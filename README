@@ -4,3 +4,7 @@ Dynamic Load Library
 
 Marta Garcia Gasulla
 <marta.garcia@bsc.es>
+
+Version 2.0
+Support for: OpenMP + MPI
+
