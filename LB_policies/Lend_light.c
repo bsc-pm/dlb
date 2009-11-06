@@ -1,6 +1,6 @@
 #include <Lend_light.h>
 #include <LB_arch/arch.h>
-#include <LB_openMP/openMP_interface.h>
+#include <LB_numThreads/numThreads.h>
 #include <LB_comm/comm_lend_light.h>
 
 #include <pthread.h>

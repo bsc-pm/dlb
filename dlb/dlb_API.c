@@ -13,7 +13,7 @@
 #include <LB_policies/JustProf.h>
 #include <LB_policies/DWB_Eco.h>
 #include <LB_arch/arch.h>
-#include <LB_openMP/openMP_interface.h>
+#include <LB_numThreads/numThreads.h>
 #include <omp.h>
 
 double omp_get_wtime (void);

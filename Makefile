@@ -18,7 +18,7 @@ export DEBUG
 
 #################### FILES ##########################
 
-OBJ= LB_MPI/MPI_interface.o LB_MPI/process_MPI.o dlb/dlb_API.o DPD/DPD.o LB_arch/MyTime.o LB_policies/JustProf.o LB_policies/Lend.o LB_policies/Weight.o LB_policies/Lend_simple.o LB_policies/LeWI_active.o LB_openMP/openMP_interface.o LB_policies/DWB_Eco.o LB_arch/common.o LB_policies/Lend_light.o LB_comm/comm_lend_light.o 
+OBJ= LB_MPI/MPI_interface.o LB_MPI/process_MPI.o dlb/dlb_API.o DPD/DPD.o LB_arch/MyTime.o LB_policies/JustProf.o LB_policies/Lend.o LB_policies/Weight.o LB_policies/Lend_simple.o LB_policies/LeWI_active.o LB_numThreads/numThreads.o LB_policies/DWB_Eco.o LB_arch/common.o LB_policies/Lend_light.o LB_comm/comm_lend_light.o 
 
 SOCKT_OBJ= LB_comm/comm_sockets.o
 
@@ -28,9 +28,9 @@ COMM_OBJ=$(SHMEM_OBJ)
 
 INTERCEPT_OBJ= LB_MPI/MPI_intercept.o
 
-DEPENDS= Makefile LB_MPI/MPI_calls_coded.h dlb/dlb_API.h LB_openMP/openMP_interface.h LB_comm/comm.h
+DEPENDS= Makefile LB_MPI/MPI_calls_coded.h dlb/dlb_API.h LB_numThreads/numThreads.h LB_comm/comm.h
 
-SUB_DIRS= LB_MPI dlb LB_arch LB_policies DPD LB_comm LB_openMP
+SUB_DIRS= LB_MPI dlb LB_arch LB_policies DPD LB_comm LB_numThreads
 
 
 #################### FLAGS ##########################
