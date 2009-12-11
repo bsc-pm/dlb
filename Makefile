@@ -1,3 +1,5 @@
+include Makefile.obj
+
 ################ DEBUG OPTIONS ######################
 
 ## -DdebugBasicInfo :Prints the configuration values used (recommended to set always)- printed in stdout
@@ -15,24 +17,6 @@
 DEBUG= -DdebugBasicInfo
 export DEBUG 
 
-
-#################### FILES ##########################
-
-OBJ= LB_MPI/MPI_interface.o LB_MPI/process_MPI.o dlb/dlb_API.o DPD/DPD.o LB_arch/MyTime.o LB_policies/JustProf.o LB_policies/Lend.o LB_policies/Weight.o LB_policies/Lend_simple.o LB_policies/LeWI_active.o LB_numThreads/numThreads.o LB_policies/DWB_Eco.o LB_arch/common.o LB_policies/Lend_light.o LB_comm/comm_lend_light.o 
-
-SOCKT_OBJ= LB_comm/comm_sockets.o
-
-SHMEM_OBJ=LB_comm/comm_shMem.o
-
-COMM_OBJ=$(SHMEM_OBJ)
-
-INTERCEPT_OBJ= LB_MPI/MPI_intercept.o
-
-DEPENDS= Makefile LB_MPI/MPI_calls_coded.h dlb/dlb_API.h LB_numThreads/numThreads.h LB_comm/comm.h
-
-SUB_DIRS= LB_MPI dlb LB_arch LB_policies DPD LB_comm LB_numThreads
-
-
 #################### FLAGS ##########################
 
 CC= xlc_r
@@ -41,50 +25,72 @@ export CC
 MPICC= mpicc
 export MPICC
 
-CFLAGS= -qPIC -q64 -I. -I.. -I/home/bsc41/bsc41273/foreign-pkgs/mpitrace-dlb/32/include/ $(DEBUG) -qinfo=gen -qformat=all
+CFLAGS= -qPIC -I. -I.. $(DEBUG) -qinfo=gen -qformat=all
 export CFLAGS
 
-LDFLAGS= -qPIC -q64 -qmkshrobj 
+LDFLAGS= -qPIC -qmkshrobj 
 export LDFLAGS
 
 
 #################### RULES ##########################
 
-all: lib/libdlb.so lib/libTdlb.so lib/libUpdRes.so
-
-dlb: lib/libdlb.so 
-
-trace_dlb: lib/libTdlb.so
-
-updRes: lib/libUpdRes.so
+all: lib32 lib64
 
 
-lib/libdlb.so: $(DEPENDS) $(OBJ) $(INTERCEPT_OBJ) $(COMM_OBJ)
-	$(CC) $(LDFLAGS) -o lib/libdlb.so $(OBJ) $(INTERCEPT_OBJ) $(COMM_OBJ)
+dlb: lib/32/libdlb.so lib/64/libdlb.so
+
+
+trace_dlb: lib/32/libTdlb.so lib/64/libTdlb.so
+
+updRes: lib/32/libUpdRes.so lib/64/libUpdRes.so
+
+lib32: lib/32/libdlb.so lib/32/libTdlb.so lib/32/libUpdRes.so
+  echo "Building: " $@
+
+lib64: lib/64/libdlb.so lib/64/libTdlb.so lib/64/libUpdRes.so
+
+
+#------- 64bits library ----------#
+lib/64/libdlb.so: $(DEPENDS) $(OBJ) $(INTERCEPT_OBJ)
+	$(CC) $(LDFLAGS) -q64 -o lib/64/libdlb.so $(OBJ) $(INTERCEPT_OBJ)
 	
 
-lib/libTdlb.so: $(DEPENDS) $(OBJ) $(COMM_OBJ)
-	$(CC) $(LDFLAGS) -o lib/libTdlb.so $(OBJ) $(COMM_OBJ)
+lib/64/libTdlb.so: $(DEPENDS) $(OBJ)
+	$(CC) $(LDFLAGS) -q64 -o lib/64/libTdlb.so $(OBJ)
 
+#------- 32bits library ----------#
+lib/32/libdlb.so: $(DEPENDS) $(OBJ32) $(INTERCEPT_OBJ32)
+	$(CC) $(LDFLAGS) -q32 -o lib/32/libdlb.so $(OBJ32) $(INTERCEPT_OBJ32)
+	
+
+lib/32/libTdlb.so: $(DEPENDS) $(OBJ)
+	$(CC) $(LDFLAGS) -q32 -o lib/32/libTdlb.so $(OBJ32)
+
+
+%32.o: %.c
+	$(MAKE) -C `dirname $@` `basename $@`
 
 %.o : %.c
 	$(MAKE) -C `dirname $@` `basename $@`
 
-######### Library UpdRes just includes de call to updateResources to compile applications #####
-lib/libUpdRes.so: dlb/updateResources.o
-	$(CC) $(LDFLAGS) -o lib/libUpdRes.so dlb/updateResources.o
 
-##	$(CC) $(CFLAGS) -c  dlb/updateResources.c -o dlb/updateResources.o
+
+######### Library UpdRes just includes de call to updateResources to compile applications #####
+
+lib/64/libUpdRes.so: dlb/updateResources.o
+	$(CC) $(LDFLAGS) -q64 -o lib/64/libUpdRes.so dlb/updateResources.o
+
+lib/32/libUpdRes.so: dlb/updateResources32.o
+	$(CC) $(LDFLAGS) -q32 -o lib/32/libUpdRes.so dlb/updateResources32.o
+
+################### CLEAN ###############################################
 
 clean:
 	for i in $(SUB_DIRS);\
 	do\
 		$(MAKE) -C $${i} clean;\
 	done
-	rm -f lib/libdlb.so
-	rm -f lib/libTdlb.so
-
-#for i in $(SUB_DIRS);\
-#	do\
-#		$(MAKE) -C $${i} dlb;\
-#	done
+	rm -f lib/32/libdlb.so
+	rm -f lib/32/libTdlb.so
+	rm -f lib/64/libdlb.so
+	rm -f lib/64/libTdlb.so

@@ -31,6 +31,7 @@ struct timespec MPITime;
 
 double iterCpuTime_avg=0, iterMPITime_avg=0, start, stop;
 char prof;
+int ready=0;
 
 BalancePolicy lb_funcs;
 
@@ -185,6 +186,8 @@ void Init(int me, int num_procs, int node){
 	}
 
 	lb_funcs.init(me, num_procs, node);
+	ready=1;
+	
 }
 
 void Finish(void){
@@ -270,11 +273,11 @@ void OutOfBlockingCall(void){
 }
 
 void updateresources(){
-	lb_funcs.updateresources();
+	if(ready)lb_funcs.updateresources();
 }
 
 void UpdateResources(){
-	lb_funcs.updateresources();
+	if(ready)lb_funcs.updateresources();
 }
 
 void dummyFunc(){}

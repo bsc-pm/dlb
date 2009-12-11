@@ -36,8 +36,8 @@ void LoadCommConfig(int num_procs, int meId, int nodeId){
 	size_queue=procs*100;
 
 	if ((k=getenv("SLURM_JOBID"))==NULL){
-		fprintf(stdout,"INFO: SLURM_JOBID not found using constant shared Memory name\n");
-		key=42424242;
+		key=getppid();
+		fprintf(stdout,"%d:%d INFO: LOAD LEVELER JOBID not found using getppid as Shared Memory name %d\n", node, me, key);
 	}else{
 		key=atol(k);
 	}

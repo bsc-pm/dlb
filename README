@@ -1,6 +1,6 @@
 
 Dynamic Load Library
---------------------
+------------------------------------------------------------
 
 Marta Garcia Gasulla
 <marta.garcia@bsc.es>
@@ -8,3 +8,62 @@ Marta Garcia Gasulla
 Version 2.0
 Support for: OpenMP + MPI
 
+------------------------------------------------------------
+0 CONTENTS
+------------------------------------------------------------
+1 PACKAGE CONTENT
+
+
+
+
+
+------------------------------------------------------------
+1 PACKAGE CONTENT
+------------------------------------------------------------
+dlb/
+	README			: This file
+	Makefile		: Makefile to build the library in 32 and 64 bits versions. Main Rules: all, lib32, lib64
+	Makefile.obj		: Auxiliar Makefile containing name of files belonging to the library to be compiled
+
+	bin/			: Folder containing auxiliar tools
+		adder		: Script to add a set of Event-Values definition to a pcf file from a txt file
+	lib/			: Folder containing the dynamic libraries
+		32|64/		: 32|64 bits versions
+			libdlb.so		: Dynamic DLB library
+			libTdlb.so		: Dynamic DLB library to run with tracing
+			libompitrace.so		: Tracing library 
+			libompitrace-lb.so	: Tracing library to run with DLB library
+
+	DPD/			: Folder containing the Dinamic Periodicity Detector source files
+
+	LB_arch/		: Folder containing the source files that architecture dependant (Number of cores per node for example)
+
+	LB_comm/		: Folder containing the source files implementing communication aspects
+
+	LB_MPI/			: Folder containing the source files from the MPI layer
+
+	LB_numThreads/		: Folder containing the source files to change the number of resources
+
+	LB_policies/		: Folder containing the source files fo the Load balancing policies implemented
+
+	
+------------------------------------------------------------
+2 COMPILING THE LIBRARY
+------------------------------------------------------------
+			
+
+------------------------------------------------------------
+3 EXECUTING THE LIBRARY
+------------------------------------------------------------
+
+------------------------------------------------------------
+4 LOAD BALANCING POLICIES IMPLEMENTED
+------------------------------------------------------------
+NO: Do not use Load Balancing. This policy is useful for obtaining profiling information about the application.
+
+WEIGHT: 
+
+------------------------------------------------------------
+
+------------------------------------------------------------
+------------------------------------------------------------

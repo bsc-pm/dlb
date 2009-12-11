@@ -19,7 +19,7 @@ void after_init(){
 	int num_mpis, node;
 
 	if ((mpi_per_node=getenv("LB_MPIxNODE"))==NULL){
-			fprintf(stdout,"PANIC: MPI_PER_NODE must be defined\n");
+			fprintf(stdout,"PANIC: LB_MPIxNODE must be defined\n");
 			exit(1);
 	}
 	num_mpis= atoi(mpi_per_node);	
