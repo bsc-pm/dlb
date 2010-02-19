@@ -2,6 +2,7 @@
 #include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 #include <LB_comm/comm_lend_light.h>
+#include <LB_MPI/tracing.h>
 
 #include <pthread.h>
 #include <stdio.h>
@@ -12,11 +13,6 @@ int greedy;
 int default_cpus;
 int myCPUS;
 
-/********* OMPITRACE EVENTS *********/
-#define process_event 800001
-#define master_state 800002
-#define proc_threads 800010
-/*************************************/
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
@@ -58,7 +54,7 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 }
 
 void Lend_light_Finish(void){
-	comm_close();
+	if (me==0) finalize_comm();
 }
 
 void Lend_light_InitIteration(){}
@@ -72,24 +68,15 @@ void Lend_light_OutOfCommunication(void){}
 void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs){
 	
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - LENDING %d cpus\n", node, me, threadsUsed);
+	fprintf(stderr, "%d:%d - LENDING %d cpus\n", node, me, myCPUS);
 #endif
 
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 1);
-#endif
 	releaseCpus(myCPUS);
 	setThreads_Lend_light(0);
 	
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 0);
-#endif	
 }
 
 void Lend_light_OutOfBlockingCall(void){
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 2);
-#endif
 
 	int cpus=acquireCpus();
 	setThreads_Lend_light(cpus);
@@ -97,9 +84,6 @@ void Lend_light_OutOfBlockingCall(void){
 	fprintf(stderr, "%d:%d - ACQUIRING %d cpus\n", node, me, cpus);
 #endif
 
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 0);
-#endif
 }
 
 /******* Auxiliar Functions Lend_light Balancing Policy ********/

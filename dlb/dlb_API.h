@@ -13,6 +13,8 @@ typedef struct{
 	void (*updateresources) (void);
 } BalancePolicy;
 
+void bind_procs2CPUS();
+
 void Init(int me, int num_procs, int node);
 
 void Finish(void);
@@ -37,4 +39,5 @@ void dummyIntoBlockingCall(double a, double b);
 void updateresources();
 void UpdateResources();
 
+int tracing_ready();
 #endif //DLB_API_H

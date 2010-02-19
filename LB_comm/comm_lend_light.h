@@ -9,4 +9,7 @@ int acquireCpus();
 
 int checkIdleCpus(int myCpus);
 
+void finalize_comm();
+
 #endif //COMM_LEND_LIGHT
+

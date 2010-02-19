@@ -4,6 +4,7 @@
 
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int me, node, procs;
 int finished;
@@ -50,15 +51,9 @@ void LeWI_A_IntoBlockingCall(double cpuSecs, double MPISecs){
 	info.secsComp=cpuSecs;
 	info.secsMPI=MPISecs;
 
-#ifdef OMPI_events	
-	OMPItrace_event (800001, 1);
-#endif
 
 	setThreads_LeWI_A(0);
 	SendToMaster((char *)&info,sizeof(info));
-#ifdef OMPI_events	
-	OMPItrace_event (800001, 0);
-#endif	
 }
 
 void LeWI_A_OutOfBlockingCall(void){
@@ -66,14 +61,8 @@ void LeWI_A_OutOfBlockingCall(void){
 	info.action = ACQUIRE_CPUS;
 	info.cpus=threadsUsed;
 
-#ifdef OMPI_events	
-	OMPItrace_event (800001, 2);
-#endif
 	setThreads_LeWI_A(CPUS_NODE/procs);
 	SendToMaster((char *)&info,sizeof(info));
-#ifdef OMPI_events	
-	OMPItrace_event (800001, 0);
-#endif
 #ifdef debugLeWI_A
 	fprintf(stderr, "%d:%d - ACQUIRING %d cpus\n", node, me, threadsUsed);
 #endif
@@ -233,16 +222,10 @@ void LeWI_A_updateresources(){
 	info.action = ASK_4_CPUS;
 	info.cpus=threadsUsed;
 
-#ifdef OMPI_events	
-	OMPItrace_event (800001, 3);
-#endif
 
 	SendToMaster((char *)&info,sizeof(info));
 	GetFromMaster((char*)&cpus,sizeof(int));
 
-#ifdef OMPI_events	
-	OMPItrace_event (800001, 0);
-#endif
 	if (threadsUsed!=cpus){
 #ifdef debugDistribution
 		fprintf(stderr,"%d:%d - Using %d cpus\n", node, me, cpus);
@@ -276,3 +259,4 @@ void setThreads_LeWI_A(int numThreads){
 		threadsUsed=numThreads;
 	}
 }
+

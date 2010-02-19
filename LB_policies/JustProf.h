@@ -18,3 +18,4 @@ void JustProf_IntoBlockingCall(void);
 void JustProf_OutOfBlockingCall(void);
 
 #endif //JUSTPROF_H
+

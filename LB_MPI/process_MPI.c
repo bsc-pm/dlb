@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <dlb/dlb_API.h>
+#include <LB_MPI/tracing.h>
 #include <MPI_calls_coded.h>
 #include <DPD/DPD.h>
 #include <mpi.h>
@@ -15,6 +16,7 @@ void before_init(){
 }
 
 void after_init(){
+	add_event(RUNTIME, 1);
 	char* mpi_per_node;
 	int num_mpis, node;
 
@@ -109,10 +111,12 @@ void after_init(){
 #endif	
 
 	Init(me, num_mpis, node);
-
+		
+	add_event(RUNTIME, 0);
 }
 
-void before_mpi(mpi_call call_type, int buf, int dest){
+void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
+	add_event(RUNTIME, 2);
 	int valor_dpd;
 	IntoCommunication();
 
@@ -126,19 +130,22 @@ void before_mpi(mpi_call call_type, int buf, int dest){
 	//fprintf(stderr, "%d - Muestra %d Llamada %0x Valor DPD %d\n", me, value, call_type, valor_dpd);
 
 	if (valor_dpd!=0){
-		//fprintf(stderr, "%d - Detecto iteracion\n", me);
+//		fprintf(stderr, "%d - Detecto iteracion\n", me);
 		FinishIteration();
 		InitIteration();
 	}
+	add_event(RUNTIME, 0);
 }
 
 void after_mpi(mpi_call call_type){
+	add_event(RUNTIME, 3);
 
 	if (is_blocking(call_type)){
 		OutOfBlockingCall();
 	}
 
 	OutOfCommunication();
+	add_event(RUNTIME, 0);
 }
 
 void before_finalize(){

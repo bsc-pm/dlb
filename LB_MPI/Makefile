@@ -1,8 +1,8 @@
 %32.o : %.c
-	$(MPICC) $(CFLAGS) -q32 -c -o $@ $<
+	$(MPICC) $(CFLAGS) $(FLAGS32) -c -o $@ $<
 
 %.o : %.c
-	$(MPICC) $(CFLAGS) -q64 -c -o $@ $<
+	$(MPICC) $(CFLAGS) $(FLAGS64) -c -o $@ $<
 
 
 clean:

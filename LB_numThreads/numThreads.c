@@ -1,12 +1,18 @@
 #include <numThreads.h>
+#include <LB_MPI/tracing.h>
+#include <LB_arch/arch.h>
+#include <stdio.h>
+
 //#include <mpitrace_user_events.h>
 
-void OMPItrace_event(int Type, int Value)__attribute__ ((weak));
 
 void update_threads(int threads){
-//#ifdef OMPI_events	
-	if(OMPItrace_event)OMPItrace_event (800000, threads);
-//#endif
+	if (threads>CPUS_NODE){
+		fprintf(stderr, "WARNING trying to use more CPUS (%d) than the available (%d)\n", threads, CPUS_NODE);
+		threads=CPUS_NODE;
+	}
+
+	add_event(THREADS_USED, threads);
 	if (threads==0){
 		if(omp_set_num_threads)omp_set_num_threads(1);
 		if(css_set_num_threads)css_set_num_threads(1);

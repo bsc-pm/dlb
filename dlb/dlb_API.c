@@ -1,6 +1,12 @@
+#define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
+
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <sched.h>
 
 #include <dlb_API.h>
 
@@ -14,9 +20,7 @@
 #include <LB_policies/DWB_Eco.h>
 #include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
-#include <omp.h>
-
-double omp_get_wtime (void);
+#include <LB_MPI/tracing.h>
 
 int iterNum;
 struct timespec initAppl;
@@ -29,7 +33,7 @@ struct timespec iterMPITime;
 struct timespec CpuTime;
 struct timespec MPITime;
 
-double iterCpuTime_avg=0, iterMPITime_avg=0, start, stop;
+double iterCpuTime_avg=0, iterMPITime_avg=0 ;
 char prof;
 int ready=0;
 
@@ -43,6 +47,8 @@ void Init(int me, int num_procs, int node){
 	char* profile;
 	char* threads;
 	prof=0;
+
+	int bindCPUS=0;
 
 	nodeId=node;
 	meId=me;
@@ -176,7 +182,6 @@ void Init(int me, int num_procs, int node){
 #endif
 
 	if (prof){
-		start=omp_get_wtime();
 		clock_gettime(CLOCK_REALTIME, &initAppl);
 		reset(&iterCpuTime);
 		reset(&iterMPITime);
@@ -187,7 +192,18 @@ void Init(int me, int num_procs, int node){
 
 	lb_funcs.init(me, num_procs, node);
 	ready=1;
-	
+
+	if(bindCPUS) bind_procs2CPUS();
+}
+
+void bind_procs2CPUS(){
+	int tid = syscall(SYS_gettid);
+	cpu_set_t cpu_set;
+        sched_getaffinity((pid_t) tid, sizeof(cpu_set), &cpu_set);
+        CPU_ZERO(&cpu_set); 
+	//cada thread principal a su CPU
+	CPU_SET(meId, &cpu_set);
+	sched_setaffinity((pid_t) tid, sizeof(cpu_set), &cpu_set); 
 }
 
 void Finish(void){
@@ -203,9 +219,6 @@ void Finish(void){
 		add_time(MPITime, iterMPITime, &MPITime);
 
 		diff_time(initAppl, aux, &aux);
-		
-		stop=omp_get_wtime();
-		double elapsed=stop-start;
 		
 		if (meId==0 && nodeId==0){
 			fprintf(stdout, "%d:%d - Application time: %.4f\n", nodeId, meId, to_secs(aux));
@@ -273,13 +286,24 @@ void OutOfBlockingCall(void){
 }
 
 void updateresources(){
-	if(ready)lb_funcs.updateresources();
+	if(ready){
+		add_event(RUNTIME, 4);
+		lb_funcs.updateresources();
+		add_event(RUNTIME, 0);
+	}
 }
 
 void UpdateResources(){
-	if(ready)lb_funcs.updateresources();
+	if(ready){
+		add_event(RUNTIME, 4);
+		lb_funcs.updateresources();
+		add_event(RUNTIME, 0);
+	}
 }
 
+int tracing_ready(){
+	return ready;
+}
 void dummyFunc(){}
 void dummyInit(int me, int num_procs, int node){}
 void dummyFinishIter(double a, double b){}

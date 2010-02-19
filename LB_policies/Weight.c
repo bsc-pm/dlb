@@ -4,7 +4,7 @@
 
 #include <semaphore.h>
 #include <stdio.h>
-
+#include <stdlib.h>
 
 int me, node, procs;
 int finished;
@@ -166,7 +166,7 @@ void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]){
 		if (weights[i]>=(double)100){	
 			cpus[i]=LM[i].cpus;
 		}else{ 
-			cpus_alloc=round((weights[i]*(double)CPUS_NODE)/(double)100);
+			cpus_alloc=my_round((weights[i]*(double)CPUS_NODE)/(double)100);
 
 			if (cpus_alloc>(CPUS_NODE-(procs-1))) cpus[i]=CPUS_NODE-(procs-1);
 			else if (cpus_alloc<1) cpus[i]=1;

@@ -36,6 +36,7 @@ OBJ= LB_MPI/MPI_interface.o \
     LB_arch/common.o \
     LB_policies/Lend_light.o \
     LB_comm/comm_lend_light.o \
+    LB_MPI/tracing.o \
     $(COMM_OBJ)
 
 OBJ32= LB_MPI/MPI_interface32.o \
@@ -53,6 +54,7 @@ OBJ32= LB_MPI/MPI_interface32.o \
     LB_arch/common32.o \
     LB_policies/Lend_light32.o \
     LB_comm/comm_lend_light32.o  \
+    LB_MPI/tracing32.o \
     $(COMM_OBJ32)
 
 INTERCEPT_OBJ= LB_MPI/MPI_intercept.o

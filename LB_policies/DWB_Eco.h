@@ -32,7 +32,7 @@ void GetMetrics_DWB_Eco(ProcMetrics metrics[]);
 //void getLocaMetrics(ProcMetrics *metr);
 void SendLocalMetrics_DWB_Eco(ProcMetrics LM);
 void CalculateNewDistribution_DWB_Eco(ProcMetrics LM[], int cpus[]);
-int round(double x);
 void applyNewDistribution_DWB_Eco(int cpus[]);
 
 #endif //DWB_Eco_H
+

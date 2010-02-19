@@ -1,4 +1,6 @@
 #include <comm.h>
+#include <LB_arch/common.h>
+
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdlib.h>
@@ -16,11 +18,13 @@ int node;
 
 int defaultCPUS;
 int greedy;
-
 //pointers to the shared memory structures
-int* idleCpus;
-sem_t* sem;
+struct shdata {
+   int   idleCpus;
+};
 
+struct shdata *shdata;
+int shmid;
 
 void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy){
 #ifdef debugSharedMem 
@@ -33,20 +37,20 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 	greedy=is_greedy;
 
 	char *k;
-	int shmid, i;
-    key_t key;
-    int sm_size;
-    char * shm;
+	int i;
+	key_t key;
+    	int sm_size;
+    	char * shm;
 
 	if ((k=getenv("SLURM_JOBID"))==NULL){
-		fprintf(stdout,"INFO: SLURM_JOBID not found using constant shared Memory name\n");
-		key=42424242;
+		fprintf(stdout,"INFO: SLURM_JOBID not found using parent pid(%d) as shared Memory name\n", getppid());
+		key=getppid();
 	}else{
 		key=atol(k);
 	}
 
-	sm_size= sizeof(int) + sizeof(sem_t);
-	//       idle cpus       semaphore
+	sm_size= sizeof(struct shdata);
+	//       idle cpus      
 
 	if (me==0){
        
@@ -64,6 +68,8 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 			perror("shmat Master");
 			exit(1);
 		}
+
+                shdata = (struct shdata *)shm;
 	
 		
 	
@@ -71,23 +77,17 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 		fprintf(stderr,"%d:%d setting values to the shared mem\n", node, me);
 #endif
 		/* idleCPUS */
-		idleCpus=(int*)shm;
-		*idleCpus=0;
-
-		//The sempahore  to acces the shared data
-		sem = (sem_t*)((char*)idleCpus + sizeof(int)); 
-		if (sem_init(sem, 1, 1)<0){
-			perror("sem_init");
-			exit(1);
-		}
+                shdata->idleCpus = 0;
 
 		PMPI_Barrier(MPI_COMM_WORLD);
+#ifdef debugSharedMem 
+		fprintf(stderr,"%d:%d Finished setting values to the shared mem\n", node, me);
+#endif
 
 	}else{
 #ifdef debugSharedMem 
     	fprintf(stderr,"%d:%d Slave Comm - associating to shared mem\n", node, me);
 #endif
-
 		PMPI_Barrier(MPI_COMM_WORLD);
 	
 		
@@ -109,26 +109,24 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 			exit(1);
 		}
 	
-		// idle CPUs
-		idleCpus=(int*)shm;
-
-		//The sempahore  to acces the shared data
-		sem = (sem_t*)((char*)idleCpus + sizeof(int)); 
+		shdata = (struct shdata *)shm;
 	}
 }
 
+void finalize_comm(){
+	if (shmctl(shmid, IPC_RMID, NULL)<0)
+		perror("Removing Shared Memory");	
+}
+
 int releaseCpus(int cpus){
-  if (sem_wait(sem)<0){
-    perror("Wait sem");
-    return -1;
-  }
+#ifdef debugSharedMem 
+		fprintf(stderr,"%d:%d Releasing CPUS...\n", node, me);
+#endif
+	__sync_fetch_and_add (&(shdata->idleCpus), cpus); 
 
-    (*idleCpus)+=cpus;
-
-  if (sem_post(sem)<0){
-    perror("Post sem");
-    return -1;
-  }
+#ifdef debugSharedMem 
+		fprintf(stderr,"%d:%d DONE Releasing CPUS (idle %d) \n", node, me, shdata->idleCpus);
+#endif
   return 0;
 }
 
@@ -137,24 +135,22 @@ Returns de number of cpus
 that are assigned
 */
 int acquireCpus(){
+#ifdef debugSharedMem 
+		fprintf(stderr,"%d:%d Acquiring CPUS...\n", node, me);
+#endif
   int cpus = defaultCPUS;
-  if (sem_wait(sem)<0){
-    perror("Wait sem");
-    return -1;
-  }
 
-//I don't care if there are enough cpus
-    (*idleCpus)-=defaultCPUS;
+//I don't care if there aren't enough cpus
 
-    if ((greedy)&&((*idleCpus)>0)){
-	cpus+=(*idleCpus);
-	(*idleCpus)=0;
-    }
+	if((__sync_sub_and_fetch (&(shdata->idleCpus), defaultCPUS)>0) && (greedy)){ 
+//WARNING//
+		cpus+=__sync_val_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, 0);
+    	}
 
-  if (sem_post(sem)<0){
-    perror("Post sem");
-    return -1;
-  }
+#ifdef debugSharedMem 
+		fprintf(stderr,"%d:%d Using %d CPUS... %d Idle \n", node, me, cpus, shdata->idleCpus);
+#endif
+
   return cpus;
 }
 
@@ -163,27 +159,28 @@ Returns de number of cpus
 that are assigned
 */
 int checkIdleCpus(int myCpus){
+#ifdef debugSharedMem 
+		fprintf(stderr,"%d:%d Checking idle CPUS... %d\n", node, me, shdata->idleCpus);
+#endif
   int cpus;
-
-  if (sem_wait(sem)<0){
-    perror("Wait sem");
-    return -1;
-  }
+  int aux;
+//WARNING//
     //if more CPUS than the availables are used release some
-    if ( ((*idleCpus) < 0) && (myCpus>defaultCPUS) ){
-      cpus=MIN(abs(*idleCpus), myCpus-defaultCPUS);
-      (*idleCpus)+=cpus;
-      myCpus-=cpus;
+    if ((shdata->idleCpus < 0) && (myCpus>defaultCPUS) ){
+	aux=shdata->idleCpus;
+	cpus=MIN(abs(aux), myCpus-defaultCPUS);
+
+	if(__sync_bool_compare_and_swap(&(shdata->idleCpus), aux, aux+cpus)){
+		myCpus-=cpus;
+	}
 
     //if there are idle CPUS use them
-    }else if((*idleCpus) > 0){
-      myCpus+=(*idleCpus);
-      (*idleCpus)=0;
+    }else if( shdata->idleCpus > 0){
+	myCpus+=__sync_val_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, 0);
     }
 
-  if (sem_post(sem)<0){
-    perror("Post sem");
-    return -1;
-  }
+#ifdef debugSharedMem 
+		fprintf(stderr,"%d:%d Using %d CPUS... %d Idle \n", node, me, myCpus, shdata->idleCpus);
+#endif
   return myCpus;
 }

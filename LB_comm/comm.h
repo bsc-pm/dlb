@@ -67,3 +67,4 @@ void GetFromMasterNonBlocking(char *info,int size);
 void WriteToSlave(int rank,char *info,int size);
 
 #endif //COMM_H
+

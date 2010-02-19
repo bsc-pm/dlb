@@ -11,25 +11,40 @@ include Makefile.obj
 ## -DdebugDistribution :Prints the changes in the distribution of cpus
 ## -DdebugSharedMem :Prints the operations on shared memory
 ## -DdebugLend :Prints debug information of Lend policy
-## -DOMPI_events: adds debug events to the trace, but should run with tracing OMPItrace library
 ## -DdebugLoads: Prints the computational time, MPI time and weight of each MPI
 
-DEBUG= -DdebugBasicInfo
+DEBUG= -DdebugBasicInfo  
 export DEBUG 
 
 #################### FLAGS ##########################
 
-CC= xlc_r
+CC= xlc_r 
+CC= gcc 
 export CC
 
-MPICC= mpicc
+MPICC= mpicc -cc=gcc
 export MPICC
 
-CFLAGS= -qPIC -I. -I.. $(DEBUG) -qinfo=gen -qformat=all
+CFLAGS_xl= -qPIC -I. -I.. $(DEBUG) -qinfo=gen -qformat=all
+CFLAGS= -fPIC -I. -I.. $(DEBUG) 
 export CFLAGS
+export CFLAGS_xl
 
-LDFLAGS= -qPIC -qmkshrobj 
+LDFLAGS_xl= -qPIC -qmkshrobj 
+LDFLAGS= -fPIC -shared 
 export LDFLAGS
+export LDFLAGS_xl
+
+FLAGS32_xl= -q32
+FLAGS32= -m32
+export FLAGS32
+export FLAGS32_xl
+
+
+FLAGS64_xl= -q64
+FLAGS64= -m64
+export FLAGS64
+export FLAGS64_xl
 
 
 #################### RULES ##########################
@@ -52,19 +67,19 @@ lib64: lib/64/libdlb.so lib/64/libTdlb.so lib/64/libUpdRes.so
 
 #------- 64bits library ----------#
 lib/64/libdlb.so: $(DEPENDS) $(OBJ) $(INTERCEPT_OBJ)
-	$(CC) $(LDFLAGS) -q64 -o lib/64/libdlb.so $(OBJ) $(INTERCEPT_OBJ)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libdlb.so $(OBJ) $(INTERCEPT_OBJ)
 	
 
 lib/64/libTdlb.so: $(DEPENDS) $(OBJ)
-	$(CC) $(LDFLAGS) -q64 -o lib/64/libTdlb.so $(OBJ)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libTdlb.so $(OBJ)
 
 #------- 32bits library ----------#
 lib/32/libdlb.so: $(DEPENDS) $(OBJ32) $(INTERCEPT_OBJ32)
-	$(CC) $(LDFLAGS) -q32 -o lib/32/libdlb.so $(OBJ32) $(INTERCEPT_OBJ32)
+	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/32/libdlb.so $(OBJ32) $(INTERCEPT_OBJ32)
 	
 
 lib/32/libTdlb.so: $(DEPENDS) $(OBJ)
-	$(CC) $(LDFLAGS) -q32 -o lib/32/libTdlb.so $(OBJ32)
+	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/32/libTdlb.so $(OBJ32)
 
 
 %32.o: %.c
@@ -78,10 +93,10 @@ lib/32/libTdlb.so: $(DEPENDS) $(OBJ)
 ######### Library UpdRes just includes de call to updateResources to compile applications #####
 
 lib/64/libUpdRes.so: dlb/updateResources.o
-	$(CC) $(LDFLAGS) -q64 -o lib/64/libUpdRes.so dlb/updateResources.o
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libUpdRes.so dlb/updateResources.o
 
 lib/32/libUpdRes.so: dlb/updateResources32.o
-	$(CC) $(LDFLAGS) -q32 -o lib/32/libUpdRes.so dlb/updateResources32.o
+	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/32/libUpdRes.so dlb/updateResources32.o
 
 ################### CLEAN ###############################################
 

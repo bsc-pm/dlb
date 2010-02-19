@@ -19,6 +19,7 @@ sharedData* shData;
 msg * msgs;
 sem_t * msg4slave;
 int * threads;
+int shmid;
 
 void LoadCommConfig(int num_procs, int meId, int nodeId){
 #ifdef debugSharedMem 
@@ -29,7 +30,7 @@ void LoadCommConfig(int num_procs, int meId, int nodeId){
 	node=nodeId;
 
 	char *k;
-	int shmid, i;
+	int i;
     key_t key;
     int sm_size;
     char * shm;
@@ -271,5 +272,6 @@ void SendToSlave(int rank,char *info,int size){
 }
 
 void comm_close(){
-	//shmdt(shData);
+	if (shmctl(shmid, IPC_RMID, NULL)<0)
+		perror("Removing Shared Memory");	
 }

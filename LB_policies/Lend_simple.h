@@ -36,3 +36,4 @@ void* slaveThread_Lend_simple(void* arg);
 void Lend_simple_updateresources();
 
 #endif //LEND_SIMPLE_H
+

@@ -9,3 +9,4 @@ void reset(struct timespec *t1);
 double to_secs(struct timespec t1);
 
 #endif // MYTIME_H
+

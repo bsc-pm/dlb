@@ -35,3 +35,4 @@ void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]);
 void applyNewDistribution_Weight(int cpus[]);
 
 #endif //WEIGHT_H
+

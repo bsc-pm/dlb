@@ -1,6 +1,7 @@
 #include <Lend.h>
 #include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
+#include <LB_MPI/tracing.h>
 
 #include <pthread.h>
 #include <stdio.h>
@@ -13,11 +14,6 @@ int idleCpus;
 int greedy;
 int default_cpus;
 
-/********* OMPITRACE EVENTS *********/
-#define process_event 800001
-#define master_state 800002
-#define proc_threads 800010
-/*************************************/
 
 /******* Main Functions Lend Balancing Policy ********/
 
@@ -79,15 +75,8 @@ void Lend_IntoBlockingCall(double cpuSecs, double MPISecs){
 	info.secsComp=cpuSecs;
 	info.secsMPI=MPISecs;
 
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 1);
-#endif
-
 	setThreads_Lend(0);
 	SendToMaster((char *)&info,sizeof(info));
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 0);
-#endif	
 }
 
 void Lend_OutOfBlockingCall(void){
@@ -100,14 +89,8 @@ void Lend_OutOfBlockingCall(void){
 	info.action = ACQUIRE_CPUS;
 	info.cpus=threadsUsed;
 
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 2);
-#endif
 	setThreads_Lend(default_cpus);
 	SendToMaster((char *)&info,sizeof(info));
-#ifdef OMPI_events	
-	OMPItrace_event (process_event, 0);
-#endif
 }
 
 /******* Auxiliar Functions Lend Balancing Policy ********/
@@ -141,9 +124,6 @@ int createThreads_Lend(){
 
 /******* Master Thread Functions ********/
 void* masterThread_Lend(void* arg){
-#ifdef OMPI_events2	
-	OMPItrace_event (master_state, 1);
-#endif	
 	int cpus[procs], numThreads;
 	int i, aux;
 	//int info;
@@ -164,35 +144,17 @@ void* masterThread_Lend(void* arg){
 	applyNewDistribution(cpus, procs+1);
 
 	while(!finished){
-#ifdef OMPI_events2	
-		OMPItrace_event (master_state, 2);
-#endif	
 		i = GetFromAnySlave((char*)&info, sizeof(info));
-#ifdef OMPI_events2	
-		OMPItrace_event (master_state, 1);
-#endif
 		if (i>=0){
 			if (info.action ==LEND_CPUS){
 				numThreads=0;
 				WriteToSlave(i,(char*)&numThreads,sizeof(int));
 				old_info[i]=info;
-#ifdef OMPI_events2	
-		OMPItrace_event (master_state, 3);
-#endif
 				assign_lended_cpus(cpus, i, old_info);
-#ifdef OMPI_events2	
-		OMPItrace_event (master_state, 1);
-#endif
 			}else if(info.action ==ACQUIRE_CPUS){
 				numThreads=default_cpus;
 				WriteToSlave(i,(char*)&numThreads,sizeof(int));
-#ifdef OMPI_events2	
-		OMPItrace_event (master_state, 4);
-#endif
 				retrieve_cpus(cpus, i, old_info);
-#ifdef OMPI_events2	
-		OMPItrace_event (master_state, 1);
-#endif
 			}/*else{
 				fprintf(stderr,"%d:%d - WHAT?? %d\n", node, me, info.action);
 			}*/
