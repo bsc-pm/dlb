@@ -49,7 +49,7 @@ int MPI_Sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, 
 	#endif
 
 	int res;
-	DLB_MPI_Sendrecv_enter (sendbuf,sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm);
+	DLB_MPI_Sendrecv_enter (sendbuf,sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, status);
 	res=PMPI_Sendrecv(sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, status);
 	DLB_MPI_Sendrecv_leave ();
 	

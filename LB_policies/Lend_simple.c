@@ -75,7 +75,7 @@ void Lend_simple_OutOfBlockingCall(void){
 /******* Auxiliar Functions Lend Balancing Policy ********/
 
 /* Creates auxiliar threads */
-int createThreads_Lend_simple(){
+void createThreads_Lend_simple(){
 	pthread_t t;
 	finished=0;
 
@@ -179,7 +179,7 @@ int CalculateNewDistribution_Lend_simple(int* cpus, int process, ProcMetrics inf
 		}
 	}else{
 		if(cpus[process]!=0){
-			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, i, cpus[process]);
+			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
 		}else{
 			lended=0;
 			i= (process+1)%procs;

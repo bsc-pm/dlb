@@ -26,7 +26,7 @@ void Lend_simple_OutOfBlockingCall(void);
 
 /******* Auxiliar Functions Lend Balancing Policy ********/
 
-int createThreads_Lend_simple();
+void createThreads_Lend_simple();
 
 void* masterThread_Lend_simple(void* arg);
 void applyNewDistribution_Lend_simple(int* cpus, int except);

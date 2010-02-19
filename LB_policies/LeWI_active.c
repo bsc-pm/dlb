@@ -71,7 +71,7 @@ void LeWI_A_OutOfBlockingCall(void){
 /******* Auxiliar Functions LeWI_A Balancing Policy ********/
 
 /* Creates auxiliar threads */
-int createThreads_LeWI_A(){
+void createThreads_LeWI_A(){
 	pthread_t t;
 	finished=0;
 
@@ -101,7 +101,7 @@ int createThreads_LeWI_A(){
 void* masterThread_LeWI_A(void* arg){
 
 	int cpus[procs], numThreads;
-	int i, aux;
+	int i;
 	//int info;
 	ProcMetrics info;
 	ProcMetrics old_info[procs];
@@ -162,7 +162,7 @@ void LeWI_A_applyNewDistribution(int * cpus, int except){
 	}
 }
 
-int LeWI_A_retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
+void LeWI_A_retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 	if(cpus[process]!=0){
 			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
 	}else{

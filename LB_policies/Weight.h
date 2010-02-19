@@ -28,6 +28,8 @@ void Weight_updateresources();
 void* masterThread_Weight(void* arg);
 void* slaveThread_Weight(void* arg);
 
+void createThreads_Weight();
+
 void GetMetrics(ProcMetrics metrics[]);
 void getLocaMetrics(ProcMetrics *metr);
 void SendLocalMetrics(ProcMetrics LM);

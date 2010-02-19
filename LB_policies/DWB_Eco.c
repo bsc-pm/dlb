@@ -9,7 +9,6 @@
 int me, node, procs;
 int finished;
 int threads2use, threadsUsed;
-static sem_t sem_localMetrics;
 ProcMetrics localMetrics;
 
 /******* Main Functions DWB_Eco Balancing Policy ********/

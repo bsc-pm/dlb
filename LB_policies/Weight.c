@@ -5,6 +5,8 @@
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <LB_numThreads/numThreads.h>
 
 int me, node, procs;
 int finished;
@@ -43,7 +45,7 @@ void Weight_FinishIteration(double cpuSecs, double MPISecs){
 void Weight_IntoCommunication(void){}
 
 void Weight_OutOfCommunication(void){
-	updateresources();
+	Weight_updateresources();
 }
 
 void Weight_IntoBlockingCall(double cpuSecs, double MPISecs){}
@@ -53,7 +55,7 @@ void Weight_OutOfBlockingCall(void){}
 /******* Auxiliar Functions Weight Balancing Policy ********/
 
 /* Creates auxiliar threads */
-int createThreads_Weight(){
+void createThreads_Weight(){
 	pthread_t t;
 	finished=0;
 
@@ -87,7 +89,6 @@ void* masterThread_Weight(void* arg){
 
 	int cpus[procs];
 	int i;
-	int info;
 
 #ifdef debugConfig
 	fprintf(stderr,"%d:%d - Creating Master thread\n", node, me);
@@ -96,7 +97,6 @@ void* masterThread_Weight(void* arg){
 	StartMasterComm();
 
 	ProcMetrics currMetrics[procs];
-	ProcMetrics lastMetrics[procs];
 
 	if (sem_init(&sem_localMetrics,0,0)<0){
 		perror("Initializing metrics semaphore\n");

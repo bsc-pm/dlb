@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 
 int me, node, procs;
 int greedy;

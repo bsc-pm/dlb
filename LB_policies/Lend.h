@@ -26,7 +26,7 @@ void Lend_OutOfBlockingCall(void);
 
 /******* Auxiliar Functions Lend Balancing Policy ********/
 
-int createThreads_Lend();
+void createThreads_Lend();
 
 void* masterThread_Lend(void* arg);
 void applyNewDistribution(int* cpus, int except);
@@ -36,6 +36,8 @@ int CalculateNewDistribution_Lend_siguiente(int* cpus, int process, ProcMetrics 
 void* slaveThread_Lend(void* arg);
 void Lend_updateresources();
 void setThreads_Lend(int numThreads);
+void assign_lended_cpus(int* cpus, int process, ProcMetrics info[]);
+void retrieve_cpus(int* cpus, int process, ProcMetrics info[]);
 
 #endif //LEND_H
 

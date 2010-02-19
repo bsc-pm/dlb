@@ -25,9 +25,10 @@ void LeWI_A_IntoBlockingCall(double cpuSecs, double MPISecs);
 
 void LeWI_A_OutOfBlockingCall(void);
 
+void LeWI_A_retrieve_cpus(int* cpus, int process, ProcMetrics info[]);
 /******* Auxiliar Functions LeWI_A Balancing Policy ********/
 
-int createThreads_LeWI_A();
+void createThreads_LeWI_A();
 
 void* masterThread_LeWI_A(void* arg);
 void LeWI_A_applyNewDistribution(int* cpus, int except);

@@ -105,7 +105,7 @@ void DLB_MPI_Allgatherv_leave ();
 void DLB_MPI_Gather_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 void DLB_MPI_Gather_leave ();
-// 
+ 
 void DLB_MPI_Gatherv_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int *recvcnts, int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm );
 
 void DLB_MPI_Gatherv_leave ();
@@ -121,6 +121,14 @@ void DLB_MPI_Scatterv_leave ();
 void DLB_MPI_Scan_enter (void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 
 void DLB_MPI_Scan_leave ();
+
+void DLB_MPI_Sendrecv_replace_enter ( void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status );
+
+void DLB_MPI_Sendrecv_replace_leave ();
+
+void DLB_MPI_Sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status );
+
+void DLB_MPI_Sendrecv_leave ();
 
 #endif //MPI_INTERFACE_H
 

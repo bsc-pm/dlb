@@ -7,12 +7,3 @@ int my_round(double x)
 	if ((x - val)>0.5) val++;
 	return val;
 }
-
-void atomic_add (int *x, int y){
-	#pragma omp atomic
-	*x += y;
-}
-
-void atomic_set (int *x, int y){
-	*x = y;
-}

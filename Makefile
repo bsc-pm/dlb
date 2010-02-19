@@ -26,12 +26,12 @@ MPICC= mpicc -cc=gcc
 export MPICC
 
 CFLAGS_xl= -qPIC -I. -I.. $(DEBUG) -qinfo=gen -qformat=all
-CFLAGS= -fPIC -I. -I.. $(DEBUG) 
+CFLAGS= -fPIC -I. -I.. $(DEBUG) -Wall -O2
 export CFLAGS
 export CFLAGS_xl
 
 LDFLAGS_xl= -qPIC -qmkshrobj 
-LDFLAGS= -fPIC -shared 
+LDFLAGS= -fPIC -shared -Wall -O2
 export LDFLAGS
 export LDFLAGS_xl
 

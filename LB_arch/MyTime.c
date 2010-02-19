@@ -19,7 +19,7 @@ int diff_time(struct timespec init, struct timespec end, struct timespec* diff){
 	return 0;
 }
 
-int add_time(struct timespec t1, struct timespec t2, struct timespec* sum){
+void add_time(struct timespec t1, struct timespec t2, struct timespec* sum){
 	sum->tv_nsec = t1.tv_nsec + t2.tv_nsec;
 
 	if (sum->tv_nsec >= 1e9){

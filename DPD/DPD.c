@@ -27,7 +27,7 @@ int DPD(long muestra, int *periode)
 {
 	void build_lista(int);
 
-	LISTA *work_ptr, work2_ptr;
+	LISTA *work_ptr;
 	DATASEQUENCE *data_ptr;
 
  
@@ -39,20 +39,14 @@ int DPD(long muestra, int *periode)
 	int max_count;
 
 	long addr;
-	long z, zz; 
+	long zz; 
  
 	static int counter;
-	static int flag_h;
-	int flag_per_det;
- 
 
-	int i,j,w;
- 
-	float average;
+	int i,w;
  
 	int limit, limit1;
-	long sum;
-	int flag, flag2;
+	int flag;
 
  
 

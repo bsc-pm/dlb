@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <mpi.h>
 
@@ -37,7 +38,6 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 	greedy=is_greedy;
 
 	char *k;
-	int i;
 	key_t key;
     	int sm_size;
     	char * shm;

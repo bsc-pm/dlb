@@ -45,7 +45,6 @@ void Init(int me, int num_procs, int node){
 	//Read Environment vars
 	char* policy;
 	char* profile;
-	char* threads;
 	prof=0;
 
 	int bindCPUS=0;

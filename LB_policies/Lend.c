@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 
 int me, node, procs;
 int finished;
@@ -96,7 +97,7 @@ void Lend_OutOfBlockingCall(void){
 /******* Auxiliar Functions Lend Balancing Policy ********/
 
 /* Creates auxiliar threads */
-int createThreads_Lend(){
+void createThreads_Lend(){
 	pthread_t t;
 	finished=0;
 
@@ -125,7 +126,7 @@ int createThreads_Lend(){
 /******* Master Thread Functions ********/
 void* masterThread_Lend(void* arg){
 	int cpus[procs], numThreads;
-	int i, aux;
+	int i;
 	//int info;
 	ProcMetrics info;
 	ProcMetrics old_info[procs];
@@ -183,7 +184,7 @@ void applyNewDistribution(int * cpus, int except){
 	}
 }
 
-int assign_lended_cpus(int* cpus, int process, ProcMetrics info[]){
+void assign_lended_cpus(int* cpus, int process, ProcMetrics info[]){
 	int i;
 	int lended;
 	double load;
@@ -233,7 +234,7 @@ int assign_lended_cpus(int* cpus, int process, ProcMetrics info[]){
 	}
 }
 
-int retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
+void retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 	if(cpus[process]!=0){
 			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
 	}else{
