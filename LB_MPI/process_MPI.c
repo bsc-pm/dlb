@@ -11,11 +11,11 @@
 int periodo; 
 int me;
 
-void before_init(){
+void before_init(void){
 	DPDWindowSize(300);
 }
 
-void after_init(){
+void after_init(void){
 	add_event(RUNTIME, 1);
 	char* mpi_per_node;
 	int num_mpis, node;
@@ -148,10 +148,10 @@ void after_mpi(mpi_call call_type){
 	add_event(RUNTIME, 0);
 }
 
-void before_finalize(){
+void before_finalize(void){
 	Finish();
 }
 
-void after_finalize(){}
+void after_finalize(void){}
 
 

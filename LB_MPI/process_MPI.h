@@ -1,11 +1,13 @@
 #ifndef PROCESS_MPI_H
 #define PROCESS_MPI_H
 
-void before_init();
-void after_init();
+#include <MPI_calls_coded.h>
+
+void before_init(void);
+void after_init(void);
 void before_mpi(int call, int buf, int dest);
-void after_mpi();
-void before_finalize();
-void after_finalize();
+void after_mpi(mpi_call call_type);
+void before_finalize(void);
+void after_finalize(void);
 
 #endif //PROCESS_MPI_H

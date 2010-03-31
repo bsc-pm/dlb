@@ -11,21 +11,21 @@ void DLB_MPI_Init_enter (int *argc, char ***argv){
 	before_init();
 }
 
-void DLB_MPI_Init_leave (){
+void DLB_MPI_Init_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Init...............\n");
 	#endif
 	after_init();
 }
 
-void DLB_MPI_Finalize_enter (){
+void DLB_MPI_Finalize_enter (void){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Finalize...............\n");
 	#endif
 	before_finalize();
 }
 
-void DLB_MPI_Finalize_leave (){
+void DLB_MPI_Finalize_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Finalize...............\n");
 	#endif
@@ -40,7 +40,7 @@ void DLB_MPI_Sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtyp
 	before_mpi(SendRecv, (intptr_t)sendbuf, dest);
 }
 
-void DLB_MPI_Sendrecv_leave (){
+void DLB_MPI_Sendrecv_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_SendRecv...............\n");
 	#endif
@@ -56,7 +56,7 @@ void DLB_MPI_Sendrecv_replace_enter ( void *buf, int count, MPI_Datatype datatyp
 	before_mpi(SendRecv, (intptr_t)buf, dest);
 }
 
-void DLB_MPI_Sendrecv_replace_leave (){
+void DLB_MPI_Sendrecv_replace_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_SendRecv_replace...............\n");
 	#endif
@@ -72,7 +72,7 @@ void DLB_MPI_Bsend_enter (void* buf, int count, MPI_Datatype datatype, int dest,
 	before_mpi(Bsend, (intptr_t)buf, dest);
 }
 
-void DLB_MPI_Bsend_leave (){
+void DLB_MPI_Bsend_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Bsend...............\n");
 	#endif
@@ -88,7 +88,7 @@ void DLB_MPI_Ssend_enter (void*buf, int count, MPI_Datatype datatype, int dest, 
 	before_mpi(Ssend, (intptr_t)buf, dest);
 }
 
-void DLB_MPI_Ssend_leave (){
+void DLB_MPI_Ssend_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Ssend...............\n");
 	#endif
@@ -104,7 +104,7 @@ void DLB_MPI_Rsend_enter (void*buf, int count, MPI_Datatype datatype, int dest, 
 	before_mpi(Rsend, (intptr_t)buf, dest);
 }
 
-void DLB_MPI_Rsend_leave (){
+void DLB_MPI_Rsend_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Rsend...............\n");
 	#endif
@@ -120,7 +120,7 @@ void DLB_MPI_Send_enter (void*buf, int count, MPI_Datatype datatype, int dest, i
 	before_mpi(Send, (intptr_t)buf, dest);
 }
 
-void DLB_MPI_Send_leave (){
+void DLB_MPI_Send_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Send...............\n");
 	#endif
@@ -136,7 +136,7 @@ void DLB_MPI_Ibsend_enter (void *buf, int count, MPI_Datatype datatype, int dest
 	before_mpi(Ibsend, (intptr_t)buf, dest);	
 }
 
-void DLB_MPI_Ibsend_leave (){
+void DLB_MPI_Ibsend_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Ibsend...............\n");
 	#endif
@@ -153,7 +153,7 @@ void DLB_MPI_Isend_enter (void*buf, int count, MPI_Datatype datatype, int dest, 
 
 }
 
-void DLB_MPI_Isend_leave (){
+void DLB_MPI_Isend_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Isend...............\n");
 	#endif
@@ -169,7 +169,7 @@ void DLB_MPI_Issend_enter (void*buf, int count, MPI_Datatype datatype, int dest,
 	before_mpi(Issend, (intptr_t)buf, dest);
 }
 
-void DLB_MPI_Issend_leave (){
+void DLB_MPI_Issend_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Issend...............\n");
 	#endif
@@ -185,7 +185,7 @@ void DLB_MPI_Irsend_enter (void*buf, int count, MPI_Datatype datatype, int dest,
 	before_mpi(Irsend, (intptr_t)buf, dest);
 }
 
-void DLB_MPI_Irsend_leave (){
+void DLB_MPI_Irsend_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Irsend...............\n");
 	#endif
@@ -201,7 +201,7 @@ void DLB_MPI_Recv_enter (void*buf, int count, MPI_Datatype datatype, int source,
 	before_mpi(Recv, (intptr_t)buf, source);
 }
 
-void DLB_MPI_Recv_leave (){
+void DLB_MPI_Recv_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Recv...............\n");
 	#endif
@@ -217,7 +217,7 @@ void DLB_MPI_Irecv_enter (void* buf, int count, MPI_Datatype datatype, int sourc
 	before_mpi(Irecv, (intptr_t)buf, source);
 }
 
-void DLB_MPI_Irecv_leave (){
+void DLB_MPI_Irecv_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Irecv...............\n");
 	#endif
@@ -233,7 +233,7 @@ void DLB_MPI_Reduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datatype
 	before_mpi(Reduce, (intptr_t)sendbuf, root);
 }
 
-void DLB_MPI_Reduce_leave (){
+void DLB_MPI_Reduce_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Reduce...............\n");
 	#endif
@@ -249,7 +249,7 @@ void DLB_MPI_Reduce_scatter_enter (void* sendbuf, void* recvbuf, int* recvcounts
 	before_mpi(Reduce_scatter, (intptr_t)sendbuf, (intptr_t)recvbuf);
 }
 
-void DLB_MPI_Reduce_scatter_leave (){
+void DLB_MPI_Reduce_scatter_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Reduce_scatter...............\n");
 	#endif
@@ -265,7 +265,7 @@ void DLB_MPI_Allreduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datat
 	before_mpi(Allreduce, (intptr_t)sendbuf, (intptr_t)recvbuf);
 }
 
-void DLB_MPI_Allreduce_leave (){
+void DLB_MPI_Allreduce_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Allreduce...............\n");
 	#endif
@@ -281,7 +281,7 @@ void DLB_MPI_Barrier_enter (MPI_Comm comm){
 	before_mpi(Barrier, 0, 0);
 }
 
-void DLB_MPI_Barrier_leave (){
+void DLB_MPI_Barrier_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Barrier...............\n");
 	#endif
@@ -297,7 +297,7 @@ void DLB_MPI_Wait_enter (MPI_Request  *request, MPI_Status   *status){
 	before_mpi(Wait, 0, 0);
 }
 
-void DLB_MPI_Wait_leave (){
+void DLB_MPI_Wait_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Wait...............\n");
 	#endif
@@ -313,7 +313,7 @@ void DLB_MPI_Waitall_enter (int count, MPI_Request *array_of_requests, MPI_Statu
 	before_mpi(Waitall, 0, 0);
 }
 
-void DLB_MPI_Waitall_leave (){
+void DLB_MPI_Waitall_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Waitall...............\n");
 	#endif
@@ -329,7 +329,7 @@ void DLB_MPI_Waitany_enter (int count, MPI_Request *requests, int* index, MPI_St
 	before_mpi(Waitany, 0, 0);
 }
 
-void DLB_MPI_Waitany_leave (){
+void DLB_MPI_Waitany_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Waitany...............\n");
 	#endif
@@ -345,7 +345,7 @@ void DLB_MPI_Waitsome_enter (int incount,MPI_Request *array_of_requests, int *ou
 	before_mpi(Waitsome, 0, 0);
 }
 
-void DLB_MPI_Waitsome_leave (){
+void DLB_MPI_Waitsome_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Waitsome...............\n");
 	#endif
@@ -362,7 +362,7 @@ void DLB_MPI_Bcast_enter (void *buffer, int count, MPI_Datatype datatype, int ro
 }
 
 
-void DLB_MPI_Bcast_leave (){
+void DLB_MPI_Bcast_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Bcast...............\n");
 	#endif
@@ -378,7 +378,7 @@ void DLB_MPI_Alltoall_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype
 	before_mpi(Alltoall, (intptr_t)sendbuf, (intptr_t)recvbuf);
 }
 
-void DLB_MPI_Alltoall_leave (){
+void DLB_MPI_Alltoall_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Alltoall...............\n");
 	#endif
@@ -394,7 +394,7 @@ void DLB_MPI_Alltoallv_enter (void *sendbuf, int *sendcnts, int *sdispls, MPI_Da
 	before_mpi(Alltoallv, (intptr_t)sendbuf, (intptr_t)recvbuf);
 }
 
-void DLB_MPI_Alltoallv_leave (){
+void DLB_MPI_Alltoallv_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Alltoallv...............\n");
 	#endif
@@ -410,7 +410,7 @@ void DLB_MPI_Allgather_enter (void *sendbuf, int sendcount, MPI_Datatype sendtyp
 	before_mpi(Allgather, (intptr_t)sendbuf, (intptr_t)recvbuf);
 }
 
-void DLB_MPI_Allgather_leave (){
+void DLB_MPI_Allgather_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Allgather...............\n");
 	#endif
@@ -426,7 +426,7 @@ void DLB_MPI_Allgatherv_enter (void *sendbuf, int sendcount, MPI_Datatype sendty
 	before_mpi(Allgatherv, (intptr_t)sendbuf, (intptr_t)recvbuf);
 }
 
-void DLB_MPI_Allgatherv_leave (){
+void DLB_MPI_Allgatherv_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Allgatherv...............\n");
 	#endif
@@ -442,7 +442,7 @@ void DLB_MPI_Gather_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, vo
 	before_mpi(Gather, (intptr_t)sendbuf, root);
 }
 
-void DLB_MPI_Gather_leave (){
+void DLB_MPI_Gather_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Gather...............\n");
 	#endif
@@ -458,7 +458,7 @@ void DLB_MPI_Gatherv_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, v
 	before_mpi(Gatherv, (intptr_t)sendbuf, root);
 }
 
-void DLB_MPI_Gatherv_leave (){
+void DLB_MPI_Gatherv_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Gatherv...............\n");
 	#endif
@@ -474,7 +474,7 @@ void DLB_MPI_Scatter_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, v
 	before_mpi(Scatter, (intptr_t)sendbuf, root);
 }
 
-void DLB_MPI_Scatter_leave (){
+void DLB_MPI_Scatter_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Scatter...............\n");
 	#endif
@@ -490,7 +490,7 @@ void DLB_MPI_Scatterv_enter (void *sendbuf, int *sendcnts, int *displs, MPI_Data
 	before_mpi(Scatterv, (intptr_t)sendbuf, root);
 }
 
-void DLB_MPI_Scatterv_leave (){
+void DLB_MPI_Scatterv_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Scatterv...............\n");
 	#endif
@@ -506,7 +506,7 @@ void DLB_MPI_Scan_enter (void *sendbuf, void *recvbuf, int count, MPI_Datatype d
 	before_mpi(Scan, (intptr_t)sendbuf, (intptr_t)recvbuf);
 }
 
-void DLB_MPI_Scan_leave (){
+void DLB_MPI_Scan_leave (void){
 	#ifdef debugInOut
 	fprintf(stderr," << MPI_Scan...............\n");
 	#endif
