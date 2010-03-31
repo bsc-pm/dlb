@@ -13,7 +13,7 @@ include Makefile.obj
 ## -DdebugLend :Prints debug information of Lend policy
 ## -DdebugLoads: Prints the computational time, MPI time and weight of each MPI
 
-DEBUG= -DdebugBasicInfo  
+DEBUG= -DdebugBasicInfo 
 export DEBUG 
 
 #################### FLAGS ##########################

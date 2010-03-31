@@ -161,7 +161,7 @@ void* masterThread_Lend(void* arg){
 			}*/
 	
 	#ifdef debugDistribution
-				aux=0;
+				int aux=0;
 				fprintf(stderr,"%d:%d - New Distribution: ", node, me);
 				for (i=0; i<procs; i++){ fprintf(stderr,"[%d]", cpus[i]);aux+=cpus[i];}
 				fprintf(stderr,"Total=%d\n", aux);

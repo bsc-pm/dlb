@@ -142,8 +142,7 @@ int acquireCpus(){
 
 //I don't care if there aren't enough cpus
 
-	if((__sync_sub_and_fetch (&(shdata->idleCpus), defaultCPUS)>0) && (greedy)){ 
-//WARNING//
+	if((__sync_sub_and_fetch (&(shdata->idleCpus), defaultCPUS)>0) && greedy){ 
 		cpus+=__sync_val_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, 0);
     	}
 
@@ -169,14 +168,16 @@ int checkIdleCpus(int myCpus){
     if ((shdata->idleCpus < 0) && (myCpus>defaultCPUS) ){
 	aux=shdata->idleCpus;
 	cpus=MIN(abs(aux), myCpus-defaultCPUS);
-
 	if(__sync_bool_compare_and_swap(&(shdata->idleCpus), aux, aux+cpus)){
 		myCpus-=cpus;
 	}
 
     //if there are idle CPUS use them
     }else if( shdata->idleCpus > 0){
-	myCpus+=__sync_val_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, 0);
+	aux=shdata->idleCpus;
+	if(__sync_bool_compare_and_swap(&(shdata->idleCpus), aux, 0)){
+		myCpus+=aux;
+	}
     }
 
 #ifdef debugSharedMem 

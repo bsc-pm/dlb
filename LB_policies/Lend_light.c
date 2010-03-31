@@ -29,7 +29,7 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	default_cpus=CPUS_NODE/procs;
 	
 	setThreads_Lend_light(default_cpus);
-	myCPUS=default_cpus;
+//	myCPUS=default_cpus;
 
 #ifdef debugBasicInfo
 	    if (me==0 && node==0){
@@ -91,6 +91,7 @@ void Lend_light_OutOfBlockingCall(void){
 
 void Lend_light_updateresources(){
 	int cpus = checkIdleCpus(myCPUS);
+
 
 	if (myCPUS!=cpus){
 #ifdef debugDistribution
