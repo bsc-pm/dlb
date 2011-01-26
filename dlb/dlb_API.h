@@ -13,6 +13,8 @@ typedef struct{
 	void (*updateresources) (void);
 } BalancePolicy;
 
+extern int use_dpd;
+
 void bind_procs2CPUS();
 
 void Init(int me, int num_procs, int node);

@@ -41,6 +41,8 @@ BalancePolicy lb_funcs;
 
 int nodeId, meId;
 
+int use_dpd;
+
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
 	char* policy;
@@ -48,6 +50,7 @@ void Init(int me, int num_procs, int node){
 	prof=0;
 
 	int bindCPUS=0;
+	use_dpd=0;
 
 	nodeId=node;
 	meId=me;
@@ -127,6 +130,8 @@ void Init(int me, int num_procs, int node){
 #ifdef debugConfig
 		fprintf(stderr, "%d:%d - Balancing policy: Weight balancing\n", node, me);
 #endif	
+		use_dpd=1;
+
 		lb_funcs.init = &Weight_Init;
 		lb_funcs.finish = &Weight_Finish;
 		lb_funcs.initIteration = &Weight_InitIteration;
@@ -141,6 +146,8 @@ void Init(int me, int num_procs, int node){
 #ifdef debugConfig
 		fprintf(stderr, "%d:%d - Balancing policy: DWB_Eco balancing\n", node, me);
 #endif	
+		use_dpd=1;
+
 		lb_funcs.init = &DWB_Eco_Init;
 		lb_funcs.finish = &DWB_Eco_Finish;
 		lb_funcs.initIteration = &DWB_Eco_InitIteration;

@@ -125,13 +125,15 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 		IntoBlockingCall();
 	}
 
-	long value = (long)((((buf>>5)^dest)<<5)|call_type);
-
-	valor_dpd=DPD(value,&periodo);
-
-	if (valor_dpd!=0){
-		FinishIteration();
-		InitIteration();
+	if(use_dpd){
+		long value = (long)((((buf>>5)^dest)<<5)|call_type);
+	
+		valor_dpd=DPD(value,&periodo);
+	
+		if (valor_dpd!=0){
+			FinishIteration();
+			InitIteration();
+		}
 	}
 	add_event(RUNTIME_EVENT, 0);
 }
