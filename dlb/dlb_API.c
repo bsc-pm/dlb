@@ -80,7 +80,7 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.outOfBlockingCall = &Lend_simple_OutOfBlockingCall;
 		lb_funcs.updateresources = &Lend_simple_updateresources;
 
-	}else if (strcasecmp(policy, "LEND")==0){
+	}else if (strcasecmp(policy, "LeWI_t")==0){
 #ifdef debugConfig
 	fprintf(stderr, "%d:%d - Balancing policy: Lend cpus\n", node, me);
 #endif	
@@ -108,10 +108,11 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.outOfBlockingCall = &LeWI_A_OutOfBlockingCall;
 		lb_funcs.updateresources = &LeWI_A_updateresources;
 
-	}else if (strcasecmp(policy, "LEND_LIGHT")==0){
+	}else if (strcasecmp(policy, "LeWI")==0){
 #ifdef debugConfig
 	fprintf(stderr, "%d:%d - Balancing policy: Lend cpus light version\n", node, me);
 #endif	
+		
 		lb_funcs.init = &Lend_light_Init;
 		lb_funcs.finish = &Lend_light_Finish;
 		lb_funcs.initIteration = &Lend_light_InitIteration;
@@ -201,7 +202,11 @@ void bind_procs2CPUS(){
         sched_getaffinity((pid_t) tid, sizeof(cpu_set), &cpu_set);
         CPU_ZERO(&cpu_set); 
 	//cada thread principal a su CPU
-	CPU_SET(meId, &cpu_set);
+	//CPU_SET(meId, &cpu_set);
+	
+	//2 threads cada uno a una cpu
+	CPU_SET(tid+meId*2, &cpu_set);
+	fprintf(stdout, "%d: Thread %d pinned to cpu %d\n", meId, tid, tid+meId*2);
 	sched_setaffinity((pid_t) tid, sizeof(cpu_set), &cpu_set); 
 }
 
@@ -286,17 +291,17 @@ void OutOfBlockingCall(void){
 
 void updateresources(){
 	if(ready){
-		add_event(RUNTIME, 4);
+		add_event(RUNTIME_EVENT, 4);
 		lb_funcs.updateresources();
-		add_event(RUNTIME, 0);
+		add_event(RUNTIME_EVENT, 0);
 	}
 }
 
 void UpdateResources(){
 	if(ready){
-		add_event(RUNTIME, 4);
+		add_event(RUNTIME_EVENT, 4);
 		lb_funcs.updateresources();
-		add_event(RUNTIME, 0);
+		add_event(RUNTIME_EVENT, 0);
 	}
 }
 

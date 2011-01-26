@@ -16,7 +16,7 @@ void before_init(void){
 }
 
 void after_init(void){
-	add_event(RUNTIME, 1);
+	add_event(RUNTIME_EVENT, 1);
 	char* mpi_per_node;
 	int num_mpis, node;
 
@@ -112,40 +112,40 @@ void after_init(void){
 
 	Init(me, num_mpis, node);
 		
-	add_event(RUNTIME, 0);
+	add_event(RUNTIME_EVENT, 0);
 }
 
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
-	add_event(RUNTIME, 2);
+	add_event(RUNTIME_EVENT, 2);
 	int valor_dpd;
 	IntoCommunication();
 
 	if (is_blocking(call_type)){
+	//if (call_type==Barrier){
 		IntoBlockingCall();
 	}
 
 	long value = (long)((((buf>>5)^dest)<<5)|call_type);
 
 	valor_dpd=DPD(value,&periodo);
-	//fprintf(stderr, "%d - Muestra %d Llamada %0x Valor DPD %d\n", me, value, call_type, valor_dpd);
 
 	if (valor_dpd!=0){
-//		fprintf(stderr, "%d - Detecto iteracion\n", me);
 		FinishIteration();
 		InitIteration();
 	}
-	add_event(RUNTIME, 0);
+	add_event(RUNTIME_EVENT, 0);
 }
 
 void after_mpi(mpi_call call_type){
-	add_event(RUNTIME, 3);
+	add_event(RUNTIME_EVENT, 3);
 
 	if (is_blocking(call_type)){
+	//if (call_type==Barrier){
 		OutOfBlockingCall();
 	}
 
 	OutOfCommunication();
-	add_event(RUNTIME, 0);
+	add_event(RUNTIME_EVENT, 0);
 }
 
 void before_finalize(void){

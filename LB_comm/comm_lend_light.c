@@ -1,5 +1,6 @@
 #include <comm.h>
 #include <LB_arch/common.h>
+#include <LB_MPI/tracing.h>
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -78,6 +79,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 #endif
 		/* idleCPUS */
                 shdata->idleCpus = 0;
+		add_event(IDLE_CPUS_EVENT, 0);
 
 		PMPI_Barrier(MPI_COMM_WORLD);
 #ifdef debugSharedMem 
@@ -123,6 +125,7 @@ int releaseCpus(int cpus){
 		fprintf(stderr,"%d:%d Releasing CPUS...\n", node, me);
 #endif
 	__sync_fetch_and_add (&(shdata->idleCpus), cpus); 
+	add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
 #ifdef debugSharedMem 
 		fprintf(stderr,"%d:%d DONE Releasing CPUS (idle %d) \n", node, me, shdata->idleCpus);
@@ -134,23 +137,24 @@ int releaseCpus(int cpus){
 Returns de number of cpus
 that are assigned
 */
-int acquireCpus(){
+int acquireCpus(int current_cpus){
 #ifdef debugSharedMem 
 		fprintf(stderr,"%d:%d Acquiring CPUS...\n", node, me);
 #endif
-  int cpus = defaultCPUS;
+  int cpus = defaultCPUS-current_cpus;
 
 //I don't care if there aren't enough cpus
 
-	if((__sync_sub_and_fetch (&(shdata->idleCpus), defaultCPUS)>0) && greedy){ 
+	if((__sync_sub_and_fetch (&(shdata->idleCpus), cpus)>0) && greedy){ 
 		cpus+=__sync_val_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, 0);
     	}
+	add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
 #ifdef debugSharedMem 
 		fprintf(stderr,"%d:%d Using %d CPUS... %d Idle \n", node, me, cpus, shdata->idleCpus);
 #endif
 
-  return cpus;
+  return cpus+current_cpus;
 }
 
 /*
@@ -179,6 +183,7 @@ int checkIdleCpus(int myCpus){
 		myCpus+=aux;
 	}
     }
+	add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
 #ifdef debugSharedMem 
 		fprintf(stderr,"%d:%d Using %d CPUS... %d Idle \n", node, me, myCpus, shdata->idleCpus);
