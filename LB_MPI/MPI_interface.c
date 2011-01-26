@@ -34,7 +34,7 @@ void DLB_MPI_Finalize_leave (void){
 
 void DLB_MPI_Sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status ){
 	#ifdef debugInOut
-	fprintf(stderr," >> MPI_Sendrecv...............\n");
+	fprintf(stderr," >> MPI_Sendrecv (to: %d - from: %d)...............\n", dest, source);
 	#endif
 	
 	before_mpi(SendRecv, (intptr_t)sendbuf, dest);
