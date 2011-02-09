@@ -13,7 +13,7 @@ struct timespec MPITime;
 void JustProf_Init(void){
 	//Read Environment vars
 	if (clock_gettime(CLOCK_REALTIME, &initAppl)<0){
-		fprintf(stderr, "clock_gettime failed\n");
+		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
 	}
 	reset(&cpuTime);
 	reset(&MPITime);
@@ -25,7 +25,7 @@ void JustProf_Finish(void){
 	double secs;
 
 	if (clock_gettime(CLOCK_REALTIME, &aux)<0){
-		fprintf(stderr, "clock_gettime failed\n");
+		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
 	}
 	
 	diff_time(initAppl, aux, &aux);
@@ -33,15 +33,15 @@ void JustProf_Finish(void){
 	secs=aux.tv_sec;
 	secs+= (aux.tv_nsec) / 1e9;
 
-	fprintf(stdout, "Application -> %.4f secs\n", secs);
+	fprintf(stdout, "DLB: Application -> %.4f secs\n", secs);
 }
 
 void JustProf_InitIteration(void){
 	if (clock_gettime(CLOCK_REALTIME, &initIter)<0){
-		fprintf(stderr, "clock_gettime failed\n");
+		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
 	}
 	iterNum++;
-	fprintf(stdout, "Iteration %d detected\n", iterNum);
+	fprintf(stdout, "DLB: Iteration %d detected\n", iterNum);
 }
 
 void JustProf_FinishIteration(void){
@@ -49,14 +49,14 @@ void JustProf_FinishIteration(void){
 	double secs;
 
 	if (clock_gettime(CLOCK_REALTIME, &aux)<0){
-		fprintf(stderr, "clock_gettime failed\n");
+		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
 	}
 	
 	diff_time(initIter, aux, &aux);
 
 	secs=aux.tv_sec;
 	secs+= (aux.tv_nsec) / 1e9;
-	fprintf(stdout, "Iteration %d -> %.4f secs\n", iterNum, secs);
+	fprintf(stdout, "DLB: Iteration %d -> %.4f secs\n", iterNum, secs);
 	
 }
 

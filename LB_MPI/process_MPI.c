@@ -10,6 +10,7 @@
 
 int periodo; 
 int me;
+int just_barrier;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -20,22 +21,27 @@ void after_init(void){
 	char* mpi_per_node;
 	int num_mpis, node;
 
+	just_barrier=0;
+	if ((getenv("LB_JUST_BARRIER"))==NULL){
+		just_barrier=0;
+	}else{
+		just_barrier=1;
+		fprintf(stdout, "DLB: Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n");
+	}
+	
 	if ((mpi_per_node=getenv("LB_MPIxNODE"))==NULL){
-			fprintf(stdout,"PANIC: LB_MPIxNODE must be defined\n");
+			fprintf(stdout,"DLB PANIC: LB_MPIxNODE must be defined\n");
 			exit(1);
 	}
 	num_mpis= atoi(mpi_per_node);	
 	MPI_Comm_rank(MPI_COMM_WORLD,&me);
+fprintf(stderr, "%d: I am %d\n", getpid(), me);
 
-	//Setting me and nodeId for MPIs
+/*	//Setting me and nodeId for MPIs
 	char nodeId[50];
 	int procs;
 	MPI_Comm_size (MPI_COMM_WORLD, &procs); 
 	char recvData[procs][50];
-
-	/*if (me==0){
-		recvData=malloc(sizeof(char)*50*procs);
-	}*/
 
 	if (gethostname(nodeId, 50)<0){
 		perror("gethostname");
@@ -100,14 +106,14 @@ void after_init(void){
 		PMPI_Recv(&data, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, 0);
 		me=data[0];
 		node=data[1];
-	}
+	}*/
 
 	/////////////////////////////////////
-	//node = me/num_mpis;
-	//me = me % num_mpis;
+	node = me/num_mpis;
+	me = me % num_mpis;
 	/////////////////////////////////////
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - mpi_per_node: %d\n", node, me, num_mpis);
+	fprintf(stderr, "DLB: (%d:%d) - MPIs per node: %d\n", node, me, num_mpis);
 #endif	
 
 	Init(me, num_mpis, node);
@@ -120,8 +126,11 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 	int valor_dpd;
 	IntoCommunication();
 
-	if (is_blocking(call_type)){
-	//if (call_type==Barrier){
+	if(just_barrier){
+		if (call_type==Barrier){
+			IntoBlockingCall();
+		}
+	}else if (is_blocking(call_type)){
 		IntoBlockingCall();
 	}
 
@@ -141,8 +150,11 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 void after_mpi(mpi_call call_type){
 	add_event(RUNTIME_EVENT, 3);
 
-	if (is_blocking(call_type)){
-	//if (call_type==Barrier){
+	if(just_barrier){
+		if (call_type==Barrier){
+			OutOfBlockingCall();
+		}
+	}else if (is_blocking(call_type)){
 		OutOfBlockingCall();
 	}
 

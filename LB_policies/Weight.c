@@ -18,7 +18,7 @@ ProcMetrics localMetrics;
 
 void Weight_Init(int meId, int num_procs, int nodeId){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Weight Init\n", nodeId, meId);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Weight Init\n", nodeId, meId);
 #endif
 	me = meId;
 	node = nodeId;
@@ -60,7 +60,7 @@ void createThreads_Weight(){
 	finished=0;
 
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Creating Threads\n", node, me);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Creating Threads\n", node, me);
 #endif
 
 	threadsUsed=0;
@@ -71,13 +71,13 @@ void createThreads_Weight(){
 
 	if (me==0){ 
 		if (pthread_create(&t,NULL,masterThread_Weight,NULL)>0){
-			perror("createThreads_Weight:Error in pthread_create master\n");
+			perror("DLB PANIC: createThreads_Weight:Error in pthread_create master\n");
 			exit(1);
 		}
 	}
 
 	if(pthread_create(&t,NULL,slaveThread_Weight,NULL)>0){
-		perror("createThreads_Weight:Error in pthread_create slave\n");
+		perror("DLB PANIC: createThreads_Weight:Error in pthread_create slave\n");
 		exit(1);
 	}
 	
@@ -91,7 +91,7 @@ void* masterThread_Weight(void* arg){
 	int i;
 
 #ifdef debugConfig
-	fprintf(stderr,"%d:%d - Creating Master thread\n", node, me);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Master thread\n", node, me);
 #endif	
 
 	StartMasterComm();
@@ -99,7 +99,7 @@ void* masterThread_Weight(void* arg){
 	ProcMetrics currMetrics[procs];
 
 	if (sem_init(&sem_localMetrics,0,0)<0){
-		perror("Initializing metrics semaphore\n");
+		perror("DLB PANIC: Initializing metrics semaphore\n");
 		exit(1);
 	}
 
@@ -153,12 +153,12 @@ void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]){
 	for (i=0; i<procs; i++){
 		weights[i]=(double)(LM[i].secsComp * (double)LM[i].cpus *(double)100/(double)total_time);
 #ifdef debugLoads
-	fprintf(stderr,"[Process %d] Comp. time: %f.4 - cpus: %d - Load: %f.4\n", i, LM[i].secsComp, LM[i].cpus, weights[i]);
+	fprintf(stderr,"DLB DEBUG: [Process %d] Comp. time: %f.4 - cpus: %d - Load: %f.4\n", i, LM[i].secsComp, LM[i].cpus, weights[i]);
 #endif
 	}
 
 #ifdef debugDistribution
-	fprintf(stderr,"New Distribution: ");
+	fprintf(stderr,"DLB DEBUG: New Distribution: ");
 #endif
 	//Calculate new distribution
 	for (i=0; i<procs; i++){
@@ -182,9 +182,9 @@ void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]){
 	fprintf(stderr,"\n");
 #endif
 	if (total_cpus>CPUS_NODE){
-		fprintf(stderr,"WARNING using more cpus than the ones available in the node (%d>%d)\n", total_cpus, CPUS_NODE);
+		fprintf(stderr,"DLB WARNING: Using more cpus than the ones available in the node (%d>%d)\n", total_cpus, CPUS_NODE);
 	}else if(total_cpus<CPUS_NODE){
-		fprintf(stderr,"WARNING using less cpus than the ones available in the node (%d<%d)\n", total_cpus, CPUS_NODE);
+		fprintf(stderr,"DLB WARNING: Using less cpus than the ones available in the node (%d<%d)\n", total_cpus, CPUS_NODE);
 	}
 }
 
@@ -202,12 +202,12 @@ void* slaveThread_Weight(void* arg){
 	ProcMetrics metr;
 
 	if (sem_init(&sem_localMetrics,0,0)<0){
-		perror("Initializing metrics semaphore\n");
+		perror("DLB PANIC: Initializing metrics semaphore\n");
 		exit(1);
 	}
 
 #ifdef debugConfig
-	fprintf(stderr,"%d:%d - Creating Slave thread\n", node, me);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Slave thread\n", node, me);
 #endif	
 	StartSlaveComm();
 
@@ -222,7 +222,7 @@ void* slaveThread_Weight(void* arg){
 void Weight_updateresources(){
 	if (threadsUsed!=threads2use){
 #ifdef debugDistribution
-		fprintf(stderr,"%d:%d - Using %d cpus\n", node, me, threads2use);
+		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, threads2use);
 #endif
 		update_threads(threads2use);
 		threadsUsed=threads2use;

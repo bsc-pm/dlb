@@ -57,7 +57,7 @@ void Init(int me, int num_procs, int node){
 	iterNum=0;
 
 	if ((policy=getenv("LB_POLICY"))==NULL){
-		fprintf(stderr,"PANIC: LB_POLICY must be defined\n");
+		fprintf(stderr,"DLB PANIC: LB_POLICY must be defined\n");
 		exit(1);
 	}
 
@@ -71,7 +71,7 @@ void Init(int me, int num_procs, int node){
 
 	if (strcasecmp(policy, "LEND_simple")==0){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Balancing policy: Lend_simple cpus\n", node, me);
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Lend_simple cpus\n", node, me);
 #endif	
 		lb_funcs.init = &Lend_simple_Init;
 		lb_funcs.finish = &Lend_simple_Finish;
@@ -85,7 +85,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "LeWI_t")==0){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Balancing policy: Lend cpus\n", node, me);
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Lend cpus\n", node, me);
 #endif	
 		lb_funcs.init = &Lend_Init;
 		lb_funcs.finish = &Lend_Finish;
@@ -99,7 +99,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "LeWI_A")==0){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Balancing policy: LeWI_Active \n", node, me);
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI_Active \n", node, me);
 #endif	
 		lb_funcs.init = &LeWI_A_Init;
 		lb_funcs.finish = &LeWI_A_Finish;
@@ -113,7 +113,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "LeWI")==0){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Balancing policy: Lend cpus light version\n", node, me);
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Lend cpus light version\n", node, me);
 #endif	
 		
 		lb_funcs.init = &Lend_light_Init;
@@ -128,7 +128,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "WEIGHT")==0){
 #ifdef debugConfig
-		fprintf(stderr, "%d:%d - Balancing policy: Weight balancing\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Weight balancing\n", node, me);
 #endif	
 		use_dpd=1;
 
@@ -144,7 +144,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "DWB_Eco")==0){
 #ifdef debugConfig
-		fprintf(stderr, "%d:%d - Balancing policy: DWB_Eco balancing\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: DWB_Eco balancing\n", node, me);
 #endif	
 		use_dpd=1;
 
@@ -160,7 +160,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
-		fprintf(stderr, "%d:%d - No Load balancing\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", node, me);
 #endif	
 		lb_funcs.init = &dummyInit;
 		lb_funcs.finish = &dummyFunc;
@@ -172,18 +172,18 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.outOfBlockingCall = &dummyFunc;
 		lb_funcs.updateresources = &dummyFunc;
 	}else{
-		fprintf(stderr,"PANIC: Unknown policy: %s\n", policy);
+		fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
 		exit(1);
 	}
 
 #ifdef debugBasicInfo
 	if (me==0 && node==0){
-		fprintf(stdout, "Balancing policy: %s balancing\n", policy);
-		fprintf(stdout, "MPI processes per node: %d \n", num_procs);
-		fprintf(stdout, "Each MPI process starts with %d threads\n", CPUS_NODE/num_procs);
+		fprintf(stdout, "DLB: Balancing policy: %s balancing\n", policy);
+		fprintf(stdout, "DLB: MPI processes per node: %d \n", num_procs);
+		fprintf(stdout, "DLB: Each MPI process starts with %d threads\n", CPUS_NODE/num_procs);
 		
 		if (prof){
-			fprintf(stdout, "Profiling of application activated\n");
+			fprintf(stdout, "DLB: Profiling of application active\n");
 		}
 	}
 #endif
@@ -213,7 +213,7 @@ void bind_procs2CPUS(){
 	
 	//2 threads cada uno a una cpu
 	CPU_SET(tid+meId*2, &cpu_set);
-	fprintf(stdout, "%d: Thread %d pinned to cpu %d\n", meId, tid, tid+meId*2);
+	fprintf(stdout, "DLB: %d: Thread %d pinned to cpu %d\n", meId, tid, tid+meId*2);
 	sched_setaffinity((pid_t) tid, sizeof(cpu_set), &cpu_set); 
 }
 
@@ -232,11 +232,11 @@ void Finish(void){
 		diff_time(initAppl, aux, &aux);
 		
 		if (meId==0 && nodeId==0){
-			fprintf(stdout, "%d:%d - Application time: %.4f\n", nodeId, meId, to_secs(aux));
-			fprintf(stdout, "%d:%d - Iterations detected: %d\n", nodeId, meId, iterNum);
+			fprintf(stdout, "DLB: Application time: %.4f\n", to_secs(aux));
+			fprintf(stdout, "DLB: Iterations detected: %d\n", iterNum);
 		}
-		fprintf(stdout, "%d:%d - CPU time: %.4f\n", nodeId, meId, to_secs(CpuTime));
-		fprintf(stdout, "%d:%d - MPI time: %.4f\n", nodeId, meId, to_secs(MPITime));
+		fprintf(stdout, "DLB: (%d:%d) - CPU time: %.4f\n", nodeId, meId, to_secs(CpuTime));
+		fprintf(stdout, "DLB: (%d:%d) - MPI time: %.4f\n", nodeId, meId, to_secs(MPITime));
 	}
 }
 

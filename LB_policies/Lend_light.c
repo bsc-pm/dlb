@@ -26,7 +26,7 @@ int block;
 
 void Lend_light_Init(int meId, int num_procs, int nodeId){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Lend_light Init\n", nodeId, meId);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Lend_light Init\n", nodeId, meId);
 #endif
 	char* policy_greedy;
 	char* blocking;
@@ -40,7 +40,7 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 
 #ifdef debugBasicInfo
 	    if (me==0 && node==0){
-	      fprintf(stdout, "Default cpus per process: %d\n", default_cpus);
+	      fprintf(stdout, "DLB: Default cpus per process: %d\n", default_cpus);
 	    }
 #endif
 
@@ -50,7 +50,7 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	    greedy=1;
 #ifdef debugBasicInfo
 	    if (me==0 && node==0){
-	      fprintf(stdout, "Policy mode GREEDY\n");
+	      fprintf(stdout, "DLB: Policy mode GREEDY\n");
 	    }
 #endif
 	    }
@@ -62,26 +62,26 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 		if (strcasecmp(blocking, "blocking")==0){
 			block=MPI_BLOCKING;
 #ifdef debugBasicInfo
-			fprintf(stdout, "%d:%d - MPI blocking mode set to blocking (I will lend all the resources)\n", node, me);
+			fprintf(stdout, "DLB: (%d:%d) - MPI blocking mode set to blocking (I will lend all the resources)\n", node, me);
 #endif	
 		}
 	}
 	if(block==_1CPU){
 #ifdef debugBasicInfo 
-		fprintf(stderr, "%d:%d - MPI blocking mode NOT set to blocking\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - MPI blocking mode NOT set to blocking\n", node, me);
 #endif	
 		if ((blocking=getenv("LB_LEND_MODE"))!=NULL){
 			if (strcasecmp(blocking, "PRIO")==0){
 				block=PRIO;
 #ifdef debugBasicInfo 
-				fprintf(stderr, "%d:%d - LEND mode set to PRIO. I will decrease priority when in an MPI call\n", node, me);
+				fprintf(stderr, "DLB (%d:%d) - LEND mode set to PRIO. I will decrease priority when in an MPI call\n", node, me);
 #endif	
 			}
 		}
 	}
 #ifdef debugBasicInfo 
 	if (block==_1CPU)
-		fprintf(stderr, "%d:%d - LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n", node, me);
 #endif	
 
 	//Initialize shared memory
@@ -105,13 +105,13 @@ void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs){
 	int prio;
 	if (block==_1CPU){
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - LENDING %d cpus\n", node, me, myCPUS-1);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, myCPUS-1);
 #endif
 		releaseCpus(myCPUS-1);
 		setThreads_Lend_light(1);
 	}else{
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - LENDING %d cpus\n", node, me, myCPUS);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, myCPUS);
 #endif
 		releaseCpus(myCPUS);
 		setThreads_Lend_light(0);
@@ -136,7 +136,7 @@ void Lend_light_OutOfBlockingCall(void){
 	int cpus=acquireCpus(myCPUS);
 	setThreads_Lend_light(cpus);
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - ACQUIRING %d cpus\n", node, me, cpus);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", node, me, cpus);
 #endif
 
 }
@@ -149,7 +149,7 @@ void Lend_light_updateresources(){
 
 	if (myCPUS!=cpus){
 #ifdef debugDistribution
-		fprintf(stderr,"%d:%d - Using %d cpus\n", node, me, cpus);
+		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, cpus);
 #endif
 		 setThreads_Lend_light(cpus);
 	}
@@ -159,7 +159,7 @@ void setThreads_Lend_light(int numThreads){
 
 	if (myCPUS!=numThreads){
 #ifdef debugDistribution
-		fprintf(stderr,"%d:%d - Using %d cpus\n", node, me, numThreads);
+		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, numThreads);
 #endif
 		update_threads(numThreads);
 		myCPUS=numThreads;

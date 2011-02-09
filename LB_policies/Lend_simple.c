@@ -15,7 +15,7 @@ int idleCpus;
 
 void Lend_simple_Init(int meId, int num_procs, int nodeId){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Lend Init\n", nodeId, meId);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Lend Init\n", nodeId, meId);
 #endif
 	me = meId;
 	node = nodeId;
@@ -44,7 +44,7 @@ void Lend_simple_OutOfCommunication(void){
 void Lend_simple_IntoBlockingCall(double cpuSecs, double MPISecs){
 	ProcMetrics info;
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - LENDING %d cpus\n", node, me, threadsUsed);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, threadsUsed);
 #endif
 	info.action = LEND_CPUS;
 	info.cpus=threadsUsed;
@@ -68,7 +68,7 @@ void Lend_simple_OutOfBlockingCall(void){
 	threads2use=CPUS_NODE/procs;
 	Lend_simple_updateresources();
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - ACQUIRING %d cpus\n", node, me, threadsUsed);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", node, me, threadsUsed);
 #endif
 }
 
@@ -82,19 +82,19 @@ void createThreads_Lend_simple(){
 	threads2use=CPUS_NODE/procs;
 
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Creating Threads\n", node, me);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Creating Threads\n", node, me);
 #endif
 	LoadCommConfig(procs, me, node);
 
 	if (me==0){ 
 		if (pthread_create(&t,NULL,masterThread_Lend_simple,NULL)>0){
-			perror("createThreads:Error in pthread_create master\n");
+			perror("DLB PANIC: createThreads:Error in pthread_create master\n");
 			exit(1);
 		}
 	}
 
 	if (pthread_create(&t,NULL,slaveThread_Lend_simple,NULL)>0){
-		perror("createThreads:Error in pthread_create slave\n");
+		perror("DLB PANIC: createThreads:Error in pthread_create slave\n");
 		exit(1);
 	}
 }
@@ -108,7 +108,7 @@ void* masterThread_Lend_simple(void* arg){
 	ProcMetrics info;
 
 #ifdef debugConfig
-	fprintf(stderr,"%d:%d - Creating Master thread\n", node, me);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Master thread\n", node, me);
 #endif	
 
 	StartMasterComm();
@@ -127,7 +127,7 @@ void* masterThread_Lend_simple(void* arg){
 		//applyNewDistribution(cpus, i);
 
 #ifdef debugDistribution
-			fprintf(stderr,"%d:%d - New Distribution: ", node, me);
+			fprintf(stderr,"DLB DEBUG: (%d:%d) - New Distribution: ", node, me);
 			for (i=0; i<procs; i++) fprintf(stderr,"[%d]", cpus[i]);
 			fprintf(stderr,"\n");
 #endif
@@ -141,7 +141,7 @@ void* masterThread_Lend_simple(void* arg){
 void applyNewDistribution_Lend_simple(int * cpus, int except){
 	int i;
 #ifdef debugDistribution
-	fprintf(stderr,"%d:%d - New Distribution: ", node, me);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - New Distribution: ", node, me);
 	for (i=0; i<procs; i++) fprintf(stderr,"[%d]", cpus[i]);
 	fprintf(stderr,"\n");
 #endif
@@ -160,7 +160,7 @@ int CalculateNewDistribution_Lend_simple(int* cpus, int process, ProcMetrics inf
 
 	if (info.action == LEND_CPUS){
 		if(cpus[process]==0){
-			fprintf(stderr,"%d:%d - WARNING proces %d trying to Lend cpus when does not have any\n", node, me, process);
+			fprintf(stderr,"DLB WARNING: (%d:%d) - Process %d trying to Lend cpus when does not have any\n", node, me, process);
 		}else{
 			lended=cpus[process];
 
@@ -179,7 +179,7 @@ int CalculateNewDistribution_Lend_simple(int* cpus, int process, ProcMetrics inf
 		}
 	}else{
 		if(cpus[process]!=0){
-			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
+			fprintf(stderr,"DLB WARNING: (%d:%d) - Process %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
 		}else{
 			lended=0;
 			i= (process+1)%procs;
@@ -214,7 +214,7 @@ void* slaveThread_Lend_simple(void* arg){
 	int cpus;
 
 #ifdef debugConfig
-	fprintf(stderr,"%d:%d - Creating Slave thread\n", node, me);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Slave thread\n", node, me);
 #endif	
 	StartSlaveComm();
 	threadsUsed=CPUS_NODE/procs;
@@ -228,7 +228,7 @@ void* slaveThread_Lend_simple(void* arg){
 void Lend_simple_updateresources(){
 	if (threadsUsed!=threads2use){
 #ifdef debugDistribution
-		fprintf(stderr,"%d:%d - Using %d cpus\n", node, me, threads2use);
+		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, threads2use);
 #endif
 		update_threads(threads2use);
 		threadsUsed=threads2use;

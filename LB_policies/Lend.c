@@ -20,7 +20,7 @@ int default_cpus;
 
 void Lend_Init(int meId, int num_procs, int nodeId){
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Lend Init\n", nodeId, meId);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Lend Init\n", nodeId, meId);
 #endif
 	char* policy_greedy;
 
@@ -30,7 +30,7 @@ void Lend_Init(int meId, int num_procs, int nodeId){
 	default_cpus=CPUS_NODE/procs;
 #ifdef debugBasicInfo
 	    if (me==0 && node==0){
-	      fprintf(stdout, "Default cpus per process: %d\n", default_cpus);
+	      fprintf(stdout, "DLB: Default cpus per process: %d\n", default_cpus);
 	    }
 #endif
 
@@ -40,7 +40,7 @@ void Lend_Init(int meId, int num_procs, int nodeId){
 	    greedy=1;
 #ifdef debugBasicInfo
 	    if (me==0 && node==0){
-	      fprintf(stdout, "Policy mode GREEDY\n");
+	      fprintf(stdout, "DLB: Policy mode GREEDY\n");
 	    }
 #endif
 	    }
@@ -69,7 +69,7 @@ void Lend_OutOfCommunication(void){
 void Lend_IntoBlockingCall(double cpuSecs, double MPISecs){
 	ProcMetrics info;
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - LENDING %d cpus\n", node, me, threadsUsed);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, threadsUsed);
 #endif
 	info.action = LEND_CPUS;
 	info.cpus=threadsUsed;
@@ -84,7 +84,7 @@ void Lend_OutOfBlockingCall(void){
 	ProcMetrics info;
 
 #ifdef debugLend
-	fprintf(stderr, "%d:%d - ACQUIRING %d cpus\n", node, me, threadsUsed);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", node, me, threadsUsed);
 #endif
 
 	info.action = ACQUIRE_CPUS;
@@ -102,13 +102,13 @@ void createThreads_Lend(){
 	finished=0;
 
 #ifdef debugConfig
-	fprintf(stderr, "%d:%d - Creating Threads\n", node, me);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Creating Threads\n", node, me);
 #endif
 	LoadCommConfig(procs, me, node);
 
 	if (me==0){ 
 		if (pthread_create(&t,NULL,masterThread_Lend,NULL)>0){
-			perror("createThreads:Error in pthread_create master\n");
+			perror("DLB PANIC: createThreads:Error in pthread_create master\n");
 			exit(1);
 		}
 	}
@@ -132,7 +132,7 @@ void* masterThread_Lend(void* arg){
 	ProcMetrics old_info[procs];
 
 #ifdef debugConfig
-	fprintf(stderr,"%d:%d - Creating Master thread\n", node, me);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Master thread\n", node, me);
 #endif	
 
 	StartMasterComm();
@@ -162,7 +162,7 @@ void* masterThread_Lend(void* arg){
 	
 	#ifdef debugDistribution
 				int aux=0;
-				fprintf(stderr,"%d:%d - New Distribution: ", node, me);
+				fprintf(stderr,"DLB DEBUG: (%d:%d) - New Distribution: ", node, me);
 				for (i=0; i<procs; i++){ fprintf(stderr,"[%d]", cpus[i]);aux+=cpus[i];}
 				fprintf(stderr,"Total=%d\n", aux);
 	#endif
@@ -173,7 +173,7 @@ void* masterThread_Lend(void* arg){
 void applyNewDistribution(int * cpus, int except){
 	int i;
 #ifdef debugDistribution
-	fprintf(stderr,"%d:%d - New Distribution: ", node, me);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - New Distribution: ", node, me);
 	for (i=0; i<procs; i++) fprintf(stderr,"[%d]", cpus[i]);
 	fprintf(stderr,"\n");
 #endif
@@ -192,7 +192,7 @@ void assign_lended_cpus(int* cpus, int process, ProcMetrics info[]){
 	int loadedProc;
 
 	if(cpus[process]==0){
-		fprintf(stderr,"%d:%d - WARNING proces %d trying to Lend cpus when does not have any\n", node, me, process);
+		fprintf(stderr,"DLB WARNING: (%d:%d) - Proces %d trying to Lend cpus when does not have any\n", node, me, process);
 	}else{
 		lended=cpus[process];
 
@@ -222,7 +222,7 @@ void assign_lended_cpus(int* cpus, int process, ProcMetrics info[]){
 				lended--;
 				WriteToSlave(loadedProc,(char*) &cpus[loadedProc] , sizeof(int));
 #ifdef debugLend
-	fprintf(stderr,"%d:%d - Process %d LENDED %d cpus to process %d\n", node, me, process, 1, loadedProc);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Process %d LENDED %d cpus to process %d\n", node, me, process, 1, loadedProc);
 #endif
 			}else{
 				idleCpus+=lended;
@@ -236,7 +236,7 @@ void assign_lended_cpus(int* cpus, int process, ProcMetrics info[]){
 
 void retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 	if(cpus[process]!=0){
-			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
+			fprintf(stderr,"DLB WARNING: (%d:%d) - Process %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
 	}else{
 		int assigned=0;
 		int missing=default_cpus;
@@ -251,12 +251,12 @@ void retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 			}
 			missing=0;
 #ifdef debugLend
-		fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, default_cpus);
+		fprintf(stderr,"DLB DEBUG: (%d:%d) - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, default_cpus);
 #endif
 		}else{
 
 #ifdef debugLend
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, idleCpus);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, idleCpus);
 #endif
 			missing=missing-idleCpus;
 			idleCpus=0;
@@ -267,13 +267,13 @@ void retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 				if (cpus[i]>default_cpus){
 					if (missing>(cpus[i]-default_cpus)){
 #ifdef debugLend
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-default_cpus, i);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-default_cpus, i);
 #endif
 						missing=missing-(cpus[i]-default_cpus);
 						cpus[i]=default_cpus;
 					}else{
 #ifdef debugLend
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, missing, i);
+	fprintf(stderr,"DLB DEBUG: (%d:%d) - Process %d ACQUIRED %d cpus from %d\n", node, me, process, missing, i);
 #endif
 						cpus[i]=cpus[i]-missing;
 						missing=0;
@@ -285,7 +285,7 @@ void retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 			assigned=default_cpus;
 		}
 		if(missing!=0){
-			fprintf(stderr,"%d:%d - WARNING proces %d tried to retrieve %d cpus and there are not enough available\n", node, me, process, default_cpus);
+			fprintf(stderr,"DLB WARNING: (%d:%d) - Process %d tried to retrieve %d cpus and there are not enough available\n", node, me, process, default_cpus);
 		}
 		cpus[process]=assigned;
 		WriteToSlave(process,(char*) &cpus[process] , sizeof(int));
@@ -298,7 +298,7 @@ void Lend_updateresources(){
 
 	if (threadsUsed!=cpus){
 #ifdef debugDistribution
-		fprintf(stderr,"%d:%d - Using %d cpus\n", node, me, cpus);
+		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, cpus);
 #endif
 		update_threads(cpus);
 		threadsUsed=cpus;
@@ -309,7 +309,7 @@ void setThreads_Lend(int numThreads){
 
 	if (threadsUsed!=numThreads){
 #ifdef debugDistribution
-		fprintf(stderr,"%d:%d - Using %d cpus\n", node, me, numThreads);
+		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, numThreads);
 #endif
 		update_threads(numThreads);
 		threadsUsed=numThreads;
