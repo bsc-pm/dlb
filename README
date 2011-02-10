@@ -56,6 +56,9 @@ dlb/
 3 EXECUTING THE LIBRARY
 ------------------------------------------------------------
 
+Environment Variables:
+- LB_JUST_BARRIER: Set it if you just want to intercept barriers. 
+
 ------------------------------------------------------------
 4 LOAD BALANCING POLICIES IMPLEMENTED
 ------------------------------------------------------------

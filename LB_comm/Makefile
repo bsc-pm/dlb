@@ -1,8 +1,14 @@
+%32-mpi2.o : %.c
+	$(CC) $(CFLAGS) $(FLAGS32) $(MPI2INCLUDE) -c -o $@ $<
+
+%-mpi2.o : %.c
+	$(CC) $(CFLAGS) $(FLAGS64) $(MPI2INCLUDE) -c -o $@ $<
+
 %32.o : %.c
-	$(MPICC) $(CFLAGS) $(FLAGS32) -c -o $@ $<
+	$(CC) $(CFLAGS) $(FLAGS32) $(MPIINCLUDE) -c -o $@ $<
 
 %.o : %.c
-	$(MPICC) $(CFLAGS) $(FLAGS64) -c -o $@ $<
+	$(CC) $(CFLAGS) $(FLAGS64) $(MPIINCLUDE) -c -o $@ $<
 
 
 clean:

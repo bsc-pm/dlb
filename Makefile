@@ -22,9 +22,6 @@ CC= xlc_r
 CC= gcc 
 export CC
 
-MPICC= mpicc -cc=gcc
-export MPICC
-
 CFLAGS_xl= -qPIC -I. -I.. $(DEBUG) -qinfo=gen -qformat=all
 CFLAGS= -fPIC -I. -I.. $(DEBUG) -Wall -O2
 export CFLAGS
@@ -46,10 +43,19 @@ FLAGS64= -m64
 export FLAGS64
 export FLAGS64_xl
 
+#MPIFLAGS=-DUSE_STDARG -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_UNISTD_H=1 -DHAVE_STDARG_H=1 -DUSE_STDARG=1 -DMALLOC_RET_VOID=1 -L/opt/osshpc/mpich-mx/64/lib/shared -L/opt/osshpc/mpich-mx/64/lib -lmpich -L/opt/osshpc/mx/lib64 -L/opt/osshpc/mx/lib/ -lmyriexpress -lpthread -lrt
+
+#MPI2FLAGS=-L/opt/osshpc/mx/lib64/ -L/gpfs/apps/MPICH2/slurm/64/lib -I/gpfs/apps/MPICH2/mx/1.0.8p1..3/64/include -L/gpfs/apps/MPICH2/mx/1.0.8p1..3/64/lib -lmpichf90 -lmpich -lpmi -lmyriexpress -lrt
+
+MPIINCLUDE=-I/opt/osshpc/mpich-mx/64/include
+MPI2INCLUDE=-I/gpfs/apps/MPICH2/mx/default/64/include/
+export MPIINCLUDE
+export MPI2INCLUDE
 
 #################### RULES ##########################
 
-all: lib32 lib64
+all: lib32 lib64 libmpi2-64 
+#libmpi2-32
 
 
 dlb: lib/32/libdlb.so lib/64/libdlb.so
@@ -64,23 +70,48 @@ lib32: lib/32/libdlb.so lib/32/libTdlb.so lib/32/libUpdRes.so
 
 lib64: lib/64/libdlb.so lib/64/libTdlb.so lib/64/libUpdRes.so
 
+libmpi2-64: lib/mpi2-64/libdlb.so lib/mpi2-64/libTdlb.so lib/64/libUpdRes.so 
+
+libmpi2-32: lib/mpi2-32/libdlb.so lib/mpi2-32/libTdlb.so lib/32/libUpdRes.so 
+
 
 #------- 64bits library ----------#
-lib/64/libdlb.so: $(DEPENDS) $(OBJ) $(INTERCEPT_OBJ)
-	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libdlb.so $(OBJ) $(INTERCEPT_OBJ)
+lib/64/libdlb.so: $(DEPENDS) $(OBJ) $(OBJ_MPI) $(INTERCEPT_OBJ)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libdlb.so $(OBJ) $(OBJ_MPI) $(INTERCEPT_OBJ)
 	
 
-lib/64/libTdlb.so: $(DEPENDS) $(OBJ)
-	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libTdlb.so $(OBJ)
+lib/64/libTdlb.so: $(DEPENDS) $(OBJ) $(OBJ_MPI)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libTdlb.so $(OBJ) $(OBJ_MPI)
 
 #------- 32bits library ----------#
-lib/32/libdlb.so: $(DEPENDS) $(OBJ32) $(INTERCEPT_OBJ32)
-	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/32/libdlb.so $(OBJ32) $(INTERCEPT_OBJ32)
+lib/32/libdlb.so: $(DEPENDS) $(OBJ32) $(OBJ32_MPI) $(INTERCEPT_OBJ32)
+	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/32/libdlb.so $(OBJ32) $(OBJ32_MPI) $(INTERCEPT_OBJ32)
 	
 
-lib/32/libTdlb.so: $(DEPENDS) $(OBJ)
-	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/32/libTdlb.so $(OBJ32)
+lib/32/libTdlb.so: $(DEPENDS) $(OBJ) $(OBJ32_MPI)
+	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/32/libTdlb.so $(OBJ32) $(OBJ32_MPI)
 
+#------- 64bits library for MPICH2 ----------#
+lib/mpi2-64/libdlb.so: $(DEPENDS) $(OBJ) $(OBJ_MPI2) $(INTERCEPT_OBJ_MPI2)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/mpi2-64/libdlb.so $(OBJ) $(OBJ_MPI2) $(INTERCEPT_OBJ_MPI2)
+	
+lib/mpi2-64/libTdlb.so: $(DEPENDS) $(OBJ) $(OBJ_MPI2)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/mpi2-64/libTdlb.so $(OBJ) $(OBJ_MPI2)
+
+#------- 32bits library for MPICH2 ----------#
+lib/mpi2-32/libdlb.so: $(DEPENDS) $(OBJ32) $(OBJ32_MPI2) $(INTERCEPT_OBJ32_MPI2)
+	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/mpi2-32/libdlb.so $(OBJ32) $(OBJ32_MPI2) $(INTERCEPT_OBJ32_MPI2)
+	
+lib/mpi2-32/libTdlb.so: $(DEPENDS) $(OBJ32) $(OBJ32_MPI2)
+	$(CC) $(LDFLAGS) $(FLAGS32) -o lib/mpi2-32/libTdlb.so $(OBJ32) $(OBJ32_MPI2)
+
+
+
+%32-mpi2.o: %.c
+	$(MAKE) -C `dirname $@` `basename $@`
+
+%-mpi2.o : %.c
+	$(MAKE) -C `dirname $@` `basename $@`
 
 %32.o: %.c
 	$(MAKE) -C `dirname $@` `basename $@`

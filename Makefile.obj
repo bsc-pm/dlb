@@ -7,24 +7,36 @@ SUB_DIRS= LB_MPI \
     LB_comm \
     LB_numThreads
 
-SOCKT_OBJ= LB_comm/comm_sockets.o
-
-SHMEM_OBJ=LB_comm/comm_shMem.o
-
-SOCKT_OBJ32= LB_comm/comm_sockets32.o
-
-SHMEM_OBJ32=LB_comm/comm_shMem32.o
-
 ############### CHOOSE THE COMMUNICATION MODEL #########
 ############### SHARED MEMORY OR SOCKETS ############### 
 
-COMM_OBJ=$(SHMEM_OBJ)
+OBJ_MPI= LB_comm/comm_lend_light.o \
+	LB_comm/comm_shMem.o \
+	LB_MPI/MPI_interface.o \
+	LB_MPI/MPI_interfaceF.o \
+	LB_MPI/process_MPI.o \
 
-COMM_OBJ32=$(SHMEM_OBJ32)
+OBJ32_MPI=LB_comm/comm_lend_light32.o \
+	LB_comm/comm_shMem32.o \
+	LB_MPI/MPI_interface32.o \
+	LB_MPI/MPI_interfaceF32.o \
+	LB_MPI/process_MPI32.o \
 
-OBJ= LB_MPI/MPI_interface.o \
-    LB_MPI/process_MPI.o \
-    dlb/dlb_API.o DPD/DPD.o \
+OBJ_MPI2= LB_comm/comm_lend_light-mpi2.o \
+	LB_comm/comm_shMem-mpi2.o \
+	LB_MPI/MPI_interface-mpi2.o \
+	LB_MPI/MPI_interfaceF-mpi2.o \
+	LB_MPI/process_MPI-mpi2.o \
+
+OBJ32_MPI2=LB_comm/comm_lend_light32-mpi2.o \
+	LB_comm/comm_shMem32-mpi2.o \
+	LB_MPI/MPI_interface32-mpi2.o \
+	LB_MPI/MPI_interfaceF32-mpi2.o \
+	LB_MPI/process_MPI32-mpi2.o \
+
+
+OBJ=dlb/dlb_API.o \
+    DPD/DPD.o \
     LB_arch/MyTime.o \
     LB_policies/JustProf.o \
     LB_policies/Lend.o \
@@ -35,13 +47,9 @@ OBJ= LB_MPI/MPI_interface.o \
     LB_policies/DWB_Eco.o \
     LB_arch/common.o \
     LB_policies/Lend_light.o \
-    LB_comm/comm_lend_light.o \
     LB_MPI/tracing.o \
-    $(COMM_OBJ)
 
-OBJ32= LB_MPI/MPI_interface32.o \
-    LB_MPI/process_MPI32.o \
-    dlb/dlb_API32.o  \
+OBJ32=dlb/dlb_API32.o \
     DPD/DPD32.o \
     LB_arch/MyTime32.o \
     LB_policies/JustProf32.o \
@@ -53,13 +61,15 @@ OBJ32= LB_MPI/MPI_interface32.o \
     LB_policies/DWB_Eco32.o \
     LB_arch/common32.o \
     LB_policies/Lend_light32.o \
-    LB_comm/comm_lend_light32.o  \
     LB_MPI/tracing32.o \
-    $(COMM_OBJ32)
 
 INTERCEPT_OBJ= LB_MPI/MPI_intercept.o
 
 INTERCEPT_OBJ32= LB_MPI/MPI_intercept32.o
+
+INTERCEPT_OBJ_MPI2= LB_MPI/MPI_intercept-mpi2.o
+
+INTERCEPT_OBJ32_MPI2= LB_MPI/MPI_intercept32-mpi2.o
 
 DEPENDS= Makefile LB_MPI/MPI_calls_coded.h dlb/dlb_API.h LB_numThreads/numThreads.h LB_comm/comm.h
 
