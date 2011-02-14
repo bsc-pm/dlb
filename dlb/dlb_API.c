@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sched.h>
+#include <pthread.h>
 
 #include <dlb_API.h>
 
@@ -39,9 +40,10 @@ int ready=0;
 
 BalancePolicy lb_funcs;
 
-int nodeId, meId;
+int nodeId, meId, procsNode;
 
 int use_dpd;
+int bindCPUS=1;
 
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
@@ -49,11 +51,12 @@ void Init(int me, int num_procs, int node){
 	char* profile;
 	prof=0;
 
-	int bindCPUS=0;
 	use_dpd=0;
 
 	nodeId=node;
 	meId=me;
+	procsNode=num_procs;
+
 	iterNum=0;
 
 	if ((policy=getenv("LB_POLICY"))==NULL){
@@ -200,22 +203,9 @@ void Init(int me, int num_procs, int node){
 	lb_funcs.init(me, num_procs, node);
 	ready=1;
 
-	if(bindCPUS) bind_procs2CPUS();
+	if(bindCPUS) bind_master();
 }
 
-void bind_procs2CPUS(){
-	int tid = syscall(SYS_gettid);
-	cpu_set_t cpu_set;
-        sched_getaffinity((pid_t) tid, sizeof(cpu_set), &cpu_set);
-        CPU_ZERO(&cpu_set); 
-	//cada thread principal a su CPU
-	//CPU_SET(meId, &cpu_set);
-	
-	//2 threads cada uno a una cpu
-	CPU_SET(tid+meId*2, &cpu_set);
-	fprintf(stdout, "DLB: %d: Thread %d pinned to cpu %d\n", meId, tid, tid+meId*2);
-	sched_setaffinity((pid_t) tid, sizeof(cpu_set), &cpu_set); 
-}
 
 void Finish(void){
 	lb_funcs.finish();
@@ -311,6 +301,37 @@ void UpdateResources(){
 		add_event(RUNTIME_EVENT, 0);
 	}
 }
+
+void bind_master(){
+	cpu_set_t cpu_set;
+        CPU_ZERO(&cpu_set); 
+	//cada thread principal a su CPU
+	CPU_SET(meId, &cpu_set);
+	if(sched_setaffinity(0, sizeof(cpu_set), &cpu_set)<0)perror("DLB ERROR: sched_setaffinity"); 
+}
+
+void DLB_bind_thread(int tid){
+	if(bindCPUS){
+		int i;
+		cpu_set_t set;
+		CPU_ZERO(&set);
+		int default_threads=CPUS_NODE/procsNode;
+
+		//I am one of the default slave threads
+		if(tid<(default_threads)){
+			CPU_SET(tid+(meId*procsNode)%CPUS_NODE, &set);
+		}else{
+		//I am one of the auxiliar slave threads
+			for (i=0; i<(CPUS_NODE-(default_threads)); i++){
+				CPU_SET((i+((meId+1)*default_threads))%CPUS_NODE, &set);
+			}
+		}
+		if(sched_setaffinity(0, sizeof(set), &set)<0)perror("DLB ERROR: sched_setaffinity");
+	
+		if(pthread_setschedprio(pthread_self(), 1)<0)perror("DLB ERROR: pthread_setschedprio");
+	}
+}
+
 
 int tracing_ready(){
 	return ready;
