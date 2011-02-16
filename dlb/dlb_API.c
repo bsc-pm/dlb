@@ -308,6 +308,9 @@ void bind_master(){
 	//cada thread principal a su CPU
 	CPU_SET(meId, &cpu_set);
 	if(sched_setaffinity(0, sizeof(cpu_set), &cpu_set)<0)perror("DLB ERROR: sched_setaffinity"); 
+#ifdef debugBinding	
+	fprintf(stderr, "DLB DEBUG: (%d:%d) Thread 0 pinned to cpu %d\n", nodeId, meId, meId);
+#endif
 }
 
 void DLB_bind_thread(int tid){
@@ -320,10 +323,16 @@ void DLB_bind_thread(int tid){
 		//I am one of the default slave threads
 		if(tid<(default_threads)){
 			CPU_SET(tid+(meId*procsNode)%CPUS_NODE, &set);
+#ifdef debugBinding	
+			fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, tid+(meId*procsNode)%CPUS_NODE);
+#endif
 		}else{
 		//I am one of the auxiliar slave threads
 			for (i=0; i<(CPUS_NODE-(default_threads)); i++){
 				CPU_SET((i+((meId+1)*default_threads))%CPUS_NODE, &set);
+#ifdef debugBinding	
+				fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, (i+((meId+1)*default_threads))%CPUS_NODE);
+#endif
 			}
 		}
 		if(sched_setaffinity(0, sizeof(set), &set)<0)perror("DLB ERROR: sched_setaffinity");

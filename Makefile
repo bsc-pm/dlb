@@ -12,6 +12,7 @@ include Makefile.obj
 ## -DdebugSharedMem :Prints the operations on shared memory
 ## -DdebugLend :Prints debug information of Lend policy
 ## -DdebugLoads: Prints the computational time, MPI time and weight of each MPI
+## -DdebugBinding: Prints the binding of threads to cpus if binding is set
 
 DEBUG= -DdebugBasicInfo  
 export DEBUG 
