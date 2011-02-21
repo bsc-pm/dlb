@@ -102,6 +102,7 @@ void Lend_light_IntoCommunication(void){}
 void Lend_light_OutOfCommunication(void){}
 
 void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs){
+
 	int prio;
 	if (block==_1CPU){
 #ifdef debugLend
@@ -145,8 +146,6 @@ void Lend_light_OutOfBlockingCall(void){
 
 void Lend_light_updateresources(){
 	int cpus = checkIdleCpus(myCPUS);
-
-
 	if (myCPUS!=cpus){
 #ifdef debugDistribution
 		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, cpus);

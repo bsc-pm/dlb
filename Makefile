@@ -14,7 +14,7 @@ include Makefile.obj
 ## -DdebugLoads: Prints the computational time, MPI time and weight of each MPI
 ## -DdebugBinding: Prints the binding of threads to cpus if binding is set
 
-DEBUG= -DdebugBasicInfo  
+DEBUG= -DdebugBasicInfo 
 export DEBUG 
 
 #################### FLAGS ##########################

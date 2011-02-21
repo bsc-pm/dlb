@@ -13,26 +13,26 @@ SUB_DIRS= LB_MPI \
 OBJ_MPI= LB_comm/comm_lend_light.o \
 	LB_comm/comm_shMem.o \
 	LB_MPI/MPI_interface.o \
-	LB_MPI/MPI_interfaceF.o \
 	LB_MPI/process_MPI.o \
+	LB_MPI/MPI_interfaceF.o \
 
 OBJ32_MPI=LB_comm/comm_lend_light32.o \
 	LB_comm/comm_shMem32.o \
 	LB_MPI/MPI_interface32.o \
-	LB_MPI/MPI_interfaceF32.o \
 	LB_MPI/process_MPI32.o \
+	LB_MPI/MPI_interfaceF32.o \
 
 OBJ_MPI2= LB_comm/comm_lend_light-mpi2.o \
 	LB_comm/comm_shMem-mpi2.o \
 	LB_MPI/MPI_interface-mpi2.o \
-	LB_MPI/MPI_interfaceF-mpi2.o \
 	LB_MPI/process_MPI-mpi2.o \
+	LB_MPI/MPI_interfaceF-mpi2.o \
 
 OBJ32_MPI2=LB_comm/comm_lend_light32-mpi2.o \
 	LB_comm/comm_shMem32-mpi2.o \
 	LB_MPI/MPI_interface32-mpi2.o \
-	LB_MPI/MPI_interfaceF32-mpi2.o \
 	LB_MPI/process_MPI32-mpi2.o \
+	LB_MPI/MPI_interfaceF32-mpi2.o \
 
 
 OBJ=dlb/dlb_API.o \

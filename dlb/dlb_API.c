@@ -275,7 +275,6 @@ void OutOfCommunication(void){
 void IntoBlockingCall(void){
 	double cpuSecs;
 	double MPISecs;
-
 	cpuSecs=iterCpuTime_avg;
 	MPISecs=iterMPITime_avg;
 
