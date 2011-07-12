@@ -142,6 +142,19 @@ void Lend_light_OutOfBlockingCall(void){
 
 }
 
+void Lend_light_IntoSequentialCode(){
+
+#ifdef debugLend
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, myCPUS-1);
+#endif
+	releaseCpus(myCPUS-1);
+	setThreads_Lend_light(1);
+}
+
+void Lend_light_OutOfSequentialCode(){
+	Lend_light_OutOfBlockingCall();
+}
+
 /******* Auxiliar Functions Lend_light Balancing Policy ********/
 
 void Lend_light_updateresources(){

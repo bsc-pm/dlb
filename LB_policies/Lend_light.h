@@ -24,6 +24,10 @@ void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs);
 
 void Lend_light_OutOfBlockingCall(void);
 
+void Lend_light_IntoSequentialCode(void);
+
+void Lend_light_OutOfSequentialCode(void);
+
 /******* Auxiliar Functions Lend_light Balancing Policy ********/
 
 int createThreads_Lend_light();

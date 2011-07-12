@@ -10,6 +10,8 @@ typedef struct{
 	void (*outOfCommunication) (void);
 	void (*intoBlockingCall) (double cpuSecs, double MPISecs);
 	void (*outOfBlockingCall) (void);
+	void (*intoSequentialCode) (void);
+	void (*outOfSequentialCode) (void);
 	void (*updateresources) (void);
 } BalancePolicy;
 

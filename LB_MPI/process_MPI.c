@@ -11,6 +11,7 @@
 int periodo; 
 int me;
 int just_barrier;
+int all_to_all;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -20,13 +21,21 @@ void after_init(void){
 	add_event(RUNTIME_EVENT, 1);
 	char* mpi_per_node;
 	int num_mpis, node;
+	int data[2];
 
 	just_barrier=0;
+	all_to_all=0;
+
 	if ((getenv("LB_JUST_BARRIER"))==NULL){
 		just_barrier=0;
 	}else{
 		just_barrier=1;
-		fprintf(stdout, "DLB: Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n");
+		if ((getenv("LB_ALL_TO_ALL"))!=NULL){
+			all_to_all=1;
+			fprintf(stdout, "DLB: Only lending resources when MPI_Barrier or MPI_Alltoall (Env. var. LB_JUST_BARRIER and LB_ALL_TO_ALL are set)\n");
+		}else{
+			fprintf(stdout, "DLB: Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n");
+		}
 	}
 	
 	if ((mpi_per_node=getenv("LB_MPIxNODE"))==NULL){
@@ -35,9 +44,8 @@ void after_init(void){
 	}
 	num_mpis= atoi(mpi_per_node);	
 	MPI_Comm_rank(MPI_COMM_WORLD,&me);
-fprintf(stderr, "%d: I am %d\n", getpid(), me);
 
-/*	//Setting me and nodeId for MPIs
+	//Setting me and nodeId for MPIs
 	char nodeId[50];
 	int procs;
 	MPI_Comm_size (MPI_COMM_WORLD, &procs); 
@@ -69,6 +77,7 @@ fprintf(stderr, "%d: I am %d\n", getpid(), me);
 		for (i=0; i<nodes; i++){
 			memset(nodesIds[i], 0, 50);
 			procsPerNode[i]=0;
+
 		}
 
 		strcpy(nodesIds[0],recvData[0]);
@@ -96,21 +105,19 @@ fprintf(stderr, "%d: I am %d\n", getpid(), me);
 				procsPerNode[j]++;
 			}
 		}
-		for(i=1; i<procs; i++){
-			PMPI_Send((void*)procsIds[i], 2, MPI_INT, i, 0, MPI_COMM_WORLD);
-		}
+		PMPI_Scatter ((void*)procsIds, 2,MPI_INT ,(void*)&data,2, MPI_INT,0,MPI_COMM_WORLD );
 		me=procsIds[0][0];
 		node=procsIds[0][1];
 	}else{
-		int data[2];
-		PMPI_Recv(&data, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, 0);
+		PMPI_Scatter ((void*) NULL,0 ,0,(void*)&data,2, MPI_INT,0,MPI_COMM_WORLD );
+
 		me=data[0];
 		node=data[1];
-	}*/
+	}
 
 	/////////////////////////////////////
-	node = me/num_mpis;
-	me = me % num_mpis;
+//	node = me/num_mpis;
+//	me = me % num_mpis;
 	/////////////////////////////////////
 #ifdef debugConfig
 	fprintf(stderr, "DLB: (%d:%d) - MPIs per node: %d\n", node, me, num_mpis);
@@ -128,6 +135,8 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 
 	if(just_barrier){
 		if (call_type==Barrier){
+			IntoBlockingCall();
+		}else if (all_to_all&&(call_type==Alltoall)){
 			IntoBlockingCall();
 		}
 	}else if (is_blocking(call_type)){
@@ -152,6 +161,8 @@ void after_mpi(mpi_call call_type){
 
 	if(just_barrier){
 		if (call_type==Barrier){
+			OutOfBlockingCall();
+		}else if (all_to_all&&(call_type==Alltoall)){
 			OutOfBlockingCall();
 		}
 	}else if (is_blocking(call_type)){
