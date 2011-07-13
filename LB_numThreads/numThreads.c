@@ -21,3 +21,7 @@ void update_threads(int threads){
 		if(css_set_num_threads)css_set_num_threads(threads);
 	}	
 }
+
+int* update_cpus(int action, int num_cpus, int* cpus){
+	if (css_set_num_threads_cpus) return css_set_num_threads_cpus(action, num_cpus, cpus);
+}

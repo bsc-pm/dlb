@@ -10,8 +10,6 @@ typedef struct{
 	void (*outOfCommunication) (void);
 	void (*intoBlockingCall) (double cpuSecs, double MPISecs);
 	void (*outOfBlockingCall) (void);
-	void (*intoSequentialCode) (void);
-	void (*outOfSequentialCode) (void);
 	void (*updateresources) (void);
 } BalancePolicy;
 
@@ -41,7 +39,7 @@ void dummyFinishIter(double a, double b);
 void dummyIntoBlockingCall(double a, double b);
 
 void updateresources();
-void UpdateResources();
+void UpdateResources_Map(int max_cpus);
 
 int tracing_ready();
 #endif //DLB_API_H

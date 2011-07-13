@@ -20,16 +20,16 @@ export DEBUG
 #################### FLAGS ##########################
 
 CC= xlc_r 
-CC= gcc 
+CC= mpicc 
 export CC
 
 CFLAGS_xl= -qPIC -I. -I.. $(DEBUG) -qinfo=gen -qformat=all
-CFLAGS= -fPIC -I. -I.. $(DEBUG) -Wall -O2
+CFLAGS= -fPIC -I. -I.. $(DEBUG) -Wall -O2 -g
 export CFLAGS
 export CFLAGS_xl
 
 LDFLAGS_xl= -qPIC -qmkshrobj 
-LDFLAGS= -fPIC -shared -Wall -O2
+LDFLAGS= -fPIC -shared -Wall -O2 -lrt -g
 export LDFLAGS
 export LDFLAGS_xl
 
@@ -44,18 +44,14 @@ FLAGS64= -m64
 export FLAGS64
 export FLAGS64_xl
 
-#MPIFLAGS=-DUSE_STDARG -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_UNISTD_H=1 -DHAVE_STDARG_H=1 -DUSE_STDARG=1 -DMALLOC_RET_VOID=1 -L/opt/osshpc/mpich-mx/64/lib/shared -L/opt/osshpc/mpich-mx/64/lib -lmpich -L/opt/osshpc/mx/lib64 -L/opt/osshpc/mx/lib/ -lmyriexpress -lpthread -lrt
 
-#MPI2FLAGS=-L/opt/osshpc/mx/lib64/ -L/gpfs/apps/MPICH2/slurm/64/lib -I/gpfs/apps/MPICH2/mx/1.0.8p1..3/64/include -L/gpfs/apps/MPICH2/mx/1.0.8p1..3/64/lib -lmpichf90 -lmpich -lpmi -lmyriexpress -lrt
-
-MPIINCLUDE=-I/opt/osshpc/mpich-mx/64/include
-MPI2INCLUDE=-I/gpfs/apps/MPICH2/mx/default/64/include/
+MPIINCLUDE=-I/afs/pdc.kth.se/home/m/mgarci/mvapich2-1.6-install/include
 export MPIINCLUDE
-export MPI2INCLUDE
 
 #################### RULES ##########################
 
-all: lib32 lib64 libmpi2-64 
+all: lib64 
+#all: lib32 lib64 libmpi2-64 
 #libmpi2-32
 
 
@@ -78,11 +74,11 @@ libmpi2-32: lib/mpi2-32/libdlb.so lib/mpi2-32/libTdlb.so lib/32/libUpdRes.so
 
 #------- 64bits library ----------#
 lib/64/libdlb.so: $(DEPENDS) $(OBJ) $(OBJ_MPI) $(INTERCEPT_OBJ)
-	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libdlb.so $(OBJ) $(OBJ_MPI) $(INTERCEPT_OBJ)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libdlb.so $(OBJ) $(OBJ_MPI) $(INTERCEPT_OBJ) 
 	
 
 lib/64/libTdlb.so: $(DEPENDS) $(OBJ) $(OBJ_MPI)
-	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libTdlb.so $(OBJ) $(OBJ_MPI)
+	$(CC) $(LDFLAGS) $(FLAGS64) -o lib/64/libTdlb.so $(OBJ) $(OBJ_MPI) 
 
 #------- 32bits library ----------#
 lib/32/libdlb.so: $(DEPENDS) $(OBJ32) $(OBJ32_MPI) $(INTERCEPT_OBJ32)

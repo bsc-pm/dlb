@@ -8,3 +8,6 @@ void UpdateResources()
 {
 }
 
+void updateresources_()
+{
+}

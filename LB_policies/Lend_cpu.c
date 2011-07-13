@@ -1,4 +1,4 @@
-#include <Lend_light.h>
+#include <Lend_cpu.h>
 #include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 #include <LB_comm/comm_lend_light.h>
@@ -22,11 +22,11 @@ int block;
 #define MPI_BLOCKING 1 //MPI set to blocking mode
 #define PRIO 2 // MPI not set to blocking, decrease priority when in a blocking call
 
-/******* Main Functions Lend_light Balancing Policy ********/
+/******* Main Functions Lend_cpu Balancing Policy ********/
 
-void Lend_light_Init(int meId, int num_procs, int nodeId){
+void Lend_cpu_Init(int meId, int num_procs, int nodeId){
 #ifdef debugConfig
-	fprintf(stderr, "DLB DEBUG: (%d:%d) - Lend_light Init\n", nodeId, meId);
+	fprintf(stderr, "DLB DEBUG: (%d:%d) - Lend_cpu Init\n", nodeId, meId);
 #endif
 	char* policy_greedy;
 	char* blocking;
@@ -35,7 +35,7 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	procs = num_procs;
 	default_cpus=CPUS_NODE/procs;
 	
-	setThreads_Lend_light(default_cpus);
+	setThreads_Lend_cpu(default_cpus);
 //	myCPUS=default_cpus;
 
 #ifdef debugBasicInfo
@@ -58,23 +58,23 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 
 //Setting blocking mode
 	block=_1CPU;
-/*	if ((blocking=getenv("MXMPI_RECV"))!=NULL){
+	if ((blocking=getenv("MXMPI_RECV"))!=NULL){
 		if (strcasecmp(blocking, "blocking")==0){
 			block=MPI_BLOCKING;
 #ifdef debugBasicInfo
 			fprintf(stdout, "DLB: (%d:%d) - MPI blocking mode set to blocking (I will lend all the resources)\n", node, me);
 #endif	
 		}
-	}*/
+	}
 	if(block==_1CPU){
-/*#ifdef debugBasicInfo 
-		fprintf(stderr, "DLB: (%d:%d) - MPI blocking mode NOT set to blocking\n", node, me);
-#endif	*/
-		if ((blocking=getenv("LB_LEND_MODE"))!=NULL){
-			if (strcasecmp(blocking, "BLOCK")==0){
-				block=MPI_BLOCKING;
 #ifdef debugBasicInfo 
-				fprintf(stderr, "DLB (%d:%d) - LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - MPI blocking mode NOT set to blocking\n", node, me);
+#endif	
+		if ((blocking=getenv("LB_LEND_MODE"))!=NULL){
+			if (strcasecmp(blocking, "PRIO")==0){
+				block=PRIO;
+#ifdef debugBasicInfo 
+				fprintf(stderr, "DLB (%d:%d) - LEND mode set to PRIO. I will decrease priority when in an MPI call\n", node, me);
 #endif	
 			}
 		}
@@ -89,33 +89,32 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 
 }
 
-void Lend_light_Finish(void){
+void Lend_cpu_Finish(void){
 	if (me==0) finalize_comm();
 }
 
-void Lend_light_InitIteration(){}
+void Lend_cpu_InitIteration(){}
 
-void Lend_light_FinishIteration(double cpuSecs, double MPISecs){}
+void Lend_cpu_FinishIteration(double cpuSecs, double MPISecs){}
 
-void Lend_light_IntoCommunication(void){}
+void Lend_cpu_IntoCommunication(void){}
 
-void Lend_light_OutOfCommunication(void){}
+void Lend_cpu_OutOfCommunication(void){}
 
-void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs){
-
+void Lend_cpu_IntoBlockingCall(double cpuSecs, double MPISecs){
 	int prio;
 	if (block==_1CPU){
 #ifdef debugLend
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, myCPUS-1);
 #endif
 		releaseCpus(myCPUS-1);
-		setThreads_Lend_light(1);
+		setThreads_Lend_cpu(1);
 	}else{
 #ifdef debugLend
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, myCPUS);
 #endif
 		releaseCpus(myCPUS);
-		setThreads_Lend_light(0);
+		setThreads_Lend_cpu(0);
 		if (block==PRIO){
 			fprintf(stderr,"Current priority %d\n", getpriority(PRIO_PROCESS, 0));
 			if((prio=nice(19))<0) perror("Error setting priority 'nice'");
@@ -124,7 +123,7 @@ void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs){
 	}
 }
 
-void Lend_light_OutOfBlockingCall(void){
+void Lend_cpu_OutOfBlockingCall(void){
 	int prio;
 
 	if (block==PRIO){
@@ -135,26 +134,28 @@ void Lend_light_OutOfBlockingCall(void){
 	}
 
 	int cpus=acquireCpus(myCPUS);
-	setThreads_Lend_light(cpus);
+	setThreads_Lend_cpu(cpus);
 #ifdef debugLend
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", node, me, cpus);
 #endif
 
 }
 
-/******* Auxiliar Functions Lend_light Balancing Policy ********/
+/******* Auxiliar Functions Lend_cpu Balancing Policy ********/
 
-void Lend_light_updateresources(){
+void Lend_cpu_updateresources(){
 	int cpus = checkIdleCpus(myCPUS);
+
+
 	if (myCPUS!=cpus){
 #ifdef debugDistribution
 		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", node, me, cpus);
 #endif
-		 setThreads_Lend_light(cpus);
+		 setThreads_Lend_cpu(cpus);
 	}
 }
 
-void setThreads_Lend_light(int numThreads){
+void setThreads_Lend_cpu(int numThreads){
 
 	if (myCPUS!=numThreads){
 #ifdef debugDistribution

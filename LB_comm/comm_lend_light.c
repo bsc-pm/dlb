@@ -38,22 +38,23 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 	defaultCPUS=defCPUS;
 	greedy=is_greedy;
 
-	char *k;
+	int k;
 	key_t key;
     	int sm_size;
     	char * shm;
 
-	if ((k=getenv("SLURM_JOBID"))==NULL){
-		fprintf(stdout,"DLB: SLURM_JOBID not found, using parent pid(%d) as shared Memory name\n", getppid());
-		key=getppid();
-	}else{
-		key=atol(k);
-	}
 
 	sm_size= sizeof(struct shdata);
 	//       idle cpus      
 
+	MPI_Comm comm_node;	
+	MPI_Comm_split (MPI_COMM_WORLD, nodeId, 0, &comm_node );
+
+
 	if (me==0){
+
+		k=getpid();
+		key=k;
        
 	
 #ifdef debugSharedMem 
@@ -81,7 +82,8 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
                 shdata->idleCpus = 0;
 		add_event(IDLE_CPUS_EVENT, 0);
 
-		PMPI_Barrier(MPI_COMM_WORLD);
+		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, comm_node);
+
 #ifdef debugSharedMem 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) Finished setting values to the shared mem\n", node, me);
 #endif
@@ -90,8 +92,8 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 #ifdef debugSharedMem 
     	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
 #endif
-		PMPI_Barrier(MPI_COMM_WORLD);
-	
+		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, comm_node);
+		key=k;
 		
 		shmid = shmget(key, sm_size, 0666);
 	
@@ -179,7 +181,9 @@ int checkIdleCpus(int myCpus){
     //if there are idle CPUS use them
     }else if( shdata->idleCpus > 0){
 	aux=shdata->idleCpus;
-	if(__sync_bool_compare_and_swap(&(shdata->idleCpus), aux, 0)){
+        if(aux>defaultCPUS) aux=defaultCPUS;
+
+	if(__sync_bool_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, shdata->idleCpus-aux)){
 		myCpus+=aux;
 	}
     }

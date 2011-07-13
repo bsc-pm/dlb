@@ -19,6 +19,8 @@
 #include <LB_policies/Weight.h>
 #include <LB_policies/JustProf.h>
 #include <LB_policies/DWB_Eco.h>
+#include <LB_policies/Lewi_map.h>
+
 #include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 #include <LB_MPI/tracing.h>
@@ -43,7 +45,7 @@ BalancePolicy lb_funcs;
 int nodeId, meId, procsNode;
 
 int use_dpd;
-int bindCPUS=0;
+int bindCPUS=1;
 
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
@@ -70,7 +72,7 @@ void Init(int me, int num_procs, int node){
 		}
 	}
 
-	update_threads(CPUS_NODE/num_procs);
+//	update_threads(CPUS_NODE/num_procs);
 
 	if (strcasecmp(policy, "LEND_simple")==0){
 #ifdef debugConfig
@@ -85,8 +87,6 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &Lend_simple_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &Lend_simple_OutOfBlockingCall;
 		lb_funcs.updateresources = &Lend_simple_updateresources;
-		lb_funcs.intoSequentialCode = &dummyFunc;
-		lb_funcs.outOfSequentialCode = &dummyFunc;
 
 	}else if (strcasecmp(policy, "LeWI_t")==0){
 #ifdef debugConfig
@@ -101,8 +101,6 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &Lend_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &Lend_OutOfBlockingCall;
 		lb_funcs.updateresources = &Lend_updateresources;
-		lb_funcs.intoSequentialCode = &dummyFunc;
-		lb_funcs.outOfSequentialCode = &dummyFunc;
 
 	}else if (strcasecmp(policy, "LeWI_A")==0){
 #ifdef debugConfig
@@ -117,8 +115,6 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &LeWI_A_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &LeWI_A_OutOfBlockingCall;
 		lb_funcs.updateresources = &LeWI_A_updateresources;
-		lb_funcs.intoSequentialCode = &dummyFunc;
-		lb_funcs.outOfSequentialCode = &dummyFunc;
 
 	}else if (strcasecmp(policy, "LeWI")==0){
 #ifdef debugConfig
@@ -134,8 +130,21 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &Lend_light_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &Lend_light_OutOfBlockingCall;
 		lb_funcs.updateresources = &Lend_light_updateresources;
-		lb_funcs.intoSequentialCode = &Lend_light_IntoSequentialCode;
-		lb_funcs.outOfSequentialCode = &Lend_light_OutOfSequentialCode;
+
+	}else if (strcasecmp(policy, "Map")==0){
+#ifdef debugConfig
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI with Map of cpus version\n", node, me);
+#endif	
+		
+		lb_funcs.init = &Map_Init;
+		lb_funcs.finish = &Map_Finish;
+		lb_funcs.initIteration = &Map_InitIteration;
+		lb_funcs.finishIteration = &Map_FinishIteration;
+		lb_funcs.intoCommunication = &Map_IntoCommunication;
+		lb_funcs.outOfCommunication = &Map_OutOfCommunication;
+		lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
+		lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
+		lb_funcs.updateresources = &Map_updateresources;
 
 	}else if (strcasecmp(policy, "WEIGHT")==0){
 #ifdef debugConfig
@@ -152,8 +161,6 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
 		lb_funcs.updateresources = &Weight_updateresources;
-		lb_funcs.intoSequentialCode = &dummyFunc;
-		lb_funcs.outOfSequentialCode = &dummyFunc;
 
 	}else if (strcasecmp(policy, "DWB_Eco")==0){
 #ifdef debugConfig
@@ -167,10 +174,9 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.finishIteration = &DWB_Eco_FinishIteration;
 		lb_funcs.intoCommunication = &DWB_Eco_IntoCommunication;
 		lb_funcs.outOfCommunication = &DWB_Eco_OutOfCommunication;
+		lb_funcs.intoBlockingCall = &DWB_Eco_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &DWB_Eco_OutOfBlockingCall;
 		lb_funcs.updateresources = &DWB_Eco_updateresources;
-		lb_funcs.intoSequentialCode = &dummyFunc;
-		lb_funcs.outOfSequentialCode = &dummyFunc;
 
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
@@ -185,8 +191,6 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &dummyIntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &dummyFunc;
 		lb_funcs.updateresources = &dummyFunc;
-		lb_funcs.intoSequentialCode = &dummyFunc;
-		lb_funcs.outOfSequentialCode = &dummyFunc;
 	}else{
 		fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
 		exit(1);
@@ -298,15 +302,15 @@ void OutOfBlockingCall(void){
 	lb_funcs.outOfBlockingCall();
 }
 
-void IntoSequentialCode(void){
-	lb_funcs.intoSequentialCode();
-}
-
-void OutOfSequentialCode(void){
-	lb_funcs.outOfBlockingCall();
-}
-
 void updateresources(){
+	if(ready){
+		add_event(RUNTIME_EVENT, 4);
+		lb_funcs.updateresources();
+		add_event(RUNTIME_EVENT, 0);
+	}
+}
+
+void updateresources_(){
 	if(ready){
 		add_event(RUNTIME_EVENT, 4);
 		lb_funcs.updateresources();
@@ -321,6 +325,13 @@ void UpdateResources(){
 		add_event(RUNTIME_EVENT, 0);
 	}
 }
+void UpdateResources_Map(int max_cpus){
+	if(ready){
+		add_event(RUNTIME_EVENT, 4);
+		Map_updateresources(max_cpus);
+		add_event(RUNTIME_EVENT, 0);
+	}
+}
 
 void bind_master(){
 	cpu_set_t cpu_set;
@@ -331,7 +342,6 @@ void bind_master(){
 #ifdef debugBinding	
 	fprintf(stderr, "DLB DEBUG: (%d:%d) Thread 0 pinned to cpu %d\n", nodeId, meId, meId);
 #endif
-	add_event(BIND_2CPU_EVENT, meId);
 }
 
 void DLB_bind_thread(int tid){
@@ -347,7 +357,6 @@ void DLB_bind_thread(int tid){
 #ifdef debugBinding	
 			fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, tid+(meId*procsNode)%CPUS_NODE);
 #endif
-			add_event(BIND_2CPU_EVENT, tid+(meId*procsNode)%CPUS_NODE);
 		}else{
 		//I am one of the auxiliar slave threads
 			for (i=0; i<(CPUS_NODE-(default_threads)); i++){
@@ -355,13 +364,13 @@ void DLB_bind_thread(int tid){
 #ifdef debugBinding	
 				fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, (i+((meId+1)*default_threads))%CPUS_NODE);
 #endif
-				add_event(BIND_2CPU_EVENT, (i+((meId+1)*default_threads))%CPUS_NODE);
 			}
 		}
 		if(sched_setaffinity(0, sizeof(set), &set)<0)perror("DLB ERROR: sched_setaffinity");
 	
-		if(pthread_setschedprio(pthread_self(), 1)<0)perror("DLB ERROR: pthread_setschedprio");
 	}
+
+	if(pthread_setschedprio(pthread_self(), 1)<0)perror("DLB ERROR: pthread_setschedprio");
 }
 
 

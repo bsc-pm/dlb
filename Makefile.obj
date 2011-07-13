@@ -15,24 +15,28 @@ OBJ_MPI= LB_comm/comm_lend_light.o \
 	LB_MPI/MPI_interface.o \
 	LB_MPI/process_MPI.o \
 	LB_MPI/MPI_interfaceF.o \
+	LB_comm/comm_map.o \
 
 OBJ32_MPI=LB_comm/comm_lend_light32.o \
 	LB_comm/comm_shMem32.o \
 	LB_MPI/MPI_interface32.o \
 	LB_MPI/process_MPI32.o \
 	LB_MPI/MPI_interfaceF32.o \
+	LB_comm/comm_map.o \
 
 OBJ_MPI2= LB_comm/comm_lend_light-mpi2.o \
 	LB_comm/comm_shMem-mpi2.o \
 	LB_MPI/MPI_interface-mpi2.o \
 	LB_MPI/process_MPI-mpi2.o \
 	LB_MPI/MPI_interfaceF-mpi2.o \
+	LB_comm/comm_map.o \
 
 OBJ32_MPI2=LB_comm/comm_lend_light32-mpi2.o \
 	LB_comm/comm_shMem32-mpi2.o \
 	LB_MPI/MPI_interface32-mpi2.o \
 	LB_MPI/process_MPI32-mpi2.o \
 	LB_MPI/MPI_interfaceF32-mpi2.o \
+	LB_comm/comm_map.o \
 
 
 OBJ=dlb/dlb_API.o \
@@ -43,6 +47,7 @@ OBJ=dlb/dlb_API.o \
     LB_policies/Weight.o \
     LB_policies/Lend_simple.o \
     LB_policies/LeWI_active.o \
+    LB_policies/Lewi_map.o \
     LB_numThreads/numThreads.o \
     LB_policies/DWB_Eco.o \
     LB_arch/common.o \
@@ -63,13 +68,13 @@ OBJ32=dlb/dlb_API32.o \
     LB_policies/Lend_light32.o \
     LB_MPI/tracing32.o \
 
-INTERCEPT_OBJ= LB_MPI/MPI_intercept.o
+INTERCEPT_OBJ= LB_MPI/MPI_intercept.o 
 
-INTERCEPT_OBJ32= LB_MPI/MPI_intercept32.o
+INTERCEPT_OBJ32= LB_MPI/MPI_intercept32.o 
 
-INTERCEPT_OBJ_MPI2= LB_MPI/MPI_intercept-mpi2.o
+INTERCEPT_OBJ_MPI2= LB_MPI/MPI_intercept-mpi2.o 
 
-INTERCEPT_OBJ32_MPI2= LB_MPI/MPI_intercept32-mpi2.o
+INTERCEPT_OBJ32_MPI2= LB_MPI/MPI_intercept32-mpi2.o 
 
 DEPENDS= Makefile LB_MPI/MPI_calls_coded.h dlb/dlb_API.h LB_numThreads/numThreads.h LB_comm/comm.h
 
