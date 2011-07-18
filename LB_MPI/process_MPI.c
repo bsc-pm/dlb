@@ -11,6 +11,7 @@
 int periodo; 
 int me;
 int just_barrier;
+int mpi_ready=0;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -117,49 +118,53 @@ fprintf(stderr, "%d: I am %d\n", getpid(), me);
 #endif	
 
 	Init(me, num_mpis, node);
-		
+	mpi_ready=1;	
 	add_event(RUNTIME_EVENT, 0);
 }
 
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
-	add_event(RUNTIME_EVENT, 2);
-	int valor_dpd;
-	IntoCommunication();
+	if(mpi_ready){
+		add_event(RUNTIME_EVENT, 2);
+		int valor_dpd;
+		IntoCommunication();
 
-	if(just_barrier){
-		if (call_type==Barrier){
+		if(just_barrier){
+			if (call_type==Barrier){
+				IntoBlockingCall();
+			}
+		}else if (is_blocking(call_type)){
 			IntoBlockingCall();
 		}
-	}else if (is_blocking(call_type)){
-		IntoBlockingCall();
-	}
-
-	if(use_dpd){
-		long value = (long)((((buf>>5)^dest)<<5)|call_type);
 	
-		valor_dpd=DPD(value,&periodo);
-	
-		if (valor_dpd!=0){
-			FinishIteration();
-			InitIteration();
+		if(use_dpd){
+			long value = (long)((((buf>>5)^dest)<<5)|call_type);
+		
+			valor_dpd=DPD(value,&periodo);
+		
+			if (valor_dpd!=0){
+				FinishIteration();
+				InitIteration();
+			}
 		}
+		add_event(RUNTIME_EVENT, 0);
 	}
-	add_event(RUNTIME_EVENT, 0);
 }
 
 void after_mpi(mpi_call call_type){
-	add_event(RUNTIME_EVENT, 3);
+	if (mpi_ready){
+		add_event(RUNTIME_EVENT, 3);
 
-	if(just_barrier){
-		if (call_type==Barrier){
+		if(just_barrier){
+			if (call_type==Barrier){
+				OutOfBlockingCall();
+			}
+		}else if (is_blocking(call_type)){
 			OutOfBlockingCall();
 		}
-	}else if (is_blocking(call_type)){
-		OutOfBlockingCall();
+	
+		OutOfCommunication();
+		add_event(RUNTIME_EVENT, 0);
 	}
-
-	OutOfCommunication();
-	add_event(RUNTIME_EVENT, 0);
 }
 
 void before_finalize(void){
