@@ -188,21 +188,24 @@ void finalize_comm_Map(){
 }
 
 int releaseCpus_Map(int cpus, int* released_cpus){
-#ifdef debugSharedMem 
-		fprintf(stderr,"DLB DEBUG: (%d:%d) Releasing %d CPUS...\n", node, me, cpus);
-#endif
+	int i;
 	while(!__sync_bool_compare_and_swap(&(shdata->mutex), -1, me))sched_yield();
 //	fprintf(stderr,"DLB DEBUG: (%d:%d) mutex: %d\n", node, me, shdata->mutex);
 	//print_map();
 
 	int I_have=shdata->num_cpus_proc[me] + shdata->claimed_cpus_proc[me];
+#ifdef debugMap 
+		fprintf(stderr,"DLB DEBUG: (%d:%d) Releasing(%d) but already claimed (%d) ", node, me, cpus, shdata->claimed_cpus_proc[me]);
+		for (i=0; i<cpus-shdata->claimed_cpus_proc[me]; i++)
+			fprintf(stderr,"%d ", shdata->cpus_map[me][i]);
+		fprintf(stderr,"\n");
+#endif
 	memcpy(released_cpus, &(shdata->cpus_map[me][I_have-cpus]), cpus * sizeof(int));
 	memcpy(&(shdata->cpus_map[procs][shdata->idleCpus]), &(shdata->cpus_map[me][I_have-cpus]), (cpus-shdata->claimed_cpus_proc[me]) * sizeof(int));
 //fprintf(stderr,"DLB DEBUG: (%d:%d) I_have=%d+%d=%d cpus=%d\n", node, me, shdata->num_cpus_proc[me], shdata->claimed_cpus_proc[me], I_have, cpus);
 
-	int i;
 	for (i=1; i<=cpus; i++){
-		shdata->cpus_map[me][I_have-i]=-1;
+		shdata->cpus_map[me][I_have-i]=-(me+1);
 	}
 
 	shdata->num_cpus_proc[me]-= cpus;
@@ -214,11 +217,14 @@ int releaseCpus_Map(int cpus, int* released_cpus){
 
 	//print_map();
 //	fprintf(stderr,"DLB DEBUG: (%d:%d) mutex: %d\n", node, me, shdata->mutex);
+#ifdef debugMap 
+		fprintf(stderr,"DLB DEBUG: (%d:%d) Done Releasing, Idle cpus: ", node, me);
+		for (i=0; i<shdata->idleCpus; i++)
+			fprintf(stderr,"%d ", shdata->cpus_map[procs][i]);
+		fprintf(stderr,"\n");
+#endif
 	while(!__sync_bool_compare_and_swap(&(shdata->mutex), me, -1));
 
-#ifdef debugSharedMem 
-		fprintf(stderr,"DLB DEBUG: (%d:%d) DONE Releasing CPUS (idle %d) \n", node, me, shdata->idleCpus);
-#endif
 
 	//Just in case I let the thread run in all the cpus
 	if(sched_setaffinity(syscall(SYS_gettid), sizeof(all_cpu), &all_cpu)<0)perror("ERROR: sched_setaffinity of master thread");
@@ -263,7 +269,7 @@ int acquireCpus_Map(int current_cpus, int* new_cpus){
 
 		memcpy(&(shdata->cpus_map[me][current_cpus]), &(shdata->cpus_map[procs][shdata->idleCpus]), sizeof(int)*cpus);
 
-		for (i=0; i<cpus; i++)shdata->cpus_map[procs][shdata->idleCpus+i]=-1;
+		for (i=0; i<cpus; i++)shdata->cpus_map[procs][shdata->idleCpus+i]=-(me+101);
 
 		i=0;
 		while((cpus+current_cpus<defaultCPUS) && i<procs){ //There are not enough idle cpus
@@ -314,8 +320,11 @@ add_event(1005, shdata->cpus_map[me][0]+1);
 	while(!__sync_bool_compare_and_swap(&(shdata->mutex), me, -1));
 	add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
-#ifdef debugSharedMem 
-		fprintf(stderr,"DLB DEBUG: (%d:%d) Using %d CPUS... %d Idle \n", node, me, cpus, shdata->idleCpus);
+#ifdef debugMap 
+		fprintf(stderr,"DLB DEBUG: (%d:%d) Acquiring ", node, me);
+		for (i=0; i<cpus; i++)
+			fprintf(stderr,"%d ", new_cpus[i]);
+		fprintf(stderr,"\n");
 #endif
 
   return cpus+current_cpus;
@@ -334,10 +343,10 @@ int checkIdleCpus_Map(int myCpus, int max_cpus, int* new_cpus){
     //if more CPUS than the availables are used release some
     if (shdata->claimed_cpus_proc[me]>0){
 	while(!__sync_bool_compare_and_swap(&(shdata->mutex), -1, me))sched_yield();
-//fprintf(stderr,"DLB DEBUG: (%d:%d) I'm using too many cpus... %d\n", node, me, shdata->claimed_cpus_proc[me]);
+//fprintf(stderr,"DLB DEBUG: (%d:%d) I'm using %d, too many cpus... %d\n", node, me, shdata->num_cpus_proc[me], shdata->claimed_cpus_proc[me]);
 	memcpy(new_cpus, &(shdata->cpus_map[me][shdata->num_cpus_proc[me]]), sizeof(int)*shdata->claimed_cpus_proc[me]);
-	for (i=0; i<=shdata->claimed_cpus_proc[me]; i++){
-		shdata->cpus_map[me][shdata->num_cpus_proc[me]+i]=-1;
+	for (i=0; i<shdata->claimed_cpus_proc[me]; i++){
+		shdata->cpus_map[me][shdata->num_cpus_proc[me]+i]=-(me+201);
 	}
 	cpus=-shdata->num_cpus_proc[me];	
 	shdata->claimed_cpus_proc[me]=0;
@@ -356,7 +365,7 @@ int checkIdleCpus_Map(int myCpus, int max_cpus, int* new_cpus){
 	memcpy(&(shdata->cpus_map[me][shdata->num_cpus_proc[me]]), &(shdata->cpus_map[procs][shdata->idleCpus-cpus]), sizeof(int)*cpus);
 	memcpy(new_cpus, &(shdata->cpus_map[procs][shdata->idleCpus-cpus]), sizeof(int)*cpus);
 	
-	for (i=0; i<cpus; i++)shdata->cpus_map[procs][shdata->idleCpus-i]=-1;
+	for (i=0; i<cpus; i++)shdata->cpus_map[procs][shdata->idleCpus-i]=-(me+301);
 	
 	shdata->num_cpus_proc[me]+=cpus;
 	shdata->idleCpus-=cpus;
