@@ -45,7 +45,6 @@ BalancePolicy lb_funcs;
 int nodeId, meId, procsNode;
 
 int use_dpd;
-int bindCPUS=1;
 
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
@@ -220,7 +219,6 @@ void Init(int me, int num_procs, int node){
 	lb_funcs.init(me, num_procs, node);
 	ready=1;
 
-	if(bindCPUS) bind_master();
 }
 
 
@@ -331,46 +329,6 @@ void UpdateResources_Map(int max_cpus){
 		Map_updateresources(max_cpus);
 		add_event(RUNTIME_EVENT, 0);
 	}
-}
-
-void bind_master(){
-	cpu_set_t cpu_set;
-        CPU_ZERO(&cpu_set); 
-	//cada thread principal a su CPU
-	CPU_SET(meId, &cpu_set);
-	if(sched_setaffinity(0, sizeof(cpu_set), &cpu_set)<0)perror("DLB ERROR: sched_setaffinity"); 
-#ifdef debugBinding	
-	fprintf(stderr, "DLB DEBUG: (%d:%d) Thread 0 pinned to cpu %d\n", nodeId, meId, meId);
-#endif
-}
-
-void DLB_bind_thread(int tid){
-	if(bindCPUS){
-		int i;
-		cpu_set_t set;
-		CPU_ZERO(&set);
-		int default_threads=CPUS_NODE/procsNode;
-
-		//I am one of the default slave threads
-		if(tid<(default_threads)){
-			CPU_SET(tid+(meId*procsNode)%CPUS_NODE, &set);
-#ifdef debugBinding	
-			fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, tid+(meId*procsNode)%CPUS_NODE);
-#endif
-		}else{
-		//I am one of the auxiliar slave threads
-			for (i=0; i<(CPUS_NODE-(default_threads)); i++){
-				CPU_SET((i+((meId+1)*default_threads))%CPUS_NODE, &set);
-#ifdef debugBinding	
-				fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, (i+((meId+1)*default_threads))%CPUS_NODE);
-#endif
-			}
-		}
-		if(sched_setaffinity(0, sizeof(set), &set)<0)perror("DLB ERROR: sched_setaffinity");
-	
-	}
-
-	if(pthread_setschedprio(pthread_self(), 1)<0)perror("DLB ERROR: pthread_setschedprio");
 }
 
 

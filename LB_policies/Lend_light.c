@@ -44,6 +44,18 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	    }
 #endif
 
+	char* bind;
+	if ((bind=getenv("LB_BIND"))!=NULL){
+	    	if(strcasecmp(bind, "YES")==0){
+	      		fprintf(stdout, "DLB: Binding of threads to cpus enabled\n");
+			if (css_set_num_threads){ //If we are running with openMP we must bind the slave threads
+				bind_master(meId, nodeId);
+			}else{
+	      			fprintf(stderr, "DLB ERROR: Binding of threads only enabled for SMPSs\n");
+			}
+		}
+	}
+
 	greedy=0;
 	if ((policy_greedy=getenv("LB_GREEDY"))!=NULL){
 	    if(strcasecmp(policy_greedy, "YES")==0){
@@ -58,25 +70,12 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 
 //Setting blocking mode
 	block=_1CPU;
-/*	if ((blocking=getenv("MXMPI_RECV"))!=NULL){
-		if (strcasecmp(blocking, "blocking")==0){
+	if ((blocking=getenv("LB_LEND_MODE"))!=NULL){
+		if (strcasecmp(blocking, "BLOCK")==0){
 			block=MPI_BLOCKING;
-#ifdef debugBasicInfo
-			fprintf(stdout, "DLB: (%d:%d) - MPI blocking mode set to blocking (I will lend all the resources)\n", node, me);
-#endif	
-		}
-	}*/
-	if(block==_1CPU){
-/*#ifdef debugBasicInfo 
-		fprintf(stderr, "DLB: (%d:%d) - MPI blocking mode NOT set to blocking\n", node, me);
-#endif	*/
-		if ((blocking=getenv("LB_LEND_MODE"))!=NULL){
-			if (strcasecmp(blocking, "BLOCK")==0){
-				block=MPI_BLOCKING;
 #ifdef debugBasicInfo 
-				fprintf(stderr, "DLB (%d:%d) - LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n", node, me);
-#endif	
-			}
+			fprintf(stderr, "DLB (%d:%d) - LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n", node, me);
+#endif
 		}
 	}
 #ifdef debugBasicInfo 

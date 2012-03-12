@@ -130,7 +130,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 
 		shdata->mutex=-1;
 
-		add_event(IDLE_CPUS_EVENT, 0);
+		//add_event(IDLE_CPUS_EVENT, 0);
 
 		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, comm_node);
 
@@ -179,7 +179,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 	CPU_ZERO(&cpu_set);//prepare cpu_set
 	CPU_SET(shdata->cpus_map[me][0], &cpu_set);
 	if(sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set), &cpu_set)<0)perror("ERROR: sched_setaffinity of master thread");
-add_event(1005, shdata->cpus_map[me][0]+1);
+//add_event(1005, shdata->cpus_map[me][0]+1);
 }
 
 void finalize_comm_Map(){
@@ -213,7 +213,7 @@ int releaseCpus_Map(int cpus, int* released_cpus){
 	shdata->idleCpus+= (cpus-shdata->claimed_cpus_proc[me]);
 	shdata->claimed_cpus_proc[me]=0;
 
-	add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
+	//add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
 	//print_map();
 //	fprintf(stderr,"DLB DEBUG: (%d:%d) mutex: %d\n", node, me, shdata->mutex);
@@ -228,7 +228,7 @@ int releaseCpus_Map(int cpus, int* released_cpus){
 
 	//Just in case I let the thread run in all the cpus
 	if(sched_setaffinity(syscall(SYS_gettid), sizeof(all_cpu), &all_cpu)<0)perror("ERROR: sched_setaffinity of master thread");
-add_event(1005, 30);
+//add_event(1005, 30);
 	
   return 0;
 }
@@ -308,7 +308,7 @@ int acquireCpus_Map(int current_cpus, int* new_cpus){
 			CPU_ZERO(&cpu_set);//prepare cpu_set
 			CPU_SET(shdata->cpus_map[me][0], &cpu_set);
 			if(sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set), &cpu_set)<0)perror("ERROR: sched_setaffinity of master thread");
-add_event(1005, shdata->cpus_map[me][0]+1);
+//add_event(1005, shdata->cpus_map[me][0]+1);
 
 			if (overloading)sched_yield();
 
@@ -318,7 +318,7 @@ add_event(1005, shdata->cpus_map[me][0]+1);
 	//print_map();
 //	fprintf(stderr,"DLB DEBUG: (%d:%d) mutex: %d\n", node, me, shdata->mutex);
 	while(!__sync_bool_compare_and_swap(&(shdata->mutex), me, -1));
-	add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
+	//add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
 #ifdef debugMap 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) Acquiring ", node, me);
@@ -375,7 +375,7 @@ int checkIdleCpus_Map(int myCpus, int max_cpus, int* new_cpus){
 	while(!__sync_bool_compare_and_swap(&(shdata->mutex), me, -1));
 
     }
-	add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
+	//add_event(IDLE_CPUS_EVENT, shdata->idleCpus;
 
 #ifdef debugSharedMem 
 //		fprintf(stderr,"DLB DEBUG: (%d:%d) Using %d CPUS... %d Idle \n", node, me, shdata->num_cpus_proc[me], shdata->idleCpus);

@@ -22,21 +22,21 @@ OBJ32_MPI=LB_comm/comm_lend_light32.o \
 	LB_MPI/MPI_interface32.o \
 	LB_MPI/process_MPI32.o \
 	LB_MPI/MPI_interfaceF32.o \
-	LB_comm/comm_map.o \
+	LB_comm/comm_map32.o \
 
 OBJ_MPI2= LB_comm/comm_lend_light-mpi2.o \
 	LB_comm/comm_shMem-mpi2.o \
 	LB_MPI/MPI_interface-mpi2.o \
 	LB_MPI/process_MPI-mpi2.o \
 	LB_MPI/MPI_interfaceF-mpi2.o \
-	LB_comm/comm_map.o \
+	LB_comm/comm_map-mpi2.o \
 
 OBJ32_MPI2=LB_comm/comm_lend_light32-mpi2.o \
 	LB_comm/comm_shMem32-mpi2.o \
 	LB_MPI/MPI_interface32-mpi2.o \
 	LB_MPI/process_MPI32-mpi2.o \
 	LB_MPI/MPI_interfaceF32-mpi2.o \
-	LB_comm/comm_map.o \
+	LB_comm/comm_map32-mpi2.o \
 
 
 OBJ=dlb/dlb_API.o \

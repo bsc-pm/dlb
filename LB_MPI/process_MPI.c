@@ -36,9 +36,9 @@ void after_init(void){
 	}
 	num_mpis= atoi(mpi_per_node);	
 	MPI_Comm_rank(MPI_COMM_WORLD,&me);
-fprintf(stderr, "%d: I am %d\n", getpid(), me);
+//fprintf(stderr, "%d: I am %d\n", getpid(), me);
 
-/*	//Setting me and nodeId for MPIs
+	//Setting me and nodeId for MPIs
 	char nodeId[50];
 	int procs;
 	MPI_Comm_size (MPI_COMM_WORLD, &procs); 
@@ -107,11 +107,11 @@ fprintf(stderr, "%d: I am %d\n", getpid(), me);
 		PMPI_Recv(&data, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, 0);
 		me=data[0];
 		node=data[1];
-	}*/
+	}
 
 	/////////////////////////////////////
-	node = me/num_mpis;
-	me = me % num_mpis;
+	//node = me/num_mpis;
+	//me = me % num_mpis;
 	/////////////////////////////////////
 #ifdef debugConfig
 	fprintf(stderr, "DLB: (%d:%d) - MPIs per node: %d\n", node, me, num_mpis);
@@ -169,6 +169,7 @@ void after_mpi(mpi_call call_type){
 
 void before_finalize(void){
 	Finish();
+	mpi_ready=0;
 }
 
 void after_finalize(void){}

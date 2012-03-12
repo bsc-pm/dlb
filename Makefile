@@ -11,6 +11,7 @@ include Makefile.obj
 ## -DdebugDistribution :Prints the changes in the distribution of cpus
 ## -DdebugSharedMem :Prints the operations on shared memory
 ## -DdebugLend :Prints debug information of Lend policy
+## -DdebugMap :Prints debug information of Map policy
 ## -DdebugLoads: Prints the computational time, MPI time and weight of each MPI
 ## -DdebugBinding: Prints the binding of threads to cpus if binding is set
 
@@ -21,15 +22,16 @@ export DEBUG
 
 CC= xlc_r 
 CC= mpicc 
+CC= gcc
 export CC
 
 CFLAGS_xl= -qPIC -I. -I.. $(DEBUG) -qinfo=gen -qformat=all
-CFLAGS= -fPIC -I. -I.. $(DEBUG) -Wall -O2 -g
+CFLAGS= -fPIC -I. -I.. $(DEBUG) -Wall -O2 
 export CFLAGS
 export CFLAGS_xl
 
 LDFLAGS_xl= -qPIC -qmkshrobj 
-LDFLAGS= -fPIC -shared -Wall -O2 -lrt -g
+LDFLAGS= -fPIC -shared -Wall -O2 -lrt
 export LDFLAGS
 export LDFLAGS_xl
 
@@ -44,15 +46,14 @@ FLAGS64= -m64
 export FLAGS64
 export FLAGS64_xl
 
-
-MPIINCLUDE=-I/afs/pdc.kth.se/home/m/mgarci/mvapich2-1.6-install/include
+MPIINCLUDE=-I/opt/osshpc/mpich-mx/64/include
+MPI2INCLUDE=-I/gpfs/apps/MPICH2/mx/default/64/include/
 export MPIINCLUDE
+export MPI2INCLUDE
 
 #################### RULES ##########################
 
-all: lib64 
-#all: lib32 lib64 libmpi2-64 
-#libmpi2-32
+all: lib32 lib64 libmpi2-64 
 
 
 dlb: lib/32/libdlb.so lib/64/libdlb.so
@@ -63,7 +64,6 @@ trace_dlb: lib/32/libTdlb.so lib/64/libTdlb.so
 updRes: lib/32/libUpdRes.so lib/64/libUpdRes.so
 
 lib32: lib/32/libdlb.so lib/32/libTdlb.so lib/32/libUpdRes.so
-  echo "Building: " $@
 
 lib64: lib/64/libdlb.so lib/64/libTdlb.so lib/64/libUpdRes.so
 

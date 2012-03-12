@@ -22,7 +22,7 @@ else
 	params=${10}	
 fi
 
-if [ $version == "SERIE" ]
+if [ $version == "SERIE" -o $version == "ORIG" ]
 then
 	MPI_TRACE_LIB=libmpitrace.so
 	MPI_TRACE_LIB_DLB=libmpitrace.so
@@ -64,7 +64,7 @@ export LB_MPIxNODE=$procs_node
 export LB_POLICY=$policy
 export LB_PROFILE=$profiling
 export LB_LEND_MODE=${block_mode}
-export LB_BIND=YES
+#export LB_BIND=YES
 #export LB_JUST_BARRIER=1
 DLB_PATH=/home/bsc15/bsc15994/DLB/dlb/lib/${bits}
 
@@ -89,6 +89,11 @@ fi
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${DLB_PATH}:${SMPSS_PATH}:$TRACE_PATH:/gpfs/apps/GCC/4.2.3/lib${BITS}
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/apps/PAPI/3.6.2-970mp/64/lib64
+
+if [ "$MPI_VLAD" == "YES" ]
+then
+	export LD_LIBRARY_PATH=/home/bsc18/bsc18023/pub/Linux/mpich-mx_modified/64.xlc/lib/shared:$LD_LIBRARY_PATH 
+fi
 
 if [ $policy == "ORIG" ]
 then
