@@ -57,6 +57,7 @@ void Init(int me, int num_procs, int node){
 	nodeId=node;
 	meId=me;
 	procsNode=num_procs;
+        mpi_x_node=num_procs;
 
 	iterNum=0;
 

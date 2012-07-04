@@ -46,7 +46,7 @@ FLAGS64= -m64
 export FLAGS64
 export FLAGS64_xl
 
-MPIINCLUDE=-I/opt/osshpc/mpich-mx/64/include
+MPIINCLUDE=-I/opt/mpi/bullxmpi/1.1.11.1/include
 MPI2INCLUDE=-I/gpfs/apps/MPICH2/mx/default/64/include/
 export MPIINCLUDE
 export MPI2INCLUDE

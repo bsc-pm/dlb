@@ -1,4 +1,4 @@
 
 //Architecture file for Marenostrum
-#define CPUS_NODE 4
+#define CPUS_NODE 12
 
