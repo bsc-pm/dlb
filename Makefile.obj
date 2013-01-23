@@ -5,7 +5,9 @@ SUB_DIRS= LB_MPI \
     LB_policies \
     DPD \
     LB_comm \
-    LB_numThreads
+    LB_numThreads \
+    support \
+    api
 
 ############### CHOOSE THE COMMUNICATION MODEL #########
 ############### SHARED MEMORY OR SOCKETS ############### 
@@ -53,6 +55,15 @@ OBJ=dlb/dlb_API.o \
     LB_arch/common.o \
     LB_policies/Lend_light.o \
     LB_MPI/tracing.o \
+    LB_comm/shmem.o \
+    LB_comm/shmem_lewi_mask.o \
+    LB_policies/lewi_mask.o \
+    support/debug.o \
+    support/globals.o \
+    support/utils.o \
+    api/update_resources.o \
+#support/tracing.o \
+
 
 OBJ32=dlb/dlb_API32.o \
     DPD/DPD32.o \

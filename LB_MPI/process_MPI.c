@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "support/globals.h"
+int omp_get_num_threads() __attribute__( ( weak ) );
+
 int periodo; 
 int me;
 int just_barrier;
@@ -116,6 +119,13 @@ void after_init(void){
 #ifdef debugConfig
 	fprintf(stderr, "DLB: (%d:%d) - MPIs per node: %d\n", node, me, num_mpis);
 #endif	
+
+        // Globals
+        MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
+        _process_id = me;
+        _node_id = node;
+        _mpis_per_node = num_mpis;
+        if ( omp_get_num_threads ) _default_nthreads = omp_get_num_threads();
 
 	Init(me, num_mpis, node);
 	mpi_ready=1;	

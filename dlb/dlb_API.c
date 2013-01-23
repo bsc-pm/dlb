@@ -20,6 +20,7 @@
 #include <LB_policies/JustProf.h>
 #include <LB_policies/DWB_Eco.h>
 #include <LB_policies/Lewi_map.h>
+#include <LB_policies/lewi_mask.h>
 
 #include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
@@ -177,6 +178,20 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &DWB_Eco_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &DWB_Eco_OutOfBlockingCall;
 		lb_funcs.updateresources = &DWB_Eco_updateresources;
+
+	}else if (strcasecmp(policy, "LeWI_mask")==0){
+#ifdef debugConfig
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI mask\n", node, me);
+#endif
+		lb_funcs.init = &lewi_mask_init;
+		lb_funcs.finish = &lewi_mask_finish;
+		lb_funcs.initIteration = &lewi_mask_init_iteration;
+		lb_funcs.finishIteration = &lewi_mask_finish_iteration;
+		lb_funcs.intoCommunication = &lewi_mask_into_communication;
+		lb_funcs.outOfCommunication = &lewi_mask_out_of_communication;
+		lb_funcs.intoBlockingCall = &lewi_mask_into_blocking_call;
+		lb_funcs.outOfBlockingCall = &lewi_mask_out_of_blocking_call;
+		lb_funcs.updateresources = &lewi_mask_update_resources;
 
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
