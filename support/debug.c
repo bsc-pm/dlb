@@ -23,7 +23,7 @@
 #include <mpi.h>
 #include "globals.h"
 
-void verbose0 ( char *fmt, ... )
+void verbose0 ( const char *fmt, ... )
 {
 #ifndef QUIET_MODE
    if ( _mpi_rank == 0 ) {
@@ -36,7 +36,7 @@ void verbose0 ( char *fmt, ... )
 #endif
 }
 
-void verbose ( char *fmt, ... )
+void verbose ( const char *fmt, ... )
 {
 #ifndef QUIET_MODE
    va_list args;
@@ -47,7 +47,7 @@ void verbose ( char *fmt, ... )
 #endif
 }
 
-void fatal0 ( char *fmt, ... )
+void fatal0 ( const char *fmt, ... )
 {
    if ( _mpi_rank == 0 ) {
       va_list args;
@@ -59,7 +59,7 @@ void fatal0 ( char *fmt, ... )
    PMPI_Abort ( MPI_COMM_WORLD, 1 );
 }
 
-void fatal ( char *fmt, ... )
+void fatal ( const char *fmt, ... )
 {
    va_list args;
    va_start( args, fmt );
@@ -69,7 +69,7 @@ void fatal ( char *fmt, ... )
    PMPI_Abort ( MPI_COMM_WORLD, 1 );
 }
 
-void debug_basic_info0 ( char *fmt, ... )
+void debug_basic_info0 ( const char *fmt, ... )
 {
 #ifdef debugBasicInfo
    if ( _mpi_rank == 0 ) {
@@ -82,7 +82,7 @@ void debug_basic_info0 ( char *fmt, ... )
 #endif
 }
 
-void debug_basic_info ( char *fmt, ... )
+void debug_basic_info ( const char *fmt, ... )
 {
 #ifdef debugBasicInfo
    va_list args;
@@ -93,7 +93,7 @@ void debug_basic_info ( char *fmt, ... )
 #endif
 }
 
-void debug_config ( char *fmt, ... )
+void debug_config ( const char *fmt, ... )
 {
 #ifdef debugConfig
    va_list args;
@@ -104,17 +104,18 @@ void debug_config ( char *fmt, ... )
 #endif
 }
 
-void debug_inout ( char *fmt, ... )
+void debug_inout ( const char *fmt, ... )
 {
 #ifdef DEBUG_INOUT
    va_list args;
    va_start( args, fmt );
+   fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
    vfprintf( stderr, fmt, args );
    va_end( args );
 #endif
 }
 
-void debug_inout_MPI ( char *fmt, ... )
+void debug_inout_MPI ( const char *fmt, ... )
 {
 #ifdef debugInOutMPI
    va_list args;
@@ -124,7 +125,7 @@ void debug_inout_MPI ( char *fmt, ... )
 #endif
 }
 
-void debug_lend ( char *fmt, ... )
+void debug_lend ( const char *fmt, ... )
 {
 #ifdef debugLend
    va_list args;
@@ -135,7 +136,7 @@ void debug_lend ( char *fmt, ... )
 #endif
 }
 
-void debug_shmem ( char *fmt, ... )
+void debug_shmem ( const char *fmt, ... )
 {
 #ifdef debugSharedMem
    va_list args;

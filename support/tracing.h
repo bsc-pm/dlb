@@ -19,7 +19,6 @@
 
 /********* EXTRAE EVENTS *************/
 #define THREADS_USED_EVENT 800000
-#define MPI_BLOCKED_EVENT 800010
 #define RUNTIME_EVENT 800020
    #define EVENT_INIT     1
    #define EVENT_INTO_MPI 2

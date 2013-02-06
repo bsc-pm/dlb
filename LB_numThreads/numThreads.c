@@ -97,4 +97,3 @@ void add_mask( cpu_set_t *cpu_set )
 {
    if ( nanos_add_mask ) nanos_add_mask ( cpu_set );
 }
-

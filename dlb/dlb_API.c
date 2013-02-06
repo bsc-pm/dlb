@@ -25,6 +25,9 @@
 #include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 #include <LB_MPI/tracing.h>
+#include "support/debug.h"
+#include "support/globals.h"
+#include "support/utils.h"
 
 int iterNum;
 struct timespec initAppl;
@@ -72,6 +75,10 @@ void Init(int me, int num_procs, int node){
 			prof=1;
 		}
 	}
+
+        parse_env_bool( "LB_JUST_BARRIER", &_just_barrier );
+
+        parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
 //	update_threads(CPUS_NODE/num_procs);
 
@@ -222,6 +229,14 @@ void Init(int me, int num_procs, int node){
 		}
 	}
 #endif
+
+        if ( _just_barrier )
+           debug_basic_info0 ( "Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n" );
+
+        if ( _blocking_mode == ONE_CPU )
+           debug_basic_info0 ( "LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n" );
+        else if ( _blocking_mode == BLOCK )
+           debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n" );
 
 	if (prof){
 		clock_gettime(CLOCK_REALTIME, &initAppl);

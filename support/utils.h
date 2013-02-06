@@ -25,8 +25,15 @@ typedef enum {
    true = 1
 } bool;
 
+typedef enum {
+   ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call
+   BLOCK,   // MPI set to blocking mode
+} blocking_mode_t;
+
+
 void parse_env_bool ( const char *env, bool *var );
 void parse_env_int_or_die ( char const *env, int *var );
 void parse_env_string ( char const *env, char **var );
+void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode );
 
 #endif /* UTILS_H */

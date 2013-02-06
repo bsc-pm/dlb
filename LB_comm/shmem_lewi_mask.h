@@ -23,6 +23,7 @@
 #define _GNU_SOURCE
 #include <sched.h>
 
+const char* mask_to_str ( cpu_set_t *cpu_set );
 void shmem_lewi_mask_init( cpu_set_t *cpu_set );
 void shmem_lewi_mask_finalize( void );
 void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set );

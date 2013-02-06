@@ -52,3 +52,15 @@ void parse_env_string ( char const *env, char **var )
 {
    *var = getenv( env );
 }
+
+void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode )
+{
+   char* blocking = getenv( env );
+
+   if ( blocking != NULL ) {
+      if ( strcasecmp( blocking, "1CPU" ) == 0 )
+         *mode = ONE_CPU;
+      else if ( strcasecmp( blocking, "BLOCK" ) == 0 )
+         *mode = BLOCK;
+   }
+}

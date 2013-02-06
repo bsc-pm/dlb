@@ -27,3 +27,4 @@ int _mpis_per_node;
 int _default_nthreads;
 
 bool _just_barrier = false;
+blocking_mode_t _blocking_mode = ONE_CPU;

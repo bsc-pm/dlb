@@ -20,16 +20,16 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-void verbose0 ( char *fmt, ... );
-void verbose ( char *fmt, ... );
-void fatal0 ( char *fmt, ... );
-void fatal ( char *fmt, ... );
-void debug_basic_info0 ( char *fmt, ... );
-void debug_basic_info ( char *fmt, ... );
-void debug_config ( char *fmt, ... );
-void debug_inout ( char *fmt, ... );
-void debug_inout_MPI ( char *fmt, ... );
-void debug_lend ( char *fmt, ... );
-void debug_shmem ( char *fmt, ... );
+void verbose0 ( const char *fmt, ... );
+void verbose ( const char *fmt, ... );
+void fatal0 ( const char *fmt, ... );
+void fatal ( const char *fmt, ... );
+void debug_basic_info0 ( const char *fmt, ... );
+void debug_basic_info ( const char *fmt, ... );
+void debug_config ( const char *fmt, ... );
+void debug_inout ( const char *fmt, ... );
+void debug_inout_MPI ( const char *fmt, ... );
+void debug_lend ( const char *fmt, ... );
+void debug_shmem ( const char *fmt, ... );
 
 #endif /* DEBUG_H */
