@@ -61,7 +61,7 @@ void lewi_mask_init( void )
 
 void lewi_mask_finish( void )
 {
-   if ( _process_id == 0 ) shmem_lewi_mask_finalize();
+   shmem_lewi_mask_finalize();
 }
 
 void lewi_mask_init_iteration( void ) {}

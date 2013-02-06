@@ -17,7 +17,8 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#include <sys/sem.h>
+#include <fcntl.h>
+#include <semaphore.h>
 #include <sys/shm.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -30,9 +31,8 @@
 #include "support/tracing.h"
 
 static int shmid;
-static int semid;
-static struct sembuf lock;
-static struct sembuf unlock;
+static sem_t *mutex;
+static const char SEM_NAME[]= "DLB_mutex";
 
 void shmem_init( void **shdata, size_t sm_size )
 {
@@ -41,15 +41,7 @@ void shmem_init( void **shdata, size_t sm_size )
    key_t key;
 
    MPI_Comm comm_node;
-   MPI_Comm_split ( MPI_COMM_WORLD, _node_id, 0, &comm_node );
-
-   lock.sem_num = 0;
-   lock.sem_op = -1;
-   lock.sem_flg = 0;
-
-   unlock.sem_num = 0;
-   unlock.sem_op = 1;
-   unlock.sem_flg = 0;
+   PMPI_Comm_split ( MPI_COMM_WORLD, _node_id, 0, &comm_node );
 
    if ( _process_id == 0 ) {
 
@@ -57,14 +49,11 @@ void shmem_init( void **shdata, size_t sm_size )
 
       key = getpid();
 
-      short sem_init = 1;
-      if ( ( semid = semget( key, 1, IPC_EXCL | IPC_CREAT | 0666 ) ) < 0 ) {
-         perror( "DLB PANIC: semget Master" );
-         exit( 1 );
-      }
-
-      if ( semctl( semid, 0, SETALL, &sem_init ) < 0 ) {
-         perror( "DLB PANIC: semctl Master" );
+      sem_unlink( SEM_NAME );
+      mutex = sem_open( SEM_NAME, O_CREAT | O_EXCL, 0666, 1 );
+      if ( mutex == SEM_FAILED ) {
+         perror( "unable to create semaphore" );
+         sem_unlink( SEM_NAME );
          exit( 1 );
       }
 
@@ -87,13 +76,18 @@ void shmem_init( void **shdata, size_t sm_size )
 
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, comm_node );
 
-      semid = semget( key, 1, 0666 );
+      mutex = sem_open( SEM_NAME, 0, 0666, 0 );
+      if ( mutex == SEM_FAILED ) {
+         perror( "reader:unable to execute semaphore" );
+         sem_close( mutex );
+         exit( 1 );
+      }
 
       do {
          shmid = shmget( key, sm_size, 0666 );
       } while ( shmid<0 && errno==ENOENT );
 
-      if ( shmid < 0 || semid < 0 ) {
+      if ( shmid < 0 ) {
          perror( "shmget slave" );
          exit( 1 );
       }
@@ -109,8 +103,10 @@ void shmem_init( void **shdata, size_t sm_size )
 
 void shmem_finalize( void )
 {
-   if ( semctl( semid, 1, IPC_RMID ) < 0 )
-      perror( "DLB ERROR: Removing Semaphore" );
+   sem_close(mutex);
+   if ( _process_id == 0 ) {
+      sem_unlink(SEM_NAME);
+   }
 
    if ( shmctl( shmid, IPC_RMID, NULL ) < 0 )
       perror( "DLB ERROR: Removing Shared Memory" );
@@ -118,18 +114,10 @@ void shmem_finalize( void )
 
 void shmem_lock( void )
 {
-   if ( semop( semid, &lock, 1 ) < 0 ) {
-      perror("shmctl: LOCK failed");
-      exit( 1 );
-   }
-   add_event( 800050, 1);
+   sem_wait( mutex );
 }
 
 void shmem_unlock( void )
 {
-   if ( semop( semid, &unlock, 1 ) < 0 ) {
-      perror("shmctl: UNLOCK failed");
-      exit( 1 );
-   }
-   add_event( 800050, 0);
+   sem_post( mutex );
 }
