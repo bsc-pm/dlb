@@ -3,8 +3,8 @@
 #include <sched.h>
 #include <pthread.h>
 #include <numThreads.h>
+#include "support/globals.h"
 #include "support/tracing.h"
-#include <LB_arch/arch.h>
 #include <stdio.h>
 #include <omp.h>
 
@@ -62,7 +62,7 @@ void DLB_bind_thread(int tid, int procsNode){
 		cpu_set_t set;
 		CPU_ZERO(&set);
                 if (procsNode == 0) procsNode = mpi_x_node;
-		int default_threads=CPUS_NODE/procsNode;
+		int default_threads=_default_nthreads;
 
 		//I am one of the default slave threads
 		if(tid<(default_threads)){

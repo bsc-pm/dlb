@@ -40,6 +40,17 @@ AC_ARG_WITH([mpi],
    ]
 )
 
+# check for number of cpus on node
+AC_ARG_WITH([cpus-per-node],
+   AS_HELP_STRING([--with-cpus-per-node=N], [Number of cpus per node]),
+   [
+      ncpus="$withval"
+   ],
+   [
+      ncpus=1
+   ]
+)
+
 AM_CONDITIONAL([MPI_SUPPORT], [test x"$mpi_dir" = x"yes"])
 AC_SUBST([MPI_HOME])
 
@@ -71,12 +82,12 @@ AC_MSG_RESULT([$debugit])
 if test x"$debugit" = x"yes"; then
     AC_DEFINE([DEBUG],[],[Debug Mode])
     DEBUG_FLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-    DEBUG_MACRO_FLAGS="-DDEBUGBASICINFO -DDEBUGINOUT -DDEBUGLEND -DDEBUGSHAREDMEM"
+    DEBUG_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DDEBUGBASICINFO -DDEBUGINOUT -DDEBUGLEND -DDEBUGSHAREDMEM"
 else
     AC_DEFINE([NDEBUG],[],[No-debug Mode])
 fi
 PERFO_FLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-PERFO_MACRO_FLAGS="-DDEBUGBASICINFO"
+PERFO_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DDEBUGBASICINFO"
 
 ##########################################################################
 

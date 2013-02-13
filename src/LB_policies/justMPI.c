@@ -1,7 +1,7 @@
 #include <Lend_light.h>
-#include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 #include <LB_comm/comm_lend_light.h>
+#include "support/globals.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -25,7 +25,7 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	me = meId;
 	node = nodeId;
 	procs = num_procs;
-	default_cpus=CPUS_NODE/procs;
+	default_cpus = _default_nthreads;
 	
 	setThreads_Lend_light(default_cpus);
 //	myCPUS=default_cpus;

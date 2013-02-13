@@ -1,7 +1,7 @@
 #include <Lewi_map.h>
-#include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 #include <LB_comm/comm_map.h>
+#include "support/globals.h"
 #include "support/tracing.h"
 
 #include <pthread.h>
@@ -32,7 +32,7 @@ void Map_Init(int meId, int num_procs, int nodeId){
 	me = meId;
 	node = nodeId;
 	procs = num_procs;
-	default_cpus=CPUS_NODE/procs;
+	default_cpus = _default_nthreads;
 	
 #ifdef debugBasicInfo
 	    if (me==0 && node==0){

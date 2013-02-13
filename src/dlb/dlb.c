@@ -21,7 +21,6 @@
 #include <LB_policies/Lewi_map.h>
 #include <LB_policies/lewi_mask.h>
 
-#include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 #include "support/debug.h"
 #include "support/globals.h"
@@ -81,8 +80,6 @@ void Init(int me, int num_procs, int node){
         parse_env_bool( "LB_JUST_BARRIER", &_just_barrier );
 
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
-
-//	update_threads(CPUS_NODE/num_procs);
 
 	if (strcasecmp(policy, "LEND_simple")==0){
 #ifdef debugConfig
@@ -224,7 +221,7 @@ void Init(int me, int num_procs, int node){
 	if (me==0 && node==0){
 		fprintf(stdout, "DLB: Balancing policy: %s balancing\n", policy);
 		fprintf(stdout, "DLB: MPI processes per node: %d \n", num_procs);
-		fprintf(stdout, "DLB: Each MPI process starts with %d threads\n", CPUS_NODE/num_procs);
+		fprintf(stdout, "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
 		
 		if (prof){
 			fprintf(stdout, "DLB: Profiling of application active\n");

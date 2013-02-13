@@ -1,6 +1,6 @@
 #include <Weight.h>
-#include <LB_arch/arch.h>
-#include <support/utils.h>
+#include "support/globals.h"
+#include "support/utils.h"
 
 #include <semaphore.h>
 #include <stdio.h>
@@ -64,7 +64,7 @@ void createThreads_Weight(){
 #endif
 
 	threadsUsed=0;
-	threads2use=CPUS_NODE/procs;
+	threads2use=_default_nthreads;
 
 	//The local thread won't communicate by sockets
 	LoadCommConfig(procs, me, node);
@@ -104,7 +104,7 @@ void* masterThread_Weight(void* arg){
 	}
 
 	//We start with equidistribution
-	for (i=0; i<procs; i++) cpus[i]=CPUS_NODE/procs;
+	for (i=0; i<procs; i++) cpus[i]=_default_nthreads;
 
 //	applyNewDistribution_Weight(cpus);
 

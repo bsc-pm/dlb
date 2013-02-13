@@ -55,7 +55,6 @@ includes = \
          -I$(top_srcdir)/src/LB_policies              	\
          -I$(top_srcdir)/src/LB_MPI                   	\
          -I$(top_srcdir)/src/LB_comm                 	\
-         -I$(top_srcdir)/src/LB_arch               	\
          -I$(top_srcdir)/src/dlb               		\
          -I$(top_srcdir)/src/support               	\
          $(END)

@@ -1,7 +1,6 @@
 #define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */                                                                                                                                                                          
 
 #include <comm.h>
-#include <LB_arch/arch.h>
 #include "support/tracing.h"
 
 #include <stdio.h>                                                                                                                                                                                                                       

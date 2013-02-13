@@ -1,5 +1,4 @@
 #include <Lend.h>
-#include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
 //#include <mpitrace_user_events.h>
 
@@ -64,10 +63,10 @@ void Lend_OutOfBlockingCall(void){
 	info.action = ACQUIRE_CPUS;
 	info.cpus=threadsUsed;
 
-	threads2use=CPUS_NODE/procs;
+	threads2use=_default_nthreads;
 	Lend_updateresources();
 	SendToMaster((char *)&info,sizeof(info));
-	threads2use=CPUS_NODE/procs;
+	threads2use=_default_nthreads;
 	Lend_updateresources();
 #ifdef debugLend
 	fprintf(stderr, "%d:%d - ACQUIRING %d cpus\n", node, me, threadsUsed);
@@ -81,7 +80,7 @@ int createThreads_Lend(){
 	pthread_t t;
 	finished=0;
 
-	threads2use=CPUS_NODE/procs;
+	threads2use=_default_nthreads;
 	
 #ifdef debugConfig
 	fprintf(stderr, "%d:%d - Creating Threads\n", node, me);
@@ -119,7 +118,7 @@ void* masterThread_Lend(void* arg){
 	
 
 	//We start with equidistribution
-	for (i=0; i<procs; i++) cpus[i]=CPUS_NODE/procs;
+	for (i=0; i<procs; i++) cpus[i]=_default_nthreads;
 
 	applyNewDistribution(cpus, procs+1);
 
@@ -210,13 +209,13 @@ int retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 	if(cpus[process]!=0){
 			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
 	}else{
-		int missing=CPUS_NODE/procs;
+		int missing=_default_nthreads;
 		int i;
-		if(idleCpus>=(CPUS_NODE/procs)){
+		if(idleCpus>=(_default_nthreads)){
 			idleCpus-=missing;
 			missing=0;
 #ifdef debugLend
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, CPUS_NODE/procs);
+	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, _default_nthreads);
 #endif
 		}else{
 
@@ -229,13 +228,13 @@ int retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 			i= (process+1)%procs;
 			while ((missing!=0) && (i!=process)){
 					
-				if (cpus[i]>CPUS_NODE/procs){
-					if (missing>(cpus[i]-CPUS_NODE/procs)){
+				if (cpus[i]>_default_nthreads){
+					if (missing>(cpus[i]-_default_nthreads)){
 #ifdef debugLend
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-CPUS_NODE/procs, i);
+	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-_default_nthreads, i);
 #endif
-						missing=missing-(cpus[i]-CPUS_NODE/procs);
-						cpus[i]=CPUS_NODE/procs;
+						missing=missing-(cpus[i]-_default_nthreads);
+						cpus[i]=_default_nthreads;
 					}else{
 #ifdef debugLend
 	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, missing, i);
@@ -248,10 +247,10 @@ int retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 				i= (i+1)%procs;
 			}
 		}
-		cpus[process]=(CPUS_NODE/procs);
+		cpus[process]=(_default_nthreads);
 		//SendToSlave(process,(char*) &cpus[process] , sizeof(int));
 		if(missing!=0){
-			fprintf(stderr,"%d:%d - WARNING proces %d tried to retrieve %d cpus and there are not enough available\n", node, me, process, CPUS_NODE/procs);
+			fprintf(stderr,"%d:%d - WARNING proces %d tried to retrieve %d cpus and there are not enough available\n", node, me, process, _default_nthreads);
 		}
 	}
 }
@@ -311,8 +310,8 @@ int CalculateNewDistribution_Lend(int* cpus, int process, ProcMetrics info[]){
 			lended=0;
 			i= (process+1)%procs;
 
-			if(idleCpus>=(CPUS_NODE/procs)){
-				lended=CPUS_NODE/procs;
+			if(idleCpus>=(_default_nthreads)){
+				lended=_default_nthreads;
 				idleCpus-=lended;
 #ifdef debugLend
 	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, lended);
@@ -321,21 +320,21 @@ int CalculateNewDistribution_Lend(int* cpus, int process, ProcMetrics info[]){
 				lended=idleCpus;
 				idleCpus=0;
 
-				while ((lended<(CPUS_NODE/procs)) && (i!=process)){
+				while ((lended<(_default_nthreads)) && (i!=process)){
 					
-					if (cpus[i]>CPUS_NODE/procs){
+					if (cpus[i]>_default_nthreads){
 #ifdef debugLend
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-CPUS_NODE/procs, i);
+	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-_default_nthreads, i);
 #endif
-						lended=lended+(cpus[i]-CPUS_NODE/procs);
-						cpus[i]=CPUS_NODE/procs;
+						lended=lended+(cpus[i]-_default_nthreads);
+						cpus[i]=_default_nthreads;
 						changed=i;
 					}
 					i= (i+1)%procs;
 				}
 
 			}
-			//cpus[process]=CPUS_NODE/procs;
+			//cpus[process]=_default_nthreads;
 			cpus[process]=lended;
 		}
 	}
@@ -351,7 +350,7 @@ void* slaveThread_Lend(void* arg){
 	fprintf(stderr,"%d:%d - Creating Slave thread\n", node, me);
 #endif	
 	StartSlaveComm();
-	threadsUsed=CPUS_NODE/procs;
+	threadsUsed=_default_nthreads;
 
 	while(!finished){
 		GetFromMaster((char*)&cpus,sizeof(int));

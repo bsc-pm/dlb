@@ -1,6 +1,6 @@
 #include <LeWI_active.h>
-#include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
+#include "support/globals.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -61,7 +61,7 @@ void LeWI_A_OutOfBlockingCall(void){
 	info.action = ACQUIRE_CPUS;
 	info.cpus=threadsUsed;
 
-	setThreads_LeWI_A(CPUS_NODE/procs);
+	setThreads_LeWI_A(_default_nthreads);
 	SendToMaster((char *)&info,sizeof(info));
 #ifdef debugLeWI_A
 	fprintf(stderr, "%d:%d - ACQUIRING %d cpus\n", node, me, threadsUsed);
@@ -88,8 +88,8 @@ void createThreads_LeWI_A(){
 	}
 
 	StartSlaveComm();
-	setThreads_LeWI_A(CPUS_NODE/procs);
-	threadsUsed=CPUS_NODE/procs;
+	setThreads_LeWI_A(_default_nthreads);
+	threadsUsed=_default_nthreads;
 
 	/*if (pthread_create(&t,NULL,slaveThread_LeWI_A,NULL)>0){
 		perror("createThreads:Error in pthread_create slave\n");
@@ -115,7 +115,7 @@ void* masterThread_LeWI_A(void* arg){
 	
 
 	//We start with equidistribution
-	for (i=0; i<procs; i++) cpus[i]=CPUS_NODE/procs;
+	for (i=0; i<procs; i++) cpus[i]=_default_nthreads;
 
 	LeWI_A_applyNewDistribution(cpus, procs+1);
 
@@ -130,7 +130,7 @@ void* masterThread_LeWI_A(void* arg){
 			cpus[i]=0;
 //			assign_lended_cpus(cpus, i, old_info);
 		}else if(info.action ==ACQUIRE_CPUS){
-			numThreads=CPUS_NODE/procs;
+			numThreads=_default_nthreads;
 			WriteToSlave(i,(char*)&numThreads,sizeof(int));
 			LeWI_A_retrieve_cpus(cpus, i, old_info);
 		}else{
@@ -167,13 +167,13 @@ void LeWI_A_retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 	if(cpus[process]!=0){
 			fprintf(stderr,"%d:%d - WARNING proces %d trying to Retrieve cpus when have already %d\n", node, me, process, cpus[process]);
 	}else{
-		int missing=CPUS_NODE/procs;
+		int missing=_default_nthreads;
 		int i;
-		if(idleCpus>=(CPUS_NODE/procs)){
+		if(idleCpus>=(_default_nthreads)){
 			idleCpus-=missing;
 			missing=0;
 #ifdef debugLeWI_A
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, CPUS_NODE/procs);
+	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus that where idle\n", node, me, process, _default_nthreads);
 #endif
 		}else{
 
@@ -186,13 +186,13 @@ void LeWI_A_retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 			i= (process+1)%procs;
 			while ((missing!=0) && (i!=process)){
 					
-				if (cpus[i]>CPUS_NODE/procs){
-					if (missing>(cpus[i]-CPUS_NODE/procs)){
+				if (cpus[i]>_default_nthreads){
+					if (missing>(cpus[i]-_default_nthreads)){
 #ifdef debugLeWI_A
-	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-CPUS_NODE/procs, i);
+	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, cpus[i]-_default_nthreads, i);
 #endif
-						missing=missing-(cpus[i]-CPUS_NODE/procs);
-						cpus[i]=CPUS_NODE/procs;
+						missing=missing-(cpus[i]-_default_nthreads);
+						cpus[i]=_default_nthreads;
 					}else{
 #ifdef debugLeWI_A
 	fprintf(stderr,"%d:%d - Process %d ACQUIRED %d cpus from %d\n", node, me, process, missing, i);
@@ -205,10 +205,10 @@ void LeWI_A_retrieve_cpus(int* cpus, int process, ProcMetrics info[]){
 				i= (i+1)%procs;
 			}
 		}
-		cpus[process]=(CPUS_NODE/procs);
+		cpus[process]=(_default_nthreads);
 		//SendToSlave(process,(char*) &cpus[process] , sizeof(int));
 		if(missing!=0){
-			fprintf(stderr,"%d:%d - WARNING proces %d tried to retrieve %d cpus and there are not enough available\n", node, me, process, CPUS_NODE/procs);
+			fprintf(stderr,"%d:%d - WARNING proces %d tried to retrieve %d cpus and there are not enough available\n", node, me, process, _default_nthreads);
 		}
 	}
 }

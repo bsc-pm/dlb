@@ -1,6 +1,6 @@
 #include <Lend_simple.h>
-#include <LB_arch/arch.h>
 #include <LB_numThreads/numThreads.h>
+#include "support/globals.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -61,11 +61,11 @@ void Lend_simple_OutOfBlockingCall(void){
 	info.action = ACQUIRE_CPUS;
 	info.cpus=threadsUsed;
 
-	threads2use=CPUS_NODE/procs;
+	threads2use=_default_nthreads;
 	Lend_simple_updateresources();
 
 	SendToMaster((char *)&info,sizeof(info));
-	threads2use=CPUS_NODE/procs;
+	threads2use=_default_nthreads;
 	Lend_simple_updateresources();
 #ifdef debugLend
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", node, me, threadsUsed);
@@ -79,7 +79,7 @@ void createThreads_Lend_simple(){
 	pthread_t t;
 	finished=0;
 
-	threads2use=CPUS_NODE/procs;
+	threads2use=_default_nthreads;
 
 #ifdef debugConfig
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - Creating Threads\n", node, me);
@@ -116,7 +116,7 @@ void* masterThread_Lend_simple(void* arg){
 	
 
 	//We start with equidistribution
-	for (i=0; i<procs; i++) cpus[i]=CPUS_NODE/procs;
+	for (i=0; i<procs; i++) cpus[i]=_default_nthreads;
 
 	applyNewDistribution_Lend_simple(cpus, procs+1);
 
@@ -185,27 +185,27 @@ int CalculateNewDistribution_Lend_simple(int* cpus, int process, ProcMetrics inf
 			lended=0;
 			i= (process+1)%procs;
 
-			if(idleCpus>=(CPUS_NODE/procs)){
-				lended=CPUS_NODE/procs;
+			if(idleCpus>=(_default_nthreads)){
+				lended=_default_nthreads;
 				idleCpus-=lended;
 			}else{
 				lended=idleCpus;
 				idleCpus=0;
 			}
 
-			while ((lended<(CPUS_NODE/procs)) && (i!=process)){
-				if (cpus[i]>=2*(CPUS_NODE/procs)){
-					lended=CPUS_NODE/procs;
-					cpus[i]=cpus[i]-CPUS_NODE/procs;
+			while ((lended<(_default_nthreads)) && (i!=process)){
+				if (cpus[i]>=2*(_default_nthreads)){
+					lended=_default_nthreads;
+					cpus[i]=cpus[i]-_default_nthreads;
 					changed=i;
-				}else if (cpus[i]>CPUS_NODE/procs){
-					lended=cpus[i]-CPUS_NODE/procs;
-					cpus[i]=CPUS_NODE/procs;
+				}else if (cpus[i]>_default_nthreads){
+					lended=cpus[i]-_default_nthreads;
+					cpus[i]=_default_nthreads;
 					changed=i;
 				}
 				i= (i+1)%procs;
 			}
-			cpus[process]=CPUS_NODE/procs;
+			cpus[process]=_default_nthreads;
 		}
 	}
 	return changed;
@@ -218,7 +218,7 @@ void* slaveThread_Lend_simple(void* arg){
 	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Slave thread\n", node, me);
 #endif	
 	StartSlaveComm();
-	threadsUsed=CPUS_NODE/procs;
+	threadsUsed=_default_nthreads;
 
 	while(!finished){
 		GetFromMaster((char*)&cpus,sizeof(int));

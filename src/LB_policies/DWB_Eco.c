@@ -1,6 +1,6 @@
 #include <DWB_Eco.h>
-#include <LB_arch/arch.h>
 #include "LB_numThreads/numThreads.h"
+#include "support/globals.h"
 
 #include <semaphore.h>
 #include <stdio.h>
@@ -20,7 +20,7 @@ void DWB_Eco_Init(int meId, int num_procs, int nodeId){
 	me = meId;
 	node = nodeId;
 	procs = num_procs;
-	threadsUsed=CPUS_NODE/procs;
+	threadsUsed=_default_nthreads;
 }
 
 void DWB_Eco_Finish(void){}
