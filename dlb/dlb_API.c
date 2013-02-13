@@ -50,6 +50,8 @@ int nodeId, meId, procsNode;
 
 int use_dpd;
 
+static void dummyFunc(){}
+
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
 	char* policy;
@@ -204,13 +206,13 @@ void Init(int me, int num_procs, int node){
 #ifdef debugConfig
 		fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", node, me);
 #endif	
-		lb_funcs.init = &dummyInit;
+		lb_funcs.init = &dummyFunc;
 		lb_funcs.finish = &dummyFunc;
 		lb_funcs.initIteration = &dummyFunc;
-		lb_funcs.finishIteration = &dummyFinishIter;
+		lb_funcs.finishIteration = &dummyFunc;
 		lb_funcs.intoCommunication = &dummyFunc;
 		lb_funcs.outOfCommunication = &dummyFunc;
-		lb_funcs.intoBlockingCall = &dummyIntoBlockingCall;
+		lb_funcs.intoBlockingCall = &dummyFunc;
 		lb_funcs.outOfBlockingCall = &dummyFunc;
 		lb_funcs.updateresources = &dummyFunc;
 	}else{
@@ -331,42 +333,14 @@ void OutOfBlockingCall(void){
 	lb_funcs.outOfBlockingCall();
 }
 
-void updateresources(){
+void updateresources( int max_resources ){
 	if(ready){
 		add_event(RUNTIME_EVENT, 4);
-		lb_funcs.updateresources();
+		lb_funcs.updateresources( max_resources );
 		add_event(RUNTIME_EVENT, 0);
 	}
 }
-
-void updateresources_(){
-	if(ready){
-		add_event(RUNTIME_EVENT, 4);
-		lb_funcs.updateresources();
-		add_event(RUNTIME_EVENT, 0);
-	}
-}
-
-void UpdateResources(){
-	if(ready){
-		add_event(RUNTIME_EVENT, 4);
-		lb_funcs.updateresources();
-		add_event(RUNTIME_EVENT, 0);
-	}
-}
-void UpdateResources_Map(int max_cpus){
-	if(ready){
-		add_event(RUNTIME_EVENT, 4);
-		Map_updateresources(max_cpus);
-		add_event(RUNTIME_EVENT, 0);
-	}
-}
-
 
 int tracing_ready(){
 	return ready;
 }
-void dummyFunc(){}
-void dummyInit(int me, int num_procs, int node){}
-void dummyFinishIter(double a, double b){}
-void dummyIntoBlockingCall(double a, double b){}

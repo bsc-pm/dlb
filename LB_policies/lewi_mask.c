@@ -30,11 +30,11 @@
 
 static int nthreads;
 
-/******* Main Functions - LeWI Balancing Policy ********/
+/******* Main Functions - LeWI Mask Balancing Policy ********/
 
 void lewi_mask_init( void )
 {
-   debug_config ( "LeWI Balancing Init\n" );
+   debug_config ( "LeWI Mask Balancing Init\n" );
 
    nthreads = _default_nthreads;
 
@@ -95,11 +95,11 @@ void lewi_mask_out_of_blocking_call( void )
 }
 
 /* Update Resources - Try to acquire foreign threads */
-void lewi_mask_update_resources( void )
+void lewi_mask_update_resources( int max_resources )
 {
    cpu_set_t free_cpus;
    CPU_ZERO( &free_cpus );
-   int new_threads = shmem_lewi_mask_collect_mask( &free_cpus );
+   int new_threads = shmem_lewi_mask_collect_mask( &free_cpus, max_resources );
 
    if ( new_threads > 0 ) {
       nthreads += new_threads;

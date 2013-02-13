@@ -71,7 +71,7 @@ void fatal ( const char *fmt, ... )
 
 void debug_basic_info0 ( const char *fmt, ... )
 {
-#ifdef debugBasicInfo
+#ifdef DEBUGBASICINFO
    if ( _mpi_rank == 0 ) {
       va_list args;
       va_start( args, fmt );
@@ -84,7 +84,7 @@ void debug_basic_info0 ( const char *fmt, ... )
 
 void debug_basic_info ( const char *fmt, ... )
 {
-#ifdef debugBasicInfo
+#ifdef DEBUGBASICINFO
    va_list args;
    va_start( args, fmt );
    fprintf( stdout, "DLB[%d:%d]: ", _node_id, _process_id );
@@ -95,7 +95,7 @@ void debug_basic_info ( const char *fmt, ... )
 
 void debug_config ( const char *fmt, ... )
 {
-#ifdef debugConfig
+#ifdef DEBUGCONFIG
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
@@ -106,7 +106,7 @@ void debug_config ( const char *fmt, ... )
 
 void debug_inout ( const char *fmt, ... )
 {
-#ifdef DEBUG_INOUT
+#ifdef DEBUGINOUT
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
@@ -117,7 +117,7 @@ void debug_inout ( const char *fmt, ... )
 
 void debug_inout_MPI ( const char *fmt, ... )
 {
-#ifdef debugInOutMPI
+#ifdef DEBUGINOUTMPI
    va_list args;
    va_start( args, fmt );
    vfprintf( stderr, fmt, args );
@@ -127,7 +127,7 @@ void debug_inout_MPI ( const char *fmt, ... )
 
 void debug_lend ( const char *fmt, ... )
 {
-#ifdef debugLend
+#ifdef DEBUGLEND
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
@@ -138,7 +138,7 @@ void debug_lend ( const char *fmt, ... )
 
 void debug_shmem ( const char *fmt, ... )
 {
-#ifdef debugSharedMem
+#ifdef DEBUGSHAREDMEM
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );

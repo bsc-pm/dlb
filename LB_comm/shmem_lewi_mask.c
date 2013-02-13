@@ -70,18 +70,19 @@ void shmem_lewi_mask_finalize( void )
 
 void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
 {
-   debug_shmem( "Lewi_add_mask: %s\n", mask_to_str(cpu_set));
    int size = CPU_COUNT( cpu_set );
+   int post_size;
 
    shmem_lock();
    {
       CPU_OR( &(shdata->free_cpus), &(shdata->free_cpus), cpu_set );
-      int post_size = CPU_COUNT( &(shdata->free_cpus) );
+      post_size = CPU_COUNT( &(shdata->free_cpus) );
       debug_shmem ( "Increasing %d Idle Threads (%d)\n", size, post_size );
-      debug_shmem ( "Free mask: %s\n", mask_to_str(&(shdata->free_cpus)) ) ;
-      add_event( IDLE_CPUS_EVENT, post_size );
+      debug_shmem ( "Free mask: %s\n", mask_to_str(&(shdata->free_cpus)) );
    }
    shmem_unlock();
+
+   add_event( IDLE_CPUS_EVENT, post_size );
 }
 
 cpu_set_t* shmem_lewi_mask_recover_defmask( void )
@@ -99,31 +100,43 @@ cpu_set_t* shmem_lewi_mask_recover_defmask( void )
          }
       }
       post_size = CPU_COUNT( &(shdata->free_cpus) );
-      add_event( IDLE_CPUS_EVENT, post_size );
       debug_shmem ( "Decreasing %d Idle Threads (%d)\n", prev_size - post_size, post_size );
       debug_shmem ( "Free mask: %s\n", mask_to_str(&(shdata->free_cpus)) ) ;
    }
    shmem_unlock();
 
+   add_event( IDLE_CPUS_EVENT, post_size );
+
    return &default_mask;
 }
 
-int shmem_lewi_mask_collect_mask ( cpu_set_t *cpu_set )
+int shmem_lewi_mask_collect_mask ( cpu_set_t *cpu_set, int max_resources )
 {
+   int i;
    int size = 0;
+   int collected = 0;
 
    shmem_lock();
    {
       size = CPU_COUNT( &(shdata->free_cpus) );
-      if ( size > 0 && shdata->ready_procs == 0) {
-         memcpy( cpu_set, &(shdata->free_cpus), sizeof(cpu_set_t) );
-         CPU_ZERO( &(shdata->free_cpus) );
-         debug_shmem ( "Clearing Idle Threads (0)\n" );
-         debug_shmem ( "Collecting mask %s, (size=%d)\n", mask_to_str( cpu_set ), size ) ;
-         add_event( IDLE_CPUS_EVENT, 0 );
+      if ( size > 0 && shdata->ready_procs == 0 ) {
+         for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
+            if ( CPU_ISSET( i, &(shdata->free_cpus) ) ) {
+               CPU_CLR( i, &(shdata->free_cpus) );
+               CPU_SET( i, cpu_set );
+               max_resources--;
+               collected++;
+            }
+         }
       }
    }
    shmem_unlock();
 
-   return size;
+   if ( collected > 0 ) {
+      debug_shmem ( "Clearing %d Idle Threads (%d)\n", collected,  size - collected );
+      debug_shmem ( "Collecting mask %s, (size=%d)\n", mask_to_str( cpu_set ), collected );
+      add_event( IDLE_CPUS_EVENT, size - collected );
+   }
+
+   return collected;
 }

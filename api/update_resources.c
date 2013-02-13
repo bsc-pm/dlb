@@ -19,11 +19,11 @@
 
 #include "dlb/dlb_API.h"
 
-void DLB_UpdateResources()
+void DLB_UpdateResources( int max_resources )
 {
-   updateresources();
+   updateresources( max_resources );
 }
 
-void dlb_updateresources() __attribute__ ((alias ("DLB_UpdateResources")));
-void DLB_UpdateResources_() __attribute__ ((alias ("DLB_UpdateResources")));
-void dlb_updateresources_() __attribute__ ((alias ("DLB_UpdateResources")));
+void dlb_updateresources( int max_resources ) __attribute__ ((alias ("DLB_UpdateResources")));
+void DLB_UpdateResources_( int max_resources ) __attribute__ ((alias ("DLB_UpdateResources")));
+void dlb_updateresources_( int max_resources ) __attribute__ ((alias ("DLB_UpdateResources")));

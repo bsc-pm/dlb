@@ -10,7 +10,7 @@ typedef struct{
 	void (*outOfCommunication) (void);
 	void (*intoBlockingCall) (double cpuSecs, double MPISecs);
 	void (*outOfBlockingCall) (void);
-	void (*updateresources) (void);
+	void (*updateresources) ( int max_resources );
 } BalancePolicy;
 
 extern int use_dpd;
@@ -33,13 +33,7 @@ void IntoBlockingCall(void);
 
 void OutOfBlockingCall(void);
 
-void dummyFunc(void);
-void dummyInit(int me, int num_procs, int node);
-void dummyFinishIter(double a, double b);
-void dummyIntoBlockingCall(double a, double b);
-
-void updateresources();
-void UpdateResources_Map(int max_cpus);
+void updateresources( int max_resources );
 
 int tracing_ready();
 #endif //DLB_API_H

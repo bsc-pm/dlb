@@ -20,6 +20,6 @@
 #ifndef UPDATE_RESOURCES_H
 #define UPDATE_RESOURCES_H 
 
-void DLB_UpdateResources();
+void DLB_UpdateResources( int max_resources );
 
 #endif /* UPDATE_RESOURCES_H */
