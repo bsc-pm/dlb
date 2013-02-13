@@ -80,12 +80,11 @@ AC_ARG_ENABLE([debug],
 AC_MSG_RESULT([$debugit])
 
 if test x"$debugit" = x"yes"; then
-    AC_DEFINE([DEBUG],[],[Debug Mode])
     DEBUG_FLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
     DEBUG_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DDEBUGBASICINFO -DDEBUGINOUT -DDEBUGLEND -DDEBUGSHAREDMEM"
-else
-    AC_DEFINE([NDEBUG],[],[No-debug Mode])
 fi
+AM_CONDITIONAL([DEBUG_LIB], [test x"$debugit" = x"yes"])
+
 PERFO_FLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
 PERFO_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DDEBUGBASICINFO"
 

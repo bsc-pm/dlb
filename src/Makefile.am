@@ -6,7 +6,11 @@
 # THE LIBRARIES TO BUILD
 ###############################################################################
 
-lib_LTLIBRARIES = libdlb.la libdlb-debug.la libUpdRes.la
+lib_LTLIBRARIES = libdlb.la libUpdRes.la
+if DEBUG_LIB
+lib_LTLIBRARIES += libdlb-debug.la
+endif
+
 include_HEADERS = $(top_srcdir)/src/dlb/api.h \
                   $(top_srcdir)/src/LB_MPI/MPI_interface.h
 
@@ -65,18 +69,20 @@ AM_LDFLAGS = -L$(MPI_HOME)/lib -lmpi
 endif
 
 libdlb_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
-libdlb_debug_la_CPPFLAGS = $(DEBUG_MACRO_FLAGS)
 libUpdRes_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
 
 libdlb_la_CFLAGS = $(PERFO_FLAGS) $(includes)
-libdlb_debug_la_CFLAGS = $(DEBUG_FLAGS) $(includes)
 libUpdRes_la_CFLAGS = $(PERFO_FLAGS)
 
 libdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
-libdlb_debug_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libUpdRes_la_LDFLAGS = -avoid-version
 
 libdlb_la_SOURCES = $(sources)
-libdlb_debug_la_SOURCES = $(sources)
 libUpdRes_la_SOURCES = dlb/update_resources_stub.c
 
+if DEBUG_LIB
+libdlb_debug_la_CPPFLAGS = $(DEBUG_MACRO_FLAGS)
+libdlb_debug_la_CFLAGS = $(DEBUG_FLAGS) $(includes)
+libdlb_debug_la_LDFLAGS = $(libdlb_la_LDFLAGS)
+libdlb_debug_la_SOURCES = $(libdlb_la_SOURCES)
+endif

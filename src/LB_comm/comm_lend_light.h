@@ -5,7 +5,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 
 int releaseCpus(int cpus);
 
-int acquireCpus();
+int acquireCpus(int current_cpus);
 
 int checkIdleCpus(int myCpus);
 
