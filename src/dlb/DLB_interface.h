@@ -17,9 +17,9 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef UPDATE_RESOURCES_H
-#define UPDATE_RESOURCES_H 
+#ifndef DLB_INTERFACE_H
+#define DLB_INTERFACE_H
 
 void DLB_UpdateResources( int max_resources );
 
-#endif /* UPDATE_RESOURCES_H */
+#endif /* DLB_INTERFACE_H */

@@ -1,5 +1,5 @@
-#ifndef DLB_API_H
-#define DLB_API_H
+#ifndef DLB_H
+#define DLB_H
 
 typedef struct{
 	void (*init) (int me, int num_procs, int node);
@@ -36,4 +36,4 @@ void OutOfBlockingCall(void);
 void updateresources( int max_resources );
 
 int tracing_ready();
-#endif //DLB_API_H
+#endif //DLB_H

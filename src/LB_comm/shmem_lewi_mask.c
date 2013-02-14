@@ -28,9 +28,6 @@
 
 typedef struct {
    cpu_set_t free_cpus;
-   int ready_procs;  // It works as a lock -> Every process returning from an MPI Barrier will increse this valuy by 1.
-                     // No process will be able to collect threads from the Pool until all processes have set this value.
-                     // The last process will have to set it to 0
 } shdata_t;
 
 static shdata_t *shdata;
@@ -88,8 +85,6 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
 cpu_set_t* shmem_lewi_mask_recover_defmask( void )
 {
    int prev_size, post_size, i;
-   __sync_add_and_fetch ( &( shdata->ready_procs ), 1 );
-   __sync_val_compare_and_swap( &( shdata->ready_procs ), _mpis_per_node, 0 );
 
    shmem_lock();
    {
@@ -119,7 +114,7 @@ int shmem_lewi_mask_collect_mask ( cpu_set_t *cpu_set, int max_resources )
    shmem_lock();
    {
       size = CPU_COUNT( &(shdata->free_cpus) );
-      if ( size > 0 && shdata->ready_procs == 0 ) {
+      if ( size > 0 ) {
          for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
             if ( CPU_ISSET( i, &(shdata->free_cpus) ) ) {
                CPU_CLR( i, &(shdata->free_cpus) );

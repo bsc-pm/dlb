@@ -6,12 +6,12 @@
 # THE LIBRARIES TO BUILD
 ###############################################################################
 
-lib_LTLIBRARIES = libdlb.la libUpdRes.la
+lib_LTLIBRARIES = libdlb.la libTdlb.la libUpdRes.la
 if DEBUG_LIB
-lib_LTLIBRARIES += libdlb-debug.la
+lib_LTLIBRARIES += libdlb_dbg.la
 endif
 
-include_HEADERS = $(top_srcdir)/src/dlb/api.h \
+include_HEADERS = $(top_srcdir)/src/dlb/DLB_interface.h \
                   $(top_srcdir)/src/LB_MPI/MPI_interface.h
 
 END =
@@ -32,7 +32,6 @@ sources = \
          $(top_srcdir)/src/LB_comm/comm_map.c      	\
          $(top_srcdir)/src/LB_comm/shmem.c           	\
          $(top_srcdir)/src/LB_comm/shmem_lewi_mask.c 	\
-	 $(top_srcdir)/src/LB_MPI/MPI_intercept.c     	\
          $(top_srcdir)/src/LB_MPI/MPI_interface.c     	\
 	 $(top_srcdir)/src/LB_MPI/MPI_interfaceF.c    	\
          $(top_srcdir)/src/LB_MPI/process_MPI.c       	\
@@ -44,6 +43,8 @@ sources = \
          $(top_srcdir)/src/support/utils.c         	\
          $(top_srcdir)/src/support/mytime.c        	\
          $(END)
+
+intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
 
 # UNUSED
 #$(top_srcdir)/src/LB_policies/Lend_complex.c
@@ -69,20 +70,24 @@ AM_LDFLAGS = -L$(MPI_HOME)/lib -lmpi
 endif
 
 libdlb_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
+libTdlb_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
 libUpdRes_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
 
 libdlb_la_CFLAGS = $(PERFO_FLAGS) $(includes)
+libTdlb_la_CFLAGS = $(PERFO_FLAGS) $(includes)
 libUpdRes_la_CFLAGS = $(PERFO_FLAGS)
 
 libdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
+libTdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libUpdRes_la_LDFLAGS = -avoid-version
 
 libdlb_la_SOURCES = $(sources)
-libUpdRes_la_SOURCES = dlb/update_resources_stub.c
+libTdlb_la_SOURCES = $(sources) $(intercept)
+libUpdRes_la_SOURCES = dlb/api_stub.c
 
 if DEBUG_LIB
-libdlb_debug_la_CPPFLAGS = $(DEBUG_MACRO_FLAGS)
-libdlb_debug_la_CFLAGS = $(DEBUG_FLAGS) $(includes)
-libdlb_debug_la_LDFLAGS = $(libdlb_la_LDFLAGS)
-libdlb_debug_la_SOURCES = $(libdlb_la_SOURCES)
+libdlb_dbg_la_CPPFLAGS = $(DEBUG_MACRO_FLAGS)
+libdlb_dbg_la_CFLAGS = $(DEBUG_FLAGS) $(includes)
+libdlb_dbg_la_LDFLAGS = $(libdlb_la_LDFLAGS)
+libdlb_dbg_la_SOURCES = $(libTdlb_la_SOURCES)
 endif
