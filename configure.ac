@@ -81,12 +81,12 @@ AC_MSG_RESULT([$debugit])
 
 if test x"$debugit" = x"yes"; then
     DEBUG_FLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-    DEBUG_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DDEBUGBASICINFO -DDEBUGINOUT -DDEBUGLEND -DDEBUGSHAREDMEM"
+    DEBUG_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugInOut -DdebugLend -DdebugSharedMem"
 fi
 AM_CONDITIONAL([DEBUG_LIB], [test x"$debugit" = x"yes"])
 
 PERFO_FLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-PERFO_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DDEBUGBASICINFO"
+PERFO_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo"
 
 ##########################################################################
 

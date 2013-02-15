@@ -7,9 +7,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
 #include "support/globals.h"
-int omp_get_num_threads() __attribute__( ( weak ) );
+
+int omp_get_max_threads() __attribute__( ( weak ) );
+int nanos_omp_get_num_threads() __attribute__( ( weak ) );
 
 int periodo; 
 int me;
@@ -125,7 +126,9 @@ void after_init(void){
         _process_id = me;
         _node_id = node;
         _mpis_per_node = num_mpis;
-        if ( omp_get_num_threads ) _default_nthreads = omp_get_num_threads();
+        if ( nanos_omp_get_num_threads ) _default_nthreads = nanos_omp_get_num_threads();
+        else if ( omp_get_max_threads ) _default_nthreads = omp_get_max_threads();
+        else _default_nthreads = 1;
 
 	Init(me, num_mpis, node);
 	mpi_ready=1;	
