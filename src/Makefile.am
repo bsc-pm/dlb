@@ -81,8 +81,8 @@ libdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libTdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libUpdRes_la_LDFLAGS = -avoid-version
 
-libdlb_la_SOURCES = $(sources)
-libTdlb_la_SOURCES = $(sources) $(intercept)
+libdlb_la_SOURCES = $(sources) $(intercept)
+libTdlb_la_SOURCES = $(sources)
 libUpdRes_la_SOURCES = dlb/api_stub.c
 
 if DEBUG_LIB
