@@ -27,6 +27,7 @@
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
+#include "support/utils.h"
 
 static int nthreads;
 
@@ -97,13 +98,16 @@ void lewi_mask_out_of_blocking_call( void )
 /* Update Resources - Try to acquire foreign threads */
 void lewi_mask_update_resources( int max_resources )
 {
-   cpu_set_t free_cpus;
-   CPU_ZERO( &free_cpus );
-   int new_threads = shmem_lewi_mask_collect_mask( &free_cpus, max_resources );
+   cpu_set_t mask;
+   CPU_ZERO( &mask );
+   get_mask( &mask );
 
-   if ( new_threads > 0 ) {
+   int new_threads;
+   bool dirty = shmem_lewi_mask_collect_mask( &mask, max_resources, &new_threads );
+
+   if ( dirty ) {
       nthreads += new_threads;
-      add_mask( &free_cpus );
+      set_mask( &mask );
       debug_lend ( "ACQUIRING %d threads for a total of %d\n", new_threads, nthreads );
       add_event( THREADS_USED_EVENT, nthreads );
    }

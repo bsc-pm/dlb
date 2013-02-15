@@ -27,7 +27,7 @@ sources = \
          $(top_srcdir)/src/LB_policies/Lewi_map.c       \
          $(top_srcdir)/src/LB_policies/Weight.c         \
          $(top_srcdir)/src/LB_policies/lewi_mask.c      \
-         $(top_srcdir)/src/LB_comm/comm.c           	\
+	 $(top_srcdir)/src/LB_comm/comm_shMem.c 	\
          $(top_srcdir)/src/LB_comm/comm_lend_light.c 	\
          $(top_srcdir)/src/LB_comm/comm_map.c      	\
          $(top_srcdir)/src/LB_comm/shmem.c           	\
@@ -52,7 +52,7 @@ intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
 #$(top_srcdir)/src/LB_policies/justMPI.c
 #$(top_srcdir)/src/LB_comm/comm_sockets.c
 #$(top_srcdir)/src/LB_comm/comm_shMem_states.c
-#$(top_srcdir)/src/LB_comm/comm_shMem.c
+#$(top_srcdir)/src/LB_comm/comm.c
 
 includes = \
          -I$(top_srcdir)/src                       	\

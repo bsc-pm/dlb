@@ -17,10 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#include <stdlib.h>
-#include <strings.h>
 #include "utils.h"
 #include "debug.h"
+#include <stdlib.h>
+#include <string.h>
 
 void parse_env_bool ( const char *env, bool *var )
 {
@@ -71,4 +71,17 @@ int my_round ( double x )
    //return (int)((x+x+1.0)/2);
    if ((x - val)>0.5) val++;
    return val;
+}
+
+const char* mask_to_str ( cpu_set_t *cpu_set )
+{
+   int i;
+   static char str[CPU_SETSIZE*2 + 4];
+   strcpy( str, "[ " );
+   for ( i=0; i<12; i++ ) {
+      if ( CPU_ISSET(i, cpu_set) ) strcat( str, "1 " );
+      else strcat( str,"0 " );
+   }
+   strcat( str, "]\0" );
+   return str;
 }

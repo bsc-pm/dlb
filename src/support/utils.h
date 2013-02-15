@@ -20,6 +20,9 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#define _GNU_SOURCE
+#include <sched.h>
+
 typedef enum {
    false = 0,
    true = 1
@@ -37,5 +40,7 @@ void parse_env_string ( char const *env, char **var );
 void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode );
 
 int my_round ( double x );
+
+const char* mask_to_str ( cpu_set_t *cpu_set );
 
 #endif /* UTILS_H */
