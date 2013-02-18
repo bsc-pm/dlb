@@ -23,8 +23,7 @@ void before_init(void){
 
 void after_init(void){
 	add_event(RUNTIME_EVENT, 1);
-	char* mpi_per_node;
-	int num_mpis, node;
+	int num_mpis=0, node;
 
 	just_barrier=0;
 	if ((getenv("LB_JUST_BARRIER"))==NULL){
@@ -33,12 +32,7 @@ void after_init(void){
 		just_barrier=1;
 		fprintf(stdout, "DLB: Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n");
 	}
-	
-	if ((mpi_per_node=getenv("LB_MPIxNODE"))==NULL){
-			fprintf(stdout,"DLB PANIC: LB_MPIxNODE must be defined\n");
-			exit(1);
-	}
-	num_mpis= atoi(mpi_per_node);	
+
 	MPI_Comm_rank(MPI_COMM_WORLD,&me);
 //fprintf(stderr, "%d: I am %d\n", getpid(), me);
 
@@ -53,7 +47,7 @@ void after_init(void){
 	}
 
 	MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-	int error_code = PMPI_Gather (nodeId, 50, MPI_CHAR, recvData, 50, MPI_CHAR, 0, MPI_COMM_WORLD);
+	int error_code = PMPI_Allgather (nodeId, 50, MPI_CHAR, recvData, 50, MPI_CHAR, MPI_COMM_WORLD);
 
 	if (error_code != MPI_SUCCESS) {
 		char error_string[BUFSIZ];
@@ -63,8 +57,14 @@ void after_init(void){
    		fprintf(stderr, "%3d: %s\n", me, error_string);
 	}
 
+        int i;
+        for ( i=0; i<procs; i++ ) {
+           if ( strcmp ( recvData[i], nodeId ) == 0 )
+              num_mpis++;
+        }
+
 	if (me==0){
-		int i, j, maxSetNode;
+		int j, maxSetNode;
 		int nodes=procs/num_mpis;
 		int procsPerNode[nodes];
 		char nodesIds[nodes][50];
