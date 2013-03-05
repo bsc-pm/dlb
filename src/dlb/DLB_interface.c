@@ -17,13 +17,27 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#include "dlb/DLB_interface.h"
 #include "dlb/dlb.h"
+#include "LB_MPI/process_MPI.h"
+#include "support/utils.h"
 
-void DLB_UpdateResources( int max_resources )
+static bool dlb_enabled = true;
+
+DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) )
 {
-   updateresources( max_resources );
+   if ( dlb_enabled )
+      updateresources( max_resources );
 }
 
-void dlb_updateresources( int max_resources ) __attribute__ ((alias ("DLB_UpdateResources")));
-void DLB_UpdateResources_( int max_resources ) __attribute__ ((alias ("DLB_UpdateResources")));
-void dlb_updateresources_( int max_resources ) __attribute__ ((alias ("DLB_UpdateResources")));
+DLB_API_DEF( void, DLB_enable, dlb_enable, (void) )
+{
+   enable_mpi();
+   dlb_enabled = true;
+}
+
+DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
+{
+   dlb_enabled = false;
+   disable_mpi();
+}

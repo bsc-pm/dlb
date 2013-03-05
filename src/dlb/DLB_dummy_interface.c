@@ -17,8 +17,8 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-void DLB_UpdateResources() {}
+#include "dlb/DLB_interface.h"
 
-void dlb_updateresources() __attribute__ ((alias ("DLB_UpdateResources")));
-void DLB_UpdateResources_() __attribute__ ((alias ("DLB_UpdateResources")));
-void dlb_updateresources_() __attribute__ ((alias ("DLB_UpdateResources")));
+DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) ) {}
+DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {}
+DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {}
