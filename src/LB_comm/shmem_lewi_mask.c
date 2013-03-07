@@ -68,7 +68,7 @@ void shmem_lewi_mask_finalize( void )
 
 void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
 {
-   int size = CPU_COUNT( cpu_set );
+   DLB_DEBUG( int size = CPU_COUNT( cpu_set ); )
    int post_size;
 
    shmem_lock();
@@ -86,11 +86,11 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
 
 cpu_set_t* shmem_lewi_mask_recover_defmask( void )
 {
-   int prev_size, post_size, i;
+   int post_size, i;
 
    shmem_lock();
    {
-      prev_size = CPU_COUNT( &(shdata->avail_cpus) );
+      DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
       for ( i = 0; i < CPU_SETSIZE; i++ ) {
          if ( CPU_ISSET(i, &default_mask) ) {
             CPU_CLR( i, &(shdata->given_cpus) );

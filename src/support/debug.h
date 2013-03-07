@@ -20,16 +20,59 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-void verbose0 ( const char *fmt, ... );
-void verbose ( const char *fmt, ... );
 void fatal0 ( const char *fmt, ... );
 void fatal ( const char *fmt, ... );
+
+#ifndef QUIET_MODE
+void verbose0 ( const char *fmt, ... );
+void verbose ( const char *fmt, ... );
+#else
+#define verbose0(fmt, ...)
+#define verbose(fmt, ...)
+#endif
+
+#ifdef debugBasicInfo
 void debug_basic_info0 ( const char *fmt, ... );
 void debug_basic_info ( const char *fmt, ... );
+#else
+#define debug_basic_info0(fmt, ...)
+#define debug_basic_info(fmt, ...)
+#endif
+
+#ifdef debugConfig
 void debug_config ( const char *fmt, ... );
+#else
+#define debug_config(fmt, ...)
+#endif
+
+#ifdef debugInOut
 void debug_inout ( const char *fmt, ... );
+#else
+#define debug_inout(fmt, ...)
+#endif
+
+#ifdef debugInOutMPI
 void debug_inout_MPI ( const char *fmt, ... );
+#else
+#define debug_inout_MPI(fmt, ...)
+#endif
+
+#ifdef debugLend
 void debug_lend ( const char *fmt, ... );
+#else
+#define debug_lend(fmt, ...)
+#endif
+
+#ifdef debugSharedMem
 void debug_shmem ( const char *fmt, ... );
+#else
+#define debug_shmem(fmt, ...)
+#endif
+
+#ifdef ENABLE_DEBUG
+#define DLB_DEBUG(f) f
+#else
+#define DLB_DEBUG(f)
+#endif
 
 #endif /* DEBUG_H */
