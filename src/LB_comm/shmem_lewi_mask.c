@@ -26,20 +26,23 @@
 #include "support/globals.h"
 #include "support/debug.h"
 #include "support/utils.h"
+#include "support/mask_utils.h"
 
 typedef struct {
    /*
     * When a process gives their cpus, they are added to both sets.
     * When a process recovers their cpus, they are removed from both sets.
     * When a process collects cpus, they are removed only from avail_cpus,
-    *    and if it owns cpus not present in given_cpus or its own cpus, it must give them back.
+    *    and if it owns cpus not present in given_cpus it must give them back.
+    *    (Its own cpus are excluded, of course)
     */
    cpu_set_t given_cpus; // set of given cpus. Only modified by its own process.
    cpu_set_t avail_cpus; // set of available cpus at the moment
 } shdata_t;
 
 static shdata_t *shdata;
-static cpu_set_t default_mask;
+static cpu_set_t default_mask;         // default mask of the process
+static cpu_set_t default_worthy_mask;  // default mask of obtainable cpus
 
 void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 {
@@ -51,7 +54,10 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
    }
 
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
+   // Get the parent mask of any bit present in the default mask
+   mu_get_parent_mask( &default_worthy_mask, &default_mask, MU_ANY_BIT );
    debug_shmem( "Default Mask: %s\n", mask_to_str(&default_mask));
+   debug_shmem( "Default Worthy Mask: %s\n", mask_to_str(&default_worthy_mask));
 }
 
 void shmem_lewi_mask_finalize( void )
@@ -70,7 +76,7 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
       CPU_OR( &(shdata->given_cpus), &(shdata->given_cpus), cpu_set );
       CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), cpu_set );
       post_size = CPU_COUNT( &(shdata->avail_cpus) );
-      debug_shmem ( "Increasing %d Idle Threads (%d)\n", size, post_size );
+      debug_shmem ( "Increasing %d Idle Threads (%d now)\n", size, post_size );
       debug_shmem ( "Available mask: %s\n", mask_to_str(&(shdata->avail_cpus)) );
    }
    shmem_unlock();
@@ -92,7 +98,7 @@ cpu_set_t* shmem_lewi_mask_recover_defmask( void )
          }
       }
       post_size = CPU_COUNT( &(shdata->avail_cpus) );
-      debug_shmem ( "Decreasing %d Idle Threads (%d)\n", prev_size - post_size, post_size );
+      debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
       debug_shmem ( "Available mask: %s\n", mask_to_str(&(shdata->avail_cpus)) ) ;
    }
    shmem_unlock();
@@ -104,45 +110,66 @@ cpu_set_t* shmem_lewi_mask_recover_defmask( void )
 
 bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new_threads )
 {
-   int size = 0;
+   int size;
    int returned = 0;
    int collected = 0;
    bool dirty = false;
    cpu_set_t slaves_mask;
-   CPU_ZERO( &slaves_mask );
    CPU_XOR( &slaves_mask, mask, &default_mask );
 
-   shmem_lock();
-   {
-      size = CPU_COUNT( &(shdata->avail_cpus) );
+   // First Step: Remove extra-cpus (slaves_mask) that have been removed from given_cpus
+   int i;
+   for ( i=0; i<CPU_SETSIZE; i++ ) {
+      if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
+         CPU_CLR( i, mask );
+         max_resources++;
+         returned++;
+         dirty = true;
+      }
+   }
 
-      int i;
-      for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
-         if ( CPU_ISSET( i, &(shdata->avail_cpus) ) ) {
-            CPU_CLR( i, &(shdata->avail_cpus) );
-            CPU_SET( i, mask );
-            max_resources--;
-            collected++;
-            dirty = true;
-         }
-         else {
-            // If the cpu is a slave, but it's been removed from given_cpus, then remove it
-            if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
-               CPU_CLR( i, mask );
-               max_resources++;
-               returned++;
-               dirty = true;
+   if ( dirty ) {
+      debug_shmem ( "Giving back %d Threads\n", returned );
+      *new_threads = -returned;
+   }
+
+
+   // Second Step: Retrieve extra-cpus if possible
+   size = CPU_COUNT( &(shdata->avail_cpus) );
+   if ( size > 0) {
+      cpu_set_t worthy_mask;
+      mu_get_parent_mask( &worthy_mask, &(shdata->given_cpus), MU_ALL_BITS );
+      debug_shmem( "Get parent mask: %s\n", mask_to_str(&worthy_mask));
+      debug_shmem( "(Obtained from given_cpus: %s)\n", mask_to_str(&(shdata->given_cpus)));
+      CPU_OR( &worthy_mask, &worthy_mask, &default_worthy_mask );
+      debug_shmem( "Worthy mask: %s\n", mask_to_str(&worthy_mask));
+
+      shmem_lock();
+      {
+         // We look again for the size once we've locked the shmem
+         size = CPU_COUNT( &(shdata->avail_cpus) );
+         if ( size > 0 ) {
+            for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
+               if ( CPU_ISSET( i, &worthy_mask ) ) {
+                  if ( CPU_ISSET( i, &(shdata->avail_cpus) ) ) {
+                     CPU_CLR( i, &(shdata->avail_cpus) );
+                     CPU_SET( i, mask );
+                     max_resources--;
+                     collected++;
+                     dirty = true;
+                  }
+               }
             }
          }
       }
-   }
-   shmem_unlock();
+      shmem_unlock();
 
-   if ( dirty ) {
-      debug_shmem ( "Clearing %d Idle Threads (%d)\n", collected,  size - collected );
-      debug_shmem ( "Collecting mask %s, (size=%d)\n", mask_to_str(mask) );
-      add_event( IDLE_CPUS_EVENT, size - collected );
-      *new_threads = collected - returned;
+      if ( dirty ) {
+         debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected,  size - collected );
+         debug_shmem ( "Collecting mask %s\n", mask_to_str(mask) );
+         add_event( IDLE_CPUS_EVENT, size - collected );
+         *new_threads += collected;
+      }
    }
 
    return dirty;
