@@ -37,8 +37,12 @@
    __attribute__((alias(#Name))) Type NameF##_ Params; \
    DLB_API_SIMPLE_DEF(Type, Name, Params)
 
-DLB_API_DECL( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) );
 DLB_API_DECL( void, DLB_enable, dlb_enable, (void) );
 DLB_API_DECL( void, DLB_disable, dlb_disable, (void) );
+DLB_API_DECL( void, DLB_single, dlb_single, (void) );
+DLB_API_DECL( void, DLB_parallel, dlb_parallel, (void) );
+DLB_API_DECL( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) );
+DLB_API_DECL( void, DLB_Lend, dlb_lend, (void) );
+DLB_API_DECL( void, DLB_Retrieve, dlb_retrieve, (void) );
 
 #endif /* DLB_INTERFACE_H */

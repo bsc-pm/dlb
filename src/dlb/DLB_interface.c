@@ -24,12 +24,6 @@
 
 static bool dlb_enabled = true;
 
-DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) )
-{
-   if ( dlb_enabled )
-      updateresources( max_resources );
-}
-
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) )
 {
    enable_mpi();
@@ -40,4 +34,34 @@ DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
 {
    dlb_enabled = false;
    disable_mpi();
+}
+
+DLB_API_DEF( void, DLB_single, dlb_single, (void) )
+{
+   IntoBlockingCall();
+   DLB_disable();
+}
+
+DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) )
+{
+   DLB_enable();
+   OutOfBlockingCall();
+}
+
+DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) )
+{
+   if ( dlb_enabled )
+      updateresources( max_resources );
+}
+
+DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
+{
+   if ( dlb_enabled )
+      IntoBlockingCall();
+}
+
+DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
+{
+   if ( dlb_enabled )
+      OutOfBlockingCall();
 }

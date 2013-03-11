@@ -33,7 +33,6 @@ sources = \
          $(top_srcdir)/src/LB_comm/shmem.c           	\
          $(top_srcdir)/src/LB_comm/shmem_lewi_mask.c 	\
          $(top_srcdir)/src/LB_MPI/MPI_interface.c     	\
-	 $(top_srcdir)/src/LB_MPI/MPI_interfaceF.c    	\
          $(top_srcdir)/src/LB_MPI/process_MPI.c       	\
          $(top_srcdir)/src/dlb/dlb.c       		\
          $(top_srcdir)/src/dlb/DLB_interface.c 		\
@@ -54,6 +53,7 @@ intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
 #$(top_srcdir)/src/LB_comm/comm_sockets.c
 #$(top_srcdir)/src/LB_comm/comm_shMem_states.c
 #$(top_srcdir)/src/LB_comm/comm.c
+#$(top_srcdir)/src/LB_MPI/MPI_interfaceF
 
 includes = \
          -I$(top_srcdir)/src                       	\
