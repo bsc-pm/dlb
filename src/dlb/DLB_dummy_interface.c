@@ -17,58 +17,8 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#include "utils.h"
-#include "debug.h"
-#include <stdlib.h>
-#include <string.h>
+#include "dlb/DLB_interface.h"
 
-void parse_env_bool ( const char *env, bool *var )
-{
-   char *tmp_var = getenv( env );
-
-   if ( tmp_var == NULL ) {
-      *var = false;
-   } else if ( strcasecmp( tmp_var, "YES" ) == 0 ) {
-      *var = true;
-   } else if ( strcasecmp( tmp_var, "1" ) == 0 ) {
-      *var = true;
-   } else {
-      *var = false;
-   }
-}
-
-void parse_env_int_or_die ( char const *env, int *var )
-{
-   char *tmp_var = getenv( env );
-
-   if ( tmp_var == NULL || tmp_var[0] == 0 ) {
-      fatal0( "%s must be defined\n", env );
-   } else {
-      *var = atoi( tmp_var );
-   }
-}
-
-void parse_env_string ( char const *env, char **var )
-{
-   *var = getenv( env );
-}
-
-void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode )
-{
-   char* blocking = getenv( env );
-
-   if ( blocking != NULL ) {
-      if ( strcasecmp( blocking, "1CPU" ) == 0 )
-         *mode = ONE_CPU;
-      else if ( strcasecmp( blocking, "BLOCK" ) == 0 )
-         *mode = BLOCK;
-   }
-}
-
-int my_round ( double x )
-{
-   int val = x;
-   //return (int)((x+x+1.0)/2);
-   if ((x - val)>0.5) val++;
-   return val;
-}
+DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) ) {}
+DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {}
+DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {}

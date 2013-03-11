@@ -187,4 +187,6 @@ void before_finalize(void){
 
 void after_finalize(void){}
 
+void enable_mpi(void) { mpi_ready = 1; }
 
+void disable_mpi(void) { mpi_ready = 0; }

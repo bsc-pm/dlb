@@ -17,8 +17,19 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-void DLB_UpdateResources() {}
+#ifndef MASK_UTILS_H
+#define MASK_UTILS_H
 
-void dlb_updateresources() __attribute__ ((alias ("DLB_UpdateResources")));
-void DLB_UpdateResources_() __attribute__ ((alias ("DLB_UpdateResources")));
-void dlb_updateresources_() __attribute__ ((alias ("DLB_UpdateResources")));
+#define _GNU_SOURCE
+#include <sched.h>
+
+typedef enum {
+   MU_ANY_BIT,
+   MU_ALL_BITS
+} mu_opt_t;
+
+void mu_get_parent_mask( cpu_set_t *parent_set, const cpu_set_t *child_set, mu_opt_t condition );
+
+const char* mu_to_str ( const cpu_set_t *cpu_set );
+
+#endif /* MASK_UTILS_H */

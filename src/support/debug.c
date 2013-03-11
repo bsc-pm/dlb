@@ -23,30 +23,6 @@
 #include <mpi.h>
 #include "globals.h"
 
-void verbose0 ( const char *fmt, ... )
-{
-#ifndef QUIET_MODE
-   if ( _mpi_rank == 0 ) {
-      va_list args;
-      va_start( args, fmt );
-      fprintf( stdout, "DLB[*]: " );
-      vfprintf( stdout, fmt, args );
-      va_end( args );
-   }
-#endif
-}
-
-void verbose ( const char *fmt, ... )
-{
-#ifndef QUIET_MODE
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stdout, "DLB[%d]: ", _mpi_rank );
-   vfprintf( stdout, fmt, args );
-   va_end( args );
-#endif
-}
-
 void fatal0 ( const char *fmt, ... )
 {
    if ( _mpi_rank == 0 ) {
@@ -69,9 +45,9 @@ void fatal ( const char *fmt, ... )
    PMPI_Abort ( MPI_COMM_WORLD, 1 );
 }
 
-void debug_basic_info0 ( const char *fmt, ... )
+#ifndef QUIET_MODE
+void verbose0 ( const char *fmt, ... )
 {
-#ifdef debugBasicInfo
    if ( _mpi_rank == 0 ) {
       va_list args;
       va_start( args, fmt );
@@ -79,70 +55,90 @@ void debug_basic_info0 ( const char *fmt, ... )
       vfprintf( stdout, fmt, args );
       va_end( args );
    }
+}
+
+void verbose ( const char *fmt, ... )
+{
+   va_list args;
+   va_start( args, fmt );
+   fprintf( stdout, "DLB[%d]: ", _mpi_rank );
+   vfprintf( stdout, fmt, args );
+   va_end( args );
+}
 #endif
+
+#ifdef debugBasicInfo
+void debug_basic_info0 ( const char *fmt, ... )
+{
+   if ( _mpi_rank == 0 ) {
+      va_list args;
+      va_start( args, fmt );
+      fprintf( stdout, "DLB[*]: " );
+      vfprintf( stdout, fmt, args );
+      va_end( args );
+   }
 }
 
 void debug_basic_info ( const char *fmt, ... )
 {
-#ifdef debugBasicInfo
    va_list args;
    va_start( args, fmt );
    fprintf( stdout, "DLB[%d:%d]: ", _node_id, _process_id );
    vfprintf( stdout, fmt, args );
    va_end( args );
-#endif
 }
+#endif
 
+#ifdef debugConfig
 void debug_config ( const char *fmt, ... )
 {
-#ifdef debugConfig
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
    vfprintf( stderr, fmt, args );
    va_end( args );
-#endif
 }
+#endif
 
+#ifdef debugInOut
 void debug_inout ( const char *fmt, ... )
 {
-#ifdef debugInOut
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
    vfprintf( stderr, fmt, args );
    va_end( args );
-#endif
 }
+#endif
 
+#ifdef debugInOutMPI
 void debug_inout_MPI ( const char *fmt, ... )
 {
-#ifdef debugInOutMPI
    va_list args;
    va_start( args, fmt );
    vfprintf( stderr, fmt, args );
    va_end( args );
-#endif
 }
+#endif
 
+#ifdef debugLend
 void debug_lend ( const char *fmt, ... )
 {
-#ifdef debugLend
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
    vfprintf( stderr, fmt, args );
    va_end( args );
-#endif
 }
+#endif
 
+#ifdef debugSharedMem
 void debug_shmem ( const char *fmt, ... )
 {
-#ifdef debugSharedMem
    va_list args;
    va_start( args, fmt );
    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
    vfprintf( stderr, fmt, args );
    va_end( args );
-#endif
 }
+#endif

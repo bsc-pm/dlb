@@ -6,7 +6,7 @@
 # THE LIBRARIES TO BUILD
 ###############################################################################
 
-lib_LTLIBRARIES = libdlb.la libTdlb.la libUpdRes.la
+lib_LTLIBRARIES = libdlb.la libTdlb.la libdlb_dummy.la
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_dbg.la
 endif
@@ -36,12 +36,13 @@ sources = \
 	 $(top_srcdir)/src/LB_MPI/MPI_interfaceF.c    	\
          $(top_srcdir)/src/LB_MPI/process_MPI.c       	\
          $(top_srcdir)/src/dlb/dlb.c       		\
-         $(top_srcdir)/src/dlb/api.c       		\
+         $(top_srcdir)/src/dlb/DLB_interface.c 		\
          $(top_srcdir)/src/support/globals.c       	\
          $(top_srcdir)/src/support/debug.c         	\
          $(top_srcdir)/src/support/tracing.c       	\
          $(top_srcdir)/src/support/utils.c         	\
          $(top_srcdir)/src/support/mytime.c        	\
+         $(top_srcdir)/src/support/mask_utils.c      	\
          $(END)
 
 intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
@@ -64,30 +65,36 @@ includes = \
          -I$(top_srcdir)/src/support               	\
          $(END)
 
+AM_CPPFLAGS = $(includes)
+AM_LDFLAGS = $(END)
 if MPI_SUPPORT
-includes += -I$(MPI_HOME)/include
-AM_LDFLAGS = -L$(MPI_HOME)/lib -lmpi
+AM_CPPFLAGS += -DUSE_MPI -I$(MPI_HOME)/include
+AM_LDFLAGS += -L$(MPI_HOME)/lib -lmpi
+endif
+if HWLOC_SUPPORT
+AM_CPPFLAGS += -DUSE_HWLOC -I$(HWLOC_HOME)/include
+AM_LDFLAGS += -L$(HWLOC_HOME)/lib -lhwloc
 endif
 
 libdlb_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
 libTdlb_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
-libUpdRes_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
+libdlb_dummy_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
 
-libdlb_la_CFLAGS = $(PERFO_FLAGS) $(includes)
-libTdlb_la_CFLAGS = $(PERFO_FLAGS) $(includes)
-libUpdRes_la_CFLAGS = $(PERFO_FLAGS)
+libdlb_la_CFLAGS = $(PERFO_FLAGS) $(AM_CPPFLAGS)
+libTdlb_la_CFLAGS = $(PERFO_FLAGS) $(AM_CPPFLAGS)
+libdlb_dummy_la_CFLAGS = $(PERFO_FLAGS)
 
 libdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libTdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
-libUpdRes_la_LDFLAGS = -avoid-version
+libdlb_dummy_la_LDFLAGS = -avoid-version
 
 libdlb_la_SOURCES = $(sources) $(intercept)
 libTdlb_la_SOURCES = $(sources)
-libUpdRes_la_SOURCES = dlb/api_stub.c
+libdlb_dummy_la_SOURCES = dlb/DLB_dummy_interface.c
 
 if DEBUG_LIB
 libdlb_dbg_la_CPPFLAGS = $(DEBUG_MACRO_FLAGS)
-libdlb_dbg_la_CFLAGS = $(DEBUG_FLAGS) $(includes)
+libdlb_dbg_la_CFLAGS = $(DEBUG_FLAGS) $(AM_CPPFLAGS)
 libdlb_dbg_la_LDFLAGS = $(libdlb_la_LDFLAGS)
 libdlb_dbg_la_SOURCES = $(libTdlb_la_SOURCES)
 endif

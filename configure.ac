@@ -18,10 +18,9 @@ AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 : ${CXXFLAGS=""}
 : ${FCFLAGS=""}
 
-LT_INIT
-
 # Checks for programs
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+LT_INIT
 AC_PROG_CC([$CC])
 AC_PROG_CPP
 
@@ -32,11 +31,23 @@ AC_LANG([C])
 AC_ARG_WITH([mpi],
    AS_HELP_STRING([--with-mpi=dir], [Directory of MPI installation]),
    [
-      mpi_dir=yes
+      mpi=yes
       MPI_HOME="$withval"
    ],
    [
-      mpi_dir=no
+      AC_CHECK_HEADERS([mpi.h], [mpi=yes], [mpi=no])
+   ]
+)
+
+# check for HWLOC path
+AC_ARG_WITH([hwloc],
+   AS_HELP_STRING([--with-hwloc=dir], [Directory of HWLOC installation]),
+   [
+      hwloc=yes
+      HWLOC_HOME="$withval"
+   ],
+   [
+      AC_CHECK_HEADERS([hwloc.h], [hwloc=yes], [hwloc=no])
    ]
 )
 
@@ -47,19 +58,14 @@ AC_ARG_WITH([cpus-per-node],
       ncpus="$withval"
    ],
    [
-      ncpus=1
+      ncpus=$(nproc)
    ]
 )
-
-AM_CONDITIONAL([MPI_SUPPORT], [test x"$mpi_dir" = x"yes"])
-AC_SUBST([MPI_HOME])
-
 
 # Checks for header files.
 #AC_HEADER_STDC
 #AC_CHECK_HEADERS([string])
 #AC_CHECK_HEADERS([iostream])
-AC_CHECK_HEADERS([mpi.h])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -74,16 +80,16 @@ AC_CONFIG_FILES([Makefile src/Makefile scripts/Makefile])
 AC_MSG_CHECKING([whether to build with debug information])
 AC_ARG_ENABLE([debug],
    AS_HELP_STRING([--enable-debug], [enable debug data generation [default=no]]),
-   [ debugit="$enableval" ],
-   [ debugit=no ]
+   [ debug="$enableval" ],
+   [ debug=no ]
 )
-AC_MSG_RESULT([$debugit])
+AC_MSG_RESULT([$debug])
 
-if test x"$debugit" = x"yes"; then
+if test x"$debug" = x"yes"; then
     DEBUG_FLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-    DEBUG_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugInOut -DdebugLend -DdebugSharedMem"
+    DEBUG_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugInOut -DdebugLend -DdebugSharedMem -DENABLE_DEBUG"
 fi
-AM_CONDITIONAL([DEBUG_LIB], [test x"$debugit" = x"yes"])
+AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
 
 PERFO_FLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
 PERFO_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo"
@@ -97,14 +103,17 @@ AC_SUBST([DEBUG_MACRO_FLAGS])
 
 
 ##########################################################################
-# MPI CHECK
+# EXTERNAL LIBS CHECK
 ##########################################################################
 
-if test x"$ac_cv_header_mpi_h" = x"no"; then
-    if test x"$mpi_dir" = x"no"; then
-        AC_MSG_ERROR([mpi.h was not found. MPI headers are mandatory. You can use --with-mpi=dir option to set the MPI location or you can manually add an include directory in CPPFLAGS])
-    fi
+if test x"$mpi" = x"no"; then
+    AC_MSG_ERROR([mpi.h was not found. MPI headers are mandatory. You can use --with-mpi=dir option to set the MPI location or you can manually add an include directory in CPPFLAGS])
 fi
+
+AM_CONDITIONAL([MPI_SUPPORT], [test x"$mpi" = x"yes"])
+AC_SUBST([MPI_HOME])
+AM_CONDITIONAL([HWLOC_SUPPORT], [test x"$hwloc" = x"yes"])
+AC_SUBST([HWLOC_HOME])
 
 ##########################################################################
 
