@@ -30,4 +30,6 @@ typedef enum {
 
 void mu_get_parent_mask( cpu_set_t *parent_set, const cpu_set_t *child_set, mu_opt_t condition );
 
+const char* mu_to_str ( const cpu_set_t *cpu_set );
+
 #endif /* MASK_UTILS_H */

@@ -41,8 +41,8 @@ typedef struct {
 } shdata_t;
 
 static shdata_t *shdata;
-static cpu_set_t default_mask;         // default mask of the process
-static cpu_set_t default_worthy_mask;  // default mask of obtainable cpus
+static cpu_set_t default_mask;   // default mask of the process
+static cpu_set_t affinity_mask;  // default mask of obtainable cpus
 
 void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 {
@@ -55,9 +55,9 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
    // Get the parent mask of any bit present in the default mask
-   mu_get_parent_mask( &default_worthy_mask, &default_mask, MU_ANY_BIT );
-   debug_shmem( "Default Mask: %s\n", mask_to_str(&default_mask));
-   debug_shmem( "Default Worthy Mask: %s\n", mask_to_str(&default_worthy_mask));
+   mu_get_parent_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
+   debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
+   debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
 }
 
 void shmem_lewi_mask_finalize( void )
@@ -77,7 +77,7 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
       CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), cpu_set );
       post_size = CPU_COUNT( &(shdata->avail_cpus) );
       debug_shmem ( "Increasing %d Idle Threads (%d now)\n", size, post_size );
-      debug_shmem ( "Available mask: %s\n", mask_to_str(&(shdata->avail_cpus)) );
+      debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) );
    }
    shmem_unlock();
 
@@ -99,7 +99,7 @@ cpu_set_t* shmem_lewi_mask_recover_defmask( void )
       }
       post_size = CPU_COUNT( &(shdata->avail_cpus) );
       debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
-      debug_shmem ( "Available mask: %s\n", mask_to_str(&(shdata->avail_cpus)) ) ;
+      debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
    }
    shmem_unlock();
 
@@ -131,45 +131,57 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
    if ( dirty ) {
       debug_shmem ( "Giving back %d Threads\n", returned );
       *new_threads = -returned;
+      dirty = false;
    }
 
-
-   // Second Step: Retrieve extra-cpus if possible
+   // Second Step: Retrive extra-cpus from my default affinity mask
    size = CPU_COUNT( &(shdata->avail_cpus) );
-   if ( size > 0) {
-      cpu_set_t worthy_mask;
-      mu_get_parent_mask( &worthy_mask, &(shdata->given_cpus), MU_ALL_BITS );
-      debug_shmem( "Get parent mask: %s\n", mask_to_str(&worthy_mask));
-      debug_shmem( "(Obtained from given_cpus: %s)\n", mask_to_str(&(shdata->given_cpus)));
-      CPU_OR( &worthy_mask, &worthy_mask, &default_worthy_mask );
-      debug_shmem( "Worthy mask: %s\n", mask_to_str(&worthy_mask));
-
+   if ( size > 0 && max_resources > 0) {
       shmem_lock();
       {
-         // We look again for the size once we've locked the shmem
-         size = CPU_COUNT( &(shdata->avail_cpus) );
-         if ( size > 0 ) {
-            for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
-               if ( CPU_ISSET( i, &worthy_mask ) ) {
-                  if ( CPU_ISSET( i, &(shdata->avail_cpus) ) ) {
-                     CPU_CLR( i, &(shdata->avail_cpus) );
-                     CPU_SET( i, mask );
-                     max_resources--;
-                     collected++;
-                     dirty = true;
-                  }
-               }
+         cpu_set_t candidates_mask;
+         CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
+         for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
+            if ( CPU_ISSET( i, &candidates_mask ) ) {
+               CPU_CLR( i, &(shdata->avail_cpus) );
+               CPU_SET( i, mask );
+               max_resources--;
+               collected++;
+               dirty = true;
             }
          }
       }
       shmem_unlock();
+   }
 
-      if ( dirty ) {
-         debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected,  size - collected );
-         debug_shmem ( "Collecting mask %s\n", mask_to_str(mask) );
-         add_event( IDLE_CPUS_EVENT, size - collected );
-         *new_threads += collected;
+   // Third Step: Retrive extra-cpus from foreing affinity masks
+   if ( size-collected > 0 && max_resources > 0 ) {
+      cpu_set_t candidates_mask;
+      mu_get_parent_mask( &candidates_mask, &(shdata->given_cpus), MU_ALL_BITS );
+
+      if ( CPU_COUNT( &candidates_mask ) > 0 ) {
+         shmem_lock();
+         {
+            CPU_AND( &candidates_mask, &candidates_mask, &(shdata->avail_cpus) );
+            for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
+               if ( CPU_ISSET( i, &candidates_mask ) ) {
+                  CPU_CLR( i, &(shdata->avail_cpus) );
+                  CPU_SET( i, mask );
+                  max_resources--;
+                  collected++;
+                  dirty = true;
+               }
+            }
+         }
+         shmem_unlock();
       }
+   }
+
+   if ( dirty ) {
+      debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected,  size - collected );
+      debug_shmem ( "Collecting mask %s\n", mu_to_str(mask) );
+      add_event( IDLE_CPUS_EVENT, size - collected );
+      *new_threads += collected;
    }
 
    return dirty;

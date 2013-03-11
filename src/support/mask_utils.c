@@ -47,7 +47,7 @@ inline static void get_parent_mask_by_obj( cpu_set_t *parent_set, const cpu_set_
    CPU_AND( &intxn, &obj_mask, child_set );
 
    if ( (condition == MU_ANY_BIT && CPU_COUNT( &intxn ) > 0) ||
-        (condition == MU_ALL_BITS && CPU_COUNT( &intxn ) == CPU_COUNT( &obj_mask )  ) ) {
+        (condition == MU_ALL_BITS && CPU_EQUAL( &intxn,  &obj_mask ) ) ) {
       CPU_OR( parent_set, parent_set, &obj_mask );
    }
 }
@@ -57,6 +57,8 @@ void mu_get_parent_mask( cpu_set_t *parent_set, const cpu_set_t *child_set, mu_o
 {
 #ifdef USE_HWLOC
    if ( !topology ) topology_init();
+
+   CPU_ZERO( parent_set );
 
    if ( _socket_aware ) {
       hwloc_obj_t numa_node = hwloc_get_obj_by_type( topology, HWLOC_OBJ_NODE, 0 );
@@ -79,4 +81,17 @@ void mu_get_parent_mask( cpu_set_t *parent_set, const cpu_set_t *child_set, mu_o
 #else
    memset( parent_set, INT_MAX, sizeof(cpu_set_t) );
 #endif
+}
+
+const char* mu_to_str ( const cpu_set_t *cpu_set )
+{
+   int i;
+   static char str[CPU_SETSIZE*2 + 4];
+   strcpy( str, "[ " );
+   for ( i=0; i<12; i++ ) {
+      if ( CPU_ISSET(i, cpu_set) ) strcat( str, "1 " );
+      else strcat( str,"0 " );
+   }
+   strcat( str, "]\0" );
+   return str;
 }
