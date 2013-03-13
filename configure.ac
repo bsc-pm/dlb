@@ -115,6 +115,13 @@ AC_SUBST([MPI_HOME])
 AM_CONDITIONAL([HWLOC_SUPPORT], [test x"$hwloc" = x"yes"])
 AC_SUBST([HWLOC_HOME])
 
+AC_CHECK_PROG([lscpu], [lscpu], [yes], [no])
+if test x"$lscpu" = x"no"; then
+   if test x"$hwloc" = x"no"; then
+      AC_MSG_ERROR([neither lscpu nor hwloc are found, one of them is mandatory])
+   fi
+fi
+
 ##########################################################################
 
 # generate the final Makefile etc.

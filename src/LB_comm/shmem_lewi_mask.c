@@ -55,7 +55,8 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
    // Get the parent mask of any bit present in the default mask
-   mu_get_parent_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
+   mu_init();
+   mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
 }
@@ -64,6 +65,7 @@ void shmem_lewi_mask_finalize( void )
 {
    while ( CPU_COUNT( &(shdata->given_cpus) ) != 0 );
    shmem_finalize();
+   mu_finalize();
 }
 
 void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
@@ -91,7 +93,7 @@ cpu_set_t* shmem_lewi_mask_recover_defmask( void )
    shmem_lock();
    {
       DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
-      for ( i = 0; i < CPU_SETSIZE; i++ ) {
+      for ( i = 0; i < mu_get_system_size(); i++ ) {
          if ( CPU_ISSET(i, &default_mask) ) {
             CPU_CLR( i, &(shdata->given_cpus) );
             CPU_CLR( i, &(shdata->avail_cpus) );
@@ -119,7 +121,7 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
 
    // First Step: Remove extra-cpus (slaves_mask) that have been removed from given_cpus
    int i;
-   for ( i=0; i<CPU_SETSIZE; i++ ) {
+   for ( i=0; i<mu_get_system_size(); i++ ) {
       if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
          CPU_CLR( i, mask );
          max_resources++;
@@ -141,7 +143,7 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
       {
          cpu_set_t candidates_mask;
          CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
-         for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
+         for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
             if ( CPU_ISSET( i, &candidates_mask ) ) {
                CPU_CLR( i, &(shdata->avail_cpus) );
                CPU_SET( i, mask );
@@ -157,13 +159,13 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
    // Third Step: Retrive extra-cpus from foreing affinity masks
    if ( size-collected > 0 && max_resources > 0 ) {
       cpu_set_t candidates_mask;
-      mu_get_parent_mask( &candidates_mask, &(shdata->given_cpus), MU_ALL_BITS );
+      mu_get_affinity_mask( &candidates_mask, &(shdata->given_cpus), MU_ALL_BITS );
 
       if ( CPU_COUNT( &candidates_mask ) > 0 ) {
          shmem_lock();
          {
             CPU_AND( &candidates_mask, &candidates_mask, &(shdata->avail_cpus) );
-            for ( i=0; i<CPU_SETSIZE && max_resources>0; i++ ) {
+            for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
                if ( CPU_ISSET( i, &candidates_mask ) ) {
                   CPU_CLR( i, &(shdata->avail_cpus) );
                   CPU_SET( i, mask );

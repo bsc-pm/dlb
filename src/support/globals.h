@@ -29,6 +29,7 @@ extern int _process_id;       /* Process ID per node */
 extern int _mpis_per_node;    /* Numer of MPI processes per node */
 extern int _default_nthreads; /* Number of threads per MPI process */
 
+extern bool _locality_aware;
 extern bool _just_barrier;
 extern blocking_mode_t _blocking_mode;
 
