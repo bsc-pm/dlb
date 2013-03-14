@@ -63,7 +63,6 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 
 void shmem_lewi_mask_finalize( void )
 {
-   while ( CPU_COUNT( &(shdata->given_cpus) ) != 0 );
    shmem_finalize();
    mu_finalize();
 }

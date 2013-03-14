@@ -47,6 +47,7 @@ void lewi_mask_init( void )
 
 void lewi_mask_finish( void )
 {
+   set_mask( shmem_lewi_mask_recover_defmask() );
    shmem_lewi_mask_finalize();
 }
 
