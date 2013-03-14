@@ -45,6 +45,26 @@ void fatal ( const char *fmt, ... )
    PMPI_Abort ( MPI_COMM_WORLD, 1 );
 }
 
+void warning0 ( const char *fmt, ... )
+{
+   if ( _mpi_rank == 0 ) {
+      va_list args;
+      va_start( args, fmt );
+      fprintf( stderr, "DLB WARNING[*]: " );
+      vfprintf( stderr, fmt, args );
+      va_end( args );
+   }
+}
+
+void warning ( const char *fmt, ... )
+{
+   va_list args;
+   va_start( args, fmt );
+   fprintf( stderr, "DLB WARNING[%d]: ", _mpi_rank );
+   vfprintf( stderr, fmt, args );
+   va_end( args );
+}
+
 #ifndef QUIET_MODE
 void verbose0 ( const char *fmt, ... )
 {

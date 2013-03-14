@@ -22,6 +22,8 @@
 
 void fatal0 ( const char *fmt, ... );
 void fatal ( const char *fmt, ... );
+void warning0 ( const char *fmt, ... );
+void warning ( const char *fmt, ... );
 
 #ifndef QUIET_MODE
 void verbose0 ( const char *fmt, ... );
