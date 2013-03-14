@@ -16,6 +16,7 @@ int periodo;
 int me;
 int just_barrier;
 int mpi_ready=0;
+static MPI_Comm mpi_comm_node;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -121,6 +122,9 @@ void after_init(void){
 	fprintf(stderr, "DLB: (%d:%d) - MPIs per node: %d\n", node, me, num_mpis);
 #endif	
 
+        // Color = node, key is 0 because we don't mind the internal rank
+        MPI_Comm_split( MPI_COMM_WORLD, node, 0, &mpi_comm_node );
+
         // Globals
         MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
         _process_id = me;
@@ -190,3 +194,5 @@ void after_finalize(void){}
 void enable_mpi(void) { mpi_ready = 1; }
 
 void disable_mpi(void) { mpi_ready = 0; }
+
+void node_barrier(void) { MPI_Barrier( mpi_comm_node ); }

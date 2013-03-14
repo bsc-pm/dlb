@@ -65,3 +65,9 @@ DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
    if ( dlb_enabled )
       OutOfBlockingCall();
 }
+
+DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) )
+{
+   if ( dlb_enabled )
+      node_barrier();
+}
