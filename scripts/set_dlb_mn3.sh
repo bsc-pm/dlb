@@ -37,6 +37,11 @@ then
 	MPI_TRACE_LIB=libompitrace.so
 	MPI_TRACE_LIB_DLB=libompitrace-lb.so
 
+elif [ $version == "OMPSS" ]
+then
+	MPI_TRACE_LIB=libnanosmpitrace.so
+	MPI_TRACE_LIB_DLB=libnanosmpitrace-lb.so
+
 else
 	echo "Unknown version $version"
 	exit
@@ -87,6 +92,7 @@ if [ $tracing == "YES" ]
 then
 	export MPITRACE_ON=1
 	export EXTRAE_CONFIG_FILE=${conf_extrae}
+	export NX_ARGS+=" --instrumentation=extrae --extrae-skip-merge" 
 fi
 
 
@@ -102,17 +108,16 @@ then
         then
                 export LD_PRELOAD=${TRACE_PATH}/${MPI_TRACE_LIB}
         fi
-echo $OMP_NUM_THREADS
 	$params
 
 ################### RUN APPLICATION WITH DLB ###################
 else
-	if [ $policy == "NO" ]
-	then
+##	if [ $policy == "NO" ]
+##	then
        		export OMP_NUM_THREADS=$(($CPUS_NODE/$procs_node))
-	else
-       		export OMP_NUM_THREADS=$CPUS_NODE
-	fi
+##	else
+ ##      		export OMP_NUM_THREADS=$CPUS_NODE
+##	fi
 
 	if [ $tracing == "YES" ]
 	then
@@ -120,7 +125,5 @@ else
 	else
 		export LD_PRELOAD=${DLB_PATH}/libdlb.so
 	fi
-
-echo $OMP_NUM_THREADS
 	$params
 fi 

@@ -37,6 +37,11 @@ else
 	dist="--hostfile $distribution"
 fi
 
+program=$(echo $params | cut -d"\"" -f2 | cut -d " " -f1 )
+
+CPUS_NODE=16
+CPUS_PROC=$(($CPUS_NODE/$procs_node))
+
  cat > ${ini_dir}/MN_SCRIPTS/${script_name}.mn <<EOF
 #!/bin/bash
 
@@ -62,7 +67,14 @@ fi
 ### Wall clock time in HH:MM
 #BSUB -W ${duration}
 
-mpirun $dist ${DLB_PATH}/bin/set_dlb_mn3.sh ${params}
+ulimit -c unlimited
+export TMPDIR=$TMPDIR/extrae
+mkdir -p $TMPDIR
+ 
+output="${ini_dir}/OUTS/${script_name}.\$LSB_JOBID.app"
+
+mpirun --cpus-per-proc $CPUS_PROC $dist ${DLB_PATH}/bin/set_dlb_mn3.sh ${params} > \$output
+
 
 if [ $tracing == "YES" ]
 then
@@ -71,12 +83,12 @@ then
 		export EXTRAE_LABELS=StarSs.pcf
 	fi
 
-	if [ $mpi_procs == "1" ]
-	then
-		mpirun ${MPITRACE_HOME}/bin/mpi2prv -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv
-	else
-		mpirun ${MPITRACE_HOME}/bin/mpimpi2prv -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv
-	fi
+#	if [ $mpi_procs == "1" ]
+#	then
+		${MPITRACE_HOME}/bin/mpi2prv -e ${program} -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv >> \$output
+#	else
+#		mpirun ${MPITRACE_HOME}/bin/mpimpi2prv -e ${program} -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv >> \$output
+#	fi
 	rm ${trace_path}/set-0/TRACE*
 
 
