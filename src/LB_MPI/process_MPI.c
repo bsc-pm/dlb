@@ -8,9 +8,12 @@
 #include <unistd.h>
 #include <string.h>
 #include "support/globals.h"
+#include "support/debug.h"
 
-int omp_get_max_threads() __attribute__( ( weak ) );
-int nanos_omp_get_num_threads() __attribute__( ( weak ) );
+int omp_get_max_threads(void) __attribute__( ( weak ) );
+int nanos_omp_get_num_threads(void) __attribute__( ( weak ) );
+int nanos_omp_get_max_threads(void) __attribute__( ( weak ) );
+const char* nanos_get_pm(void) __attribute__( ( weak ) );
 
 int periodo; 
 int me;
@@ -130,9 +133,21 @@ void after_init(void){
         _process_id = me;
         _node_id = node;
         _mpis_per_node = num_mpis;
-        if ( nanos_omp_get_num_threads ) _default_nthreads = nanos_omp_get_num_threads();
-        else if ( omp_get_max_threads ) _default_nthreads = omp_get_max_threads();
-        else _default_nthreads = 1;
+
+        if ( nanos_get_pm ) {
+           const char *pm = nanos_get_pm();
+           if ( strcmp( pm, "OpenMP" ) == 0 ) {
+              _default_nthreads = nanos_omp_get_max_threads();
+           }
+           else if ( strcmp( pm, "OmpSs" ) == 0 ) {
+              _default_nthreads = nanos_omp_get_num_threads();
+           }
+           else
+              fatal( "Unknown Programming Model\n" );
+        }
+        else {
+           _default_nthreads = omp_get_max_threads();
+        }
 
 	Init(me, num_mpis, node);
 	mpi_ready=1;	
