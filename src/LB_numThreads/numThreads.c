@@ -11,9 +11,9 @@
 
 //#include <mpitrace_user_events.h>
 
-void nanos_get_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_set_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_add_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_get_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_set_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_add_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
 
 int meId;
 int nodeId;
@@ -87,15 +87,16 @@ void DLB_bind_thread(int tid, int procsNode){
 
 void get_mask( cpu_set_t *cpu_set )
 {
-   if ( nanos_get_mask ) nanos_get_mask ( cpu_set );
+   if ( nanos_omp_get_mask ) nanos_omp_get_mask ( cpu_set );
+   else sched_getaffinity( 0, sizeof(cpu_set_t), cpu_set );
 }
 
 void set_mask( cpu_set_t *cpu_set )
 {
-   if ( nanos_set_mask ) nanos_set_mask ( cpu_set );
+   if ( nanos_omp_set_mask ) nanos_omp_set_mask ( cpu_set );
 }
 
 void add_mask( cpu_set_t *cpu_set )
 {
-   if ( nanos_add_mask ) nanos_add_mask ( cpu_set );
+   if ( nanos_omp_add_mask ) nanos_omp_add_mask ( cpu_set );
 }

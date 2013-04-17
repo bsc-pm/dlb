@@ -27,6 +27,7 @@
 #include "support/tracing.h"
 #include "support/utils.h"
 #include "support/mytime.h"
+#include "support/mask_utils.h"
 
 int iterNum;
 struct timespec initAppl;
@@ -236,6 +237,13 @@ void Init(int me, int num_procs, int node){
            debug_basic_info0 ( "LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n" );
         else if ( _blocking_mode == BLOCK )
            debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n" );
+
+        // FIXME: It could be printed from Nanos, mu_init is called twice now
+        cpu_set_t default_mask;
+        get_mask( &default_mask );
+        mu_init();
+        debug_basic_info ( "Default Mask: %s\n", mu_to_str(&default_mask) );
+        //
 
 	if (prof){
 		clock_gettime(CLOCK_REALTIME, &initAppl);
