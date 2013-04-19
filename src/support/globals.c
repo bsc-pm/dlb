@@ -28,4 +28,5 @@ int _default_nthreads;
 
 bool _locality_aware = true;
 bool _just_barrier = false;
+bool _aggressive_init = false;
 blocking_mode_t _blocking_mode = ONE_CPU;

@@ -2,6 +2,7 @@
 #include <LB_numThreads/numThreads.h>
 #include <LB_comm/comm_lend_light.h>
 #include "support/globals.h"
+#include "support/mask_utils.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -85,6 +86,10 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	//Initialize shared memory
 	ConfigShMem(procs, me, node, default_cpus, greedy);
 
+      if ( _aggressive_init ) {
+         setThreads_Lend_light( mu_get_system_size() );
+         setThreads_Lend_light( _default_nthreads );
+      }
 }
 
 void Lend_light_Finish(void){

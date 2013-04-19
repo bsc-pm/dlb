@@ -31,6 +31,7 @@ extern int _default_nthreads; /* Number of threads per MPI process */
 
 extern bool _locality_aware;
 extern bool _just_barrier;
+extern bool _aggressive_init; /* Initialize all threads at init */
 extern blocking_mode_t _blocking_mode;
 
 #endif /* GLOBALS_H */
