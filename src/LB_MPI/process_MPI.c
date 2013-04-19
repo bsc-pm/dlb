@@ -17,7 +17,6 @@ const char* nanos_get_pm(void) __attribute__( ( weak ) );
 
 int periodo; 
 int me;
-int just_barrier;
 int mpi_ready=0;
 static MPI_Comm mpi_comm_node;
 
@@ -28,14 +27,6 @@ void before_init(void){
 void after_init(void){
 	add_event(RUNTIME_EVENT, 1);
 	int num_mpis=0, node;
-
-	just_barrier=0;
-	if ((getenv("LB_JUST_BARRIER"))==NULL){
-		just_barrier=0;
-	}else{
-		just_barrier=1;
-		fprintf(stdout, "DLB: Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n");
-	}
 
 	MPI_Comm_rank(MPI_COMM_WORLD,&me);
 //fprintf(stderr, "%d: I am %d\n", getpid(), me);
@@ -160,7 +151,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 		int valor_dpd;
 		IntoCommunication();
 
-		if(just_barrier){
+		if(_just_barrier){
 			if (call_type==Barrier){
 				IntoBlockingCall();
 			}
@@ -186,7 +177,7 @@ void after_mpi(mpi_call call_type){
 	if (mpi_ready){
 		add_event(RUNTIME_EVENT, 3);
 
-		if(just_barrier){
+		if(_just_barrier){
 			if (call_type==Barrier){
 				OutOfBlockingCall();
 			}
