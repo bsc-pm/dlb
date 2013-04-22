@@ -1,9 +1,9 @@
 #!/bin/bash
 
-if [ $# != 10 ]
+if [ $# != 9 ]
 then
 	echo "ERROR: wrong number of parameters"
-	echo "Usage: set_dlb.sh <procs per node> <profiling> <version> <policy> <tracing> <block mode> <bits> <conf_smpss> <conf_extrae> <params>"
+	echo "Usage: set_dlb.sh <procs per node> <profiling> <version> <policy> <tracing> <block mode> <bits> <conf_extrae> <params>"
 	echo $*
 	echo Found $# parameters instead of 10
 	echo ${11}
@@ -17,9 +17,8 @@ else
 	tracing=$5 
 	block_mode=$6
 	bits=$7
-	conf_smpss=$8	
-	conf_extrae=$9	
-	params=${10}	
+	conf_extrae=$8	
+	params=${9}	
 fi
 
 if [ $version == "SERIE" -o $version == "ORIG" ]
@@ -37,7 +36,7 @@ then
 	MPI_TRACE_LIB=libompitrace.so
 	MPI_TRACE_LIB_DLB=libompitrace-lb.so
 
-elif [ $version == "OMPSS" ]
+elif [ $version == "OMPSS" -o $version == "OMP-NANOS" ]
 then
 	MPI_TRACE_LIB=libnanosmpitrace.so
 	MPI_TRACE_LIB_DLB=libnanosmpitrace-lb.so
@@ -50,7 +49,8 @@ fi
 ## Deciding blocking mode
 if [ ${block_mode} == "BLOCK" ]
 then
-	export MXMPI_RECV=blocking
+	#export MXMPI_RECV=blocking
+	export OMPI_MCA_mpi_yield_when_idle=1 
 elif [ ${block_mode} == "1CPU" ]
 then
 	export LB_LEND_MODE=1CPU

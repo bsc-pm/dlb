@@ -6,10 +6,10 @@ DLB_PATH=/home/bsc15/bsc15994/MN3/dlb/install
 
 profiling=NO
 
-if [ $# != 12 ]
+if [ $# != 15 ]
 then
 	echo "ERROR: Wrong number of parameters"
-	echo "Usage: write_script.sh <script_name> <ini_dir> <mpi_procs> <procs per node> <params> <tracing> <version> <policy> <trace_path> <BITS> <distribution> <duration>"
+	echo "Usage: write_script.sh <script_name> <ini_dir> <mpi_procs> <procs per node> <params> <tracing> <version> <policy> <trace_path> <BITS> <distribution> <block_mode> <extrae_xml> <duration> <submit>"
 	echo $* 
 	exit
 else
@@ -24,7 +24,10 @@ else
 	trace_path=$9
 	bits=${10}
 	distribution=${11}
-	duration=${12}
+	block_mode=${12}
+	extrae_xml=${13}
+	duration=${14}
+	submit=${15}
 fi
 
 if [ $distribution == "CYCLIC" ]
@@ -41,6 +44,20 @@ program=$(echo $params | cut -d"\"" -f2 | cut -d " " -f1 )
 
 CPUS_NODE=16
 CPUS_PROC=$(($CPUS_NODE/$procs_node))
+
+if [ $policy != "LeWI_mask" ]
+then
+	NANOS_ARGS=" --disable-binding --instrument-cpuid"
+else
+        binding="--cpus-per-proc $CPUS_PROC"
+
+	if [ $CPUS_PROC == 1 ]
+	then
+		binding="$binding --bind-to-core"
+	fi
+fi
+
+output="${ini_dir}/OUTS/${script_name}"
 
  cat > ${ini_dir}/MN_SCRIPTS/${script_name}.mn <<EOF
 #!/bin/bash
@@ -70,10 +87,13 @@ CPUS_PROC=$(($CPUS_NODE/$procs_node))
 ulimit -c unlimited
 export TMPDIR=$TMPDIR/extrae
 mkdir -p $TMPDIR
- 
-output="${ini_dir}/OUTS/${script_name}.\$LSB_JOBID.app"
 
-mpirun --cpus-per-proc $CPUS_PROC $dist ${DLB_PATH}/bin/set_dlb_mn3.sh ${params} > \$output
+export NX_ARGS+="${NANOS_ARGS}"
+export LB_AGGRESSIVE_INIT=1
+ 
+output="${output}.\$LSB_JOBID.app"
+
+/usr/bin/time mpirun -n ${mpi_procs}  $binding $dist ${DLB_PATH}/bin/set_dlb_mn3.sh ${procs_node} NO ${version} ${policy} ${tracing} ${block_mode} ${bits} ${extrae_xml} "${params}" > \$output
 
 
 if [ $tracing == "YES" ]
@@ -89,8 +109,9 @@ then
 #	else
 #		mpirun ${MPITRACE_HOME}/bin/mpimpi2prv -e ${program} -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv >> \$output
 #	fi
-	rm ${trace_path}/set-0/TRACE*
 
+	rm ${trace_path}/set-0/TRACE*
+	rm -r ${ini_dir}/trace* 
 
 	if [ $policy != "ORIG" ]
 	then
@@ -103,7 +124,12 @@ fi
 
 EOF
 
-bsub <  ${ini_dir}/MN_SCRIPTS/${script_name}.mn
-
-echo Submiting ${ini_dir}/MN_SCRIPTS/${script_name}.mn
-
+if [ ${submit} == "YES" ]
+then
+	bsub <  ${ini_dir}/MN_SCRIPTS/${script_name}.mn
+	echo Submiting ${ini_dir}/MN_SCRIPTS/${script_name}.mn
+else
+	chmod a+x MN_SCRIPTS/${script_name}.mn
+	./MN_SCRIPTS/${script_name}.mn
+	echo Output in $output..app
+fi
