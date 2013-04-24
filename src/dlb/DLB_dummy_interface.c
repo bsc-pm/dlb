@@ -23,7 +23,8 @@ DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {}
 DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {}
 DLB_API_DEF( void, DLB_single, dlb_single, (void) ) {}
 DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) ) {}
-DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) ) {}
+DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) ) {}
+DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) ) {}
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) ) {}
 DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) ) {}
 DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) ) {}

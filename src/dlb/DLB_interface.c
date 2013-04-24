@@ -17,6 +17,7 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#include <limits.h>
 #include "dlb/DLB_interface.h"
 #include "dlb/dlb.h"
 #include "LB_MPI/process_MPI.h"
@@ -48,7 +49,13 @@ DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) )
    OutOfBlockingCall();
 }
 
-DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (int max_resources) )
+DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) )
+{
+   if ( dlb_enabled )
+      updateresources( USHRT_MAX );
+}
+
+DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) )
 {
    if ( dlb_enabled )
       updateresources( max_resources );
