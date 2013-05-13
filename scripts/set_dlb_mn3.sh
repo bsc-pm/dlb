@@ -67,8 +67,8 @@ TRACE_PATH=/home/bsc15/bsc15994/extrae-2.3.2/install_MN3/lib
 CPUS_NODE=16
 
 ##############  OpenMP VARS ################
-export OMP_SCHEDULE=STATIC
-##export OMP_SCHEDULE=DYNAMIC
+##export OMP_SCHEDULE=STATIC
+export OMP_SCHEDULE=DYNAMIC
 ##export OMP_SCHEDULE=GUIDED
 
 

@@ -84,13 +84,19 @@ output="${ini_dir}/OUTS/${script_name}"
 ### Wall clock time in HH:MM
 #BSUB -W ${duration}
 
+### DEBUG queue ####
+#BSUB -q debug
+###BSUB -q sequential 
+
 ulimit -c unlimited
 export TMPDIR=$TMPDIR/extrae
 mkdir -p $TMPDIR
 
-export NX_ARGS+="${NANOS_ARGS}"
+export NX_ARGS+=" ${NANOS_ARGS} --enable-dlb"
 export LB_AGGRESSIVE_INIT=1
  
+export OMPI_MCA_mpi_warn_on_fork=0
+
 output="${output}.\$LSB_JOBID.app"
 
 /usr/bin/time mpirun -n ${mpi_procs}  $binding $dist ${DLB_PATH}/bin/set_dlb_mn3.sh ${procs_node} NO ${version} ${policy} ${tracing} ${block_mode} ${bits} ${extrae_xml} "${params}" > \$output

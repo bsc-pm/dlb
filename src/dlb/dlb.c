@@ -11,13 +11,9 @@
 
 #include "dlb.h"
 
-#include <LB_policies/Lend.h>
 #include <LB_policies/Lend_light.h>
-#include <LB_policies/LeWI_active.h>
-#include <LB_policies/Lend_simple.h>
 #include <LB_policies/Weight.h>
 #include <LB_policies/JustProf.h>
-#include <LB_policies/DWB_Eco.h>
 #include <LB_policies/Lewi_map.h>
 #include <LB_policies/lewi_mask.h>
 
@@ -30,17 +26,17 @@
 #include "support/mask_utils.h"
 
 int iterNum;
-struct timespec initAppl;
-struct timespec initComp;
-struct timespec initMPI;
+//struct timespec initAppl;
+//struct timespec initComp;
+//struct timespec initMPI;
 
-struct timespec iterCpuTime;
-struct timespec iterMPITime;
+//struct timespec iterCpuTime;
+//struct timespec iterMPITime;
 
-struct timespec CpuTime;
-struct timespec MPITime;
+//struct timespec CpuTime;
+//struct timespec MPITime;
 
-double iterCpuTime_avg=0, iterMPITime_avg=0 ;
+//double iterCpuTime_avg=0, iterMPITime_avg=0 ;
 char prof;
 int ready=0;
 
@@ -55,7 +51,6 @@ static void dummyFunc(){}
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
 	char* policy;
-	char* profile;
 	prof=0;
 
 	use_dpd=0;
@@ -72,63 +67,15 @@ void Init(int me, int num_procs, int node){
 		exit(1);
 	}
 
-	if ((profile=getenv("LB_PROFILE"))!=NULL){
-		if (strcasecmp(profile, "YES")==0){
-			prof=1;
-		}
-	}
-
         parse_env_bool( "LB_JUST_BARRIER", &_just_barrier );
 
         parse_env_bool( "LB_AGGRESSIVE_INIT", &_aggressive_init );
 
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
-	if (strcasecmp(policy, "LEND_simple")==0){
+	if (strcasecmp(policy, "LeWI")==0){
 #ifdef debugConfig
-	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Lend_simple cpus\n", node, me);
-#endif	
-		lb_funcs.init = &Lend_simple_Init;
-		lb_funcs.finish = &Lend_simple_Finish;
-		lb_funcs.initIteration = &Lend_simple_InitIteration;
-		lb_funcs.finishIteration = &Lend_simple_FinishIteration;
-		lb_funcs.intoCommunication = &Lend_simple_IntoCommunication;
-		lb_funcs.outOfCommunication = &Lend_simple_OutOfCommunication;
-		lb_funcs.intoBlockingCall = &Lend_simple_IntoBlockingCall;
-		lb_funcs.outOfBlockingCall = &Lend_simple_OutOfBlockingCall;
-		lb_funcs.updateresources = &Lend_simple_updateresources;
-
-	}else if (strcasecmp(policy, "LeWI_t")==0){
-#ifdef debugConfig
-	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Lend cpus\n", node, me);
-#endif	
-		lb_funcs.init = &Lend_Init;
-		lb_funcs.finish = &Lend_Finish;
-		lb_funcs.initIteration = &Lend_InitIteration;
-		lb_funcs.finishIteration = &Lend_FinishIteration;
-		lb_funcs.intoCommunication = &Lend_IntoCommunication;
-		lb_funcs.outOfCommunication = &Lend_OutOfCommunication;
-		lb_funcs.intoBlockingCall = &Lend_IntoBlockingCall;
-		lb_funcs.outOfBlockingCall = &Lend_OutOfBlockingCall;
-		lb_funcs.updateresources = &Lend_updateresources;
-
-	}else if (strcasecmp(policy, "LeWI_A")==0){
-#ifdef debugConfig
-	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI_Active \n", node, me);
-#endif	
-		lb_funcs.init = &LeWI_A_Init;
-		lb_funcs.finish = &LeWI_A_Finish;
-		lb_funcs.initIteration = &LeWI_A_InitIteration;
-		lb_funcs.finishIteration = &LeWI_A_FinishIteration;
-		lb_funcs.intoCommunication = &LeWI_A_IntoCommunication;
-		lb_funcs.outOfCommunication = &LeWI_A_OutOfCommunication;
-		lb_funcs.intoBlockingCall = &LeWI_A_IntoBlockingCall;
-		lb_funcs.outOfBlockingCall = &LeWI_A_OutOfBlockingCall;
-		lb_funcs.updateresources = &LeWI_A_updateresources;
-
-	}else if (strcasecmp(policy, "LeWI")==0){
-#ifdef debugConfig
-	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Lend cpus light version\n", node, me);
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI\n", node, me);
 #endif	
 		
 		lb_funcs.init = &Lend_light_Init;
@@ -172,22 +119,6 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
 		lb_funcs.updateresources = &Weight_updateresources;
 
-	}else if (strcasecmp(policy, "DWB_Eco")==0){
-#ifdef debugConfig
-		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: DWB_Eco balancing\n", node, me);
-#endif	
-		use_dpd=1;
-
-		lb_funcs.init = &DWB_Eco_Init;
-		lb_funcs.finish = &DWB_Eco_Finish;
-		lb_funcs.initIteration = &DWB_Eco_InitIteration;
-		lb_funcs.finishIteration = &DWB_Eco_FinishIteration;
-		lb_funcs.intoCommunication = &DWB_Eco_IntoCommunication;
-		lb_funcs.outOfCommunication = &DWB_Eco_OutOfCommunication;
-		lb_funcs.intoBlockingCall = &DWB_Eco_IntoBlockingCall;
-		lb_funcs.outOfBlockingCall = &DWB_Eco_OutOfBlockingCall;
-		lb_funcs.updateresources = &DWB_Eco_updateresources;
-
 	}else if (strcasecmp(policy, "LeWI_mask")==0){
 #ifdef debugConfig
 		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI mask\n", node, me);
@@ -220,17 +151,9 @@ void Init(int me, int num_procs, int node){
 		exit(1);
 	}
 
-#ifdef debugBasicInfo
-	if (me==0 && node==0){
-		fprintf(stdout, "DLB: Balancing policy: %s balancing\n", policy);
-		fprintf(stdout, "DLB: MPI processes per node: %d \n", num_procs);
-		fprintf(stdout, "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
-		
-		if (prof){
-			fprintf(stdout, "DLB: Profiling of application active\n");
-		}
-	}
-#endif
+	debug_basic_info0 ( "DLB: Balancing policy: %s balancing\n", policy);
+	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", num_procs);
+	debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
 
         if ( _just_barrier )
            debug_basic_info0 ( "Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n" );
@@ -247,14 +170,14 @@ void Init(int me, int num_procs, int node){
         debug_basic_info ( "Default Mask: %s\n", mu_to_str(&default_mask) );
         //
 
-	if (prof){
+/*	if (prof){
 		clock_gettime(CLOCK_REALTIME, &initAppl);
 		reset(&iterCpuTime);
 		reset(&iterMPITime);
 		reset(&CpuTime);
 		reset(&MPITime);
 		clock_gettime(CLOCK_REALTIME, &initComp);
-	}
+	}*/
 
 	lb_funcs.init(me, num_procs, node);
 	ready=1;
@@ -264,7 +187,7 @@ void Init(int me, int num_procs, int node){
 
 void Finish(void){
 	lb_funcs.finish();
-	if (prof){
+/*	if (prof){
 		struct timespec aux, aux2;
 
 		clock_gettime(CLOCK_REALTIME, &aux);
@@ -282,18 +205,18 @@ void Finish(void){
 		}
 		fprintf(stdout, "DLB: (%d:%d) - CPU time: %.4f\n", nodeId, meId, to_secs(CpuTime));
 		fprintf(stdout, "DLB: (%d:%d) - MPI time: %.4f\n", nodeId, meId, to_secs(MPITime));
-	}
+	}*/
 }
 
 void InitIteration(void){
-	add_time(CpuTime, iterCpuTime, &CpuTime);
+/*	add_time(CpuTime, iterCpuTime, &CpuTime);
 	add_time(MPITime, iterMPITime, &MPITime);
 
 	iterCpuTime_avg=(to_secs(iterCpuTime)+iterCpuTime_avg)/2;
 	iterMPITime_avg=(to_secs(iterMPITime)+iterMPITime_avg)/2;
 
 	reset(&iterCpuTime);
-	reset(&iterMPITime);
+	reset(&iterMPITime);*/
 
 	lb_funcs.initIteration();
 	iterNum++;
@@ -303,26 +226,26 @@ void FinishIteration(){
 	double cpuSecs;
 	double MPISecs;
 
-	cpuSecs=to_secs(iterCpuTime);
-	MPISecs=to_secs(iterMPITime);
+/*	cpuSecs=to_secs(iterCpuTime);
+	MPISecs=to_secs(iterMPITime);*/
 
 	lb_funcs.finishIteration(cpuSecs, MPISecs);
 }
 
 void IntoCommunication(void){
-	struct timespec aux;
+/*	struct timespec aux;
 	clock_gettime(CLOCK_REALTIME, &initMPI);
 	diff_time(initComp, initMPI, &aux);
-	add_time(iterCpuTime, aux, &iterCpuTime);
+	add_time(iterCpuTime, aux, &iterCpuTime);*/
 
 	lb_funcs.intoCommunication();
 }
 
 void OutOfCommunication(void){
-	struct timespec aux;
+/*	struct timespec aux;
 	clock_gettime(CLOCK_REALTIME, &initComp);
 	diff_time(initMPI, initComp, &aux);
-	add_time(iterMPITime, aux, &iterMPITime);
+	add_time(iterMPITime, aux, &iterMPITime);*/
 
 	lb_funcs.outOfCommunication();
 }
@@ -330,8 +253,8 @@ void OutOfCommunication(void){
 void IntoBlockingCall(void){
 	double cpuSecs;
 	double MPISecs;
-	cpuSecs=iterCpuTime_avg;
-	MPISecs=iterMPITime_avg;
+/*	cpuSecs=iterCpuTime_avg;
+	MPISecs=iterMPITime_avg;*/
 
 	lb_funcs.intoBlockingCall(cpuSecs, MPISecs);
 }

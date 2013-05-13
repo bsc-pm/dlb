@@ -85,8 +85,6 @@ Will build all the libraries
 
 - LB_POLICY: See section "4 LOAD BALANCING POLICIES IMPLEMENTED"
 
-- LB_PROFILE: YES | NO: To obtain profiling information about the execution, not recomended. 
-
 - LB_BIND: YES | NO: To bind or not threads to cpus. Only for SMPSs applications. Must be coherent with the parameter: "dlb.bindCPUS.enable=1" in the smpss configuration file
 
 - LD_PRELOAD
@@ -112,6 +110,10 @@ WEIGHT: Iterative Load balancing algorithm based on redistributing the number of
 LeWI: Lend CPUS when MPI process is Idle in a blocking MPI call.
 
 Map: Same as LeWI but the 
+
+LeWI_mask:
+
+RaL: 
 ------------------------------------------------------------
 5 DEPENDENCES
 ------------------------------------------------------------

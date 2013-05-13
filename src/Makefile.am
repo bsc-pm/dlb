@@ -18,12 +18,8 @@ END =
 sources = \
          $(top_srcdir)/src/DPD/DPD.c           		\
          $(top_srcdir)/src/LB_numThreads/numThreads.c   \
-         $(top_srcdir)/src/LB_policies/DWB_Eco.c    	\
          $(top_srcdir)/src/LB_policies/JustProf.c       \
-         $(top_srcdir)/src/LB_policies/LeWI_active.c    \
-         $(top_srcdir)/src/LB_policies/Lend.c         	\
          $(top_srcdir)/src/LB_policies/Lend_light.c     \
-         $(top_srcdir)/src/LB_policies/Lend_simple.c    \
          $(top_srcdir)/src/LB_policies/Lewi_map.c       \
          $(top_srcdir)/src/LB_policies/Weight.c         \
          $(top_srcdir)/src/LB_policies/lewi_mask.c      \
@@ -54,6 +50,10 @@ intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
 #$(top_srcdir)/src/LB_comm/comm_shMem_states.c
 #$(top_srcdir)/src/LB_comm/comm.c
 #$(top_srcdir)/src/LB_MPI/MPI_interfaceF
+#$(top_srcdir)/src/LB_policies/DWB_Eco.c    	
+#$(top_srcdir)/src/LB_policies/LeWI_active.c    
+#$(top_srcdir)/src/LB_policies/Lend.c         	
+#$(top_srcdir)/src/LB_policies/Lend_simple.c    
 
 includes = \
          -I$(top_srcdir)/src                       	\
