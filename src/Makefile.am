@@ -76,13 +76,13 @@ AM_CPPFLAGS += -DUSE_HWLOC -I$(HWLOC_HOME)/include
 AM_LDFLAGS += -L$(HWLOC_HOME)/lib -lhwloc
 endif
 
-libdlb_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
-libTdlb_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
-libdlb_dummy_la_CPPFLAGS = $(PERFO_MACRO_FLAGS)
+libdlb_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+libTdlb_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_dummy_la_CPPFLAGS = $(PERFO_CPPFLAGS)
 
-libdlb_la_CFLAGS = $(PERFO_FLAGS) $(AM_CPPFLAGS)
-libTdlb_la_CFLAGS = $(PERFO_FLAGS) $(AM_CPPFLAGS)
-libdlb_dummy_la_CFLAGS = $(PERFO_FLAGS)
+libdlb_la_CFLAGS = $(PERFO_CFLAGS)
+libTdlb_la_CFLAGS = $(PERFO_CFLAGS)
+libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS)
 
 libdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libTdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
@@ -93,8 +93,8 @@ libTdlb_la_SOURCES = $(sources)
 libdlb_dummy_la_SOURCES = dlb/DLB_dummy_interface.c
 
 if DEBUG_LIB
-libdlb_dbg_la_CPPFLAGS = $(DEBUG_MACRO_FLAGS)
-libdlb_dbg_la_CFLAGS = $(DEBUG_FLAGS) $(AM_CPPFLAGS)
+libdlb_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_dbg_la_CFLAGS = $(DEBUG_CFLAGS)
 libdlb_dbg_la_LDFLAGS = $(libdlb_la_LDFLAGS)
 libdlb_dbg_la_SOURCES = $(libTdlb_la_SOURCES)
 endif
