@@ -16,6 +16,7 @@
 #include <LB_policies/JustProf.h>
 #include <LB_policies/Lewi_map.h>
 #include <LB_policies/lewi_mask.h>
+#include <LB_policies/RaL.h>
 
 #include <LB_numThreads/numThreads.h>
 #include "support/debug.h"
@@ -25,7 +26,7 @@
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 
-int iterNum;
+//int iterNum;
 //struct timespec initAppl;
 //struct timespec initComp;
 //struct timespec initMPI;
@@ -46,7 +47,7 @@ int nodeId, meId, procsNode;
 
 int use_dpd;
 
-static void dummyFunc(){}
+//static void dummyFunc(){}
 
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
@@ -60,7 +61,7 @@ void Init(int me, int num_procs, int node){
 	procsNode=num_procs;
         mpi_x_node=num_procs;
 
-	iterNum=0;
+	//iterNum=0;
 
 	if ((policy=getenv("LB_POLICY"))==NULL){
 		fprintf(stderr,"DLB PANIC: LB_POLICY must be defined\n");
@@ -133,19 +134,35 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.outOfBlockingCall = &lewi_mask_out_of_blocking_call;
 		lb_funcs.updateresources = &lewi_mask_update_resources;
 
+	}else if (strcasecmp(policy, "RaL")==0){
+#ifdef debugConfig
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: RaL: Redistribute and Lend \n", node, me);
+#endif
+		lb_funcs.init = &RaL_init;
+		lb_funcs.finish = &RaL_finish;
+		lb_funcs.initIteration = &RaL_init_iteration;
+		lb_funcs.finishIteration = &RaL_finish_iteration;
+		lb_funcs.intoCommunication = &RaL_into_communication;
+		lb_funcs.outOfCommunication = &RaL_out_of_communication;
+		lb_funcs.intoBlockingCall = &RaL_into_blocking_call;
+		lb_funcs.outOfBlockingCall = &RaL_out_of_blocking_call;
+		lb_funcs.updateresources = &RaL_update_resources;
+
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
 		fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", node, me);
 #endif	
-		lb_funcs.init = &dummyFunc;
-		lb_funcs.finish = &dummyFunc;
-		lb_funcs.initIteration = &dummyFunc;
-		lb_funcs.finishIteration = &dummyFunc;
-		lb_funcs.intoCommunication = &dummyFunc;
-		lb_funcs.outOfCommunication = &dummyFunc;
-		lb_funcs.intoBlockingCall = &dummyFunc;
-		lb_funcs.outOfBlockingCall = &dummyFunc;
-		lb_funcs.updateresources = &dummyFunc;
+		use_dpd=1;
+
+		lb_funcs.init = &JustProf_Init;
+		lb_funcs.finish = &JustProf_Finish;
+		lb_funcs.initIteration = &JustProf_InitIteration;
+		lb_funcs.finishIteration = &JustProf_FinishIteration;
+		lb_funcs.intoCommunication = &JustProf_IntoCommunication;
+		lb_funcs.outOfCommunication = &JustProf_OutOfCommunication;
+		lb_funcs.intoBlockingCall = &JustProf_IntoBlockingCall;
+		lb_funcs.outOfBlockingCall = &JustProf_OutOfBlockingCall;
+		lb_funcs.updateresources = &JustProf_UpdateResources;
 	}else{
 		fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
 		exit(1);
@@ -181,6 +198,7 @@ void Init(int me, int num_procs, int node){
 
 	lb_funcs.init(me, num_procs, node);
 	ready=1;
+
 
 }
 
@@ -219,17 +237,17 @@ void InitIteration(void){
 	reset(&iterMPITime);*/
 
 	lb_funcs.initIteration();
-	iterNum++;
+//	iterNum++;
 }
 
 void FinishIteration(){
-	double cpuSecs;
+/*	double cpuSecs;
 	double MPISecs;
 
-/*	cpuSecs=to_secs(iterCpuTime);
+	cpuSecs=to_secs(iterCpuTime);
 	MPISecs=to_secs(iterMPITime);*/
 
-	lb_funcs.finishIteration(cpuSecs, MPISecs);
+	lb_funcs.finishIteration();
 }
 
 void IntoCommunication(void){
@@ -251,12 +269,12 @@ void OutOfCommunication(void){
 }
 
 void IntoBlockingCall(void){
-	double cpuSecs;
+/*	double cpuSecs;
 	double MPISecs;
-/*	cpuSecs=iterCpuTime_avg;
+	cpuSecs=iterCpuTime_avg;
 	MPISecs=iterMPITime_avg;*/
 
-	lb_funcs.intoBlockingCall(cpuSecs, MPISecs);
+	lb_funcs.intoBlockingCall();
 }
 
 void OutOfBlockingCall(void){

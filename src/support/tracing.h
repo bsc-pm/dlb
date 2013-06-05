@@ -19,12 +19,13 @@
 
 /********* EXTRAE EVENTS *************/
 #define THREADS_USED_EVENT 800000
-#define RUNTIME_EVENT 800020
-   #define EVENT_INIT     1
-   #define EVENT_INTO_MPI 2
-   #define EVENT_OUT_MPI  3
-   #define EVENT_UPDATE   4
-#define IDLE_CPUS_EVENT 800030
+#define RUNTIME_EVENT      800020
+   #define EVENT_INIT        1
+   #define EVENT_INTO_MPI    2
+   #define EVENT_OUT_MPI     3
+   #define EVENT_UPDATE      4
+#define ITERATION_EVENT    800021
+#define IDLE_CPUS_EVENT    800030
 /*************************************/
 
 void add_event( int type, int value );

@@ -62,7 +62,7 @@ fi
 ##############  PATHS  #############
 DLB_PATH=/home/bsc15/bsc15994/MN3/dlb/install/lib
 SMPSS_PATH=/home/bsc15/bsc15994/SMPSs-install${bits}/lib
-TRACE_PATH=/home/bsc15/bsc15994/extrae-2.3.2/install_MN3/lib
+TRACE_PATH=/home/bsc15/bsc15994/MN3/extrae/lib
 
 CPUS_NODE=16
 

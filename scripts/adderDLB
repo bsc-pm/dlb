@@ -8,9 +8,6 @@ EVENT_TYPE
 0    800000	DLB Threads used
 
 EVENT_TYPE
-0    800010	DLB MPI Blocked
-
-EVENT_TYPE
 0    800020	DLB runtime 
 VALUES
 0      User code
@@ -20,10 +17,10 @@ VALUES
 4      UpdateResources
 
 EVENT_TYPE
-0    800030	DLB Idle Threads
+0    800021	DLB Iteration
 
 EVENT_TYPE
-0    800040	DLB Thread bound to CPU
+0    800030	DLB Idle Threads
 
 EOF
 

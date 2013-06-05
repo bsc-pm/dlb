@@ -96,15 +96,15 @@ void Lend_light_Finish(void){
 	if (me==0) finalize_comm();
 }
 
-void Lend_light_InitIteration(){}
+void Lend_light_InitIteration(void){}
 
-void Lend_light_FinishIteration(double cpuSecs, double MPISecs){}
+void Lend_light_FinishIteration(void){}
 
 void Lend_light_IntoCommunication(void){}
 
 void Lend_light_OutOfCommunication(void){}
 
-void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs){
+void Lend_light_IntoBlockingCall(void){
 
 	int prio;
 	if (block==_1CPU){

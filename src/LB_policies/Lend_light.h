@@ -12,15 +12,15 @@ void Lend_light_Init(int me, int num_procs, int node);
 
 void Lend_light_Finish(void);
 
-void Lend_light_InitIteration();
+void Lend_light_InitIteration(void);
 
-void Lend_light_FinishIteration(double cpuSecs, double MPISecs);
+void Lend_light_FinishIteration(void);
 
 void Lend_light_IntoCommunication(void);
 
 void Lend_light_OutOfCommunication(void);
 
-void Lend_light_IntoBlockingCall(double cpuSecs, double MPISecs);
+void Lend_light_IntoBlockingCall(void);
 
 void Lend_light_OutOfBlockingCall(void);
 

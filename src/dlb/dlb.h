@@ -5,10 +5,10 @@ typedef struct{
 	void (*init) (int me, int num_procs, int node);
 	void (*finish) (void);
 	void (*initIteration) (void);
-	void (*finishIteration) (double cpuSecs, double MPISecs);
+	void (*finishIteration) (void);
 	void (*intoCommunication) (void);
 	void (*outOfCommunication) (void);
-	void (*intoBlockingCall) (double cpuSecs, double MPISecs);
+	void (*intoBlockingCall) (void);
 	void (*outOfBlockingCall) (void);
 	void (*updateresources) ( int max_resources );
 } BalancePolicy;

@@ -30,20 +30,22 @@ void LoadCommConfig(int num_procs, int meId, int nodeId){
 	me=meId;
 	node=nodeId;
 
-	char *k;
+//	char *k;
 	int i;
     key_t key;
     int sm_size;
     char * shm;
 	size_queue=procs*100;
 
-	if ((k=getenv("SLURM_JOBID"))==NULL){
+	/*if ((k=getenv("SLURM_JOBID"))==NULL){
 		key=getppid();
 		fprintf(stdout,"DLB: (%d:%d) SLURM_JOBID not found using getppid(%d) as Shared Memory name\n", node, me, key);
 	}else{
 		key=atol(k);
-	}
+	}*/
 
+	key=(key_t) 10002;
+	
 	sm_size= sizeof(sharedData) + (sizeof(msg)*size_queue) + (sizeof(sem_t)*procs)+ (sizeof(int)*procs);
 	//         the struct         the queue of messages       the semaphores         the threads    
 

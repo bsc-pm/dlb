@@ -66,14 +66,14 @@ void lewi_mask_finish( void )
 
 void lewi_mask_init_iteration( void ) {}
 
-void lewi_mask_finish_iteration( double cpu_secs, double MPI_secs ) {}
+void lewi_mask_finish_iteration( void) {}
 
 void lewi_mask_into_communication( void ) {}
 
 void lewi_mask_out_of_communication( void ) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void lewi_mask_into_blocking_call( double cpu_secs, double MPI_secs )
+void lewi_mask_into_blocking_call( void)
 {
    cpu_set_t mask;
    CPU_ZERO( &mask );

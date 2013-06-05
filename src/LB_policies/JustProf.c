@@ -1,70 +1,136 @@
 #include "support/mytime.h"
+#include "support/debug.h"
+#include "support/globals.h"
+#include "support/tracing.h"
+
 #include <stdio.h>
 
 
 int iterNum;
 struct timespec initAppl;
+struct timespec initComp;
+//struct timespec initCpu;
 struct timespec initIter;
-struct timespec initMPI;
 
 struct timespec cpuTime;
-struct timespec MPITime;
+struct timespec compTime;
 
-void JustProf_Init(void){
+struct timespec iter_cpuTime;
+struct timespec iter_compTime;
+
+int myCPUS;
+int myId;
+void JustProf_Init(int me, int num_procs, int node){
 	//Read Environment vars
+
+	myCPUS = _default_nthreads;
+	myId=me;
+
 	if (clock_gettime(CLOCK_REALTIME, &initAppl)<0){
 		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
 	}
+
+	if (clock_gettime(CLOCK_REALTIME, &initComp)<0){
+		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+	}
 	reset(&cpuTime);
-	reset(&MPITime);
+	reset(&compTime);
+	reset(&iter_cpuTime);
+	reset(&iter_compTime);
 	iterNum=0;
 }
 
 void JustProf_Finish(void){
+	add_event(ITERATION_EVENT, 0);
+	struct timespec fin;
 	struct timespec aux;
-	double secs;
+	double totalTime;
 
-	if (clock_gettime(CLOCK_REALTIME, &aux)<0){
+	if (clock_gettime(CLOCK_REALTIME, &fin)<0){
 		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
 	}
 	
-	diff_time(initAppl, aux, &aux);
+	diff_time(initComp, fin, &aux);
+	
+	
+        add_time(compTime, aux, &compTime);
 
-	secs=aux.tv_sec;
-	secs+= (aux.tv_nsec) / 1e9;
+        mult_time(aux, myCPUS, &aux);
 
-	fprintf(stdout, "DLB: Application -> %.4f secs\n", secs);
+        add_time(cpuTime, aux, &cpuTime);
+
+	diff_time(initAppl, fin, &aux);
+
+	totalTime=to_secs(aux) * myCPUS;
+
+	debug_basic_info("Application -> %.4f secs\n", to_secs(aux));
+	debug_basic_info("Computation time: %.4f secs\n", to_secs(compTime));
+	debug_basic_info("CPU time: %.4f secs\n", to_secs(cpuTime));
+
+	debug_basic_info("Usage:  %.2f \n", (to_secs(cpuTime)*100)/totalTime);
+
+
+
 }
 
 void JustProf_InitIteration(void){
+	iterNum++;
+	add_event(ITERATION_EVENT, iterNum);
 	if (clock_gettime(CLOCK_REALTIME, &initIter)<0){
 		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
 	}
-	iterNum++;
-	fprintf(stdout, "DLB: Iteration %d detected\n", iterNum);
+
+	reset(&iter_cpuTime);
+	reset(&iter_compTime);
+
+	debug_basic_info("Iteration %d detected\n", iterNum);
 }
 
 void JustProf_FinishIteration(void){
-	struct timespec aux;
-	double secs;
+	if (iterNum!=0){	
+		struct timespec aux;
+		double totalTime;
 
-	if (clock_gettime(CLOCK_REALTIME, &aux)<0){
-		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+		if (clock_gettime(CLOCK_REALTIME, &aux)<0){
+			fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+		}
+	
+		diff_time(initIter, aux, &aux);
+
+        	totalTime=to_secs(aux) * myCPUS;
+
+		debug_basic_info("Iteration %d -> %.4f secs Usage: %.2f (%.4f * 100 / %.4f ) \n", iterNum, to_secs(aux), (to_secs(iter_cpuTime)*100)/totalTime, to_secs(iter_cpuTime), totalTime );
 	}
-	
-	diff_time(initIter, aux, &aux);
-
-	secs=aux.tv_sec;
-	secs+= (aux.tv_nsec) / 1e9;
-	fprintf(stdout, "DLB: Iteration %d -> %.4f secs\n", iterNum, secs);
-	
 }
 
 void JustProf_IntoCommunication(void){}
 
 void JustProf_OutOfCommunication(void){}
 
-void JustProf_IntoBlockingCall(void){}
+void JustProf_IntoBlockingCall(void){
+	struct timespec initMPI;
+	struct timespec diff;
 
-void JustProf_OutOfBlockingCall(void){}
+	if (clock_gettime(CLOCK_REALTIME, &initMPI)<0){
+                fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+        }
+	
+	diff_time(initComp, initMPI, &diff);
+	
+	add_time(compTime, diff, &compTime);
+	add_time(iter_compTime, diff, &iter_compTime);
 
+	mult_time(diff, myCPUS, &diff);
+
+	add_time(cpuTime, diff, &cpuTime);
+	add_time(iter_cpuTime, diff, &iter_cpuTime);
+	
+}
+
+void JustProf_OutOfBlockingCall(void){
+	if (clock_gettime(CLOCK_REALTIME, &initComp)<0){
+                fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+        }
+}
+
+void JustProf_UpdateResources(){}

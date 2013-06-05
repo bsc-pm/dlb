@@ -1,8 +1,8 @@
 #ifndef WEIGHT_H
 #define WEIGHT_H
 
-#include <LB_comm/comm.h>
 
+#include <LB_comm/comm.h>
 /******* Main Functions Weight Balancing Policy ********/
 
 void Weight_Init(int meId, int num_procs, int nodeId);
@@ -11,13 +11,13 @@ void Weight_Finish(void);
 
 void Weight_InitIteration(void);
 
-void Weight_FinishIteration(double cpuSecs, double MPISecs);
+void Weight_FinishIteration(void);
 
 void Weight_IntoCommunication(void);
 
 void Weight_OutOfCommunication(void);
 
-void Weight_IntoBlockingCall(double cpuSecs, double MPISecs);
+void Weight_IntoBlockingCall(void);
 
 void Weight_OutOfBlockingCall(void);
 

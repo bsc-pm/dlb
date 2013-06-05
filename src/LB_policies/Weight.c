@@ -1,6 +1,8 @@
 #include <Weight.h>
 #include "support/globals.h"
 #include "support/utils.h"
+#include "support/mytime.h"
+#include "support/tracing.h"
 
 #include <semaphore.h>
 #include <stdio.h>
@@ -14,6 +16,17 @@ int threads2use, threadsUsed;
 static sem_t sem_localMetrics;
 ProcMetrics localMetrics;
 
+struct timespec initAppl;
+struct timespec initComp;
+struct timespec initMPI;
+
+struct timespec iterCpuTime;
+struct timespec iterMPITime;
+
+struct timespec CpuTime;
+struct timespec MPITime;
+
+int iterNum;
 /******* Main Functions Weight Balancing Policy ********/
 
 void Weight_Init(int meId, int num_procs, int nodeId){
@@ -24,22 +37,50 @@ void Weight_Init(int meId, int num_procs, int nodeId){
 	node = nodeId;
 	procs = num_procs;
 
+	clock_gettime(CLOCK_REALTIME, &initAppl);
+        reset(&iterCpuTime);
+        reset(&iterMPITime);
+        reset(&CpuTime);
+        reset(&MPITime);
+        clock_gettime(CLOCK_REALTIME, &initComp);
+
+	iterNum=0;
 	//Create auxiliar threads
 	createThreads_Weight();	
 }
 
-void Weight_Finish(void){}
+void Weight_Finish(void){
+	comm_close();
+}
 
-void Weight_InitIteration(void){}
+void Weight_InitIteration(void){
+	iterNum++;
+	add_event(ITERATION_EVENT, iterNum);
 
-void Weight_FinishIteration(double cpuSecs, double MPISecs){
+	add_time(CpuTime, iterCpuTime, &CpuTime);
+        add_time(MPITime, iterMPITime, &MPITime);
+
+        reset(&iterCpuTime);
+        reset(&iterMPITime);
+}
+
+void Weight_FinishIteration(void){
+	if(iterNum!=0){
+		add_event(ITERATION_EVENT, 0);
 	
-	ProcMetrics pm;
-	pm.secsComp=cpuSecs;
-	pm.secsMPI=MPISecs;
-	pm.cpus=threadsUsed;
-	SendLocalMetrics(pm);
+		double cpuSecs;
+        	double MPISecs;
 
+        	cpuSecs=to_secs(iterCpuTime);
+        	MPISecs=to_secs(iterMPITime);
+
+		ProcMetrics pm;
+		pm.secsComp=cpuSecs;
+		pm.secsMPI=MPISecs;
+		pm.cpus=threadsUsed;
+
+		SendLocalMetrics(pm);
+	}
 }
 
 void Weight_IntoCommunication(void){}
@@ -48,9 +89,19 @@ void Weight_OutOfCommunication(void){
 	Weight_updateresources();
 }
 
-void Weight_IntoBlockingCall(double cpuSecs, double MPISecs){}
+void Weight_IntoBlockingCall(void){
+	struct timespec aux;
+        clock_gettime(CLOCK_REALTIME, &initMPI);
+        diff_time(initComp, initMPI, &aux);
+        add_time(iterCpuTime, aux, &iterCpuTime);
+}
 
-void Weight_OutOfBlockingCall(void){}
+void Weight_OutOfBlockingCall(void){
+	struct timespec aux;
+        clock_gettime(CLOCK_REALTIME, &initComp);
+        diff_time(initMPI, initComp, &aux);
+        add_time(iterMPITime, aux, &iterMPITime);
+}
 
 /******* Auxiliar Functions Weight Balancing Policy ********/
 
@@ -144,6 +195,10 @@ void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]){
 	double total_time=0;
 	int i, cpus_alloc, total_cpus=0;
 	double weights[procs];
+//make it global
+	double weight_1cpu = 100/CPUS_NODE;
+	int cpus_to_give=CPUS_NODE-procs;
+	double total_weight=0;
 
 	//Calculate total runtime
 	for (i=0; i<procs; i++){
@@ -152,36 +207,38 @@ void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]){
 
 	//Calculate weigth per process
 	for (i=0; i<procs; i++){
-		weights[i]=(double)(LM[i].secsComp * (double)LM[i].cpus *(double)100/(double)total_time);
-#ifdef debugLoads
-	fprintf(stderr,"DLB DEBUG: [Process %d] Comp. time: %f.4 - cpus: %d - Load: %f.4\n", i, LM[i].secsComp, LM[i].cpus, weights[i]);
-#endif
+		weights[i]=(double)((LM[i].secsComp * (double)LM[i].cpus *(double)100/(double)total_time)-weight_1cpu);
+		if (weights[i]>0){
+			total_weight+=weights[i];
+		}
+//#ifdef debugLoads
+	fprintf(stderr,"DLB DEBUG: [Process %d] Comp. time: %f - Load: %f\n", i, LM[i].secsComp, weights[i]);
+//#endif
 	}
-
-#ifdef debugDistribution
+//#ifdef debugDistribution
 	fprintf(stderr,"DLB DEBUG: New Distribution: ");
-#endif
+//#endif
 	//Calculate new distribution
 	for (i=0; i<procs; i++){
+		//By default one cpu per process
+		cpus_alloc=1;
+		//Then we distribute the remaning ones
+		cpus_alloc+=my_round((weights[i]*(double)cpus_to_give)/(double)total_weight);
 		
-		if (weights[i]>=(double)100){	
-			cpus[i]=LM[i].cpus;
-		}else{ 
-			cpus_alloc=my_round((weights[i]*(double)CPUS_NODE)/(double)100);
 
-			if (cpus_alloc>(CPUS_NODE-(procs-1))) cpus[i]=CPUS_NODE-(procs-1);
-			else if (cpus_alloc<1) cpus[i]=1;
-			else cpus[i]=cpus_alloc; 	
-		}
+//		if (cpus_alloc>(CPUS_NODE-(procs-1))) cpus[i]=CPUS_NODE-(procs-1);
+//		else if (cpus_alloc<1) cpus[i]=1;
+//		else 
+		cpus[i]=cpus_alloc; 	
 		
-		#ifdef debugDistribution
+//		#ifdef debugDistribution
 			fprintf(stderr,"[%d]", cpus[i]);
-		#endif
+//		#endif
 		total_cpus+=cpus[i];
 	}
-#ifdef debugDistribution
+//#ifdef debugDistribution
 	fprintf(stderr,"\n");
-#endif
+//#endif
 	if (total_cpus>CPUS_NODE){
 		fprintf(stderr,"DLB WARNING: Using more cpus than the ones available in the node (%d>%d)\n", total_cpus, CPUS_NODE);
 	}else if(total_cpus<CPUS_NODE){

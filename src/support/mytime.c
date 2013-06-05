@@ -52,6 +52,18 @@ void add_time( struct timespec t1, struct timespec t2, struct timespec* sum )
    }
 }
 
+void mult_time( struct timespec t1, int factor, struct timespec* prod )
+{
+   prod->tv_nsec = t1.tv_nsec * factor;
+
+   if ( prod->tv_nsec >= 1e9 ) {
+      prod->tv_sec = (t1.tv_sec * factor) + ( prod->tv_nsec/1e9 );
+      prod->tv_nsec = ( prod->tv_nsec % ( long )1e9 );
+   } else {
+      prod->tv_sec = t1.tv_sec * factor;
+   }
+}
+
 void reset( struct timespec *t1 )
 {
    t1->tv_nsec = 0;

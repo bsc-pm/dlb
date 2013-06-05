@@ -14,13 +14,13 @@ void Map_Finish(void);
 
 void Map_InitIteration();
 
-void Map_FinishIteration(double cpuSecs, double MPISecs);
+void Map_FinishIteration(void);
 
 void Map_IntoCommunication(void);
 
 void Map_OutOfCommunication(void);
 
-void Map_IntoBlockingCall(double cpuSecs, double MPISecs);
+void Map_IntoBlockingCall(void);
 
 void Map_OutOfBlockingCall(void);
 
