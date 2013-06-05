@@ -1,0 +1,44 @@
+#!/bin/bash
+
+cat <<EOF
+
+SRC=@SRCDIR@/src
+BUILD=@BUILDDIR@/src
+
+PERFO_CFLAGS=@PERFO_CFLAGS@
+PERFO_CXXFLAGS=@PERFO_CXXFLAGS@
+DEBUG_CFLAGS=@DEBUG_CFLAGS@
+DEBUG_CXXFLAGS=@DEBUG_CXXFLAGS@
+INSTR_CFLAGS=@INSTR_CFLAGS@
+INSTR_CXXFLAGS=@INSTR_CXXFLAGS@
+INSTRDEBUG_CFLAGS=@INSTRDEBUG_CFLAGS@
+INSTRDEBUG_CXXFLAGS=@INSTRDEBUG_CXXFLAGS@
+
+common_includes="-I\$SRC/core -I\$SRC/apis/c -I\$BUILD/apis/c"
+
+compile_versions="@COMPILE_VERSIONS@"
+
+test_CC=@CONFIG_CC@
+test_CXX=@CONFIG_CXX@
+
+test_CFLAGS="\$common_includes"
+test_CXXFLAGS="\$common_includes"
+
+test_CFLAGS_performance="\$PERFO_CFLAGS"
+test_CXXFLAGS_performance="\$PERFO_CXXFLAGS"
+test_CFLAGS_debug="\$DEBUG_CFLAGS"
+test_CXXFLAGS_debug="\$DEBUG_CXXFLAGS"
+test_CFLAGS_instrumentation="\$INSTR_CFLAGS"
+test_CXXFLAGS_instrumentation="\$INSTR_CXXFLAGS"
+test_CFLAGS_instrumentation_debug="\$INSTRDEBUG_CFLAGS"
+test_CXXFLAGS_instrumentation_debug="\$INSTRDEBUG_CXXFLAGS"
+
+test_LDFLAGS_performance="\$BUILD/.libs/libdlb.so"
+test_ENV_performance="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
+
+test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so"
+test_ENV_debug="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
+
+`@SRCDIR@/tests/gens/config.py $*`
+EOF
+

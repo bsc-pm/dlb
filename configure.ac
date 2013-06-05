@@ -70,7 +70,12 @@ AC_ARG_WITH([cpus-per-node],
 AC_CONFIG_HEADERS([config.h])
 
 # files to generate via autotools (.am or .in source files)
-AC_CONFIG_FILES([Makefile src/Makefile scripts/Makefile])
+AC_CONFIG_FILES([ Makefile
+                  src/Makefile
+                  scripts/Makefile
+                  tests/Makefile
+                  tests/gens/Makefile
+               ])
 
 
 ##########################################################################
@@ -86,20 +91,20 @@ AC_ARG_ENABLE([debug],
 AC_MSG_RESULT([$debug])
 
 if test x"$debug" = x"yes"; then
-    DEBUG_FLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-    DEBUG_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugInOut -DdebugLend -DdebugSharedMem -DENABLE_DEBUG"
+    DEBUG_CFLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
+    DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugInOut -DdebugLend -DdebugSharedMem -DENABLE_DEBUG"
 fi
 AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
 
-PERFO_FLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-PERFO_MACRO_FLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo"
+PERFO_CFLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
+PERFO_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo"
 
 ##########################################################################
 
-AC_SUBST([PERFO_FLAGS])
-AC_SUBST([PERFO_MACRO_FLAGS])
-AC_SUBST([DEBUG_FLAGS])
-AC_SUBST([DEBUG_MACRO_FLAGS])
+AC_SUBST([PERFO_CFLAGS])
+AC_SUBST([PERFO_CPPFLAGS])
+AC_SUBST([DEBUG_CFLAGS])
+AC_SUBST([DEBUG_CPPFLAGS])
 
 
 ##########################################################################
