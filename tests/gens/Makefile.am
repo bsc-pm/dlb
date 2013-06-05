@@ -16,8 +16,8 @@ basic-generator: basic-generator.in
 	tmp_srcdir=$(abs_top_srcdir) ; \
 	tmp_builddir=$(abs_top_builddir) ; \
 	tmp_compile_versions="$(versions)" ; \
-	tmp_perfo_cflags='"$(PERFO_CFLAGS)"' ; \
-	tmp_debug_cflags='"$(DEBUG_CFLAGS)"' ; \
+	tmp_perfo_cflags='"$(PERFO_CFLAGS) -fopenmp"' ; \
+	tmp_debug_cflags='"$(DEBUG_CFLAGS) -fopenmp"' ; \
 	tmp_cc='"$(CC)"' ; \
 	tmp_cxx='"$(CXX)"' ; \
 	sed \
