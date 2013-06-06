@@ -3,6 +3,7 @@
 #include <LB_comm/comm_lend_light.h>
 #include "support/globals.h"
 #include "support/mask_utils.h"
+#include "support/utils.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -15,12 +16,6 @@ int me, node, procs;
 int greedy;
 int default_cpus;
 int myCPUS;
-int block;
-
-/* Blocking modes */
-#define _1CPU 0 // MPI not set to blocking, leave a cpu while in a MPI blockin call
-#define MPI_BLOCKING 1 //MPI set to blocking mode
-#define PRIO 2 // MPI not set to blocking, decrease priority when in a blocking call
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
@@ -29,14 +24,12 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - Lend_light Init\n", nodeId, meId);
 #endif
 	char* policy_greedy;
-	char* blocking;
 	me = meId;
 	node = nodeId;
 	procs = num_procs;
 	default_cpus = _default_nthreads;
 	
 	setThreads_Lend_light(default_cpus);
-//	myCPUS=default_cpus;
 
 #ifdef debugBasicInfo
 	    if (me==0 && node==0){
@@ -69,19 +62,6 @@ void Lend_light_Init(int meId, int num_procs, int nodeId){
 	}
 
 //Setting blocking mode
-	block=_1CPU;
-	if ((blocking=getenv("LB_LEND_MODE"))!=NULL){
-		if (strcasecmp(blocking, "BLOCK")==0){
-			block=MPI_BLOCKING;
-#ifdef debugBasicInfo 
-			fprintf(stderr, "DLB (%d:%d) - LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n", node, me);
-#endif
-		}
-	}
-#ifdef debugBasicInfo 
-	if (block==_1CPU)
-		fprintf(stderr, "DLB: (%d:%d) - LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n", node, me);
-#endif	
 
 	//Initialize shared memory
 	ConfigShMem(procs, me, node, default_cpus, greedy);
@@ -102,8 +82,7 @@ void Lend_light_OutOfCommunication(void){}
 
 void Lend_light_IntoBlockingCall(int is_iter){
 
-	int prio;
-	if (block==_1CPU){
+	if ( _blocking_mode == ONE_CPU ) {
 #ifdef debugLend
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, myCPUS-1);
 #endif
@@ -115,23 +94,10 @@ void Lend_light_IntoBlockingCall(int is_iter){
 #endif
 		releaseCpus(myCPUS);
 		setThreads_Lend_light(0);
-		if (block==PRIO){
-			fprintf(stderr,"Current priority %d\n", getpriority(PRIO_PROCESS, 0));
-			if((prio=nice(19))<0) perror("Error setting priority 'nice'");
-			else fprintf(stderr,"%d:%d - Priority set to %d\n", node, me, prio);
-		}
 	}
 }
 
 void Lend_light_OutOfBlockingCall(int is_iter){
-	int prio;
-
-	if (block==PRIO){
-		fprintf(stderr,"Current priority %d\n", getpriority(PRIO_PROCESS, 0));
-
-		if((prio=nice(-1))<0) perror("Error setting priority 'nice'");
-		else fprintf(stderr,"%d:%d - Priority set to %d\n", node, me, prio);
-	}
 
 	int cpus=acquireCpus(myCPUS);
 	setThreads_Lend_light(cpus);

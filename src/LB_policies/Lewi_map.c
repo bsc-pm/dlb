@@ -14,12 +14,7 @@
 int me, node, procs;
 int default_cpus;
 int myCPUS=0;
-int block;
 int *my_cpus;
-
-/* Blocking modes */
-#define _1CPU 0 // MPI not set to blocking, leave a cpu while in a MPI blockin call
-#define MPI_BLOCKING 1 //MPI set to blocking mode
 
 /******* Main Functions Map Balancing Policy ********/
 
@@ -27,7 +22,6 @@ void Map_Init(int meId, int num_procs, int nodeId){
 #ifdef debugConfig
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - Map Init\n", nodeId, meId);
 #endif
-	char* blocking;
 	my_cpus= malloc(sizeof(int)*CPUS_NODE);
 	me = meId;
 	node = nodeId;
@@ -39,23 +33,6 @@ void Map_Init(int meId, int num_procs, int nodeId){
 	      fprintf(stdout, "DLB: Default cpus per process: %d\n", default_cpus);
 	    }
 #endif
-	
-
-//Setting blocking mode
-	block=_1CPU;
-
-	if ((blocking=getenv("LB_LEND_MODE"))!=NULL){
-		if (strcasecmp(blocking, "BLOCK")==0){
-			block=MPI_BLOCKING;
-#ifdef debugBasicInfo 
-			fprintf(stderr, "DLB (%d:%d) - LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n", node, me);
-#endif	
-		}
-	}
-#ifdef debugBasicInfo 
-	if (block==_1CPU)
-		fprintf(stderr, "DLB: (%d:%d) - LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n", node, me);
-#endif	
 
 	//Initialize shared memory
 	ConfigShMem_Map(procs, me, node, default_cpus, my_cpus);
@@ -76,7 +53,8 @@ void Map_OutOfCommunication(void){}
 void Map_IntoBlockingCall(int is_iter){
 
 	int res;
-	if (block==_1CPU){
+
+	if ( _blocking_mode == ONE_CPU ) {
 #ifdef debugLend
 	fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", node, me, myCPUS-1);
 #endif
@@ -94,7 +72,6 @@ void Map_IntoBlockingCall(int is_iter){
 }
 
 void Map_OutOfBlockingCall(int is_iter){
-   //int prio;
 
 	int cpus=acquireCpus_Map(myCPUS, my_cpus);
 	setThreads_Map(cpus, 1, my_cpus);
