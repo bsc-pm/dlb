@@ -22,23 +22,19 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void RaL_init( /* TODO: should be void */ );
+void RaL_Init( /* TODO: should be void */ );
 
-void RaL_finish( void );
+void RaL_Finish( void );
 
-void RaL_init_iteration( void );
+void RaL_IntoCommunication( void );
 
-void RaL_finish_iteration( void);
+void RaL_OutOfCommunication( void );
 
-void RaL_into_communication( void );
+void RaL_IntoBlockingCall(int is_iter);
 
-void RaL_out_of_communication( void );
+void RaL_OutOfBlockingCall(int is_iter);
 
-void RaL_into_blocking_call( void);
-
-void RaL_out_of_blocking_call( void );
-
-void RaL_update_resources( int max_resources );
+void RaL_UpdateResources( int max_resources );
 
 #endif /* RAL_H */
 

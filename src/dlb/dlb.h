@@ -8,8 +8,8 @@ typedef struct{
 	void (*finishIteration) (void);
 	void (*intoCommunication) (void);
 	void (*outOfCommunication) (void);
-	void (*intoBlockingCall) (void);
-	void (*outOfBlockingCall) (void);
+	void (*intoBlockingCall) (int is_iter);
+	void (*outOfBlockingCall) (int is_iter);
 	void (*updateresources) ( int max_resources );
 } BalancePolicy;
 
@@ -21,17 +21,13 @@ void Init(int me, int num_procs, int node);
 
 void Finish(void);
 
-void InitIteration(void);
-
-void FinishIteration(void);
-
 void IntoCommunication(void);
 
 void OutOfCommunication(void);
 
-void IntoBlockingCall(void);
+void IntoBlockingCall(int is_iter);
 
-void OutOfBlockingCall(void);
+void OutOfBlockingCall(int is_iter);
 
 void updateresources( int max_resources );
 

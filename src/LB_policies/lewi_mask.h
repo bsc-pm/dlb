@@ -22,23 +22,19 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void lewi_mask_init( /* TODO: should be void */ );
+void lewi_mask_Init( /* TODO: should be void */ );
 
-void lewi_mask_finish( void );
+void lewi_mask_Finish( void );
 
-void lewi_mask_init_iteration( void );
+void lewi_mask_IntoCommunication( void );
 
-void lewi_mask_finish_iteration( void);
+void lewi_mask_OutOfCommunication( void );
 
-void lewi_mask_into_communication( void );
+void lewi_mask_IntoBlockingCall(int is_iter);
 
-void lewi_mask_out_of_communication( void );
+void lewi_mask_OutOfBlockingCall(int is_iter);
 
-void lewi_mask_into_blocking_call( void);
-
-void lewi_mask_out_of_blocking_call( void );
-
-void lewi_mask_update_resources( int max_resources );
+void lewi_mask_UpdateResources( int max_resources );
 
 #endif /* LEWI_MASK_H */
 

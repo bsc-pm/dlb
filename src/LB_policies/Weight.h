@@ -9,17 +9,13 @@ void Weight_Init(int meId, int num_procs, int nodeId);
 
 void Weight_Finish(void);
 
-void Weight_InitIteration(void);
-
-void Weight_FinishIteration(void);
-
 void Weight_IntoCommunication(void);
 
 void Weight_OutOfCommunication(void);
 
-void Weight_IntoBlockingCall(void);
+void Weight_IntoBlockingCall(int is_iter);
 
-void Weight_OutOfBlockingCall(void);
+void Weight_OutOfBlockingCall(int is_iter);
 
 void Weight_updateresources();
 

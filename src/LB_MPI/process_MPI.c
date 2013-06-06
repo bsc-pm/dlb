@@ -19,6 +19,7 @@ int periodo;
 int me;
 int mpi_ready=0;
 static MPI_Comm mpi_comm_node;
+static int valor_dpd;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -148,27 +149,23 @@ void after_init(void){
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 	if(mpi_ready){
 		add_event(RUNTIME_EVENT, 2);
-		int valor_dpd;
 		IntoCommunication();
 
-		if(_just_barrier){
-			if (call_type==Barrier){
-				IntoBlockingCall();
-			}
-		}else if (is_blocking(call_type)){
-			IntoBlockingCall();
-		}
-	
+		valor_dpd=0;
 		if(use_dpd){
 			long value = (long)((((buf>>5)^dest)<<5)|call_type);
 		
 			valor_dpd=DPD(value,&periodo);
-		
-			if (valor_dpd!=0){
-				FinishIteration();
-				InitIteration();
-			}
 		}
+
+		if(_just_barrier){
+			if (call_type==Barrier){
+				IntoBlockingCall(valor_dpd);
+			}
+		}else if (is_blocking(call_type)){
+			IntoBlockingCall(valor_dpd);
+		}
+	
 		add_event(RUNTIME_EVENT, 0);
 	}
 }
@@ -179,10 +176,10 @@ void after_mpi(mpi_call call_type){
 
 		if(_just_barrier){
 			if (call_type==Barrier){
-				OutOfBlockingCall();
+				OutOfBlockingCall(valor_dpd);
 			}
 		}else if (is_blocking(call_type)){
-			OutOfBlockingCall();
+			OutOfBlockingCall(valor_dpd);
 		}
 	
 		OutOfCommunication();

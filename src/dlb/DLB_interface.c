@@ -39,14 +39,14 @@ DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) )
 {
-   IntoBlockingCall();
+   IntoBlockingCall(0);
    DLB_disable();
 }
 
 DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) )
 {
    DLB_enable();
-   OutOfBlockingCall();
+   OutOfBlockingCall(0);
 }
 
 DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) )
@@ -64,13 +64,13 @@ DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_re
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
 {
    if ( dlb_enabled )
-      IntoBlockingCall();
+      IntoBlockingCall(0);
 }
 
 DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
 {
    if ( dlb_enabled )
-      OutOfBlockingCall();
+      OutOfBlockingCall(0);
 }
 
 DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) )

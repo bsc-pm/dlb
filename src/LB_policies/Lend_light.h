@@ -12,17 +12,13 @@ void Lend_light_Init(int me, int num_procs, int node);
 
 void Lend_light_Finish(void);
 
-void Lend_light_InitIteration(void);
-
-void Lend_light_FinishIteration(void);
-
 void Lend_light_IntoCommunication(void);
 
 void Lend_light_OutOfCommunication(void);
 
-void Lend_light_IntoBlockingCall(void);
+void Lend_light_IntoBlockingCall(int is_iter);
 
-void Lend_light_OutOfBlockingCall(void);
+void Lend_light_OutOfBlockingCall(int is_iter);
 
 /******* Auxiliar Functions Lend_light Balancing Policy ********/
 

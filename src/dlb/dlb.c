@@ -81,8 +81,6 @@ void Init(int me, int num_procs, int node){
 		
 		lb_funcs.init = &Lend_light_Init;
 		lb_funcs.finish = &Lend_light_Finish;
-		lb_funcs.initIteration = &Lend_light_InitIteration;
-		lb_funcs.finishIteration = &Lend_light_FinishIteration;
 		lb_funcs.intoCommunication = &Lend_light_IntoCommunication;
 		lb_funcs.outOfCommunication = &Lend_light_OutOfCommunication;
 		lb_funcs.intoBlockingCall = &Lend_light_IntoBlockingCall;
@@ -96,8 +94,6 @@ void Init(int me, int num_procs, int node){
 		
 		lb_funcs.init = &Map_Init;
 		lb_funcs.finish = &Map_Finish;
-		lb_funcs.initIteration = &Map_InitIteration;
-		lb_funcs.finishIteration = &Map_FinishIteration;
 		lb_funcs.intoCommunication = &Map_IntoCommunication;
 		lb_funcs.outOfCommunication = &Map_OutOfCommunication;
 		lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
@@ -112,8 +108,6 @@ void Init(int me, int num_procs, int node){
 
 		lb_funcs.init = &Weight_Init;
 		lb_funcs.finish = &Weight_Finish;
-		lb_funcs.initIteration = &Weight_InitIteration;
-		lb_funcs.finishIteration = &Weight_FinishIteration;
 		lb_funcs.intoCommunication = &Weight_IntoCommunication;
 		lb_funcs.outOfCommunication = &Weight_OutOfCommunication;
 		lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
@@ -124,29 +118,27 @@ void Init(int me, int num_procs, int node){
 #ifdef debugConfig
 		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI mask\n", node, me);
 #endif
-		lb_funcs.init = &lewi_mask_init;
-		lb_funcs.finish = &lewi_mask_finish;
-		lb_funcs.initIteration = &lewi_mask_init_iteration;
-		lb_funcs.finishIteration = &lewi_mask_finish_iteration;
-		lb_funcs.intoCommunication = &lewi_mask_into_communication;
-		lb_funcs.outOfCommunication = &lewi_mask_out_of_communication;
-		lb_funcs.intoBlockingCall = &lewi_mask_into_blocking_call;
-		lb_funcs.outOfBlockingCall = &lewi_mask_out_of_blocking_call;
-		lb_funcs.updateresources = &lewi_mask_update_resources;
+		lb_funcs.init = &lewi_mask_Init;
+		lb_funcs.finish = &lewi_mask_Finish;
+		lb_funcs.intoCommunication = &lewi_mask_IntoCommunication;
+		lb_funcs.outOfCommunication = &lewi_mask_OutOfCommunication;
+		lb_funcs.intoBlockingCall = &lewi_mask_IntoBlockingCall;
+		lb_funcs.outOfBlockingCall = &lewi_mask_OutOfBlockingCall;
+		lb_funcs.updateresources = &lewi_mask_UpdateResources;
 
 	}else if (strcasecmp(policy, "RaL")==0){
 #ifdef debugConfig
 		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: RaL: Redistribute and Lend \n", node, me);
 #endif
-		lb_funcs.init = &RaL_init;
-		lb_funcs.finish = &RaL_finish;
-		lb_funcs.initIteration = &RaL_init_iteration;
-		lb_funcs.finishIteration = &RaL_finish_iteration;
-		lb_funcs.intoCommunication = &RaL_into_communication;
-		lb_funcs.outOfCommunication = &RaL_out_of_communication;
-		lb_funcs.intoBlockingCall = &RaL_into_blocking_call;
-		lb_funcs.outOfBlockingCall = &RaL_out_of_blocking_call;
-		lb_funcs.updateresources = &RaL_update_resources;
+		use_dpd=1;
+
+		lb_funcs.init = &RaL_Init;
+		lb_funcs.finish = &RaL_Finish;
+		lb_funcs.intoCommunication = &RaL_IntoCommunication;
+		lb_funcs.outOfCommunication = &RaL_OutOfCommunication;
+		lb_funcs.intoBlockingCall = &RaL_IntoBlockingCall;
+		lb_funcs.outOfBlockingCall = &RaL_OutOfBlockingCall;
+		lb_funcs.updateresources = &RaL_UpdateResources;
 
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
@@ -156,8 +148,6 @@ void Init(int me, int num_procs, int node){
 
 		lb_funcs.init = &JustProf_Init;
 		lb_funcs.finish = &JustProf_Finish;
-		lb_funcs.initIteration = &JustProf_InitIteration;
-		lb_funcs.finishIteration = &JustProf_FinishIteration;
 		lb_funcs.intoCommunication = &JustProf_IntoCommunication;
 		lb_funcs.outOfCommunication = &JustProf_OutOfCommunication;
 		lb_funcs.intoBlockingCall = &JustProf_IntoBlockingCall;
@@ -226,29 +216,6 @@ void Finish(void){
 	}*/
 }
 
-void InitIteration(void){
-/*	add_time(CpuTime, iterCpuTime, &CpuTime);
-	add_time(MPITime, iterMPITime, &MPITime);
-
-	iterCpuTime_avg=(to_secs(iterCpuTime)+iterCpuTime_avg)/2;
-	iterMPITime_avg=(to_secs(iterMPITime)+iterMPITime_avg)/2;
-
-	reset(&iterCpuTime);
-	reset(&iterMPITime);*/
-
-	lb_funcs.initIteration();
-//	iterNum++;
-}
-
-void FinishIteration(){
-/*	double cpuSecs;
-	double MPISecs;
-
-	cpuSecs=to_secs(iterCpuTime);
-	MPISecs=to_secs(iterMPITime);*/
-
-	lb_funcs.finishIteration();
-}
 
 void IntoCommunication(void){
 /*	struct timespec aux;
@@ -268,17 +235,17 @@ void OutOfCommunication(void){
 	lb_funcs.outOfCommunication();
 }
 
-void IntoBlockingCall(void){
+void IntoBlockingCall(int is_iter){
 /*	double cpuSecs;
 	double MPISecs;
 	cpuSecs=iterCpuTime_avg;
 	MPISecs=iterMPITime_avg;*/
 
-	lb_funcs.intoBlockingCall();
+	lb_funcs.intoBlockingCall(is_iter);
 }
 
-void OutOfBlockingCall(void){
-	lb_funcs.outOfBlockingCall();
+void OutOfBlockingCall(int is_iter){
+	lb_funcs.outOfBlockingCall(is_iter);
 }
 
 void updateresources( int max_resources ){

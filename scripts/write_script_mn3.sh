@@ -45,7 +45,7 @@ program=$(echo $params | cut -d"\"" -f2 | cut -d " " -f1 )
 CPUS_NODE=16
 CPUS_PROC=$(($CPUS_NODE/$procs_node))
 
-if [ $policy != "LeWI_mask" ]
+if [ $policy != "LeWI_mask" -a $policy != "RaL" ]
 then
 	NANOS_ARGS=" --disable-binding --instrument-cpuid"
 else

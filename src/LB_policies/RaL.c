@@ -32,13 +32,23 @@
 
 static int nthreads;
 
+/*static int iterNum;
+static struct timespec iterCpuTime;
+static struct timespec iterMPITime;*/
+
+
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void RaL_init( void )
+void RaL_Init( void )
 {
    debug_config ( "LeWI Mask Balancing Init\n" );
 
    nthreads = _default_nthreads;
+
+   //Initialize iterative info
+/*   iterNum=0;
+   reset(&iterCpuTime);
+   reset(&iterMPITime);   */
 
    //Initialize shared memory
    cpu_set_t default_mask;
@@ -58,22 +68,18 @@ void RaL_init( void )
    }
 }
 
-void RaL_finish( void )
+void RaL_Finish( void )
 {
    set_mask( shmem_lewi_mask_recover_defmask() );
    shmem_lewi_mask_finalize();
 }
 
-void RaL_init_iteration( void ) {}
+void RaL_IntoCommunication( void ) {}
 
-void RaL_finish_iteration( void) {}
-
-void RaL_into_communication( void ) {}
-
-void RaL_out_of_communication( void ) {}
+void RaL_OutOfCommunication( void ) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void RaL_into_blocking_call( void)
+void RaL_IntoBlockingCall(int is_iter)
 {
    cpu_set_t mask;
    CPU_ZERO( &mask );
@@ -100,7 +106,7 @@ void RaL_into_blocking_call( void)
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
-void RaL_out_of_blocking_call( void )
+void RaL_OutOfBlockingCall(int is_iter )
 {
    debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
    set_mask( shmem_lewi_mask_recover_defmask() );
@@ -110,7 +116,7 @@ void RaL_out_of_blocking_call( void )
 }
 
 /* Update Resources - Try to acquire foreign threads */
-void RaL_update_resources( int max_resources )
+void RaL_UpdateResources( int max_resources )
 {
    cpu_set_t mask;
    CPU_ZERO( &mask );

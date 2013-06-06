@@ -73,41 +73,12 @@ void JustProf_Finish(void){
 
 }
 
-void JustProf_InitIteration(void){
-	iterNum++;
-	add_event(ITERATION_EVENT, iterNum);
-	if (clock_gettime(CLOCK_REALTIME, &initIter)<0){
-		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
-	}
-
-	reset(&iter_cpuTime);
-	reset(&iter_compTime);
-
-	debug_basic_info("Iteration %d detected\n", iterNum);
-}
-
-void JustProf_FinishIteration(void){
-	if (iterNum!=0){	
-		struct timespec aux;
-		double totalTime;
-
-		if (clock_gettime(CLOCK_REALTIME, &aux)<0){
-			fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
-		}
-	
-		diff_time(initIter, aux, &aux);
-
-        	totalTime=to_secs(aux) * myCPUS;
-
-		debug_basic_info("Iteration %d -> %.4f secs Usage: %.2f (%.4f * 100 / %.4f ) \n", iterNum, to_secs(aux), (to_secs(iter_cpuTime)*100)/totalTime, to_secs(iter_cpuTime), totalTime );
-	}
-}
 
 void JustProf_IntoCommunication(void){}
 
 void JustProf_OutOfCommunication(void){}
 
-void JustProf_IntoBlockingCall(void){
+void JustProf_IntoBlockingCall(int is_iter){
 	struct timespec initMPI;
 	struct timespec diff;
 
@@ -124,13 +95,36 @@ void JustProf_IntoBlockingCall(void){
 
 	add_time(cpuTime, diff, &cpuTime);
 	add_time(iter_cpuTime, diff, &iter_cpuTime);
-	
+
 }
 
-void JustProf_OutOfBlockingCall(void){
+void JustProf_OutOfBlockingCall(int is_iter){
 	if (clock_gettime(CLOCK_REALTIME, &initComp)<0){
                 fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
         }
+	if (is_iter!=0){
+		if(iterNum!=0){
+			//Finishing iteration
+			struct timespec aux;
+			double totalTime;
+
+			diff_time(initIter, initComp, &aux);
+	
+        		totalTime=to_secs(aux) * myCPUS;
+
+			debug_basic_info("Iteration %d -> %.4f secs Usage: %.2f (%.4f * 100 / %.4f ) \n", iterNum, to_secs(aux), (to_secs(iter_cpuTime)*100)/totalTime, to_secs(iter_cpuTime), totalTime );
+		}
+		//Starting iteration
+		iterNum++;
+		add_event(ITERATION_EVENT, iterNum);
+
+		initIter=initComp;
+
+		reset(&iter_cpuTime);
+		reset(&iter_compTime);
+
+		debug_basic_info("Iteration %d detected\n", iterNum);
+	}
 }
 
 void JustProf_UpdateResources(){}

@@ -12,17 +12,13 @@ void Map_Init(int me, int num_procs, int node);
 
 void Map_Finish(void);
 
-void Map_InitIteration();
-
-void Map_FinishIteration(void);
-
 void Map_IntoCommunication(void);
 
 void Map_OutOfCommunication(void);
 
-void Map_IntoBlockingCall(void);
+void Map_IntoBlockingCall(int is_iter);
 
-void Map_OutOfBlockingCall(void);
+void Map_OutOfBlockingCall(int is_iter);
 
 /******* Auxiliar Functions Map Balancing Policy ********/
 

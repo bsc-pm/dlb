@@ -53,54 +53,53 @@ void Weight_Finish(void){
 	comm_close();
 }
 
-void Weight_InitIteration(void){
-	iterNum++;
-	add_event(ITERATION_EVENT, iterNum);
-
-	add_time(CpuTime, iterCpuTime, &CpuTime);
-        add_time(MPITime, iterMPITime, &MPITime);
-
-        reset(&iterCpuTime);
-        reset(&iterMPITime);
-}
-
-void Weight_FinishIteration(void){
-	if(iterNum!=0){
-		add_event(ITERATION_EVENT, 0);
-	
-		double cpuSecs;
-        	double MPISecs;
-
-        	cpuSecs=to_secs(iterCpuTime);
-        	MPISecs=to_secs(iterMPITime);
-
-		ProcMetrics pm;
-		pm.secsComp=cpuSecs;
-		pm.secsMPI=MPISecs;
-		pm.cpus=threadsUsed;
-
-		SendLocalMetrics(pm);
-	}
-}
-
 void Weight_IntoCommunication(void){}
 
 void Weight_OutOfCommunication(void){
 	Weight_updateresources();
 }
 
-void Weight_IntoBlockingCall(void){
+void Weight_IntoBlockingCall(int is_iter){
 	struct timespec aux;
         clock_gettime(CLOCK_REALTIME, &initMPI);
         diff_time(initComp, initMPI, &aux);
         add_time(iterCpuTime, aux, &iterCpuTime);
 }
 
-void Weight_OutOfBlockingCall(void){
+void Weight_OutOfBlockingCall(int is_iter){
 	struct timespec aux;
         clock_gettime(CLOCK_REALTIME, &initComp);
         diff_time(initMPI, initComp, &aux);
         add_time(iterMPITime, aux, &iterMPITime);
+
+
+	if (is_iter!=0){
+		if(iterNum!=0){
+			//Finishing iteration
+			add_event(ITERATION_EVENT, 0);
+	
+			double cpuSecs;
+	        	double MPISecs;
+
+	        	cpuSecs=to_secs(iterCpuTime);
+       	 		MPISecs=to_secs(iterMPITime);
+
+			ProcMetrics pm;
+			pm.secsComp=cpuSecs;
+			pm.secsMPI=MPISecs;
+			pm.cpus=threadsUsed;
+
+			SendLocalMetrics(pm);
+		}
+		iterNum++;
+		add_event(ITERATION_EVENT, iterNum);
+
+		add_time(CpuTime, iterCpuTime, &CpuTime);
+        	add_time(MPITime, iterMPITime, &MPITime);
+
+        	reset(&iterCpuTime);
+        	reset(&iterMPITime);
+	}
 }
 
 /******* Auxiliar Functions Weight Balancing Policy ********/

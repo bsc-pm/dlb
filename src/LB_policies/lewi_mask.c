@@ -34,7 +34,7 @@ static int nthreads;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void lewi_mask_init( void )
+void lewi_mask_Init( void )
 {
    debug_config ( "LeWI Mask Balancing Init\n" );
 
@@ -58,22 +58,18 @@ void lewi_mask_init( void )
    }
 }
 
-void lewi_mask_finish( void )
+void lewi_mask_Finish( void )
 {
    set_mask( shmem_lewi_mask_recover_defmask() );
    shmem_lewi_mask_finalize();
 }
 
-void lewi_mask_init_iteration( void ) {}
+void lewi_mask_IntoCommunication( void ) {}
 
-void lewi_mask_finish_iteration( void) {}
-
-void lewi_mask_into_communication( void ) {}
-
-void lewi_mask_out_of_communication( void ) {}
+void lewi_mask_OutOfCommunication( void ) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void lewi_mask_into_blocking_call( void)
+void lewi_mask_IntoBlockingCall(int is_iter)
 {
    cpu_set_t mask;
    CPU_ZERO( &mask );
@@ -100,7 +96,7 @@ void lewi_mask_into_blocking_call( void)
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
-void lewi_mask_out_of_blocking_call( void )
+void lewi_mask_OutOfBlockingCall(int is_iter)
 {
    debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
    set_mask( shmem_lewi_mask_recover_defmask() );
@@ -110,7 +106,7 @@ void lewi_mask_out_of_blocking_call( void )
 }
 
 /* Update Resources - Try to acquire foreign threads */
-void lewi_mask_update_resources( int max_resources )
+void lewi_mask_UpdateResources( int max_resources )
 {
    cpu_set_t mask;
    CPU_ZERO( &mask );
