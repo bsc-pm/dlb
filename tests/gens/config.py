@@ -20,7 +20,8 @@ def lb_policy(policies):
     for p in policies:
         if p == 'LeWI':
             ans = ans + ['NX_ARGS=--disable-binding LB_POLICY='+p]
-        ans = ans + ['LB_POLICY='+p]
+        else:
+            ans = ans + ['LB_POLICY='+p]
     return ans
 
 def lb_barrier(bar):
@@ -51,8 +52,8 @@ import sys
 
 header ='DLB config generator 0.1\n\n'+\
 	'Envorionment variables that affect this script:\n'+\
-	'   LB_TEST_MODE=\'small\'|\'large\'   -  \'small\' by default\n'+\
-	'   LB_TEST_MAX_CPUS=#CPUS         -  2 by default\n'+\
+	'   LB_TEST_MODE=\'single\'|\'small\'|\'large\'   -  \'small\' by default\n'+\
+	'   LB_TEST_MAX_CPUS=#CPUS                  -  2 by default\n'+\
 	'   LB_TEST_POLICY=[policy]\n'
 if '-h' in sys.argv or '--help' in sys.argv:
     print header
@@ -87,16 +88,19 @@ max_cpus=int(max_cpus)
 policies_small=['No','LeWI','LeWI_mask']
 policies_large=['No','LeWI','LeWI_mask']
 barriers=[0,1]
-blocking=['1CPU','BLOCK']
+blocking_small=['BLOCK']
+blocking_large=['1CPU','BLOCK']
 
 if test_policy is not None:
     policies_small=[test_policy]
     policies_large=[test_policy]
 
-if test_mode == 'small':
-    configs=cross(*[cpus(max_cpus)]+[lb_policy(policies_small)]+[lb_barrier(barriers)]+[lb_lend_mode(blocking)]+addlist)
+if test_mode == 'single':
+    configs=[lb_policy(['No'])]
+elif test_mode == 'small':
+    configs=cross(*[lb_policy(policies_small)]+[lb_lend_mode(blocking_small)]+addlist)
 elif test_mode == 'large':
-    configs=cross(*[cpus(max_cpus)]+[lb_policy(policies_large)]+[lb_barrier(barriers)]+[lb_lend_mode(blocking)]+addlist)
+    configs=cross(*[cpus(max_cpus)]+[lb_policy(policies_large)]+[lb_barrier(barriers)]+[lb_lend_mode(blocking_large)]+addlist)
 
 config_lines=[]
 versions=''

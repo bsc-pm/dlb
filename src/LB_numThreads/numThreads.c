@@ -51,12 +51,7 @@ void bind_master(int me, int node){
 	fprintf(stderr, "DLB DEBUG: (%d:%d) Master Thread pinned to cpu %d\n", nodeId, meId, meId);
 #endif
 }
-void bind_threads(int num_procs, int meId, int nodeId){
-	#pragma omp parallel num_threads(CPUS_NODE)
-	{
-		DLB_bind_thread(omp_get_thread_num(), num_procs);
-	}
-}
+
 void DLB_bind_thread(int tid, int procsNode){
 		int i;
 		cpu_set_t set;
