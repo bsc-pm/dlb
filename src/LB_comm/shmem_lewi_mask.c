@@ -109,15 +109,42 @@ cpu_set_t* shmem_lewi_mask_recover_defmask( void )
    return &default_mask;
 }
 
+void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
+{
+   int post_size, i;
+
+   shmem_lock();
+   {
+      DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
+      for ( i = 0; i < mu_get_system_size() && max_resources>0; i++ ) {
+         if ( CPU_ISSET(i, &default_mask) ) {
+            CPU_CLR( i, &(shdata->given_cpus) );
+            CPU_CLR( i, &(shdata->avail_cpus) );
+	    CPU_SET( i, mask );
+	    max_resources--;
+         }
+      }
+      post_size = CPU_COUNT( &(shdata->avail_cpus) );
+      debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
+      debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
+   }
+   shmem_unlock();
+
+   add_event( IDLE_CPUS_EVENT, post_size );
+
+   return;
+}
+
 bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new_threads )
 {
    int size;
    int returned = 0;
    int collected = 0;
    bool dirty = false;
+   *new_threads=0;
+
    cpu_set_t slaves_mask;
    CPU_XOR( &slaves_mask, mask, &default_mask );
-
    // First Step: Remove extra-cpus (slaves_mask) that have been removed from given_cpus
    int i;
    for ( i=0; i<mu_get_system_size(); i++ ) {
@@ -157,8 +184,33 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
 
    // Third Step: Retrive extra-cpus from foreing affinity masks
    if ( size-collected > 0 && max_resources > 0 ) {
+	   if ( CPU_COUNT( &(shdata->avail_cpus) ) > 0 ) {
+		   shmem_lock();
+		   {
+
+			   for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
+				   if ( CPU_ISSET( i, &(shdata->avail_cpus)) ) {
+					   CPU_CLR( i, &(shdata->avail_cpus) );
+					   CPU_SET( i, mask );
+					   max_resources--;
+					   collected++;
+					   dirty = true;
+				   }
+			   }
+		   }
+		   shmem_unlock();
+	   }
+   }
+
+
+
+
+/*   if ( size-collected > 0 && max_resources > 0 ) {
       cpu_set_t candidates_mask;
       mu_get_affinity_mask( &candidates_mask, &(shdata->given_cpus), MU_ALL_BITS );
+
+debug_shmem ( "UPD_RES: given mask: %s\n", mu_to_str(&(shdata->given_cpus)) ) ;
+debug_shmem ( "UPD_RES: candidates mask: %s\n", mu_to_str(&candidates_mask) ) ;
 
       if ( CPU_COUNT( &candidates_mask ) > 0 ) {
          shmem_lock();
@@ -176,7 +228,7 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
          }
          shmem_unlock();
       }
-   }
+   }*/
 
    if ( dirty ) {
       debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected,  size - collected );
@@ -184,6 +236,5 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
       add_event( IDLE_CPUS_EVENT, size - collected );
       *new_threads += collected;
    }
-
    return dirty;
 }
