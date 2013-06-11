@@ -67,7 +67,7 @@ includes = \
          $(END)
 
 AM_CPPFLAGS = $(includes)
-AM_LDFLAGS = $(END)
+AM_LDFLAGS = -lrt
 if MPI_SUPPORT
 AM_CPPFLAGS += -DUSE_MPI -I$(MPI_HOME)/include
 AM_LDFLAGS += -L$(MPI_HOME)/lib -lmpi

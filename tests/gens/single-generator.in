@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LB_TEST_MODE=single
+
 cat <<EOF
 
 SRC=@SRCDIR@/src
@@ -12,7 +14,7 @@ DEBUG_CXXFLAGS=@DEBUG_CXXFLAGS@
 
 common_includes="-I\$SRC -I\$SRC/LB_numThreads -I\$SRC/LB_policies -I\$SRC/LB_MPI -I\$SRC/LB_comm -I\$SRC/dlb -I\$SRC/support"
 
-compile_versions="@COMPILE_VERSIONS@"
+compile_versions=@COMPILE_VERSIONS@
 
 test_CC=@CONFIG_CC@
 test_CXX=@CONFIG_CXX@
@@ -35,6 +37,6 @@ test_ENV_performance="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so"
 test_ENV_debug="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
+
 `@SRCDIR@/tests/gens/config.py $*`
 EOF
-

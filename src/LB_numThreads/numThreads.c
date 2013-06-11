@@ -1,5 +1,23 @@
-#define _GNU_SOURCE
+/*************************************************************************************/
+/*      Copyright 2012 Barcelona Supercomputing Center                               */
+/*                                                                                   */
+/*      This file is part of the DLB library.                                        */
+/*                                                                                   */
+/*      DLB is free software: you can redistribute it and/or modify                  */
+/*      it under the terms of the GNU Lesser General Public License as published by  */
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      DLB is distributed in the hope that it will be useful,                       */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
+/*************************************************************************************/
 
+#define _GNU_SOURCE
 #include <sched.h>
 #include <pthread.h>
 #include <numThreads.h>
@@ -51,12 +69,7 @@ void bind_master(int me, int node){
 	fprintf(stderr, "DLB DEBUG: (%d:%d) Master Thread pinned to cpu %d\n", nodeId, meId, meId);
 #endif
 }
-void bind_threads(int num_procs, int meId, int nodeId){
-	#pragma omp parallel num_threads(CPUS_NODE)
-	{
-		DLB_bind_thread(omp_get_thread_num(), num_procs);
-	}
-}
+
 void DLB_bind_thread(int tid, int procsNode){
 		int i;
 		cpu_set_t set;

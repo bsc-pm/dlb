@@ -27,6 +27,9 @@ AC_PROG_CPP
 # use the C compiler for the following checks
 AC_LANG([C])
 
+# check for OpenMP availability
+AC_OPENMP
+
 # check for MPI path
 AC_ARG_WITH([mpi],
    AS_HELP_STRING([--with-mpi=dir], [Directory of MPI installation]),

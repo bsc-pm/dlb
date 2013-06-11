@@ -494,7 +494,7 @@ run_gen_test ()
    exec_versions=
    
    if [ "$test_max_cpus" ]; then
-      export NX_TEST_MAX_CPUS="$test_max_cpus"
+      export LB_TEST_MAX_CPUS="$test_max_cpus"
    fi
    if [ "$test_schedule" ]; then
       export NX_TEST_SCHEDULE="$test_schedule"
@@ -605,7 +605,7 @@ run_gen_test ()
    fi
    
    if [ "$test_max_cpus" ]; then
-      unset NX_TEST_MAX_CPUS
+      unset LB_TEST_MAX_CPUS
    fi
 
    if [ "$test_schedule" ]; then
