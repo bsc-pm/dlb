@@ -69,14 +69,22 @@ void shmem_lewi_mask_finalize( void )
 
 void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
 {
-   DLB_DEBUG( int size = CPU_COUNT( cpu_set ); )
    int post_size;
+   cpu_set_t cpus_to_give;
+   cpu_set_t cpus_to_free;
 
    shmem_lock();
    {
-      CPU_OR( &(shdata->given_cpus), &(shdata->given_cpus), cpu_set );
-      CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), cpu_set );
+      // We only add the owned cpus to given_cpus
+      CPU_AND( &cpus_to_give, &default_mask, cpu_set );
+      CPU_OR( &(shdata->given_cpus), &(shdata->given_cpus), &cpus_to_give );
+
+      // We only free the cpus that are present in given_cpus
+      CPU_AND( &cpus_to_free, &(shdata->given_cpus), cpu_set );
+      CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), &cpus_to_free );
+
       post_size = CPU_COUNT( &(shdata->avail_cpus) );
+      DLB_DEBUG( int size = CPU_COUNT( &cpus_to_free ); )
       debug_shmem ( "Increasing %d Idle Threads (%d now)\n", size, post_size );
       debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) );
    }
