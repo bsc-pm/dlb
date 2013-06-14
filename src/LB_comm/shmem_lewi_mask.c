@@ -42,7 +42,6 @@ typedef struct {
 
 static shdata_t *shdata;
 static cpu_set_t default_mask;   // default mask of the process
-static cpu_set_t affinity_mask;  // default mask of obtainable cpus
 
 void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 {
@@ -54,8 +53,9 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
    }
 
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
-   // Get the parent mask of any bit present in the default mask
    mu_init();
+   cpu_set_t affinity_mask;
+   // Get the parent mask of any bit present in the default mask
    mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
@@ -143,115 +143,88 @@ void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
    return;
 }
 
-bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new_threads )
+int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )
 {
-   int size;
-   int returned = 0;
-   int collected = 0;
-   bool dirty = false;
-   *new_threads=0;
-
-   cpu_set_t slaves_mask;
-   CPU_XOR( &slaves_mask, mask, &default_mask );
-   // First Step: Remove extra-cpus (slaves_mask) that have been removed from given_cpus
    int i;
+   int returned = 0;
+   cpu_set_t slaves_mask;
+
+   CPU_XOR( &slaves_mask, mask, &default_mask );
+   // Remove extra-cpus (slaves_mask) that have been removed from given_cpus
    for ( i=0; i<mu_get_system_size(); i++ ) {
       if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
          CPU_CLR( i, mask );
-         max_resources++;
          returned++;
-         dirty = true;
       }
    }
 
-   if ( dirty ) {
+   if ( returned > 0 ) {
       debug_shmem ( "Giving back %d Threads\n", returned );
-      *new_threads = -returned;
-      //dirty = false;
    }
-debug_shmem ( "max_resources1 %d\n", max_resources );
 
-   // Second Step: Retrive extra-cpus from my default affinity mask
+   return returned;
+}
+
+int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
+{
+   int i;
+   int size;
+   int collected = 0;
+
    size = CPU_COUNT( &(shdata->avail_cpus) );
    if ( size > 0 && max_resources > 0) {
+
       cpu_set_t candidates_mask;
-      CPU_ZERO(&candidates_mask);
-      //The candidates are the cpus affines to the ones that I hace now
-      mu_get_affinity_mask( &candidates_mask, mask, MU_ANY_BIT );
-   	debug_shmem ( "candidates afiine %s\n", mu_to_str(&candidates_mask) );
+      cpu_set_t affinity_mask;
+
+      /* First Step: Retrieve extra-cpus from my affinity mask */
+      /* Note: if _locality_aware is disabled, this step is the only one because affinity_mask contains the full mask */
+
+      // affinity_mask: sockets where ANY of the bits is in my mask
+      mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );
 
       shmem_lock();
       {
-         CPU_AND( &candidates_mask, &candidates_mask, &(shdata->avail_cpus) );
+         CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
          for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
             if ( CPU_ISSET( i, &candidates_mask ) ) {
                CPU_CLR( i, &(shdata->avail_cpus) );
                CPU_SET( i, mask );
                max_resources--;
                collected++;
-               dirty = true;
             }
          }
       }
       shmem_unlock();
-   }
-   debug_shmem ( "Getting %d affine Threads (%s)\n", collected, mu_to_str(mask) );
-debug_shmem ( "max_resources2 %d\n", max_resources );
-   // Third Step: Retrive extra-cpus from foreing affinity masks
-   if ( size-collected > 0 && max_resources > 0 ) {
-	   if ( CPU_COUNT( &(shdata->avail_cpus) ) > 0 ) {
-		   shmem_lock();
-		   {
+      debug_shmem ( "Getting %d affine Threads (%s)\n", collected, mu_to_str(mask) );
 
-			   for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
-				   if ( CPU_ISSET( i, &(shdata->avail_cpus)) ) {
-					   CPU_CLR( i, &(shdata->avail_cpus) );
-					   CPU_SET( i, mask );
-					   max_resources--;
-					   collected++;
-					   dirty = true;
-				   }
-			   }
-		   }
-		   shmem_unlock();
-	   }
-   }
-debug_shmem ( "max_resources3 %d\n", max_resources );
-   debug_shmem ( "Getting %d other Threads (%s)\n", collected, mu_to_str(mask) );
+      /* Second Step: Retrive extra-cpus from foreing affinity masks, if needed */
+      if ( size-collected > 0 && max_resources > 0 ) {
 
+         // affinity mask: sockets where ALL of the bits are given
+         mu_get_affinity_mask( &affinity_mask, &(shdata->given_cpus), MU_ALL_BITS );
 
-
-
-/*   if ( size-collected > 0 && max_resources > 0 ) {
-      cpu_set_t candidates_mask;
-      mu_get_affinity_mask( &candidates_mask, &(shdata->given_cpus), MU_ALL_BITS );
-
-debug_shmem ( "UPD_RES: given mask: %s\n", mu_to_str(&(shdata->given_cpus)) ) ;
-debug_shmem ( "UPD_RES: candidates mask: %s\n", mu_to_str(&candidates_mask) ) ;
-
-      if ( CPU_COUNT( &candidates_mask ) > 0 ) {
          shmem_lock();
          {
-            CPU_AND( &candidates_mask, &candidates_mask, &(shdata->avail_cpus) );
+            CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
             for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
                if ( CPU_ISSET( i, &candidates_mask ) ) {
                   CPU_CLR( i, &(shdata->avail_cpus) );
                   CPU_SET( i, mask );
                   max_resources--;
                   collected++;
-                  dirty = true;
                }
             }
          }
          shmem_unlock();
+         debug_shmem ( "Getting %d other Threads (%s)\n", collected, mu_to_str(mask) );
       }
-   }*/
+   }
 
-   if ( dirty ) {
+   if ( collected > 0 ) {
       debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected,  size - collected );
       debug_shmem ( "Collecting mask %s\n", mu_to_str(mask) );
       add_event( IDLE_CPUS_EVENT, size - collected );
-      *new_threads += collected;
    }
-   return dirty;
+   return collected;
 }

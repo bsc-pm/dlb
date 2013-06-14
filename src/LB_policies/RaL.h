@@ -36,5 +36,7 @@ void RaL_OutOfBlockingCall(int is_iter);
 
 void RaL_UpdateResources( int max_resources );
 
+void RaL_ReturnClaimedCpus( void );
+
 #endif /* RAL_H */
 

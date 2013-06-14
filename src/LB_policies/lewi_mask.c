@@ -112,13 +112,29 @@ void lewi_mask_UpdateResources( int max_resources )
    CPU_ZERO( &mask );
    get_mask( &mask );
 
-   int new_threads;
-   bool dirty = shmem_lewi_mask_collect_mask( &mask, max_resources, &new_threads );
+   int collected = shmem_lewi_mask_collect_mask( &mask, max_resources );
 
-   if ( dirty ) {
-      nthreads += new_threads;
+   if ( collected > 0 ) {
+      nthreads += collected;
       set_mask( &mask );
-      debug_lend ( "ACQUIRING %d threads for a total of %d\n", new_threads, nthreads );
+      debug_lend ( "ACQUIRING %d threads for a total of %d\n", collected, nthreads );
+      add_event( THREADS_USED_EVENT, nthreads );
+   }
+}
+
+/* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
+void lewi_mask_ReturnClaimedCpus( void )
+{
+   cpu_set_t mask;
+   CPU_ZERO( &mask );
+   get_mask( &mask );
+
+   int returned = shmem_lewi_mask_return_claimed( &mask );
+
+   if ( returned > 0 ) {
+      nthreads -= returned;
+      set_mask( &mask );
+      debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
       add_event( THREADS_USED_EVENT, nthreads );
    }
 }

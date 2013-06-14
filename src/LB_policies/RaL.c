@@ -179,15 +179,13 @@ void RaL_UpdateResources( int max_resources )
    CPU_ZERO( &mask );
    get_mask( &mask );
 
-   int new_threads;
-
    if(max_cpus<_default_nthreads) max_resources=0;
 //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
 
-   bool dirty = shmem_lewi_mask_collect_mask( &mask, max_resources, &new_threads );
+   int new_threads = shmem_lewi_mask_collect_mask( &mask, max_resources );
 //printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);
 
-   if ( dirty ) {
+   if ( new_threads > 0 ) {
    	struct timespec aux;
    	if (clock_gettime(CLOCK_REALTIME, &aux)<0){
    		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
@@ -201,6 +199,23 @@ void RaL_UpdateResources( int max_resources )
       nthreads += new_threads;
       set_mask( &mask );
       debug_lend ( "ACQUIRING %d threads for a total of %d\n", new_threads, nthreads );
+      add_event( THREADS_USED_EVENT, nthreads );
+   }
+}
+
+/* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
+void RaL_ReturnClaimedCpus( void )
+{
+   cpu_set_t mask;
+   CPU_ZERO( &mask );
+   get_mask( &mask );
+
+   int returned = shmem_lewi_mask_return_claimed( &mask );
+
+   if ( returned > 0 ) {
+      nthreads -= returned;
+      set_mask( &mask );
+      debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
       add_event( THREADS_USED_EVENT, nthreads );
    }
 }

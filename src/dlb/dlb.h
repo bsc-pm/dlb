@@ -30,6 +30,7 @@ typedef struct{
 	void (*intoBlockingCall) (int is_iter);
 	void (*outOfBlockingCall) (int is_iter);
 	void (*updateresources) ( int max_resources );
+	void (*returnclaimed) (void);
 } BalancePolicy;
 
 extern int use_dpd;
@@ -49,6 +50,8 @@ void IntoBlockingCall(int is_iter);
 void OutOfBlockingCall(int is_iter);
 
 void updateresources( int max_resources );
+
+void returnclaimed( void );
 
 int tracing_ready();
 #endif //DLB_H

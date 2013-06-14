@@ -36,5 +36,7 @@ void lewi_mask_OutOfBlockingCall(int is_iter);
 
 void lewi_mask_UpdateResources( int max_resources );
 
+void lewi_mask_ReturnClaimedCpus( void );
+
 #endif /* LEWI_MASK_H */
 

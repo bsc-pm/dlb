@@ -155,6 +155,7 @@ int mu_get_system_size( void )
 void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, mu_opt_t condition )
 {
    if ( _locality_aware ) {
+      CPU_ZERO( affinity_set );
       cpu_set_t intxn;
       int i;
       for ( i=0; i<sys.num_parents; i++ ) {

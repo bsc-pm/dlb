@@ -61,6 +61,12 @@ DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_re
       updateresources( max_resources );
 }
 
+DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) )
+{
+   if ( dlb_enabled )
+      returnclaimed();
+}
+
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
 {
    if ( dlb_enabled )

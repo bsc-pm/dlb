@@ -66,7 +66,7 @@ int nodeId, meId, procsNode;
 
 int use_dpd;
 
-//static void dummyFunc(){}
+static void dummyFunc(){}
 
 void Init(int me, int num_procs, int node){
 	//Read Environment vars
@@ -105,6 +105,7 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &Lend_light_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &Lend_light_OutOfBlockingCall;
 		lb_funcs.updateresources = &Lend_light_updateresources;
+		lb_funcs.returnclaimed = &dummyFunc;
 
 	}else if (strcasecmp(policy, "Map")==0){
 #ifdef debugConfig
@@ -118,6 +119,7 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
 		lb_funcs.updateresources = &Map_updateresources;
+		lb_funcs.returnclaimed = &dummyFunc;
 
 	}else if (strcasecmp(policy, "WEIGHT")==0){
 #ifdef debugConfig
@@ -132,6 +134,7 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
 		lb_funcs.updateresources = &Weight_updateresources;
+		lb_funcs.returnclaimed = &dummyFunc;
 
 	}else if (strcasecmp(policy, "LeWI_mask")==0){
 #ifdef debugConfig
@@ -144,6 +147,7 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &lewi_mask_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &lewi_mask_OutOfBlockingCall;
 		lb_funcs.updateresources = &lewi_mask_UpdateResources;
+		lb_funcs.returnclaimed = &lewi_mask_ReturnClaimedCpus;
 
 	}else if (strcasecmp(policy, "RaL")==0){
 #ifdef debugConfig
@@ -158,6 +162,7 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &RaL_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &RaL_OutOfBlockingCall;
 		lb_funcs.updateresources = &RaL_UpdateResources;
+		lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
 
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
@@ -172,6 +177,7 @@ void Init(int me, int num_procs, int node){
 		lb_funcs.intoBlockingCall = &JustProf_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &JustProf_OutOfBlockingCall;
 		lb_funcs.updateresources = &JustProf_UpdateResources;
+		lb_funcs.returnclaimed = &dummyFunc;
 	}else{
 		fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
 		exit(1);
@@ -272,6 +278,12 @@ void updateresources( int max_resources ){
 		add_event(RUNTIME_EVENT, 4);
 		lb_funcs.updateresources( max_resources );
 		add_event(RUNTIME_EVENT, 0);
+	}
+}
+
+void returnclaimed( void ){
+	if(ready){
+		lb_funcs.returnclaimed();
 	}
 }
 
