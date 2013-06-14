@@ -38,7 +38,7 @@ int periodo;
 int me;
 int mpi_ready=0;
 static MPI_Comm mpi_comm_node;
-static int valor_dpd;
+static int is_iter;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -46,6 +46,7 @@ void before_init(void){
 
 void after_init(void){
 	add_event(RUNTIME_EVENT, 1);
+	is_iter=0;
 	int num_mpis=0, node;
 
 	MPI_Comm_rank(MPI_COMM_WORLD,&me);
@@ -166,23 +167,26 @@ void after_init(void){
 }
 
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
+	int valor_dpd;	
 	if(mpi_ready){
 		add_event(RUNTIME_EVENT, 2);
 		IntoCommunication();
 
-		valor_dpd=0;
 		if(use_dpd){
 			long value = (long)((((buf>>5)^dest)<<5)|call_type);
 		
 			valor_dpd=DPD(value,&periodo);
+			//Only update if already treated previous iteration
+			if(is_iter==0)	is_iter=valor_dpd;
+
 		}
 
 		if(_just_barrier){
 			if (call_type==Barrier){
-				IntoBlockingCall(valor_dpd);
+				IntoBlockingCall(is_iter);
 			}
 		}else if (is_blocking(call_type)){
-			IntoBlockingCall(valor_dpd);
+			IntoBlockingCall(is_iter);
 		}
 	
 		add_event(RUNTIME_EVENT, 0);
@@ -195,10 +199,12 @@ void after_mpi(mpi_call call_type){
 
 		if(_just_barrier){
 			if (call_type==Barrier){
-				OutOfBlockingCall(valor_dpd);
+				OutOfBlockingCall(is_iter);
+				is_iter=0;
 			}
 		}else if (is_blocking(call_type)){
-			OutOfBlockingCall(valor_dpd);
+			OutOfBlockingCall(is_iter);
+			is_iter=0;
 		}
 	
 		OutOfCommunication();

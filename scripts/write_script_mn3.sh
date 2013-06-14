@@ -57,6 +57,11 @@ else
 	fi
 fi
 
+if [ $policy != "ORIG" ]
+then
+	NANOS_ARGS="$NANOS_ARGS --enable-dlb"
+fi
+
 output="${ini_dir}/OUTS/${script_name}"
 
  cat > ${ini_dir}/MN_SCRIPTS/${script_name}.mn <<EOF
@@ -92,7 +97,7 @@ ulimit -c unlimited
 export TMPDIR=$TMPDIR/extrae
 mkdir -p $TMPDIR
 
-export NX_ARGS+=" ${NANOS_ARGS} --enable-dlb"
+export NX_ARGS+=" ${NANOS_ARGS}"
 export LB_AGGRESSIVE_INIT=1
  
 export OMPI_MCA_mpi_warn_on_fork=0

@@ -21,6 +21,7 @@
 #include <sched.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <stdio.h>
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_lewi_mask.h"
@@ -29,13 +30,18 @@
 #include "support/tracing.h"
 #include "support/utils.h"
 #include "support/mask_utils.h"
+#include "support/mytime.h"
+
 
 static int nthreads;
+static int max_cpus;
 
-/*static int iterNum;
-static struct timespec iterCpuTime;
-static struct timespec iterMPITime;*/
-
+static int iterNum;
+static struct timespec initIter;
+static struct timespec initComp;
+//static struct timespec compIter;
+static double iter_cpu;
+static double previous_iter;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
@@ -44,11 +50,12 @@ void RaL_Init( void )
    debug_config ( "LeWI Mask Balancing Init\n" );
 
    nthreads = _default_nthreads;
+   max_cpus= _default_nthreads;
 
    //Initialize iterative info
-/*   iterNum=0;
-   reset(&iterCpuTime);
-   reset(&iterMPITime);   */
+//   reset(&compIter);
+   iterNum=0;
+   iter_cpu=0;
 
    //Initialize shared memory
    cpu_set_t default_mask;
@@ -81,6 +88,15 @@ void RaL_OutOfCommunication( void ) {}
 /* Into Blocking Call - Lend the maximum number of threads */
 void RaL_IntoBlockingCall(int is_iter)
 {
+   struct timespec aux;
+   if (clock_gettime(CLOCK_REALTIME, &aux)<0){
+   	fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+   }
+	
+   diff_time(initComp, aux, &aux);
+//   add_time(compIter, aux, &compIter);
+   iter_cpu+=to_secs(aux) * nthreads;
+
    cpu_set_t mask;
    CPU_ZERO( &mask );
    get_mask( &mask );
@@ -107,12 +123,53 @@ void RaL_IntoBlockingCall(int is_iter)
 
 /* Out of Blocking Call - Recover the default number of threads */
 void RaL_OutOfBlockingCall(int is_iter )
-{
-   debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
-   set_mask( shmem_lewi_mask_recover_defmask() );
-   nthreads = _default_nthreads;
+{ 
+ 
+
+   if (clock_gettime(CLOCK_REALTIME, &initComp)<0){
+   	fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+   }
+	
+   if (is_iter!=0){
+	struct timespec aux;
+
+	if(iterNum!=0){
+		double iter_duration;
+		//Finishing Iteration
+		//aux is the duration of the last iteration
+		diff_time(initIter, initComp, &aux);
+		iter_duration=to_secs(aux);
+		//If the iteration has been longer than the last maybe something went wrong, recover one cpu
+	debug_lend("Iter %d:  %.4f (%.4f) max_cpus:%d\n", iterNum, to_secs(aux), iter_cpu, max_cpus);
+		if ((iter_duration>=previous_iter) && (max_cpus<_default_nthreads)) max_cpus++;
+		else {
+			iter_cpu=iter_cpu/(max_cpus-1);
+			//If we can do the same computations with one cpu less in less time than the iteration time, release a cpu "forever"
+			//but only if we still have one cpu
+			if(iter_cpu<iter_duration && max_cpus>0){
+				max_cpus--;	
+//			fprintf(stderr, "[%d] with one cpu less: %.4f - %.4f (iter): %d\n", _mpi_rank, iter_cpu, to_secs(aux), iter_cpu<to_secs(aux) );
+			}
+		}
+		previous_iter=iter_duration;
+	}
+	//Init Iteration
+	add_event(ITERATION_EVENT, iterNum);
+	iterNum++;
+	initIter=initComp;
+	iter_cpu=0;
+   }
+
+   debug_lend ( "RECOVERING %d threads\n", max_cpus - nthreads );
+   cpu_set_t mask;
+   CPU_ZERO( &mask );
+   shmem_lewi_mask_recover_some_defcpus( &mask, max_cpus );
+   set_mask( &mask );
+   nthreads = max_cpus;
+//printf(stderr, "[%d] Using %d threads\n", _mpi_rank, nthreads );
 
    add_event( THREADS_USED_EVENT, nthreads );
+
 }
 
 /* Update Resources - Try to acquire foreign threads */
@@ -123,9 +180,24 @@ void RaL_UpdateResources( int max_resources )
    get_mask( &mask );
 
    int new_threads;
+
+   if(max_cpus<_default_nthreads) max_resources=0;
+//fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
+
    bool dirty = shmem_lewi_mask_collect_mask( &mask, max_resources, &new_threads );
+//printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);
 
    if ( dirty ) {
+   	struct timespec aux;
+   	if (clock_gettime(CLOCK_REALTIME, &aux)<0){
+   		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+   	}
+	
+   	diff_time(initComp, aux, &initComp);
+   	iter_cpu+=to_secs(initComp) * nthreads;
+
+	initComp=aux;
+
       nthreads += new_threads;
       set_mask( &mask );
       debug_lend ( "ACQUIRING %d threads for a total of %d\n", new_threads, nthreads );

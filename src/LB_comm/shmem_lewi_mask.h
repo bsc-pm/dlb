@@ -27,7 +27,8 @@
 void shmem_lewi_mask_init( cpu_set_t *cpu_set );
 void shmem_lewi_mask_finalize( void );
 void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set );
-cpu_set_t* shmem_lewi_mask_recover_defmask( void );
+cpu_set_t* shmem_lewi_mask_recover_defmask( void);
+void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources );
 bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new_threads );
 
 #endif /* SHMEM_LEWI_MASK_H */

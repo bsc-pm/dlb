@@ -159,10 +159,13 @@ void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, 
       int i;
       for ( i=0; i<sys.num_parents; i++ ) {
          CPU_AND( &intxn, &(sys.parents[i]), child_set );
-
+debug_shmem ( "parents[%d]  %s\n", i, mu_to_str(&(sys.parents[i])) );
+debug_shmem ( "intx         %s\n", mu_to_str(&intxn) );
          if ( (condition == MU_ANY_BIT && CPU_COUNT( &intxn ) > 0) ||
               (condition == MU_ALL_BITS && CPU_EQUAL( &intxn, &(sys.parents[i]) )) ) {
             CPU_OR( affinity_set, affinity_set, &(sys.parents[i]) );
+debug_shmem ( "affinity_set %s\n", mu_to_str(affinity_set) );
+    
          }
       }
    } else {

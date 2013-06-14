@@ -122,6 +122,7 @@ else
 	if [ $tracing == "YES" ]
 	then
 		export LD_PRELOAD=${TRACE_PATH}/${MPI_TRACE_LIB_DLB}:${DLB_PATH}/libTdlb.so
+#		export LD_PRELOAD=${TRACE_PATH}/${MPI_TRACE_LIB_DLB}:${DLB_PATH}/libdlb_dbg.so
 	else
 		export LD_PRELOAD=${DLB_PATH}/libdlb.so
 	fi

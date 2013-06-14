@@ -167,16 +167,22 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
    if ( dirty ) {
       debug_shmem ( "Giving back %d Threads\n", returned );
       *new_threads = -returned;
-      dirty = false;
+      //dirty = false;
    }
+debug_shmem ( "max_resources1 %d\n", max_resources );
 
    // Second Step: Retrive extra-cpus from my default affinity mask
    size = CPU_COUNT( &(shdata->avail_cpus) );
    if ( size > 0 && max_resources > 0) {
+      cpu_set_t candidates_mask;
+      CPU_ZERO(&candidates_mask);
+      //The candidates are the cpus affines to the ones that I hace now
+      mu_get_affinity_mask( &candidates_mask, mask, MU_ANY_BIT );
+   	debug_shmem ( "candidates afiine %s\n", mu_to_str(&candidates_mask) );
+
       shmem_lock();
       {
-         cpu_set_t candidates_mask;
-         CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
+         CPU_AND( &candidates_mask, &candidates_mask, &(shdata->avail_cpus) );
          for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
             if ( CPU_ISSET( i, &candidates_mask ) ) {
                CPU_CLR( i, &(shdata->avail_cpus) );
@@ -189,7 +195,8 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
       }
       shmem_unlock();
    }
-
+   debug_shmem ( "Getting %d affine Threads (%s)\n", collected, mu_to_str(mask) );
+debug_shmem ( "max_resources2 %d\n", max_resources );
    // Third Step: Retrive extra-cpus from foreing affinity masks
    if ( size-collected > 0 && max_resources > 0 ) {
 	   if ( CPU_COUNT( &(shdata->avail_cpus) ) > 0 ) {
@@ -209,6 +216,8 @@ bool shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources, int *new
 		   shmem_unlock();
 	   }
    }
+debug_shmem ( "max_resources3 %d\n", max_resources );
+   debug_shmem ( "Getting %d other Threads (%s)\n", collected, mu_to_str(mask) );
 
 
 
