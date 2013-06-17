@@ -179,27 +179,28 @@ void RaL_UpdateResources( int max_resources )
    CPU_ZERO( &mask );
    get_mask( &mask );
 
-   if(max_cpus<_default_nthreads) max_resources=0;
-//fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
+   if( max_cpus==_default_nthreads) {
+      //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
 
-   int new_threads = shmem_lewi_mask_collect_mask( &mask, max_resources );
-//printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);
+      int new_threads = shmem_lewi_mask_collect_mask( &mask, max_resources );
+      //printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);
 
-   if ( new_threads > 0 ) {
-   	struct timespec aux;
-   	if (clock_gettime(CLOCK_REALTIME, &aux)<0){
-   		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
-   	}
-	
-   	diff_time(initComp, aux, &initComp);
-   	iter_cpu+=to_secs(initComp) * nthreads;
+      if ( new_threads > 0 ) {
+         struct timespec aux;
+         if (clock_gettime(CLOCK_REALTIME, &aux)<0){
+            fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+         }
 
-	initComp=aux;
+         diff_time(initComp, aux, &initComp);
+         iter_cpu+=to_secs(initComp) * nthreads;
 
-      nthreads += new_threads;
-      set_mask( &mask );
-      debug_lend ( "ACQUIRING %d threads for a total of %d\n", new_threads, nthreads );
-      add_event( THREADS_USED_EVENT, nthreads );
+         initComp=aux;
+
+         nthreads += new_threads;
+         set_mask( &mask );
+         debug_lend ( "ACQUIRING %d threads for a total of %d\n", new_threads, nthreads );
+         add_event( THREADS_USED_EVENT, nthreads );
+      }
    }
 }
 

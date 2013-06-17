@@ -91,6 +91,8 @@ void Init(int me, int num_procs, int node){
 
         parse_env_bool( "LB_AGGRESSIVE_INIT", &_aggressive_init );
 
+        parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality );
+
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
 	if (strcasecmp(policy, "LeWI")==0){

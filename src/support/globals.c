@@ -26,7 +26,7 @@ int _process_id;
 int _mpis_per_node;
 int _default_nthreads;
 
-bool _locality_aware = false;
 bool _just_barrier = false;
 bool _aggressive_init = false;
+bool _priorize_locality = false;
 blocking_mode_t _blocking_mode = ONE_CPU;

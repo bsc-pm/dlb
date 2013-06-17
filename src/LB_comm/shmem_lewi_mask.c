@@ -168,23 +168,18 @@ int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )
 int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
 {
    int i;
-   int size;
    int collected = 0;
+   int size = CPU_COUNT( &(shdata->avail_cpus) );
 
-   size = CPU_COUNT( &(shdata->avail_cpus) );
    if ( size > 0 && max_resources > 0) {
 
       cpu_set_t candidates_mask;
       cpu_set_t affinity_mask;
-
-      /* First Step: Retrieve extra-cpus from my affinity mask */
-      /* Note: if _locality_aware is disabled, this step is the only one because affinity_mask contains the full mask */
-
-      // affinity_mask: sockets where ANY of the bits is in my mask
       mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );
 
       shmem_lock();
       {
+         /* First Step: Retrieve affine cpus */
          CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
          for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
             if ( CPU_ISSET( i, &candidates_mask ) ) {
@@ -194,19 +189,19 @@ int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
                collected++;
             }
          }
-      }
-      shmem_unlock();
-      debug_shmem ( "Getting %d affine Threads (%s)\n", collected, mu_to_str(mask) );
+         debug_shmem ( "Getting %d affine Threads (%s)\n", collected, mu_to_str(mask) );
 
-      /* Second Step: Retrive extra-cpus from foreing affinity masks, if needed */
-      if ( size-collected > 0 && max_resources > 0 ) {
+         /* Second Step: Retrieve non-affine cpus, if needed */
+         if ( size-collected > 0 && max_resources > 0 ) {
 
-         // affinity mask: sockets where ALL of the bits are given
-         mu_get_affinity_mask( &affinity_mask, &(shdata->given_cpus), MU_ALL_BITS );
+            if ( _priorize_locality ) {
+               mu_get_affinity_mask( &affinity_mask, &(shdata->given_cpus), MU_ALL_BITS );
+               CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
+            }
+            else {
+               memcpy( &candidates_mask, &(shdata->avail_cpus), sizeof(cpu_set_t) );
+            }
 
-         shmem_lock();
-         {
-            CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
             for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
                if ( CPU_ISSET( i, &candidates_mask ) ) {
                   CPU_CLR( i, &(shdata->avail_cpus) );
@@ -215,10 +210,10 @@ int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
                   collected++;
                }
             }
+            debug_shmem ( "Getting %d other Threads (%s)\n", collected, mu_to_str(mask) );
          }
-         shmem_unlock();
-         debug_shmem ( "Getting %d other Threads (%s)\n", collected, mu_to_str(mask) );
       }
+      shmem_unlock();
    }
 
    if ( collected > 0 ) {
