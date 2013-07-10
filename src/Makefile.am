@@ -6,10 +6,17 @@
 # THE LIBRARIES TO BUILD
 ###############################################################################
 
-lib_LTLIBRARIES = libdlb.la libTdlb.la libdlb_dummy.la
+lib_LTLIBRARIES = libdlb.la libdlb_dummy.la
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_dbg.la
 endif
+if INSTRUMENTATION_LIB
+lib_LTLIBRARIES += libdlb_instr.la
+endif
+if INSTRUMENTATION_DEBUG_LIB
+lib_LTLIBRARIES += libdlb_instr_dbg.la
+endif
+
 
 include_HEADERS = $(top_srcdir)/src/dlb/DLB_interface.h \
                   $(top_srcdir)/src/LB_MPI/MPI_interface.h
@@ -76,24 +83,32 @@ AM_LDFLAGS += -L$(HWLOC_HOME)/lib -lhwloc
 endif
 
 libdlb_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
-libTdlb_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
-libdlb_dummy_la_CPPFLAGS = $(PERFO_CPPFLAGS)
-
 libdlb_la_CFLAGS = $(PERFO_CFLAGS)
-libTdlb_la_CFLAGS = $(PERFO_CFLAGS)
-libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS)
-
 libdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
-libTdlb_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
-libdlb_dummy_la_LDFLAGS = -avoid-version
-
 libdlb_la_SOURCES = $(sources) $(intercept)
-libTdlb_la_SOURCES = $(sources)
+
+libdlb_dummy_la_CPPFLAGS = $(PERFO_CPPFLAGS)
+libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS)
+libdlb_dummy_la_LDFLAGS = -avoid-version
 libdlb_dummy_la_SOURCES = dlb/DLB_dummy_interface.c
 
 if DEBUG_LIB
 libdlb_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_dbg_la_CFLAGS = $(DEBUG_CFLAGS)
 libdlb_dbg_la_LDFLAGS = $(libdlb_la_LDFLAGS)
-libdlb_dbg_la_SOURCES = $(libTdlb_la_SOURCES)
+libdlb_dbg_la_SOURCES = $(sources) $(intercept)
+endif
+
+if INSTRUMENTATION_LIB
+libdlb_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_instr_la_CFLAGS = $(INSTR_CFLAGS)
+libdlb_instr_la_LDFLAGS = $(libdlb_la_LDFLAGS)
+libdlb_instr_la_SOURCES = $(sources)
+endif
+
+if INSTRUMENTATION_DEBUG_LIB
+libdlb_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS)
+libdlb_instr_dbg_la_LDFLAGS = $(libdlb_la_LDFLAGS)
+libdlb_instr_dbg_la_SOURCES = $(sources)
 endif

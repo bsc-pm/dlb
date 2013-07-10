@@ -69,7 +69,6 @@ void shmem_lewi_mask_finalize( void )
 
 void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
 {
-   int post_size;
    cpu_set_t cpus_to_give;
    cpu_set_t cpus_to_free;
 
@@ -83,47 +82,45 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
       CPU_AND( &cpus_to_free, &(shdata->given_cpus), cpu_set );
       CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), &cpus_to_free );
 
-      post_size = CPU_COUNT( &(shdata->avail_cpus) );
       DLB_DEBUG( int size = CPU_COUNT( &cpus_to_free ); )
+      DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
       debug_shmem ( "Increasing %d Idle Threads (%d now)\n", size, post_size );
       debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) );
    }
    shmem_unlock();
 
-   add_event( IDLE_CPUS_EVENT, post_size );
+   add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 }
 
 cpu_set_t* shmem_lewi_mask_recover_defmask( void )
 {
-   int post_size, i;
-
    shmem_lock();
    {
       DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
+      int i;
       for ( i = 0; i < mu_get_system_size(); i++ ) {
          if ( CPU_ISSET(i, &default_mask) ) {
             CPU_CLR( i, &(shdata->given_cpus) );
             CPU_CLR( i, &(shdata->avail_cpus) );
          }
       }
-      post_size = CPU_COUNT( &(shdata->avail_cpus) );
+      DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
       debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
       debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
    }
    shmem_unlock();
 
-   add_event( IDLE_CPUS_EVENT, post_size );
+   add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 
    return &default_mask;
 }
 
 void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
 {
-   int post_size, i;
-
    shmem_lock();
    {
       DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
+      int i;
       for ( i = 0; i < mu_get_system_size() && max_resources>0; i++ ) {
          if ( CPU_ISSET(i, &default_mask) ) {
             CPU_CLR( i, &(shdata->given_cpus) );
@@ -132,15 +129,13 @@ void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
 	    max_resources--;
          }
       }
-      post_size = CPU_COUNT( &(shdata->avail_cpus) );
+      DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
       debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
       debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
    }
    shmem_unlock();
 
-   add_event( IDLE_CPUS_EVENT, post_size );
-
-   return;
+   add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 }
 
 int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )

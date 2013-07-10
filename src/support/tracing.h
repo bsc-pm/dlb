@@ -28,4 +28,15 @@
 #define IDLE_CPUS_EVENT    800030
 /*************************************/
 
+#ifdef INSTRUMENTATION_VERSION
 void add_event( int type, int value );
+#else
+#define add_event(type, value)
+#endif
+
+
+#ifdef INSTRUMENTATION_VERSION
+#define DLB_INSTR(f) f
+#else
+#define DLB_INSTR(f)
+#endif

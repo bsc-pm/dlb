@@ -82,32 +82,57 @@ AC_CONFIG_FILES([ Makefile
 
 
 ##########################################################################
-# debug compilation support
+# Instrumentation & Debug compilation support
 ##########################################################################
 
-AC_MSG_CHECKING([whether to build with debug information])
+AC_MSG_CHECKING([whether to compile the debug version])
 AC_ARG_ENABLE([debug],
-   AS_HELP_STRING([--enable-debug], [enable debug data generation [default=no]]),
+   AS_HELP_STRING([--disable-debug], [Disables generation of debug version]),
    [ debug="$enableval" ],
-   [ debug=no ]
+   [ debug=yes ]
 )
 AC_MSG_RESULT([$debug])
 
-if test x"$debug" = x"yes"; then
-    DEBUG_CFLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-    DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugBlockingMPI -DdebugLend -DdebugSharedMem -DENABLE_DEBUG"
-fi
+AC_MSG_CHECKING([whether to compile the instrumentation version])
+AC_ARG_ENABLE([instrumentation],
+   AS_HELP_STRING([--disable-instrumentation], [Disables generation of instrumentation version]),
+   [ instrumentation="$enableval" ],
+   [ instrumentation=yes ]
+)
+AC_MSG_RESULT([$instrumentation])
+
+AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
+AC_ARG_ENABLE([instrumentation-debug],
+   AS_HELP_STRING([--disable-instrumentation-debug], [Disables generation of instrumentation-debug version]),
+   [ instrumentation_debug="$enableval" ],
+   [ instrumentation_debug=yes ]
+)
+AC_MSG_RESULT([$instrumentation_debug])
+
 AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
+AM_CONDITIONAL([INSTRUMENTATION_LIB], [test x"$instrumentation" = x"yes"])
+AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test x"$instrumentation_debug" = x"yes"])
 
 PERFO_CFLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
 PERFO_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo"
 
-##########################################################################
+DEBUG_CFLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
+DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugBlockingMPI -DdebugLend -DdebugSharedMem -DDEBUG_VERSION"
+
+INSTR_CFLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
+INSTR_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DINSTRUMENTATION_VERSION"
+
+INSTR_DEBUG_CFLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
+INSTR_DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugBlockingMPI -DdebugLend -DdebugSharedMem -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
 AC_SUBST([PERFO_CFLAGS])
 AC_SUBST([PERFO_CPPFLAGS])
 AC_SUBST([DEBUG_CFLAGS])
 AC_SUBST([DEBUG_CPPFLAGS])
+AC_SUBST([INSTR_CFLAGS])
+AC_SUBST([INSTR_CPPFLAGS])
+AC_SUBST([INSTR_DEBUG_CFLAGS])
+AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 
 ##########################################################################
@@ -126,7 +151,7 @@ AC_SUBST([HWLOC_HOME])
 AC_CHECK_PROG([lscpu], [lscpu], [yes], [no])
 if test x"$lscpu" = x"no"; then
    if test x"$hwloc" = x"no"; then
-      AC_MSG_ERROR([neither lscpu nor hwloc are found, one of them is mandatory])
+      AC_MSG_ERROR([neither lscpu nor hwloc were found, one of them is mandatory])
    fi
 fi
 

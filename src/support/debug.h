@@ -77,7 +77,7 @@ void debug_shmem ( const char *fmt, ... );
 #define debug_shmem(fmt, ...)
 #endif
 
-#ifdef ENABLE_DEBUG
+#ifdef DEBUG_VERSION
 #define DLB_DEBUG(f) f
 #else
 #define DLB_DEBUG(f)
