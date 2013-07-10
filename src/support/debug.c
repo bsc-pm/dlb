@@ -141,6 +141,17 @@ void debug_inout_MPI ( const char *fmt, ... )
 }
 #endif
 
+#ifdef debugBlockingMPI
+void debug_blocking_MPI ( const char *fmt, ... )
+{
+   va_list args;
+   va_start( args, fmt );
+   fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
+   vfprintf( stderr, fmt, args );
+   va_end( args );
+}
+#endif
+
 #ifdef debugLend
 void debug_lend ( const char *fmt, ... )
 {

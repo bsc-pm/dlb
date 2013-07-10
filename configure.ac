@@ -95,7 +95,7 @@ AC_MSG_RESULT([$debug])
 
 if test x"$debug" = x"yes"; then
     DEBUG_CFLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-    DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugInOut -DdebugLend -DdebugSharedMem -DENABLE_DEBUG"
+    DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugBlockingMPI -DdebugLend -DdebugSharedMem -DENABLE_DEBUG"
 fi
 AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
 

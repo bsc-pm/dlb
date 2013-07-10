@@ -17,70 +17,35 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef DEBUG_H
-#define DEBUG_H
-
-void fatal0 ( const char *fmt, ... );
-void fatal ( const char *fmt, ... );
-void warning0 ( const char *fmt, ... );
-void warning ( const char *fmt, ... );
-
-#ifndef QUIET_MODE
-void verbose0 ( const char *fmt, ... );
-void verbose ( const char *fmt, ... );
-#else
-#define verbose0(fmt, ...)
-#define verbose(fmt, ...)
-#endif
-
-#ifdef debugBasicInfo
-void debug_basic_info0 ( const char *fmt, ... );
-void debug_basic_info ( const char *fmt, ... );
-#else
-#define debug_basic_info0(fmt, ...)
-#define debug_basic_info(fmt, ...)
-#endif
-
-#ifdef debugConfig
-void debug_config ( const char *fmt, ... );
-#else
-#define debug_config(fmt, ...)
-#endif
-
-#ifdef debugInOut
-void debug_inout ( const char *fmt, ... );
-#else
-#define debug_inout(fmt, ...)
-#endif
-
-#ifdef debugInOutMPI
-void debug_inout_MPI ( const char *fmt, ... );
-#else
-#define debug_inout_MPI(fmt, ...)
-#endif
-
-#ifdef debugBlockingMPI
-void debug_blocking_MPI ( const char *fmt, ... );
-#else
-#define debug_blocking_MPI(fmt, ...)
-#endif
-
-#ifdef debugLend
-void debug_lend ( const char *fmt, ... );
-#else
-#define debug_lend(fmt, ...)
-#endif
-
-#ifdef debugSharedMem
-void debug_shmem ( const char *fmt, ... );
-#else
-#define debug_shmem(fmt, ...)
-#endif
-
-#ifdef ENABLE_DEBUG
-#define DLB_DEBUG(f) f
-#else
-#define DLB_DEBUG(f)
-#endif
-
-#endif /* DEBUG_H */
+const char* mpi_call_names[] = {
+	"Unknown MPI call",
+	"MPI_Bsend",
+	"MPI_Ssend",
+	"MPI_Rsend",
+	"MPI_Send",
+	"MPI_Ibsend",
+	"MPI_Isend",
+	"MPI_Issend",
+	"MPI_Irsend",
+	"MPI_Recv",
+	"MPI_Irecv",
+	"MPI_Reduce",
+	"MPI_Reduce_scatter",
+	"MPI_Allreduce",
+	"MPI_Barrier",
+	"MPI_Wait",
+	"MPI_Waitall",
+	"MPI_Waitany",
+	"MPI_Waitsome",
+	"MPI_Bcast",
+	"MPI_Alltoall",
+	"MPI_Alltoallv",
+	"MPI_Allgather",
+	"MPI_Allgatherv",
+	"MPI_Gather",
+	"MPI_Gatherv",
+	"MPI_Scatter",
+	"MPI_Scatterv",
+	"MPI_Scan",
+	"MPI_SendRecv"
+};

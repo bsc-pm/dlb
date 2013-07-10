@@ -183,9 +183,11 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 
 		if(_just_barrier){
 			if (call_type==Barrier){
+				debug_blocking_MPI( " >> MPI_Barrier...............\n" );
 				IntoBlockingCall(is_iter);
 			}
 		}else if (is_blocking(call_type)){
+			debug_blocking_MPI( " >> %s...............\n", mpi_call_names[call_type] );
 			IntoBlockingCall(is_iter);
 		}
 	
@@ -199,10 +201,12 @@ void after_mpi(mpi_call call_type){
 
 		if(_just_barrier){
 			if (call_type==Barrier){
+				debug_blocking_MPI( " << MPI_Barrier...............\n" );
 				OutOfBlockingCall(is_iter);
 				is_iter=0;
 			}
 		}else if (is_blocking(call_type)){
+			debug_blocking_MPI( " << %s...............\n", mpi_call_names[call_type] );
 			OutOfBlockingCall(is_iter);
 			is_iter=0;
 		}
