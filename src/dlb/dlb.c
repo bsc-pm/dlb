@@ -277,7 +277,7 @@ void OutOfBlockingCall(int is_iter){
 
 void updateresources( int max_resources ){
 	if(ready){
-		add_event(RUNTIME_EVENT, 4);
+		add_event(RUNTIME_EVENT, EVENT_UPDATE);
 		lb_funcs.updateresources( max_resources );
 		add_event(RUNTIME_EVENT, 0);
 	}
@@ -285,7 +285,9 @@ void updateresources( int max_resources ){
 
 void returnclaimed( void ){
 	if(ready){
+		add_event(RUNTIME_EVENT, EVENT_RETURN);
 		lb_funcs.returnclaimed();
+		add_event(RUNTIME_EVENT, 0);
 	}
 }
 

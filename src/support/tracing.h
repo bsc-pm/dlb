@@ -24,6 +24,7 @@
    #define EVENT_INTO_MPI    2
    #define EVENT_OUT_MPI     3
    #define EVENT_UPDATE      4
+   #define EVENT_RETURN      5
 #define ITERATION_EVENT    800021
 #define IDLE_CPUS_EVENT    800030
 /*************************************/

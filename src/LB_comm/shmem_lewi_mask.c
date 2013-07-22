@@ -144,17 +144,22 @@ int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )
    int returned = 0;
    cpu_set_t slaves_mask;
 
+   DLB_DEBUG( cpu_set_t returned_cpus; )
+   DLB_DEBUG( CPU_ZERO( &returned_cpus ); )
+
    CPU_XOR( &slaves_mask, mask, &default_mask );
    // Remove extra-cpus (slaves_mask) that have been removed from given_cpus
    for ( i=0; i<mu_get_system_size(); i++ ) {
       if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
          CPU_CLR( i, mask );
          returned++;
+         DLB_DEBUG( CPU_SET( i, &returned_cpus ); )
       }
    }
 
    if ( returned > 0 ) {
       debug_shmem ( "Giving back %d Threads\n", returned );
+      debug_shmem ( "Returned mask: %s\n",  mu_to_str(&returned_cpus) );
    }
 
    return returned;
