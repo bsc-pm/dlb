@@ -59,6 +59,12 @@ void debug_inout_MPI ( const char *fmt, ... );
 #define debug_inout_MPI(fmt, ...)
 #endif
 
+#ifdef debugBlockingMPI
+void debug_blocking_MPI ( const char *fmt, ... );
+#else
+#define debug_blocking_MPI(fmt, ...)
+#endif
+
 #ifdef debugLend
 void debug_lend ( const char *fmt, ... );
 #else
@@ -71,7 +77,7 @@ void debug_shmem ( const char *fmt, ... );
 #define debug_shmem(fmt, ...)
 #endif
 
-#ifdef ENABLE_DEBUG
+#ifdef DEBUG_VERSION
 #define DLB_DEBUG(f) f
 #else
 #define DLB_DEBUG(f)

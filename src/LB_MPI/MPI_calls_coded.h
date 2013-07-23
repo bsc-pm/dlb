@@ -74,5 +74,7 @@ typedef enum{
 	SendRecv=_SendRecv|_Blocking,
 } mpi_call;
 
+extern const char* mpi_call_names[];
+
 #endif //MPI_CALLS_CODED_H
 

@@ -15,6 +15,7 @@ VALUES
 2      Into MPI Call
 3      Out MPI Call
 4      UpdateResources
+5      ReturnClaimed
 
 EVENT_TYPE
 0    800021	DLB Iteration

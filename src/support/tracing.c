@@ -17,9 +17,11 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef INSTRUMENTATION_VERSION
 void Extrae_eventandcounters ( unsigned type, long long value ) __attribute__( ( weak ) );
 
 void add_event( unsigned type, long long value )
 {
    if ( Extrae_eventandcounters ) Extrae_eventandcounters( type, value );
 }
+#endif

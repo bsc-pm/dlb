@@ -17,27 +17,35 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-/********* EXTRAE EVENTS *************/
-#define THREADS_USED_EVENT 800000
-#define RUNTIME_EVENT      800020
-   #define EVENT_INIT        1
-   #define EVENT_INTO_MPI    2
-   #define EVENT_OUT_MPI     3
-   #define EVENT_UPDATE      4
-   #define EVENT_RETURN      5
-#define ITERATION_EVENT    800021
-#define IDLE_CPUS_EVENT    800030
-/*************************************/
-
-#ifdef INSTRUMENTATION_VERSION
-void add_event( int type, int value );
-#else
-#define add_event(type, value)
-#endif
-
-
-#ifdef INSTRUMENTATION_VERSION
-#define DLB_INSTR(f) f
-#else
-#define DLB_INSTR(f)
-#endif
+const char* mpi_call_names[] = {
+	"Unknown MPI call",
+	"MPI_Bsend",
+	"MPI_Ssend",
+	"MPI_Rsend",
+	"MPI_Send",
+	"MPI_Ibsend",
+	"MPI_Isend",
+	"MPI_Issend",
+	"MPI_Irsend",
+	"MPI_Recv",
+	"MPI_Irecv",
+	"MPI_Reduce",
+	"MPI_Reduce_scatter",
+	"MPI_Allreduce",
+	"MPI_Barrier",
+	"MPI_Wait",
+	"MPI_Waitall",
+	"MPI_Waitany",
+	"MPI_Waitsome",
+	"MPI_Bcast",
+	"MPI_Alltoall",
+	"MPI_Alltoallv",
+	"MPI_Allgather",
+	"MPI_Allgatherv",
+	"MPI_Gather",
+	"MPI_Gatherv",
+	"MPI_Scatter",
+	"MPI_Scatterv",
+	"MPI_Scan",
+	"MPI_SendRecv"
+};
