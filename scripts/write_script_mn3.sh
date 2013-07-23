@@ -94,8 +94,8 @@ output="${ini_dir}/OUTS/${script_name}"
 ###BSUB -q sequential 
 
 ulimit -c unlimited
-export TMPDIR=$TMPDIR/extrae
-mkdir -p $TMPDIR
+#export TMPDIR=$TMPDIR/extrae
+#mkdir -p $TMPDIR
 
 export NX_ARGS+=" ${NANOS_ARGS}"
 export LB_AGGRESSIVE_INIT=1

@@ -179,7 +179,7 @@ void RaL_UpdateResources( int max_resources )
    CPU_ZERO( &mask );
    get_mask( &mask );
 
-   if( max_cpus==_default_nthreads) {
+   if( max_cpus==_default_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
       //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
 
       int new_threads = shmem_lewi_mask_collect_mask( &mask, max_resources );
