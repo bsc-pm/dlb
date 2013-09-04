@@ -75,7 +75,7 @@ AM_CPPFLAGS = $(includes)
 AM_LDFLAGS = -lrt
 if MPI_SUPPORT
 AM_CPPFLAGS += -DUSE_MPI -I$(MPI_HOME)/include
-AM_LDFLAGS += -L$(MPI_HOME)/lib -lmpi
+AM_LDFLAGS += -L$(MPI_HOME)/lib $(MPI_LIBS)
 endif
 if HWLOC_SUPPORT
 AM_CPPFLAGS += -DUSE_HWLOC -I$(HWLOC_HOME)/include
