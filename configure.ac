@@ -36,6 +36,9 @@ AC_ARG_WITH([mpi],
    [
       mpi=yes
       MPI_HOME="$withval"
+   ],
+   [
+      AC_CHECK_HEADERS([mpi.h], [mpi=yes], [mpi=no])
    ]
 )
 AC_ARG_WITH([mpich],
@@ -44,9 +47,6 @@ AC_ARG_WITH([mpich],
       mpi=yes
       mpich=yes
       MPI_HOME="$withval"
-   ],
-   [
-      AC_CHECK_HEADERS([mpi.h], [mpi=yes], [mpi=no])
    ]
 )
 
