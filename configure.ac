@@ -41,6 +41,14 @@ AC_ARG_WITH([mpi],
       AC_CHECK_HEADERS([mpi.h], [mpi=yes], [mpi=no])
    ]
 )
+AC_ARG_WITH([mpich],
+   AS_HELP_STRING([--with-mpich=dir], [Directory of MPICH installation]),
+   [
+      mpi=yes
+      mpich=yes
+      MPI_HOME="$withval"
+   ]
+)
 
 # check for HWLOC path
 AC_ARG_WITH([hwloc],
@@ -61,7 +69,7 @@ AC_ARG_WITH([cpus-per-node],
       ncpus="$withval"
    ],
    [
-      ncpus=$(nproc)
+      ncpus=$(nproc) || ncpus=1
    ]
 )
 
@@ -141,10 +149,17 @@ AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 if test x"$mpi" = x"no"; then
     AC_MSG_ERROR([mpi.h was not found. MPI headers are mandatory. You can use --with-mpi=dir option to set the MPI location or you can manually add an include directory in CPPFLAGS])
+else
+    if test x"$mpich" = x"yes"; then
+        MPI_LIBS=-lmpich
+    else
+        MPI_LIBS=-lmpi
+    fi
 fi
 
 AM_CONDITIONAL([MPI_SUPPORT], [test x"$mpi" = x"yes"])
 AC_SUBST([MPI_HOME])
+AC_SUBST([MPI_LIBS])
 AM_CONDITIONAL([HWLOC_SUPPORT], [test x"$hwloc" = x"yes"])
 AC_SUBST([HWLOC_HOME])
 
