@@ -31,6 +31,7 @@ sources = \
          $(top_srcdir)/src/LB_policies/Weight.c         \
          $(top_srcdir)/src/LB_policies/lewi_mask.c      \
          $(top_srcdir)/src/LB_policies/RaL.c		\
+         $(top_srcdir)/src/LB_policies/PERaL.c		\
 	 $(top_srcdir)/src/LB_comm/comm_shMem.c 	\
          $(top_srcdir)/src/LB_comm/comm_lend_light.c 	\
          $(top_srcdir)/src/LB_comm/comm_map.c      	\
