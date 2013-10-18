@@ -27,7 +27,7 @@
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init(int me, int num_procs, int node);
+void Lend_light_Init(void);
 
 void Lend_light_Finish(void);
 
@@ -35,7 +35,7 @@ void Lend_light_IntoCommunication(void);
 
 void Lend_light_OutOfCommunication(void);
 
-void Lend_light_IntoBlockingCall(int is_iter);
+void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode);
 
 void Lend_light_OutOfBlockingCall(int is_iter);
 

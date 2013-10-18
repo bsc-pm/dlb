@@ -146,7 +146,7 @@ void after_init(void){
         _node_id = node;
         _mpis_per_node = num_mpis;
 
-        if ( nanos_get_pm ) {
+/*        if ( nanos_get_pm ) {
            const char *pm = nanos_get_pm();
            if ( strcmp( pm, "OpenMP" ) == 0 ) {
               _default_nthreads = nanos_omp_get_max_threads();
@@ -159,9 +159,9 @@ void after_init(void){
         }
         else {
            _default_nthreads = omp_get_max_threads();
-        }
+        }*/
 
-	Init(me, num_mpis, node);
+	Init();
 	mpi_ready=1;	
 	add_event(RUNTIME_EVENT, 0);
 }
@@ -184,11 +184,11 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 		if(_just_barrier){
 			if (call_type==Barrier){
 				debug_blocking_MPI( " >> MPI_Barrier...............\n" );
-				IntoBlockingCall(is_iter);
+				IntoBlockingCall(is_iter, 0);
 			}
 		}else if (is_blocking(call_type)){
 			debug_blocking_MPI( " >> %s...............\n", mpi_call_names[call_type] );
-			IntoBlockingCall(is_iter);
+			IntoBlockingCall(is_iter, 0);
 		}
 	
 		add_event(RUNTIME_EVENT, 0);

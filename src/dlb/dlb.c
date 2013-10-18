@@ -36,6 +36,7 @@
 #include <LB_policies/Lewi_map.h>
 #include <LB_policies/lewi_mask.h>
 #include <LB_policies/RaL.h>
+#include <LB_policies/PERaL.h>
 
 #include <LB_numThreads/numThreads.h>
 #include "support/debug.h"
@@ -57,29 +58,30 @@
 //struct timespec MPITime;
 
 //double iterCpuTime_avg=0, iterMPITime_avg=0 ;
+
+int omp_get_max_threads(void) __attribute__( ( weak ) );
+int nanos_omp_get_num_threads(void) __attribute__( ( weak ) );
+int nanos_omp_get_max_threads(void) __attribute__( ( weak ) );
+const char* nanos_get_pm(void) __attribute__( ( weak ) );
+
+
 char prof;
 int ready=0;
 
 BalancePolicy lb_funcs;
 
-int nodeId, meId, procsNode;
-
 int use_dpd;
 
 static void dummyFunc(){}
 
-void Init(int me, int num_procs, int node){
+void Init(){
 	//Read Environment vars
 	char* policy;
+
+	char* thread_distrib;
 	prof=0;
 
 	use_dpd=0;
-
-	nodeId=node;
-	meId=me;
-	procsNode=num_procs;
-        mpi_x_node=num_procs;
-
 	//iterNum=0;
 
 	if ((policy=getenv("LB_POLICY"))==NULL){
@@ -97,7 +99,7 @@ void Init(int me, int num_procs, int node){
 
 	if (strcasecmp(policy, "LeWI")==0){
 #ifdef debugConfig
-	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI\n", node, me);
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI\n", _node_id, _process_id);
 #endif	
 		
 		lb_funcs.init = &Lend_light_Init;
@@ -111,7 +113,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "Map")==0){
 #ifdef debugConfig
-	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI with Map of cpus version\n", node, me);
+	fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI with Map of cpus version\n", _node_id, _process_id);
 #endif	
 		
 		lb_funcs.init = &Map_Init;
@@ -125,7 +127,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "WEIGHT")==0){
 #ifdef debugConfig
-		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Weight balancing\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Weight balancing\n", _node_id, _process_id);
 #endif	
 		use_dpd=1;
 
@@ -140,7 +142,7 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "LeWI_mask")==0){
 #ifdef debugConfig
-		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI mask\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI mask\n", _node_id, _process_id);
 #endif
 		lb_funcs.init = &lewi_mask_Init;
 		lb_funcs.finish = &lewi_mask_Finish;
@@ -153,22 +155,32 @@ void Init(int me, int num_procs, int node){
 
 	}else if (strcasecmp(policy, "RaL")==0){
 #ifdef debugConfig
-		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: RaL: Redistribute and Lend \n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: RaL: Redistribute and Lend \n", _node_id, _process_id);
 #endif
 		use_dpd=1;
 
-		lb_funcs.init = &RaL_Init;
-		lb_funcs.finish = &RaL_Finish;
-		lb_funcs.intoCommunication = &RaL_IntoCommunication;
-		lb_funcs.outOfCommunication = &RaL_OutOfCommunication;
-		lb_funcs.intoBlockingCall = &RaL_IntoBlockingCall;
-		lb_funcs.outOfBlockingCall = &RaL_OutOfBlockingCall;
-		lb_funcs.updateresources = &RaL_UpdateResources;
-		lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
-
+		if (_mpis_per_node>1){
+			lb_funcs.init = &PERaL_Init;
+			lb_funcs.finish = &PERaL_Finish;
+			lb_funcs.intoCommunication = &PERaL_IntoCommunication;
+			lb_funcs.outOfCommunication = &PERaL_OutOfCommunication;
+			lb_funcs.intoBlockingCall = &PERaL_IntoBlockingCall;
+			lb_funcs.outOfBlockingCall = &PERaL_OutOfBlockingCall;
+			lb_funcs.updateresources = &PERaL_UpdateResources;
+			lb_funcs.returnclaimed = &PERaL_ReturnClaimedCpus;
+		}else{
+			lb_funcs.init = &RaL_Init;
+			lb_funcs.finish = &RaL_Finish;
+			lb_funcs.intoCommunication = &RaL_IntoCommunication;
+			lb_funcs.outOfCommunication = &RaL_OutOfCommunication;
+			lb_funcs.intoBlockingCall = &RaL_IntoBlockingCall;
+			lb_funcs.outOfBlockingCall = &RaL_OutOfBlockingCall;
+			lb_funcs.updateresources = &RaL_UpdateResources;
+			lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
+		}
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
-		fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", node, me);
+		fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", _node_id,  _process_id);
 #endif	
 		use_dpd=1;
 
@@ -186,8 +198,58 @@ void Init(int me, int num_procs, int node){
 	}
 
 	debug_basic_info0 ( "DLB: Balancing policy: %s balancing\n", policy);
-	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", num_procs);
-	debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
+	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _node_id);
+
+	if ((thread_distrib=getenv("LB_THREAD_DISTRIBUTION"))==NULL){
+		if ( nanos_get_pm ) {
+			const char *pm = nanos_get_pm();
+			if ( strcmp( pm, "OpenMP" ) == 0 ) {
+				_default_nthreads = nanos_omp_get_max_threads();
+			}else if ( strcmp( pm, "OmpSs" ) == 0 ) {
+				_default_nthreads = nanos_omp_get_num_threads();
+			}else{
+				fatal( "Unknown Programming Model\n" );
+			}
+		}else{
+			_default_nthreads = omp_get_max_threads();
+		}
+
+		debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
+
+	//Initial thread distribution specified
+	}else{
+
+		char* token = strtok(thread_distrib, "-");
+		int i=0;
+		while(i<_process_id && (token = strtok(NULL, "-"))){
+			i++;
+		}
+			
+		if (i!=_process_id){
+			warning ("Error parsing the LB_THREAD_DISTRIBUTION (%s), using default\n");
+				if ( nanos_get_pm ) {
+        	                const char *pm = nanos_get_pm();
+                	        if ( strcmp( pm, "OpenMP" ) == 0 ) {
+                        	        _default_nthreads = nanos_omp_get_max_threads();
+	                        }else if ( strcmp( pm, "OmpSs" ) == 0 ) {
+        	                        _default_nthreads = nanos_omp_get_num_threads();
+                	        }else{
+                        	        fatal( "Unknown Programming Model\n" );
+	                        }
+        	        }else{
+                	        _default_nthreads = omp_get_max_threads();
+                	}
+
+                	debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
+
+		}else{
+			_default_nthreads=atoi(token);
+			debug_basic_info ( "DLB: I start with %d threads\n", _default_nthreads);
+		}
+	}
+
+
+
 
         if ( _just_barrier )
            debug_basic_info0 ( "Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n" );
@@ -213,7 +275,7 @@ void Init(int me, int num_procs, int node){
 		clock_gettime(CLOCK_REALTIME, &initComp);
 	}*/
 
-	lb_funcs.init(me, num_procs, node);
+	lb_funcs.init();
 	ready=1;
 
 
@@ -234,12 +296,12 @@ void Finish(void){
 
 		diff_time(initAppl, aux, &aux);
 		
-		if (meId==0 && nodeId==0){
+		if (meId==0 && _node_idId==0){
 			fprintf(stdout, "DLB: Application time: %.4f\n", to_secs(aux));
 			fprintf(stdout, "DLB: Iterations detected: %d\n", iterNum);
 		}
-		fprintf(stdout, "DLB: (%d:%d) - CPU time: %.4f\n", nodeId, meId, to_secs(CpuTime));
-		fprintf(stdout, "DLB: (%d:%d) - MPI time: %.4f\n", nodeId, meId, to_secs(MPITime));
+		fprintf(stdout, "DLB: (%d:%d) - CPU time: %.4f\n", _node_idId, meId, to_secs(CpuTime));
+		fprintf(stdout, "DLB: (%d:%d) - MPI time: %.4f\n", _node_idId, meId, to_secs(MPITime));
 	}*/
 }
 
@@ -262,13 +324,15 @@ void OutOfCommunication(void){
 	lb_funcs.outOfCommunication();
 }
 
-void IntoBlockingCall(int is_iter){
+void IntoBlockingCall(int is_iter, int is_single){
 /*	double cpuSecs;
 	double MPISecs;
 	cpuSecs=iterCpuTime_avg;
 	MPISecs=iterMPITime_avg;*/
-
-	lb_funcs.intoBlockingCall(is_iter);
+	if (is_single)
+		lb_funcs.intoBlockingCall(is_iter, ONE_CPU);
+	else
+		lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
 }
 
 void OutOfBlockingCall(int is_iter){

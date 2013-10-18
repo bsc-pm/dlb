@@ -30,7 +30,7 @@ void RaL_IntoCommunication( void );
 
 void RaL_OutOfCommunication( void );
 
-void RaL_IntoBlockingCall(int is_iter);
+void RaL_IntoBlockingCall(int is_iter, int blocking_mode);
 
 void RaL_OutOfBlockingCall(int is_iter);
 

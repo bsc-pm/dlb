@@ -38,12 +38,10 @@ struct timespec iter_cpuTime;
 struct timespec iter_compTime;
 
 int myCPUS;
-int myId;
-void JustProf_Init(int me, int num_procs, int node){
+void JustProf_Init(){
 	//Read Environment vars
 
 	myCPUS = _default_nthreads;
-	myId=me;
 
 	if (clock_gettime(CLOCK_REALTIME, &initAppl)<0){
 		fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
@@ -97,7 +95,7 @@ void JustProf_IntoCommunication(void){}
 
 void JustProf_OutOfCommunication(void){}
 
-void JustProf_IntoBlockingCall(int is_iter){
+void JustProf_IntoBlockingCall(int is_iter, int blocking_mode){
 	struct timespec initMPI;
 	struct timespec diff;
 

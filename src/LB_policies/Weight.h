@@ -24,7 +24,7 @@
 #include <LB_comm/comm.h>
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(int meId, int num_procs, int nodeId);
+void Weight_Init(void);
 
 void Weight_Finish(void);
 
@@ -32,7 +32,7 @@ void Weight_IntoCommunication(void);
 
 void Weight_OutOfCommunication(void);
 
-void Weight_IntoBlockingCall(int is_iter);
+void Weight_IntoBlockingCall(int is_iter, int blocking_mode);
 
 void Weight_OutOfBlockingCall(int is_iter);
 

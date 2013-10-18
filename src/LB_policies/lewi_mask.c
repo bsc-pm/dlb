@@ -69,7 +69,7 @@ void lewi_mask_IntoCommunication( void ) {}
 void lewi_mask_OutOfCommunication( void ) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void lewi_mask_IntoBlockingCall(int is_iter)
+void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode)
 {
    cpu_set_t mask;
    CPU_ZERO( &mask );
@@ -79,7 +79,7 @@ void lewi_mask_IntoBlockingCall(int is_iter)
    CPU_ZERO( &cpu );
    sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
 
-   if ( _blocking_mode == ONE_CPU ) {
+   if ( blocking_mode == ONE_CPU ) {
       // Remove current cpu from the mask
       CPU_XOR( &mask, &mask, &cpu );
       debug_lend ( "LENDING %d threads\n", nthreads-1 );

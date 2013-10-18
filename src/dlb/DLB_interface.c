@@ -39,7 +39,8 @@ DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) )
 {
-   IntoBlockingCall(0);
+	//no iter, single
+   IntoBlockingCall(0, 1);
    DLB_disable();
 }
 
@@ -70,7 +71,8 @@ DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) )
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
 {
    if ( dlb_enabled )
-      IntoBlockingCall(0);
+	//no iter, no single
+      IntoBlockingCall(0, 0);
 }
 
 DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )

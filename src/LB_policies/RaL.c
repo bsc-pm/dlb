@@ -86,7 +86,7 @@ void RaL_IntoCommunication( void ) {}
 void RaL_OutOfCommunication( void ) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void RaL_IntoBlockingCall(int is_iter)
+void RaL_IntoBlockingCall(int is_iter, int blocking_mode)
 {
    struct timespec aux;
    if (clock_gettime(CLOCK_REALTIME, &aux)<0){
@@ -105,13 +105,13 @@ void RaL_IntoBlockingCall(int is_iter)
    CPU_ZERO( &cpu );
    sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
 
-   if ( _blocking_mode == ONE_CPU ) {
+   if ( blocking_mode == ONE_CPU ) {
       // Remove current cpu from the mask
       CPU_XOR( &mask, &mask, &cpu );
       debug_lend ( "LENDING %d threads\n", nthreads-1 );
       nthreads = 1;
    }
-   else if ( _blocking_mode == BLOCK ) {
+   else if ( blocking_mode == BLOCK ) {
       debug_lend ( "LENDING %d threads\n", nthreads );
       nthreads = 0;
    }

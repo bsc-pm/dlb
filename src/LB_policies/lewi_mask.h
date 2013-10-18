@@ -30,7 +30,7 @@ void lewi_mask_IntoCommunication( void );
 
 void lewi_mask_OutOfCommunication( void );
 
-void lewi_mask_IntoBlockingCall(int is_iter);
+void lewi_mask_IntoBlockingCall(int is_iter, int bloking_mode);
 
 void lewi_mask_OutOfBlockingCall(int is_iter);
 
