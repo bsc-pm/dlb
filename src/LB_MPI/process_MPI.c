@@ -227,4 +227,4 @@ void enable_mpi(void) { mpi_ready = 1; }
 
 void disable_mpi(void) { mpi_ready = 0; }
 
-void node_barrier(void) { MPI_Barrier( mpi_comm_node ); }
+void node_barrier(void) { if (mpi_ready) MPI_Barrier( mpi_comm_node ); }
