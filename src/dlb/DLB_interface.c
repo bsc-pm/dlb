@@ -22,17 +22,21 @@
 #include "dlb/dlb.h"
 #include "LB_MPI/process_MPI.h"
 #include "support/utils.h"
+#include "support/tracing.h"
 
 static bool dlb_enabled = true;
 
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) )
 {
+   add_event(DLB_MODE_EVENT, EVENT_ENABLED);
    enable_mpi();
    dlb_enabled = true;
 }
 
 DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
 {
+   //FIXME This hiddes the single event always
+   add_event(DLB_MODE_EVENT, EVENT_DISABLED);
    dlb_enabled = false;
    disable_mpi();
 }
@@ -40,12 +44,15 @@ DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
 DLB_API_DEF( void, DLB_single, dlb_single, (void) )
 {
 	//no iter, single
+   add_event(DLB_MODE_EVENT, EVENT_SINGLE);
    IntoBlockingCall(0, 1);
+   //FIXME Do we really want to disable DLB?
    DLB_disable();
 }
 
 DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) )
 {
+   add_event(DLB_MODE_EVENT, EVENT_ENABLED);
    DLB_enable();
    OutOfBlockingCall(0);
 }

@@ -25,8 +25,13 @@
    #define EVENT_OUT_MPI     3
    #define EVENT_UPDATE      4
    #define EVENT_RETURN      5
-#define ITERATION_EVENT    800021
 #define IDLE_CPUS_EVENT    800030
+#define ITERATION_EVENT    800040
+#define DLB_MODE_EVENT     800050
+   #define EVENT_ENABLED        1
+   #define EVENT_DISABLED       2
+   #define EVENT_SINGLE         3
+
 /*************************************/
 
 #ifdef INSTRUMENTATION_VERSION

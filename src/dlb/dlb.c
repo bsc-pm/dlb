@@ -277,6 +277,7 @@ void Init(){
 
 	lb_funcs.init();
 	ready=1;
+        add_event(DLB_MODE_EVENT, EVENT_ENABLED);
 
 
 }
