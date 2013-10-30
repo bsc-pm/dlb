@@ -1,24 +1,30 @@
 #!/bin/bash
 
-if [ $# != 9 ]
+if [ $# != 8 ]
 then
 	echo "ERROR: wrong number of parameters"
-	echo "Usage: set_dlb.sh <procs per node> <profiling> <version> <policy> <tracing> <block mode> <bits> <conf_extrae> <params>"
+	echo "Usage: set_dlb.sh <procs per node> <version> <policy> <tracing> <block mode> <conf_extrae> <thread distribution> <params>"
 	echo $*
-	echo Found $# parameters instead of 10
-	echo ${11}
-	echo ${12}
+	echo Found $# parameters instead of 8 
+	echo
+	echo "procs per node: Num mpi procs inside a node"
+	echo "version: SERIE | SMPSS | OMP | OMPSS"
+	echo "policy: ORIG | LeWI | LeWI_mask | RaL | PeRaL"
+	echo "tracing: YES | NO"
+	echo "block mode: BLOCK | 1CPU"
+	echo "conf extrae: path to extrae configuration file"
+	echo "thread distribution: - (default thread distribution) | x-y-z-w (MPI0 x threads, MPI1 y threads...)"
+	echo "params: execution line with all its parameters"
 	exit
 else
 	procs_node=$1
-	profiling=$2
-	version=$3
-	policy=$4
-	tracing=$5 
-	block_mode=$6
-	bits=$7
-	conf_extrae=$8	
-	params=${9}	
+	version=$2
+	policy=$3
+	tracing=$4 
+	block_mode=$5
+	conf_extrae=$6	
+	thread_distrib=$7
+	params=${8}	
 fi
 
 if [ $version == "SERIE" -o $version == "ORIG" ]
@@ -59,27 +65,46 @@ else
 	exit
 fi
 
+CPUS_NODE=16
+CPUS_PROC=$(($CPUS_NODE/$procs_node))
+
+if [ $policy != "LeWI_mask" -a $policy != "RaL" ]
+then
+	NANOS_ARGS=" --disable-binding " 
+###--instrument-cpuid"
+fi
+
+if [ $policy != "ORIG" ]
+then
+	NANOS_ARGS="$NANOS_ARGS --enable-dlb"
+fi
+
+export NX_ARGS+=$NANOS_ARGS
+
 ##############  PATHS  #############
 DLB_PATH=/home/bsc15/bsc15994/MN3/dlb/install/lib
 SMPSS_PATH=/home/bsc15/bsc15994/SMPSs-install${bits}/lib
 TRACE_PATH=/home/bsc15/bsc15994/MN3/extrae/lib
 
-CPUS_NODE=16
 
 ##############  OpenMP VARS ################
-##export OMP_SCHEDULE=STATIC
-export OMP_SCHEDULE=DYNAMIC
+export OMP_SCHEDULE=STATIC
+#export OMP_SCHEDULE=DYNAMIC
 ##export OMP_SCHEDULE=GUIDED
+export OMP_NUM_THREADS=$CPUS_PROC
 
 
 ############## DLB ENV VARS ################
 export LB_MPIxNODE=$procs_node
 export LB_POLICY=$policy
-export LB_PROFILE=$profiling
 export LB_LEND_MODE=${block_mode}
 #export LB_BIND=YES
 #export LB_JUST_BARRIER=1
 
+if [ $thread_distrib != "-" ]
+then
+	export LB_THREAD_DISTRIBUTION=$thread_distrib
+fi
 
 ############## CSS ENV VARS ################
 export CSS_NUM_CPUS=$(($CPUS_NODE/$procs_node))                                                                                                                                                                                              
@@ -102,8 +127,6 @@ if [ $policy == "ORIG" ]
 then
 ################### RUN ORIGINAL APPLICATION ###################
 
-        export OMP_NUM_THREADS=$(($CPUS_NODE/$procs_node))
-
 	if [ $tracing == "YES" ]
         then
                 export LD_PRELOAD=${TRACE_PATH}/${MPI_TRACE_LIB}
@@ -112,16 +135,10 @@ then
 
 ################### RUN APPLICATION WITH DLB ###################
 else
-##	if [ $policy == "NO" ]
-##	then
-       		export OMP_NUM_THREADS=$(($CPUS_NODE/$procs_node))
-##	else
- ##      		export OMP_NUM_THREADS=$CPUS_NODE
-##	fi
 
 	if [ $tracing == "YES" ]
 	then
-		export LD_PRELOAD=${TRACE_PATH}/${MPI_TRACE_LIB_DLB}:${DLB_PATH}/libTdlb.so
+		export LD_PRELOAD=${TRACE_PATH}/${MPI_TRACE_LIB_DLB}:${DLB_PATH}/libdlb_instr.so
 #		export LD_PRELOAD=${TRACE_PATH}/${MPI_TRACE_LIB_DLB}:${DLB_PATH}/libdlb_dbg.so
 	else
 		export LD_PRELOAD=${DLB_PATH}/libdlb.so

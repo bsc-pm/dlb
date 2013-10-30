@@ -4,12 +4,11 @@
 DLB_PATH=/home/bsc15/bsc15994/MN3/dlb/install
 ##########################################
 
-profiling=NO
 
-if [ $# != 15 ]
+if [ $# != 16 ]
 then
 	echo "ERROR: Wrong number of parameters"
-	echo "Usage: write_script.sh <script_name> <ini_dir> <mpi_procs> <procs per node> <params> <tracing> <version> <policy> <trace_path> <BITS> <distribution> <block_mode> <extrae_xml> <duration> <submit>"
+	echo "Usage: write_script.sh <script_name> <ini_dir> <mpi_procs> <procs per node> <params> <tracing> <version> <policy> <trace_path> <BITS> <distribution> <block_mode> <extrae_xml> <duration> <submit> <thread distribution>"
 	echo $* 
 	exit
 else
@@ -28,6 +27,7 @@ else
 	extrae_xml=${13}
 	duration=${14}
 	submit=${15}
+	thread_distrib=${16}
 fi
 
 if [ $distribution == "CYCLIC" ]
@@ -40,27 +40,25 @@ else
 	dist="--hostfile $distribution"
 fi
 
-program=$(echo $params | cut -d"\"" -f2 | cut -d " " -f1 )
-
 CPUS_NODE=16
 CPUS_PROC=$(($CPUS_NODE/$procs_node))
 
-if [ $policy != "LeWI_mask" -a $policy != "RaL" ]
+if [ $policy == "LeWI_mask" -o $policy == "RaL" ]
 then
-	NANOS_ARGS=" --disable-binding --instrument-cpuid"
-else
         binding="--cpus-per-proc $CPUS_PROC"
 
 	if [ $CPUS_PROC == 1 ]
 	then
 		binding="$binding --bind-to-core"
 	fi
+else
+	binding="--bind-to-none "
 fi
 
-if [ $policy != "ORIG" ]
-then
-	NANOS_ARGS="$NANOS_ARGS --enable-dlb"
-fi
+binding="$binding "
+
+program=$(echo $params | cut -d"\"" -f2 | cut -d " " -f1 )
+
 
 output="${ini_dir}/OUTS/${script_name}"
 
@@ -97,14 +95,13 @@ ulimit -c unlimited
 #export TMPDIR=$TMPDIR/extrae
 #mkdir -p $TMPDIR
 
-export NX_ARGS+=" ${NANOS_ARGS}"
 export LB_AGGRESSIVE_INIT=1
  
 export OMPI_MCA_mpi_warn_on_fork=0
 
 output="${output}.\$LSB_JOBID.app"
 
-/usr/bin/time mpirun -n ${mpi_procs}  $binding $dist ${DLB_PATH}/bin/set_dlb_mn3.sh ${procs_node} NO ${version} ${policy} ${tracing} ${block_mode} ${bits} ${extrae_xml} "${params}" > \$output
+/usr/bin/time mpirun -n ${mpi_procs}  $binding $dist ${DLB_PATH}/bin/set_dlb_mn3.sh ${procs_node} ${version} ${policy} ${tracing} ${block_mode} ${extrae_xml} ${thread_distrib} "${params}" > \$output
 
 
 if [ $tracing == "YES" ]
@@ -114,12 +111,12 @@ then
 		export EXTRAE_LABELS=StarSs.pcf
 	fi
 
-#	if [ $mpi_procs == "1" ]
-#	then
+##	if [ $mpi_procs == "1" ]
+##	then
 		${MPITRACE_HOME}/bin/mpi2prv -e ${program} -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv >> \$output
-#	else
-#		mpirun ${MPITRACE_HOME}/bin/mpimpi2prv -e ${program} -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv >> \$output
-#	fi
+##	else
+##		mpirun  -n ${mpi_procs} ${MPITRACE_HOME}/bin/mpimpi2prv -e ${program} -f ${trace_path}/TRACE.mpits -syn -o ${trace_path}/$script_name.prv >> \$output
+##	fi
 
 	rm ${trace_path}/set-0/TRACE*
 	rm -r ${ini_dir}/trace* 
