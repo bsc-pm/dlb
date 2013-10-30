@@ -41,6 +41,14 @@ AC_ARG_WITH([mpi],
       AC_CHECK_HEADERS([mpi.h], [mpi=yes], [mpi=no])
    ]
 )
+AC_ARG_WITH([mpi_mt],
+   AS_HELP_STRING([--with-mpi_mt=dir], [Directory of MPI installation (Threaded version)]),
+   [
+      mpi=yes
+      mpi_mt=yes
+      MPI_HOME="$withval"
+   ]
+)
 AC_ARG_WITH([mpich],
    AS_HELP_STRING([--with-mpich=dir], [Directory of MPICH installation]),
    [
@@ -153,7 +161,11 @@ else
     if test x"$mpich" = x"yes"; then
         MPI_LIBS=-lmpich
     else
-        MPI_LIBS=-lmpi
+        if test x"$mpi_mt" = x"yes"; then
+            MPI_LIBS=-lmpi_mt
+        else
+            MPI_LIBS=-lmpi
+        fi
     fi
 fi
 
