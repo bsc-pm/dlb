@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <bits/local_lim.h>
 #include "support/globals.h"
 #include "support/debug.h"
 
@@ -35,10 +36,9 @@ int nanos_omp_get_max_threads(void) __attribute__( ( weak ) );
 const char* nanos_get_pm(void) __attribute__( ( weak ) );
 
 int periodo; 
-int me;
-int mpi_ready=0;
-static MPI_Comm mpi_comm_node;
+static int mpi_ready = 0;
 static int is_iter;
+static MPI_Comm mpi_comm_node;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -47,48 +47,45 @@ void before_init(void){
 void after_init(void){
 	add_event(RUNTIME_EVENT, 1);
 	is_iter=0;
-	int num_mpis=0, node;
 
-	MPI_Comm_rank(MPI_COMM_WORLD,&me);
-//fprintf(stderr, "%d: I am %d\n", getpid(), me);
+        MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
+        MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
 
-	//Setting me and nodeId for MPIs
-	char nodeId[50];
-	int procs;
-	MPI_Comm_size (MPI_COMM_WORLD, &procs); 
-	char recvData[procs][50];
+	char hostname[HOST_NAME_MAX];
+	char recvData[_mpi_size][HOST_NAME_MAX];
 
-	if (gethostname(nodeId, 50)<0){
+	if (gethostname(hostname, HOST_NAME_MAX)<0){
 		perror("gethostname");
 	}
 
 	MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-	int error_code = PMPI_Allgather (nodeId, 50, MPI_CHAR, recvData, 50, MPI_CHAR, MPI_COMM_WORLD);
+	int error_code = PMPI_Allgather (hostname, HOST_NAME_MAX, MPI_CHAR, recvData, HOST_NAME_MAX, MPI_CHAR, MPI_COMM_WORLD);
 
 	if (error_code != MPI_SUCCESS) {
 		char error_string[BUFSIZ];
    		int length_of_error_string;
 
    		MPI_Error_string(error_code, error_string, &length_of_error_string);
-   		fprintf(stderr, "%3d: %s\n", me, error_string);
+                fatal( "%3d: %s\n", _mpi_rank, error_string );
 	}
 
         int i;
-        for ( i=0; i<procs; i++ ) {
-           if ( strcmp ( recvData[i], nodeId ) == 0 )
-              num_mpis++;
+        _mpis_per_node = 0;
+        for ( i=0; i<_mpi_size; i++ ) {
+           if ( strcmp ( recvData[i], hostname ) == 0 )
+              _mpis_per_node++;
         }
 
-	if (me==0){
+	int procsIds[_mpi_size][2];
+	if (_mpi_rank==0){
 		int j, maxSetNode;
-		int nodes=procs/num_mpis;
+		int nodes=_mpi_size/_mpis_per_node;
 		int procsPerNode[nodes];
-		char nodesIds[nodes][50];
-		int procsIds[procs][2];
+		char nodesIds[nodes][HOST_NAME_MAX];
 
 		maxSetNode=0;
 		for (i=0; i<nodes; i++){
-			memset(nodesIds[i], 0, 50);
+			memset(nodesIds[i], 0, HOST_NAME_MAX);
 			procsPerNode[i]=0;
 		}
 
@@ -98,7 +95,7 @@ void after_init(void){
 		procsIds[0][1]=0;
 		maxSetNode++;
 
-		for(i=1; i<procs; i++){
+		for(i=1; i<_mpi_size; i++){
 			j=0;
 			while((strcmp(recvData[i],nodesIds[j]))&&(j<nodes)){
 				j++;
@@ -117,34 +114,20 @@ void after_init(void){
 				procsPerNode[j]++;
 			}
 		}
-		for(i=1; i<procs; i++){
-			PMPI_Send((void*)procsIds[i], 2, MPI_INT, i, 0, MPI_COMM_WORLD);
-		}
-		me=procsIds[0][0];
-		node=procsIds[0][1];
-	}else{
-		int data[2];
-		PMPI_Recv(&data, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, 0);
-		me=data[0];
-		node=data[1];
 	}
 
-	/////////////////////////////////////
-	//node = me/num_mpis;
-	//me = me % num_mpis;
-	/////////////////////////////////////
-#ifdef debugConfig
-	fprintf(stderr, "DLB: (%d:%d) - MPIs per node: %d\n", node, me, num_mpis);
-#endif	
+        int data[2];
+        PMPI_Scatter(procsIds, 2, MPI_INT, data, 2, MPI_INT, 0, MPI_COMM_WORLD);
+        _process_id = data[0];
+        _node_id    = data[1];
+
+        /********************************************
+         * _node_id    = _mpi_rank / _mpis_per_node;
+         * _process_id = _mpi_rank % _mpis_per_node;
+         ********************************************/
 
         // Color = node, key is 0 because we don't mind the internal rank
-        MPI_Comm_split( MPI_COMM_WORLD, node, 0, &mpi_comm_node );
-
-        // Globals
-        MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
-        _process_id = me;
-        _node_id = node;
-        _mpis_per_node = num_mpis;
+        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 
 /*        if ( nanos_get_pm ) {
            const char *pm = nanos_get_pm();
