@@ -121,11 +121,6 @@ then
 	rm ${trace_path}/set-0/TRACE*
 	rm -r ${ini_dir}/trace* 
 
-	if [ $policy != "ORIG" ]
-	then
-		$DLB_PATH/bin/adderDLB ${trace_path}/$script_name.pcf
-	fi
-
 fi
 
 

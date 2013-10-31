@@ -35,9 +35,11 @@
 /*************************************/
 
 #ifdef INSTRUMENTATION_VERSION
-void add_event( int type, int value );
+void add_event( unsigned type, long long value );
+void init_tracing( void );
 #else
 #define add_event(type, value)
+#define init_tracing()
 #endif
 
 

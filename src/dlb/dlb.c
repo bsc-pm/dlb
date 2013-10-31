@@ -275,6 +275,7 @@ void Init(){
 		clock_gettime(CLOCK_REALTIME, &initComp);
 	}*/
 
+        init_tracing();
 	lb_funcs.init();
 	ready=1;
         add_event(DLB_MODE_EVENT, EVENT_ENABLED);
