@@ -40,9 +40,6 @@ void shmem_init( void **shdata, size_t sm_size )
 
    key_t key;
 
-   MPI_Comm comm_node;
-   PMPI_Comm_split ( MPI_COMM_WORLD, _node_id, 0, &comm_node );
-
    if ( _process_id == 0 ) {
 
       debug_shmem ( "Start Master Comm - creating shared mem \n" );
@@ -67,14 +64,14 @@ void shmem_init( void **shdata, size_t sm_size )
          exit( 1 );
       }
 
-      PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, comm_node );
+      PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
 
       debug_shmem ( "Start Master Comm - shared mem created\n" );
 
    } else {
       debug_shmem ( "Slave Comm - associating to shared mem\n" );
 
-      PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, comm_node );
+      PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
 
       mutex = sem_open( SEM_NAME, 0, 0666, 0 );
       if ( mutex == SEM_FAILED ) {
