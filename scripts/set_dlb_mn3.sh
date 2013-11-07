@@ -117,7 +117,7 @@ if [ $tracing == "YES" ]
 then
 	export MPITRACE_ON=1
 	export EXTRAE_CONFIG_FILE=${conf_extrae}
-	export NX_ARGS+=" --instrumentation=extrae --extrae-skip-merge" 
+	export NX_ARGS+=" --instrumentation=extrae " 
 fi
 
 
