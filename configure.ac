@@ -1,5 +1,5 @@
 
-AC_INIT([DLB],[2.0],[pm-tools@bsc.es])
+AC_INIT([DLB],[0.1],[pm-tools@bsc.es])
 AC_CONFIG_SRCDIR([src/dlb/dlb.c])
 
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])

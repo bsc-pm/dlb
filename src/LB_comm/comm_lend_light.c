@@ -19,6 +19,7 @@
 
 #include <comm.h>
 #include "support/tracing.h"
+#include "support/globals.h"
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -65,9 +66,6 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 	sm_size= sizeof(struct shdata);
 	//       idle cpus      
 
-	MPI_Comm comm_node;	
-	MPI_Comm_split (MPI_COMM_WORLD, nodeId, 0, &comm_node );
-
 
 	if (me==0){
 
@@ -100,7 +98,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
                 shdata->idleCpus = 0;
 		add_event(IDLE_CPUS_EVENT, 0);
 
-		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, comm_node);
+		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
 
 #ifdef debugSharedMem 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) Finished setting values to the shared mem\n", node, me);
@@ -110,7 +108,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 #ifdef debugSharedMem 
     	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
 #endif
-		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, comm_node);
+		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
 		key=k;
 		
 		shmid = shmget(key, sm_size, 0666);

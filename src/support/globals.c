@@ -18,6 +18,7 @@
 /*************************************************************************************/
 
 #include "utils.h"
+#include <mpi.h>
 
 int _mpi_rank;
 int _mpi_size;
@@ -30,3 +31,5 @@ bool _just_barrier = false;
 bool _aggressive_init = false;
 bool _priorize_locality = false;
 blocking_mode_t _blocking_mode = ONE_CPU;
+
+MPI_Comm _mpi_comm_node;

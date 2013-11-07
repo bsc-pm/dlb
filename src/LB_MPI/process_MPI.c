@@ -38,7 +38,6 @@ const char* nanos_get_pm(void) __attribute__( ( weak ) );
 int periodo; 
 static int mpi_ready = 0;
 static int is_iter;
-static MPI_Comm mpi_comm_node;
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -127,7 +126,7 @@ void after_init(void){
          ********************************************/
 
         // Color = node, key is 0 because we don't mind the internal rank
-        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
+        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &_mpi_comm_node );
 
 /*        if ( nanos_get_pm ) {
            const char *pm = nanos_get_pm();
@@ -210,4 +209,4 @@ void enable_mpi(void) { mpi_ready = 1; }
 
 void disable_mpi(void) { mpi_ready = 0; }
 
-void node_barrier(void) { if (mpi_ready) MPI_Barrier( mpi_comm_node ); }
+void node_barrier(void) { if (mpi_ready) MPI_Barrier( _mpi_comm_node ); }
