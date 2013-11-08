@@ -3,6 +3,15 @@
 #AM_CFLAGS = -I$(top_srcdir)/src @AM_CFLAGS@
 
 ###############################################################################
+# HELPER BINARY
+###############################################################################
+
+bin_PROGRAMS = dlb
+
+dlb_LDFLAGS =
+dlb_SOURCES = $(top_srcdir)/src/utils/dlb_info.c
+
+###############################################################################
 # THE LIBRARIES TO BUILD
 ###############################################################################
 
@@ -77,6 +86,8 @@ sources = \
 
 intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
 
+dummy_iface = $(top_srcdir)/src/dlb/DLB_dummy_interface.c
+
 # UNUSED
 #$(top_srcdir)/src/LB_policies/Lend_complex.c
 #$(top_srcdir)/src/LB_policies/Lend_cpu.c
@@ -116,7 +127,7 @@ libdlb_la_SOURCES = $(sources) $(intercept)
 libdlb_dummy_la_CPPFLAGS = $(PERFO_CPPFLAGS)
 libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS)
 libdlb_dummy_la_LDFLAGS = -avoid-version
-libdlb_dummy_la_SOURCES = dlb/DLB_dummy_interface.c
+libdlb_dummy_la_SOURCES = $(dummy_iface)
 
 if DEBUG_LIB
 libdlb_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
