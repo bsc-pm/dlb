@@ -259,13 +259,6 @@ void Init(){
         else if ( _blocking_mode == BLOCK )
            debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n" );
 
-        // FIXME: It could be printed from Nanos, mu_init is called twice now
-        cpu_set_t default_mask;
-        get_mask( &default_mask );
-        mu_init();
-        debug_basic_info ( "Default Mask: %s\n", mu_to_str(&default_mask) );
-        //
-
 /*	if (prof){
 		clock_gettime(CLOCK_REALTIME, &initAppl);
 		reset(&iterCpuTime);
