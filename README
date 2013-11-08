@@ -99,7 +99,6 @@ Will build all the libraries
 
 - OMP_NUM_THREADS: Number of cores available per node. I.e the maximum number of threads that can run in one node.
 
-
 ------------------------------------------------------------
 4 LOAD BALANCING POLICIES IMPLEMENTED
 ------------------------------------------------------------
