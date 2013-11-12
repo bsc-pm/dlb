@@ -17,6 +17,12 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef HAVE_MPI
+
 #include <stdio.h>
 #include <process_MPI.h>
 #include <mpi.h>
@@ -596,3 +602,5 @@ void DLB_MPI_Scan_leave (void){
 	
 	after_mpi(Scan);
 }
+
+#endif /* HAVE_MPI */

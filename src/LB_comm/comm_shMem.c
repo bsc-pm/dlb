@@ -17,6 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <comm.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -26,7 +30,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef HAVE_MPI
 #include <mpi.h>
+#endif
 
 int procs;
 int me;
@@ -132,14 +138,18 @@ void LoadCommConfig(int num_procs, int meId, int nodeId){
 			threads[i]=0;
 		}
 
+#ifdef HAVE_MPI
 		PMPI_Barrier(MPI_COMM_WORLD);
+#endif
 
 	}else{
 #ifdef debugSharedMem 
     	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
 #endif
 
+#ifdef HAVE_MPI
 		PMPI_Barrier(MPI_COMM_WORLD);
+#endif
 	
 		
 		shmid = shmget(key, sm_size, 0666);

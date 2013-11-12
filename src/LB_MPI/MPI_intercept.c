@@ -17,6 +17,12 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef HAVE_MPI
+
 #include <stdio.h>
 #include <mpi.h>
 #include <MPI_interface.h>
@@ -568,3 +574,4 @@ int MPI_Scan (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MP
 	return res;
 }
 
+#endif /* HAVE_MPI */
