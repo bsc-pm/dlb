@@ -11,7 +11,7 @@ test_generator="gens/mpi_omp-generator"
 #include <sched.h>
 #include <utmpx.h>
 #include <omp.h>
-#include "dlb/DLB_interface.h"
+#include "LB_core/DLB_interface.h"
 
 #define N 8192
 #define M 256

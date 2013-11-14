@@ -4,8 +4,8 @@ test_generator="gens/single-generator"
 </testinfo>*/
 
 #include <stdio.h>
-#include "dlb/dlb.h"
-#include "dlb/DLB_interface.h"
+#include "LB_core/DLB_kernel.h"
+#include "LB_core/DLB_interface.h"
 
 int main( int argc, char **argv )
 {
