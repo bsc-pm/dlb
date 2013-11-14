@@ -128,6 +128,7 @@ AC_CONFIG_FILES([ Makefile
                   scripts/Makefile
                   tests/Makefile
                   tests/gens/Makefile
+                  doc/Makefile
                ])
 
 
