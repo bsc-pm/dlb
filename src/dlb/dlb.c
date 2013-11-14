@@ -198,7 +198,7 @@ void Init(void){
 	}
 
 	debug_basic_info0 ( "DLB: Balancing policy: %s balancing\n", policy);
-	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _node_id);
+	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
 
 	if ((thread_distrib=getenv("LB_THREAD_DISTRIBUTION"))==NULL){
 		if ( nanos_get_pm ) {
