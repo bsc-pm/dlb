@@ -46,6 +46,26 @@ int MPI_Init (int *argc, char ***argv){
 	return res;
 }
 
+int MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
+{
+	#ifdef debugInOutMPI
+	fprintf(stderr," >> MPI_Init_thread........\n");
+	#endif
+
+	int res;
+	DLB_MPI_Init_enter (argc, argv);
+	res=PMPI_Init_thread(argc, argv, required, provided);
+	DLB_MPI_Init_leave ();
+
+	MPI_Comm_rank(MPI_COMM_WORLD,&whoami);
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Init_thread........\n",whoami);
+	#endif
+
+	return res;
+}
+
 int MPI_Finalize (void){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Finalize...............\n",whoami);
