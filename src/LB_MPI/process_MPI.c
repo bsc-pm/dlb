@@ -128,21 +128,6 @@ void after_init(void){
         // Color = node, key is 0 because we don't mind the internal rank
         MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &_mpi_comm_node );
 
-/*        if ( nanos_get_pm ) {
-           const char *pm = nanos_get_pm();
-           if ( strcmp( pm, "OpenMP" ) == 0 ) {
-              _default_nthreads = nanos_omp_get_max_threads();
-           }
-           else if ( strcmp( pm, "OmpSs" ) == 0 ) {
-              _default_nthreads = nanos_omp_get_num_threads();
-           }
-           else
-              fatal( "Unknown Programming Model\n" );
-        }
-        else {
-           _default_nthreads = omp_get_max_threads();
-        }*/
-
 	Init();
 	mpi_ready=1;	
 	add_event(RUNTIME_EVENT, 0);

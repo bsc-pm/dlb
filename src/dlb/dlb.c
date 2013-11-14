@@ -208,10 +208,13 @@ void Init(void){
 			}else if ( strcmp( pm, "OmpSs" ) == 0 ) {
 				_default_nthreads = nanos_omp_get_num_threads();
 			}else{
-				fatal( "Unknown Programming Model\n" );
+				fatal0( "Unknown Programming Model\n" );
 			}
 		}else{
-			_default_nthreads = omp_get_max_threads();
+			if ( omp_get_max_threads )
+				_default_nthreads = omp_get_max_threads();
+			else
+				_default_nthreads = 1;
 		}
 
 		debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
@@ -226,7 +229,7 @@ void Init(void){
 		}
 			
 		if (i!=_process_id){
-			warning ("Error parsing the LB_THREAD_DISTRIBUTION (%s), using default\n");
+			warning0 ("Error parsing the LB_THREAD_DISTRIBUTION (%s), using default\n");
 				if ( nanos_get_pm ) {
         	                const char *pm = nanos_get_pm();
                 	        if ( strcmp( pm, "OpenMP" ) == 0 ) {
@@ -234,17 +237,20 @@ void Init(void){
 	                        }else if ( strcmp( pm, "OmpSs" ) == 0 ) {
         	                        _default_nthreads = nanos_omp_get_num_threads();
                 	        }else{
-                        	        fatal( "Unknown Programming Model\n" );
+					fatal0( "Unknown Programming Model\n" );
 	                        }
         	        }else{
-                	        _default_nthreads = omp_get_max_threads();
+				if ( omp_get_max_threads )
+					_default_nthreads = omp_get_max_threads();
+				else
+					_default_nthreads = 1;
                 	}
 
                 	debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
 
 		}else{
 			_default_nthreads=atoi(token);
-			debug_basic_info ( "DLB: I start with %d threads\n", _default_nthreads);
+			debug_basic_info0 ( "DLB: I start with %d threads\n", _default_nthreads);
 		}
 	}
 
