@@ -9,7 +9,7 @@
 bin_PROGRAMS = dlb
 
 dlb_LDFLAGS =
-dlb_SOURCES = $(top_srcdir)/src/utils/dlb_info.c
+dlb_SOURCES = $(top_srcdir)/src/utils/dlb.c
 
 ###############################################################################
 # THE LIBRARIES TO BUILD
@@ -27,7 +27,7 @@ lib_LTLIBRARIES += libdlb_instr_dbg.la
 endif
 
 
-include_HEADERS = $(top_srcdir)/src/dlb/DLB_interface.h \
+include_HEADERS = $(top_srcdir)/src/LB_core/DLB_interface.h \
                   $(top_srcdir)/src/LB_MPI/MPI_interface.h
 
 END =
@@ -66,10 +66,10 @@ sources = \
 	  $(top_srcdir)/src/LB_MPI/MPI_interface.h     	\
 	  $(top_srcdir)/src/LB_MPI/process_MPI.c       	\
 	  $(top_srcdir)/src/LB_MPI/process_MPI.h       	\
-	  $(top_srcdir)/src/dlb/dlb.c       		\
-	  $(top_srcdir)/src/dlb/dlb.h       		\
-	  $(top_srcdir)/src/dlb/DLB_interface.c 	\
-	  $(top_srcdir)/src/dlb/DLB_interface.h 	\
+	  $(top_srcdir)/src/LB_core/DLB_kernel.c       	\
+	  $(top_srcdir)/src/LB_core/DLB_kernel.h       	\
+	  $(top_srcdir)/src/LB_core/DLB_interface.c 	\
+	  $(top_srcdir)/src/LB_core/DLB_interface.h 	\
 	  $(top_srcdir)/src/support/globals.c       	\
 	  $(top_srcdir)/src/support/globals.h       	\
 	  $(top_srcdir)/src/support/debug.c         	\
@@ -86,7 +86,7 @@ sources = \
 
 intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
 
-dummy_iface = $(top_srcdir)/src/dlb/DLB_dummy_interface.c
+dummy_iface = $(top_srcdir)/src/LB_core/DLB_dummy_interface.c
 
 # UNUSED
 #$(top_srcdir)/src/LB_policies/Lend_complex.c
@@ -104,7 +104,7 @@ includes = \
          -I$(top_srcdir)/src/LB_policies              	\
          -I$(top_srcdir)/src/LB_MPI                   	\
          -I$(top_srcdir)/src/LB_comm                 	\
-         -I$(top_srcdir)/src/dlb               		\
+         -I$(top_srcdir)/src/LB_core               	\
          -I$(top_srcdir)/src/support               	\
          $(END)
 

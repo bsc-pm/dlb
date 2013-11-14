@@ -18,8 +18,8 @@
 /*************************************************************************************/
 
 #include <limits.h>
-#include "dlb/DLB_interface.h"
-#include "dlb/dlb.h"
+#include "LB_core/DLB_interface.h"
+#include "LB_core/DLB_kernel.h"
 #include "LB_MPI/process_MPI.h"
 #include "support/utils.h"
 #include "support/tracing.h"

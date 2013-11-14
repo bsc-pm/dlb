@@ -17,8 +17,8 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef DLB_H
-#define DLB_H
+#ifndef DLB_KERNEL_H
+#define DLB_KERNEL_H
 
 typedef struct{
 	void (*init) (void);
@@ -54,4 +54,4 @@ void updateresources( int max_resources );
 void returnclaimed( void );
 
 int tracing_ready();
-#endif //DLB_H
+#endif //DLB_KERNEL_H

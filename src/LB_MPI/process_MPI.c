@@ -18,7 +18,7 @@
 /*************************************************************************************/
 
 #include <stdio.h>
-#include "dlb/dlb.h"
+#include "LB_core/DLB_kernel.h"
 #include "support/tracing.h"
 #include <MPI_calls_coded.h>
 #include <DPD/DPD.h>

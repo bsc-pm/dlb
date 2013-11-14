@@ -28,7 +28,7 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "dlb.h"
+#include "DLB_kernel.h"
 
 #include <LB_policies/Lend_light.h>
 #include <LB_policies/Weight.h>
