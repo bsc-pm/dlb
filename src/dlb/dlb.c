@@ -74,7 +74,7 @@ int use_dpd;
 
 static void dummyFunc(){}
 
-void Init(){
+void Init(void){
 	//Read Environment vars
 	char* policy;
 

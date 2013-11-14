@@ -8,6 +8,6 @@ test_generator="gens/single-generator"
 
 int main( int argc, char **argv )
 {
-   Init( 0, 1, 0 );
+   Init();
    return 0;
 }

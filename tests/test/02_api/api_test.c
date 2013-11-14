@@ -9,7 +9,7 @@ test_generator="gens/single-generator"
 
 int main( int argc, char **argv )
 {
-   Init( 0, 1, 0 );
+   Init();
    DLB_disable();
    DLB_enable();
    DLB_UpdateResources();
