@@ -12,7 +12,7 @@ PERFO_CXXFLAGS=@PERFO_CXXFLAGS@
 DEBUG_CFLAGS=@DEBUG_CFLAGS@
 DEBUG_CXXFLAGS=@DEBUG_CXXFLAGS@
 
-common_includes="-I\$SRC -I\$SRC/LB_numThreads -I\$SRC/LB_policies -I\$SRC/LB_MPI -I\$SRC/LB_comm -I\$SRC/dlb -I\$SRC/support"
+common_includes="-I\$SRC -I\$SRC/LB_numThreads -I\$SRC/LB_policies -I\$SRC/LB_MPI -I\$SRC/LB_comm -I\$SRC/LB_core -I\$SRC/support"
 
 compile_versions=@COMPILE_VERSIONS@
 
