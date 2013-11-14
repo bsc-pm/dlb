@@ -43,18 +43,19 @@ DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) )
 {
-	//no iter, single
-   add_event(DLB_MODE_EVENT, EVENT_SINGLE);
-   IntoBlockingCall(0, 1);
-   //FIXME Do we really want to disable DLB?
-   DLB_disable();
+   if ( dlb_enabled ) {
+      add_event(DLB_MODE_EVENT, EVENT_SINGLE);
+      //no iter, single
+      IntoBlockingCall(0, 1);
+   }
 }
 
 DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) )
 {
-   add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-   DLB_enable();
-   OutOfBlockingCall(0);
+   if ( dlb_enabled ) {
+      add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+      OutOfBlockingCall(0);
+   }
 }
 
 DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) )
