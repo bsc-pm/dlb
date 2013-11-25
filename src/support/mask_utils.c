@@ -17,6 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #define _GNU_SOURCE
 #include <sched.h>
 #include <stdio.h>
@@ -29,7 +33,7 @@
 #include "support/utils.h"
 #include "support/mask_utils.h"
 
-#ifdef USE_HWLOC
+#ifdef HAVE_HWLOC
 #include <hwloc.h>
 #include <hwloc/bitmap.h>
 #include <hwloc/glibc-sched.h>
@@ -44,7 +48,7 @@ typedef struct {
 
 static mu_system_loc_t sys;
 
-#ifdef USE_HWLOC
+#ifdef HAVE_HWLOC
 static void parse_hwloc( void )
 {
    hwloc_topology_t topology;
@@ -128,14 +132,14 @@ static void parse_lscpu( void )
    free( line );
    pclose( pipe );
 }
-#endif /* USE_HWLOC */
+#endif /* HAVE_HWLOC */
 
 void mu_init( void )
 {
    sys.num_parents = 0;
    sys.parents = NULL;
 
-#ifdef USE_HWLOC
+#ifdef HAVE_HWLOC
    parse_hwloc();
 #else
    parse_lscpu();

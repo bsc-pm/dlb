@@ -17,11 +17,18 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <mpi.h>
 #include "globals.h"
+
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif
 
 void fatal0 ( const char *fmt, ... )
 {
@@ -32,7 +39,9 @@ void fatal0 ( const char *fmt, ... )
       vfprintf( stderr, fmt, args );
       va_end( args );
    }
+#ifdef HAVE_MPI
    PMPI_Abort ( MPI_COMM_WORLD, 1 );
+#endif
 }
 
 void fatal ( const char *fmt, ... )
@@ -42,7 +51,9 @@ void fatal ( const char *fmt, ... )
    fprintf( stderr, "DLB PANIC[%d]: ", _mpi_rank );
    vfprintf( stderr, fmt, args );
    va_end( args );
+#ifdef HAVE_MPI
    PMPI_Abort ( MPI_COMM_WORLD, 1 );
+#endif
 }
 
 void warning0 ( const char *fmt, ... )

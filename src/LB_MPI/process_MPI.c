@@ -17,6 +17,12 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef HAVE_MPI
+
 #include <stdio.h>
 #include "LB_core/DLB_kernel.h"
 #include "support/tracing.h"
@@ -195,3 +201,5 @@ void enable_mpi(void) { mpi_ready = 1; }
 void disable_mpi(void) { mpi_ready = 0; }
 
 void node_barrier(void) { if (mpi_ready) MPI_Barrier( _mpi_comm_node ); }
+
+#endif /* HAVE_MPI */

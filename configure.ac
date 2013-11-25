@@ -64,45 +64,14 @@ AC_LANG([C])
 # check for OpenMP availability
 AC_OPENMP
 
-# check for MPI path
-AC_ARG_WITH([mpi],
-   AS_HELP_STRING([--with-mpi=dir], [Directory of MPI installation]),
-   [
-      mpi=yes
-      MPI_HOME="$withval"
-   ],
-   [
-      AC_CHECK_HEADERS([mpi.h], [mpi=yes], [mpi=no])
-   ]
-)
-AC_ARG_WITH([mpi_mt],
-   AS_HELP_STRING([--with-mpi_mt=dir], [Directory of MPI installation (Threaded version)]),
-   [
-      mpi=yes
-      mpi_mt=yes
-      MPI_HOME="$withval"
-   ]
-)
-AC_ARG_WITH([mpich],
-   AS_HELP_STRING([--with-mpich=dir], [Directory of MPICH installation]),
-   [
-      mpi=yes
-      mpich=yes
-      MPI_HOME="$withval"
-   ]
-)
+# check for MPI
+AX_PROG_MPI
 
-# check for HWLOC path
-AC_ARG_WITH([hwloc],
-   AS_HELP_STRING([--with-hwloc=dir], [Directory of HWLOC installation]),
-   [
-      hwloc=yes
-      HWLOC_HOME="$withval"
-   ],
-   [
-      AC_CHECK_HEADERS([hwloc.h], [hwloc=yes], [hwloc=no])
-   ]
-)
+# check for HWLOC
+AX_PROG_HWLOC
+
+# check for LSCPU
+AX_PROG_LSCPU
 
 # check for number of cpus on node
 AC_ARG_WITH([cpus-per-node],
@@ -117,10 +86,6 @@ AC_ARG_WITH([cpus-per-node],
 NCPUS="$ncpus"
 AC_SUBST([NCPUS])
 
-# Checks for header files.
-#AC_HEADER_STDC
-#AC_CHECK_HEADERS([string])
-#AC_CHECK_HEADERS([iostream])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -189,37 +154,20 @@ AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 
 ##########################################################################
-# EXTERNAL LIBS CHECK
-##########################################################################
-
-if test x"$mpi" = x"no"; then
-    AC_MSG_ERROR([mpi.h was not found. MPI headers are mandatory. You can use --with-mpi=dir option to set the MPI location or you can manually add an include directory in CPPFLAGS])
-else
-    if test x"$mpich" = x"yes"; then
-        MPI_LIBS=-lmpich
-    else
-        if test x"$mpi_mt" = x"yes"; then
-            MPI_LIBS=-lmpi_mt
-        else
-            MPI_LIBS=-lmpi
-        fi
-    fi
-fi
-
-AM_CONDITIONAL([MPI_SUPPORT], [test x"$mpi" = x"yes"])
-AC_SUBST([MPI_HOME])
-AC_SUBST([MPI_LIBS])
-AM_CONDITIONAL([HWLOC_SUPPORT], [test x"$hwloc" = x"yes"])
-AC_SUBST([HWLOC_HOME])
-
-AC_CHECK_PROG([lscpu], [lscpu], [yes], [no])
-if test x"$lscpu" = x"no"; then
-   if test x"$hwloc" = x"no"; then
-      AC_MSG_ERROR([neither lscpu nor hwloc were found, one of them is mandatory])
-   fi
-fi
-
-##########################################################################
 
 # generate the final Makefile etc.
 AC_OUTPUT
+
+# Summary
+echo ""
+echo "$PACKAGE_STRING configuration summary"
+echo "============================="
+echo ""
+echo " Installation prefix       : $prefix"
+echo " Debug version             : $debug"
+echo " Instrumentation version   : $instrumentation"
+echo " Instr + debug version     : $instrumentation_debug"
+echo ""
+echo " Extra Packages:"
+AX_SHOW_CONFIGURATION([MPI])
+AX_SHOW_CONFIGURATION([HWLOC])

@@ -17,6 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <fcntl.h>
 #include <semaphore.h>
 #include <sys/shm.h>
@@ -24,7 +28,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+
+#ifdef HAVE_MPI
 #include <mpi.h>
+#endif
 
 #include "support/debug.h"
 #include "support/globals.h"
@@ -64,14 +71,18 @@ void shmem_init( void **shdata, size_t sm_size )
          exit( 1 );
       }
 
+#ifdef HAVE_MPI
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
+#endif
 
       debug_shmem ( "Start Master Comm - shared mem created\n" );
 
    } else {
       debug_shmem ( "Slave Comm - associating to shared mem\n" );
 
+#ifdef HAVE_MPI
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
+#endif
 
       mutex = sem_open( SEM_NAME, 0, 0666, 0 );
       if ( mutex == SEM_FAILED ) {

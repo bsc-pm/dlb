@@ -17,6 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */                                                                                                                                                                          
 
 #include <comm.h>
@@ -36,7 +40,10 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <errno.h>
+
+#ifdef HAVE_MPI
 #include <mpi.h>
+#endif
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
@@ -147,7 +154,9 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 
 		//add_event(IDLE_CPUS_EVENT, 0);
 
+#ifdef HAVE_MPI
 		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
+#endif
 
 #ifdef debugSharedMem 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) Finished setting values to the shared mem\n", node, me);
@@ -157,7 +166,9 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 #ifdef debugSharedMem 
     	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
 #endif
+#ifdef HAVE_MPI
 		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
+#endif
 		key=k;
 		
 		shmid = shmget(key, sm_size, 0666);
