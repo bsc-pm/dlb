@@ -114,6 +114,8 @@ AC_ARG_WITH([cpus-per-node],
       ncpus=$(nproc) || ncpus=1
    ]
 )
+NCPUS="$ncpus"
+AC_SUBST([NCPUS])
 
 # Checks for header files.
 #AC_HEADER_STDC

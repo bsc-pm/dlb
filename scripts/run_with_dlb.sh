@@ -7,17 +7,18 @@ POLICY=LeWI_mask
 TRACING=NO
 MPI_WAIT_MODE=BLOCK
 THREAD_DISTRIB=NO
-CPUS_NODE=16   # --> FIXME parametrize from configure 
+CPUS_NODE=16
 SHOW=NO
 KEEP=NO
 EXTRAE_CFG=$EXTRAE_CONFIG_FILE
 DEBUG=NO
+AGGRESSIVE_INIT=YES
 
 
 ### PATHS ###
-DLB_PATH=/home/bsc15/bsc15994/MN3/dlb/install/lib  # --> FIXME parametrize from configure 
+DLB_PATH="/home/bsc15/bsc15994/MN3/dlb/install/lib"
 SMPSS_PATH=/home/bsc15/bsc15994/SMPSs-install${bits}/lib  # --> FIXME parametrize from configure 
-TRACE_PATH=/home/bsc15/bsc15994/MN3/extrae/lib  # --> FIXME parametrize from configure 
+TRACE_PATH=${EXTRAE_HOME}  
 
 ##################
 ### Print Help ###
@@ -28,6 +29,8 @@ function help
    echo "Syntax: $SC [OPTIONS] -- APP [APP_ARGS]"
    echo ""
    echo "OPTIONS:"
+   echo "  --aggressive-init"
+   echo "  --no-aggressive-init     : Enable/Disable creation of all threads at start time [Default = $AGGRESSIVE_INIT]"
    echo "  --debug                  : Use debug version of DLB [Default = $DEBUG]"
    echo "  --extrae-cfg x           : Use this extrae config file for tracing [Default EXTRAE_CONFIG_FILE env var = $EXTRAE_CONFIG_FILE]"
    echo "  --flavor x               : Application progamming model [Default = $FLAVOR]"
@@ -53,6 +56,7 @@ function help
    echo "         NO                   : Use homogeneous thread distribution among MPI processes"
    echo "         x-y-z-w              : Numbers separated by '-'. First MPI x threads, second MPI y threads..."
    echo "  --tracing                : Trace application using Extrae [Default = $TRACING]"
+   echo "  --trace-lib              : Trace application using this Extrae instalation [Default = $TRACE_PATH]"
    echo ""
    echo " Following environment variables are honored:"
    echo "      EXTRAE_HOME=$EXTRAE_HOME"
@@ -112,6 +116,17 @@ while [ "$1" != "--" ]; do
          MPIS_NODE=$2
          shift;
          ;;
+      --aggressive-init)
+         AGGRESSIVE_INIT=YES
+         ;;
+      --no-aggressive-init)
+         AGGRESSIVE_INIT=NO
+         ;;
+      --trace-lib)
+         TRACING=YES 
+         EXTRAE_HOME=$2
+         shift;
+         ;;
    *)
       echo "$0: Not valid argument [$1]";
       help
@@ -126,7 +141,7 @@ shift
 APP_ARGS=$@
 
 
-SCRIPT=dlb_script.sh
+SCRIPT=dlb_script_$$.sh
 echo "#!/bin/bash" > $SCRIPT
 
 
@@ -178,7 +193,7 @@ then
    echo "export OMPI_MCA_mpi_yield_when_idle=1 #OpenMPI" >> $SCRIPT
    
    ### Intel MPI ###
-   echo "export I_MPI_MPI_WAIT_MODE=1 #Intel MPI" >> $SCRIPT
+   echo "export I_MPI_WAIT_MODE=1 #Intel MPI" >> $SCRIPT
 
    echo "" >> $SCRIPT
    echo "# DLB env vars" >> $SCRIPT
@@ -203,6 +218,8 @@ fi
 echo "export LB_POLICY=$POLICY" >> $SCRIPT
 echo "[Set DLB]: Using $POLICY policy"
 
+echo "export LB_AGGRESSIVE_INIT=$AGGRESSIVE_INIT" >> $SCRIPT
+echo "[Set DLB]: Using aggressive init = $AGGRESSIVE_INIT "
 
 ###########################
 ### Thread distribution ###
@@ -211,6 +228,8 @@ echo "[Set DLB]: Using $POLICY policy"
 if [ $THREAD_DISTRIB != "NO" ]
 then
    echo "export LB_THREAD_DISTRIBUTION=$THREAD_DISTRIB" >> $SCRIPT
+   echo "[Set DLB]: Using thread distribution = $THREAD_DISTRIB "
+
 fi
 
 
@@ -220,6 +239,11 @@ fi
 
 if [ "$TRACING" == "YES" ]
 then
+   if [ ! -d ${TRACE_PATH} ]
+   then
+      echo "[Set DLB]: ERROR: Extrae tracing path does not exist: ${TRACE_PATH}"
+      exit -1
+   fi
    echo "[Set DLB]: Using extrae tracing"
    echo "" >> $SCRIPT
    echo "# Extrae env vars" >> $SCRIPT
@@ -263,12 +287,15 @@ then
    
 fi
 
-if [[ ( "$FLAVOR" == "SMPSs" || "$FLAVOR" == "OMP" ) &&  "$MPIS_NODE" == "" ]]
+if [[ ( "$FLAVOR" == "SMPSs" || "$FLAVOR" == "OMP" ) && "$MPIS_NODE" == "" ]]
 then
    echo "[Set DLB]: ERROR: --num-mpis-node is a mandatory flag when using flavor $FLAVOR"
    exit -1
 else
-   CPUS_PROC=$(($CPUS_NODE/$MPIS_NODE))
+   if [[ "$MPIS_NODE" != "" ]]
+   then
+      CPUS_PROC=$(($CPUS_NODE/$MPIS_NODE))
+   fi
 fi
 
 ######################
@@ -311,7 +338,7 @@ if [ "$POLICY" == "ORIG" ]
 then
    if [ "$TRACING" == "YES" ]
    then
-      EXTRAE_LIB=${TRACE_PATH}/${EXTRAE_LIB}.so
+      EXTRAE_LIB=${TRACE_PATH}/lib/${EXTRAE_LIB}.so
       if [ -f $EXTRAE_LIB ]
       then
          echo "export LD_PRELOAD=${EXTRAE_LIB}" >> $SCRIPT
@@ -324,7 +351,7 @@ else
 
    if [ "$TRACING" == "YES" ]
    then
-      EXTRAE_LIB=${TRACE_PATH}/${EXTRAE_LIB}-lb.so
+      EXTRAE_LIB=${TRACE_PATH}/lib/${EXTRAE_LIB}-lb.so
       if [ -f $EXTRAE_LIB ]
       then
          if [ "$DEBUG" == "YES" ]
@@ -369,15 +396,4 @@ if [ "$KEEP" != "YES" ]
 then
    rm -f $SCRIPT
 fi
-
-
-   
-#================================================================================================================================================
-#================================================================================================================================================
-#================================================================================================================================================
-#================================================================================================================================================
-
-
-
-
 
