@@ -13,6 +13,7 @@ KEEP=NO
 EXTRAE_CFG=$EXTRAE_CONFIG_FILE
 DEBUG=NO
 AGGRESSIVE_INIT=YES
+JUST_BARRIER=NO
 
 
 ### PATHS ###
@@ -39,6 +40,7 @@ function help
    echo "         OMP                  : OMP application, not in Nanos runtime"
    echo "         OMP-NANOS            : OMP application in Nanos runtime"
    echo "         SMPSS                : SMPSs application"
+   echo "  --just-barrier           : Only lend cpus when in an MPI_Barrier, ignore other MPI calls [Default = $JUST_BARRIER]"
    echo "  --keep                   : Keep generated script [Default = $KEEP]"
    echo "  --mpi-wait-mode x        : MPI wwait mode when in a MPI blocking call [Default = $MPI_WAIT_MODE]"
    echo "         BLOCK                : Blocking wait mode, not consuimg cpu"
@@ -126,6 +128,9 @@ while [ "$1" != "--" ]; do
          TRACING=YES 
          EXTRAE_HOME=$2
          shift;
+         ;;
+      --just-barrier)
+         JUST_BARRIER=YES
          ;;
    *)
       echo "$0: Not valid argument [$1]";
@@ -220,6 +225,9 @@ echo "[Set DLB]: Using $POLICY policy"
 
 echo "export LB_AGGRESSIVE_INIT=$AGGRESSIVE_INIT" >> $SCRIPT
 echo "[Set DLB]: Using aggressive init = $AGGRESSIVE_INIT "
+
+echo "export LB_JUST_BARRIER=$JUST_BARRIER" >> $SCRIPT
+echo "[Set DLB]: Using just barrier = $JUST_BARRIER "
 
 ###########################
 ### Thread distribution ###
