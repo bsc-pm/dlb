@@ -44,6 +44,19 @@ Support for:
 1 INTRODUCTION
 ------------------------------------------------------------
 
+DLB is a dynamic library designed to speed up hybrid applications with nested parallelism by improving the load balance inside each computational node.
+
+In general DLB will redistribute the computational resources of the second level of parallelism to improve the load balance of the outer level of parallelism.
+
+There are different load balancing algorithms implemented within DLB. They all relay on this main idea but they target different types of applications or situations.
+
+The DLB library uses an interposition technique during runtime, therefor in most of the cases it is not necessary to analyze previously the application, modify it or recompile.
+
+The current version of DLB supports the following programming models:
+
+* MPI + OpenMP
+* MPI + OMPSs
+* MPI + SMPSs (not maintained)
 
 
 ------------------------------------------------------------
@@ -73,8 +86,10 @@ Support for:
 
       $ ./configure --prefix=<<instalation-path>> <<configure-flags>>
 
-      The most important flags are the following:
-         -
+         The most relevant flags in the configure:                                                                                                                                                                                            
+            --prefix
+            --with-mpi[=DIR]        specify where to find MPI libraries and includes [Mandatory]
+            --with-cpus-per-node=N  Number of cpus per node [Optional]
 
    4 Build and install 
 
