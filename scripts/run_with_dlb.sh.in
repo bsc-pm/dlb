@@ -275,7 +275,7 @@ if [ "$FLAVOR" == "OMPSS" -o "$FLAVOR" == "OMP-NANOS" ]
 then
    if [ "$POLICY" == "LeWI" ]
    then
-      NANOS= " --disable-binding"
+      NANOS+=" --disable-binding"
       ###--instrument-cpuid"
    fi
 
