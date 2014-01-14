@@ -100,6 +100,7 @@ void Weight_OutOfBlockingCall(int is_iter){
        	 		MPISecs=to_secs(iterMPITime);
 
 			ProcMetrics pm;
+			pm.action=0;
 			pm.secsComp=cpuSecs;
 			pm.secsMPI=MPISecs;
 			pm.cpus=threadsUsed;

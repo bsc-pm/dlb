@@ -119,7 +119,7 @@ void setThreads_Map(int numThreads, int action, int* cpus){
 		fprintf(stderr,"DLB DEBUG: (%d:%d) - I have %d cpus I'm going to use %d cpus\n", _node_id, _process_id, myCPUS, numThreads);
 #endif
 		add_event(THREADS_USED_EVENT, numThreads);
-		int num_cpus;
+		int num_cpus=1;
 
 		if (action==1) num_cpus=numThreads-myCPUS;
 		if (action==2) num_cpus=myCPUS-numThreads;

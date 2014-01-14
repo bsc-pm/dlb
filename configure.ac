@@ -84,11 +84,10 @@ AC_ARG_WITH([cpus-per-node],
       ncpus="$withval"
    ],
    [
-      ncpus=$(nproc) || ncpus=1
+      ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
    ]
 )
-NCPUS="$ncpus"
-AC_SUBST([NCPUS])
+AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
 
 
 AC_CONFIG_HEADERS([config.h])
@@ -136,17 +135,20 @@ AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
 AM_CONDITIONAL([INSTRUMENTATION_LIB], [test x"$instrumentation" = x"yes"])
 AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test x"$instrumentation_debug" = x"yes"])
 
-PERFO_CFLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-PERFO_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo"
+WARNING_FLAGS="-Wall -Werror -Wno-error=unknown-pragmas"
+DEBUG_VERBOSITY="-DdebugBlockingMPI -DdebugLend -DdebugSharedMem"
 
-DEBUG_CFLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugBlockingMPI -DdebugLend -DdebugSharedMem -DDEBUG_VERSION"
+PERFO_CFLAGS="-g -O3 $WARNING_FLAGS"
+PERFO_CPPFLAGS="-DdebugBasicInfo"
 
-INSTR_CFLAGS="-g -O3 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-INSTR_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DINSTRUMENTATION_VERSION"
+DEBUG_CFLAGS="-g -O0 $WARNING_FLAGS"
+DEBUG_CPPFLAGS="-DdebugBasicInfo $DEBUG_VERBOSITY -DDEBUG_VERSION"
 
-INSTR_DEBUG_CFLAGS="-g -O0 -Wall -Werror -Wno-error=unknown-pragmas -Wno-uninitialized"
-INSTR_DEBUG_CPPFLAGS="-DCPUS_NODE=$ncpus -DdebugBasicInfo -DdebugBlockingMPI -DdebugLend -DdebugSharedMem -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
+INSTR_CFLAGS="-g -O3 $WARNING_FLAGS"
+INSTR_CPPFLAGS="-DdebugBasicInfo -DINSTRUMENTATION_VERSION"
+
+INSTR_DEBUG_CFLAGS="-g -O0 $WARNING_FLAGS"
+INSTR_DEBUG_CPPFLAGS="-DdebugBasicInfo $DEBUG_VERBOSITY -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
 AC_SUBST([PERFO_CFLAGS])
 AC_SUBST([PERFO_CPPFLAGS])
