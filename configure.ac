@@ -135,7 +135,8 @@ AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
 AM_CONDITIONAL([INSTRUMENTATION_LIB], [test x"$instrumentation" = x"yes"])
 AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test x"$instrumentation_debug" = x"yes"])
 
-WARNING_FLAGS="-Wall -Werror -Wno-error=unknown-pragmas"
+AX_GCC_VERSION_CHECK
+WARNING_FLAGS="-Wall -Werror -Wno-error=unknown-pragmas $ax_cv_gcc_version_warnings"
 DEBUG_VERBOSITY="-DdebugBlockingMPI -DdebugLend -DdebugSharedMem"
 
 PERFO_CFLAGS="-g -O3 $WARNING_FLAGS"
