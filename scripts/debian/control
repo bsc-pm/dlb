@@ -1,0 +1,13 @@
+# Tutorial: http://wiki.debian.org/IntroDebianPackaging
+# Interesting stuff: http://honk.sigxcpu.org/projects/git-buildpackage/manual-html/gbp.releases.html
+Source: dlb
+Maintainer: The DLB developers <pm-tools@bsc.es>
+Section: devel
+Priority: optional
+Standards-Version: 3.9.3
+Build-Depends: debhelper (>= 9)
+
+Package: dlb
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: DLB Dynamic Load Balancing
