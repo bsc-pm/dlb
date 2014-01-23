@@ -35,6 +35,7 @@
 #include <LB_policies/JustProf.h>
 #include <LB_policies/Lewi_map.h>
 #include <LB_policies/lewi_mask.h>
+#include <LB_policies/autonomous_lewi_mask.h>
 #include <LB_policies/RaL.h>
 #include <LB_policies/PERaL.h>
 
@@ -73,6 +74,7 @@ BalancePolicy lb_funcs;
 int use_dpd;
 
 static void dummyFunc(){}
+static int false_dummyFunc(){return 0;}
 
 void Init(void){
 	//Read Environment vars
@@ -110,6 +112,8 @@ void Init(void){
 		lb_funcs.outOfBlockingCall = &Lend_light_OutOfBlockingCall;
 		lb_funcs.updateresources = &Lend_light_updateresources;
 		lb_funcs.returnclaimed = &dummyFunc;
+		lb_funcs.releasecpu = &false_dummyFunc;
+                lb_funcs.claimcpus = &dummyFunc;
 
 	}else if (strcasecmp(policy, "Map")==0){
 #ifdef debugConfig
@@ -124,6 +128,8 @@ void Init(void){
 		lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
 		lb_funcs.updateresources = &Map_updateresources;
 		lb_funcs.returnclaimed = &dummyFunc;
+		lb_funcs.releasecpu = &false_dummyFunc;
+                lb_funcs.claimcpus = &dummyFunc;
 
 	}else if (strcasecmp(policy, "WEIGHT")==0){
 #ifdef debugConfig
@@ -139,6 +145,8 @@ void Init(void){
 		lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
 		lb_funcs.updateresources = &Weight_updateresources;
 		lb_funcs.returnclaimed = &dummyFunc;
+		lb_funcs.releasecpu = &false_dummyFunc;
+                lb_funcs.claimcpus = &dummyFunc;
 
 	}else if (strcasecmp(policy, "LeWI_mask")==0){
 #ifdef debugConfig
@@ -152,6 +160,23 @@ void Init(void){
 		lb_funcs.outOfBlockingCall = &lewi_mask_OutOfBlockingCall;
 		lb_funcs.updateresources = &lewi_mask_UpdateResources;
 		lb_funcs.returnclaimed = &lewi_mask_ReturnClaimedCpus;
+		lb_funcs.releasecpu = &false_dummyFunc;
+                lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
+
+	}else if (strcasecmp(policy, "auto_LeWI_mask")==0){
+#ifdef debugConfig
+		fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Autonomous LeWI mask\n", _node_id, _process_id);
+#endif
+		lb_funcs.init = &auto_lewi_mask_Init;
+		lb_funcs.finish = &auto_lewi_mask_Finish;
+		lb_funcs.intoCommunication = &auto_lewi_mask_IntoCommunication;
+		lb_funcs.outOfCommunication = &auto_lewi_mask_OutOfCommunication;
+		lb_funcs.intoBlockingCall = &auto_lewi_mask_IntoBlockingCall;
+		lb_funcs.outOfBlockingCall = &auto_lewi_mask_OutOfBlockingCall;
+		lb_funcs.updateresources = &auto_lewi_mask_UpdateResources;
+		lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
+		lb_funcs.releasecpu = &auto_lewi_mask_ReleaseCpu;
+                lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
 
 	}else if (strcasecmp(policy, "RaL")==0){
 #ifdef debugConfig
@@ -178,6 +203,9 @@ void Init(void){
 			lb_funcs.updateresources = &RaL_UpdateResources;
 			lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
 		}
+
+		lb_funcs.releasecpu = &false_dummyFunc;
+                lb_funcs.claimcpus = &dummyFunc;
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
 		fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", _node_id,  _process_id);
@@ -192,6 +220,8 @@ void Init(void){
 		lb_funcs.outOfBlockingCall = &JustProf_OutOfBlockingCall;
 		lb_funcs.updateresources = &JustProf_UpdateResources;
 		lb_funcs.returnclaimed = &dummyFunc;
+		lb_funcs.releasecpu = &false_dummyFunc;
+                lb_funcs.claimcpus = &dummyFunc;
 	}else{
 		fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
 		exit(1);
@@ -284,6 +314,7 @@ void Init(void){
 
 
 void Finish(void){
+        ready=0; 
 	lb_funcs.finish();
 /*	if (prof){
 		struct timespec aux, aux2;
@@ -354,6 +385,23 @@ void returnclaimed( void ){
 		lb_funcs.returnclaimed();
 		add_event(RUNTIME_EVENT, 0);
 	}
+}
+int releasecpu( int cpu ){
+      int released=0;
+	if(ready){
+//		add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
+		released=lb_funcs.releasecpu(cpu);
+//		add_event(RUNTIME_EVENT, 0);
+	}
+        return released;
+}
+
+void claimcpus( int cpus ){
+   if(ready){
+      add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
+      lb_funcs.claimcpus(cpus);
+      add_event(RUNTIME_EVENT, 0);
+   }
 }
 
 int tracing_ready(){

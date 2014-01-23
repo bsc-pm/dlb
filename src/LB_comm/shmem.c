@@ -39,7 +39,7 @@
 
 static int shmid;
 static sem_t *mutex;
-static const char SEM_NAME[]= "DLB_mutex";
+static const char SEM_NAME[]= "DLB_mutex2";
 
 void shmem_init( void **shdata, size_t sm_size )
 {

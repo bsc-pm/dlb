@@ -52,6 +52,8 @@ DLB_API_DECL( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) )
 DLB_API_DECL( void, DLB_Lend, dlb_lend, (void) );
 DLB_API_DECL( void, DLB_Retrieve, dlb_retrieve, (void) );
 DLB_API_DECL( void, DLB_Barrier, dlb_barrier, (void) );
+DLB_API_DECL( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) )
+DLB_API_DECL( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) )
 
 #ifdef __cplusplus
 }

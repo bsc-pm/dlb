@@ -31,6 +31,8 @@ typedef struct{
 	void (*outOfBlockingCall) (int is_iter);
 	void (*updateresources) ( int max_resources );
 	void (*returnclaimed) (void);
+	int (*releasecpu) (int cpu);
+        void (*claimcpus) (int cpus);
 } BalancePolicy;
 
 extern int use_dpd;
@@ -52,6 +54,10 @@ void OutOfBlockingCall(int is_iter);
 void updateresources( int max_resources );
 
 void returnclaimed( void );
+
+int releasecpu( int cpu );
+
+void claimcpus( int cpus );
 
 int tracing_ready();
 #endif //DLB_KERNEL_H

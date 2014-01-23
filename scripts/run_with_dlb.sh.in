@@ -51,6 +51,7 @@ function help
    echo "         NO                   : Do not load balance, use DLB just for profile"
    echo "         LeWI                 : Lend When Idle policy"
    echo "         LeWI_mask            : Lend When Idle and use cpu binding policy (Only available for OMPSs or OMP-NANOS flavor)"
+   echo "         auto_LeWI_mask       : Lend When Idle and use cpu binding policy with autonomous threads (Only available for OMPSs or OMP-NANOS flavor)"
    echo "         RaL:                 : Redistribute and Lend policy with cpu binding (Only available for OMPSs or OMP-NANOS flavor)"
    echo "  --smpss-cfg x               : Path to SMPSs configuration file"
    echo "  --show                   : Do not run application but show output of this script [Default = $SHOW]"
@@ -288,7 +289,7 @@ then
    echo "# Nanos arguments" >> $SCRIPT
    echo "export NX_ARGS+=\"$NANOS\"" >> $SCRIPT
 
-elif [ "$POLICY" == "LeWI_mask" -o "$POLICY" == "RaL" ]
+elif [ "$POLICY" == "LeWI_mask" -o "$POLICY" == "RaL" -o "$POLICY" == "auto_LeWI_mask" ]
 then
    echo "[Set DLB]: ERROR: Incompatible flavor and policy: flavor=$FLAVOR policy=$POLICY"
    exit -1

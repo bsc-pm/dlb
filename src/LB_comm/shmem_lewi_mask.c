@@ -20,6 +20,7 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <string.h>
+#include <assert.h>
 
 #include "shmem.h"
 #include "support/tracing.h"
@@ -38,6 +39,7 @@ typedef struct {
     */
    cpu_set_t given_cpus; // set of given cpus. Only modified by its own process.
    cpu_set_t avail_cpus; // set of available cpus at the moment
+   cpu_set_t not_borrowed_cpus; // set of cpus not used by somebody not his owner
 } shdata_t;
 
 static shdata_t *shdata;
@@ -45,6 +47,8 @@ static cpu_set_t default_mask;   // default mask of the process
 
 void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 {
+   int i;
+
    shmem_init( &shdata, sizeof(shdata_t) );
    add_event( IDLE_CPUS_EVENT, 0 );
    if ( _process_id == 0 ) {
@@ -57,6 +61,11 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
    cpu_set_t affinity_mask;
    // Get the parent mask of any bit present in the default mask
    mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
+
+   for ( i = 0; i < mu_get_system_size(); i++ ) {
+      CPU_SET(i, &(shdata->not_borrowed_cpus) );
+   }
+
    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
 }
@@ -71,21 +80,34 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
 {
    cpu_set_t cpus_to_give;
    cpu_set_t cpus_to_free;
+   cpu_set_t cpus_not_mine;
 
    shmem_lock();
-   {
+    {
       // We only add the owned cpus to given_cpus
       CPU_AND( &cpus_to_give, &default_mask, cpu_set );
       CPU_OR( &(shdata->given_cpus), &(shdata->given_cpus), &cpus_to_give );
 
+      //Mark as not borrowed the cpus that I had borrowed
+      CPU_XOR( &cpus_not_mine, &default_mask, cpu_set );
+      CPU_AND( &cpus_not_mine, &cpus_not_mine, cpu_set );
+      CPU_OR( &(shdata->not_borrowed_cpus), &(shdata->not_borrowed_cpus), &cpus_not_mine);
+
       // We only free the cpus that are present in given_cpus
       CPU_AND( &cpus_to_free, &(shdata->given_cpus), cpu_set );
+      debug_shmem ( "Lending %s\n", mu_to_str(&cpus_to_free) );
+      
+      // Remove from the set the cpus that are being borrowed
+      CPU_AND( &cpus_to_free, &(shdata->not_borrowed_cpus), &cpus_to_free); 
+      debug_shmem ( "Lending2 %s\n", mu_to_str(&cpus_to_free) );
       CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), &cpus_to_free );
+
 
       DLB_DEBUG( int size = CPU_COUNT( &cpus_to_free ); )
       DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
       debug_shmem ( "Increasing %d Idle Threads (%d now)\n", size, post_size );
       debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) );
+      debug_shmem ( "Not borrowed %s\n", mu_to_str(&(shdata->not_borrowed_cpus)) );
    }
    shmem_unlock();
 
@@ -122,7 +144,7 @@ void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
       DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
       int i;
       for ( i = 0; i < mu_get_system_size() && max_resources>0; i++ ) {
-         if ( CPU_ISSET(i, &default_mask) ) {
+         if ( (CPU_ISSET(i, &default_mask)) && (!CPU_ISSET(i, mask)) ) {
             CPU_CLR( i, &(shdata->given_cpus) );
             CPU_CLR( i, &(shdata->avail_cpus) );
 	    CPU_SET( i, mask );
@@ -148,18 +170,23 @@ int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )
    DLB_DEBUG( CPU_ZERO( &returned_cpus ); )
 
    CPU_XOR( &slaves_mask, mask, &default_mask );
-   // Remove extra-cpus (slaves_mask) that have been removed from given_cpus
-   for ( i=0; i<mu_get_system_size(); i++ ) {
-      if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
-         CPU_CLR( i, mask );
-         returned++;
-         DLB_DEBUG( CPU_SET( i, &returned_cpus ); )
+   shmem_lock();
+      {
+         // Remove extra-cpus (slaves_mask) that have been removed from given_cpus
+         for ( i=0; i<mu_get_system_size(); i++ ) {
+            if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
+               CPU_CLR( i, mask );
+               CPU_SET( i, &(shdata->not_borrowed_cpus)); //Mark that I returned the borrowed cpu
+               returned++;
+               DLB_DEBUG( CPU_SET( i, &returned_cpus ); )
+            }
+         }
       }
-   }
-
+         shmem_unlock();
    if ( returned > 0 ) {
       debug_shmem ( "Giving back %d Threads\n", returned );
-      debug_shmem ( "Returned mask: %s\n",  mu_to_str(&returned_cpus) );
+      debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
+      debug_shmem ( "Not borrowed %s\n", mu_to_str(&(shdata->not_borrowed_cpus)) );
    }
 
    return returned;
@@ -176,21 +203,25 @@ int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
       cpu_set_t candidates_mask;
       cpu_set_t affinity_mask;
       mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );
-
+int aux=CPU_COUNT(mask);
       shmem_lock();
       {
          /* First Step: Retrieve affine cpus */
          CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
          for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
             if ( CPU_ISSET( i, &candidates_mask ) ) {
+               assert(!CPU_ISSET(i, mask));
                CPU_CLR( i, &(shdata->avail_cpus) );
                CPU_SET( i, mask );
+               if (!CPU_ISSET(i, &default_mask)) //If the cpu is not mine
+                  CPU_CLR(i, &(shdata->not_borrowed_cpus)); //Mark as borrowed cpu
                max_resources--;
                collected++;
             }
          }
          debug_shmem ( "Getting %d affine Threads (%s)\n", collected, mu_to_str(mask) );
 
+   assert(collected==CPU_COUNT(mask)-aux);
          /* Second Step: Retrieve non-affine cpus, if needed */
          if ( size-collected > 0 && max_resources > 0 ) {
 
@@ -204,8 +235,11 @@ int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
 
             for ( i=0; i<mu_get_system_size() && max_resources>0; i++ ) {
                if ( CPU_ISSET( i, &candidates_mask ) ) {
+                  assert(!CPU_ISSET(i, mask));
                   CPU_CLR( i, &(shdata->avail_cpus) );
                   CPU_SET( i, mask );
+                  if (!CPU_ISSET(i, &default_mask)) //If the cpu is not mine
+                      CPU_CLR(i, &(shdata->not_borrowed_cpus)); //Mark as borrowed cpu
                   max_resources--;
                   collected++;
                }
@@ -218,8 +252,10 @@ int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
 
    if ( collected > 0 ) {
       debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected,  size - collected );
-      debug_shmem ( "Collecting mask %s\n", mu_to_str(mask) );
+      debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
+      debug_shmem ( "Not borrowed %s\n", mu_to_str(&(shdata->not_borrowed_cpus)) );
       add_event( IDLE_CPUS_EVENT, size - collected );
    }
    return collected;
 }
+

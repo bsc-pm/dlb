@@ -21,6 +21,7 @@
 #include <sched.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <assert.h>
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_lewi_mask.h"
@@ -135,6 +136,27 @@ void lewi_mask_ReturnClaimedCpus( void )
       nthreads -= returned;
       set_mask( &mask );
       debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
+      add_event( THREADS_USED_EVENT, nthreads );
+   }
+}
+
+void lewi_mask_ClaimCpus(int cpus)
+{
+   if (nthreads<_default_nthreads){
+      //Do not get more cpus than the default ones
+
+      if ((cpus+nthreads)>_default_nthreads) cpus=_default_nthreads-nthreads;
+
+      debug_lend ( "Claiming  %d cpus\n", cpus );
+      cpu_set_t current_mask;
+      CPU_ZERO( &current_mask );
+
+      get_mask( &current_mask );
+      shmem_lewi_mask_recover_some_defcpus( &current_mask, cpus ); 
+      set_mask( &current_mask);
+      nthreads += cpus;
+      assert(nthreads==CPU_COUNT(&current_mask));
+
       add_event( THREADS_USED_EVENT, nthreads );
    }
 }

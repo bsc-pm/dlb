@@ -76,6 +76,20 @@ DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) )
       returnclaimed();
 }
 
+DLB_API_DEF( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) )
+{
+   if ( dlb_enabled )
+      return releasecpu(cpu);
+   else
+      return 0;
+}
+
+DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) )
+{
+   if ( dlb_enabled )
+      claimcpus(cpus);
+}
+
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
 {
    if ( dlb_enabled )

@@ -38,5 +38,7 @@ void lewi_mask_UpdateResources( int max_resources );
 
 void lewi_mask_ReturnClaimedCpus( void );
 
+void lewi_mask_ClaimCpus( int cpus );
+
 #endif /* LEWI_MASK_H */
 

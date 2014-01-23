@@ -45,6 +45,8 @@ sources = \
 	  $(top_srcdir)/src/LB_policies/Weight.c        \
 	  $(top_srcdir)/src/LB_policies/Weight.h        \
 	  $(top_srcdir)/src/LB_policies/lewi_mask.c     \
+	  $(top_srcdir)/src/LB_policies/autonomous_lewi_mask.h     \
+	  $(top_srcdir)/src/LB_policies/autonomous_lewi_mask.c     \
 	  $(top_srcdir)/src/LB_policies/lewi_mask.h     \
 	  $(top_srcdir)/src/LB_policies/RaL.c		\
 	  $(top_srcdir)/src/LB_policies/RaL.h		\

@@ -25,6 +25,8 @@
    #define EVENT_OUT_MPI     3
    #define EVENT_UPDATE      4
    #define EVENT_RETURN      5
+   #define EVENT_RELEASE_CPU 6
+   #define EVENT_CLAIM_CPUS  7
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040
 #define DLB_MODE_EVENT     800050

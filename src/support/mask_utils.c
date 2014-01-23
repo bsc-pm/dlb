@@ -177,11 +177,14 @@ void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, 
 const char* mu_to_str ( const cpu_set_t *cpu_set )
 {
    int i;
-   static char str[CPU_SETSIZE*2 + 4];
+   static char str[CPU_SETSIZE*2 + 4 + 6];
+   char str_i[1];
    strcpy( str, "[ " );
    for ( i=0; i<sys.size; i++ ) {
-      if ( CPU_ISSET(i, cpu_set) ) strcat( str, "1 " );
-      else strcat( str,"0 " );
+      if ( CPU_ISSET(i, cpu_set) ){
+         sprintf(str_i,"%d ", i);
+         strcat( str, str_i );
+      } else strcat( str,"- " );
    }
    strcat( str, "]\0" );
    return str;
