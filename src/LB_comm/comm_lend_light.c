@@ -118,6 +118,8 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 #endif
 #ifdef HAVE_MPI
 		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
+#else
+                k=0;
 #endif
 		key=k;
 		

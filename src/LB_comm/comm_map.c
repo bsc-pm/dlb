@@ -168,6 +168,8 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 #endif
 #ifdef HAVE_MPI
 		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
+#else
+                k=0;
 #endif
 		key=k;
 		

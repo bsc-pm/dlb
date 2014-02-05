@@ -82,6 +82,8 @@ void shmem_init( void **shdata, size_t sm_size )
 
 #ifdef HAVE_MPI
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
+#else
+      key = 0;
 #endif
 
       mutex = sem_open( SEM_NAME, 0, 0666, 0 );
