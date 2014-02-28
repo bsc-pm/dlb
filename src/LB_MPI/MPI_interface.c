@@ -603,4 +603,58 @@ void DLB_MPI_Scan_leave (void){
 	after_mpi(Scan);
 }
 
+__attribute__((alias("DLB_MPI_Testall_enter"))) void DLB_mpi_testall_enter (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]);
+void  DLB_MPI_Testall_enter (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]){
+	#ifdef debugInOut
+	fprintf(stderr," >> MPI_Testall...............\n");
+	#endif
+
+	before_mpi(Testall, 0, 0);
+}
+
+__attribute__((alias("DLB_MPI_Testall_leave"))) void DLB_mpi_testall_leave (void);
+void  DLB_MPI_Testall_leave (void){
+	#ifdef debugInOut
+	fprintf(stderr," << MPI_Testall...............\n");
+	#endif
+
+	after_mpi(Testall);
+}
+
+__attribute__((alias("DLB_MPI_Testany_enter"))) void DLB_mpi_testany_enter (int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status);
+void  DLB_MPI_Testany_enter (int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status){
+	#ifdef debugInOut
+	fprintf(stderr," >> MPI_Testany...............\n");
+	#endif
+
+	before_mpi(Testany, 0, 0);
+}
+
+__attribute__((alias("DLB_MPI_Testany_leave"))) void DLB_mpi_testany_leave (void);
+void  DLB_MPI_Testany_leave (void){
+	#ifdef debugInOut
+	fprintf(stderr," << MPI_Testany...............\n");
+	#endif
+
+	after_mpi(Testany);
+}
+
+__attribute__((alias("DLB_MPI_Testsome_enter"))) void DLB_mpi_testsome_enter (int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]);
+void  DLB_MPI_Testsome_enter (int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]){
+	#ifdef debugInOut
+	fprintf(stderr," >> MPI_Testsome...............\n");
+	#endif
+
+	before_mpi(Testsome, 0, 0);
+}
+
+__attribute__((alias("DLB_MPI_Testsome_leave"))) void DLB_mpi_testsome_leave (void);
+void  DLB_MPI_Testsome_leave (void){
+	#ifdef debugInOut
+	fprintf(stderr," << MPI_Testsome...............\n");
+	#endif
+
+	after_mpi(Testsome);
+}
+
 #endif /* HAVE_MPI */

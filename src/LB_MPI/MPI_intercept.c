@@ -574,4 +574,52 @@ int MPI_Scan (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MP
 	return res;
 }
 
+int MPI_Testall (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Testall...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Testall_enter (count, array_of_requests, flag, array_of_statuses);
+	res=PMPI_Testall (count, array_of_requests, flag, array_of_statuses);
+	DLB_MPI_Testall_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Testall...............\n",whoami);
+	#endif
+	return res;
+}
+
+int MPI_Testany (int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Testany...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Testany_enter (count, array_of_requests, indx, flag, status);
+	res=PMPI_Testany (count, array_of_requests, indx, flag, status);
+	DLB_MPI_Testany_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Testany...............\n",whoami);
+	#endif
+	return res;
+}
+
+int MPI_Testsome (int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Testsome...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Testsome_enter (incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+	res=PMPI_Testsome (incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+	DLB_MPI_Testsome_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Testsome...............\n",whoami);
+	#endif
+	return res;
+}
+
 #endif /* HAVE_MPI */

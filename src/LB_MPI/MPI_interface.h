@@ -149,6 +149,18 @@ void DLB_MPI_Sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtyp
 
 void DLB_MPI_Sendrecv_leave (void);
 
+void  DLB_MPI_Testall_enter (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]);
+
+void  DLB_MPI_Testall_leave (void);
+
+void  DLB_MPI_Testany_enter (int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status);
+
+void  DLB_MPI_Testany_leave (void);
+
+void  DLB_MPI_Testsome_enter (int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]);
+
+void  DLB_MPI_Testsome_leave (void);
+
 #endif //MPI_INTERFACE_H
 
 
