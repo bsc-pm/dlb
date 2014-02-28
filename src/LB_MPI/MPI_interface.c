@@ -603,6 +603,24 @@ void DLB_MPI_Scan_leave (void){
 	after_mpi(Scan);
 }
 
+__attribute__((alias("DLB_MPI_Test_enter"))) void DLB_mpi_test_enter (MPI_Request *request, int *flag, MPI_Status *status);
+void  DLB_MPI_Test_enter (MPI_Request *request, int *flag, MPI_Status *status){
+	#ifdef debugInOut
+	fprintf(stderr," >> MPI_Test...............\n");
+	#endif
+
+	before_mpi(Test, 0, 0);
+}
+
+__attribute__((alias("DLB_MPI_Test_leave"))) void DLB_mpi_test_leave (void);
+void  DLB_MPI_Test_leave (void){
+	#ifdef debugInOut
+	fprintf(stderr," << MPI_Test...............\n");
+	#endif
+
+	after_mpi(Test);
+}
+
 __attribute__((alias("DLB_MPI_Testall_enter"))) void DLB_mpi_testall_enter (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]);
 void  DLB_MPI_Testall_enter (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]){
 	#ifdef debugInOut

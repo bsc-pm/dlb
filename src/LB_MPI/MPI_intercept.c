@@ -574,6 +574,22 @@ int MPI_Scan (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MP
 	return res;
 }
 
+int MPI_Test (MPI_Request *request, int *flag, MPI_Status *status){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Test...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Test_enter (request, flag, status);
+	res=PMPI_Test (request, flag, status);
+	DLB_MPI_Test_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Test...............\n",whoami);
+	#endif
+	return res;
+}
+
 int MPI_Testall (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Testall...............\n",whoami);

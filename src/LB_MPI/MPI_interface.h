@@ -149,6 +149,10 @@ void DLB_MPI_Sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtyp
 
 void DLB_MPI_Sendrecv_leave (void);
 
+void  DLB_MPI_Test_enter (MPI_Request *request, int *flag, MPI_Status *status);
+
+void  DLB_MPI_Test_leave (void);
+
 void  DLB_MPI_Testall_enter (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]);
 
 void  DLB_MPI_Testall_leave (void);

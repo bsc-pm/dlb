@@ -73,6 +73,7 @@ typedef enum{
 	Scatterv=_Scatter|_Blocking,
 	Scan=_Scan|_Blocking,
 	SendRecv=_SendRecv|_Blocking,
+	Test=_Test,
 	Testall=_Test,
 	Testany=_Test,
 	Testsome=_Test,
