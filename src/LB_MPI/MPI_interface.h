@@ -20,6 +20,14 @@
 #ifndef MPI_INTERFACE_H
 #define MPI_INTERFACE_H
 
+#include <mpi.h>
+
+#if MPI_VERSION >= 3
+#define MPI3_CONST const
+#else
+#define MPI3_CONST
+#endif
+
 void DLB_MPI_Init_enter (int *argc, char ***argv);
 
 void DLB_MPI_Init_leave (void);
@@ -28,35 +36,35 @@ void DLB_MPI_Finalize_enter (void);
 
 void DLB_MPI_Finalize_leave (void);
 
-void DLB_MPI_Bsend_enter (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Bsend_enter (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 
 void DLB_MPI_Bsend_leave (void);
 
-void DLB_MPI_Ssend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Ssend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 
 void DLB_MPI_Ssend_leave (void);
 
-void DLB_MPI_Rsend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Rsend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 
 void DLB_MPI_Rsend_leave (void);
 
-void DLB_MPI_Send_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Send_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 
 void DLB_MPI_Send_leave (void);
 
-void DLB_MPI_Ibsend_enter (void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request );
+void DLB_MPI_Ibsend_enter (MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request );
 
 void DLB_MPI_Ibsend_leave (void);
 
-void DLB_MPI_Isend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
+void DLB_MPI_Isend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
 
 void DLB_MPI_Isend_leave (void);
 
-void DLB_MPI_Issend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
+void DLB_MPI_Issend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
 
 void DLB_MPI_Issend_leave (void);
 
-void DLB_MPI_Irsend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
+void DLB_MPI_Irsend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
 
 void DLB_MPI_Irsend_leave (void);
 
@@ -68,15 +76,15 @@ void DLB_MPI_Irecv_enter (void* buf, int count, MPI_Datatype datatype, int sourc
 
 void DLB_MPI_Irecv_leave (void);
 
-void DLB_MPI_Reduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm);
+void DLB_MPI_Reduce_enter (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm);
 
 void DLB_MPI_Reduce_leave (void);
 								
-void DLB_MPI_Reduce_scatter_enter (void* sendbuf, void* recvbuf, int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
+void DLB_MPI_Reduce_scatter_enter (MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 
 void DLB_MPI_Reduce_scatter_leave (void);
 
-void DLB_MPI_Allreduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
+void DLB_MPI_Allreduce_enter (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 
 void DLB_MPI_Allreduce_leave (void);
 
@@ -104,40 +112,40 @@ void DLB_MPI_Bcast_enter (void *buffer, int count, MPI_Datatype datatype, int ro
 
 void DLB_MPI_Bcast_leave (void);
 
-void DLB_MPI_Alltoall_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm);
+void DLB_MPI_Alltoall_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm);
 
 void DLB_MPI_Alltoall_leave (void);
 
-void DLB_MPI_Alltoallv_enter (void *sendbuf, int *sendcnts, int *sdispls, MPI_Datatype sendtype, void *recvbuf, int *recvcnts, int *rdispls, MPI_Datatype recvtype, MPI_Comm comm);
+void DLB_MPI_Alltoallv_enter (MPI3_CONST void *sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm);
 
 void DLB_MPI_Alltoallv_leave (void);
 
 
-void DLB_MPI_Allgather_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm);
+void DLB_MPI_Allgather_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm);
 
 void DLB_MPI_Allgather_leave (void);
 
-void DLB_MPI_Allgatherv_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int *recvcounts, int *displs, MPI_Datatype recvtype, MPI_Comm comm);
+void DLB_MPI_Allgatherv_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm);
 
 void DLB_MPI_Allgatherv_leave (void);
 
-void DLB_MPI_Gather_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
+void DLB_MPI_Gather_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 void DLB_MPI_Gather_leave (void);
  
-void DLB_MPI_Gatherv_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int *recvcnts, int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm );
+void DLB_MPI_Gatherv_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm );
 
 void DLB_MPI_Gatherv_leave (void);
 
-void DLB_MPI_Scatter_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
+void DLB_MPI_Scatter_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 void DLB_MPI_Scatter_leave (void);
 
-void DLB_MPI_Scatterv_enter (void *sendbuf, int *sendcnts, int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
+void DLB_MPI_Scatterv_enter (MPI3_CONST void *sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 void DLB_MPI_Scatterv_leave (void);
 
-void DLB_MPI_Scan_enter (void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
+void DLB_MPI_Scan_enter (MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 
 void DLB_MPI_Scan_leave (void);
 
@@ -145,7 +153,7 @@ void DLB_MPI_Sendrecv_replace_enter ( void *buf, int count, MPI_Datatype datatyp
 
 void DLB_MPI_Sendrecv_replace_leave (void);
 
-void DLB_MPI_Sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status );
+void DLB_MPI_Sendrecv_enter ( MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status );
 
 void DLB_MPI_Sendrecv_leave (void);
 

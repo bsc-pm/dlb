@@ -29,6 +29,12 @@
 #include <MPI_calls_coded.h>
 #include <stdint.h>
 
+#if MPI_VERSION >= 3
+#define MPI3_CONST const
+#else
+#define MPI3_CONST
+#endif
+
 __attribute__((alias("DLB_MPI_Init_enter"))) void DLB_mpi_init_enter (int *argc, char ***argv);
 void DLB_MPI_Init_enter (int *argc, char ***argv){
 	#ifdef debugInOut
@@ -61,8 +67,8 @@ void DLB_MPI_Finalize_leave (void){
 	after_finalize();
 }
 
-__attribute__((alias("DLB_MPI_Sendrecv_enter"))) void DLB_mpi_sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status );
-void DLB_MPI_Sendrecv_enter ( void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status ){
+__attribute__((alias("DLB_MPI_Sendrecv_enter"))) void DLB_mpi_sendrecv_enter ( MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status );
+void DLB_MPI_Sendrecv_enter ( MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status ){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Sendrecv (to: %d - from: %d)...............\n", dest, source);
 	#endif
@@ -97,8 +103,8 @@ void DLB_MPI_Sendrecv_replace_leave (void){
 	after_mpi(SendRecv);
 }
 
-__attribute__((alias("DLB_MPI_Bsend_enter"))) void DLB_mpi_bsend_enter (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-void DLB_MPI_Bsend_enter (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Bsend_enter"))) void DLB_mpi_bsend_enter (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Bsend_enter (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Bsend...............\n");
 	#endif
@@ -115,8 +121,8 @@ void DLB_MPI_Bsend_leave (void){
 	after_mpi(Bsend);
 }
 
-__attribute__((alias("DLB_MPI_Ssend_enter"))) void DLB_mpi_ssend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-void DLB_MPI_Ssend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Ssend_enter"))) void DLB_mpi_ssend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Ssend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Ssend...............\n");
 	#endif
@@ -133,8 +139,8 @@ void DLB_MPI_Ssend_leave (void){
 	after_mpi(Ssend);
 }
 
-__attribute__((alias("DLB_MPI_Rsend_enter"))) void DLB_mpi_rsend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-void DLB_MPI_Rsend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Rsend_enter"))) void DLB_mpi_rsend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Rsend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Rsend...............\n");
 	#endif
@@ -151,8 +157,8 @@ void DLB_MPI_Rsend_leave (void){
 	after_mpi(Rsend);
 }
 
-__attribute__((alias("DLB_MPI_Send_enter"))) void DLB_mpi_send_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-void DLB_MPI_Send_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Send_enter"))) void DLB_mpi_send_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
+void DLB_MPI_Send_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Send...............\n");
 	#endif
@@ -169,8 +175,8 @@ void DLB_MPI_Send_leave (void){
 	after_mpi(Send);
 }
 
-__attribute__((alias("DLB_MPI_Ibsend_enter"))) void DLB_mpi_ibsend_enter (void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request );
-void DLB_MPI_Ibsend_enter (void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request ){
+__attribute__((alias("DLB_MPI_Ibsend_enter"))) void DLB_mpi_ibsend_enter (MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request );
+void DLB_MPI_Ibsend_enter (MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request ){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Ibsend...............\n");
 	#endif
@@ -187,8 +193,8 @@ void DLB_MPI_Ibsend_leave (void){
 	after_mpi(Ibsend);
 }
 
-__attribute__((alias("DLB_MPI_Isend_enter"))) void DLB_mpi_isend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
-void DLB_MPI_Isend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
+__attribute__((alias("DLB_MPI_Isend_enter"))) void DLB_mpi_isend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
+void DLB_MPI_Isend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Isend...............\n");
 	#endif
@@ -206,8 +212,8 @@ void DLB_MPI_Isend_leave (void){
 	after_mpi(Isend);
 }
 
-__attribute__((alias("DLB_MPI_Issend_enter"))) void DLB_mpi_issend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
-void DLB_MPI_Issend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
+__attribute__((alias("DLB_MPI_Issend_enter"))) void DLB_mpi_issend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
+void DLB_MPI_Issend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Issend...............\n");
 	#endif
@@ -224,8 +230,8 @@ void DLB_MPI_Issend_leave (void){
 	after_mpi(Issend);
 }
 
-__attribute__((alias("DLB_MPI_Irsend_enter"))) void DLB_mpi_irsend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
-void DLB_MPI_Irsend_enter (void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
+__attribute__((alias("DLB_MPI_Irsend_enter"))) void DLB_mpi_irsend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
+void DLB_MPI_Irsend_enter (MPI3_CONST void*buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Irsend...............\n");
 	#endif
@@ -278,8 +284,8 @@ void DLB_MPI_Irecv_leave (void){
 	after_mpi(Irecv);
 }
 
-__attribute__((alias("DLB_MPI_Reduce_enter"))) void DLB_mpi_reduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm);
-void DLB_MPI_Reduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Reduce_enter"))) void DLB_mpi_reduce_enter (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm);
+void DLB_MPI_Reduce_enter (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Reduce...............\n");
 	#endif
@@ -296,8 +302,8 @@ void DLB_MPI_Reduce_leave (void){
 	after_mpi(Reduce);
 }
 								
-__attribute__((alias("DLB_MPI_Reduce_scatter_enter"))) void DLB_mpi_reduce_scatter_enter (void* sendbuf, void* recvbuf, int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
-void DLB_MPI_Reduce_scatter_enter (void* sendbuf, void* recvbuf, int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Reduce_scatter_enter"))) void DLB_mpi_reduce_scatter_enter (MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
+void DLB_MPI_Reduce_scatter_enter (MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Reduce_scatter...............\n");
 	#endif
@@ -314,8 +320,8 @@ void DLB_MPI_Reduce_scatter_leave (void){
 	after_mpi(Reduce_scatter);
 }
 
-__attribute__((alias("DLB_MPI_Allreduce_enter"))) void DLB_mpi_allreduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
-void DLB_MPI_Allreduce_enter (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Allreduce_enter"))) void DLB_mpi_allreduce_enter (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
+void DLB_MPI_Allreduce_enter (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Allreduce...............\n");
 	#endif
@@ -441,8 +447,8 @@ void DLB_MPI_Bcast_leave (void){
 	after_mpi(Bcast);
 }
 
-__attribute__((alias("DLB_MPI_Alltoall_enter"))) void DLB_mpi_alltoall_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm);
-void DLB_MPI_Alltoall_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Alltoall_enter"))) void DLB_mpi_alltoall_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm);
+void DLB_MPI_Alltoall_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Alltoall...............\n");
 	#endif
@@ -459,8 +465,8 @@ void DLB_MPI_Alltoall_leave (void){
 	after_mpi(Alltoall);
 }
 
-__attribute__((alias("DLB_MPI_Alltoallv_enter"))) void DLB_mpi_alltoallv_enter (void *sendbuf, int *sendcnts, int *sdispls, MPI_Datatype sendtype, void *recvbuf, int *recvcnts, int *rdispls, MPI_Datatype recvtype, MPI_Comm comm);
-void DLB_MPI_Alltoallv_enter (void *sendbuf, int *sendcnts, int *sdispls, MPI_Datatype sendtype, void *recvbuf, int *recvcnts, int *rdispls, MPI_Datatype recvtype, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Alltoallv_enter"))) void DLB_mpi_alltoallv_enter (MPI3_CONST void *sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm);
+void DLB_MPI_Alltoallv_enter (MPI3_CONST void *sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Alltoallv...............\n");
 	#endif
@@ -477,8 +483,8 @@ void DLB_MPI_Alltoallv_leave (void){
 	after_mpi(Alltoallv);
 }
 
-__attribute__((alias("DLB_MPI_Allgather_enter"))) void DLB_mpi_allgather_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm);
-void DLB_MPI_Allgather_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Allgather_enter"))) void DLB_mpi_allgather_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm);
+void DLB_MPI_Allgather_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Allgather...............\n");
 	#endif
@@ -495,7 +501,7 @@ void DLB_MPI_Allgather_leave (void){
 	after_mpi(Allgather);
 }
 
-__attribute__((alias("DLB_MPI_Allgatherv_enter"))) void DLB_mpi_allgatherv_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int *recvcounts, int *displs, MPI_Datatype recvtype, MPI_Comm comm);
+__attribute__((alias("DLB_MPI_Allgatherv_enter"))) void DLB_mpi_allgatherv_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm);
 void DLB_MPI_Allgatherv_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int *recvcounts, int *displs, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Allgatherv...............\n");
@@ -513,8 +519,8 @@ void DLB_MPI_Allgatherv_leave (void){
 	after_mpi(Allgatherv);
 }
 
-__attribute__((alias("DLB_MPI_Gather_enter"))) void DLB_mpi_gather_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
-void DLB_MPI_Gather_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Gather_enter"))) void DLB_mpi_gather_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
+void DLB_MPI_Gather_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Gather...............\n");
 	#endif
@@ -531,8 +537,8 @@ void DLB_MPI_Gather_leave (void){
 	after_mpi(Gather);
 }
 
-__attribute__((alias("DLB_MPI_Gatherv_enter"))) void DLB_mpi_gatherv_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int *recvcnts, int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm );
-void DLB_MPI_Gatherv_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int *recvcnts, int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm ){
+__attribute__((alias("DLB_MPI_Gatherv_enter"))) void DLB_mpi_gatherv_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm );
+void DLB_MPI_Gatherv_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm ){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Gatherv...............\n");
 	#endif
@@ -549,8 +555,8 @@ void DLB_MPI_Gatherv_leave (void){
 	after_mpi(Gatherv);
 }
 
-__attribute__((alias("DLB_MPI_Scatter_enter"))) void DLB_mpi_scatter_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
-void DLB_MPI_Scatter_enter (void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Scatter_enter"))) void DLB_mpi_scatter_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
+void DLB_MPI_Scatter_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Scatter...............\n");
 	#endif
@@ -567,8 +573,8 @@ void DLB_MPI_Scatter_leave (void){
 	after_mpi(Scatter);
 }
 
-__attribute__((alias("DLB_MPI_Scatterv_enter"))) void DLB_mpi_scatterv_enter (void *sendbuf, int *sendcnts, int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
-void DLB_MPI_Scatterv_enter (void *sendbuf, int *sendcnts, int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Scatterv_enter"))) void DLB_mpi_scatterv_enter (MPI3_CONST void *sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm);
+void DLB_MPI_Scatterv_enter (MPI3_CONST void *sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Scatterv...............\n");
 	#endif
@@ -585,8 +591,8 @@ void DLB_MPI_Scatterv_leave (void){
 	after_mpi(Scatterv);
 }
 
-__attribute__((alias("DLB_MPI_Scan_enter"))) void DLB_mpi_scan_enter (void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
-void DLB_MPI_Scan_enter (void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
+__attribute__((alias("DLB_MPI_Scan_enter"))) void DLB_mpi_scan_enter (MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
+void DLB_MPI_Scan_enter (MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Scan...............\n");
 	#endif
