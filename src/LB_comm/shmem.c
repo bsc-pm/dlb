@@ -21,10 +21,11 @@
 #include "config.h"
 #endif
 
-#include <fcntl.h>
-#include <semaphore.h>
-#include <sys/shm.h>
 #include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>      /* For mode constants */
+#include <fcntl.h>         /* For O_* constants */
+#include <semaphore.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -37,8 +38,11 @@
 #include "support/globals.h"
 #include "support/tracing.h"
 
-static int shmid;
+static int fd;
+static void* addr;
+static size_t length;
 static sem_t *mutex;
+static char filename[FILENAME_MAX];
 static const char SEM_NAME[]= "DLB_mutex";
 
 void shmem_init( void **shdata, size_t sm_size )
@@ -53,21 +57,33 @@ void shmem_init( void **shdata, size_t sm_size )
 
       key = getpid();
 
+      /* Create Semaphore */
       sem_unlink( SEM_NAME );
-      mutex = sem_open( SEM_NAME, O_CREAT | O_EXCL, 0666, 1 );
+      mutex = sem_open( SEM_NAME, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
       if ( mutex == SEM_FAILED ) {
-         perror( "unable to create semaphore" );
+         perror( "DLB_PANIC: Master unable to create semaphore" );
          sem_unlink( SEM_NAME );
          exit( 1 );
       }
 
-      if ( ( shmid = shmget( key, sm_size, IPC_EXCL | IPC_CREAT | 0666 ) ) < 0 ) {
-         perror( "DLB PANIC: shmget Master" );
+      /* Obtain a file descriptor for the shmem */
+      sprintf( filename, "/DLB_shm_%d", key );
+      fd = shm_open( filename, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR );
+      if ( fd == -1 ) {
+         perror( "DLB PANIC: shm_open Master" );
          exit( 1 );
       }
 
-      if ( ( *shdata = shmat( shmid, NULL, 0 ) ) == ( void * ) -1 ) {
-         perror( "DLB PANIC: shmat Master" );
+      /* Truncate the regular file to a precise size */
+      if ( ftruncate( fd, sm_size ) == -1 ) {
+         perror( "DLB PANIC: ftruncate Master" );
+         exit( 1 );
+      }
+
+      /* Map shared memory object */
+      *shdata = mmap( NULL, sm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+      if ( *shdata == MAP_FAILED ) {
+         perror( "DLB PANIC: mmap Master" );
          exit( 1 );
       }
 
@@ -86,29 +102,38 @@ void shmem_init( void **shdata, size_t sm_size )
       key = 0;
 #endif
 
-      mutex = sem_open( SEM_NAME, 0, 0666, 0 );
+      /* Open Semaphore */
+      mutex = sem_open( SEM_NAME, 0, S_IRUSR | S_IWUSR, 0 );
       if ( mutex == SEM_FAILED ) {
-         perror( "reader:unable to execute semaphore" );
+         perror( "DLB PANIC: Reader unable to open semaphore" );
          sem_close( mutex );
          exit( 1 );
       }
 
+      /* Obtain a file descriptor for the shmem */
+      sprintf( filename, "/DLB_shm_%d", key );
       do {
-         shmid = shmget( key, sm_size, 0666 );
-      } while ( shmid<0 && errno==ENOENT );
+         fd = shm_open( filename, O_RDWR, S_IRUSR | S_IWUSR );
+      } while ( fd < 0 && errno == ENOENT );
 
-      if ( shmid < 0 ) {
-         perror( "shmget slave" );
+      if ( fd < 0 ) {
+         perror( "DLB PANIC: shm_open Slave" );
          exit( 1 );
       }
 
       debug_shmem ( "Slave Comm - associated to shared mem\n" );
 
-      if ( ( *shdata = shmat( shmid, NULL, 0 ) ) == ( void * ) -1 ) {
-         perror( "shmat slave" );
+      /* Map shared memory object */
+      *shdata = mmap( NULL, sm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+      if ( *shdata == MAP_FAILED ) {
+         perror( "DLB PANIC: mmap Slave" );
          exit( 1 );
       }
    }
+
+   /* Store addr and length for the finalize step*/
+   addr = *shdata;
+   length = sm_size;
 }
 
 void shmem_finalize( void )
@@ -118,8 +143,13 @@ void shmem_finalize( void )
       sem_unlink(SEM_NAME);
    }
 
-   if ( shmctl( shmid, IPC_RMID, NULL ) < 0 )
-      perror( "DLB ERROR: Removing Shared Memory" );
+   if ( munmap( addr, length ) )
+      perror( "DLB ERROR: munmap" );
+
+   if ( _process_id == 0 ) {
+      if ( shm_unlink( filename ) )
+         perror( "DLB ERROR: shm_unlink" );
+   }
 }
 
 void shmem_lock( void )
