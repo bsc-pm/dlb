@@ -32,7 +32,9 @@ typedef struct{
 	void (*updateresources) ( int max_resources );
 	void (*returnclaimed) (void);
 	int (*releasecpu) (int cpu);
+	int (*returnclaimedcpu) (int cpu);
         void (*claimcpus) (int cpus);
+        int (*checkCpuAvailability) (int cpu);
 } BalancePolicy;
 
 extern int use_dpd;
@@ -57,7 +59,11 @@ void returnclaimed( void );
 
 int releasecpu( int cpu );
 
+int returnclaimedcpu( int cpu );
+
 void claimcpus( int cpus );
+
+int checkCpuAvailability ( int cpu );
 
 int tracing_ready();
 #endif //DLB_KERNEL_H

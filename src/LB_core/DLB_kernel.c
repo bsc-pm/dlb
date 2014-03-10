@@ -75,6 +75,7 @@ int use_dpd;
 
 static void dummyFunc(){}
 static int false_dummyFunc(){return 0;}
+static int true_dummyFunc(){return 1;}
 
 void Init(void){
 	//Read Environment vars
@@ -113,7 +114,9 @@ void Init(void){
 		lb_funcs.updateresources = &Lend_light_updateresources;
 		lb_funcs.returnclaimed = &dummyFunc;
 		lb_funcs.releasecpu = &false_dummyFunc;
+		lb_funcs.returnclaimedcpu = &false_dummyFunc;
                 lb_funcs.claimcpus = &dummyFunc;
+                lb_funcs.checkCpuAvailability = &true_dummyFunc;
 
 	}else if (strcasecmp(policy, "Map")==0){
 #ifdef debugConfig
@@ -129,7 +132,9 @@ void Init(void){
 		lb_funcs.updateresources = &Map_updateresources;
 		lb_funcs.returnclaimed = &dummyFunc;
 		lb_funcs.releasecpu = &false_dummyFunc;
+		lb_funcs.returnclaimedcpu = &false_dummyFunc;
                 lb_funcs.claimcpus = &dummyFunc;
+                lb_funcs.checkCpuAvailability = &true_dummyFunc;
 
 	}else if (strcasecmp(policy, "WEIGHT")==0){
 #ifdef debugConfig
@@ -146,7 +151,9 @@ void Init(void){
 		lb_funcs.updateresources = &Weight_updateresources;
 		lb_funcs.returnclaimed = &dummyFunc;
 		lb_funcs.releasecpu = &false_dummyFunc;
+		lb_funcs.returnclaimedcpu = &false_dummyFunc;
                 lb_funcs.claimcpus = &dummyFunc;
+                lb_funcs.checkCpuAvailability = &true_dummyFunc;
 
 	}else if (strcasecmp(policy, "LeWI_mask")==0){
 #ifdef debugConfig
@@ -161,7 +168,9 @@ void Init(void){
 		lb_funcs.updateresources = &lewi_mask_UpdateResources;
 		lb_funcs.returnclaimed = &lewi_mask_ReturnClaimedCpus;
 		lb_funcs.releasecpu = &false_dummyFunc;
+		lb_funcs.returnclaimedcpu = &false_dummyFunc;
                 lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
+                lb_funcs.checkCpuAvailability = &true_dummyFunc;
 
 	}else if (strcasecmp(policy, "auto_LeWI_mask")==0){
 #ifdef debugConfig
@@ -176,7 +185,9 @@ void Init(void){
 		lb_funcs.updateresources = &auto_lewi_mask_UpdateResources;
 		lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
 		lb_funcs.releasecpu = &auto_lewi_mask_ReleaseCpu;
+		lb_funcs.returnclaimedcpu = &auto_lewi_mask_ReturnCpuIfClaimed;
                 lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
+                lb_funcs.checkCpuAvailability = &auto_lewi_mask_CheckCpuAvailability;
 
 	}else if (strcasecmp(policy, "RaL")==0){
 #ifdef debugConfig
@@ -205,7 +216,9 @@ void Init(void){
 		}
 
 		lb_funcs.releasecpu = &false_dummyFunc;
+		lb_funcs.returnclaimedcpu = &false_dummyFunc;
                 lb_funcs.claimcpus = &dummyFunc;
+                lb_funcs.checkCpuAvailability = &true_dummyFunc;
 	}else if (strcasecmp(policy, "NO")==0){
 #ifdef debugConfig
 		fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", _node_id,  _process_id);
@@ -221,7 +234,9 @@ void Init(void){
 		lb_funcs.updateresources = &JustProf_UpdateResources;
 		lb_funcs.returnclaimed = &dummyFunc;
 		lb_funcs.releasecpu = &false_dummyFunc;
+		lb_funcs.returnclaimedcpu = &false_dummyFunc;
                 lb_funcs.claimcpus = &dummyFunc;
+                lb_funcs.checkCpuAvailability = &true_dummyFunc;
 	}else{
 		fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
 		exit(1);
@@ -396,6 +411,16 @@ int releasecpu( int cpu ){
         return released;
 }
 
+int returnclaimedcpu( int cpu ){
+      int released=0;
+	if(ready){
+//		add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
+		released=lb_funcs.returnclaimedcpu(cpu);
+//		add_event(RUNTIME_EVENT, 0);
+	}
+        return released;
+}
+
 void claimcpus( int cpus ){
    if(ready){
       add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
@@ -404,6 +429,13 @@ void claimcpus( int cpus ){
    }
 }
 
+int checkCpuAvailability (int cpu){
+   int available=1;
+   if (ready){
+      available=lb_funcs.checkCpuAvailability(cpu);
+   }
+   return available;
+}
 int tracing_ready(){
 	return ready;
 }

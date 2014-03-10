@@ -174,7 +174,7 @@ int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )
       {
          // Remove extra-cpus (slaves_mask) that have been removed from given_cpus
          for ( i=0; i<mu_get_system_size(); i++ ) {
-            if ( CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
+            if ( CPU_ISSET( i, mask ) && CPU_ISSET( i, &slaves_mask ) && !CPU_ISSET( i, &(shdata->given_cpus) ) ) {
                CPU_CLR( i, mask );
                CPU_SET( i, &(shdata->not_borrowed_cpus)); //Mark that I returned the borrowed cpu
                returned++;
@@ -259,3 +259,10 @@ int aux=CPU_COUNT(mask);
    return collected;
 }
 
+int checkCpuBorrowed ( int cpu ){
+   //If the cpu is mine just check that it is not borrowed
+   if CPU_ISSET(cpu, &default_mask)
+      return CPU_ISSET(cpu, &(shdata->not_borrowed_cpus));
+   else
+      return 1;
+}

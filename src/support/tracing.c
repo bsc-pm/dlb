@@ -44,8 +44,8 @@ void init_tracing( void ){
 
       //RUNTIME_EVENT
       type=RUNTIME_EVENT;
-      n_values=8;
-      char* value_desc[8]={"User code", "Init", "Into MPI call", "Out of MPI call", "Update Resources", "Return Claimed", "Release my cpu", "Claim my cpus"};
+      n_values=9;
+      char* value_desc[9]={"User code", "Init", "Into MPI call", "Out of MPI call", "Update Resources", "Return Claimed", "Release my cpu", "Claim my cpus", "Return my cpu if claimed"};
       Extrae_define_event_type(&type, "DLB Runtime call", &n_values, values, value_desc);
 
       //IDLE_CPUS_EVENT

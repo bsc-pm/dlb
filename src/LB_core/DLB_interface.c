@@ -84,6 +84,14 @@ DLB_API_DEF( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) )
       return 0;
 }
 
+DLB_API_DEF( int, DLB_ReturnClaimedCpu, dlb_returnclaimedcpu, (int cpu) )
+{
+   if ( dlb_enabled )
+      return returnclaimedcpu(cpu);
+   else
+      return 0;
+}
+
 DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) )
 {
    if ( dlb_enabled )
@@ -108,3 +116,13 @@ DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) )
    if ( dlb_enabled )
       node_barrier();
 }
+
+DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) )
+{
+   if ( dlb_enabled )
+      return checkCpuAvailability(cpu);
+   else
+      return 1;
+
+}
+
