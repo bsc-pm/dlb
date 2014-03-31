@@ -35,6 +35,7 @@ enum type_mpi_call{
 	_Scan=9,
 	_Reduce=10,
 	_SendRecv=11,
+        _Test=12,
 //Last 16 bits: 0000000x yyyyyyyy
 // x : Blocking - No blocking
 // y : type mpi call [0-15]
@@ -72,6 +73,10 @@ typedef enum{
 	Scatterv=_Scatter|_Blocking,
 	Scan=_Scan|_Blocking,
 	SendRecv=_SendRecv|_Blocking,
+	Test=_Test,
+	Testall=_Test,
+	Testany=_Test,
+	Testsome=_Test,
 } mpi_call;
 
 extern const char* mpi_call_names[];

@@ -27,6 +27,12 @@
 #include <mpi.h>
 #include <MPI_interface.h>
 
+#if MPI_VERSION >= 3
+#define MPI3_CONST const
+#else
+#define MPI3_CONST
+#endif
+
 int whoami;
 
 
@@ -89,7 +95,7 @@ int MPI_Finalize (void){
 	return res;
 }
 
-int MPI_Sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status){
+int MPI_Sendrecv(MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Sendrecv (to %d - from %d)...............\n",whoami, dest, source);
 	#endif
@@ -125,7 +131,7 @@ int MPI_Sendrecv_replace( void *buf, int count, MPI_Datatype datatype, int dest,
 
 }
 
-int MPI_Bsend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+int MPI_Bsend (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Bsend...............\n",whoami);
 	#endif
@@ -142,7 +148,7 @@ int MPI_Bsend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, M
 	return res;
 }
 
-int MPI_Ssend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+int MPI_Ssend (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Ssend...............\n",whoami);
 	#endif
@@ -158,7 +164,7 @@ int MPI_Ssend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, M
 	return res;
 }
 
-int MPI_Rsend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+int MPI_Rsend (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Rsend...............\n",whoami);
 	#endif
@@ -174,7 +180,7 @@ int MPI_Rsend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, M
 	return res;
 }
 
-int MPI_Send (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+int MPI_Send (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Send...............\n",whoami);
 	#endif
@@ -190,7 +196,7 @@ int MPI_Send (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MP
 	return res;
 }
 
-int MPI_Ibsend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request ){
+int MPI_Ibsend (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request ){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Ibsend...............\n",whoami);
 	#endif
@@ -206,7 +212,7 @@ int MPI_Ibsend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, 
 	return res;
 }
 
-int MPI_Isend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
+int MPI_Isend (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Isend...............\n",whoami);
 	#endif
@@ -222,7 +228,7 @@ int MPI_Isend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, M
 	return res;
 }
 
-int MPI_Issend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
+int MPI_Issend (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Issend...............\n",whoami);
 	#endif
@@ -238,7 +244,7 @@ int MPI_Issend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, 
 	return res;
 }
 
-int MPI_Irsend (void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
+int MPI_Irsend (MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Irsend...............\n",whoami);
 	#endif
@@ -286,7 +292,7 @@ int MPI_Irecv (void* buf, int count, MPI_Datatype datatype, int source, int tag,
 	return res;
 }
 
-int MPI_Reduce (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm){
+int MPI_Reduce (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Reduce...............\n",whoami);
 	#endif
@@ -302,7 +308,7 @@ int MPI_Reduce (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, 
 	return res;
 }
 
-int MPI_Reduce_scatter (void* sendbuf, void* recvbuf, int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
+int MPI_Reduce_scatter (MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Reduce_scatter...............\n",whoami);
 	#endif
@@ -318,7 +324,7 @@ int MPI_Reduce_scatter (void* sendbuf, void* recvbuf, int* recvcounts, MPI_Datat
 	return res;
 }
 
-int MPI_Allreduce (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
+int MPI_Allreduce (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Allreduce...............\n",whoami);
 	#endif
@@ -430,7 +436,7 @@ int MPI_Bcast (void* buffer, int count, MPI_Datatype datatype, int root, MPI_Com
 	return res;
 }
 
-int MPI_Alltoall (void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm){
+int MPI_Alltoall (MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Alltoall...............\n",whoami);
 	#endif
@@ -446,7 +452,7 @@ int MPI_Alltoall (void* sendbuf, int sendcount, MPI_Datatype sendtype, void* rec
 	return res;
 }
 
-int MPI_Alltoallv (void* sendbuf, int *sendcnts, int *sdispls, MPI_Datatype sendtype, void* recvbuf, int *recvcnts, int *rdispls, MPI_Datatype recvtype, MPI_Comm comm){
+int MPI_Alltoallv (MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Alltoallv...............\n",whoami);
 	#endif
@@ -462,7 +468,7 @@ int MPI_Alltoallv (void* sendbuf, int *sendcnts, int *sdispls, MPI_Datatype send
 	return res;
 }
 
-int MPI_Allgather (void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm){
+int MPI_Allgather (MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Allgather...............\n",whoami);
 	#endif
@@ -478,7 +484,7 @@ int MPI_Allgather (void* sendbuf, int sendcount, MPI_Datatype sendtype, void* re
 	return res;
 }
 
-int MPI_Allgatherv (void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int *recvcounts, int *displs, MPI_Datatype recvtype, MPI_Comm comm){
+int MPI_Allgatherv (MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Allgatherv...............\n",whoami);
 	#endif
@@ -494,7 +500,7 @@ int MPI_Allgatherv (void* sendbuf, int sendcount, MPI_Datatype sendtype, void* r
 	return res;
 }
 
-int MPI_Gather (void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm){
+int MPI_Gather (MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Gather...............\n",whoami);
 	#endif
@@ -510,7 +516,7 @@ int MPI_Gather (void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf
 	return res;
 }
 
-int MPI_Gatherv (void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int *recvcnts, int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm ){
+int MPI_Gatherv (MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm ){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Gatherv...............\n",whoami);
 	#endif
@@ -526,7 +532,7 @@ int MPI_Gatherv (void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbu
 	return res;
 }
 
-int MPI_Scatter (void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
+int MPI_Scatter (MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Scatter...............\n",whoami);
 	#endif
@@ -542,7 +548,7 @@ int MPI_Scatter (void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbu
 	return res;
 }
 
-int MPI_Scatterv (void* sendbuf, int *sendcnts, int *displs, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
+int MPI_Scatterv (MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *displs, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Scatterv...............\n",whoami);
 	#endif
@@ -558,7 +564,7 @@ int MPI_Scatterv (void* sendbuf, int *sendcnts, int *displs, MPI_Datatype sendty
 	return res;
 }
 
-int MPI_Scan (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
+int MPI_Scan (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d >> MPI_Scan...............\n",whoami);
 	#endif
@@ -570,6 +576,70 @@ int MPI_Scan (void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MP
 	
 	#ifdef debugInOutMPI
 	fprintf(stderr,"%d << MPI_Scan...............\n",whoami);
+	#endif
+	return res;
+}
+
+int MPI_Test (MPI_Request *request, int *flag, MPI_Status *status){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Test...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Test_enter (request, flag, status);
+	res=PMPI_Test (request, flag, status);
+	DLB_MPI_Test_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Test...............\n",whoami);
+	#endif
+	return res;
+}
+
+int MPI_Testall (int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Testall...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Testall_enter (count, array_of_requests, flag, array_of_statuses);
+	res=PMPI_Testall (count, array_of_requests, flag, array_of_statuses);
+	DLB_MPI_Testall_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Testall...............\n",whoami);
+	#endif
+	return res;
+}
+
+int MPI_Testany (int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Testany...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Testany_enter (count, array_of_requests, indx, flag, status);
+	res=PMPI_Testany (count, array_of_requests, indx, flag, status);
+	DLB_MPI_Testany_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Testany...............\n",whoami);
+	#endif
+	return res;
+}
+
+int MPI_Testsome (int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]){
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d >> MPI_Testsome...............\n",whoami);
+	#endif
+
+	int res;
+	DLB_MPI_Testsome_enter (incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+	res=PMPI_Testsome (incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+	DLB_MPI_Testsome_leave ();
+
+	#ifdef debugInOutMPI
+	fprintf(stderr,"%d << MPI_Testsome...............\n",whoami);
 	#endif
 	return res;
 }

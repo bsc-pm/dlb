@@ -40,10 +40,33 @@ typedef struct {
    cpu_set_t given_cpus; // set of given cpus. Only modified by its own process.
    cpu_set_t avail_cpus; // set of available cpus at the moment
    cpu_set_t not_borrowed_cpus; // set of cpus not used by somebody not his owner
+
+   cpu_set_t check_mask; // To check whether the masks of
+                         // the node processes are disjoint
 } shdata_t;
 
 static shdata_t *shdata;
 static cpu_set_t default_mask;   // default mask of the process
+
+static inline bool mask_is_shared( void )
+{
+   bool shared;
+   cpu_set_t intxn_mask; // intersection mask
+   CPU_ZERO( &intxn_mask );
+   shmem_lock();
+   {
+      CPU_AND( &intxn_mask, &(shdata->check_mask), &default_mask );
+      if (CPU_COUNT( &intxn_mask ) > 0 ) {
+         shared = true;
+      } else {
+         CPU_OR( &(shdata->check_mask), &(shdata->check_mask), &default_mask );
+         shared = false;
+      }
+   }
+   shmem_unlock();
+
+   return shared;
+}
 
 void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 {
@@ -68,6 +91,8 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 
    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
+
+   fatal_cond( mask_is_shared(), "Another process in the same node is using one of your cpus\n" );
 }
 
 void shmem_lewi_mask_finalize( void )

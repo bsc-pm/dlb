@@ -63,7 +63,7 @@ void after_init(void){
 		perror("gethostname");
 	}
 
-	MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+	MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 	int error_code = PMPI_Allgather (hostname, HOST_NAME_MAX, MPI_CHAR, recvData, HOST_NAME_MAX, MPI_CHAR, MPI_COMM_WORLD);
 
 	if (error_code != MPI_SUCCESS) {

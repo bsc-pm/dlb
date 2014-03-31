@@ -22,11 +22,8 @@
 
 #define _GNU_SOURCE
 #include <sched.h>
+#include <stdbool.h>
 
-typedef enum {
-   false = 0,
-   true = 1
-} bool;
 
 typedef enum {
    ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call

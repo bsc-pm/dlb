@@ -6,7 +6,6 @@ Makefile.in
 *.la
 .libs
 .deps
-INSTALL
 aclocal.m4
 autom4te.cache/
 compile
