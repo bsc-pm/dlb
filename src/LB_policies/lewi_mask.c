@@ -100,9 +100,11 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode)
 void lewi_mask_OutOfBlockingCall(int is_iter)
 {
    debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
-   set_mask( shmem_lewi_mask_recover_defmask() );
+   cpu_set_t* current_mask;
+   current_mask = shmem_lewi_mask_recover_defmask();
+   set_mask(current_mask);
    nthreads = _default_nthreads;
-
+assert(nthreads==CPU_COUNT(current_mask));
    add_event( THREADS_USED_EVENT, nthreads );
 }
 

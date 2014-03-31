@@ -151,6 +151,7 @@ void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
 	    max_resources--;
          }
       }
+      assert(max_resources==0);
       DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
       debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
       debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
