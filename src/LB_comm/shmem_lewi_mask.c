@@ -292,3 +292,12 @@ int checkCpuBorrowed ( int cpu ){
    else
       return 1;
 }
+
+int checkCPUIsClaimed( int cpu ){
+      //Just check if my cpu is claimed
+   if (!CPU_ISSET( cpu, &default_mask ) && !CPU_ISSET( cpu, &(shdata->given_cpus) ) )
+      return 1;
+   else
+      return 0;
+}
+

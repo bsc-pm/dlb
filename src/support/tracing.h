@@ -20,6 +20,7 @@
 /********* EXTRAE EVENTS *************/
 #define THREADS_USED_EVENT 800000
 #define RUNTIME_EVENT      800020
+   #define EVENT_USER        0
    #define EVENT_INIT        1
    #define EVENT_INTO_MPI    2
    #define EVENT_OUT_MPI     3

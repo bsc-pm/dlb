@@ -50,7 +50,7 @@ void before_init(void){
 }
 
 void after_init(void){
-	add_event(RUNTIME_EVENT, 1);
+	add_event(RUNTIME_EVENT, EVENT_INIT);
 	is_iter=0;
 
         MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
@@ -142,7 +142,7 @@ void after_init(void){
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 	int valor_dpd;	
 	if(mpi_ready){
-		add_event(RUNTIME_EVENT, 2);
+		add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
 		IntoCommunication();
 
 		if(use_dpd){
@@ -170,7 +170,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
 
 void after_mpi(mpi_call call_type){
 	if (mpi_ready){
-		add_event(RUNTIME_EVENT, 3);
+		add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
 
 		if(_just_barrier){
 			if (call_type==Barrier){

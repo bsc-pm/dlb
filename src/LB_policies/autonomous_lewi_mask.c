@@ -179,37 +179,40 @@ void auto_lewi_mask_ReturnClaimedCpus( void )
 
 int auto_lewi_mask_ReturnCpuIfClaimed( int cpu )
 {
-   add_event(RUNTIME_EVENT, EVENT_RETURN_CPU);
-   cpu_set_t release_mask;
-   CPU_ZERO( &release_mask );
-   CPU_SET(cpu, &release_mask);
-
-   cpu_set_t mask;
-   CPU_ZERO( &mask );
-
    int returned=0;
 
-   pthread_mutex_lock (&mutex);
-   if (enabled){
-      get_mask( &mask );
+   if (checkCPUIsClaimed( cpu )){
+      add_event(RUNTIME_EVENT, EVENT_RETURN_CPU);
+      cpu_set_t release_mask;
+      CPU_ZERO( &release_mask );
+      CPU_SET(cpu, &release_mask);
 
-      if ( CPU_ISSET( cpu, &mask)){
-         returned = shmem_lewi_mask_return_claimed( &release_mask );
+      cpu_set_t mask;
+      CPU_ZERO( &mask );
 
-         if ( returned > 0 ) {
-            nthreads -= returned;
-            CPU_CLR(cpu, &mask);
 
-            set_mask( &mask );
-            debug_lend ( "RETURNING MY CPU %d returned threads for a total of %d\n", returned, nthreads );
-            add_event( THREADS_USED_EVENT, nthreads );
-            assert(nthreads==CPU_COUNT(&mask));
+      pthread_mutex_lock (&mutex);
+      if (enabled){
+         get_mask( &mask );
+
+         if ( CPU_ISSET( cpu, &mask)){
+            returned = shmem_lewi_mask_return_claimed( &release_mask );
+
+            if ( returned > 0 ) {
+               nthreads -= returned;
+               CPU_CLR(cpu, &mask);
+
+               set_mask( &mask );
+               debug_lend ( "RETURNING MY CPU %d returned threads for a total of %d\n", returned, nthreads );
+               add_event( THREADS_USED_EVENT, nthreads );
+               assert(nthreads==CPU_COUNT(&mask));
+            }
+            debug_shmem ( "My mask %s\n", mu_to_str(&mask));
          }
-         debug_shmem ( "My mask %s\n", mu_to_str(&mask));
       }
+      pthread_mutex_unlock (&mutex);
+      add_event(RUNTIME_EVENT, 0);
    }
-   pthread_mutex_unlock (&mutex);
-   add_event(RUNTIME_EVENT, 0);
    return returned;
 }
 

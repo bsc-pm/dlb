@@ -183,7 +183,8 @@ void Init(void){
 		lb_funcs.intoBlockingCall = &auto_lewi_mask_IntoBlockingCall;
 		lb_funcs.outOfBlockingCall = &auto_lewi_mask_OutOfBlockingCall;
 		lb_funcs.updateresources = &auto_lewi_mask_UpdateResources;
-		lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
+		//lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
+		lb_funcs.returnclaimed = &dummyFunc;
 		lb_funcs.releasecpu = &auto_lewi_mask_ReleaseCpu;
 		lb_funcs.returnclaimedcpu = &auto_lewi_mask_ReturnCpuIfClaimed;
                 lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
@@ -390,7 +391,7 @@ void updateresources( int max_resources ){
 	if(ready){
 		add_event(RUNTIME_EVENT, EVENT_UPDATE);
 		lb_funcs.updateresources( max_resources );
-		add_event(RUNTIME_EVENT, 0);
+		add_event(RUNTIME_EVENT, EVENT_USER);
 	}
 }
 
@@ -398,15 +399,13 @@ void returnclaimed( void ){
 	if(ready){
 		add_event(RUNTIME_EVENT, EVENT_RETURN);
 		lb_funcs.returnclaimed();
-		add_event(RUNTIME_EVENT, 0);
+		add_event(RUNTIME_EVENT, EVENT_USER);
 	}
 }
 int releasecpu( int cpu ){
       int released=0;
 	if(ready){
-//		add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
 		released=lb_funcs.releasecpu(cpu);
-//		add_event(RUNTIME_EVENT, 0);
 	}
         return released;
 }
@@ -414,9 +413,7 @@ int releasecpu( int cpu ){
 int returnclaimedcpu( int cpu ){
       int released=0;
 	if(ready){
-//		add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
 		released=lb_funcs.returnclaimedcpu(cpu);
-//		add_event(RUNTIME_EVENT, 0);
 	}
         return released;
 }
@@ -425,7 +422,7 @@ void claimcpus( int cpus ){
    if(ready){
       add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
       lb_funcs.claimcpus(cpus);
-      add_event(RUNTIME_EVENT, 0);
+      add_event(RUNTIME_EVENT, EVENT_USER);
    }
 }
 
