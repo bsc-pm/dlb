@@ -42,8 +42,8 @@ static int fd;
 static void* addr;
 static size_t length;
 static sem_t *mutex;
-static char filename[FILENAME_MAX];
-static const char SEM_NAME[]= "DLB_mutex";
+static char shm_filename[32];    /* 32 chars should be enough to store /DLB_xxx_$PID\0 */
+static char sem_filename[32];    /* even in systems where PID_MAX has been increased   */
 
 void shmem_init( void **shdata, size_t sm_size )
 {
@@ -58,17 +58,17 @@ void shmem_init( void **shdata, size_t sm_size )
       key = getpid();
 
       /* Create Semaphore */
-      sem_unlink( SEM_NAME );
-      mutex = sem_open( SEM_NAME, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
+      sprintf( sem_filename, "/DLB_sem_%d", key );
+      mutex = sem_open( sem_filename, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
       if ( mutex == SEM_FAILED ) {
          perror( "DLB_PANIC: Master unable to create semaphore" );
-         sem_unlink( SEM_NAME );
+         sem_unlink( sem_filename );
          exit( 1 );
       }
 
       /* Obtain a file descriptor for the shmem */
-      sprintf( filename, "/DLB_shm_%d", key );
-      fd = shm_open( filename, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR );
+      sprintf( shm_filename, "/DLB_shm_%d", key );
+      fd = shm_open( shm_filename, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR );
       if ( fd == -1 ) {
          perror( "DLB PANIC: shm_open Master" );
          exit( 1 );
@@ -103,7 +103,8 @@ void shmem_init( void **shdata, size_t sm_size )
 #endif
 
       /* Open Semaphore */
-      mutex = sem_open( SEM_NAME, 0, S_IRUSR | S_IWUSR, 0 );
+      sprintf( sem_filename, "/DLB_sem_%d", key );
+      mutex = sem_open( sem_filename, 0, S_IRUSR | S_IWUSR, 0 );
       if ( mutex == SEM_FAILED ) {
          perror( "DLB PANIC: Reader unable to open semaphore" );
          sem_close( mutex );
@@ -111,9 +112,9 @@ void shmem_init( void **shdata, size_t sm_size )
       }
 
       /* Obtain a file descriptor for the shmem */
-      sprintf( filename, "/DLB_shm_%d", key );
+      sprintf( shm_filename, "/DLB_shm_%d", key );
       do {
-         fd = shm_open( filename, O_RDWR, S_IRUSR | S_IWUSR );
+         fd = shm_open( shm_filename, O_RDWR, S_IRUSR | S_IWUSR );
       } while ( fd < 0 && errno == ENOENT );
 
       if ( fd < 0 ) {
@@ -140,14 +141,14 @@ void shmem_finalize( void )
 {
    sem_close(mutex);
    if ( _process_id == 0 ) {
-      sem_unlink(SEM_NAME);
+      sem_unlink(sem_filename);
    }
 
    if ( munmap( addr, length ) )
       perror( "DLB ERROR: munmap" );
 
    if ( _process_id == 0 ) {
-      if ( shm_unlink( filename ) )
+      if ( shm_unlink( shm_filename ) )
          perror( "DLB ERROR: shm_unlink" );
    }
 }
