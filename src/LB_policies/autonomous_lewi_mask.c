@@ -167,6 +167,11 @@ void auto_lewi_mask_ReturnClaimedCpus( void )
 
       if ( returned > 0 ) {
          nthreads -= returned;
+         // If final nthreads is 0, get at least one cpu from the default mask
+         if ( nthreads == 0 ) {
+            shmem_lewi_mask_recover_some_defcpus( &mask, 1 );
+            nthreads = 1;
+         }
          set_mask( &mask );
          debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
          add_event( THREADS_USED_EVENT, nthreads );
@@ -202,6 +207,11 @@ int auto_lewi_mask_ReturnCpuIfClaimed( int cpu )
                nthreads -= returned;
                CPU_CLR(cpu, &mask);
 
+               // If final nthreads is 0, get at least one cpu from the default mask
+               if ( nthreads == 0 ) {
+                  shmem_lewi_mask_recover_some_defcpus( &mask, 1 );
+                  nthreads = 1;
+               }
                set_mask( &mask );
                debug_lend ( "RETURNING MY CPU %d returned threads for a total of %d\n", returned, nthreads );
                add_event( THREADS_USED_EVENT, nthreads );
@@ -244,7 +254,7 @@ int auto_lewi_mask_ReleaseCpu( int cpu )
       get_mask( &current_mask );
       get_mask(&debug_mask);
 
-      if (CPU_ISSET(cpu, &current_mask)){
+      if (CPU_ISSET(cpu, &current_mask) && nthreads>1){
          //debug_basic_info ( "current mask %s\n", mu_to_str(&current_mask));
 
          CPU_XOR( &current_mask, &current_mask, &release_mask );
