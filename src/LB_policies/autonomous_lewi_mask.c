@@ -252,9 +252,9 @@ int auto_lewi_mask_ReleaseCpu( int cpu )
          //debug_basic_info ( "new mask %s\n", mu_to_str(&current_mask));
 
 
-         shmem_lewi_mask_add_mask( &release_mask );
          set_mask( &current_mask );
          nthreads--;
+         shmem_lewi_mask_add_mask( &release_mask );
          add_event( THREADS_USED_EVENT, nthreads );
          released=1;
       }
