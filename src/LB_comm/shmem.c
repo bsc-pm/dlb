@@ -29,6 +29,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <pthread.h>
+
+#ifndef _POSIX_THREAD_PROCESS_SHARED
+#error This system does not support process shared mutex
+#endif
 
 #ifdef HAVE_MPI
 #include <mpi.h>
@@ -41,7 +46,8 @@
 static int fd;
 static void* addr;
 static size_t length;
-static sem_t *mutex;
+static sem_t *semaphore;
+static pthread_mutex_t *shmem_mutex = NULL;
 static char shm_filename[32];    /* 32 chars should be enough to store /DLB_xxx_$PID\0 */
 static char sem_filename[32];    /* even in systems where PID_MAX has been increased   */
 
@@ -59,8 +65,8 @@ void shmem_init( void **shdata, size_t sm_size )
 
       /* Create Semaphore */
       sprintf( sem_filename, "/DLB_sem_%d", key );
-      mutex = sem_open( sem_filename, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
-      if ( mutex == SEM_FAILED ) {
+      semaphore = sem_open( sem_filename, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
+      if ( semaphore == SEM_FAILED ) {
          perror( "DLB_PANIC: Master unable to create semaphore" );
          sem_unlink( sem_filename );
          exit( 1 );
@@ -104,10 +110,10 @@ void shmem_init( void **shdata, size_t sm_size )
 
       /* Open Semaphore */
       sprintf( sem_filename, "/DLB_sem_%d", key );
-      mutex = sem_open( sem_filename, 0, S_IRUSR | S_IWUSR, 0 );
-      if ( mutex == SEM_FAILED ) {
+      semaphore = sem_open( sem_filename, 0, S_IRUSR | S_IWUSR, 0 );
+      if ( semaphore == SEM_FAILED ) {
          perror( "DLB PANIC: Reader unable to open semaphore" );
-         sem_close( mutex );
+         sem_close( semaphore );
          exit( 1 );
       }
 
@@ -139,7 +145,12 @@ void shmem_init( void **shdata, size_t sm_size )
 
 void shmem_finalize( void )
 {
-   sem_close(mutex);
+   if ( shmem_mutex != NULL ) {
+      if ( pthread_mutex_destroy( shmem_mutex ) )
+         perror ( "DLB ERROR: Shared Memory mutex destroy" );
+   }
+
+   sem_close( semaphore );
    if ( _process_id == 0 ) {
       sem_unlink(sem_filename);
    }
@@ -153,12 +164,45 @@ void shmem_finalize( void )
    }
 }
 
+void shmem_set_mutex ( pthread_mutex_t *shmutex )
+{
+   if ( shmutex != NULL ) {
+      pthread_mutexattr_t attr;
+
+      /* Init pthread attributes */
+      if ( pthread_mutexattr_init( &attr ) )
+         perror( "DLB ERROR: " );
+
+      /* Set process-shared attribute */
+      if ( pthread_mutexattr_setpshared( &attr, PTHREAD_PROCESS_SHARED ) )
+         perror( "DLB ERROR: " );
+
+      /* Init pthread mutex */
+      if ( pthread_mutex_init( shmutex, &attr ) )
+         perror( "DLB ERROR: " );
+
+      /* Destroy pthread attributes */
+      if ( pthread_mutexattr_destroy( &attr ) )
+         perror( "DLB ERROR: " );
+
+      shmem_mutex = shmutex;
+   }
+}
+
 void shmem_lock( void )
 {
-   sem_wait( mutex );
+   if ( shmem_mutex != NULL ) {
+      pthread_mutex_lock( shmem_mutex );
+   } else {
+      sem_wait( semaphore );
+   }
 }
 
 void shmem_unlock( void )
 {
-   sem_post( mutex );
+   if ( shmem_mutex != NULL ) {
+      pthread_mutex_unlock( shmem_mutex );
+   } else {
+      sem_post( semaphore );
+   }
 }

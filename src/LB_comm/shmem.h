@@ -21,9 +21,11 @@
 #define SHMEM_H
 
 #include <stdlib.h>
+#include <pthread.h>
 
 void shmem_init( void *shdata, size_t sm_size );
 void shmem_finalize( void );
+void shmem_set_mutex ( pthread_mutex_t *shmutex );
 void shmem_lock( void );
 void shmem_unlock( void );
 

@@ -21,6 +21,7 @@
 #include <sched.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "shmem.h"
 #include "support/tracing.h"
@@ -43,36 +44,20 @@ typedef struct {
 
    cpu_set_t check_mask; // To check whether the masks of
                          // the node processes are disjoint
+   pthread_mutex_t shmem_mutex;
 } shdata_t;
 
 static shdata_t *shdata;
 static cpu_set_t default_mask;   // default mask of the process
 
-static inline bool mask_is_shared( void )
-{
-   bool shared;
-   cpu_set_t intxn_mask; // intersection mask
-   CPU_ZERO( &intxn_mask );
-   shmem_lock();
-   {
-      CPU_AND( &intxn_mask, &(shdata->check_mask), &default_mask );
-      if (CPU_COUNT( &intxn_mask ) > 0 ) {
-         shared = true;
-      } else {
-         CPU_OR( &(shdata->check_mask), &(shdata->check_mask), &default_mask );
-         shared = false;
-      }
-   }
-   shmem_unlock();
-
-   return shared;
-}
+static bool has_shared_mask(void);
 
 void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 {
    int i;
 
    shmem_init( &shdata, sizeof(shdata_t) );
+   shmem_set_mutex( &(shdata->shmem_mutex) );
    add_event( IDLE_CPUS_EVENT, 0 );
    if ( _process_id == 0 ) {
       CPU_ZERO( &(shdata->given_cpus) );
@@ -92,7 +77,7 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
 
-   fatal_cond( mask_is_shared(), "Another process in the same node is using one of your cpus\n" );
+   fatal_cond( has_shared_mask(), "Another process in the same node is using one of your cpus\n" );
 }
 
 void shmem_lewi_mask_finalize( void )
@@ -301,3 +286,23 @@ int checkCPUIsClaimed( int cpu ){
       return 0;
 }
 
+
+static bool has_shared_mask( void )
+{
+   bool shared;
+   cpu_set_t intxn_mask; // intersection mask
+   CPU_ZERO( &intxn_mask );
+   shmem_lock();
+   {
+      CPU_AND( &intxn_mask, &(shdata->check_mask), &default_mask );
+      if (CPU_COUNT( &intxn_mask ) > 0 ) {
+         shared = true;
+      } else {
+         CPU_OR( &(shdata->check_mask), &(shdata->check_mask), &default_mask );
+         shared = false;
+      }
+   }
+   shmem_unlock();
+
+   return shared;
+}
