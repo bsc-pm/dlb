@@ -17,6 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */
 #include <stdio.h>
 #include <string.h>
@@ -76,6 +80,23 @@ int use_dpd;
 static void dummyFunc(){}
 static int false_dummyFunc(){return 0;}
 static int true_dummyFunc(){return 1;}
+
+void fixme_init_without_mpi(void)
+{
+   add_event(RUNTIME_EVENT, EVENT_INIT);
+   _mpi_rank = -1;
+   _mpi_size = -1;
+   _node_id = -1;
+   _process_id = getpid();
+   _mpis_per_node = -1;
+   Init();
+   add_event(RUNTIME_EVENT, 0);
+}
+
+void fixme_finalize_without_mpi(void)
+{
+   Finish();
+}
 
 void Init(void){
 	//Read Environment vars
@@ -244,7 +265,9 @@ void Init(void){
 	}
 
 	debug_basic_info0 ( "DLB: Balancing policy: %s balancing\n", policy);
+#ifdef HAVE_MPI
 	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
+#endif
 
 	if ((thread_distrib=getenv("LB_THREAD_DISTRIBUTION"))==NULL){
 		if ( nanos_get_pm ) {
@@ -262,8 +285,6 @@ void Init(void){
 			else
 				_default_nthreads = 1;
 		}
-
-		debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
 
 	//Initial thread distribution specified
 	}else{
@@ -292,17 +313,15 @@ void Init(void){
 					_default_nthreads = 1;
                 	}
 
-                	debug_basic_info0 ( "DLB: Each MPI process starts with %d threads\n", _default_nthreads);
-
 		}else{
 			_default_nthreads=atoi(token);
-			debug_basic_info0 ( "DLB: I start with %d threads\n", _default_nthreads);
 		}
 	}
 
 
+        debug_basic_info0 ( "DLB: This process starts with %d threads\n", _default_nthreads);
 
-
+#ifdef HAVE_MPI
         if ( _just_barrier )
            debug_basic_info0 ( "Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n" );
 
@@ -310,6 +329,7 @@ void Init(void){
            debug_basic_info0 ( "LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n" );
         else if ( _blocking_mode == BLOCK )
            debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n" );
+#endif
 
 /*	if (prof){
 		clock_gettime(CLOCK_REALTIME, &initAppl);

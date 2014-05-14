@@ -41,6 +41,9 @@ extern int use_dpd;
 
 void bind_master();
 
+void fixme_init_without_mpi(void);
+void fixme_finalize_without_mpi(void);
+
 void Init(void);
 
 void Finish(void);

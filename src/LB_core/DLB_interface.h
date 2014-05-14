@@ -42,6 +42,8 @@ extern "C"
 {
 #endif
 
+DLB_API_DECL( void, DLB_Init, dlb_init, (void) )
+DLB_API_DECL( void, DLB_Finalize, dlb_finalize, (void) )
 DLB_API_DECL( void, DLB_enable, dlb_enable, (void) );
 DLB_API_DECL( void, DLB_disable, dlb_disable, (void) );
 DLB_API_DECL( void, DLB_single, dlb_single, (void) );

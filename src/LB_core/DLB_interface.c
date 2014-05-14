@@ -26,6 +26,18 @@
 
 static bool dlb_enabled = true;
 
+DLB_API_DEF( void, DLB_Init, dlb_init, (void) )
+{
+   fixme_init_without_mpi();
+   dlb_enabled = true;
+}
+
+DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) )
+{
+   dlb_enabled = false;
+   fixme_finalize_without_mpi();
+}
+
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) )
 {
    add_event(DLB_MODE_EVENT, EVENT_ENABLED);

@@ -18,13 +18,13 @@
 /*************************************************************************************/
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include <config.h>
 #endif
-
-#include "utils.h"
 #ifdef HAVE_MPI
 #include <mpi.h>
 #endif
+
+#include "utils.h"
 
 int _mpi_rank;
 int _mpi_size;
