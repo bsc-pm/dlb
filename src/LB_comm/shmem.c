@@ -181,7 +181,7 @@ void shmem_init( void **shdata, size_t sm_size )
       exit( 1 );
    }
 
-   debug_shmem ( "Start Pocessr Comm - shared mem created\n" );
+   debug_shmem ( "Start Process Comm - shared mem created\n" );
 
    /* Save addr and length for the finalize step*/
    addr = *shdata;

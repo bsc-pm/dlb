@@ -178,11 +178,11 @@ const char* mu_to_str ( const cpu_set_t *cpu_set )
 {
    int i;
    static char str[CPU_SETSIZE*2 + 4 + 6];
-   char str_i[1];
+   char str_i[3];
    strcpy( str, "[ " );
    for ( i=0; i<sys.size; i++ ) {
       if ( CPU_ISSET(i, cpu_set) ){
-         sprintf(str_i,"%d ", i);
+         snprintf(str_i, sizeof(str_i), "%d ", i);
          strcat( str, str_i );
       } else strcat( str,"- " );
    }

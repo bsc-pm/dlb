@@ -21,60 +21,100 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
+#include <sched.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include "support/utils.h"
 
 void print_usage( const char * program )
 {
-   fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );
+   fprintf( stdout, "usage: %s [-h] [--help] [-l] [--list] [-d] [--delete]\n", program );
 }
 
 void print_help( void )
 {
    fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
    fprintf( stdout, "\n" );
-   fprintf( stdout, "DLB Environment Variables:\n" );
-   fprintf( stdout, "LB_JUST_BARRIER = [0, 1]\n" );
-   fprintf( stdout, "LB_LEND_MODE = [BLOCK, 1CPU]\n" );
-   fprintf( stdout, "LB_AGGRESSIVE_INIT = [0, 1]\n" );
-   fprintf( stdout, "LB_PRIORIZE_LOCALITY = [0, 1]\n" );
-   fprintf( stdout, "LB_POLICY = [policy]\n" );
-   fprintf( stdout, "\n" );
-   fprintf( stdout, "LB Policies:\n" );
-   fprintf( stdout, "- No: \n" );
-   fprintf( stdout, "- LeWI:\n" );
-   fprintf( stdout, "- LeWI_mask:\n" );
-   fprintf( stdout, "- RaL:\n" );
+   fprintf( stdout, "COMMANDS:\n" );
+   fprintf( stdout, " - list[-l]:   Print DLB shmem data, if any\n" );
+   fprintf( stdout, " - delete[-d]: Delete shmem data\n" );
 }
 
-void print_version( void )
+// FIXME
+void get_masks( cpu_set_t *given,  cpu_set_t *avail,  cpu_set_t *not_borrowed, cpu_set_t *check );
+const char* mu_to_str ( const cpu_set_t *cpu_set );
+void mu_init( void );
+void mu_finalize( void );
+void list_shdata( void )
 {
-   fprintf( stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION );
-   fprintf( stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS );
+   cpu_set_t given, avail, not_borrowed, check;
+   get_masks( &given, &avail, &not_borrowed, &check );
+   mu_init();
+   fprintf( stderr, "Given CPUs:        %s\n", mu_to_str( &given ) );
+   fprintf( stderr, "Available CPUs:    %s\n", mu_to_str( &avail ) );
+   fprintf( stderr, "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
+   fprintf( stderr, "Running CPUs:      %s\n", mu_to_str( &check ) );
+   mu_finalize();
+}
+
+void delete_shdata( void )
+{
+   const char dir[] = "/dev/shm";
+   DIR *dp;
+   struct dirent *entry;
+   struct stat statbuf;
+
+   if ( (dp = opendir(dir)) == NULL ) {
+      perror( "DLB ERROR: can't open /dev/shm" );
+      exit( EXIT_FAILURE );
+   }
+
+   chdir(dir);
+   while ( (entry = readdir(dp)) != NULL ) {
+      lstat( entry->d_name, &statbuf );
+      if( S_ISREG( statbuf.st_mode ) ) {
+         if ( fnmatch( "DLB_shm_*", entry->d_name, 0)  == 0    ||
+              fnmatch( "sem.DLB_sem_*", entry->d_name, 0) == 0 ) {
+            fprintf( stdout, "Deleting... %s\n", entry->d_name );
+            if ( unlink( entry->d_name ) ) {
+               perror( "DLB ERROR: can't delete shm file" );
+               exit( EXIT_FAILURE );
+            }
+         }
+      }
+   }
+
+   closedir(dp);
 }
 
 int main ( int argc, char *argv[] )
 {
    bool do_help = false;
-   bool do_version = false;
+   bool do_list = false;
+   bool do_delete = false;
 
    int i;
    for ( i=1; i<argc; i++ ) {
       if ( strcmp( argv[i], "--help" ) == 0 ||
            strcmp( argv[i], "-h" ) == 0 ) {
          do_help = true;
-      } else if ( strcmp( argv[i], "--version" ) == 0 ||
-                  strcmp( argv[i], "-v" ) == 0 ) {
-         do_version = true;
+      } else if ( strcmp( argv[i], "--list" ) == 0 ||
+                  strcmp( argv[i], "-l" ) == 0 ) {
+         do_list = true;
+      } else if ( strcmp( argv[i], "--delete" ) == 0 ||
+                  strcmp( argv[i], "-d" ) == 0 ) {
+         do_delete = true;
       } else {
          print_usage( argv[0] );
          exit(0);
       }
    }
 
-   if ( !do_help && !do_version ) {
+   if ( !do_help && !do_list && !do_delete ) {
       print_usage( argv[0] );
       exit(0);
    }
@@ -82,8 +122,11 @@ int main ( int argc, char *argv[] )
    if ( do_help )
       print_help();
 
-   if ( do_version )
-      print_version();
+   if ( do_list )
+      list_shdata();
+
+   if ( do_delete )
+      delete_shdata();
 
    return 0;
 }

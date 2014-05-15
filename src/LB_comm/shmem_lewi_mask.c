@@ -327,3 +327,31 @@ static bool has_shared_mask( void )
 
    return shared;
 }
+
+// This function is intended to be called from external processes only to consult the shdata
+// That's why we should initialize and finalize with the shared mem
+void get_masks( cpu_set_t *given,  cpu_set_t *avail,  cpu_set_t *not_borrowed, cpu_set_t *check )
+{
+   shmem_init( &shdata, sizeof(shdata_t) );
+   shmem_set_mutex( &(shdata->shmem_mutex) );
+
+   shmem_lock();
+   {
+      memcpy( given, &(shdata->given_cpus), sizeof(cpu_set_t) );
+      memcpy( avail, &(shdata->avail_cpus), sizeof(cpu_set_t) );
+      memcpy( not_borrowed, &(shdata->not_borrowed_cpus), sizeof(cpu_set_t) );
+      memcpy( check, &(shdata->check_mask), sizeof(cpu_set_t) );
+   }
+   shmem_unlock();
+
+   shmem_finalize();
+}
+
+void get_check_mask( cpu_set_t *cpu )
+{
+   shmem_lock();
+   {
+      memcpy( cpu, &(shdata->check_mask), sizeof(cpu_set_t) );
+   }
+   shmem_unlock();
+}

@@ -6,10 +6,13 @@
 # HELPER BINARY
 ###############################################################################
 
-bin_PROGRAMS = dlb
+bin_PROGRAMS = dlb dlb_shm
 
 dlb_LDFLAGS =
 dlb_SOURCES = $(top_srcdir)/src/utils/dlb.c
+
+dlb_shm_LDFLAGS = -ldlb_nanos
+dlb_shm_SOURCES = $(top_srcdir)/src/utils/dlb_shm.c
 
 ###############################################################################
 # THE LIBRARIES TO BUILD
