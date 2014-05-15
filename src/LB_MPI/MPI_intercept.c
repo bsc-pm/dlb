@@ -21,7 +21,7 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 
 #include <stdio.h>
 #include <mpi.h>
@@ -644,4 +644,4 @@ int MPI_Testsome (int incount, MPI_Request array_of_requests[], int *outcount, i
 	return res;
 }
 
-#endif /* HAVE_MPI */
+#endif /* MPI_LIB */

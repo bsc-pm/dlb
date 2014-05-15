@@ -22,6 +22,7 @@
 #endif
 
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>      /* For mode constants */
 #include <fcntl.h>         /* For O_* constants */
@@ -35,7 +36,7 @@
 #error This system does not support process shared mutex
 #endif
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 #include <mpi.h>
 #endif
 
@@ -51,6 +52,7 @@ static pthread_mutex_t *shmem_mutex = NULL;
 static char shm_filename[32];    /* 32 chars should be enough to store /DLB_xxx_$PID\0 */
 static char sem_filename[32];    /* even in systems where PID_MAX has been increased   */
 
+#ifdef MPI_LIB
 void shmem_init( void **shdata, size_t sm_size )
 {
    debug_shmem ( "Shared Memory Init: pid(%d)\n", getpid() );
@@ -93,20 +95,14 @@ void shmem_init( void **shdata, size_t sm_size )
          exit( 1 );
       }
 
-#ifdef HAVE_MPI
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
-#endif
 
       debug_shmem ( "Start Master Comm - shared mem created\n" );
 
    } else {
       debug_shmem ( "Slave Comm - associating to shared mem\n" );
 
-#ifdef HAVE_MPI
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
-#else
-      key = 0;
-#endif
 
       /* Open Semaphore */
       sprintf( sem_filename, "/DLB_sem_%d", key );
@@ -138,10 +134,60 @@ void shmem_init( void **shdata, size_t sm_size )
       }
    }
 
-   /* Store addr and length for the finalize step*/
+   /* Save addr and length for the finalize step*/
    addr = *shdata;
    length = sm_size;
 }
+
+#else
+
+void shmem_init( void **shdata, size_t sm_size )
+{
+   debug_shmem ( "Shared Memory Init: pid(%d)\n", getpid() );
+
+   key_t key = getuid();
+
+   debug_shmem ( "Start Process Comm - creating shared mem \n" );
+
+   /* Create Semaphore */
+   sprintf( sem_filename, "/DLB_sem_%d", key );
+   semaphore = sem_open( sem_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
+   if ( semaphore == SEM_FAILED ) {
+      perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
+      // Not sure if we need both
+      sem_close( semaphore );
+      sem_unlink( sem_filename );
+      exit( 1 );
+   }
+
+   /* Obtain a file descriptor for the shmem */
+   sprintf( shm_filename, "/DLB_shm_%d", key );
+   fd = shm_open( shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR );
+   if ( fd == -1 ) {
+      perror( "DLB PANIC: shm_open Master" );
+      exit( 1 );
+   }
+
+   /* Truncate the regular file to a precise size */
+   if ( ftruncate( fd, sm_size ) == -1 ) {
+      perror( "DLB PANIC: ftruncate Process" );
+      exit( 1 );
+   }
+
+   /* Map shared memory object */
+   *shdata = mmap( NULL, sm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+   if ( *shdata == MAP_FAILED ) {
+      perror( "DLB PANIC: mmap Process" );
+      exit( 1 );
+   }
+
+   debug_shmem ( "Start Pocessr Comm - shared mem created\n" );
+
+   /* Save addr and length for the finalize step*/
+   addr = *shdata;
+   length = sm_size;
+}
+#endif
 
 void shmem_finalize( void )
 {
@@ -150,43 +196,42 @@ void shmem_finalize( void )
          perror ( "DLB ERROR: Shared Memory mutex destroy" );
    }
 
-   sem_close( semaphore );
-   if ( _process_id == 0 ) {
-      sem_unlink(sem_filename);
-   }
+   if ( sem_close( semaphore ) ) perror( "DLB ERROR: sem_close" );
+   if ( munmap( addr, length ) ) perror( "DLB_ERROR: munmap" );
 
-   if ( munmap( addr, length ) )
-      perror( "DLB ERROR: munmap" );
-
+#ifdef MPI_LIB
    if ( _process_id == 0 ) {
-      if ( shm_unlink( shm_filename ) )
-         perror( "DLB ERROR: shm_unlink" );
+      if ( sem_unlink( sem_filename ) ) perror( "DLB_ERROR: sem_unlink" );
+      if ( shm_unlink( shm_filename ) ) perror( "DLB ERROR: shm_unlink" );
    }
+#endif
 }
 
 void shmem_set_mutex ( pthread_mutex_t *shmutex )
 {
+   sem_wait( semaphore );
    if ( shmutex != NULL ) {
       pthread_mutexattr_t attr;
 
       /* Init pthread attributes */
       if ( pthread_mutexattr_init( &attr ) )
-         perror( "DLB ERROR: " );
+         perror( "DLB ERROR: pthread_mutexattr_init" );
 
       /* Set process-shared attribute */
       if ( pthread_mutexattr_setpshared( &attr, PTHREAD_PROCESS_SHARED ) )
-         perror( "DLB ERROR: " );
+         perror( "DLB ERROR: pthread_mutexattr_setpshared" );
 
       /* Init pthread mutex */
       if ( pthread_mutex_init( shmutex, &attr ) )
-         perror( "DLB ERROR: " );
+         perror( "DLB ERROR: pthread_mutex_init" );
 
       /* Destroy pthread attributes */
       if ( pthread_mutexattr_destroy( &attr ) )
-         perror( "DLB ERROR: " );
+         perror( "DLB ERROR: pthread_mutexattr_destroy" );
 
       shmem_mutex = shmutex;
    }
+   sem_post( semaphore );
 }
 
 void shmem_lock( void )

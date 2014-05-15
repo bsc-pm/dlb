@@ -70,6 +70,7 @@ AC_OPENMP
 
 # check for MPI
 AX_PROG_MPI
+AM_CONDITIONAL([MPI_LIB], [test "${MPI_INSTALLED}" = "yes"])
 
 # check for HWLOC
 AX_PROG_HWLOC

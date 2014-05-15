@@ -21,7 +21,7 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 
 #include <stdio.h>
 #include "LB_core/DLB_kernel.h"
@@ -202,4 +202,4 @@ void disable_mpi(void) { mpi_ready = 0; }
 
 void node_barrier(void) { if (mpi_ready) MPI_Barrier( _mpi_comm_node ); }
 
-#endif /* HAVE_MPI */
+#endif /* MPI_LIB */

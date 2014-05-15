@@ -30,7 +30,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 #include <mpi.h>
 #endif
 
@@ -138,7 +138,7 @@ void LoadCommConfig(int num_procs, int meId, int nodeId){
 			threads[i]=0;
 		}
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 		PMPI_Barrier(MPI_COMM_WORLD);
 #endif
 
@@ -147,7 +147,7 @@ void LoadCommConfig(int num_procs, int meId, int nodeId){
     	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
 #endif
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 		PMPI_Barrier(MPI_COMM_WORLD);
 #endif
 	

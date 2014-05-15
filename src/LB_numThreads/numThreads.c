@@ -78,7 +78,7 @@ void DLB_bind_thread(int tid, int procsNode){
 		int i;
 		cpu_set_t set;
 		CPU_ZERO(&set);
-                if (procsNode == 0) procsNode = mpi_x_node;
+                if (procsNode == 0) procsNode = _mpis_per_node;
 		int default_threads=_default_nthreads;
 
 		//I am one of the default slave threads

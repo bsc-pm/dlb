@@ -265,7 +265,7 @@ void Init(void){
 	}
 
 	debug_basic_info0 ( "DLB: Balancing policy: %s balancing\n", policy);
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
 #endif
 
@@ -321,7 +321,7 @@ void Init(void){
 
         debug_basic_info0 ( "DLB: This process starts with %d threads\n", _default_nthreads);
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
         if ( _just_barrier )
            debug_basic_info0 ( "Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n" );
 

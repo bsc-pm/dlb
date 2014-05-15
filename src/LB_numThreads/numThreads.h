@@ -23,8 +23,6 @@
 #define _GNU_SOURCE
 #include <sched.h>
 
-int mpi_x_node;
-
 void omp_set_num_threads (int numThreads) __attribute__ ((weak));
 void css_set_num_threads (int numThreads) __attribute__ ((weak));
 int* css_set_num_threads_cpus(int action, int num_cpus, int* cpus) __attribute__ ((weak));

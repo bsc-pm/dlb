@@ -21,7 +21,7 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 
 #include <stdio.h>
 #include <process_MPI.h>
@@ -681,4 +681,4 @@ void  DLB_MPI_Testsome_leave (void){
 	after_mpi(Testsome);
 }
 
-#endif /* HAVE_MPI */
+#endif /* MPI_LIB */

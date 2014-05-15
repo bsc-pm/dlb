@@ -20,7 +20,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 #include <mpi.h>
 #endif
 
@@ -38,6 +38,6 @@ bool _aggressive_init = false;
 bool _priorize_locality = false;
 blocking_mode_t _blocking_mode = ONE_CPU;
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 MPI_Comm _mpi_comm_node;
 #endif

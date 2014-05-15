@@ -23,11 +23,11 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
-#include "utils.h"
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 #include <mpi.h>
 #endif
+
+#include "utils.h"
 
 extern int _mpi_rank;         /* MPI rank */
 extern int _mpi_size;         /* MPI size */
@@ -41,7 +41,7 @@ extern bool _aggressive_init; /* Initialize all threads at init */
 extern bool _priorize_locality; /* Given threads are reserved for other processes using the same socket, unless all of them are given */
 extern blocking_mode_t _blocking_mode;
 
-#ifdef HAVE_MPI
+#ifdef MPI_LIB
 extern MPI_Comm _mpi_comm_node; /* MPI Communicator specific to the node */
 #endif
 

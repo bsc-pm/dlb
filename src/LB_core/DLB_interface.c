@@ -17,12 +17,18 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <limits.h>
 #include "LB_core/DLB_interface.h"
 #include "LB_core/DLB_kernel.h"
-#include "LB_MPI/process_MPI.h"
 #include "support/utils.h"
 #include "support/tracing.h"
+#ifdef MPI_LIB
+#include "LB_MPI/process_MPI.h"
+#endif
 
 static bool dlb_enabled = true;
 
@@ -41,7 +47,9 @@ DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) )
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) )
 {
    add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+#ifdef MPI_LIB
    enable_mpi();
+#endif
    dlb_enabled = true;
 }
 
@@ -50,7 +58,9 @@ DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
    //FIXME This hiddes the single event always
    add_event(DLB_MODE_EVENT, EVENT_DISABLED);
    dlb_enabled = false;
+#ifdef MPI_LIB
    disable_mpi();
+#endif
 }
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) )
@@ -125,8 +135,10 @@ DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
 
 DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) )
 {
+#ifdef MPI_LIB
    if ( dlb_enabled )
       node_barrier();
+#endif
 }
 
 DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) )
