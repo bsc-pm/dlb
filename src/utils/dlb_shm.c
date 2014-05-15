@@ -51,13 +51,35 @@ void mu_init( void );
 void mu_finalize( void );
 void list_shdata( void )
 {
-   cpu_set_t given, avail, not_borrowed, check;
-   get_masks( &given, &avail, &not_borrowed, &check );
+   const char dir[] = "/dev/shm";
+   DIR *dp;
+   struct dirent *entry;
+   struct stat statbuf;
+
+   if ( (dp = opendir(dir)) == NULL ) {
+      perror( "DLB ERROR: can't open /dev/shm" );
+      exit( EXIT_FAILURE );
+   }
+
    mu_init();
-   fprintf( stderr, "Given CPUs:        %s\n", mu_to_str( &given ) );
-   fprintf( stderr, "Available CPUs:    %s\n", mu_to_str( &avail ) );
-   fprintf( stderr, "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
-   fprintf( stderr, "Running CPUs:      %s\n", mu_to_str( &check ) );
+   chdir(dir);
+   while ( (entry = readdir(dp)) != NULL ) {
+      lstat( entry->d_name, &statbuf );
+      if( S_ISREG( statbuf.st_mode ) ) {
+         if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
+            fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
+
+            setenv( "LB_SHM_NAME", &(entry->d_name[8]), 1);
+            cpu_set_t given, avail, not_borrowed, check;
+            get_masks( &given, &avail, &not_borrowed, &check );
+            fprintf( stderr, "Given CPUs:        %s\n", mu_to_str( &given ) );
+            fprintf( stderr, "Available CPUs:    %s\n", mu_to_str( &avail ) );
+            fprintf( stderr, "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
+            fprintf( stderr, "Running CPUs:      %s\n", mu_to_str( &check ) );
+         }
+      }
+   }
+   closedir(dp);
    mu_finalize();
 }
 
@@ -77,7 +99,7 @@ void delete_shdata( void )
    while ( (entry = readdir(dp)) != NULL ) {
       lstat( entry->d_name, &statbuf );
       if( S_ISREG( statbuf.st_mode ) ) {
-         if ( fnmatch( "DLB_shm_*", entry->d_name, 0)  == 0    ||
+         if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0    ||
               fnmatch( "sem.DLB_sem_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Deleting... %s\n", entry->d_name );
             if ( unlink( entry->d_name ) ) {

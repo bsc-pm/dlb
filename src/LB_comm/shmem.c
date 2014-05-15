@@ -44,13 +44,15 @@
 #include "support/globals.h"
 #include "support/tracing.h"
 
+#define SHM_NAME_LENGTH 32
+
 static int fd;
 static void* addr;
 static size_t length;
 static sem_t *semaphore;
 static pthread_mutex_t *shmem_mutex = NULL;
-static char shm_filename[32];    /* 32 chars should be enough to store /DLB_xxx_$PID\0 */
-static char sem_filename[32];    /* even in systems where PID_MAX has been increased   */
+static char shm_filename[SHM_NAME_LENGTH];
+static char sem_filename[SHM_NAME_LENGTH];
 
 #ifdef MPI_LIB
 void shmem_init( void **shdata, size_t sm_size )
@@ -58,15 +60,25 @@ void shmem_init( void **shdata, size_t sm_size )
    debug_shmem ( "Shared Memory Init: pid(%d)\n", getpid() );
 
    key_t key;
+   char *custom_shm_name;
+
+   parse_env_string( "LB_SHM_NAME", &custom_shm_name );
+   if ( custom_shm_name != NULL ) {
+      snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%s", custom_shm_name );
+      snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%s", custom_shm_name );
+   }
 
    if ( _process_id == 0 ) {
 
       debug_shmem ( "Start Master Comm - creating shared mem \n" );
 
-      key = getpid();
+      if ( custom_shm_name == NULL ) {
+         key = getpid();
+         snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%d", key );
+         snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
+      }
 
       /* Create Semaphore */
-      sprintf( sem_filename, "/DLB_sem_%d", key );
       semaphore = sem_open( sem_filename, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
       if ( semaphore == SEM_FAILED ) {
          perror( "DLB_PANIC: Master unable to create semaphore" );
@@ -75,7 +87,6 @@ void shmem_init( void **shdata, size_t sm_size )
       }
 
       /* Obtain a file descriptor for the shmem */
-      sprintf( shm_filename, "/DLB_shm_%d", key );
       fd = shm_open( shm_filename, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR );
       if ( fd == -1 ) {
          perror( "DLB PANIC: shm_open Master" );
@@ -104,8 +115,12 @@ void shmem_init( void **shdata, size_t sm_size )
 
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
 
+      if ( custom_shm_name == NULL ) {
+         snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%d", key );
+         snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
+      }
+
       /* Open Semaphore */
-      sprintf( sem_filename, "/DLB_sem_%d", key );
       semaphore = sem_open( sem_filename, 0, S_IRUSR | S_IWUSR, 0 );
       if ( semaphore == SEM_FAILED ) {
          perror( "DLB PANIC: Reader unable to open semaphore" );
@@ -114,7 +129,6 @@ void shmem_init( void **shdata, size_t sm_size )
       }
 
       /* Obtain a file descriptor for the shmem */
-      sprintf( shm_filename, "/DLB_shm_%d", key );
       do {
          fd = shm_open( shm_filename, O_RDWR, S_IRUSR | S_IWUSR );
       } while ( fd < 0 && errno == ENOENT );
@@ -146,11 +160,20 @@ void shmem_init( void **shdata, size_t sm_size )
    debug_shmem ( "Shared Memory Init: pid(%d)\n", getpid() );
 
    key_t key = getuid();
+   char *custom_shm_name;
+   parse_env_string( "LB_SHM_NAME", &custom_shm_name );
+
+   if ( custom_shm_name != NULL ) {
+      snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%s", custom_shm_name );
+      snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%s", custom_shm_name );
+   } else {
+      snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%d", key );
+      snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
+   }
 
    debug_shmem ( "Start Process Comm - creating shared mem \n" );
 
    /* Create Semaphore */
-   sprintf( sem_filename, "/DLB_sem_%d", key );
    semaphore = sem_open( sem_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
    if ( semaphore == SEM_FAILED ) {
       perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
@@ -161,10 +184,9 @@ void shmem_init( void **shdata, size_t sm_size )
    }
 
    /* Obtain a file descriptor for the shmem */
-   sprintf( shm_filename, "/DLB_shm_%d", key );
    fd = shm_open( shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR );
    if ( fd == -1 ) {
-      perror( "DLB PANIC: shm_open Master" );
+      perror( "DLB PANIC: shm_open Process" );
       exit( 1 );
    }
 
