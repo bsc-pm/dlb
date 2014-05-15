@@ -54,15 +54,9 @@ static bool has_shared_mask(void);
 
 void shmem_lewi_mask_init( cpu_set_t *cpu_set )
 {
-   int i;
-
    shmem_init( &shdata, sizeof(shdata_t) );
    shmem_set_mutex( &(shdata->shmem_mutex) );
    add_event( IDLE_CPUS_EVENT, 0 );
-   if ( _process_id == 0 ) {
-      CPU_ZERO( &(shdata->given_cpus) );
-      CPU_ZERO( &(shdata->avail_cpus) );
-   }
 
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
    mu_init();
@@ -70,18 +64,45 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
    // Get the parent mask of any bit present in the default mask
    mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
 
-   for ( i = 0; i < mu_get_system_size(); i++ ) {
-      CPU_SET(i, &(shdata->not_borrowed_cpus) );
+   // We have to check the shared_mask first before screwing up the shdata
+   fatal_cond( has_shared_mask(), "Another process in the same node is using one of your cpus\n" );
+
+   shmem_lock();
+   {
+      int i;
+      for ( i = 0; i < mu_get_system_size(); i++ ) {
+         if ( CPU_ISSET( i, &default_mask ) ) {
+            CPU_CLR( i, &(shdata->given_cpus) );
+            CPU_CLR( i, &(shdata->avail_cpus) );
+            CPU_SET( i, &(shdata->not_borrowed_cpus) );
+         }
+      }
    }
+   shmem_unlock();
 
    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
-
-   fatal_cond( has_shared_mask(), "Another process in the same node is using one of your cpus\n" );
 }
 
 void shmem_lewi_mask_finalize( void )
 {
+   // In non-MPI libs, we have to remove our cpus from the shared memory, since it'll survive the process
+#ifndef MPI_LIB
+   shmem_lock();
+   {
+      int i;
+      for ( i = 0; i < mu_get_system_size(); i++ ) {
+         if ( CPU_ISSET( i, &default_mask ) ) {
+            CPU_CLR( i, &(shdata->given_cpus) );
+            CPU_CLR( i, &(shdata->avail_cpus) );
+            CPU_SET( i, &(shdata->not_borrowed_cpus) );
+            CPU_CLR( i, &(shdata->check_mask) );
+         }
+      }
+   }
+   shmem_unlock();
+#endif
+
    shmem_finalize();
    mu_finalize();
 }
