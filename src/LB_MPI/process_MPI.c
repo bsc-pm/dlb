@@ -84,7 +84,8 @@ void after_init(void){
 	int procsIds[_mpi_size][2];
 	if (_mpi_rank==0){
 		int j, maxSetNode;
-		int nodes=_mpi_size/_mpis_per_node;
+                // Ceiling division (total_size/node_size)
+		int nodes=(_mpi_size + _mpis_per_node - 1) /_mpis_per_node;
 		int procsPerNode[nodes];
 		char nodesIds[nodes][HOST_NAME_MAX];
 
