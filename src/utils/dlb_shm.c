@@ -65,7 +65,7 @@ void list_shdata( void )
    chdir(dir);
    while ( (entry = readdir(dp)) != NULL ) {
       lstat( entry->d_name, &statbuf );
-      if( S_ISREG( statbuf.st_mode ) ) {
+      if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
          if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
 
@@ -98,7 +98,7 @@ void delete_shdata( void )
    chdir(dir);
    while ( (entry = readdir(dp)) != NULL ) {
       lstat( entry->d_name, &statbuf );
-      if( S_ISREG( statbuf.st_mode ) ) {
+      if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
          if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0    ||
               fnmatch( "sem.DLB_sem_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Deleting... %s\n", entry->d_name );
