@@ -8,11 +8,10 @@
 
 bin_PROGRAMS = dlb dlb_shm
 
-dlb_LDFLAGS =
 dlb_SOURCES = $(top_srcdir)/src/utils/dlb.c
 
-dlb_shm_LDFLAGS = -ldlb_nanos
 dlb_shm_SOURCES = $(top_srcdir)/src/utils/dlb_shm.c
+dlb_shm_LDADD = libdlb_nanos.la
 
 ###############################################################################
 # THE LIBRARIES TO BUILD
@@ -21,6 +20,12 @@ dlb_shm_SOURCES = $(top_srcdir)/src/utils/dlb_shm.c
 lib_LTLIBRARIES = libdlb_dummy.la libdlb_nanos.la
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_nanos_dbg.la
+endif
+if INSTRUMENTATION_LIB
+lib_LTLIBRARIES += libdlb_nanos_instr.la
+endif
+if INSTRUMENTATION_DEBUG_LIB
+lib_LTLIBRARIES += libdlb_nanos_instr_dbg.la
 endif
 
 if MPI_LIB
@@ -136,7 +141,7 @@ libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS)
 libdlb_dummy_la_LDFLAGS = -avoid-version
 libdlb_dummy_la_SOURCES = $(dummy_iface)
 
-libdlb_nanos_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) -DINSTRUMENTATION_VERSION
+libdlb_nanos_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_nanos_la_CFLAGS = $(PERFO_CFLAGS)
 libdlb_nanos_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libdlb_nanos_la_SOURCES = $(common_sources)
@@ -146,6 +151,20 @@ libdlb_nanos_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_nanos_dbg_la_CFLAGS = $(DEBUG_CFLAGS)
 libdlb_nanos_dbg_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libdlb_nanos_dbg_la_SOURCES = $(common_sources)
+endif
+
+if INSTRUMENTATION_LIB
+libdlb_nanos_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_nanos_instr_la_CFLAGS = $(INSTR_CFLAGS)
+libdlb_nanos_instr_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
+libdlb_nanos_instr_la_SOURCES = $(common_sources)
+endif
+
+if INSTRUMENTATION_DEBUG_LIB
+libdlb_nanos_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_nanos_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS)
+libdlb_nanos_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
+libdlb_nanos_instr_dbg_la_SOURCES = $(common_sources)
 endif
 
 if MPI_LIB
