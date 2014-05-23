@@ -32,10 +32,10 @@
 
 void fatal0 ( const char *fmt, ... )
 {
-   if ( _mpi_rank == 0 ) {
+   if ( _mpi_rank <= 0 ) {
       va_list args;
       va_start( args, fmt );
-      fprintf( stderr, "DLB PANIC[*]: " );
+      fprintf( stderr, "DLB PANIC[%d]: ", _process_id );
       vfprintf( stderr, fmt, args );
       va_end( args );
    }
@@ -62,10 +62,10 @@ void fatal ( const char *fmt, ... )
 
 void warning0 ( const char *fmt, ... )
 {
-   if ( _mpi_rank == 0 ) {
+   if ( _mpi_rank <= 0 ) {
       va_list args;
       va_start( args, fmt );
-      fprintf( stderr, "DLB WARNING[*]: " );
+      fprintf( stderr, "DLB WARNING[%d]: ", _process_id );
       vfprintf( stderr, fmt, args );
       va_end( args );
    }
@@ -83,10 +83,10 @@ void warning ( const char *fmt, ... )
 #ifndef QUIET_MODE
 void verbose0 ( const char *fmt, ... )
 {
-   if ( _mpi_rank == 0 ) {
+   if ( _mpi_rank <= 0 ) {
       va_list args;
       va_start( args, fmt );
-      fprintf( stdout, "DLB[*]: " );
+      fprintf( stdout, "DLB[%d]: ", _process_id );
       vfprintf( stdout, fmt, args );
       va_end( args );
    }
@@ -105,10 +105,10 @@ void verbose ( const char *fmt, ... )
 #ifdef debugBasicInfo
 void debug_basic_info0 ( const char *fmt, ... )
 {
-   if ( _mpi_rank == 0 ) {
+   if ( _mpi_rank <= 0 ) {
       va_list args;
       va_start( args, fmt );
-      fprintf( stdout, "DLB[*]: " );
+      fprintf( stdout, "DLB[%d]: ", _process_id );
       vfprintf( stdout, fmt, args );
       va_end( args );
    }

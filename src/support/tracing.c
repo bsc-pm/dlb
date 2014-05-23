@@ -32,6 +32,7 @@ void add_event( unsigned type, long long value )
 }
 
 void init_tracing( void ){
+   //Extrae_eventandcounters( 100000, 1 ); 
    if ( Extrae_define_event_type ){
       unsigned type;
       int n_values;
@@ -63,6 +64,10 @@ void init_tracing( void ){
       n_values=4;
       char* value_desc2[4]={"not ready", "Enabled", "Disabled", "Single"};
       Extrae_define_event_type(&type, "DLB mode", &n_values, values, value_desc2);
+      
+      puts ("Init EXTRAE"); 
    }
+   else 
+      puts ("NO Init EXTRAE"); 
 }
 #endif

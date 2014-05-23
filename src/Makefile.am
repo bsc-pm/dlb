@@ -136,7 +136,7 @@ libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS)
 libdlb_dummy_la_LDFLAGS = -avoid-version
 libdlb_dummy_la_SOURCES = $(dummy_iface)
 
-libdlb_nanos_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_nanos_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) -DINSTRUMENTATION_VERSION
 libdlb_nanos_la_CFLAGS = $(PERFO_CFLAGS)
 libdlb_nanos_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version
 libdlb_nanos_la_SOURCES = $(common_sources)

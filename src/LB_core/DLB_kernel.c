@@ -83,6 +83,12 @@ static int true_dummyFunc(){return 1;}
 
 void fixme_init_without_mpi(void)
 {
+   char* policy;
+   parse_env_string( "LB_POLICY", &policy );
+   if ( policy == NULL || strcasecmp( policy, "auto_LeWI_mask" ) != 0 ) {
+      fatal0( "DLB_Init can only be called when using auto_LeWI_mask policy\n" );
+   }
+
    add_event(RUNTIME_EVENT, EVENT_INIT);
    _mpi_rank = -1;
    _mpi_size = -1;
@@ -340,6 +346,7 @@ void Init(void){
 		clock_gettime(CLOCK_REALTIME, &initComp);
 	}*/
 
+      puts ("Pre init");
         init_tracing();
 	lb_funcs.init();
 	ready=1;
