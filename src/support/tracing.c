@@ -32,11 +32,10 @@ void add_event( unsigned type, long long value )
 }
 
 void init_tracing( void ){
-   //Extrae_eventandcounters( 100000, 1 ); 
    if ( Extrae_define_event_type ){
       unsigned type;
       int n_values;
-      long long values[10]={0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+      long long values[12]={0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
       //THREADS_USED_EVENT
       type=THREADS_USED_EVENT;
@@ -45,8 +44,8 @@ void init_tracing( void ){
 
       //RUNTIME_EVENT
       type=RUNTIME_EVENT;
-      n_values=9;
-      char* value_desc[9]={"User code", "Init", "Into MPI call", "Out of MPI call", "Update Resources", "Return Claimed", "Release my cpu", "Claim my cpus", "Return my cpu if claimed"};
+      n_values=11;
+      char* value_desc[11]={"User code", "Init", "Into MPI call", "Out of MPI call", "Update Resources", "Return Claimed", "Release my cpu", "Claim my cpus", "Return my cpu if claimed", "Lend cpus", "Retrieve cpus"};
       Extrae_define_event_type(&type, "DLB Runtime call", &n_values, values, value_desc);
 
       //IDLE_CPUS_EVENT
@@ -64,10 +63,6 @@ void init_tracing( void ){
       n_values=4;
       char* value_desc2[4]={"not ready", "Enabled", "Disabled", "Single"};
       Extrae_define_event_type(&type, "DLB mode", &n_values, values, value_desc2);
-      
-      puts ("Init EXTRAE"); 
    }
-   else 
-      puts ("NO Init EXTRAE"); 
 }
 #endif

@@ -57,6 +57,8 @@ void lewi_mask_Init( void )
       set_mask( &mask );
       set_mask( &default_mask );
    }
+
+   add_event( THREADS_USED_EVENT, nthreads );
 }
 
 void lewi_mask_Finish( void )

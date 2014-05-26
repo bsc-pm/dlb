@@ -346,7 +346,6 @@ void Init(void){
 		clock_gettime(CLOCK_REALTIME, &initComp);
 	}*/
 
-      puts ("Pre init");
         init_tracing();
 	lb_funcs.init();
 	ready=1;

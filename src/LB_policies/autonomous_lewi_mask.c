@@ -64,6 +64,8 @@ void auto_lewi_mask_Init( void )
 
    pthread_mutex_init(&mutex, NULL);
    enabled=1;
+
+   add_event( THREADS_USED_EVENT, nthreads );
 }
 
 void auto_lewi_mask_Finish( void )
@@ -83,7 +85,6 @@ void auto_lewi_mask_OutOfCommunication( void ) {}
 /* Into Blocking Call - Lend the maximum number of threads */
 void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode)
 {
-/*
    cpu_set_t cpu;
    CPU_ZERO( &cpu );
    sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
@@ -110,13 +111,12 @@ void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode)
    pthread_mutex_unlock (&mutex);
 
    add_event( THREADS_USED_EVENT, nthreads );
-*/
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
 void auto_lewi_mask_OutOfBlockingCall(int is_iter)
 {
-  /* debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
+   debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
    pthread_mutex_lock (&mutex);
 
    set_mask( shmem_lewi_mask_recover_defmask() );
@@ -124,7 +124,6 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter)
 
    add_event( THREADS_USED_EVENT, nthreads );
    pthread_mutex_unlock (&mutex);
-*/
 }
 
 /* Update Resources - Try to acquire foreign threads */

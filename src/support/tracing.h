@@ -29,6 +29,8 @@
    #define EVENT_RELEASE_CPU 6
    #define EVENT_CLAIM_CPUS  7
    #define EVENT_RETURN_CPU  8
+   #define EVENT_LEND        9
+   #define EVENT_RETRIEVE    10
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040
 #define DLB_MODE_EVENT     800050

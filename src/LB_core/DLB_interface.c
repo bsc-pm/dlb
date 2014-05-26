@@ -122,15 +122,21 @@ DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) )
 
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
 {
-   if ( dlb_enabled )
-	//no iter, no single
+   if ( dlb_enabled ) {
+      add_event(RUNTIME_EVENT, EVENT_LEND);
+      //no iter, no single
       IntoBlockingCall(0, 0);
+      add_event(RUNTIME_EVENT, 0);
+   }
 }
 
 DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
 {
-   if ( dlb_enabled )
+   if ( dlb_enabled ) {
+      add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
       OutOfBlockingCall(0);
+      add_event(RUNTIME_EVENT, 0);
+   }
 }
 
 DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) )
