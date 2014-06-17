@@ -29,10 +29,11 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include "support/utils.h"
+#include "LB_core/DLB_interface.h"
 
 void print_usage( const char * program )
 {
-   fprintf( stdout, "usage: %s [-h] [--help] [-l] [--list] [-d] [--delete]\n", program );
+   fprintf( stdout, "usage: %s [-h] [--help] [-c] [--create] [-l] [--list] [-d] [--delete]\n", program );
 }
 
 void print_help( void )
@@ -40,8 +41,21 @@ void print_help( void )
    fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
    fprintf( stdout, "\n" );
    fprintf( stdout, "COMMANDS:\n" );
+   fprintf( stdout, " - create[-c]: Create and empty shmem data\n" );
    fprintf( stdout, " - list[-l]:   Print DLB shmem data, if any\n" );
    fprintf( stdout, " - delete[-d]: Delete shmem data\n" );
+}
+
+void create_shdata( void )
+{
+   char *policy = getenv( "LB_POLICY" );
+   if ( policy == NULL ) {
+      fprintf( stdout, "Creating shmem without policy... Setting auto_LeWI_mask as default.\n" );
+      setenv( "LB_POLICY", "auto_LeWI_mask", 1 );
+   }
+
+   DLB_Init();
+   DLB_Finalize();
 }
 
 // FIXME
@@ -116,6 +130,7 @@ void delete_shdata( void )
 int main ( int argc, char *argv[] )
 {
    bool do_help = false;
+   bool do_create = false;
    bool do_list = false;
    bool do_delete = false;
 
@@ -124,6 +139,9 @@ int main ( int argc, char *argv[] )
       if ( strcmp( argv[i], "--help" ) == 0 ||
            strcmp( argv[i], "-h" ) == 0 ) {
          do_help = true;
+      } else if ( strcmp( argv[i], "--create" ) == 0 ||
+                  strcmp( argv[i], "-c" ) == 0 ) {
+         do_create = true;
       } else if ( strcmp( argv[i], "--list" ) == 0 ||
                   strcmp( argv[i], "-l" ) == 0 ) {
          do_list = true;
@@ -136,13 +154,16 @@ int main ( int argc, char *argv[] )
       }
    }
 
-   if ( !do_help && !do_list && !do_delete ) {
+   if ( !do_help && !do_create && !do_list && !do_delete ) {
       print_usage( argv[0] );
       exit(0);
    }
 
    if ( do_help )
       print_help();
+
+   if ( do_create )
+      create_shdata();
 
    if ( do_list )
       list_shdata();
