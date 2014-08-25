@@ -4,7 +4,7 @@ AC_CONFIG_SRCDIR([src/LB_core/DLB_kernel.c])
 
 configure_orig_arguments="$@"
 
-AM_INIT_AUTOMAKE([foreign -Wall -Werror])
+AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Enable silent rules if available

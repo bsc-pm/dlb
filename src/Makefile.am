@@ -8,9 +8,9 @@
 
 bin_PROGRAMS = dlb dlb_shm
 
-dlb_SOURCES = $(top_srcdir)/src/utils/dlb.c
+dlb_SOURCES = utils/dlb.c
 
-dlb_shm_SOURCES = $(top_srcdir)/src/utils/dlb_shm.c
+dlb_shm_SOURCES = utils/dlb_shm.c
 dlb_shm_LDADD = libdlb_nanos.la
 
 ###############################################################################
@@ -47,85 +47,85 @@ include_HEADERS = $(top_srcdir)/src/LB_core/DLB_interface.h \
 
 END =
 common_sources = \
-	  $(top_srcdir)/src/DPD/DPD.c           	\
-	  $(top_srcdir)/src/DPD/DPD.h           	\
-	  $(top_srcdir)/src/LB_numThreads/numThreads.c  \
-	  $(top_srcdir)/src/LB_numThreads/numThreads.h  \
-	  $(top_srcdir)/src/LB_policies/JustProf.c      \
-	  $(top_srcdir)/src/LB_policies/JustProf.h      \
-	  $(top_srcdir)/src/LB_policies/Lend_light.c    \
-	  $(top_srcdir)/src/LB_policies/Lend_light.h    \
-	  $(top_srcdir)/src/LB_policies/Lewi_map.c      \
-	  $(top_srcdir)/src/LB_policies/Lewi_map.h      \
-	  $(top_srcdir)/src/LB_policies/Weight.c        \
-	  $(top_srcdir)/src/LB_policies/Weight.h        \
-	  $(top_srcdir)/src/LB_policies/lewi_mask.c     \
-	  $(top_srcdir)/src/LB_policies/autonomous_lewi_mask.h     \
-	  $(top_srcdir)/src/LB_policies/autonomous_lewi_mask.c     \
-	  $(top_srcdir)/src/LB_policies/lewi_mask.h     \
-	  $(top_srcdir)/src/LB_policies/RaL.c		\
-	  $(top_srcdir)/src/LB_policies/RaL.h		\
-	  $(top_srcdir)/src/LB_policies/PERaL.c		\
-	  $(top_srcdir)/src/LB_policies/PERaL.h		\
-	  $(top_srcdir)/src/LB_comm/comm_shMem.c 	\
-	  $(top_srcdir)/src/LB_comm/comm.h 		\
-	  $(top_srcdir)/src/LB_comm/comm_lend_light.c 	\
-	  $(top_srcdir)/src/LB_comm/comm_lend_light.h 	\
-	  $(top_srcdir)/src/LB_comm/comm_map.c      	\
-	  $(top_srcdir)/src/LB_comm/comm_map.h      	\
-	  $(top_srcdir)/src/LB_comm/shmem.c           	\
-	  $(top_srcdir)/src/LB_comm/shmem.h           	\
-	  $(top_srcdir)/src/LB_comm/shmem_lewi_mask.c 	\
-	  $(top_srcdir)/src/LB_comm/shmem_lewi_mask.h 	\
-	  $(top_srcdir)/src/LB_core/DLB_kernel.c       	\
-	  $(top_srcdir)/src/LB_core/DLB_kernel.h       	\
-	  $(top_srcdir)/src/LB_core/DLB_interface.c 	\
-	  $(top_srcdir)/src/LB_core/DLB_interface.h 	\
-	  $(top_srcdir)/src/support/globals.c       	\
-	  $(top_srcdir)/src/support/globals.h       	\
-	  $(top_srcdir)/src/support/debug.c         	\
-	  $(top_srcdir)/src/support/debug.h         	\
-	  $(top_srcdir)/src/support/tracing.c       	\
-	  $(top_srcdir)/src/support/tracing.h       	\
-	  $(top_srcdir)/src/support/utils.c         	\
-	  $(top_srcdir)/src/support/utils.h         	\
-	  $(top_srcdir)/src/support/mytime.c        	\
-	  $(top_srcdir)/src/support/mytime.h        	\
-	  $(top_srcdir)/src/support/mask_utils.c      	\
-	  $(top_srcdir)/src/support/mask_utils.h      	\
+	  DPD/DPD.c                   \
+	  DPD/DPD.h                   \
+	  LB_numThreads/numThreads.c  \
+	  LB_numThreads/numThreads.h  \
+	  LB_policies/JustProf.c      \
+	  LB_policies/JustProf.h      \
+	  LB_policies/Lend_light.c    \
+	  LB_policies/Lend_light.h    \
+	  LB_policies/Lewi_map.c      \
+	  LB_policies/Lewi_map.h      \
+	  LB_policies/Weight.c        \
+	  LB_policies/Weight.h        \
+	  LB_policies/lewi_mask.c     \
+	  LB_policies/autonomous_lewi_mask.h     \
+	  LB_policies/autonomous_lewi_mask.c     \
+	  LB_policies/lewi_mask.h     \
+	  LB_policies/RaL.c           \
+	  LB_policies/RaL.h           \
+	  LB_policies/PERaL.c         \
+	  LB_policies/PERaL.h         \
+	  LB_comm/comm_shMem.c        \
+	  LB_comm/comm.h              \
+	  LB_comm/comm_lend_light.c   \
+	  LB_comm/comm_lend_light.h   \
+	  LB_comm/comm_map.c          \
+	  LB_comm/comm_map.h          \
+	  LB_comm/shmem.c             \
+	  LB_comm/shmem.h             \
+	  LB_comm/shmem_lewi_mask.c   \
+	  LB_comm/shmem_lewi_mask.h   \
+	  LB_core/DLB_kernel.c        \
+	  LB_core/DLB_kernel.h        \
+	  LB_core/DLB_interface.c     \
+	  LB_core/DLB_interface.h     \
+	  support/globals.c           \
+	  support/globals.h           \
+	  support/debug.c             \
+	  support/debug.h             \
+	  support/tracing.c           \
+	  support/tracing.h           \
+	  support/utils.c             \
+	  support/utils.h             \
+	  support/mytime.c            \
+	  support/mytime.h            \
+	  support/mask_utils.c        \
+	  support/mask_utils.h        \
 	  $(END)
 
 mpi_sources = \
-	  $(top_srcdir)/src/LB_MPI/MPI_calls_coded.c    \
-	  $(top_srcdir)/src/LB_MPI/MPI_calls_coded.h    \
-	  $(top_srcdir)/src/LB_MPI/MPI_interface.c     	\
-	  $(top_srcdir)/src/LB_MPI/MPI_interface.h     	\
-	  $(top_srcdir)/src/LB_MPI/process_MPI.c       	\
-	  $(top_srcdir)/src/LB_MPI/process_MPI.h       	\
+	  LB_MPI/MPI_calls_coded.c    \
+	  LB_MPI/MPI_calls_coded.h    \
+	  LB_MPI/MPI_interface.c      \
+	  LB_MPI/MPI_interface.h      \
+	  LB_MPI/process_MPI.c        \
+	  LB_MPI/process_MPI.h        \
 	  $(END)
 
-intercept = $(top_srcdir)/src/LB_MPI/MPI_intercept.c
+intercept = LB_MPI/MPI_intercept.c
 
-dummy_iface = $(top_srcdir)/src/LB_core/DLB_dummy_interface.c
+dummy_iface = LB_core/DLB_dummy_interface.c
 
 # UNUSED
-#$(top_srcdir)/src/LB_policies/Lend_complex.c
-#$(top_srcdir)/src/LB_policies/Lend_cpu.c
-#$(top_srcdir)/src/LB_policies/justMPI.c
-#$(top_srcdir)/src/LB_policies/DWB_Eco.c    	
-#$(top_srcdir)/src/LB_policies/LeWI_active.c    
-#$(top_srcdir)/src/LB_policies/Lend.c         	
-#$(top_srcdir)/src/LB_policies/Lend_simple.c    
-#$(top_srcdir)/src/LB_MPI/MPI_interfaceF
+#LB_policies/Lend_complex.c
+#LB_policies/Lend_cpu.c
+#LB_policies/justMPI.c
+#LB_policies/DWB_Eco.c
+#LB_policies/LeWI_active.c
+#LB_policies/Lend.c
+#LB_policies/Lend_simple.c
+#LB_MPI/MPI_interfaceF
 
 includes = \
-         -I$(top_srcdir)/src                       	\
-         -I$(top_srcdir)/src/LB_numThreads              \
-         -I$(top_srcdir)/src/LB_policies              	\
-         -I$(top_srcdir)/src/LB_MPI                   	\
-         -I$(top_srcdir)/src/LB_comm                 	\
-         -I$(top_srcdir)/src/LB_core               	\
-         -I$(top_srcdir)/src/support               	\
+         -I$(top_srcdir)/src                 \
+         -I$(top_srcdir)/src/LB_numThreads   \
+         -I$(top_srcdir)/src/LB_policies     \
+         -I$(top_srcdir)/src/LB_MPI          \
+         -I$(top_srcdir)/src/LB_comm         \
+         -I$(top_srcdir)/src/LB_core         \
+         -I$(top_srcdir)/src/support         \
          $(END)
 
 AM_CPPFLAGS = $(includes)
