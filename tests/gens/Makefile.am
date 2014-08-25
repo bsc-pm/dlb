@@ -1,8 +1,8 @@
 
 
-noinst_SCRIPTS = single-generator basic-generator mpi_ompss-generator mpi_nanox-generator mpi_omp-generator
+noinst_SCRIPTS = single-generator mpi_ompss-generator mpi_nanox-generator mpi_omp-generator
 
-EXTRA_DIST = single-generator.in basic-generator.in mpi-generator.in config.py
+EXTRA_DIST = single-generator.in mpi-generator.in config.py
 
 CLEANFILES = $(noinst_SCRIPTS)
 

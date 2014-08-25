@@ -60,6 +60,7 @@ AC_SUBST([DEB_RELEASE])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
 AC_PROG_CC([$CC])
+AM_PROG_CC_C_O
 AC_PROG_CPP
 
 # use the C compiler for the following checks

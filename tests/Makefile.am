@@ -1,7 +1,7 @@
 
 SUBDIRS = gens
 
-CLEANFILES = tests.log tests.log.xml
+DISTCLEANFILES = tests.log tests.log.xml
 
 EXTRA_DIST = test
 
