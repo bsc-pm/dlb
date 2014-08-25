@@ -161,6 +161,20 @@ AC_SUBST([INSTR_CPPFLAGS])
 AC_SUBST([INSTR_DEBUG_CFLAGS])
 AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
+##########################################################################
+# BlueGene/Q specific options
+##########################################################################
+
+case $host in
+   powerpc64-bgq-linux*)
+      AC_LDFLAGS="-dynamic"
+      ;;
+   *)
+      AC_LDFLAGS=""
+      ;;
+esac
+AC_SUBST([AC_LDFLAGS])
+
 
 ##########################################################################
 

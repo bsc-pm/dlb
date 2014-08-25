@@ -129,7 +129,7 @@ includes = \
          $(END)
 
 AM_CPPFLAGS = $(includes)
-AM_LDFLAGS = -lrt
+AM_LDFLAGS = -lrt $(AC_LDFLAGS)
 if HAVE_HWLOC
 AM_CPPFLAGS += $(HWLOC_CPPFLAGS)
 AM_LDFLAGS += $(HWLOC_LDFLAGS) $(HWLOC_LIBS)
