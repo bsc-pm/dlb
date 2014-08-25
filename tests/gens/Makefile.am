@@ -17,7 +17,7 @@ if DEBUG_LIB
 versions += debug
 endif
 
-single-generator basic-generator : %-generator : %-generator.in
+single-generator: single-generator.in
 	rm -f $@
 	sed \
 		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
