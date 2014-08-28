@@ -78,14 +78,6 @@ void shmem_init( void **shdata, size_t sm_size )
          snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
       }
 
-      /* Create Semaphore */
-      semaphore = sem_open( sem_filename, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
-      if ( semaphore == SEM_FAILED ) {
-         perror( "DLB_PANIC: Master unable to create semaphore" );
-         sem_unlink( sem_filename );
-         exit( 1 );
-      }
-
       /* Obtain a file descriptor for the shmem */
       fd = shm_open( shm_filename, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR );
       if ( fd == -1 ) {
@@ -106,6 +98,14 @@ void shmem_init( void **shdata, size_t sm_size )
          exit( 1 );
       }
 
+      /* Create Semaphore */
+      semaphore = sem_open( sem_filename, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
+      if ( semaphore == SEM_FAILED ) {
+         perror( "DLB_PANIC: Master unable to create semaphore" );
+         sem_unlink( sem_filename );
+         exit( 1 );
+      }
+
       PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
 
       debug_shmem ( "Start Master Comm - shared mem created\n" );
@@ -118,14 +118,6 @@ void shmem_init( void **shdata, size_t sm_size )
       if ( custom_shm_name == NULL ) {
          snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%d", key );
          snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
-      }
-
-      /* Open Semaphore */
-      semaphore = sem_open( sem_filename, 0, S_IRUSR | S_IWUSR, 0 );
-      if ( semaphore == SEM_FAILED ) {
-         perror( "DLB PANIC: Reader unable to open semaphore" );
-         sem_close( semaphore );
-         exit( 1 );
       }
 
       /* Obtain a file descriptor for the shmem */
@@ -144,6 +136,14 @@ void shmem_init( void **shdata, size_t sm_size )
       *shdata = mmap( NULL, sm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
       if ( *shdata == MAP_FAILED ) {
          perror( "DLB PANIC: mmap Slave" );
+         exit( 1 );
+      }
+
+      /* Open Semaphore */
+      semaphore = sem_open( sem_filename, 0, S_IRUSR | S_IWUSR, 0 );
+      if ( semaphore == SEM_FAILED ) {
+         perror( "DLB PANIC: Reader unable to open semaphore" );
+         sem_close( semaphore );
          exit( 1 );
       }
    }
@@ -173,16 +173,6 @@ void shmem_init( void **shdata, size_t sm_size )
 
    debug_shmem ( "Start Process Comm - creating shared mem \n" );
 
-   /* Create Semaphore */
-   semaphore = sem_open( sem_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
-   if ( semaphore == SEM_FAILED ) {
-      perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
-      // Not sure if we need both
-      sem_close( semaphore );
-      sem_unlink( sem_filename );
-      exit( 1 );
-   }
-
    /* Obtain a file descriptor for the shmem */
    fd = shm_open( shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR );
    if ( fd == -1 ) {
@@ -200,6 +190,16 @@ void shmem_init( void **shdata, size_t sm_size )
    *shdata = mmap( NULL, sm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
    if ( *shdata == MAP_FAILED ) {
       perror( "DLB PANIC: mmap Process" );
+      exit( 1 );
+   }
+
+   /* Create Semaphore */
+   semaphore = sem_open( sem_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
+   if ( semaphore == SEM_FAILED ) {
+      perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
+      // Not sure if we need both
+      sem_close( semaphore );
+      sem_unlink( sem_filename );
       exit( 1 );
    }
 
