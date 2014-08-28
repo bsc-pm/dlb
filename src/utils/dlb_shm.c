@@ -31,6 +31,9 @@
 #include "support/utils.h"
 #include "LB_core/DLB_interface.h"
 
+static char * created_shm_filename = NULL;
+static char * userdef_shm_filename = NULL;
+
 void print_usage( const char * program )
 {
    fprintf( stdout, "usage: %s [-h] [--help] [-c] [--create] [-l] [--list] [-d] [--delete]\n", program );
@@ -46,6 +49,8 @@ void print_help( void )
    fprintf( stdout, " - delete[-d]: Delete shmem data\n" );
 }
 
+// FIXME
+char *get_shm_filename( void );
 void create_shdata( void )
 {
    char *policy = getenv( "LB_POLICY" );
@@ -55,6 +60,8 @@ void create_shdata( void )
    }
 
    DLB_Init();
+   created_shm_filename = get_shm_filename();
+   fprintf( stdout, "Succesfully created Shared Memory: %s\n", created_shm_filename );
    DLB_Finalize();
 }
 
@@ -63,8 +70,24 @@ void get_masks( cpu_set_t *given,  cpu_set_t *avail,  cpu_set_t *not_borrowed, c
 const char* mu_to_str ( const cpu_set_t *cpu_set );
 void mu_init( void );
 void mu_finalize( void );
+
+void list_shdata_item( const char* name )
+{
+   setenv( "LB_SHM_NAME", name, 1);
+   cpu_set_t given, avail, not_borrowed, check;
+   get_masks( &given, &avail, &not_borrowed, &check );
+   fprintf( stderr, "Given CPUs:        %s\n", mu_to_str( &given ) );
+   fprintf( stderr, "Available CPUs:    %s\n", mu_to_str( &avail ) );
+   fprintf( stderr, "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
+   fprintf( stderr, "Running CPUs:      %s\n", mu_to_str( &check ) );
+}
+
 void list_shdata( void )
 {
+   // Ignore them if the filename is not specified
+   bool created_shm_listed = created_shm_filename == NULL;
+   bool userdef_shm_listed = userdef_shm_filename == NULL;
+
    const char dir[] = "/dev/shm";
    DIR *dp;
    struct dirent *entry;
@@ -78,27 +101,51 @@ void list_shdata( void )
    mu_init();
    chdir(dir);
    while ( (entry = readdir(dp)) != NULL ) {
+      printf ("%s\n", entry->d_name);
       lstat( entry->d_name, &statbuf );
       if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
          if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
+            list_shdata_item( &(entry->d_name[8]) );
 
-            setenv( "LB_SHM_NAME", &(entry->d_name[8]), 1);
-            cpu_set_t given, avail, not_borrowed, check;
-            get_masks( &given, &avail, &not_borrowed, &check );
-            fprintf( stderr, "Given CPUs:        %s\n", mu_to_str( &given ) );
-            fprintf( stderr, "Available CPUs:    %s\n", mu_to_str( &avail ) );
-            fprintf( stderr, "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
-            fprintf( stderr, "Running CPUs:      %s\n", mu_to_str( &check ) );
+            // Double-check if recently created or user defined
+            // Shared Memories are detected. (BG/Q needs it)
+            created_shm_listed = created_shm_listed || strstr( created_shm_filename, entry->d_name );
+            userdef_shm_listed = userdef_shm_listed || strstr( userdef_shm_filename, entry->d_name );
          }
       }
+   }
+
+   if ( !created_shm_listed ) {
+      fprintf( stderr, "Previously created Shared Memory file not found.\n" );
+      fprintf( stderr, "Looking for %s...\n", created_shm_filename );
+      list_shdata_item( &(created_shm_filename[9]) );
+   }
+
+   if ( !userdef_shm_listed ) {
+      fprintf( stderr, "User defined Shared Memory file not found.\n" );
+      fprintf( stderr, "Looking for %s...\n", userdef_shm_filename );
+      list_shdata_item( &(userdef_shm_filename[8]) );
    }
    closedir(dp);
    mu_finalize();
 }
 
+void delete_shdata_item( const char* name )
+{
+   fprintf( stdout, "Deleting... %s\n", name );
+   if ( unlink( name ) ) {
+      perror( "DLB ERROR: can't delete shm file" );
+      exit( EXIT_FAILURE );
+   }
+}
+
 void delete_shdata( void )
 {
+   // Ignore them if the filename is not specified
+   bool created_shm_deleted = created_shm_filename == NULL;
+   bool userdef_shm_deleted = userdef_shm_filename == NULL;
+
    const char dir[] = "/dev/shm";
    DIR *dp;
    struct dirent *entry;
@@ -115,13 +162,26 @@ void delete_shdata( void )
       if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
          if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0    ||
               fnmatch( "sem.DLB_sem_*", entry->d_name, 0) == 0 ) {
-            fprintf( stdout, "Deleting... %s\n", entry->d_name );
-            if ( unlink( entry->d_name ) ) {
-               perror( "DLB ERROR: can't delete shm file" );
-               exit( EXIT_FAILURE );
-            }
+            delete_shdata_item( entry->d_name );
+
+            // Double-check if recently created or user defined
+            // Shared Memories are detected. (BG/Q needs it)
+            created_shm_deleted = created_shm_deleted || strstr( created_shm_filename, entry->d_name );
+            userdef_shm_deleted = userdef_shm_deleted || strstr( userdef_shm_filename, entry->d_name );
          }
       }
+   }
+
+   if ( !created_shm_deleted ) {
+      fprintf( stderr, "Previously created Shared Memory file not found.\n" );
+      fprintf( stderr, "Trying to delete %s...\n", created_shm_filename );
+      delete_shdata_item( created_shm_filename );
+   }
+
+   if ( !userdef_shm_deleted ) {
+      fprintf( stderr, "User defined Shared Memory file not found.\n" );
+      fprintf( stderr, "Trying to delete %s...\n", userdef_shm_filename );
+      delete_shdata_item( userdef_shm_filename );
    }
 
    closedir(dp);
@@ -156,7 +216,7 @@ int main ( int argc, char *argv[] )
 
    if ( !do_help && !do_create && !do_list && !do_delete ) {
       print_usage( argv[0] );
-      exit(0);
+      exit( EXIT_SUCCESS );
    }
 
    if ( do_help )

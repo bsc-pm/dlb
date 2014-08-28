@@ -273,3 +273,8 @@ void shmem_unlock( void )
       sem_post( semaphore );
    }
 }
+
+char *get_shm_filename( void )
+{
+   return shm_filename;
+}

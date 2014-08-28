@@ -28,5 +28,6 @@ void shmem_finalize( void );
 void shmem_set_mutex ( pthread_mutex_t *shmutex );
 void shmem_lock( void );
 void shmem_unlock( void );
+char *get_shm_filename( void );
 
 #endif /* SHMEM_H */
