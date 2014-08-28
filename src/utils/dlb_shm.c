@@ -28,6 +28,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <getopt.h>
 #include "support/utils.h"
 #include "LB_core/DLB_interface.h"
 
@@ -36,17 +37,19 @@ static char * userdef_shm_filename = NULL;
 
 void print_usage( const char * program )
 {
-   fprintf( stdout, "usage: %s [-h] [--help] [-c] [--create] [-l] [--list] [-d] [--delete]\n", program );
+   fprintf( stdout, "usage: %s OPTION [OPTION]...\n", program );
+   fprintf( stdout, "Try '%s --help' for more information.\n", program );
 }
 
-void print_help( void )
+void print_help( const char * program )
 {
    fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
-   fprintf( stdout, "\n" );
-   fprintf( stdout, "COMMANDS:\n" );
-   fprintf( stdout, " - create[-c]: Create and empty shmem data\n" );
-   fprintf( stdout, " - list[-l]:   Print DLB shmem data, if any\n" );
-   fprintf( stdout, " - delete[-d]: Delete shmem data\n" );
+   fprintf( stdout, "usage: %s OPTION [OPTION]...\n", program );
+   fprintf( stdout, "  -h, --help         Print this help\n" );
+   fprintf( stdout, "  -c, --create       Create and empty Shared Memory file\n" );
+   fprintf( stdout, "  -l, --list         Print DLB shmem data, if any\n" );
+   fprintf( stdout, "  -d, --delete       Delete shmem data\n" );
+   fprintf( stdout, "  -f, --file=FILE    Specify manually a Shared Memory file\n" );
 }
 
 // FIXME
@@ -101,7 +104,6 @@ void list_shdata( void )
    mu_init();
    chdir(dir);
    while ( (entry = readdir(dp)) != NULL ) {
-      printf ("%s\n", entry->d_name);
       lstat( entry->d_name, &statbuf );
       if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
          if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
@@ -125,7 +127,7 @@ void list_shdata( void )
    if ( !userdef_shm_listed ) {
       fprintf( stderr, "User defined Shared Memory file not found.\n" );
       fprintf( stderr, "Looking for %s...\n", userdef_shm_filename );
-      list_shdata_item( &(userdef_shm_filename[8]) );
+      list_shdata_item( &(userdef_shm_filename[9]) );
    }
    closedir(dp);
    mu_finalize();
@@ -134,6 +136,7 @@ void list_shdata( void )
 void delete_shdata_item( const char* name )
 {
    fprintf( stdout, "Deleting... %s\n", name );
+
    if ( unlink( name ) ) {
       perror( "DLB ERROR: can't delete shm file" );
       exit( EXIT_FAILURE );
@@ -194,23 +197,31 @@ int main ( int argc, char *argv[] )
    bool do_list = false;
    bool do_delete = false;
 
-   int i;
-   for ( i=1; i<argc; i++ ) {
-      if ( strcmp( argv[i], "--help" ) == 0 ||
-           strcmp( argv[i], "-h" ) == 0 ) {
-         do_help = true;
-      } else if ( strcmp( argv[i], "--create" ) == 0 ||
-                  strcmp( argv[i], "-c" ) == 0 ) {
-         do_create = true;
-      } else if ( strcmp( argv[i], "--list" ) == 0 ||
-                  strcmp( argv[i], "-l" ) == 0 ) {
-         do_list = true;
-      } else if ( strcmp( argv[i], "--delete" ) == 0 ||
-                  strcmp( argv[i], "-d" ) == 0 ) {
-         do_delete = true;
-      } else {
-         print_usage( argv[0] );
-         exit(0);
+   int opt;
+   struct option long_options[] = {
+      {"help",   no_argument,       0, 'h'},
+      {"create", no_argument,       0, 'c'},
+      {"list",   no_argument,       0, 'l'},
+      {"delete", no_argument,       0, 'd'},
+      {"file",   required_argument, 0, 'f'},
+      {0,        0,                 0, 0 }
+   };
+
+   while ( (opt = getopt_long(argc, argv, "hcldf:", long_options, NULL)) != -1 ) {
+      switch (opt) {
+         case 'h': do_help = true; break;
+         case 'c': do_create = true; break;
+         case 'l': do_list = true; break;
+         case 'd': do_delete = true; break;
+         case 'f':
+            // Make enough space for '/' and '\0' characters
+            userdef_shm_filename = malloc( strlen(optarg) + 2 );
+            // Prepend '/' if needed
+            sprintf( userdef_shm_filename, "%s%s", optarg[0] == '/' ? "" : "/", optarg );
+            break;
+         default:
+            print_usage( argv[0] );
+            exit( EXIT_SUCCESS );
       }
    }
 
@@ -220,7 +231,7 @@ int main ( int argc, char *argv[] )
    }
 
    if ( do_help )
-      print_help();
+      print_help(argv[0] );
 
    if ( do_create )
       create_shdata();
@@ -231,5 +242,6 @@ int main ( int argc, char *argv[] )
    if ( do_delete )
       delete_shdata();
 
+   free( userdef_shm_filename );
    return 0;
 }
