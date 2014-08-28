@@ -42,13 +42,13 @@
 typedef struct {
    int size;
    int num_parents;
-   cpu_set_t sys_mask;
    cpu_set_t *parents;
+   cpu_set_t sys_mask;
 } mu_system_loc_t;
 
 static mu_system_loc_t sys;
 
-#ifdef HAVE_HWLOC
+#if defined HAVE_HWLOC
 static void parse_hwloc( void )
 {
    hwloc_topology_t topology;
@@ -77,6 +77,20 @@ static void parse_hwloc( void )
    sys.size = hwloc_bitmap_weight( machine->cpuset );
 
    hwloc_topology_destroy( topology );
+}
+#elif defined IS_BGQ_MACHINE
+static void set_bgq_info( void )
+{
+   sys.size = 64;
+   sys.num_parents = 1;
+   sys.parents = (cpu_set_t *) malloc( sizeof(cpu_set_t) );
+   CPU_ZERO( &(sys.parents[0]) );
+   CPU_ZERO( &sys.sys_mask );
+   int i;
+   for ( i=0; i<64; i++ ) {
+      CPU_SET( i, &(sys.parents[0]) );
+      CPU_SET( i, &sys.sys_mask );
+   }
 }
 #else
 static void parse_lscpu( void )
@@ -139,8 +153,10 @@ void mu_init( void )
    sys.num_parents = 0;
    sys.parents = NULL;
 
-#ifdef HAVE_HWLOC
+#if defined HAVE_HWLOC
    parse_hwloc();
+#elif defined IS_BGQ_MACHINE
+   set_bgq_info();
 #else
    parse_lscpu();
 #endif

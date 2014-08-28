@@ -168,6 +168,7 @@ AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 case $host in
    powerpc64-bgq-linux*)
+      AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
       AC_LDFLAGS="-dynamic"
       ;;
    *)
