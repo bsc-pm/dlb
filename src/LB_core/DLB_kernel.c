@@ -337,6 +337,12 @@ void Init(void){
            debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n" );
 #endif
 
+#if IS_BGQ_MACHINE
+        int bg_threadmodel;
+        parse_env_int( "BG_THREADMODEL", &bg_threadmodel );
+        fatal_cond0( bg_threadmodel!=2, "BlueGene/Q jobs need to enable Extended thread affinity control in order to active external threads. To do so, export BG_THREADMODEL=2\n" );
+#endif
+
 /*	if (prof){
 		clock_gettime(CLOCK_REALTIME, &initAppl);
 		reset(&iterCpuTime);

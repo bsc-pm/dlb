@@ -32,6 +32,7 @@ typedef enum {
 
 
 void parse_env_bool ( const char *env, bool *var );
+void parse_env_int ( char const *env, int *var );
 void parse_env_int_or_die ( char const *env, int *var );
 void parse_env_string ( char const *env, char **var );
 void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode );

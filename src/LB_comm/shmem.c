@@ -213,6 +213,12 @@ void shmem_init( void **shdata, size_t sm_size )
 
 void shmem_finalize( void )
 {
+#ifdef IS_BGQ_MACHINE
+   // BG/Q have some problems deallocating shmem
+   // It will be cleaned after the job completion anyway
+   return;
+#endif
+
    if ( shmem_mutex != NULL ) {
       if ( pthread_mutex_destroy( shmem_mutex ) )
          perror ( "DLB ERROR: Shared Memory mutex destroy" );

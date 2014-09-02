@@ -37,6 +37,17 @@ void parse_env_bool ( const char *env, bool *var )
    }
 }
 
+void parse_env_int ( char const *env, int *var )
+{
+   char *tmp_var = getenv( env );
+
+   if ( tmp_var == NULL || tmp_var[0] == 0 ) {
+      *var = 0;
+   } else {
+      *var = atoi( tmp_var );
+   }
+}
+
 void parse_env_int_or_die ( char const *env, int *var )
 {
    char *tmp_var = getenv( env );
