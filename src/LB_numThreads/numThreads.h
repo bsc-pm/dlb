@@ -35,7 +35,7 @@ void DLB_bind_thread(int tid, int procsNode);
 void bind_threads(int num_procs, int meId, int nodeId);
 
 void get_mask( cpu_set_t *cpu_set );
-void set_mask( cpu_set_t *cpu_set );
-void add_mask( cpu_set_t *cpu_set );
+void set_mask( const cpu_set_t *cpu_set );
+void add_mask( const cpu_set_t *cpu_set );
 
 #endif //NUMTHREADS_H

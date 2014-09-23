@@ -77,8 +77,8 @@ void debug_shmem ( const char *fmt, ... );
 #define debug_shmem(fmt, ...)
 #endif
 
-#define fatal_cond(cond,msg) if ( cond ) fatal(msg);
-#define fatal_cond0(cond,msg) if ( cond ) fatal0(msg);
+#define fatal_cond(cond, ...) if ( cond ) fatal(__VA_ARGS__);
+#define fatal_cond0(cond, ...) if ( cond ) fatal0(__VA_ARGS__);
 
 #ifdef DEBUG_VERSION
 #define DLB_DEBUG(f) f

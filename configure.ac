@@ -89,8 +89,6 @@ AC_ARG_WITH([cpus-per-node],
       ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
    ]
 )
-AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
-
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -170,12 +168,14 @@ case $host in
    powerpc64-bgq-linux*)
       AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
       AC_LDFLAGS="-dynamic"
+      ncpus=64
       ;;
    *)
       AC_LDFLAGS=""
       ;;
 esac
 AC_SUBST([AC_LDFLAGS])
+AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
 
 
 ##########################################################################

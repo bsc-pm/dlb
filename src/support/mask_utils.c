@@ -28,6 +28,8 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <regex.h>
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/utils.h"
@@ -160,6 +162,8 @@ void mu_init( void )
 #else
    parse_lscpu();
 #endif
+
+   fatal_cond( sys.size != CPUS_NODE, "Detected cpus at runtime (%d), does not match detected cpus at configure time(%d)", sys.size, CPUS_NODE );
 }
 
 void mu_finalize( void )
@@ -204,4 +208,71 @@ const char* mu_to_str ( const cpu_set_t *cpu_set )
    }
    strcat( str, "]\0" );
    return str;
+}
+
+void mu_parse_mask( char const *env, cpu_set_t *mask )
+{
+   char* str = getenv( env );
+   if ( !str ) return;
+
+   regex_t regex_bitmask;
+   regex_t regex_range;
+   CPU_ZERO( mask );
+
+   /* Compile regular expression */
+   if ( regcomp(&regex_bitmask, "^[0-1]+$", REG_EXTENDED|REG_NOSUB) )
+      fatal0( "Could not compile regex\n");
+
+   if ( regcomp(&regex_range, "^[0-9,-]+$", REG_EXTENDED|REG_NOSUB) )
+      fatal0( "Could not compile regex\n");
+
+   /* Regular expression matches bitmask, e.g.: 11110011 */
+   if ( !regexec(&regex_bitmask, str, 0, NULL, 0) ) {
+      // Parse
+      int i;
+      for (i=0; i<strlen(str); i++) {
+         if ( str[i] == '1' && i < sys.size )
+            CPU_SET( i, mask );
+      }
+   }
+   /* Regular expression matches range, e.g.: 0-3,6-7 */
+   else if ( !regexec(&regex_range, str, 0, NULL, 0) ) {
+      // Parse
+      char *ptr = str;
+      char *endptr;
+      while ( ptr < str+strlen(str) ) {
+         // Discard junk at the left
+         if ( !isdigit(*ptr) ) { ptr++; continue; }
+
+         unsigned int start = strtoul( ptr, &endptr, 10 );
+         ptr = endptr;
+
+         // Single element
+         if ( (*ptr == ',' || *ptr == '\0') && start < sys.size ) {
+            CPU_SET( start, mask );
+            ptr++;
+            continue;
+         }
+         // Range
+         else if ( *ptr == '-' ) {
+            ptr++;
+            if ( !isdigit(*ptr) ) { ptr++; continue; }
+            unsigned int end = strtoul( ptr, &endptr, 10 );
+            if ( end > start ) {
+               int i;
+               for ( i=start; i<=end && i<sys.size; i++ )
+                  CPU_SET( i, mask );
+            }
+            ptr++;
+            continue;
+         }
+         // Unexpected token
+         else { }
+      }
+   }
+   /* Regular expression does not match */
+   else { }
+
+   regfree(&regex_bitmask);
+   regfree(&regex_range);
 }
