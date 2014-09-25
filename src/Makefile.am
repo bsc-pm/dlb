@@ -9,8 +9,10 @@
 bin_PROGRAMS = dlb dlb_shm
 
 dlb_SOURCES = utils/dlb.c
+dlb_CFLAGS = $(PERFO_CFLAGS)
 
 dlb_shm_SOURCES = utils/dlb_shm.c
+dlb_shm_CFLAGS = $(PERFO_CFLAGS)
 dlb_shm_LDADD = libdlb_nanos.la
 
 ###############################################################################
@@ -75,8 +77,10 @@ common_sources = \
 	  LB_comm/comm_map.h          \
 	  LB_comm/shmem.c             \
 	  LB_comm/shmem.h             \
-	  LB_comm/shmem_lewi_mask.c   \
-	  LB_comm/shmem_lewi_mask.h   \
+	  LB_comm/shmem_bitset.c      \
+	  LB_comm/shmem_bitset.h      \
+	  LB_comm/shmem_cpuarray.c    \
+	  LB_comm/shmem_cpuarray.h    \
 	  LB_core/DLB_kernel.c        \
 	  LB_core/DLB_kernel.h        \
 	  LB_core/DLB_interface.c     \

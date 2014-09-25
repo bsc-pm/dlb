@@ -24,12 +24,13 @@
 #include <assert.h>
 
 #include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_lewi_mask.h"
+#include "LB_comm/shmem_cpuarray.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
 #include "support/utils.h"
 #include "support/mask_utils.h"
+
 
 static int nthreads;
 
@@ -44,7 +45,7 @@ void lewi_mask_Init( void )
    //Initialize shared memory
    cpu_set_t default_mask;
    get_mask( &default_mask );
-   shmem_lewi_mask_init( &default_mask );
+   shmem_mask.init( &default_mask );
 
    if ( _aggressive_init ) {
       cpu_set_t mask;
@@ -63,8 +64,8 @@ void lewi_mask_Init( void )
 
 void lewi_mask_Finish( void )
 {
-   set_mask( shmem_lewi_mask_recover_defmask() );
-   shmem_lewi_mask_finalize();
+   set_mask( shmem_mask.recover_defmask() );
+   shmem_mask.finalize();
 }
 
 void lewi_mask_IntoCommunication( void ) {}
@@ -94,7 +95,7 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode)
    }
 
    set_mask( &cpu );
-   shmem_lewi_mask_add_mask( &mask );
+   shmem_mask.add_mask( &mask );
    add_event( THREADS_USED_EVENT, nthreads );
 }
 
@@ -102,7 +103,7 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode)
 void lewi_mask_OutOfBlockingCall(int is_iter)
 {
    debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
-   const cpu_set_t* current_mask = shmem_lewi_mask_recover_defmask();
+   const cpu_set_t* current_mask = shmem_mask.recover_defmask();
    set_mask(current_mask);
    nthreads = _default_nthreads;
 assert(nthreads==CPU_COUNT(current_mask));
@@ -116,7 +117,7 @@ void lewi_mask_UpdateResources( int max_resources )
    CPU_ZERO( &mask );
    get_mask( &mask );
 
-   int collected = shmem_lewi_mask_collect_mask( &mask, max_resources );
+   int collected = shmem_mask.collect_mask( &mask, max_resources );
 
    if ( collected > 0 ) {
       nthreads += collected;
@@ -133,7 +134,7 @@ void lewi_mask_ReturnClaimedCpus( void )
    CPU_ZERO( &mask );
    get_mask( &mask );
 
-   int returned = shmem_lewi_mask_return_claimed( &mask );
+   int returned = shmem_mask.return_claimed( &mask );
 
    if ( returned > 0 ) {
       nthreads -= returned;
@@ -155,7 +156,7 @@ void lewi_mask_ClaimCpus(int cpus)
       CPU_ZERO( &current_mask );
 
       get_mask( &current_mask );
-      shmem_lewi_mask_recover_some_defcpus( &current_mask, cpus ); 
+      shmem_mask.recover_some_defcpus( &current_mask, cpus );
       set_mask( &current_mask);
       nthreads += cpus;
       assert(nthreads==CPU_COUNT(&current_mask));

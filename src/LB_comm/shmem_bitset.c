@@ -52,7 +52,7 @@ static cpu_set_t default_mask;   // default mask of the process
 
 static bool has_shared_mask(void);
 
-void shmem_lewi_mask_init( cpu_set_t *cpu_set )
+void shmem_bitset__init( const cpu_set_t *cpu_set )
 {
    shmem_init( &shdata, sizeof(shdata_t) );
    shmem_set_mutex( &(shdata->shmem_mutex) );
@@ -84,7 +84,7 @@ void shmem_lewi_mask_init( cpu_set_t *cpu_set )
    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
 }
 
-void shmem_lewi_mask_finalize( void )
+void shmem_bitset__finalize( void )
 {
    // In non-MPI libs, we have to remove our cpus from the shared memory, since it'll survive the process
 #ifndef MPI_LIB
@@ -107,7 +107,7 @@ void shmem_lewi_mask_finalize( void )
    mu_finalize();
 }
 
-void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
+void shmem_bitset__add_mask( const cpu_set_t *cpu_set )
 {
    cpu_set_t cpus_to_give;
    cpu_set_t cpus_to_free;
@@ -127,9 +127,9 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
       // We only free the cpus that are present in given_cpus
       CPU_AND( &cpus_to_free, &(shdata->given_cpus), cpu_set );
       debug_shmem ( "Lending %s\n", mu_to_str(&cpus_to_free) );
-      
+
       // Remove from the set the cpus that are being borrowed
-      CPU_AND( &cpus_to_free, &(shdata->not_borrowed_cpus), &cpus_to_free); 
+      CPU_AND( &cpus_to_free, &(shdata->not_borrowed_cpus), &cpus_to_free);
       debug_shmem ( "Lending2 %s\n", mu_to_str(&cpus_to_free) );
       CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), &cpus_to_free );
 
@@ -145,7 +145,7 @@ void shmem_lewi_mask_add_mask( cpu_set_t *cpu_set )
    add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 }
 
-cpu_set_t* shmem_lewi_mask_recover_defmask( void )
+const cpu_set_t* shmem_bitset__recover_defmask( void )
 {
    shmem_lock();
    {
@@ -168,7 +168,7 @@ cpu_set_t* shmem_lewi_mask_recover_defmask( void )
    return &default_mask;
 }
 
-void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
+void shmem_bitset__recover_some_defcpus( cpu_set_t *mask, int max_resources )
 {
    shmem_lock();
    {
@@ -192,7 +192,7 @@ void shmem_lewi_mask_recover_some_defcpus( cpu_set_t *mask, int max_resources )
    add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 }
 
-int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )
+int shmem_bitset__return_claimed ( cpu_set_t *mask )
 {
    int i;
    int returned = 0;
@@ -224,7 +224,7 @@ int shmem_lewi_mask_return_claimed ( cpu_set_t *mask )
    return returned;
 }
 
-int shmem_lewi_mask_collect_mask ( cpu_set_t *mask, int max_resources )
+int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources )
 {
    int i;
    int collected = 0;
@@ -291,22 +291,48 @@ int aux=CPU_COUNT(mask);
    return collected;
 }
 
-int checkCpuBorrowed ( int cpu ){
+bool shmem_bitset__is_cpu_borrowed ( int cpu ){
    //If the cpu is mine just check that it is not borrowed
    if CPU_ISSET(cpu, &default_mask)
       return CPU_ISSET(cpu, &(shdata->not_borrowed_cpus));
    else
-      return 1;
+      return true;
 }
 
-int checkCPUIsClaimed( int cpu ){
+bool shmem_bitset__is_cpu_claimed( int cpu ){
       //Just check if my cpu is claimed
    if (!CPU_ISSET( cpu, &default_mask ) && !CPU_ISSET( cpu, &(shdata->given_cpus) ) )
-      return 1;
+      return true;
    else
-      return 0;
+      return false;
 }
 
+
+/* This function is intended to be called from external processes only to consult the shdata
+ * That's why we should initialize and finalize with the shared mem
+ */
+void shmem_bitset__print_info( void )
+{
+   shmem_init( &shdata, sizeof(shdata_t) );
+   shmem_set_mutex( &(shdata->shmem_mutex) );
+
+   cpu_set_t given, avail, not_borrowed, check;
+
+   shmem_lock();
+   {
+      memcpy( &given, &(shdata->given_cpus), sizeof(cpu_set_t) );
+      memcpy( &avail, &(shdata->avail_cpus), sizeof(cpu_set_t) );
+      memcpy( &not_borrowed, &(shdata->not_borrowed_cpus), sizeof(cpu_set_t) );
+      memcpy( &check, &(shdata->check_mask), sizeof(cpu_set_t) );
+   }
+   shmem_unlock();
+   shmem_finalize();
+
+   debug_basic_info0( "Given CPUs:        %s\n", mu_to_str( &given ) );
+   debug_basic_info0( "Available CPUs:    %s\n", mu_to_str( &avail ) );
+   debug_basic_info0( "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
+   debug_basic_info0( "Running CPUs:      %s\n", mu_to_str( &check ) );
+}
 
 static bool has_shared_mask( void )
 {
@@ -326,32 +352,4 @@ static bool has_shared_mask( void )
    shmem_unlock();
 
    return shared;
-}
-
-// This function is intended to be called from external processes only to consult the shdata
-// That's why we should initialize and finalize with the shared mem
-void get_masks( cpu_set_t *given,  cpu_set_t *avail,  cpu_set_t *not_borrowed, cpu_set_t *check )
-{
-   shmem_init( &shdata, sizeof(shdata_t) );
-   shmem_set_mutex( &(shdata->shmem_mutex) );
-
-   shmem_lock();
-   {
-      memcpy( given, &(shdata->given_cpus), sizeof(cpu_set_t) );
-      memcpy( avail, &(shdata->avail_cpus), sizeof(cpu_set_t) );
-      memcpy( not_borrowed, &(shdata->not_borrowed_cpus), sizeof(cpu_set_t) );
-      memcpy( check, &(shdata->check_mask), sizeof(cpu_set_t) );
-   }
-   shmem_unlock();
-
-   shmem_finalize();
-}
-
-void get_check_mask( cpu_set_t *cpu )
-{
-   shmem_lock();
-   {
-      memcpy( cpu, &(shdata->check_mask), sizeof(cpu_set_t) );
-   }
-   shmem_unlock();
 }

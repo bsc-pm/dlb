@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 #include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_lewi_mask.h"
+#include "LB_comm/shmem_bitset.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -60,7 +60,7 @@ void PERaL_Init( void )
    //Initialize shared memory
    cpu_set_t default_mask;
    get_mask( &default_mask );
-   shmem_lewi_mask_init( &default_mask );
+   shmem_mask.init( &default_mask );
 
    if ( _aggressive_init ) {
       cpu_set_t mask;
@@ -77,8 +77,8 @@ void PERaL_Init( void )
 
 void PERaL_Finish( void )
 {
-   set_mask( shmem_lewi_mask_recover_defmask() );
-   shmem_lewi_mask_finalize();
+   set_mask( shmem_mask.recover_defmask() );
+   shmem_mask.finalize();
 }
 
 void PERaL_IntoCommunication( void ) {}
@@ -90,9 +90,9 @@ void PERaL_IntoBlockingCall(int is_iter, int blocking_mode)
 {
    struct timespec aux;
    if (clock_gettime(CLOCK_REALTIME, &aux)<0){
-   	fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+      fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
    }
-	
+
    diff_time(initComp, aux, &aux);
 //   add_time(compIter, aux, &compIter);
    iter_cpu+=to_secs(aux) * nthreads;
@@ -117,19 +117,18 @@ void PERaL_IntoBlockingCall(int is_iter, int blocking_mode)
    }
 
    set_mask( &cpu );
-   shmem_lewi_mask_add_mask( &mask );
+   shmem_mask.add_mask( &mask );
    add_event( THREADS_USED_EVENT, nthreads );
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
 void PERaL_OutOfBlockingCall(int is_iter )
-{ 
- 
+{
 
    if (clock_gettime(CLOCK_REALTIME, &initComp)<0){
-   	fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
+      fprintf(stderr, "DLB ERROR: clock_gettime failed\n");
    }
-	
+
    if (is_iter!=0){
 	struct timespec aux;
 
@@ -148,7 +147,7 @@ add_event(1001, iter_cpu);
 			//If we can do the same computations with one cpu less in less time than the iteration time, release a cpu "forever"
 			//but only if we still have one cpu
 			if(iter_cpu<iter_duration && max_cpus>0){
-				max_cpus--;	
+				max_cpus--;
 //			fprintf(stderr, "[%d] with one cpu less: %.4f - %.4f (iter): %d\n", _mpi_rank, iter_cpu, to_secs(aux), iter_cpu<to_secs(aux) );
 			}
 		}
@@ -164,7 +163,7 @@ add_event(1001, iter_cpu);
    debug_lend ( "RECOVERING %d threads\n", max_cpus - nthreads );
    cpu_set_t mask;
    CPU_ZERO( &mask );
-   shmem_lewi_mask_recover_some_defcpus( &mask, max_cpus );
+   shmem_mask.recover_some_defcpus( &mask, max_cpus );
    set_mask( &mask );
    nthreads = max_cpus;
 //printf(stderr, "[%d] Using %d threads\n", _mpi_rank, nthreads );
@@ -183,7 +182,7 @@ void PERaL_UpdateResources( int max_resources )
    if( max_cpus==_default_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
       //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
 
-      int new_threads = shmem_lewi_mask_collect_mask( &mask, max_resources );
+      int new_threads = shmem_mask.collect_mask( &mask, max_resources );
       //printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);
 
       if ( new_threads > 0 ) {
@@ -212,7 +211,7 @@ void PERaL_ReturnClaimedCpus( void )
    CPU_ZERO( &mask );
    get_mask( &mask );
 
-   int returned = shmem_lewi_mask_return_claimed( &mask );
+   int returned = shmem_mask.return_claimed( &mask );
 
    if ( returned > 0 ) {
       nthreads -= returned;

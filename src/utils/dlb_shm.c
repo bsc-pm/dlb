@@ -23,14 +23,18 @@
 
 #define _GNU_SOURCE
 #include <sched.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <fnmatch.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <getopt.h>
 #include "support/utils.h"
 #include "LB_core/DLB_interface.h"
+#include "LB_comm/shmem.h"
+#include "LB_comm/shmem_cpuarray.h"
 
 static char * created_shm_filename = NULL;
 static char * userdef_shm_filename = NULL;
@@ -52,8 +56,6 @@ void print_help( const char * program )
    fprintf( stdout, "  -f, --file=FILE    Specify manually a Shared Memory file\n" );
 }
 
-// FIXME
-char *get_shm_filename( void );
 void create_shdata( void )
 {
    char *policy = getenv( "LB_POLICY" );
@@ -68,21 +70,10 @@ void create_shdata( void )
    DLB_Finalize();
 }
 
-// FIXME
-void get_masks( cpu_set_t *given,  cpu_set_t *avail,  cpu_set_t *not_borrowed, cpu_set_t *check );
-const char* mu_to_str ( const cpu_set_t *cpu_set );
-void mu_init( void );
-void mu_finalize( void );
-
 void list_shdata_item( const char* name )
 {
    setenv( "LB_SHM_NAME", name, 1);
-   cpu_set_t given, avail, not_borrowed, check;
-   get_masks( &given, &avail, &not_borrowed, &check );
-   fprintf( stderr, "Given CPUs:        %s\n", mu_to_str( &given ) );
-   fprintf( stderr, "Available CPUs:    %s\n", mu_to_str( &avail ) );
-   fprintf( stderr, "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
-   fprintf( stderr, "Running CPUs:      %s\n", mu_to_str( &check ) );
+   shmem_mask.print_info();
 }
 
 void list_shdata( void )
@@ -101,7 +92,6 @@ void list_shdata( void )
       exit( EXIT_FAILURE );
    }
 
-   mu_init();
    chdir(dir);
    while ( (entry = readdir(dp)) != NULL ) {
       lstat( entry->d_name, &statbuf );
@@ -130,7 +120,6 @@ void list_shdata( void )
       list_shdata_item( &(userdef_shm_filename[9]) );
    }
    closedir(dp);
-   mu_finalize();
 }
 
 void delete_shdata_item( const char* name )
