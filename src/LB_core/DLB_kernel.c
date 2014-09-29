@@ -125,6 +125,8 @@ void Init(void){
 
         parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality );
 
+        parse_env_bool( "LB_VERBOSE", &_verbose );
+
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
 	if (strcasecmp(policy, "LeWI")==0){

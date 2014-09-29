@@ -36,6 +36,7 @@ int _default_nthreads;
 bool _just_barrier = false;
 bool _aggressive_init = false;
 bool _priorize_locality = false;
+bool _verbose = false;
 blocking_mode_t _blocking_mode = ONE_CPU;
 
 #ifdef MPI_LIB
