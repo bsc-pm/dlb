@@ -313,14 +313,16 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask )
       for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
          fatal_cond0( CPU_ISSET( cpu, mask ) && shdata->node_info[cpu].guest != ME,
                "Current mask and Shared Memory information differ\n" );
-         if ( (shdata->node_info[cpu].owner != ME     &&
-               shdata->node_info[cpu].guest == ME     &&
-               shdata->node_info[cpu].state == BUSY)  ||
-              (shdata->node_info[cpu].state == DISABLED) ) {
-            shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
-            returned++;
-            CPU_CLR( cpu, mask );
-            DLB_DEBUG( CPU_SET( cpu, &returned_cpus ); )
+         if ( CPU_ISSET( cpu, mask ) ) {
+            if ( (shdata->node_info[cpu].owner != ME     &&
+                  shdata->node_info[cpu].guest == ME     &&
+                  shdata->node_info[cpu].state == BUSY)  ||
+               (shdata->node_info[cpu].state == DISABLED) ) {
+               shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
+               returned++;
+               CPU_CLR( cpu, mask );
+               DLB_DEBUG( CPU_SET( cpu, &returned_cpus ); )
+            }
          }
 
          // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION

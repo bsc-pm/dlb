@@ -23,7 +23,7 @@
 #include <strings.h>
 
 #include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_cpuarray.h"
+#include "LB_comm/shmem_bitset.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
