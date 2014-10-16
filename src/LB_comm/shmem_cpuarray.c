@@ -109,10 +109,8 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set )
             shdata->node_info[cpu].state = LENT;
          }
 
-         // Look for Idle CPUs, only in INSTRUMENTATION
-         if ( is_idle(cpu) ) {
-            DLB_INSTR( idle_count++; )
-         }
+         // Look for Idle CPUs
+         DLB_INSTR( if (is_idle(cpu)) idle_count++; )
       }
    }
    shmem_unlock();
@@ -266,8 +264,8 @@ void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources )
       for ( cpu = 0; (cpu < CPUS_NODE) && (max_resources > 0); cpu++ ) {
          if ( (CPU_ISSET(cpu, &default_mask)) && (!CPU_ISSET(cpu, mask)) ) {
             shdata->node_info[cpu].state = BUSY;
-	    CPU_SET( cpu, mask );
-	    max_resources--;
+            CPU_SET( cpu, mask );
+            max_resources--;
             if ( shdata->node_info[cpu].guest == NOBODY ) {
                shdata->node_info[cpu].guest = ME;
                DLB_DEBUG( CPU_SET( cpu, &recovered_cpus ); )

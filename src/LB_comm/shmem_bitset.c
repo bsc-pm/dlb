@@ -178,8 +178,8 @@ void shmem_bitset__recover_some_defcpus( cpu_set_t *mask, int max_resources )
          if ( (CPU_ISSET(i, &default_mask)) && (!CPU_ISSET(i, mask)) ) {
             CPU_CLR( i, &(shdata->given_cpus) );
             CPU_CLR( i, &(shdata->avail_cpus) );
-	    CPU_SET( i, mask );
-	    max_resources--;
+            CPU_SET( i, mask );
+            max_resources--;
          }
       }
       assert(max_resources==0);
@@ -293,7 +293,7 @@ int aux=CPU_COUNT(mask);
 
 bool shmem_bitset__is_cpu_borrowed ( int cpu ){
    //If the cpu is mine just check that it is not borrowed
-   if CPU_ISSET(cpu, &default_mask)
+   if (CPU_ISSET(cpu, &default_mask))
       return CPU_ISSET(cpu, &(shdata->not_borrowed_cpus));
    else
       return true;
