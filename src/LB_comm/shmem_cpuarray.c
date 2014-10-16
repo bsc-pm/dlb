@@ -65,6 +65,7 @@ typedef struct {
 static shdata_t *shdata;
 static cpu_set_t default_mask;   // default mask of the process
 static cpu_set_t affinity_mask;  // affinity mask of the process
+static cpu_set_t dlb_mask;       // CPUs not owned by any process but usable by others
 static bool cpu_is_public_post_mortem = false;
 
 static inline bool is_idle( int cpu )
@@ -78,7 +79,6 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set )
    shmem_set_mutex( &(shdata->shmem_mutex) );
 
    mu_init();
-   cpu_set_t dlb_mask;
    mu_parse_mask( "LB_MASK", &dlb_mask );
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
    mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
@@ -99,8 +99,11 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set )
          // Add my mask info
          if ( CPU_ISSET( cpu, &default_mask ) ) {
             shdata->node_info[cpu].owner = ME;
-            shdata->node_info[cpu].guest = ME;
             shdata->node_info[cpu].state = BUSY;
+            // It could be that my cpu was being used by anybody else if it was set in the DLB mask
+            if ( shdata->node_info[cpu].guest == NOBODY ) {
+                shdata->node_info[cpu].guest = ME;
+            }
          }
          // Add DLB mask info
          if ( CPU_ISSET( cpu, &dlb_mask )  &&
@@ -136,10 +139,18 @@ void shmem_cpuarray__finalize( void )
             }
             if ( cpu_is_public_post_mortem ) {
                shdata->node_info[cpu].state = LENT;
+            } else if ( CPU_ISSET( cpu, &dlb_mask ) ) {
+               shdata->node_info[cpu].state = LENT;
             } else {
                shdata->node_info[cpu].state = DISABLED;
             }
+         } else {
+             // Free external CPUs that may I be using
+             if ( shdata->node_info[cpu].guest == ME ) {
+                 shdata->node_info[cpu].guest = NOBODY;
+             }
          }
+
          if ( is_idle(cpu) ) {
             DLB_INSTR( idle_count++; )
          }
