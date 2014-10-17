@@ -36,12 +36,8 @@
 #error This system does not support process shared mutex
 #endif
 
-#ifdef MPI_LIB
-#include <mpi.h>
-#endif
-
 #include "support/debug.h"
-#include "support/globals.h"
+#include "support/utils.h"
 #include "support/tracing.h"
 
 #define SHM_NAME_LENGTH 32
@@ -53,107 +49,6 @@ static sem_t *semaphore;
 static pthread_mutex_t *shmem_mutex = NULL;
 static char shm_filename[SHM_NAME_LENGTH];
 static char sem_filename[SHM_NAME_LENGTH];
-
-#ifdef MPI_LIB
-void shmem_init( void **shdata, size_t sm_size )
-{
-   debug_shmem ( "Shared Memory Init: pid(%d)\n", getpid() );
-
-   key_t key;
-   char *custom_shm_name;
-
-   parse_env_string( "LB_SHM_NAME", &custom_shm_name );
-   if ( custom_shm_name != NULL ) {
-      snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%s", custom_shm_name );
-      snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%s", custom_shm_name );
-   }
-
-   if ( _process_id == 0 ) {
-
-      debug_shmem ( "Start Master Comm - creating shared mem \n" );
-
-      if ( custom_shm_name == NULL ) {
-         key = getpid();
-         snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%d", key );
-         snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
-      }
-
-      /* Obtain a file descriptor for the shmem */
-      fd = shm_open( shm_filename, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR );
-      if ( fd == -1 ) {
-         perror( "DLB PANIC: shm_open Master" );
-         exit( 1 );
-      }
-
-      /* Truncate the regular file to a precise size */
-      if ( ftruncate( fd, sm_size ) == -1 ) {
-         perror( "DLB PANIC: ftruncate Master" );
-         exit( 1 );
-      }
-
-      /* Map shared memory object */
-      *shdata = mmap( NULL, sm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-      if ( *shdata == MAP_FAILED ) {
-         perror( "DLB PANIC: mmap Master" );
-         exit( 1 );
-      }
-
-      /* Create Semaphore */
-      semaphore = sem_open( sem_filename, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1 );
-      if ( semaphore == SEM_FAILED ) {
-         perror( "DLB_PANIC: Master unable to create semaphore" );
-         sem_unlink( sem_filename );
-         exit( 1 );
-      }
-
-      PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
-
-      debug_shmem ( "Start Master Comm - shared mem created\n" );
-
-   } else {
-      debug_shmem ( "Slave Comm - associating to shared mem\n" );
-
-      PMPI_Bcast ( &key, 1, MPI_INTEGER, 0, _mpi_comm_node );
-
-      if ( custom_shm_name == NULL ) {
-         snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%d", key );
-         snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
-      }
-
-      /* Obtain a file descriptor for the shmem */
-      do {
-         fd = shm_open( shm_filename, O_RDWR, S_IRUSR | S_IWUSR );
-      } while ( fd < 0 && errno == ENOENT );
-
-      if ( fd < 0 ) {
-         perror( "DLB PANIC: shm_open Slave" );
-         exit( 1 );
-      }
-
-      debug_shmem ( "Slave Comm - associated to shared mem\n" );
-
-      /* Map shared memory object */
-      *shdata = mmap( NULL, sm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-      if ( *shdata == MAP_FAILED ) {
-         perror( "DLB PANIC: mmap Slave" );
-         exit( 1 );
-      }
-
-      /* Open Semaphore */
-      semaphore = sem_open( sem_filename, 0, S_IRUSR | S_IWUSR, 0 );
-      if ( semaphore == SEM_FAILED ) {
-         perror( "DLB PANIC: Reader unable to open semaphore" );
-         sem_close( semaphore );
-         exit( 1 );
-      }
-   }
-
-   /* Save addr and length for the finalize step*/
-   addr = *shdata;
-   length = sm_size;
-}
-
-#else
 
 void shmem_init( void **shdata, size_t sm_size )
 {
@@ -209,7 +104,6 @@ void shmem_init( void **shdata, size_t sm_size )
    addr = *shdata;
    length = sm_size;
 }
-#endif
 
 void shmem_finalize( void )
 {
@@ -226,13 +120,6 @@ void shmem_finalize( void )
 
    if ( sem_close( semaphore ) ) perror( "DLB ERROR: sem_close" );
    if ( munmap( addr, length ) ) perror( "DLB_ERROR: munmap" );
-
-#ifdef MPI_LIB
-   if ( _process_id == 0 ) {
-      if ( sem_unlink( sem_filename ) ) perror( "DLB_ERROR: sem_unlink" );
-      if ( shm_unlink( shm_filename ) ) perror( "DLB ERROR: shm_unlink" );
-   }
-#endif
 }
 
 void shmem_set_mutex ( pthread_mutex_t *shmutex )
