@@ -82,8 +82,10 @@ void debug_shmem ( const char *fmt, ... );
 
 #ifdef DEBUG_VERSION
 #define DLB_DEBUG(f) f
+#define ensure(cond, ...) if ( !(cond) ) fatal(__VA_ARGS__);
 #else
 #define DLB_DEBUG(f)
+#define ensure(cond, ...)
 #endif
 
 #endif /* DEBUG_H */

@@ -26,10 +26,6 @@
 #include <stdarg.h>
 #include "globals.h"
 
-#ifdef MPI_LIB
-#include <mpi.h>
-#endif
-
 void fatal0 ( const char *fmt, ... )
 {
    if ( _mpi_rank <= 0 ) {
@@ -39,11 +35,7 @@ void fatal0 ( const char *fmt, ... )
       vfprintf( stderr, fmt, args );
       va_end( args );
    }
-#ifdef MPI_LIB
-   PMPI_Abort ( MPI_COMM_WORLD, 1 );
-#else
    abort();
-#endif
 }
 
 void fatal ( const char *fmt, ... )
@@ -53,11 +45,7 @@ void fatal ( const char *fmt, ... )
    fprintf( stderr, "DLB PANIC[%d]: ", _mpi_rank );
    vfprintf( stderr, fmt, args );
    va_end( args );
-#ifdef MPI_LIB
-   PMPI_Abort ( MPI_COMM_WORLD, 1 );
-#else
    abort();
-#endif
 }
 
 void warning0 ( const char *fmt, ... )

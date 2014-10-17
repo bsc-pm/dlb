@@ -48,6 +48,7 @@ void print_help( void )
    fprintf( stdout, "- No: \n" );
    fprintf( stdout, "- LeWI:\n" );
    fprintf( stdout, "- LeWI_mask:\n" );
+   fprintf( stdout, "- auto_LeWI_mask:\n" );
    fprintf( stdout, "- RaL:\n" );
 }
 
