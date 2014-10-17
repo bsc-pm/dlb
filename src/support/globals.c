@@ -17,13 +17,6 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-#ifdef MPI_LIB
-#include <mpi.h>
-#endif
-
 #include "utils.h"
 
 int _mpi_rank;
@@ -38,7 +31,3 @@ bool _aggressive_init = false;
 bool _priorize_locality = false;
 bool _verbose = false;
 blocking_mode_t _blocking_mode = ONE_CPU;
-
-#ifdef MPI_LIB
-MPI_Comm _mpi_comm_node;
-#endif

@@ -23,11 +23,12 @@
 
 #ifdef MPI_LIB
 
+#include "process_MPI.h"
+#include "MPI_calls_coded.h"
+#include "MPI_interface.h"
 #include <stdio.h>
-#include <process_MPI.h>
-#include <mpi.h>
-#include <MPI_calls_coded.h>
 #include <stdint.h>
+#include <mpi.h>
 
 #if MPI_VERSION >= 3
 #define MPI3_CONST const
@@ -679,6 +680,13 @@ void  DLB_MPI_Testsome_leave (void){
 	#endif
 
 	after_mpi(Testsome);
+}
+
+/* From here, custom DLB_MPI interfaces */
+
+DLB_API_DEF( void, DLB_MPI_node_barrier, dlb_mpi_node_barrier, (void) )
+{
+    node_barrier();
 }
 
 #endif /* MPI_LIB */

@@ -173,6 +173,26 @@ void  DLB_MPI_Testsome_enter (int incount, MPI_Request array_of_requests[], int 
 
 void  DLB_MPI_Testsome_leave (void);
 
+/* From here, custom DLB_MPI interfaces */
+#define DLB_API_SIMPLE_DECL(Type, Name, Params) \
+   extern Type Name##_ Params; \
+   extern Type Name Params;
+
+#define DLB_API_DECL(Type, Name, NameF, Params) \
+   DLB_API_SIMPLE_DECL(Type, NameF, Params) \
+   DLB_API_SIMPLE_DECL(Type, Name, Params)
+
+#define DLB_API_SIMPLE_DEF(Type, Name, Params) \
+   __attribute__((alias(#Name))) Type Name##_ Params; \
+   Type Name Params
+
+#define DLB_API_DEF(Type, Name, NameF, Params) \
+   __attribute__((alias(#Name))) Type NameF Params; \
+   __attribute__((alias(#Name))) Type NameF##_ Params; \
+   DLB_API_SIMPLE_DEF(Type, Name, Params)
+
+DLB_API_DECL( void, DLB_MPI_node_barrier, dlb_mpi_node_barrier, (void) );
+
 #endif //MPI_INTERFACE_H
 
 

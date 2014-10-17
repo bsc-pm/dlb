@@ -105,7 +105,9 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 		add_event(IDLE_CPUS_EVENT, 0);
 
 #ifdef MPI_LIB
-		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
+                // FIXME
+                k=0;
+                //PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
 #endif
 
 #ifdef debugSharedMem 
@@ -117,7 +119,9 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
     	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
 #endif
 #ifdef MPI_LIB
-		PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
+                // FIXME
+                k=0;
+                //PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
 #else
                 k=0;
 #endif

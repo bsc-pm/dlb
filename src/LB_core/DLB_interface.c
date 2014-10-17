@@ -139,14 +139,6 @@ DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
    }
 }
 
-DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) )
-{
-#ifdef MPI_LIB
-   if ( dlb_enabled )
-      node_barrier();
-#endif
-}
-
 DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) )
 {
    if ( dlb_enabled )
@@ -155,4 +147,3 @@ DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) 
       return 1;
 
 }
-

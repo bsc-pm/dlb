@@ -44,6 +44,7 @@ const char* nanos_get_pm(void) __attribute__( ( weak ) );
 int periodo; 
 static int mpi_ready = 0;
 static int is_iter;
+static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
 
 void before_init(void){
 	DPDWindowSize(300);
@@ -133,7 +134,7 @@ void after_init(void){
          ********************************************/
 
         // Color = node, key is 0 because we don't mind the internal rank
-        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &_mpi_comm_node );
+        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 
 	Init();
 	mpi_ready=1;	
@@ -201,6 +202,10 @@ void enable_mpi(void) { mpi_ready = 1; }
 
 void disable_mpi(void) { mpi_ready = 0; }
 
-void node_barrier(void) { if (mpi_ready) MPI_Barrier( _mpi_comm_node ); }
+/* FIXME: If a Fortran application preloads the Extrae-Fortran library, it will only
+ *          intercept C MPI symbols. If we just call MPI_Barrier from here, the call
+ *          can never be intercepted by Extrae nor DLB
+ */
+void node_barrier(void) { if (mpi_ready) MPI_Barrier( mpi_comm_node ); }
 
 #endif /* MPI_LIB */

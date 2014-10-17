@@ -20,13 +20,6 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-#ifdef MPI_LIB
-#include <mpi.h>
-#endif
-
 #include "utils.h"
 
 extern int _mpi_rank;         /* MPI rank */
@@ -41,9 +34,5 @@ extern bool _aggressive_init;    /* Initialize all threads at init */
 extern bool _priorize_locality;  /* Given threads are reserved for other processes using the same socket, unless all of them are given */
 extern bool _verbose;            /* Verbosity for Debug Mode */
 extern blocking_mode_t _blocking_mode;
-
-#ifdef MPI_LIB
-extern MPI_Comm _mpi_comm_node; /* MPI Communicator specific to the node */
-#endif
 
 #endif /* GLOBALS_H */
