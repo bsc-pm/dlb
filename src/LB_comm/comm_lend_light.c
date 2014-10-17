@@ -17,25 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <comm.h>
+#include "shmem.h"
 #include "support/tracing.h"
-#include "support/globals.h"
-
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
-#include <string.h>
 #include <unistd.h>
-
-#ifdef MPI_LIB
-#include <mpi.h>
-#endif
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
@@ -51,7 +36,6 @@ struct shdata {
 };
 
 struct shdata *shdata;
-int shmid;
 
 void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy){
 #ifdef debugSharedMem 
@@ -63,40 +47,10 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 	defaultCPUS=defCPUS;
 	greedy=is_greedy;
 
-	int k;
-	key_t key;
-    	int sm_size;
-    	char * shm;
-
-
-	sm_size= sizeof(struct shdata);
-	//       idle cpus      
-
+	shmem_init( &shdata, sizeof(struct shdata) );
 
 	if (me==0){
 
-		k=getpid();
-		key=k;
-       
-	
-#ifdef debugSharedMem 
-		fprintf(stderr,"DLB DEBUG: (%d:%d) Start Master Comm - creating shared mem \n", node, me);
-#endif
-	
-		if ((shmid = shmget(key, sm_size, IPC_EXCL | IPC_CREAT | 0666)) < 0) {
-			perror("DLB PANIC: shmget Master");
-			exit(1);
-		}
-	
-		if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
-			perror("DLB PANIC: shmat Master");
-			exit(1);
-		}
-
-                shdata = (struct shdata *)shm;
-	
-		
-	
 #ifdef debugSharedMem 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) setting values to the shared mem\n", node, me);
 #endif
@@ -104,54 +58,14 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
                 shdata->idleCpus = 0;
 		add_event(IDLE_CPUS_EVENT, 0);
 
-#ifdef MPI_LIB
-                // FIXME
-                k=0;
-                //PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
-#endif
-
 #ifdef debugSharedMem 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) Finished setting values to the shared mem\n", node, me);
 #endif
-
-	}else{
-#ifdef debugSharedMem 
-    	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
-#endif
-#ifdef MPI_LIB
-                // FIXME
-                k=0;
-                //PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
-#else
-                k=0;
-#endif
-		key=k;
-		
-		shmid = shmget(key, sm_size, 0666);
-	
-		while (shmid<0 && errno==ENOENT){
-			shmid = shmget(key, sm_size, 0666);
-		}
-		if (shmid < 0) {
-			perror("shmget slave");
-			exit(1);
-		}
-	
-#ifdef debugSharedMem 
-		fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associated to shared mem\n", node, me);
-#endif
-		if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
-			perror("shmat slave");
-			exit(1);
-		}
-	
-		shdata = (struct shdata *)shm;
 	}
 }
 
 void finalize_comm(){
-	if (shmctl(shmid, IPC_RMID, NULL)<0)
-		perror("DLB ERROR: Removing Shared Memory");	
+	shmem_finalize();
 }
 
 int releaseCpus(int cpus){

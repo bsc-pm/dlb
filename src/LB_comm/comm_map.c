@@ -21,29 +21,13 @@
 #include <config.h>
 #endif
 
-#define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */                                                                                                                                                                          
-
-#include <comm.h>
-#include "support/tracing.h"
-#include "support/globals.h"
-
-#include <stdio.h>                                                                                                                                                                                                                       
-#include <string.h>                                                                                                                                                                                                                      
-#include <stdlib.h>                                                                                                                                                                                                                      
-#include <sys/types.h>                                                                                                                                                                                                                   
-
-#include <unistd.h>                                                                                                                                                                                                                      
-#include <sys/syscall.h>                                                                                                                                                                                                                 
-#include <sched.h>                                                                                                                                                                                                                       
-#include <pthread.h> 
-
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <errno.h>
-
-#ifdef MPI_LIB
-#include <mpi.h>
-#endif
+#define _GNU_SOURCE
+#include <sched.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include "shmem.h"
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
@@ -70,7 +54,6 @@ struct shdata {
 };
 
 struct shdata *shdata;
-int shmid;
 
 cpu_set_t all_cpu;
 
@@ -97,48 +80,18 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 #ifdef debugSharedMem 
     fprintf(stderr,"DLB DEBUG: (%d:%d) - %d LoadCommonConfig\n", node,me,  getpid());
 #endif
+	int i, j;
 	procs=num_procs;
 	me=meId;
 	node=nodeId;
 	defaultCPUS=defCPUS;
 
-	int k, i, j;
-	key_t key;
-    	int sm_size;
-    	char * shm;
-
-
 	CPU_ZERO(&all_cpu);//prepare cpu_set
 	for(i=0; i<CPUS_NODE; i++) CPU_SET(i, &all_cpu);
 
-	sm_size= sizeof(struct shdata);
-	//       idle cpus      
-
+	shmem_init( &shdata, sizeof(struct shdata) );
 
 	if (me==0){
-
-		k=getpid();
-		key=k;
-       
-	
-#ifdef debugSharedMem 
-		fprintf(stderr,"DLB DEBUG: (%d:%d) Start Master Comm - creating shared mem \n", node, me);
-#endif
-	
-		if ((shmid = shmget(key, sm_size, IPC_EXCL | IPC_CREAT | 0666)) < 0) {
-			perror("DLB PANIC: shmget Master");
-			exit(1);
-		}
-	
-		if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
-			perror("DLB PANIC: shmat Master");
-			exit(1);
-		}
-
-                shdata = (struct shdata *)shm;
-	
-		
-	
 #ifdef debugSharedMem 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) setting values to the shared mem\n", node, me);
 #endif
@@ -154,51 +107,12 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 
 		//add_event(IDLE_CPUS_EVENT, 0);
 
-#ifdef MPI_LIB
-                // FIXME
-                k=0;
-                //PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
-#endif
-
 #ifdef debugSharedMem 
 		fprintf(stderr,"DLB DEBUG: (%d:%d) Finished setting values to the shared mem\n", node, me);
 #endif
-
-	}else{
-#ifdef debugSharedMem 
-    	fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
-#endif
-#ifdef MPI_LIB
-                // FIXME
-                k=0;
-                //PMPI_Bcast ( &k, 1, MPI_INTEGER, 0, _mpi_comm_node);
-#else
-                k=0;
-#endif
-		key=k;
-		
-		shmid = shmget(key, sm_size, 0666);
-	
-		while (shmid<0 && errno==ENOENT){
-			shmid = shmget(key, sm_size, 0666);
-		}
-		if (shmid < 0) {
-			perror("shmget slave");
-			exit(1);
-		}
-	
-#ifdef debugSharedMem 
-		fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associated to shared mem\n", node, me);
-#endif
-		if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
-			perror("shmat slave");
-			exit(1);
-		}
-	
-		shdata = (struct shdata *)shm;
 	}
+
 	//Each Process initialize his cpus
-	
 	for (i=0; i<defCPUS; i++){
 //		fprintf(stderr, "%d: %d = %d\n", me, i, (me*defCPUS)+i);
 		shdata->cpus_map[me][i]=(me*defCPUS)+i;
@@ -215,8 +129,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 }
 
 void finalize_comm_Map(){
-	if (shmctl(shmid, IPC_RMID, NULL)<0)
-		perror("DLB ERROR: Removing Shared Memory");	
+	shmem_finalize();
 }
 
 int releaseCpus_Map(int cpus, int* released_cpus){
