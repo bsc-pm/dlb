@@ -78,25 +78,24 @@ void list_shdata_item( const char* name )
 
 void list_shdata( void )
 {
-   // Ignore them if the filename is not specified
-   bool created_shm_listed = created_shm_filename == NULL;
-   bool userdef_shm_listed = userdef_shm_filename == NULL;
+    // Ignore them if the filename is not specified
+    bool created_shm_listed = created_shm_filename == NULL;
+    bool userdef_shm_listed = userdef_shm_filename == NULL;
 
-   const char dir[] = "/dev/shm";
-   DIR *dp;
-   struct dirent *entry;
-   struct stat statbuf;
+    const char dir[] = "/dev/shm";
+    DIR *dp;
+    struct dirent *entry;
+    struct stat statbuf;
 
-   if ( (dp = opendir(dir)) == NULL ) {
-      perror( "DLB ERROR: can't open /dev/shm" );
-      exit( EXIT_FAILURE );
-   }
+    if ( (dp = opendir(dir)) == NULL ) {
+        perror( "DLB ERROR: can't open /dev/shm" );
+        exit( EXIT_FAILURE );
+    }
 
-   chdir(dir);
-   while ( (entry = readdir(dp)) != NULL ) {
-      lstat( entry->d_name, &statbuf );
-      if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
-         if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
+    while ( (entry = readdir(dp)) != NULL ) {
+        lstat( entry->d_name, &statbuf );
+        if( getuid() == statbuf.st_uid &&
+                fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
             list_shdata_item( &(entry->d_name[8]) );
 
@@ -104,22 +103,20 @@ void list_shdata( void )
             // Shared Memories are detected. (BG/Q needs it)
             created_shm_listed = created_shm_listed || strstr( created_shm_filename, entry->d_name );
             userdef_shm_listed = userdef_shm_listed || strstr( userdef_shm_filename, entry->d_name );
-         }
-      }
-   }
+        }
+    }
 
-   if ( !created_shm_listed ) {
-      fprintf( stderr, "Previously created Shared Memory file not found.\n" );
-      fprintf( stderr, "Looking for %s...\n", created_shm_filename );
-      list_shdata_item( &(created_shm_filename[9]) );
-   }
+    if ( !created_shm_listed ) {
+        fprintf( stderr, "Previously created Shared Memory file not found.\n" );
+        fprintf( stderr, "Looking for %s...\n", created_shm_filename );
+        list_shdata_item( &(created_shm_filename[9]) );
+    }
 
-   if ( !userdef_shm_listed ) {
-      fprintf( stderr, "User defined Shared Memory file not found.\n" );
-      fprintf( stderr, "Looking for %s...\n", userdef_shm_filename );
-      list_shdata_item( &(userdef_shm_filename[9]) );
-   }
-   closedir(dp);
+    if ( !userdef_shm_listed ) {
+        fprintf( stderr, "User defined Shared Memory file not found.\n" );
+        fprintf( stderr, "Looking for %s...\n", userdef_shm_filename );
+        list_shdata_item( &(userdef_shm_filename[9]) );
+    }
 }
 
 void delete_shdata_item( const char* name )

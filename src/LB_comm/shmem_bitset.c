@@ -44,7 +44,6 @@ typedef struct {
 
    cpu_set_t check_mask; // To check whether the masks of
                          // the node processes are disjoint
-   pthread_mutex_t shmem_mutex;
 } shdata_t;
 
 static shdata_t *shdata;
@@ -55,7 +54,6 @@ static bool has_shared_mask(void);
 void shmem_bitset__init( const cpu_set_t *cpu_set )
 {
    shmem_init( &shdata, sizeof(shdata_t) );
-   shmem_set_mutex( &(shdata->shmem_mutex) );
    add_event( IDLE_CPUS_EVENT, 0 );
 
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
@@ -314,7 +312,6 @@ bool shmem_bitset__is_cpu_claimed( int cpu ){
 void shmem_bitset__print_info( void )
 {
    shmem_init( &shdata, sizeof(shdata_t) );
-   shmem_set_mutex( &(shdata->shmem_mutex) );
 
    cpu_set_t given, avail, not_borrowed, check;
 

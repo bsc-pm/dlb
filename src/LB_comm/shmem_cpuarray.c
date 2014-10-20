@@ -59,7 +59,6 @@ typedef struct {
 
 typedef struct {
    cpu_info_t node_info[CPUS_NODE];
-   pthread_mutex_t shmem_mutex;
 } shdata_t;
 
 static shdata_t *shdata;
@@ -76,7 +75,6 @@ static inline bool is_idle( int cpu )
 void shmem_cpuarray__init( const cpu_set_t *cpu_set )
 {
    shmem_init( &shdata, sizeof(shdata_t) );
-   shmem_set_mutex( &(shdata->shmem_mutex) );
 
    mu_init();
    mu_parse_mask( "LB_MASK", &dlb_mask );
@@ -458,18 +456,13 @@ bool shmem_cpuarray__is_cpu_claimed( int cpu )
 void shmem_cpuarray__print_info( void )
 {
    shmem_init( &shdata, sizeof(shdata_t) );
-   shmem_set_mutex( &(shdata->shmem_mutex) );
 
    int cpu;
    cpu_info_t node_info_copy[CPUS_NODE];
 
    shmem_lock();
    {
-      for ( cpu=0; cpu<CPUS_NODE; cpu++ ) {
-         node_info_copy[cpu].owner = shdata->node_info[cpu].owner;
-         node_info_copy[cpu].guest = shdata->node_info[cpu].guest;
-         node_info_copy[cpu].state = shdata->node_info[cpu].state;
-      }
+       memcpy( node_info_copy, shdata->node_info, sizeof(cpu_info_t)*CPUS_NODE );
    }
    shmem_unlock();
    shmem_finalize();
