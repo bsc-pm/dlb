@@ -503,7 +503,7 @@ void DLB_MPI_Allgather_leave (void){
 }
 
 __attribute__((alias("DLB_MPI_Allgatherv_enter"))) void DLB_mpi_allgatherv_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm);
-void DLB_MPI_Allgatherv_enter (void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int *recvcounts, int *displs, MPI_Datatype recvtype, MPI_Comm comm){
+void DLB_MPI_Allgatherv_enter (MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm){
 	#ifdef debugInOut
 	fprintf(stderr," >> MPI_Allgatherv...............\n");
 	#endif
