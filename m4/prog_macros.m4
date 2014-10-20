@@ -13,11 +13,7 @@ AC_DEFUN([AX_PROG_MPI],
       [mpi_paths="not_set"]
    )
 
-   if test "${mpi_paths}" = "not_set" ; then
-      AC_MSG_ERROR([Attention! You have not passed the location of the MPI library through --with-mpi option. Please, use --with-mpi to specify the location of the MPI installation on your system, or if you just want a basic installation of the DLB binary, use --without-mpi instead.])
-   fi
-
-   if test ${mpi_paths} != "no" -a ! -d ${mpi_paths} ; then
+   if test ${mpi_paths} != "no" -a ${mpi_paths} != "not_set" -a ! -d ${mpi_paths} ; then
       AC_MSG_ERROR([Attention! You have passed an invalid MPI location.])
    fi
 
@@ -102,7 +98,7 @@ AC_DEFUN([AX_PROG_HWLOC],
       [hwloc_paths="not_set"]
    )
 
-   if test ${hwloc_paths} != "not_set" -a ! -d ${hwloc_paths} ; then
+   if test ${hwloc_paths} != "no" -a ${hwloc_paths} != "not_set" -a ! -d ${hwloc_paths} ; then
       AC_MSG_ERROR([Attention! You have passed an invalid HWLOC location.])
    fi
 
