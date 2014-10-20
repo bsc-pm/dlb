@@ -64,6 +64,14 @@ void parse_env_string ( char const *env, char **var )
    *var = getenv( env );
 }
 
+void parse_env_string_or_die ( char const *env, char **var )
+{
+    *var = getenv( env );
+    if ( var == NULL ) {
+        fatal0( "%s must be defined\n", env );
+    }
+}
+
 void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode )
 {
    char* blocking = getenv( env );

@@ -17,133 +17,96 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <limits.h>
 #include "LB_core/DLB_interface.h"
 #include "LB_core/DLB_kernel.h"
-#include "support/utils.h"
 #include "support/tracing.h"
-#ifdef MPI_LIB
-#include "LB_MPI/process_MPI.h"
-#endif
 
-static bool dlb_enabled = true;
+// sub-process ID
+static int spid = 0;
 
 DLB_API_DEF( void, DLB_Init, dlb_init, (void) )
 {
-   fixme_init_without_mpi();
-   dlb_enabled = true;
+    spid = Init();
 }
 
 DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) )
 {
-   dlb_enabled = false;
-   fixme_finalize_without_mpi();
+    Finish( spid );
 }
 
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) )
 {
-   add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-#ifdef MPI_LIB
-   enable_mpi();
-#endif
-   dlb_enabled = true;
+    add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+    set_dlb_enabled( true );
 }
 
 DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
 {
-   //FIXME This hiddes the single event always
-   add_event(DLB_MODE_EVENT, EVENT_DISABLED);
-   dlb_enabled = false;
-#ifdef MPI_LIB
-   disable_mpi();
-#endif
+    //FIXME This hiddes the single event always
+    add_event(DLB_MODE_EVENT, EVENT_DISABLED);
+    set_dlb_enabled( false );
 }
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) )
 {
-   if ( dlb_enabled ) {
-      add_event(DLB_MODE_EVENT, EVENT_SINGLE);
-      //no iter, single
-      IntoBlockingCall(0, 1);
-   }
+    add_event(DLB_MODE_EVENT, EVENT_SINGLE);
+    //no iter, single
+    IntoBlockingCall(0, 1);
 }
 
 DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) )
 {
-   if ( dlb_enabled ) {
-      add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-      OutOfBlockingCall(0);
-   }
+    add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+    OutOfBlockingCall(0);
 }
 
 DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) )
 {
-   if ( dlb_enabled )
-      updateresources( USHRT_MAX );
+    updateresources( USHRT_MAX );
 }
 
 DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) )
 {
-   if ( dlb_enabled )
-      updateresources( max_resources );
+    updateresources( max_resources );
 }
 
 DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) )
 {
-   if ( dlb_enabled )
-      returnclaimed();
+    returnclaimed();
 }
 
 DLB_API_DEF( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) )
 {
-   if ( dlb_enabled )
-      return releasecpu(cpu);
-   else
-      return 0;
+    return releasecpu(cpu);
 }
 
 DLB_API_DEF( int, DLB_ReturnClaimedCpu, dlb_returnclaimedcpu, (int cpu) )
 {
-   if ( dlb_enabled )
-      return returnclaimedcpu(cpu);
-   else
-      return 0;
+    return returnclaimedcpu(cpu);
 }
 
 DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) )
 {
-   if ( dlb_enabled )
-      claimcpus(cpus);
+    claimcpus(cpus);
 }
 
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
 {
-   if ( dlb_enabled ) {
-      add_event(RUNTIME_EVENT, EVENT_LEND);
-      //no iter, no single
-      IntoBlockingCall(0, 0);
-      add_event(RUNTIME_EVENT, 0);
-   }
+    add_event(RUNTIME_EVENT, EVENT_LEND);
+    //no iter, no single
+    IntoBlockingCall(0, 0);
+    add_event(RUNTIME_EVENT, 0);
 }
 
 DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
 {
-   if ( dlb_enabled ) {
-      add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
-      OutOfBlockingCall(0);
-      add_event(RUNTIME_EVENT, 0);
-   }
+    add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
+    OutOfBlockingCall(0);
+    add_event(RUNTIME_EVENT, 0);
 }
 
 DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) )
 {
-   if ( dlb_enabled )
-      return checkCpuAvailability(cpu);
-   else
-      return 1;
-
+    return checkCpuAvailability(cpu);
 }

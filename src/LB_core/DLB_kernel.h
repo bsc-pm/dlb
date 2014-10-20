@@ -20,6 +20,8 @@
 #ifndef DLB_KERNEL_H
 #define DLB_KERNEL_H
 
+#include <stdbool.h>
+
 typedef struct{
 	void (*init) (void);
 	void (*finish) (void);
@@ -39,14 +41,11 @@ typedef struct{
 
 extern int use_dpd;
 
-void bind_master();
+void set_dlb_enabled(bool enabled);
 
-void fixme_init_without_mpi(void);
-void fixme_finalize_without_mpi(void);
+int Init(void);
 
-void Init(void);
-
-void Finish(void);
+void Finish(int id);
 
 void IntoCommunication(void);
 

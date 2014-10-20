@@ -41,19 +41,18 @@ int nanos_omp_get_num_threads(void) __attribute__( ( weak ) );
 int nanos_omp_get_max_threads(void) __attribute__( ( weak ) );
 const char* nanos_get_pm(void) __attribute__( ( weak ) );
 
-int periodo; 
+static int spid = 0;
 static int mpi_ready = 0;
-static int is_iter;
+static int is_iter = 0;
+static int periodo = 0;
 static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
+
 
 void before_init(void){
 	DPDWindowSize(300);
 }
 
 void after_init(void){
-	add_event(RUNTIME_EVENT, EVENT_INIT);
-	is_iter=0;
-
         MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
         MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
 
@@ -136,9 +135,8 @@ void after_init(void){
         // Color = node, key is 0 because we don't mind the internal rank
         MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 
-	Init();
-	mpi_ready=1;	
-	add_event(RUNTIME_EVENT, 0);
+        spid = Init();
+        mpi_ready=1;
 }
 
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
@@ -192,15 +190,11 @@ void after_mpi(mpi_call call_type){
 }
 
 void before_finalize(void){
-	Finish();
+	Finish(spid);
 	mpi_ready=0;
 }
 
 void after_finalize(void){}
-
-void enable_mpi(void) { mpi_ready = 1; }
-
-void disable_mpi(void) { mpi_ready = 0; }
 
 /* FIXME: If a Fortran application preloads the Extrae-Fortran library, it will only
  *          intercept C MPI symbols. If we just call MPI_Barrier from here, the call

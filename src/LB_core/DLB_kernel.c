@@ -17,20 +17,12 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-
 #include <unistd.h>
-#include <sys/syscall.h>
-#include <sched.h>
-#include <pthread.h>
 
 #include "DLB_kernel.h"
 
@@ -51,7 +43,7 @@
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 
-//int iterNum;
+//int iterNum = 0;
 //struct timespec initAppl;
 //struct timespec initComp;
 //struct timespec initMPI;
@@ -69,64 +61,55 @@ int nanos_omp_get_num_threads(void) __attribute__( ( weak ) );
 int nanos_omp_get_max_threads(void) __attribute__( ( weak ) );
 const char* nanos_get_pm(void) __attribute__( ( weak ) );
 
+// Global
+int use_dpd = 0;
 
-char prof;
-int ready=0;
+char prof = 0;
 
 BalancePolicy lb_funcs;
 
-int use_dpd;
+
+/* These flags are used to
+ *  a) activate/deactive DLB functionality from the API
+ *  b) protect DLB functionality before the initialization
+ *  c) protect DLB_Init / DLB_MPI_Init twice
+ */
+static bool dlb_enabled = false;
+static bool dlb_initialized = false;
+static int init_id = 0;
 
 static void dummyFunc(){}
 static int false_dummyFunc(){return 0;}
 static int true_dummyFunc(){return 1;}
 
-void fixme_init_without_mpi(void)
+void set_dlb_enabled(bool enabled)
 {
-   char* policy;
-   parse_env_string( "LB_POLICY", &policy );
-   if ( policy == NULL || strcasecmp( policy, "auto_LeWI_mask" ) != 0 ) {
-      fatal0( "DLB_Init can only be called when using auto_LeWI_mask policy\n" );
-   }
-
-   add_event(RUNTIME_EVENT, EVENT_INIT);
-   _mpi_rank = -1;
-   _mpi_size = -1;
-   _node_id = -1;
-   _process_id = getpid();
-   _mpis_per_node = -1;
-   Init();
-   add_event(RUNTIME_EVENT, 0);
+    if (dlb_initialized) {
+        dlb_enabled = enabled;
+    }
 }
 
-void fixme_finalize_without_mpi(void)
-{
-   Finish();
-}
+int Init(void){
+    int initializer_id = 0;
 
-void Init(void){
-	//Read Environment vars
-	char* policy;
+    if (!dlb_initialized) {
+        init_tracing();
+        add_event(RUNTIME_EVENT, EVENT_INIT);
 
-	char* thread_distrib;
-	prof=0;
+        // Set IDs
+        _process_id = (_process_id == -1) ? getpid() : _process_id;
+        init_id = _process_id;
+        initializer_id = _process_id;
 
-	use_dpd=0;
-	//iterNum=0;
-
-	if ((policy=getenv("LB_POLICY"))==NULL){
-		fprintf(stderr,"DLB PANIC: LB_POLICY must be defined\n");
-		exit(1);
-	}
-
+        //Read Environment vars
+        char* policy;
+        char* thread_distrib;
+        parse_env_string_or_die( "LB_POLICY", &policy );
+        parse_env_string( "LB_THREAD_DISTRIBUTION", &thread_distrib );
         parse_env_bool( "LB_JUST_BARRIER", &_just_barrier );
-
         parse_env_bool( "LB_AGGRESSIVE_INIT", &_aggressive_init );
-
         parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality );
-
         parse_env_bool( "LB_VERBOSE", &_verbose );
-
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
 	if (strcasecmp(policy, "LeWI")==0){
@@ -277,7 +260,7 @@ void Init(void){
 	debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
 #endif
 
-	if ((thread_distrib=getenv("LB_THREAD_DISTRIBUTION"))==NULL){
+	if (thread_distrib==NULL){
 		if ( nanos_get_pm ) {
 			const char *pm = nanos_get_pm();
 			if ( strcmp( pm, "OpenMP" ) == 0 ) {
@@ -329,20 +312,20 @@ void Init(void){
 
         debug_basic_info0 ( "DLB: This process starts with %d threads\n", _default_nthreads);
 
-#ifdef MPI_LIB
         if ( _just_barrier )
-           debug_basic_info0 ( "Only lending resources when MPI_Barrier (Env. var. LB_JUST_BARRIER is set)\n" );
+            debug_basic_info0 ( "Only lending resources when MPI_Barrier "
+                                "(Env. var. LB_JUST_BARRIER is set)\n" );
 
-        if ( _blocking_mode == ONE_CPU )
-           debug_basic_info0 ( "LEND mode set to 1CPU. I will leave a cpu per MPI process when in an MPI call\n" );
-        else if ( _blocking_mode == BLOCK )
-           debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all the resources when in an MPI call\n" );
-#endif
+        if ( _blocking_mode == BLOCK )
+           debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all "
+                                "the resources when in an MPI call\n" );
 
 #if IS_BGQ_MACHINE
         int bg_threadmodel;
         parse_env_int( "BG_THREADMODEL", &bg_threadmodel );
-        fatal_cond0( bg_threadmodel!=2, "BlueGene/Q jobs need to enable Extended thread affinity control in order to active external threads. To do so, export BG_THREADMODEL=2\n" );
+        fatal_cond0( bg_threadmodel!=2,
+                "BlueGene/Q jobs need to enable Extended thread affinity control in order to "
+                "active external threads. To do so, export BG_THREADMODEL=2\n" );
 #endif
 
 /*	if (prof){
@@ -354,18 +337,22 @@ void Init(void){
 		clock_gettime(CLOCK_REALTIME, &initComp);
 	}*/
 
-        init_tracing();
-	lb_funcs.init();
-	ready=1;
+        lb_funcs.init();
+        dlb_enabled = true;
+        dlb_initialized = true;
         add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-
-
+        add_event(RUNTIME_EVENT, 0);
+    }
+    return initializer_id;
 }
 
 
-void Finish(void){
-        ready=0; 
-	lb_funcs.finish();
+void Finish(int id){
+    if ( dlb_initialized && init_id == id ) {
+        dlb_enabled = false;
+        dlb_initialized = false;
+        lb_funcs.finish();
+    }
 /*	if (prof){
 		struct timespec aux, aux2;
 
@@ -394,7 +381,9 @@ void IntoCommunication(void){
 	diff_time(initComp, initMPI, &aux);
 	add_time(iterCpuTime, aux, &iterCpuTime);*/
 
-	lb_funcs.intoCommunication();
+    if (dlb_enabled) {
+        lb_funcs.intoCommunication();
+    }
 }
 
 void OutOfCommunication(void){
@@ -403,7 +392,9 @@ void OutOfCommunication(void){
 	diff_time(initMPI, initComp, &aux);
 	add_time(iterMPITime, aux, &iterMPITime);*/
 
-	lb_funcs.outOfCommunication();
+    if (dlb_enabled) {
+        lb_funcs.outOfCommunication();
+    }
 }
 
 void IntoBlockingCall(int is_iter, int is_single){
@@ -411,62 +402,63 @@ void IntoBlockingCall(int is_iter, int is_single){
 	double MPISecs;
 	cpuSecs=iterCpuTime_avg;
 	MPISecs=iterMPITime_avg;*/
-	if (is_single)
-		lb_funcs.intoBlockingCall(is_iter, ONE_CPU);
-	else
-		lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
+    if (dlb_enabled) {
+        if (is_single)
+            lb_funcs.intoBlockingCall(is_iter, ONE_CPU);
+        else
+            lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
+    }
 }
 
 void OutOfBlockingCall(int is_iter){
-	lb_funcs.outOfBlockingCall(is_iter);
+    if (dlb_enabled) {
+        lb_funcs.outOfBlockingCall(is_iter);
+    }
 }
 
 void updateresources( int max_resources ){
-	if(ready){
-		add_event(RUNTIME_EVENT, EVENT_UPDATE);
-		lb_funcs.updateresources( max_resources );
-		add_event(RUNTIME_EVENT, EVENT_USER);
-	}
+    if (dlb_enabled) {
+        add_event(RUNTIME_EVENT, EVENT_UPDATE);
+        lb_funcs.updateresources( max_resources );
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
 }
 
 void returnclaimed( void ){
-	if(ready){
-		add_event(RUNTIME_EVENT, EVENT_RETURN);
-		lb_funcs.returnclaimed();
-		add_event(RUNTIME_EVENT, EVENT_USER);
-	}
+    if (dlb_enabled) {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        lb_funcs.returnclaimed();
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
 }
 int releasecpu( int cpu ){
-      int released=0;
-	if(ready){
-		released=lb_funcs.releasecpu(cpu);
-	}
-        return released;
+    if (dlb_enabled) {
+        return lb_funcs.releasecpu(cpu);
+    } else {
+        return 0;
+    }
 }
 
 int returnclaimedcpu( int cpu ){
-      int released=0;
-	if(ready){
-		released=lb_funcs.returnclaimedcpu(cpu);
-	}
-        return released;
+    if (dlb_enabled) {
+        return lb_funcs.returnclaimedcpu(cpu);
+    } else {
+        return 0;
+    }
 }
 
 void claimcpus( int cpus ){
-   if(ready){
-      add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
-      lb_funcs.claimcpus(cpus);
-      add_event(RUNTIME_EVENT, EVENT_USER);
-   }
+    if (dlb_enabled) {
+        add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
+        lb_funcs.claimcpus(cpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
 }
 
 int checkCpuAvailability (int cpu){
-   int available=1;
-   if (ready){
-      available=lb_funcs.checkCpuAvailability(cpu);
-   }
-   return available;
-}
-int tracing_ready(){
-	return ready;
+    if (dlb_enabled) {
+        return lb_funcs.checkCpuAvailability(cpu);
+    } else {
+        return 1;
+    }
 }
