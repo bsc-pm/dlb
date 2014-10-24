@@ -17,10 +17,6 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #define _GNU_SOURCE
 #include <sched.h>
 #include <unistd.h>
@@ -58,13 +54,14 @@ typedef struct {
 } cpu_info_t;
 
 typedef struct {
-   cpu_info_t node_info[CPUS_NODE];
+   cpu_info_t node_info[0];
 } shdata_t;
 
 static shdata_t *shdata;
 static cpu_set_t default_mask;   // default mask of the process
 static cpu_set_t affinity_mask;  // affinity mask of the process
 static cpu_set_t dlb_mask;       // CPUs not owned by any process but usable by others
+static int cpus_node;
 static bool cpu_is_public_post_mortem = false;
 
 static inline bool is_idle( int cpu )
@@ -74,12 +71,14 @@ static inline bool is_idle( int cpu )
 
 void shmem_cpuarray__init( const cpu_set_t *cpu_set )
 {
-   shmem_init( &shdata, sizeof(shdata_t) );
-
    mu_init();
    mu_parse_mask( "LB_MASK", &dlb_mask );
    memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
    mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
+   cpus_node = mu_get_system_size();
+
+   // Basic size + zero-length array real length
+   shmem_init( &shdata, sizeof(shdata_t) + sizeof(cpu_info_t)*cpus_node );
 
    DLB_INSTR( int idle_count = 0; )
 
@@ -87,13 +86,13 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set )
    {
       int cpu;
       // Check first that my default_mask is not already owned
-      for ( cpu = 0; cpu < CPUS_NODE; cpu++ )
+      for ( cpu = 0; cpu < cpus_node; cpu++ )
          if ( CPU_ISSET( cpu, &default_mask ) && shdata->node_info[cpu].owner != NOBODY ) {
             shmem_unlock();
             fatal0( "Another process in the same node is using one of your cpus\n" );
          }
 
-      for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
+      for ( cpu = 0; cpu < cpus_node; cpu++ ) {
          // Add my mask info
          if ( CPU_ISSET( cpu, &default_mask ) ) {
             shdata->node_info[cpu].owner = ME;
@@ -129,7 +128,7 @@ void shmem_cpuarray__finalize( void )
    shmem_lock();
    {
       int cpu;
-      for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
+      for ( cpu = 0; cpu < cpus_node; cpu++ ) {
          if ( CPU_ISSET( cpu, &default_mask ) ) {
             shdata->node_info[cpu].owner = NOBODY;
             if ( shdata->node_info[cpu].guest == ME ) {
@@ -178,7 +177,7 @@ void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask )
    shmem_lock();
    {
       int cpu;
-      for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
+      for ( cpu = 0; cpu < cpus_node; cpu++ ) {
          if ( CPU_ISSET( cpu, cpu_mask ) ) {
 
             // If the CPU was mine, just change the state
@@ -226,7 +225,7 @@ const cpu_set_t* shmem_cpuarray__recover_defmask( void )
    shmem_lock();
    {
       int cpu;
-      for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
+      for ( cpu = 0; cpu < cpus_node; cpu++ ) {
          if ( CPU_ISSET( cpu, &default_mask ) ) {
             shdata->node_info[cpu].state = BUSY;
             if ( shdata->node_info[cpu].guest == NOBODY ) {
@@ -270,7 +269,7 @@ void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources )
    shmem_lock();
    {
       int cpu;
-      for ( cpu = 0; (cpu < CPUS_NODE) && (max_resources > 0); cpu++ ) {
+      for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
          if ( (CPU_ISSET(cpu, &default_mask)) && (!CPU_ISSET(cpu, mask)) ) {
             shdata->node_info[cpu].state = BUSY;
             CPU_SET( cpu, mask );
@@ -317,7 +316,7 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask )
    shmem_lock();
    {
       int cpu;
-      for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
+      for ( cpu = 0; cpu < cpus_node; cpu++ ) {
          fatal_cond0( CPU_ISSET( cpu, mask ) && shdata->node_info[cpu].guest != ME,
                "Current mask and Shared Memory information differ\n" );
          if ( CPU_ISSET( cpu, mask ) ) {
@@ -368,7 +367,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources )
    DLB_INSTR( int idle_count = 0; )
 
    // Fast non-safe check to get if there is some idle CPU
-   for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
+   for ( cpu = 0; cpu < cpus_node; cpu++ ) {
       some_idle_cpu = is_idle( cpu );
       if ( some_idle_cpu ) break;
    }
@@ -378,7 +377,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources )
       shmem_lock();
       {
          /* First Step: Retrieve affine cpus */
-         for ( cpu = 0; (cpu < CPUS_NODE) && (max_resources > 0); cpu++ ) {
+         for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
             if ( CPU_ISSET( cpu, &affinity_mask )        &&
                   shdata->node_info[cpu].state == LENT   &&
                   shdata->node_info[cpu].guest == NOBODY ) {
@@ -391,7 +390,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources )
          debug_shmem ( "Getting %d affine Threads (%s)\n", collected1, mu_to_str(mask) );
 
          /* Second Step: Retrieve non-affine cpus, if needed */
-         for ( cpu = 0; (cpu < CPUS_NODE) && (max_resources > 0); cpu++ ) {
+         for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
             if ( shdata->node_info[cpu].state == LENT    &&
                   shdata->node_info[cpu].guest == NOBODY ) {
                shdata->node_info[cpu].guest = ME;
@@ -404,7 +403,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources )
 
          // FIXME: Another loop, efficiency?
          // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-         for ( cpu = 0; cpu < CPUS_NODE; cpu++ ) {
+         for ( cpu = 0; cpu < cpus_node; cpu++ ) {
             if ( is_idle(cpu) ) {
                DLB_INSTR( idle_count++; )
                DLB_DEBUG( CPU_SET( cpu, &idle_cpus ); )
@@ -451,18 +450,20 @@ bool shmem_cpuarray__is_cpu_claimed( int cpu )
 
 
 /* This function is intended to be called from external processes only to consult the shdata
- * That's why we should initialize and finalize with the shared mem
+ * That's why we should initialize and finalize the shared memory
  */
 void shmem_cpuarray__print_info( void )
 {
-   shmem_init( &shdata, sizeof(shdata_t) );
+   mu_init();
+   cpus_node = mu_get_system_size();
 
-   int cpu;
-   cpu_info_t node_info_copy[CPUS_NODE];
+   // Basic size + zero-length array real length
+   shmem_init( &shdata, sizeof(shdata_t) + sizeof(cpu_info_t)*cpus_node );
+   cpu_info_t node_info_copy[cpus_node];
 
    shmem_lock();
    {
-       memcpy( node_info_copy, shdata->node_info, sizeof(cpu_info_t)*CPUS_NODE );
+       memcpy( node_info_copy, shdata->node_info, sizeof(cpu_info_t)*cpus_node );
    }
    shmem_unlock();
    shmem_finalize();
@@ -473,7 +474,8 @@ void shmem_cpuarray__print_info( void )
    char *o = owners+8;
    char *g = guests+8;
    char *s = states+8;
-   for ( cpu=0; cpu<CPUS_NODE; cpu++ ) {
+   int cpu;
+   for ( cpu=0; cpu<cpus_node; cpu++ ) {
       o += snprintf( o, 8, "%d, ", node_info_copy[cpu].owner );
       g += snprintf( g, 8, "%d, ", node_info_copy[cpu].guest );
       s += snprintf( s, 8, "%d, ", node_info_copy[cpu].state );
