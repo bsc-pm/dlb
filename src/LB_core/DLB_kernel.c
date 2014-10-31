@@ -105,10 +105,10 @@ int Init(void) {
         char* thread_distrib;
         parse_env_string_or_die( "LB_POLICY", &policy );
         parse_env_string( "LB_THREAD_DISTRIBUTION", &thread_distrib );
-        parse_env_bool( "LB_JUST_BARRIER", &_just_barrier );
-        parse_env_bool( "LB_AGGRESSIVE_INIT", &_aggressive_init );
-        parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality );
-        parse_env_bool( "LB_VERBOSE", &_verbose );
+        parse_env_bool( "LB_JUST_BARRIER", &_just_barrier, false );
+        parse_env_bool( "LB_AGGRESSIVE_INIT", &_aggressive_init, false );
+        parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality, false );
+        parse_env_bool( "LB_VERBOSE", &_verbose, false );
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
         if (strcasecmp(policy, "LeWI")==0) {

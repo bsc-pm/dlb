@@ -22,17 +22,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-void parse_env_bool ( const char *env, bool *var ) {
+void parse_env_bool ( const char *env, bool *var, bool default_value ) {
+    *var = default_value;
     char *tmp_var = getenv( env );
-
-    if ( tmp_var == NULL ) {
-        *var = false;
-    } else if ( strcasecmp( tmp_var, "YES" ) == 0 ) {
-        *var = true;
-    } else if ( strcasecmp( tmp_var, "1" ) == 0 ) {
-        *var = true;
-    } else {
-        *var = false;
+    if ( tmp_var ) {
+        if ( strcasecmp(tmp_var, "1")==0        ||
+                strcasecmp(tmp_var, "yes")==0   ||
+                strcasecmp(tmp_var, "true")==0 ) {
+            *var = true;
+        } else if ( strcasecmp(tmp_var, "0")==0 ||
+                strcasecmp(tmp_var, "no")==0    ||
+                strcasecmp(tmp_var, "false")==0 ) {
+            *var = false;
+        }
     }
 }
 
