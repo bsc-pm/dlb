@@ -79,7 +79,7 @@ void DLB_MPI_Irecv_leave (void);
 void DLB_MPI_Reduce_enter (MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm);
 
 void DLB_MPI_Reduce_leave (void);
-								
+
 void DLB_MPI_Reduce_scatter_enter (MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 
 void DLB_MPI_Reduce_scatter_leave (void);
@@ -132,7 +132,7 @@ void DLB_MPI_Allgatherv_leave (void);
 void DLB_MPI_Gather_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 void DLB_MPI_Gather_leave (void);
- 
+
 void DLB_MPI_Gatherv_enter (MPI3_CONST void *sendbuf, int sendcnt, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm );
 
 void DLB_MPI_Gatherv_leave (void);

@@ -36,27 +36,27 @@ bool shmem_bitset__is_cpu_claimed( int cpu );
 void shmem_bitset__print_info( void );
 
 static const struct {
-   void (*init) (const cpu_set_t *cpu_set);
-   void (*finalize) (void);
-   void (*add_mask) (const cpu_set_t*);
-   const cpu_set_t* (*recover_defmask) (void);
-   void (*recover_some_defcpus) (cpu_set_t*, int);
-   int (*return_claimed) (cpu_set_t*);
-   int (*collect_mask) (cpu_set_t*, int);
-   bool (*is_cpu_borrowed) (int);
-   bool (*is_cpu_claimed) (int);
-   void (*print_info) (void);
+    void (*init) (const cpu_set_t *cpu_set);
+    void (*finalize) (void);
+    void (*add_mask) (const cpu_set_t*);
+    const cpu_set_t* (*recover_defmask) (void);
+    void (*recover_some_defcpus) (cpu_set_t*, int);
+    int (*return_claimed) (cpu_set_t*);
+    int (*collect_mask) (cpu_set_t*, int);
+    bool (*is_cpu_borrowed) (int);
+    bool (*is_cpu_claimed) (int);
+    void (*print_info) (void);
 } shmem_mask = {
-   shmem_bitset__init,
-   shmem_bitset__finalize,
-   shmem_bitset__add_mask,
-   shmem_bitset__recover_defmask,
-   shmem_bitset__recover_some_defcpus,
-   shmem_bitset__return_claimed,
-   shmem_bitset__collect_mask,
-   shmem_bitset__is_cpu_borrowed,
-   shmem_bitset__is_cpu_claimed,
-   shmem_bitset__print_info
+    shmem_bitset__init,
+    shmem_bitset__finalize,
+    shmem_bitset__add_mask,
+    shmem_bitset__recover_defmask,
+    shmem_bitset__recover_some_defcpus,
+    shmem_bitset__return_claimed,
+    shmem_bitset__collect_mask,
+    shmem_bitset__is_cpu_borrowed,
+    shmem_bitset__is_cpu_claimed,
+    shmem_bitset__print_info
 };
 
 #endif /* SHMEM_BITSET_H */

@@ -22,21 +22,21 @@
 
 #include <stdbool.h>
 
-typedef struct{
-	void (*init) (void);
-	void (*finish) (void);
-	void (*initIteration) (void);
-	void (*finishIteration) (void);
-	void (*intoCommunication) (void);
-	void (*outOfCommunication) (void);
-	void (*intoBlockingCall) (int is_iter, int blocking_mode);
-	void (*outOfBlockingCall) (int is_iter);
-	void (*updateresources) ( int max_resources );
-	void (*returnclaimed) (void);
-	int (*releasecpu) (int cpu);
-	int (*returnclaimedcpu) (int cpu);
-        void (*claimcpus) (int cpus);
-        int (*checkCpuAvailability) (int cpu);
+typedef struct {
+    void (*init) (void);
+    void (*finish) (void);
+    void (*initIteration) (void);
+    void (*finishIteration) (void);
+    void (*intoCommunication) (void);
+    void (*outOfCommunication) (void);
+    void (*intoBlockingCall) (int is_iter, int blocking_mode);
+    void (*outOfBlockingCall) (int is_iter);
+    void (*updateresources) ( int max_resources );
+    void (*returnclaimed) (void);
+    int (*releasecpu) (int cpu);
+    int (*returnclaimedcpu) (int cpu);
+    void (*claimcpus) (int cpus);
+    int (*checkCpuAvailability) (int cpu);
 } BalancePolicy;
 
 extern int use_dpd;

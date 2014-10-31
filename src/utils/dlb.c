@@ -26,67 +26,65 @@
 #include <string.h>
 #include "support/utils.h"
 
-void print_usage( const char * program )
-{
-   fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );
+void print_usage( const char * program ) {
+    fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );
 }
 
-void print_help( void )
-{
-   fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
-   fprintf( stdout, "\n" );
-   fprintf( stdout, "DLB Environment Variables:\n" );
-   fprintf( stdout, "LB_JUST_BARRIER = [0, 1]\n" );
-   fprintf( stdout, "LB_LEND_MODE = [BLOCK, 1CPU]\n" );
-   fprintf( stdout, "LB_AGGRESSIVE_INIT = [0, 1]\n" );
-   fprintf( stdout, "LB_PRIORIZE_LOCALITY = [0, 1]\n" );
-   fprintf( stdout, "LB_VERBOSE = [0, 1]\n" );
-   fprintf( stdout, "LB_SHM_NAME = [name]\n" );
-   fprintf( stdout, "LB_POLICY = [policy]\n" );
-   fprintf( stdout, "\n" );
-   fprintf( stdout, "LB Policies:\n" );
-   fprintf( stdout, "- No: \n" );
-   fprintf( stdout, "- LeWI:\n" );
-   fprintf( stdout, "- LeWI_mask:\n" );
-   fprintf( stdout, "- auto_LeWI_mask:\n" );
-   fprintf( stdout, "- RaL:\n" );
+void print_help( void ) {
+    fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
+    fprintf( stdout, "\n" );
+    fprintf( stdout, "DLB Environment Variables:\n" );
+    fprintf( stdout, "LB_JUST_BARRIER = [0, 1]\n" );
+    fprintf( stdout, "LB_LEND_MODE = [BLOCK, 1CPU]\n" );
+    fprintf( stdout, "LB_AGGRESSIVE_INIT = [0, 1]\n" );
+    fprintf( stdout, "LB_PRIORIZE_LOCALITY = [0, 1]\n" );
+    fprintf( stdout, "LB_VERBOSE = [0, 1]\n" );
+    fprintf( stdout, "LB_SHM_NAME = [name]\n" );
+    fprintf( stdout, "LB_POLICY = [policy]\n" );
+    fprintf( stdout, "\n" );
+    fprintf( stdout, "LB Policies:\n" );
+    fprintf( stdout, "- No: \n" );
+    fprintf( stdout, "- LeWI:\n" );
+    fprintf( stdout, "- LeWI_mask:\n" );
+    fprintf( stdout, "- auto_LeWI_mask:\n" );
+    fprintf( stdout, "- RaL:\n" );
 }
 
-void print_version( void )
-{
-   fprintf( stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION );
-   fprintf( stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS );
+void print_version( void ) {
+    fprintf( stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION );
+    fprintf( stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS );
 }
 
-int main ( int argc, char *argv[] )
-{
-   bool do_help = false;
-   bool do_version = false;
+int main ( int argc, char *argv[] ) {
+    bool do_help = false;
+    bool do_version = false;
 
-   int i;
-   for ( i=1; i<argc; i++ ) {
-      if ( strcmp( argv[i], "--help" ) == 0 ||
-           strcmp( argv[i], "-h" ) == 0 ) {
-         do_help = true;
-      } else if ( strcmp( argv[i], "--version" ) == 0 ||
-                  strcmp( argv[i], "-v" ) == 0 ) {
-         do_version = true;
-      } else {
-         print_usage( argv[0] );
-         exit(0);
-      }
-   }
+    int i;
+    for ( i=1; i<argc; i++ ) {
+        if ( strcmp( argv[i], "--help" ) == 0 ||
+                strcmp( argv[i], "-h" ) == 0 ) {
+            do_help = true;
+        } else if ( strcmp( argv[i], "--version" ) == 0 ||
+                    strcmp( argv[i], "-v" ) == 0 ) {
+            do_version = true;
+        } else {
+            print_usage( argv[0] );
+            exit(0);
+        }
+    }
 
-   if ( !do_help && !do_version ) {
-      print_usage( argv[0] );
-      exit(0);
-   }
+    if ( !do_help && !do_version ) {
+        print_usage( argv[0] );
+        exit(0);
+    }
 
-   if ( do_help )
-      print_help();
+    if ( do_help ) {
+        print_help();
+    }
 
-   if ( do_version )
-      print_version();
+    if ( do_version ) {
+        print_version();
+    }
 
-   return 0;
+    return 0;
 }

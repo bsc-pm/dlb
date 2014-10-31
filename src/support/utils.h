@@ -26,8 +26,8 @@
 
 
 typedef enum {
-   ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call
-   BLOCK,   // MPI set to blocking mode
+    ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call
+    BLOCK,   // MPI set to blocking mode
 } blocking_mode_t;
 
 

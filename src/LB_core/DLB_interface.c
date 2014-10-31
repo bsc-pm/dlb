@@ -25,88 +25,73 @@
 // sub-process ID
 static int spid = 0;
 
-DLB_API_DEF( void, DLB_Init, dlb_init, (void) )
-{
+DLB_API_DEF( void, DLB_Init, dlb_init, (void) ) {
     spid = Init();
 }
 
-DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) )
-{
+DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) ) {
     Finish( spid );
 }
 
-DLB_API_DEF( void, DLB_enable, dlb_enable, (void) )
-{
+DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     set_dlb_enabled( true );
 }
 
-DLB_API_DEF( void, DLB_disable, dlb_disable, (void) )
-{
+DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {
     //FIXME This hiddes the single event always
     add_event(DLB_MODE_EVENT, EVENT_DISABLED);
     set_dlb_enabled( false );
 }
 
-DLB_API_DEF( void, DLB_single, dlb_single, (void) )
-{
+DLB_API_DEF( void, DLB_single, dlb_single, (void) ) {
     add_event(DLB_MODE_EVENT, EVENT_SINGLE);
     //no iter, single
     IntoBlockingCall(0, 1);
 }
 
-DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) )
-{
+DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) ) {
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     OutOfBlockingCall(0);
 }
 
-DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) )
-{
+DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) ) {
     updateresources( USHRT_MAX );
 }
 
-DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) )
-{
+DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) ) {
     updateresources( max_resources );
 }
 
-DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) )
-{
+DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) ) {
     returnclaimed();
 }
 
-DLB_API_DEF( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) )
-{
+DLB_API_DEF( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) ) {
     return releasecpu(cpu);
 }
 
-DLB_API_DEF( int, DLB_ReturnClaimedCpu, dlb_returnclaimedcpu, (int cpu) )
-{
+DLB_API_DEF( int, DLB_ReturnClaimedCpu, dlb_returnclaimedcpu, (int cpu) ) {
     return returnclaimedcpu(cpu);
 }
 
-DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) )
-{
+DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) ) {
     claimcpus(cpus);
 }
 
-DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) )
-{
+DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) ) {
     add_event(RUNTIME_EVENT, EVENT_LEND);
     //no iter, no single
     IntoBlockingCall(0, 0);
     add_event(RUNTIME_EVENT, 0);
 }
 
-DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) )
-{
+DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) ) {
     add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
     OutOfBlockingCall(0);
     add_event(RUNTIME_EVENT, 0);
 }
 
-DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) )
-{
+DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) ) {
     return checkCpuAvailability(cpu);
 }

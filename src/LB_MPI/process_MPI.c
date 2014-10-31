@@ -48,158 +48,159 @@ static int periodo = 0;
 static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
 
 
-void before_init(void){
-	DPDWindowSize(300);
+void before_init(void) {
+    DPDWindowSize(300);
 }
 
-void after_init(void){
-        MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
-        MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
+void after_init(void) {
+    MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
+    MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
 
-	char hostname[HOST_NAME_MAX];
-	char recvData[_mpi_size][HOST_NAME_MAX];
+    char hostname[HOST_NAME_MAX];
+    char recvData[_mpi_size][HOST_NAME_MAX];
 
-	if (gethostname(hostname, HOST_NAME_MAX)<0){
-		perror("gethostname");
-	}
+    if (gethostname(hostname, HOST_NAME_MAX)<0) {
+        perror("gethostname");
+    }
 
-	MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-	int error_code = PMPI_Allgather (hostname, HOST_NAME_MAX, MPI_CHAR, recvData, HOST_NAME_MAX, MPI_CHAR, MPI_COMM_WORLD);
+    MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+    int error_code = PMPI_Allgather (hostname, HOST_NAME_MAX, MPI_CHAR, recvData, HOST_NAME_MAX, MPI_CHAR, MPI_COMM_WORLD);
 
-	if (error_code != MPI_SUCCESS) {
-		char error_string[BUFSIZ];
-   		int length_of_error_string;
+    if (error_code != MPI_SUCCESS) {
+        char error_string[BUFSIZ];
+        int length_of_error_string;
 
-   		MPI_Error_string(error_code, error_string, &length_of_error_string);
-                fatal( "%3d: %s\n", _mpi_rank, error_string );
-	}
+        MPI_Error_string(error_code, error_string, &length_of_error_string);
+        fatal( "%3d: %s\n", _mpi_rank, error_string );
+    }
 
-        int i;
-        _mpis_per_node = 0;
-        for ( i=0; i<_mpi_size; i++ ) {
-           if ( strcmp ( recvData[i], hostname ) == 0 )
-              _mpis_per_node++;
+    int i;
+    _mpis_per_node = 0;
+    for ( i=0; i<_mpi_size; i++ ) {
+        if ( strcmp ( recvData[i], hostname ) == 0 ) {
+            _mpis_per_node++;
+        }
+    }
+
+    int procsIds[_mpi_size][2];
+    if (_mpi_rank==0) {
+        int j, maxSetNode;
+        // Ceiling division (total_size/node_size)
+        int nodes=(_mpi_size + _mpis_per_node - 1) /_mpis_per_node;
+        int procsPerNode[nodes];
+        char nodesIds[nodes][HOST_NAME_MAX];
+
+        maxSetNode=0;
+        for (i=0; i<nodes; i++) {
+            memset(nodesIds[i], 0, HOST_NAME_MAX);
+            procsPerNode[i]=0;
         }
 
-	int procsIds[_mpi_size][2];
-	if (_mpi_rank==0){
-		int j, maxSetNode;
-                // Ceiling division (total_size/node_size)
-		int nodes=(_mpi_size + _mpis_per_node - 1) /_mpis_per_node;
-		int procsPerNode[nodes];
-		char nodesIds[nodes][HOST_NAME_MAX];
+        strcpy(nodesIds[0],recvData[0]);
+        procsPerNode[0]=1;
+        procsIds[0][0]=0;
+        procsIds[0][1]=0;
+        maxSetNode++;
 
-		maxSetNode=0;
-		for (i=0; i<nodes; i++){
-			memset(nodesIds[i], 0, HOST_NAME_MAX);
-			procsPerNode[i]=0;
-		}
+        for(i=1; i<_mpi_size; i++) {
+            j=0;
+            while((strcmp(recvData[i],nodesIds[j]))&&(j<nodes)) {
+                j++;
+            }
 
-		strcpy(nodesIds[0],recvData[0]);
-		procsPerNode[0]=1;
-		procsIds[0][0]=0;
-		procsIds[0][1]=0;
-		maxSetNode++;
+            if(j>=nodes) {
+                strcpy(nodesIds[maxSetNode],recvData[i]);
+                procsIds[i][0]=procsPerNode[maxSetNode];
+                procsIds[i][1]=maxSetNode;
+                procsPerNode[maxSetNode]++;
+                maxSetNode++;
+            } else {
+                strcpy(nodesIds[j],recvData[i]);
+                procsIds[i][0]=procsPerNode[j];
+                procsIds[i][1]=j;
+                procsPerNode[j]++;
+            }
+        }
+    }
 
-		for(i=1; i<_mpi_size; i++){
-			j=0;
-			while((strcmp(recvData[i],nodesIds[j]))&&(j<nodes)){
-				j++;
-			}
-			
-			if(j>=nodes){
-				strcpy(nodesIds[maxSetNode],recvData[i]);
-				procsIds[i][0]=procsPerNode[maxSetNode];
-				procsIds[i][1]=maxSetNode;
-				procsPerNode[maxSetNode]++;
-				maxSetNode++;
-			}else{
-				strcpy(nodesIds[j],recvData[i]);
-				procsIds[i][0]=procsPerNode[j];
-				procsIds[i][1]=j;
-				procsPerNode[j]++;
-			}
-		}
-	}
+    int data[2];
+    PMPI_Scatter(procsIds, 2, MPI_INT, data, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    _process_id = data[0];
+    _node_id    = data[1];
 
-        int data[2];
-        PMPI_Scatter(procsIds, 2, MPI_INT, data, 2, MPI_INT, 0, MPI_COMM_WORLD);
-        _process_id = data[0];
-        _node_id    = data[1];
+    /********************************************
+     * _node_id    = _mpi_rank / _mpis_per_node;
+     * _process_id = _mpi_rank % _mpis_per_node;
+     ********************************************/
 
-        /********************************************
-         * _node_id    = _mpi_rank / _mpis_per_node;
-         * _process_id = _mpi_rank % _mpis_per_node;
-         ********************************************/
+    // Color = node, key is 0 because we don't mind the internal rank
+    MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 
-        // Color = node, key is 0 because we don't mind the internal rank
-        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
-
-        spid = Init();
-        mpi_ready=1;
+    spid = Init();
+    mpi_ready=1;
 }
 
-void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest){
-	int valor_dpd;	
-	if(mpi_ready){
-		add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
-		IntoCommunication();
+void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
+    int valor_dpd;
+    if(mpi_ready) {
+        add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
+        IntoCommunication();
 
-		if(use_dpd){
-			long value = (long)((((buf>>5)^dest)<<5)|call_type);
-		
-			valor_dpd=DPD(value,&periodo);
-			//Only update if already treated previous iteration
-			if(is_iter==0)	is_iter=valor_dpd;
+        if(use_dpd) {
+            long value = (long)((((buf>>5)^dest)<<5)|call_type);
 
-		}
+            valor_dpd=DPD(value,&periodo);
+            //Only update if already treated previous iteration
+            if(is_iter==0)  { is_iter=valor_dpd; }
 
-		if(_just_barrier){
-			if (call_type==Barrier){
-				debug_blocking_MPI( " >> MPI_Barrier...............\n" );
-				IntoBlockingCall(is_iter, 0);
-			}
-		}else if (is_blocking(call_type)){
-			debug_blocking_MPI( " >> %s...............\n", mpi_call_names[call_type] );
-			IntoBlockingCall(is_iter, 0);
-		}
-	
-		add_event(RUNTIME_EVENT, 0);
-	}
+        }
+
+        if(_just_barrier) {
+            if (call_type==Barrier) {
+                debug_blocking_MPI( " >> MPI_Barrier...............\n" );
+                IntoBlockingCall(is_iter, 0);
+            }
+        } else if (is_blocking(call_type)) {
+            debug_blocking_MPI( " >> %s...............\n", mpi_call_names[call_type] );
+            IntoBlockingCall(is_iter, 0);
+        }
+
+        add_event(RUNTIME_EVENT, 0);
+    }
 }
 
-void after_mpi(mpi_call call_type){
-	if (mpi_ready){
-		add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
+void after_mpi(mpi_call call_type) {
+    if (mpi_ready) {
+        add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
 
-		if(_just_barrier){
-			if (call_type==Barrier){
-				debug_blocking_MPI( " << MPI_Barrier...............\n" );
-				OutOfBlockingCall(is_iter);
-				is_iter=0;
-			}
-		}else if (is_blocking(call_type)){
-			debug_blocking_MPI( " << %s...............\n", mpi_call_names[call_type] );
-			OutOfBlockingCall(is_iter);
-			is_iter=0;
-		}
-	
-		OutOfCommunication();
-		add_event(RUNTIME_EVENT, 0);
-	}
+        if(_just_barrier) {
+            if (call_type==Barrier) {
+                debug_blocking_MPI( " << MPI_Barrier...............\n" );
+                OutOfBlockingCall(is_iter);
+                is_iter=0;
+            }
+        } else if (is_blocking(call_type)) {
+            debug_blocking_MPI( " << %s...............\n", mpi_call_names[call_type] );
+            OutOfBlockingCall(is_iter);
+            is_iter=0;
+        }
+
+        OutOfCommunication();
+        add_event(RUNTIME_EVENT, 0);
+    }
 }
 
-void before_finalize(void){
-	Finish(spid);
-	mpi_ready=0;
+void before_finalize(void) {
+    Finish(spid);
+    mpi_ready=0;
 }
 
-void after_finalize(void){}
+void after_finalize(void) {}
 
 /* FIXME: If a Fortran application preloads the Extrae-Fortran library, it will only
  *          intercept C MPI symbols. If we just call MPI_Barrier from here, the call
  *          can never be intercepted by Extrae nor DLB
  */
-void node_barrier(void) { if (mpi_ready) MPI_Barrier( mpi_comm_node ); }
+void node_barrier(void) { if (mpi_ready) { MPI_Barrier( mpi_comm_node ); } }
 
 #endif /* MPI_LIB */

@@ -50,8 +50,7 @@ static sem_t *semaphore = NULL;
 static char shm_filename[SHM_NAME_LENGTH];
 static char sem_filename[SHM_NAME_LENGTH];
 
-void shmem_init( void **shdata, size_t shdata_size )
-{
+void shmem_init( void **shdata, size_t shdata_size ) {
     debug_shmem ( "Shared Memory Init: pid(%d)\n", getpid() );
 
     /* Calculate total shmem size:
@@ -117,26 +116,29 @@ void shmem_init( void **shdata, size_t shdata_size )
         pthread_mutexattr_t attr;
 
         /* Init pthread attributes */
-        if ( pthread_mutexattr_init( &attr ) )
+        if ( pthread_mutexattr_init( &attr ) ) {
             perror( "DLB ERROR: pthread_mutexattr_init" );
+        }
 
         /* Set process-shared attribute */
-        if ( pthread_mutexattr_setpshared( &attr, PTHREAD_PROCESS_SHARED ) )
+        if ( pthread_mutexattr_setpshared( &attr, PTHREAD_PROCESS_SHARED ) ) {
             perror( "DLB ERROR: pthread_mutexattr_setpshared" );
+        }
 
         /* Init pthread mutex */
-        if ( pthread_mutex_init( &(shsync->shmem_mutex), &attr ) )
+        if ( pthread_mutex_init( &(shsync->shmem_mutex), &attr ) ) {
             perror( "DLB ERROR: pthread_mutex_init" );
+        }
 
         /* Destroy pthread attributes */
-        if ( pthread_mutexattr_destroy( &attr ) )
+        if ( pthread_mutexattr_destroy( &attr ) ) {
             perror( "DLB ERROR: pthread_mutexattr_destroy" );
+        }
     }
     sem_post( semaphore );
 }
 
-void shmem_finalize( void )
-{
+void shmem_finalize( void ) {
 #ifdef IS_BGQ_MACHINE
     // BG/Q have some problems deallocating shmem
     // It will be cleaned after the job completion anyway
@@ -150,23 +152,23 @@ void shmem_finalize( void )
 
     /* Only the last process destroys the pthread_mutex */
     if ( nprocs == 0 ) {
-        if ( pthread_mutex_destroy( &(shsync->shmem_mutex) ) )
+        if ( pthread_mutex_destroy( &(shsync->shmem_mutex) ) ) {
             perror ( "DLB ERROR: Shared Memory mutex destroy" );
+        }
     }
 
     /* All processes must close semaphores and unmap shmem */
-    if ( sem_close( semaphore ) ) perror( "DLB ERROR: sem_close" );
-    if ( munmap( shmem_addr, shmem_size ) ) perror( "DLB_ERROR: munmap" );
+    if ( sem_close( semaphore ) ) { perror( "DLB ERROR: sem_close" ); }
+    if ( munmap( shmem_addr, shmem_size ) ) { perror( "DLB_ERROR: munmap" ); }
 
     /* Only the last process unlinks semaphores and shmem */
     if ( nprocs == 0 ) {
-        if ( sem_unlink( sem_filename ) ) perror( "DLB_ERROR: sem_unlink" );
-        if ( shm_unlink( shm_filename ) ) perror( "DLB ERROR: shm_unlink" );
+        if ( sem_unlink( sem_filename ) ) { perror( "DLB_ERROR: sem_unlink" ); }
+        if ( shm_unlink( shm_filename ) ) { perror( "DLB ERROR: shm_unlink" ); }
     }
 }
 
-void shmem_lock( void )
-{
+void shmem_lock( void ) {
     if ( shsync != NULL ) {
         pthread_mutex_lock( &(shsync->shmem_mutex) );
     } else {
@@ -174,8 +176,7 @@ void shmem_lock( void )
     }
 }
 
-void shmem_unlock( void )
-{
+void shmem_unlock( void ) {
     if ( shsync != NULL ) {
         pthread_mutex_unlock( &(shsync->shmem_mutex) );
     } else {
@@ -183,7 +184,6 @@ void shmem_unlock( void )
     }
 }
 
-char *get_shm_filename( void )
-{
+char *get_shm_filename( void ) {
     return shm_filename;
 }

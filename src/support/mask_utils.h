@@ -24,8 +24,8 @@
 #include <sched.h>
 
 typedef enum {
-   MU_ANY_BIT,
-   MU_ALL_BITS
+    MU_ANY_BIT,
+    MU_ALL_BITS
 } mu_opt_t;
 
 void mu_init( void );

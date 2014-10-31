@@ -51,258 +51,257 @@ struct timespec MPITime;
 int iterNum;
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(void){
+void Weight_Init(void) {
 #ifdef debugConfig
-	fprintf(stderr, "DLB DEBUG: (%d:%d) - Weight Init\n", _node_id, _process_id);
+    fprintf(stderr, "DLB DEBUG: (%d:%d) - Weight Init\n", _node_id, _process_id);
 #endif
 
-	clock_gettime(CLOCK_REALTIME, &initAppl);
+    clock_gettime(CLOCK_REALTIME, &initAppl);
+    reset(&iterCpuTime);
+    reset(&iterMPITime);
+    reset(&CpuTime);
+    reset(&MPITime);
+    clock_gettime(CLOCK_REALTIME, &initComp);
+
+    iterNum=0;
+    //Create auxiliar threads
+    createThreads_Weight();
+}
+
+void Weight_Finish(void) {
+    comm_close();
+}
+
+void Weight_IntoCommunication(void) {}
+
+void Weight_OutOfCommunication(void) {
+    Weight_updateresources();
+}
+
+void Weight_IntoBlockingCall(int is_iter, int blocking_mode) {
+    struct timespec aux;
+    clock_gettime(CLOCK_REALTIME, &initMPI);
+    diff_time(initComp, initMPI, &aux);
+    add_time(iterCpuTime, aux, &iterCpuTime);
+}
+
+void Weight_OutOfBlockingCall(int is_iter) {
+    struct timespec aux;
+    clock_gettime(CLOCK_REALTIME, &initComp);
+    diff_time(initMPI, initComp, &aux);
+    add_time(iterMPITime, aux, &iterMPITime);
+
+
+    if (is_iter!=0) {
+        if(iterNum!=0) {
+            //Finishing iteration
+            add_event(ITERATION_EVENT, 0);
+
+            double cpuSecs;
+            double MPISecs;
+
+            cpuSecs=to_secs(iterCpuTime);
+            MPISecs=to_secs(iterMPITime);
+
+            ProcMetrics pm;
+            pm.action=0;
+            pm.secsComp=cpuSecs;
+            pm.secsMPI=MPISecs;
+            pm.cpus=threadsUsed;
+
+            SendLocalMetrics(pm);
+        }
+        iterNum++;
+        add_event(ITERATION_EVENT, iterNum);
+
+        add_time(CpuTime, iterCpuTime, &CpuTime);
+        add_time(MPITime, iterMPITime, &MPITime);
+
         reset(&iterCpuTime);
         reset(&iterMPITime);
-        reset(&CpuTime);
-        reset(&MPITime);
-        clock_gettime(CLOCK_REALTIME, &initComp);
-
-	iterNum=0;
-	//Create auxiliar threads
-	createThreads_Weight();	
-}
-
-void Weight_Finish(void){
-	comm_close();
-}
-
-void Weight_IntoCommunication(void){}
-
-void Weight_OutOfCommunication(void){
-	Weight_updateresources();
-}
-
-void Weight_IntoBlockingCall(int is_iter, int blocking_mode){
-	struct timespec aux;
-        clock_gettime(CLOCK_REALTIME, &initMPI);
-        diff_time(initComp, initMPI, &aux);
-        add_time(iterCpuTime, aux, &iterCpuTime);
-}
-
-void Weight_OutOfBlockingCall(int is_iter){
-	struct timespec aux;
-        clock_gettime(CLOCK_REALTIME, &initComp);
-        diff_time(initMPI, initComp, &aux);
-        add_time(iterMPITime, aux, &iterMPITime);
-
-
-	if (is_iter!=0){
-		if(iterNum!=0){
-			//Finishing iteration
-			add_event(ITERATION_EVENT, 0);
-	
-			double cpuSecs;
-	        	double MPISecs;
-
-	        	cpuSecs=to_secs(iterCpuTime);
-       	 		MPISecs=to_secs(iterMPITime);
-
-			ProcMetrics pm;
-			pm.action=0;
-			pm.secsComp=cpuSecs;
-			pm.secsMPI=MPISecs;
-			pm.cpus=threadsUsed;
-
-			SendLocalMetrics(pm);
-		}
-		iterNum++;
-		add_event(ITERATION_EVENT, iterNum);
-
-		add_time(CpuTime, iterCpuTime, &CpuTime);
-        	add_time(MPITime, iterMPITime, &MPITime);
-
-        	reset(&iterCpuTime);
-        	reset(&iterMPITime);
-	}
+    }
 }
 
 /******* Auxiliar Functions Weight Balancing Policy ********/
 
 /* Creates auxiliar threads */
-void createThreads_Weight(){
-	pthread_t t;
-	finished=0;
+void createThreads_Weight() {
+    pthread_t t;
+    finished=0;
 
 #ifdef debugConfig
-	fprintf(stderr, "DLB DEBUG: (%d:%d) - Creating Threads\n", _node_id, _process_id);
+    fprintf(stderr, "DLB DEBUG: (%d:%d) - Creating Threads\n", _node_id, _process_id);
 #endif
 
-	threadsUsed=0;
-	threads2use=_default_nthreads;
+    threadsUsed=0;
+    threads2use=_default_nthreads;
 
-	//The local thread won't communicate by sockets
-	LoadCommConfig(_mpis_per_node, _process_id, _node_id);
+    //The local thread won't communicate by sockets
+    LoadCommConfig(_mpis_per_node, _process_id, _node_id);
 
-	if (_process_id==0){ 
-		if (pthread_create(&t,NULL,masterThread_Weight,NULL)>0){
-			perror("DLB PANIC: createThreads_Weight:Error in pthread_create master\n");
-			exit(1);
-		}
-	}
+    if (_process_id==0) {
+        if (pthread_create(&t,NULL,masterThread_Weight,NULL)>0) {
+            perror("DLB PANIC: createThreads_Weight:Error in pthread_create master\n");
+            exit(1);
+        }
+    }
 
-	if(pthread_create(&t,NULL,slaveThread_Weight,NULL)>0){
-		perror("DLB PANIC: createThreads_Weight:Error in pthread_create slave\n");
-		exit(1);
-	}
-	
-	Weight_updateresources();
+    if(pthread_create(&t,NULL,slaveThread_Weight,NULL)>0) {
+        perror("DLB PANIC: createThreads_Weight:Error in pthread_create slave\n");
+        exit(1);
+    }
+
+    Weight_updateresources();
 }
 
 /******* Master Thread Functions ********/
-void* masterThread_Weight(void* arg){
+void* masterThread_Weight(void* arg) {
 
-	int cpus[_mpis_per_node];
-	int i;
+    int cpus[_mpis_per_node];
+    int i;
 
 #ifdef debugConfig
-	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Master thread\n", _node_id, _process_id);
-#endif	
+    fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Master thread\n", _node_id, _process_id);
+#endif
 
-	StartMasterComm();
+    StartMasterComm();
 
-	ProcMetrics currMetrics[_mpis_per_node];
+    ProcMetrics currMetrics[_mpis_per_node];
 
-	if (sem_init(&sem_localMetrics,0,0)<0){
-		perror("DLB PANIC: Initializing metrics semaphore\n");
-		exit(1);
-	}
+    if (sem_init(&sem_localMetrics,0,0)<0) {
+        perror("DLB PANIC: Initializing metrics semaphore\n");
+        exit(1);
+    }
 
-	//We start with equidistribution
-	for (i=0; i<_mpis_per_node; i++) cpus[i]=_default_nthreads;
+    //We start with equidistribution
+    for (i=0; i<_mpis_per_node; i++) { cpus[i]=_default_nthreads; }
 
-//	applyNewDistribution_Weight(cpus);
+//  applyNewDistribution_Weight(cpus);
 
-	while(!finished){
-		GetMetrics(currMetrics);
-		CalculateNewDistribution_Weight(currMetrics, cpus);
-		applyNewDistribution_Weight(cpus);
-	}
-        return NULL;
+    while(!finished) {
+        GetMetrics(currMetrics);
+        CalculateNewDistribution_Weight(currMetrics, cpus);
+        applyNewDistribution_Weight(cpus);
+    }
+    return NULL;
 }
 
-void GetMetrics(ProcMetrics metrics[]){
-	int i, slave;
-	ProcMetrics metr;
+void GetMetrics(ProcMetrics metrics[]) {
+    int i, slave;
+    ProcMetrics metr;
 
-	/*getLocaMetrics(&metr);
-	metrics[0]=metr;*/
+    /*getLocaMetrics(&metr);
+    metrics[0]=metr;*/
 
-	for (i=0; i<_mpis_per_node; i++){
-		slave=GetFromAnySlave((char *) &metr,sizeof(ProcMetrics));
-		metrics[slave]=metr;
-	}
+    for (i=0; i<_mpis_per_node; i++) {
+        slave=GetFromAnySlave((char *) &metr,sizeof(ProcMetrics));
+        metrics[slave]=metr;
+    }
 }
 
-void getLocaMetrics(ProcMetrics *metr){
-	sem_wait(&sem_localMetrics);
-	*metr=localMetrics;
+void getLocaMetrics(ProcMetrics *metr) {
+    sem_wait(&sem_localMetrics);
+    *metr=localMetrics;
 }
 
-void SendLocalMetrics(ProcMetrics LM)
-{
-	localMetrics = LM;
-	sem_post(&sem_localMetrics);
+void SendLocalMetrics(ProcMetrics LM) {
+    localMetrics = LM;
+    sem_post(&sem_localMetrics);
 }
 
-void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]){
-	double total_time=0;
-	int i, cpus_alloc, total_cpus=0;
-	double weights[_mpis_per_node];
+void CalculateNewDistribution_Weight(ProcMetrics LM[], int cpus[]) {
+    double total_time=0;
+    int i, cpus_alloc, total_cpus=0;
+    double weights[_mpis_per_node];
 //make it global
-	double weight_1cpu = 100/CPUS_NODE;
-	int cpus_to_give=CPUS_NODE-_mpis_per_node;
-	double total_weight=0;
+    double weight_1cpu = 100/CPUS_NODE;
+    int cpus_to_give=CPUS_NODE-_mpis_per_node;
+    double total_weight=0;
 
-	//Calculate total runtime
-	for (i=0; i<_mpis_per_node; i++){
-		total_time+=(LM[i].secsComp * LM[i].cpus);
-	}
+    //Calculate total runtime
+    for (i=0; i<_mpis_per_node; i++) {
+        total_time+=(LM[i].secsComp * LM[i].cpus);
+    }
 
-	//Calculate weigth per process
-	for (i=0; i<_mpis_per_node; i++){
-		weights[i]=(double)((LM[i].secsComp * (double)LM[i].cpus *(double)100/(double)total_time)-weight_1cpu);
-		if (weights[i]>0){
-			total_weight+=weights[i];
-		}
+    //Calculate weigth per process
+    for (i=0; i<_mpis_per_node; i++) {
+        weights[i]=(double)((LM[i].secsComp * (double)LM[i].cpus *(double)100/(double)total_time)-weight_1cpu);
+        if (weights[i]>0) {
+            total_weight+=weights[i];
+        }
 //#ifdef debugLoads
-	fprintf(stderr,"DLB DEBUG: [Process %d] Comp. time: %f - Load: %f\n", i, LM[i].secsComp, weights[i]);
+        fprintf(stderr,"DLB DEBUG: [Process %d] Comp. time: %f - Load: %f\n", i, LM[i].secsComp, weights[i]);
 //#endif
-	}
+    }
 //#ifdef debugDistribution
-	fprintf(stderr,"DLB DEBUG: New Distribution: ");
+    fprintf(stderr,"DLB DEBUG: New Distribution: ");
 //#endif
-	//Calculate new distribution
-	for (i=0; i<_mpis_per_node; i++){
-		//By default one cpu per process
-		cpus_alloc=1;
-		//Then we distribute the remaning ones
-		cpus_alloc+=my_round((weights[i]*(double)cpus_to_give)/(double)total_weight);
-		
+    //Calculate new distribution
+    for (i=0; i<_mpis_per_node; i++) {
+        //By default one cpu per process
+        cpus_alloc=1;
+        //Then we distribute the remaning ones
+        cpus_alloc+=my_round((weights[i]*(double)cpus_to_give)/(double)total_weight);
 
-//		if (cpus_alloc>(CPUS_NODE-(_mpis_per_node-1))) cpus[i]=CPUS_NODE-(_mpis_per_node-1);
-//		else if (cpus_alloc<1) cpus[i]=1;
-//		else 
-		cpus[i]=cpus_alloc; 	
-		
-//		#ifdef debugDistribution
-			fprintf(stderr,"[%d]", cpus[i]);
-//		#endif
-		total_cpus+=cpus[i];
-	}
+
+//      if (cpus_alloc>(CPUS_NODE-(_mpis_per_node-1))) cpus[i]=CPUS_NODE-(_mpis_per_node-1);
+//      else if (cpus_alloc<1) cpus[i]=1;
+//      else
+        cpus[i]=cpus_alloc;
+
+//      #ifdef debugDistribution
+        fprintf(stderr,"[%d]", cpus[i]);
+//      #endif
+        total_cpus+=cpus[i];
+    }
 //#ifdef debugDistribution
-	fprintf(stderr,"\n");
+    fprintf(stderr,"\n");
 //#endif
-	if (total_cpus>CPUS_NODE){
-		fprintf(stderr,"DLB WARNING: Using more cpus than the ones available in the _node_id (%d>%d)\n", total_cpus, CPUS_NODE);
-	}else if(total_cpus<CPUS_NODE){
-		fprintf(stderr,"DLB WARNING: Using less cpus than the ones available in the _node_id (%d<%d)\n", total_cpus, CPUS_NODE);
-	}
+    if (total_cpus>CPUS_NODE) {
+        fprintf(stderr,"DLB WARNING: Using more cpus than the ones available in the _node_id (%d>%d)\n", total_cpus, CPUS_NODE);
+    } else if(total_cpus<CPUS_NODE) {
+        fprintf(stderr,"DLB WARNING: Using less cpus than the ones available in the _node_id (%d<%d)\n", total_cpus, CPUS_NODE);
+    }
 }
 
-void applyNewDistribution_Weight(int cpus[]){
-	int i;
-	//threads2use = cpus[0];
-	for (i=0; i<_mpis_per_node; i++){
-		SendToSlave(i, (char*)&cpus[i], sizeof(int));
-	}
+void applyNewDistribution_Weight(int cpus[]) {
+    int i;
+    //threads2use = cpus[0];
+    for (i=0; i<_mpis_per_node; i++) {
+        SendToSlave(i, (char*)&cpus[i], sizeof(int));
+    }
 }
 
 /******* Slave Thread Functions ********/
-void* slaveThread_Weight(void* arg){
-	int cpus;
-	ProcMetrics metr;
+void* slaveThread_Weight(void* arg) {
+    int cpus;
+    ProcMetrics metr;
 
-	if (sem_init(&sem_localMetrics,0,0)<0){
-		perror("DLB PANIC: Initializing metrics semaphore\n");
-		exit(1);
-	}
+    if (sem_init(&sem_localMetrics,0,0)<0) {
+        perror("DLB PANIC: Initializing metrics semaphore\n");
+        exit(1);
+    }
 
 #ifdef debugConfig
-	fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Slave thread\n", _node_id, _process_id);
-#endif	
-	StartSlaveComm();
+    fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Slave thread\n", _node_id, _process_id);
+#endif
+    StartSlaveComm();
 
-	while(!finished){
-		getLocaMetrics(&metr);
-		SendToMaster((char*)&metr, sizeof(ProcMetrics));
-		GetFromMaster((char*)&cpus,sizeof(int));
-		threads2use=cpus;
-	}
-        return NULL;
+    while(!finished) {
+        getLocaMetrics(&metr);
+        SendToMaster((char*)&metr, sizeof(ProcMetrics));
+        GetFromMaster((char*)&cpus,sizeof(int));
+        threads2use=cpus;
+    }
+    return NULL;
 }
 
-void Weight_updateresources(){
-	if (threadsUsed!=threads2use){
+void Weight_updateresources() {
+    if (threadsUsed!=threads2use) {
 #ifdef debugDistribution
-		fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", _node_id, _process_id, threads2use);
+        fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", _node_id, _process_id, threads2use);
 #endif
-		update_threads(threads2use);
-		threadsUsed=threads2use;
-	}
+        update_threads(threads2use);
+        threadsUsed=threads2use;
+    }
 }

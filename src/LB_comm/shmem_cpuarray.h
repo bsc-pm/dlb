@@ -36,27 +36,27 @@ bool shmem_cpuarray__is_cpu_claimed( int cpu );
 void shmem_cpuarray__print_info( void );
 
 static const struct {
-   void (*init) (const cpu_set_t *cpu_set);
-   void (*finalize) (void);
-   void (*add_mask) (const cpu_set_t*);
-   const cpu_set_t* (*recover_defmask) (void);
-   void (*recover_some_defcpus) (cpu_set_t*, int);
-   int (*return_claimed) (cpu_set_t*);
-   int (*collect_mask) (cpu_set_t*, int);
-   bool (*is_cpu_borrowed) (int);
-   bool (*is_cpu_claimed) (int);
-   void (*print_info) (void);
+    void (*init) (const cpu_set_t *cpu_set);
+    void (*finalize) (void);
+    void (*add_mask) (const cpu_set_t*);
+    const cpu_set_t* (*recover_defmask) (void);
+    void (*recover_some_defcpus) (cpu_set_t*, int);
+    int (*return_claimed) (cpu_set_t*);
+    int (*collect_mask) (cpu_set_t*, int);
+    bool (*is_cpu_borrowed) (int);
+    bool (*is_cpu_claimed) (int);
+    void (*print_info) (void);
 } shmem_mask = {
-   shmem_cpuarray__init,
-   shmem_cpuarray__finalize,
-   shmem_cpuarray__add_mask,
-   shmem_cpuarray__recover_defmask,
-   shmem_cpuarray__recover_some_defcpus,
-   shmem_cpuarray__return_claimed,
-   shmem_cpuarray__collect_mask,
-   shmem_cpuarray__is_cpu_borrowed,
-   shmem_cpuarray__is_cpu_claimed,
-   shmem_cpuarray__print_info
+    shmem_cpuarray__init,
+    shmem_cpuarray__finalize,
+    shmem_cpuarray__add_mask,
+    shmem_cpuarray__recover_defmask,
+    shmem_cpuarray__recover_some_defcpus,
+    shmem_cpuarray__return_claimed,
+    shmem_cpuarray__collect_mask,
+    shmem_cpuarray__is_cpu_borrowed,
+    shmem_cpuarray__is_cpu_claimed,
+    shmem_cpuarray__print_info
 };
 
 #endif /* SHMEM_CPUARRAY_H */

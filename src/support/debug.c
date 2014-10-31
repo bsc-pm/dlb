@@ -26,165 +26,151 @@
 #include <stdarg.h>
 #include "globals.h"
 
-void fatal0 ( const char *fmt, ... )
-{
-   if ( _mpi_rank <= 0 ) {
-      va_list args;
-      va_start( args, fmt );
-      fprintf( stderr, "DLB PANIC[%d]: ", _process_id );
-      vfprintf( stderr, fmt, args );
-      va_end( args );
-   }
-   abort();
+void fatal0 ( const char *fmt, ... ) {
+    if ( _mpi_rank <= 0 ) {
+        va_list args;
+        va_start( args, fmt );
+        fprintf( stderr, "DLB PANIC[%d]: ", _process_id );
+        vfprintf( stderr, fmt, args );
+        va_end( args );
+    }
+    abort();
 }
 
-void fatal ( const char *fmt, ... )
-{
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stderr, "DLB PANIC[%d]: ", _mpi_rank );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
-   abort();
+void fatal ( const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB PANIC[%d]: ", _mpi_rank );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
+    abort();
 }
 
-void warning0 ( const char *fmt, ... )
-{
-   if ( _mpi_rank <= 0 ) {
-      va_list args;
-      va_start( args, fmt );
-      fprintf( stderr, "DLB WARNING[%d]: ", _process_id );
-      vfprintf( stderr, fmt, args );
-      va_end( args );
-   }
+void warning0 ( const char *fmt, ... ) {
+    if ( _mpi_rank <= 0 ) {
+        va_list args;
+        va_start( args, fmt );
+        fprintf( stderr, "DLB WARNING[%d]: ", _process_id );
+        vfprintf( stderr, fmt, args );
+        va_end( args );
+    }
 }
 
-void warning ( const char *fmt, ... )
-{
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stderr, "DLB WARNING[%d]: ", _mpi_rank );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
+void warning ( const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB WARNING[%d]: ", _mpi_rank );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
 }
 
 #ifndef QUIET_MODE
-void verbose0 ( const char *fmt, ... )
-{
-   if ( _mpi_rank <= 0 ) {
-      va_list args;
-      va_start( args, fmt );
-      fprintf( stdout, "DLB[%d]: ", _process_id );
-      vfprintf( stdout, fmt, args );
-      va_end( args );
-   }
+void verbose0 ( const char *fmt, ... ) {
+    if ( _mpi_rank <= 0 ) {
+        va_list args;
+        va_start( args, fmt );
+        fprintf( stdout, "DLB[%d]: ", _process_id );
+        vfprintf( stdout, fmt, args );
+        va_end( args );
+    }
 }
 
-void verbose ( const char *fmt, ... )
-{
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stdout, "DLB[%d]: ", _mpi_rank );
-   vfprintf( stdout, fmt, args );
-   va_end( args );
+void verbose ( const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stdout, "DLB[%d]: ", _mpi_rank );
+    vfprintf( stdout, fmt, args );
+    va_end( args );
 }
 #endif
 
 #ifdef debugBasicInfo
-void debug_basic_info0 ( const char *fmt, ... )
-{
-   if ( _mpi_rank <= 0 ) {
-      va_list args;
-      va_start( args, fmt );
-      fprintf( stdout, "DLB[%d]: ", _process_id );
-      vfprintf( stdout, fmt, args );
-      va_end( args );
-   }
+void debug_basic_info0 ( const char *fmt, ... ) {
+    if ( _mpi_rank <= 0 ) {
+        va_list args;
+        va_start( args, fmt );
+        fprintf( stdout, "DLB[%d]: ", _process_id );
+        vfprintf( stdout, fmt, args );
+        va_end( args );
+    }
 }
 
-void debug_basic_info ( const char *fmt, ... )
-{
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stdout, "DLB[%d:%d]: ", _node_id, _process_id );
-   vfprintf( stdout, fmt, args );
-   va_end( args );
+void debug_basic_info ( const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stdout, "DLB[%d:%d]: ", _node_id, _process_id );
+    vfprintf( stdout, fmt, args );
+    va_end( args );
 }
 #endif
 
 #ifdef debugConfig
-void debug_config ( const char *fmt, ... )
-{
-   if ( !_verbose ) return;
+void debug_config ( const char *fmt, ... ) {
+    if ( !_verbose ) { return; }
 
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
 }
 #endif
 
 #ifdef debugInOut
-void debug_inout ( const char *fmt, ... )
-{
-   if ( !_verbose ) return;
+void debug_inout ( const char *fmt, ... ) {
+    if ( !_verbose ) { return; }
 
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
 }
 #endif
 
 #ifdef debugInOutMPI
-void debug_inout_MPI ( const char *fmt, ... )
-{
-   if ( !_verbose ) return;
+void debug_inout_MPI ( const char *fmt, ... ) {
+    if ( !_verbose ) { return; }
 
-   va_list args;
-   va_start( args, fmt );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
+    va_list args;
+    va_start( args, fmt );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
 }
 #endif
 
 #ifdef debugBlockingMPI
-void debug_blocking_MPI ( const char *fmt, ... )
-{
-   if ( !_verbose ) return;
+void debug_blocking_MPI ( const char *fmt, ... ) {
+    if ( !_verbose ) { return; }
 
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
 }
 #endif
 
 #ifdef debugLend
-void debug_lend ( const char *fmt, ... )
-{
-   if ( !_verbose ) return;
+void debug_lend ( const char *fmt, ... ) {
+    if ( !_verbose ) { return; }
 
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
 }
 #endif
 
 #ifdef debugSharedMem
-void debug_shmem ( const char *fmt, ... )
-{
-   if ( !_verbose ) return;
+void debug_shmem ( const char *fmt, ... ) {
+    if ( !_verbose ) { return; }
 
-   va_list args;
-   va_start( args, fmt );
-   fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
-   vfprintf( stderr, fmt, args );
-   va_end( args );
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB[%d:%d]: ", _node_id, _process_id );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
 }
 #endif

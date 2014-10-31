@@ -23,23 +23,23 @@
 #include <semaphore.h>
 #include <LB_policies/Weight.h>
 
-typedef struct{
-	int proc;
-	int data;
-}msg_LEND;
-
-typedef struct{
-	ProcMetrics data;
-	int proc;
-}msg_WEIGHT;
+typedef struct {
+    int proc;
+    int data;
+} msg_LEND;
 
 typedef struct {
-	int first;
-	int last;
-	sem_t msg4master;
-	sem_t lock_data;
-	sem_t queue;
-}sharedData;
+    ProcMetrics data;
+    int proc;
+} msg_WEIGHT;
+
+typedef struct {
+    int first;
+    int last;
+    sem_t msg4master;
+    sem_t lock_data;
+    sem_t queue;
+} sharedData;
 
 /* Shared Memory structure
 

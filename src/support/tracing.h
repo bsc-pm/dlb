@@ -20,23 +20,23 @@
 /********* EXTRAE EVENTS *************/
 #define THREADS_USED_EVENT 800000
 #define RUNTIME_EVENT      800020
-   #define EVENT_USER        0
-   #define EVENT_INIT        1
-   #define EVENT_INTO_MPI    2
-   #define EVENT_OUT_MPI     3
-   #define EVENT_UPDATE      4
-   #define EVENT_RETURN      5
-   #define EVENT_RELEASE_CPU 6
-   #define EVENT_CLAIM_CPUS  7
-   #define EVENT_RETURN_CPU  8
-   #define EVENT_LEND        9
-   #define EVENT_RETRIEVE    10
+#define EVENT_USER        0
+#define EVENT_INIT        1
+#define EVENT_INTO_MPI    2
+#define EVENT_OUT_MPI     3
+#define EVENT_UPDATE      4
+#define EVENT_RETURN      5
+#define EVENT_RELEASE_CPU 6
+#define EVENT_CLAIM_CPUS  7
+#define EVENT_RETURN_CPU  8
+#define EVENT_LEND        9
+#define EVENT_RETRIEVE    10
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040
 #define DLB_MODE_EVENT     800050
-   #define EVENT_ENABLED        1
-   #define EVENT_DISABLED       2
-   #define EVENT_SINGLE         3
+#define EVENT_ENABLED        1
+#define EVENT_DISABLED       2
+#define EVENT_SINGLE         3
 
 /*************************************/
 

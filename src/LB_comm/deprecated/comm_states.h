@@ -24,27 +24,27 @@
 
 #include <semaphore.h>
 
-typedef struct{
-	int action;
-	int cpus;
-	double secsComp;
-	double secsMPI;
-}ProcMetrics;
+typedef struct {
+    int action;
+    int cpus;
+    double secsComp;
+    double secsMPI;
+} ProcMetrics;
 
 /*typedef struct{
-	int proc;
-	int data;
+    int proc;
+    int data;
 }msg_LEND;*/
 
 /*typedef struct{
-	int proc;
-	ProcMetrics data;
+    int proc;
+    ProcMetrics data;
 }msg;*/
 
 typedef struct {
-	sem_t msg4master;
-//	sem_t lock_data[];
-}sharedData;
+    sem_t msg4master;
+//  sem_t lock_data[];
+} sharedData;
 
 /* Shared Memory structure
 
