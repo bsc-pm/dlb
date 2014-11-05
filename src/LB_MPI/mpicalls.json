@@ -90,7 +90,7 @@
     },
     {
         "name": "MPI_Waitsome",
-        "args": "int incount,MPI_Request *array_of_requests, int *outcount,int *array_of_indices,MPI_Status *array_of_statuses"
+        "args": "int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses"
     },
     {
         "name": "MPI_Bcast",
@@ -283,6 +283,30 @@
     {
         "name": "MPI_Put",
         "args": "MPI3_CONST void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win"
+    },
+    {
+        "name": "MPI_Win_create",
+        "args": "void *base, MPI_Aint size, int disp_unit, MPI_Info info, MPI_Comm comm, MPI_Win *win"
+    },
+    {
+        "name": "MPI_Win_free",
+        "args": "MPI_Win *win"
+    },
+    {
+        "name": "MPI_Win_fence",
+        "args": "int assert, MPI_Win win"
+    },
+    {
+        "name": "MPI_Win_start",
+        "args": "MPI_Group group, int assert, MPI_Win win"
+    },
+    {
+        "name": "MPI_Win_complete",
+        "args": "MPI_Win win"
+    },
+    {
+        "name": "MPI_Win_wait",
+        "args": "MPI_Win win"
     }
     ]
 }

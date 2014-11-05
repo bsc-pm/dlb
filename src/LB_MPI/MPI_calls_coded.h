@@ -114,7 +114,13 @@ typedef enum {
     File_write_at=_IO,
     File_write_at_all=_IO,
     Get=Unknown,
-    Put=Unknown
+    Put=Unknown,
+    Win_create=Unknown,
+    Win_free=Unknown,
+    Win_fence=Unknown,
+    Win_start=Unknown,
+    Win_complete=Unknown,
+    Win_wait=Unknown
 } mpi_call;
 
 extern const char* mpi_call_names[];

@@ -85,5 +85,11 @@ const char* mpi_call_names[] = {
     "MPI_file_write_at",
     "MPI_File_write_at_all",
     "MPI_Get",
-    "MPI_Put"
+    "MPI_Put",
+    "Win_create",
+    "Win_free",
+    "Win_fence",
+    "Win_start",
+    "Win_complete",
+    "Win_wait"
 };
