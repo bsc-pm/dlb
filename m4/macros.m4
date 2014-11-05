@@ -177,7 +177,7 @@ AC_DEFUN([AX_GCC_VERSION_CHECK], [
          ])
          # GCC < 4.5
          AS_IF([test $ax_cv_gcc_version_major = 4 -a $ax_cv_gcc_version_minor -lt 5],[
-            ax_cv_gcc_version_warnings="-Wno-uninitialized "
+            ax_cv_gcc_version_warnings+="-Wno-uninitialized "
          ])
       ])
    ])

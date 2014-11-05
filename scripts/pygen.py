@@ -15,24 +15,25 @@ class MPIFile:
         self._mpi_calls = calls
 
     def parse(self):
-        with open(self._in_filename, 'r') as in_f, open(self._out_filename, 'w+') as out_f:
-            pragma_scope = False
-            pragma_block = ''
-            for line in in_f:
-                if pragma_scope:
-                    if '#pragma pygen end' in line:
-                        pragma_scope = False
-                        pragma_block += '\n'
-                        parsed = self._parse_block(pragma_block)
-                        out_f.write(parsed)
+        with open(self._in_filename, 'r') as in_f:
+            with open(self._out_filename, 'w+') as out_f:
+                pragma_scope = False
+                pragma_block = ''
+                for line in in_f:
+                    if pragma_scope:
+                        if '#pragma pygen end' in line:
+                            pragma_scope = False
+                            pragma_block += '\n'
+                            parsed = self._parse_block(pragma_block)
+                            out_f.write(parsed)
+                        else:
+                            pragma_block += line
                     else:
-                        pragma_block += line
-                else:
-                    if '#pragma pygen start' in line:
-                        pragma_scope = True
-                        pragma_block = ''
-                    elif line != '':
-                        out_f.write(line)
+                        if '#pragma pygen start' in line:
+                            pragma_scope = True
+                            pragma_block = ''
+                        elif line != '':
+                            out_f.write(line)
 
     def _parse_block(self, block):
         parsed = ''
