@@ -24,11 +24,11 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <pthread.h>
-#include <numThreads.h>
-#include "support/globals.h"
-#include "support/tracing.h"
 #include <stdio.h>
 #include <omp.h>
+#include "LB_numThreads/numThreads.h"
+#include "support/globals.h"
+#include "support/tracing.h"
 
 
 //#include <mpitrace_user_events.h>

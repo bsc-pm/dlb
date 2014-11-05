@@ -24,6 +24,12 @@ EXTRA_DIST = single-generator.in mpi-generator.in config.py
 
 CLEANFILES = $(noinst_SCRIPTS)
 
+if SUPPORTED_SILENT_RULES
+GEN_verbose = $(GEN_verbose_@AM_V@)
+GEN_verbose_ = $(GEN_verbose_@AM_DEFAULT_V@)
+GEN_verbose_0 = @echo "  GEN     " $@;
+endif
+
 ompss_cc  = "env OMPI_CC=mcc OMPI_CFLAGS=--ompss mpicc"
 ompss_cxx = "env OMPI_CXX=mcxx OMPI_CXXFLAGS=--ompss mpicxx"
 nanox_cc  = "env OMPI_CC=mcc mpicc"
@@ -36,7 +42,7 @@ versions += debug
 endif
 
 single-generator: single-generator.in
-	rm -f $@
+	$(GEN_verbose)rm -f $@ ; \
 	sed \
 		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
 		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
@@ -47,12 +53,12 @@ single-generator: single-generator.in
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@CONFIG_CC\@,"$(CC)",g' \
 		-e's,@CONFIG_CXX\@,"$(CXX)",g' \
-		$^ > $@.tmp
-	mv $@.tmp $@
+		$^ > $@.tmp ; \
+	mv $@.tmp $@ ; \
 	chmod 755 $@
 
 mpi_ompss-generator: mpi-generator.in
-	rm -f $@
+	$(GEN_verbose)rm -f $@ ; \
 	sed \
 		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
 		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
@@ -63,12 +69,12 @@ mpi_ompss-generator: mpi-generator.in
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@CONFIG_CC\@,$(ompss_cc),g' \
 		-e's,@CONFIG_CXX\@,$(ompss_cxx),g' \
-		$^ > $@.tmp
-	mv $@.tmp $@
+		$^ > $@.tmp ; \
+	mv $@.tmp $@ ; \
 	chmod 755 $@
 
 mpi_nanox-generator: mpi-generator.in
-	rm -f $@
+	$(GEN_verbose)rm -f $@ ; \
 	sed \
 		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
 		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
@@ -79,12 +85,12 @@ mpi_nanox-generator: mpi-generator.in
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@CONFIG_CC\@,$(nanox_cc),g' \
 		-e's,@CONFIG_CXX\@,$(nanox_cxx),g' \
-		$^ > $@.tmp
-	mv $@.tmp $@
+		$^ > $@.tmp ; \
+	mv $@.tmp $@ ; \
 	chmod 755 $@
 
 mpi_omp-generator: mpi-generator.in
-	rm -f $@
+	$(GEN_verbose)rm -f $@ ; \
 	sed \
 		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
 		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
@@ -95,7 +101,7 @@ mpi_omp-generator: mpi-generator.in
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@CONFIG_CC\@,$(omp_cc),g' \
 		-e's,@CONFIG_CXX\@,$(omp_cxx),g' \
-		$^ > $@.tmp
-	mv $@.tmp $@
+		$^ > $@.tmp ; \
+	mv $@.tmp $@ ; \
 	chmod 755 $@
 

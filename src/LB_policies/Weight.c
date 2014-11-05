@@ -21,7 +21,8 @@
 #include <config.h>
 #endif
 
-#include <Weight.h>
+#include "LB_numThreads/numThreads.h"
+#include "LB_policies/Weight.h"
 #include "support/globals.h"
 #include "support/utils.h"
 #include "support/mytime.h"
@@ -31,7 +32,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <LB_numThreads/numThreads.h>
 
 int finished;
 int threads2use, threadsUsed;

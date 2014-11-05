@@ -20,7 +20,7 @@
 #ifndef PROCESS_MPI_H
 #define PROCESS_MPI_H
 
-#include <MPI_calls_coded.h>
+#include "LB_MPI/MPI_calls_coded.h"
 
 void before_init(void);
 void after_init(void);

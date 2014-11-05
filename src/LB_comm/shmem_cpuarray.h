@@ -22,7 +22,7 @@
 
 #define _GNU_SOURCE
 #include <sched.h>
-#include <utils.h>
+#include <stdbool.h>
 
 void shmem_cpuarray__init( const cpu_set_t *cpu_set );
 void shmem_cpuarray__finalize( void );

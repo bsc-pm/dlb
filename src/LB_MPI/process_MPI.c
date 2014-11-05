@@ -24,15 +24,16 @@
 #ifdef MPI_LIB
 
 #include <stdio.h>
-#include "LB_core/DLB_kernel.h"
-#include "support/tracing.h"
-#include <MPI_calls_coded.h>
-#include <DPD/DPD.h>
 #include <mpi.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <bits/local_lim.h>
+
+#include "DPD/DPD.h"
+#include "LB_core/DLB_kernel.h"
+#include "LB_MPI/MPI_calls_coded.h"
+#include "support/tracing.h"
 #include "support/globals.h"
 #include "support/debug.h"
 

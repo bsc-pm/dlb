@@ -21,7 +21,7 @@
 #include <config.h>
 #endif
 
-#include <comm.h>
+#include "LB_comm/comm.h"
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdlib.h>

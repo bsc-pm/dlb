@@ -17,9 +17,9 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#include <Lend_light.h>
-#include <LB_numThreads/numThreads.h>
-#include <LB_comm/comm_lend_light.h>
+#include "LB_policies/Lend_light.h"
+#include "LB_numThreads/numThreads.h"
+#include "LB_comm/comm_lend_light.h"
 #include "support/globals.h"
 #include "support/mask_utils.h"
 #include "support/utils.h"

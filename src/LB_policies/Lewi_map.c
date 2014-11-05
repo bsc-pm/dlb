@@ -21,9 +21,9 @@
 #include <config.h>
 #endif
 
-#include <Lewi_map.h>
-#include <LB_numThreads/numThreads.h>
-#include <LB_comm/comm_map.h>
+#include "LB_policies/Lewi_map.h"
+#include "LB_numThreads/numThreads.h"
+#include "LB_comm/comm_map.h"
 #include "support/globals.h"
 #include "support/tracing.h"
 

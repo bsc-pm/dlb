@@ -64,7 +64,7 @@ void parse_env_string ( char const *env, char **var ) {
 
 void parse_env_string_or_die ( char const *env, char **var ) {
     *var = getenv( env );
-    if ( var == NULL ) {
+    if ( *var == NULL ) {
         fatal0( "%s must be defined\n", env );
     }
 }

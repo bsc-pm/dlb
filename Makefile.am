@@ -17,15 +17,311 @@
 #      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 #
 #####################################################################################
 
-SUBDIRS =   src scripts tests doc
-
 ACLOCAL_AMFLAGS=-I m4
 
+SUBDIRS = tests
+
+BUILT_SOURCES =
+CLEANFILES =
+EXTRA_DIST =
+END =
+
+if SUPPORTED_SILENT_RULES
+PYTHON_verbose = $(PYTHON_verbose_@AM_V@)
+PYTHON_verbose_ = $(PYTHON_verbose_@AM_DEFAULT_V@)
+PYTHON_verbose_0 = @echo "  PYTHON  " $@;
+
+GEN_verbose = $(GEN_verbose_@AM_V@)
+GEN_verbose_ = $(GEN_verbose_@AM_DEFAULT_V@)
+GEN_verbose_0 = @echo "  GEN     " $@;
+endif
+
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
+AM_LDFLAGS = -lrt $(AC_LDFLAGS) -avoid-version
+if HAVE_HWLOC
+AM_CPPFLAGS += $(HWLOC_CPPFLAGS)
+AM_LDFLAGS += $(HWLOC_LDFLAGS) $(HWLOC_LIBS)
+endif
+
+##########################################################################
+# src                                                                  ###
+##########################################################################
+##########################################################################
+# Headers
+##########################################################################
+dist_include_HEADERS = src/LB_core/DLB_interface.h
+nodist_include_HEADERS = src/LB_MPI/MPI_interface.h
+EXTRA_DIST += src/support/dlb_api.h
+
+##########################################################################
+# Built Sources
+##########################################################################
+MPI_GENERATOR = $(top_srcdir)/scripts/pygen.py
+
+EXTRA_DIST    += src/LB_MPI/mpicalls.json
+EXTRA_DIST    += src/LB_MPI/MPI_interface.h.in
+CLEANFILES    += src/LB_MPI/MPI_interface.h
+BUILT_SOURCES += src/LB_MPI/MPI_interface.h
+src/LB_MPI/MPI_interface.h: $(top_srcdir)/src/LB_MPI/MPI_interface.h.in
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(top_srcdir)/src/LB_MPI/mpicalls.json
+
+EXTRA_DIST    += src/LB_MPI/MPI_interface.c.in
+CLEANFILES    += src/LB_MPI/MPI_interface.c
+BUILT_SOURCES += src/LB_MPI/MPI_interface.c
+src/LB_MPI/MPI_interface.c: $(top_srcdir)/src/LB_MPI/MPI_interface.c.in
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(top_srcdir)/src/LB_MPI/mpicalls.json
+
+EXTRA_DIST    += src/LB_MPI/MPI_intercept.c.in
+CLEANFILES    += src/LB_MPI/MPI_intercept.c
+BUILT_SOURCES += src/LB_MPI/MPI_intercept.c
+src/LB_MPI/MPI_intercept.c: $(top_srcdir)/src/LB_MPI/MPI_intercept.c.in
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(top_srcdir)/src/LB_MPI/mpicalls.json
+
+##########################################################################
+# libdlb_dummy.so
+##########################################################################
+lib_LTLIBRARIES = libdlb_dummy.la
+libdlb_dummy_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS)
+libdlb_dummy_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_dummy_la_SOURCES = src/LB_core/DLB_dummy_interface.c
+
+##########################################################################
+# libdlb.so
+##########################################################################
+COMMON_SRCS = \
+	src/DPD/DPD.c                   \
+	src/DPD/DPD.h                   \
+	src/LB_numThreads/numThreads.c  \
+	src/LB_numThreads/numThreads.h  \
+	src/LB_policies/JustProf.c      \
+	src/LB_policies/JustProf.h      \
+	src/LB_policies/Lend_light.c    \
+	src/LB_policies/Lend_light.h    \
+	src/LB_policies/Lewi_map.c      \
+	src/LB_policies/Lewi_map.h      \
+	src/LB_policies/Weight.c        \
+	src/LB_policies/Weight.h        \
+	src/LB_policies/lewi_mask.c     \
+	src/LB_policies/autonomous_lewi_mask.h     \
+	src/LB_policies/autonomous_lewi_mask.c     \
+	src/LB_policies/lewi_mask.h     \
+	src/LB_policies/RaL.c           \
+	src/LB_policies/RaL.h           \
+	src/LB_policies/PERaL.c         \
+	src/LB_policies/PERaL.h         \
+	src/LB_comm/comm_shMem.c        \
+	src/LB_comm/comm.h              \
+	src/LB_comm/comm_lend_light.c   \
+	src/LB_comm/comm_lend_light.h   \
+	src/LB_comm/comm_map.c          \
+	src/LB_comm/comm_map.h          \
+	src/LB_comm/shmem.c             \
+	src/LB_comm/shmem.h             \
+	src/LB_comm/shmem_bitset.c      \
+	src/LB_comm/shmem_bitset.h      \
+	src/LB_comm/shmem_cpuarray.c    \
+	src/LB_comm/shmem_cpuarray.h    \
+	src/LB_core/DLB_kernel.c        \
+	src/LB_core/DLB_kernel.h        \
+	src/LB_core/DLB_interface.c     \
+	src/LB_core/DLB_interface.h     \
+	src/support/globals.c           \
+	src/support/globals.h           \
+	src/support/debug.c             \
+	src/support/debug.h             \
+	src/support/tracing.c           \
+	src/support/tracing.h           \
+	src/support/utils.c             \
+	src/support/utils.h             \
+	src/support/mytime.c            \
+	src/support/mytime.h            \
+	src/support/mask_utils.c        \
+	src/support/mask_utils.h        \
+	$(END)
+
+lib_LTLIBRARIES += libdlb.la
+libdlb_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_la_CFLAGS = $(PERFO_CFLAGS)
+libdlb_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_la_SOURCES = $(COMMON_SRCS)
+
+if DEBUG_LIB
+lib_LTLIBRARIES += libdlb_dbg.la
+libdlb_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_dbg_la_CFLAGS = $(DEBUG_CFLAGS)
+libdlb_dbg_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_dbg_la_SOURCES = $(COMMON_SRCS)
+endif
+
+if INSTRUMENTATION_LIB
+lib_LTLIBRARIES += libdlb_instr.la
+libdlb_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_instr_la_CFLAGS = $(INSTR_CFLAGS)
+libdlb_instr_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_instr_la_SOURCES = $(COMMON_SRCS)
+endif
+
+if INSTRUMENTATION_DEBUG_LIB
+lib_LTLIBRARIES += libdlb_instr_dbg.la
+libdlb_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS)
+libdlb_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_instr_dbg_la_SOURCES = $(COMMON_SRCS)
+endif
+
+##########################################################################
+# libdlb_mpi.so
+##########################################################################
+if MPI_LIB
+MPI_SRCS = \
+	src/LB_MPI/MPI_calls_coded.c    \
+	src/LB_MPI/MPI_calls_coded.h    \
+	src/LB_MPI/process_MPI.c        \
+	src/LB_MPI/process_MPI.h        \
+	$(END)
+
+MPI_SRCS_GEN = src/LB_MPI/MPI_interface.c
+MPI_INTR_GEN = src/LB_MPI/MPI_intercept.c
+
+MPI_CPPFLAGS += -DMPI_LIB
+
+lib_LTLIBRARIES += libdlb_mpi.la
+libdlb_mpi_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpi_la_CFLAGS = $(PERFO_CFLAGS)
+libdlb_mpi_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpi_la_LIBADD = libdlb.la
+libdlb_mpi_la_SOURCES = $(MPI_SRCS)
+nodist_libdlb_mpi_la_SOURCES = $(MPI_SRCS_GEN) $(MPI_INTR_GEN)
+
+if DEBUG_LIB
+lib_LTLIBRARIES += libdlb_mpi_dbg.la
+libdlb_mpi_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpi_dbg_la_CFLAGS = $(DEBUG_CFLAGS)
+libdlb_mpi_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpi_dbg_la_LIBADD = libdlb_dbg.la
+libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS)
+nodist_libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS_GEN) $(MPI_INTR_GEN)
+endif
+
+if INSTRUMENTATION_LIB
+lib_LTLIBRARIES += libdlb_mpi_instr.la
+libdlb_mpi_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpi_instr_la_CFLAGS = $(INSTR_CFLAGS)
+libdlb_mpi_instr_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpi_instr_la_LIBADD = libdlb_instr.la
+libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS)
+nodist_libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS_GEN)
+endif
+
+if INSTRUMENTATION_DEBUG_LIB
+lib_LTLIBRARIES += libdlb_mpi_instr_dbg.la
+libdlb_mpi_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpi_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS)
+libdlb_mpi_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpi_instr_dbg_la_LIBADD = libdlb_instr_dbg.la
+libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS)
+nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_GEN)
+endif
+endif #MPI_LIB
+
+##########################################################################
+# Support binaries
+##########################################################################
+bin_PROGRAMS = dlb dlb_shm
+
+dlb_SOURCES = src/utils/dlb.c
+dlb_CFLAGS = $(PERFO_CFLAGS)
+
+dlb_shm_SOURCES = src/utils/dlb_shm.c
+dlb_shm_CFLAGS = $(PERFO_CFLAGS)
+dlb_shm_LDADD = libdlb.la
+
+##########################################################################
+# doc                                                                  ###
+##########################################################################
+paraver_cfgs = \
+	doc/paraver_cfgs/DLB_cpus(4).cfg \
+	doc/paraver_cfgs/DLB_cpus(8).cfg \
+	doc/paraver_cfgs/DLB_cpus(16).cfg \
+	doc/paraver_cfgs/DLB_mode.cfg \
+	doc/paraver_cfgs/DLB_runtime.cfg \
+	doc/paraver_cfgs/DLB_num_threads.cfg \
+	$(END)
+
+paravercfgsdir = $(datadir)
+nobase_dist_paravercfgs_DATA = $(paraver_cfgs)
+
+##########################################################################
+# scripts                                                              ###
+##########################################################################
+nodist_bin_SCRIPTS = scripts/run_with_dlb.sh
+EXTRA_DIST += \
+	scripts/bets \
+	scripts/run_with_dlb.sh.in \
+	scripts/dlb.spec \
+	scripts/pygen.py \
+	scripts/debian/compat \
+	scripts/debian/source/format \
+	scripts/debian/rules \
+	scripts/debian/control \
+	$(END)
+
+CLEANFILES    += scripts/run_with_dlb.sh
+scripts/run_with_dlb.sh: $(top_srcdir)/scripts/run_with_dlb.sh.in
+	$(GEN_verbose)rm -f $@; \
+	sed \
+		-e's,@PREFIX_LIB\@,"$(libdir)",g' \
+		-e's,@NCPUS\@,$(NCPUS),g' \
+	$^ > $@.tmp; \
+	mv $@.tmp $@; \
+	chmod 755 $@
+
 rpm: dist-gzip
-	$(MAKE) -C scripts rpm
+	@echo "Generating RPM structure"
+	cd scripts; \
+	$(MKDIR_P) SOURCES BUILD RPMS SPECS SRPMS; \
+	cp ../$(distdir).tar.gz SOURCES; \
+	THREADS=$$(getconf _NPROCESSORS_ONLN); THREADS=$${THREADS:-1};\
+	rpmbuild -v -bb --clean $(abs_top_srcdir)/scripts/dlb.spec --define '_topdir $$(pwd)' \
+		--define 'version $(VERSION)'\
+		--define 'release $(shell date +%Y%m%d)'\
+		--define "threads $${THREADS}"\
+		--define 'configure_options CFLAGS=-D_FORTIFY_SOURCE=0'
+
+clean-rpm:
+	cd scripts; \
+	rm -rf BUILDROOT SOURCES BUILD RPMS SPECS SRPMS
 
 deb: dist-gzip
-	$(MAKE) -C scripts deb
+	cd scripts; \
+	cp ../$(distdir).tar.gz $(PACKAGE_TARNAME)_$(VERSION).orig.tar.gz; \
+	tar -xf $(PACKAGE_TARNAME)_$(VERSION).orig.tar.gz; \
+	rm -rf upstream_dir; \
+	mv $(PACKAGE_TARNAME)-$(VERSION) upstream_dir; \
+	cp -rf $(abs_top_srcdir)/scripts/debian upstream_dir/; \
+	cp -rf upstream_dir/COPYING upstream_dir/debian/copyright; \
+	rm -f upstream_dir/debian/changelog; \
+	if test ! -d $(abs_top_srcdir)/.git; \
+	then dch --create -c upstream_dir/debian/changelog --empty --package $(PACKAGE_TARNAME) -v "$(VERSION)-$(shell date +%Y%m%d)$(DEB_RELEASE)"; \
+	else git --git-dir="$(abs_top_srcdir)/.git" --work-tree="$(abs_top_srcdir)/.git" log -1 --pretty=format:"$(PACKAGE_TARNAME) ($(VERSION)-$(shell date +%Y%m%d)$(DEB_RELEASE)) unstable; urgency=low%x0A%x0A  * %h %s%x0A%x0A -- %an <%ae>  %aD" > upstream_dir/debian/changelog; \
+	fi; \
+	THREADS=$$(getconf _NPROCESSORS_ONLN); THREADS=$${THREADS:-1}; \
+	cd upstream_dir; DEB_BUILD_OPTIONS="nocheck parallel=$${THREADS}" debuild -us -uc; \
+	rm -rf upstream_dir
+
+clean-deb:
+	cd scripts; \
+	rm -rf $(PACKAGE_TARNAME)_$(VERSION).orig.tar.gz $(PACKAGE_TARNAME)_$(VERSION)*.debian.tar.gz \
+		$(PACKAGE_TARNAME)_$(VERSION)*.dsc $(PACKAGE_TARNAME)_$(DEB_RELEASE)*.build \
+		$(PACKAGE_TARNAME)_$(DEB_RELEASE)*.changes *.deb
+
+
+##########################################################################
+# Hooks                                                                ###
+##########################################################################
+
+clean-local: clean-rpm clean-deb
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \
