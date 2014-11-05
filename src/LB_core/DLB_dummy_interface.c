@@ -17,7 +17,7 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#include "LB_core/DLB_interface.h"
+#include "support/dlb_api.h"
 
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {}
 DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {}

@@ -18,8 +18,8 @@
 /*************************************************************************************/
 
 #include <limits.h>
-#include "LB_core/DLB_interface.h"
 #include "LB_core/DLB_kernel.h"
+#include "support/dlb_api.h"
 #include "support/tracing.h"
 
 // sub-process ID

@@ -20,43 +20,26 @@
 #ifndef DLB_INTERFACE_H
 #define DLB_INTERFACE_H
 
-#define DLB_API_SIMPLE_DECL(Type, Name, Params) \
-   extern Type Name##_ Params; \
-   extern Type Name Params;
-
-#define DLB_API_DECL(Type, Name, NameF, Params) \
-   DLB_API_SIMPLE_DECL(Type, NameF, Params) \
-   DLB_API_SIMPLE_DECL(Type, Name, Params)
-
-#define DLB_API_SIMPLE_DEF(Type, Name, Params) \
-   __attribute__((alias(#Name))) Type Name##_ Params; \
-   Type Name Params
-
-#define DLB_API_DEF(Type, Name, NameF, Params) \
-   __attribute__((alias(#Name))) Type NameF Params; \
-   __attribute__((alias(#Name))) Type NameF##_ Params; \
-   DLB_API_SIMPLE_DEF(Type, Name, Params)
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-DLB_API_DECL( void, DLB_Init, dlb_init, (void) )
-DLB_API_DECL( void, DLB_Finalize, dlb_finalize, (void) )
-DLB_API_DECL( void, DLB_enable, dlb_enable, (void) );
-DLB_API_DECL( void, DLB_disable, dlb_disable, (void) );
-DLB_API_DECL( void, DLB_single, dlb_single, (void) );
-DLB_API_DECL( void, DLB_parallel, dlb_parallel, (void) );
-DLB_API_DECL( void, DLB_UpdateResources, dlb_updateresources, (void) );
-DLB_API_DECL( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) );
-DLB_API_DECL( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) )
-DLB_API_DECL( void, DLB_Lend, dlb_lend, (void) );
-DLB_API_DECL( void, DLB_Retrieve, dlb_retrieve, (void) );
-DLB_API_DECL( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) )
-DLB_API_DECL( int, DLB_ReturnClaimedCpu, dlb_returnclaimedcpu, (int cpu) )
-DLB_API_DECL( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) )
-DLB_API_DECL( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) )
+void DLB_Init(void);
+void DLB_Finalize(void);
+void DLB_enable(void);
+void DLB_disable(void);
+void DLB_single(void);
+void DLB_parallel(void);
+void DLB_UpdateResources(void);
+void DLB_UpdateResources_max(int max_resources);
+void DLB_ReturnClaimedCpus(void);
+void DLB_Lend(void);
+void DLB_Retrieve(void);
+int DLB_ReleaseCpu(int cpu);
+int DLB_ReturnClaimedCpu(int cpu);
+void DLB_ClaimCpus(int cpus);
+int DLB_CheckCpuAvailability(int cpu);
 
 #ifdef __cplusplus
 }
