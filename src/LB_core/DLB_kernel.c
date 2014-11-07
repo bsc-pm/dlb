@@ -88,7 +88,7 @@ void set_dlb_enabled(bool enabled) {
     }
 }
 
-int Init(void) {
+int Initialize(void) {
     int initializer_id = 0;
 
     if (!dlb_initialized) {

@@ -42,6 +42,7 @@ int {MPI_NAME}({FULL_ARGS}) {{
     debug_inout_MPI("<< {MPI_NAME}...............\n");
     return res;
 }}
+
 #pragma pygen end
 
 #endif /* MPI_LIB */

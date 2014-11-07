@@ -26,7 +26,7 @@
 static int spid = 0;
 
 DLB_API_DEF( void, DLB_Init, dlb_init, (void) ) {
-    spid = Init();
+    spid = Initialize();
 }
 
 DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) ) {

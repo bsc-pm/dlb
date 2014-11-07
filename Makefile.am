@@ -57,25 +57,39 @@ EXTRA_DIST += src/support/dlb_api.h
 # Built Sources
 ##########################################################################
 MPI_GENERATOR = $(top_srcdir)/scripts/pygen.py
-
+MPICALLS_DB = $(top_srcdir)/src/LB_MPI/mpicalls.json
 EXTRA_DIST    += src/LB_MPI/mpicalls.json
+
+EXTRA_DIST    += src/LB_MPI/MPI_calls_coded.h.in
+CLEANFILES    += src/LB_MPI/MPI_calls_coded.h
+BUILT_SOURCES += src/LB_MPI/MPI_calls_coded.h
+src/LB_MPI/MPI_calls_coded.h: $(top_srcdir)/src/LB_MPI/MPI_calls_coded.h.in $(MPICALLS_DB)
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+
+EXTRA_DIST    += src/LB_MPI/MPI_calls_coded.c.in
+CLEANFILES    += src/LB_MPI/MPI_calls_coded.c
+BUILT_SOURCES += src/LB_MPI/MPI_calls_coded.c
+src/LB_MPI/MPI_calls_coded.c: $(top_srcdir)/src/LB_MPI/MPI_calls_coded.c.in $(MPICALLS_DB)
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+
 EXTRA_DIST    += src/LB_MPI/MPI_interface.h.in
 CLEANFILES    += src/LB_MPI/MPI_interface.h
 BUILT_SOURCES += src/LB_MPI/MPI_interface.h
-src/LB_MPI/MPI_interface.h: $(top_srcdir)/src/LB_MPI/MPI_interface.h.in
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(top_srcdir)/src/LB_MPI/mpicalls.json
+src/LB_MPI/MPI_interface.h: $(top_srcdir)/src/LB_MPI/MPI_interface.h.in $(MPICALLS_DB)
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_interface.c.in
 CLEANFILES    += src/LB_MPI/MPI_interface.c
 BUILT_SOURCES += src/LB_MPI/MPI_interface.c
-src/LB_MPI/MPI_interface.c: $(top_srcdir)/src/LB_MPI/MPI_interface.c.in
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(top_srcdir)/src/LB_MPI/mpicalls.json
+src/LB_MPI/MPI_interface.c: $(top_srcdir)/src/LB_MPI/MPI_interface.c.in $(MPICALLS_DB)
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_intercept.c.in
 CLEANFILES    += src/LB_MPI/MPI_intercept.c
 BUILT_SOURCES += src/LB_MPI/MPI_intercept.c
-src/LB_MPI/MPI_intercept.c: $(top_srcdir)/src/LB_MPI/MPI_intercept.c.in
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(top_srcdir)/src/LB_MPI/mpicalls.json
+src/LB_MPI/MPI_intercept.c: $(top_srcdir)/src/LB_MPI/MPI_intercept.c.in $(MPICALLS_DB)
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+
 
 ##########################################################################
 # libdlb_dummy.so
@@ -175,13 +189,15 @@ endif
 ##########################################################################
 if MPI_LIB
 MPI_SRCS = \
-	src/LB_MPI/MPI_calls_coded.c    \
-	src/LB_MPI/MPI_calls_coded.h    \
 	src/LB_MPI/process_MPI.c        \
 	src/LB_MPI/process_MPI.h        \
 	$(END)
 
-MPI_SRCS_GEN = src/LB_MPI/MPI_interface.c
+MPI_SRCS_GEN = \
+	src/LB_MPI/MPI_calls_coded.c    \
+	src/LB_MPI/MPI_interface.c
+	$(END)
+
 MPI_INTR_GEN = src/LB_MPI/MPI_intercept.c
 
 MPI_CPPFLAGS += -DMPI_LIB
@@ -269,7 +285,8 @@ EXTRA_DIST += \
 
 CLEANFILES    += scripts/run_with_dlb.sh
 scripts/run_with_dlb.sh: $(top_srcdir)/scripts/run_with_dlb.sh.in
-	$(GEN_verbose)rm -f $@; \
+	$(GEN_verbose)$(MKDIR_P) scripts/; \
+	rm -f $@; \
 	sed \
 		-e's,@PREFIX_LIB\@,"$(libdir)",g' \
 		-e's,@NCPUS\@,$(NCPUS),g' \

@@ -2,311 +2,393 @@
     "mpi_calls": [
     {
         "name": "MPI_Init",
-        "args": "int *argc, char ***argv"
+        "args": "int *argc, char ***argv",
+        "tags": ""
     },
     {
         "name": "MPI_Init_thread",
-        "args": "int *argc, char ***argv, int required, int *provided"
+        "args": "int *argc, char ***argv, int required, int *provided",
+        "tags": ""
     },
     {
         "name": "MPI_Finalize",
-        "args": "void"
-    },
-    {
-        "name": "MPI_Sendrecv",
-        "args": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status"
-    },
-    {
-        "name": "MPI_Sendrecv_replace",
-        "args": "void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status"
+        "args": "void",
+        "tags": ""
     },
     {
         "name": "MPI_Bsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Ssend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Rsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Send",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Ibsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_Isend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_Issend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_Irsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_Recv",
-        "args": "void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status"
+        "args": "void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status",
+        "tags": "_Receive|_Blocking"
     },
     {
         "name": "MPI_Irecv",
-        "args": "void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Receive"
     },
     {
         "name": "MPI_Reduce",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm",
+        "tags": "_Reduce|_Blocking"
     },
     {
         "name": "MPI_Reduce_scatter",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "tags": "_Reduce|_Blocking"
     },
     {
         "name": "MPI_Allreduce",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "tags": "_Reduce|_Blocking"
     },
     {
         "name": "MPI_Barrier",
-        "args": "MPI_Comm comm"
+        "args": "MPI_Comm comm",
+        "tags": "_Barrier|_Blocking"
     },
     {
         "name": "MPI_Wait",
-        "args": "MPI_Request *request, MPI_Status *status"
+        "args": "MPI_Request *request, MPI_Status *status",
+        "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Waitall",
-        "args": "int count, MPI_Request *array_of_requests, MPI_Status *array_of_statuses"
+        "args": "int count, MPI_Request *array_of_requests, MPI_Status *array_of_statuses",
+        "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Waitany",
-        "args": "int count, MPI_Request *requests, int* index, MPI_Status* status"
+        "args": "int count, MPI_Request *requests, int* index, MPI_Status* status",
+        "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Waitsome",
-        "args": "int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses"
+        "args": "int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses",
+        "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Bcast",
-        "args": "void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm"
+        "args": "void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm",
+        "tags": "_Bcast|_Blocking"
     },
     {
         "name": "MPI_Alltoall",
-        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm",
+        "tags": "_All2All|_Blocking"
     },
     {
         "name": "MPI_Alltoallv",
-        "args": "MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm",
+        "tags": "_All2All|_Blocking"
     },
     {
         "name": "MPI_Allgather",
-        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
+        "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Allgatherv",
-        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm",
+        "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Gather",
-        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Gatherv",
-        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Scatter",
-        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "tags": "_Scatter|_Blocking"
     },
     {
         "name": "MPI_Scatterv",
-        "args": "MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *displs, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *displs, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "tags": "_Scatter|_Blocking"
     },
     {
         "name": "MPI_Scan",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm"
+        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "tags": "_Scan|_Blocking"
+    },
+    {
+        "name": "MPI_Sendrecv",
+        "args": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
+        "tags": "_SendRecv|_Blocking"
+    },
+    {
+        "name": "MPI_Sendrecv_replace",
+        "args": "void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
+        "tags": "_SendRecv|_Blocking"
     },
     {
         "name": "MPI_Test",
-        "args": "MPI_Request *request, int *flag, MPI_Status *status"
+        "args": "MPI_Request *request, int *flag, MPI_Status *status",
+        "tags": "_Test"
     },
     {
         "name": "MPI_Testall",
-        "args": "int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]"
+        "args": "int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]",
+        "tags": "_Test"
     },
     {
         "name": "MPI_Testany",
-        "args": "int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status"
+        "args": "int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status",
+        "tags": "_Test"
     },
     {
         "name": "MPI_Testsome",
-        "args": "int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]"
+        "args": "int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]",
+        "tags": "_Test"
     },
     {
         "name": "MPI_Probe",
-        "args": "int source, int tag, MPI_Comm comm, MPI_Status *status"
+        "args": "int source, int tag, MPI_Comm comm, MPI_Status *status",
+        "tags": "_Test"
     },
     {
         "name": "MPI_Iprobe",
-        "args": "int source, int tag, MPI_Comm comm, int *flag, MPI_Status *status"
+        "args": "int source, int tag, MPI_Comm comm, int *flag, MPI_Status *status",
+        "tags": "_Test"
     },
     {
         "name": "MPI_Request_get_status",
-        "args": "MPI_Request request, int *flag, MPI_Status *status"
+        "args": "MPI_Request request, int *flag, MPI_Status *status",
+        "tags": "_Test"
     },
     {
         "name": "MPI_Request_free",
-        "args": "MPI_Request *request"
+        "args": "MPI_Request *request",
+        "tags": ""
     },
     {
         "name": "MPI_Cancel",
-        "args": "MPI_Request *request"
+        "args": "MPI_Request *request",
+        "tags": ""
     },
     {
         "name": "MPI_Comm_rank",
-        "args": "MPI_Comm comm, int *rank"
+        "args": "MPI_Comm comm, int *rank",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_size",
-        "args": "MPI_Comm comm, int *size"
+        "args": "MPI_Comm comm, int *size",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_create",
-        "args": "MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm"
+        "args": "MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_free",
-        "args": "MPI_Comm *comm"
+        "args": "MPI_Comm *comm",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_dup",
-        "args": "MPI_Comm comm, MPI_Comm *newcomm"
+        "args": "MPI_Comm comm, MPI_Comm *newcomm",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_split",
-        "args": "MPI_Comm comm, int color, int key, MPI_Comm *newcomm"
+        "args": "MPI_Comm comm, int color, int key, MPI_Comm *newcomm",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_spawn",
-        "args": "MPI3_CONST char *command, char *argv[], int maxprocs, MPI_Info info, int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]"
+        "args": "MPI3_CONST char *command, char *argv[], int maxprocs, MPI_Info info, int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_spawn_multiple",
-        "args": "int count, char *array_of_commands[], char **array_of_argv[], MPI3_CONST int array_of_maxprocs[], MPI3_CONST MPI_Info array_of_info[], int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]"
+        "args": "int count, char *array_of_commands[], char **array_of_argv[], MPI3_CONST int array_of_maxprocs[], MPI3_CONST MPI_Info array_of_info[], int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Cart_create",
-        "args": "MPI_Comm comm_old, int ndims, MPI3_CONST int dims[], MPI3_CONST int periods[], int reorder, MPI_Comm *comm_cart"
+        "args": "MPI_Comm comm_old, int ndims, MPI3_CONST int dims[], MPI3_CONST int periods[], int reorder, MPI_Comm *comm_cart",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Cart_sub",
-        "args": "MPI_Comm comm, MPI3_CONST int remain_dims[], MPI_Comm *newcomm"
+        "args": "MPI_Comm comm, MPI3_CONST int remain_dims[], MPI_Comm *newcomm",
+        "tags": "_Comm"
     },
     {
         "name": "MPI_Start",
-        "args": "MPI_Request *request"
+        "args": "MPI_Request *request",
+        "tags": ""
     },
     {
         "name": "MPI_Startall",
-        "args": "int count, MPI_Request array_of_requests[]"
+        "args": "int count, MPI_Request array_of_requests[]",
+        "tags": ""
     },
     {
         "name": "MPI_Recv_init",
-        "args": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Receive"
     },
     {
         "name": "MPI_Send_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_Bsend_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_Rsend_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_Ssend_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request"
+        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "tags": "_Send"
     },
     {
         "name": "MPI_File_open",
-        "args": "MPI_Comm comm, MPI3_CONST char *filename, int amode, MPI_Info info, MPI_File *fh"
+        "args": "MPI_Comm comm, MPI3_CONST char *filename, int amode, MPI_Info info, MPI_File *fh",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_close",
-        "args": "MPI_File *fh"
+        "args": "MPI_File *fh",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_read",
-        "args": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_read_all",
-        "args": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_write",
-        "args": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_write_all",
-        "args": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_read_at",
-        "args": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_read_at_all",
-        "args": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_write_at",
-        "args": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_File_write_at_all",
-        "args": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status"
+        "args": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "tags": "_IO"
     },
     {
         "name": "MPI_Get",
-        "args": "void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win"
+        "args": "void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
+        "tags": ""
     },
     {
         "name": "MPI_Put",
-        "args": "MPI3_CONST void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win"
+        "args": "MPI3_CONST void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
+        "tags": ""
     },
     {
         "name": "MPI_Win_create",
-        "args": "void *base, MPI_Aint size, int disp_unit, MPI_Info info, MPI_Comm comm, MPI_Win *win"
+        "args": "void *base, MPI_Aint size, int disp_unit, MPI_Info info, MPI_Comm comm, MPI_Win *win",
+        "tags": ""
     },
     {
         "name": "MPI_Win_free",
-        "args": "MPI_Win *win"
+        "args": "MPI_Win *win",
+        "tags": ""
     },
     {
         "name": "MPI_Win_fence",
-        "args": "int assert, MPI_Win win"
+        "args": "int assert, MPI_Win win",
+        "tags": ""
     },
     {
         "name": "MPI_Win_start",
-        "args": "MPI_Group group, int assert, MPI_Win win"
+        "args": "MPI_Group group, int assert, MPI_Win win",
+        "tags": ""
     },
     {
         "name": "MPI_Win_complete",
-        "args": "MPI_Win win"
+        "args": "MPI_Win win",
+        "tags": ""
     },
     {
         "name": "MPI_Win_wait",
-        "args": "MPI_Win win"
+        "args": "MPI_Win win",
+        "tags": ""
+    },
+    {
+        "name": "MPI_Win_post",
+        "args": "MPI_Group group, int assert, MPI_Win win",
+        "tags": ""
     }
     ]
 }

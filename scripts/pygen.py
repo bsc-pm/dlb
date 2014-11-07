@@ -23,7 +23,6 @@ class MPIFile:
                     if pragma_scope:
                         if '#pragma pygen end' in line:
                             pragma_scope = False
-                            pragma_block += '\n'
                             parsed = self._parse_block(pragma_block)
                             out_f.write(parsed)
                         else:
@@ -43,6 +42,8 @@ class MPIFile:
                 MPI_LCASE = func['name'].lower(),
                 FULL_ARGS = func['args'],
                 ARGS = func['short_args'],
+                TAGS = func['tags'],
+                MPI_KEYNAME = func['name'][4:],
                 BEFORE_FUNC = func['before'],
                 AFTER_FUNC = func['after']
                 )
@@ -52,12 +53,18 @@ class MPIFile:
 def enrich(mpi_calls):
     last_word = re.compile(r"(\w+)(\[\])?\Z")
     for func in mpi_calls:
+        # Parse short args: "int argc, char *argv[]" -> "argc, argv"
         short_args = []
         if func['args'] != 'void':
             for arg in func['args'].split(','):
                 short_args.append(last_word.search(arg).group(1))
         func['short_args'] = ', '.join(short_args)
 
+        # Set tag _Unknown if not defined
+        if not func['tags']:
+            func['tags'] = '_Unknown'
+
+        # Set before and after funtions
         if 'MPI_Init' in func['name']:
             func['before'] = 'before_init()'
             func['after'] = 'after_init()'
