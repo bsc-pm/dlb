@@ -2,392 +2,470 @@
     "mpi_calls": [
     {
         "name": "MPI_Init",
-        "args": "int *argc, char ***argv",
+        "cpar": "int *argc, char ***argv",
+        "fpar": "MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Init_thread",
-        "args": "int *argc, char ***argv, int required, int *provided",
+        "cpar": "int *argc, char ***argv, int required, int *provided",
+        "fpar": "MPI_Fint *required, MPI_Fint *provided, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Finalize",
-        "args": "void",
+        "cpar": "void",
+        "fpar": "MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Bsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Ssend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Rsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Send",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Send|_Blocking"
     },
     {
         "name": "MPI_Ibsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_Isend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_Issend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_Irsend",
-        "args": "MPI3_CONST void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_Recv",
-        "args": "void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status",
+        "cpar": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status",
+        "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Receive|_Blocking"
     },
     {
         "name": "MPI_Irecv",
-        "args": "void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Receive"
     },
     {
         "name": "MPI_Reduce",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Reduce|_Blocking"
     },
     {
         "name": "MPI_Reduce_scatter",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, MPI3_CONST int* recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST int *recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Reduce|_Blocking"
     },
     {
         "name": "MPI_Allreduce",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Reduce|_Blocking"
     },
     {
         "name": "MPI_Barrier",
-        "args": "MPI_Comm comm",
+        "cpar": "MPI_Comm comm",
+        "fpar": "MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Barrier|_Blocking"
     },
     {
         "name": "MPI_Wait",
-        "args": "MPI_Request *request, MPI_Status *status",
+        "cpar": "MPI_Request *request, MPI_Status *status",
+        "fpar": "MPI_Fint *request, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Waitall",
-        "args": "int count, MPI_Request *array_of_requests, MPI_Status *array_of_statuses",
+        "cpar": "int count, MPI_Request *array_of_requests, MPI_Status *array_of_statuses",
+        "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
         "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Waitany",
-        "args": "int count, MPI_Request *requests, int* index, MPI_Status* status",
+        "cpar": "int count, MPI_Request *requests, int *index, MPI_Status *status",
+        "fpar": "MPI_Fint *count, MPI_Fint *requests, MPI_Fint *index, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Waitsome",
-        "args": "int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses",
+        "cpar": "int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses",
+        "fpar": "MPI_Fint *incount, MPI_Fint *array_of_requests, MPI_Fint *outcount, MPI_Fint *array_of_indices, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
         "tags": "_Wait|_Blocking"
     },
     {
         "name": "MPI_Bcast",
-        "args": "void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm",
+        "cpar": "void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm",
+        "fpar": "void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Bcast|_Blocking"
     },
     {
         "name": "MPI_Alltoall",
-        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_All2All|_Blocking"
     },
     {
         "name": "MPI_Alltoallv",
-        "args": "MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int *sendcounts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *sdispls, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *rdispls, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_All2All|_Blocking"
     },
     {
         "name": "MPI_Allgather",
-        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Allgatherv",
-        "args": "MPI3_CONST void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Gather",
-        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Gatherv",
-        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, MPI3_CONST int *recvcnts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Gather|_Blocking"
     },
     {
         "name": "MPI_Scatter",
-        "args": "MPI3_CONST void* sendbuf, int sendcnt, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Scatter|_Blocking"
     },
     {
         "name": "MPI_Scatterv",
-        "args": "MPI3_CONST void* sendbuf, MPI3_CONST int *sendcnts, MPI3_CONST int *displs, MPI_Datatype sendtype, void* recvbuf, int recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int *sendcounts, MPI3_CONST int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Scatter|_Blocking"
     },
     {
         "name": "MPI_Scan",
-        "args": "MPI3_CONST void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
+        "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Scan|_Blocking"
     },
     {
         "name": "MPI_Sendrecv",
-        "args": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
+        "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
+        "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, MPI_Fint *dest, MPI_Fint *sendtag, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_SendRecv|_Blocking"
     },
     {
         "name": "MPI_Sendrecv_replace",
-        "args": "void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
+        "cpar": "void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
+        "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *sendtag, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_SendRecv|_Blocking"
     },
     {
         "name": "MPI_Test",
-        "args": "MPI_Request *request, int *flag, MPI_Status *status",
+        "cpar": "MPI_Request *request, int *flag, MPI_Status *status",
+        "fpar": "MPI_Fint *request, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Test"
     },
     {
         "name": "MPI_Testall",
-        "args": "int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]",
+        "cpar": "int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]",
+        "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *flag, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
         "tags": "_Test"
     },
     {
         "name": "MPI_Testany",
-        "args": "int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status",
+        "cpar": "int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status",
+        "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *index, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Test"
     },
     {
         "name": "MPI_Testsome",
-        "args": "int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]",
+        "cpar": "int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]",
+        "fpar": "MPI_Fint *incount, MPI_Fint *array_of_requests, MPI_Fint *outcount, MPI_Fint *array_of_indices, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
         "tags": "_Test"
     },
     {
         "name": "MPI_Probe",
-        "args": "int source, int tag, MPI_Comm comm, MPI_Status *status",
+        "cpar": "int source, int tag, MPI_Comm comm, MPI_Status *status",
+        "fpar": "MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Test"
     },
     {
         "name": "MPI_Iprobe",
-        "args": "int source, int tag, MPI_Comm comm, int *flag, MPI_Status *status",
+        "cpar": "int source, int tag, MPI_Comm comm, int *flag, MPI_Status *status",
+        "fpar": "MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Test"
     },
     {
         "name": "MPI_Request_get_status",
-        "args": "MPI_Request request, int *flag, MPI_Status *status",
+        "cpar": "MPI_Request request, int *flag, MPI_Status *status",
+        "fpar": "MPI_Fint *request, int *flag, MPI_Fint *status, MPI_Fint *ierror",
         "tags": "_Test"
     },
     {
         "name": "MPI_Request_free",
-        "args": "MPI_Request *request",
+        "cpar": "MPI_Request *request",
+        "fpar": "MPI_Fint *request, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Cancel",
-        "args": "MPI_Request *request",
+        "cpar": "MPI_Request *request",
+        "fpar": "MPI_Fint *request, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Comm_rank",
-        "args": "MPI_Comm comm, int *rank",
+        "cpar": "MPI_Comm comm, int *rank",
+        "fpar": "MPI_Fint *comm, MPI_Fint *rank, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_size",
-        "args": "MPI_Comm comm, int *size",
+        "cpar": "MPI_Comm comm, int *size",
+        "fpar": "MPI_Fint *comm, MPI_Fint *size, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_create",
-        "args": "MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm",
+        "cpar": "MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm",
+        "fpar": "MPI_Fint *comm, MPI_Fint *group, MPI_Fint *newcomm, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_free",
-        "args": "MPI_Comm *comm",
+        "cpar": "MPI_Comm *comm",
+        "fpar": "MPI_Fint *comm, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_dup",
-        "args": "MPI_Comm comm, MPI_Comm *newcomm",
+        "cpar": "MPI_Comm comm, MPI_Comm *newcomm",
+        "fpar": "MPI_Fint *comm, MPI_Fint *newcomm, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_split",
-        "args": "MPI_Comm comm, int color, int key, MPI_Comm *newcomm",
+        "cpar": "MPI_Comm comm, int color, int key, MPI_Comm *newcomm",
+        "fpar": "MPI_Fint *comm, MPI_Fint *color, MPI_Fint *key, MPI_Fint *newcomm, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_spawn",
-        "args": "MPI3_CONST char *command, char *argv[], int maxprocs, MPI_Info info, int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
+        "cpar": "MPI3_CONST char *command, char *argv[], int maxprocs, MPI_Info info, int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
+        "fpar": "MPI3_CONST char *command, char *argv, MPI_Fint *maxprocs, MPI_Fint *info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *intercomm, MPI_Fint *array_of_errcodes, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Comm_spawn_multiple",
-        "args": "int count, char *array_of_commands[], char **array_of_argv[], MPI3_CONST int array_of_maxprocs[], MPI3_CONST MPI_Info array_of_info[], int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
+        "cpar": "int count, char *array_of_commands[], char **array_of_argv[], MPI3_CONST int array_of_maxprocs[], MPI3_CONST MPI_Info array_of_info[], int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
+        "fpar": "MPI_Fint *count, char *array_of_commands, char *array_of_argv, MPI3_CONST MPI_Fint *array_of_maxprocs, MPI3_CONST MPI_Fint *array_of_info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *intercomm, MPI_Fint *array_of_errcodes, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Cart_create",
-        "args": "MPI_Comm comm_old, int ndims, MPI3_CONST int dims[], MPI3_CONST int periods[], int reorder, MPI_Comm *comm_cart",
+        "cpar": "MPI_Comm comm_old, int ndims, MPI3_CONST int dims[], MPI3_CONST int periods[], int reorder, MPI_Comm *comm_cart",
+        "fpar": "MPI_Fint *comm_old, MPI_Fint *ndims, MPI3_CONST MPI_Fint *dims, MPI3_CONST MPI_Fint *periods, MPI_Fint *reorder, MPI_Fint *comm_cart, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Cart_sub",
-        "args": "MPI_Comm comm, MPI3_CONST int remain_dims[], MPI_Comm *newcomm",
+        "cpar": "MPI_Comm comm, MPI3_CONST int remain_dims[], MPI_Comm *newcomm",
+        "fpar": "MPI_Fint *comm, MPI3_CONST MPI_Fint *remain_dims, MPI_Fint *comm_new, MPI_Fint *ierror",
         "tags": "_Comm"
     },
     {
         "name": "MPI_Start",
-        "args": "MPI_Request *request",
+        "cpar": "MPI_Request *request",
+        "fpar": "MPI_Fint *request, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Startall",
-        "args": "int count, MPI_Request array_of_requests[]",
+        "cpar": "int count, MPI_Request array_of_requests[]",
+        "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Recv_init",
-        "args": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Receive"
     },
     {
         "name": "MPI_Send_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_Bsend_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_Rsend_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_Ssend_init",
-        "args": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
+        "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
         "tags": "_Send"
     },
     {
         "name": "MPI_File_open",
-        "args": "MPI_Comm comm, MPI3_CONST char *filename, int amode, MPI_Info info, MPI_File *fh",
+        "cpar": "MPI_Comm comm, MPI3_CONST char *filename, int amode, MPI_Info info, MPI_File *fh",
+        "fpar": "MPI_Fint *comm, char *filename, MPI_Fint *amode, MPI_Fint *info, MPI_File *fh, MPI_Fint *len, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_close",
-        "args": "MPI_File *fh",
+        "cpar": "MPI_File *fh",
+        "fpar": "MPI_File *fh, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_read",
-        "args": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_read_all",
-        "args": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_write",
-        "args": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_write_all",
-        "args": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_read_at",
-        "args": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, MPI_Offset *offset, void* buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_read_at_all",
-        "args": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, MPI_Offset *offset, void* buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_write_at",
-        "args": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, MPI_Offset *offset, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_File_write_at_all",
-        "args": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "cpar": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
+        "fpar": "MPI_File *fh, MPI_Offset *offset, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
         "tags": "_IO"
     },
     {
         "name": "MPI_Get",
-        "args": "void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
+        "cpar": "void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
+        "fpar": "MPI_Fint *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, MPI_Fint *target_rank, MPI_Fint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Put",
-        "args": "MPI3_CONST void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
+        "cpar": "MPI3_CONST void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
+        "fpar": "MPI3_CONST void *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, MPI_Fint *target_rank, MPI_Fint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Win_create",
-        "args": "void *base, MPI_Aint size, int disp_unit, MPI_Info info, MPI_Comm comm, MPI_Win *win",
+        "cpar": "void *base, MPI_Aint size, int disp_unit, MPI_Info info, MPI_Comm comm, MPI_Win *win",
+        "fpar": "void *base, MPI_Aint *size, MPI_Fint *disp_unit, MPI_Fint *info, MPI_Fint *comm, MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Win_free",
-        "args": "MPI_Win *win",
+        "cpar": "MPI_Win *win",
+        "fpar": "MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Win_fence",
-        "args": "int assert, MPI_Win win",
+        "cpar": "int assert, MPI_Win win",
+        "fpar": "MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Win_start",
-        "args": "MPI_Group group, int assert, MPI_Win win",
+        "cpar": "MPI_Group group, int assert, MPI_Win win",
+        "fpar": "MPI_Fint *group, MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Win_complete",
-        "args": "MPI_Win win",
+        "cpar": "MPI_Win win",
+        "fpar": "MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Win_wait",
-        "args": "MPI_Win win",
+        "cpar": "MPI_Win win",
+        "fpar": "MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     },
     {
         "name": "MPI_Win_post",
-        "args": "MPI_Group group, int assert, MPI_Win win",
+        "cpar": "MPI_Group group, int assert, MPI_Win win",
+        "fpar": "MPI_Fint *group, MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
     }
     ]

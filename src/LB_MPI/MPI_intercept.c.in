@@ -34,10 +34,10 @@
 #endif
 
 #pragma pygen start
-int {MPI_NAME}({FULL_ARGS}) {{
+int {MPI_NAME}({C_PARAMS}) {{
     debug_inout_MPI(">> {MPI_NAME}...............\n");
-    DLB_{MPI_NAME}_enter({ARGS});
-    int res = P{MPI_NAME}({ARGS});
+    DLB_{MPI_NAME}_enter({C_ARG_LIST});
+    int res = P{MPI_NAME}({C_ARG_LIST});
     DLB_{MPI_NAME}_leave();
     debug_inout_MPI("<< {MPI_NAME}...............\n");
     return res;

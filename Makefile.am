@@ -50,7 +50,8 @@ endif
 # Headers
 ##########################################################################
 dist_include_HEADERS = src/LB_core/DLB_interface.h
-nodist_include_HEADERS = src/LB_MPI/MPI_interface.h
+nodist_include_HEADERS = src/LB_MPI/MPI_interface.h \
+			 src/LB_MPI/MPI_interfaceF.h
 EXTRA_DIST += src/support/dlb_api.h
 
 ##########################################################################
@@ -82,6 +83,18 @@ EXTRA_DIST    += src/LB_MPI/MPI_interface.c.in
 CLEANFILES    += src/LB_MPI/MPI_interface.c
 BUILT_SOURCES += src/LB_MPI/MPI_interface.c
 src/LB_MPI/MPI_interface.c: $(top_srcdir)/src/LB_MPI/MPI_interface.c.in $(MPICALLS_DB)
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+
+EXTRA_DIST    += src/LB_MPI/MPI_interfaceF.c.in
+CLEANFILES    += src/LB_MPI/MPI_interfaceF.c
+BUILT_SOURCES += src/LB_MPI/MPI_interfaceF.c
+src/LB_MPI/MPI_interfaceF.c: $(top_srcdir)/src/LB_MPI/MPI_interfaceF.c.in $(MPICALLS_DB)
+	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+
+EXTRA_DIST    += src/LB_MPI/MPI_interfaceF.h.in
+CLEANFILES    += src/LB_MPI/MPI_interfaceF.h
+BUILT_SOURCES += src/LB_MPI/MPI_interfaceF.h
+src/LB_MPI/MPI_interfaceF.h: $(top_srcdir)/src/LB_MPI/MPI_interfaceF.h.in $(MPICALLS_DB)
 	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_intercept.c.in
@@ -195,7 +208,8 @@ MPI_SRCS = \
 
 MPI_SRCS_GEN = \
 	src/LB_MPI/MPI_calls_coded.c    \
-	src/LB_MPI/MPI_interface.c
+	src/LB_MPI/MPI_interface.c      \
+	src/LB_MPI/MPI_interfaceF.c
 	$(END)
 
 MPI_INTR_GEN = src/LB_MPI/MPI_intercept.c

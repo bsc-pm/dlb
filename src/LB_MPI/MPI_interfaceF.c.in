@@ -17,9 +17,17 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef MPI_INTERFACE_H
-#define MPI_INTERFACE_H
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
+#ifdef MPI_LIB
+
+#include "LB_MPI/process_MPI.h"
+#include "LB_MPI/MPI_calls_coded.h"
+#include "LB_MPI/MPI_interface.h"
+#include "support/dlb_api.h"
+#include "support/debug.h"
 #include <mpi.h>
 
 #if MPI_VERSION >= 3
@@ -28,21 +36,17 @@
 #define MPI3_CONST
 #endif
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #pragma pygen start
-void DLB_{MPI_NAME}_enter({C_PARAMS});
-void DLB_{MPI_NAME}_leave(void);
+void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
+    debug_inout(">> {MPI_NAME}...............\n");
+    {BEFORE_FUNC};
+}}
+
+void DLB_{MPI_NAME}_F_leave(void) {{
+    debug_inout("<< {MPI_NAME}...............\\n");
+    {AFTER_FUNC};
+}}
 
 #pragma pygen end
 
-void DLB_MPI_node_barrier(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif //MPI_INTERFACE_H
+#endif /* MPI_LIB */

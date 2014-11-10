@@ -40,8 +40,10 @@ class MPIFile:
             parsed += block.format(
                 MPI_NAME = func['name'],
                 MPI_LCASE = func['name'].lower(),
-                FULL_ARGS = func['args'],
-                ARGS = func['short_args'],
+                C_PARAMS = func['cpar'],
+                F_PARAMS = func['fpar'],
+                C_ARG_LIST = func['c_args'],
+                F_ARG_LIST = func['f_args'],
                 TAGS = func['tags'],
                 MPI_KEYNAME = func['name'][4:],
                 BEFORE_FUNC = func['before'],
@@ -53,12 +55,18 @@ class MPIFile:
 def enrich(mpi_calls):
     last_word = re.compile(r"(\w+)(\[\])?\Z")
     for func in mpi_calls:
-        # Parse short args: "int argc, char *argv[]" -> "argc, argv"
-        short_args = []
-        if func['args'] != 'void':
-            for arg in func['args'].split(','):
-                short_args.append(last_word.search(arg).group(1))
-        func['short_args'] = ', '.join(short_args)
+        # C: Parse arg list: "int argc, char *argv[]" -> "argc, argv"
+        c_args = []
+        if func['cpar'] != 'void':
+            for arg in func['cpar'].split(','):
+                c_args.append(last_word.search(arg).group(1))
+        func['c_args'] = ', '.join(c_args)
+        # Fortran: Parse arg list: "MPI_Fint *comm, MPI_Fint *ierror" -> "comm, ierror"
+        f_args = []
+        if func['fpar'] != '':
+            for arg in func['fpar'].split(','):
+                f_args.append(last_word.search(arg).group(1))
+        func['f_args'] = ', '.join(f_args)
 
         # Set tag _Unknown if not defined
         if not func['tags']:
