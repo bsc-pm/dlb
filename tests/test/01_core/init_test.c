@@ -25,6 +25,7 @@ test_generator="gens/single-generator"
 #include "LB_core/DLB_kernel.h"
 
 int main( int argc, char **argv ) {
-    Init();
+    int spid = Initialize();
+    Finish( spid );
     return 0;
 }

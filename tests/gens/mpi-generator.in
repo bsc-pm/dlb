@@ -3,7 +3,7 @@
 cat <<EOF
 
 SRC=@SRCDIR@/src
-BUILD=@BUILDDIR@/src
+BUILD=@BUILDDIR@
 
 PERFO_CFLAGS=@PERFO_CFLAGS@
 PERFO_CXXFLAGS=@PERFO_CXXFLAGS@
@@ -29,10 +29,10 @@ test_CXXFLAGS_instrumentation="\$INSTR_CXXFLAGS"
 test_CFLAGS_instrumentation_debug="\$INSTRDEBUG_CFLAGS"
 test_CXXFLAGS_instrumentation_debug="\$INSTRDEBUG_CXXFLAGS"
 
-test_LDFLAGS_performance="\$BUILD/.libs/libdlb.so"
+test_LDFLAGS_performance="\$BUILD/.libs/libdlb.so \$BUILD/.libs/libdlb_mpi.so"
 test_ENV_performance="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
-test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so"
+test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so \$BUILD/.libs/libdlb_mpi_dbg.so"
 test_ENV_debug="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
 test_ENV="mpirun -n 2 --bind-to-core env"
