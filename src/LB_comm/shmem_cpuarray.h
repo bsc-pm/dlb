@@ -27,6 +27,7 @@
 void shmem_cpuarray__init( const cpu_set_t *cpu_set );
 void shmem_cpuarray__finalize( void );
 void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask );
+void shmem_cpuarray__add_cpu( int cpu );
 const cpu_set_t* shmem_cpuarray__recover_defmask( void );
 void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources );
 int shmem_cpuarray__return_claimed ( cpu_set_t *mask );
@@ -39,6 +40,7 @@ static const struct {
     void (*init) (const cpu_set_t *cpu_set);
     void (*finalize) (void);
     void (*add_mask) (const cpu_set_t*);
+    void (*add_cpu) (int cpu);
     const cpu_set_t* (*recover_defmask) (void);
     void (*recover_some_defcpus) (cpu_set_t*, int);
     int (*return_claimed) (cpu_set_t*);
@@ -50,6 +52,7 @@ static const struct {
     shmem_cpuarray__init,
     shmem_cpuarray__finalize,
     shmem_cpuarray__add_mask,
+    shmem_cpuarray__add_cpu,
     shmem_cpuarray__recover_defmask,
     shmem_cpuarray__recover_some_defcpus,
     shmem_cpuarray__return_claimed,

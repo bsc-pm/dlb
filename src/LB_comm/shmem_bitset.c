@@ -140,6 +140,13 @@ void shmem_bitset__add_mask( const cpu_set_t *cpu_set ) {
     add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 }
 
+void shmem_bitset__add_cpu( int cpu ) {
+    cpu_set_t mask;
+    CPU_ZERO( &mask );
+    CPU_SET( cpu, &mask );
+    shmem_bitset__add_mask( &mask );
+}
+
 const cpu_set_t* shmem_bitset__recover_defmask( void ) {
     shmem_lock();
     {

@@ -27,6 +27,7 @@
 void shmem_bitset__init( const cpu_set_t *cpu_set );
 void shmem_bitset__finalize( void );
 void shmem_bitset__add_mask( const cpu_set_t *cpu_set );
+void shmem_bitset__add_cpu( int cpu );
 const cpu_set_t* shmem_bitset__recover_defmask( void );
 void shmem_bitset__recover_some_defcpus( cpu_set_t *mask, int max_resources );
 int shmem_bitset__return_claimed ( cpu_set_t *mask );
@@ -39,6 +40,7 @@ static const struct {
     void (*init) (const cpu_set_t *cpu_set);
     void (*finalize) (void);
     void (*add_mask) (const cpu_set_t*);
+    void (*add_cpu) (int cpu);
     const cpu_set_t* (*recover_defmask) (void);
     void (*recover_some_defcpus) (cpu_set_t*, int);
     int (*return_claimed) (cpu_set_t*);
@@ -50,6 +52,7 @@ static const struct {
     shmem_bitset__init,
     shmem_bitset__finalize,
     shmem_bitset__add_mask,
+    shmem_bitset__add_cpu,
     shmem_bitset__recover_defmask,
     shmem_bitset__recover_some_defcpus,
     shmem_bitset__return_claimed,

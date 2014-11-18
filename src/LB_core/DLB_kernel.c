@@ -434,6 +434,7 @@ void returnclaimed( void ) {
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
+
 int releasecpu( int cpu ) {
     if (dlb_enabled) {
         return lb_funcs.releasecpu(cpu);

@@ -218,58 +218,31 @@ int auto_lewi_mask_ReturnCpuIfClaimed( int cpu ) {
 }
 
 int auto_lewi_mask_ReleaseCpu( int cpu ) {
-    add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
-    cpu_set_t my_cpu;
-    sched_getaffinity( 0, sizeof(cpu_set_t), &my_cpu);
-    assert(CPU_ISSET(cpu, &my_cpu));
-
-    int released=0;
-    debug_lend ( "Lending cpu:  %d \n", cpu );
-    // add_event(1000, cpu);
-
-//debug_basic_info ( "I release cpu %d\n", cpu);
-
-    cpu_set_t debug_mask;
-    cpu_set_t release_mask;
-    CPU_ZERO( &release_mask );
-    CPU_SET(cpu, &release_mask);
-
-//debug_basic_info ( "release mask %s\n", mu_to_str(&release_mask));
-
-    cpu_set_t current_mask;
-    CPU_ZERO( &current_mask );
-
-    pthread_mutex_lock (&mutex);
+    int returned = 0;
     if (enabled) {
+        add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
+        debug_lend ( "Lending cpu:  %d \n", cpu );
+
+        pthread_mutex_lock (&mutex);
+        cpu_set_t current_mask;
         get_mask( &current_mask );
-        get_mask(&debug_mask);
 
         if (CPU_ISSET(cpu, &current_mask) && nthreads>1) {
-            //debug_basic_info ( "current mask %s\n", mu_to_str(&current_mask));
-
-            CPU_XOR( &current_mask, &current_mask, &release_mask );
-
-            //debug_basic_info ( "new mask %s\n", mu_to_str(&current_mask));
-
-
+            shmem_mask.add_cpu( cpu );
+            CPU_CLR( cpu, &current_mask );
             set_mask( &current_mask );
             nthreads--;
-            shmem_mask.add_mask( &release_mask );
             add_event( THREADS_USED_EVENT, nthreads );
-            released=1;
+            returned = 1;
         }
-        /*else
-          assert(CPU_ISSET(cpu, &current_mask));*/
+
+        pthread_mutex_unlock (&mutex);
 
         assert(nthreads==CPU_COUNT(&current_mask));
         debug_shmem ( "My mask %s\n", mu_to_str(&current_mask));
+        add_event(RUNTIME_EVENT, 0);
     }
-    pthread_mutex_unlock (&mutex);
-
-
-    add_event(RUNTIME_EVENT, 0);
-//   add_event(1000, 0);
-    return released;
+    return returned;
 }
 
 void auto_lewi_mask_ClaimCpus(int cpus) {

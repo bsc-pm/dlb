@@ -206,6 +206,51 @@ void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask ) {
     add_event( IDLE_CPUS_EVENT, idle_count );
 }
 
+/* Add cpu to the Shared Mask
+ * If the process originally owns the CPU:      State => LENT
+ * If the process is currently using the CPU:   Guest => NOBODY
+ */
+void shmem_cpuarray__add_cpu( int cpu ) {
+    DLB_DEBUG( cpu_set_t freed_cpus; )
+    DLB_DEBUG( cpu_set_t idle_cpus; )
+    DLB_DEBUG( CPU_ZERO( &freed_cpus ); )
+    DLB_DEBUG( CPU_ZERO( &idle_cpus ); )
+
+    DLB_INSTR( int idle_count = 0; )
+
+    shmem_lock();
+    {
+        // If the CPU was mine, just change the state
+        if ( CPU_ISSET( cpu, &default_mask ) ) {
+            shdata->node_info[cpu].state = LENT;
+        }
+
+        // If am currently using the CPU, free it
+        if ( shdata->node_info[cpu].guest == ME ) {
+            shdata->node_info[cpu].guest = NOBODY;
+            DLB_DEBUG( CPU_SET( cpu, &freed_cpus ); )
+        }
+
+        // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
+        int i;
+        for ( i = 0; i < cpus_node; i++ ) {
+            if ( is_idle(i) ) {
+                DLB_INSTR( idle_count++; )
+                DLB_DEBUG( CPU_SET( i, &idle_cpus ); )
+        }
+    }
+    }
+    shmem_unlock();
+
+    DLB_DEBUG( int size = CPU_COUNT( &freed_cpus ); )
+    DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
+    debug_shmem( "Lending %s\n", mu_to_str(&freed_cpus) );
+    debug_shmem( "Increasing %d Idle Threads (%d now)\n", size, post_size );
+    debug_shmem( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+
+    add_event( IDLE_CPUS_EVENT, idle_count );
+}
+
 /* Remove the process default mask from the Shared Mask
  * CPUs from default_mask:          State => BUSY
  * CPUs that also have no guest:    Guest => ME
