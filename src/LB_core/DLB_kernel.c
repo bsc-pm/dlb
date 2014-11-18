@@ -57,11 +57,6 @@
 
 //double iterCpuTime_avg=0, iterMPITime_avg=0 ;
 
-int omp_get_max_threads(void) __attribute__( ( weak ) );
-int nanos_omp_get_num_threads(void) __attribute__( ( weak ) );
-int nanos_omp_get_max_threads(void) __attribute__( ( weak ) );
-const char* nanos_get_pm(void) __attribute__( ( weak ) );
-
 // Global
 int use_dpd = 0;
 
@@ -264,6 +259,8 @@ int Initialize(void) {
         debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
 #endif
 
+        pm_init();
+#if 0
         if (thread_distrib==NULL) {
             if ( nanos_get_pm ) {
                 const char *pm = nanos_get_pm();
@@ -314,7 +311,7 @@ int Initialize(void) {
                 _default_nthreads=atoi(token);
             }
         }
-
+#endif
 
         debug_basic_info0 ( "DLB: This process starts with %d threads\n", _default_nthreads);
 

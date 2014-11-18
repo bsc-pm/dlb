@@ -58,11 +58,12 @@ void Lend_light_Init() {
     if ((bind=getenv("LB_BIND"))!=NULL) {
         if(strcasecmp(bind, "YES")==0) {
             fprintf(stdout, "DLB: Binding of threads to cpus enabled\n");
-            if (css_set_num_threads) { //If we are running with openMP we must bind the slave threads
-                bind_master(_process_id, _node_id);
-            } else {
-                fprintf(stderr, "DLB ERROR: Binding of threads only enabled for SMPSs\n");
-            }
+            // Not implemented
+            // if (css_set_num_threads) { //If we are running with openMP we must bind the slave threads
+            //     bind_master(_process_id, _node_id);
+            // } else {
+            //     fprintf(stderr, "DLB ERROR: Binding of threads only enabled for SMPSs\n");
+            // }
         }
     }
 

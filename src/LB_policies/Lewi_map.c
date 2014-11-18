@@ -134,7 +134,8 @@ void setThreads_Map(int numThreads, int action, int* cpus) {
         }
 
 
-        update_cpus(action, num_cpus, cpus);
+        // Not implemented
+        //update_cpus(action, num_cpus, cpus);
 //fprintf(stderr, "(%d:%d) ******************** CPUS %d --> %d\n", _node_id, _process_id, myCPUS, numThreads);
         myCPUS=numThreads;
     }
