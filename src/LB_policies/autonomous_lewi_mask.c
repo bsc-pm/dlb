@@ -130,7 +130,6 @@ void auto_lewi_mask_UpdateResources( int max_resources ) {
     if (enabled) {
         get_mask( &mask );
 
-
         int collected = shmem_mask.collect_mask( &mask, max_resources );
 
         if ( collected > 0 ) {
@@ -154,16 +153,10 @@ void auto_lewi_mask_ReturnClaimedCpus( void ) {
     if (enabled) {
         get_mask( &mask );
 
-
         int returned = shmem_mask.return_claimed( &mask );
 
         if ( returned > 0 ) {
             nthreads -= returned;
-            // If final nthreads is 0, get at least one cpu from the default mask
-            if ( nthreads == 0 ) {
-                shmem_mask.recover_some_defcpus( &mask, 1 );
-                nthreads = 1;
-            }
             set_mask( &mask );
             debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
@@ -197,12 +190,6 @@ int auto_lewi_mask_ReturnCpuIfClaimed( int cpu ) {
                 if ( returned > 0 ) {
                     nthreads -= returned;
                     CPU_CLR(cpu, &mask);
-
-                    // If final nthreads is 0, get at least one cpu from the default mask
-                    if ( nthreads == 0 ) {
-                        shmem_mask.recover_some_defcpus( &mask, 1 );
-                        nthreads = 1;
-                    }
                     set_mask( &mask );
                     debug_lend ( "RETURNING MY CPU %d returned threads for a total of %d\n", returned, nthreads );
                     add_event( THREADS_USED_EVENT, nthreads );
