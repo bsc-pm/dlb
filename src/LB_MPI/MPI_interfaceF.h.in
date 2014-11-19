@@ -34,12 +34,10 @@ extern "C"
 #endif
 
 #pragma pygen start
-void DLB_{MPI_NAME}_enter({C_PARAMS});
-void DLB_{MPI_NAME}_leave(void);
+void DLB_{MPI_NAME}_F_enter({F_PARAMS});
+void DLB_{MPI_NAME}_F_leave(void);
 
 #pragma pygen end
-
-void DLB_MPI_node_barrier(void);
 
 #ifdef __cplusplus
 }

@@ -137,7 +137,7 @@ void after_init(void) {
     // Color = node, key is 0 because we don't mind the internal rank
     MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 
-    spid = Init();
+    spid = Initialize();
     mpi_ready=1;
 }
 

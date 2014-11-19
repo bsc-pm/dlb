@@ -17,32 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef MPI_INTERFACE_H
-#define MPI_INTERFACE_H
-
-#include <mpi.h>
-
-#if MPI_VERSION >= 3
-#define MPI3_CONST const
-#else
-#define MPI3_CONST
-#endif
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
+const char* mpi_call_names[] = {
+    "Unknown MPI call",
 #pragma pygen start
-void DLB_{MPI_NAME}_enter({C_PARAMS});
-void DLB_{MPI_NAME}_leave(void);
-
+    "{MPI_NAME}",
 #pragma pygen end
-
-void DLB_MPI_node_barrier(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif //MPI_INTERFACE_H
+    "Not implemented MPI call"
+};

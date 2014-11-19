@@ -43,7 +43,7 @@ extern int use_dpd;
 
 void set_dlb_enabled(bool enabled);
 
-int Init(void);
+int Initialize(void);
 
 void Finish(int id);
 

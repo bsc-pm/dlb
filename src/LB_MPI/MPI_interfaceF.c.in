@@ -17,79 +17,36 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-const char* mpi_call_names[] = {
-    "Unknown MPI call",
-    "MPI_Bsend",
-    "MPI_Ssend",
-    "MPI_Rsend",
-    "MPI_Send",
-    "MPI_Ibsend",
-    "MPI_Isend",
-    "MPI_Issend",
-    "MPI_Irsend",
-    "MPI_Recv",
-    "MPI_Irecv",
-    "MPI_Reduce",
-    "MPI_Reduce_scatter",
-    "MPI_Allreduce",
-    "MPI_Barrier",
-    "MPI_Wait",
-    "MPI_Waitall",
-    "MPI_Waitany",
-    "MPI_Waitsome",
-    "MPI_Bcast",
-    "MPI_Alltoall",
-    "MPI_Alltoallv",
-    "MPI_Allgather",
-    "MPI_Allgatherv",
-    "MPI_Gather",
-    "MPI_Gatherv",
-    "MPI_Scatter",
-    "MPI_Scatterv",
-    "MPI_Scan",
-    "MPI_Sendrecv",
-    "MPI_Sendrecv_replace",
-    "MPI_Test",
-    "MPI_Testall",
-    "MPI_Testany",
-    "MPI_Testsome",
-    "MPI_Probe",
-    "MPI_IProbe",
-    "MPI_Request_get_status",
-    "MPI_Request_free",
-    "MPI_Cancel",
-    "MPI_Comm_Rank",
-    "MPI_Comm_Size",
-    "MPI_Comm_Create",
-    "MPI_Comm_Free",
-    "MPI_Comm_Dup",
-    "MPI_Comm_Split",
-    "MPI_Comm_spawn",
-    "MPI_Comm_spawn_multiple",
-    "MPI_Cart_create",
-    "MPI_Cart_sub",
-    "MPI_Start",
-    "MPI_Startall",
-    "MPI_Recv_init",
-    "MPI_Send_init",
-    "MPI_Bsend_init",
-    "MPI_Rsend_init",
-    "MPI_Ssend_init",
-    "MPI_File_close",
-    "MPI_File_read",
-    "MPI_File_read_all",
-    "MPI_File_write",
-    "MPI_File_write_all",
-    "MPI_File_read_at",
-    "MPI_File_read_at_all",
-    "MPI_file_write_at",
-    "MPI_File_write_at_all",
-    "MPI_Get",
-    "MPI_Put",
-    "Win_create",
-    "Win_free",
-    "Win_fence",
-    "Win_start",
-    "Win_complete",
-    "Win_wait"
-};
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#ifdef MPI_LIB
+
+#include "LB_MPI/process_MPI.h"
+#include "LB_MPI/MPI_calls_coded.h"
+#include "LB_MPI/MPI_interface.h"
+#include "support/dlb_api.h"
+#include "support/debug.h"
+#include <mpi.h>
+
+#if MPI_VERSION >= 3
+#define MPI3_CONST const
+#else
+#define MPI3_CONST
+#endif
+
+#pragma pygen start
+void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
+    debug_inout(">> {MPI_NAME}...............\n");
+    {BEFORE_FUNC};
+}}
+
+void DLB_{MPI_NAME}_F_leave(void) {{
+    debug_inout("<< {MPI_NAME}...............\\n");
+    {AFTER_FUNC};
+}}
+
+#pragma pygen end
+
+#endif /* MPI_LIB */
