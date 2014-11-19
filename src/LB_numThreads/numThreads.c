@@ -33,9 +33,9 @@
 
 //#include <mpitrace_user_events.h>
 
-void nanos_omp_get_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_set_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_add_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_get_active_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_set_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_add_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
 
 int meId;
 int nodeId;
@@ -103,14 +103,14 @@ void DLB_bind_thread(int tid, int procsNode) {
 
 
 void get_mask( cpu_set_t *cpu_set ) {
-    if ( nanos_omp_get_mask ) { nanos_omp_get_mask ( cpu_set ); }
+    if ( nanos_omp_get_active_mask ) { nanos_omp_get_active_mask( cpu_set ); }
     else { sched_getaffinity( 0, sizeof(cpu_set_t), cpu_set ); }
 }
 
 void set_mask( const cpu_set_t *cpu_set ) {
-    if ( nanos_omp_set_mask ) { nanos_omp_set_mask ( cpu_set ); }
+    if ( nanos_omp_set_active_mask ) { nanos_omp_set_active_mask ( cpu_set ); }
 }
 
 void add_mask( const cpu_set_t *cpu_set ) {
-    if ( nanos_omp_add_mask ) { nanos_omp_add_mask ( cpu_set ); }
+    if ( nanos_omp_add_active_mask ) { nanos_omp_add_active_mask ( cpu_set ); }
 }
