@@ -40,6 +40,7 @@ int DLB_ReleaseCpu(int cpu);
 int DLB_ReturnClaimedCpu(int cpu);
 void DLB_ClaimCpus(int cpus);
 int DLB_CheckCpuAvailability(int cpu);
+int DLB_Is_auto(void);
 
 #ifdef __cplusplus
 }
