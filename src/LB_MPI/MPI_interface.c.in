@@ -36,6 +36,7 @@
 #define MPI3_CONST
 #endif
 
+
 #pragma pygen start
 DLB_API_DEF(void, DLB_{MPI_NAME}_enter, dlb_{MPI_LCASE}_enter, ({FULL_ARGS})) {{
     debug_inout(">> {MPI_NAME}...............\n");

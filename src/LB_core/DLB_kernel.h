@@ -68,4 +68,6 @@ void claimcpus( int cpus );
 int checkCpuAvailability ( int cpu );
 
 int tracing_ready();
+
+int is_auto( void );
 #endif //DLB_KERNEL_H

@@ -59,6 +59,9 @@ void lewi_mask_Init( void ) {
     }
 
     add_event( THREADS_USED_EVENT, nthreads );
+
+    //Check num threads and mask size are the same
+    assert(nthreads==CPU_COUNT(&default_mask));
 }
 
 void lewi_mask_Finish( void ) {
@@ -75,6 +78,9 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
     get_mask( &mask );
+
+    //Check num threads and mask size are the same
+    assert(nthreads==CPU_COUNT(&mask));
 
     cpu_set_t cpu;
     CPU_ZERO( &cpu );
@@ -93,10 +99,20 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
     set_mask( &cpu );
     shmem_mask.add_mask( &mask );
     add_event( THREADS_USED_EVENT, nthreads );
+    //Check num threads and mask size are the same (this is the only case where they don't match)
+    assert(nthreads+1==CPU_COUNT(&cpu));
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
 void lewi_mask_OutOfBlockingCall(int is_iter) {
+    
+   //Check num threads and mask size are the same
+    cpu_set_t mask;
+    CPU_ZERO( &mask );
+    get_mask( &mask );
+    assert(nthreads+1==CPU_COUNT(&mask));
+
+
     debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
     const cpu_set_t* current_mask = shmem_mask.recover_defmask();
     set_mask(current_mask);
@@ -111,6 +127,9 @@ void lewi_mask_UpdateResources( int max_resources ) {
     CPU_ZERO( &mask );
     get_mask( &mask );
 
+    //Check num threads and mask size are the same
+    assert(nthreads==CPU_COUNT(&mask));
+
     int collected = shmem_mask.collect_mask( &mask, max_resources );
 
     if ( collected > 0 ) {
@@ -119,6 +138,8 @@ void lewi_mask_UpdateResources( int max_resources ) {
         debug_lend ( "ACQUIRING %d threads for a total of %d\n", collected, nthreads );
         add_event( THREADS_USED_EVENT, nthreads );
     }
+    //Check num threads and mask size are the same
+    assert(nthreads==CPU_COUNT(&mask));
 }
 
 /* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
@@ -126,6 +147,9 @@ void lewi_mask_ReturnClaimedCpus( void ) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
     get_mask( &mask );
+
+    //Check num threads and mask size are the same
+    assert(nthreads==CPU_COUNT(&mask));
 
     int returned = shmem_mask.return_claimed( &mask );
 
@@ -135,9 +159,15 @@ void lewi_mask_ReturnClaimedCpus( void ) {
         debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
         add_event( THREADS_USED_EVENT, nthreads );
     }
+    //Check num threads and mask size are the same
+    assert(nthreads==CPU_COUNT(&mask));
 }
 
 void lewi_mask_ClaimCpus(int cpus) {
+    cpu_set_t mask;
+    CPU_ZERO( &mask );
+    get_mask( &mask );
+
     if (nthreads<_default_nthreads) {
         //Do not get more cpus than the default ones
 
@@ -148,6 +178,10 @@ void lewi_mask_ClaimCpus(int cpus) {
         CPU_ZERO( &current_mask );
 
         get_mask( &current_mask );
+    
+    //Check num threads and mask size are the same
+    assert(nthreads==CPU_COUNT(&current_mask));
+
         shmem_mask.recover_some_defcpus( &current_mask, cpus );
         set_mask( &current_mask);
         nthreads += cpus;

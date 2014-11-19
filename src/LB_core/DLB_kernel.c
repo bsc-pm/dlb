@@ -65,7 +65,7 @@ const char* nanos_get_pm(void) __attribute__( ( weak ) );
 int use_dpd = 0;
 
 char prof = 0;
-
+int policy_auto = 0;
 BalancePolicy lb_funcs;
 
 
@@ -200,6 +200,7 @@ int Init(void) {
             lb_funcs.returnclaimedcpu = &auto_lewi_mask_ReturnCpuIfClaimed;
             lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
             lb_funcs.checkCpuAvailability = &auto_lewi_mask_CheckCpuAvailability;
+            policy_auto=1;
 
         } else if (strcasecmp(policy, "RaL")==0) {
 #ifdef debugConfig
@@ -463,4 +464,8 @@ int checkCpuAvailability (int cpu) {
     } else {
         return 1;
     }
+}
+
+int is_auto( void ){
+   return policy_auto; 
 }

@@ -95,3 +95,9 @@ DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) ) {
 DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) ) {
     return checkCpuAvailability(cpu);
 }
+
+
+DLB_API_DEF( int, DLB_Is_auto, dlb_is_auto, (void) ) {
+    return is_auto();
+}
+
