@@ -54,6 +54,7 @@ struct shdata {
 };
 
 struct shdata *shdata;
+static shmem_handler_t *shm_handler;
 
 cpu_set_t all_cpu;
 
@@ -89,7 +90,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
     CPU_ZERO(&all_cpu);//prepare cpu_set
     for(i=0; i<CPUS_NODE; i++) { CPU_SET(i, &all_cpu); }
 
-    shmem_init( &shdata, sizeof(struct shdata) );
+    shm_handler = shmem_init( (void**)&shdata, sizeof(struct shdata), "lewi" );
 
     if (me==0) {
 #ifdef debugSharedMem
@@ -129,7 +130,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 }
 
 void finalize_comm_Map() {
-    shmem_finalize();
+    shmem_finalize( shm_handler );
 }
 
 int releaseCpus_Map(int cpus, int* released_cpus) {

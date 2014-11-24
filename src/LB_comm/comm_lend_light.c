@@ -36,6 +36,7 @@ struct shdata {
 };
 
 struct shdata *shdata;
+static shmem_handler_t *shm_handler;
 
 void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy) {
 #ifdef debugSharedMem
@@ -47,7 +48,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
     defaultCPUS=defCPUS;
     greedy=is_greedy;
 
-    shmem_init( &shdata, sizeof(struct shdata) );
+    shm_handler = shmem_init( (void**)&shdata, sizeof(struct shdata), "lewi" );
 
     if (me==0) {
 
@@ -65,7 +66,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 }
 
 void finalize_comm() {
-    shmem_finalize();
+    shmem_finalize( shm_handler );
 }
 
 int releaseCpus(int cpus) {

@@ -46,13 +46,14 @@ typedef struct {
     // the node processes are disjoint
 } shdata_t;
 
+static shmem_handler_t *shm_handler;
 static shdata_t *shdata;
 static cpu_set_t default_mask;   // default mask of the process
 
 static bool has_shared_mask(void);
 
 void shmem_bitset__init( const cpu_set_t *cpu_set ) {
-    shmem_init( &shdata, sizeof(shdata_t) );
+    shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t), "lewi" );
     add_event( IDLE_CPUS_EVENT, 0 );
 
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
@@ -64,7 +65,7 @@ void shmem_bitset__init( const cpu_set_t *cpu_set ) {
     // We have to check the shared_mask first before screwing up the shdata
     fatal_cond( has_shared_mask(), "Another process in the same node is using one of your cpus\n" );
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int i;
         for ( i = 0; i < mu_get_system_size(); i++ ) {
@@ -75,7 +76,7 @@ void shmem_bitset__init( const cpu_set_t *cpu_set ) {
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
     debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
@@ -84,7 +85,7 @@ void shmem_bitset__init( const cpu_set_t *cpu_set ) {
 void shmem_bitset__finalize( void ) {
     // In non-MPI libs, we have to remove our cpus from the shared memory, since it'll survive the process
 #ifndef MPI_LIB
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int i;
         for ( i = 0; i < mu_get_system_size(); i++ ) {
@@ -96,10 +97,10 @@ void shmem_bitset__finalize( void ) {
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 #endif
 
-    shmem_finalize();
+    shmem_finalize( shm_handler );
     mu_finalize();
 }
 
@@ -108,7 +109,7 @@ void shmem_bitset__add_mask( const cpu_set_t *cpu_set ) {
     cpu_set_t cpus_to_free;
     cpu_set_t cpus_not_mine;
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         // We only add the owned cpus to given_cpus
         CPU_AND( &cpus_to_give, &default_mask, cpu_set );
@@ -135,7 +136,7 @@ void shmem_bitset__add_mask( const cpu_set_t *cpu_set ) {
         debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) );
         debug_shmem ( "Not borrowed %s\n", mu_to_str(&(shdata->not_borrowed_cpus)) );
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 }
@@ -148,7 +149,7 @@ void shmem_bitset__add_cpu( int cpu ) {
 }
 
 const cpu_set_t* shmem_bitset__recover_defmask( void ) {
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
         int i;
@@ -162,7 +163,7 @@ const cpu_set_t* shmem_bitset__recover_defmask( void ) {
         debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
         debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 
@@ -170,7 +171,7 @@ const cpu_set_t* shmem_bitset__recover_defmask( void ) {
 }
 
 void shmem_bitset__recover_some_defcpus( cpu_set_t *mask, int max_resources ) {
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         DLB_DEBUG( int prev_size = CPU_COUNT( &(shdata->avail_cpus) ); )
         int i;
@@ -187,7 +188,7 @@ void shmem_bitset__recover_some_defcpus( cpu_set_t *mask, int max_resources ) {
         debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
         debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
 }
@@ -201,7 +202,7 @@ int shmem_bitset__return_claimed ( cpu_set_t *mask ) {
     DLB_DEBUG( CPU_ZERO( &returned_cpus ); )
 
     CPU_XOR( &slaves_mask, mask, &default_mask );
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         // Remove extra-cpus (slaves_mask) that have been removed from given_cpus
         for ( i=0; i<mu_get_system_size(); i++ ) {
@@ -213,7 +214,7 @@ int shmem_bitset__return_claimed ( cpu_set_t *mask ) {
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
     if ( returned > 0 ) {
         debug_shmem ( "Giving back %d Threads\n", returned );
         debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
@@ -234,7 +235,7 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
         cpu_set_t affinity_mask;
         mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );
         int aux=CPU_COUNT(mask);
-        shmem_lock();
+        shmem_lock( shm_handler );
         {
             /* First Step: Retrieve affine cpus */
             CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
@@ -278,7 +279,7 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
                 debug_shmem ( "Getting %d other Threads (%s)\n", collected, mu_to_str(mask) );
             }
         }
-        shmem_unlock();
+        shmem_unlock( shm_handler );
     }
 
     if ( collected > 0 ) {
@@ -313,19 +314,19 @@ bool shmem_bitset__is_cpu_claimed( int cpu ) {
  * That's why we should initialize and finalize with the shared mem
  */
 void shmem_bitset__print_info( void ) {
-    shmem_init( &shdata, sizeof(shdata_t) );
+    shmem_handler_t *handler = shmem_init( (void**)&shdata, sizeof(shdata_t), "lewi" );
 
     cpu_set_t given, avail, not_borrowed, check;
 
-    shmem_lock();
+    shmem_lock( handler );
     {
         memcpy( &given, &(shdata->given_cpus), sizeof(cpu_set_t) );
         memcpy( &avail, &(shdata->avail_cpus), sizeof(cpu_set_t) );
         memcpy( &not_borrowed, &(shdata->not_borrowed_cpus), sizeof(cpu_set_t) );
         memcpy( &check, &(shdata->check_mask), sizeof(cpu_set_t) );
     }
-    shmem_unlock();
-    shmem_finalize();
+    shmem_unlock( handler );
+    shmem_finalize( handler );
 
     debug_basic_info0( "Given CPUs:        %s\n", mu_to_str( &given ) );
     debug_basic_info0( "Available CPUs:    %s\n", mu_to_str( &avail ) );
@@ -337,7 +338,7 @@ static bool has_shared_mask( void ) {
     bool shared;
     cpu_set_t intxn_mask; // intersection mask
     CPU_ZERO( &intxn_mask );
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         CPU_AND( &intxn_mask, &(shdata->check_mask), &default_mask );
         if (CPU_COUNT( &intxn_mask ) > 0 ) {
@@ -347,7 +348,7 @@ static bool has_shared_mask( void ) {
             shared = false;
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     return shared;
 }

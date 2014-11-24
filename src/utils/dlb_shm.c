@@ -55,6 +55,8 @@ void print_help( const char * program ) {
 }
 
 void create_shdata( void ) {
+    fprintf( stdout, "Create shdata: Function currently disabled\n" );
+#if 0
     char *policy = getenv( "LB_POLICY" );
     if ( policy == NULL ) {
         fprintf( stdout, "Creating shmem without policy... Setting auto_LeWI_mask as default.\n" );
@@ -65,10 +67,11 @@ void create_shdata( void ) {
     created_shm_filename = get_shm_filename();
     fprintf( stdout, "Succesfully created Shared Memory: %s\n", created_shm_filename );
     DLB_Finalize();
+#endif
 }
 
-void list_shdata_item( const char* name ) {
-    setenv( "LB_SHM_NAME", name, 1);
+void list_shdata_item( const char* key ) {
+    setenv( "LB_SHM_KEY", key, 1);
     shmem_mask.print_info();
 }
 
