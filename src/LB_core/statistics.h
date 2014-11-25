@@ -23,6 +23,9 @@
 void stats_init(void);
 void stats_finalize(void);
 void stats_update(void);
-double stats_getcpuusage(int pid);
+
+void stats_ext_init(void);
+double stats_ext_getcpuusage(int pid);
+void stats_ext_finalize(void);
 
 #endif /* STATISTICS_H */

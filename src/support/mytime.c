@@ -76,11 +76,7 @@ double to_secs( struct timespec t1 ) {
     return secs;
 }
 
-long long timeval_diff( const struct timeval *init, const struct timeval *end ) {
-    long long init_usec, end_usec;
-
-    init_usec = (long long)init->tv_sec*1000000LL + (long long)init->tv_usec;
-    end_usec = (long long)end->tv_sec*1000000LL + (long long)end->tv_usec;
-
-    return end_usec - init_usec;
+long timeval_diff( const struct timeval *init, const struct timeval *end ) {
+    return (long)(end->tv_sec - init->tv_sec)*1000000L +
+        (long)(end->tv_usec - init->tv_usec);
 }

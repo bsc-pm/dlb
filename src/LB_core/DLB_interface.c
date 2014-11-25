@@ -101,6 +101,14 @@ DLB_API_DEF( int, DLB_Is_auto, dlb_is_auto, (void) ) {
     return is_auto();
 }
 
-DLB_API_DEF( double, DLB_GetCpuUsage, dlb_getcpuusage, (int pid) ) {
-    return stats_getcpuusage(pid);
+DLB_API_DEF( void, DLB_Stats_Init, dlb_stats_init, (void) ) {
+    stats_ext_init();
+}
+
+DLB_API_DEF( double, DLB_Stats_GetCpuUsage, dlb_stats_getcpuusage, (int pid) ) {
+    return stats_ext_getcpuusage(pid);
+}
+
+DLB_API_DEF( void, DLB_Stats_Finalize, dlb_stats_finalize, (void) ) {
+    stats_ext_finalize();
 }

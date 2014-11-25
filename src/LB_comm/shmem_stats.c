@@ -108,14 +108,17 @@ void shmem_stats__update( void ) {
     shmem_unlock( shm_handler );
 }
 
-double shmem_stats_getcpuusage(int pid) {
-    double cpu_usage = 0.0;
 
+/* From here: functions aimed to be called from an external process, only to consult the shmem */
+
+void shmem_stats_ext__init( void ) {
     mu_init();
     max_processes = mu_get_system_size();
-
-    // Basic size + zero-length array real length
     shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "stats" );
+}
+
+double shmem_stats_ext__getcpuusage(int pid) {
+    double cpu_usage = 0.0;
 
     shmem_lock( shm_handler );
     {
@@ -128,7 +131,10 @@ double shmem_stats_getcpuusage(int pid) {
         }
     }
     shmem_unlock( shm_handler );
-    shmem_finalize( shm_handler );
 
     return cpu_usage;
+}
+
+void shmem_stats_ext__finalize( void ) {
+    shmem_finalize( shm_handler );
 }

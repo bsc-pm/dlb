@@ -31,6 +31,14 @@ void stats_update( void ) {
     shmem_stats__update();
 }
 
-double stats_getcpuusage( int pid ) {
-    return shmem_stats_getcpuusage( pid );
+void stats_ext_init( void ) {
+    shmem_stats_ext__init();
+}
+
+double stats_ext_getcpuusage( int pid ) {
+    return shmem_stats_ext__getcpuusage( pid );
+}
+
+void stats_ext_finalize( void ) {
+    shmem_stats_ext__finalize();
 }

@@ -42,7 +42,9 @@ void DLB_ClaimCpus(int cpus);
 int DLB_CheckCpuAvailability(int cpu);
 int DLB_Is_auto(void);
 
-double DLB_GetCpuUsage(int pid);
+void DLB_Stats_Init(void);
+double DLB_Stats_GetCpuUsage(int pid);
+void DLB_Stats_Finalize(void);
 
 #ifdef __cplusplus
 }
