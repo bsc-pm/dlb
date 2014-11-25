@@ -38,7 +38,6 @@
 
 #define SHSYNC_MAX_SIZE 64
 
-
 shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module ) {
     debug_shmem ( "Shared Memory Init: pid(%d), module(%s)\n", getpid(), shmem_module );
 
@@ -58,12 +57,10 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     parse_env_string( "LB_SHM_KEY", &custom_shm_key );
 
     if ( custom_shm_key != NULL ) {
-        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_shm_%s", shmem_module, custom_shm_key );
-        snprintf( handler->sem_filename, SHM_NAME_LENGTH, "/DLB_%s_sem_%s", shmem_module, custom_shm_key );
+        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key );
     } else {
         key_t key = getuid();
-        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_shm_%d", shmem_module, key );
-        snprintf( handler->sem_filename, SHM_NAME_LENGTH, "/DLB_%s_sem_%d", shmem_module, key );
+        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, key );
     }
 
     debug_shmem ( "Start Process Comm - creating shared mem, module(%s)\n", shmem_module );
@@ -89,7 +86,7 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     }
 
     /* Create Semaphore(1): Mutex */
-    handler->semaphore = sem_open( handler->sem_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
+    handler->semaphore = sem_open( handler->shm_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
     if ( handler->semaphore == SEM_FAILED ) {
         perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
         exit( EXIT_FAILURE );
@@ -157,7 +154,7 @@ void shmem_finalize( shmem_handler_t* handler ) {
 
     /* Only the last process unlinks semaphores and shmem */
     if ( nprocs == 0 ) {
-        if ( sem_unlink( handler->sem_filename ) ) { perror( "DLB_ERROR: sem_unlink" ); }
+        if ( sem_unlink( handler->shm_filename ) ) { perror( "DLB_ERROR: sem_unlink" ); }
         if ( shm_unlink( handler->shm_filename ) ) { perror( "DLB ERROR: shm_unlink" ); }
     }
 

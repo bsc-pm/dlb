@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#define SHM_NAME_LENGTH 64
+#define SHM_NAME_LENGTH 32
 
 // Shared Memory Sync. Must be a struct because it will be allocated inside the shmem
 typedef struct {
@@ -38,7 +38,6 @@ typedef struct {
     shmem_sync_t *shsync;
     sem_t *semaphore;               // Sem mutex. Used for shmem setup
     char shm_filename[SHM_NAME_LENGTH];
-    char sem_filename[SHM_NAME_LENGTH];
 } shmem_handler_t;
 
 shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module );

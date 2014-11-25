@@ -93,7 +93,7 @@ void list_shdata( void ) {
     while ( (entry = readdir(dp)) != NULL ) {
         lstat( entry->d_name, &statbuf );
         if( getuid() == statbuf.st_uid &&
-                fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
+                fnmatch( "DLB_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
             list_shdata_item( &(entry->d_name[8]) );
 
@@ -145,8 +145,8 @@ void delete_shdata( void ) {
     while ( (entry = readdir(dp)) != NULL ) {
         lstat( entry->d_name, &statbuf );
         if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
-            if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0    ||
-                    fnmatch( "sem.DLB_sem_*", entry->d_name, 0) == 0 ) {
+            if ( fnmatch( "DLB_*", entry->d_name, 0) == 0    ||
+                    fnmatch( "sem.DLB_*", entry->d_name, 0) == 0 ) {
                 delete_shdata_item( entry->d_name );
 
                 // Double-check if recently created or user defined
