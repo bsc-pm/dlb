@@ -17,17 +17,11 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef MYTIME_H
-#define MYTIME_H
+#ifndef SHMEM_STATS_H
+#define SHMEM_STATS_H
 
-#include <time.h>       // for timespec: sec + nsec
-#include <sys/time.h>   // for timeval: sec + usec
+void shmem_stats__init(void);
+void shmem_stats__finalize(void);
+void shmem_stats__update(void);
 
-int diff_time( struct timespec init, struct timespec end, struct timespec* diff );
-void add_time( struct timespec t1, struct timespec t2, struct timespec* sum );
-void mult_time( struct timespec t1, int factor, struct timespec* prod );
-void reset( struct timespec *t1 );
-double to_secs( struct timespec t1 );
-long long timeval_diff( const struct timeval *start, const struct timeval *finish );
-
-#endif /* MYTIME_H */
+#endif /* SHMEM_STATS_H */

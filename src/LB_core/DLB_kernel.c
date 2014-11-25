@@ -36,6 +36,7 @@
 #include <LB_policies/PERaL.h>
 
 #include <LB_numThreads/numThreads.h>
+#include "LB_core/statistics.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -78,6 +79,8 @@ static bool dlb_enabled = false;
 static bool dlb_initialized = false;
 static int init_id = 0;
 
+static bool stats_enabled;
+
 static void dummyFunc() {}
 static int false_dummyFunc() {return 0;}
 static int true_dummyFunc() {return 1;}
@@ -109,6 +112,7 @@ int Initialize(void) {
         parse_env_bool( "LB_AGGRESSIVE_INIT", &_aggressive_init, false );
         parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality, false );
         parse_env_bool( "LB_VERBOSE", &_verbose, false );
+        parse_env_bool( "LB_STATISTICS", &stats_enabled, false );
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
         if (strcasecmp(policy, "LeWI")==0) {
@@ -340,6 +344,7 @@ int Initialize(void) {
             }*/
 
         lb_funcs.init();
+        if ( stats_enabled ) stats_init();
         dlb_enabled = true;
         dlb_initialized = true;
         add_event(DLB_MODE_EVENT, EVENT_ENABLED);
@@ -353,6 +358,7 @@ void Finish(int id) {
     if ( dlb_initialized && init_id == id ) {
         dlb_enabled = false;
         dlb_initialized = false;
+        if ( stats_enabled ) stats_finalize();
         lb_funcs.finish();
     }
     /*  if (prof){
@@ -385,6 +391,7 @@ void IntoCommunication(void) {
 
     if (dlb_enabled) {
         lb_funcs.intoCommunication();
+        if ( stats_enabled ) stats_update();
     }
 }
 
@@ -396,6 +403,7 @@ void OutOfCommunication(void) {
 
     if (dlb_enabled) {
         lb_funcs.outOfCommunication();
+        if ( stats_enabled ) stats_update();
     }
 }
 
@@ -410,12 +418,14 @@ void IntoBlockingCall(int is_iter, int is_single) {
         } else {
             lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
         }
+        if ( stats_enabled ) stats_update();
     }
 }
 
 void OutOfBlockingCall(int is_iter) {
     if (dlb_enabled) {
         lb_funcs.outOfBlockingCall(is_iter);
+        if ( stats_enabled ) stats_update();
     }
 }
 
@@ -423,6 +433,7 @@ void updateresources( int max_resources ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_UPDATE);
         lb_funcs.updateresources( max_resources );
+        if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
@@ -431,12 +442,14 @@ void returnclaimed( void ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
         lb_funcs.returnclaimed();
+        if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
 
 int releasecpu( int cpu ) {
     if (dlb_enabled) {
+        if ( stats_enabled ) stats_update();
         return lb_funcs.releasecpu(cpu);
     } else {
         return 0;
@@ -445,6 +458,7 @@ int releasecpu( int cpu ) {
 
 int returnclaimedcpu( int cpu ) {
     if (dlb_enabled) {
+        if ( stats_enabled ) stats_update();
         return lb_funcs.returnclaimedcpu(cpu);
     } else {
         return 0;
@@ -455,12 +469,14 @@ void claimcpus( int cpus ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
         lb_funcs.claimcpus(cpus);
+        if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
 
 int checkCpuAvailability (int cpu) {
     if (dlb_enabled) {
+        if ( stats_enabled ) stats_update();
         return lb_funcs.checkCpuAvailability(cpu);
     } else {
         return 1;
