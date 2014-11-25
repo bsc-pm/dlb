@@ -50,7 +50,7 @@ static int max_processes;
 static int my_process;
 
 void shmem_stats__init( void ) {
-    // We will reserve enough positions  assuming that there won't be more processes than cpus
+    // We will reserve enough positions assuming that there won't be more processes than cpus
     max_processes = mu_get_system_size();
 
     // Basic size + zero-length array real length
@@ -106,4 +106,29 @@ void shmem_stats__update( void ) {
         shdata->process_info[my_process].cpu_usage = cpu_usage;
     }
     shmem_unlock( shm_handler );
+}
+
+double shmem_stats_getcpuusage(int pid) {
+    double cpu_usage = 0.0;
+
+    mu_init();
+    max_processes = mu_get_system_size();
+
+    // Basic size + zero-length array real length
+    shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "stats" );
+
+    shmem_lock( shm_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata->process_info[p].pid == pid ) {
+                cpu_usage = shdata->process_info[p].cpu_usage;
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_handler );
+    shmem_finalize( shm_handler );
+
+    return cpu_usage;
 }

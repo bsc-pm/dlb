@@ -30,3 +30,7 @@ void stats_finalize( void ) {
 void stats_update( void ) {
     shmem_stats__update();
 }
+
+double stats_getcpuusage( int pid ) {
+    return shmem_stats_getcpuusage( pid );
+}

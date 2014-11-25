@@ -23,5 +23,6 @@
 void shmem_stats__init(void);
 void shmem_stats__finalize(void);
 void shmem_stats__update(void);
+double shmem_stats_getcpuusage(int pid);
 
 #endif /* SHMEM_STATS_H */

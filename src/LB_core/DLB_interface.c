@@ -19,6 +19,7 @@
 
 #include <limits.h>
 #include "LB_core/DLB_kernel.h"
+#include "LB_core/statistics.h"
 #include "support/dlb_api.h"
 #include "support/tracing.h"
 
@@ -98,4 +99,8 @@ DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) 
 
 DLB_API_DEF( int, DLB_Is_auto, dlb_is_auto, (void) ) {
     return is_auto();
+}
+
+DLB_API_DEF( double, DLB_GetCpuUsage, dlb_getcpuusage, (int pid) ) {
+    return stats_getcpuusage(pid);
 }

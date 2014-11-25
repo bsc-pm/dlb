@@ -31,6 +31,7 @@
 #include "support/mask_utils.h"
 
 #include <pthread.h>
+#define NDEBUG
 #include <assert.h>
 
 
