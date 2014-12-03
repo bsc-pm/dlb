@@ -17,15 +17,17 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef MPI_INTERFACE_H
-#define MPI_INTERFACE_H
+#ifndef MPI_INTERFACEF_H
+#define MPI_INTERFACEF_H
 
 #include <mpi.h>
 
-#if MPI_VERSION >= 3
-#define MPI3_CONST const
-#else
-#define MPI3_CONST
+#ifndef MPI3_CONST
+#  if MPI_VERSION >= 3
+#    define MPI3_CONST const
+#  else
+#    define MPI3_CONST
+#  endif
 #endif
 
 #ifdef __cplusplus
@@ -43,4 +45,4 @@ void DLB_{MPI_NAME}_F_leave(void);
 }
 #endif
 
-#endif //MPI_INTERFACE_H
+#endif //MPI_INTERFACEF_H

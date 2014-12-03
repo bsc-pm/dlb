@@ -37,18 +37,19 @@ class MPIFile:
     def _parse_block(self, block):
         parsed = ''
         for func in self._mpi_calls:
-            parsed += block.format(
-                MPI_NAME = func['name'],
-                MPI_LCASE = func['name'].lower(),
-                C_PARAMS = func['cpar'],
-                F_PARAMS = func['fpar'],
-                C_ARG_LIST = func['c_args'],
-                F_ARG_LIST = func['f_args'],
-                TAGS = func['tags'],
-                MPI_KEYNAME = func['name'][4:],
-                BEFORE_FUNC = func['before'],
-                AFTER_FUNC = func['after']
-                )
+            if func['enabled']:
+                parsed += block.format(
+                    MPI_NAME = func['name'],
+                    MPI_LCASE = func['name'].lower(),
+                    C_PARAMS = func['cpar'],
+                    F_PARAMS = func['fpar'],
+                    C_ARG_LIST = func['c_args'],
+                    F_ARG_LIST = func['f_args'],
+                    TAGS = func['tags'],
+                    MPI_KEYNAME = func['name'][4:],
+                    BEFORE_FUNC = func['before'],
+                    AFTER_FUNC = func['after']
+                    )
         return parsed
 
 
@@ -69,7 +70,8 @@ def enrich(mpi_calls):
         func['f_args'] = ', '.join(f_args)
 
         # Set tag _Unknown if not defined
-        if not func['tags']:
+        func.setdefault('tags', '_Unknown')
+        if func['tags'] == '':
             func['tags'] = '_Unknown'
 
         # Set before and after funtions
@@ -83,18 +85,21 @@ def enrich(mpi_calls):
             func['before'] = 'before_mpi({0}, 0, 0)'.format(func['name'].replace('MPI_', ''))
             func['after'] = 'after_mpi({0})'.format(func['name'].replace('MPI_', ''))
 
+        # Set flag enabled if not defined
+        func.setdefault('enabled', True)
+
 def main(argv):
     inputfile = ''
     outputfile = ''
     jsonfile = ''
     try:
-        opts, args = getopt.getopt(argv,"hi:o:j:",["ifile=","ofile=","json="])
+        opts, args = getopt.getopt(argv[1:],"hi:o:j:",["ifile=","ofile=","json="])
     except getopt.GetoptError:
-        print 'test.py -i <inputfile> -o <outputfile> -j <jsonfile>'
+        print argv[0], ' -i <inputfile> -o <outputfile> -j <jsonfile>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'test.py -i <inputfile> -o <outputfile> -j <jsonfile>'
+            print argv[0], ' -i <inputfile> -o <outputfile> -j <jsonfile>'
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
@@ -102,6 +107,10 @@ def main(argv):
             outputfile = arg
         elif opt in ("-j", "--json"):
             jsonfile = arg
+
+    if inputfile == '' or outputfile == '' or jsonfile == '':
+        print argv[0], ' -i <inputfile> -o <outputfile> -j <jsonfile>'
+        sys.exit()
 
     # Read JSON file
     json_data = open(jsonfile)
@@ -114,4 +123,4 @@ def main(argv):
     mpi_intercept_c.parse()
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+   main(sys.argv)

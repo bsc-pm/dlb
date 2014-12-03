@@ -358,7 +358,9 @@
         "name": "MPI_File_open",
         "cpar": "MPI_Comm comm, MPI3_CONST char *filename, int amode, MPI_Info info, MPI_File *fh",
         "fpar": "MPI_Fint *comm, char *filename, MPI_Fint *amode, MPI_Fint *info, MPI_File *fh, MPI_Fint *len, MPI_Fint *ierror",
-        "tags": "_IO"
+        "tags": "_IO",
+        "enabled" : false,
+        "_comment": "MPI_File_open currently disabled due to problems considering a Fortran string as a char*"
     },
     {
         "name": "MPI_File_close",

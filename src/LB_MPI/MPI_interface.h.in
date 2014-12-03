@@ -22,10 +22,12 @@
 
 #include <mpi.h>
 
-#if MPI_VERSION >= 3
-#define MPI3_CONST const
-#else
-#define MPI3_CONST
+#ifndef MPI3_CONST
+#  if MPI_VERSION >= 3
+#    define MPI3_CONST const
+#  else
+#    define MPI3_CONST
+#  endif
 #endif
 
 #ifdef __cplusplus
