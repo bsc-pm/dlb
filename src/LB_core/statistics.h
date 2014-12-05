@@ -25,7 +25,10 @@ void stats_finalize(void);
 void stats_update(void);
 
 void stats_ext_init(void);
-double stats_ext_getcpuusage(int pid);
 void stats_ext_finalize(void);
+int stats_ext_getnumcpus(void);
+double stats_ext_getcpuusage(int pid);
+int stats_ext_getactivecpus(int pid);
+void stats_ext_getloadavg(int pid, double *load);
 
 #endif /* STATISTICS_H */

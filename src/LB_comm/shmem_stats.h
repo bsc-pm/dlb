@@ -24,7 +24,10 @@ void shmem_stats__init(void);
 void shmem_stats__finalize(void);
 void shmem_stats__update(void);
 void shmem_stats_ext__init( void );
-double shmem_stats_ext__getcpuusage(int pid);
 void shmem_stats_ext__finalize(void);
+int shmem_stats_ext__getnumcpus(int pid);
+double shmem_stats_ext__getcpuusage(int pid);
+int shmem_stats_ext__getactivecpus(int pid);
+void shmem_stats_ext__getloadavg(int pid,double *load);
 
 #endif /* SHMEM_STATS_H */

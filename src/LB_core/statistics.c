@@ -35,10 +35,22 @@ void stats_ext_init( void ) {
     shmem_stats_ext__init();
 }
 
+void stats_ext_finalize( void ) {
+    shmem_stats_ext__finalize();
+}
+
+int stats_ext_getnumcpus( int pid ) {
+    return shmem_stats_ext__getnumcpus( pid );
+}
+
 double stats_ext_getcpuusage( int pid ) {
     return shmem_stats_ext__getcpuusage( pid );
 }
 
-void stats_ext_finalize( void ) {
-    shmem_stats_ext__finalize();
+int stats_ext_getactivecpus( int pid ) {
+    return shmem_stats_ext__getactivecpus( pid );
+}
+
+void stats_ext_getloadavg( int pid, double *load ) {
+    shmem_stats_ext__getloadavg( pid, load );
 }

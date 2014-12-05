@@ -43,8 +43,11 @@ int DLB_CheckCpuAvailability(int cpu);
 int DLB_Is_auto(void);
 
 void DLB_Stats_Init(void);
-double DLB_Stats_GetCpuUsage(int pid);
 void DLB_Stats_Finalize(void);
+int DLB_Stats_GetNumCpus(void);
+double DLB_Stats_GetCpuUsage(int pid);
+int DLB_Stats_GetActiveCpus(int pid);
+void DLB_Stats_GetLoadAvg(int pid, double *load);
 
 #ifdef __cplusplus
 }
