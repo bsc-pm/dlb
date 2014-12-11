@@ -66,6 +66,9 @@ AC_PROG_CPP
 # use the C compiler for the following checks
 AC_LANG([C])
 
+# Check for Python
+AM_PATH_PYTHON
+
 # check for OpenMP availability
 AC_OPENMP
 

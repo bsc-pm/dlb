@@ -27,9 +27,9 @@ EXTRA_DIST =
 END =
 
 if SUPPORTED_SILENT_RULES
-PYTHON_verbose = $(PYTHON_verbose_@AM_V@)
-PYTHON_verbose_ = $(PYTHON_verbose_@AM_DEFAULT_V@)
-PYTHON_verbose_0 = @echo "  PYTHON  " $@;
+PYGEN_verbose = $(PYGEN_verbose_@AM_V@)
+PYGEN_verbose_ = $(PYGEN_verbose_@AM_DEFAULT_V@)
+PYGEN_verbose_0 = @echo "  PYGEN   " $@;
 
 GEN_verbose = $(GEN_verbose_@AM_V@)
 GEN_verbose_ = $(GEN_verbose_@AM_DEFAULT_V@)
@@ -65,43 +65,43 @@ EXTRA_DIST    += src/LB_MPI/MPI_calls_coded.h.in
 CLEANFILES    += src/LB_MPI/MPI_calls_coded.h
 BUILT_SOURCES += src/LB_MPI/MPI_calls_coded.h
 src/LB_MPI/MPI_calls_coded.h: $(top_srcdir)/src/LB_MPI/MPI_calls_coded.h.in $(MPICALLS_DB)
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_calls_coded.c.in
 CLEANFILES    += src/LB_MPI/MPI_calls_coded.c
 BUILT_SOURCES += src/LB_MPI/MPI_calls_coded.c
 src/LB_MPI/MPI_calls_coded.c: $(top_srcdir)/src/LB_MPI/MPI_calls_coded.c.in $(MPICALLS_DB)
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_interface.h.in
 CLEANFILES    += src/LB_MPI/MPI_interface.h
 BUILT_SOURCES += src/LB_MPI/MPI_interface.h
 src/LB_MPI/MPI_interface.h: $(top_srcdir)/src/LB_MPI/MPI_interface.h.in $(MPICALLS_DB)
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_interface.c.in
 CLEANFILES    += src/LB_MPI/MPI_interface.c
 BUILT_SOURCES += src/LB_MPI/MPI_interface.c
 src/LB_MPI/MPI_interface.c: $(top_srcdir)/src/LB_MPI/MPI_interface.c.in $(MPICALLS_DB)
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_interfaceF.c.in
 CLEANFILES    += src/LB_MPI/MPI_interfaceF.c
 BUILT_SOURCES += src/LB_MPI/MPI_interfaceF.c
 src/LB_MPI/MPI_interfaceF.c: $(top_srcdir)/src/LB_MPI/MPI_interfaceF.c.in $(MPICALLS_DB)
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_interfaceF.h.in
 CLEANFILES    += src/LB_MPI/MPI_interfaceF.h
 BUILT_SOURCES += src/LB_MPI/MPI_interfaceF.h
 src/LB_MPI/MPI_interfaceF.h: $(top_srcdir)/src/LB_MPI/MPI_interfaceF.h.in $(MPICALLS_DB)
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 EXTRA_DIST    += src/LB_MPI/MPI_intercept.c.in
 CLEANFILES    += src/LB_MPI/MPI_intercept.c
 BUILT_SOURCES += src/LB_MPI/MPI_intercept.c
 src/LB_MPI/MPI_intercept.c: $(top_srcdir)/src/LB_MPI/MPI_intercept.c.in $(MPICALLS_DB)
-	$(PYTHON_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 
 ##########################################################################
@@ -289,7 +289,14 @@ nobase_dist_paravercfgs_DATA = $(paraver_cfgs)
 ##########################################################################
 # scripts                                                              ###
 ##########################################################################
-nodist_bin_SCRIPTS = scripts/run_with_dlb.sh
+python_PYTHON = scripts/viewer/dlb_wrapper.py \
+		scripts/viewer/progressmeter.py
+
+nodist_python_PYTHON = scripts/viewer/dlb_viewer.py
+
+nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage \
+		     scripts/run_with_dlb.sh
+
 EXTRA_DIST += \
 	scripts/bets \
 	scripts/run_with_dlb.sh.in \
@@ -299,7 +306,21 @@ EXTRA_DIST += \
 	scripts/debian/source/format \
 	scripts/debian/rules \
 	scripts/debian/control \
+	scripts/viewer/dlb_cpu_usage.in \
+	scripts/viewer/dlb_viewer.py.in \
 	$(END)
+
+CLEANFILES    += scripts/viewer/dlb_viewer.py
+scripts/viewer/dlb_viewer.py: $(top_srcdir)/scripts/viewer/dlb_viewer.py.in
+	$(GEN_verbose)$(MKDIR_P) scripts/viewer; \
+	rm -f $@; \
+	sed -e's,@PREFIX\@,"$(prefix)",g' $^ > $@
+
+CLEANFILES    += scripts/viewer/dlb_cpu_usage
+scripts/viewer/dlb_cpu_usage: $(top_srcdir)/scripts/viewer/dlb_cpu_usage.in
+	$(GEN_verbose)$(MKDIR_P) scripts/viewer; \
+	rm -f $@; \
+	sed -e's,@PYTHONDIR\@,"$(pythondir)",g' $^ > $@
 
 CLEANFILES    += scripts/run_with_dlb.sh
 scripts/run_with_dlb.sh: $(top_srcdir)/scripts/run_with_dlb.sh.in
