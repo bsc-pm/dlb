@@ -18,6 +18,7 @@
 /*************************************************************************************/
 
 #include <time.h>
+#include <sys/time.h>
 
 int diff_time( struct timespec init, struct timespec end, struct timespec* diff ) {
     if ( init.tv_sec > end.tv_sec ) {
@@ -73,4 +74,9 @@ double to_secs( struct timespec t1 ) {
     secs += ( t1.tv_nsec ) / 1e9;
 
     return secs;
+}
+
+long timeval_diff( const struct timeval *init, const struct timeval *end ) {
+    return (long)(end->tv_sec - init->tv_sec)*1000000L +
+        (long)(end->tv_usec - init->tv_usec);
 }

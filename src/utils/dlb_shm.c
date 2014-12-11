@@ -55,6 +55,8 @@ void print_help( const char * program ) {
 }
 
 void create_shdata( void ) {
+    fprintf( stdout, "Create shdata: Function currently disabled\n" );
+#if 0
     char *policy = getenv( "LB_POLICY" );
     if ( policy == NULL ) {
         fprintf( stdout, "Creating shmem without policy... Setting auto_LeWI_mask as default.\n" );
@@ -65,10 +67,11 @@ void create_shdata( void ) {
     created_shm_filename = get_shm_filename();
     fprintf( stdout, "Succesfully created Shared Memory: %s\n", created_shm_filename );
     DLB_Finalize();
+#endif
 }
 
-void list_shdata_item( const char* name ) {
-    setenv( "LB_SHM_NAME", name, 1);
+void list_shdata_item( const char* key ) {
+    setenv( "LB_SHM_KEY", key, 1);
     shmem_mask.print_info();
 }
 
@@ -90,7 +93,7 @@ void list_shdata( void ) {
     while ( (entry = readdir(dp)) != NULL ) {
         lstat( entry->d_name, &statbuf );
         if( getuid() == statbuf.st_uid &&
-                fnmatch( "DLB_shm_*", entry->d_name, 0) == 0 ) {
+                fnmatch( "DLB_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
             list_shdata_item( &(entry->d_name[8]) );
 
@@ -142,8 +145,8 @@ void delete_shdata( void ) {
     while ( (entry = readdir(dp)) != NULL ) {
         lstat( entry->d_name, &statbuf );
         if( S_ISREG( statbuf.st_mode ) && getuid() == statbuf.st_uid ) {
-            if ( fnmatch( "DLB_shm_*", entry->d_name, 0) == 0    ||
-                    fnmatch( "sem.DLB_sem_*", entry->d_name, 0) == 0 ) {
+            if ( fnmatch( "DLB_*", entry->d_name, 0) == 0    ||
+                    fnmatch( "sem.DLB_*", entry->d_name, 0) == 0 ) {
                 delete_shdata_item( entry->d_name );
 
                 // Double-check if recently created or user defined

@@ -1,0 +1,233 @@
+
+# OS & language
+import time
+from collections import deque
+# GUI
+import Tkinter as tk
+import ttk
+import progressmeter
+from matplotlib.figure import Figure, figaspect
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+#DLB
+import dlb_wrapper
+
+# dlb defined out of the frame to properly call its destructor
+dlb = dlb_wrapper.DLB_Stats(@PREFIX@)
+
+class DLBHistory(tk.Frame):
+    def __init__(self, parent, max_len=100, debug=False, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent
+        self.max_len = max_len
+        self.debug = debug
+        self.proc_data = []
+        self.lines = []
+
+        self.fig = Figure(figsize=figaspect(0.25), dpi=40)
+        self.ax0 = self.fig.add_subplot(111)
+        self.ax0.set_title('Plot Title')
+        self.ax0.set_xlabel('X axis label')
+        self.ax0.set_ylabel('Y label')
+        self.ax0.set_xlim([0,self.max_len])
+        self.ax0.set_ylim([0,8])
+
+        self.line1, = self.ax0.plot([],[])
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.show()
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+        if self.debug:
+            self.toolbar = NavigationToolbar2TkAgg(self.canvas, self )
+            self.toolbar.pack()
+            self.toolbar.update()
+
+    def add_process(self, pid):
+        #self.proc_data.append(deque([0.0]*self.max_len))
+        self.proc_data.append(deque([0.0]))
+        line, = self.ax0.plot([],[])
+        self.lines.append(line)
+
+    def update(self, usage=[]):
+        for key, data in enumerate(self.proc_data):
+            # usage is of the form 0%-X00%, where X=num_cpus
+            # data must be in the range 0..num_cpus
+            data.append(usage[key]/100.0)
+            while len(data) > self.max_len:
+                data.popleft()
+            self.lines[key].set_data(range(len(data)), data)
+            #self.ax0.set_xlim([length-self.max_len,length])
+            self.canvas.draw()
+
+
+class DLBLoadAvg(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent
+
+        self.fig = Figure(figsize=figaspect(.5), dpi=50)
+        self.ax0 = self.fig.add_axes( (0.05, .25, .25, .5))
+        self.ax1 = self.fig.add_axes( (0.35, .25, .25, .5))
+        self.ax2 = self.fig.add_axes( (0.65, .25, .25, .5))
+        self.ax0.set_xlabel( 'Load Avg (1)' )
+        self.ax1.set_xlabel( 'Load Avg (5)' )
+        self.ax2.set_xlabel( 'Load Avg (15)' )
+
+        self.ax0.pie([1], autopct='%1.1f%%', shadow=True, startangle=90)
+        self.ax1.pie([1], autopct='%1.1f%%', shadow=True, startangle=90)
+        self.ax2.pie([1], autopct='%1.1f%%', shadow=True, startangle=90)
+
+        self.ax0.axis('equal')
+        self.ax1.axis('equal')
+        self.ax2.axis('equal')
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.show()
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+    def update(self, loadavg_1=[1], loadavg_5=[1], loadavg_15=[1]):
+        self.ax0.pie(loadavg_1)
+        self.ax1.pie(loadavg_5)
+        self.ax2.pie(loadavg_15)
+        self.canvas.draw()
+
+class DLBUsageEntry(tk.Frame):
+    def __init__(self, parent, text, fillcolor1, fillcolor2, bg, textcolor=None, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent
+        self.text = text
+        self.fc1 = fillcolor1
+        self.fc2 = fillcolor2
+        self.tc = textcolor
+        self.bg = bg
+
+        self._label = ttk.Label(self, text=self.text, width=16)
+        self._meter = progressmeter.Meter(self, fillcolor=self.fc1, bg=self.bg, textcolor=self.tc)
+        self._resrc = progressmeter.Meter(self, fillcolor=self.fc2, bg=self.bg, textcolor=self.tc, text="")
+
+        self._label.grid(row=0, column=0, rowspan=2, sticky=tk.W)
+        self._meter.grid(row=0, column=1)
+        self._resrc.grid(row=1, column=1)
+
+    def set_label(self, text=None):
+        self._label.config(text="{0} ({1})".format(self.text,text))
+
+    def set_meter(self, value, text=None):
+        self._meter.set(value, text)
+
+    def set_resources(self, value, text=""):
+        self._resrc.set(value, text)
+
+class DLBUsage(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent
+        self.num_cpus = dlb.get_num_cpus()
+
+        self.usage_entries = []
+        self.usage_entries.append(DLBUsageEntry(self, text="Total CPUs ({0})".format(self.num_cpus),
+            fillcolor1="red", fillcolor2="orange", bg="grey"))
+
+        self.usage_entries[0].pack(pady=5)
+
+    def add_process(self, pid):
+        self.usage_entries.append(DLBUsageEntry(self, text="PID {0}".format(pid),
+            fillcolor1="blue", fillcolor2="cyan", textcolor="white", bg="black"))
+        self.usage_entries[-1].pack(pady=5)
+
+class DLBViewer(tk.Frame):
+    def __init__(self, parent, refresh_time=100, norm_100=False, debug=False, experimental_loadavg=False, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent
+        self.refresh_time = refresh_time
+        self.norm_100 = norm_100
+        self.debug = debug
+        self.experimental_loadavg = experimental_loadavg
+        self.processes = []
+        self.started = False
+        self.num_cpus = dlb.get_num_cpus()
+
+        # CPU Usage
+        self.usage = DLBUsage(self)
+        self.usage.pack(fill=tk.X)
+        # Load Average
+        if self.experimental_loadavg:
+            self.loadavg = DLBLoadAvg(self)
+            self.loadavg.pack(fill=tk.X)
+        # CPU Usage history
+        self.history = DLBHistory(self, debug=self.debug)
+        self.history.pack()
+        # FPS
+        if self.debug:
+            self.fps = ttk.Label(self, text="")
+            self.fps.pack()
+
+    def start(self):
+        if not self.started:
+            self.started = True
+            self.poll()
+
+    def stop(self):
+        self.started = False
+
+    def empty(self):
+        return len(self.processes) == 0
+
+    def set_normalized(self, norm_100):
+        self.norm_100 = norm_100
+
+    def add_process(self, pid):
+        if pid not in self.processes:
+            self.processes.append(pid)
+            self.usage.add_process(pid)
+            self.history.add_process(pid)
+
+    def poll(self):
+        if self.started:
+            start = time.time()
+            usage = []
+            usage.append(0)
+            resources = []
+            resources.append(self.num_cpus)
+            if self.experimental_loadavg:
+                loadavg_1 = []
+                loadavg_5 = []
+                loadavg_15 = []
+            for proc in self.processes:
+                cpu_usage = dlb.get_cpu_usage(proc)
+                usage.append(cpu_usage)
+                usage[0] += cpu_usage
+                resources.append(dlb.get_active_cpus(proc))
+                if self.experimental_loadavg:
+                    load = dlb.get_load_avg(proc)
+                    loadavg_1.append(load[0])
+                    loadavg_5.append(load[1])
+                    loadavg_15.append(load[2])
+
+            # Update Usage Entries
+            for key, elem in enumerate(self.usage.usage_entries):
+                # usage is of the form 0%-X00%, where X=num_cpus
+                # normalized_usage must be in the range 0..1
+                normalized_usage = usage[key] / (self.num_cpus*100)
+                if self.norm_100:
+                    elem.set_meter(normalized_usage)
+                else:
+                    elem.set_meter(normalized_usage, "{0:.0f}%".format(usage[key]))
+
+                normalized_resources = float(resources[key]) / self.num_cpus
+                elem.set_resources(normalized_resources, "{0} CPUs".format(resources[key]))
+
+            # Update Load Average
+            if self.experimental_loadavg:
+                self.loadavg.update(loadavg_1, loadavg_5, loadavg_15)
+
+            # Update History
+            self.history.update(usage[1:])
+
+            self.after(self.refresh_time, self.poll)
+
+            # FPS
+            if self.debug:
+                fps = round(1./(time.time()-start),2)
+                self.fps.config(text="FPS: {0}".format(fps))
+

@@ -17,40 +17,40 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef DLB_INTERFACE_H
-#define DLB_INTERFACE_H
+#include "LB_comm/shmem_stats.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-void DLB_Init(void);
-void DLB_Finalize(void);
-void DLB_enable(void);
-void DLB_disable(void);
-void DLB_single(void);
-void DLB_parallel(void);
-void DLB_UpdateResources(void);
-void DLB_UpdateResources_max(int max_resources);
-void DLB_ReturnClaimedCpus(void);
-void DLB_Lend(void);
-void DLB_Retrieve(void);
-int DLB_ReleaseCpu(int cpu);
-int DLB_ReturnClaimedCpu(int cpu);
-void DLB_ClaimCpus(int cpus);
-int DLB_CheckCpuAvailability(int cpu);
-int DLB_Is_auto(void);
-
-void DLB_Stats_Init(void);
-void DLB_Stats_Finalize(void);
-int DLB_Stats_GetNumCpus(void);
-double DLB_Stats_GetCpuUsage(int pid);
-int DLB_Stats_GetActiveCpus(int pid);
-void DLB_Stats_GetLoadAvg(int pid, double *load);
-
-#ifdef __cplusplus
+void stats_init( void ) {
+    shmem_stats__init();
 }
-#endif
 
-#endif /* DLB_INTERFACE_H */
+void stats_finalize( void ) {
+    shmem_stats__finalize();
+}
+
+void stats_update( void ) {
+    shmem_stats__update();
+}
+
+void stats_ext_init( void ) {
+    shmem_stats_ext__init();
+}
+
+void stats_ext_finalize( void ) {
+    shmem_stats_ext__finalize();
+}
+
+int stats_ext_getnumcpus( int pid ) {
+    return shmem_stats_ext__getnumcpus( pid );
+}
+
+double stats_ext_getcpuusage( int pid ) {
+    return shmem_stats_ext__getcpuusage( pid );
+}
+
+int stats_ext_getactivecpus( int pid ) {
+    return shmem_stats_ext__getactivecpus( pid );
+}
+
+void stats_ext_getloadavg( int pid, double *load ) {
+    shmem_stats_ext__getloadavg( pid, load );
+}

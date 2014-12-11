@@ -20,12 +20,14 @@
 #ifndef MYTIME_H
 #define MYTIME_H
 
-#include <time.h>
+#include <time.h>       // for timespec: sec + nsec
+#include <sys/time.h>   // for timeval: sec + usec
 
 int diff_time( struct timespec init, struct timespec end, struct timespec* diff );
 void add_time( struct timespec t1, struct timespec t2, struct timespec* sum );
 void mult_time( struct timespec t1, int factor, struct timespec* prod );
 void reset( struct timespec *t1 );
 double to_secs( struct timespec t1 );
+long timeval_diff( const struct timeval *start, const struct timeval *finish );
 
 #endif /* MYTIME_H */

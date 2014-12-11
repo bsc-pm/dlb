@@ -32,87 +32,76 @@
 #error This system does not support process shared mutex
 #endif
 
+#include "LB_comm/shmem.h"
 #include "support/debug.h"
 #include "support/utils.h"
 
-#define SHM_NAME_LENGTH 32
 #define SHSYNC_MAX_SIZE 64
 
-typedef struct {
-    pthread_mutex_t shmem_mutex;
-    unsigned short nprocs;
-} shsync_t;
+shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module ) {
+    debug_shmem ( "Shared Memory Init: pid(%d), module(%s)\n", getpid(), shmem_module );
 
-static size_t shmem_size;
-static char *shmem_addr = NULL;
-static shsync_t *shsync = NULL;
-static sem_t *semaphore = NULL;
-static char shm_filename[SHM_NAME_LENGTH];
-static char sem_filename[SHM_NAME_LENGTH];
-
-void shmem_init( void **shdata, size_t shdata_size ) {
-    debug_shmem ( "Shared Memory Init: pid(%d)\n", getpid() );
+    /* Allocate new Shared Memory handler */
+    shmem_handler_t *handler = malloc( sizeof(shmem_handler_t) );
 
     /* Calculate total shmem size:
      *   shsync_t will be allocated within the first SHSYNC_MAX_SIZE bytes
      *   shdata_t will use the rest
      */
-    ensure( sizeof(shsync_t) <= SHSYNC_MAX_SIZE,
+    ensure( sizeof(shmem_sync_t) <= SHSYNC_MAX_SIZE,
             "Sync structure must be %d bytes maximum\n", SHSYNC_MAX_SIZE );
-    shmem_size = SHSYNC_MAX_SIZE + shdata_size;
+    handler->size = SHSYNC_MAX_SIZE + shdata_size;
 
     /* Get /dev/shm/ file names to create */
-    key_t key = getuid();
-    char *custom_shm_name;
-    parse_env_string( "LB_SHM_NAME", &custom_shm_name );
+    char *custom_shm_key;
+    parse_env_string( "LB_SHM_KEY", &custom_shm_key );
 
-    if ( custom_shm_name != NULL ) {
-        snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%s", custom_shm_name );
-        snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%s", custom_shm_name );
+    if ( custom_shm_key != NULL ) {
+        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key );
     } else {
-        snprintf( shm_filename, sizeof(shm_filename), "/DLB_shm_%d", key );
-        snprintf( sem_filename, sizeof(sem_filename), "/DLB_sem_%d", key );
+        key_t key = getuid();
+        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, key );
     }
 
-    debug_shmem ( "Start Process Comm - creating shared mem \n" );
+    debug_shmem ( "Start Process Comm - creating shared mem, module(%s)\n", shmem_module );
 
     /* Obtain a file descriptor for the shmem */
-    int fd = shm_open( shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR );
+    int fd = shm_open( handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR );
     if ( fd == -1 ) {
         perror( "DLB PANIC: shm_open Process" );
         exit( EXIT_FAILURE );
     }
 
     /* Truncate the regular file to a precise size */
-    if ( ftruncate( fd, shmem_size ) == -1 ) {
+    if ( ftruncate( fd, handler->size ) == -1 ) {
         perror( "DLB PANIC: ftruncate Process" );
         exit( EXIT_FAILURE );
     }
 
     /* Map shared memory object */
-    shmem_addr = mmap( NULL, shmem_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if ( shmem_addr == MAP_FAILED ) {
+    handler->addr = mmap( NULL, handler->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if ( handler->addr == MAP_FAILED ) {
         perror( "DLB PANIC: mmap Process" );
         exit( EXIT_FAILURE );
     }
 
     /* Create Semaphore(1): Mutex */
-    semaphore = sem_open( sem_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
-    if ( semaphore == SEM_FAILED ) {
+    handler->semaphore = sem_open( handler->shm_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
+    if ( handler->semaphore == SEM_FAILED ) {
         perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
         exit( EXIT_FAILURE );
     }
 
-    debug_shmem ( "Start Process Comm - shared mem created\n" );
+    debug_shmem ( "Start Process Comm - shared mem created, module(%s)\n", shmem_module );
 
     /* Set the address for both structs */
-    shsync = (shsync_t*) shmem_addr;
-    *shdata = shmem_addr + SHSYNC_MAX_SIZE;
+    handler->shsync = (shmem_sync_t*) handler->addr;
+    *shdata = handler->addr + SHSYNC_MAX_SIZE;
 
     /* Set up shsync struct: increment reference counter and initialize pthread_mutex */
-    sem_wait( semaphore );
-    shsync->nprocs++;
-    if ( shsync->nprocs == 1 ) {
+    sem_wait( handler->semaphore );
+    handler->shsync->nprocs++;
+    if ( handler->shsync->nprocs == 1 ) {
         pthread_mutexattr_t attr;
 
         /* Init pthread attributes */
@@ -126,7 +115,7 @@ void shmem_init( void **shdata, size_t shdata_size ) {
         }
 
         /* Init pthread mutex */
-        if ( pthread_mutex_init( &(shsync->shmem_mutex), &attr ) ) {
+        if ( pthread_mutex_init( &(handler->shsync->shmem_mutex), &attr ) ) {
             perror( "DLB ERROR: pthread_mutex_init" );
         }
 
@@ -135,10 +124,12 @@ void shmem_init( void **shdata, size_t shdata_size ) {
             perror( "DLB ERROR: pthread_mutexattr_destroy" );
         }
     }
-    sem_post( semaphore );
+    sem_post( handler->semaphore );
+
+    return handler;
 }
 
-void shmem_finalize( void ) {
+void shmem_finalize( shmem_handler_t* handler ) {
 #ifdef IS_BGQ_MACHINE
     // BG/Q have some problems deallocating shmem
     // It will be cleaned after the job completion anyway
@@ -146,44 +137,46 @@ void shmem_finalize( void ) {
 #endif
 
     /* Decrement reference counter */
-    sem_wait( semaphore );
-    int nprocs = --(shsync->nprocs);
-    sem_post( semaphore );
+    sem_wait( handler->semaphore );
+    int nprocs = --(handler->shsync->nprocs);
+    sem_post( handler->semaphore );
 
     /* Only the last process destroys the pthread_mutex */
     if ( nprocs == 0 ) {
-        if ( pthread_mutex_destroy( &(shsync->shmem_mutex) ) ) {
+        if ( pthread_mutex_destroy( &(handler->shsync->shmem_mutex) ) ) {
             perror ( "DLB ERROR: Shared Memory mutex destroy" );
         }
     }
 
     /* All processes must close semaphores and unmap shmem */
-    if ( sem_close( semaphore ) ) { perror( "DLB ERROR: sem_close" ); }
-    if ( munmap( shmem_addr, shmem_size ) ) { perror( "DLB_ERROR: munmap" ); }
+    if ( sem_close( handler->semaphore ) ) { perror( "DLB ERROR: sem_close" ); }
+    if ( munmap( handler->addr, handler->size ) ) { perror( "DLB_ERROR: munmap" ); }
 
     /* Only the last process unlinks semaphores and shmem */
     if ( nprocs == 0 ) {
-        if ( sem_unlink( sem_filename ) ) { perror( "DLB_ERROR: sem_unlink" ); }
-        if ( shm_unlink( shm_filename ) ) { perror( "DLB ERROR: shm_unlink" ); }
+        if ( sem_unlink( handler->shm_filename ) ) { perror( "DLB_ERROR: sem_unlink" ); }
+        if ( shm_unlink( handler->shm_filename ) ) { perror( "DLB ERROR: shm_unlink" ); }
     }
+
+    free( handler );
 }
 
-void shmem_lock( void ) {
-    if ( shsync != NULL ) {
-        pthread_mutex_lock( &(shsync->shmem_mutex) );
+void shmem_lock( shmem_handler_t* handler ) {
+    if ( handler->shsync != NULL ) {
+        pthread_mutex_lock( &(handler->shsync->shmem_mutex) );
     } else {
-        sem_wait( semaphore );
+        sem_wait( handler->semaphore );
     }
 }
 
-void shmem_unlock( void ) {
-    if ( shsync != NULL ) {
-        pthread_mutex_unlock( &(shsync->shmem_mutex) );
+void shmem_unlock( shmem_handler_t* handler ) {
+    if ( handler->shsync != NULL ) {
+        pthread_mutex_unlock( &(handler->shsync->shmem_mutex) );
     } else {
-        sem_post( semaphore );
+        sem_post( handler->semaphore );
     }
 }
 
-char *get_shm_filename( void ) {
-    return shm_filename;
+char *get_shm_filename( shmem_handler_t* handler ) {
+    return handler->shm_filename;
 }

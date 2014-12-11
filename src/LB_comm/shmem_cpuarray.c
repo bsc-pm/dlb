@@ -57,6 +57,7 @@ typedef struct {
     cpu_info_t node_info[0];
 } shdata_t;
 
+static shmem_handler_t *shm_handler;
 static shdata_t *shdata;
 static cpu_set_t default_mask;   // default mask of the process
 static cpu_set_t affinity_mask;  // affinity mask of the process
@@ -76,17 +77,17 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
     cpus_node = mu_get_system_size();
 
     // Basic size + zero-length array real length
-    shmem_init( &shdata, sizeof(shdata_t) + sizeof(cpu_info_t)*cpus_node );
+    shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(cpu_info_t)*cpus_node, "lewi" );
 
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int cpu;
         // Check first that my default_mask is not already owned
         for ( cpu = 0; cpu < cpus_node; cpu++ )
             if ( CPU_ISSET( cpu, &default_mask ) && shdata->node_info[cpu].owner != NOBODY ) {
-                shmem_unlock();
+                shmem_unlock( shm_handler );
                 fatal0( "Another process in the same node is using one of your cpus\n" );
             }
 
@@ -111,7 +112,7 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
             DLB_INSTR( if (is_idle(cpu)) idle_count++; )
             }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
     debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
@@ -122,7 +123,7 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
 void shmem_cpuarray__finalize( void ) {
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int cpu;
         for ( cpu = 0; cpu < cpus_node; cpu++ ) {
@@ -150,11 +151,11 @@ void shmem_cpuarray__finalize( void ) {
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     add_event( IDLE_CPUS_EVENT, idle_count );
 
-    shmem_finalize();
+    shmem_finalize( shm_handler );
     mu_finalize();
 }
 
@@ -170,7 +171,7 @@ void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask ) {
 
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int cpu;
         for ( cpu = 0; cpu < cpus_node; cpu++ ) {
@@ -195,7 +196,7 @@ void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask ) {
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     DLB_DEBUG( int size = CPU_COUNT( &freed_cpus ); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
@@ -218,7 +219,7 @@ void shmem_cpuarray__add_cpu( int cpu ) {
 
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         // If the CPU was mine, just change the state
         if ( CPU_ISSET( cpu, &default_mask ) ) {
@@ -237,10 +238,10 @@ void shmem_cpuarray__add_cpu( int cpu ) {
             if ( is_idle(i) ) {
                 DLB_INSTR( idle_count++; )
                 DLB_DEBUG( CPU_SET( i, &idle_cpus ); )
+            }
         }
     }
-    }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     DLB_DEBUG( int size = CPU_COUNT( &freed_cpus ); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
@@ -263,7 +264,7 @@ const cpu_set_t* shmem_cpuarray__recover_defmask( void ) {
 
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int cpu;
         for ( cpu = 0; cpu < cpus_node; cpu++ ) {
@@ -282,7 +283,7 @@ const cpu_set_t* shmem_cpuarray__recover_defmask( void ) {
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     DLB_DEBUG( int recovered = CPU_COUNT( &recovered_cpus); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
@@ -306,7 +307,7 @@ void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources ) 
 
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int cpu;
         for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
@@ -327,7 +328,7 @@ void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources ) 
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
 
     DLB_DEBUG( int recovered = CPU_COUNT( &recovered_cpus); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
@@ -352,7 +353,7 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask ) {
 
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock();
+    shmem_lock( shm_handler );
     {
         int cpu;
         for ( cpu = 0; cpu < cpus_node; cpu++ ) {
@@ -377,7 +378,7 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask ) {
             }
         }
     }
-    shmem_unlock();
+    shmem_unlock( shm_handler );
     if ( returned > 0 ) {
         debug_shmem ( "Giving back %d Threads (%s)\n", returned, mu_to_str(&returned_cpus) );
         debug_shmem ( "Available mask: %s\n", mu_to_str(&idle_cpus) );
@@ -412,7 +413,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
 
     if ( some_idle_cpu && max_resources > 0) {
 
-        shmem_lock();
+        shmem_lock( shm_handler );
         {
             /* First Step: Retrieve affine cpus */
             for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
@@ -448,7 +449,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
                 }
             }
         }
-        shmem_unlock();
+        shmem_unlock( shm_handler );
     }
 
     int collected = collected1 + collected2;
@@ -496,15 +497,16 @@ void shmem_cpuarray__print_info( void ) {
     cpus_node = mu_get_system_size();
 
     // Basic size + zero-length array real length
-    shmem_init( &shdata, sizeof(shdata_t) + sizeof(cpu_info_t)*cpus_node );
+    shmem_handler_t *handler;
+    handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(cpu_info_t)*cpus_node, "lewi" );
     cpu_info_t node_info_copy[cpus_node];
 
-    shmem_lock();
+    shmem_lock( handler );
     {
         memcpy( node_info_copy, shdata->node_info, sizeof(cpu_info_t)*cpus_node );
     }
-    shmem_unlock();
-    shmem_finalize();
+    shmem_unlock( handler );
+    shmem_finalize( handler );
 
     char owners[512] = "OWNERS: ";
     char guests[512] = "GUESTS: ";

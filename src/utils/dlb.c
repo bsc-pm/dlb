@@ -39,7 +39,7 @@ void print_help( void ) {
     fprintf( stdout, "LB_AGGRESSIVE_INIT = [0, 1]\n" );
     fprintf( stdout, "LB_PRIORIZE_LOCALITY = [0, 1]\n" );
     fprintf( stdout, "LB_VERBOSE = [0, 1]\n" );
-    fprintf( stdout, "LB_SHM_NAME = [name]\n" );
+    fprintf( stdout, "LB_SHM_KEY = [key]\n" );
     fprintf( stdout, "LB_POLICY = [policy]\n" );
     fprintf( stdout, "\n" );
     fprintf( stdout, "LB Policies:\n" );
