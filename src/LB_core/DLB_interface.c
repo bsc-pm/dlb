@@ -116,12 +116,24 @@ DLB_API_DEF( int, DLB_Stats_GetNumCpus, dlb_stats_getnumcpus, (void) ) {
     return stats_ext_getnumcpus();
 }
 
+DLB_API_DEF( void, DLB_Stats_GetPidList, dlb_stats_getpidlist, (int *pidlist, int *nelems, int max_len) ) {
+    stats_ext_getpidlist(pidlist, nelems, max_len);
+}
+
 DLB_API_DEF( double, DLB_Stats_GetCpuUsage, dlb_stats_getcpuusage, (int pid) ) {
     return stats_ext_getcpuusage(pid);
 }
 
+DLB_API_DEF( void, DLB_Stats_GetCpuUsageList, dlb_stats_getcpuusagelist, (double *usagelist,int *nelems,int max_len) ) {
+    return stats_ext_getcpuusage_list(usagelist, nelems, max_len);
+}
+
 DLB_API_DEF( int, DLB_Stats_GetActiveCpus, dlb_stats_getactivecpus, (int pid) ) {
     return stats_ext_getactivecpus(pid);
+}
+
+DLB_API_DEF( void, DLB_Stats_GetActiveCpusList, dlb_stats_getactivecpus_list, (int *cpuslist,int *nelems,int max_len) ) {
+    return stats_ext_getactivecpus_list(cpuslist, nelems, max_len);
 }
 
 DLB_API_DEF( void, DLB_Stats_GetLoadAvg, dlb_stats_getloadavg, (int pid, double *load) ) {

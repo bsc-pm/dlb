@@ -45,8 +45,11 @@ int DLB_Is_auto(void);
 void DLB_Stats_Init(void);
 void DLB_Stats_Finalize(void);
 int DLB_Stats_GetNumCpus(void);
+void DLB_Stats_GetPidList(int *pidlist,int *nelems,int max_len);
 double DLB_Stats_GetCpuUsage(int pid);
+void DLB_Stats_GetCpuUsageList(double *usagelist,int *nelems,int max_len);
 int DLB_Stats_GetActiveCpus(int pid);
+void DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
 void DLB_Stats_GetLoadAvg(int pid, double *load);
 
 #ifdef __cplusplus

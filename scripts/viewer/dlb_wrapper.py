@@ -26,3 +26,24 @@ class DLB_Stats():
         load = (ctypes.c_double*3)()
         self.lib.DLB_Stats_GetLoadAvg(pid, ctypes.byref(load))
         return [load[i] for i in range(len(load))]
+
+    def get_pid_list(self):
+        array_size = self.get_num_cpus()
+        pidlist = (ctypes.c_int*array_size)()
+        nelems = ctypes.c_int()
+        self.lib.DLB_Stats_GetPidList(ctypes.byref(pidlist), ctypes.byref(nelems), array_size)
+        return [pidlist[i] for i in range(nelems.value)]
+
+    def get_cpu_usage_list(self):
+        array_size = self.get_num_cpus()
+        usage_list = (ctypes.c_double*array_size)()
+        nelems = ctypes.c_int()
+        self.lib.DLB_Stats_GetCpuUsageList(ctypes.byref(usage_list), ctypes.byref(nelems), array_size)
+        return [usage_list[i] for i in range(nelems.value)]
+
+    def get_active_cpus_list(self):
+        array_size = self.get_num_cpus()
+        cpus_list = (ctypes.c_int*array_size)()
+        nelems = ctypes.c_int()
+        self.lib.DLB_Stats_GetActiveCpusList(ctypes.byref(cpus_list), ctypes.byref(nelems), array_size)
+        return [cpus_list[i] for i in range(nelems.value)]

@@ -161,8 +161,26 @@ void shmem_stats_ext__finalize( void ) {
     shmem_finalize( shm_handler );
 }
 
-int shmem_stats_ext__getnumcpus( int pid ) {
+int shmem_stats_ext__getnumcpus( void ) {
     return mu_get_system_size();
+}
+
+void shmem_stats_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
+    *nelems = 0;
+    shmem_lock( shm_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            int pid = shdata->process_info[p].pid;
+            if ( pid != NOBODY ) {
+                pidlist[(*nelems)++] = pid;
+            }
+            if ( *nelems == max_len ) {
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_handler );
 }
 
 double shmem_stats_ext__getcpuusage( int pid ) {
@@ -183,6 +201,23 @@ double shmem_stats_ext__getcpuusage( int pid ) {
     return cpu_usage;
 }
 
+void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
+    *nelems = 0;
+    shmem_lock( shm_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata->process_info[p].pid != NOBODY ) {
+                usagelist[(*nelems)++] = shdata->process_info[p].cpu_usage;
+            }
+            if ( *nelems == max_len ) {
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_handler );
+}
+
 int shmem_stats_ext__getactivecpus( int pid ) {
     int active_cpus = 0;
     shmem_lock( shm_handler );
@@ -197,6 +232,23 @@ int shmem_stats_ext__getactivecpus( int pid ) {
     }
     shmem_unlock( shm_handler );
     return active_cpus;
+}
+
+void shmem_stats_ext__getactivecpus_list( int *cpuslist, int *nelems, int max_len ) {
+    *nelems = 0;
+    shmem_lock( shm_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata->process_info[p].pid != NOBODY ) {
+                cpuslist[(*nelems)++] = shdata->process_info[p].active_cpus;
+            }
+            if ( *nelems == max_len ) {
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_handler );
 }
 
 void shmem_stats_ext__getloadavg( int pid, double *load ) {
