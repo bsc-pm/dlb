@@ -29,7 +29,7 @@ class MainApplication(tk.Frame):
         self.reset_btn = ttk.Button(self, text="Reset DLB Viewer:", command=self.reset)
         self.check = ttk.Checkbutton(self, text="Normalize to 100%", variable=self.CheckVar, command=self.check_normalized)
         self.separator = ttk.Separator(self, orient="horizontal")
-        self.viewer = dlb_viewer.DLBViewer(self, refresh_time=1000, debug=True)
+        self.viewer = dlb_viewer.DLBViewer(self, refresh_time=100, debug=True)
 
         # Grid
         self.grid()
@@ -61,10 +61,11 @@ class MainApplication(tk.Frame):
         text_entry = self.entry.get()
         if len(text_entry) != 0:
             self.viewer.add_process(int(text_entry))
+            self.entry.delete(0, tk.END)
 
     def reset(self):
         self.viewer.destroy()
-        self.viewer = DLBViewer(self, self.CheckVar.get())
+        self.viewer = dlb_viewer.DLBViewer(self, refresh_time=100, debug=True)
         self.viewer.grid(row=4, column=0, columnspan=3)
 
     def check_normalized(self):

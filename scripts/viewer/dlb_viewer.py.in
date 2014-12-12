@@ -15,21 +15,22 @@ import dlb_wrapper
 dlb = dlb_wrapper.DLB_Stats(@PREFIX@)
 
 class DLBHistory(tk.Frame):
-    def __init__(self, parent, max_len=100, debug=False, *args, **kwargs):
+    def __init__(self, parent, x_max=1000, y_max=64, debug=False, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
-        self.max_len = max_len
+        self.x_max = x_max
+        self.y_max = y_max
         self.debug = debug
         self.proc_data = []
         self.lines = []
 
         self.fig = Figure(figsize=figaspect(0.25), dpi=40)
         self.ax0 = self.fig.add_subplot(111)
-        self.ax0.set_title('Plot Title')
-        self.ax0.set_xlabel('X axis label')
-        self.ax0.set_ylabel('Y label')
-        self.ax0.set_xlim([0,self.max_len])
-        self.ax0.set_ylim([0,8])
+        self.ax0.set_title('CPU Usage History')
+        self.ax0.set_xlabel('Samples')
+        self.ax0.set_ylabel('Cpu Usage')
+        self.ax0.set_xlim([0,self.x_max])
+        self.ax0.set_ylim([0,self.y_max])
 
         self.line1, = self.ax0.plot([],[])
 
@@ -43,7 +44,6 @@ class DLBHistory(tk.Frame):
             self.toolbar.update()
 
     def add_process(self, pid):
-        #self.proc_data.append(deque([0.0]*self.max_len))
         self.proc_data.append(deque([0.0]))
         line, = self.ax0.plot([],[])
         self.lines.append(line)
@@ -53,9 +53,9 @@ class DLBHistory(tk.Frame):
             # usage is of the form 0%-X00%, where X=num_cpus
             # data must be in the range 0..num_cpus
             data.append(usage[key]/100.0)
-            while len(data) > self.max_len:
+            while len(data) > self.x_max:
                 data.popleft()
-            self.lines[key].set_data(range(len(data)), data)
+            self.lines[key].set_data(range(self.x_max-len(data), self.x_max), data)
             #self.ax0.set_xlim([length-self.max_len,length])
             self.canvas.draw()
 
@@ -125,14 +125,14 @@ class DLBUsage(tk.Frame):
         self.num_cpus = dlb.get_num_cpus()
 
         self.usage_entries = []
-        self.usage_entries.append(DLBUsageEntry(self, text="Total CPUs ({0})".format(self.num_cpus),
-            fillcolor1="red", fillcolor2="orange", bg="grey"))
+        self.usage_entries.append(DLBUsageEntry(self, text="DLB Processes",
+            fillcolor1="yellow", fillcolor2="dark khaki", bg="grey"))
 
         self.usage_entries[0].pack(pady=5)
 
     def add_process(self, pid):
         self.usage_entries.append(DLBUsageEntry(self, text="PID {0}".format(pid),
-            fillcolor1="blue", fillcolor2="cyan", textcolor="white", bg="black"))
+            fillcolor1="blue", fillcolor2="SteelBlue4", textcolor="white", bg="black"))
         self.usage_entries[-1].pack(pady=5)
 
 class DLBViewer(tk.Frame):
@@ -155,7 +155,7 @@ class DLBViewer(tk.Frame):
             self.loadavg = DLBLoadAvg(self)
             self.loadavg.pack(fill=tk.X)
         # CPU Usage history
-        self.history = DLBHistory(self, debug=self.debug)
+        self.history = DLBHistory(self, y_max=self.num_cpus, debug=self.debug)
         self.history.pack()
         # FPS
         if self.debug:
@@ -165,7 +165,7 @@ class DLBViewer(tk.Frame):
     def start(self):
         if not self.started:
             self.started = True
-            self.poll()
+            self._poll()
 
     def stop(self):
         self.started = False
@@ -181,23 +181,28 @@ class DLBViewer(tk.Frame):
             self.processes.append(pid)
             self.usage.add_process(pid)
             self.history.add_process(pid)
+            self.start()
 
-    def poll(self):
+    def _poll(self):
         if self.started:
             start = time.time()
             usage = []
             usage.append(0)
             resources = []
-            resources.append(self.num_cpus)
+            resources.append(0)
             if self.experimental_loadavg:
                 loadavg_1 = []
                 loadavg_5 = []
                 loadavg_15 = []
             for proc in self.processes:
+                # update cpu_usage
                 cpu_usage = dlb.get_cpu_usage(proc)
                 usage.append(cpu_usage)
                 usage[0] += cpu_usage
-                resources.append(dlb.get_active_cpus(proc))
+                # update asigned resources
+                resrc = dlb.get_active_cpus(proc)
+                resources.append(resrc)
+                resources[0] += resrc
                 if self.experimental_loadavg:
                     load = dlb.get_load_avg(proc)
                     loadavg_1.append(load[0])
@@ -224,7 +229,7 @@ class DLBViewer(tk.Frame):
             # Update History
             self.history.update(usage[1:])
 
-            self.after(self.refresh_time, self.poll)
+            self.after(self.refresh_time, self._poll)
 
             # FPS
             if self.debug:

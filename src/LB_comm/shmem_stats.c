@@ -41,6 +41,7 @@ typedef pid_t spid_t;  // Sub-process ID
 
 typedef struct {
     spid_t pid;
+    unsigned int active_cpus;
     // Cpu Usage fields:
     double cpu_usage;
     struct timeval last_ttime;  // Total time
@@ -109,6 +110,11 @@ void shmem_stats__update( void ) {
 
     shmem_lock( shm_handler );
     {
+        // Get the active CPUs
+        cpu_set_t mask;
+        get_mask( &mask );
+        shdata->process_info[my_process].active_cpus = CPU_COUNT( &mask );
+
         // Compute elapsed total time
         struct timeval current_ttime;
         long long elapsed_ttime;
@@ -178,9 +184,19 @@ double shmem_stats_ext__getcpuusage( int pid ) {
 }
 
 int shmem_stats_ext__getactivecpus( int pid ) {
-    cpu_set_t mask;
-    get_mask( &mask );
-    return CPU_COUNT( &mask );
+    int active_cpus = 0;
+    shmem_lock( shm_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata->process_info[p].pid == pid ) {
+                active_cpus = shdata->process_info[p].active_cpus;
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_handler );
+    return active_cpus;
 }
 
 void shmem_stats_ext__getloadavg( int pid, double *load ) {
