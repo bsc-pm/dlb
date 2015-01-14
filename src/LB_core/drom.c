@@ -17,52 +17,39 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef DLB_INTERFACE_H
-#define DLB_INTERFACE_H
+#define _GNU_SOURCE
+#include <sched.h>
+#include "LB_comm/shmem_drom.h"
 
-/* cpu_set_t hidden as void pointer */
-typedef void* dlb_cpu_set_t;
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-void DLB_Init(void);
-void DLB_Finalize(void);
-void DLB_enable(void);
-void DLB_disable(void);
-void DLB_single(void);
-void DLB_parallel(void);
-void DLB_UpdateResources(void);
-void DLB_UpdateResources_max(int max_resources);
-void DLB_ReturnClaimedCpus(void);
-void DLB_Lend(void);
-void DLB_Retrieve(void);
-int DLB_ReleaseCpu(int cpu);
-int DLB_ReturnClaimedCpu(int cpu);
-void DLB_ClaimCpus(int cpus);
-int DLB_CheckCpuAvailability(int cpu);
-int DLB_Is_auto(void);
-
-void DLB_Stats_Init(void);
-void DLB_Stats_Finalize(void);
-int DLB_Stats_GetNumCpus(void);
-void DLB_Stats_GetPidList(int *pidlist,int *nelems,int max_len);
-double DLB_Stats_GetCpuUsage(int pid);
-void DLB_Stats_GetCpuUsageList(double *usagelist,int *nelems,int max_len);
-int DLB_Stats_GetActiveCpus(int pid);
-void DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
-void DLB_Stats_GetLoadAvg(int pid, double *load);
-
-void DLB_Drom_Init(void);
-void DLB_Drom_Finalize(void);
-int DLB_Drom_GetNumCpus(void);
-void DLB_Drom_GetPidList(int *pidlist, int *nelems, int max_len);
-void DLB_Drom_SetProcessMask(int pid, dlb_cpu_set_t mask);
-
-#ifdef __cplusplus
+void drom_init( void ) {
+    shmem_drom__init();
 }
-#endif
 
-#endif /* DLB_INTERFACE_H */
+void drom_finalize( void ) {
+    shmem_drom__finalize();
+}
+
+void drom_update( void ) {
+    shmem_drom__update();
+}
+
+
+void drom_ext_init( void ) {
+    shmem_drom_ext__init();
+}
+
+void drom_ext_finalize( void ) {
+    shmem_drom_ext__finalize();
+}
+
+int drom_ext_getnumcpus( void ) {
+    return shmem_drom_ext__getnumcpus();
+}
+
+void drom_ext_getpidlist( int *pidlist, int *nelems, int max_len ) {
+    shmem_drom_ext__getpidlist(pidlist, nelems, max_len);
+}
+
+void drom_ext_setprocessmask( int pid, cpu_set_t *mask ) {
+    shmem_drom_ext__setprocessmask( pid, mask );
+}

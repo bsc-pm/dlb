@@ -37,6 +37,7 @@
 
 #include <LB_numThreads/numThreads.h>
 #include "LB_core/statistics.h"
+#include "LB_core/drom.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -75,6 +76,7 @@ static bool dlb_initialized = false;
 static int init_id = 0;
 
 static bool stats_enabled;
+static bool drom_enabled;
 
 static void dummyFunc() {}
 static int false_dummyFunc() {return 0;}
@@ -108,6 +110,7 @@ int Initialize(void) {
         parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality, false );
         parse_env_bool( "LB_VERBOSE", &_verbose, false );
         parse_env_bool( "LB_STATISTICS", &stats_enabled, false );
+        parse_env_bool( "LB_DROM", &drom_enabled, false );
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
         if (strcasecmp(policy, "LeWI")==0) {
@@ -341,6 +344,7 @@ int Initialize(void) {
             }*/
 
         lb_funcs.init();
+        if ( drom_enabled ) drom_init();
         if ( stats_enabled ) stats_init();
         dlb_enabled = true;
         dlb_initialized = true;
@@ -356,6 +360,7 @@ void Finish(int id) {
         dlb_enabled = false;
         dlb_initialized = false;
         if ( stats_enabled ) stats_finalize();
+        if ( drom_enabled ) drom_finalize();
         lb_funcs.finish();
     }
     /*  if (prof){
@@ -387,6 +392,7 @@ void IntoCommunication(void) {
         add_time(iterCpuTime, aux, &iterCpuTime);*/
 
     if (dlb_enabled) {
+        if ( drom_enabled ) drom_update();
         lb_funcs.intoCommunication();
         if ( stats_enabled ) stats_update();
     }
@@ -399,6 +405,7 @@ void OutOfCommunication(void) {
         add_time(iterMPITime, aux, &iterMPITime);*/
 
     if (dlb_enabled) {
+        if ( drom_enabled ) drom_update();
         lb_funcs.outOfCommunication();
         if ( stats_enabled ) stats_update();
     }
@@ -410,6 +417,7 @@ void IntoBlockingCall(int is_iter, int is_single) {
         cpuSecs=iterCpuTime_avg;
         MPISecs=iterMPITime_avg;*/
     if (dlb_enabled) {
+        if ( drom_enabled ) drom_update();
         if (is_single) {
             lb_funcs.intoBlockingCall(is_iter, ONE_CPU);
         } else {
@@ -421,6 +429,7 @@ void IntoBlockingCall(int is_iter, int is_single) {
 
 void OutOfBlockingCall(int is_iter) {
     if (dlb_enabled) {
+        if ( drom_enabled ) drom_update();
         lb_funcs.outOfBlockingCall(is_iter);
         if ( stats_enabled ) stats_update();
     }
@@ -429,6 +438,7 @@ void OutOfBlockingCall(int is_iter) {
 void updateresources( int max_resources ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_UPDATE);
+        if ( drom_enabled ) drom_update();
         lb_funcs.updateresources( max_resources );
         if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
@@ -438,6 +448,7 @@ void updateresources( int max_resources ) {
 void returnclaimed( void ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
+        if ( drom_enabled ) drom_update();
         lb_funcs.returnclaimed();
         if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
@@ -446,6 +457,7 @@ void returnclaimed( void ) {
 
 int releasecpu( int cpu ) {
     if (dlb_enabled) {
+        if ( drom_enabled ) drom_update();
         if ( stats_enabled ) stats_update();
         return lb_funcs.releasecpu(cpu);
     } else {
@@ -455,6 +467,7 @@ int releasecpu( int cpu ) {
 
 int returnclaimedcpu( int cpu ) {
     if (dlb_enabled) {
+        if ( drom_enabled ) drom_update();
         if ( stats_enabled ) stats_update();
         return lb_funcs.returnclaimedcpu(cpu);
     } else {
@@ -465,6 +478,7 @@ int returnclaimedcpu( int cpu ) {
 void claimcpus( int cpus ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
+        if ( drom_enabled ) drom_update();
         lb_funcs.claimcpus(cpus);
         if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
@@ -473,6 +487,7 @@ void claimcpus( int cpus ) {
 
 int checkCpuAvailability (int cpu) {
     if (dlb_enabled) {
+        if ( drom_enabled ) drom_update();
         if ( stats_enabled ) stats_update();
         return lb_funcs.checkCpuAvailability(cpu);
     } else {
@@ -481,5 +496,5 @@ int checkCpuAvailability (int cpu) {
 }
 
 int is_auto( void ){
-   return policy_auto; 
+   return policy_auto;
 }

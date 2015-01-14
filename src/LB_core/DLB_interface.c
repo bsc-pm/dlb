@@ -17,9 +17,13 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#define _GNU_SOURCE
+#include <sched.h>
 #include <limits.h>
+#include "LB_core/DLB_interface.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/statistics.h"
+#include "LB_core/drom.h"
 #include "support/dlb_api.h"
 #include "support/tracing.h"
 
@@ -138,4 +142,27 @@ DLB_API_DEF( void, DLB_Stats_GetActiveCpusList, dlb_stats_getactivecpus_list, (i
 
 DLB_API_DEF( void, DLB_Stats_GetLoadAvg, dlb_stats_getloadavg, (int pid, double *load) ) {
     stats_ext_getloadavg(pid, load);
+}
+
+// final name not decided yet
+/* Dynamic Resource Ownership Manager API */
+
+DLB_API_DEF( void, DLB_Drom_Init, dlb_drom_init, (void) ) {
+    drom_ext_init();
+}
+
+DLB_API_DEF( void, DLB_Drom_Finalize, dlb_drom_finalize, (void) ) {
+    drom_ext_finalize();
+}
+
+DLB_API_DEF( int, DLB_Drom_GetNumCpus, dlb_drom_getnumcpus, (void) ) {
+    return drom_ext_getnumcpus();
+}
+
+DLB_API_DEF( void, DLB_Drom_GetPidList, dlb_drom_getpidlist, (int *pidlist, int *nelems, int max_len) ) {
+    drom_ext_getpidlist(pidlist, nelems, max_len);
+}
+
+DLB_API_DEF( void, DLB_Drom_SetProcessMask, dlb_drom_setprocessmask, (int pid, dlb_cpu_set_t mask) ) {
+    drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
 }

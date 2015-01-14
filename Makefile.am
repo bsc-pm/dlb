@@ -151,12 +151,16 @@ COMMON_SRCS = \
 	src/LB_comm/shmem_cpuarray.h    \
 	src/LB_comm/shmem_stats.c       \
 	src/LB_comm/shmem_stats.h       \
+	src/LB_comm/shmem_drom.c       \
+	src/LB_comm/shmem_drom.h       \
 	src/LB_core/DLB_kernel.c        \
 	src/LB_core/DLB_kernel.h        \
 	src/LB_core/DLB_interface.c     \
 	src/LB_core/DLB_interface.h     \
 	src/LB_core/statistics.c        \
 	src/LB_core/statistics.h        \
+	src/LB_core/drom.c              \
+	src/LB_core/drom.h              \
 	src/support/globals.c           \
 	src/support/globals.h           \
 	src/support/debug.c             \
