@@ -99,7 +99,6 @@ void shmem_drom__update( void ) {
 /* From here: functions aimed to be called from an external process */
 
 void shmem_drom_ext__init( void ) {
-    mu_init();
     max_processes = mu_get_system_size();
     shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "drom" );
 }

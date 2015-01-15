@@ -70,7 +70,6 @@ static inline bool is_idle( int cpu ) {
 }
 
 void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
-    mu_init();
     mu_parse_mask( "LB_MASK", &dlb_mask );
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
     mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
@@ -156,7 +155,6 @@ void shmem_cpuarray__finalize( void ) {
     add_event( IDLE_CPUS_EVENT, idle_count );
 
     shmem_finalize( shm_handler );
-    mu_finalize();
 }
 
 /* Add cpu_mask to the Shared Mask
@@ -493,7 +491,6 @@ bool shmem_cpuarray__is_cpu_claimed( int cpu ) {
  * That's why we should initialize and finalize the shared memory
  */
 void shmem_cpuarray__print_info( void ) {
-    mu_init();
     cpus_node = mu_get_system_size();
 
     // Basic size + zero-length array real length

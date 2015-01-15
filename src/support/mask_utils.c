@@ -49,6 +49,7 @@ typedef struct {
 } mu_system_loc_t;
 
 static mu_system_loc_t sys;
+static bool mu_initialized = false;
 
 #if defined HAVE_HWLOC
 static void parse_hwloc( void ) {
@@ -148,26 +149,32 @@ static void parse_lscpu( void ) {
 #endif /* HAVE_HWLOC */
 
 void mu_init( void ) {
-    sys.num_parents = 0;
-    sys.parents = NULL;
+    if ( !mu_initialized ) {
+        sys.num_parents = 0;
+        sys.parents = NULL;
 
 #if defined HAVE_HWLOC
-    parse_hwloc();
+        parse_hwloc();
 #elif defined IS_BGQ_MACHINE
-    set_bgq_info();
+        set_bgq_info();
 #else
-    parse_lscpu();
+        parse_lscpu();
 #endif
 
-    fatal_cond( sys.size != CPUS_NODE, "Detected cpus at runtime (%d) do not match "
-            "detected cpus at configure time(%d)", sys.size, CPUS_NODE );
+        fatal_cond( sys.size != CPUS_NODE, "Detected cpus at runtime (%d) do not match "
+                "detected cpus at configure time(%d)", sys.size, CPUS_NODE );
+
+        mu_initialized = true;
+    }
 }
 
 void mu_finalize( void ) {
     free(sys.parents);
+    mu_initialized = false;
 }
 
 int mu_get_system_size( void ) {
+    if ( !mu_initialized ) mu_init();
     return sys.size;
 }
 
@@ -176,6 +183,8 @@ int mu_get_system_size( void ) {
  * MU_ALL_BITS: the socket mask must be a subset of child_set
  */
 void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, mu_opt_t condition ) {
+    if ( !mu_initialized ) mu_init();
+
     CPU_ZERO( affinity_set );
     cpu_set_t intxn;
     int i;
@@ -189,6 +198,8 @@ void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, 
 }
 
 const char* mu_to_str ( const cpu_set_t *cpu_set ) {
+    if ( !mu_initialized ) mu_init();
+
     int i;
     static char str[CPU_SETSIZE*4];
     char str_i[8];
@@ -204,6 +215,8 @@ const char* mu_to_str ( const cpu_set_t *cpu_set ) {
 }
 
 void mu_parse_mask( char const *env, cpu_set_t *mask ) {
+    if ( !mu_initialized ) mu_init();
+
     char* str = getenv( env );
     if ( !str ) { return; }
 
