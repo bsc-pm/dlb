@@ -44,6 +44,7 @@
 #include "support/utils.h"
 #include "support/mytime.h"
 #include "support/mask_utils.h"
+#include "support/sighandler.h"
 
 //int iterNum = 0;
 //struct timespec initAppl;
@@ -343,6 +344,9 @@ int Initialize(void) {
                 clock_gettime(CLOCK_REALTIME, &initComp);
             }*/
 
+        /* Intercept POSIX signals to manage DLB cleanup */
+        register_signals();
+
         lb_funcs.init();
         if ( drom_enabled ) drom_init();
         if ( stats_enabled ) stats_init();
@@ -362,6 +366,7 @@ void Finish(int id) {
         if ( stats_enabled ) stats_finalize();
         if ( drom_enabled ) drom_finalize();
         lb_funcs.finish();
+        unregister_signals();
     }
     /*  if (prof){
             struct timespec aux, aux2;
@@ -384,6 +389,11 @@ void Finish(int id) {
         }*/
 }
 
+void Terminate(void) {
+    if ( stats_enabled ) stats_finalize();
+    if ( drom_enabled ) drom_finalize();
+    lb_funcs.finish();
+}
 
 void IntoCommunication(void) {
     /*  struct timespec aux;

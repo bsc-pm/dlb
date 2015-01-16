@@ -173,6 +173,8 @@ COMMON_SRCS = \
 	src/support/mytime.h            \
 	src/support/mask_utils.c        \
 	src/support/mask_utils.h        \
+	src/support/sighandler.c        \
+	src/support/sighandler.h        \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la

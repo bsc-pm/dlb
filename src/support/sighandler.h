@@ -17,59 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
-#ifndef DLB_KERNEL_H
-#define DLB_KERNEL_H
+#ifndef SIGHANDLER_H
+#define SIGHANDLER_H
 
-#include <stdbool.h>
+void register_signals(void);
+void unregister_signals(void);
 
-typedef struct {
-    void (*init) (void);
-    void (*finish) (void);
-    void (*initIteration) (void);
-    void (*finishIteration) (void);
-    void (*intoCommunication) (void);
-    void (*outOfCommunication) (void);
-    void (*intoBlockingCall) (int is_iter, int blocking_mode);
-    void (*outOfBlockingCall) (int is_iter);
-    void (*updateresources) ( int max_resources );
-    void (*returnclaimed) (void);
-    int (*releasecpu) (int cpu);
-    int (*returnclaimedcpu) (int cpu);
-    void (*claimcpus) (int cpus);
-    int (*checkCpuAvailability) (int cpu);
-} BalancePolicy;
-
-extern int use_dpd;
-
-void set_dlb_enabled(bool enabled);
-
-int Initialize(void);
-
-void Finish(int id);
-
-void Terminate(void);
-
-void IntoCommunication(void);
-
-void OutOfCommunication(void);
-
-void IntoBlockingCall(int is_iter, int is_single);
-
-void OutOfBlockingCall(int is_iter);
-
-void updateresources( int max_resources );
-
-void returnclaimed( void );
-
-int releasecpu( int cpu );
-
-int returnclaimedcpu( int cpu );
-
-void claimcpus( int cpus );
-
-int checkCpuAvailability ( int cpu );
-
-int tracing_ready();
-
-int is_auto( void );
-#endif //DLB_KERNEL_H
+#endif /* SIGHANDLER_H */
