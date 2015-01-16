@@ -120,8 +120,8 @@ void register_signals( void ) {
     register_signal( SIGALRM );
     register_signal( SIGTERM );
     register_signal( SIGUSR1 );
-    register_signal( SIGUSR2 );
-    register_signal( SIGCHLD );
+    //register_signal( SIGUSR2 );
+    //register_signal( SIGCHLD );
     register_signal( SIGBUS );
     register_signal( SIGURG );
     register_signal( SIGVTALRM );
