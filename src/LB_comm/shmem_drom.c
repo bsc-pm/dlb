@@ -45,6 +45,7 @@ typedef struct {
 } shdata_t;
 
 static shmem_handler_t *shm_handler;
+static shmem_handler_t *shm_ext_handler;
 static shdata_t *shdata;
 static int max_processes;
 static int my_process;
@@ -100,11 +101,11 @@ void shmem_drom__update( void ) {
 
 void shmem_drom_ext__init( void ) {
     max_processes = mu_get_system_size();
-    shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "drom" );
+    shm_ext_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "drom" );
 }
 
 void shmem_drom_ext__finalize( void ) {
-    shmem_finalize( shm_handler );
+    shmem_finalize( shm_ext_handler );
 }
 
 int shmem_drom_ext__getnumcpus( void ) {
@@ -113,7 +114,7 @@ int shmem_drom_ext__getnumcpus( void ) {
 
 void shmem_drom_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
     *nelems = 0;
-    shmem_lock( shm_handler );
+    shmem_lock( shm_ext_handler );
     {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
@@ -126,11 +127,11 @@ void shmem_drom_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
             }
         }
     }
-    shmem_unlock( shm_handler );
+    shmem_unlock( shm_ext_handler );
 }
 
 void shmem_drom_ext__setprocessmask( int pid, cpu_set_t *mask ) {
-    shmem_lock( shm_handler );
+    shmem_lock( shm_ext_handler );
     {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
@@ -141,5 +142,5 @@ void shmem_drom_ext__setprocessmask( int pid, cpu_set_t *mask ) {
             }
         }
     }
-    shmem_unlock( shm_handler );
+    shmem_unlock( shm_ext_handler );
 }
