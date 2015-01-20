@@ -101,15 +101,15 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
                 }
             }
             // Add DLB mask info
-            if ( CPU_ISSET( cpu, &dlb_mask )  &&
-                    shdata->node_info[cpu].owner == NOBODY &&
-                    shdata->node_info[cpu].state == DISABLED ) {
+            if ( CPU_ISSET( cpu, &dlb_mask )
+                    && shdata->node_info[cpu].owner == NOBODY
+                    && shdata->node_info[cpu].state == DISABLED ) {
                 shdata->node_info[cpu].state = LENT;
             }
 
             // Look for Idle CPUs
             DLB_INSTR( if (is_idle(cpu)) idle_count++; )
-            }
+        }
     }
     shmem_unlock( shm_handler );
 
@@ -358,10 +358,10 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask ) {
             fatal_cond0( CPU_ISSET( cpu, mask ) && shdata->node_info[cpu].guest != ME,
                          "Current mask and Shared Memory information differ\n" );
             if ( CPU_ISSET( cpu, mask ) ) {
-                if ( (shdata->node_info[cpu].owner != ME     &&
-                        shdata->node_info[cpu].guest == ME     &&
-                        shdata->node_info[cpu].state == BUSY)  ||
-                        (shdata->node_info[cpu].state == DISABLED) ) {
+                if ( ( shdata->node_info[cpu].owner != ME
+                            && shdata->node_info[cpu].guest == ME
+                            && shdata->node_info[cpu].state == BUSY
+                     ) || shdata->node_info[cpu].state == DISABLED ) {
                     shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
                     returned++;
                     CPU_CLR( cpu, mask );
@@ -415,9 +415,9 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
         {
             /* First Step: Retrieve affine cpus */
             for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
-                if ( CPU_ISSET( cpu, &affinity_mask )        &&
-                        shdata->node_info[cpu].state == LENT   &&
-                        shdata->node_info[cpu].guest == NOBODY ) {
+                if ( CPU_ISSET( cpu, &affinity_mask )
+                        && shdata->node_info[cpu].state == LENT
+                        && shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
                     CPU_SET( cpu, mask );
                     max_resources--;
@@ -428,8 +428,8 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
 
             /* Second Step: Retrieve non-affine cpus, if needed */
             for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
-                if ( shdata->node_info[cpu].state == LENT    &&
-                        shdata->node_info[cpu].guest == NOBODY ) {
+                if ( shdata->node_info[cpu].state == LENT
+                        && shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
                     CPU_SET( cpu, mask );
                     max_resources--;
