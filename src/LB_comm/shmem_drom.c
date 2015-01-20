@@ -35,8 +35,9 @@
 typedef pid_t spid_t;  // Sub-process ID
 
 typedef struct {
+    cpu_set_t current_process_mask;
+    cpu_set_t future_process_mask;
     spid_t pid;
-    cpu_set_t process_mask;
     bool dirty;
 } pinfo_t;
 
@@ -62,8 +63,8 @@ void shmem_drom__init(void) {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
             if ( shdata->process_info[p].pid == NOBODY ) {
+                get_process_mask( &(shdata->process_info[p].current_process_mask) );
                 shdata->process_info[p].pid = ME;
-                CPU_ZERO( &(shdata->process_info[p].process_mask) );
                 shdata->process_info[p].dirty = false;
                 my_process = p;
                 break;
@@ -90,7 +91,7 @@ void shmem_drom__update( void ) {
         shmem_lock( shm_handler );
         {
             if ( shdata->process_info[my_process].dirty ) {
-                set_process_mask( &(shdata->process_info[my_process].process_mask) );
+                set_process_mask( &(shdata->process_info[my_process].future_process_mask) );
             }
         }
         shmem_unlock( shm_handler );
@@ -136,8 +137,8 @@ void shmem_drom_ext__setprocessmask( int pid, cpu_set_t *mask ) {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
             if ( shdata->process_info[p].pid == pid ) {
-                memcpy( &(shdata->process_info[my_process].process_mask), mask, sizeof(cpu_set_t) );
-                shdata->process_info[my_process].dirty = true;
+                memcpy( &(shdata->process_info[p].future_process_mask), mask, sizeof(cpu_set_t) );
+                shdata->process_info[p].dirty = true;
                 break;
             }
         }
