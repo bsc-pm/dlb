@@ -105,6 +105,10 @@ DLB_API_DEF( int, DLB_Is_auto, dlb_is_auto, (void) ) {
     return is_auto();
 }
 
+DLB_API_DEF( void, DLB_Update, dlb_update, (void) ) {
+    return Update();
+}
+
 
 /* Statistics API */
 

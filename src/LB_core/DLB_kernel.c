@@ -395,6 +395,11 @@ void Terminate(void) {
     lb_funcs.finish();
 }
 
+void Update() {
+    if ( drom_enabled ) drom_update();
+    if ( stats_enabled ) stats_update();
+}
+
 void IntoCommunication(void) {
     /*  struct timespec aux;
         clock_gettime(CLOCK_REALTIME, &initMPI);
@@ -402,9 +407,7 @@ void IntoCommunication(void) {
         add_time(iterCpuTime, aux, &iterCpuTime);*/
 
     if (dlb_enabled) {
-        if ( drom_enabled ) drom_update();
         lb_funcs.intoCommunication();
-        if ( stats_enabled ) stats_update();
     }
 }
 
@@ -415,9 +418,7 @@ void OutOfCommunication(void) {
         add_time(iterMPITime, aux, &iterMPITime);*/
 
     if (dlb_enabled) {
-        if ( drom_enabled ) drom_update();
         lb_funcs.outOfCommunication();
-        if ( stats_enabled ) stats_update();
     }
 }
 
@@ -427,30 +428,24 @@ void IntoBlockingCall(int is_iter, int is_single) {
         cpuSecs=iterCpuTime_avg;
         MPISecs=iterMPITime_avg;*/
     if (dlb_enabled) {
-        if ( drom_enabled ) drom_update();
         if (is_single) {
             lb_funcs.intoBlockingCall(is_iter, ONE_CPU);
         } else {
             lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
         }
-        if ( stats_enabled ) stats_update();
     }
 }
 
 void OutOfBlockingCall(int is_iter) {
     if (dlb_enabled) {
-        if ( drom_enabled ) drom_update();
         lb_funcs.outOfBlockingCall(is_iter);
-        if ( stats_enabled ) stats_update();
     }
 }
 
 void updateresources( int max_resources ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_UPDATE);
-        if ( drom_enabled ) drom_update();
         lb_funcs.updateresources( max_resources );
-        if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
@@ -458,17 +453,13 @@ void updateresources( int max_resources ) {
 void returnclaimed( void ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
-        if ( drom_enabled ) drom_update();
         lb_funcs.returnclaimed();
-        if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
 
 int releasecpu( int cpu ) {
     if (dlb_enabled) {
-        if ( drom_enabled ) drom_update();
-        if ( stats_enabled ) stats_update();
         return lb_funcs.releasecpu(cpu);
     } else {
         return 0;
@@ -477,8 +468,6 @@ int releasecpu( int cpu ) {
 
 int returnclaimedcpu( int cpu ) {
     if (dlb_enabled) {
-        if ( drom_enabled ) drom_update();
-        if ( stats_enabled ) stats_update();
         return lb_funcs.returnclaimedcpu(cpu);
     } else {
         return 0;
@@ -488,17 +477,13 @@ int returnclaimedcpu( int cpu ) {
 void claimcpus( int cpus ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
-        if ( drom_enabled ) drom_update();
         lb_funcs.claimcpus(cpus);
-        if ( stats_enabled ) stats_update();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
 
 int checkCpuAvailability (int cpu) {
     if (dlb_enabled) {
-        if ( drom_enabled ) drom_update();
-        if ( stats_enabled ) stats_update();
         return lb_funcs.checkCpuAvailability(cpu);
     } else {
         return 1;
