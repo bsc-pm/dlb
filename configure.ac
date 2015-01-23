@@ -180,6 +180,9 @@ AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
 
 ##########################################################################
 
+NCPUS=$ncpus
+AC_SUBST([NCPUS])
+
 # generate the final Makefile etc.
 AC_OUTPUT
 
