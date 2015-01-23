@@ -70,7 +70,6 @@ static inline bool is_idle( int cpu ) {
 }
 
 void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
-    mu_init();
     mu_parse_mask( "LB_MASK", &dlb_mask );
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
     mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
@@ -102,15 +101,15 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
                 }
             }
             // Add DLB mask info
-            if ( CPU_ISSET( cpu, &dlb_mask )  &&
-                    shdata->node_info[cpu].owner == NOBODY &&
-                    shdata->node_info[cpu].state == DISABLED ) {
+            if ( CPU_ISSET( cpu, &dlb_mask )
+                    && shdata->node_info[cpu].owner == NOBODY
+                    && shdata->node_info[cpu].state == DISABLED ) {
                 shdata->node_info[cpu].state = LENT;
             }
 
             // Look for Idle CPUs
             DLB_INSTR( if (is_idle(cpu)) idle_count++; )
-            }
+        }
     }
     shmem_unlock( shm_handler );
 
@@ -156,7 +155,6 @@ void shmem_cpuarray__finalize( void ) {
     add_event( IDLE_CPUS_EVENT, idle_count );
 
     shmem_finalize( shm_handler );
-    mu_finalize();
 }
 
 /* Add cpu_mask to the Shared Mask
@@ -360,10 +358,10 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask ) {
             fatal_cond0( CPU_ISSET( cpu, mask ) && shdata->node_info[cpu].guest != ME,
                          "Current mask and Shared Memory information differ\n" );
             if ( CPU_ISSET( cpu, mask ) ) {
-                if ( (shdata->node_info[cpu].owner != ME     &&
-                        shdata->node_info[cpu].guest == ME     &&
-                        shdata->node_info[cpu].state == BUSY)  ||
-                        (shdata->node_info[cpu].state == DISABLED) ) {
+                if ( ( shdata->node_info[cpu].owner != ME
+                            && shdata->node_info[cpu].guest == ME
+                            && shdata->node_info[cpu].state == BUSY
+                     ) || shdata->node_info[cpu].state == DISABLED ) {
                     shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
                     returned++;
                     CPU_CLR( cpu, mask );
@@ -417,9 +415,9 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
         {
             /* First Step: Retrieve affine cpus */
             for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
-                if ( CPU_ISSET( cpu, &affinity_mask )        &&
-                        shdata->node_info[cpu].state == LENT   &&
-                        shdata->node_info[cpu].guest == NOBODY ) {
+                if ( CPU_ISSET( cpu, &affinity_mask )
+                        && shdata->node_info[cpu].state == LENT
+                        && shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
                     CPU_SET( cpu, mask );
                     max_resources--;
@@ -430,8 +428,8 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
 
             /* Second Step: Retrieve non-affine cpus, if needed */
             for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
-                if ( shdata->node_info[cpu].state == LENT    &&
-                        shdata->node_info[cpu].guest == NOBODY ) {
+                if ( shdata->node_info[cpu].state == LENT
+                        && shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
                     CPU_SET( cpu, mask );
                     max_resources--;
@@ -493,7 +491,6 @@ bool shmem_cpuarray__is_cpu_claimed( int cpu ) {
  * That's why we should initialize and finalize the shared memory
  */
 void shmem_cpuarray__print_info( void ) {
-    mu_init();
     cpus_node = mu_get_system_size();
 
     // Basic size + zero-length array real length

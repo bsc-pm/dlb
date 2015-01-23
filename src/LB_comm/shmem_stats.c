@@ -58,6 +58,7 @@ typedef struct {
 } shdata_t;
 
 static shmem_handler_t *shm_handler;
+static shmem_handler_t *shm_ext_handler;
 static shdata_t *shdata;
 static int max_processes;
 static int my_process;
@@ -152,23 +153,40 @@ void shmem_stats__update( void ) {
 /* From here: functions aimed to be called from an external process, only to consult the shmem */
 
 void shmem_stats_ext__init( void ) {
-    mu_init();
     max_processes = mu_get_system_size();
-    shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "stats" );
+    shm_ext_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "stats" );
 }
 
 void shmem_stats_ext__finalize( void ) {
-    shmem_finalize( shm_handler );
+    shmem_finalize( shm_ext_handler );
 }
 
-int shmem_stats_ext__getnumcpus( int pid ) {
+int shmem_stats_ext__getnumcpus( void ) {
     return mu_get_system_size();
+}
+
+void shmem_stats_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
+    *nelems = 0;
+    shmem_lock( shm_ext_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            int pid = shdata->process_info[p].pid;
+            if ( pid != NOBODY ) {
+                pidlist[(*nelems)++] = pid;
+            }
+            if ( *nelems == max_len ) {
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_ext_handler );
 }
 
 double shmem_stats_ext__getcpuusage( int pid ) {
     double cpu_usage = 0.0;
 
-    shmem_lock( shm_handler );
+    shmem_lock( shm_ext_handler );
     {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
@@ -178,14 +196,31 @@ double shmem_stats_ext__getcpuusage( int pid ) {
             }
         }
     }
-    shmem_unlock( shm_handler );
+    shmem_unlock( shm_ext_handler );
 
     return cpu_usage;
 }
 
+void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
+    *nelems = 0;
+    shmem_lock( shm_ext_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata->process_info[p].pid != NOBODY ) {
+                usagelist[(*nelems)++] = shdata->process_info[p].cpu_usage;
+            }
+            if ( *nelems == max_len ) {
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_ext_handler );
+}
+
 int shmem_stats_ext__getactivecpus( int pid ) {
     int active_cpus = 0;
-    shmem_lock( shm_handler );
+    shmem_lock( shm_ext_handler );
     {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
@@ -195,13 +230,30 @@ int shmem_stats_ext__getactivecpus( int pid ) {
             }
         }
     }
-    shmem_unlock( shm_handler );
+    shmem_unlock( shm_ext_handler );
     return active_cpus;
+}
+
+void shmem_stats_ext__getactivecpus_list( int *cpuslist, int *nelems, int max_len ) {
+    *nelems = 0;
+    shmem_lock( shm_ext_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata->process_info[p].pid != NOBODY ) {
+                cpuslist[(*nelems)++] = shdata->process_info[p].active_cpus;
+            }
+            if ( *nelems == max_len ) {
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_ext_handler );
 }
 
 void shmem_stats_ext__getloadavg( int pid, double *load ) {
 #ifdef DLB_LOAD_AVERAGE
-    shmem_lock( shm_handler );
+    shmem_lock( shm_ext_handler );
     {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
@@ -213,6 +265,6 @@ void shmem_stats_ext__getloadavg( int pid, double *load ) {
             }
         }
     }
-    shmem_unlock( shm_handler );
+    shmem_unlock( shm_ext_handler );
 #endif
 }

@@ -57,7 +57,6 @@ void shmem_bitset__init( const cpu_set_t *cpu_set ) {
     add_event( IDLE_CPUS_EVENT, 0 );
 
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
-    mu_init();
     cpu_set_t affinity_mask;
     // Get the parent mask of any bit present in the default mask
     mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
@@ -101,7 +100,6 @@ void shmem_bitset__finalize( void ) {
 #endif
 
     shmem_finalize( shm_handler );
-    mu_finalize();
 }
 
 void shmem_bitset__add_mask( const cpu_set_t *cpu_set ) {

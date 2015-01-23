@@ -47,6 +47,8 @@ int Initialize(void);
 
 void Finish(int id);
 
+void Terminate(void);
+
 void IntoCommunication(void);
 
 void OutOfCommunication(void);

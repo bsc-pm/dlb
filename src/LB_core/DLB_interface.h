@@ -20,6 +20,9 @@
 #ifndef DLB_INTERFACE_H
 #define DLB_INTERFACE_H
 
+/* cpu_set_t hidden as void pointer */
+typedef void* dlb_cpu_set_t;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -45,9 +48,18 @@ int DLB_Is_auto(void);
 void DLB_Stats_Init(void);
 void DLB_Stats_Finalize(void);
 int DLB_Stats_GetNumCpus(void);
+void DLB_Stats_GetPidList(int *pidlist,int *nelems,int max_len);
 double DLB_Stats_GetCpuUsage(int pid);
+void DLB_Stats_GetCpuUsageList(double *usagelist,int *nelems,int max_len);
 int DLB_Stats_GetActiveCpus(int pid);
+void DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
 void DLB_Stats_GetLoadAvg(int pid, double *load);
+
+void DLB_Drom_Init(void);
+void DLB_Drom_Finalize(void);
+int DLB_Drom_GetNumCpus(void);
+void DLB_Drom_GetPidList(int *pidlist, int *nelems, int max_len);
+void DLB_Drom_SetProcessMask(int pid, dlb_cpu_set_t mask);
 
 #ifdef __cplusplus
 }

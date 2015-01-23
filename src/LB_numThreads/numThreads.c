@@ -29,88 +29,113 @@
 #include "LB_numThreads/numThreads.h"
 #include "support/globals.h"
 #include "support/tracing.h"
+#include "support/debug.h"
 
+#define NANOS_SYMBOLS_DEFINED ( \
+        nanos_omp_get_process_mask && \
+        nanos_omp_set_process_mask && \
+        nanos_omp_add_process_mask && \
+        nanos_omp_get_active_mask && \
+        nanos_omp_set_process_mask && \
+        nanos_omp_add_process_mask && \
+        nanos_omp_get_max_threads && \
+        nanos_omp_set_num_threads \
+        )
 
-//#include <mpitrace_user_events.h>
+#define OMP_SYMBOLS_DEFINED ( \
+        omp_get_max_threads && \
+        omp_set_num_threads \
+        )
 
+/* Weak symbols */
+void nanos_omp_get_process_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_set_process_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+void nanos_omp_add_process_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
 void nanos_omp_get_active_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
 void nanos_omp_set_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
 void nanos_omp_add_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+int  nanos_omp_get_max_threads (void) __attribute__ ((weak));
+void nanos_omp_set_num_threads (int nthreads) __attribute__ ((weak));
+int  omp_get_max_threads (void) __attribute__ ((weak));
+void omp_set_num_threads (int nthreads) __attribute__ ((weak));
 
-int meId;
-int nodeId;
+void pm_not_implemented() { fatal0( "Not implemented\n" ); }
+
+static struct {
+    void (*get_process_mask) (cpu_set_t *cpu_set);
+    void (*set_process_mask) (const cpu_set_t *cpu_set);
+    void (*add_process_mask) (const cpu_set_t *cpu_set);
+    void (*get_active_mask) (cpu_set_t *cpu_set);
+    void (*set_active_mask) (const cpu_set_t *cpu_set);
+    void (*add_active_mask) (const cpu_set_t *cpu_set);
+    int  (*get_threads) (void);
+    void (*set_threads) (int nthreads);
+} pm_funcs = {
+    pm_not_implemented,
+    pm_not_implemented,
+    pm_not_implemented,
+    pm_not_implemented,
+    pm_not_implemented,
+    pm_not_implemented,
+    (int (*)()) pm_not_implemented,
+    pm_not_implemented
+};
+
+void pm_init( void ) {
+    /* Nanos++ */
+    if ( NANOS_SYMBOLS_DEFINED ) {
+        pm_funcs.get_process_mask = nanos_omp_get_process_mask;
+        pm_funcs.set_process_mask = nanos_omp_set_process_mask;
+        pm_funcs.add_process_mask = nanos_omp_add_process_mask;
+        pm_funcs.get_active_mask = nanos_omp_get_active_mask;
+        pm_funcs.set_active_mask = nanos_omp_set_active_mask;
+        pm_funcs.add_active_mask = nanos_omp_add_active_mask;
+        pm_funcs.get_threads = nanos_omp_get_max_threads;
+        pm_funcs.set_threads = nanos_omp_set_num_threads;
+    }
+    /* OpenMP */
+    else if ( OMP_SYMBOLS_DEFINED ) {
+        pm_funcs.get_threads = omp_get_max_threads;
+        pm_funcs.set_threads = omp_set_num_threads;
+    }
+    /* Undefined */
+    else {
+    }
+    _default_nthreads = pm_funcs.get_threads();
+}
 
 void update_threads(int threads) {
-    if (threads>CPUS_NODE) {
-        fprintf(stderr, "WARNING trying to use more CPUS (%d) than the available (%d)\n", threads, CPUS_NODE);
-        threads=CPUS_NODE;
+    if ( threads > CPUS_NODE ) {
+        warning( "Trying to use more CPUS (%d) than the available (%d)\n", threads, CPUS_NODE);
+        threads = CPUS_NODE;
     }
 
     add_event(THREADS_USED_EVENT, threads);
-    if (threads==0) {
-        if(omp_set_num_threads) { omp_set_num_threads(1); }
-        if(css_set_num_threads) { css_set_num_threads(1); }
-    } else {
-        if(omp_set_num_threads) { omp_set_num_threads(threads); }
-        if(css_set_num_threads) { css_set_num_threads(threads); }
-    }
+
+    threads = (threads<1) ? 1 : threads;
+    pm_funcs.set_threads( threads );
 }
-
-int* update_cpus(int action, int num_cpus, int* cpus) {
-    if (css_set_num_threads_cpus) { return css_set_num_threads_cpus(action, num_cpus, cpus); }
-    return NULL;
-}
-
-void bind_master(int me, int node) {
-    meId=me;
-    nodeId=node;
-    cpu_set_t cpu_set;
-    CPU_ZERO(&cpu_set);
-    //cada thread principal a su CPU
-    CPU_SET(meId, &cpu_set);
-    if(sched_setaffinity(0, sizeof(cpu_set), &cpu_set)<0) { perror("DLB ERROR: sched_setaffinity"); }
-#ifdef debugBinding
-    fprintf(stderr, "DLB DEBUG: (%d:%d) Master Thread pinned to cpu %d\n", nodeId, meId, meId);
-#endif
-}
-
-void DLB_bind_thread(int tid, int procsNode) {
-    int i;
-    cpu_set_t set;
-    CPU_ZERO(&set);
-    if (procsNode == 0) { procsNode = _mpis_per_node; }
-    int default_threads=_default_nthreads;
-
-    //I am one of the default slave threads
-    if(tid<(default_threads)) {
-        CPU_SET(tid+(meId*procsNode)%CPUS_NODE, &set);
-#ifdef debugBinding
-        fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, tid+(meId*procsNode)%CPUS_NODE);
-#endif
-    } else {
-        //I am one of the auxiliar slave threads
-        for (i=0; i<(CPUS_NODE-(default_threads)); i++) {
-            CPU_SET((i+((meId+1)*default_threads))%CPUS_NODE, &set);
-#ifdef debugBinding
-            fprintf(stderr, "DLB DEBUG: (%d:%d) Thread %d pinned to cpu %d\n", nodeId, meId, tid, (i+((meId+1)*default_threads))%CPUS_NODE);
-#endif
-        }
-    }
-    if(sched_setaffinity(0, sizeof(set), &set)<0) { perror("DLB ERROR: sched_setaffinity"); }
-
-    if(pthread_setschedprio(pthread_self(), 1)<0) { perror("DLB ERROR: pthread_setschedprio"); }
-}
-
 
 void get_mask( cpu_set_t *cpu_set ) {
-    if ( nanos_omp_get_active_mask ) { nanos_omp_get_active_mask( cpu_set ); }
-    else { sched_getaffinity( 0, sizeof(cpu_set_t), cpu_set ); }
+    pm_funcs.get_active_mask( cpu_set );
 }
 
 void set_mask( const cpu_set_t *cpu_set ) {
-    if ( nanos_omp_set_active_mask ) { nanos_omp_set_active_mask ( cpu_set ); }
+    pm_funcs.set_active_mask( cpu_set );
 }
 
 void add_mask( const cpu_set_t *cpu_set ) {
-    if ( nanos_omp_add_active_mask ) { nanos_omp_add_active_mask ( cpu_set ); }
+    pm_funcs.add_active_mask( cpu_set );
+}
+
+void get_process_mask( cpu_set_t *cpu_set ) {
+    pm_funcs.get_process_mask( cpu_set );
+}
+
+void set_process_mask( const cpu_set_t *cpu_set ) {
+    pm_funcs.set_process_mask( cpu_set );
+}
+
+void add_process_mask( const cpu_set_t *cpu_set ) {
+    pm_funcs.add_process_mask( cpu_set );
 }

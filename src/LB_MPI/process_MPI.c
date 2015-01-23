@@ -37,11 +37,6 @@
 #include "support/globals.h"
 #include "support/debug.h"
 
-int omp_get_max_threads(void) __attribute__( ( weak ) );
-int nanos_omp_get_num_threads(void) __attribute__( ( weak ) );
-int nanos_omp_get_max_threads(void) __attribute__( ( weak ) );
-const char* nanos_get_pm(void) __attribute__( ( weak ) );
-
 static int spid = 0;
 static int mpi_ready = 0;
 static int is_iter = 0;

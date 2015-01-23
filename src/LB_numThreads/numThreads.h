@@ -23,19 +23,14 @@
 #define _GNU_SOURCE
 #include <sched.h>
 
-void omp_set_num_threads (int numThreads) __attribute__ ((weak));
-void css_set_num_threads (int numThreads) __attribute__ ((weak));
-int* css_set_num_threads_cpus(int action, int num_cpus, int* cpus) __attribute__ ((weak));
+void pm_init();
 
 void update_threads(int threads);
-int* update_cpus(int action, int num_cpus, int* cpus);
-
-void bind_master(int meId, int nodeId);
-void DLB_bind_thread(int tid, int procsNode);
-void bind_threads(int num_procs, int meId, int nodeId);
-
 void get_mask( cpu_set_t *cpu_set );
 void set_mask( const cpu_set_t *cpu_set );
 void add_mask( const cpu_set_t *cpu_set );
+void get_process_mask( cpu_set_t *cpu_set );
+void set_process_mask( const cpu_set_t *cpu_set );
+void add_process_mask( const cpu_set_t *cpu_set );
 
 #endif //NUMTHREADS_H
