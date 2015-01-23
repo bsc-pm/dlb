@@ -42,10 +42,12 @@ function help
    echo "         SMPSS                : SMPSs application"
    echo "  --just-barrier           : Only lend cpus when in an MPI_Barrier, ignore other MPI calls [Default = $JUST_BARRIER]"
    echo "  --keep                   : Keep generated script [Default = $KEEP]"
-   echo "  --mpi-wait-mode x        : MPI wwait mode when in a MPI blocking call [Default = $MPI_WAIT_MODE]"
+   echo "  --mpi-wait-mode x        : MPI wait mode when in a MPI blocking call [Default = $MPI_WAIT_MODE]"
    echo "         BLOCK                : Blocking wait mode, not consuimg cpu"
    echo "         1CPU                 : Polling wait mode, consuming cpu"
+   echo "  --np x                   : Num MPI processes to spawn"
    echo "  --num-mpis-node x           : Number of MPI processes running in one node. Mandatory for OMP and SMPSS flavor "
+   echo "  --node-size x            : Run using only x cpus of the node [x<=$CPUS_NODE]"
    echo "  --policy x               : DLB policy [Default = $POLICY]"
    echo "         ORIG                 : Do not use DLB library"
    echo "         NO                   : Do not load balance, use DLB just for profile"
@@ -66,8 +68,19 @@ function help
    echo "      EXTRAE_CONFIG_FILE=$EXTRAE_CONFIG_FILE"
    echo "      EXTRAE_LABELS=$EXTRAE_LABELS"
    echo "      EXTRAE_FINAL_DIR=$EXTRAE_FINAL_DIR"
+   echo ""
+   echo "BASIC EXAMPLE:" 
+   echo ""
+   echo "$SC --np x --num-mpis-node y --policy zzz"
+   echo ""
+   echo "               x: Num MPIs to spawn"
+   echo "               y: Num MPIs per node"
+   echo "               zzz: Policy [ORIG | NO | LeWI | LeWI_mask | auto_LeWI_mask | RaL ]"
+   echo "               Default options: Aggressive init, Blocking mode, OMPSs flavor, NO tracing"
    exit -1
 }
+
+
 
 
 ###################
@@ -91,7 +104,8 @@ while [ "$1" != "--" ]; do
          KEEP=YES
          ;;
       --tracing)
-         TRACING=YES
+         TRACING=$2
+         shift;
          ;;
       --extrae-cfg)
          EXTRAE_CFG=$2
@@ -133,8 +147,20 @@ while [ "$1" != "--" ]; do
       --just-barrier)
          JUST_BARRIER=YES
          ;;
+      --np)
+         MPIS=$2
+         shift;
+         ;;
+      --node-size)
+        NODE_SIZE=$2      
+        shift;
+        ;;
    *)
+     if [ "$1" != "" ]
+     then
       echo "$0: Not valid argument [$1]";
+     fi
+
       help
       ;;
    esac
@@ -147,9 +173,36 @@ shift
 APP_ARGS=$@
 
 
+echo "WARNING: This script only works with OpenMPI"
+
 SCRIPT=dlb_script_$$.sh
 echo "#!/bin/bash" > $SCRIPT
 
+
+########################
+### node size        ###
+########################
+
+if [[ $NODE_SIZE != "" ]]
+then
+    if [ $NODE_SIZE -gt $CPUS_NODE ]
+    then
+        echo "[Set DLB]: ERROR: --node-size ($NODE_SIZE) greater than actual node size ($CPUS_NODE)"
+        exit -1
+    fi
+    CPUS_NODE=$NODE_SIZE
+fi
+
+if [[ ( "$FLAVOR" == "SMPSs" || "$FLAVOR" == "OMP" ) &&  "$MPIS_NODE" == "" ]]
+then
+   echo "[Set DLB]: ERROR: --num-mpis-node is a mandatory flag when using flavor $FLAVOR"
+   exit -1
+else
+   if [[ "$MPIS_NODE" != "" ]]
+   then
+      CPUS_PROC=$(($CPUS_NODE/$MPIS_NODE))
+   fi
+fi
 
 ########################
 ### flavor selection ###
@@ -230,15 +283,84 @@ echo "[Set DLB]: Using aggressive init = $AGGRESSIVE_INIT "
 echo "export LB_JUST_BARRIER=$JUST_BARRIER" >> $SCRIPT
 echo "[Set DLB]: Using just barrier = $JUST_BARRIER "
 
+echo "export LB_VERBOSE=0" >> $SCRIPT
+echo "export LB_SHM_KEY=$(id -u $USER)" >> $SCRIPT
+echo "export LB_TRACE_ENABLED=1" >> $SCRIPT
+echo "export LB_STATISTICS=0" >> $SCRIPT
+
+
 ###########################
 ### Thread distribution ###
 ###########################
 
 if [ $THREAD_DISTRIB != "NO" ]
 then
-   echo "export LB_THREAD_DISTRIBUTION=$THREAD_DISTRIB" >> $SCRIPT
+
+    TASKSET_str="("
+    CPUS_str="("
+    cpu=1
+
+    for threads in $(echo $THREAD_DISTRIB | cut -d'-' --complement -f$CPUS_NODE --output-delimiter=' ' )
+    do
+        
+        TASKSET_str+="'$cpu"
+        CPUS_str+="$threads "
+
+        let "cpu=cpu+1"
+        let "threads=threads-1"
+
+        for a in `seq $threads`
+        do
+            TASKSET_str+=",$cpu"
+            let "cpu=cpu+1"
+        done  
+        TASKSET_str+="' "
+    done
+
+    TASKSET_str+=")"
+    CPUS_str+=")"
+
+    echo $TASKSET_str
+    echo $CPUS_str
+
+    echo "export LB_THREAD_DISTRIBUTION=$THREAD_DISTRIB" >> $SCRIPT
+
+
+   echo "declare -a TASKSET=$TASKSET_str; " >> $SCRIPT
+   echo "declare -a THREADS_SET=$CPUS_str; " >> $SCRIPT
+
+
+   CPUS_PROC="\${THREADS_SET[\$OMPI_COMM_WORLD_NODE_RANK]}" 
+
    echo "[Set DLB]: Using thread distribution = $THREAD_DISTRIB "
 
+else
+
+    TASKSET_str="("
+    cpu=1
+    let "threads=CPUS_PROC-1"
+
+    for i in `seq $MPIS_NODE`
+    do
+        
+        TASKSET_str+="'$cpu"
+
+        let "cpu=cpu+1"
+
+        for a in `seq $threads`
+        do
+            TASKSET_str+=",$cpu"
+            let "cpu=cpu+1"
+        done  
+        TASKSET_str+="' "
+    done
+
+    TASKSET_str+=")"
+
+    echo $TASKSET_str
+
+   echo "declare -a TASKSET=$TASKSET_str; " >> $SCRIPT
+   
 fi
 
 
@@ -285,6 +407,12 @@ then
       NANOS+=" --enable-dlb"
    fi
 
+   if [ "$POLICY" == "auto_LeWI_mask" ]
+   then
+      NANOS+=" --enable-block"
+      ###--instrument-cpuid"
+   fi
+
    echo "" >> $SCRIPT
    echo "# Nanos arguments" >> $SCRIPT
    echo "export NX_ARGS+=\"$NANOS\"" >> $SCRIPT
@@ -296,16 +424,9 @@ then
    
 fi
 
-if [[ ( "$FLAVOR" == "SMPSs" || "$FLAVOR" == "OMP" ) &&  "$MPIS_NODE" == "" ]]
-then
-   echo "[Set DLB]: ERROR: --num-mpis-node is a mandatory flag when using flavor $FLAVOR"
-   exit -1
-else
-   if [[ "$MPIS_NODE" != "" ]]
-   then
-      CPUS_PROC=$(($CPUS_NODE/$MPIS_NODE))
-   fi
-fi
+
+
+echo "export OMP_NUM_THREADS=$CPUS_PROC" >> $SCRIPT
 
 ######################
 ### SMPSs env vars ###
@@ -365,9 +486,9 @@ else
       then
          if [ "$DEBUG" == "YES" ]
          then
-            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_instr_dbg.so" >> $SCRIPT
+            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_mpi_instr_dbg.so" >> $SCRIPT
          else
-            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_instr.so" >> $SCRIPT
+            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_mpi_instr.so" >> $SCRIPT
          fi
       else
          echo "[Set DLB]: ERROR: Extrae lib does not exist: $EXTRAE_LIB. Check the path and that Extrae was installed with DLB support"
@@ -376,12 +497,18 @@ else
    else
       if [ "$DEBUG" == "YES" ]
       then
-         echo "export LD_PRELOAD=${DLB_PATH}/libdlb_dbg.so" >> $SCRIPT
+         echo "export LD_PRELOAD=${DLB_PATH}/libdlb_mpi_dbg.so" >> $SCRIPT
       else
-         echo "export LD_PRELOAD=${DLB_PATH}/libdlb.so" >> $SCRIPT
+         echo "export LD_PRELOAD=${DLB_PATH}/libdlb_mpi.so" >> $SCRIPT
       fi
    fi
 fi 
+
+########################
+### mpirun line      ###
+########################
+
+MPIRUN="mpirun -np ${MPIS} " 
 
 
 ########################
@@ -390,15 +517,17 @@ fi
 
 echo "" >> $SCRIPT
 echo "# Finally run application with its parameters" >> $SCRIPT
-echo "\$*" >> $SCRIPT
+echo "taskset -c \${TASKSET[\$OMPI_COMM_WORLD_NODE_RANK]} \$*" >> $SCRIPT
 
 if [ "$SHOW" == "YES" ]
 then
    cat $SCRIPT
+   echo $MPIRUN $SCRIPT $APP $APP_ARGS
+
 else
    chmod +x $SCRIPT
 
-   $SCRIPT $APP $APP_ARGS
+   $MPIRUN $SCRIPT $APP $APP_ARGS
 fi
 
 if [ "$KEEP" != "YES" ]
