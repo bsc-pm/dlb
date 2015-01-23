@@ -352,3 +352,33 @@ static bool has_shared_mask( void ) {
 
     return shared;
 }
+
+bool shmem_bitset__acquire_cpu(int cpu){
+    bool acquired=true;
+
+        shmem_lock( shm_handler );
+    //cpu is mine -> Claim it
+    if (CPU_ISSET(cpu, &default_mask)){
+
+        CPU_CLR( cpu, &(shdata->given_cpus) );
+        CPU_CLR( cpu, &(shdata->avail_cpus) );
+        
+        debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
+
+    //cpu is not mine but is free -> take it
+    }else if(CPU_ISSET(cpu, &(shdata->avail_cpus))){
+        CPU_CLR(cpu, &(shdata->avail_cpus) );
+        CPU_CLR(cpu, &(shdata->not_borrowed_cpus));         
+
+    //cpus is not mine and the owner has recover it -> take it
+    }else if(CPU_ISSET(cpu, &(shdata->not_borrowed_cpus))){
+        CPU_CLR(cpu, &(shdata->not_borrowed_cpus));         
+
+    }else{
+        acquired=false;
+    }
+
+    add_event( IDLE_CPUS_EVENT, CPU_COUNT( &(shdata->avail_cpus) ) );
+    shmem_unlock( shm_handler );
+    return acquired;
+}

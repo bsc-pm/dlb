@@ -23,12 +23,14 @@
 #include <strings.h>
 
 #include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_cpuarray.h"
+#include "LB_comm/shmem_bitset.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
 #include "support/utils.h"
 #include "support/mask_utils.h"
+
+#include "autonomous_lewi_mask.h"
 
 #include <pthread.h>
 #define NDEBUG
@@ -83,43 +85,59 @@ void auto_lewi_mask_OutOfCommunication( void ) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
 void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
-    cpu_set_t cpu;
-    CPU_ZERO( &cpu );
-    sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
 
-    cpu_set_t mask;
-    CPU_ZERO( &mask );
+   if ( _blocking_mode == BLOCK ) {
+      debug_lend ( "LENDING myself \n");
+      cpu_set_t cpu;
+      CPU_ZERO( &cpu );
+      sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
 
-    pthread_mutex_lock (&mutex);
-    get_mask( &mask );
+      int i=0;
 
-    if ( blocking_mode == ONE_CPU ) {
-        // Remove current cpu from the mask
-        CPU_XOR( &mask, &mask, &cpu );
-        debug_lend ( "LENDING %d threads\n", nthreads-1 );
-        nthreads = 1;
-    } else if ( _blocking_mode == BLOCK ) {
-        debug_lend ( "LENDING %d threads\n", nthreads );
-        nthreads = 0;
-    }
-
-    set_mask( &cpu );
-    shmem_mask.add_mask( &mask );
-    pthread_mutex_unlock (&mutex);
-
-    add_event( THREADS_USED_EVENT, nthreads );
+      while (i< mu_get_system_size()){
+        if (CPU_ISSET(i, &cpu)) break; 
+        i++;
+      }
+      if (i!=mu_get_system_size()){
+            auto_lewi_mask_ReleaseCpu( i );
+      }
+   }
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
 void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
-    debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
-    pthread_mutex_lock (&mutex);
+    debug_lend ( "RECOVERING myself\n");
 
-    set_mask( shmem_mask.recover_defmask() );
-    nthreads = _default_nthreads;
+    cpu_set_t mask;
+    CPU_ZERO( &mask );
+    sched_getaffinity( 0, sizeof(cpu_set_t), &mask);
 
-    add_event( THREADS_USED_EVENT, nthreads );
-    pthread_mutex_unlock (&mutex);
+    int my_cpu=0;
+
+    while (my_cpu < mu_get_system_size()){
+        if (CPU_ISSET(my_cpu, &mask)) break;
+        my_cpu++;
+    }
+
+    if (my_cpu!=mu_get_system_size()){
+
+        CPU_ZERO( &mask );
+
+        pthread_mutex_lock (&mutex);
+
+        get_mask( &mask );
+
+        if (!CPU_ISSET(my_cpu, &mask)){
+
+            if( shmem_mask.acquire_cpu(my_cpu) ){
+                nthreads ++;
+                CPU_SET(my_cpu, &mask);
+                set_mask( &mask );
+                add_event( THREADS_USED_EVENT, nthreads );
+            }   
+        }
+        pthread_mutex_unlock (&mutex);
+    }
 }
 
 /* Update Resources - Try to acquire foreign threads */
@@ -139,7 +157,7 @@ void auto_lewi_mask_UpdateResources( int max_resources ) {
             debug_lend ( "ACQUIRING %d threads for a total of %d\n", collected, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
-        assert(nthreads==CPU_COUNT(&mask));
+//        assert(nthreads==CPU_COUNT(&mask));
         debug_shmem ( "My mask %s\n", mu_to_str(&mask));
     }
     pthread_mutex_unlock (&mutex);
@@ -161,7 +179,7 @@ void auto_lewi_mask_ReturnClaimedCpus( void ) {
             set_mask( &mask );
             debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
-            assert(nthreads==CPU_COUNT(&mask));
+            //assert(nthreads==CPU_COUNT(&mask));
         }
         debug_shmem ( "My mask %s\n", mu_to_str(&mask));
     }
@@ -194,7 +212,7 @@ int auto_lewi_mask_ReturnCpuIfClaimed( int cpu ) {
                     set_mask( &mask );
                     debug_lend ( "RETURNING MY CPU %d returned threads for a total of %d\n", returned, nthreads );
                     add_event( THREADS_USED_EVENT, nthreads );
-                    assert(nthreads==CPU_COUNT(&mask));
+                    //assert(nthreads==CPU_COUNT(&mask));
                 }
                 debug_shmem ( "My mask %s\n", mu_to_str(&mask));
             }
@@ -215,7 +233,8 @@ int auto_lewi_mask_ReleaseCpu( int cpu ) {
         cpu_set_t current_mask;
         get_mask( &current_mask );
 
-        if (CPU_ISSET(cpu, &current_mask) && nthreads>1) {
+        //if (CPU_ISSET(cpu, &current_mask) && nthreads>1) {
+        if (CPU_ISSET(cpu, &current_mask)) {
             shmem_mask.add_cpu( cpu );
             CPU_CLR( cpu, &current_mask );
             set_mask( &current_mask );
@@ -224,9 +243,10 @@ int auto_lewi_mask_ReleaseCpu( int cpu ) {
             returned = 1;
         }
 
+//        assert(nthreads==CPU_COUNT(&current_mask));
+
         pthread_mutex_unlock (&mutex);
 
-        assert(nthreads==CPU_COUNT(&current_mask));
         debug_shmem ( "My mask %s\n", mu_to_str(&current_mask));
         add_event(RUNTIME_EVENT, 0);
     }
@@ -253,7 +273,7 @@ void auto_lewi_mask_ClaimCpus(int cpus) {
             shmem_mask.recover_some_defcpus( &current_mask, cpus );
             set_mask( &current_mask);
             nthreads += cpus;
-            assert(nthreads==CPU_COUNT(&current_mask));
+//            assert(nthreads==CPU_COUNT(&current_mask));
 
             add_event( THREADS_USED_EVENT, nthreads );
             debug_shmem ( "My mask %s\n", mu_to_str(&current_mask));
