@@ -167,6 +167,10 @@ DLB_API_DEF( void, DLB_Drom_GetPidList, dlb_drom_getpidlist, (int *pidlist, int 
     drom_ext_getpidlist(pidlist, nelems, max_len);
 }
 
-DLB_API_DEF( void, DLB_Drom_SetProcessMask, dlb_drom_setprocessmask, (int pid, dlb_cpu_set_t mask) ) {
+DLB_API_DEF( void, DLB_Drom_GetProcessMask, dlb_drom_getprocessmask, (int pid, dlb_cpu_set_t mask) ) {
+    drom_ext_getprocessmask( pid, (cpu_set_t*)mask);
+}
+
+DLB_API_DEF( void, DLB_Drom_SetProcessMask, dlb_drom_setprocessmask, (int pid, const dlb_cpu_set_t mask) ) {
     drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
 }

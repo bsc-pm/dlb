@@ -60,7 +60,8 @@ void DLB_Drom_Init(void);
 void DLB_Drom_Finalize(void);
 int DLB_Drom_GetNumCpus(void);
 void DLB_Drom_GetPidList(int *pidlist, int *nelems, int max_len);
-void DLB_Drom_SetProcessMask(int pid, dlb_cpu_set_t mask);
+void DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
+void DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask);
 
 #ifdef __cplusplus
 }
