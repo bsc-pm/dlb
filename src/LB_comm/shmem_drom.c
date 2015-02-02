@@ -79,6 +79,7 @@ void shmem_drom__init(void) {
         fatal_cond( p == max_processes, "Cannot reserve process info for the Dynamic Resource Ownership Manager" );
     }
     shmem_unlock( shm_handler );
+    _mpi_rank = ME;
 }
 
 void shmem_drom__finalize( void ) {
@@ -127,7 +128,23 @@ void shmem_drom__update( void ) {
                     shdata->process_info[my_process].dirty = false;
                 }
                 // Set final mask
-                set_process_mask( &next_mask );
+                int error = set_process_mask( &next_mask );
+                // On error, update local mask and steal again from other processes
+                if ( error ) {
+                    get_process_mask( &next_mask );
+                    for ( c = max_cpus-1; c >= 0; c-- ) {
+                        if ( CPU_ISSET( c, &next_mask ) ) {
+                            for ( p = 0; p < max_processes; p++ ) {
+                                if ( p == my_process ) continue;
+                                if ( CPU_ISSET( c, &(shdata->process_info[p].current_process_mask) )
+                                        && CPU_COUNT( &(shdata->process_info[p].current_process_mask) ) > 1 ) {
+                                    // Steal CPU only if other process currently owns it
+                                    steal_cpu(c, p);
+                                }
+                            }
+                        }
+                    }
+                }
                 // Update local info
                 memcpy( &(shdata->process_info[my_process].current_process_mask), &next_mask, sizeof(cpu_set_t) );
             }

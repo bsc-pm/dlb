@@ -27,10 +27,10 @@ void pm_init();
 
 void update_threads(int threads);
 void get_mask( cpu_set_t *cpu_set );
-void set_mask( const cpu_set_t *cpu_set );
+int  set_mask( const cpu_set_t *cpu_set );
 void add_mask( const cpu_set_t *cpu_set );
 void get_process_mask( cpu_set_t *cpu_set );
-void set_process_mask( const cpu_set_t *cpu_set );
+int  set_process_mask( const cpu_set_t *cpu_set );
 void add_process_mask( const cpu_set_t *cpu_set );
 
 #endif //NUMTHREADS_H
