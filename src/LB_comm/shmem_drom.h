@@ -33,5 +33,6 @@ int shmem_drom_ext__getnumcpus(void);
 void shmem_drom_ext__getpidlist(int *pidlist, int *nelems, int max_len);
 void shmem_drom_ext__getprocessmask(int pid, cpu_set_t *mask);
 void shmem_drom_ext__setprocessmask(int pid, const cpu_set_t *mask);
+void shmem_drom_ext__printinfo(void);
 
 #endif /* SHMEM_DROM_H */

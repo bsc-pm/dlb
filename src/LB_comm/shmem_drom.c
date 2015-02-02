@@ -236,3 +236,36 @@ void shmem_drom_ext__setprocessmask( int pid, const cpu_set_t *mask ) {
     }
     shmem_unlock( shm_ext_handler );
 }
+
+
+/* This function is intended to be called from external processes only to consult the shdata
+ * That's why we should initialize and finalize the shared memory
+ */
+void shmem_drom_ext__printinfo( void ) {
+    max_processes = mu_get_system_size();
+    //
+    // Basic size + zero-length array real length
+    shmem_handler_t *handler;
+    handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "drom" );
+    pinfo_t process_info_copy[max_processes];
+
+    shmem_lock( handler );
+    {
+        memcpy( process_info_copy, shdata->process_info, sizeof(pinfo_t)*max_processes );
+    }
+    shmem_unlock( handler );
+    shmem_finalize( handler );
+
+    int p;
+    for ( p = 0; p < max_processes; p++ ) {
+        if ( process_info_copy[p].pid != NOBODY ) {
+            char current[max_processes*2+16];
+            char future[max_processes*2+16];
+            strncpy( current, mu_to_str( &(process_info_copy[p].current_process_mask) ), sizeof(current) );
+            strncpy( future, mu_to_str( &(process_info_copy[p].future_process_mask) ), sizeof(future) );
+
+            debug_basic_info0( "PID: %d, Current mask: %s, Future mask: %s, Dirty: %d\n",
+                    process_info_copy[p].pid, current, future, process_info_copy[p].dirty );
+        }
+    }
+}
