@@ -65,7 +65,7 @@ void lewi_mask_Init( void ) {
 }
 
 void lewi_mask_Finish( void ) {
-    set_mask( shmem_mask.recover_defmask() );
+    shmem_mask.recover_defmask();
     shmem_mask.finalize();
 }
 
