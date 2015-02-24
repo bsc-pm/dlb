@@ -114,6 +114,13 @@ int Initialize(void) {
         parse_env_bool( "LB_DROM", &drom_enabled, false );
         parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
 
+        if ( _aggressive_init ) {
+            warning0( "FIXME: Ignoring LB_AGGRESSIVE_INIT variable. DLB cannot set the number "
+                    "of threads during initialization anymore. This option will remain disabled "
+                    "until we can implemented it in the runtime\n" );
+            _aggressive_init = false;
+        }
+
         if (strcasecmp(policy, "LeWI")==0) {
 #ifdef debugConfig
             fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI\n", _node_id, _process_id);
