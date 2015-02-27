@@ -28,4 +28,4 @@ DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_re
 DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) ) {}
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) ) {}
 DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) ) {}
-DLB_API_DEF( void, DLB_Barrier, dlb_barrier, (void) ) {}
+DLB_API_DEF( void, DLB_MPI_node_barrier, dlb_mpi_node_barrier, (void) ) {}
