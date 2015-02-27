@@ -46,5 +46,7 @@ int auto_lewi_mask_ReturnCpuIfClaimed( int cpu );
 
 int auto_lewi_mask_CheckCpuAvailability ( int cpu );
 
+void auto_lewi_mask_resetDLB( void );
+
 #endif /* AUTO_LEWI_MASK_H */
 

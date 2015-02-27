@@ -37,6 +37,7 @@ typedef struct {
     int (*returnclaimedcpu) (int cpu);
     void (*claimcpus) (int cpus);
     int (*checkCpuAvailability) (int cpu);
+    void (*resetDLB) (void);
 } BalancePolicy;
 
 extern int use_dpd;
@@ -70,6 +71,8 @@ void claimcpus( int cpus );
 int checkCpuAvailability ( int cpu );
 
 int tracing_ready();
+
+void resetDLB ();
 
 int is_auto( void );
 #endif //DLB_KERNEL_H

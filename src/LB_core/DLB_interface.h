@@ -33,6 +33,7 @@ void DLB_Finalize(void);
 void DLB_enable(void);
 void DLB_disable(void);
 void DLB_single(void);
+void DLB_reset(void);
 void DLB_parallel(void);
 void DLB_UpdateResources(void);
 void DLB_UpdateResources_max(int max_resources);

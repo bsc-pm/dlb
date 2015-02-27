@@ -100,7 +100,7 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
     shmem_mask.add_mask( &mask );
     add_event( THREADS_USED_EVENT, nthreads );
     //Check num threads and mask size are the same (this is the only case where they don't match)
-    assert(nthreads+1==CPU_COUNT(&cpu));
+    //assert(nthreads+1==CPU_COUNT(&cpu));
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
@@ -110,7 +110,7 @@ void lewi_mask_OutOfBlockingCall(int is_iter) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
     get_mask( &mask );
-    assert(nthreads+1==CPU_COUNT(&mask));
+    //assert(nthreads+1==CPU_COUNT(&mask));
 
 
     debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );

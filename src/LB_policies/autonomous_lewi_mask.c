@@ -23,7 +23,7 @@
 #include <strings.h>
 
 #include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_bitset.h"
+#include "LB_comm/shmem_cpuarray.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -284,4 +284,15 @@ void auto_lewi_mask_ClaimCpus(int cpus) {
 
 int auto_lewi_mask_CheckCpuAvailability ( int cpu ) {
     return shmem_mask.is_cpu_borrowed( cpu );
+}
+
+void auto_lewi_mask_resetDLB(){
+    pthread_mutex_lock (&mutex);
+    debug_lend ( "Reseting DLB to default\n");
+    cpu_set_t current_mask;
+    CPU_ZERO( &current_mask );
+    get_mask( &current_mask );
+    nthreads=shmem_mask.reset_default_cpus(&current_mask);
+    set_mask( &current_mask);
+    pthread_mutex_unlock (&mutex);
 }

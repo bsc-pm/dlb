@@ -36,6 +36,7 @@ bool shmem_bitset__is_cpu_borrowed ( int cpu );
 bool shmem_bitset__is_cpu_claimed( int cpu );
 void shmem_bitset__print_info( void );
 bool shmem_bitset__acquire_cpu( int cpu );
+int shmem_bitset__reset_default_cpus(cpu_set_t *mask);
 
 static const struct {
     void (*init) (const cpu_set_t *cpu_set);
@@ -50,6 +51,7 @@ static const struct {
     bool (*is_cpu_claimed) (int);
     void (*print_info) (void);
     bool (*acquire_cpu) (int);
+    int (*reset_default_cpus) (cpu_set_t*);
 
 } shmem_mask = {
     shmem_bitset__init,
@@ -63,7 +65,8 @@ static const struct {
     shmem_bitset__is_cpu_borrowed,
     shmem_bitset__is_cpu_claimed,
     shmem_bitset__print_info,
-    shmem_bitset__acquire_cpu
+    shmem_bitset__acquire_cpu,
+    shmem_bitset__reset_default_cpus
 };
 
 #endif /* SHMEM_BITSET_H */

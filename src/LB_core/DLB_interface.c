@@ -46,7 +46,14 @@ DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {
 DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {
     //FIXME This hiddes the single event always
     add_event(DLB_MODE_EVENT, EVENT_DISABLED);
+    resetDLB();
     set_dlb_enabled( false );
+}
+
+DLB_API_DEF( void, DLB_reset, dlb_reset, (void) ) {
+    //FIXME This hiddes the single event always
+    add_event(RUNTIME_EVENT, EVENT_RESET);
+    resetDLB();
 }
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) ) {

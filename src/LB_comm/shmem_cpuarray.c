@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "shmem.h"
 #include "support/tracing.h"
@@ -486,7 +487,71 @@ bool shmem_cpuarray__is_cpu_claimed( int cpu ) {
     return (shdata->node_info[cpu].owner != ME) && (shdata->node_info[cpu].state == BUSY);
 }
 
+/*Reset current mask to use my default cpus
+  I.e: Release borrowed cpus and claim lend cpus
+ */
+int shmem_cpuarray__reset_default_cpus(cpu_set_t *mask){
+    shmem_lock( shm_handler );
+    int i;
+    int n=0;
+    for ( i = 0; i < mu_get_system_size(); i++ ) {
+        //CPU is mine --> claim it and set in my mask
+        if ( CPU_ISSET(i, &default_mask) ) {
+//          DLB_INSTR( if (is_idle(i)) idle_count--; )
+            shdata->node_info[i].state = BUSY;
+            CPU_SET( i, mask);
+            n++;
+        //CPU is not mine and I have it --> release it and clear from my mask
+        }else if(CPU_ISSET(i, mask)){
+            if ( shdata->node_info[i].guest == ME ){
+                shdata->node_info[i].guest = NOBODY;
+//              DLB_INSTR( if(shdata->node_info[i].state==LENT) idle_count++; )
+            }
+            CPU_CLR( i, mask);
+        }
+    }
+//    add_event( IDLE_CPUS_EVENT, idle_count );
+    DLB_DEBUG(assert(CPU_EQUAL(mask, &default_mask)==0);)
+    shmem_unlock( shm_handler );
+    return n;
 
+}
+/*
+  Acquire this cpu, wether it was mine or not
+  Can have a problem if the cpu was borrowed by somebody else
+ */
+
+bool shmem_cpuarray__acquire_cpu (int cpu){
+
+    bool acquired=true;
+
+    shmem_lock( shm_handler );
+    //cpu is mine -> Claim it
+    if (CPU_ISSET(cpu, &default_mask)){
+//        DLB_INSTR( if (is_idle(cpu)) idle_count--; )
+        shdata->node_info[cpu].state = BUSY;
+
+    //cpu is not mine but is free -> take it
+    }else if(shdata->node_info[cpu].state == LENT
+             && shdata->node_info[cpu].guest == NOBODY){
+        shdata->node_info[cpu].guest = ME;
+//        DLB_INSTR( idle_count--; )
+
+    //cpus is not mine and the owner has recover it -> take it
+    }else if(shdata->node_info[cpu].state == BUSY){
+        shdata->node_info[cpu].guest = ME;
+
+    }else{
+        //FIXME: An other process has borrowed it
+        // or    the cpu is DISABLED in the system
+        acquired=false;
+    }
+
+//    add_event( IDLE_CPUS_EVENT, idle_count );
+    shmem_unlock( shm_handler );
+    return acquired;
+
+}
 /* This function is intended to be called from external processes only to consult the shdata
  * That's why we should initialize and finalize the shared memory
  */
@@ -526,3 +591,4 @@ void shmem_cpuarray__print_info( void ) {
     debug_basic_info0( states );
     debug_basic_info0( "States Legend: DISABLED=%d, BUSY=%d, LENT=%d\n", DISABLED, BUSY, LENT );
 }
+

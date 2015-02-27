@@ -35,6 +35,8 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources );
 bool shmem_cpuarray__is_cpu_borrowed ( int cpu );
 bool shmem_cpuarray__is_cpu_claimed( int cpu );
 void shmem_cpuarray__print_info( void );
+int shmem_cpuarray__reset_default_cpus (cpu_set_t *mask );
+bool shmem_cpuarray__acquire_cpu (int cpu);
 
 static const struct {
     void (*init) (const cpu_set_t *cpu_set);
@@ -47,6 +49,8 @@ static const struct {
     int (*collect_mask) (cpu_set_t*, int);
     bool (*is_cpu_borrowed) (int);
     bool (*is_cpu_claimed) (int);
+    int (*reset_default_cpus) (cpu_set_t*);
+    bool (*acquire_cpu) (int);
     void (*print_info) (void);
 } shmem_mask = {
     shmem_cpuarray__init,
@@ -59,6 +63,8 @@ static const struct {
     shmem_cpuarray__collect_mask,
     shmem_cpuarray__is_cpu_borrowed,
     shmem_cpuarray__is_cpu_claimed,
+    shmem_cpuarray__reset_default_cpus,
+    shmem_cpuarray__acquire_cpu,
     shmem_cpuarray__print_info
 };
 

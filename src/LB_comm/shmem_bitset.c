@@ -380,3 +380,30 @@ bool shmem_bitset__acquire_cpu(int cpu){
     shmem_unlock( shm_handler );
     return acquired;
 }
+
+int shmem_bitset__reset_default_cpus(cpu_set_t *mask){
+    shmem_lock( shm_handler );
+    int i;
+    int n=0;
+    for ( i = 0; i < mu_get_system_size(); i++ ) {
+        //CPU is mine --> claim it and set in my mask
+        if ( CPU_ISSET(i, &default_mask) ) {
+            CPU_CLR( i, &(shdata->given_cpus) );
+            CPU_CLR( i, &(shdata->avail_cpus) );
+            CPU_SET( i, mask);
+            n++;
+        //CPU is not mine and I have it --> release it and clear from my mask
+        }else if(CPU_ISSET(i, mask)){
+            //Mark as not borrowed
+            CPU_SET( i, &(shdata->not_borrowed_cpus));
+
+            //Only avail those still given
+            if (CPU_ISSET(i, &(shdata->given_cpus))){
+                CPU_SET(i, &(shdata->avail_cpus));
+            }
+        }
+    }
+    DLB_DEBUG(assert(CPU_EQUAL(mask, &default_mask)==0);)
+    shmem_unlock( shm_handler );
+    return n;
+}
