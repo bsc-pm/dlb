@@ -304,7 +304,7 @@
         "name": "MPI_Cart_create",
         "cpar": "MPI_Comm comm_old, int ndims, MPI3_CONST int dims[], MPI3_CONST int periods[], int reorder, MPI_Comm *comm_cart",
         "fpar": "MPI_Fint *comm_old, MPI_Fint *ndims, MPI3_CONST MPI_Fint *dims, MPI3_CONST MPI_Fint *periods, MPI_Fint *reorder, MPI_Fint *comm_cart, MPI_Fint *ierror",
-        "tags": "_Comm"
+        "tags": "_Comm|_Blocking"
     },
     {
         "name": "MPI_Cart_sub",
