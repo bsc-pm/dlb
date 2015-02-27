@@ -21,6 +21,8 @@ DLB_PATH=@PREFIX_LIB@
 SMPSS_PATH=/home/bsc15/bsc15994/SMPSs-install${bits}/lib  # --> FIXME parametrize from configure 
 TRACE_PATH=${EXTRAE_HOME}  
 
+SCRIPT=dlb_script_$$.sh
+
 ##################
 ### Print Help ###
 ##################
@@ -42,6 +44,7 @@ function help
    echo "         SMPSS                : SMPSs application"
    echo "  --just-barrier           : Only lend cpus when in an MPI_Barrier, ignore other MPI calls [Default = $JUST_BARRIER]"
    echo "  --keep                   : Keep generated script [Default = $KEEP]"
+   echo "  --name                   : Name for the generated script [Default = dlb_script_*pid*.sh]"
    echo "  --mpi-wait-mode x        : MPI wait mode when in a MPI blocking call [Default = $MPI_WAIT_MODE]"
    echo "         BLOCK                : Blocking wait mode, not consuimg cpu"
    echo "         1CPU                 : Polling wait mode, consuming cpu"
@@ -104,8 +107,7 @@ while [ "$1" != "--" ]; do
          KEEP=YES
          ;;
       --tracing)
-         TRACING=$2
-         shift;
+         TRACING=YES
          ;;
       --extrae-cfg)
          EXTRAE_CFG=$2
@@ -155,6 +157,11 @@ while [ "$1" != "--" ]; do
         NODE_SIZE=$2      
         shift;
         ;;
+      --name)
+        SCRIPT=$2
+        KEEP=YES
+        shift;
+        ;;
    *)
      if [ "$1" != "" ]
      then
@@ -175,7 +182,6 @@ APP_ARGS=$@
 
 echo "WARNING: This script only works with OpenMPI"
 
-SCRIPT=dlb_script_$$.sh
 echo "#!/bin/bash" > $SCRIPT
 
 
@@ -298,7 +304,7 @@ then
 
     TASKSET_str="("
     CPUS_str="("
-    cpu=1
+    cpu=0
 
     for threads in $(echo $THREAD_DISTRIB | cut -d'-' --complement -f$CPUS_NODE --output-delimiter=' ' )
     do
@@ -320,13 +326,11 @@ then
     TASKSET_str+=")"
     CPUS_str+=")"
 
-    echo $TASKSET_str
     echo $CPUS_str
 
     echo "export LB_THREAD_DISTRIBUTION=$THREAD_DISTRIB" >> $SCRIPT
 
 
-   echo "declare -a TASKSET=$TASKSET_str; " >> $SCRIPT
    echo "declare -a THREADS_SET=$CPUS_str; " >> $SCRIPT
 
 
@@ -336,33 +340,53 @@ then
 
 else
 
-    TASKSET_str="("
-    cpu=1
-    let "threads=CPUS_PROC-1"
+    if [ "$POLICY" == "LeWI" ]
+    then
+      
+        TASKSET_str="("
+        LIMIT=$CPUS_NODE
 
-    for i in `seq $MPIS_NODE`
-    do
-        
-        TASKSET_str+="'$cpu"
-
-        let "cpu=cpu+1"
-
-        for a in `seq $threads`
+        for i in `seq $MPIS_NODE`
         do
-            TASKSET_str+=",$cpu"
+            cpu=0
+            TASKSET_str+="'$cpu"
+
+            for ((cpu=1; cpu < LIMIT ; cpu++))
+            do
+                TASKSET_str+=",$cpu"
+            done
+            TASKSET_str+="' "
+        done
+        TASKSET_str+=")"
+
+    else
+       
+        TASKSET_str="("
+        cpu=0
+        let "threads=CPUS_PROC-1"
+
+        for i in `seq $MPIS_NODE`
+        do
+        
+            TASKSET_str+="'$cpu"
+
             let "cpu=cpu+1"
-        done  
-        TASKSET_str+="' "
-    done
 
-    TASKSET_str+=")"
+            for a in `seq $threads`
+            do
+                TASKSET_str+=",$cpu"
+                let "cpu=cpu+1"
+            done  
+            TASKSET_str+="' "
+        done
 
-    echo $TASKSET_str
+        TASKSET_str+=")"
 
-   echo "declare -a TASKSET=$TASKSET_str; " >> $SCRIPT
-   
+    fi
 fi
 
+   echo $TASKSET_str
+   echo "declare -a TASKSET=$TASKSET_str; " >> $SCRIPT
 
 #######################
 ### Extrae env vars ###
@@ -379,7 +403,7 @@ then
    echo "" >> $SCRIPT
    echo "# Extrae env vars" >> $SCRIPT
 
-   NANOS+=" --instrumentation=extrae"
+   NANOS+=" --instrumentation=extrae --instrument-default=user "
 
    if [ "${EXTRAE_CFG}" == "" ]
    then
@@ -415,7 +439,7 @@ then
 
    echo "" >> $SCRIPT
    echo "# Nanos arguments" >> $SCRIPT
-   echo "export NX_ARGS+=\"$NANOS\"" >> $SCRIPT
+   echo "export NX_ARGS+=\"$NANOS --summary \"" >> $SCRIPT
 
 elif [ "$POLICY" == "LeWI_mask" -o "$POLICY" == "RaL" -o "$POLICY" == "auto_LeWI_mask" ]
 then
@@ -486,9 +510,9 @@ else
       then
          if [ "$DEBUG" == "YES" ]
          then
-            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_mpi_instr_dbg.so" >> $SCRIPT
+            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_mpi_instr_dbg.so:${DLB_PATH}/libdlb_instr_dbg.so" >> $SCRIPT
          else
-            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_mpi_instr.so" >> $SCRIPT
+            echo "export LD_PRELOAD=${EXTRAE_LIB}:${DLB_PATH}/libdlb_mpi_instr.so:${DLB_PATH}/libdlb_instr.so" >> $SCRIPT
          fi
       else
          echo "[Set DLB]: ERROR: Extrae lib does not exist: $EXTRAE_LIB. Check the path and that Extrae was installed with DLB support"
@@ -497,9 +521,9 @@ else
    else
       if [ "$DEBUG" == "YES" ]
       then
-         echo "export LD_PRELOAD=${DLB_PATH}/libdlb_mpi_dbg.so" >> $SCRIPT
+         echo "export LD_PRELOAD=${DLB_PATH}/libdlb_mpi_dbg.so:${DLB_PATH}/libdlb_dbg.so" >> $SCRIPT
       else
-         echo "export LD_PRELOAD=${DLB_PATH}/libdlb_mpi.so" >> $SCRIPT
+         echo "export LD_PRELOAD=${DLB_PATH}/libdlb_mpi.so:${DLB_PATH}/libdlb.so" >> $SCRIPT
       fi
    fi
 fi 
@@ -516,6 +540,7 @@ MPIRUN="mpirun -np ${MPIS} "
 ########################
 
 echo "" >> $SCRIPT
+echo "echo \"[\$OMPI_COMM_WORLD_NODE_RANK] Running with cpus: \${TASKSET[\$OMPI_COMM_WORLD_NODE_RANK]}\"" >> $SCRIPT
 echo "# Finally run application with its parameters" >> $SCRIPT
 echo "taskset -c \${TASKSET[\$OMPI_COMM_WORLD_NODE_RANK]} \$*" >> $SCRIPT
 
