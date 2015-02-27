@@ -29,5 +29,6 @@ void after_mpi(mpi_call call_type);
 void before_finalize(void);
 void after_finalize(void);
 void node_barrier(void);
+void node_barrier_fortran(void);
 
 #endif //PROCESS_MPI_H

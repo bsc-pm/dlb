@@ -130,8 +130,12 @@ void after_init(void) {
      ********************************************/
 
     // Color = node, key is 0 because we don't mind the internal rank
-    MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
-
+    //Commented code is just for Alya
+//    if (_mpi_rank==0) {
+//        MPI_Comm_split( MPI_COMM_WORLD, -1, 0, &mpi_comm_node );
+//    }else{    
+        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
+//    }
     spid = Initialize();
     mpi_ready=1;
 }
@@ -198,5 +202,9 @@ void after_finalize(void) {}
  *          can never be intercepted by Extrae nor DLB
  */
 void node_barrier(void) { if (mpi_ready) { MPI_Barrier( mpi_comm_node ); } }
+
+void mpi_barrier_(int *, int *);
+
+void node_barrier_fortran(void) { if (mpi_ready) { int ierror; mpi_barrier_( &mpi_comm_node, &ierror ); } }
 
 #endif /* MPI_LIB */
