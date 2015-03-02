@@ -469,6 +469,18 @@
         "cpar": "MPI_Group group, int assert, MPI_Win win",
         "fpar": "MPI_Fint *group, MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierror",
         "tags": ""
+    },
+    {
+        "name": "MPI_Intercomm_create",
+        "cpar": "MPI_Comm local_comm, int local_leader, MPI_Comm peer_comm, int remote_leader, int tag, MPI_Comm *newintercomm",
+        "fpar": "MPI_Fint *local_comm, MPI_Fint *local_leader, MPI_Fint *peer_comm, MPI_Fint *remote_leader, MPI_Fint *tag, MPI_Fint *newintercomm, MPI_Fint *ierror",
+        "tags": ""
+    },
+    {
+        "name": "MPI_Intercomm_merge",
+        "cpar": "MPI_Comm intercomm, int high, MPI_Comm *newintracomm",
+        "fpar": "MPI_Fint *intercomm, MPI_Fint *high, MPI_Fint *newintracomm, MPI_Fint *ierror",
+        "tags": ""
     }
     ]
 }

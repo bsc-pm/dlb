@@ -72,7 +72,7 @@ void auto_lewi_mask_Init( void ) {
 
 void auto_lewi_mask_Finish( void ) {
     pthread_mutex_lock (&mutex);
-    set_mask( shmem_mask.recover_defmask() );
+    shmem_mask.recover_defmask();
     shmem_mask.finalize();
     enabled=0;
     pthread_mutex_unlock (&mutex);

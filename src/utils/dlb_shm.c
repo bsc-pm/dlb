@@ -35,6 +35,7 @@
 #include "LB_core/DLB_interface.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuarray.h"
+#include "LB_comm/shmem_drom.h"
 
 static char * created_shm_filename = NULL;
 static char * userdef_shm_filename = NULL;
@@ -70,9 +71,21 @@ void create_shdata( void ) {
 #endif
 }
 
-void list_shdata_item( const char* key ) {
-    setenv( "LB_SHM_KEY", key, 1);
-    shmem_mask.print_info();
+void list_shdata_item( const char* shm_suffix ) {
+    char *p;
+    if ( (p = strstr(shm_suffix, "drom")) ) {
+        p = p + 5;  // remove "drom_"
+        setenv( "LB_SHM_KEY", p, 1);
+        shmem_drom_ext__printinfo();
+    } else if ( (p = strstr(shm_suffix, "lewi")) ) {
+        p = p + 5;  // remove "lewi_"
+        setenv( "LB_SHM_KEY", p, 1);
+        shmem_mask.print_info();
+    } else if ( (p = strstr(shm_suffix, "stats")) ) {
+        p = p + 6;  // remove "stats_"
+        setenv( "LB_SHM_KEY", p, 1);
+        // call print_info
+    }
 }
 
 void list_shdata( void ) {
@@ -95,7 +108,8 @@ void list_shdata( void ) {
         if( getuid() == statbuf.st_uid &&
                 fnmatch( "DLB_*", entry->d_name, 0) == 0 ) {
             fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
-            list_shdata_item( &(entry->d_name[8]) );
+            // Ignore DLB_ prefix
+            list_shdata_item( &(entry->d_name[4]) );
 
             // Double-check if recently created or user defined
             // Shared Memories are detected. (BG/Q needs it)
