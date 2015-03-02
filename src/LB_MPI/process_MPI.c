@@ -203,7 +203,7 @@ void after_finalize(void) {}
  */
 void node_barrier(void) { if (mpi_ready) { MPI_Barrier( mpi_comm_node ); } }
 
-void mpi_barrier_(int *, int *);
+void mpi_barrier_(MPI_Comm *, int *);
 
 void node_barrier_fortran(void) { if (mpi_ready) { int ierror; mpi_barrier_( &mpi_comm_node, &ierror ); } }
 
