@@ -24,13 +24,16 @@ void fatal0 ( const char *fmt, ... );
 void fatal ( const char *fmt, ... );
 void warning0 ( const char *fmt, ... );
 void warning ( const char *fmt, ... );
+void warningT ( const char *fmt, ... );
 
 #ifndef QUIET_MODE
 void verbose0 ( const char *fmt, ... );
 void verbose ( const char *fmt, ... );
+void verboseT ( const char *fmt, ... );
 #else
 #define verbose0(fmt, ...)
 #define verbose(fmt, ...)
+#define verboseT(fmt, ...)
 #endif
 
 #ifdef debugBasicInfo

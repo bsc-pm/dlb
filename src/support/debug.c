@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "globals.h"
+#include "LB_numThreads/numThreads.h"
 
 void fatal0 ( const char *fmt, ... ) {
     if ( _mpi_rank <= 0 ) {
@@ -64,6 +65,14 @@ void warning ( const char *fmt, ... ) {
     va_end( args );
 }
 
+void warningT ( const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stderr, "DLB WARNING[%d:%d]: ", _process_id, get_thread_num() );
+    vfprintf( stderr, fmt, args );
+    va_end( args );
+}
+
 #ifndef QUIET_MODE
 void verbose0 ( const char *fmt, ... ) {
     if ( _mpi_rank <= 0 ) {
@@ -79,6 +88,14 @@ void verbose ( const char *fmt, ... ) {
     va_list args;
     va_start( args, fmt );
     fprintf( stdout, "DLB[%d]: ", _mpi_rank );
+    vfprintf( stdout, fmt, args );
+    va_end( args );
+}
+
+void verboseT ( const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stdout, "DLB[%d:%d]: ", _process_id, get_thread_num() );
     vfprintf( stdout, fmt, args );
     va_end( args );
 }
