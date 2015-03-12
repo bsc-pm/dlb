@@ -91,4 +91,6 @@ void debug_shmem ( const char *fmt, ... );
 #define ensure(cond, ...)
 #endif
 
+void print_backtrace ( void );
+
 #endif /* DEBUG_H */

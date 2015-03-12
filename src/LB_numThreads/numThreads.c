@@ -63,7 +63,7 @@ int  omp_get_thread_num  (void) __attribute__ ((weak));
 int  omp_get_max_threads (void) __attribute__ ((weak));
 void omp_set_num_threads (int nthreads) __attribute__ ((weak));
 
-void pm_not_implemented() { fatal0( "Not implemented\n" ); }
+void pm_not_implemented() { print_backtrace(); fatal0( "Not implemented\n" ); }
 
 static struct {
     void (*get_process_mask) (cpu_set_t *cpu_set);

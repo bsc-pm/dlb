@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <execinfo.h>
 #include "globals.h"
 #include "LB_numThreads/numThreads.h"
 
@@ -191,3 +192,22 @@ void debug_shmem ( const char *fmt, ... ) {
     va_end( args );
 }
 #endif
+
+void print_backtrace ( void )
+{
+    void* trace_ptrs[100];
+    int count = backtrace( trace_ptrs, 100 );
+    char** func_names = backtrace_symbols( trace_ptrs, count );
+    fprintf( stderr, "+--------------------------------------\n" );
+
+    // Print the stack trace
+    int i;
+    for( i = 0; i < count; i++ ) {
+        fprintf( stderr, "| %s\n", func_names[i] );
+    }
+
+    // Free the string pointers
+    free( func_names );
+    fprintf( stderr, "+--------------------------------------\n" );
+
+}
