@@ -25,7 +25,6 @@
 #include <sched.h>
 #include <pthread.h>
 #include <stdio.h>
-#include <omp.h>
 #include "LB_numThreads/numThreads.h"
 #include "support/globals.h"
 #include "support/tracing.h"

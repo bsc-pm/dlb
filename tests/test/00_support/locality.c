@@ -18,15 +18,24 @@
 /*************************************************************************************/
 
 /*<testinfo>
-test_generator="gens/single-generator"
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "support/mask_utils.h"
 
 int main( int argc, char **argv ) {
     mu_init();
     fprintf( stdout, "System size: %d\n", mu_get_system_size() );
+
+    setenv("LB_MASK", "0-1,3,5-7", 1);
+
+    cpu_set_t lb_mask;
+    mu_parse_mask( "LB_MASK", &lb_mask );
+    fprintf( stdout, "LB Mask: %s\n", mu_to_str(&lb_mask) );
+
     mu_finalize();
     return 0;
 }

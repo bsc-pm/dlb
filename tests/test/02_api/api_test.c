@@ -18,11 +18,22 @@
 /*************************************************************************************/
 
 /*<testinfo>
-test_generator="gens/single-generator"
+    compile_versions="gomp nanox_omp nanox_ompss"
+
+    test_CC_gomp="gcc"
+    test_CFLAGS_gomp="-fopenmp"
+    test_LDFLAGS_gomp="-Wl,--no-as-needed"
+
+    test_CC_nanox_omp="smpcc"
+    test_CFLAGS_nanox_omp="--openmp"
+
+    test_CC_nanox_ompss="smpcc"
+    test_CFLAGS_nanox_ompss="--ompss"
+
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
-#include <stdio.h>
-#include "LB_core/DLB_kernel.h"
 #include "LB_core/DLB_interface.h"
 
 int main( int argc, char **argv ) {
@@ -30,5 +41,6 @@ int main( int argc, char **argv ) {
     DLB_disable();
     DLB_enable();
     DLB_UpdateResources();
+    DLB_Finalize();
     return 0;
 }

@@ -22,7 +22,7 @@ test_CXXFLAGS="\$common_includes"
 
 test_CFLAGS_performance="\$PERFO_CFLAGS"
 test_CXXFLAGS_performance="\$PERFO_CXXFLAGS"
-test_CFLAGS_debug="\$DEBUG_CFLAGS"
+test_CFLAGS_debug="\$DEBUG_CFLAGS --debug"
 test_CXXFLAGS_debug="\$DEBUG_CXXFLAGS"
 test_CFLAGS_instrumentation="\$INSTR_CFLAGS"
 test_CXXFLAGS_instrumentation="\$INSTR_CXXFLAGS"
