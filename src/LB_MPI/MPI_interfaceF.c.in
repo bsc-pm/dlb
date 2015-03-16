@@ -51,4 +51,15 @@ void DLB_{MPI_NAME}_F_leave(void) {{
 
 #pragma pygen end
 
+void mpi_barrier_(MPI_Comm *, int *);
+
+void dlb_mpi_node_barrier_ (void)  {
+    if (is_mpi_ready()) {
+        int ierror;
+        MPI_Comm mpi_comm_node = getNodeComm();
+        mpi_barrier_(&mpi_comm_node, &ierror);
+    }
+}
+
+
 #endif /* MPI_LIB */

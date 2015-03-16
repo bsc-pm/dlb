@@ -225,7 +225,6 @@ MPI_SRCS = \
 MPI_SRCS_GEN = \
 	src/LB_MPI/MPI_calls_coded.c    \
 	src/LB_MPI/MPI_interface.c      \
-	src/LB_MPI/MPI_interfaceF.c
 	$(END)
 
 MPI_INTR_GEN = src/LB_MPI/MPI_intercept.c
@@ -282,8 +281,7 @@ MPIF_SRCS = \
 
 MPIF_SRCS_GEN = \
 	src/LB_MPI/MPI_calls_coded.c    \
-	src/LB_MPI/MPI_interface.c      \
-	src/LB_MPI/MPI_interfaceF.c
+	src/LB_MPI/MPI_interfaceF.c     \
 	$(END)
 
 MPIF_INTR_GEN = src/LB_MPI/MPI_interceptF.c
