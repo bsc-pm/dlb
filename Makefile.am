@@ -103,6 +103,12 @@ BUILT_SOURCES += src/LB_MPI/MPI_intercept.c
 src/LB_MPI/MPI_intercept.c: $(top_srcdir)/src/LB_MPI/MPI_intercept.c.in $(MPICALLS_DB)
 	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
+EXTRA_DIST    += src/LB_MPI/MPI_interceptF.c.in
+CLEANFILES    += src/LB_MPI/MPI_interceptF.c
+BUILT_SOURCES += src/LB_MPI/MPI_interceptF.c
+src/LB_MPI/MPI_interceptF.c: $(top_srcdir)/src/LB_MPI/MPI_interceptF.c.in $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+
 
 ##########################################################################
 # libdlb_dummy.so
@@ -262,6 +268,62 @@ libdlb_mpi_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
 libdlb_mpi_instr_dbg_la_LIBADD = libdlb_instr_dbg.la
 libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS)
 nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_GEN)
+endif
+endif #MPI_LIB
+
+##########################################################################
+# libdlb_mpif.so
+##########################################################################
+if MPI_LIB
+MPIF_SRCS = \
+	src/LB_MPI/process_MPI.c        \
+	src/LB_MPI/process_MPI.h        \
+	$(END)
+
+MPIF_SRCS_GEN = \
+	src/LB_MPI/MPI_calls_coded.c    \
+	src/LB_MPI/MPI_interface.c      \
+	src/LB_MPI/MPI_interfaceF.c
+	$(END)
+
+MPIF_INTR_GEN = src/LB_MPI/MPI_interceptF.c
+
+lib_LTLIBRARIES += libdlb_mpif.la
+libdlb_mpif_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpif_la_CFLAGS = $(PERFO_CFLAGS)
+libdlb_mpif_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpif_la_LIBADD = libdlb.la
+libdlb_mpif_la_SOURCES = $(MPIF_SRCS)
+nodist_libdlb_mpif_la_SOURCES = $(MPIF_SRCS_GEN) $(MPIF_INTR_GEN)
+
+if DEBUG_LIB
+lib_LTLIBRARIES += libdlb_mpif_dbg.la
+libdlb_mpif_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpif_dbg_la_CFLAGS = $(DEBUG_CFLAGS)
+libdlb_mpif_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpif_dbg_la_LIBADD = libdlb_dbg.la
+libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS)
+nodist_libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS_GEN) $(MPIF_INTR_GEN)
+endif
+
+if INSTRUMENTATION_LIB
+lib_LTLIBRARIES += libdlb_mpif_instr.la
+libdlb_mpif_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpif_instr_la_CFLAGS = $(INSTR_CFLAGS)
+libdlb_mpif_instr_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpif_instr_la_LIBADD = libdlb_instr.la
+libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS)
+nodist_libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS_GEN)
+endif
+
+if INSTRUMENTATION_DEBUG_LIB
+lib_LTLIBRARIES += libdlb_mpif_instr_dbg.la
+libdlb_mpif_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(MPI_CPPFLAGS)
+libdlb_mpif_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS)
+libdlb_mpif_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) $(MPI_LIBS)
+libdlb_mpif_instr_dbg_la_LIBADD = libdlb_instr_dbg.la
+libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS)
+nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_GEN)
 endif
 endif #MPI_LIB
 
