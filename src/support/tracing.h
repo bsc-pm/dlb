@@ -38,6 +38,7 @@
 #define EVENT_DISABLED       2
 #define EVENT_SINGLE         3
 #define EVENT_RESET          11
+#define EVENT_ACQUIRE_CPU    12
 
 /*************************************/
 
