@@ -62,7 +62,7 @@ void Map_Init() {
 
 void Map_Finish(void) {
     free(my_cpus);
-    if (_process_id==0) { finalize_comm_Map(); }
+    finalize_comm_Map();
 }
 
 void Map_IntoCommunication(void) {}

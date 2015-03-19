@@ -91,7 +91,7 @@ void Lend_light_Init() {
 }
 
 void Lend_light_Finish(void) {
-    if (_process_id==0) { finalize_comm(); }
+    finalize_comm();
 }
 
 void Lend_light_IntoCommunication(void) {}
