@@ -35,6 +35,7 @@ test_ENV_performance="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so \$BUILD/.libs/libdlb_mpi_dbg.so"
 test_ENV_debug="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
+test_ignore=@TEST_IGNORE@
 test_ENV="mpirun -n 2 --bind-to-core env"
 
 `@SRCDIR@/tests/gens/config.py $*`

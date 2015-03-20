@@ -35,6 +35,12 @@ if DEBUG_LIB
 versions += debug
 endif
 
+if MPI_LIB
+ignore_mpi=
+else
+ignore_mpi=yes
+endif
+
 basic-generator: basic-generator.in
 	$(GEN_verbose)rm -f $@ ; \
 	sed \
@@ -63,6 +69,7 @@ mpi-generator: mpi-generator.in
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@CONFIG_CC\@,"mpicc",g' \
 		-e's,@CONFIG_CXX\@,"mpicxx",g' \
+		-e's,@TEST_IGNORE\@,"$(ignore_mpi)",g' \
 		$^ > $@.tmp ; \
 	mv $@.tmp $@ ; \
 	chmod 755 $@
