@@ -43,7 +43,6 @@ static int is_iter = 0;
 static int periodo = 0;
 static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
 
-
 void before_init(void) {
     DPDWindowSize(300);
 }
@@ -143,7 +142,6 @@ void after_init(void) {
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
     int valor_dpd;
     if(mpi_ready) {
-        add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
         IntoCommunication();
 
         if(use_dpd) {
@@ -158,35 +156,40 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
         if(_just_barrier) {
             if (call_type==Barrier) {
                 debug_blocking_MPI( " >> MPI_Barrier...............\n" );
+                add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
                 IntoBlockingCall(is_iter, 0);
+                add_event(RUNTIME_EVENT, 0);
             }
         } else if (is_blocking(call_type)) {
             debug_blocking_MPI( " >> %s...............\n", mpi_call_names[call_type] );
+            add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
             IntoBlockingCall(is_iter, 0);
+            add_event(RUNTIME_EVENT, 0);
         }
 
-        add_event(RUNTIME_EVENT, 0);
     }
 }
 
 void after_mpi(mpi_call call_type) {
     if (mpi_ready) {
-        add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
 
         if(_just_barrier) {
             if (call_type==Barrier) {
                 debug_blocking_MPI( " << MPI_Barrier...............\n" );
+                add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
                 OutOfBlockingCall(is_iter);
+                add_event(RUNTIME_EVENT, 0);
                 is_iter=0;
             }
         } else if (is_blocking(call_type)) {
             debug_blocking_MPI( " << %s...............\n", mpi_call_names[call_type] );
+            add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
             OutOfBlockingCall(is_iter);
+            add_event(RUNTIME_EVENT, 0);
             is_iter=0;
         }
 
         OutOfCommunication();
-        add_event(RUNTIME_EVENT, 0);
     }
 }
 
@@ -201,10 +204,20 @@ void after_finalize(void) {}
  *          intercept C MPI symbols. If we just call MPI_Barrier from here, the call
  *          can never be intercepted by Extrae nor DLB
  */
-void node_barrier(void) { if (mpi_ready) { MPI_Barrier( mpi_comm_node ); } }
+void node_barrier(void) { 
+    if (mpi_ready) { 
+        MPI_Barrier( mpi_comm_node ); 
+    } 
+}
 
 void mpi_barrier_(MPI_Comm *, int *);
+void pmpi_barrier_(MPI_Comm *, int *);
 
-void node_barrier_fortran(void) { if (mpi_ready) { int ierror; mpi_barrier_( &mpi_comm_node, &ierror ); } }
+void node_barrier_fortran(void) { 
+    
+    if (mpi_ready) { 
+        int ierror; mpi_barrier_( &mpi_comm_node, &ierror ); 
+    } 
+}
 
 #endif /* MPI_LIB */
