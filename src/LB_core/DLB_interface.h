@@ -43,6 +43,7 @@ void DLB_Retrieve(void);
 int DLB_ReleaseCpu(int cpu);
 int DLB_ReturnClaimedCpu(int cpu);
 void DLB_ClaimCpus(int cpus);
+void DLB_AcquireCpu(int cpu);
 int DLB_CheckCpuAvailability(int cpu);
 int DLB_Is_auto(void);
 void DLB_Update(void);

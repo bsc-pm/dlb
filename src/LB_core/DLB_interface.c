@@ -46,7 +46,7 @@ DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {
 DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {
     //FIXME This hiddes the single event always
     add_event(DLB_MODE_EVENT, EVENT_DISABLED);
-    resetDLB();
+    DLB_reset();
     set_dlb_enabled( false );
 }
 
@@ -54,6 +54,7 @@ DLB_API_DEF( void, DLB_reset, dlb_reset, (void) ) {
     //FIXME This hiddes the single event always
     add_event(RUNTIME_EVENT, EVENT_RESET);
     resetDLB();
+    add_event(RUNTIME_EVENT, 0);
 }
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) ) {
@@ -116,6 +117,9 @@ DLB_API_DEF( void, DLB_Update, dlb_update, (void) ) {
     return Update();
 }
 
+DLB_API_DEF( void, DLB_AcquireCpu, dlb_acquirecpu, (int cpu) ) {
+    return acquirecpu(cpu);
+}
 
 /* Statistics API */
 

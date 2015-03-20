@@ -36,8 +36,11 @@ typedef struct {
     int (*releasecpu) (int cpu);
     int (*returnclaimedcpu) (int cpu);
     void (*claimcpus) (int cpus);
+    void (*acquirecpu) (int cpu);
     int (*checkCpuAvailability) (int cpu);
     void (*resetDLB) (void);
+    void (*disableDLB)(void);
+    void (*enableDLB) (void);
 } BalancePolicy;
 
 extern int use_dpd;
@@ -77,4 +80,7 @@ int tracing_ready();
 void resetDLB ();
 
 int is_auto( void );
+
+void acquirecpu (int cpu);
+
 #endif //DLB_KERNEL_H

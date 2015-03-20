@@ -84,12 +84,17 @@ static int false_dummyFunc() {return 0;}
 static int true_dummyFunc() {return 1;}
 static void notImplemented()
 {
-    warning("Reset Not implemented in this policy");
+    warning("Functionality  Not implemented in this policy");
 }
 
 void set_dlb_enabled(bool enabled) {
     if (dlb_initialized) {
         dlb_enabled = enabled;
+        if (enabled){
+            lb_funcs.enableDLB();
+        }else{
+            lb_funcs.disableDLB();
+        }
     }
 }
 
@@ -143,6 +148,9 @@ int Initialize(void) {
             lb_funcs.claimcpus = &dummyFunc;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &notImplemented;
+            lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.disableDLB = &dummyFunc;
+            lb_funcs.enableDLB = &dummyFunc;
 
         } else if (strcasecmp(policy, "Map")==0) {
 #ifdef debugConfig
@@ -162,6 +170,9 @@ int Initialize(void) {
             lb_funcs.claimcpus = &dummyFunc;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB= &notImplemented;
+            lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.disableDLB = &dummyFunc;
+            lb_funcs.enableDLB = &dummyFunc;
 
         } else if (strcasecmp(policy, "WEIGHT")==0) {
 #ifdef debugConfig
@@ -182,6 +193,9 @@ int Initialize(void) {
             lb_funcs.claimcpus = &dummyFunc;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB= &notImplemented;
+            lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.disableDLB = &dummyFunc;
+            lb_funcs.enableDLB = &dummyFunc;
 
         } else if (strcasecmp(policy, "LeWI_mask")==0) {
 #ifdef debugConfig
@@ -200,6 +214,9 @@ int Initialize(void) {
             lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB  = &notImplemented;
+            lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.disableDLB = &dummyFunc;
+            lb_funcs.enableDLB = &dummyFunc;
 
         } else if (strcasecmp(policy, "auto_LeWI_mask")==0) {
 #ifdef debugConfig
@@ -219,6 +236,9 @@ int Initialize(void) {
             lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
             lb_funcs.checkCpuAvailability = &auto_lewi_mask_CheckCpuAvailability;
             lb_funcs.resetDLB = &auto_lewi_mask_resetDLB;
+            lb_funcs.acquirecpu = &auto_lewi_mask_acquireCpu;
+            lb_funcs.disableDLB = &auto_lewi_mask_disableDLB;
+            lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
             policy_auto=1;
 
         } else if (strcasecmp(policy, "RaL")==0) {
@@ -252,6 +272,9 @@ int Initialize(void) {
             lb_funcs.claimcpus = &dummyFunc;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &notImplemented;
+            lb_funcs.acquirecpu = &notImplemented;
+            lb_funcs.disableDLB = &dummyFunc;
+            lb_funcs.enableDLB = &dummyFunc;
 
         } else if (strcasecmp(policy, "NO")==0) {
 #ifdef debugConfig
@@ -272,6 +295,9 @@ int Initialize(void) {
             lb_funcs.claimcpus = &dummyFunc;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &dummyFunc;
+            lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.disableDLB = &dummyFunc;
+            lb_funcs.enableDLB = &dummyFunc;
         } else {
             fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
             exit(1);
@@ -497,6 +523,14 @@ void claimcpus( int cpus ) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
         lb_funcs.claimcpus(cpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+}
+
+void acquirecpu (int cpu){
+    if (dlb_enabled) {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE_CPU);
+        lb_funcs.acquirecpu(cpu);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }

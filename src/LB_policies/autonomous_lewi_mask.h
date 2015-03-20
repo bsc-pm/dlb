@@ -36,7 +36,8 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter);
 
 void auto_lewi_mask_UpdateResources( int max_resources );
 
-void auto_lewi_mask_ReturnClaimedCpus( void );
+//DEPRECATED
+//void auto_lewi_mask_ReturnClaimedCpus( void );
 
 int auto_lewi_mask_ReleaseCpu(int cpu);
 
@@ -47,6 +48,12 @@ int auto_lewi_mask_ReturnCpuIfClaimed( int cpu );
 int auto_lewi_mask_CheckCpuAvailability ( int cpu );
 
 void auto_lewi_mask_resetDLB( void );
+
+void auto_lewi_mask_acquireCpu( int cpu );
+
+void auto_lewi_mask_disableDLB ( void );
+
+void auto_lewi_mask_enableDLB ( void );
 
 #endif /* AUTO_LEWI_MASK_H */
 
