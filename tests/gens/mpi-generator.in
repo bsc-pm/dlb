@@ -36,7 +36,7 @@ test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so \$BUILD/.libs/libdlb_mpi_dbg.so"
 test_ENV_debug="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
 test_ignore=@TEST_IGNORE@
-test_ENV="mpirun -n 2 --bind-to-core env"
+test_ENV="@MPIRUN@ -n 2 @MPIRUN_BIND@ env"
 
 `@SRCDIR@/tests/gens/config.py $*`
 EOF

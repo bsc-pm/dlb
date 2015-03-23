@@ -35,10 +35,10 @@ if DEBUG_LIB
 versions += debug
 endif
 
-if MPI_LIB
-ignore_mpi=
+if IGNORE_MPI_TESTS
+ignore_mpi_tests = yes
 else
-ignore_mpi=yes
+ignore_mpi_tests =
 endif
 
 basic-generator: basic-generator.in
@@ -67,9 +67,11 @@ mpi-generator: mpi-generator.in
 		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@CONFIG_CC\@,"mpicc",g' \
+		-e's,@CONFIG_CC\@,"$(MPICC)",g' \
 		-e's,@CONFIG_CXX\@,"mpicxx",g' \
-		-e's,@TEST_IGNORE\@,"$(ignore_mpi)",g' \
+		-e's,@MPIRUN\@,$(MPIRUN),g' \
+		-e's,@MPIRUN_BIND\@,$(MPIRUN_BIND),g' \
+		-e's,@TEST_IGNORE\@,"$(ignore_mpi_tests)",g' \
 		$^ > $@.tmp ; \
 	mv $@.tmp $@ ; \
 	chmod 755 $@
