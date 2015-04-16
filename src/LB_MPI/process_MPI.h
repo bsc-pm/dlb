@@ -20,6 +20,7 @@
 #ifndef PROCESS_MPI_H
 #define PROCESS_MPI_H
 
+#include <mpi.h>
 #include "LB_MPI/MPI_calls_coded.h"
 
 void before_init(void);
@@ -28,7 +29,7 @@ void before_mpi(int call, int buf, int dest);
 void after_mpi(mpi_call call_type);
 void before_finalize(void);
 void after_finalize(void);
-void node_barrier(void);
-void node_barrier_fortran(void);
+int is_mpi_ready();
+MPI_Comm getNodeComm();
 
 #endif //PROCESS_MPI_H

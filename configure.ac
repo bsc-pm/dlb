@@ -74,7 +74,9 @@ AC_OPENMP
 
 # check for MPI
 AX_PROG_MPI
+AX_PROG_MPITESTS
 AM_CONDITIONAL([MPI_LIB], [test "${MPI_INSTALLED}" = "yes"])
+AM_CONDITIONAL([IGNORE_MPI_TESTS], [test "${MPI_INSTALLED}" != "yes" -o "x${mpi_tests}" = "xno"])
 
 # check for HWLOC
 AX_PROG_HWLOC
@@ -109,7 +111,7 @@ AC_CONFIG_FILES([ Makefile
 
 AC_MSG_CHECKING([whether to compile the debug version])
 AC_ARG_ENABLE([debug],
-   AS_HELP_STRING([--disable-debug], [Disables generation of debug version]),
+   AS_HELP_STRING([--disable-debug], [Disable generation of debug version]),
    [ debug="$enableval" ],
    [ debug=yes ]
 )
@@ -117,7 +119,7 @@ AC_MSG_RESULT([$debug])
 
 AC_MSG_CHECKING([whether to compile the instrumentation version])
 AC_ARG_ENABLE([instrumentation],
-   AS_HELP_STRING([--disable-instrumentation], [Disables generation of instrumentation version]),
+   AS_HELP_STRING([--disable-instrumentation], [Disable generation of instrumentation version]),
    [ instrumentation="$enableval" ],
    [ instrumentation=yes ]
 )
@@ -125,7 +127,7 @@ AC_MSG_RESULT([$instrumentation])
 
 AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
 AC_ARG_ENABLE([instrumentation-debug],
-   AS_HELP_STRING([--disable-instrumentation-debug], [Disables generation of instrumentation-debug version]),
+   AS_HELP_STRING([--disable-instrumentation-debug], [Disable generation of instrumentation-debug version]),
    [ instrumentation_debug="$enableval" ],
    [ instrumentation_debug=yes ]
 )

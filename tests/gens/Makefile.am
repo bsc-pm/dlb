@@ -18,9 +18,9 @@
 #####################################################################################
 
 
-noinst_SCRIPTS = single-generator mpi_ompss-generator mpi_nanox-generator mpi_omp-generator
+noinst_SCRIPTS = basic-generator mpi-generator
 
-EXTRA_DIST = single-generator.in mpi-generator.in config.py
+EXTRA_DIST = basic-generator.in mpi-generator.in config.py
 
 CLEANFILES = $(noinst_SCRIPTS)
 
@@ -30,18 +30,18 @@ GEN_verbose_ = $(GEN_verbose_@AM_DEFAULT_V@)
 GEN_verbose_0 = @echo "  GEN     " $@;
 endif
 
-ompss_cc  = "env OMPI_CC=mcc OMPI_CFLAGS=--ompss mpicc"
-ompss_cxx = "env OMPI_CXX=mcxx OMPI_CXXFLAGS=--ompss mpicxx"
-nanox_cc  = "env OMPI_CC=mcc mpicc"
-nanox_cxx = "env OMPI_CXX=mcxx mpicxx"
-omp_cc    = "env OMPI_CC=$(CC) OMPI_CFLAGS=$(OPENMP_CFLAGS) mpicc"
-omp_cxx   = "env OMPI_CXX=$(CXX) OMPI_CXXFLAGS=$(OPENMP_CFLAGS) mpicxx"
 versions = performance
 if DEBUG_LIB
 versions += debug
 endif
 
-single-generator: single-generator.in
+if IGNORE_MPI_TESTS
+ignore_mpi_tests = yes
+else
+ignore_mpi_tests =
+endif
+
+basic-generator: basic-generator.in
 	$(GEN_verbose)rm -f $@ ; \
 	sed \
 		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
@@ -57,7 +57,7 @@ single-generator: single-generator.in
 	mv $@.tmp $@ ; \
 	chmod 755 $@
 
-mpi_ompss-generator: mpi-generator.in
+mpi-generator: mpi-generator.in
 	$(GEN_verbose)rm -f $@ ; \
 	sed \
 		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
@@ -67,40 +67,11 @@ mpi_ompss-generator: mpi-generator.in
 		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@CONFIG_CC\@,$(ompss_cc),g' \
-		-e's,@CONFIG_CXX\@,$(ompss_cxx),g' \
-		$^ > $@.tmp ; \
-	mv $@.tmp $@ ; \
-	chmod 755 $@
-
-mpi_nanox-generator: mpi-generator.in
-	$(GEN_verbose)rm -f $@ ; \
-	sed \
-		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
-		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
-		-e's,@COMPILE_VERSIONS\@,"$(versions)",g' \
-		-e's,@PERFO_CFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@CONFIG_CC\@,$(nanox_cc),g' \
-		-e's,@CONFIG_CXX\@,$(nanox_cxx),g' \
-		$^ > $@.tmp ; \
-	mv $@.tmp $@ ; \
-	chmod 755 $@
-
-mpi_omp-generator: mpi-generator.in
-	$(GEN_verbose)rm -f $@ ; \
-	sed \
-		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
-		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
-		-e's,@COMPILE_VERSIONS\@,"$(versions)",g' \
-		-e's,@PERFO_CFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@CONFIG_CC\@,$(omp_cc),g' \
-		-e's,@CONFIG_CXX\@,$(omp_cxx),g' \
+		-e's,@CONFIG_CC\@,"$(MPICC)",g' \
+		-e's,@CONFIG_CXX\@,"mpicxx",g' \
+		-e's,@MPIRUN\@,$(MPIRUN),g' \
+		-e's,@MPIRUN_BIND\@,$(MPIRUN_BIND),g' \
+		-e's,@TEST_IGNORE\@,"$(ignore_mpi_tests)",g' \
 		$^ > $@.tmp ; \
 	mv $@.tmp $@ ; \
 	chmod 755 $@

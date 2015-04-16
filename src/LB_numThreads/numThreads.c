@@ -25,7 +25,6 @@
 #include <sched.h>
 #include <pthread.h>
 #include <stdio.h>
-#include <omp.h>
 #include "LB_numThreads/numThreads.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -38,11 +37,13 @@
         nanos_omp_get_active_mask && \
         nanos_omp_set_process_mask && \
         nanos_omp_add_process_mask && \
+        nanos_omp_get_thread_num && \
         nanos_omp_get_max_threads && \
         nanos_omp_set_num_threads \
         )
 
 #define OMP_SYMBOLS_DEFINED ( \
+        omp_get_thread_num && \
         omp_get_max_threads && \
         omp_set_num_threads \
         )
@@ -54,12 +55,14 @@ void nanos_omp_add_process_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( w
 void nanos_omp_get_active_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
 int  nanos_omp_set_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
 void nanos_omp_add_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
+int  nanos_omp_get_thread_num  (void) __attribute__ ((weak));
 int  nanos_omp_get_max_threads (void) __attribute__ ((weak));
 void nanos_omp_set_num_threads (int nthreads) __attribute__ ((weak));
+int  omp_get_thread_num  (void) __attribute__ ((weak));
 int  omp_get_max_threads (void) __attribute__ ((weak));
 void omp_set_num_threads (int nthreads) __attribute__ ((weak));
 
-void pm_not_implemented() { fatal0( "Not implemented\n" ); }
+void pm_not_implemented() { print_backtrace(); fatal0( "Not implemented\n" ); }
 
 static struct {
     void (*get_process_mask) (cpu_set_t *cpu_set);
@@ -68,6 +71,7 @@ static struct {
     void (*get_active_mask) (cpu_set_t *cpu_set);
     int  (*set_active_mask) (const cpu_set_t *cpu_set);
     void (*add_active_mask) (const cpu_set_t *cpu_set);
+    int  (*get_thread_num) (void);
     int  (*get_threads) (void);
     void (*set_threads) (int nthreads);
 } pm_funcs = {
@@ -77,6 +81,7 @@ static struct {
     pm_not_implemented,
     (int (*)()) pm_not_implemented,
     pm_not_implemented,
+    (int (*)()) pm_not_implemented,
     (int (*)()) pm_not_implemented,
     pm_not_implemented
 };
@@ -90,11 +95,13 @@ void pm_init( void ) {
         pm_funcs.get_active_mask = nanos_omp_get_active_mask;
         pm_funcs.set_active_mask = nanos_omp_set_active_mask;
         pm_funcs.add_active_mask = nanos_omp_add_active_mask;
+        pm_funcs.get_thread_num = nanos_omp_get_thread_num;
         pm_funcs.get_threads = nanos_omp_get_max_threads;
         pm_funcs.set_threads = nanos_omp_set_num_threads;
     }
     /* OpenMP */
     else if ( OMP_SYMBOLS_DEFINED ) {
+        pm_funcs.get_thread_num = omp_get_thread_num;
         pm_funcs.get_threads = omp_get_max_threads;
         pm_funcs.set_threads = omp_set_num_threads;
     }
@@ -138,4 +145,8 @@ int  set_process_mask( const cpu_set_t *cpu_set ) {
 
 void add_process_mask( const cpu_set_t *cpu_set ) {
     pm_funcs.add_process_mask( cpu_set );
+}
+
+int get_thread_num( void ) {
+    return pm_funcs.get_thread_num();
 }

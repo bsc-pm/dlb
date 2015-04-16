@@ -18,7 +18,17 @@
 /*************************************************************************************/
 
 /*<testinfo>
-test_generator="gens/mpi_ompss-generator"
+    compile_versions="gomp nanox_omp"
+
+    test_CC_gomp="mpicc"
+    test_CFLAGS_gomp="-fopenmp"
+    test_LDFLAGS_gomp="-Wl,--no-as-needed"
+
+    test_CC_nanox_omp="env OMPI_CC=smpcc mpicc"
+    test_CFLAGS_nanox_omp="--openmp"
+
+    test_generator="gens/mpi-generator"
+    test_generator_ENV=( "LB_TEST_MODE=omp-only" )
 </testinfo>*/
 
 #define _GNU_SOURCE
@@ -29,10 +39,10 @@ test_generator="gens/mpi_ompss-generator"
 #include <sched.h>
 #include <utmpx.h>
 #include <omp.h>
+#include "LB_core/DLB_interface.h"
 
 #define N 8192
 #define M 256
-
 
 int size, rank;
 double *A, *B, *C;
@@ -49,13 +59,11 @@ void compute(int n) {
     }
 }
 
-#pragma omp task
 void short_task(int n) {
     int i;
     for (i=0; i<N; i++) { compute(n); }
 }
 
-#pragma omp task
 void long_task(int n) {
     int i;
     for (i=0; i<2*N; i++) { compute(n); }
@@ -75,11 +83,16 @@ int main(int argc, char* argv[]) {
     int i,j;
     for (j = 0; j < 1; j++) {
         if (rank%2 == 0) {
+            #pragma omp parallel for
             for(i=0; i<16; i++) { short_task(i*M*(rank+1)); }
         } else {
+            #pragma omp parallel for
+            for(i=0; i<32; i++) { long_task(i*M*(rank+1)); }
+            // It's likely that at this point we will have the other ranks resources
+            DLB_UpdateResources();
+            #pragma omp parallel for
             for(i=0; i<32; i++) { long_task(i*M*(rank+1)); }
         }
-        #pragma omp taskwait
         MPI_Barrier( MPI_COMM_WORLD );
     }
 

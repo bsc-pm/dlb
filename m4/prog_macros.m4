@@ -72,9 +72,6 @@ AC_DEFUN([AX_PROG_MPI],
 
    fi
 
-   # Did the checks pass?
-   AM_CONDITIONAL([HAVE_MPI], [test "${MPI_INSTALLED}" = "yes"])
-
    if test "${MPI_INSTALLED}" = "yes" ; then
       AC_DEFINE([HAVE_MPI], [1], [Determine if MPI in installed])
    fi
@@ -82,6 +79,103 @@ AC_DEFUN([AX_PROG_MPI],
    AX_FLAGS_RESTORE()
 ])
 
+# AX_PROG_MPITESTS
+# -----------
+AC_DEFUN([AX_PROG_MPITESTS],
+[
+    AC_REQUIRE([AX_PROG_MPI])
+    AX_FLAGS_SAVE()
+
+    AC_MSG_CHECKING([whether to enable MPI test suite])
+    AC_ARG_ENABLE([mpi-tests],
+        AS_HELP_STRING([--disable-mpi-tests], [Disable MPI tests]),
+        [ mpi_tests="$enableval" ],
+        [ mpi_tests=yes ]
+    )
+    AC_MSG_RESULT([$mpi_tests])
+
+    AS_IF([ test $mpi_tests = yes ],
+    [
+        AS_IF([test -d "${MPI_HOME}/bin"], [MPI_BINS="${MPI_HOME}/bin"],
+            [test -d "${MPI_HOME}/bin${BITS}"], [MPI_BINS="${MPI_HOME}/bin${BITS}"],
+            [MPI_BINS="not found"]
+        )
+
+        AC_MSG_CHECKING([for mpicc])
+        AS_IF([test -f "${MPI_BINS}/mpigcc"], [MPICC="${MPI_BINS}/mpigcc"],
+            [test -f "${MPI_BINS}/mpicc"], [MPICC="${MPI_BINS}/mpicc"],
+            [MPICC="not found"]
+        )
+        AC_MSG_RESULT([${MPICC}])
+
+        AC_MSG_CHECKING([for mpirun])
+        AS_IF([test -f "${MPI_BINS}/mpirun"], [MPIRUN="${MPI_BINS}/mpirun"],
+            [test -f "${MPI_BINS}/mpiexec"], [MPIRUN="${MPI_BINS}/mpiexec"],
+            [MPIRUN="not found"]
+        )
+        AC_MSG_RESULT([${MPIRUN}])
+
+        AS_IF([test "$MPICC" = "not found" -o "$MPIRUN" = "not found"],
+        [
+            AC_MSG_NOTICE([Cannot find MPI execution environment. Disabling MPI test suite.])
+            mpi_tests=no
+        ])
+    ])
+
+    # Check again once MPICC and MPIRUN are valid
+    AS_IF([ test $mpi_tests = yes ],
+    [
+        AC_LANG_PUSH([C])
+        AC_LANG_CONFTEST(
+        [
+            AC_LANG_SOURCE([[
+                #ifndef _GNU_SOURCE
+                #define _GNU_SOURCE
+                #endif
+                #include <sched.h>
+                #include <mpi.h>
+                int main(int argc, char *argv[])
+                {
+                    int rank;
+                    MPI_Init( &argc, &argv );
+                    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+                    cpu_set_t mask;
+                    sched_getaffinity( 0, sizeof(cpu_set_t), &mask) ;
+                    int error = CPU_COUNT( &mask ) != 1;
+                    MPI_Reduce(&error, &error, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD );
+                    MPI_Finalize();
+                    return error;
+                }
+            ]])
+        ])
+        AC_LANG_POP([C])
+
+        AC_MSG_CHECKING([for mpirun binding options])
+        AS_IF([${MPICC} conftest.c -o conftest],
+        [
+            AS_IF([${MPIRUN} -n 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD],
+                    [MPIRUN_BIND="--bind-to-core"],
+                [${MPIRUN} -n 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD],
+                    [MPIRUN_BIND="--bind-to core"],
+                [MPIRUN_BIND="none found"]
+            )
+        ])
+        rm -f conftest
+        AC_MSG_RESULT([${MPIRUN_BIND}])
+
+        AS_IF([test "$MPIRUN_BIND" = "none found"],
+        [
+            AC_MSG_NOTICE([Cannot find a suitable binding option for MPI. Disabling MPI test suite.])
+            mpi_tests=no
+        ])
+    ])
+
+    AC_SUBST([MPICC])
+    AC_SUBST([MPIRUN])
+    AC_SUBST([MPIRUN_BIND])
+
+   AX_FLAGS_RESTORE()
+])
 
 # AX_PROG_HWLOC
 # -----------

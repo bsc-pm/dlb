@@ -53,11 +53,10 @@ DLB_API_DEF(void, DLB_{MPI_NAME}_leave, dlb_{MPI_LCASE}_leave, (void)) {{
 #pragma pygen end
 
 void DLB_MPI_node_barrier (void) {
-    node_barrier();
-}
-
-void dlb_mpi_node_barrier_ (void)  {
-    node_barrier_fortran();
+    if (is_mpi_ready()) {
+        MPI_Comm mpi_comm_node = getNodeComm();
+        MPI_Barrier(mpi_comm_node);
+    }
 }
 
 #endif /* MPI_LIB */

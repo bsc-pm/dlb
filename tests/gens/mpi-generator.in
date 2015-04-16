@@ -22,7 +22,7 @@ test_CXXFLAGS="\$common_includes"
 
 test_CFLAGS_performance="\$PERFO_CFLAGS"
 test_CXXFLAGS_performance="\$PERFO_CXXFLAGS"
-test_CFLAGS_debug="\$DEBUG_CFLAGS"
+test_CFLAGS_debug="\$DEBUG_CFLAGS --debug"
 test_CXXFLAGS_debug="\$DEBUG_CXXFLAGS"
 test_CFLAGS_instrumentation="\$INSTR_CFLAGS"
 test_CXXFLAGS_instrumentation="\$INSTR_CXXFLAGS"
@@ -35,7 +35,8 @@ test_ENV_performance="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so \$BUILD/.libs/libdlb_mpi_dbg.so"
 test_ENV_debug="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
-test_ENV="mpirun -n 2 --bind-to-core env"
+test_ignore=@TEST_IGNORE@
+test_ENV="@MPIRUN@ -n 2 @MPIRUN_BIND@ env"
 
 `@SRCDIR@/tests/gens/config.py $*`
 EOF

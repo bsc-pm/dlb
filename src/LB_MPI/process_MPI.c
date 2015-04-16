@@ -200,24 +200,12 @@ void before_finalize(void) {
 
 void after_finalize(void) {}
 
-/* FIXME: If a Fortran application preloads the Extrae-Fortran library, it will only
- *          intercept C MPI symbols. If we just call MPI_Barrier from here, the call
- *          can never be intercepted by Extrae nor DLB
- */
-void node_barrier(void) { 
-    if (mpi_ready) { 
-        MPI_Barrier( mpi_comm_node ); 
-    } 
+int is_mpi_ready() {
+    return mpi_ready;
 }
 
-void mpi_barrier_(MPI_Comm *, int *);
-void pmpi_barrier_(MPI_Comm *, int *);
-
-void node_barrier_fortran(void) { 
-    
-    if (mpi_ready) { 
-        int ierror; mpi_barrier_( &mpi_comm_node, &ierror ); 
-    } 
+MPI_Comm getNodeComm() {
+    return mpi_comm_node;
 }
 
 #endif /* MPI_LIB */
