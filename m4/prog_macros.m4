@@ -41,8 +41,8 @@ AC_DEFUN([AX_PROG_MPI],
       # Check for the MPI library.
       # We won't use neither AC_CHECK_LIB nor AC_TRY_LINK because this library may have unresolved references
       AC_MSG_CHECKING([for MPI library])
-      if test -f "${MPI_LIBSDIR}/libmpi.a" ; then
-         MPI_LIBS="-lmpi"
+      if test -f "${MPI_LIBSDIR}/libmpi_mt.so" ; then
+         MPI_LIBS="-lmpi_mt"
       elif test -f "${MPI_LIBSDIR}/libmpi.so" ; then
          MPI_LIBS="-lmpi"
       elif test -f "${MPI_LIBSDIR}/libmpich-gcc.legacy.a"; then
