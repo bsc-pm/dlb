@@ -40,5 +40,13 @@ void lewi_mask_ReturnClaimedCpus( void );
 
 void lewi_mask_ClaimCpus( int cpus );
 
+void lewi_mask_disableDLB(void);
+
+void lewi_mask_enableDLB(void);
+
+void lewi_mask_single(void);
+
+void lewi_mask_parallel(void);
+
 #endif /* LEWI_MASK_H */
 

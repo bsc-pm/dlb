@@ -55,5 +55,9 @@ void auto_lewi_mask_disableDLB ( void );
 
 void auto_lewi_mask_enableDLB ( void );
 
+void auto_lewi_mask_single(void);
+
+void auto_lewi_mask_parallel(void);
+
 #endif /* AUTO_LEWI_MASK_H */
 

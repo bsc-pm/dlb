@@ -59,13 +59,12 @@ DLB_API_DEF( void, DLB_reset, dlb_reset, (void) ) {
 
 DLB_API_DEF( void, DLB_single, dlb_single, (void) ) {
     add_event(DLB_MODE_EVENT, EVENT_SINGLE);
-    //no iter, single
-    IntoBlockingCall(0, 1);
+    singlemode();
 }
 
 DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) ) {
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-    OutOfBlockingCall(0);
+    parallelmode();
 }
 
 DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) ) {

@@ -41,6 +41,8 @@ typedef struct {
     void (*resetDLB) (void);
     void (*disableDLB)(void);
     void (*enableDLB) (void);
+    void (*single) (void);
+    void (*parallel) (void);
 } BalancePolicy;
 
 extern int use_dpd;
@@ -82,5 +84,9 @@ void resetDLB ();
 int is_auto( void );
 
 void acquirecpu (int cpu);
+
+void singlemode(void);
+
+void parallelmode(void);
 
 #endif //DLB_KERNEL_H

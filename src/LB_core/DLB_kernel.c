@@ -151,6 +151,8 @@ int Initialize(void) {
             lb_funcs.acquirecpu = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
+            lb_funcs.single = &dummyFunc;
+            lb_funcs.parallel = &dummyFunc;
 
         } else if (strcasecmp(policy, "Map")==0) {
 #ifdef debugConfig
@@ -173,6 +175,8 @@ int Initialize(void) {
             lb_funcs.acquirecpu = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
+            lb_funcs.single = &dummyFunc;
+            lb_funcs.parallel = &dummyFunc;
 
         } else if (strcasecmp(policy, "WEIGHT")==0) {
 #ifdef debugConfig
@@ -196,6 +200,8 @@ int Initialize(void) {
             lb_funcs.acquirecpu = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
+            lb_funcs.single = &dummyFunc;
+            lb_funcs.parallel = &dummyFunc;
 
         } else if (strcasecmp(policy, "LeWI_mask")==0) {
 #ifdef debugConfig
@@ -215,8 +221,10 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB  = &notImplemented;
             lb_funcs.acquirecpu = &dummyFunc;
-            lb_funcs.disableDLB = &dummyFunc;
-            lb_funcs.enableDLB = &dummyFunc;
+            lb_funcs.disableDLB = &lewi_mask_disableDLB;
+            lb_funcs.enableDLB = &lewi_mask_enableDLB;
+            lb_funcs.single = &lewi_mask_single;
+            lb_funcs.parallel = &lewi_mask_parallel;
 
         } else if (strcasecmp(policy, "auto_LeWI_mask")==0) {
 #ifdef debugConfig
@@ -239,6 +247,8 @@ int Initialize(void) {
             lb_funcs.acquirecpu = &auto_lewi_mask_acquireCpu;
             lb_funcs.disableDLB = &auto_lewi_mask_disableDLB;
             lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
+            lb_funcs.single = &auto_lewi_mask_single;
+            lb_funcs.parallel = &auto_lewi_mask_parallel;
             policy_auto=1;
 
         } else if (strcasecmp(policy, "RaL")==0) {
@@ -275,6 +285,8 @@ int Initialize(void) {
             lb_funcs.acquirecpu = &notImplemented;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
+            lb_funcs.single = &dummyFunc;
+            lb_funcs.parallel = &dummyFunc;
 
         } else if (strcasecmp(policy, "NO")==0) {
 #ifdef debugConfig
@@ -298,6 +310,8 @@ int Initialize(void) {
             lb_funcs.acquirecpu = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
+            lb_funcs.single = &dummyFunc;
+            lb_funcs.parallel = &dummyFunc;
         } else {
             fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
             exit(1);
@@ -467,17 +481,14 @@ void OutOfCommunication(void) {
     }
 }
 
-void IntoBlockingCall(int is_iter, int is_single) {
+void IntoBlockingCall(int is_iter, int blocking_mode) {
     /*  double cpuSecs;
         double MPISecs;
         cpuSecs=iterCpuTime_avg;
         MPISecs=iterMPITime_avg;*/
     if (dlb_enabled) {
-        if (is_single) {
-            lb_funcs.intoBlockingCall(is_iter, ONE_CPU);
-        } else {
-            lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
-        }
+        // We explicitly ignore the argument
+        lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
     }
 }
 
@@ -547,6 +558,16 @@ void resetDLB () {
     if (dlb_enabled) {
         lb_funcs.resetDLB();
     }
+}
+
+void singlemode () {
+    dlb_enabled = false;
+    lb_funcs.single();
+}
+
+void parallelmode () {
+    dlb_enabled = true;
+    lb_funcs.parallel();
 }
 
 int is_auto( void ){

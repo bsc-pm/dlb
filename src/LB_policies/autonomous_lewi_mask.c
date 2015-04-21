@@ -41,6 +41,8 @@
 static int nthreads;
 static pthread_mutex_t mutex;
 static int enabled=0;
+static int single=0;
+
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
 void auto_lewi_mask_Init( void ) {
@@ -87,7 +89,7 @@ void auto_lewi_mask_OutOfCommunication( void ) {}
 /* Into Blocking Call - Lend the maximum number of threads */
 void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
 
-    if ( _blocking_mode == BLOCK ) {
+    if ( blocking_mode == BLOCK ) {
         cpu_set_t cpu;
         CPU_ZERO( &cpu );
         sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
@@ -135,7 +137,7 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
         CPU_ZERO( &mask );
 
         pthread_mutex_lock(&mutex);
-        if (enabled){
+        if (enabled && !single){
             get_mask( &mask );
 
             if (!CPU_ISSET(my_cpu, &mask)){
@@ -160,7 +162,7 @@ void auto_lewi_mask_UpdateResources( int max_resources ) {
     CPU_ZERO( &mask );
 
     pthread_mutex_lock(&mutex);
-    if (enabled) {
+    if (enabled && !single) {
         debug_lend("UpdateResources\n");
         get_mask( &mask );
 
@@ -270,7 +272,7 @@ void auto_lewi_mask_ClaimCpus(int cpus) {
     if (nthreads<_default_nthreads) {
         //Do not get more cpus than the default ones
         pthread_mutex_lock(&mutex);
-        if (enabled) {
+        if (enabled && !single) {
             debug_lend("ClaimCpus max: %d\n", cpus);
             if ((cpus+nthreads)>_default_nthreads) { cpus=_default_nthreads-nthreads; }
 
@@ -301,7 +303,7 @@ void auto_lewi_mask_resetDLB(){
     CPU_ZERO( &current_mask );
 
     pthread_mutex_lock(&mutex);
-    if (enabled){
+    if (enabled && !single){
         debug_lend("ResetDLB \n");
         get_mask( &current_mask );
         nthreads=shmem_mask.reset_default_cpus(&current_mask);
@@ -316,7 +318,7 @@ void auto_lewi_mask_acquireCpu(int cpu){
     cpu_set_t mask;
 
     pthread_mutex_lock(&mutex);
-    if (enabled){
+    if (enabled && !single){
         debug_lend("AcquireCpu %d\n", cpu);
         get_mask( &mask );
 
@@ -345,7 +347,24 @@ void auto_lewi_mask_disableDLB ( void ){
 
 void auto_lewi_mask_enableDLB ( void ){
     pthread_mutex_lock ( &mutex);
+    single=0;
     enabled=1;
     debug_lend("Enabling DLB\n");
+    pthread_mutex_unlock (&mutex);
+}
+
+void auto_lewi_mask_single(void) {
+    pthread_mutex_lock ( &mutex);
+    single=1;
+    debug_lend("Enabling DLB Single Mode\n");
+    pthread_mutex_unlock (&mutex);
+}
+
+// In this policy, DLB_parallel and DLB_enable do the same
+void auto_lewi_mask_parallel(void) {
+    pthread_mutex_lock ( &mutex);
+    single=0;
+    enabled=1;
+    debug_lend("Disabling DLB Single Mode\n");
     pthread_mutex_unlock (&mutex);
 }
