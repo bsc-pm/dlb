@@ -37,4 +37,8 @@
    __attribute__((alias(#Name))) Type NameF##_ Params; \
    DLB_API_SIMPLE_DEF(Type, Name, Params)
 
+#define DLB_API_F_ALIAS( NameF, Params) \
+   void NameF##_ Params __attribute__((alias(#NameF))); \
+   void NameF##__ Params __attribute__((alias(#NameF)))
+
 #endif /* DLB_API_H */

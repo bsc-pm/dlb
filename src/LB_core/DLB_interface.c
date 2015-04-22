@@ -30,157 +30,157 @@
 // sub-process ID
 static int spid = 0;
 
-DLB_API_DEF( void, DLB_Init, dlb_init, (void) ) {
+void DLB_Init (void) {
     spid = Initialize();
 }
 
-DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) ) {
+void DLB_Finalize (void) {
     Finish( spid );
 }
 
-DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {
+void DLB_enable (void) {
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     set_dlb_enabled( true );
 }
 
-DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {
+void DLB_disable (void) {
     //FIXME This hiddes the single event always
     add_event(DLB_MODE_EVENT, EVENT_DISABLED);
     DLB_reset();
     set_dlb_enabled( false );
 }
 
-DLB_API_DEF( void, DLB_reset, dlb_reset, (void) ) {
+void DLB_reset (void) {
     //FIXME This hiddes the single event always
     add_event(RUNTIME_EVENT, EVENT_RESET);
     resetDLB();
     add_event(RUNTIME_EVENT, 0);
 }
 
-DLB_API_DEF( void, DLB_single, dlb_single, (void) ) {
+void DLB_single (void) {
     add_event(DLB_MODE_EVENT, EVENT_SINGLE);
     singlemode();
 }
 
-DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) ) {
+void DLB_parallel (void) {
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     parallelmode();
 }
 
-DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) ) {
+void DLB_UpdateResources (void) {
     updateresources( USHRT_MAX );
 }
 
-DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) ) {
+void DLB_UpdateResources_max (int max_resources) {
     updateresources( max_resources );
 }
 
-DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) ) {
+void DLB_ReturnClaimedCpus (void) {
     returnclaimed();
 }
 
-DLB_API_DEF( int, DLB_ReleaseCpu, dlb_releasecpu, (int cpu) ) {
+int DLB_ReleaseCpu (int cpu) {
     return releasecpu(cpu);
 }
 
-DLB_API_DEF( int, DLB_ReturnClaimedCpu, dlb_returnclaimedcpu, (int cpu) ) {
+int DLB_ReturnClaimedCpu (int cpu) {
     return returnclaimedcpu(cpu);
 }
 
-DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (int cpus) ) {
+void DLB_ClaimCpus (int cpus) {
     claimcpus(cpus);
 }
 
-DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) ) {
+void DLB_Lend (void) {
     add_event(RUNTIME_EVENT, EVENT_LEND);
     //no iter, no single
     IntoBlockingCall(0, 0);
     add_event(RUNTIME_EVENT, 0);
 }
 
-DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) ) {
+void DLB_Retrieve (void) {
     add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
     OutOfBlockingCall(0);
     add_event(RUNTIME_EVENT, 0);
 }
 
-DLB_API_DEF( int, DLB_CheckCpuAvailability, dlb_checkcpuavailability, (int cpu) ) {
+int DLB_CheckCpuAvailability (int cpu) {
     return checkCpuAvailability(cpu);
 }
 
-DLB_API_DEF( int, DLB_Is_auto, dlb_is_auto, (void) ) {
+int DLB_Is_auto (void) {
     return is_auto();
 }
 
-DLB_API_DEF( void, DLB_Update, dlb_update, (void) ) {
-    return Update();
+void DLB_Update (void) {
+    Update();
 }
 
-DLB_API_DEF( void, DLB_AcquireCpu, dlb_acquirecpu, (int cpu) ) {
-    return acquirecpu(cpu);
+void DLB_AcquireCpu (int cpu) {
+    acquirecpu(cpu);
 }
 
 /* Statistics API */
 
-DLB_API_DEF( void, DLB_Stats_Init, dlb_stats_init, (void) ) {
+void DLB_Stats_Init (void) {
     stats_ext_init();
 }
 
-DLB_API_DEF( void, DLB_Stats_Finalize, dlb_stats_finalize, (void) ) {
+void DLB_Stats_Finalize (void) {
     stats_ext_finalize();
 }
 
-DLB_API_DEF( int, DLB_Stats_GetNumCpus, dlb_stats_getnumcpus, (void) ) {
+int DLB_Stats_GetNumCpus (void) {
     return stats_ext_getnumcpus();
 }
 
-DLB_API_DEF( void, DLB_Stats_GetPidList, dlb_stats_getpidlist, (int *pidlist, int *nelems, int max_len) ) {
+void DLB_Stats_GetPidList (int *pidlist, int *nelems, int max_len) {
     stats_ext_getpidlist(pidlist, nelems, max_len);
 }
 
-DLB_API_DEF( double, DLB_Stats_GetCpuUsage, dlb_stats_getcpuusage, (int pid) ) {
+double DLB_Stats_GetCpuUsage (int pid) {
     return stats_ext_getcpuusage(pid);
 }
 
-DLB_API_DEF( void, DLB_Stats_GetCpuUsageList, dlb_stats_getcpuusagelist, (double *usagelist,int *nelems,int max_len) ) {
-    return stats_ext_getcpuusage_list(usagelist, nelems, max_len);
+void DLB_Stats_GetCpuUsageList (double *usagelist, int *nelems, int max_len) {
+    stats_ext_getcpuusage_list(usagelist, nelems, max_len);
 }
 
-DLB_API_DEF( int, DLB_Stats_GetActiveCpus, dlb_stats_getactivecpus, (int pid) ) {
+int DLB_Stats_GetActiveCpus (int pid) {
     return stats_ext_getactivecpus(pid);
 }
 
-DLB_API_DEF( void, DLB_Stats_GetActiveCpusList, dlb_stats_getactivecpus_list, (int *cpuslist,int *nelems,int max_len) ) {
-    return stats_ext_getactivecpus_list(cpuslist, nelems, max_len);
+void DLB_Stats_GetActiveCpusList (int *cpuslist, int *nelems, int max_len) {
+    stats_ext_getactivecpus_list(cpuslist, nelems, max_len);
 }
 
-DLB_API_DEF( void, DLB_Stats_GetLoadAvg, dlb_stats_getloadavg, (int pid, double *load) ) {
+void DLB_Stats_GetLoadAvg (int pid, double *load) {
     stats_ext_getloadavg(pid, load);
 }
 
 // final name not decided yet
 /* Dynamic Resource Ownership Manager API */
 
-DLB_API_DEF( void, DLB_Drom_Init, dlb_drom_init, (void) ) {
+void DLB_Drom_Init (void) {
     drom_ext_init();
 }
 
-DLB_API_DEF( void, DLB_Drom_Finalize, dlb_drom_finalize, (void) ) {
+void DLB_Drom_Finalize (void) {
     drom_ext_finalize();
 }
 
-DLB_API_DEF( int, DLB_Drom_GetNumCpus, dlb_drom_getnumcpus, (void) ) {
+int DLB_Drom_GetNumCpus (void) {
     return drom_ext_getnumcpus();
 }
 
-DLB_API_DEF( void, DLB_Drom_GetPidList, dlb_drom_getpidlist, (int *pidlist, int *nelems, int max_len) ) {
+void DLB_Drom_GetPidList (int *pidlist, int *nelems, int max_len) {
     drom_ext_getpidlist(pidlist, nelems, max_len);
 }
 
-DLB_API_DEF( void, DLB_Drom_GetProcessMask, dlb_drom_getprocessmask, (int pid, dlb_cpu_set_t mask) ) {
+void DLB_Drom_GetProcessMask (int pid, dlb_cpu_set_t mask) {
     drom_ext_getprocessmask( pid, (cpu_set_t*)mask);
 }
 
-DLB_API_DEF( void, DLB_Drom_SetProcessMask, dlb_drom_setprocessmask, (int pid, const dlb_cpu_set_t mask) ) {
+void DLB_Drom_SetProcessMask (int pid, const dlb_cpu_set_t mask) {
     drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
 }
