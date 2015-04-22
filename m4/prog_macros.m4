@@ -98,6 +98,7 @@ AC_DEFUN([AX_PROG_MPITESTS],
     [
         AS_IF([test -d "${MPI_HOME}/bin"], [MPI_BINS="${MPI_HOME}/bin"],
             [test -d "${MPI_HOME}/bin${BITS}"], [MPI_BINS="${MPI_HOME}/bin${BITS}"],
+            [test -d "/usr/bin"], [MPI_BINS="/usr/bin"],
             [MPI_BINS="not found"]
         )
 
@@ -141,10 +142,11 @@ AC_DEFUN([AX_PROG_MPITESTS],
                     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
                     cpu_set_t mask;
                     sched_getaffinity( 0, sizeof(cpu_set_t), &mask) ;
-                    int error = CPU_COUNT( &mask ) != 1;
-                    MPI_Reduce(&error, &error, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD );
+                    int local_error = CPU_COUNT( &mask ) != 1;
+                    int global_error = 0;
+                    MPI_Reduce(&local_error, &global_error, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD );
                     MPI_Finalize();
-                    return error;
+                    return global_error;
                 }
             ]])
         ])
