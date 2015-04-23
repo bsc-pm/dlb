@@ -24,7 +24,8 @@
 #include <assert.h>
 
 #include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_bitset.h"
+#include "LB_comm/shmem_cpuarray.h"
+//#include "LB_comm/shmem_bitset.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -34,6 +35,8 @@
 
 static int nthreads;
 static int enabled = 0;
+static int single = 0;
+static int master_cpu;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
@@ -87,6 +90,7 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
         cpu_set_t cpu;
         CPU_ZERO( &cpu );
         sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
+        master_cpu = sched_getcpu();
 
         if ( blocking_mode == ONE_CPU ) {
             // Remove current cpu from the mask
@@ -98,8 +102,16 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
             nthreads = 0;
         }
 
-        set_mask( &cpu );
-        shmem_mask.add_mask( &mask );
+        // Don't set application mask if it is already 1 cpu
+        if ( !CPU_EQUAL( &mask, &cpu ) ) {
+            set_mask( &cpu );
+        }
+
+        // Don't add mask if empty
+        if ( CPU_COUNT( &mask ) > 0 ) {
+            shmem_mask.add_mask( &mask );
+        }
+
         add_event( THREADS_USED_EVENT, nthreads );
         //Check num threads and mask size are the same (this is the only case where they don't match)
         //assert(nthreads+1==CPU_COUNT(&cpu));
@@ -109,25 +121,32 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
 /* Out of Blocking Call - Recover the default number of threads */
 void lewi_mask_OutOfBlockingCall(int is_iter) {
     if (enabled) {
-        //Check num threads and mask size are the same
         cpu_set_t mask;
         CPU_ZERO( &mask );
         get_mask( &mask );
+        //Check num threads and mask size are the same
         //assert(nthreads+1==CPU_COUNT(&mask));
 
-
-        debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
-        const cpu_set_t* current_mask = shmem_mask.recover_defmask();
-        set_mask(current_mask);
-        nthreads = _default_nthreads;
-        assert(nthreads==CPU_COUNT(current_mask));
+        if (single) {
+            debug_lend ( "RECOVERING master thread\n" );
+            shmem_mask.recover_cpu( master_cpu );
+            CPU_SET( master_cpu, &mask );
+            nthreads = 1;
+        } else {
+            debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
+            const cpu_set_t* def_mask = shmem_mask.recover_defmask();
+            CPU_OR( &mask, &mask, def_mask );
+            nthreads = _default_nthreads;
+        }
+        set_mask( &mask );
+        assert(nthreads==CPU_COUNT(&mask));
         add_event( THREADS_USED_EVENT, nthreads );
     }
 }
 
 /* Update Resources - Try to acquire foreign threads */
 void lewi_mask_UpdateResources( int max_resources ) {
-    if (enabled) {
+    if (enabled && !single) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
         get_mask( &mask );
@@ -150,7 +169,7 @@ void lewi_mask_UpdateResources( int max_resources ) {
 
 /* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
 void lewi_mask_ReturnClaimedCpus( void ) {
-    if (enabled) {
+    if (enabled && !single) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
         get_mask( &mask );
@@ -172,7 +191,7 @@ void lewi_mask_ReturnClaimedCpus( void ) {
 }
 
 void lewi_mask_ClaimCpus(int cpus) {
-    if (enabled) {
+    if (enabled && !single) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
         get_mask( &mask );
@@ -212,10 +231,10 @@ void lewi_mask_enableDLB(void) {
 
 void lewi_mask_single(void) {
     lewi_mask_IntoBlockingCall(0, ONE_CPU);
-    lewi_mask_disableDLB();
+    single = 1;
 }
 
 void lewi_mask_parallel(void) {
-    lewi_mask_enableDLB();
     lewi_mask_OutOfBlockingCall(0);
+    single = 0;
 }

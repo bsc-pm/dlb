@@ -337,6 +337,43 @@ void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources ) 
     add_event( IDLE_CPUS_EVENT, idle_count );
 }
 
+/* Remove CPU from the Shared Mask
+ * CPUs from default_mask:          State => BUSY
+ * CPUs that also have no guest:    Guest => ME
+ */
+void shmem_cpuarray__recover_cpu( int cpu ) {
+    DLB_DEBUG( cpu_set_t recovered_cpus; )
+    DLB_DEBUG( cpu_set_t idle_cpus; )
+    DLB_DEBUG( CPU_ZERO( &recovered_cpus ); )
+    DLB_DEBUG( CPU_ZERO( &idle_cpus ); )
+
+    DLB_INSTR( int idle_count = 0; )
+
+    shmem_lock( shm_handler );
+    {
+        if ( CPU_ISSET(cpu, &default_mask) ) {
+            shdata->node_info[cpu].state = BUSY;
+            if ( shdata->node_info[cpu].guest == NOBODY ) {
+                shdata->node_info[cpu].guest = ME;
+                DLB_DEBUG( CPU_SET( cpu, &recovered_cpus ); )
+            }
+        }
+
+        // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
+        if ( is_idle(cpu) ) {
+            DLB_INSTR( idle_count++; )
+                DLB_DEBUG( CPU_SET( cpu, &idle_cpus ); )
+        }
+    }
+    shmem_unlock( shm_handler );
+
+    DLB_DEBUG( int recovered = CPU_COUNT( &recovered_cpus); )
+    DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
+    debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", recovered, post_size );
+    debug_shmem ( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+
+    add_event( IDLE_CPUS_EVENT, idle_count );
+}
 
 /* Remove non default CPUs that have been set as BUSY by their owner
  * or remove also CPUs that habe been set DISABLED

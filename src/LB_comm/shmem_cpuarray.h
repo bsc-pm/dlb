@@ -30,6 +30,7 @@ void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask );
 void shmem_cpuarray__add_cpu( int cpu );
 const cpu_set_t* shmem_cpuarray__recover_defmask( void );
 void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources );
+void shmem_cpuarray__recover_cpu( int cpu );
 int shmem_cpuarray__return_claimed ( cpu_set_t *mask );
 int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources );
 bool shmem_cpuarray__is_cpu_borrowed ( int cpu );
@@ -45,6 +46,7 @@ static const struct {
     void (*add_cpu) (int cpu);
     const cpu_set_t* (*recover_defmask) (void);
     void (*recover_some_defcpus) (cpu_set_t*, int);
+    void (*recover_cpu) (int);
     int (*return_claimed) (cpu_set_t*);
     int (*collect_mask) (cpu_set_t*, int);
     bool (*is_cpu_borrowed) (int);
@@ -59,6 +61,7 @@ static const struct {
     shmem_cpuarray__add_cpu,
     shmem_cpuarray__recover_defmask,
     shmem_cpuarray__recover_some_defcpus,
+    shmem_cpuarray__recover_cpu,
     shmem_cpuarray__return_claimed,
     shmem_cpuarray__collect_mask,
     shmem_cpuarray__is_cpu_borrowed,
