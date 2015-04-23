@@ -39,6 +39,7 @@ void DLB_Finalize (void) {
 }
 
 void DLB_enable (void) {
+    //FIXME This hiddes the single event always
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     set_dlb_enabled( true );
 }
@@ -46,12 +47,10 @@ void DLB_enable (void) {
 void DLB_disable (void) {
     //FIXME This hiddes the single event always
     add_event(DLB_MODE_EVENT, EVENT_DISABLED);
-    DLB_reset();
     set_dlb_enabled( false );
 }
 
 void DLB_reset (void) {
-    //FIXME This hiddes the single event always
     add_event(RUNTIME_EVENT, EVENT_RESET);
     resetDLB();
     add_event(RUNTIME_EVENT, 0);

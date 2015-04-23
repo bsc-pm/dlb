@@ -339,10 +339,19 @@ void auto_lewi_mask_acquireCpu(int cpu){
 }
 
 void auto_lewi_mask_disableDLB ( void ){
-    pthread_mutex_lock ( &mutex);
-    enabled=0;
-    debug_lend("Disabling DLB\n");
-    pthread_mutex_unlock (&mutex);
+    cpu_set_t current_mask;
+    CPU_ZERO( &current_mask );
+
+    pthread_mutex_lock(&mutex);
+    if (enabled){
+        debug_lend("Disabling DLB\n");
+        get_mask( &current_mask );
+        nthreads=shmem_mask.reset_default_cpus(&current_mask);
+        set_mask( &current_mask);
+        debug_lend("New Mask: %s\n", mu_to_str(&current_mask));
+        enabled=0;
+    }
+    pthread_mutex_unlock(&mutex);
 }
 
 void auto_lewi_mask_enableDLB ( void ){

@@ -202,6 +202,7 @@ void lewi_mask_ClaimCpus(int cpus) {
 }
 
 void lewi_mask_disableDLB(void) {
+    // TODO: resetDLB
     enabled = 0;
 }
 
