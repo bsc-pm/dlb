@@ -19,13 +19,22 @@
 
 #include "support/dlb_api.h"
 
+DLB_API_DEF( void, DLB_Init, dlb_init, (void) ) {}
+DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) ) {}
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {}
 DLB_API_DEF( void, DLB_disable, dlb_disable, (void) ) {}
+DLB_API_DEF( void, DLB_reset, dlb_reset, (void) ) {}
 DLB_API_DEF( void, DLB_single, dlb_single, (void) ) {}
 DLB_API_DEF( void, DLB_parallel, dlb_parallel, (void) ) {}
 DLB_API_DEF( void, DLB_UpdateResources, dlb_updateresources, (void) ) {}
 DLB_API_DEF( void, DLB_UpdateResources_max, dlb_updateresources_max, (int max_resources) ) {}
 DLB_API_DEF( void, DLB_ReturnClaimedCpus, dlb_returnclaimedcpus, (void) ) {}
+DLB_API_DEF( void, DLB_ReleaseCpu, dlb_releasecpu, (void) ) {}
+DLB_API_DEF( void, DLB_ReturnClaimedCpu, dlb_returnclaimedcpu, (void) ) {}
+DLB_API_DEF( void, DLB_ClaimCpus, dlb_claimcpus, (void) ) {}
 DLB_API_DEF( void, DLB_Lend, dlb_lend, (void) ) {}
 DLB_API_DEF( void, DLB_Retrieve, dlb_retrieve, (void) ) {}
+DLB_API_DEF( void, DLB_Update, dlb_update, (void) ) {}
+DLB_API_DEF( void, DLB_AcquireCpu, dlb_acquirecpu, (void) ) {}
+
 DLB_API_DEF( void, DLB_MPI_node_barrier, dlb_mpi_node_barrier, (void) ) {}
