@@ -66,6 +66,8 @@ void lewi_mask_Init( void ) {
 
     //Check num threads and mask size are the same
     assert(nthreads==CPU_COUNT(&default_mask));
+
+    enabled = 1;
 }
 
 void lewi_mask_Finish( void ) {
