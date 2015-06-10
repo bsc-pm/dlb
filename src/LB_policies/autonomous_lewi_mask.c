@@ -101,7 +101,7 @@ void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
             i++;
         }
         if (i!=mu_get_system_size()){
-            debug_lend ( "IntoBlockingCall: lending cpu: %d \n",  cpu);
+            debug_lend ( "IntoBlockingCall: lending cpu: %d \n",  i);
             cpu_set_t current_mask;
 
             pthread_mutex_lock(&mutex);
