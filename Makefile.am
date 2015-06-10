@@ -353,6 +353,13 @@ paraver_cfgs = \
 paravercfgsdir = $(datadir)
 nobase_dist_paravercfgs_DATA = $(paraver_cfgs)
 
+sphinx_files = \
+	doc/user_guide/source/conf.py \
+	doc/user_guide/source/index.rst \
+	doc/user_guide/Makefile
+
+EXTRA_DIST += $(sphinx_files)
+
 ##########################################################################
 # scripts                                                              ###
 ##########################################################################
