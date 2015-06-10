@@ -32,9 +32,10 @@
 #include <unistd.h>
 #include <sys/resource.h>
 
-int greedy;
-int default_cpus;
-int myCPUS;
+static int default_cpus;
+static int myCPUS = 0;
+static int enabled = 0;
+static int single = 0;
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
@@ -68,7 +69,7 @@ void Lend_light_Init() {
         }
     }
 
-    greedy=0;
+    int greedy=0;
     if ((policy_greedy=getenv("LB_GREEDY"))!=NULL) {
         if(strcasecmp(policy_greedy, "YES")==0) {
             greedy=1;
@@ -80,8 +81,6 @@ void Lend_light_Init() {
         }
     }
 
-//Setting blocking mode
-
     //Initialize shared _process_idmory
     ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy);
 
@@ -89,6 +88,8 @@ void Lend_light_Init() {
         setThreads_Lend_light( mu_get_system_size() );
         setThreads_Lend_light( _default_nthreads );
     }
+
+    enabled = 1;
 }
 
 void Lend_light_Finish(void) {
@@ -101,49 +102,79 @@ void Lend_light_OutOfCommunication(void) {}
 
 void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode) {
 
-    if ( blocking_mode == ONE_CPU ) {
+    if (enabled) {
+        if ( blocking_mode == ONE_CPU ) {
 #ifdef debugLend
-        fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", _node_id, _process_id, myCPUS-1);
+            fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", _node_id, _process_id, myCPUS-1);
 #endif
-        releaseCpus(myCPUS-1);
-        setThreads_Lend_light(1);
-    } else {
+            releaseCpus(myCPUS-1);
+            setThreads_Lend_light(1);
+        } else {
 #ifdef debugLend
-        fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", _node_id, _process_id, myCPUS);
+            fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", _node_id, _process_id, myCPUS);
 #endif
-        releaseCpus(myCPUS);
-        setThreads_Lend_light(0);
+            releaseCpus(myCPUS);
+            setThreads_Lend_light(0);
+        }
     }
 }
 
 void Lend_light_OutOfBlockingCall(int is_iter) {
 
-    int cpus=acquireCpus(myCPUS);
-    setThreads_Lend_light(cpus);
-#ifdef debugLend
-    fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", _node_id, _process_id, cpus);
-#endif
-
-}
-
-void Lend_light_resetDLB(void) {
-    debug_lend("ResetDLB \n");
-    acquireCpus(myCPUS);
-    setThreads_Lend_light(default_cpus);
-}
-
-/******* Auxiliar Functions Lend_light Balancing Policy ********/
-
-void Lend_light_updateresources() {
-    int cpus = checkIdleCpus(myCPUS);
-    if (myCPUS!=cpus) {
-#ifdef debugDistribution
-        fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", _node_id, _process_id, cpus);
-#endif
+    if (enabled) {
+        int cpus;
+        if (single) {
+            cpus = acquireCpus(1);
+        } else {
+            cpus = acquireCpus(myCPUS);
+        }
         setThreads_Lend_light(cpus);
+#ifdef debugLend
+        fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", _node_id, _process_id, cpus);
+#endif
     }
 }
 
+void Lend_light_updateresources() {
+    if (enabled && !single) {
+        int cpus = checkIdleCpus(myCPUS);
+        if (myCPUS!=cpus) {
+#ifdef debugDistribution
+            fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", _node_id, _process_id, cpus);
+#endif
+            setThreads_Lend_light(cpus);
+        }
+    }
+}
+
+void Lend_light_resetDLB(void) {
+    if (enabled && !single) {
+        debug_lend("ResetDLB \n");
+        acquireCpus(myCPUS);
+        setThreads_Lend_light(default_cpus);
+    }
+}
+
+void Lend_light_disableDLB(void) {
+    Lend_light_resetDLB();
+    enabled = 0;
+}
+
+void Lend_light_enableDLB(void) {
+    enabled = 1;
+}
+
+void Lend_light_single(void) {
+    Lend_light_IntoBlockingCall(0, ONE_CPU);
+    single = 1;
+}
+
+void Lend_light_parallel(void) {
+    Lend_light_OutOfBlockingCall(0);
+    single = 0;
+}
+
+/******* Auxiliar Functions Lend_light Balancing Policy ********/
 void setThreads_Lend_light(int numThreads) {
 
     if (myCPUS!=numThreads) {

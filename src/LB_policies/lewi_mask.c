@@ -222,6 +222,27 @@ void lewi_mask_ClaimCpus(int cpus) {
     }
 }
 
+void lewi_mask_acquireCpu(int cpu) {
+    if (enabled && !single) {
+        debug_lend("AcquireCpu %d\n", cpu);
+        cpu_set_t mask;
+        get_mask( &mask );
+
+        if (!CPU_ISSET(cpu, &mask)){
+
+            if( shmem_mask.acquire_cpu(cpu, 0) ){
+                nthreads++;
+                CPU_SET(cpu, &mask);
+                set_mask( &mask );
+                debug_lend("New Mask: %s\n", mu_to_str(&mask));
+                add_event( THREADS_USED_EVENT, nthreads );
+            }else{
+                debug_lend("Not legally acquired cpu %d, running anyway\n",cpu);
+            }
+        }
+    }
+}
+
 void lewi_mask_resetDLB( void ) {
     if (enabled && !single) {
         debug_lend("ResetDLB \n");

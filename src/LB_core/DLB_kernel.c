@@ -149,10 +149,10 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &Lend_light_resetDLB;
             lb_funcs.acquirecpu = &dummyFunc;
-            lb_funcs.disableDLB = &dummyFunc;
-            lb_funcs.enableDLB = &dummyFunc;
-            lb_funcs.single = &dummyFunc;
-            lb_funcs.parallel = &dummyFunc;
+            lb_funcs.disableDLB = &Lend_light_disableDLB;
+            lb_funcs.enableDLB = &Lend_light_enableDLB;
+            lb_funcs.single = &Lend_light_single;
+            lb_funcs.parallel = &Lend_light_parallel;
 
         } else if (strcasecmp(policy, "Map")==0) {
 #ifdef debugConfig
@@ -220,7 +220,7 @@ int Initialize(void) {
             lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB  = &lewi_mask_resetDLB;
-            lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.acquirecpu = &lewi_mask_acquireCpu;
             lb_funcs.disableDLB = &lewi_mask_disableDLB;
             lb_funcs.enableDLB = &lewi_mask_enableDLB;
             lb_funcs.single = &lewi_mask_single;

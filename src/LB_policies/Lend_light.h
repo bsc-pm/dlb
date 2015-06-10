@@ -39,19 +39,20 @@ void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode);
 
 void Lend_light_OutOfBlockingCall(int is_iter);
 
+void Lend_light_updateresources();
+
 void Lend_light_resetDLB(void);
+
+void Lend_light_disableDLB(void);
+
+void Lend_light_enableDLB(void);
+
+void Lend_light_single(void);
+
+void Lend_light_parallel(void);
 
 /******* Auxiliar Functions Lend_light Balancing Policy ********/
 
-int createThreads_Lend_light();
-
-void* masterThread_Lend_light(void* arg);
-void applyNewDistribution_light(int* cpus, int except);
-int CalculateNewDistribution_Lend_light(int* cpus, int process, ProcMetrics info[]);
-int CalculateNewDistribution_Lend_light_siguiente(int* cpus, int process, ProcMetrics info);
-
-void* slaveThread_Lend_light(void* arg);
-void Lend_light_updateresources();
 void setThreads_Lend_light(int numThreads);
 
 #endif //LEND_H
