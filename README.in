@@ -20,8 +20,9 @@ http://pm.bsc.es/projects/dlb
 Version: @VERSION@
 Support for: 
                * OpenMP + MPI 
-               * OMPSs + MPI
+               * OmpSs + MPI
                * SMPSs + MPI (not maintained)
+               * OmpSs + Multiple Applications
 
 ------------------------------------------------------------
 0 CONTENTS
@@ -55,9 +56,9 @@ The DLB library uses an interposition technique during runtime, therefor in most
 The current version of DLB supports the following programming models:
 
 * MPI + OpenMP
-* MPI + OMPSs
+* MPI + OmpSs
 * MPI + SMPSs (not maintained)
-
+* Multiple Applications + OmpSs
 
 ------------------------------------------------------------
 2 COMPILING AND INSTALLING THE LIBRARY
@@ -67,7 +68,7 @@ The current version of DLB supports the following programming models:
 ............................................................
 
 - Any MPI library
-- OpenMP or OMPSs compiler and runtime
+- OpenMP or OmpSs compiler and runtime
 - For tracing:
    * Extrae library 
 
@@ -77,7 +78,7 @@ The current version of DLB supports the following programming models:
 
    1 Make sure you meet the requirements
    
-   2 Go to Downloads tab and grab the latest version of the library. Unpack the file and enter the directory. 
+   2 Go to https://pm.bsc.es/projects/dlb/wiki/Downloads and grab the latest version of the library. Unpack the file and enter the directory. 
 
       $ tar xfj dlb-<<version>>.tar.bz2
       $ cd dlb-<<version>>
@@ -88,7 +89,7 @@ The current version of DLB supports the following programming models:
 
          The most relevant flags in the configure:                                                                                                                                                                                            
             --prefix
-            --with-mpi[=DIR]        specify where to find MPI libraries and includes [Mandatory]
+            --with-mpi[=DIR]        specify where to find MPI libraries and includes [Optional]
             --with-cpus-per-node=N  Number of cpus per node [Optional]
 
    4 Build and install 
