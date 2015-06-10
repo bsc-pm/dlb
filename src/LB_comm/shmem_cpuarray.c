@@ -534,6 +534,9 @@ int shmem_cpuarray__reset_default_cpus(cpu_set_t *mask){
         //CPU is mine --> claim it and set in my mask
         if ( CPU_ISSET(i, &default_mask) ) {
             shdata->node_info[i].state = BUSY;
+            if ( shdata->node_info[i].guest == NOBODY ) {
+                shdata->node_info[i].guest = ME;
+            }
             CPU_SET( i, mask);
             n++;
         //CPU is not mine and I have it --> release it and clear from my mask

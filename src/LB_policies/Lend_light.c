@@ -23,6 +23,7 @@
 #include "support/globals.h"
 #include "support/mask_utils.h"
 #include "support/utils.h"
+#include "support/debug.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -123,6 +124,12 @@ void Lend_light_OutOfBlockingCall(int is_iter) {
     fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", _node_id, _process_id, cpus);
 #endif
 
+}
+
+void Lend_light_resetDLB(void) {
+    debug_lend("ResetDLB \n");
+    acquireCpus(myCPUS);
+    setThreads_Lend_light(default_cpus);
 }
 
 /******* Auxiliar Functions Lend_light Balancing Policy ********/

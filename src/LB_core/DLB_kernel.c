@@ -147,7 +147,7 @@ int Initialize(void) {
             lb_funcs.returnclaimedcpu = &false_dummyFunc;
             lb_funcs.claimcpus = &dummyFunc;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
-            lb_funcs.resetDLB = &notImplemented;
+            lb_funcs.resetDLB = &Lend_light_resetDLB;
             lb_funcs.acquirecpu = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
@@ -219,7 +219,7 @@ int Initialize(void) {
             lb_funcs.returnclaimedcpu = &false_dummyFunc;
             lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
-            lb_funcs.resetDLB  = &notImplemented;
+            lb_funcs.resetDLB  = &lewi_mask_resetDLB;
             lb_funcs.acquirecpu = &dummyFunc;
             lb_funcs.disableDLB = &lewi_mask_disableDLB;
             lb_funcs.enableDLB = &lewi_mask_enableDLB;

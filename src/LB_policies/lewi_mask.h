@@ -22,7 +22,7 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void lewi_mask_Init( /* TODO: should be void */ );
+void lewi_mask_Init( void );
 
 void lewi_mask_Finish( void );
 
@@ -39,6 +39,8 @@ void lewi_mask_UpdateResources( int max_resources );
 void lewi_mask_ReturnClaimedCpus( void );
 
 void lewi_mask_ClaimCpus( int cpus );
+
+void lewi_mask_resetDLB( void );
 
 void lewi_mask_disableDLB(void);
 
