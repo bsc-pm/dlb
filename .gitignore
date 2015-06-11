@@ -35,3 +35,4 @@ ar-lib
 tags
 py-compile
 *.pyc
+build*/

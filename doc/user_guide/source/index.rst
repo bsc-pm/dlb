@@ -6,12 +6,13 @@
 Welcome to DLB's documentation!
 ===============================
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
 
-
+  intro
+  how_to_install
+  how_to_run
+  api
 
 Indices and tables
 ==================
