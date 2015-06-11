@@ -261,6 +261,7 @@ void lewi_mask_disableDLB(void) {
 }
 
 void lewi_mask_enableDLB(void) {
+    single = 0;
     enabled = 1;
 }
 
