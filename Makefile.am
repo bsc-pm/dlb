@@ -350,8 +350,19 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_num_threads.cfg \
 	$(END)
 
-paravercfgsdir = $(datadir)
-nobase_dist_paravercfgs_DATA = $(paraver_cfgs)
+paravercfgsdir = $(datadir)/paraver_cfgs/DLB
+dist_paravercfgs_DATA = $(paraver_cfgs)
+
+examples_files = \
+	doc/examples/README \
+	doc/examples/Makefile \
+	doc/examples/mpi_ompss_pils.c \
+	doc/examples/run.sh \
+	doc/examples/extrae.xml \
+	$(END)
+
+examplesdir = $(docdir)/examples
+dist_examples_DATA = $(examples_files)
 
 sphinx_files = \
 	doc/user_guide/source/conf.py \
