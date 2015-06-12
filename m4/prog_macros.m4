@@ -240,7 +240,7 @@ AC_DEFUN([AX_PROG_HWLOC],
 
 
 # AX_PROG_LSCPU
-# -----------
+# -------------
 AC_DEFUN([AX_PROG_LSCPU],
 [
    AC_REQUIRE([AX_PROG_HWLOC])
@@ -248,6 +248,15 @@ AC_DEFUN([AX_PROG_LSCPU],
    if test ${HWLOC_INSTALLED} = "no" -a "$lscpu" = "no" ; then
       AC_MSG_ERROR([neither lscpu nor hwloc were found, one of them is mandatory])
    fi
+])
+
+
+# AX_PROG_SPHINX
+# --------------
+AC_DEFUN([AX_PROG_SPHINX],
+[
+   AC_CHECK_PROG([sphinx], [sphinx-build], [yes], [no])
+   AM_CONDITIONAL([HAVE_SPHINX], [test "$sphinx" = "yes"])
 ])
 
 

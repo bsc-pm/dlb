@@ -95,6 +95,9 @@ AC_ARG_WITH([cpus-per-node],
    ]
 )
 
+# check for SPHINX
+AX_PROG_SPHINX
+
 AC_CONFIG_HEADERS([config.h])
 
 # files to generate via autotools (.am or .in source files)
