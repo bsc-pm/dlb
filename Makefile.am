@@ -353,16 +353,38 @@ paraver_cfgs = \
 paravercfgsdir = $(datadir)/paraver_cfgs/DLB
 dist_paravercfgs_DATA = $(paraver_cfgs)
 
-examples_files = \
-	doc/examples/README \
-	doc/examples/Makefile \
-	doc/examples/mpi_ompss_pils.c \
-	doc/examples/run.sh \
-	doc/examples/extrae.xml \
+mpiompssexamples_files = \
+	doc/examples/mpi+ompss/README \
+	doc/examples/mpi+ompss/Makefile \
+	doc/examples/mpi+ompss/mpi_ompss_pils.c \
+	doc/examples/mpi+ompss/run.sh \
+	doc/examples/mpi+ompss/extrae.xml \
 	$(END)
 
-examplesdir = $(docdir)/examples
-dist_examples_DATA = $(examples_files)
+mpiompssexamplesdir = $(docdir)/examples/MPI+OmpSs
+dist_mpiompssexamples_DATA = $(mpiompssexamples_files)
+
+statsexamples_files = \
+	doc/examples/statistics/README \
+	doc/examples/statistics/Makefile \
+	doc/examples/statistics/get_cpu_usage.c \
+	doc/examples/statistics/get_pid_list.c \
+	doc/examples/statistics/mpi_ompss_pils.c \
+	doc/examples/statistics/run.sh \
+	$(END)
+
+EXTRA_DIST += doc/examples/statistics/Makefile.in
+CLEANFILES += doc/examples/statistics/Makefile
+doc/examples/statistics/Makefile: $(top_srcdir)/doc/examples/statistics/Makefile.in
+	$(GEN_verbose)$(MKDIR_P) doc/examples/statistics; \
+	rm -f $@; \
+	sed \
+		-e's,@PREFIX\@,"$(prefix)",g' \
+	$^ > $@;
+
+statsexamplesdir = $(docdir)/examples/statistics
+dist_statsexamples_DATA = $(statsexamples_files)
+
 
 sphinx_files = \
 	doc/user_guide/source/conf.py \

@@ -1,0 +1,31 @@
+README
+======
+
+This is a small example of DLB Statistics module
+
+Compilation
+-----------
+The Makefile is ready for OpenMPI. Should you want to use another MPI implementation
+modify it accordingly. It also assumes you have Mercurium drivers in your PATH.
+
+Execution
+---------
+The 'run.sh' script is configured to run an MPI+OmpSs binary for a long time. This is
+useful to give some time to play from other processes while we read some statistics.
+After that, feel free to kill (Ctrl-C) the process.
+
+While the application is running, you can run the two small programs:
+ * 'get_pid_list' will list the processes attached to the DLB Statistics module that
+   are running on the node
+ * 'get_cpu_usage' requires a PID as an argument. It will print the cpu usage of the
+   given process until it's finished or killed.
+
+Another option is to use the ${DLB_PREFIX}/dlb_cpu_usage GUI tool that allows you to
+see in real time some statistics of the processes you wish.
+
+
+* NOTE *
+To run dlb_cpu_usage on MareNostrum you need to load the following modules:
+module load intel
+module load mkl
+module load PYTHON/2.7.6
