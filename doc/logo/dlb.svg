@@ -443,8 +443,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="4.0202791"
-     inkscape:cx="83.764655"
-     inkscape:cy="-29.827621"
+     inkscape:cx="113.36459"
+     inkscape:cy="29.869727"
      inkscape:document-units="px"
      inkscape:current-layer="capa1"
      showgrid="false"
@@ -596,16 +596,6 @@
      inkscape:groupmode="layer"
      id="capa1"
      transform="translate(-104.04375,-85.6375)">
-    <rect
-       style="fill-opacity:1;fill:none"
-       id="rect3170"
-       width="55"
-       height="55"
-       x="224.68214"
-       y="187.57306"
-       inkscape:export-filename="/home/martag/Marenostrum/MarenostrumHome/MN3/dlb/doc/logo/dlb_icon2.png"
-       inkscape:export-xdpi="695.21997"
-       inkscape:export-ydpi="695.21997" />
     <path
        style="fill:#ffffff;stroke:#004455;stroke-width:1.50000000000000000;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;fill-opacity:1"
        d="m 136.4375,90.1875 -1.85804,0.0044 c -2.99734,-1.6e-5 -0.98215,3.661787 -0.98214,3.661787 l 2.84018,2.9e-5 0,2.481694 0,26.94588 c 0,0 -27.84375,-0.0173 -27.84375,23.46875 0,23.48604 27.84375,20.71875 27.84375,20.71875 l 28.46875,0 13.125,0 5.5625,0 28.59375,0 c 0,0 27.84375,2.76729 27.84375,-20.71875 0,-23.48604 -27.84375,-23.46875 -27.84375,-23.46875 l 0,-33.093757 -18.125,0 -2.07625,0.0044 c -2.8354,-4.9e-5 -0.94087,3.661753 -0.90163,3.661754 l 2.97788,9.5e-5 0,47.615068 -10.46875,0 0,-51.281251 -18.6875,0 -2.11691,0.0043 c -2.7753,-1.5e-5 -0.66566,3.661803 -0.68156,3.661803 -0.0159,0 2.79847,7.8e-5 2.79847,7.8e-5 l 0,47.61508 -10.34375,0 0,-51.281263 z"
@@ -916,30 +906,5 @@
    style="font-size:34.50292586999999855px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#0184b4;stroke:#004455;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold"
    id="tspan3126-5"
    dx="10.198298">b</tspan>alancing</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:43.12865829px;font-style:normal;font-weight:normal;line-height:105.99999428%;letter-spacing:0px;word-spacing:0px;fill:#004455;fill-opacity:1;stroke:none;font-family:Sans"
-       x="224.5407"
-       y="225.88972"
-       id="text3112-7-8"
-       sodipodi:linespacing="105.99999%"
-       inkscape:export-filename="/home/martag/Marenostrum/MarenostrumHome/MN3/dlb/doc/logo/dlb_icon2.png"
-       inkscape:export-xdpi="695.21997"
-       inkscape:export-ydpi="695.21997"><tspan
-         sodipodi:role="line"
-         x="224.5407"
-         y="225.88972"
-         id="tspan3118-8-9"
-         style="font-size:30.19006157px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:105.99999428%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"
-         dx="0 0 0"><tspan
-           dx="0 0"
-           id="tspan3167"
-           style="font-size:30.19006157px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:105.99999428%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"><tspan
-             style="font-size:34.50292587px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:105.99999428%;writing-mode:lr-tb;text-anchor:start;fill:#0184b4;stroke:#004455;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold"
-             id="tspan3120-6-7"
-             dx="0 -3.2336068">dl</tspan></tspan><tspan
-           style="font-size:34.50292587px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:105.99999428%;writing-mode:lr-tb;text-anchor:start;fill:#0184b4;stroke:#004455;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold"
-           id="tspan3126-5-9"
-           dx="-3.7310834">b</tspan></tspan></text>
   </g>
 </svg>

@@ -4,13 +4,19 @@ Public API
 
 The DLB API can be divided in three parts:
 
-**MPI API**: This is a specific API for MPI. We offer an MPI interface that will be called by Extrae if we are tracing the application or internally in the MPI intercept API. All the calls of this API are of the form: 
- DLB_<mpi_call_name>_enter(...)
- DLB_<mpi_call_name>_leave(...)
+**MPI API**
+  This is a specific API for MPI. We offer an MPI interface that will be called by Extrae if we are tracing the application or internally in the MPI intercept API. All the calls of this API are of the form:
+
+  - DLB_<mpi_call_name>_enter(...)
+
+  - DLB_<mpi_call_name>_leave(...)
+
  
-**Basic set**: The basic set is very simple and reduced and oriented to application developers. The different functions will be explained in detail in section~\ref{sec:basic_api}.
- 
-**Advanced set**: The advanced set is oriented to programming model runtimes but can be used by applications also. The advanced functions will be explained in detail in section~\ref{sec:advanced_api}.
+**Basic set**
+  The basic set is very simple and reduced and oriented to application developers. The different functions will be explained in detail in section~\ref{sec:basic_api}.
+
+**Advanced set**
+  The advanced set is oriented to programming model runtimes but can be used by applications also. The advanced functions will be explained in detail in section~\ref{sec:advanced_api}.
 
 ====================
 Basic set of DLB API
