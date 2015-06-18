@@ -26,11 +26,13 @@
 #include "LB_core/drom.h"
 #include "support/dlb_api.h"
 #include "support/tracing.h"
+#include "support/debug.h"
 
 // sub-process ID
 static int spid = 0;
 
 void DLB_Init (void) {
+    fatal_cond(spid != 0, "DLB has been already initialized\n");
     spid = Initialize();
 }
 

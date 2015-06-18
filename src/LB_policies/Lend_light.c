@@ -161,6 +161,7 @@ void Lend_light_disableDLB(void) {
 }
 
 void Lend_light_enableDLB(void) {
+    single = 0;
     enabled = 1;
 }
 

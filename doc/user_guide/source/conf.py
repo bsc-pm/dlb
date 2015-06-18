@@ -117,7 +117,7 @@ html_theme = 'default'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-	"sidebarwidth" : "280"
+    "sidebarwidth" : "280"
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -227,8 +227,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'DLB.tex', u'DLB Documentation',
-   u'Marta Garcia and Victor Lopez', 'manual'),
+  (master_doc, 'DLBUserGuide.tex', u'DLB User Guide',
+   u'Barcelona Supercomputing Center', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

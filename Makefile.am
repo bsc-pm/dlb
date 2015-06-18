@@ -350,15 +350,93 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_num_threads.cfg \
 	$(END)
 
-paravercfgsdir = $(datadir)
-nobase_dist_paravercfgs_DATA = $(paraver_cfgs)
+paravercfgsdir = $(datadir)/paraver_cfgs/DLB
+dist_paravercfgs_DATA = $(paraver_cfgs)
+
+mpiompssexamples_files = \
+	doc/examples/mpi+ompss/README \
+	doc/examples/mpi+ompss/Makefile \
+	doc/examples/mpi+ompss/mpi_ompss_pils.c \
+	doc/examples/mpi+ompss/run.sh \
+	doc/examples/mpi+ompss/extrae.xml \
+	$(END)
+
+mpiompssexamplesdir = $(docdir)/examples/MPI+OmpSs
+dist_mpiompssexamples_DATA = $(mpiompssexamples_files)
+
+statsexamples_files = \
+	doc/examples/statistics/README \
+	doc/examples/statistics/Makefile \
+	doc/examples/statistics/get_cpu_usage.c \
+	doc/examples/statistics/get_pid_list.c \
+	doc/examples/statistics/mpi_ompss_pils.c \
+	doc/examples/statistics/run.sh \
+	$(END)
+
+EXTRA_DIST += doc/examples/statistics/Makefile.in
+CLEANFILES += doc/examples/statistics/Makefile
+doc/examples/statistics/Makefile: $(top_srcdir)/doc/examples/statistics/Makefile.in
+	$(GEN_verbose)$(MKDIR_P) doc/examples/statistics; \
+	rm -f $@; \
+	sed \
+		-e's,@PREFIX\@,"$(prefix)",g' \
+	$^ > $@;
+
+statsexamplesdir = $(docdir)/examples/statistics
+dist_statsexamples_DATA = $(statsexamples_files)
+
 
 sphinx_files = \
 	doc/user_guide/source/conf.py \
+	doc/user_guide/source/api.rst \
+	doc/user_guide/source/how_to_install.rst \
+	doc/user_guide/source/how_to_run.rst \
 	doc/user_guide/source/index.rst \
+	doc/user_guide/source/intro.rst \
+	doc/user_guide/source/images/dlb_logo.png \
+	doc/user_guide/source/images/dlb_states.png \
 	doc/user_guide/Makefile
 
 EXTRA_DIST += $(sphinx_files)
+
+if HAVE_SPHINX
+SPHINXBUILD = sphinx-build
+SPHINX_SRC_DIR = $(srcdir)/doc/user_guide/source/
+
+doc: html pdf
+
+html-local:
+	$(SPHINXBUILD) -b html $(SPHINX_SRC_DIR) doc/user_guide/html
+	@echo
+	@echo "Build finished. The HTML pages are in doc/user_guide/html"
+
+install-html-local: html-local
+	$(mkdir_p) $(docdir)
+	cp -R doc/user_guide/html $(docdir)
+
+pdf-local:
+	$(SPHINXBUILD) -b latex $(SPHINX_SRC_DIR) doc/user_guide/pdf
+	@echo "Running LaTeX files through pdflatex..."
+	$(MAKE) -C doc/user_guide/pdf all-pdf
+	@echo "pdflatex finished; the PDF files are in doc/user_guide/pdf"
+
+install-pdf-local: pdf-local
+	$(mkdir_p) $(docdir)
+	cp doc/user_guide/pdf/DLBUserGuide.pdf $(docdir)
+else
+nodoc:
+	@echo "  SPHINX (http://sphinx-doc.org/) was not detected at configure time."
+	@echo "  PDF and HTML generation is disabled"
+doc: nodoc
+html-local: nodoc
+install-html-local: nodoc
+pdf-local: nodoc
+install-pdf-local: nodoc
+endif
+
+clean-doc:
+	rm -rf doc/user_guide/build doc/user_guide/html doc/user_guide/pdf
+
 
 ##########################################################################
 # scripts                                                              ###
@@ -451,7 +529,7 @@ clean-deb:
 # Hooks                                                                ###
 ##########################################################################
 
-clean-local: clean-rpm clean-deb
+clean-local: clean-rpm clean-deb clean-doc
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \
