@@ -322,10 +322,7 @@ int Initialize(void) {
         debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
 #endif
 
-        if (strcasecmp(policy, "NO")!=0) {
-            // Only pm_init when Policy is different to No
-            pm_init();
-        }
+        pm_init();
 #if 0
         if (thread_distrib==NULL) {
             if ( nanos_get_pm ) {
