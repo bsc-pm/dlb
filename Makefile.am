@@ -396,6 +396,7 @@ sphinx_files = \
 	doc/user_guide/source/images/dlb_logo.png \
 	doc/user_guide/source/images/dlb_logo_white.png \
 	doc/user_guide/source/images/dlb_states.png \
+	doc/user_guide/source/images/dlb_icon.png \
 	doc/user_guide/Makefile
 
 EXTRA_DIST += $(sphinx_files)
