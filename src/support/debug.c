@@ -23,10 +23,68 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
+#include <unistd.h>
 #include <stdarg.h>
 #include <execinfo.h>
+#include "debug.h"
 #include "globals.h"
+#include "utils.h"
 #include "LB_numThreads/numThreads.h"
+
+#define VBFORMAT_LEN 32
+static char fmt_str[VBFORMAT_LEN];
+static verbose_opts_t vb_opts = VB_CLEAR;
+static verbose_fmt_t vb_fmt = VB_CLEAR;
+
+static void print_prefix( FILE *fp, const char *str ) {
+    if ( vb_fmt & VBF_THREAD ) {
+        fprintf( fp, "%s[%s:%d]: ", str, fmt_str, get_thread_num() );
+    } else {
+        fprintf( fp, "%s[%s]", str, fmt_str );
+    }
+}
+
+void debug_init() {
+    parse_env_verbose_opts( "LB_VERBOSE", &vb_opts );
+    parse_env_verbose_format( "LB_VERBOSE_FORMAT", &vb_fmt, VBF_NODE|VBF_PID|VBF_THREAD );
+
+    int i = 0;
+    if ( vb_fmt & VBF_NODE ) {
+        char hostname[HOST_NAME_MAX];
+        gethostname( hostname, HOST_NAME_MAX );
+        i += sprintf( &fmt_str[i], "%s:", hostname);
+    }
+    if ( vb_fmt & VBF_PID ) { i += sprintf( &fmt_str[i], "%d:", getpid()); }
+    if ( vb_fmt & VBF_MPINODE ) { i += sprintf( &fmt_str[i], "%d:", _node_id); }
+    if ( vb_fmt & VBF_MPIRANK ) { i += sprintf( &fmt_str[i], "%d:", _mpi_rank); }
+
+    // Remove last separator ':' if fmt_str is not empty
+    if ( i !=0 ) {
+        fmt_str[i-1] = '\0';
+    }
+}
+
+#if 0
+void verbose ( const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    fprintf( stdout, "DLB[%s]: ", vb_format() );
+    vfprintf( stdout, fmt, args );
+
+    fprintf( stdout, "- " );
+    if ( vb_opts & VB_API ) fprintf( stdout, "api " );
+    if ( vb_opts & VB_MICROLB ) fprintf( stdout, "microlb " );
+    if ( vb_opts & VB_SHMEM ) fprintf( stdout, "shmem " );
+    if ( vb_opts & VB_MPI_API ) fprintf( stdout, "mpi_api " );
+    if ( vb_opts & VB_MPI_INT ) fprintf( stdout, "mpi_int " );
+    if ( vb_opts & VB_STATS ) fprintf( stdout, "stats " );
+    if ( vb_opts & VB_DROM ) fprintf( stdout, "drom " );
+
+    fprintf( stdout, "\n" );
+    va_end( args );
+}
+#endif
 
 void fatal0 ( const char *fmt, ... ) {
     if ( _mpi_rank <= 0 ) {
@@ -86,11 +144,13 @@ void verbose0 ( const char *fmt, ... ) {
 }
 
 void verbose ( const char *fmt, ... ) {
+    FILE *fp = stdout;
     va_list args;
+    print_prefix( fp, "DLB" );
     va_start( args, fmt );
-    fprintf( stdout, "DLB[%d]: ", _mpi_rank );
-    vfprintf( stdout, fmt, args );
+    vfprintf( fp, fmt, args );
     va_end( args );
+    fputc( '\n', fp );
 }
 
 void verboseT ( const char *fmt, ... ) {

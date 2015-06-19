@@ -70,7 +70,7 @@ void parse_env_string_or_die ( char const *env, char **var ) {
 }
 
 void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode ) {
-    char* blocking = getenv( env );
+    char *blocking = getenv( env );
 
     if ( blocking != NULL ) {
         if ( strcasecmp( blocking, "1CPU" ) == 0 ) {
@@ -78,6 +78,60 @@ void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode ) {
         } else if ( strcasecmp( blocking, "BLOCK" ) == 0 ) {
             *mode = BLOCK;
         }
+    }
+}
+
+void parse_env_verbose_opts ( char const *env, verbose_opts_t *mode ) {
+    *mode = VB_CLEAR;
+    char *str_mode = getenv( env );
+    if ( str_mode != NULL ) {
+        const char delimiter[2] = ":";
+        char *token = strtok( str_mode, delimiter );
+        while( token != NULL ) {
+            if ( !(*mode & VB_API) && !strcasecmp( token, "api" ) ) {
+                *mode |= VB_API;
+            } else if ( !(*mode & VB_MICROLB) && !strcasecmp( token, "microlb" ) ) {
+                *mode |= VB_MICROLB;
+            } else if ( !(*mode & VB_SHMEM) && !strcasecmp( token, "shmem" ) ) {
+                *mode |= VB_SHMEM;
+            } else if ( !(*mode & VB_MPI_API) && !strcasecmp( token, "mpi_api" ) ) {
+                *mode |= VB_MPI_API;
+            } else if ( !(*mode & VB_MPI_INT) && !strcasecmp( token, "mpi_intercept" ) ) {
+                *mode |= VB_MPI_INT;
+            } else if ( !(*mode & VB_STATS) && !strcasecmp( token, "stats" ) ) {
+                *mode |= VB_STATS;
+            } else if ( !(*mode & VB_DROM) && !strcasecmp( token, "drom" ) ) {
+                *mode |= VB_DROM;
+            }
+            token = strtok( NULL, delimiter );
+        }
+    }
+}
+
+void parse_env_verbose_format ( char const *env, verbose_fmt_t *format,
+                                        verbose_fmt_t default_format ) {
+    *format = VBF_CLEAR;
+    char *str_format = getenv( env );
+    if ( str_format != NULL ) {
+        const char delimiter[2] = ":";
+        char *token = strtok( str_format, delimiter );
+        while( token != NULL ) {
+            if ( !(*format & VBF_NODE) && !strcasecmp( token, "node" ) ) {
+                *format |= VBF_NODE;
+            } else if ( !(*format & VBF_PID) && !strcasecmp( token, "pid" ) ) {
+                *format |= VBF_PID;
+            } else if ( !(*format & VBF_MPINODE) && !strcasecmp( token, "mpinode" ) ) {
+                *format |= VBF_MPINODE;
+            } else if ( !(*format & VBF_MPIRANK) && !strcasecmp( token, "mpirank" ) ) {
+                *format |= VBF_MPIRANK;
+            } else if ( !(*format & VBF_THREAD) && !strcasecmp( token, "thread" ) ) {
+                *format |= VBF_THREAD;
+            }
+            token = strtok( NULL, delimiter );
+        }
+    }
+    if ( *format == VBF_CLEAR ) {
+        *format = default_format;
     }
 }
 

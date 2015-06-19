@@ -98,10 +98,16 @@ void set_dlb_enabled(bool enabled) {
     }
 }
 
+void load_modules() {
+    pm_init();
+    debug_init();
+}
+
 int Initialize(void) {
     int initializer_id = 0;
 
     if (!dlb_initialized) {
+        load_modules();
         init_tracing();
         add_event(RUNTIME_EVENT, EVENT_INIT);
 
@@ -322,7 +328,6 @@ int Initialize(void) {
         debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
 #endif
 
-        pm_init();
 #if 0
         if (thread_distrib==NULL) {
             if ( nanos_get_pm ) {
