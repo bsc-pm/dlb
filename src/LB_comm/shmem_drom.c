@@ -264,7 +264,7 @@ void shmem_drom_ext__printinfo( void ) {
             strncpy( current, mu_to_str( &(process_info_copy[p].current_process_mask) ), sizeof(current) );
             strncpy( future, mu_to_str( &(process_info_copy[p].future_process_mask) ), sizeof(future) );
 
-            debug_basic_info0( "PID: %d, Current mask: %s, Future mask: %s, Dirty: %d\n",
+            verbose( VB_DROM, "PID: %d, Current mask: %s, Future mask: %s, Dirty: %d",
                     process_info_copy[p].pid, current, future, process_info_copy[p].dirty );
         }
     }

@@ -18,10 +18,10 @@
 /*************************************************************************************/
 
 #define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */
-#include <stdio.h>
+//#include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
+//#include <stdlib.h>
+//#include <sys/types.h>
 #include <unistd.h>
 
 #include "DLB_kernel.h"
@@ -132,14 +132,12 @@ int Initialize(void) {
         if ( _aggressive_init ) {
             warning0( "FIXME: Ignoring LB_AGGRESSIVE_INIT variable. DLB cannot set the number "
                     "of threads during initialization anymore. This option will remain disabled "
-                    "until we can implemented it in the runtime\n" );
+                    "until we can implemented it in the runtime" );
             _aggressive_init = false;
         }
 
         if (strcasecmp(policy, "LeWI")==0) {
-#ifdef debugConfig
-            fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI\n", _node_id, _process_id);
-#endif
+            info0( "Balancing policy: LeWI" );
 
             lb_funcs.init = &Lend_light_Init;
             lb_funcs.finish = &Lend_light_Finish;
@@ -161,9 +159,7 @@ int Initialize(void) {
             lb_funcs.parallel = &Lend_light_parallel;
 
         } else if (strcasecmp(policy, "Map")==0) {
-#ifdef debugConfig
-            fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI with Map of cpus version\n", _node_id, _process_id);
-#endif
+            info0( "Balancing policy: LeWI with Map of cpus version" );
 
             lb_funcs.init = &Map_Init;
             lb_funcs.finish = &Map_Finish;
@@ -185,9 +181,8 @@ int Initialize(void) {
             lb_funcs.parallel = &dummyFunc;
 
         } else if (strcasecmp(policy, "WEIGHT")==0) {
-#ifdef debugConfig
-            fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Weight balancing\n", _node_id, _process_id);
-#endif
+            info0( "Balancing policy: Weight balancing" );
+
             use_dpd=1;
 
             lb_funcs.init = &Weight_Init;
@@ -210,9 +205,8 @@ int Initialize(void) {
             lb_funcs.parallel = &dummyFunc;
 
         } else if (strcasecmp(policy, "LeWI_mask")==0) {
-#ifdef debugConfig
-            fprintf(stderr, "DLB: (%d:%d) - Balancing policy: LeWI mask\n", _node_id, _process_id);
-#endif
+            info0( "Balancing policy: LeWI mask" );
+
             lb_funcs.init = &lewi_mask_Init;
             lb_funcs.finish = &lewi_mask_Finish;
             lb_funcs.intoCommunication = &lewi_mask_IntoCommunication;
@@ -233,9 +227,8 @@ int Initialize(void) {
             lb_funcs.parallel = &lewi_mask_parallel;
 
         } else if (strcasecmp(policy, "auto_LeWI_mask")==0) {
-#ifdef debugConfig
-            fprintf(stderr, "DLB: (%d:%d) - Balancing policy: Autonomous LeWI mask\n", _node_id, _process_id);
-#endif
+            info0( "Balancing policy: Autonomous LeWI mask" );
+
             lb_funcs.init = &auto_lewi_mask_Init;
             lb_funcs.finish = &auto_lewi_mask_Finish;
             lb_funcs.intoCommunication = &auto_lewi_mask_IntoCommunication;
@@ -258,9 +251,8 @@ int Initialize(void) {
             policy_auto=1;
 
         } else if (strcasecmp(policy, "RaL")==0) {
-#ifdef debugConfig
-            fprintf(stderr, "DLB: (%d:%d) - Balancing policy: RaL: Redistribute and Lend \n", _node_id, _process_id);
-#endif
+            info( "Balancing policy: RaL: Redistribute and Lend" );
+
             use_dpd=1;
 
             if (_mpis_per_node>1) {
@@ -295,9 +287,8 @@ int Initialize(void) {
             lb_funcs.parallel = &dummyFunc;
 
         } else if (strcasecmp(policy, "NO")==0) {
-#ifdef debugConfig
-            fprintf(stderr, "DLB: (%d:%d) - No Load balancing\n", _node_id,  _process_id);
-#endif
+            info0( "No Load balancing" );
+
             use_dpd=1;
 
             lb_funcs.init = &JustProf_Init;
@@ -319,13 +310,12 @@ int Initialize(void) {
             lb_funcs.single = &dummyFunc;
             lb_funcs.parallel = &dummyFunc;
         } else {
-            fprintf(stderr,"DLB PANIC: Unknown policy: %s\n", policy);
-            exit(1);
+            fatal0( "Unknown policy: %s", policy );
         }
 
-        debug_basic_info0 ( "DLB: Balancing policy: %s balancing\n", policy);
+        info0 ( "Balancing policy: %s balancing", policy);
 #ifdef MPI_LIB
-        debug_basic_info0 ( "DLB: MPI processes per node: %d \n", _mpis_per_node );
+        info0 ( "MPI processes per node: %dn", _mpis_per_node );
 #endif
 
 #if 0
@@ -381,22 +371,22 @@ int Initialize(void) {
         }
 #endif
 
-        debug_basic_info0 ( "DLB: This process starts with %d threads\n", _default_nthreads);
+        info0 ( "This process starts with %d threads", _default_nthreads);
 
         if ( _just_barrier )
-            debug_basic_info0 ( "Only lending resources when MPI_Barrier "
-                                "(Env. var. LB_JUST_BARRIER is set)\n" );
+            info0 ( "Only lending resources when MPI_Barrier "
+                    "(Env. var. LB_JUST_BARRIER is set)" );
 
         if ( _blocking_mode == BLOCK )
-            debug_basic_info0 ( "LEND mode set to BLOCKING. I will lend all "
-                                "the resources when in an MPI call\n" );
+            info0 ( "LEND mode set to BLOCKING. I will lend all "
+                    "the resources when in an MPI call" );
 
 #if IS_BGQ_MACHINE
         int bg_threadmodel;
         parse_env_int( "BG_THREADMODEL", &bg_threadmodel );
         fatal_cond0( bg_threadmodel!=2,
                      "BlueGene/Q jobs need to enable Extended thread affinity control in order to "
-                     "active external threads. To do so, export BG_THREADMODEL=2\n" );
+                     "active external threads. To do so, export BG_THREADMODEL=2" );
 #endif
 
         /*  if (prof){

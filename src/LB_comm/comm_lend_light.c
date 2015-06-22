@@ -17,10 +17,10 @@
 /*      along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*************************************************************************************/
 
+#include <stdlib.h>
 #include "shmem.h"
 #include "support/tracing.h"
-#include <stdio.h>
-#include <unistd.h>
+#include "support/debug.h"
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
@@ -39,9 +39,7 @@ struct shdata *shdata;
 static shmem_handler_t *shm_handler;
 
 void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) - %d LoadCommonConfig\n", node,me,  getpid());
-#endif
+    verbose(VB_SHMEM, "LoadCommonConfig");
     procs=num_procs;
     me=meId;
     node=nodeId;
@@ -51,17 +49,13 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
     shm_handler = shmem_init( (void**)&shdata, sizeof(struct shdata), "lewi" );
 
     if (me==0) {
+        verbose(VB_SHMEM, "setting values to the shared mem");
 
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) setting values to the shared mem\n", node, me);
-#endif
         /* idleCPUS */
         shdata->idleCpus = 0;
         add_event(IDLE_CPUS_EVENT, 0);
 
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) Finished setting values to the shared mem\n", node, me);
-#endif
+        verbose(VB_SHMEM, "Finished setting values to the shared mem");
     }
 }
 
@@ -70,15 +64,13 @@ void finalize_comm() {
 }
 
 int releaseCpus(int cpus) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Releasing CPUS...\n", node, me);
-#endif
+    verbose(VB_SHMEM, "Releasing CPUS...");
+
     __sync_fetch_and_add (&(shdata->idleCpus), cpus);
     add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) DONE Releasing CPUS (idle %d) \n", node, me, shdata->idleCpus);
-#endif
+    verbose(VB_SHMEM, "DONE Releasing CPUS (idle %d)", shdata->idleCpus);
+
     return 0;
 }
 
@@ -87,9 +79,7 @@ Returns de number of cpus
 that are assigned
 */
 int acquireCpus(int current_cpus) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Acquiring CPUS...\n", node, me);
-#endif
+    verbose(VB_SHMEM, "Acquiring CPUS...");
     int cpus = defaultCPUS-current_cpus;
 
 //I don't care if there aren't enough cpus
@@ -99,9 +89,7 @@ int acquireCpus(int current_cpus) {
     }
     add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Using %d CPUS... %d Idle \n", node, me, cpus, shdata->idleCpus);
-#endif
+    verbose(VB_SHMEM, "Using %d CPUS... %d Idle", cpus, shdata->idleCpus);
 
     return cpus+current_cpus;
 }
@@ -111,9 +99,7 @@ Returns de number of cpus
 that are assigned
 */
 int checkIdleCpus(int myCpus) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Checking idle CPUS... %d\n", node, me, shdata->idleCpus);
-#endif
+    verbose(VB_SHMEM, "Checking idle CPUS... %d", shdata->idleCpus);
     int cpus;
     int aux;
 //WARNING//
@@ -136,8 +122,6 @@ int checkIdleCpus(int myCpus) {
     }
     add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Using %d CPUS... %d Idle \n", node, me, myCpus, shdata->idleCpus);
-#endif
+    verbose(VB_SHMEM, "Using %d CPUS... %d Idle", myCpus, shdata->idleCpus);
     return myCpus;
 }

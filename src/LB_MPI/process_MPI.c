@@ -23,12 +23,10 @@
 
 #ifdef MPI_LIB
 
-#include <stdio.h>
 #include <mpi.h>
-#include <stdlib.h>
 #include <unistd.h>
+#include <limits.h>
 #include <string.h>
-#include <bits/local_lim.h>
 
 #include "DPD/DPD.h"
 #include "LB_core/DLB_kernel.h"
@@ -66,7 +64,7 @@ void after_init(void) {
         int length_of_error_string;
 
         MPI_Error_string(error_code, error_string, &length_of_error_string);
-        fatal( "%3d: %s\n", _mpi_rank, error_string );
+        fatal( "%3d: %s", _mpi_rank, error_string );
     }
 
     int i;
@@ -155,13 +153,11 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 
         if(_just_barrier) {
             if (call_type==Barrier) {
-                debug_blocking_MPI( " >> MPI_Barrier...............\n" );
                 add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
                 IntoBlockingCall(is_iter, 0);
                 add_event(RUNTIME_EVENT, 0);
             }
         } else if (is_blocking(call_type)) {
-            debug_blocking_MPI( " >> %s...............\n", mpi_call_names[call_type] );
             add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
             IntoBlockingCall(is_iter, 0);
             add_event(RUNTIME_EVENT, 0);
@@ -175,14 +171,12 @@ void after_mpi(mpi_call call_type) {
 
         if(_just_barrier) {
             if (call_type==Barrier) {
-                debug_blocking_MPI( " << MPI_Barrier...............\n" );
                 add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
                 OutOfBlockingCall(is_iter);
                 add_event(RUNTIME_EVENT, 0);
                 is_iter=0;
             }
         } else if (is_blocking(call_type)) {
-            debug_blocking_MPI( " << %s...............\n", mpi_call_names[call_type] );
             add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
             OutOfBlockingCall(is_iter);
             add_event(RUNTIME_EVENT, 0);

@@ -77,8 +77,8 @@ void shmem_bitset__init( const cpu_set_t *cpu_set ) {
     }
     shmem_unlock( shm_handler );
 
-    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
-    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
+    verbose( VB_SHMEM, "Default Mask: %s", mu_to_str(&default_mask) );
+    verbose( VB_SHMEM, "Default Affinity Mask: %s", mu_to_str(&affinity_mask) );
 }
 
 void shmem_bitset__finalize( void ) {
@@ -120,19 +120,19 @@ void shmem_bitset__add_mask( const cpu_set_t *cpu_set ) {
 
         // We only free the cpus that are present in given_cpus
         CPU_AND( &cpus_to_free, &(shdata->given_cpus), cpu_set );
-        debug_shmem ( "Lending %s\n", mu_to_str(&cpus_to_free) );
+        verbose( VB_SHMEM, "Lending %s", mu_to_str(&cpus_to_free) );
 
         // Remove from the set the cpus that are being borrowed
         CPU_AND( &cpus_to_free, &(shdata->not_borrowed_cpus), &cpus_to_free);
-        debug_shmem ( "Lending2 %s\n", mu_to_str(&cpus_to_free) );
+        verbose( VB_SHMEM, "Lending2 %s", mu_to_str(&cpus_to_free) );
         CPU_OR( &(shdata->avail_cpus), &(shdata->avail_cpus), &cpus_to_free );
 
 
         DLB_DEBUG( int size = CPU_COUNT( &cpus_to_free ); )
         DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
-        debug_shmem ( "Increasing %d Idle Threads (%d now)\n", size, post_size );
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) );
-        debug_shmem ( "Not borrowed %s\n", mu_to_str(&(shdata->not_borrowed_cpus)) );
+        verbose( VB_SHMEM, "Increasing %d Idle Threads (%d now)", size, post_size );
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&(shdata->avail_cpus)) );
+        verbose( VB_SHMEM, "Not borrowed %s", mu_to_str(&(shdata->not_borrowed_cpus)) );
     }
     shmem_unlock( shm_handler );
 
@@ -158,8 +158,8 @@ const cpu_set_t* shmem_bitset__recover_defmask( void ) {
             }
         }
         DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
-        debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
+        verbose( VB_SHMEM, "Decreasing %d Idle Threads (%d now)", prev_size - post_size, post_size );
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&(shdata->avail_cpus)) ) ;
     }
     shmem_unlock( shm_handler );
 
@@ -183,8 +183,8 @@ void shmem_bitset__recover_some_defcpus( cpu_set_t *mask, int max_resources ) {
         }
         assert(max_resources==0);
         DLB_DEBUG( int post_size = CPU_COUNT( &(shdata->avail_cpus) ); )
-        debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", prev_size - post_size, post_size );
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
+        verbose( VB_SHMEM, "Decreasing %d Idle Threads (%d now)", prev_size - post_size, post_size );
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&(shdata->avail_cpus)) ) ;
     }
     shmem_unlock( shm_handler );
 
@@ -214,9 +214,9 @@ int shmem_bitset__return_claimed ( cpu_set_t *mask ) {
     }
     shmem_unlock( shm_handler );
     if ( returned > 0 ) {
-        debug_shmem ( "Giving back %d Threads\n", returned );
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
-        debug_shmem ( "Not borrowed %s\n", mu_to_str(&(shdata->not_borrowed_cpus)) );
+        verbose( VB_SHMEM, "Giving back %d Threads", returned );
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&(shdata->avail_cpus)) ) ;
+        verbose( VB_SHMEM, "Not borrowed %s", mu_to_str(&(shdata->not_borrowed_cpus)) );
     }
 
     return returned;
@@ -249,7 +249,7 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
                     collected++;
                 }
             }
-            debug_shmem ( "Getting %d affine Threads (%s)\n", collected, mu_to_str(mask) );
+            verbose( VB_SHMEM, "Getting %d affine Threads (%s)", collected, mu_to_str(mask) );
 
             assert(collected==CPU_COUNT(mask)-aux);
             /* Second Step: Retrieve non-affine cpus, if needed */
@@ -274,16 +274,16 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
                         collected++;
                     }
                 }
-                debug_shmem ( "Getting %d other Threads (%s)\n", collected, mu_to_str(mask) );
+                verbose( VB_SHMEM, "Getting %d other Threads (%s)", collected, mu_to_str(mask) );
             }
         }
         shmem_unlock( shm_handler );
     }
 
     if ( collected > 0 ) {
-        debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected,  size - collected );
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
-        debug_shmem ( "Not borrowed %s\n", mu_to_str(&(shdata->not_borrowed_cpus)) );
+        verbose( VB_SHMEM, "Clearing %d Idle Threads (%d left)", collected,  size - collected );
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&(shdata->avail_cpus)) ) ;
+        verbose( VB_SHMEM, "Not borrowed %s", mu_to_str(&(shdata->not_borrowed_cpus)) );
         add_event( IDLE_CPUS_EVENT, size - collected );
     }
     return collected;
@@ -326,10 +326,10 @@ void shmem_bitset__print_info( void ) {
     shmem_unlock( handler );
     shmem_finalize( handler );
 
-    debug_basic_info0( "Given CPUs:        %s\n", mu_to_str( &given ) );
-    debug_basic_info0( "Available CPUs:    %s\n", mu_to_str( &avail ) );
-    debug_basic_info0( "Not borrowed CPUs: %s\n", mu_to_str( &not_borrowed ) );
-    debug_basic_info0( "Running CPUs:      %s\n", mu_to_str( &check ) );
+    info0( "Given CPUs:        %s", mu_to_str( &given ) );
+    info0( "Available CPUs:    %s", mu_to_str( &avail ) );
+    info0( "Not borrowed CPUs: %s", mu_to_str( &not_borrowed ) );
+    info0( "Running CPUs:      %s", mu_to_str( &check ) );
 }
 
 static bool has_shared_mask( void ) {
@@ -360,8 +360,8 @@ bool shmem_bitset__acquire_cpu(int cpu){
 
         CPU_CLR( cpu, &(shdata->given_cpus) );
         CPU_CLR( cpu, &(shdata->avail_cpus) );
-        
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&(shdata->avail_cpus)) ) ;
+
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&(shdata->avail_cpus)) ) ;
 
     //cpu is not mine but is free -> take it
     }else if(CPU_ISSET(cpu, &(shdata->avail_cpus))){

@@ -22,8 +22,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
-#include <stdio.h>
-#include <assert.h>
 
 #include "shmem.h"
 #include "support/tracing.h"
@@ -88,7 +86,7 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
         for ( cpu = 0; cpu < cpus_node; cpu++ )
             if ( CPU_ISSET( cpu, &default_mask ) && shdata->node_info[cpu].owner != NOBODY ) {
                 shmem_unlock( shm_handler );
-                fatal0( "Another process in the same node is using one of your cpus\n" );
+                fatal0( "Another process in the same node is using one of your cpus" );
             }
 
         for ( cpu = 0; cpu < cpus_node; cpu++ ) {
@@ -114,8 +112,8 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
     }
     shmem_unlock( shm_handler );
 
-    debug_shmem( "Default Mask: %s\n", mu_to_str(&default_mask) );
-    debug_shmem( "Default Affinity Mask: %s\n", mu_to_str(&affinity_mask) );
+    verbose( VB_SHMEM, "Default Mask: %s", mu_to_str(&default_mask) );
+    verbose( VB_SHMEM, "Default Affinity Mask: %s", mu_to_str(&affinity_mask) );
 
     add_event( IDLE_CPUS_EVENT, idle_count );
 }
@@ -199,9 +197,9 @@ void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask ) {
 
     DLB_DEBUG( int size = CPU_COUNT( &freed_cpus ); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
-    debug_shmem( "Lending %s\n", mu_to_str(&freed_cpus) );
-    debug_shmem( "Increasing %d Idle Threads (%d now)\n", size, post_size );
-    debug_shmem( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+    verbose( VB_SHMEM, "Lending %s", mu_to_str(&freed_cpus) );
+    verbose( VB_SHMEM, "Increasing %d Idle Threads (%d now)", size, post_size );
+    verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus) );
 
     add_event( IDLE_CPUS_EVENT, idle_count );
 }
@@ -244,9 +242,9 @@ void shmem_cpuarray__add_cpu( int cpu ) {
 
     DLB_DEBUG( int size = CPU_COUNT( &freed_cpus ); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
-    debug_shmem( "Lending %s\n", mu_to_str(&freed_cpus) );
-    debug_shmem( "Increasing %d Idle Threads (%d now)\n", size, post_size );
-    debug_shmem( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+    verbose( VB_SHMEM, "Lending %s", mu_to_str(&freed_cpus) );
+    verbose( VB_SHMEM, "Increasing %d Idle Threads (%d now)", size, post_size );
+    verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus) );
 
     add_event( IDLE_CPUS_EVENT, idle_count );
 }
@@ -286,8 +284,8 @@ const cpu_set_t* shmem_cpuarray__recover_defmask( void ) {
 
     DLB_DEBUG( int recovered = CPU_COUNT( &recovered_cpus); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
-    debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", recovered, post_size );
-    debug_shmem ( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+    verbose( VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size );
+    verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus) );
 
     add_event( IDLE_CPUS_EVENT, idle_count );
 
@@ -331,8 +329,8 @@ void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources ) 
 
     DLB_DEBUG( int recovered = CPU_COUNT( &recovered_cpus); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
-    debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", recovered, post_size );
-    debug_shmem ( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+    verbose( VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size );
+    verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus) );
 
     add_event( IDLE_CPUS_EVENT, idle_count );
 }
@@ -369,8 +367,8 @@ void shmem_cpuarray__recover_cpu( int cpu ) {
 
     DLB_DEBUG( int recovered = CPU_COUNT( &recovered_cpus); )
     DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus); )
-    debug_shmem ( "Decreasing %d Idle Threads (%d now)\n", recovered, post_size );
-    debug_shmem ( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+    verbose( VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size );
+    verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus) );
 
     add_event( IDLE_CPUS_EVENT, idle_count );
 }
@@ -411,8 +409,8 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask ) {
     }
     shmem_unlock( shm_handler );
     if ( returned > 0 ) {
-        debug_shmem ( "Giving back %d Threads (%s)\n", returned, mu_to_str(&returned_cpus) );
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+        verbose( VB_SHMEM, "Giving back %d Threads (%s)", returned, mu_to_str(&returned_cpus) );
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus) );
     }
 
     add_event( IDLE_CPUS_EVENT, idle_count );
@@ -457,7 +455,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
                     collected1++;
                 }
             }
-            debug_shmem ( "Getting %d affine Threads (%s)\n", collected1, mu_to_str(mask) );
+            verbose( VB_SHMEM, "Getting %d affine Threads (%s)", collected1, mu_to_str(mask) );
 
             /* Second Step: Retrieve non-affine cpus, if needed */
             for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
@@ -469,7 +467,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
                     collected2++;
                 }
             }
-            debug_shmem ( "Getting %d other Threads (%s)\n", collected2, mu_to_str(mask) );
+            verbose( VB_SHMEM, "Getting %d other Threads (%s)", collected2, mu_to_str(mask) );
 
             // FIXME: Another loop, efficiency?
             // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
@@ -486,8 +484,8 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
     int collected = collected1 + collected2;
     if ( collected > 0 ) {
         DLB_DEBUG( int post_size = CPU_COUNT( &idle_cpus ); )
-        debug_shmem ( "Clearing %d Idle Threads (%d left)\n", collected, post_size );
-        debug_shmem ( "Available mask: %s\n", mu_to_str(&idle_cpus) );
+        verbose( VB_SHMEM, "Clearing %d Idle Threads (%d left)", collected, post_size );
+        verbose( VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus) );
         add_event( IDLE_CPUS_EVENT, idle_count );
     }
     return collected;
@@ -547,7 +545,7 @@ int shmem_cpuarray__reset_default_cpus(cpu_set_t *mask){
             CPU_CLR( i, mask);
         }
     }
-    DLB_DEBUG(assert(CPU_EQUAL(mask, &default_mask));)
+    ensure( CPU_EQUAL(mask, &default_mask) , "Mask not correctly updated on reset" );
     shmem_unlock( shm_handler );
     return n;
 
@@ -623,13 +621,10 @@ void shmem_cpuarray__print_info( void ) {
         g += snprintf( g, 8, "%d, ", node_info_copy[cpu].guest );
         s += snprintf( s, 8, "%d, ", node_info_copy[cpu].state );
     }
-    *o = '\n';
-    *g = '\n';
-    *s = '\n';
 
-    debug_basic_info0( owners );
-    debug_basic_info0( guests );
-    debug_basic_info0( states );
-    debug_basic_info0( "States Legend: DISABLED=%d, BUSY=%d, LENT=%d\n", DISABLED, BUSY, LENT );
+    info0( owners );
+    info0( guests );
+    info0( states );
+    info0( "States Legend: DISABLED=%d, BUSY=%d, LENT=%d", DISABLED, BUSY, LENT );
 }
 

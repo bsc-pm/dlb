@@ -39,7 +39,7 @@
 #define SHSYNC_MAX_SIZE 64
 
 shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module ) {
-    debug_shmem ( "Shared Memory Init: pid(%d), module(%s)\n", getpid(), shmem_module );
+    verbose( VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", getpid(), shmem_module );
 
     /* Allocate new Shared Memory handler */
     shmem_handler_t *handler = malloc( sizeof(shmem_handler_t) );
@@ -63,7 +63,7 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
         snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, key );
     }
 
-    debug_shmem ( "Start Process Comm - creating shared mem, module(%s)\n", shmem_module );
+    verbose( VB_SHMEM, "Start Process Comm - creating shared mem, module(%s)", shmem_module );
 
     /* Obtain a file descriptor for the shmem */
     int fd = shm_open( handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR );
@@ -92,7 +92,7 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
         exit( EXIT_FAILURE );
     }
 
-    debug_shmem ( "Start Process Comm - shared mem created, module(%s)\n", shmem_module );
+    verbose( VB_SHMEM, "Start Process Comm - shared mem created, module(%s)", shmem_module );
 
     /* Set the address for both structs */
     handler->shsync = (shmem_sync_t*) handler->addr;

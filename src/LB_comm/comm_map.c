@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include "shmem.h"
+#include "support/debug.h"
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
@@ -78,9 +79,7 @@ void print_map() {
 }
 
 void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_cpus) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) - %d LoadCommonConfig\n", node,me,  getpid());
-#endif
+    verbose(VB_SHMEM, "LoadCommonConfig");
     int i, j;
     procs=num_procs;
     me=meId;
@@ -93,9 +92,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
     shm_handler = shmem_init( (void**)&shdata, sizeof(struct shdata), "lewi" );
 
     if (me==0) {
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) setting values to the shared mem\n", node, me);
-#endif
+        verbose(VB_SHMEM, "setting values to the shared mem");
         /* idleCPUS */
         shdata->idleCpus = 0;
 
@@ -108,9 +105,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 
         //add_event(IDLE_CPUS_EVENT, 0);
 
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) Finished setting values to the shared mem\n", node, me);
-#endif
+        verbose(VB_SHMEM, "Finished setting values to the shared mem");
     }
 
     //Each Process initialize his cpus
@@ -187,9 +182,7 @@ that are assigned
 */
 int acquireCpus_Map(int current_cpus, int* new_cpus) {
     int i;
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Acquiring CPUS...\n", node, me);
-#endif
+    verbose(VB_SHMEM, "Acquiring CPUS...");
     int cpus = defaultCPUS-current_cpus;
     int overloading =0;
     int tmp_cpus;
@@ -284,9 +277,7 @@ Returns de number of cpus
 that are assigned
 */
 int checkIdleCpus_Map(int myCpus, int max_cpus, int* new_cpus) {
-#ifdef debugSharedMem
-//      fprintf(stderr,"DLB DEBUG: (%d:%d) Checking idle CPUS... %d\n", node, me, shdata->idleCpus);
-#endif
+    verbose(VB_SHMEM, "Checking idle CPUS... %d", shdata);
     int cpus=myCpus;
     int i;
     //if more CPUS than the availables are used release some
@@ -326,9 +317,6 @@ int checkIdleCpus_Map(int myCpus, int max_cpus, int* new_cpus) {
     }
     //add_event(IDLE_CPUS_EVENT, shdata->idleCpus;
 
-#ifdef debugSharedMem
-//      fprintf(stderr,"DLB DEBUG: (%d:%d) Using %d CPUS... %d Idle \n", node, me, shdata->num_cpus_proc[me], shdata->idleCpus);
-#endif
 //  fprintf(stderr,"DLB DEBUG: (%d:%d) mutex: %d\n", node, me, shdata->mutex);
     return cpus;
 }

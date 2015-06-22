@@ -25,13 +25,6 @@
 #include "support/utils.h"
 #include "support/debug.h"
 
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <strings.h>
-#include <unistd.h>
-#include <sys/resource.h>
-
 static int default_cpus;
 static int myCPUS = 0;
 static int enabled = 0;
@@ -40,45 +33,27 @@ static int single = 0;
 /******* Main Functions Lend_light Balancing Policy ********/
 
 void Lend_light_Init() {
-#ifdef debugConfig
-    fprintf(stderr, "DLB DEBUG: (%d:%d) - Lend_light Init\n", _node_id, _process_id);
-#endif
-    char* policy_greedy;
+    verbose(VB_MICROLB, "Lend_light Init");
+
     _process_id = _process_id;
     _node_id = _node_id;
     default_cpus = _default_nthreads;
 
     setThreads_Lend_light(default_cpus);
 
-#ifdef debugBasicInfo
-    if (_process_id==0 && _node_id==0) {
-        fprintf(stdout, "DLB: Default cpus per process: %d\n", default_cpus);
-    }
-#endif
+    info0("Default cpus per process: %d", default_cpus);
 
-    char* bind;
-    if ((bind=getenv("LB_BIND"))!=NULL) {
-        if(strcasecmp(bind, "YES")==0) {
-            fprintf(stdout, "DLB: Binding of threads to cpus enabled\n");
-            // Not implemented
-            // if (css_set_num_threads) { //If we are running with openMP we must bind the slave threads
-            //     bind_master(_process_id, _node_id);
-            // } else {
-            //     fprintf(stderr, "DLB ERROR: Binding of threads only enabled for SMPSs\n");
-            // }
-        }
+    bool bind;
+    parse_env_bool("LB_BIND", &bind, false);
+    if (bind) {
+        // FIXME: Not implemented
+        info0("Binding of threads to cpus enabled");
     }
 
-    int greedy=0;
-    if ((policy_greedy=getenv("LB_GREEDY"))!=NULL) {
-        if(strcasecmp(policy_greedy, "YES")==0) {
-            greedy=1;
-#ifdef debugBasicInfo
-            if (_process_id==0 && _node_id==0) {
-                fprintf(stdout, "DLB: Policy mode GREEDY\n");
-            }
-#endif
-        }
+    bool greedy;
+    parse_env_bool("LB_GREEDY", &greedy, false);
+    if (greedy) {
+        info0("Policy mode GREEDY");
     }
 
     //Initialize shared _process_idmory
@@ -104,15 +79,11 @@ void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode) {
 
     if (enabled) {
         if ( blocking_mode == ONE_CPU ) {
-#ifdef debugLend
-            fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", _node_id, _process_id, myCPUS-1);
-#endif
+            verbose(VB_MICROLB, "LENDING %d cpus", myCPUS-1);
             releaseCpus(myCPUS-1);
             setThreads_Lend_light(1);
         } else {
-#ifdef debugLend
-            fprintf(stderr, "DLB DEBUG: (%d:%d) - LENDING %d cpus\n", _node_id, _process_id, myCPUS);
-#endif
+            verbose(VB_MICROLB, "LENDING %d cpus", myCPUS);
             releaseCpus(myCPUS);
             setThreads_Lend_light(0);
         }
@@ -129,9 +100,7 @@ void Lend_light_OutOfBlockingCall(int is_iter) {
             cpus = acquireCpus(myCPUS);
         }
         setThreads_Lend_light(cpus);
-#ifdef debugLend
-        fprintf(stderr, "DLB DEBUG: (%d:%d) - ACQUIRING %d cpus\n", _node_id, _process_id, cpus);
-#endif
+        verbose(VB_MICROLB, "ACQUIRING %d cpus", cpus);
     }
 }
 
@@ -139,9 +108,7 @@ void Lend_light_updateresources() {
     if (enabled && !single) {
         int cpus = checkIdleCpus(myCPUS);
         if (myCPUS!=cpus) {
-#ifdef debugDistribution
-            fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", _node_id, _process_id, cpus);
-#endif
+            verbose(VB_MICROLB, "Using %d cpus", cpus);
             setThreads_Lend_light(cpus);
         }
     }
@@ -149,7 +116,7 @@ void Lend_light_updateresources() {
 
 void Lend_light_resetDLB(void) {
     if (enabled && !single) {
-        debug_lend("ResetDLB \n");
+        verbose(VB_MICROLB, "ResetDLB");
         acquireCpus(myCPUS);
         setThreads_Lend_light(default_cpus);
     }
@@ -179,9 +146,7 @@ void Lend_light_parallel(void) {
 void setThreads_Lend_light(int numThreads) {
 
     if (myCPUS!=numThreads) {
-#ifdef debugDistribution
-        fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", _node_id, _process_id, numThreads);
-#endif
+        verbose(VB_MICROLB, "Using %d cpus", numThreads);
         update_threads(numThreads);
         myCPUS=numThreads;
     }

@@ -20,7 +20,6 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/resource.h>

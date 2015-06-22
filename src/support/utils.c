@@ -52,7 +52,7 @@ void parse_env_int_or_die ( char const *env, int *var ) {
     char *tmp_var = getenv( env );
 
     if ( tmp_var == NULL || tmp_var[0] == 0 ) {
-        fatal0( "%s must be defined\n", env );
+        fatal0( "%s must be defined", env );
     } else {
         *var = atoi( tmp_var );
     }
@@ -65,7 +65,7 @@ void parse_env_string ( char const *env, char **var ) {
 void parse_env_string_or_die ( char const *env, char **var ) {
     *var = getenv( env );
     if ( *var == NULL ) {
-        fatal0( "%s must be defined\n", env );
+        fatal0( "%s must be defined", env );
     }
 }
 
@@ -106,6 +106,7 @@ void parse_env_verbose_opts ( char const *env, verbose_opts_t *mode ) {
             token = strtok( NULL, delimiter );
         }
     }
+    fprintf( stdout, "Debug mode: %d\n", *((int*)mode));
 }
 
 void parse_env_verbose_format ( char const *env, verbose_fmt_t *format,

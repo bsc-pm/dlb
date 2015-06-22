@@ -40,12 +40,12 @@
 
 #pragma pygen start
 void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
-    debug_inout(">> {MPI_NAME}...............\n");
+    verbose(VB_MPI_API, ">> {MPI_NAME}...............");
     {BEFORE_FUNC};
 }}
 
 void DLB_{MPI_NAME}_F_leave(void) {{
-    debug_inout("<< {MPI_NAME}...............\\n");
+    verbose(VB_MPI_API, "<< {MPI_NAME}...............");
     {AFTER_FUNC};
 }}
 

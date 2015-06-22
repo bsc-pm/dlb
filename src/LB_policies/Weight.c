@@ -24,6 +24,7 @@
 #include "LB_numThreads/numThreads.h"
 #include "LB_policies/Weight.h"
 #include "support/globals.h"
+#include "support/debug.h"
 #include "support/utils.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
@@ -52,9 +53,7 @@ int iterNum;
 /******* Main Functions Weight Balancing Policy ********/
 
 void Weight_Init(void) {
-#ifdef debugConfig
-    fprintf(stderr, "DLB DEBUG: (%d:%d) - Weight Init\n", _node_id, _process_id);
-#endif
+    verbose(VB_MICROLB, "Weight Init");
 
     clock_gettime(CLOCK_REALTIME, &initAppl);
     reset(&iterCpuTime);
@@ -129,9 +128,7 @@ void createThreads_Weight() {
     pthread_t t;
     finished=0;
 
-#ifdef debugConfig
-    fprintf(stderr, "DLB DEBUG: (%d:%d) - Creating Threads\n", _node_id, _process_id);
-#endif
+    verbose(VB_MICROLB, "Creating Threads");
 
     threadsUsed=0;
     threads2use=_default_nthreads;
@@ -160,9 +157,7 @@ void* masterThread_Weight(void* arg) {
     int cpus[_mpis_per_node];
     int i;
 
-#ifdef debugConfig
-    fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Master thread\n", _node_id, _process_id);
-#endif
+    verbose(VB_MICROLB, "Creating Master thread");
 
     StartMasterComm();
 
@@ -282,9 +277,7 @@ void* slaveThread_Weight(void* arg) {
         exit(1);
     }
 
-#ifdef debugConfig
-    fprintf(stderr,"DLB DEBUG: (%d:%d) - Creating Slave thread\n", _node_id, _process_id);
-#endif
+    verbose(VB_MICROLB, "Creating Slave thread");
     StartSlaveComm();
 
     while(!finished) {
@@ -298,9 +291,7 @@ void* slaveThread_Weight(void* arg) {
 
 void Weight_updateresources() {
     if (threadsUsed!=threads2use) {
-#ifdef debugDistribution
-        fprintf(stderr,"DLB DEBUG: (%d:%d) - Using %d cpus\n", _node_id, _process_id, threads2use);
-#endif
+        verbose(VB_MICROLB, "Using %d cpus", threads2use);
         update_threads(threads2use);
         threadsUsed=threads2use;
     }

@@ -46,7 +46,7 @@ static double previous_iter;
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
 void PERaL_Init( void ) {
-    debug_config ( "LeWI Mask Balancing Init\n" );
+    verbose( VB_MICROLB, "LeWI Mask Balancing Init" );
 
     nthreads = _default_nthreads;
     max_cpus= _default_nthreads;
@@ -105,10 +105,10 @@ void PERaL_IntoBlockingCall(int is_iter, int blocking_mode) {
     if ( blocking_mode == ONE_CPU ) {
         // Remove current cpu from the mask
         CPU_XOR( &mask, &mask, &cpu );
-        debug_lend ( "LENDING %d threads\n", nthreads-1 );
+        verbose( VB_MICROLB, "LENDING %d threads", nthreads-1 );
         nthreads = 1;
     } else if ( blocking_mode == BLOCK ) {
-        debug_lend ( "LENDING %d threads\n", nthreads );
+        verbose( VB_MICROLB, "LENDING %d threads", nthreads );
         nthreads = 0;
     }
 
@@ -135,7 +135,7 @@ void PERaL_OutOfBlockingCall(int is_iter ) {
             iter_duration=to_secs(aux);
             add_event(1001, iter_cpu);
             //If the iteration has been longer than the last maybe something went wrong, recover one cpu
-            debug_lend("Iter %d:  %.4f (%.4f) max_cpus:%d\n", iterNum, to_secs(aux), iter_cpu, max_cpus);
+            verbose( VB_MICROLB, "Iter %d:  %.4f (%.4f) max_cpus:%d", iterNum, to_secs(aux), iter_cpu, max_cpus);
             if ((iter_duration>=previous_iter) && (max_cpus<_default_nthreads)) { max_cpus++; }
             else {
                 iter_cpu=iter_cpu/(max_cpus-1);
@@ -155,7 +155,7 @@ void PERaL_OutOfBlockingCall(int is_iter ) {
         iter_cpu=0;
     }
 
-    debug_lend ( "RECOVERING %d threads\n", max_cpus - nthreads );
+    verbose( VB_MICROLB, "RECOVERING %d threads", max_cpus - nthreads );
     cpu_set_t mask;
     CPU_ZERO( &mask );
     shmem_mask.recover_some_defcpus( &mask, max_cpus );
@@ -192,7 +192,7 @@ void PERaL_UpdateResources( int max_resources ) {
 
             nthreads += new_threads;
             set_mask( &mask );
-            debug_lend ( "ACQUIRING %d threads for a total of %d\n", new_threads, nthreads );
+            verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", new_threads, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
     }
@@ -209,7 +209,7 @@ void PERaL_ReturnClaimedCpus( void ) {
     if ( returned > 0 ) {
         nthreads -= returned;
         set_mask( &mask );
-        debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
+        verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
         add_event( THREADS_USED_EVENT, nthreads );
     }
 }

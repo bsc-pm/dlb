@@ -80,14 +80,11 @@ void JustProf_Finish(void) {
 
     totalTime=to_secs(aux) * myCPUS;
 
-    debug_basic_info("Application -> %.4f secs\n", to_secs(aux));
-    debug_basic_info("Computation time: %.4f secs\n", to_secs(compTime));
-    debug_basic_info("CPU time: %.4f secs\n", to_secs(cpuTime));
+    info("Application -> %.4f secs", to_secs(aux));
+    info("Computation time: %.4f secs", to_secs(compTime));
+    info("CPU time: %.4f secs", to_secs(cpuTime));
 
-    debug_basic_info("Usage:  %.2f \n", (to_secs(cpuTime)*100)/totalTime);
-
-
-
+    info("Usage:  %.2f", (to_secs(cpuTime)*100)/totalTime);
 }
 
 
@@ -129,7 +126,7 @@ void JustProf_OutOfBlockingCall(int is_iter) {
 
             totalTime=to_secs(aux) * myCPUS;
 
-            debug_basic_info("Iteration %d -> %.4f secs Usage: %.2f (%.4f * 100 / %.4f ) \n", iterNum, to_secs(aux), (to_secs(iter_cpuTime)*100)/totalTime, to_secs(iter_cpuTime), totalTime );
+            info("Iteration %d -> %.4f secs Usage: %.2f (%.4f * 100 / %.4f )", iterNum, to_secs(aux), (to_secs(iter_cpuTime)*100)/totalTime, to_secs(iter_cpuTime), totalTime );
         }
         //Starting iteration
         iterNum++;
@@ -140,7 +137,7 @@ void JustProf_OutOfBlockingCall(int is_iter) {
         reset(&iter_cpuTime);
         reset(&iter_compTime);
 
-        debug_basic_info("Iteration %d detected\n", iterNum);
+        info("Iteration %d detected", iterNum);
     }
 }
 

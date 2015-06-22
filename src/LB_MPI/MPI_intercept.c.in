@@ -26,6 +26,7 @@
 #include "LB_MPI/MPI_interface.h"
 #include "support/debug.h"
 #include <mpi.h>
+#include <stdio.h>
 
 #ifndef MPI3_CONST
 #  if MPI_VERSION >= 3
@@ -37,11 +38,11 @@
 
 #pragma pygen start
 int {MPI_NAME}({C_PARAMS}) {{
-    debug_inout_MPI(">> {MPI_NAME}...............\n");
+    verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
     DLB_{MPI_NAME}_enter({C_ARG_LIST});
     int res = P{MPI_NAME}({C_ARG_LIST});
     DLB_{MPI_NAME}_leave();
-    debug_inout_MPI("<< {MPI_NAME}...............\n");
+    verbose(VB_MPI_INT, "<< {MPI_NAME}...............");
     return res;
 }}
 

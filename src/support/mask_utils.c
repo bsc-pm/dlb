@@ -226,11 +226,11 @@ void mu_parse_mask( char const *env, cpu_set_t *mask ) {
 
     /* Compile regular expression */
     if ( regcomp(&regex_bitmask, "^[0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
-        fatal0( "Could not compile regex\n");
+        fatal0( "Could not compile regex");
     }
 
     if ( regcomp(&regex_range, "^[0-9,-]+$", REG_EXTENDED|REG_NOSUB) ) {
-        fatal0( "Could not compile regex\n");
+        fatal0( "Could not compile regex");
     }
 
     /* Regular expression matches bitmask, e.g.: 11110011 */

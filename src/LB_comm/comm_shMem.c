@@ -21,7 +21,6 @@
 #include <config.h>
 #endif
 
-#include "LB_comm/comm.h"
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdlib.h>
@@ -29,6 +28,8 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include "LB_comm/comm.h"
+#include "support/debug.h"
 
 #ifdef MPI_LIB
 #include <mpi.h>
@@ -48,9 +49,7 @@ int * threads;
 int shmid;
 
 void LoadCommConfig(int num_procs, int meId, int nodeId) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) - %d LoadCommonConfig\n", node,me,  getpid());
-#endif
+    verbose(VB_SHMEM, "LoadCommonConfig");
     procs=num_procs;
     me=meId;
     node=nodeId;
@@ -76,10 +75,7 @@ void LoadCommConfig(int num_procs, int meId, int nodeId) {
 
     if (me==0) {
 
-
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) Start Master Comm - creating shared mem \n", node, me);
-#endif
+        verbose(VB_SHMEM, "Start Master Comm - creating shared mem");
 
         if ((shmid = shmget(key, sm_size, IPC_EXCL | IPC_CREAT | 0666)) < 0) {
             perror("DLB PANIC: shmget Master");
@@ -93,9 +89,7 @@ void LoadCommConfig(int num_procs, int meId, int nodeId) {
 
         shData=(sharedData*)shm;
 
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) setting values to the shared mem\n", node, me);
-#endif
+        verbose(VB_SHMEM, "setting values to the shared mem");
 
         //The top and the tail of the queue
         shData->first=0;
@@ -143,14 +137,11 @@ void LoadCommConfig(int num_procs, int meId, int nodeId) {
 #endif
 
     } else {
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associating to shared mem\n", node, me);
-#endif
+        verbose(VB_SHMEM, "Slave Comm - associating to shared mem");
 
 #ifdef MPI_LIB
         PMPI_Barrier(MPI_COMM_WORLD);
 #endif
-
 
         shmid = shmget(key, sm_size, 0666);
 
@@ -162,9 +153,8 @@ void LoadCommConfig(int num_procs, int meId, int nodeId) {
             exit(1);
         }
 
-#ifdef debugSharedMem
-        fprintf(stderr,"DLB DEBUG: (%d:%d) Slave Comm - associated to shared mem\n", node, me);
-#endif
+        verbose(VB_SHMEM, "Slave Comm - associated to shared mem");
+
         if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
             perror("DLB PANIC: shmat slave");
             exit(1);
@@ -181,10 +171,6 @@ void LoadCommConfig(int num_procs, int meId, int nodeId) {
         //The array with the threads to be used by each slave
         threads = (int*)((char*)msg4slave + (sizeof(sem_t)*procs));
     }
-
-
-
-
 }
 
 void StartMasterComm() {
@@ -209,9 +195,7 @@ void printQueue() {
 int GetFromAnySlave(char *info,int size) {
     int slave;
 
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Master waiting in semaphore\n", node, me);
-#endif
+    verbose(VB_SHMEM, "Master waiting in semaphore");
     sem_wait(&(shData->msg4master));
     sem_wait(&(shData->lock_data));
 
@@ -220,9 +204,7 @@ int GetFromAnySlave(char *info,int size) {
 
     shData->first= (shData->first+1)%size_queue;
 
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Master received from %d\n", node, me, slave);
-#endif
+    verbose(VB_SHMEM, "Master received from %d", slave);
     if (sem_post(&(shData->queue))<0) {
         perror("Post queue");
     }
@@ -233,32 +215,21 @@ int GetFromAnySlave(char *info,int size) {
 }
 
 void GetFromMaster(char *info,int size) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Slave waiting in semaphore\n", node, me);
-#endif
+    verbose(VB_SHMEM, "Slave waiting in semaphore");
     sem_wait(&(msg4slave[me]));
     memcpy(info, &(threads[me]), size);
-
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Slave received %d from master\n",node,  me, *(int*)info);
-#endif
+    verbose(VB_SHMEM, "Slave received %d from master", *(int*)info);
 }
 
 void GetFromMasterNonBlocking(char *info,int size) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Reading from Master\n", node, me);
-#endif
+    verbose(VB_SHMEM, "Reading from Master");
     memcpy(info, &(threads[me]), size);
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Slave received %d from master\n",node,  me, *(int*)info);
-#endif
+    verbose(VB_SHMEM, "Slave received %d from master", *(int*)info);
 }
 
 void SendToMaster(char *info,int size) {
 
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Send to Master\n", node, me);
-#endif
+    verbose(VB_SHMEM, "Send to Master");
 
     //check if there is space in the queue
     sem_wait(&(shData->queue));
@@ -284,18 +255,12 @@ void GetFromSlave(int rank,char *info,int size) {
 }
 
 void WriteToSlave(int rank,char *info,int size) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Send to Slave %d : %d\n", node, me, rank, *(int*)info);
-#endif
-
+    verbose(VB_SHMEM, "Send to Slave %d : %d", rank, *(int*)info);
     memcpy(&(threads[rank]), info, size);
 }
 
 void SendToSlave(int rank,char *info,int size) {
-#ifdef debugSharedMem
-    fprintf(stderr,"DLB DEBUG: (%d:%d) Send to Slave %d : %d\n", node, me, rank, *(int*)info);
-#endif
-
+    verbose(VB_SHMEM, "Send to Slave %d : %d", rank, *(int*)info);
     memcpy(&(threads[rank]), info, size);
 
     if(sem_post(&(msg4slave[rank]))<0) {

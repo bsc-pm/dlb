@@ -41,7 +41,7 @@ static int master_cpu;
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
 void lewi_mask_Init( void ) {
-    debug_config ( "LeWI Mask Balancing Init\n" );
+    verbose( VB_MICROLB, "LeWI Mask Balancing Init" );
 
     nthreads = _default_nthreads;
 
@@ -97,10 +97,10 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
         if ( blocking_mode == ONE_CPU ) {
             // Remove current cpu from the mask
             CPU_XOR( &mask, &mask, &cpu );
-            debug_lend ( "LENDING %d threads\n", nthreads-1 );
+            verbose( VB_MICROLB, "LENDING %d threads", nthreads-1 );
             nthreads = 1;
         } else if ( blocking_mode == BLOCK ) {
-            debug_lend ( "LENDING %d threads\n", nthreads );
+            verbose( VB_MICROLB, "LENDING %d threads", nthreads );
             nthreads = 0;
         }
 
@@ -130,12 +130,12 @@ void lewi_mask_OutOfBlockingCall(int is_iter) {
         //assert(nthreads+1==CPU_COUNT(&mask));
 
         if (single) {
-            debug_lend ( "RECOVERING master thread\n" );
+            verbose(VB_MICROLB, "RECOVERING master thread" );
             shmem_mask.recover_cpu( master_cpu );
             CPU_SET( master_cpu, &mask );
             nthreads = 1;
         } else {
-            debug_lend ( "RECOVERING %d threads\n", _default_nthreads - nthreads );
+            verbose(VB_MICROLB, "RECOVERING %d threads", _default_nthreads - nthreads );
             const cpu_set_t* def_mask = shmem_mask.recover_defmask();
             CPU_OR( &mask, &mask, def_mask );
             nthreads = _default_nthreads;
@@ -161,7 +161,7 @@ void lewi_mask_UpdateResources( int max_resources ) {
         if ( collected > 0 ) {
             nthreads += collected;
             set_mask( &mask );
-            debug_lend ( "ACQUIRING %d threads for a total of %d\n", collected, nthreads );
+            verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", collected, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
         //Check num threads and mask size are the same
@@ -184,7 +184,7 @@ void lewi_mask_ReturnClaimedCpus( void ) {
         if ( returned > 0 ) {
             nthreads -= returned;
             set_mask( &mask );
-            debug_lend ( "RETURNING %d threads for a total of %d\n", returned, nthreads );
+            verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
         //Check num threads and mask size are the same
@@ -203,7 +203,7 @@ void lewi_mask_ClaimCpus(int cpus) {
 
             if ((cpus+nthreads)>_default_nthreads) { cpus=_default_nthreads-nthreads; }
 
-            debug_lend ( "Claiming  %d cpus\n", cpus );
+            verbose( VB_MICROLB, "Claiming %d cpus", cpus );
             cpu_set_t current_mask;
             CPU_ZERO( &current_mask );
 
@@ -224,7 +224,7 @@ void lewi_mask_ClaimCpus(int cpus) {
 
 void lewi_mask_acquireCpu(int cpu) {
     if (enabled && !single) {
-        debug_lend("AcquireCpu %d\n", cpu);
+        verbose(VB_MICROLB, "AcquireCpu %d", cpu);
         cpu_set_t mask;
         get_mask( &mask );
 
@@ -234,10 +234,10 @@ void lewi_mask_acquireCpu(int cpu) {
                 nthreads++;
                 CPU_SET(cpu, &mask);
                 set_mask( &mask );
-                debug_lend("New Mask: %s\n", mu_to_str(&mask));
+                verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&mask));
                 add_event( THREADS_USED_EVENT, nthreads );
             }else{
-                debug_lend("Not legally acquired cpu %d, running anyway\n",cpu);
+                verbose(VB_MICROLB, "Not legally acquired cpu %d, running anyway",cpu);
             }
         }
     }
@@ -245,13 +245,13 @@ void lewi_mask_acquireCpu(int cpu) {
 
 void lewi_mask_resetDLB( void ) {
     if (enabled && !single) {
-        debug_lend("ResetDLB \n");
+        verbose(VB_MICROLB, "ResetDLB");
         cpu_set_t current_mask;
         CPU_ZERO( &current_mask );
         get_mask( &current_mask );
         nthreads=shmem_mask.reset_default_cpus(&current_mask);
         set_mask( &current_mask);
-        debug_lend("New Mask: %s\n", mu_to_str(&current_mask));
+        verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
     }
 }
 

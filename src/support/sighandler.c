@@ -75,7 +75,7 @@ static struct sigaction old_actions[MAX_SIGNUM];
 static bool registed_signals[MAX_SIGNUM] = {false};
 
 static void termination_handler( int signum, siginfo_t *si, void *context ) {
-    verbose0( "Signal caught %d. Cleaning up DLB\n", signum );
+    info( "Signal caught %d. Cleaning up DLB", signum );
     Terminate();
 
     /* Restore original action, then raise it */
@@ -84,7 +84,7 @@ static void termination_handler( int signum, siginfo_t *si, void *context ) {
 }
 
 static void register_signal( int signum ) {
-    fatal_cond0( !(signum >= 0 && signum < MAX_SIGNUM), "Registering unknown signal\n" );
+    fatal_cond0( !(signum >= 0 && signum < MAX_SIGNUM), "Registering unknown signal" );
 
     sigaction( signum, NULL, &old_actions[signum] );
     if ( old_actions[signum].sa_handler != SIG_IGN ) {
@@ -95,8 +95,8 @@ static void register_signal( int signum ) {
 }
 
 static void unregister_signal( int signum ) {
-    fatal_cond0( !(signum >= 0 && signum < MAX_SIGNUM), "Unregistering unknown signal\n" );
-    ensure( registed_signals[signum], "Unregistering a not registered signal\n" );
+    fatal_cond0( !(signum >= 0 && signum < MAX_SIGNUM), "Unregistering unknown signal" );
+    ensure( registed_signals[signum], "Unregistering a not registered signal" );
 
     sigaction( signum, &old_actions[signum], NULL );
 

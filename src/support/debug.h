@@ -20,6 +20,9 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+#include <stdlib.h>
+#include <stdio.h>
+
 typedef enum VerboseOptions {
     VB_CLEAR    = 0,
     VB_API      = 1 << 0,
@@ -40,79 +43,64 @@ typedef enum VerboseFormat {
     VBF_THREAD  = 1 << 4
 } verbose_fmt_t;
 
+
 void debug_init();
+void print(FILE *fp, const char *prefix, const char *fmt, ...);
+void print_backtrace(void);
 
-void fatal0 ( const char *fmt, ... );
-void fatal ( const char *fmt, ... );
-void warning0 ( const char *fmt, ... );
-void warning ( const char *fmt, ... );
-void warningT ( const char *fmt, ... );
 
-#ifndef QUIET_MODE
-void verbose0 ( const char *fmt, ... );
-void verbose ( const char *fmt, ... );
-void verboseT ( const char *fmt, ... );
+// FIXME: we don't want to include globals.h
+// because it incurs into a circular dependency
+extern int _mpi_rank;
+extern verbose_opts_t vb_opts;
+
+#define fatal0(...) \
+    if (_mpi_rank <= 0) { print(stderr, "DLB PANIC", __VA_ARGS__); } \
+    abort();
+
+#define fatal(...) \
+    print(stderr, "DLB PANIC", __VA_ARGS__); \
+    abort();
+
+#define warning0(...) \
+    if (_mpi_rank <= 0) { print(stderr, "DLB WARNING", __VA_ARGS__); }
+
+#define warning(...) \
+    print(stderr, "DLB WARNING", __VA_ARGS__);
+
+#define info0(...) \
+    if (_mpi_rank <= 0) { print(stdout, "DLB", __VA_ARGS__); }
+
+#define info(...) \
+    print(stdout, "DLB", __VA_ARGS__);
+
+#define fatal_cond(cond, ...) if (cond) { fatal(__VA_ARGS__); }
+#define fatal_cond0(cond, ...) if (cond) { fatal0(__VA_ARGS__); }
+
+
+#ifdef DEBUG_VERSION
+#define verbose(flag, ...) \
+    if ( flag & vb_opts & VB_API )          { print(stdout, "DLB_API", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_MICROLB ) { print(stdout, "DLB MICROLB", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_SHMEM )   { print(stdout, "DLB SHMEM", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_MPI_API ) { print(stdout, "DLB MPI API", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_MPI_INT ) { print(stdout, "DLB MPI INT", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_STATS )   { print(stdout, "DLB STATS", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_DROM )    { print(stdout, "DLB DROM", __VA_ARGS__); }
 #else
-#define verbose0(fmt, ...)
-#define verbose(fmt, ...)
-#define verboseT(fmt, ...)
+#define verbose(flag, ...)
 #endif
-
-#ifdef debugBasicInfo
-void debug_basic_info0 ( const char *fmt, ... );
-void debug_basic_info ( const char *fmt, ... );
-#else
-#define debug_basic_info0(fmt, ...)
-#define debug_basic_info(fmt, ...)
-#endif
-
-#ifdef debugConfig
-void debug_config ( const char *fmt, ... );
-#else
-#define debug_config(fmt, ...)
-#endif
-
-#ifdef debugInOut
-void debug_inout ( const char *fmt, ... );
-#else
-#define debug_inout(fmt, ...)
-#endif
-
-#ifdef debugInOutMPI
-void debug_inout_MPI ( const char *fmt, ... );
-#else
-#define debug_inout_MPI(fmt, ...)
-#endif
-
-#ifdef debugBlockingMPI
-void debug_blocking_MPI ( const char *fmt, ... );
-#else
-#define debug_blocking_MPI(fmt, ...)
-#endif
-
-#ifdef debugLend
-void debug_lend ( const char *fmt, ... );
-#else
-#define debug_lend(fmt, ...)
-#endif
-
-#ifdef debugSharedMem
-void debug_shmem ( const char *fmt, ... );
-#else
-#define debug_shmem(fmt, ...)
-#endif
-
-#define fatal_cond(cond, ...) if ( cond ) fatal(__VA_ARGS__);
-#define fatal_cond0(cond, ...) if ( cond ) fatal0(__VA_ARGS__);
 
 #ifdef DEBUG_VERSION
 #define DLB_DEBUG(f) f
-#define ensure(cond, ...) if ( !(cond) ) fatal(__VA_ARGS__);
 #else
 #define DLB_DEBUG(f)
-#define ensure(cond, ...)
 #endif
 
-void print_backtrace ( void );
+#ifdef DEBUG_VERSION
+#define ensure(cond, ...) if (!(cond)) { fatal(__VA_ARGS__); }
+#else
+#define ensure(cond, ...)
+#endif
 
 #endif /* DEBUG_H */
