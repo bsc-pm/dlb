@@ -106,7 +106,6 @@ void parse_env_verbose_opts ( char const *env, verbose_opts_t *mode ) {
             token = strtok( NULL, delimiter );
         }
     }
-    fprintf( stdout, "Debug mode: %d\n", *((int*)mode));
 }
 
 void parse_env_verbose_format ( char const *env, verbose_fmt_t *format,
