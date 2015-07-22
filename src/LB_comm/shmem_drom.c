@@ -47,9 +47,9 @@ typedef struct {
     pinfo_t process_info[0];
 } shdata_t;
 
-static shmem_handler_t *shm_handler;
-static shmem_handler_t *shm_ext_handler;
-static shdata_t *shdata;
+static shmem_handler_t *shm_handler = NULL;
+static shmem_handler_t *shm_ext_handler = NULL;
+static shdata_t *shdata = NULL;
 static int max_cpus;
 static int max_processes;
 static int my_process;
@@ -57,6 +57,12 @@ static int my_process;
 static bool steal_cpu(int, int);
 
 void shmem_drom__init(void) {
+    // Protect double initialization
+    if ( shm_handler != NULL ) {
+        warning("DLB_Drom is being initialized more than once");
+        return;
+    }
+
     // We will reserve enough positions assuming that there won't be more processes than cpus
     max_processes = mu_get_system_size();
     max_cpus = mu_get_system_size();
@@ -93,6 +99,9 @@ void shmem_drom__finalize( void ) {
 }
 
 void shmem_drom__update( void ) {
+
+    if (shm_handler == NULL || shdata == NULL) return;
+
     // If dirty, we will check again once locked
     if ( shdata->process_info[my_process].dirty ) {
         shmem_lock( shm_handler );
@@ -178,6 +187,12 @@ static bool steal_cpu( int cpu, int processor ) {
 /* From here: functions aimed to be called from an external process */
 
 void shmem_drom_ext__init( void ) {
+    // Protect double initialization
+    if ( shm_ext_handler != NULL ) {
+        warning("DLB_Stats is being initialized more than once");
+        return;
+    }
+
     max_processes = mu_get_system_size();
     shm_ext_handler = shmem_init( (void**)&shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "drom" );
 }
