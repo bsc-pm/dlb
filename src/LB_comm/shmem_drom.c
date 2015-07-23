@@ -269,7 +269,7 @@ int shmem_drom_ext__setprocessmask( int pid, const cpu_set_t *mask ) {
 /* This function is intended to be called from external processes only to consult the shdata
  * That's why we should initialize and finalize the shared memory
  */
-void shmem_drom_ext__printinfo( void ) {
+void shmem_drom_ext__print_info( void ) {
     max_processes = mu_get_system_size();
     //
     // Basic size + zero-length array real length
@@ -292,7 +292,7 @@ void shmem_drom_ext__printinfo( void ) {
             strncpy( current, mu_to_str( &(process_info_copy[p].current_process_mask) ), sizeof(current) );
             strncpy( future, mu_to_str( &(process_info_copy[p].future_process_mask) ), sizeof(future) );
 
-            verbose( VB_DROM, "PID: %d, Current mask: %s, Future mask: %s, Dirty: %d",
+            fprintf( stdout, "PID: %d, Current mask: %s, Future mask: %s, Dirty: %d\n",
                     process_info_copy[p].pid, current, future, process_info_copy[p].dirty );
         }
     }

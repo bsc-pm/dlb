@@ -32,5 +32,6 @@ void shmem_stats_ext__getcpuusage_list(double *usagelist,int *nelems,int max_len
 int shmem_stats_ext__getactivecpus(int pid);
 void shmem_stats_ext__getactivecpus_list(int *cpuslist,int *nelems,int max_len);
 int shmem_stats_ext__getloadavg(int pid,double *load);
+void shmem_stats_ext__print_info(void);
 
 #endif /* SHMEM_STATS_H */

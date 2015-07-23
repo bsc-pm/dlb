@@ -91,4 +91,6 @@ void singlemode(void);
 
 void parallelmode(void);
 
+void printShmem(void);
+
 #endif //DLB_KERNEL_H

@@ -31,6 +31,8 @@
 // sub-process ID
 static int spid = 0;
 
+#pragma GCC visibility push(default)
+
 void DLB_Init (void) {
     fatal_cond(spid != 0, "DLB has been already initialized\n");
     spid = Initialize();
@@ -121,6 +123,10 @@ void DLB_AcquireCpu (int cpu) {
     acquirecpu(cpu);
 }
 
+void DLB_PrintShmem(void) {
+    printShmem();
+}
+
 /* Statistics API */
 
 void DLB_Stats_Init (void) {
@@ -159,6 +165,10 @@ int DLB_Stats_GetLoadAvg (int pid, double *load) {
     return stats_ext_getloadavg(pid, load);
 }
 
+void DLB_Stats_PrintShmem(void) {
+    stats_ext_printshmem();
+}
+
 // final name not decided yet
 /* Dynamic Resource Ownership Manager API */
 
@@ -185,3 +195,9 @@ int DLB_Drom_GetProcessMask (int pid, dlb_cpu_set_t mask) {
 int DLB_Drom_SetProcessMask (int pid, const dlb_cpu_set_t mask) {
     return drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
 }
+
+void DLB_Drom_PrintShmem(void) {
+    drom_ext_printshmem();
+}
+
+#pragma GCC visibility pop

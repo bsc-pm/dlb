@@ -568,3 +568,10 @@ void parallelmode () {
 int is_auto( void ){
    return policy_auto;
 }
+
+
+// FIXME
+void shmem_cpuarray__print_info( void );
+void printShmem(void) {
+    shmem_cpuarray__print_info();
+}

@@ -45,7 +45,7 @@ typedef enum VerboseFormat {
 
 
 void debug_init();
-void print(FILE *fp, const char *prefix, const char *fmt, ...);
+void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
 void print_backtrace(void);
 
 
@@ -55,24 +55,24 @@ extern int _mpi_rank;
 extern verbose_opts_t vb_opts;
 
 #define fatal0(...) \
-    if (_mpi_rank <= 0) { print(stderr, "DLB PANIC", __VA_ARGS__); } \
+    if (_mpi_rank <= 0) { vb_print(stderr, "DLB PANIC", __VA_ARGS__); } \
     abort();
 
 #define fatal(...) \
-    print(stderr, "DLB PANIC", __VA_ARGS__); \
+    vb_print(stderr, "DLB PANIC", __VA_ARGS__); \
     abort();
 
 #define warning0(...) \
-    if (_mpi_rank <= 0) { print(stderr, "DLB WARNING", __VA_ARGS__); }
+    if (_mpi_rank <= 0) { vb_print(stderr, "DLB WARNING", __VA_ARGS__); }
 
 #define warning(...) \
-    print(stderr, "DLB WARNING", __VA_ARGS__);
+    vb_print(stderr, "DLB WARNING", __VA_ARGS__);
 
 #define info0(...) \
-    if (_mpi_rank <= 0) { print(stdout, "DLB", __VA_ARGS__); }
+    if (_mpi_rank <= 0) { vb_print(stdout, "DLB", __VA_ARGS__); }
 
 #define info(...) \
-    print(stdout, "DLB", __VA_ARGS__);
+    vb_print(stdout, "DLB", __VA_ARGS__);
 
 #define fatal_cond(cond, ...) if (cond) { fatal(__VA_ARGS__); }
 #define fatal_cond0(cond, ...) if (cond) { fatal0(__VA_ARGS__); }
@@ -80,13 +80,13 @@ extern verbose_opts_t vb_opts;
 
 #ifdef DEBUG_VERSION
 #define verbose(flag, ...) \
-    if ( flag & vb_opts & VB_API )          { print(stdout, "DLB_API", __VA_ARGS__); } \
-    else if ( flag & vb_opts & VB_MICROLB ) { print(stdout, "DLB MICROLB", __VA_ARGS__); } \
-    else if ( flag & vb_opts & VB_SHMEM )   { print(stdout, "DLB SHMEM", __VA_ARGS__); } \
-    else if ( flag & vb_opts & VB_MPI_API ) { print(stdout, "DLB MPI API", __VA_ARGS__); } \
-    else if ( flag & vb_opts & VB_MPI_INT ) { print(stdout, "DLB MPI INT", __VA_ARGS__); } \
-    else if ( flag & vb_opts & VB_STATS )   { print(stdout, "DLB STATS", __VA_ARGS__); } \
-    else if ( flag & vb_opts & VB_DROM )    { print(stdout, "DLB DROM", __VA_ARGS__); }
+    if ( flag & vb_opts & VB_API )          { vb_print(stdout, "DLB API", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_MICROLB ) { vb_print(stdout, "DLB MICROLB", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_SHMEM )   { vb_print(stdout, "DLB SHMEM", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_MPI_API ) { vb_print(stdout, "DLB MPI API", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_MPI_INT ) { vb_print(stdout, "DLB MPI INT", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_STATS )   { vb_print(stdout, "DLB STATS", __VA_ARGS__); } \
+    else if ( flag & vb_opts & VB_DROM )    { vb_print(stdout, "DLB DROM", __VA_ARGS__); }
 #else
 #define verbose(flag, ...)
 #endif

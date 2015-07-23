@@ -293,3 +293,7 @@ int shmem_stats_ext__getloadavg( int pid, double *load ) {
 #endif
     return error;
 }
+
+void shmem_stats_ext__print_info(void) {
+    puts("To be done");
+}

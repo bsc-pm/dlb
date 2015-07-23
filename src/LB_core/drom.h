@@ -33,5 +33,6 @@ int drom_ext_getnumcpus(void);
 void drom_ext_getpidlist(int *pidlist, int *nelems, int max_len);
 int drom_ext_getprocessmask(int pid, cpu_set_t *mask);
 int drom_ext_setprocessmask(int pid, const cpu_set_t *mask);
+void drom_ext_printshmem(void);
 
 #endif /* DROM_H */

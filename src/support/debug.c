@@ -61,12 +61,12 @@ void debug_init() {
     thread_id = get_thread_num();
 }
 
-void print( FILE *fp, const char *prefix, const char *fmt, ... ) {
+void vb_print( FILE *fp, const char *prefix, const char *fmt, ... ) {
     // Print prefix and object identifier
     if ( vb_fmt & VBF_THREAD ) {
         fprintf( fp, "%s[%s:%d]: ", prefix, fmt_str, thread_id );
     } else {
-        fprintf( fp, "%s[%s]", prefix, fmt_str );
+        fprintf( fp, "%s[%s]: ", prefix, fmt_str );
     }
 
     // Print va_list

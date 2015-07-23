@@ -57,3 +57,7 @@ int drom_ext_getprocessmask( int pid, cpu_set_t *mask ) {
 int drom_ext_setprocessmask( int pid, const cpu_set_t *mask ) {
     return shmem_drom_ext__setprocessmask( pid, mask );
 }
+
+void drom_ext_printshmem(void) {
+    shmem_drom_ext__print_info();
+}

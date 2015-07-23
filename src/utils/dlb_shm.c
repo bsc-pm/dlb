@@ -31,11 +31,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <getopt.h>
-#include "support/utils.h"
+#include <stdbool.h>
 #include "LB_core/DLB_interface.h"
-#include "LB_comm/shmem.h"
-#include "LB_comm/shmem_cpuarray.h"
-#include "LB_comm/shmem_drom.h"
 
 static char * created_shm_filename = NULL;
 static char * userdef_shm_filename = NULL;
@@ -76,15 +73,15 @@ void list_shdata_item( const char* shm_suffix ) {
     if ( (p = strstr(shm_suffix, "drom")) ) {
         p = p + 5;  // remove "drom_"
         setenv( "LB_SHM_KEY", p, 1);
-        shmem_drom_ext__printinfo();
+        DLB_Drom_PrintShmem();
     } else if ( (p = strstr(shm_suffix, "lewi")) ) {
         p = p + 5;  // remove "lewi_"
         setenv( "LB_SHM_KEY", p, 1);
-        shmem_mask.print_info();
+        DLB_PrintShmem();
     } else if ( (p = strstr(shm_suffix, "stats")) ) {
         p = p + 6;  // remove "stats_"
         setenv( "LB_SHM_KEY", p, 1);
-        // call print_info
+        DLB_Stats_PrintShmem();
     }
 }
 

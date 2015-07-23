@@ -154,6 +154,10 @@ int DLB_Is_auto(void);
  */
 void DLB_Update(void);
 
+/* \brief Print the data stored in the shmem
+ */
+void DLB_PrintShmem(void);
+
 /*******************************************************/
 /*    Statistics Module                                */
 /*******************************************************/
@@ -211,6 +215,10 @@ void DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
  */
 int DLB_Stats_GetLoadAvg(int pid, double *load);
 
+/* \brief Print the data stored in the Stats shmem
+ */
+void DLB_Stats_PrintShmem(void);
+
 /*******************************************************/
 /*    Dynamic Resource Manager Module                  */
 /*******************************************************/
@@ -248,6 +256,10 @@ int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
  * \return 0 on success, -1 if pid not found
  */
 int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask);
+
+/* \brief Print the data stored in the Drom shmem
+ */
+void DLB_Drom_PrintShmem(void);
 
 #ifdef __cplusplus
 }
