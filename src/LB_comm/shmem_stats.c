@@ -102,6 +102,7 @@ void shmem_stats__finalize( void ) {
     }
     shmem_unlock( shm_handler );
     shmem_finalize( shm_handler );
+    shm_handler = NULL;
 }
 
 void shmem_stats__update( void ) {
@@ -172,6 +173,7 @@ void shmem_stats_ext__init( void ) {
 
 void shmem_stats_ext__finalize( void ) {
     shmem_finalize( shm_ext_handler );
+    shm_ext_handler = NULL;
 }
 
 int shmem_stats_ext__getnumcpus( void ) {
@@ -180,6 +182,7 @@ int shmem_stats_ext__getnumcpus( void ) {
 
 void shmem_stats_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
     *nelems = 0;
+    if (shm_ext_handler == NULL) return;
     shmem_lock( shm_ext_handler );
     {
         int p;
@@ -197,8 +200,9 @@ void shmem_stats_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
 }
 
 double shmem_stats_ext__getcpuusage( int pid ) {
-    double cpu_usage = -1.0;
+    if (shm_ext_handler == NULL) return -1.0;
 
+    double cpu_usage = -1.0;
     shmem_lock( shm_ext_handler );
     {
         int p;
@@ -216,6 +220,7 @@ double shmem_stats_ext__getcpuusage( int pid ) {
 
 void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
     *nelems = 0;
+    if (shm_ext_handler == NULL) return;
     shmem_lock( shm_ext_handler );
     {
         int p;
@@ -232,6 +237,8 @@ void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_
 }
 
 int shmem_stats_ext__getactivecpus( int pid ) {
+    if (shm_ext_handler == NULL) return -1;
+
     int active_cpus = -1;
     shmem_lock( shm_ext_handler );
     {
@@ -249,6 +256,7 @@ int shmem_stats_ext__getactivecpus( int pid ) {
 
 void shmem_stats_ext__getactivecpus_list( int *cpuslist, int *nelems, int max_len ) {
     *nelems = 0;
+    if (shm_ext_handler == NULL) return;
     shmem_lock( shm_ext_handler );
     {
         int p;
@@ -265,6 +273,7 @@ void shmem_stats_ext__getactivecpus_list( int *cpuslist, int *nelems, int max_le
 }
 
 int shmem_stats_ext__getloadavg( int pid, double *load ) {
+    if (shm_ext_handler == NULL) return -1;
     int error = -1;
 #ifdef DLB_LOAD_AVERAGE
     shmem_lock( shm_ext_handler );

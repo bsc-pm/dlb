@@ -96,6 +96,7 @@ void shmem_drom__finalize( void ) {
     }
     shmem_unlock( shm_handler );
     shmem_finalize( shm_handler );
+    shm_handler = NULL;
 }
 
 void shmem_drom__update( void ) {
@@ -199,6 +200,7 @@ void shmem_drom_ext__init( void ) {
 
 void shmem_drom_ext__finalize( void ) {
     shmem_finalize( shm_ext_handler );
+    shm_ext_handler = NULL;
 }
 
 int shmem_drom_ext__getnumcpus( void ) {
@@ -207,6 +209,7 @@ int shmem_drom_ext__getnumcpus( void ) {
 
 void shmem_drom_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
     *nelems = 0;
+    if (shm_ext_handler == NULL) return;
     shmem_lock( shm_ext_handler );
     {
         int p;
@@ -224,6 +227,8 @@ void shmem_drom_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
 }
 
 int shmem_drom_ext__getprocessmask( int pid, cpu_set_t *mask ) {
+    if (shm_ext_handler == NULL) return -1;
+
     int error = -1;
     shmem_lock( shm_ext_handler );
     {
@@ -241,6 +246,8 @@ int shmem_drom_ext__getprocessmask( int pid, cpu_set_t *mask ) {
 }
 
 int shmem_drom_ext__setprocessmask( int pid, const cpu_set_t *mask ) {
+    if (shm_ext_handler == NULL) return -1;
+
     int error = -1;
     shmem_lock( shm_ext_handler );
     {
