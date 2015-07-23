@@ -63,6 +63,6 @@ void stats_ext_getactivecpus_list( int *cpuslist, int *nelems, int max_len) {
     shmem_stats_ext__getactivecpus_list(cpuslist, nelems, max_len);
 }
 
-void stats_ext_getloadavg( int pid, double *load ) {
-    shmem_stats_ext__getloadavg( pid, load );
+int stats_ext_getloadavg( int pid, double *load ) {
+    return shmem_stats_ext__getloadavg( pid, load );
 }

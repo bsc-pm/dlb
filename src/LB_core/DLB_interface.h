@@ -180,7 +180,7 @@ void DLB_Stats_GetPidList(int *pidlist,int *nelems,int max_len);
 
 /* \brief Get the CPU Usage of the given PID
  * \param[in] pid PID to consult
- * \return the CPU usage of the given PID
+ * \return the CPU usage of the given PID, or -1.0 if not found
  */
 double DLB_Stats_GetCpuUsage(int pid);
 
@@ -193,7 +193,7 @@ void DLB_Stats_GetCpuUsageList(double *usagelist,int *nelems,int max_len);
 
 /* \brief Get the number of CPUs assigned to a given process
  * \param[in] pid Process ID to consult
- * \return the number of CPUs used by a process
+ * \return the number of CPUs used by a process, or -1 if not found
  */
 int DLB_Stats_GetActiveCpus(int pid);
 
@@ -207,8 +207,9 @@ void DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
 /* \brief Get the Load Average of a given process
  * \param[in] pid Process ID to consult
  * \param[out] load[3] Load Average ( 1min 5min 15min )
+ * \return 0 success, -1 if pid not found
  */
-void DLB_Stats_GetLoadAvg(int pid, double *load);
+int DLB_Stats_GetLoadAvg(int pid, double *load);
 
 /*******************************************************/
 /*    Dynamic Resource Manager Module                  */
@@ -237,14 +238,16 @@ void DLB_Drom_GetPidList(int *pidlist, int *nelems, int max_len);
 /* \brief Get the process mask of the given PID
  * \param[in] pid Process ID to consult
  * \param[out] mask Current process mask
+ * \return 0 on success, -1 if pid not found
  */
-void DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
+int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
 
 /* \brief Set the process mask of the given PID
  * \param[in] pid Process ID to signal
  * \param[in] mask Process mask to set
+ * \return 0 on success, -1 if pid not found
  */
-void DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask);
+int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask);
 
 #ifdef __cplusplus
 }

@@ -197,7 +197,7 @@ void shmem_stats_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
 }
 
 double shmem_stats_ext__getcpuusage( int pid ) {
-    double cpu_usage = 0.0;
+    double cpu_usage = -1.0;
 
     shmem_lock( shm_ext_handler );
     {
@@ -232,7 +232,7 @@ void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_
 }
 
 int shmem_stats_ext__getactivecpus( int pid ) {
-    int active_cpus = 0;
+    int active_cpus = -1;
     shmem_lock( shm_ext_handler );
     {
         int p;
@@ -264,7 +264,8 @@ void shmem_stats_ext__getactivecpus_list( int *cpuslist, int *nelems, int max_le
     shmem_unlock( shm_ext_handler );
 }
 
-void shmem_stats_ext__getloadavg( int pid, double *load ) {
+int shmem_stats_ext__getloadavg( int pid, double *load ) {
+    int error = -1;
 #ifdef DLB_LOAD_AVERAGE
     shmem_lock( shm_ext_handler );
     {
@@ -274,10 +275,12 @@ void shmem_stats_ext__getloadavg( int pid, double *load ) {
                 load[0] = shdata->process_info[p].load[0];
                 load[1] = shdata->process_info[p].load[1];
                 load[2] = shdata->process_info[p].load[2];
+                error = 0;
                 break;
             }
         }
     }
     shmem_unlock( shm_ext_handler );
 #endif
+    return error;
 }

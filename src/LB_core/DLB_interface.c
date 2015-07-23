@@ -155,8 +155,8 @@ void DLB_Stats_GetActiveCpusList (int *cpuslist, int *nelems, int max_len) {
     stats_ext_getactivecpus_list(cpuslist, nelems, max_len);
 }
 
-void DLB_Stats_GetLoadAvg (int pid, double *load) {
-    stats_ext_getloadavg(pid, load);
+int DLB_Stats_GetLoadAvg (int pid, double *load) {
+    return stats_ext_getloadavg(pid, load);
 }
 
 // final name not decided yet
@@ -178,10 +178,10 @@ void DLB_Drom_GetPidList (int *pidlist, int *nelems, int max_len) {
     drom_ext_getpidlist(pidlist, nelems, max_len);
 }
 
-void DLB_Drom_GetProcessMask (int pid, dlb_cpu_set_t mask) {
-    drom_ext_getprocessmask( pid, (cpu_set_t*)mask);
+int DLB_Drom_GetProcessMask (int pid, dlb_cpu_set_t mask) {
+    return drom_ext_getprocessmask( pid, (cpu_set_t*)mask);
 }
 
-void DLB_Drom_SetProcessMask (int pid, const dlb_cpu_set_t mask) {
-    drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
+int DLB_Drom_SetProcessMask (int pid, const dlb_cpu_set_t mask) {
+    return drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
 }

@@ -32,6 +32,6 @@ double stats_ext_getcpuusage(int pid);
 void stats_ext_getcpuusage_list(double *usagelist,int *nelems,int max_len);
 int stats_ext_getactivecpus(int pid);
 void stats_ext_getactivecpus_list(int *cpuslist,int *nelems,int max_len);
-void stats_ext_getloadavg(int pid,double *load);
+int stats_ext_getloadavg(int pid,double *load);
 
 #endif /* STATISTICS_H */

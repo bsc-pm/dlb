@@ -223,21 +223,25 @@ void shmem_drom_ext__getpidlist( int *pidlist, int *nelems, int max_len ) {
     shmem_unlock( shm_ext_handler );
 }
 
-void shmem_drom_ext__getprocessmask( int pid, cpu_set_t *mask ) {
+int shmem_drom_ext__getprocessmask( int pid, cpu_set_t *mask ) {
+    int error = -1;
     shmem_lock( shm_ext_handler );
     {
         int p;
         for ( p = 0; p < max_processes; p++ ) {
             if ( shdata->process_info[p].pid == pid ) {
                 memcpy( mask, &(shdata->process_info[p].current_process_mask), sizeof(cpu_set_t) );
+                error = 0;
                 break;
             }
         }
     }
     shmem_unlock( shm_ext_handler );
+    return error;
 }
 
-void shmem_drom_ext__setprocessmask( int pid, const cpu_set_t *mask ) {
+int shmem_drom_ext__setprocessmask( int pid, const cpu_set_t *mask ) {
+    int error = -1;
     shmem_lock( shm_ext_handler );
     {
         int p;
@@ -245,11 +249,13 @@ void shmem_drom_ext__setprocessmask( int pid, const cpu_set_t *mask ) {
             if ( shdata->process_info[p].pid == pid ) {
                 memcpy( &(shdata->process_info[p].future_process_mask), mask, sizeof(cpu_set_t) );
                 shdata->process_info[p].dirty = true;
+                error = 0;
                 break;
             }
         }
     }
     shmem_unlock( shm_ext_handler );
+    return error;
 }
 
 
