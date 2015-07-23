@@ -24,7 +24,6 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
@@ -214,11 +213,8 @@ const char* mu_to_str ( const cpu_set_t *cpu_set ) {
     return str;
 }
 
-void mu_parse_mask( char const *env, cpu_set_t *mask ) {
+void mu_parse_mask( char *str, cpu_set_t *mask ) {
     if ( !mu_initialized ) mu_init();
-
-    char* str = getenv( env );
-    if ( !str ) { return; }
 
     regex_t regex_bitmask;
     regex_t regex_range;

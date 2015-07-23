@@ -40,6 +40,7 @@ void parse_env_string_or_die ( char const *env, char **var );
 void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode );
 void parse_env_verbose_opts ( char const *env, verbose_opts_t *mode );
 void parse_env_verbose_format ( char const *env, verbose_fmt_t *format, verbose_fmt_t default_format );
+void parse_env_cpuset ( char const *env, cpu_set_t *mask );
 
 int my_round ( double x );
 

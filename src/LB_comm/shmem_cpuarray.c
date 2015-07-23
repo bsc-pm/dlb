@@ -69,7 +69,7 @@ static inline bool is_idle( int cpu ) {
 }
 
 void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
-    mu_parse_mask( "LB_MASK", &dlb_mask );
+    parse_env_cpuset( "LB_MASK", &dlb_mask );
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
     mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
     cpus_node = mu_get_system_size();

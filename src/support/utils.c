@@ -19,6 +19,7 @@
 
 #include "utils.h"
 #include "debug.h"
+#include "mask_utils.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -132,6 +133,13 @@ void parse_env_verbose_format ( char const *env, verbose_fmt_t *format,
     }
     if ( *format == VBF_CLEAR ) {
         *format = default_format;
+    }
+}
+
+void parse_env_cpuset ( char const *env, cpu_set_t *mask ) {
+    char* str = getenv( env );
+    if ( str ) {
+        mu_parse_mask( str, mask );
     }
 }
 
