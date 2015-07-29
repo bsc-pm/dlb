@@ -36,6 +36,8 @@
 #  endif
 #endif
 
+#pragma GCC visibility push(default)
+
 #pragma pygen start
 int {MPI_NAME}({C_PARAMS}) {{
     verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
@@ -47,5 +49,7 @@ int {MPI_NAME}({C_PARAMS}) {{
 }}
 
 #pragma pygen end
+
+#pragma GCC visibility pop
 
 #endif /* MPI_LIB */

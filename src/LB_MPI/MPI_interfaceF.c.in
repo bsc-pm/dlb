@@ -38,6 +38,8 @@
 #  endif
 #endif
 
+#pragma GCC visibility push(default)
+
 #pragma pygen start
 void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
     verbose(VB_MPI_API, ">> {MPI_NAME}...............");
@@ -61,5 +63,6 @@ void dlb_mpi_node_barrier_ (void)  {
     }
 }
 
+#pragma GCC visibility pop
 
 #endif /* MPI_LIB */

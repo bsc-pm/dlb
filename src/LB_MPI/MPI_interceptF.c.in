@@ -40,6 +40,8 @@
 void p{MPI_LCASE}({F_PARAMS});
 #pragma pygen end
 
+#pragma GCC visibility push(default)
+
 // mpi intercept
 #pragma pygen start
 void {MPI_LCASE}({F_PARAMS}) {{
@@ -53,5 +55,7 @@ void {MPI_LCASE}_ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
 void {MPI_LCASE}__ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
 
 #pragma pygen end
+
+#pragma GCC visibility pop
 
 #endif /* MPI_LIB */

@@ -155,10 +155,12 @@ AC_DEFUN([AX_PROG_MPITESTS],
         AC_MSG_CHECKING([for mpirun binding options])
         AS_IF([${MPICC} conftest.c -o conftest],
         [
-            AS_IF([${MPIRUN} -n 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD],
+            AS_IF([${MPIRUN} -n 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
                     [MPIRUN_BIND="--bind-to-core"],
-                [${MPIRUN} -n 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD],
+                [${MPIRUN} -n 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
                     [MPIRUN_BIND="--bind-to core"],
+                [${MPIRUN} -n 2 --bind-to hwthread ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
+                    [MPIRUN_BIND="--bind-to hwthread"],
                 [MPIRUN_BIND="none found"]
             )
         ])

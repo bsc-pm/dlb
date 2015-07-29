@@ -21,6 +21,8 @@
 #include "support/dlb_api.h"
 #include "support/debug.h"
 
+#pragma GCC visibility push(default)
+
 void dlb_init (void) {
     DLB_Init();
 }
@@ -189,3 +191,5 @@ void dlb_drom_setprocessmask (int *pid, const dlb_cpu_set_t mask) {
     fatal0("Cpu mask functions not implemented in Fortran");
 }
 DLB_API_F_ALIAS( dlb_drom_setprocessmask, (int*, dlb_cpu_set_t) );
+
+#pragma GCC visibility pop

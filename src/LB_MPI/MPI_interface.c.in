@@ -23,12 +23,11 @@
 
 #ifdef MPI_LIB
 
+#include <mpi.h>
 #include "LB_MPI/process_MPI.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_MPI/MPI_interface.h"
-#include "support/dlb_api.h"
 #include "support/debug.h"
-#include <mpi.h>
 
 #ifndef MPI3_CONST
 #  if MPI_VERSION >= 3
@@ -38,14 +37,15 @@
 #  endif
 #endif
 
+#pragma GCC visibility push(default)
 
 #pragma pygen start
-DLB_API_DEF(void, DLB_{MPI_NAME}_enter, dlb_{MPI_LCASE}_enter, ({C_PARAMS})) {{
+void DLB_{MPI_NAME}_enter({C_PARAMS}) {{
     verbose(VB_MPI_API, ">> {MPI_NAME}...............");
     {BEFORE_FUNC};
 }}
 
-DLB_API_DEF(void, DLB_{MPI_NAME}_leave, dlb_{MPI_LCASE}_leave, (void)) {{
+void DLB_{MPI_NAME}_leave(void) {{
     verbose(VB_MPI_API, "<< {MPI_NAME}...............");
     {AFTER_FUNC};
 }}
@@ -58,5 +58,7 @@ void DLB_MPI_node_barrier (void) {
         MPI_Barrier(mpi_comm_node);
     }
 }
+
+#pragma GCC visibility pop
 
 #endif /* MPI_LIB */
