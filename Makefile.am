@@ -322,7 +322,7 @@ endif #MPI_LIB
 ##########################################################################
 # Support binaries
 ##########################################################################
-bin_PROGRAMS = dlb dlb_shm
+bin_PROGRAMS = dlb dlb_shm dlb_taskset
 
 dlb_SOURCES = src/utils/dlb.c
 dlb_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
@@ -330,6 +330,10 @@ dlb_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_shm_SOURCES = src/utils/dlb_shm.c
 dlb_shm_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_shm_LDADD = libdlb.la
+
+dlb_taskset_SOURCES = src/utils/dlb_taskset.c
+dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+dlb_taskset_LDADD = libdlb.la
 
 ##########################################################################
 # doc                                                                  ###

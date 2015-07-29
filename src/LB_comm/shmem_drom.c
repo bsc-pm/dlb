@@ -138,6 +138,7 @@ void shmem_drom__update( void ) {
                     shdata->process_info[my_process].dirty = false;
                 }
                 // Set final mask
+                verbose(VB_DROM, "Setting new mask: %s", mu_to_str(&next_mask) );
                 int error = set_process_mask( &next_mask );
                 // On error, update local mask and steal again from other processes
                 if ( error ) {
@@ -181,6 +182,7 @@ static bool steal_cpu( int cpu, int processor ) {
                 sizeof(cpu_set_t) );
         CPU_CLR( cpu, &(shdata->process_info[processor].future_process_mask) );
         shdata->process_info[processor].dirty = true;
+        verbose(VB_DROM, "Process %d stole CPU %d", processor, cpu );
     }
     return true;
 }
