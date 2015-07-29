@@ -10,6 +10,8 @@ PERFO_CXXFLAGS=@PERFO_CXXFLAGS@
 DEBUG_CFLAGS=@DEBUG_CFLAGS@
 DEBUG_CXXFLAGS=@DEBUG_CXXFLAGS@
 
+HWLOC_LDFLAGS="@HWLOC_LDFLAGS@ @HWLOC_LIBS@"
+
 common_includes="-I\$SRC -I\$SRC/LB_numThreads -I\$SRC/LB_policies -I\$SRC/LB_MPI -I\$SRC/LB_comm -I\$SRC/LB_core -I\$SRC/support"
 
 compile_versions=@COMPILE_VERSIONS@
@@ -29,10 +31,10 @@ test_CXXFLAGS_instrumentation="\$INSTR_CXXFLAGS"
 test_CFLAGS_instrumentation_debug="\$INSTRDEBUG_CFLAGS"
 test_CXXFLAGS_instrumentation_debug="\$INSTRDEBUG_CXXFLAGS"
 
-test_LDFLAGS_performance="\$BUILD/.libs/libdlb.so"
+test_LDFLAGS_performance="\$BUILD/.libs/libdlb.a \$HWLOC_LDFLAGS -lrt"
 test_ENV_performance="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
-test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.so"
+test_LDFLAGS_debug="\$BUILD/.libs/libdlb_dbg.a \$HWLOC_LDFLAGS -lrt"
 test_ENV_debug="LD_LIBRARY_PATH=\$BUILD/.libs:$LD_LIBRARY_PATH"
 
 

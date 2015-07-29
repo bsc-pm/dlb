@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "support/utils.h"
 #include "support/mask_utils.h"
 
 int main( int argc, char **argv ) {
@@ -33,7 +34,7 @@ int main( int argc, char **argv ) {
     setenv("LB_MASK", "0-1,3,5-7", 1);
 
     cpu_set_t lb_mask;
-    mu_parse_mask( "LB_MASK", &lb_mask );
+    parse_env_cpuset( "LB_MASK", &lb_mask );
     fprintf( stdout, "LB Mask: %s\n", mu_to_str(&lb_mask) );
 
     mu_finalize();
