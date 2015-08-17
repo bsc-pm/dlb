@@ -120,20 +120,20 @@ static void mu_parse_mask( char *str, cpu_set_t *mask ) {
 }
 
 static void print_usage( const char * program ) {
-    fprintf( stdout, "usage: %s OPTION [OPTION]...\n", program );
+    fprintf( stdout, "usage: %s -p PID [-c CPU_LIST]\n", program );
     fprintf( stdout, "Try '%s --help' for more information.\n", program );
 }
 
 static void print_help( const char * program ) {
     fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
-    fprintf( stdout, "usage: %s PID [CPU-LIST]\n", program );
+    fprintf( stdout, "usage: %s -p PID [-c CPU_LIST]\n", program );
     fprintf( stdout, "\n" );
     fprintf( stdout, "Show or change the CPU affinity of a DLB process.\n" );
     fprintf( stdout, "\n" );
     fprintf( stdout, "Options:\n" );
-    fprintf( stdout, "  -p, --pid          operate on existing given pid\n" );
-    fprintf( stdout, "  -c, --cpu-list     change affinity according to list format\n" );
-    fprintf( stdout, "  -h, --help         print this help\n" );
+    fprintf( stdout, "  -p, --pid       operate on existing given pid\n" );
+    fprintf( stdout, "  -c, --cpu-list  change affinity according to cpu list (e.g., -c 0,5-7)\n" );
+    fprintf( stdout, "  -h, --help      print this help\n" );
 }
 
 
