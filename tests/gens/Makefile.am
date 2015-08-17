@@ -51,7 +51,7 @@ basic-generator: basic-generator.in
 		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@HWLOC_LDFLAGS\@,"$(HWLOC_LDFLAGS)",g' \
+		-e's,@HWLOC_LIBSDIR\@,"$(HWLOC_LIBSDIR)",g' \
 		-e's,@HWLOC_LIBS\@,"$(HWLOC_LIBS)",g' \
 		-e's,@CONFIG_CC\@,"$(CC)",g' \
 		-e's,@CONFIG_CXX\@,"$(CXX)",g' \
@@ -69,7 +69,7 @@ mpi-generator: mpi-generator.in
 		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
 		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
 		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@HWLOC_LDFLAGS\@,"$(HWLOC_LDFLAGS)",g' \
+		-e's,@HWLOC_LIBSDIR\@,"$(HWLOC_LIBSDIR)",g' \
 		-e's,@HWLOC_LIBS\@,"$(HWLOC_LIBS)",g' \
 		-e's,@CONFIG_CC\@,"$(MPICC)",g' \
 		-e's,@CONFIG_CXX\@,"mpicxx",g' \
