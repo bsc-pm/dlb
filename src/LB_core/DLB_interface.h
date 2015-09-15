@@ -134,6 +134,13 @@ void DLB_ClaimCpus(int cpus);
  */
 void DLB_AcquireCpu(int cpu);
 
+/* \brief Try to acquire a set of CPUs
+ * \param[in] mask CPU set to acquire
+ *
+ * Whenever is possible, DLB will assign the specified CPUs to the current process
+ */
+void DLB_AcquireCpus(dlb_cpu_set_t mask);
+
 /* \brief Check current status of a CPU
  * \param[in] cpu CPU to be checked
  * \return True if the CPU is not being used by anyone else

@@ -153,6 +153,7 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &Lend_light_resetDLB;
             lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.acquirecpus = &dummyFunc;
             lb_funcs.disableDLB = &Lend_light_disableDLB;
             lb_funcs.enableDLB = &Lend_light_enableDLB;
             lb_funcs.single = &Lend_light_single;
@@ -175,6 +176,7 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB= &notImplemented;
             lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.acquirecpus = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
@@ -199,6 +201,7 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB= &notImplemented;
             lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.acquirecpus = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
@@ -221,6 +224,7 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB  = &lewi_mask_resetDLB;
             lb_funcs.acquirecpu = &lewi_mask_acquireCpu;
+            lb_funcs.acquirecpus = &lewi_mask_acquireCpus;
             lb_funcs.disableDLB = &lewi_mask_disableDLB;
             lb_funcs.enableDLB = &lewi_mask_enableDLB;
             lb_funcs.single = &lewi_mask_single;
@@ -244,6 +248,7 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &auto_lewi_mask_CheckCpuAvailability;
             lb_funcs.resetDLB = &auto_lewi_mask_resetDLB;
             lb_funcs.acquirecpu = &auto_lewi_mask_acquireCpu;
+            lb_funcs.acquirecpus = &auto_lewi_mask_acquireCpus;
             lb_funcs.disableDLB = &auto_lewi_mask_disableDLB;
             lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
             lb_funcs.single = &auto_lewi_mask_single;
@@ -281,6 +286,7 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &notImplemented;
             lb_funcs.acquirecpu = &notImplemented;
+            lb_funcs.acquirecpus = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
@@ -305,6 +311,7 @@ int Initialize(void) {
             lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &dummyFunc;
             lb_funcs.acquirecpu = &dummyFunc;
+            lb_funcs.acquirecpus = &dummyFunc;
             lb_funcs.disableDLB = &dummyFunc;
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
@@ -533,10 +540,18 @@ void claimcpus( int cpus ) {
     }
 }
 
-void acquirecpu (int cpu){
+void acquirecpu(int cpu){
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE_CPU);
         lb_funcs.acquirecpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+}
+
+void acquirecpus(cpu_set_t* mask){
+    if (dlb_enabled) {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE_CPU);
+        lb_funcs.acquirecpus(mask);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
