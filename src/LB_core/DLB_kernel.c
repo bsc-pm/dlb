@@ -381,6 +381,14 @@ int Initialize(void) {
             info0 ( "LEND mode set to BLOCKING. I will lend all "
                     "the resources when in an MPI call" );
 
+        verbose(VB_API, "Enabled verbose mode for DLB API");
+        verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
+        verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
+        verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
+        verbose(VB_DROM, "Enabled verbose mode for DROM");
+        verbose(VB_STATS, "Enabled verbose mode for STATS");
+        verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+
 #if IS_BGQ_MACHINE
         int bg_threadmodel;
         parse_env_int( "BG_THREADMODEL", &bg_threadmodel );
