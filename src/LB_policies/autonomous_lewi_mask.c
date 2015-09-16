@@ -140,8 +140,6 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
         if (enabled && !single){
             get_mask( &mask );
 
-            if (!CPU_ISSET(my_cpu, &mask)){
-
                 if( shmem_mask.acquire_cpu(my_cpu, 1) ){
                     nthreads ++;
                     add_event( THREADS_USED_EVENT, nthreads );
@@ -150,7 +148,6 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
                     set_mask( &mask );
                     verbose(VB_MICROLB, "Can't recover cpu, remove from Mask, new mask: %s", mu_to_str(&mask));
                 }
-            }
         }
         pthread_mutex_unlock(&mutex);
     }
