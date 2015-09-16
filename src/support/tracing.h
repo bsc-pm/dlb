@@ -31,14 +31,15 @@
 #define EVENT_RETURN_CPU  8
 #define EVENT_LEND        9
 #define EVENT_RETRIEVE    10
+#define EVENT_RESET       11
+#define EVENT_ACQUIRE_CPU 12
+
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040
 #define DLB_MODE_EVENT     800050
 #define EVENT_ENABLED        1
 #define EVENT_DISABLED       2
 #define EVENT_SINGLE         3
-#define EVENT_RESET          11
-#define EVENT_ACQUIRE_CPU    12
 
 /*************************************/
 
