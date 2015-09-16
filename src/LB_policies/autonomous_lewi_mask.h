@@ -20,6 +20,9 @@
 #ifndef AUTO_LEWI_MASK_H
 #define AUTO_LEWI_MASK_H
 
+#define _GNU_SOURCE
+#include <sched.h>
+
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
 void auto_lewi_mask_Init( /* TODO: should be void */ );
@@ -50,6 +53,8 @@ int auto_lewi_mask_CheckCpuAvailability ( int cpu );
 void auto_lewi_mask_resetDLB( void );
 
 void auto_lewi_mask_acquireCpu( int cpu );
+
+void auto_lewi_mask_acquireCpus( cpu_set_t* cpus );
 
 void auto_lewi_mask_disableDLB ( void );
 

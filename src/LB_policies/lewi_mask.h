@@ -20,6 +20,9 @@
 #ifndef LEWI_MASK_H
 #define LEWI_MASK_H
 
+#define _GNU_SOURCE
+#include <sched.h>
+
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
 void lewi_mask_Init( void );
@@ -41,6 +44,8 @@ void lewi_mask_ReturnClaimedCpus( void );
 void lewi_mask_ClaimCpus( int cpus );
 
 void lewi_mask_acquireCpu( int cpu );
+
+void lewi_mask_acquireCpus(cpu_set_t* cpus);
 
 void lewi_mask_resetDLB( void );
 

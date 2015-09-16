@@ -20,6 +20,8 @@
 #ifndef DLB_KERNEL_H
 #define DLB_KERNEL_H
 
+#define _GNU_SOURCE
+#include <sched.h>
 #include <stdbool.h>
 
 typedef struct {
@@ -37,6 +39,7 @@ typedef struct {
     int (*returnclaimedcpu) (int cpu);
     void (*claimcpus) (int cpus);
     void (*acquirecpu) (int cpu);
+    void (*acquirecpus) (cpu_set_t* mask);
     int (*checkCpuAvailability) (int cpu);
     void (*resetDLB) (void);
     void (*disableDLB)(void);
@@ -81,11 +84,13 @@ int checkCpuAvailability ( int cpu );
 
 int tracing_ready();
 
-void resetDLB ();
+void resetDLB();
 
-int is_auto( void );
+int is_auto(void);
 
-void acquirecpu (int cpu);
+void acquirecpu(int cpu);
+
+void acquirecpus(cpu_set_t* mask);
 
 void singlemode(void);
 

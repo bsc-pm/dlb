@@ -322,7 +322,7 @@ void auto_lewi_mask_acquireCpu(int cpu){
         if (!CPU_ISSET(cpu, &mask)){
 
             if( shmem_mask.acquire_cpu(cpu, 0) ){
-                nthreads ++;
+                nthreads++;
                 CPU_SET(cpu, &mask);
                 set_mask( &mask );
                 verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&mask));
@@ -330,6 +330,38 @@ void auto_lewi_mask_acquireCpu(int cpu){
             }else{
                 verbose(VB_MICROLB, "Not legally acquired cpu %d, running anyway",cpu);
             }
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
+
+void auto_lewi_mask_acquireCpus(cpu_set_t* cpus){
+
+    pthread_mutex_lock(&mutex);
+    if (enabled && !single){
+        verbose(VB_MICROLB, "AcquireCpu %s", mu_to_str(cpus));
+        cpu_set_t current_mask;
+        get_mask( &current_mask );
+
+        bool success = false;
+        int cpu;
+        for (cpu = 0; cpu < mu_get_system_size(); ++cpu) {
+            if (!CPU_ISSET(cpu, &current_mask)
+                    && CPU_ISSET(cpu, cpus)){
+
+                if( shmem_mask.acquire_cpu(cpu, 0) ){
+                    nthreads++;
+                    CPU_SET(cpu, &current_mask);
+                    success = true;
+                }else{
+                    verbose(VB_MICROLB, "Not legally acquired cpu %d, running anyway",cpu);
+                }
+            }
+        }
+        if (success) {
+            set_mask( &current_mask );
+            verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
+            add_event( THREADS_USED_EVENT, nthreads );
         }
     }
     pthread_mutex_unlock(&mutex);

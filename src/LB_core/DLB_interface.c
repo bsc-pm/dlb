@@ -123,6 +123,10 @@ void DLB_AcquireCpu (int cpu) {
     acquirecpu(cpu);
 }
 
+void DLB_AcquireCpus(dlb_cpu_set_t mask) {
+    acquirecpus(mask);
+}
+
 void DLB_PrintShmem(void) {
     printShmem();
 }
