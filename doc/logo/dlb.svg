@@ -14,7 +14,7 @@
    height="86.481918"
    id="svg2"
    version="1.1"
-   inkscape:version="0.48.3.1 r9886"
+   inkscape:version="0.48.4 r9939"
    sodipodi:docname="dlb.svg"
    inkscape:export-filename="/home/roger/Imatges/dlb.png"
    inkscape:export-xdpi="695.21997"
@@ -442,9 +442,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="4.0202791"
-     inkscape:cx="113.36459"
-     inkscape:cy="29.869727"
+     inkscape:zoom="2.8427666"
+     inkscape:cx="120.05894"
+     inkscape:cy="35.138361"
      inkscape:document-units="px"
      inkscape:current-layer="capa1"
      showgrid="false"
@@ -452,7 +452,7 @@
      inkscape:guide-bbox="true"
      inkscape:window-width="1680"
      inkscape:window-height="995"
-     inkscape:window-x="-2"
+     inkscape:window-x="1364"
      inkscape:window-y="-3"
      inkscape:window-maximized="1"
      fit-margin-top="4"
@@ -602,7 +602,7 @@
        id="path3852"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cczcccscccccsccccscccccczccccc"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997" />
     <path
@@ -612,7 +612,7 @@
        style="fill:#0184b4;fill-opacity:1;stroke:none"
        id="path4789"
        d="m 146.34375,114.6875 c -1.10736,-3.9e-4 -3.19442,0.45138 -4.875,0.9375 -1.17477,0.33981 -1.59559,0.51397 -2.09375,0.6875 l -0.0625,6.96875 c -0.0164,1.60139 -1.27341,2.85882 -2.875,2.875 0,0 -6.48792,0.0241 -12.8125,2.6875 -3.17683,1.33784 -6.20551,3.25389 -8.4375,6.0625 -2.23199,2.80861 -3.71875,6.53283 -3.71875,11.84375 0,5.30572 1.4849,8.71852 3.65625,11.25 2.16256,2.52122 5.11997,4.14725 8.25,5.15625 6.26018,2.01804 12.78125,1.4375 12.78125,1.4375 a 1.3704724,1.3704724 0 0 1 0.0312,0 c 0.0761,-0.004 0.17387,-0.002 0.25,0 0.0285,7.5e-4 0.0652,-0.002 0.0937,0 l 28.375,0 13.125,0 5.5625,0 28.5,0 0.0937,0 c 0.0761,-0.002 0.17392,-0.004 0.25,0 a 1.3704724,1.3704724 0 0 1 0.0312,0 c 0,0 6.52107,0.58054 12.78125,-1.4375 3.13003,-1.009 6.08744,-2.63503 8.25,-5.15625 2.17135,-2.53148 3.65625,-5.94428 3.65625,-11.25 0,-5.31092 -1.48676,-9.03514 -3.71875,-11.84375 -2.23199,-2.80861 -5.26067,-4.72466 -8.4375,-6.0625 -6.32458,-2.66344 -12.8125,-2.6875 -12.8125,-2.6875 -1.60139,-0.0164 -2.85882,-1.27341 -2.875,-2.875 l 0,-6.1875 c -1.13438,-0.23045 -4.29727,-0.8854 -6.25,-1.03125 -1.83916,-0.13737 -4.7205,0.003 -6,0.0625 l -0.125,25.34375 c -0.0164,1.60139 -1.27341,2.85882 -2.875,2.875 l -10.46875,0 c -1.60139,-0.0164 -2.85882,-1.27341 -2.875,-2.875 l 0.125,-23.4375 c -1.8439,0.42947 -5.17315,1.15679 -7.84375,1.1875 -1.6565,0.019 -3.59111,-0.30974 -5,-0.59375 l -0.21875,22.84375 c -0.0164,1.60139 -1.27341,2.85882 -2.875,2.875 l -10.34375,0 c -1.60139,-0.0164 -2.85882,-1.27341 -2.875,-2.875 l 0,-25.5625 c -0.43012,-0.14626 -0.66221,-0.22895 -1.5,-0.46875 -1.34365,-0.38459 -3.00717,-0.7497 -3.84375,-0.75 z"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997" />
     <path
@@ -621,7 +621,7 @@
        id="path4063"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cccszczsc"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997" />
     <path
@@ -630,7 +630,7 @@
        id="path4089"
        d="m 172.62371,120.57391 -2.98805,-0.49559 -0.037,22.116 2.86719,-0.0694 z"
        style="fill:url(#linearGradient4091);fill-opacity:1;stroke:none"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997" />
     <path
@@ -641,11 +641,11 @@
        sodipodi:nodetypes="ccsszaaczsscc"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png" />
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png" />
     <g
        id="g4913"
        transform="matrix(0.28131543,0,0,0.28131543,94.525789,91.002953)"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -668,7 +668,7 @@
     <g
        transform="matrix(0.46185333,0,0,0.46185333,69.372666,81.639445)"
        id="g4919"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -691,7 +691,7 @@
     <g
        id="g4927"
        transform="matrix(0.28131543,0,0,0.28131543,98.747029,86.869656)"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -714,7 +714,7 @@
     <g
        transform="matrix(0.55212228,0,0,0.55212228,83.379917,76.195091)"
        id="g4935"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -737,7 +737,7 @@
     <g
        transform="matrix(0.37158438,0,0,0.37158438,108.11083,91.802517)"
        id="g4943"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -760,7 +760,7 @@
     <g
        id="g4951"
        transform="matrix(0.55212228,0,0,0.55212228,107.01128,72.956307)"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -783,7 +783,7 @@
     <g
        transform="matrix(0.28131543,0,0,0.28131543,156.78909,94.696538)"
        id="g4959"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -806,7 +806,7 @@
     <g
        transform="matrix(0.28131543,0,0,0.28131543,159.60323,90.035586)"
        id="g4967"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997">
       <path
@@ -840,45 +840,12 @@
          y="98.918869" /></text>
     <text
        xml:space="preserve"
-       style="font-size:43.12865829px;font-style:normal;font-weight:normal;line-height:79.00000215%;letter-spacing:0px;word-spacing:0px;fill:#004455;fill-opacity:1;stroke:none;font-family:Sans"
-       x="69.888931"
-       y="223.47911"
-       id="text3112"
-       sodipodi:linespacing="79.000002%"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo2.png"
-       inkscape:export-xdpi="695.21997"
-       inkscape:export-ydpi="695.21997"><tspan
-         sodipodi:role="line"
-         id="tspan3114"
-         x="69.888931"
-         y="223.47911"
-         style="font-size:30.19006157px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:79.00000215%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"><tspan
-   style="font-size:34.50292587px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:79.00000215%;writing-mode:lr-tb;text-anchor:start;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold"
-   id="tspan3120">d</tspan>ynamic</tspan><tspan
-         sodipodi:role="line"
-         x="69.888931"
-         y="250.95419"
-         id="tspan3116"
-         style="font-size:30.19006157px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:79.00000215%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"
-         dx="0 -2.6819446 -0.53638887 -0.26819444"><tspan
-   style="font-size:34.50292587px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:79.00000215%;writing-mode:lr-tb;text-anchor:start;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold"
-   id="tspan3124">l</tspan>oad</tspan><tspan
-         sodipodi:role="line"
-         x="69.888931"
-         y="278.42926"
-         id="tspan3118"
-         style="font-size:30.19006157px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:79.00000215%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"
-         dx="0 -0.53638887"><tspan
-   style="font-size:34.50292587px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:79.00000215%;writing-mode:lr-tb;text-anchor:start;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold"
-   id="tspan3126">b</tspan>alancing</tspan></text>
-    <text
-       xml:space="preserve"
        style="font-size:43.12865829px;font-style:normal;font-weight:normal;line-height:80.00000119%;letter-spacing:0px;word-spacing:0px;fill:#004455;fill-opacity:1;stroke:none;font-family:Sans"
        x="236.89742"
        y="111.87447"
        id="text3112-7"
        sodipodi:linespacing="74%"
-       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo3.png"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
        inkscape:export-xdpi="695.21997"
        inkscape:export-ydpi="695.21997"><tspan
          sodipodi:role="line"
@@ -906,5 +873,46 @@
    style="font-size:34.50292586999999855px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#0184b4;stroke:#004455;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold"
    id="tspan3126-5"
    dx="10.198298">b</tspan>alancing</tspan></text>
+    <text
+       inkscape:export-ydpi="695.21997"
+       inkscape:export-xdpi="695.21997"
+       inkscape:export-filename="/home/martag/DLB/logo/dlb_logo_white.png"
+       sodipodi:linespacing="74%"
+       id="text3127"
+       y="111.87447"
+       x="236.89742"
+       style="font-size:43.12865829px;font-style:normal;font-weight:normal;line-height:80.00000119%;letter-spacing:0px;word-spacing:0px;fill:#004455;fill-opacity:1;stroke:none;font-family:Sans"
+       xml:space="preserve"><tspan
+         style="font-size:30.19006157000000101px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"
+         y="111.87447"
+         x="236.89742"
+         id="tspan3129"
+         sodipodi:role="line"><tspan
+           id="tspan3131"
+           style="font-size:34.50292586999999855px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#0184b4;stroke:#004455;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold">d</tspan><tspan
+           style="fill:#ffffff;fill-opacity:1"
+           id="tspan3913">ynamic</tspan></tspan><tspan
+         dx="0 -2.6819446 -0.53638887 -0.26819444"
+         style="font-size:30.19006157000000101px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"
+         id="tspan3133"
+         y="139.69734"
+         x="236.89742"
+         sodipodi:role="line"><tspan
+           dx="4.9747791"
+           id="tspan3135"
+           style="font-size:34.50292586999999855px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#0184b4;stroke:#004455;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold">l</tspan><tspan
+           style="fill:#ffffff;fill-opacity:1"
+           id="tspan3915">oad</tspan></tspan><tspan
+         dx="0 -0.53638887"
+         style="font-size:30.19006157000000101px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#004455;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"
+         id="tspan3137"
+         y="167.52022"
+         x="236.89742"
+         sodipodi:role="line"><tspan
+           dx="10.198298"
+           id="tspan3139"
+           style="font-size:34.50292586999999855px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:74%;writing-mode:lr-tb;text-anchor:start;fill:#0184b4;stroke:#004455;font-family:Courier 10 Pitch;-inkscape-font-specification:Courier 10 Pitch Bold">b</tspan><tspan
+           style="fill:#ffffff;fill-opacity:1"
+           id="tspan3919">alancing</tspan></tspan></text>
   </g>
 </svg>
