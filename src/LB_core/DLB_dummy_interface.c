@@ -19,6 +19,8 @@
 
 #include "support/dlb_api.h"
 
+#pragma GCC visibility push(default)
+
 DLB_API_DEF( void, DLB_Init, dlb_init, (void) ) {}
 DLB_API_DEF( void, DLB_Finalize, dlb_finalize, (void) ) {}
 DLB_API_DEF( void, DLB_enable, dlb_enable, (void) ) {}
@@ -38,3 +40,5 @@ DLB_API_DEF( void, DLB_Update, dlb_update, (void) ) {}
 DLB_API_DEF( void, DLB_AcquireCpu, dlb_acquirecpu, (void) ) {}
 
 DLB_API_DEF( void, DLB_MPI_node_barrier, dlb_mpi_node_barrier, (void) ) {}
+
+#pragma GCC visibility pop
