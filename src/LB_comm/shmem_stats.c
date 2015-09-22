@@ -20,7 +20,6 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <unistd.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/resource.h>
 
@@ -32,8 +31,8 @@
 
 #define NOBODY 0
 #define ME getpid()
-static const long UPDATE_USAGE_MIN_THRESHOLD = 100000L;         // 100ms
-static const long UPDATE_LOADAVG_MIN_THRESHOLD = 1000000L;      // 1s
+static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
+static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
 static const double LOG2E = 1.44269504088896340736;
 
 typedef pid_t spid_t;  // Sub-process ID
@@ -43,12 +42,12 @@ typedef struct {
     unsigned int active_cpus;
     // Cpu Usage fields:
     double cpu_usage;
-    struct timeval last_ttime;  // Total time
-    struct timeval last_utime;  // Useful time (user+system)
+    struct timespec last_ttime; // Total time
+    struct timespec last_utime; // Useful time (user+system)
 #ifdef DLB_LOAD_AVERAGE
     // Load average fields:
     float load[3];              // 1min, 5min, 15mins
-    struct timeval last_ltime;  // Last time that Load was updated
+    struct timespec last_ltime; // Last time that Load was updated
 #endif
 } pinfo_t;
 
@@ -110,10 +109,10 @@ void shmem_stats__update( void ) {
     if (shm_handler == NULL || shdata == NULL) return;
 
     // Do not update if the elapsed total time is less than a predefined threshold
-    struct timeval time;
-    long long elapsed;
-    gettimeofday( &time, NULL );
-    elapsed = timeval_diff( &shdata->process_info[my_process].last_ttime, &time );
+    struct timespec now;
+    int64_t elapsed;
+    get_time_coarse( &now );
+    elapsed = timespec_diff( &shdata->process_info[my_process].last_ttime, &now );
     if ( elapsed < UPDATE_USAGE_MIN_THRESHOLD )
         return;
 
@@ -125,24 +124,24 @@ void shmem_stats__update( void ) {
         shdata->process_info[my_process].active_cpus = CPU_COUNT( &mask );
 
         // Compute elapsed total time
-        struct timeval current_ttime;
-        long long elapsed_ttime;
-        gettimeofday( &current_ttime, NULL );
-        elapsed_ttime = timeval_diff( &shdata->process_info[my_process].last_ttime, &current_ttime );
+        struct timespec current_ttime;
+        int64_t elapsed_ttime;
+        get_time_coarse( &current_ttime );
+        elapsed_ttime = timespec_diff( &shdata->process_info[my_process].last_ttime, &current_ttime );
 
         // Compute elapsed useful time (user+system)
         struct rusage usage;
-        struct timeval current_utime;
-        long long elapsed_utime;
+        struct timespec current_utime;
+        int64_t elapsed_utime;
         getrusage( RUSAGE_SELF, &usage );
-        timeradd( &usage.ru_utime, &usage.ru_stime, &current_utime );
-        elapsed_utime = timeval_diff( &shdata->process_info[my_process].last_utime, &current_utime );
+        add_tv_to_ts( &usage.ru_utime, &usage.ru_stime, &current_utime );
+        elapsed_utime = timespec_diff( &shdata->process_info[my_process].last_utime, &current_utime );
 
         // Update times for next update
         shdata->process_info[my_process].last_ttime = current_ttime;
         shdata->process_info[my_process].last_utime = current_utime;
 
-        // Compute and store usage value
+        // Compute and save usage value
         double cpu_usage = 100 * (double)elapsed_utime / (double)elapsed_ttime;
         shdata->process_info[my_process].cpu_usage = cpu_usage;
 

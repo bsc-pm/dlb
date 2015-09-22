@@ -17,8 +17,19 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <time.h>
-#include <sys/time.h>
+#include "support/mytime.h"
+
+void get_time( struct timespec *t ) {
+    clock_gettime( CLOCK_MONOTONIC, t);
+}
+
+void get_time_coarse( struct timespec *t ) {
+#ifdef CLOCK_MONOTONIC_COARSE
+    clock_gettime( CLOCK_MONOTONIC_COARSE, t);
+#else
+    clock_gettime( CLOCK_MONOTONIC, t);
+#endif
+}
 
 int diff_time( struct timespec init, struct timespec end, struct timespec* diff ) {
     if ( init.tv_sec > end.tv_sec ) {
@@ -76,7 +87,26 @@ double to_secs( struct timespec t1 ) {
     return secs;
 }
 
-long timeval_diff( const struct timeval *init, const struct timeval *end ) {
-    return (long)(end->tv_sec - init->tv_sec)*1000000L +
-        (long)(end->tv_usec - init->tv_usec);
+// Return timeval diff in us
+int64_t timeval_diff( const struct timeval *init, const struct timeval *end ) {
+    return (int64_t)(end->tv_sec - init->tv_sec) * 1000000L +
+        (int64_t)(end->tv_usec - init->tv_usec);
+}
+
+// Return timespec diff in ns
+int64_t timespec_diff( const struct timespec *init, const struct timespec *end ) {
+    return (int64_t)(end->tv_sec - init->tv_sec) * 1000000000L +
+        (int64_t)(end->tv_nsec - init->tv_nsec);
+}
+
+void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2,
+                    struct timespec *res ) {
+    long sec = t2->tv_sec + t1->tv_sec;
+    long nsec = (t2->tv_usec + t1->tv_usec) * 1000L;
+    if (nsec >= 1000000000L) {
+        nsec -= 1000000000L;
+        sec++;
+    }
+    res->tv_sec = sec;
+    res->tv_nsec = nsec;
 }
