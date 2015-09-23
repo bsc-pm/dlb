@@ -113,9 +113,8 @@ def main(argv):
         sys.exit()
 
     # Read JSON file
-    json_data = open(jsonfile)
-    mpi_calls = json.load(json_data)['mpi_calls']
-    json_data.close()
+    with open(jsonfile, 'r') as json_data:
+        mpi_calls = json.load(json_data)['mpi_calls']
     enrich(mpi_calls)
 
     # Parse input file
