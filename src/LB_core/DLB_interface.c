@@ -173,6 +173,18 @@ int DLB_Stats_GetLoadAvg (int pid, double *load) {
     return stats_ext_getloadavg(pid, load);
 }
 
+float DLB_Stats_GetCpuStateIdle( int cpu ) {
+    return stats_ext_getcpustateidle(cpu);
+}
+
+float DLB_Stats_GetCpuStateOwned( int cpu ) {
+    return stats_ext_getcpustateowned(cpu);
+}
+
+float DLB_Stats_GetCpuStateGuested( int cpu ) {
+    return stats_ext_getcpustateowned(cpu);
+}
+
 void DLB_Stats_PrintShmem(void) {
     stats_ext_printshmem();
 }

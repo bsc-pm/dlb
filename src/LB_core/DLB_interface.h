@@ -227,6 +227,24 @@ void DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
  */
 int DLB_Stats_GetLoadAvg(int pid, double *load);
 
+/* \brief Get the percentage of time that the CPU has been in state IDLE
+ * \param[in] cpu CPU id
+ * \return percentage of state/total
+ */
+float DLB_Stats_GetCpuStateIdle(int cpu);
+
+/* \brief Get the percentage of time that the CPU has been in state OWNED
+ * \param[in] cpu CPU id
+ * \return percentage of state/total
+ */
+float DLB_Stats_GetCpuStateOwned(int cpu);
+
+/* \brief Get the percentage of time that the CPU has been in state GUESTED
+ * \param[in] cpu CPU id
+ * \return percentage of state/total
+ */
+float DLB_Stats_GetCpuStateGuested(int cpu);
+
 /* \brief Print the data stored in the Stats shmem
  */
 void DLB_Stats_PrintShmem(void);

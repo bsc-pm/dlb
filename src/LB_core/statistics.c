@@ -71,6 +71,18 @@ int stats_ext_getloadavg( int pid, double *load ) {
     return shmem_stats_ext__getloadavg( pid, load );
 }
 
+float stats_ext_getcpustateidle(int cpu) {
+    return shmem_stats_ext__getcpustate(cpu, STATS_IDLE);
+}
+
+float stats_ext_getcpustateowned(int cpu) {
+    return shmem_stats_ext__getcpustate(cpu, STATS_OWNED);
+}
+
+float stats_ext_getcpustateguested(int cpu) {
+    return shmem_stats_ext__getcpustate(cpu, STATS_GUESTED);
+}
+
 void stats_ext_printshmem(void) {
     shmem_stats_ext__print_info();
 }

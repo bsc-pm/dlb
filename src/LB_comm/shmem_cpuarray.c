@@ -23,7 +23,8 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "shmem.h"
+#include "LB_comm/shmem.h"
+#include "LB_comm/shmem_stats.h"
 #include "support/tracing.h"
 #include "support/debug.h"
 #include "support/utils.h"
@@ -94,9 +95,10 @@ void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
             if ( CPU_ISSET( cpu, &default_mask ) ) {
                 shdata->node_info[cpu].owner = ME;
                 shdata->node_info[cpu].state = BUSY;
-                // It could be that my cpu was being used by anybody else if it was set in the DLB mask
+                // My CPU could already have a guest if the DLB_mask was being used
                 if ( shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
+                    shmem_stats__update_cpu(cpu, STATS_OWNED);
                 }
             }
             // Add DLB mask info
@@ -129,10 +131,10 @@ void shmem_cpuarray__finalize( void ) {
                 shdata->node_info[cpu].owner = NOBODY;
                 if ( shdata->node_info[cpu].guest == ME ) {
                     shdata->node_info[cpu].guest = NOBODY;
+                    shmem_stats__update_cpu(cpu, STATS_IDLE);
                 }
-                if ( cpu_is_public_post_mortem ) {
-                    shdata->node_info[cpu].state = LENT;
-                } else if ( CPU_ISSET( cpu, &dlb_mask ) ) {
+                if ( cpu_is_public_post_mortem
+                        || CPU_ISSET( cpu, &dlb_mask ) ) {
                     shdata->node_info[cpu].state = LENT;
                 } else {
                     shdata->node_info[cpu].state = DISABLED;
@@ -141,6 +143,7 @@ void shmem_cpuarray__finalize( void ) {
                 // Free external CPUs that may I be using
                 if ( shdata->node_info[cpu].guest == ME ) {
                     shdata->node_info[cpu].guest = NOBODY;
+                    shmem_stats__update_cpu(cpu, STATS_IDLE);
                 }
             }
 
@@ -182,6 +185,7 @@ void shmem_cpuarray__add_mask( const cpu_set_t *cpu_mask ) {
                 // If am currently using the CPU, free it
                 if ( shdata->node_info[cpu].guest == ME ) {
                     shdata->node_info[cpu].guest = NOBODY;
+                    shmem_stats__update_cpu(cpu, STATS_IDLE);
                     DLB_DEBUG( CPU_SET( cpu, &freed_cpus ); )
                 }
             }
@@ -226,6 +230,7 @@ void shmem_cpuarray__add_cpu( int cpu ) {
         // If am currently using the CPU, free it
         if ( shdata->node_info[cpu].guest == ME ) {
             shdata->node_info[cpu].guest = NOBODY;
+            shmem_stats__update_cpu(cpu, STATS_IDLE);
             DLB_DEBUG( CPU_SET( cpu, &freed_cpus ); )
         }
 
@@ -269,6 +274,7 @@ const cpu_set_t* shmem_cpuarray__recover_defmask( void ) {
                 shdata->node_info[cpu].state = BUSY;
                 if ( shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
+                    shmem_stats__update_cpu(cpu, STATS_OWNED);
                     DLB_DEBUG( CPU_SET( cpu, &recovered_cpus ); )
                 }
             }
@@ -314,6 +320,7 @@ void shmem_cpuarray__recover_some_defcpus( cpu_set_t *mask, int max_resources ) 
                 max_resources--;
                 if ( shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
+                    shmem_stats__update_cpu(cpu, STATS_OWNED);
                     DLB_DEBUG( CPU_SET( cpu, &recovered_cpus ); )
                 }
             }
@@ -353,6 +360,7 @@ void shmem_cpuarray__recover_cpu( int cpu ) {
             shdata->node_info[cpu].state = BUSY;
             if ( shdata->node_info[cpu].guest == NOBODY ) {
                 shdata->node_info[cpu].guest = ME;
+                shmem_stats__update_cpu(cpu, STATS_OWNED);
                 DLB_DEBUG( CPU_SET( cpu, &recovered_cpus ); )
             }
         }
@@ -394,6 +402,7 @@ int shmem_cpuarray__return_claimed ( cpu_set_t *mask ) {
             if ( CPU_ISSET( cpu, mask ) && (shdata->node_info[cpu].owner != ME) && shdata->node_info[cpu].state!=LENT ) {
                 if ( shdata->node_info[cpu].guest == ME ) {
                     shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
+                    shmem_stats__update_cpu(cpu, STATS_OWNED);
                 }
                 returned++;
                 CPU_CLR( cpu, mask );
@@ -450,6 +459,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
                         && shdata->node_info[cpu].state == LENT
                         && shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
+                    shmem_stats__update_cpu(cpu, STATS_GUESTED);
                     CPU_SET( cpu, mask );
                     max_resources--;
                     collected1++;
@@ -462,6 +472,7 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
                 if ( shdata->node_info[cpu].state == LENT
                         && shdata->node_info[cpu].guest == NOBODY ) {
                     shdata->node_info[cpu].guest = ME;
+                    shmem_stats__update_cpu(cpu, STATS_GUESTED);
                     CPU_SET( cpu, mask );
                     max_resources--;
                     collected2++;
@@ -504,6 +515,7 @@ bool shmem_cpuarray__is_cpu_borrowed ( int cpu ) {
         shmem_lock( shm_handler );
         if ( shdata->node_info[cpu].guest == NOBODY ) {
             shdata->node_info[cpu].guest = ME;
+            shmem_stats__update_cpu(cpu, STATS_OWNED);
         }
         shmem_unlock( shm_handler );
     }
@@ -534,6 +546,7 @@ int shmem_cpuarray__reset_default_cpus(cpu_set_t *mask){
             shdata->node_info[i].state = BUSY;
             if ( shdata->node_info[i].guest == NOBODY ) {
                 shdata->node_info[i].guest = ME;
+                shmem_stats__update_cpu(i, STATS_OWNED);
             }
             CPU_SET( i, mask);
             n++;
@@ -541,6 +554,7 @@ int shmem_cpuarray__reset_default_cpus(cpu_set_t *mask){
         }else if(CPU_ISSET(i, mask)){
             if ( shdata->node_info[i].guest == ME ){
                 shdata->node_info[i].guest = NOBODY;
+                shmem_stats__update_cpu(i, STATS_IDLE);
             }
             CPU_CLR( i, mask);
         }
@@ -564,17 +578,20 @@ bool shmem_cpuarray__acquire_cpu (int cpu, bool force){
     //cpu is mine -> Claim it
     if (CPU_ISSET(cpu, &default_mask)){
         shdata->node_info[cpu].state = BUSY;
+        // It is important to not modify the 'guest' field to remark that the CPU is claimed
 
     //cpu is not mine but is free -> take it
     }else if(shdata->node_info[cpu].state == LENT
             && shdata->node_info[cpu].guest == NOBODY){
         shdata->node_info[cpu].guest = ME;
+        shmem_stats__update_cpu(cpu, STATS_GUESTED);
 
     //cpus is not mine and the owner has recover it
     }else if (force){
         //If force -> take it
         if( shdata->node_info[cpu].guest==shdata->node_info[cpu].owner ){
             shdata->node_info[cpu].guest = ME;
+            shmem_stats__update_cpu(cpu, STATS_GUESTED);
 
         }else{
             //FIXME: An other process has borrowed it
