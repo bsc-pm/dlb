@@ -60,13 +60,21 @@ def enrich(mpi_calls):
         c_args = []
         if func['cpar'] != 'void':
             for arg in func['cpar'].split(','):
-                c_args.append(last_word.search(arg).group(1))
+                try:
+                    c_args.append(last_word.search(arg).group(1))
+                except AttributeError:
+                    print "Error parsing function " + func['name']
+                    raise
         func['c_args'] = ', '.join(c_args)
         # Fortran: Parse arg list: "MPI_Fint *comm, MPI_Fint *ierror" -> "comm, ierror"
         f_args = []
         if func['fpar'] != '':
             for arg in func['fpar'].split(','):
-                f_args.append(last_word.search(arg).group(1))
+                try:
+                    f_args.append(last_word.search(arg).group(1))
+                except AttributeError:
+                    print "Error parsing function " + func['name']
+                    raise
         func['f_args'] = ', '.join(f_args)
 
         # Set tag _Unknown if not defined
