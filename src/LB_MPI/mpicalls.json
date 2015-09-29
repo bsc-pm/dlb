@@ -245,7 +245,7 @@
         {
             "name": "MPI_Ibcast",
             "cpar": "void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, MPI_Request *request",
-            "fpar": "void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
+            "fpar": "void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
             "tags": "_Bcast"
         },
         {
