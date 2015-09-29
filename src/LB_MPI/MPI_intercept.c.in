@@ -38,7 +38,7 @@
 
 #pragma GCC visibility push(default)
 
-#pragma pygen start
+#pragma pygen start where("MPI3_only" not in info)
 int {MPI_NAME}({C_PARAMS}) {{
     verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
     DLB_{MPI_NAME}_enter({C_ARG_LIST});
@@ -49,6 +49,20 @@ int {MPI_NAME}({C_PARAMS}) {{
 }}
 
 #pragma pygen end
+
+#if MPI_VERSION >= 3
+#pragma pygen start where("MPI3_only" in info)
+int {MPI_NAME}({C_PARAMS}) {{
+    verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
+    DLB_{MPI_NAME}_enter({C_ARG_LIST});
+    int res = P{MPI_NAME}({C_ARG_LIST});
+    DLB_{MPI_NAME}_leave();
+    verbose(VB_MPI_INT, "<< {MPI_NAME}...............");
+    return res;
+}}
+
+#pragma pygen end
+#endif
 
 #pragma GCC visibility pop
 

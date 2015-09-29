@@ -39,7 +39,7 @@
 
 #pragma GCC visibility push(default)
 
-#pragma pygen start
+#pragma pygen start where("MPI3_only" not in info)
 void DLB_{MPI_NAME}_enter({C_PARAMS}) {{
     verbose(VB_MPI_API, ">> {MPI_NAME}...............");
     {BEFORE_FUNC};
@@ -51,6 +51,21 @@ void DLB_{MPI_NAME}_leave(void) {{
 }}
 
 #pragma pygen end
+
+#if MPI_VERSION >= 3
+#pragma pygen start where("MPI3_only" in info)
+void DLB_{MPI_NAME}_enter({C_PARAMS}) {{
+    verbose(VB_MPI_API, ">> {MPI_NAME}...............");
+    {BEFORE_FUNC};
+}}
+
+void DLB_{MPI_NAME}_leave(void) {{
+    verbose(VB_MPI_API, "<< {MPI_NAME}...............");
+    {AFTER_FUNC};
+}}
+
+#pragma pygen end
+#endif
 
 void DLB_MPI_node_barrier (void) {
     if (is_mpi_ready()) {

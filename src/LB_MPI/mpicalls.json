@@ -210,43 +210,50 @@
             "name": "MPI_Iallgather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Gather"
+            "tags": "_Gather",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Iallgatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int recvcounts[], MPI3_CONST int displs[], MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcount, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Gather"
+            "tags": "_Gather",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Iallreduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Reduce"
+            "tags": "_Reduce",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Ialltoall",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_All2All"
+            "tags": "_All2All",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Ialltoallv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int sendcounts[], MPI3_CONST int sdispls[], MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int recvcounts[], MPI3_CONST int rdispls[], MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *sdispls, MPI_Fint *sendtype, MPI_Fint *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *rdispls, MPI_Fint *recvtype, MPI_Fint *request, MPI_Fint *comm, MPI_Fint *ierror",
-            "tags": "_All2All"
+            "tags": "_All2All",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Ibarrier",
             "cpar": "MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Barrier"
+            "tags": "_Barrier",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Ibcast",
             "cpar": "void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Bcast"
+            "tags": "_Bcast",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Ibsend",
@@ -258,13 +265,16 @@
             "name": "MPI_Igather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Gather"
+            "tags": "_Gather",
+            "info": "MPI3_only"
         },
         {
             "name": "MPI_Igatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int recvcounts[], MPI3_CONST int displs[], MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Gather"
+            "tags": "_Gather",
+            "info": "MPI3_only"
+
         },
         {
             "name": "MPI_Init",
@@ -306,13 +316,17 @@
             "name": "MPI_Ireduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Reduce"
+            "tags": "_Reduce",
+            "info": "MPI3_only"
+
         },
         {
             "name": "MPI_Ireduce_scatter",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST int recvcounts[], MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Reduce"
+            "tags": "_Reduce",
+            "info": "MPI3_only"
+
         },
         {
             "name": "MPI_Irsend",
@@ -324,19 +338,25 @@
             "name": "MPI_Iscan",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Scan"
+            "tags": "_Scan",
+            "info": "MPI3_only"
+
         },
         {
             "name": "MPI_Iscatter",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Scatter"
+            "tags": "_Scatter",
+            "info": "MPI3_only"
+
         },
         {
             "name": "MPI_Iscatterv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int sendcounts[], MPI3_CONST int displs[], MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
-            "tags": "_Scatter"
+            "tags": "_Scatter",
+            "info": "MPI3_only"
+
         },
         {
             "name": "MPI_Isend",

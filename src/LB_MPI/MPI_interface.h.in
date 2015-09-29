@@ -30,11 +30,19 @@
 #  endif
 #endif
 
-#pragma pygen start
+#pragma pygen start where("MPI3_only" not in info)
 void DLB_{MPI_NAME}_enter({C_PARAMS});
 void DLB_{MPI_NAME}_leave(void);
 
 #pragma pygen end
+
+#if MPI_VERSION >= 3
+#pragma pygen start where("MPI3_only" in info)
+void DLB_{MPI_NAME}_enter({C_PARAMS});
+void DLB_{MPI_NAME}_leave(void);
+
+#pragma pygen end
+#endif
 
 void DLB_MPI_node_barrier(void);
 
