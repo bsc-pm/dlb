@@ -157,6 +157,10 @@ void DLB_Stats_GetCpuUsageList (double *usagelist, int *nelems, int max_len) {
     stats_ext_getcpuusage_list(usagelist, nelems, max_len);
 }
 
+double DLB_Stats_GetNodeUsage(void) {
+    return stats_ext_getnodeusage();
+}
+
 int DLB_Stats_GetActiveCpus (int pid) {
     return stats_ext_getactivecpus(pid);
 }

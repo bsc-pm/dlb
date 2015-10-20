@@ -202,6 +202,11 @@ double DLB_Stats_GetCpuUsage(int pid);
  */
 void DLB_Stats_GetCpuUsageList(double *usagelist,int *nelems,int max_len);
 
+/* \brief Get the CPU Usage of all the DLB processes in the node
+ * \return the Node Usage, or 1.0 on error
+ */
+double DLB_Stats_GetNodeUsage(void);
+
 /* \brief Get the number of CPUs assigned to a given process
  * \param[in] pid Process ID to consult
  * \return the number of CPUs used by a process, or -1 if not found

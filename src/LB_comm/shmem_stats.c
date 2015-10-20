@@ -236,6 +236,24 @@ void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_
     shmem_unlock( shm_ext_handler );
 }
 
+double shmem_stats_ext__getnodeusage(void) {
+    if (shm_ext_handler == NULL) return -1.0;
+
+    double cpu_usage = 0.0;
+    shmem_lock( shm_ext_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata->process_info[p].pid != NOBODY ) {
+                cpu_usage += shdata->process_info[p].cpu_usage;
+            }
+        }
+    }
+    shmem_unlock( shm_ext_handler );
+
+    return cpu_usage;
+}
+
 int shmem_stats_ext__getactivecpus( int pid ) {
     if (shm_ext_handler == NULL) return -1;
 

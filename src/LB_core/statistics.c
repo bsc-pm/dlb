@@ -55,6 +55,10 @@ void stats_ext_getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
     shmem_stats_ext__getcpuusage_list( usagelist, nelems, max_len );
 }
 
+double stats_ext_getnodeusage(void) {
+    return shmem_stats_ext__getnodeusage();
+}
+
 int stats_ext_getactivecpus( int pid ) {
     return shmem_stats_ext__getactivecpus( pid );
 }
