@@ -457,7 +457,30 @@ int shmem_cpuarray__collect_mask ( cpu_set_t *mask, int max_resources ) {
             }
             verbose( VB_SHMEM, "Getting %d affine Threads (%s)", collected1, mu_to_str(mask) );
 
-            /* Second Step: Retrieve non-affine cpus, if needed */
+//            /* Second Step: Retrieve non-affine cpus, if needed */
+//            cpu_set_t free_cpus; //mask with free cpus
+//            cpu_set_t free_sockets; //mask with full free sockets
+//            
+//            //first fill the free cpus mask
+//            for ( cpu = 0; cpu < cpus_node; cpu++ ) {   
+//                if ( shdata->node_info[cpu].state == LENT
+//                        && shdata->node_info[cpu].guest == NOBODY ) {
+//                    CPU_SET(cpu, &free_cpus);
+//                }
+//            }
+//            //Get the full sockets
+//            mu_get_affinity_mask( &free_sockets, &free_cpus, MU_ALL_BITS );
+//
+//            for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
+//                if ( CPU_ISSET( cpu, &free_sockets) ) {
+//                    shdata->node_info[cpu].guest = ME;
+//                    CPU_SET( cpu, mask );
+//                    max_resources--;
+//                    collected2++;
+//                }
+//            }
+
+            //Original code to retrieve non affine CPUs
             for ( cpu = 0; (cpu < cpus_node) && (max_resources > 0); cpu++ ) {
                 if ( shdata->node_info[cpu].state == LENT
                         && shdata->node_info[cpu].guest == NOBODY ) {

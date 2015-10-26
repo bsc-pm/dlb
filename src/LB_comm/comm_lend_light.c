@@ -98,7 +98,7 @@ int acquireCpus(int current_cpus) {
 Returns de number of cpus
 that are assigned
 */
-int checkIdleCpus(int myCpus) {
+int checkIdleCpus(int myCpus, int maxResources) {
     verbose(VB_SHMEM, "Checking idle CPUS... %d", shdata->idleCpus);
     int cpus;
     int aux;
@@ -114,7 +114,7 @@ int checkIdleCpus(int myCpus) {
         //if there are idle CPUS use them
     } else if( shdata->idleCpus > 0) {
         aux=shdata->idleCpus;
-        if(aux>defaultCPUS) { aux=defaultCPUS; }
+        if(aux>maxResources) { aux=maxResources; }
 
         if(__sync_bool_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, shdata->idleCpus-aux)) {
             myCpus+=aux;

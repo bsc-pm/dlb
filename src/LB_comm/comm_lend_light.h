@@ -26,7 +26,7 @@ int releaseCpus(int cpus);
 
 int acquireCpus(int current_cpus);
 
-int checkIdleCpus(int myCpus);
+int checkIdleCpus(int myCpus, int maxResources);
 
 void finalize_comm();
 

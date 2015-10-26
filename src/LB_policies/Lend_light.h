@@ -39,7 +39,7 @@ void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode);
 
 void Lend_light_OutOfBlockingCall(int is_iter);
 
-void Lend_light_updateresources();
+void Lend_light_updateresources(int maxResources);
 
 void Lend_light_resetDLB(void);
 

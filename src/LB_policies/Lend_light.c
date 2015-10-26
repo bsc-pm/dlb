@@ -104,9 +104,9 @@ void Lend_light_OutOfBlockingCall(int is_iter) {
     }
 }
 
-void Lend_light_updateresources() {
+void Lend_light_updateresources(int maxResources) {
     if (enabled && !single) {
-        int cpus = checkIdleCpus(myCPUS);
+        int cpus = checkIdleCpus(myCPUS, maxResources);
         if (myCPUS!=cpus) {
             verbose(VB_MICROLB, "Using %d cpus", cpus);
             setThreads_Lend_light(cpus);
