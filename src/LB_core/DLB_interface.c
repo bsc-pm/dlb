@@ -220,4 +220,18 @@ void DLB_Drom_PrintShmem(void) {
     drom_ext_printshmem();
 }
 
+/* MPI API */
+#ifdef MPI_LIB
+#include <mpi.h>
+#include "LB_MPI/process_MPI.h"
+void DLB_MPI_node_barrier(void) {
+    if (is_mpi_ready()) {
+        MPI_Comm mpi_comm_node = getNodeComm();
+        MPI_Barrier(mpi_comm_node);
+    }
+}
+#else
+void DLB_MPI_node_barrier(void) {}
+#endif
+
 #pragma GCC visibility pop

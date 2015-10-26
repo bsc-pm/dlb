@@ -67,13 +67,6 @@ void DLB_{MPI_NAME}_leave(void) {{
 #pragma pygen end
 #endif
 
-void DLB_MPI_node_barrier (void) {
-    if (is_mpi_ready()) {
-        MPI_Comm mpi_comm_node = getNodeComm();
-        MPI_Barrier(mpi_comm_node);
-    }
-}
-
 #pragma GCC visibility pop
 
 #endif /* MPI_LIB */

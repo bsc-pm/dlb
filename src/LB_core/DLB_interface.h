@@ -291,6 +291,14 @@ int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask);
  */
 void DLB_Drom_PrintShmem(void);
 
+/*******************************************************/
+/*    MPI Interface                                    */
+/*******************************************************/
+
+/* \brief Blocks until all processes in the same node have reached this routine.
+ * */
+void DLB_MPI_node_barrier(void);
+
 #ifdef __cplusplus
 }
 #endif
