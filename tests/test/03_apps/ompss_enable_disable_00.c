@@ -17,26 +17,44 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef STATISTICS_H
-#define STATISTICS_H
+/*<testinfo>
+    compile_versions="nanox_ompss"
 
-void stats_init(void);
-void stats_finalize(void);
-void stats_update(void);
+    test_CC_nanox_ompss="smpcc"
+    test_CFLAGS_nanox_ompss="--ompss"
 
-void stats_ext_init(void);
-void stats_ext_finalize(void);
-int stats_ext_getnumcpus(void);
-void stats_ext_getpidlist(int *pidlist,int *nelems,int max_len);
-double stats_ext_getcpuusage(int pid);
-void stats_ext_getcpuusage_list(double *usagelist,int *nelems,int max_len);
-double stats_ext_getnodeusage(void);
-int stats_ext_getactivecpus(int pid);
-void stats_ext_getactivecpus_list(int *cpuslist,int *nelems,int max_len);
-int stats_ext_getloadavg(int pid,double *load);
-float stats_ext_getcpustateidle(int cpu);
-float stats_ext_getcpustateowned(int cpu);
-float stats_ext_getcpustateowned(int cpu);
-void stats_ext_printshmem(void);
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( LB_TEST_POLICY="auto_LeWI_mask" )
+    test_ENV=( NX_ARGS="--thread-manager=dlb" )
+</testinfo>*/
 
-#endif /* STATISTICS_H */
+#include <stdio.h>
+#include <omp.h>
+#include <nanos.h>
+#include <DLB_interface.h>
+
+int main()
+{
+    int i;
+    int N = 8;
+
+    DLB_disable();
+
+    #pragma omp for schedule(static)
+    for(i=0; i<N; ++i) {
+        printf("Thread %d, running wd %d\n",
+                omp_get_thread_num(),
+                nanos_get_wd_id(nanos_current_wd()));
+    }
+
+    DLB_enable();
+
+    #pragma omp for schedule(static)
+    for(i=0; i<N; ++i) {
+        printf("Thread %d, running wd %d\n",
+                omp_get_thread_num(),
+                nanos_get_wd_id(nanos_current_wd()));
+    }
+
+    return 0;
+}

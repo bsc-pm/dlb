@@ -202,6 +202,11 @@ double DLB_Stats_GetCpuUsage(int pid);
  */
 void DLB_Stats_GetCpuUsageList(double *usagelist,int *nelems,int max_len);
 
+/* \brief Get the CPU Usage of all the DLB processes in the node
+ * \return the Node Usage, or 1.0 on error
+ */
+double DLB_Stats_GetNodeUsage(void);
+
 /* \brief Get the number of CPUs assigned to a given process
  * \param[in] pid Process ID to consult
  * \return the number of CPUs used by a process, or -1 if not found
@@ -221,6 +226,24 @@ void DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
  * \return 0 success, -1 if pid not found
  */
 int DLB_Stats_GetLoadAvg(int pid, double *load);
+
+/* \brief Get the percentage of time that the CPU has been in state IDLE
+ * \param[in] cpu CPU id
+ * \return percentage of state/total
+ */
+float DLB_Stats_GetCpuStateIdle(int cpu);
+
+/* \brief Get the percentage of time that the CPU has been in state OWNED
+ * \param[in] cpu CPU id
+ * \return percentage of state/total
+ */
+float DLB_Stats_GetCpuStateOwned(int cpu);
+
+/* \brief Get the percentage of time that the CPU has been in state GUESTED
+ * \param[in] cpu CPU id
+ * \return percentage of state/total
+ */
+float DLB_Stats_GetCpuStateGuested(int cpu);
 
 /* \brief Print the data stored in the Stats shmem
  */
@@ -267,6 +290,14 @@ int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask);
 /* \brief Print the data stored in the Drom shmem
  */
 void DLB_Drom_PrintShmem(void);
+
+/*******************************************************/
+/*    MPI Interface                                    */
+/*******************************************************/
+
+/* \brief Blocks until all processes in the same node have reached this routine.
+ * */
+void DLB_MPI_node_barrier(void);
 
 #ifdef __cplusplus
 }

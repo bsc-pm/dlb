@@ -157,6 +157,10 @@ void DLB_Stats_GetCpuUsageList (double *usagelist, int *nelems, int max_len) {
     stats_ext_getcpuusage_list(usagelist, nelems, max_len);
 }
 
+double DLB_Stats_GetNodeUsage(void) {
+    return stats_ext_getnodeusage();
+}
+
 int DLB_Stats_GetActiveCpus (int pid) {
     return stats_ext_getactivecpus(pid);
 }
@@ -167,6 +171,18 @@ void DLB_Stats_GetActiveCpusList (int *cpuslist, int *nelems, int max_len) {
 
 int DLB_Stats_GetLoadAvg (int pid, double *load) {
     return stats_ext_getloadavg(pid, load);
+}
+
+float DLB_Stats_GetCpuStateIdle( int cpu ) {
+    return stats_ext_getcpustateidle(cpu);
+}
+
+float DLB_Stats_GetCpuStateOwned( int cpu ) {
+    return stats_ext_getcpustateowned(cpu);
+}
+
+float DLB_Stats_GetCpuStateGuested( int cpu ) {
+    return stats_ext_getcpustateowned(cpu);
 }
 
 void DLB_Stats_PrintShmem(void) {
@@ -203,5 +219,19 @@ int DLB_Drom_SetProcessMask (int pid, const dlb_cpu_set_t mask) {
 void DLB_Drom_PrintShmem(void) {
     drom_ext_printshmem();
 }
+
+/* MPI API */
+#ifdef MPI_LIB
+#include <mpi.h>
+#include "LB_MPI/process_MPI.h"
+void DLB_MPI_node_barrier(void) {
+    if (is_mpi_ready()) {
+        MPI_Comm mpi_comm_node = getNodeComm();
+        MPI_Barrier(mpi_comm_node);
+    }
+}
+#else
+void DLB_MPI_node_barrier(void) {}
+#endif
 
 #pragma GCC visibility pop

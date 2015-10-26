@@ -43,7 +43,7 @@ void p{MPI_LCASE}({F_PARAMS});
 #pragma GCC visibility push(default)
 
 // mpi intercept
-#pragma pygen start
+#pragma pygen start where("MPI3_only" not in info)
 void {MPI_LCASE}({F_PARAMS}) {{
     verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
     DLB_{MPI_NAME}_F_enter({F_ARG_LIST});
@@ -55,6 +55,21 @@ void {MPI_LCASE}_ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
 void {MPI_LCASE}__ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
 
 #pragma pygen end
+
+#if MPI_VERSION >= 3
+#pragma pygen start where("MPI3_only" in info)
+void {MPI_LCASE}({F_PARAMS}) {{
+    verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
+    DLB_{MPI_NAME}_F_enter({F_ARG_LIST});
+    p{MPI_LCASE}({F_ARG_LIST});
+    DLB_{MPI_NAME}_F_leave();
+    verbose(VB_MPI_INT, "<< {MPI_NAME}...............");
+}}
+void {MPI_LCASE}_ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
+void {MPI_LCASE}__ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
+
+#pragma pygen end
+#endif
 
 #pragma GCC visibility pop
 

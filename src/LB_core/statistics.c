@@ -55,6 +55,10 @@ void stats_ext_getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
     shmem_stats_ext__getcpuusage_list( usagelist, nelems, max_len );
 }
 
+double stats_ext_getnodeusage(void) {
+    return shmem_stats_ext__getnodeusage();
+}
+
 int stats_ext_getactivecpus( int pid ) {
     return shmem_stats_ext__getactivecpus( pid );
 }
@@ -65,6 +69,18 @@ void stats_ext_getactivecpus_list( int *cpuslist, int *nelems, int max_len) {
 
 int stats_ext_getloadavg( int pid, double *load ) {
     return shmem_stats_ext__getloadavg( pid, load );
+}
+
+float stats_ext_getcpustateidle(int cpu) {
+    return shmem_stats_ext__getcpustate(cpu, STATS_IDLE);
+}
+
+float stats_ext_getcpustateowned(int cpu) {
+    return shmem_stats_ext__getcpustate(cpu, STATS_OWNED);
+}
+
+float stats_ext_getcpustateguested(int cpu) {
+    return shmem_stats_ext__getcpustate(cpu, STATS_GUESTED);
 }
 
 void stats_ext_printshmem(void) {

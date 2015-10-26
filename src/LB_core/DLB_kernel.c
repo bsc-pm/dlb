@@ -416,9 +416,9 @@ int Initialize(void) {
         /* Intercept POSIX signals to manage DLB cleanup */
         register_signals();
 
-        lb_funcs.init();
         if ( drom_enabled ) drom_init();
         if ( stats_enabled ) stats_init();
+        lb_funcs.init();
         dlb_enabled = true;
         dlb_initialized = true;
         add_event(DLB_MODE_EVENT, EVENT_ENABLED);
@@ -432,9 +432,9 @@ void Finish(int id) {
     if ( dlb_initialized && init_id == id ) {
         dlb_enabled = false;
         dlb_initialized = false;
+        lb_funcs.finish();
         if ( stats_enabled ) stats_finalize();
         if ( drom_enabled ) drom_finalize();
-        lb_funcs.finish();
         unregister_signals();
     }
     /*  if (prof){
@@ -459,9 +459,9 @@ void Finish(int id) {
 }
 
 void Terminate(void) {
+    lb_funcs.finish();
     if ( stats_enabled ) stats_finalize();
     if ( drom_enabled ) drom_finalize();
-    lb_funcs.finish();
 }
 
 void Update() {
