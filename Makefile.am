@@ -342,6 +342,7 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_cpus(4).cfg \
 	doc/paraver_cfgs/DLB_cpus(8).cfg \
 	doc/paraver_cfgs/DLB_cpus(16).cfg \
+	doc/paraver_cfgs/DLB_idle_cpus.cfg \
 	doc/paraver_cfgs/DLB_mode.cfg \
 	doc/paraver_cfgs/DLB_runtime.cfg \
 	doc/paraver_cfgs/DLB_num_threads.cfg \
