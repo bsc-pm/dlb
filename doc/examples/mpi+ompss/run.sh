@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # variables to be modified by the user
-TRACE=1
+TRACE=0
 DLB=0
 
 APP="./mpi_ompss_pils"
@@ -12,9 +12,9 @@ if [[ $TRACE == 1 ]] ; then
     export EXTRAE_CONFIG_FILE="extrae.xml"
     export NX_ARGS+=" --instrumentation=extrae"
     if [[ $DLB == 1 ]] ; then
-        export TRACENAME="pils_dlb.prv"
+        TRACENAME="pils_dlb.prv"
     else
-        export TRACENAME="pils.prv"
+        TRACENAME="pils.prv"
     fi
 fi
 
@@ -26,3 +26,8 @@ else
 fi
 
 mpirun -n 2 -x LD_PRELOAD=$PRELOAD $APP $ARGS
+
+if [[ $TRACE == 1 ]] ; then
+    $EXTRAE_HOME/bin/mpi2prv -f TRACE.mpits -no-keep-mpits -o "$TRACENAME"
+    rm -f TRACE.spawn
+fi

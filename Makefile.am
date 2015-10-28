@@ -351,6 +351,35 @@ paraver_cfgs = \
 paravercfgsdir = $(datadir)/paraver_cfgs/DLB
 dist_paravercfgs_DATA = $(paraver_cfgs)
 
+mpiompexamples_files = \
+	doc/examples/mpi+omp/README \
+	doc/examples/mpi+omp/Makefile \
+	doc/examples/mpi+omp/mpi_omp_pils.c \
+	doc/examples/mpi+omp/run.sh \
+	doc/examples/mpi+omp/extrae.xml \
+	$(END)
+
+EXTRA_DIST += doc/examples/mpi+omp/Makefile.in
+CLEANFILES += doc/examples/mpi+omp/Makefile
+doc/examples/mpi+omp/Makefile: $(top_srcdir)/doc/examples/mpi+omp/Makefile.in
+	$(GEN_verbose)$(MKDIR_P) doc/examples/mpi+omp; \
+	rm -f $@; \
+	sed \
+		-e's,@PREFIX\@,"$(prefix)",g' \
+	$^ > $@;
+
+EXTRA_DIST += doc/examples/mpi+omp/run.sh.in
+CLEANFILES += doc/examples/mpi+omp/run.sh
+doc/examples/mpi+omp/run.sh: $(top_srcdir)/doc/examples/mpi+omp/run.sh.in
+	$(GEN_verbose)$(MKDIR_P) doc/examples/mpi+omp; \
+	rm -f $@; \
+	sed \
+		-e's,@PREFIX\@,"$(prefix)",g' \
+	$^ > $@;
+
+mpiompexamplesdir = $(docdir)/examples/MPI+OMP
+dist_mpiompexamples_DATA = $(mpiompexamples_files)
+
 mpiompssexamples_files = \
 	doc/examples/mpi+ompss/README \
 	doc/examples/mpi+ompss/Makefile \

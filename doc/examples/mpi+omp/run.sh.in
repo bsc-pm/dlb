@@ -1,0 +1,35 @@
+#!/bin/bash
+
+DLB_HOME=@PREFIX@
+
+# variables to be modified by the user
+TRACE=0
+DLB=0
+
+APP="./mpi_omp_pils"
+ARGS="/dev/null 1 150 50"
+
+if [[ $DLB == 1 ]] ; then
+    if [[ $TRACE == 1 ]] ; then
+        TRACENAME="pils_dlb.prv"
+        PRELOAD="$EXTRAE_HOME/lib/libompitrace-lb.so:$DLB_HOME/lib/libdlb_mpi_instr_dbg.so"
+        export EXTRAE_CONFIG_FILE="extrae.xml"
+    else
+        PRELOAD="$DLB_HOME/lib/libdlb_mpi_dbg.so"
+    fi
+    export LB_POLICY="LeWI"
+else
+    if [[ $TRACE == 1 ]] ; then
+        TRACENAME="pils.prv"
+        PRELOAD="$EXTRAE_HOME/lib/libompitrace.so"
+        export EXTRAE_CONFIG_FILE="extrae.xml"
+    fi
+    export LB_POLICY="No"
+fi
+
+mpirun -n 2 -x LD_PRELOAD=$PRELOAD $APP $ARGS
+
+if [[ $TRACE == 1 ]] ; then
+    $EXTRAE_HOME/bin/mpi2prv -f TRACE.mpits -no-keep-mpits -o "$TRACENAME"
+    rm -f TRACE.spawn
+fi

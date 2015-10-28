@@ -1,12 +1,12 @@
 README
 ======
 
-This is a small example of an MPI+OmpSs application running optionally with DLB.
+This is a small example of an MPI+OMP application running optionally with DLB.
 
 Compilation
 -----------
 The Makefile is ready for OpenMPI. Should you want to use another MPI implementation
-modify it accordingly. It also assumes you have Mercurium drivers in your PATH.
+modify it accordingly. It also assumes that you mpicc accepts -fopenmp.
 
 Execution
 ---------
