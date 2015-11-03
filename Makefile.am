@@ -353,10 +353,13 @@ dist_paravercfgs_DATA = $(paraver_cfgs)
 
 mpiompexamples_files = \
 	doc/examples/mpi+omp/README \
-	doc/examples/mpi+omp/Makefile \
 	doc/examples/mpi+omp/mpi_omp_pils.c \
-	doc/examples/mpi+omp/run.sh \
 	doc/examples/mpi+omp/extrae.xml \
+	$(END)
+
+mpiompexamples_files_nodist = \
+	doc/examples/mpi+omp/Makefile \
+	doc/examples/mpi+omp/run.sh \
 	$(END)
 
 EXTRA_DIST += doc/examples/mpi+omp/Makefile.in
@@ -379,6 +382,7 @@ doc/examples/mpi+omp/run.sh: $(top_srcdir)/doc/examples/mpi+omp/run.sh.in
 
 mpiompexamplesdir = $(docdir)/examples/MPI+OMP
 dist_mpiompexamples_DATA = $(mpiompexamples_files)
+nodist_mpiompexamples_DATA = $(mpiompexamples_files_nodist)
 
 mpiompssexamples_files = \
 	doc/examples/mpi+ompss/README \
@@ -393,11 +397,14 @@ dist_mpiompssexamples_DATA = $(mpiompssexamples_files)
 
 statsexamples_files = \
 	doc/examples/statistics/README \
-	doc/examples/statistics/Makefile \
 	doc/examples/statistics/get_cpu_usage.c \
 	doc/examples/statistics/get_pid_list.c \
 	doc/examples/statistics/mpi_ompss_pils.c \
 	doc/examples/statistics/run.sh \
+	$(END)
+
+statsexamples_files_nodist = \
+	doc/examples/statistics/Makefile \
 	$(END)
 
 EXTRA_DIST += doc/examples/statistics/Makefile.in
@@ -411,6 +418,7 @@ doc/examples/statistics/Makefile: $(top_srcdir)/doc/examples/statistics/Makefile
 
 statsexamplesdir = $(docdir)/examples/statistics
 dist_statsexamples_DATA = $(statsexamples_files)
+nodist_statsexamples_DATA = $(statsexamples_files_nodist)
 
 
 sphinx_files = \

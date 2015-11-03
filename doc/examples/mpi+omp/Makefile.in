@@ -1,0 +1,14 @@
+
+DLB_HOME = @PREFIX@
+
+MPICC = mpicc -fopenmp
+CFLAGS = -fopenmp
+CPPFLAGS = -I$(DLB_HOME)/include
+LDFLAGS = -L$(DLB_HOME)/lib -ldlb_instr_dbg -Wl,-rpath,$(DLB_HOME)/lib
+
+mpi_omp_pils: mpi_omp_pils.c
+	$(MPICC) $^ -o $@ $(CFLAGS) $(CPPFLAGS) $(LDFLAGS)
+
+.PHONY: clean
+clean:
+	rm -f mpi_omp_pils

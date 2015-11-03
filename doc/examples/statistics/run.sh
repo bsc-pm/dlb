@@ -7,4 +7,4 @@ export NX_ARGS="--enable-dlb"
 export LB_POLICY="No"
 export LB_STATISTICS=1
 
-mpirun -n 2 -x LD_PRELOAD=$PRELOAD $APP $ARGS
+mpirun -n 2 $APP $ARGS
