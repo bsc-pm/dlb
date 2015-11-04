@@ -7,17 +7,10 @@ Welcome to DLB's documentation!
 ===============================
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-  intro
-  how_to_install
-  how_to_run
-  api
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+    intro
+    how_to_install
+    how_to_run
+    api
+    examples

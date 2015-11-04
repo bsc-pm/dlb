@@ -85,7 +85,7 @@ static struct {
     pm_not_implemented
 };
 
-// Static functions to be called when no Prog Model is ound
+// Static functions to be called when no Prog Model is found
 static void unknown_get_process_mask (cpu_set_t *cpu_set) {
     CPU_ZERO( cpu_set );
     CPU_SET( 0, cpu_set );

@@ -424,6 +424,7 @@ nodist_statsexamples_DATA = $(statsexamples_files_nodist)
 sphinx_files = \
 	doc/user_guide/source/conf.py \
 	doc/user_guide/source/api.rst \
+	doc/user_guide/source/examples.rst \
 	doc/user_guide/source/how_to_install.rst \
 	doc/user_guide/source/how_to_run.rst \
 	doc/user_guide/source/index.rst \
