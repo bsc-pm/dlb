@@ -123,11 +123,26 @@ libdlb_dummy_la_SOURCES = src/LB_core/DLB_dummy_interface.c
 ##########################################################################
 # libdlb.so
 ##########################################################################
+SUPPORT_SRCS = \
+	src/LB_numThreads/numThreads.c  \
+	src/LB_numThreads/numThreads.h  \
+	src/support/globals.c           \
+	src/support/globals.h           \
+	src/support/debug.c             \
+	src/support/debug.h             \
+	src/support/tracing.c           \
+	src/support/tracing.h           \
+	src/support/utils.c             \
+	src/support/utils.h             \
+	src/support/mytime.c            \
+	src/support/mytime.h            \
+	src/support/mask_utils.c        \
+	src/support/mask_utils.h        \
+	$(END)
+
 COMMON_SRCS = \
 	src/DPD/DPD.c                   \
 	src/DPD/DPD.h                   \
-	src/LB_numThreads/numThreads.c  \
-	src/LB_numThreads/numThreads.h  \
 	src/LB_policies/JustProf.c      \
 	src/LB_policies/JustProf.h      \
 	src/LB_policies/Lend_light.c    \
@@ -158,31 +173,20 @@ COMMON_SRCS = \
 	src/LB_comm/shmem_cpuarray.h    \
 	src/LB_comm/shmem_stats.c       \
 	src/LB_comm/shmem_stats.h       \
-	src/LB_comm/shmem_drom.c       \
-	src/LB_comm/shmem_drom.h       \
+	src/LB_comm/shmem_drom.c        \
+	src/LB_comm/shmem_drom.h        \
 	src/LB_core/DLB_kernel.c        \
 	src/LB_core/DLB_kernel.h        \
 	src/LB_core/DLB_interface.c     \
 	src/LB_core/DLB_interface.h     \
-	src/LB_core/DLB_interfaceF.c     \
+	src/LB_core/DLB_interfaceF.c    \
 	src/LB_core/statistics.c        \
 	src/LB_core/statistics.h        \
 	src/LB_core/drom.c              \
 	src/LB_core/drom.h              \
-	src/support/globals.c           \
-	src/support/globals.h           \
-	src/support/debug.c             \
-	src/support/debug.h             \
-	src/support/tracing.c           \
-	src/support/tracing.h           \
-	src/support/utils.c             \
-	src/support/utils.h             \
-	src/support/mytime.c            \
-	src/support/mytime.h            \
-	src/support/mask_utils.c        \
-	src/support/mask_utils.h        \
 	src/support/sighandler.c        \
 	src/support/sighandler.h        \
+	$(SUPPORT_SRCS)                 \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la
@@ -341,7 +345,7 @@ dlb_shm_SOURCES = src/utils/dlb_shm.c
 dlb_shm_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_shm_LDADD = libdlb.la
 
-dlb_taskset_SOURCES = src/utils/dlb_taskset.c
+dlb_taskset_SOURCES = src/utils/dlb_taskset.c $(SUPPORT_SRCS)
 dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_taskset_LDADD = libdlb.la
 

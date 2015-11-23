@@ -196,7 +196,7 @@ void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, 
     }
 }
 
-const char* mu_to_str ( const cpu_set_t *cpu_set ) {
+const char* mu_to_str( const cpu_set_t *mask ) {
     if ( !mu_initialized ) mu_init();
 
     int i;
@@ -204,7 +204,7 @@ const char* mu_to_str ( const cpu_set_t *cpu_set ) {
     char str_i[8];
     strcpy( str, "[ " );
     for ( i=0; i<sys.size; i++ ) {
-        if ( CPU_ISSET(i, cpu_set) ) {
+        if ( CPU_ISSET(i, mask) ) {
             snprintf(str_i, sizeof(str_i), "%d ", i);
             strcat( str, str_i );
         } else { strcat( str,"- " ); }
@@ -213,7 +213,7 @@ const char* mu_to_str ( const cpu_set_t *cpu_set ) {
     return str;
 }
 
-void mu_parse_mask( char *str, cpu_set_t *mask ) {
+void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if ( !mu_initialized ) mu_init();
 
     regex_t regex_bitmask;
@@ -221,7 +221,7 @@ void mu_parse_mask( char *str, cpu_set_t *mask ) {
     CPU_ZERO( mask );
 
     /* Compile regular expression */
-    if ( regcomp(&regex_bitmask, "^[0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
+    if ( regcomp(&regex_bitmask, "^[0-1][0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
         fatal0( "Could not compile regex");
     }
 
@@ -242,7 +242,7 @@ void mu_parse_mask( char *str, cpu_set_t *mask ) {
     /* Regular expression matches range, e.g.: 0-3,6-7 */
     else if ( !regexec(&regex_range, str, 0, NULL, 0) ) {
         // Parse
-        char *ptr = str;
+        const char *ptr = str;
         char *endptr;
         while ( ptr < str+strlen(str) ) {
             // Discard junk at the left
@@ -280,4 +280,9 @@ void mu_parse_mask( char *str, cpu_set_t *mask ) {
 
     regfree(&regex_bitmask);
     regfree(&regex_range);
+
+    if ( CPU_COUNT(mask) == 0 ) {
+        warning( "Parsed mask \"%s\"does not seem to be a valid mask\n", str );
+        exit( EXIT_FAILURE );
+    }
 }

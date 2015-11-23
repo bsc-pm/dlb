@@ -26,11 +26,11 @@
 #include <string.h>
 #include "support/utils.h"
 
-void print_usage( const char * program ) {
+static void print_usage( const char * program ) {
     fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );
 }
 
-void print_help( void ) {
+static void print_help( void ) {
     fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
     fprintf( stdout, "\n" );
     fprintf( stdout, "DLB Environment Variables:\n" );
@@ -50,7 +50,7 @@ void print_help( void ) {
     fprintf( stdout, "- RaL:\n" );
 }
 
-void print_version( void ) {
+static void print_version( void ) {
     fprintf( stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION );
     fprintf( stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS );
 }

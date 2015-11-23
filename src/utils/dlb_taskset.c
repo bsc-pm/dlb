@@ -30,96 +30,10 @@
 #include <ctype.h>
 #include <regex.h>
 #include <stdbool.h>
+#include "support/mask_utils.h"
 #include "LB_core/DLB_interface.h"
 
 static int sys_size;
-
-static const char* mu_to_str( const cpu_set_t *cpu_set ) {
-    int i;
-    static char str[CPU_SETSIZE*4];
-    char str_i[8];
-    strcpy( str, "[ " );
-    for ( i=0; i<sys_size; i++ ) {
-        if ( CPU_ISSET(i, cpu_set) ) {
-            snprintf(str_i, sizeof(str_i), "%d ", i);
-            strcat( str, str_i );
-        } else { strcat( str,"- " ); }
-    }
-    strcat( str, "]\0" );
-    return str;
-}
-
-static void mu_parse_mask( const char *str, cpu_set_t *mask ) {
-    regex_t regex_bitmask;
-    regex_t regex_range;
-    CPU_ZERO( mask );
-
-    /* Compile regular expression */
-    if ( regcomp(&regex_bitmask, "^[0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
-        fprintf(stderr, "Could not compile regex");
-    }
-
-    if ( regcomp(&regex_range, "^[0-9,-]+$", REG_EXTENDED|REG_NOSUB) ) {
-        fprintf(stderr, "Could not compile regex");
-    }
-
-    /* Regular expression matches bitmask, e.g.: 11110011 */
-    if ( !regexec(&regex_bitmask, str, 0, NULL, 0) ) {
-        // Parse
-        int i;
-        for (i=0; i<strlen(str); i++) {
-            if ( str[i] == '1' && i < sys_size ) {
-                CPU_SET( i, mask );
-            }
-        }
-    }
-    /* Regular expression matches range, e.g.: 0-3,6-7 */
-    else if ( !regexec(&regex_range, str, 0, NULL, 0) ) {
-        // Parse
-        const char *ptr = str;
-        char *endptr;
-        while ( ptr < str+strlen(str) ) {
-            // Discard junk at the left
-            if ( !isdigit(*ptr) ) { ptr++; continue; }
-
-            unsigned int start = strtoul( ptr, &endptr, 10 );
-            ptr = endptr;
-
-            // Single element
-            if ( (*ptr == ',' || *ptr == '\0') && start < sys_size ) {
-                CPU_SET( start, mask );
-                ptr++;
-                continue;
-            }
-            // Range
-            else if ( *ptr == '-' ) {
-                ptr++;
-                if ( !isdigit(*ptr) ) { ptr++; continue; }
-                unsigned int end = strtoul( ptr, &endptr, 10 );
-                if ( end > start ) {
-                    int i;
-                    for ( i=start; i<=end && i<sys_size; i++ ) {
-                        CPU_SET( i, mask );
-                    }
-                }
-                ptr++;
-                continue;
-            }
-            // Unexpected token
-            else { }
-        }
-    }
-    /* Regular expression does not match */
-    else { }
-
-    regfree(&regex_bitmask);
-    regfree(&regex_range);
-
-    if ( CPU_COUNT(mask) == 0 ) {
-        fprintf( stderr, "Parsed mask does not seem to be a valid mask\n" );
-        exit( EXIT_FAILURE );
-    }
-}
 
 static void dlb_check( int error, pid_t pid ) {
     if ( error ) {
