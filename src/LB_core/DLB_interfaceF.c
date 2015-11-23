@@ -111,6 +111,17 @@ DLB_API_F_ALIAS(dlb_update, (void));
 void dlb_acquirecpu(int *cpu) {
     DLB_AcquireCpu(*cpu);
 }
+DLB_API_F_ALIAS(dlb_acquirecpu, (int*));
+
+void dlb_notifyprocessmaskchange(void) {
+    DLB_NotifyProcessMaskChange();
+}
+DLB_API_F_ALIAS(dlb_notifyprocessmaskchange, (void));
+
+void dlb_notifyprocessmaskchangeto(const dlb_cpu_set_t mask) {
+    fatal0("Cpu mask functions not implemented in Fortran");
+}
+DLB_API_F_ALIAS(dlb_notifyprocessmaskchangeto, (dlb_cpu_set_t));
 
 /* Statistics API */
 

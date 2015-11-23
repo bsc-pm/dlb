@@ -22,6 +22,7 @@
 
 /* DLB custom types */
 typedef void* dlb_cpu_set_t;
+typedef const void* const_dlb_cpu_set_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -161,6 +162,20 @@ int DLB_Is_auto(void);
  */
 void DLB_Update(void);
 
+/* \brief Notify DLB that the Process Mask has changed
+ *
+ * Notify DLB that the process affinity mask has been changed. DLB will then query
+ * the runtime to obtain the current mask.
+ */
+void DLB_NotifyProcessMaskChange(void);
+
+/* \brief Notify DLB that the Process Mask has changed
+ * \param[in] The current process_mask
+ *
+ * Notify DLB that the process affinity mask has been changed
+ */
+void DLB_NotifyProcessMaskChangeTo(const_dlb_cpu_set_t mask);
+
 /* \brief Print the data stored in the shmem
  */
 void DLB_PrintShmem(void);
@@ -285,7 +300,7 @@ int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
  * \param[in] mask Process mask to set
  * \return 0 on success, -1 if pid not found
  */
-int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask);
+int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
 
 /* \brief Print the data stored in the Drom shmem
  */

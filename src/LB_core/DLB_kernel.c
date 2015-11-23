@@ -158,6 +158,7 @@ int Initialize(void) {
             lb_funcs.enableDLB = &Lend_light_enableDLB;
             lb_funcs.single = &Lend_light_single;
             lb_funcs.parallel = &Lend_light_parallel;
+            lb_funcs.notifymaskchangeto = &dummyFunc;
 
         } else if (strcasecmp(policy, "Map")==0) {
             info0( "Balancing policy: LeWI with Map of cpus version" );
@@ -181,6 +182,7 @@ int Initialize(void) {
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
             lb_funcs.parallel = &dummyFunc;
+            lb_funcs.notifymaskchangeto = &dummyFunc;
 
         } else if (strcasecmp(policy, "WEIGHT")==0) {
             info0( "Balancing policy: Weight balancing" );
@@ -206,6 +208,7 @@ int Initialize(void) {
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
             lb_funcs.parallel = &dummyFunc;
+            lb_funcs.notifymaskchangeto = &dummyFunc;
 
         } else if (strcasecmp(policy, "LeWI_mask")==0) {
             info0( "Balancing policy: LeWI mask" );
@@ -229,6 +232,7 @@ int Initialize(void) {
             lb_funcs.enableDLB = &lewi_mask_enableDLB;
             lb_funcs.single = &lewi_mask_single;
             lb_funcs.parallel = &lewi_mask_parallel;
+            lb_funcs.notifymaskchangeto = &lewi_mask_notifymaskchangeto;
 
         } else if (strcasecmp(policy, "auto_LeWI_mask")==0) {
             info0( "Balancing policy: Autonomous LeWI mask" );
@@ -253,6 +257,7 @@ int Initialize(void) {
             lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
             lb_funcs.single = &auto_lewi_mask_single;
             lb_funcs.parallel = &auto_lewi_mask_parallel;
+            lb_funcs.notifymaskchangeto = &auto_lewi_mask_notifymaskchangeto;
             policy_auto=1;
 
         } else if (strcasecmp(policy, "RaL")==0) {
@@ -291,6 +296,7 @@ int Initialize(void) {
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
             lb_funcs.parallel = &dummyFunc;
+            lb_funcs.notifymaskchangeto = &dummyFunc;
 
         } else if (strcasecmp(policy, "NO")==0) {
             info0( "No Load balancing" );
@@ -316,6 +322,7 @@ int Initialize(void) {
             lb_funcs.enableDLB = &dummyFunc;
             lb_funcs.single = &dummyFunc;
             lb_funcs.parallel = &dummyFunc;
+            lb_funcs.notifymaskchangeto = &dummyFunc;
         } else {
             fatal0( "Unknown policy: %s", policy );
         }
@@ -590,6 +597,16 @@ void parallelmode () {
 
 int is_auto( void ){
    return policy_auto;
+}
+
+void notifymaskchangeto(const cpu_set_t* mask) {
+    lb_funcs.notifymaskchangeto(mask);
+}
+
+void notifymaskchange(void) {
+    cpu_set_t process_mask;
+    get_process_mask(&process_mask);
+    notifymaskchangeto(&process_mask);
 }
 
 

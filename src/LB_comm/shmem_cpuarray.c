@@ -587,12 +587,12 @@ int shmem_cpuarray__reset_default_cpus(cpu_set_t *mask){
     return n;
 
 }
+
 /*
   Acquire this cpu, wether it was mine or not
   Can have a problem if the cpu was borrowed by somebody else
   If force take it from the owner
  */
-
 bool shmem_cpuarray__acquire_cpu (int cpu, bool force){
 
     bool acquired=true;
@@ -631,6 +631,35 @@ bool shmem_cpuarray__acquire_cpu (int cpu, bool force){
     return acquired;
 
 }
+
+/* Update CPU ownership according to the new process mask.
+ * To avoid collisions, we only release the ownership if we still own it
+ */
+void shmem_cpuarray__update_ownership(const cpu_set_t* process_mask) {
+    shmem_lock( shm_handler );
+    int cpu;
+    for ( cpu = 0; cpu < mu_get_system_size(); cpu++ ) {
+        if ( CPU_ISSET(cpu, process_mask) ) {
+            // CPU ownership should be mine
+            if ( shdata->node_info[cpu].owner != ME ) {
+                // Steal CPU
+                CPU_SET(cpu, &default_mask);
+                shdata->node_info[cpu].owner = ME;
+                shdata->node_info[cpu].guest = ME;
+                shdata->node_info[cpu].state = BUSY;
+                verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpu);
+            }
+        } else if ( shdata->node_info[cpu].owner == ME ) {
+            // Release CPU ownership
+            CPU_CLR(cpu, &default_mask);
+            shdata->node_info[cpu].owner = NOBODY;
+            shdata->node_info[cpu].state = DISABLED;
+            verbose(VB_SHMEM, "Releasing ownership of CPU %d", cpu);
+        }
+    }
+    shmem_unlock( shm_handler );
+}
+
 /* This function is intended to be called from external processes only to consult the shdata
  * That's why we should initialize and finalize the shared memory
  */

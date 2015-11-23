@@ -64,5 +64,7 @@ void auto_lewi_mask_single(void);
 
 void auto_lewi_mask_parallel(void);
 
+void auto_lewi_mask_notifymaskchangeto(const cpu_set_t* process_mask);
+
 #endif /* AUTO_LEWI_MASK_H */
 

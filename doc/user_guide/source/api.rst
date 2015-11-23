@@ -167,6 +167,15 @@ level of parallelism. But advanced users can also use them from applications.
     Update the status of 'Statistics' and 'DROM' modules, like updating the process statistics or
     check if some other process has signaled a new process mask.
 
+.. function:: void DLB_NotifyProcessMaskChange(void)
+
+    Notify DLB that the process affinity mask has been changed. DLB will then query the runtime
+    to obtain the current mask.
+
+.. function:: void DLB_NotifyProcessMaskChangeTo(const dlb_cpu_set_t mask)
+
+    Notify DLB that the process affinity mask has been changed.
+
 .. function:: void DLB_PrintShmem(void)
 
     Print the data stored in the Shared Memory

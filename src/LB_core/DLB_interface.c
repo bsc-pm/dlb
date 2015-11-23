@@ -127,6 +127,14 @@ void DLB_AcquireCpus(dlb_cpu_set_t mask) {
     acquirecpus(mask);
 }
 
+void DLB_NotifyProcessMaskChange(void) {
+    notifymaskchange();
+}
+
+void DLB_NotifyProcessMaskChangeTo(const_dlb_cpu_set_t mask) {
+    notifymaskchangeto(mask);
+}
+
 void DLB_PrintShmem(void) {
     printShmem();
 }
@@ -212,7 +220,7 @@ int DLB_Drom_GetProcessMask (int pid, dlb_cpu_set_t mask) {
     return drom_ext_getprocessmask( pid, (cpu_set_t*)mask);
 }
 
-int DLB_Drom_SetProcessMask (int pid, const dlb_cpu_set_t mask) {
+int DLB_Drom_SetProcessMask (int pid, const_dlb_cpu_set_t mask) {
     return drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
 }
 

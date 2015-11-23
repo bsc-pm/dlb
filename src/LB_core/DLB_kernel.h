@@ -46,6 +46,7 @@ typedef struct {
     void (*enableDLB) (void);
     void (*single) (void);
     void (*parallel) (void);
+    void (*notifymaskchangeto) (const cpu_set_t*);
 } BalancePolicy;
 
 extern int use_dpd;
@@ -95,6 +96,10 @@ void acquirecpus(cpu_set_t* mask);
 void singlemode(void);
 
 void parallelmode(void);
+
+void notifymaskchangeto(const cpu_set_t* mask);
+
+void notifymaskchange(void);
 
 void printShmem(void);
 
