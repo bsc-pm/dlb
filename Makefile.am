@@ -138,6 +138,10 @@ SUPPORT_SRCS = \
 	src/support/mytime.h            \
 	src/support/mask_utils.c        \
 	src/support/mask_utils.h        \
+	src/support/options.c           \
+	src/support/options.h           \
+	src/support/types.c             \
+	src/support/types.h             \
 	$(END)
 
 COMMON_SRCS = \

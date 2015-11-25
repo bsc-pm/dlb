@@ -27,6 +27,7 @@
 #include "support/dlb_api.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+#include "support/options.h"
 
 // sub-process ID
 static int spid = 0;
@@ -137,6 +138,18 @@ void DLB_NotifyProcessMaskChangeTo(const_dlb_cpu_set_t mask) {
 
 void DLB_PrintShmem(void) {
     printShmem();
+}
+
+int DLB_SetVariable(const char *variable, const char *value) {
+    return options_set_variable(variable, value);
+}
+
+int DLB_GetVariable(const char *variable, char *value) {
+    return options_set_variable(variable, value);
+}
+
+void DLB_PrintVariables(void) {
+    options_print_variables();
 }
 
 /* Statistics API */

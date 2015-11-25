@@ -17,26 +17,40 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef TYPES_H
+#define TYPES_H
 
-#define _GNU_SOURCE
-#include <sched.h>
 #include <stdbool.h>
-#include "support/types.h"
-#include "support/debug.h"
 
+typedef enum {
+    ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call
+    BLOCK,   // MPI set to blocking mode
+} blocking_mode_t;
 
-void parse_env_bool ( const char *env, bool *var, bool default_value );
-void parse_env_int ( char const *env, int *var );
-void parse_env_int_or_die ( char const *env, int *var );
-void parse_env_string ( char const *env, char **var );
-void parse_env_string_or_die ( char const *env, char **var );
-void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode );
-void parse_env_verbose_opts ( char const *env, verbose_opts_t *mode );
-void parse_env_verbose_format ( char const *env, verbose_fmt_t *format, verbose_fmt_t default_format );
-void parse_env_cpuset ( char const *env, cpu_set_t *mask );
+typedef enum VerboseOptions {
+    VB_CLEAR    = 0,
+    VB_API      = 1 << 0,
+    VB_MICROLB  = 1 << 1,
+    VB_SHMEM    = 1 << 2,
+    VB_MPI_API  = 1 << 3,
+    VB_MPI_INT  = 1 << 4,
+    VB_STATS    = 1 << 5,
+    VB_DROM     = 1 << 6
+} verbose_opts_t;
 
-int my_round ( double x );
+typedef enum VerboseFormat {
+    VBF_CLEAR   = 0,
+    VBF_NODE    = 1 << 0,
+    VBF_PID     = 1 << 1,
+    VBF_MPINODE = 1 << 2,
+    VBF_MPIRANK = 1 << 3,
+    VBF_THREAD  = 1 << 4
+} verbose_fmt_t;
 
-#endif /* UTILS_H */
+void parse_bool(const char *str, bool *value);
+void parse_int(const char *str, int *value);
+void parse_blocking_mode(const char *str, blocking_mode_t *value);
+void parse_verbose_opts(const char *str, verbose_opts_t *value);
+void parse_verbose_fmt(const char *str, verbose_fmt_t *value);
+
+#endif /* TYPES_H */

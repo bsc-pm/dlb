@@ -41,7 +41,7 @@ void Map_Init() {
 
     info0("Default cpus per process: %d", default_cpus);
 
-    //Initialize shared _process_idmory
+    //Initialize shared memory
     ConfigShMem_Map(_mpis_per_node, _process_id, _node_id, default_cpus, my_cpus);
     setThreads_Map(default_cpus, 1, my_cpus);
 }

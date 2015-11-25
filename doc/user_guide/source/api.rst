@@ -180,6 +180,18 @@ level of parallelism. But advanced users can also use them from applications.
 
     Print the data stored in the Shared Memory
 
+.. function:: int DLB_SetVariable(const char \*variable, const char \*value)
+
+    Change the value of a DLB internal variable
+
+.. function:: int DLB_GetVariable(const char \*variable, char \*value);
+
+    Get DLB internal variable
+
+.. function:: void DLB_PrintVariables(void);
+
+    Print DLB internal variables
+
 .. _stats-api:
 
 ====================

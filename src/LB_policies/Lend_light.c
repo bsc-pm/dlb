@@ -35,8 +35,6 @@ static int single = 0;
 void Lend_light_Init() {
     verbose(VB_MICROLB, "Lend_light Init");
 
-    _process_id = _process_id;
-    _node_id = _node_id;
     default_cpus = _default_nthreads;
 
     setThreads_Lend_light(default_cpus);
@@ -56,7 +54,7 @@ void Lend_light_Init() {
         info0("Policy mode GREEDY");
     }
 
-    //Initialize shared _process_idmory
+    //Initialize shared memory
     ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy);
 
     if ( _aggressive_init ) {

@@ -17,26 +17,33 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef OPTIONS_H
+#define OPTIONS_H
 
-#define _GNU_SOURCE
-#include <sched.h>
-#include <stdbool.h>
 #include "support/types.h"
-#include "support/debug.h"
 
+// internal getters
+const char* options_get_policy(void);
+bool options_get_statistics(void);
+bool options_get_drom(void);
+bool options_get_just_barier(void);
+blocking_mode_t options_get_lend_mode(void);
+verbose_opts_t options_get_verbose(void);
+verbose_fmt_t options_get_verbose_fmt(void);
+bool options_get_trace_enabled(void);
+bool options_get_trace_counters(void);
+const char* options_get_mask(void);
+bool options_get_greedy(void);
+const char* options_get_shm_key(void);
+bool options_get_bind(void);
+const char* options_get_thread_distribution(void);
+bool options_get_aggressive_init(void);
+bool options_get_priorize_locality(void);
 
-void parse_env_bool ( const char *env, bool *var, bool default_value );
-void parse_env_int ( char const *env, int *var );
-void parse_env_int_or_die ( char const *env, int *var );
-void parse_env_string ( char const *env, char **var );
-void parse_env_string_or_die ( char const *env, char **var );
-void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode );
-void parse_env_verbose_opts ( char const *env, verbose_opts_t *mode );
-void parse_env_verbose_format ( char const *env, verbose_fmt_t *format, verbose_fmt_t default_format );
-void parse_env_cpuset ( char const *env, cpu_set_t *mask );
+void options_init(void);
+void options_finalize(void);
+int options_set_variable(const char *var_name, const char *value);
+int options_get_variable(const char *var_name, char *value);
+void options_print_variables(void);
 
-int my_round ( double x );
-
-#endif /* UTILS_H */
+#endif /* OPTIONS_H */

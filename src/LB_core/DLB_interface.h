@@ -170,7 +170,7 @@ void DLB_Update(void);
 void DLB_NotifyProcessMaskChange(void);
 
 /* \brief Notify DLB that the Process Mask has changed
- * \param[in] The current process_mask
+ * \param[in] mask The current process_mask
  *
  * Notify DLB that the process affinity mask has been changed
  */
@@ -179,6 +179,28 @@ void DLB_NotifyProcessMaskChangeTo(const_dlb_cpu_set_t mask);
 /* \brief Print the data stored in the shmem
  */
 void DLB_PrintShmem(void);
+
+/* \brief Set DLB internal variable
+ * \param[in] variable Internal variable to set
+ * \param[in] value New value
+ * \return 0 on success, -1 otherwise
+ *
+ * Change the value of a DLB internal variable
+ */
+int DLB_SetVariable(const char *variable, const char *value);
+
+/* \brief Get DLB internal variable
+ * \param[in] variable Internal variable to set
+ * \param[out] value Current DLB variable value
+ * \return 0 on success, -1 otherwise
+ *
+ * Query the value of a DLB internal variable
+ */
+int DLB_GetVariable(const char *variable, char *value);
+
+/* \brief Print DLB internal variables
+ */
+void DLB_PrintVariables(void);
 
 /*******************************************************/
 /*    Statistics Module                                */

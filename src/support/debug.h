@@ -22,27 +22,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
-typedef enum VerboseOptions {
-    VB_CLEAR    = 0,
-    VB_API      = 1 << 0,
-    VB_MICROLB  = 1 << 1,
-    VB_SHMEM    = 1 << 2,
-    VB_MPI_API  = 1 << 3,
-    VB_MPI_INT  = 1 << 4,
-    VB_STATS    = 1 << 5,
-    VB_DROM     = 1 << 6
-} verbose_opts_t;
-
-typedef enum VerboseFormat {
-    VBF_CLEAR   = 0,
-    VBF_NODE    = 1 << 0,
-    VBF_PID     = 1 << 1,
-    VBF_MPINODE = 1 << 2,
-    VBF_MPIRANK = 1 << 3,
-    VBF_THREAD  = 1 << 4
-} verbose_fmt_t;
-
+#include "support/types.h"
 
 void debug_init();
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
