@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "support/utils.h"
 #include "support/types.h"
 #include "support/debug.h"
 
@@ -218,7 +217,6 @@ void options_init(void) {
     const bool FALSE = false;
     const bool TRUE = true;
 
-
     // Copy LB_ARGS env. variable
     char *env_lb_args = getenv("LB_ARGS");
     if (env_lb_args) {
@@ -260,14 +258,14 @@ void options_init(void) {
 
     // verbose
     options[i++] = register_option("LB_VERBOSE", "--verbose",
-            OPT_VB_T, &opt_verbose, RW, OPTIONAL, NULL,
+            OPT_VB_T, &opt_verbose, RO, OPTIONAL, "",
             "Verbose components. It may contain the tags: api, microlb, shmem, mpi_api, "
             "mpi_intercept, stats, drom. They can appear in any order, delimited by the "
             "character :\n"
             "  e.g.:  LB_VERBOSE=\"api:shmem:drom\"");
 
     options[i++] = register_option("LB_VERBOSE_FORMAT", "--verbose_format",
-            OPT_VBFMT_T, &opt_verbose_fmt, RW, OPTIONAL, "node:pid:thread",
+            OPT_VBFMT_T, &opt_verbose_fmt, RO, OPTIONAL, "node:pid:thread",
             "Verbose format. It may contain the tags: node, pid, mpinode, mpirank, thread. "
             "They can appear in any order, delimited by the character :");
 
@@ -429,6 +427,7 @@ void options_print_variables(void) {
             if (option->optional) {
                 b += sprintf(b, " - (optional)");
             }
+            b += sprintf(b, "\n");
         }
     }
     info0(buffer);

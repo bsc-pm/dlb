@@ -27,7 +27,7 @@
 #include "LB_comm/shmem_stats.h"
 #include "support/tracing.h"
 #include "support/debug.h"
-#include "support/utils.h"
+#include "support/options.h"
 #include "support/mask_utils.h"
 
 /* NOTE on default values:
@@ -70,7 +70,7 @@ static inline bool is_idle( int cpu ) {
 }
 
 void shmem_cpuarray__init( const cpu_set_t *cpu_set ) {
-    parse_env_cpuset( "LB_MASK", &dlb_mask );
+    mu_parse_mask( options_get_mask(), &dlb_mask );
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
     mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
     cpus_node = mu_get_system_size();

@@ -31,7 +31,6 @@
 #include <regex.h>
 #include "support/debug.h"
 #include "support/globals.h"
-#include "support/utils.h"
 #include "support/mask_utils.h"
 
 #ifdef HAVE_HWLOC
@@ -196,6 +195,10 @@ void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, 
     }
 }
 
+// mu_to_str and mu_parse_mask functions are used by DLB utilities
+// We export their dynamic symbols to avoid code duplication,
+// although they do not belong to the public API
+#pragma GCC visibility push(default)
 const char* mu_to_str( const cpu_set_t *mask ) {
     if ( !mu_initialized ) mu_init();
 
@@ -214,6 +217,7 @@ const char* mu_to_str( const cpu_set_t *mask ) {
 }
 
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
+    if ( !str || strlen(str) == 0 ) return;
     if ( !mu_initialized ) mu_init();
 
     regex_t regex_bitmask;
@@ -283,6 +287,6 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
 
     if ( CPU_COUNT(mask) == 0 ) {
         warning( "Parsed mask \"%s\"does not seem to be a valid mask\n", str );
-        exit( EXIT_FAILURE );
     }
 }
+#pragma GCC visibility pop

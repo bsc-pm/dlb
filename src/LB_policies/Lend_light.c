@@ -22,7 +22,7 @@
 #include "LB_comm/comm_lend_light.h"
 #include "support/globals.h"
 #include "support/mask_utils.h"
-#include "support/utils.h"
+#include "support/options.h"
 #include "support/debug.h"
 
 static int default_cpus;
@@ -41,15 +41,12 @@ void Lend_light_Init() {
 
     info0("Default cpus per process: %d", default_cpus);
 
-    bool bind;
-    parse_env_bool("LB_BIND", &bind, false);
-    if (bind) {
+    if (options_get_bind()) {
         // FIXME: Not implemented
         info0("Binding of threads to cpus enabled");
     }
 
-    bool greedy;
-    parse_env_bool("LB_GREEDY", &greedy, false);
+    bool greedy = options_get_greedy();
     if (greedy) {
         info0("Policy mode GREEDY");
     }
@@ -57,9 +54,9 @@ void Lend_light_Init() {
     //Initialize shared memory
     ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy);
 
-    if ( _aggressive_init ) {
-        setThreads_Lend_light( mu_get_system_size() );
-        setThreads_Lend_light( _default_nthreads );
+    if (options_get_aggressive_init()) {
+        setThreads_Lend_light(mu_get_system_size());
+        setThreads_Lend_light(_default_nthreads);
     }
 
     enabled = 1;

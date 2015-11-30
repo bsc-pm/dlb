@@ -24,7 +24,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "support/utils.h"
+#include "support/options.h"
+#include "LB_core/DLB_interface.h"
 
 static void print_usage( const char * program ) {
     fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );
@@ -33,21 +34,10 @@ static void print_usage( const char * program ) {
 static void print_help( void ) {
     fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
     fprintf( stdout, "\n" );
-    fprintf( stdout, "DLB Environment Variables:\n" );
-    fprintf( stdout, "LB_JUST_BARRIER = [0, 1]\n" );
-    fprintf( stdout, "LB_LEND_MODE = [BLOCK, 1CPU]\n" );
-    fprintf( stdout, "LB_AGGRESSIVE_INIT = [0, 1]\n" );
-    fprintf( stdout, "LB_PRIORIZE_LOCALITY = [0, 1]\n" );
-    fprintf( stdout, "LB_VERBOSE = [0, 1]\n" );
-    fprintf( stdout, "LB_SHM_KEY = [key]\n" );
-    fprintf( stdout, "LB_POLICY = [policy]\n" );
-    fprintf( stdout, "\n" );
-    fprintf( stdout, "LB Policies:\n" );
-    fprintf( stdout, "- No: \n" );
-    fprintf( stdout, "- LeWI:\n" );
-    fprintf( stdout, "- LeWI_mask:\n" );
-    fprintf( stdout, "- auto_LeWI_mask:\n" );
-    fprintf( stdout, "- RaL:\n" );
+    setenv("LB_POLICY", "no", 0);
+    DLB_Init();
+    DLB_PrintVariables();
+    DLB_Finalize();
 }
 
 static void print_version( void ) {

@@ -23,19 +23,15 @@
 </testinfo>*/
 
 #include <stdio.h>
-#include <stdlib.h>
-#include "support/utils.h"
 #include "support/mask_utils.h"
 
 int main( int argc, char **argv ) {
     mu_init();
-    fprintf( stdout, "System size: %d\n", mu_get_system_size() );
-
-    setenv("LB_MASK", "0-1,3,5-7", 1);
+    fprintf(stdout, "System size: %d\n", mu_get_system_size());
 
     cpu_set_t lb_mask;
-    parse_env_cpuset( "LB_MASK", &lb_mask );
-    fprintf( stdout, "LB Mask: %s\n", mu_to_str(&lb_mask) );
+    mu_parse_mask("0-1,3,5-7", &lb_mask);
+    fprintf(stdout, "LB Mask: %s\n", mu_to_str(&lb_mask));
 
     mu_finalize();
     return 0;

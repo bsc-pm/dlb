@@ -17,17 +17,9 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "utils.h"
-
 int _mpi_rank = -1;
 int _mpi_size = -1;
 int _mpis_per_node = -1;
 int _node_id = -1;
 int _process_id = -1;
-int _default_nthreads;
-
-bool _just_barrier = false;
-bool _aggressive_init = false;
-bool _priorize_locality = false;
-bool _verbose = false;
-blocking_mode_t _blocking_mode = ONE_CPU;
+int _default_nthreads = 0;

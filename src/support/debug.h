@@ -23,15 +23,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "support/types.h"
+#include "support/globals.h"
 
 void debug_init();
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
 void print_backtrace(void);
 
 
-// FIXME: we don't want to include globals.h
-// because it incurs into a circular dependency
-extern int _mpi_rank;
 extern verbose_opts_t vb_opts;
 
 #define fatal0(...) \

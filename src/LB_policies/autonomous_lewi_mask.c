@@ -28,7 +28,6 @@
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
-#include "support/utils.h"
 #include "support/mask_utils.h"
 
 #include "autonomous_lewi_mask.h"
@@ -54,18 +53,6 @@ void auto_lewi_mask_Init( void ) {
     cpu_set_t default_mask;
     get_mask( &default_mask );
     shmem_mask.init( &default_mask );
-
-    if ( _aggressive_init ) {
-        cpu_set_t mask;
-        CPU_ZERO( &mask );
-
-        int i;
-        for ( i = 0; i < mu_get_system_size(); i++ ) {
-            CPU_SET( i, &mask );
-        }
-        set_mask( &mask );
-        set_mask( &default_mask );
-    }
 
     pthread_mutex_init(&mutex, NULL);
     enabled=1;

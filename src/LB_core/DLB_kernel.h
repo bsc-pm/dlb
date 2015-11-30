@@ -53,8 +53,6 @@ extern int use_dpd;
 
 void set_dlb_enabled(bool enabled);
 
-void load_modules(void);
-
 int Initialize(void);
 
 void Finish(int id);

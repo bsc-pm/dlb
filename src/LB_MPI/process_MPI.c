@@ -33,6 +33,7 @@
 #include "LB_MPI/MPI_calls_coded.h"
 #include "support/tracing.h"
 #include "support/globals.h"
+#include "support/options.h"
 #include "support/debug.h"
 
 static int spid = 0;
@@ -151,7 +152,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 
         }
 
-        if(_just_barrier) {
+        if(options_get_just_barier()) {
             if (call_type==Barrier) {
                 add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
                 IntoBlockingCall(is_iter, 0);
@@ -169,7 +170,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 void after_mpi(mpi_call call_type) {
     if (mpi_ready) {
 
-        if(_just_barrier) {
+        if(options_get_just_barier()) {
             if (call_type==Barrier) {
                 add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
                 OutOfBlockingCall(is_iter);

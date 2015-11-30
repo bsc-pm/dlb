@@ -25,7 +25,6 @@
 #include "LB_policies/Weight.h"
 #include "support/globals.h"
 #include "support/debug.h"
-#include "support/utils.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
 
@@ -50,6 +49,14 @@ struct timespec CpuTime;
 struct timespec MPITime;
 
 int iterNum;
+
+static int my_round(double x) {
+    int val = x;
+    //return (int)((x+x+1.0)/2);
+    if ((x - val)>0.5) { val++; }
+    return val;
+}
+
 /******* Main Functions Weight Balancing Policy ********/
 
 void Weight_Init(void) {

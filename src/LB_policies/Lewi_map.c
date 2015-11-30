@@ -27,6 +27,7 @@
 #include "LB_comm/comm_map.h"
 #include "support/globals.h"
 #include "support/tracing.h"
+#include "support/debug.h"
 
 int default_cpus;
 int myCPUS=0;

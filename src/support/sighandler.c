@@ -66,7 +66,6 @@
 #include <signal.h>
 #include "LB_core/DLB_kernel.h"
 #include "support/debug.h"
-#include "support/utils.h"
 
 #define MAX_SIGNUM 32
 

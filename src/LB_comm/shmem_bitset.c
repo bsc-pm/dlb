@@ -27,7 +27,7 @@
 #include "support/tracing.h"
 #include "support/globals.h"
 #include "support/debug.h"
-#include "support/utils.h"
+#include "support/options.h"
 #include "support/mask_utils.h"
 
 typedef struct {
@@ -255,7 +255,7 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
             /* Second Step: Retrieve non-affine cpus, if needed */
             if ( size-collected > 0 && max_resources > 0 ) {
 
-                if ( _priorize_locality ) {
+                if ( options_get_priorize_locality() ) {
                     mu_get_affinity_mask( &affinity_mask, &(shdata->given_cpus), MU_ALL_BITS );
                     CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
                 } else {

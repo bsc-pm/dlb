@@ -41,7 +41,7 @@
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
-#include "support/utils.h"
+#include "support/options.h"
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 #include "support/sighandler.h"
@@ -87,6 +87,20 @@ static void notImplemented()
     warning("Functionality  Not implemented in this policy");
 }
 
+
+static void load_modules(void) {
+    pm_init();
+    debug_init();
+    options_init();
+    init_tracing();
+    register_signals();
+}
+
+static void unload_modules(void) {
+    unregister_signals();
+    options_finalize();
+}
+
 void set_dlb_enabled(bool enabled) {
     if (dlb_initialized) {
         dlb_enabled = enabled;
@@ -98,17 +112,11 @@ void set_dlb_enabled(bool enabled) {
     }
 }
 
-void load_modules() {
-    pm_init();
-    debug_init();
-}
-
 int Initialize(void) {
     int initializer_id = 0;
 
     if (!dlb_initialized) {
         load_modules();
-        init_tracing();
         add_event(RUNTIME_EVENT, EVENT_INIT);
 
         // Set IDs
@@ -116,25 +124,10 @@ int Initialize(void) {
         init_id = _process_id;
         initializer_id = _process_id;
 
-        //Read Environment vars
-        char* policy;
-        char* thread_distrib;
-        parse_env_string_or_die( "LB_POLICY", &policy );
-        parse_env_string( "LB_THREAD_DISTRIBUTION", &thread_distrib );
-        parse_env_bool( "LB_JUST_BARRIER", &_just_barrier, false );
-        parse_env_bool( "LB_AGGRESSIVE_INIT", &_aggressive_init, false );
-        parse_env_bool( "LB_PRIORIZE_LOCALITY", &_priorize_locality, false );
-        parse_env_bool( "LB_VERBOSE", &_verbose, false );
-        parse_env_bool( "LB_STATISTICS", &stats_enabled, false );
-        parse_env_bool( "LB_DROM", &drom_enabled, false );
-        parse_env_blocking_mode( "LB_LEND_MODE", &_blocking_mode );
-
-        if ( _aggressive_init ) {
-            warning0( "FIXME: Ignoring LB_AGGRESSIVE_INIT variable. DLB cannot set the number "
-                    "of threads during initialization anymore. This option will remain disabled "
-                    "until we can implemented it in the runtime" );
-            _aggressive_init = false;
-        }
+        // Read Options
+        const char* policy = options_get_policy();
+        stats_enabled = options_get_statistics();
+        drom_enabled = options_get_drom();
 
         if (strcasecmp(policy, "LeWI")==0) {
             info0( "Balancing policy: LeWI" );
@@ -327,9 +320,8 @@ int Initialize(void) {
             fatal0( "Unknown policy: %s", policy );
         }
 
-        info0 ( "Balancing policy: %s balancing", policy);
 #ifdef MPI_LIB
-        info0 ( "MPI processes per node: %dn", _mpis_per_node );
+        info0 ( "MPI processes per node: %d", _mpis_per_node );
 #endif
 
 #if 0
@@ -387,11 +379,11 @@ int Initialize(void) {
 
         info0 ( "This process starts with %d threads", _default_nthreads);
 
-        if ( _just_barrier )
+        if (options_get_just_barier())
             info0 ( "Only lending resources when MPI_Barrier "
                     "(Env. var. LB_JUST_BARRIER is set)" );
 
-        if ( _blocking_mode == BLOCK )
+        if (options_get_lend_mode() == BLOCK)
             info0 ( "LEND mode set to BLOCKING. I will lend all "
                     "the resources when in an MPI call" );
 
@@ -420,9 +412,6 @@ int Initialize(void) {
                 clock_gettime(CLOCK_REALTIME, &initComp);
             }*/
 
-        /* Intercept POSIX signals to manage DLB cleanup */
-        register_signals();
-
         if ( drom_enabled ) drom_init();
         if ( stats_enabled ) stats_init();
         lb_funcs.init();
@@ -442,7 +431,7 @@ void Finish(int id) {
         lb_funcs.finish();
         if ( stats_enabled ) stats_finalize();
         if ( drom_enabled ) drom_finalize();
-        unregister_signals();
+        unload_modules();
     }
     /*  if (prof){
             struct timespec aux, aux2;
@@ -505,7 +494,7 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
         MPISecs=iterMPITime_avg;*/
     if (dlb_enabled) {
         // We explicitly ignore the argument
-        lb_funcs.intoBlockingCall(is_iter, _blocking_mode );
+        lb_funcs.intoBlockingCall(is_iter, options_get_lend_mode());
     }
 }
 

@@ -17,26 +17,23 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef UTILS_H
-#define UTILS_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
+</testinfo>*/
 
-#define _GNU_SOURCE
-#include <sched.h>
-#include <stdbool.h>
-#include "support/types.h"
-#include "support/debug.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "support/options.h"
 
-
-void parse_env_bool ( const char *env, bool *var, bool default_value );
-void parse_env_int ( char const *env, int *var );
-void parse_env_int_or_die ( char const *env, int *var );
-void parse_env_string ( char const *env, char **var );
-void parse_env_string_or_die ( char const *env, char **var );
-void parse_env_blocking_mode ( char const *env, blocking_mode_t *mode );
-void parse_env_verbose_opts ( char const *env, verbose_opts_t *mode );
-void parse_env_verbose_format ( char const *env, verbose_fmt_t *format, verbose_fmt_t default_format );
-void parse_env_cpuset ( char const *env, cpu_set_t *mask );
-
-int my_round ( double x );
-
-#endif /* UTILS_H */
+int main( int argc, char **argv ) {
+    setenv("LB_POLICY", "huh", 1);
+    setenv("LB_DROM", "huh", 1);
+    setenv("LB_MASK", "huh", 1);
+    setenv("LB_LEND_MODE", "huh", 1);
+    setenv("LB_VERBOSE", "huh", 1);
+    setenv("LB_VERBOSE_FORMAT", "huh", 1);
+    options_init();
+    options_finalize();
+    return 0;
+}

@@ -28,20 +28,20 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <execinfo.h>
-#include "debug.h"
-#include "globals.h"
-#include "utils.h"
+#include "support/debug.h"
+#include "support/globals.h"
+#include "support/options.h"
 #include "LB_numThreads/numThreads.h"
 
 #define VBFORMAT_LEN 32
-verbose_opts_t vb_opts = VB_CLEAR;
+verbose_opts_t vb_opts;
+static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
-static verbose_fmt_t vb_fmt = VB_CLEAR;
 static __thread int thread_id;
 
 void debug_init() {
-    parse_env_verbose_opts( "LB_VERBOSE", &vb_opts );
-    parse_env_verbose_format( "LB_VERBOSE_FORMAT", &vb_fmt, VBF_NODE|VBF_PID|VBF_THREAD );
+    vb_opts = options_get_verbose();
+    vb_fmt = options_get_verbose_fmt();
 
     int i = 0;
     if ( vb_fmt & VBF_NODE ) {

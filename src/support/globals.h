@@ -20,19 +20,11 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include "utils.h"
-
 extern int _mpi_rank;         /* MPI rank */
 extern int _mpi_size;         /* MPI size */
 extern int _node_id;          /* Node ID */
 extern int _process_id;       /* Process ID per node */
 extern int _mpis_per_node;    /* Numer of MPI processes per node */
 extern int _default_nthreads; /* Number of threads per MPI process */
-
-extern bool _just_barrier;
-extern bool _aggressive_init;    /* Initialize all threads at init */
-extern bool _priorize_locality;  /* Given threads are reserved for other processes using the same socket, unless all of them are given */
-extern bool _verbose;            /* Verbosity for Debug Mode */
-extern blocking_mode_t _blocking_mode;
 
 #endif /* GLOBALS_H */

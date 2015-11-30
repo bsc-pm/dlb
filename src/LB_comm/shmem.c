@@ -34,7 +34,7 @@
 
 #include "LB_comm/shmem.h"
 #include "support/debug.h"
-#include "support/utils.h"
+#include "support/options.h"
 
 #define SHSYNC_MAX_SIZE 64
 
@@ -53,8 +53,7 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     handler->size = SHSYNC_MAX_SIZE + shdata_size;
 
     /* Get /dev/shm/ file names to create */
-    char *custom_shm_key;
-    parse_env_string( "LB_SHM_KEY", &custom_shm_key );
+    const char *custom_shm_key = options_get_shm_key();
 
     if ( custom_shm_key != NULL ) {
         snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key );

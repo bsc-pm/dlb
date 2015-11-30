@@ -26,7 +26,6 @@
 #include "LB_comm/shmem.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
-#include "support/utils.h"
 #include "support/mask_utils.h"
 #include "support/globals.h"
 #include "support/tracing.h"
