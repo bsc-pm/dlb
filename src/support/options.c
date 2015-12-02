@@ -231,7 +231,7 @@ void options_init(void) {
     // modules
     int i = 0;
     options[i++] = register_option("LB_POLICY", "--policy",
-            OPT_STR_T, &opt_policy, RO, !OPTIONAL, NULL,
+            OPT_STR_T, &opt_policy, RO, OPTIONAL, "no",
             "Lend Balancing Policy. Choose one of: \n"
             " - No: No policy\n"
             " - LeWI: Lend When Idle, basic policy\n"
@@ -423,9 +423,6 @@ void options_print_variables(void) {
             }
             if (option->readonly) {
                 b += sprintf(b, " - (readonly)");
-            }
-            if (option->optional) {
-                b += sprintf(b, " - (optional)");
             }
             b += sprintf(b, "\n");
         }

@@ -62,9 +62,8 @@
 // Global
 int use_dpd = 0;
 
-char prof = 0;
-int policy_auto = 0;
-BalancePolicy lb_funcs;
+//static char prof = 0;
+static int policy_auto = 0;
 
 
 /* These flags are used to
@@ -86,6 +85,32 @@ static void notImplemented()
 {
     warning("Functionality  Not implemented in this policy");
 }
+
+// Initialize lb_funcs to dummy functions
+static BalancePolicy lb_funcs = {
+    .init = &dummyFunc,
+    .finish = &dummyFunc,
+    .initIteration = &dummyFunc,
+    .finishIteration = &dummyFunc,
+    .intoCommunication = &dummyFunc,
+    .outOfCommunication = &dummyFunc,
+    .intoBlockingCall = &dummyFunc,
+    .outOfBlockingCall = &dummyFunc,
+    .updateresources = &dummyFunc,
+    .returnclaimed = &dummyFunc,
+    .releasecpu = &false_dummyFunc,
+    .returnclaimedcpu = &false_dummyFunc,
+    .claimcpus = &dummyFunc,
+    .acquirecpu = &dummyFunc,
+    .acquirecpus = &dummyFunc,
+    .checkCpuAvailability = &true_dummyFunc,
+    .resetDLB = &dummyFunc,
+    .disableDLB = &dummyFunc,
+    .enableDLB = &dummyFunc,
+    .single = &dummyFunc,
+    .parallel = &dummyFunc,
+    .notifymaskchangeto = &dummyFunc
+};
 
 
 static void load_modules(void) {
@@ -139,19 +164,11 @@ int Initialize(void) {
             lb_funcs.intoBlockingCall = &Lend_light_IntoBlockingCall;
             lb_funcs.outOfBlockingCall = &Lend_light_OutOfBlockingCall;
             lb_funcs.updateresources = &Lend_light_updateresources;
-            lb_funcs.returnclaimed = &dummyFunc;
-            lb_funcs.releasecpu = &false_dummyFunc;
-            lb_funcs.returnclaimedcpu = &false_dummyFunc;
-            lb_funcs.claimcpus = &dummyFunc;
-            lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB = &Lend_light_resetDLB;
-            lb_funcs.acquirecpu = &dummyFunc;
-            lb_funcs.acquirecpus = &dummyFunc;
             lb_funcs.disableDLB = &Lend_light_disableDLB;
             lb_funcs.enableDLB = &Lend_light_enableDLB;
             lb_funcs.single = &Lend_light_single;
             lb_funcs.parallel = &Lend_light_parallel;
-            lb_funcs.notifymaskchangeto = &dummyFunc;
 
         } else if (strcasecmp(policy, "Map")==0) {
             info0( "Balancing policy: LeWI with Map of cpus version" );
@@ -163,19 +180,9 @@ int Initialize(void) {
             lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
             lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
             lb_funcs.updateresources = &Map_updateresources;
-            lb_funcs.returnclaimed = &dummyFunc;
-            lb_funcs.releasecpu = &false_dummyFunc;
-            lb_funcs.returnclaimedcpu = &false_dummyFunc;
-            lb_funcs.claimcpus = &dummyFunc;
-            lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB= &notImplemented;
-            lb_funcs.acquirecpu = &dummyFunc;
-            lb_funcs.acquirecpus = &dummyFunc;
-            lb_funcs.disableDLB = &dummyFunc;
-            lb_funcs.enableDLB = &dummyFunc;
-            lb_funcs.single = &dummyFunc;
-            lb_funcs.parallel = &dummyFunc;
-            lb_funcs.notifymaskchangeto = &dummyFunc;
+            lb_funcs.disableDLB = &notImplemented;
+            lb_funcs.enableDLB = &notImplemented;
 
         } else if (strcasecmp(policy, "WEIGHT")==0) {
             info0( "Balancing policy: Weight balancing" );
@@ -189,19 +196,9 @@ int Initialize(void) {
             lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
             lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
             lb_funcs.updateresources = &Weight_updateresources;
-            lb_funcs.returnclaimed = &dummyFunc;
-            lb_funcs.releasecpu = &false_dummyFunc;
-            lb_funcs.returnclaimedcpu = &false_dummyFunc;
-            lb_funcs.claimcpus = &dummyFunc;
-            lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB= &notImplemented;
-            lb_funcs.acquirecpu = &dummyFunc;
-            lb_funcs.acquirecpus = &dummyFunc;
-            lb_funcs.disableDLB = &dummyFunc;
-            lb_funcs.enableDLB = &dummyFunc;
-            lb_funcs.single = &dummyFunc;
-            lb_funcs.parallel = &dummyFunc;
-            lb_funcs.notifymaskchangeto = &dummyFunc;
+            lb_funcs.disableDLB = &notImplemented;
+            lb_funcs.enableDLB = &notImplemented;
 
         } else if (strcasecmp(policy, "LeWI_mask")==0) {
             info0( "Balancing policy: LeWI mask" );
@@ -214,10 +211,7 @@ int Initialize(void) {
             lb_funcs.outOfBlockingCall = &lewi_mask_OutOfBlockingCall;
             lb_funcs.updateresources = &lewi_mask_UpdateResources;
             lb_funcs.returnclaimed = &lewi_mask_ReturnClaimedCpus;
-            lb_funcs.releasecpu = &false_dummyFunc;
-            lb_funcs.returnclaimedcpu = &false_dummyFunc;
             lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
-            lb_funcs.checkCpuAvailability = &true_dummyFunc;
             lb_funcs.resetDLB  = &lewi_mask_resetDLB;
             lb_funcs.acquirecpu = &lewi_mask_acquireCpu;
             lb_funcs.acquirecpus = &lewi_mask_acquireCpus;
@@ -238,7 +232,6 @@ int Initialize(void) {
             lb_funcs.outOfBlockingCall = &auto_lewi_mask_OutOfBlockingCall;
             lb_funcs.updateresources = &auto_lewi_mask_UpdateResources;
             //lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
-            lb_funcs.returnclaimed = &dummyFunc;
             lb_funcs.releasecpu = &auto_lewi_mask_ReleaseCpu;
             lb_funcs.returnclaimedcpu = &auto_lewi_mask_ReturnCpuIfClaimed;
             lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
@@ -278,20 +271,12 @@ int Initialize(void) {
                 lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
             }
 
-            lb_funcs.releasecpu = &false_dummyFunc;
-            lb_funcs.returnclaimedcpu = &false_dummyFunc;
-            lb_funcs.claimcpus = &dummyFunc;
-            lb_funcs.checkCpuAvailability = &true_dummyFunc;
-            lb_funcs.resetDLB = &notImplemented;
             lb_funcs.acquirecpu = &notImplemented;
-            lb_funcs.acquirecpus = &dummyFunc;
-            lb_funcs.disableDLB = &dummyFunc;
-            lb_funcs.enableDLB = &dummyFunc;
-            lb_funcs.single = &dummyFunc;
-            lb_funcs.parallel = &dummyFunc;
-            lb_funcs.notifymaskchangeto = &dummyFunc;
+            lb_funcs.resetDLB = &notImplemented;
+            lb_funcs.disableDLB = &notImplemented;
+            lb_funcs.enableDLB = &notImplemented;
 
-        } else if (strcasecmp(policy, "NO")==0) {
+        } else if (strcasecmp(policy, "JustProf")==0) {
             info0( "No Load balancing" );
 
             use_dpd=1;
@@ -303,21 +288,6 @@ int Initialize(void) {
             lb_funcs.intoBlockingCall = &JustProf_IntoBlockingCall;
             lb_funcs.outOfBlockingCall = &JustProf_OutOfBlockingCall;
             lb_funcs.updateresources = &JustProf_UpdateResources;
-            lb_funcs.returnclaimed = &dummyFunc;
-            lb_funcs.releasecpu = &false_dummyFunc;
-            lb_funcs.returnclaimedcpu = &false_dummyFunc;
-            lb_funcs.claimcpus = &dummyFunc;
-            lb_funcs.checkCpuAvailability = &true_dummyFunc;
-            lb_funcs.resetDLB = &dummyFunc;
-            lb_funcs.acquirecpu = &dummyFunc;
-            lb_funcs.acquirecpus = &dummyFunc;
-            lb_funcs.disableDLB = &dummyFunc;
-            lb_funcs.enableDLB = &dummyFunc;
-            lb_funcs.single = &dummyFunc;
-            lb_funcs.parallel = &dummyFunc;
-            lb_funcs.notifymaskchangeto = &dummyFunc;
-        } else {
-            fatal0( "Unknown policy: %s", policy );
         }
 
 #ifdef MPI_LIB
