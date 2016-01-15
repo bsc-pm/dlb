@@ -110,3 +110,7 @@ void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2,
     res->tv_sec = sec;
     res->tv_nsec = nsec;
 }
+
+int64_t ts_to_ns( const struct timespec *ts ) {
+    return ts->tv_nsec + ts->tv_sec * 1000000000L;
+}

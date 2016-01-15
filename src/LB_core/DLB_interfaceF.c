@@ -150,15 +150,30 @@ void dlb_stats_getcpuusage(int *pid, double *usage) {
 }
 DLB_API_F_ALIAS(dlb_stats_getcpuusage, (int*, double*));
 
+void dlb_stats_getcpuavgusage(int *pid, double *usage) {
+    *usage = DLB_Stats_GetCpuAvgUsage(*pid);
+}
+DLB_API_F_ALIAS(dlb_stats_getcpuavgusage, (int*, double*));
+
 void dlb_stats_getcpuusagelist(double *usagelist,int *nelems,int *max_len) {
     DLB_Stats_GetCpuUsageList(usagelist, nelems, *max_len);
 }
 DLB_API_F_ALIAS(dlb_stats_getcpuusagelist, (double*, int*, int*));
 
+void dlb_stats_getcpuavgusagelist(double *avgusagelist,int *nelems,int *max_len) {
+    DLB_Stats_GetCpuAvgUsageList(avgusagelist, nelems, *max_len);
+}
+DLB_API_F_ALIAS(dlb_stats_getcpuavgusagelist, (double*, int*, int*));
+
 void dlb_stats_getnodeusage(double *usage) {
     *usage = DLB_Stats_GetNodeUsage();
 }
 DLB_API_F_ALIAS(dlb_stats_getnodeusage, (double*));
+
+void dlb_stats_getnodeavgusage(double *usage) {
+    *usage = DLB_Stats_GetNodeAvgUsage();
+}
+DLB_API_F_ALIAS(dlb_stats_getnodeavgusage, (double*));
 
 void dlb_stats_getactivecpus(int *pid, int *cpus) {
     *cpus = DLB_Stats_GetActiveCpus(*pid);

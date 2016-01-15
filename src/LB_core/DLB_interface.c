@@ -174,12 +174,24 @@ double DLB_Stats_GetCpuUsage (int pid) {
     return stats_ext_getcpuusage(pid);
 }
 
+double DLB_Stats_GetCpuAvgUsage(int pid) {
+    return stats_ext_getcpuavgusage(pid);
+}
+
 void DLB_Stats_GetCpuUsageList (double *usagelist, int *nelems, int max_len) {
     stats_ext_getcpuusage_list(usagelist, nelems, max_len);
 }
 
+void DLB_Stats_GetCpuAvgUsageList (double *avgusagelist, int *nelems, int max_len) {
+    stats_ext_getcpuavgusage_list(avgusagelist, nelems, max_len);
+}
+
 double DLB_Stats_GetNodeUsage(void) {
     return stats_ext_getnodeusage();
+}
+
+double DLB_Stats_GetNodeAvgUsage(void) {
+    return stats_ext_getnodeavgusage();
 }
 
 int DLB_Stats_GetActiveCpus (int pid) {

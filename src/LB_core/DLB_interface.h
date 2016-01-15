@@ -232,6 +232,12 @@ void DLB_Stats_GetPidList(int *pidlist,int *nelems,int max_len);
  */
 double DLB_Stats_GetCpuUsage(int pid);
 
+/* \brief Get the CPU Average Usage of the given PID
+ * \param[in] pid PID to consult
+ * \return the CPU usage of the given PID, or -1.0 if not found
+ */
+double DLB_Stats_GetCpuAvgUsage(int pid);
+
 /* \brief Get the CPU usage of all the attached PIDs
  * \param[out] usagelist The output list
  * \param[out] nelems Number of elements in the list
@@ -239,10 +245,22 @@ double DLB_Stats_GetCpuUsage(int pid);
  */
 void DLB_Stats_GetCpuUsageList(double *usagelist,int *nelems,int max_len);
 
+/* \brief Get the CPU Average usage of all the attached PIDs
+ * \param[out] avgusagelist The output list
+ * \param[out] nelems Number of elements in the list
+ * \param[in] max_len Max capacity of the list
+ */
+void DLB_Stats_GetCpuAvgUsageList(double *avgusagelist,int *nelems,int max_len);
+
 /* \brief Get the CPU Usage of all the DLB processes in the node
  * \return the Node Usage, or 1.0 on error
  */
 double DLB_Stats_GetNodeUsage(void);
+
+/* \brief Get the CPU Average Usage of all the DLB processes in the node
+ * \return the Node Usage, or 1.0 on error
+ */
+double DLB_Stats_GetNodeAvgUsage(void);
 
 /* \brief Get the number of CPUs assigned to a given process
  * \param[in] pid Process ID to consult

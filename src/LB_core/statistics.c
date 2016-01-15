@@ -51,12 +51,24 @@ double stats_ext_getcpuusage( int pid ) {
     return shmem_stats_ext__getcpuusage( pid );
 }
 
+double stats_ext_getcpuavgusage( int pid ) {
+    return shmem_stats_ext__getcpuavgusage( pid );
+}
+
 void stats_ext_getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
     shmem_stats_ext__getcpuusage_list( usagelist, nelems, max_len );
 }
 
+void stats_ext_getcpuavgusage_list( double *avgusagelist, int *nelems, int max_len ) {
+    shmem_stats_ext__getcpuavgusage_list( avgusagelist, nelems, max_len );
+}
+
 double stats_ext_getnodeusage(void) {
     return shmem_stats_ext__getnodeusage();
+}
+
+double stats_ext_getnodeavgusage(void) {
+    return shmem_stats_ext__getnodeavgusage();
 }
 
 int stats_ext_getactivecpus( int pid ) {

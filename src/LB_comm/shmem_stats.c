@@ -43,6 +43,7 @@ typedef struct {
     unsigned int active_cpus;
     // Cpu Usage fields:
     double cpu_usage;
+    double cpu_avg_usage;
     struct timespec last_ttime; // Total time
     struct timespec last_utime; // Useful time (user+system)
 #ifdef DLB_LOAD_AVERAGE
@@ -98,8 +99,8 @@ static float getcpustate(int cpu, stats_state_t state) {
 
 static void print_stats(void) {
     fprintf(stdout, "=== DLB Statistics ===\n");
-    fprintf(stdout, "Process %d: %f CPU usage\n",
-            my_process, shdata_process(my_process).cpu_usage);
+    fprintf(stdout, "Process %d: %f CPU Avg usage\n",
+            my_process, shdata_process(my_process).cpu_avg_usage);
 
     fprintf(stdout, "CPU Statistics:\n");
     int i;
@@ -192,25 +193,35 @@ void shmem_stats__update( void ) {
 
         // Compute elapsed total time
         struct timespec current_ttime;
-        int64_t elapsed_ttime;
+        int64_t elapsed_ttime_since_last;
+        int64_t elapsed_ttime_since_init;;
         get_time_coarse( &current_ttime );
-        elapsed_ttime = timespec_diff( &shdata_process(my_process).last_ttime, &current_ttime );
+        elapsed_ttime_since_last = timespec_diff(&shdata_process(my_process).last_ttime,
+                &current_ttime);
+        elapsed_ttime_since_init = timespec_diff(&shdata->initial_time, &current_ttime );
 
         // Compute elapsed useful time (user+system)
         struct rusage usage;
         struct timespec current_utime;
-        int64_t elapsed_utime;
+        int64_t elapsed_utime_since_last;
+        int64_t elapsed_utime_since_init;
         getrusage( RUSAGE_SELF, &usage );
         add_tv_to_ts( &usage.ru_utime, &usage.ru_stime, &current_utime );
-        elapsed_utime = timespec_diff( &shdata_process(my_process).last_utime, &current_utime );
+        elapsed_utime_since_last = timespec_diff(&shdata_process(my_process).last_utime,
+                &current_utime );
+        elapsed_utime_since_init = ts_to_ns(&current_utime);
 
         // Update times for next update
         shdata_process(my_process).last_ttime = current_ttime;
         shdata_process(my_process).last_utime = current_utime;
 
-        // Compute and save usage value
-        double cpu_usage = 100 * (double)elapsed_utime / (double)elapsed_ttime;
-        shdata_process(my_process).cpu_usage = cpu_usage;
+        // Compute usage
+        shdata_process(my_process).cpu_usage = 100 *
+            (double)elapsed_utime_since_last / (double)elapsed_ttime_since_last;
+
+        // Compute avg usage
+        shdata_process(my_process).cpu_avg_usage = 100 *
+            (double)elapsed_utime_since_init / (double)elapsed_ttime_since_init;
 
 #ifdef DLB_LOAD_AVERAGE
         // Do not update the Load Average if the elapsed is less that a threshold
@@ -306,6 +317,25 @@ double shmem_stats_ext__getcpuusage( int pid ) {
     return cpu_usage;
 }
 
+double shmem_stats_ext__getcpuavgusage( int pid ) {
+    if (shm_ext_handler == NULL) return -1.0;
+
+    double cpu_avg_usage = -1.0;
+    shmem_lock( shm_ext_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata_process(p).pid == pid ) {
+                cpu_avg_usage = shdata_process(p).cpu_avg_usage;
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_ext_handler );
+
+    return cpu_avg_usage;
+}
+
 void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
     *nelems = 0;
     if (shm_ext_handler == NULL) return;
@@ -315,6 +345,24 @@ void shmem_stats_ext__getcpuusage_list( double *usagelist, int *nelems, int max_
         for ( p = 0; p < max_processes; p++ ) {
             if ( shdata_process(p).pid != NOBODY ) {
                 usagelist[(*nelems)++] = shdata_process(p).cpu_usage;
+            }
+            if ( *nelems == max_len ) {
+                break;
+            }
+        }
+    }
+    shmem_unlock( shm_ext_handler );
+}
+
+void shmem_stats_ext__getcpuavgusage_list( double *avgusagelist, int *nelems, int max_len ) {
+    *nelems = 0;
+    if (shm_ext_handler == NULL) return;
+    shmem_lock( shm_ext_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata_process(p).pid != NOBODY ) {
+                avgusagelist[(*nelems)++] = shdata_process(p).cpu_avg_usage;
             }
             if ( *nelems == max_len ) {
                 break;
@@ -340,6 +388,24 @@ double shmem_stats_ext__getnodeusage(void) {
     shmem_unlock( shm_ext_handler );
 
     return cpu_usage;
+}
+
+double shmem_stats_ext__getnodeavgusage(void) {
+    if (shm_ext_handler == NULL) return -1.0;
+
+    double cpu_avg_usage = 0.0;
+    shmem_lock( shm_ext_handler );
+    {
+        int p;
+        for ( p = 0; p < max_processes; p++ ) {
+            if ( shdata_process(p).pid != NOBODY ) {
+                cpu_avg_usage += shdata_process(p).cpu_avg_usage;
+            }
+        }
+    }
+    shmem_unlock( shm_ext_handler );
+
+    return cpu_avg_usage;
 }
 
 int shmem_stats_ext__getactivecpus( int pid ) {

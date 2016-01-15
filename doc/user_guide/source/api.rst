@@ -222,13 +222,25 @@ usage and their ownership.
 
     Get the CPU Usage of the given PID
 
+.. function:: double DLB_Stats_GetCpuAvgUsage(int pid)
+
+    Get the CPU Average Usage of the given PID
+
 .. function:: void DLB_Stats_GetCpuUsageList(double \*usagelist,int \*nelems,int max_len)
 
     Get the CPU usage of all the attached PIDs
 
+.. function:: void DLB_Stats_GetCpuAvgUsageList(double \*avgusagelist,int \*nelems,int max_len)
+
+    Get the CPU Average usage of all the attached PIDs
+
 .. function:: double DLB_Stats_GetNodeUsage(void)
 
     Get the CPU Usage of all the DLB processes in the node
+
+.. function:: double DLB_Stats_GetNodeAvgUsage(void)
+
+    Get the number of CPUs assigned to a given process
 
 .. function:: int DLB_Stats_GetActiveCpus(int pid)
 
