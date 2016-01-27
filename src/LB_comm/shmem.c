@@ -18,7 +18,6 @@
 /*********************************************************************************/
 
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>      /* For mode constants */
 #include <fcntl.h>         /* For O_* constants */
@@ -54,13 +53,7 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
 
     /* Get /dev/shm/ file names to create */
     const char *custom_shm_key = options_get_shm_key();
-
-    if ( custom_shm_key != NULL ) {
-        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key );
-    } else {
-        key_t key = getuid();
-        snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, key );
-    }
+    snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key );
 
     verbose( VB_SHMEM, "Start Process Comm - creating shared mem, module(%s)", shmem_module );
 

@@ -17,6 +17,7 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -287,8 +288,10 @@ void options_init(void) {
             OPT_BOOL_T, &opt_greedy, RW, OPTIONAL, &FALSE,
             "Greedy option for LeWI policy");
 
+    char default_key[8];
+    snprintf(default_key, 8, "%d", getuid());
     options[i++] = register_option("LB_SHM_KEY", "--shm-key",
-            OPT_STR_T, &opt_shm_key, RO, OPTIONAL, NULL,
+            OPT_STR_T, &opt_shm_key, RO, OPTIONAL, default_key,
             "Shared Memory key. It determines the namefile to which DLB processes can "
             "interconnect, default: user ID");
 
