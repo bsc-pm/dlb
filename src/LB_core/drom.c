@@ -22,11 +22,6 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 
-void drom_update(void) {
-    shmem_procinfo__update();
-}
-
-
 void drom_ext_init(void) {
     shmem_cpuinfo_ext__init();
     shmem_procinfo_ext__init();

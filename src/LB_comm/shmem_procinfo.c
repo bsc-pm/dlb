@@ -130,7 +130,7 @@ void shmem_procinfo__finalize(void) {
     shm_handler = NULL;
 }
 
-void shmem_procinfo__update(void) {
+void shmem_procinfo__update(bool do_drom, bool do_stats) {
 
     if (shm_handler == NULL || shdata == NULL) return;
 
@@ -140,14 +140,13 @@ void shmem_procinfo__update(void) {
     get_time_coarse( &now );
     elapsed = timespec_diff( &last_ttime, &now );
 
-    bool update_mask = shdata->process_info[my_process].dirty;
-    bool update_load = elapsed >= UPDATE_USAGE_MIN_THRESHOLD;
+    bool update_mask = do_drom && shdata->process_info[my_process].dirty;
+    bool update_load = do_stats && elapsed >= UPDATE_USAGE_MIN_THRESHOLD;
 
     if (update_mask || update_load) {
         shmem_lock(shm_handler);
         {
-            // double check shdata once locked
-            if (shdata->process_info[my_process].dirty) {
+            if (update_mask) {
                 update_process_mask();
             }
             if (update_load) {

@@ -20,9 +20,11 @@
 #ifndef SHMEM_PROCINFO_H
 #define SHMEM_PROCINFO_H
 
+#include "support/types.h"
+
 void shmem_procinfo__init(void);
 void shmem_procinfo__finalize(void);
-void shmem_procinfo__update(void);
+void shmem_procinfo__update(bool do_drom, bool do_stats);
 
 void shmem_procinfo_ext__init(void);
 void shmem_procinfo_ext__finalize(void);

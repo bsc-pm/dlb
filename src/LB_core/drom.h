@@ -23,8 +23,6 @@
 #define _GNU_SOURCE
 #include <sched.h>
 
-void drom_update(void);
-
 void drom_ext_init(void);
 void drom_ext_finalize(void);
 int drom_ext_getnumcpus(void);

@@ -432,7 +432,7 @@ void Terminate(void) {
 }
 
 void Update() {
-    if ( drom_enabled ) drom_update();
+    shmem_procinfo__update(drom_enabled, stats_enabled);
 }
 
 void IntoCommunication(void) {
