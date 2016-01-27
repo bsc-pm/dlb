@@ -218,10 +218,6 @@ float DLB_Stats_GetCpuStateGuested( int cpu ) {
     return stats_ext_getcpustateowned(cpu);
 }
 
-void DLB_Stats_PrintShmem(void) {
-    stats_ext_printshmem();
-}
-
 // final name not decided yet
 /* Dynamic Resource Ownership Manager API */
 
@@ -247,10 +243,6 @@ int DLB_Drom_GetProcessMask (int pid, dlb_cpu_set_t mask) {
 
 int DLB_Drom_SetProcessMask (int pid, const_dlb_cpu_set_t mask) {
     return drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
-}
-
-void DLB_Drom_PrintShmem(void) {
-    drom_ext_printshmem();
 }
 
 /* MPI API */

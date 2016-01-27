@@ -17,33 +17,27 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef SHMEM_STATS_H
-#define SHMEM_STATS_H
+#ifndef SHMEM_PROCINFO_H
+#define SHMEM_PROCINFO_H
 
-typedef enum {
-    STATS_IDLE = 0,
-    STATS_OWNED,
-    STATS_GUESTED
-} stats_state_t;
+void shmem_procinfo__init(void);
+void shmem_procinfo__finalize(void);
+void shmem_procinfo__update(void);
 
-void shmem_stats__init(void);
-void shmem_stats__finalize(void);
-void shmem_stats__update(void);
-void shmem_stats__update_cpu(int cpu, stats_state_t new_state);
-void shmem_stats_ext__init( void );
-void shmem_stats_ext__finalize(void);
-int shmem_stats_ext__getnumcpus(void);
-void shmem_stats_ext__getpidlist(int *pidlist,int *nelems,int max_len);
-double shmem_stats_ext__getcpuusage(int pid);
-double shmem_stats_ext__getcpuavgusage(int pid);
-void shmem_stats_ext__getcpuusage_list(double *usagelist,int *nelems,int max_len);
-void shmem_stats_ext__getcpuavgusage_list(double *avgusagelist,int *nelems,int max_len);
-double shmem_stats_ext__getnodeusage(void);
-double shmem_stats_ext__getnodeavgusage(void);
-int shmem_stats_ext__getactivecpus(int pid);
-void shmem_stats_ext__getactivecpus_list(int *cpuslist,int *nelems,int max_len);
-int shmem_stats_ext__getloadavg(int pid,double *load);
-float shmem_stats_ext__getcpustate(int cpu, stats_state_t state);
-void shmem_stats_ext__print_info(void);
+void shmem_procinfo_ext__init(void);
+void shmem_procinfo_ext__finalize(void);
+void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len);
+int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask);
+int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask);
+double shmem_procinfo_ext__getcpuusage(int pid);
+double shmem_procinfo_ext__getcpuavgusage(int pid);
+void shmem_procinfo_ext__getcpuusage_list(double *usagelist, int *nelems, int max_len);
+void shmem_procinfo_ext__getcpuavgusage_list(double *avgusagelist, int *nelems, int max_len);
+double shmem_procinfo_ext__getnodeusage(void);
+double shmem_procinfo_ext__getnodeavgusage(void);
+int shmem_procinfo_ext__getactivecpus(int pid);
+void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_len);
+int shmem_procinfo_ext__getloadavg(int pid, double *load);
+void shmem_procinfo_ext__print_info(void);
 
-#endif /* SHMEM_STATS_H */
+#endif /* SHMEM_PROCINFO_H */

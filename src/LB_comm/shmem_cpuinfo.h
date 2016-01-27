@@ -17,22 +17,40 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef SHMEM_DROM_H
-#define SHMEM_DROM_H
+#ifndef SHMEM_CPUINFO_H
+#define SHMEM_CPUINFO_H
 
 #define _GNU_SOURCE
 #include <sched.h>
+#include "support/types.h"
 
-void shmem_drom__init(void);
-void shmem_drom__finalize(void);
-void shmem_drom__update(void);
 
-void shmem_drom_ext__init(void);
-void shmem_drom_ext__finalize(void);
-int shmem_drom_ext__getnumcpus(void);
-void shmem_drom_ext__getpidlist(int *pidlist, int *nelems, int max_len);
-int shmem_drom_ext__getprocessmask(int pid, cpu_set_t *mask);
-int shmem_drom_ext__setprocessmask(int pid, const cpu_set_t *mask);
-void shmem_drom_ext__print_info(void);
+// Simplified states to keep statistics
+typedef enum {
+    STATS_IDLE = 0,
+    STATS_OWNED,
+    STATS_GUESTED,
+    _NUM_STATS
+} stats_state_t;
 
-#endif /* SHMEM_DROM_H */
+void shmem_cpuinfo__init(void);
+void shmem_cpuinfo__finalize(void);
+void shmem_cpuinfo__add_mask(const cpu_set_t *cpu_mask);
+void shmem_cpuinfo__add_cpu(int cpu);
+const cpu_set_t* shmem_cpuinfo__recover_defmask(void);
+void shmem_cpuinfo__recover_some_defcpus(cpu_set_t *mask, int max_resources);
+void shmem_cpuinfo__recover_cpu(int cpu);
+int shmem_cpuinfo__return_claimed(cpu_set_t *mask);
+int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources);
+bool shmem_cpuinfo__is_cpu_borrowed(int cpu);
+bool shmem_cpuinfo__is_cpu_claimed(int cpu);
+int shmem_cpuinfo__reset_default_cpus(cpu_set_t *mask);
+bool shmem_cpuinfo__acquire_cpu(int cpu, bool force);
+void shmem_cpuinfo__update_ownership(const cpu_set_t* process_mask);
+
+void shmem_cpuinfo_ext__init(void);
+void shmem_cpuinfo_ext__finalize(void);
+int shmem_cpuinfo_ext__getnumcpus(void);
+float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);
+void shmem_cpuinfo_ext__print_info(void);
+#endif /* SHMEM_CPUINFO_H */

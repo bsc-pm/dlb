@@ -17,84 +17,71 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "LB_comm/shmem_stats.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
 
-void stats_init( void ) {
-    shmem_stats__init();
+void stats_ext_init(void) {
+    shmem_cpuinfo__init();
+    shmem_procinfo__init();
 }
 
-void stats_finalize( void ) {
-    shmem_stats__finalize();
+void stats_ext_finalize(void) {
+    shmem_cpuinfo_ext__finalize();
+    shmem_procinfo_ext__finalize();
 }
 
-void stats_update( void ) {
-    shmem_stats__update();
+int stats_ext_getnumcpus(void) {
+    return shmem_cpuinfo_ext__getnumcpus();
 }
 
-void stats_ext_init( void ) {
-    shmem_stats_ext__init();
+void stats_ext_getpidlist(int *pidlist, int *nelems, int max_len) {
+    shmem_procinfo_ext__getpidlist(pidlist, nelems, max_len);
 }
 
-void stats_ext_finalize( void ) {
-    shmem_stats_ext__finalize();
+double stats_ext_getcpuusage(int pid) {
+    return shmem_procinfo_ext__getcpuusage(pid);
 }
 
-int stats_ext_getnumcpus( void ) {
-    return shmem_stats_ext__getnumcpus();
+double stats_ext_getcpuavgusage(int pid) {
+    return shmem_procinfo_ext__getcpuavgusage(pid);
 }
 
-void stats_ext_getpidlist( int *pidlist, int *nelems, int max_len ) {
-    shmem_stats_ext__getpidlist( pidlist, nelems, max_len );
+void stats_ext_getcpuusage_list(double *usagelist, int *nelems, int max_len) {
+    shmem_procinfo_ext__getcpuusage_list(usagelist, nelems, max_len);
 }
 
-double stats_ext_getcpuusage( int pid ) {
-    return shmem_stats_ext__getcpuusage( pid );
-}
-
-double stats_ext_getcpuavgusage( int pid ) {
-    return shmem_stats_ext__getcpuavgusage( pid );
-}
-
-void stats_ext_getcpuusage_list( double *usagelist, int *nelems, int max_len ) {
-    shmem_stats_ext__getcpuusage_list( usagelist, nelems, max_len );
-}
-
-void stats_ext_getcpuavgusage_list( double *avgusagelist, int *nelems, int max_len ) {
-    shmem_stats_ext__getcpuavgusage_list( avgusagelist, nelems, max_len );
+void stats_ext_getcpuavgusage_list(double *avgusagelist, int *nelems, int max_len) {
+    shmem_procinfo_ext__getcpuavgusage_list(avgusagelist, nelems, max_len);
 }
 
 double stats_ext_getnodeusage(void) {
-    return shmem_stats_ext__getnodeusage();
+    return shmem_procinfo_ext__getnodeusage();
 }
 
 double stats_ext_getnodeavgusage(void) {
-    return shmem_stats_ext__getnodeavgusage();
+    return shmem_procinfo_ext__getnodeavgusage();
 }
 
-int stats_ext_getactivecpus( int pid ) {
-    return shmem_stats_ext__getactivecpus( pid );
+int stats_ext_getactivecpus(int pid) {
+    return shmem_procinfo_ext__getactivecpus(pid);
 }
 
-void stats_ext_getactivecpus_list( int *cpuslist, int *nelems, int max_len) {
-    shmem_stats_ext__getactivecpus_list(cpuslist, nelems, max_len);
+void stats_ext_getactivecpus_list(int *cpuslist, int *nelems, int max_len) {
+    shmem_procinfo_ext__getactivecpus_list(cpuslist, nelems, max_len);
 }
 
-int stats_ext_getloadavg( int pid, double *load ) {
-    return shmem_stats_ext__getloadavg( pid, load );
+int stats_ext_getloadavg(int pid, double *load) {
+    return shmem_procinfo_ext__getloadavg(pid, load);
 }
 
 float stats_ext_getcpustateidle(int cpu) {
-    return shmem_stats_ext__getcpustate(cpu, STATS_IDLE);
+    return shmem_cpuinfo_ext__getcpustate(cpu, STATS_IDLE);
 }
 
 float stats_ext_getcpustateowned(int cpu) {
-    return shmem_stats_ext__getcpustate(cpu, STATS_OWNED);
+    return shmem_cpuinfo_ext__getcpustate(cpu, STATS_OWNED);
 }
 
 float stats_ext_getcpustateguested(int cpu) {
-    return shmem_stats_ext__getcpustate(cpu, STATS_GUESTED);
-}
-
-void stats_ext_printshmem(void) {
-    shmem_stats_ext__print_info();
+    return shmem_cpuinfo_ext__getcpustate(cpu, STATS_GUESTED);
 }

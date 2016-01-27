@@ -19,45 +19,36 @@
 
 #define _GNU_SOURCE
 #include <sched.h>
-#include "LB_comm/shmem_drom.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
 
-void drom_init( void ) {
-    shmem_drom__init();
-}
-
-void drom_finalize( void ) {
-    shmem_drom__finalize();
-}
-
-void drom_update( void ) {
-    shmem_drom__update();
+void drom_update(void) {
+    shmem_procinfo__update();
 }
 
 
-void drom_ext_init( void ) {
-    shmem_drom_ext__init();
+void drom_ext_init(void) {
+    shmem_cpuinfo_ext__init();
+    shmem_procinfo_ext__init();
 }
 
-void drom_ext_finalize( void ) {
-    shmem_drom_ext__finalize();
+void drom_ext_finalize(void) {
+    shmem_cpuinfo_ext__finalize();
+    shmem_procinfo_ext__finalize();
 }
 
-int drom_ext_getnumcpus( void ) {
-    return shmem_drom_ext__getnumcpus();
+int drom_ext_getnumcpus(void) {
+    return shmem_cpuinfo_ext__getnumcpus();
 }
 
-void drom_ext_getpidlist( int *pidlist, int *nelems, int max_len ) {
-    shmem_drom_ext__getpidlist(pidlist, nelems, max_len);
+void drom_ext_getpidlist(int *pidlist, int *nelems, int max_len) {
+    shmem_procinfo_ext__getpidlist(pidlist, nelems, max_len);
 }
 
-int drom_ext_getprocessmask( int pid, cpu_set_t *mask ) {
-    return shmem_drom_ext__getprocessmask( pid, mask );
+int drom_ext_getprocessmask(int pid, cpu_set_t *mask) {
+    return shmem_procinfo_ext__getprocessmask(pid, mask);
 }
 
-int drom_ext_setprocessmask( int pid, const cpu_set_t *mask ) {
-    return shmem_drom_ext__setprocessmask( pid, mask );
-}
-
-void drom_ext_printshmem(void) {
-    shmem_drom_ext__print_info();
+int drom_ext_setprocessmask(int pid, const cpu_set_t *mask) {
+    return shmem_procinfo_ext__setprocessmask(pid, mask);
 }

@@ -137,7 +137,7 @@ static void show_affinity( pid_t pid ) {
         fprintf( stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask) );
     } else {
         // Show CPU affinity of all processes attached to DLB
-        DLB_Drom_PrintShmem();
+        DLB_PrintShmem();
     }
     DLB_Drom_Finalize();
 }

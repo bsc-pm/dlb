@@ -38,6 +38,8 @@
 #include <LB_numThreads/numThreads.h>
 #include "LB_core/statistics.h"
 #include "LB_core/drom.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -119,9 +121,13 @@ static void load_modules(void) {
     options_init();
     init_tracing();
     register_signals();
+    shmem_procinfo__init();
+    shmem_cpuinfo__init();
 }
 
 static void unload_modules(void) {
+    shmem_cpuinfo__finalize();
+    shmem_procinfo__finalize();
     unregister_signals();
     options_finalize();
 }
@@ -382,8 +388,6 @@ int Initialize(void) {
                 clock_gettime(CLOCK_REALTIME, &initComp);
             }*/
 
-        if ( drom_enabled ) drom_init();
-        if ( stats_enabled ) stats_init();
         lb_funcs.init();
         dlb_enabled = true;
         dlb_initialized = true;
@@ -399,8 +403,6 @@ void Finish(int id) {
         dlb_enabled = false;
         dlb_initialized = false;
         lb_funcs.finish();
-        if ( stats_enabled ) stats_finalize();
-        if ( drom_enabled ) drom_finalize();
         unload_modules();
     }
     /*  if (prof){
@@ -426,13 +428,11 @@ void Finish(int id) {
 
 void Terminate(void) {
     lb_funcs.finish();
-    if ( stats_enabled ) stats_finalize();
-    if ( drom_enabled ) drom_finalize();
+    unload_modules();
 }
 
 void Update() {
     if ( drom_enabled ) drom_update();
-    if ( stats_enabled ) stats_update();
 }
 
 void IntoCommunication(void) {
@@ -568,9 +568,7 @@ void notifymaskchange(void) {
     notifymaskchangeto(&process_mask);
 }
 
-
-// FIXME
-void shmem_cpuarray__print_info( void );
 void printShmem(void) {
-    shmem_cpuarray__print_info();
+    shmem_cpuinfo_ext__print_info();
+    shmem_procinfo_ext__print_info();
 }

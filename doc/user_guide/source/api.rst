@@ -266,10 +266,6 @@ usage and their ownership.
 
     Get the percentage of time that the CPU has been in state GUESTED
 
-.. function:: void DLB_Stats_PrintShmem(void)
-
-    Print the data stored in the Stats Shared Memory
-
 .. _drom-api:
 
 ==================================
@@ -303,10 +299,6 @@ process mask of each DLB process.
 .. function:: int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask)
 
     Set the process mask of the given PID
-
-.. function:: void DLB_Drom_PrintShmem(void)
-
-    Print the data stored in the Drom Shared Memory
 
 .. _mpi-api:
 

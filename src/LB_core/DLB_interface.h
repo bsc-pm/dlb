@@ -300,10 +300,6 @@ float DLB_Stats_GetCpuStateOwned(int cpu);
  */
 float DLB_Stats_GetCpuStateGuested(int cpu);
 
-/* \brief Print the data stored in the Stats shmem
- */
-void DLB_Stats_PrintShmem(void);
-
 /*******************************************************/
 /*    Dynamic Resource Manager Module                  */
 /*******************************************************/
@@ -341,10 +337,6 @@ int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
  * \return 0 on success, -1 if pid not found
  */
 int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
-
-/* \brief Print the data stored in the Drom shmem
- */
-void DLB_Drom_PrintShmem(void);
 
 /*******************************************************/
 /*    MPI Interface                                    */

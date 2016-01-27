@@ -70,18 +70,14 @@ void create_shdata( void ) {
 
 void list_shdata_item( const char* shm_suffix ) {
     char *p;
-    if ( (p = strstr(shm_suffix, "drom")) ) {
-        p = p + 5;  // remove "drom_"
-        setenv( "LB_SHM_KEY", p, 1);
-        DLB_Drom_PrintShmem();
-    } else if ( (p = strstr(shm_suffix, "lewi")) ) {
-        p = p + 5;  // remove "lewi_"
+    if ( (p = strstr(shm_suffix, "cpuinfo")) ) {
+        p = p + 8;  // remove "cpuinfo_"
         setenv( "LB_SHM_KEY", p, 1);
         DLB_PrintShmem();
-    } else if ( (p = strstr(shm_suffix, "stats")) ) {
-        p = p + 6;  // remove "stats_"
+    } else if ( (p = strstr(shm_suffix, "procinfo")) ) {
+        p = p + 9;  // remove "procinfo_"
         setenv( "LB_SHM_KEY", p, 1);
-        DLB_Stats_PrintShmem();
+        DLB_PrintShmem();
     }
 }
 
