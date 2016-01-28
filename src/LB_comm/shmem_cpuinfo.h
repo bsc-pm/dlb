@@ -22,8 +22,10 @@
 
 #define _GNU_SOURCE
 #include <sched.h>
+#include <limits.h>
 #include "support/types.h"
 
+#define CPUINFO_RECOVER_ALL INT_MAX
 
 // Simplified states to keep statistics
 typedef enum {
@@ -37,8 +39,7 @@ void shmem_cpuinfo__init(void);
 void shmem_cpuinfo__finalize(void);
 void shmem_cpuinfo__add_mask(const cpu_set_t *cpu_mask);
 void shmem_cpuinfo__add_cpu(int cpu);
-const cpu_set_t* shmem_cpuinfo__recover_defmask(void);
-void shmem_cpuinfo__recover_some_defcpus(cpu_set_t *mask, int max_resources);
+void shmem_cpuinfo__recover_some_cpus(cpu_set_t *mask, int max_resources);
 void shmem_cpuinfo__recover_cpu(int cpu);
 int shmem_cpuinfo__return_claimed(cpu_set_t *mask);
 int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources);

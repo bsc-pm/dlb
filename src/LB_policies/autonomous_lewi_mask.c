@@ -54,8 +54,11 @@ void auto_lewi_mask_Init(void) {
 }
 
 void auto_lewi_mask_Finish(void) {
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
     pthread_mutex_lock(&mutex);
-    shmem_cpuinfo__recover_defmask();
+    shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
+    set_mask(&mask);
     enabled=0;
     pthread_mutex_unlock(&mutex);
     pthread_mutex_destroy(&mutex);
@@ -259,7 +262,7 @@ void auto_lewi_mask_ClaimCpus(int cpus) {
             get_mask( &current_mask );
             get_mask(&debug_mask);
 
-            shmem_cpuinfo__recover_some_defcpus(&current_mask, cpus);
+            shmem_cpuinfo__recover_some_cpus(&current_mask, cpus);
             set_mask( &current_mask);
             verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
             nthreads += cpus;

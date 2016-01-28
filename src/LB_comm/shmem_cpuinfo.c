@@ -66,8 +66,6 @@ typedef struct {
 static spid_t ME;
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
-static cpu_set_t default_mask;   // default mask of the process
-static cpu_set_t affinity_mask;  // affinity mask of the process
 static cpu_set_t dlb_mask;       // CPUs not owned by any process but usable by others
 static int node_size;
 static bool cpu_is_public_post_mortem = false;
@@ -86,8 +84,10 @@ void shmem_cpuinfo__init(void) {
 
     ME = getpid();
     mu_parse_mask(options_get_mask(), &dlb_mask);
-    get_mask(&default_mask);
-    mu_get_affinity_mask(&affinity_mask, &default_mask, MU_ANY_BIT);
+    cpu_set_t process_mask;
+    get_process_mask(&process_mask);
+    cpu_set_t affinity_mask;
+    mu_get_affinity_mask(&affinity_mask, &process_mask, MU_ANY_BIT);
     node_size = mu_get_system_size();
 
     // Basic size + zero-length array real length
@@ -99,9 +99,9 @@ void shmem_cpuinfo__init(void) {
     shmem_lock(init_handler);
     {
         int cpu;
-        // Check first that my default_mask is not already owned
+        // Check first that my process_mask is not already owned
         for (cpu = 0; cpu < node_size; cpu++)
-            if (CPU_ISSET(cpu, &default_mask) && shdata->node_info[cpu].owner != NOBODY) {
+            if (CPU_ISSET(cpu, &process_mask) && shdata->node_info[cpu].owner != NOBODY) {
                 spid_t owner = shdata->node_info[cpu].owner;
                 shmem_unlock(init_handler);
                 fatal("Error trying to acquire CPU %d, already owned by process %d", cpu, owner);
@@ -109,7 +109,7 @@ void shmem_cpuinfo__init(void) {
 
         for (cpu = 0; cpu < node_size; cpu++) {
             // Add my mask info
-            if (CPU_ISSET(cpu, &default_mask)) {
+            if (CPU_ISSET(cpu, &process_mask)) {
                 shdata->node_info[cpu].owner = ME;
                 shdata->node_info[cpu].state = CPU_BUSY;
                 // My CPU could have already a guest if the DLB_mask is being used
@@ -143,8 +143,8 @@ void shmem_cpuinfo__init(void) {
     shm_handler = init_handler;
 
     // TODO mask info should go in shmem_procinfo. Print something else here?
-    verbose( VB_SHMEM, "Default Mask: %s", mu_to_str(&default_mask) );
-    verbose( VB_SHMEM, "Default Affinity Mask: %s", mu_to_str(&affinity_mask) );
+    verbose( VB_SHMEM, "Process Mask: %s", mu_to_str(&process_mask) );
+    verbose( VB_SHMEM, "Process Affinity Mask: %s", mu_to_str(&affinity_mask) );
 
     add_event(IDLE_CPUS_EVENT, idle_count);
 }
@@ -156,7 +156,7 @@ void shmem_cpuinfo__finalize(void) {
     {
         int cpu;
         for (cpu = 0; cpu < node_size; cpu++) {
-            if (CPU_ISSET(cpu, &default_mask)) {
+            if (shdata->node_info[cpu].owner == ME) {
                 shdata->node_info[cpu].owner = NOBODY;
                 if (shdata->node_info[cpu].guest == ME) {
                     shdata->node_info[cpu].guest = NOBODY;
@@ -206,7 +206,7 @@ void shmem_cpuinfo__add_mask(const cpu_set_t *cpu_mask) {
             if (CPU_ISSET(cpu, cpu_mask)) {
 
                 // If the CPU was mine, just change the state
-                if (CPU_ISSET(cpu, &default_mask)) {
+                if (shdata->node_info[cpu].owner == ME) {
                     shdata->node_info[cpu].state = CPU_LENT;
                 }
 
@@ -251,7 +251,7 @@ void shmem_cpuinfo__add_cpu(int cpu) {
     shmem_lock(shm_handler);
     {
         // If the CPU was mine, just change the state
-        if (CPU_ISSET(cpu, &default_mask)) {
+        if (shdata->node_info[cpu].owner == ME) {
             shdata->node_info[cpu].state = CPU_LENT;
         }
 
@@ -282,28 +282,32 @@ void shmem_cpuinfo__add_cpu(int cpu) {
     add_event(IDLE_CPUS_EVENT, idle_count);
 }
 
-/* Remove the process default mask from the Shared Mask
- * CPUs from default_mask:          State => CPU_BUSY
- * CPUs that also have no guest:    Guest => ME
+/* Acquire some of the CPUs owned by the process
+ * CPUs that owner == ME:           State => CPU_BUSY
+ * CPUs that guest == NOBODY        Guest => ME
  */
-const cpu_set_t* shmem_cpuinfo__recover_defmask(void) {
-    DLB_DEBUG( cpu_set_t recovered_cpus; )
+void shmem_cpuinfo__recover_some_cpus(cpu_set_t *mask, int max_resources) {
     DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( CPU_ZERO(&recovered_cpus); )
     DLB_DEBUG( CPU_ZERO(&idle_cpus); )
 
     DLB_INSTR( int idle_count = 0; )
 
+    cpu_set_t recovered_cpus;
+    CPU_ZERO(&recovered_cpus);
+    max_resources = (max_resources) ? max_resources : INT_MAX;
+
     shmem_lock(shm_handler);
     {
         int cpu;
-        for (cpu = 0; cpu < node_size; cpu++) {
-            if (CPU_ISSET(cpu, &default_mask)) {
+        for (cpu = 0; cpu < node_size && max_resources > 0; cpu++) {
+            if (shdata->node_info[cpu].owner == ME && mask && !CPU_ISSET(cpu, mask)) {
                 shdata->node_info[cpu].state = CPU_BUSY;
+                CPU_SET(cpu, &recovered_cpus);
+                --max_resources;
+
                 if (shdata->node_info[cpu].guest == NOBODY) {
                     shdata->node_info[cpu].guest = ME;
                     update_cpu_stats(cpu, STATS_OWNED);
-                    DLB_DEBUG( CPU_SET(cpu, &recovered_cpus); )
                 }
             }
 
@@ -316,51 +320,10 @@ const cpu_set_t* shmem_cpuinfo__recover_defmask(void) {
     }
     shmem_unlock(shm_handler);
 
-    DLB_DEBUG( int recovered = CPU_COUNT(&recovered_cpus); )
-    DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
-    verbose(VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size);
-    verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
-
-    add_event(IDLE_CPUS_EVENT, idle_count);
-
-    return &default_mask;
-}
-
-/* Remove part of the process default mask from the Shared Mask
- * CPUs from default_mask:          State => CPU_BUSY
- * CPUs that also have no guest:    Guest => ME
- */
-void shmem_cpuinfo__recover_some_defcpus(cpu_set_t *mask, int max_resources) {
-    DLB_DEBUG( cpu_set_t recovered_cpus; )
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( CPU_ZERO(&recovered_cpus); )
-    DLB_DEBUG( CPU_ZERO(&idle_cpus); )
-
-    DLB_INSTR( int idle_count = 0; )
-
-    shmem_lock(shm_handler);
-    {
-        int cpu;
-        for (cpu = 0; (cpu < node_size) && (max_resources > 0); cpu++) {
-            if ((CPU_ISSET(cpu, &default_mask)) && (!CPU_ISSET(cpu, mask))) {
-                shdata->node_info[cpu].state = CPU_BUSY;
-                CPU_SET(cpu, mask);
-                max_resources--;
-                if (shdata->node_info[cpu].guest == NOBODY) {
-                    shdata->node_info[cpu].guest = ME;
-                    update_cpu_stats(cpu, STATS_OWNED);
-                    DLB_DEBUG( CPU_SET(cpu, &recovered_cpus); )
-                }
-            }
-
-            // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-            if (is_idle(cpu)) {
-                DLB_INSTR( idle_count++; )
-                DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
-            }
-        }
+    if (mask) {
+        // If a mask was provided, add the recovered CPUs
+        CPU_OR(mask, mask, &recovered_cpus);
     }
-    shmem_unlock(shm_handler);
 
     DLB_DEBUG( int recovered = CPU_COUNT(&recovered_cpus); )
     DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
@@ -371,8 +334,8 @@ void shmem_cpuinfo__recover_some_defcpus(cpu_set_t *mask, int max_resources) {
 }
 
 /* Remove CPU from the Shared Mask
- * CPUs from default_mask:          State => CPU_BUSY
- * CPUs that also have no guest:    Guest => ME
+ * CPU if owner == ME:          State => CPU_BUSY
+ * CPU if guest == NOBODY       Guest => ME
  */
 void shmem_cpuinfo__recover_cpu(int cpu) {
     DLB_DEBUG( cpu_set_t recovered_cpus; )
@@ -384,7 +347,7 @@ void shmem_cpuinfo__recover_cpu(int cpu) {
 
     shmem_lock(shm_handler);
     {
-        if (CPU_ISSET(cpu, &default_mask)) {
+        if (shdata->node_info[cpu].owner == ME) {
             shdata->node_info[cpu].state = CPU_BUSY;
             if (shdata->node_info[cpu].guest == NOBODY) {
                 shdata->node_info[cpu].guest = ME;
@@ -396,7 +359,7 @@ void shmem_cpuinfo__recover_cpu(int cpu) {
         // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
         if (is_idle(cpu)) {
             DLB_INSTR( idle_count++; )
-                DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
+            DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
         }
     }
     shmem_unlock(shm_handler);
@@ -467,6 +430,19 @@ int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources) {
     int collected1 = 0;
     int collected2 = 0;
     bool some_idle_cpu = false;
+
+    // Since the process mask may change during the execution,
+    // we need to compute the affinity_mask everytime
+    // FIXME: Fast non-safe check to get the updated process mask
+    cpu_set_t process_mask;
+    CPU_ZERO(&process_mask);
+    for (cpu = 0; cpu < node_size; cpu++) {
+        if (shdata->node_info[cpu].owner == ME) {
+            CPU_SET(cpu, &process_mask);
+        }
+    }
+    cpu_set_t affinity_mask;
+    mu_get_affinity_mask(&affinity_mask, &process_mask, MU_ANY_BIT);
 
     DLB_DEBUG( cpu_set_t idle_cpus; )
     DLB_DEBUG( CPU_ZERO(&idle_cpus); )
@@ -559,7 +535,7 @@ int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources) {
  */
 bool shmem_cpuinfo__is_cpu_borrowed(int cpu) {
     // If the CPU is not mine, skip check
-    if (!(CPU_ISSET(cpu, &default_mask))) {
+    if (shdata->node_info[cpu].owner != ME) {
         return true;
     }
 
@@ -595,7 +571,7 @@ int shmem_cpuinfo__reset_default_cpus(cpu_set_t *mask) {
     shmem_lock(shm_handler);
     for (cpu = 0; cpu < mu_get_system_size(); cpu++) {
         //CPU is mine --> claim it and set in my mask
-        if (CPU_ISSET(cpu, &default_mask)) {
+        if (shdata->node_info[cpu].owner == ME) {
             shdata->node_info[cpu].state = CPU_BUSY;
             if (shdata->node_info[cpu].guest == NOBODY) {
                 shdata->node_info[cpu].guest = ME;
@@ -613,7 +589,6 @@ int shmem_cpuinfo__reset_default_cpus(cpu_set_t *mask) {
         }
     }
     shmem_unlock(shm_handler);
-    ensure(CPU_EQUAL(mask, &default_mask), "Mask not correctly updated on reset");
     return n;
 
 }
@@ -629,12 +604,12 @@ bool shmem_cpuinfo__acquire_cpu(int cpu, bool force) {
 
     shmem_lock(shm_handler);
     //cpu is mine -> Claim it
-    if (CPU_ISSET(cpu, &default_mask)) {
+    if (shdata->node_info[cpu].owner == ME) {
         shdata->node_info[cpu].state = CPU_BUSY;
         // It is important to not modify the 'guest' field to remark that the CPU is claimed
 
     //cpu is not mine but is free -> take it
-    } else if(shdata->node_info[cpu].state == CPU_LENT
+    } else if (shdata->node_info[cpu].state == CPU_LENT
             && shdata->node_info[cpu].guest == NOBODY) {
         shdata->node_info[cpu].guest = ME;
         update_cpu_stats(cpu, STATS_GUESTED);
@@ -642,12 +617,12 @@ bool shmem_cpuinfo__acquire_cpu(int cpu, bool force) {
     //cpus is not mine and the owner has recover it
     } else if (force) {
         //If force -> take it
-        if (shdata->node_info[cpu].guest==shdata->node_info[cpu].owner) {
+        if (shdata->node_info[cpu].guest == shdata->node_info[cpu].owner) {
             shdata->node_info[cpu].guest = ME;
             update_cpu_stats(cpu, STATS_GUESTED);
 
         } else {
-            //FIXME: An other process has borrowed it
+            //FIXME: Another process has borrowed it
             // or    the cpu is DISABLED in the system
             acquired=false;
         }
@@ -659,7 +634,6 @@ bool shmem_cpuinfo__acquire_cpu(int cpu, bool force) {
     // add_event(IDLE_CPUS_EVENT, idle_count);
     shmem_unlock(shm_handler);
     return acquired;
-
 }
 
 /* Update CPU ownership according to the new process mask.
@@ -673,7 +647,6 @@ void shmem_cpuinfo__update_ownership(const cpu_set_t* process_mask) {
             // CPU ownership should be mine
             if (shdata->node_info[cpu].owner != ME) {
                 // Steal CPU
-                CPU_SET(cpu, &default_mask);
                 shdata->node_info[cpu].owner = ME;
                 shdata->node_info[cpu].guest = ME;
                 shdata->node_info[cpu].state = CPU_BUSY;
@@ -682,7 +655,6 @@ void shmem_cpuinfo__update_ownership(const cpu_set_t* process_mask) {
             }
         } else if (shdata->node_info[cpu].owner == ME) {
             // Release CPU ownership
-            CPU_CLR(cpu, &default_mask);
             shdata->node_info[cpu].owner = NOBODY;
             shdata->node_info[cpu].state = CPU_DISABLED;
             update_cpu_stats(cpu, STATS_IDLE);
@@ -798,8 +770,6 @@ static void update_cpu_stats(int cpu, stats_state_t new_state) {
     // skip update if old_state == new_state
     if (shdata->node_info[cpu].stats_state == new_state) return;
 
-    // TODO performance vs:
-    // cpuinfo_t *cpuinfo = shdata->node_info[cpu];
     struct timespec now;
     int64_t elapsed;
 
@@ -813,7 +783,6 @@ static void update_cpu_stats(int cpu, stats_state_t new_state) {
     shdata->node_info[cpu].stats_state = new_state;
     shdata->node_info[cpu].last_update = now;
 }
-
 
 static float getcpustate(int cpu, stats_state_t state) {
     struct timespec now;

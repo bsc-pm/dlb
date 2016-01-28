@@ -53,7 +53,10 @@ void lewi_mask_Init(void) {
 }
 
 void lewi_mask_Finish(void) {
-    shmem_cpuinfo__recover_defmask();
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
+    set_mask(&mask);
 }
 
 void lewi_mask_IntoCommunication(void) {}
@@ -117,8 +120,7 @@ void lewi_mask_OutOfBlockingCall(int is_iter) {
             nthreads = 1;
         } else {
             verbose(VB_MICROLB, "RECOVERING %d threads", _default_nthreads - nthreads );
-            const cpu_set_t* def_mask = shmem_cpuinfo__recover_defmask();
-            CPU_OR( &mask, &mask, def_mask );
+            shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
             nthreads = _default_nthreads;
         }
         set_mask( &mask );
@@ -193,7 +195,7 @@ void lewi_mask_ClaimCpus(int cpus) {
             //Check num threads and mask size are the same
             assert(nthreads==CPU_COUNT(&current_mask));
 
-            shmem_cpuinfo__recover_some_defcpus(&current_mask, cpus);
+            shmem_cpuinfo__recover_some_cpus(&current_mask, cpus);
             set_mask( &current_mask);
             nthreads += cpus;
             assert(nthreads==CPU_COUNT(&current_mask));
