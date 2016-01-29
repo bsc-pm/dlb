@@ -338,6 +338,16 @@ int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
  */
 int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
 
+/* \brief Ask for free (or stolen) CPUs in the node
+ * \param[in] cpus Number of CPUs to get
+ * \param[in] steal Whether if look only into free CPUs or force stealing
+ * \param[out] cpulist The output list
+ * \param[out] nelems Numer of element in the list
+ * \param[in] max_len Max capacity of the list
+ * \return 0 on sucess, -1 if not all ncpus could be given
+ */
+int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
+
 /*******************************************************/
 /*    MPI Interface                                    */
 /*******************************************************/

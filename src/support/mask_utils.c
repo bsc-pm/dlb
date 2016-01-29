@@ -176,6 +176,11 @@ int mu_get_system_size( void ) {
     return sys.size;
 }
 
+void mu_get_system_mask(cpu_set_t *mask) {
+    if ( !mu_initialized ) mu_init();
+    memcpy(mask, &sys.sys_mask, sizeof(cpu_set_t));
+}
+
 /* Returns the set of parent's masks (aka: socket masks) for the given child_set being condition:
  * MU_ANY_BIT: the intersection between the socket and the child_set must be non-empty
  * MU_ALL_BITS: the socket mask must be a subset of child_set

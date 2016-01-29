@@ -406,6 +406,68 @@ int shmem_procinfo_ext__getloadavg(int pid, double *load) {
     return error;
 }
 
+int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
+    *nelems = 0;
+    if (shm_ext_handler == NULL) return -1;
+
+    int n_elems = 0;
+    int max_cpus = mu_get_system_size();
+    cpu_set_t used_cpus;
+    CPU_ZERO(&used_cpus);
+
+    shmem_lock(shm_ext_handler);
+    {
+        int c, p;
+        // Sum all used CPUs by active processes
+        for (p = 0; p < max_processes; p++) {
+            if (shdata->process_info[p].pid != NOBODY) {
+                CPU_OR(&used_cpus, &used_cpus, &shdata->process_info[p].current_process_mask);
+            }
+        }
+
+        // Get free CPUs
+        for (c = max_cpus-1; c >= 0; c--) {
+            if (!CPU_ISSET(c, &used_cpus)) {
+                cpulist[n_elems++] = c;
+            }
+            if (n_elems == ncpus || n_elems == max_len) {
+                break;
+            }
+        }
+
+        // If 'steal' is enabled, get more CPUs from other processes in round-robin
+        if (steal && n_elems < ncpus && n_elems < max_len) {
+            while(true) {
+                // We won't keep looping unless we found at least one candidate
+                bool keep_looping = false;
+
+                for (p = 0; p < max_processes; p++) {
+                    if (shdata->process_info[p].pid != NOBODY) {
+                        for (c = max_cpus-1; c >= 0; c--) {
+                            bool success = steal_cpu(c, p);
+                            if (success) {
+                                // keep going from the next processor
+                                cpulist[n_elems++] = c;
+                                keep_looping = true;
+                                break;
+                            }
+                        }
+                        if (n_elems == ncpus || n_elems == max_len) {
+                            keep_looping = false;
+                            break;
+                        }
+                    }
+                }
+                if (!keep_looping) break;
+            }
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+
+    *nelems = n_elems;
+    return (n_elems == ncpus) ? 0 : -1;
+}
+
 void shmem_procinfo_ext__print_info(void) {
     max_processes = mu_get_system_size();
 
@@ -503,13 +565,11 @@ static void update_process_mask(void) {
         if (CPU_ISSET(c, &(shdata->process_info[my_process].future_process_mask))) {
             for (p = 0; p < max_processes; p++) {
                 if (p == my_process) continue;
-                if (CPU_ISSET( c, &(shdata->process_info[p].current_process_mask))
-                        && CPU_COUNT(&(shdata->process_info[p].current_process_mask)) > 1) {
-                    // Steal CPU only if other process currently owns it
-                    if (!steal_cpu(c, p)) {
-                        // If stealing was not successfull, do not set CPU
-                        CPU_CLR(p, &next_mask);
-                    }
+                // Steal CPU only if other process currently owns it
+                bool success = steal_cpu(c, p);
+                if (!success) {
+                    // If stealing was not successfull, do not set CPU
+                    CPU_CLR(p, &next_mask);
                 }
             }
         }
@@ -528,11 +588,8 @@ static void update_process_mask(void) {
             if (CPU_ISSET( c, &next_mask) ) {
                 for (p = 0; p < max_processes; p++) {
                     if (p == my_process ) continue;
-                    if (CPU_ISSET(c, &(shdata->process_info[p].current_process_mask))
-                            && CPU_COUNT(&(shdata->process_info[p].current_process_mask)) > 1) {
-                        // Steal CPU only if other process currently owns it
-                        steal_cpu(c, p);
-                    }
+                    // Steal CPU only if other process currently owns it
+                    steal_cpu(c, p);
                 }
             }
         }
@@ -542,23 +599,34 @@ static void update_process_mask(void) {
 }
 
 static bool steal_cpu(int cpu, int processor) {
+    bool success = false;
     if (shdata->process_info[processor].dirty) {
-        // If the future mask is dirty, make sure that it is not the last one, else remove it
-        if (CPU_COUNT(&(shdata->process_info[processor].future_process_mask)) == 1
-                && CPU_ISSET(cpu, &(shdata->process_info[processor].future_process_mask))) {
-            // cannot steal, fallback
-            return false;
-        } else {
-            CPU_CLR(cpu, &(shdata->process_info[processor].future_process_mask));
+        // If dirty, we steal from future_mask
+        if (CPU_ISSET(cpu, &shdata->process_info[processor].future_process_mask)
+                && CPU_COUNT(&shdata->process_info[processor].future_process_mask) > 1) {
+
+            // Steal
+            CPU_CLR(cpu, &shdata->process_info[processor].future_process_mask);
+            success = true;
         }
     } else {
-        // If not dirty, set up a new mask
-        memcpy(&(shdata->process_info[processor].future_process_mask),
-                &(shdata->process_info[processor].current_process_mask),
-                sizeof(cpu_set_t));
-        CPU_CLR(cpu, &(shdata->process_info[processor].future_process_mask));
-        shdata->process_info[processor].dirty = true;
-        verbose(VB_DROM, "Process %d stole CPU %d", processor, cpu);
+        // If not dirty, we steal from process_mask
+        if (CPU_ISSET(cpu, &shdata->process_info[processor].current_process_mask)
+                && CPU_COUNT(&shdata->process_info[processor].current_process_mask) > 1) {
+
+            // Update future_mask and steal
+            memcpy(&shdata->process_info[processor].future_process_mask,
+                    &shdata->process_info[processor].current_process_mask,
+                    sizeof(cpu_set_t));
+            CPU_CLR(cpu, &shdata->process_info[processor].future_process_mask);
+            shdata->process_info[processor].dirty = true;
+            success = true;
+        }
     }
-    return true;
+
+    if (success) {
+        verbose(VB_DROM, "CPU %d has been removed from processor %d", cpu, processor);
+    }
+
+    return success;
 }

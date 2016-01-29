@@ -21,8 +21,14 @@
 #include <sched.h>
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include <LB_numThreads/numThreads.h>
+#include "support/options.h"
+#include "support/debug.h"
 
 void drom_ext_init(void) {
+    pm_init();
+    options_init();
+    debug_init();
     shmem_cpuinfo_ext__init();
     shmem_procinfo_ext__init();
 }
@@ -30,6 +36,7 @@ void drom_ext_init(void) {
 void drom_ext_finalize(void) {
     shmem_cpuinfo_ext__finalize();
     shmem_procinfo_ext__finalize();
+    options_finalize();
 }
 
 int drom_ext_getnumcpus(void) {
@@ -46,4 +53,8 @@ int drom_ext_getprocessmask(int pid, cpu_set_t *mask) {
 
 int drom_ext_setprocessmask(int pid, const cpu_set_t *mask) {
     return shmem_procinfo_ext__setprocessmask(pid, mask);
+}
+
+int drom_ext_getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
+    return shmem_procinfo_ext__getcpus(ncpus, steal, cpulist, nelems, max_len);
 }

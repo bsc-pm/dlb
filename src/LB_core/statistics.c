@@ -19,8 +19,14 @@
 
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include <LB_numThreads/numThreads.h>
+#include "support/options.h"
+#include "support/debug.h"
 
 void stats_ext_init(void) {
+    pm_init();
+    options_init();
+    debug_init();
     shmem_cpuinfo__init();
     shmem_procinfo__init();
 }
@@ -28,6 +34,7 @@ void stats_ext_init(void) {
 void stats_ext_finalize(void) {
     shmem_cpuinfo_ext__finalize();
     shmem_procinfo_ext__finalize();
+    options_finalize();
 }
 
 int stats_ext_getnumcpus(void) {

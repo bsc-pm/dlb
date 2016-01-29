@@ -31,6 +31,7 @@ typedef enum {
 void mu_init(void);
 void mu_finalize(void);
 int  mu_get_system_size(void);
+void mu_get_system_mask(cpu_set_t *mask);
 void mu_get_affinity_mask(cpu_set_t *affinity_set, const cpu_set_t *child_set, mu_opt_t condition);
 
 const char* mu_to_str(const cpu_set_t *cpu_set);

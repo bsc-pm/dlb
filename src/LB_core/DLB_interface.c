@@ -245,6 +245,10 @@ int DLB_Drom_SetProcessMask (int pid, const_dlb_cpu_set_t mask) {
     return drom_ext_setprocessmask( pid, (cpu_set_t*)mask);
 }
 
+int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
+    return drom_ext_getcpus(ncpus, steal, cpulist, nelems, max_len);
+}
+
 /* MPI API */
 #ifdef MPI_LIB
 #include <mpi.h>

@@ -68,6 +68,24 @@ static void print_help( const char * program ) {
     fprintf( stdout, "  -h, --help                  print this help\n" );
 }
 
+static void get_cpus(unsigned int ncpus) {
+    int max_len = sys_size;
+    int cpulist[max_len];
+    int nelems;
+    int steal = 1;
+
+    DLB_Drom_Init();
+    DLB_Drom_getCPUs(ncpus, steal, cpulist, &nelems, max_len);
+    DLB_Drom_Finalize();
+
+    int i;
+    fprintf(stdout, "Asking for %d CPUs. CPUs given: ", ncpus);
+    for (i=0; i<nelems; ++i) {
+        fprintf(stdout, "%d ", cpulist[i]);
+    }
+    fprintf(stdout, "\n");
+}
+
 static void set_affinity( pid_t pid, char *cpu_list ) {
     cpu_set_t new_mask;
     mu_parse_mask( cpu_list, &new_mask );
@@ -148,14 +166,17 @@ int main ( int argc, char *argv[] ) {
     bool do_help = false;
     bool do_set = false;
     bool do_remove = false;
+    bool do_get = false;
 
     pid_t pid = 0;
     char *cpu_list = NULL;
+    unsigned int ncpus = 0;
 
     int opt;
     extern char *optarg;
     struct option long_options[] = {
         {"list",     no_argument,       0, 'l'},
+        {"get",      required_argument, 0, 'g'},
         {"set",      required_argument, 0, 's'},
         {"remove",   required_argument, 0, 'r'},
         {"pid",      required_argument, 0, 'p'},
@@ -163,10 +184,14 @@ int main ( int argc, char *argv[] ) {
         {0,          0,                 0, 0 }
     };
 
-    while ( (opt = getopt_long(argc, argv, "ls:r:p:h", long_options, NULL)) != -1 ) {
+    while ( (opt = getopt_long(argc, argv, "lg:s:r:p:h", long_options, NULL)) != -1 ) {
         switch (opt) {
         case 'l':
             do_list = true;
+            break;
+        case 'g':
+            do_get = true;
+            ncpus = strtoul(optarg, NULL, 10);
             break;
         case 's':
             do_set = true;
@@ -208,6 +233,9 @@ int main ( int argc, char *argv[] ) {
     // Actions
     if ( do_help ) {
         print_help(argv[0]);
+    }
+    else if ( do_get ) {
+        get_cpus(ncpus);
     }
     else if ( do_set ) {
         set_affinity( pid, cpu_list );

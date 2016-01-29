@@ -17,30 +17,59 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef SHMEM_PROCINFO_H
-#define SHMEM_PROCINFO_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
+</testinfo>*/
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "support/types.h"
+#include "support/options.h"
 
-void shmem_procinfo__init(void);
-void shmem_procinfo__finalize(void);
-void shmem_procinfo__update(bool do_drom, bool do_stats);
+int main(int argc, char *argv[]) {
+    verbose_opts_t vb_opts;
+    verbose_fmt_t vbf_opts;
+    int error = 0;
 
-void shmem_procinfo_ext__init(void);
-void shmem_procinfo_ext__finalize(void);
-void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len);
-int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask);
-int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask);
-double shmem_procinfo_ext__getcpuusage(int pid);
-double shmem_procinfo_ext__getcpuavgusage(int pid);
-void shmem_procinfo_ext__getcpuusage_list(double *usagelist, int *nelems, int max_len);
-void shmem_procinfo_ext__getcpuavgusage_list(double *avgusagelist, int *nelems, int max_len);
-double shmem_procinfo_ext__getnodeusage(void);
-double shmem_procinfo_ext__getnodeavgusage(void);
-int shmem_procinfo_ext__getactivecpus(int pid);
-void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_len);
-int shmem_procinfo_ext__getloadavg(int pid, double *load);
-int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
-void shmem_procinfo_ext__print_info(void);
+    parse_verbose_opts("api", &vb_opts);
+    if (vb_opts != VB_API) {
+        error++;
+        fprintf(stderr, "Simple verbose option failed\n");
+    }
 
-#endif /* SHMEM_PROCINFO_H */
+    parse_verbose_opts("shmem:mpi_api:drom", &vb_opts);
+    if (vb_opts != (VB_SHMEM | VB_MPI_API | VB_DROM)) {
+        error++;
+        fprintf(stderr, "Multiple verbose option failed\n");
+    }
+
+    parse_verbose_fmt("mpinode", &vbf_opts);
+    if (vbf_opts != VBF_MPINODE) {
+        error++;
+        fprintf(stderr, "Simple verbose format option failed\n");
+    }
+
+    parse_verbose_fmt("node:pid:thread", &vbf_opts);
+    if (vbf_opts != (VBF_NODE | VBF_PID | VBF_THREAD)) {
+        error++;
+        fprintf(stderr, "Multiple verbose format option failed\n");
+    }
+
+    // Check DLB defaults
+    options_init();
+    vb_opts = options_get_verbose();
+    if (vb_opts != VB_CLEAR) {
+        error++;
+        fprintf(stderr, "Default verbose option failed\n");
+    }
+
+    vbf_opts = options_get_verbose_fmt();
+    if (vbf_opts != (VBF_NODE | VBF_PID | VBF_THREAD)) {
+        error++;
+        fprintf(stderr, "Default verbose format option failed\n");
+    }
+    options_finalize();
+
+    return error;
+}
