@@ -48,20 +48,35 @@
         )
 
 /* Weak symbols */
-void nanos_omp_get_process_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-int  nanos_omp_set_process_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_add_process_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_get_active_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-int  nanos_omp_set_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_add_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-int  nanos_omp_get_thread_num  (void) __attribute__ ((weak));
-int  nanos_omp_get_max_threads (void) __attribute__ ((weak));
-void nanos_omp_set_num_threads (int nthreads) __attribute__ ((weak));
-int  omp_get_thread_num  (void) __attribute__ ((weak));
-int  omp_get_max_threads (void) __attribute__ ((weak));
-void omp_set_num_threads (int nthreads) __attribute__ ((weak));
+void nanos_omp_get_process_mask(cpu_set_t *cpu_set) __attribute__((weak));
+int  nanos_omp_set_process_mask(const cpu_set_t *cpu_set) __attribute__ ((weak));
+void nanos_omp_add_process_mask(const cpu_set_t *cpu_set) __attribute__ ((weak));
+void nanos_omp_get_active_mask(cpu_set_t *cpu_set) __attribute__ ((weak));
+int  nanos_omp_set_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
+void nanos_omp_add_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
+int  nanos_omp_get_thread_num(void) __attribute__((weak));
+int  nanos_omp_get_max_threads(void) __attribute__((weak));
+void nanos_omp_set_num_threads(int nthreads) __attribute__((weak));
+int  omp_get_thread_num(void) __attribute__((weak));
+int  omp_get_max_threads(void) __attribute__((weak));
+void omp_set_num_threads(int nthreads) __attribute__((weak));
 
-void pm_not_implemented() { print_backtrace(); /*fatal0( "Not implemented" );*/ }
+
+// Static functions to be called when no Prog Model is found
+static void unknown_get_process_mask(cpu_set_t *cpu_set) {
+    sched_getaffinity(0, sizeof(cpu_set), cpu_set);
+}
+static int  unknown_set_process_mask(const cpu_set_t *cpu_set) { return 0; }
+static void unknown_add_process_mask(const cpu_set_t *cpu_set) {}
+static void unknown_get_active_mask(cpu_set_t *cpu_set) {
+    return unknown_get_process_mask(cpu_set);
+}
+static int  unknown_set_active_mask(const cpu_set_t *cpu_set) { return 0; }
+static void unknown_add_active_mask(const cpu_set_t *cpu_set) {}
+static int  unknown_get_thread_num(void) { return 0; }
+static int  unknown_get_threads(void) { return 1;}
+static void unknown_set_threads(int nthreads) {}
+
 
 static struct {
     void (*get_process_mask) (cpu_set_t *cpu_set);
@@ -74,29 +89,16 @@ static struct {
     int  (*get_threads) (void);
     void (*set_threads) (int nthreads);
 } pm_funcs = {
-    pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    pm_not_implemented,
-    pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    pm_not_implemented
+    unknown_get_process_mask,
+    unknown_set_process_mask,
+    unknown_add_process_mask,
+    unknown_get_active_mask,
+    unknown_set_active_mask,
+    unknown_add_active_mask,
+    unknown_get_thread_num,
+    unknown_get_threads,
+    unknown_set_threads
 };
-
-// Static functions to be called when no Prog Model is found
-static void unknown_get_process_mask (cpu_set_t *cpu_set) {
-    sched_getaffinity(0, sizeof(cpu_set), cpu_set);
-}
-static int  unknown_set_process_mask (const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_process_mask (const cpu_set_t *cpu_set) {}
-static void unknown_get_active_mask (cpu_set_t *cpu_set) { return unknown_get_process_mask(cpu_set); }
-static int  unknown_set_active_mask (const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_active_mask (const cpu_set_t *cpu_set) {}
-static int  unknown_get_thread_num (void) { return 0; }
-static int  unknown_get_threads (void) { return 1;}
-static void unknown_set_threads (int nthreads) {}
 
 void pm_init( void ) {
     /* Nanos++ */

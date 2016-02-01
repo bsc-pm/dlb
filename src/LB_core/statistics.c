@@ -27,8 +27,8 @@ void stats_ext_init(void) {
     pm_init();
     options_init();
     debug_init();
-    shmem_cpuinfo__init();
-    shmem_procinfo__init();
+    shmem_cpuinfo_ext__init();
+    shmem_procinfo_ext__init();
 }
 
 void stats_ext_finalize(void) {
