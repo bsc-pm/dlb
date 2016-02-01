@@ -43,6 +43,7 @@ int main( int argc, char **argv ) {
 
     DLB_Stats_Init();
     DLB_Update();
+    DLB_Stats_Finalize();
 
     DLB_Init();
     DLB_Update();
