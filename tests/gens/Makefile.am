@@ -41,20 +41,25 @@ else
 ignore_mpi_tests =
 endif
 
+if HAVE_HWLOC
+hwloc_flags = $(HWLOC_LDFLAGS) $(HWLOC_LIBS) -Wl,-rpath,$(HWLOC_LIBSDIR)
+else
+hwloc_flags =
+endif
+
 basic-generator: basic-generator.in
 	$(GEN_verbose)rm -f $@ ; \
 	sed \
-		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
-		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
-		-e's,@COMPILE_VERSIONS\@,"$(versions)",g' \
-		-e's,@PERFO_CFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@HWLOC_LIBSDIR\@,"$(HWLOC_LIBSDIR)",g' \
-		-e's,@HWLOC_LIBS\@,"$(HWLOC_LIBS)",g' \
-		-e's,@CONFIG_CC\@,"$(CC)",g' \
-		-e's,@CONFIG_CXX\@,"$(CXX)",g' \
+		-e's|@SRCDIR\@|"$(abs_top_srcdir)"|g' \
+		-e's|@BUILDDIR\@|"$(abs_top_builddir)"|g' \
+		-e's|@COMPILE_VERSIONS\@|"$(versions)"|g' \
+		-e's|@PERFO_CFLAGS\@|"$(PERFO_CFLAGS)"|g' \
+		-e's|@DEBUG_CFLAGS\@|"$(DEBUG_CFLAGS)"|g' \
+		-e's|@PERFO_CXXFLAGS\@|"$(PERFO_CFLAGS)"|g' \
+		-e's|@DEBUG_CXXFLAGS\@|"$(DEBUG_CFLAGS)"|g' \
+		-e's|@HWLOC_LDFLAGS\@|"$(hwloc_flags)"|g' \
+		-e's|@CONFIG_CC\@|"$(CC)"|g' \
+		-e's|@CONFIG_CXX\@|"$(CXX)"|g' \
 		$^ > $@.tmp ; \
 	mv $@.tmp $@ ; \
 	chmod 755 $@
@@ -62,20 +67,19 @@ basic-generator: basic-generator.in
 mpi-generator: mpi-generator.in
 	$(GEN_verbose)rm -f $@ ; \
 	sed \
-		-e's,@SRCDIR\@,"$(abs_top_srcdir)",g' \
-		-e's,@BUILDDIR\@,"$(abs_top_builddir)",g' \
-		-e's,@COMPILE_VERSIONS\@,"$(versions)",g' \
-		-e's,@PERFO_CFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@PERFO_CXXFLAGS\@,"$(PERFO_CFLAGS)",g' \
-		-e's,@DEBUG_CXXFLAGS\@,"$(DEBUG_CFLAGS)",g' \
-		-e's,@HWLOC_LIBSDIR\@,"$(HWLOC_LIBSDIR)",g' \
-		-e's,@HWLOC_LIBS\@,"$(HWLOC_LIBS)",g' \
-		-e's,@CONFIG_CC\@,"$(MPICC)",g' \
-		-e's,@CONFIG_CXX\@,"mpicxx",g' \
-		-e's,@MPIRUN\@,$(MPIRUN),g' \
-		-e's,@MPIRUN_BIND\@,$(MPIRUN_BIND),g' \
-		-e's,@TEST_IGNORE\@,"$(ignore_mpi_tests)",g' \
+		-e's|@SRCDIR\@|"$(abs_top_srcdir)"|g' \
+		-e's|@BUILDDIR\@|"$(abs_top_builddir)"|g' \
+		-e's|@COMPILE_VERSIONS\@|"$(versions)"|g' \
+		-e's|@PERFO_CFLAGS\@|"$(PERFO_CFLAGS)"|g' \
+		-e's|@DEBUG_CFLAGS\@|"$(DEBUG_CFLAGS)"|g' \
+		-e's|@PERFO_CXXFLAGS\@|"$(PERFO_CFLAGS)"|g' \
+		-e's|@DEBUG_CXXFLAGS\@|"$(DEBUG_CFLAGS)"|g' \
+		-e's|@HWLOC_LDFLAGS\@|"$(hwloc_flags)"|g' \
+		-e's|@CONFIG_CC\@|"$(MPICC)"|g' \
+		-e's|@CONFIG_CXX\@|"mpicxx"|g' \
+		-e's|@MPIRUN\@|$(MPIRUN)|g' \
+		-e's|@MPIRUN_BIND\@|$(MPIRUN_BIND)|g' \
+		-e's|@TEST_IGNORE\@|"$(ignore_mpi_tests)"|g' \
 		$^ > $@.tmp ; \
 	mv $@.tmp $@ ; \
 	chmod 755 $@

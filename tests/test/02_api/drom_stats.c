@@ -43,6 +43,7 @@ int main( int argc, char **argv ) {
 
     DLB_Drom_Init();
     DLB_Update();
+    DLB_Drom_Finalize();
 
     DLB_Init();
     DLB_Update();
