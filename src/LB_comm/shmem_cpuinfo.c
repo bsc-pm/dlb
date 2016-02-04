@@ -52,7 +52,6 @@ typedef enum {
 
 typedef struct {
     spid_t      owner;      // Current owner, useful to resolve reclaimed CPUs
-    spid_t      last_owner; // Initial? Last?
     spid_t      guest;      // Current user of the CPU
     cpu_state_t state;
     stats_state_t stats_state;

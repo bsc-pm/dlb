@@ -47,6 +47,25 @@
 static sem_t *sem[MAX_CHILDS][NUM_SEMS];
 static int num_cpus;
 
+// This function simulates a process to be allocated in the cpuset that has been stolen
+static void launch_intruder(const cpu_set_t *mask) {
+    sched_setaffinity(0, sizeof(cpu_set_t), mask);
+
+    // Load basic DLB modules
+    options_init();
+    pm_init();
+    debug_init();
+    register_signals();
+    shmem_procinfo__init();
+    shmem_cpuinfo__init();
+
+    // Unload DLB modules
+    shmem_cpuinfo__finalize();
+    shmem_procinfo__finalize();
+    unregister_signals();
+    options_finalize();
+}
+
 static pid_t do_child(int id, int num_childs) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
@@ -74,13 +93,31 @@ static pid_t do_child(int id, int num_childs) {
         shmem_procinfo__init();
         shmem_cpuinfo__init();
 
+        // Save our initial mask
+        cpu_set_t initial_mask;
+        shmem_procinfo_ext__init();
+        shmem_procinfo_ext__getprocessmask(getpid(), &initial_mask);
+
         // Wait until parent process change our mask
         sem_post(sem[id][0]);
         sem_wait(sem[id][1]);
 
         // Update process mask and signal parent
         shmem_procinfo__update(true, true);
+        shmem_procinfo_ext__getprocessmask(getpid(), &new_mask);
+        shmem_cpuinfo__update_ownership(&new_mask);
+        printf("Child running with mask: %s\n", mu_to_str(&new_mask));
         sem_post(sem[id][2]);
+
+        // Wait until an intruder process gets and then leaves our CPUs
+        sem_wait(sem[id][0]);
+        shmem_procinfo__update(true, true);
+        shmem_procinfo_ext__getprocessmask(getpid(), &new_mask);
+        shmem_cpuinfo__update_ownership(&new_mask);
+        printf("Child running with mask: %s\n", mu_to_str(&new_mask));
+
+        // Compare initial and current mask (they should be the same)
+        int error = CPU_EQUAL(&initial_mask, &new_mask) ? EXIT_SUCCESS : EXIT_FAILURE;
 
         printf("Child process finishing\n");
 
@@ -93,7 +130,7 @@ static pid_t do_child(int id, int num_childs) {
         for (i=0; i<NUM_SEMS; i++) {
             munmap(sem[i], sizeof(sem_t));
         }
-        _exit(EXIT_SUCCESS);
+        _exit(error);
 
     } else if (child_pid > 0) {
         // Parent process
@@ -101,11 +138,12 @@ static pid_t do_child(int id, int num_childs) {
     } else {
         fprintf(stderr, "Fork failed\n");
     }
-    return -1;
+    return EXIT_FAILURE;
 
 }
 
 static int do_test(int num_childs) {
+    int error = EXIT_SUCCESS;
     pid_t childs[num_childs];
     int i;
     for (i=0; i<num_childs; ++i) {
@@ -165,6 +203,19 @@ static int do_test(int num_childs) {
         sem_wait(sem[i][2]);
     }
 
+    // simulate a new process running on the stolen CPUs
+    cpu_set_t intruder_mask;
+    CPU_ZERO(&intruder_mask);
+    for (i=0; i<nelems; i++) {
+        CPU_SET(cpulist[i], &intruder_mask);
+    }
+    launch_intruder(&intruder_mask);
+
+    // Signal all childs again so they can recover their CPUs
+    for (i=0; i<num_childs; ++i) {
+        sem_post(sem[i][0]);
+    }
+
     int status;
     for (i=0; i<num_childs; ++i) {
         int j;
@@ -173,13 +224,16 @@ static int do_test(int num_childs) {
             munmap(sem[i][j], sizeof(sem_t));
         }
         waitpid(childs[i], &status, 0);
+        error += status;
     }
 
-    return nelems - ncpus;
+    error += nelems - ncpus;
+
+    return error;
 }
 
 int main( int argc, char **argv ) {
-    int error = 0;
+    int error = EXIT_SUCCESS;
     num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     // This test creates 2 processes and asks for 2 CPUs, so a minimium of 4 CPUs is required

@@ -45,6 +45,7 @@ typedef struct {
     bool dirty;
     cpu_set_t current_process_mask;
     cpu_set_t future_process_mask;
+    cpu_set_t stolen_cpus;
     unsigned int active_cpus;
     // Cpu Usage fields:
     double cpu_usage;
@@ -57,13 +58,16 @@ typedef struct {
 } pinfo_t;
 
 typedef struct {
+    bool initialized;
     struct timespec initial_time;
+    cpu_set_t free_mask;        // Contains the CPUs in the system not owned
     pinfo_t process_info[0];
 } shdata_t;
 
 static spid_t ME;
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
+static int max_cpus;
 static int max_processes;
 static int my_process;
 
@@ -72,7 +76,11 @@ struct timespec last_utime; // Useful time (user+system)
 
 static void update_process_loads(void);
 static void update_process_mask(void);
-static bool steal_cpu(int cpu, int processor);
+static bool steal_cpu(int cpu, int process, bool dry_run);
+static int register_mask(const cpu_set_t *mask);
+static void unregister_mask(const cpu_set_t *mask);
+static int set_new_mask(int process, const cpu_set_t *mask, bool dry_run);
+static int steal_mask(const cpu_set_t *mask, bool dry_run);
 
 void shmem_procinfo__init(void) {
     // Protect double initialization
@@ -86,6 +94,7 @@ void shmem_procinfo__init(void) {
 
     // We will reserve enough positions assuming that there won't be more processes than cpus
     max_processes = mu_get_system_size();
+    max_cpus = mu_get_system_size();
 
     // Basic size + zero-length array real length
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
@@ -93,12 +102,32 @@ void shmem_procinfo__init(void) {
 
     shmem_lock(init_handler);
     {
+        // Initialize some values if this is the 1st process attached to the shmem
+        if (!shdata->initialized) {
+            get_time(&shdata->initial_time);
+            mu_get_system_mask(&shdata->free_mask);
+            shdata->initialized = true;
+        }
+
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == NOBODY) {
                 shdata->process_info[p].pid = ME;
                 shdata->process_info[p].dirty = false;
-                get_process_mask( &(shdata->process_info[p].current_process_mask) );
+
+                // Get process mask and set current == future
+                get_process_mask(&shdata->process_info[p].current_process_mask);
+                memcpy(&shdata->process_info[p].future_process_mask,
+                        &shdata->process_info[p].current_process_mask, sizeof(cpu_set_t));
+
+                // Register mask into the system
+                int error = register_mask(&shdata->process_info[p].current_process_mask);
+                if (error) {
+                    shmem_unlock(init_handler);
+                    fatal("Error trying to register CPU mask: %s",
+                        &shdata->process_info[p].current_process_mask);
+                }
+
 #ifdef DLB_LOAD_AVERAGE
                 shdata->process_info[p].load[0] = 0.0f;
                 shdata->process_info[p].load[1] = 0.0f;
@@ -108,11 +137,9 @@ void shmem_procinfo__init(void) {
                 break;
             }
         }
-        fatal_cond(p == max_processes, "Cannot reserve process statistics");
-
-        // Initialize initial time
-        if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
-            get_time(&shdata->initial_time);
+        if (p == max_processes) {
+            shmem_unlock(init_handler);
+            fatal("Not enough space in the shared memory to register process %d", ME);
         }
     }
     shmem_unlock(init_handler);
@@ -124,8 +151,26 @@ void shmem_procinfo__init(void) {
 void shmem_procinfo__finalize(void) {
     shmem_lock(shm_handler);
     {
+        // Unregister our process mask, or future mask if we are dirty
+        if (shdata->process_info[my_process].dirty) {
+            unregister_mask(&shdata->process_info[my_process].future_process_mask);
+        } else {
+            unregister_mask(&shdata->process_info[my_process].current_process_mask);
+        }
+
+        // Clear process fields
         shdata->process_info[my_process].pid = NOBODY;
         shdata->process_info[my_process].dirty = false;
+        CPU_ZERO(&shdata->process_info[my_process].current_process_mask);
+        CPU_ZERO(&shdata->process_info[my_process].future_process_mask);
+        CPU_ZERO(&shdata->process_info[my_process].stolen_cpus);
+        shdata->process_info[my_process].active_cpus = 0;
+        shdata->process_info[my_process].cpu_usage = 0.0;
+        shdata->process_info[my_process].cpu_avg_usage = 0.0;
+#ifdef DLB_LOAD_AVERAGE
+        shdata->process_info[my_process].load[3] = {0.0f, 0.0f, 0.0f};
+        shdata->process_info[my_process].last_ltime = {0};
+#endif
     }
     shmem_unlock(shm_handler);
     shmem_finalize(shm_handler);
@@ -172,9 +217,21 @@ void shmem_procinfo_ext__init(void) {
         return;
     }
 
+    max_cpus = mu_get_system_size();
     max_processes = mu_get_system_size();
     shm_ext_handler = shmem_init((void**)&shdata,
             sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "procinfo" );
+
+    shmem_lock(shm_ext_handler);
+    {
+        // Initialize some values if this is the 1st process attached to the shmem
+        if (!shdata->initialized) {
+            get_time(&shdata->initial_time);
+            mu_get_system_mask(&shdata->free_mask);
+            shdata->initialized = true;
+        }
+    }
+    shmem_unlock(shm_ext_handler);
 }
 
 void shmem_procinfo_ext__finalize(void) {
@@ -223,17 +280,29 @@ int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask) {
 int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
     if (shm_ext_handler == NULL) return -1;
 
-    int error = -1;
+    int error = 0;
     shmem_lock(shm_ext_handler);
     {
+        // Find process
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == pid) {
-                memcpy(&(shdata->process_info[p].future_process_mask), mask, sizeof(cpu_set_t));
-                shdata->process_info[p].dirty = true;
-                error = 0;
                 break;
             }
+        }
+
+        // PID not found
+        if (p == max_processes) {
+            error = -1;
+        }
+
+        // Run first a dry run to see if the mask can be completely stolen. If it's ok, run it.
+        error = error ? error : set_new_mask(p, mask, true);
+        error = error ? error : set_new_mask(p, mask, false);
+        if (!error) {
+            // If everything went ok, update future_mask and dirty flag
+            memcpy(&shdata->process_info[p].future_process_mask, mask, sizeof(cpu_set_t));
+            shdata->process_info[p].dirty = true;
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -413,23 +482,13 @@ int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems,
     if (shm_ext_handler == NULL) return -1;
 
     int n_elems = 0;
-    int max_cpus = mu_get_system_size();
-    cpu_set_t used_cpus;
-    CPU_ZERO(&used_cpus);
-
     shmem_lock(shm_ext_handler);
     {
         int c, p;
-        // Sum all used CPUs by active processes
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid != NOBODY) {
-                CPU_OR(&used_cpus, &used_cpus, &shdata->process_info[p].current_process_mask);
-            }
-        }
-
-        // Get free CPUs
-        for (c = max_cpus-1; c >= 0; c--) {
-            if (!CPU_ISSET(c, &used_cpus)) {
+        // Get CPUs from the free_mask
+        for (c = 0; c < max_cpus; c++) {
+            if (CPU_ISSET(c, &shdata->free_mask)) {
+                CPU_CLR(c, &shdata->free_mask);
                 cpulist[n_elems++] = c;
             }
             if (n_elems == ncpus || n_elems == max_len) {
@@ -446,9 +505,9 @@ int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems,
                 for (p = 0; p < max_processes; p++) {
                     if (shdata->process_info[p].pid != NOBODY) {
                         for (c = max_cpus-1; c >= 0; c--) {
-                            bool success = steal_cpu(c, p);
+                            bool success = steal_cpu(c, p, false);
                             if (success) {
-                                // keep going from the next processor
+                                // keep going from the next process
                                 cpulist[n_elems++] = c;
                                 keep_looping = true;
                                 break;
@@ -551,84 +610,160 @@ static void update_process_loads(void) {
 }
 
 static void update_process_mask(void) {
-    int max_cpus = mu_get_system_size();
-    // XXX: Should we do this step?
-    // Update current process mask (it could have externally changed, although rare)
-    get_process_mask(&(shdata->process_info[my_process].current_process_mask));
 
-    // Set up our next mask. We cannot blindly use the future_mask becasue
-    // some CPU might not be stolen
-    cpu_set_t next_mask;
-    memcpy(&next_mask, &(shdata->process_info[my_process].future_process_mask), sizeof(cpu_set_t));
+    // Set up our next mask. We cannot blindly use the future_mask because the PM might reject it
+    cpu_set_t *next_mask = &shdata->process_info[my_process].future_process_mask;
 
-    // foreach set cpu in future mask, steal it from others unless it is the last one
-    int c, p;
-    for (c = max_cpus-1; c >= 0; c--) {
-        if (CPU_ISSET(c, &(shdata->process_info[my_process].future_process_mask))) {
-            for (p = 0; p < max_processes; p++) {
-                if (p == my_process) continue;
-                // Steal CPU only if other process currently owns it
-                bool success = steal_cpu(c, p);
-                if (!success) {
-                    // If stealing was not successfull, do not set CPU
-                    CPU_CLR(p, &next_mask);
-                }
-            }
-        }
-    }
-    // Clear dirty flag only if we didn't clear any CPU in next_mask
-    if (CPU_EQUAL(&(shdata->process_info[my_process].future_process_mask), &next_mask)) {
-        shdata->process_info[my_process].dirty = false;
-    }
-    // Set final mask
-    verbose(VB_DROM, "Setting new mask: %s", mu_to_str(&next_mask));
-    int error = set_process_mask(&next_mask);
+    // Notify the mask change to the PM
+    verbose(VB_DROM, "Setting new mask: %s", mu_to_str(next_mask))
+    int error = set_process_mask(next_mask);
+
     // On error, update local mask and steal again from other processes
     if (error) {
-        get_process_mask(&next_mask);
+        get_process_mask(next_mask);
+        int c, p;
         for (c = max_cpus-1; c >= 0; c--) {
-            if (CPU_ISSET( c, &next_mask) ) {
+            if (CPU_ISSET( c, next_mask) ) {
                 for (p = 0; p < max_processes; p++) {
                     if (p == my_process ) continue;
                     // Steal CPU only if other process currently owns it
-                    steal_cpu(c, p);
+                    steal_cpu(c, p, false);
                 }
             }
         }
     }
     // Update local info
-    memcpy(&(shdata->process_info[my_process].current_process_mask), &next_mask, sizeof(cpu_set_t));
+    memcpy(&shdata->process_info[my_process].current_process_mask, next_mask, sizeof(cpu_set_t));
+    shdata->process_info[my_process].dirty = false;
 }
 
-static bool steal_cpu(int cpu, int processor) {
-    bool success = false;
-    if (shdata->process_info[processor].dirty) {
-        // If dirty, we steal from future_mask
-        if (CPU_ISSET(cpu, &shdata->process_info[processor].future_process_mask)
-                && CPU_COUNT(&shdata->process_info[processor].future_process_mask) > 1) {
+static bool steal_cpu(int cpu, int process, bool dry_run) {
+    bool steal;
 
-            // Steal
-            CPU_CLR(cpu, &shdata->process_info[processor].future_process_mask);
-            success = true;
+    // If not dirty, check that the CPU is owned by the process and it's not the last one
+    steal = !shdata->process_info[process].dirty
+        && CPU_ISSET(cpu, &shdata->process_info[process].current_process_mask)
+        && CPU_COUNT(&shdata->process_info[process].future_process_mask) > 1;
+
+    // If dirty, check the same but in the future mask
+    steal |= shdata->process_info[process].dirty
+        && CPU_ISSET(cpu, &shdata->process_info[process].future_process_mask)
+        && CPU_COUNT(&shdata->process_info[process].future_process_mask) > 1;
+
+
+    if (steal) {
+        if (!dry_run) {
+            shdata->process_info[process].dirty = true;
+            CPU_SET(cpu, &shdata->process_info[process].stolen_cpus);
+            CPU_CLR(cpu, &shdata->process_info[process].future_process_mask);
+
+            // Add the stolen mask to the free_mask so other processes can acquire it
+            CPU_SET(cpu, &shdata->free_mask);
         }
-    } else {
-        // If not dirty, we steal from process_mask
-        if (CPU_ISSET(cpu, &shdata->process_info[processor].current_process_mask)
-                && CPU_COUNT(&shdata->process_info[processor].current_process_mask) > 1) {
+        verbose(VB_DROM, "CPU %d has been removed from process %d", cpu, process);
+    }
 
-            // Update future_mask and steal
-            memcpy(&shdata->process_info[processor].future_process_mask,
-                    &shdata->process_info[processor].current_process_mask,
-                    sizeof(cpu_set_t));
-            CPU_CLR(cpu, &shdata->process_info[processor].future_process_mask);
-            shdata->process_info[processor].dirty = true;
-            success = true;
+    return steal;
+}
+
+// Register a new set of CPUs. Remove them from the free_mask
+static int register_mask(const cpu_set_t *mask) {
+    int c;
+    for (c = 0; c < max_cpus; c++) {
+        if (CPU_ISSET(c, mask)) {
+            if (CPU_ISSET(c, &shdata->free_mask)) {
+                CPU_CLR(c, &shdata->free_mask);
+            } else {
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
+
+// Unregister CPUs. Either add them to the free_mask or give them back to their owner
+static void unregister_mask(const cpu_set_t *mask) {
+    int c, p;
+    for (c = 0; c < max_cpus; c++) {
+        if (CPU_ISSET(c, mask)) {
+            // look if the CPU belongs to some other process
+            for (p = 0; p < max_processes; p++) {
+                if (CPU_ISSET(c, &shdata->process_info[p].stolen_cpus)) {
+                    // give it back to the process p
+                    CPU_SET(c, &shdata->process_info[p].future_process_mask);
+                    CPU_CLR(c, &shdata->process_info[p].stolen_cpus);
+                    shdata->process_info[p].dirty = true;
+                    break;
+                }
+            }
+
+            // if we didn't find the owner, add it to the free_mask
+            if (p == max_processes) {
+                CPU_SET(c, &shdata->free_mask);
+            }
+        }
+    }
+}
+
+// Configure a new cpu_set for the process
+//  * If the CPU is SET and unused, remove it from the free_mask
+//  * If the CPU is SET, used and not owned, try to steal it
+//  * If the CPU is UNSET and owned by thr process, unregister it
+// Returns true if all CPUS could be stolen
+static int set_new_mask(int process, const cpu_set_t *mask, bool dry_run) {
+    cpu_set_t cpus_to_acquire;
+    cpu_set_t cpus_to_steal;
+    cpu_set_t cpus_to_free;
+    CPU_ZERO(&cpus_to_acquire);
+    CPU_ZERO(&cpus_to_steal);
+    CPU_ZERO(&cpus_to_free);
+
+    int c;
+    for (c = 0; c < max_cpus; c++) {
+        if (CPU_ISSET(c, mask)) {
+            if (CPU_ISSET(c, &shdata->free_mask)) {
+                // CPU is not being used
+                CPU_SET(c, &cpus_to_acquire);
+            } else {
+                if (CPU_ISSET(c, &shdata->process_info[process].future_process_mask)) {
+                    // CPU is being used by other process
+                    CPU_SET(c, &cpus_to_steal);
+                }
+            }
+        } else {
+            if (CPU_ISSET(c, &shdata->process_info[process].future_process_mask)) {
+                // CPU no longer used by this process
+                CPU_SET(c, &cpus_to_free);
+            }
         }
     }
 
-    if (success) {
-        verbose(VB_DROM, "CPU %d has been removed from processor %d", cpu, processor);
+    int error = steal_mask(&cpus_to_steal, dry_run);
+
+    if (!dry_run && !error) {
+        register_mask(&cpus_to_acquire);
+        unregister_mask(&cpus_to_free);
     }
 
-    return success;
+    return error;
+}
+
+// Steal every CPU set in mask from other processes
+static int steal_mask(const cpu_set_t *mask, bool dry_run) {
+    int c, p;
+    for (c = max_cpus-1; c >= 0; c--) {
+        if (CPU_ISSET(c, mask)) {
+            for (p = 0; p < max_processes; p++) {
+                bool success = steal_cpu(c, p, dry_run);
+                if (success) break;
+            }
+
+            if (p == my_process) {
+                // No process returned a success
+                verbose(VB_DROM, "CPU %d could not get acquired", c);
+                return false;
+            }
+        }
+    }
+    return true;
 }
