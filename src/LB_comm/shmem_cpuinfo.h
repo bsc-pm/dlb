@@ -20,7 +20,9 @@
 #ifndef SHMEM_CPUINFO_H
 #define SHMEM_CPUINFO_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 #include <limits.h>
 #include "support/types.h"

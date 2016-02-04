@@ -20,7 +20,9 @@
 #ifndef MASK_UTILS_H
 #define MASK_UTILS_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 
 typedef enum {

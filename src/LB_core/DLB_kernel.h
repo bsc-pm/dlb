@@ -20,7 +20,9 @@
 #ifndef DLB_KERNEL_H
 #define DLB_KERNEL_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 #include <stdbool.h>
 

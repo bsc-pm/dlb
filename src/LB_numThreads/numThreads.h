@@ -20,7 +20,9 @@
 #ifndef NUMTHREADS_H
 #define NUMTHREADS_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 
 void pm_init();

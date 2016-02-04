@@ -20,7 +20,9 @@
 #ifndef AUTO_LEWI_MASK_H
 #define AUTO_LEWI_MASK_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/

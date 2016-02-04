@@ -17,7 +17,9 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 //#include <stdio.h>
 #include <string.h>
 //#include <stdlib.h>

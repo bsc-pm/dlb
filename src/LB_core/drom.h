@@ -20,7 +20,9 @@
 #ifndef DROM_H
 #define DROM_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 
 void drom_ext_init(void);
