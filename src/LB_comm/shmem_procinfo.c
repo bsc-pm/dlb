@@ -698,6 +698,7 @@ static int register_mask(const cpu_set_t *mask) {
 
 // Unregister CPUs. Either add them to the free_mask or give them back to their owner
 static void unregister_mask(const cpu_set_t *mask) {
+    verbose(VB_DROM, "Process %d unregistering mask %s", my_process, mu_to_str(mask));
     int c, p;
     for (c = 0; c < max_cpus; c++) {
         if (CPU_ISSET(c, mask)) {
@@ -708,6 +709,7 @@ static void unregister_mask(const cpu_set_t *mask) {
                     CPU_SET(c, &shdata->process_info[p].future_process_mask);
                     CPU_CLR(c, &shdata->process_info[p].stolen_cpus);
                     shdata->process_info[p].dirty = true;
+                    verbose(VB_DROM, "Giving back CPU %d to process %d", c, p);
                     break;
                 }
             }
@@ -740,7 +742,7 @@ static int set_new_mask(int process, const cpu_set_t *mask, bool dry_run) {
                 // CPU is not being used
                 CPU_SET(c, &cpus_to_acquire);
             } else {
-                if (CPU_ISSET(c, &shdata->process_info[process].future_process_mask)) {
+                if (!CPU_ISSET(c, &shdata->process_info[process].future_process_mask)) {
                     // CPU is being used by other process
                     CPU_SET(c, &cpus_to_steal);
                 }
@@ -776,9 +778,9 @@ static int steal_mask(const cpu_set_t *mask, bool dry_run) {
             if (p == my_process) {
                 // No process returned a success
                 verbose(VB_DROM, "CPU %d could not get acquired", c);
-                return false;
+                return -1;
             }
         }
     }
-    return true;
+    return 0;
 }

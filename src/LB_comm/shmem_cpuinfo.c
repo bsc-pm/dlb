@@ -396,8 +396,13 @@ int shmem_cpuinfo__return_claimed(cpu_set_t *mask) {
                     && shdata->node_info[cpu].owner != ME
                     && shdata->node_info[cpu].state != CPU_LENT) {
                 if (shdata->node_info[cpu].guest == ME) {
-                    shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
-                    update_cpu_stats(cpu, STATS_OWNED);
+                    if (shdata->node_info[cpu].owner == NOBODY) {
+                        shdata->node_info[cpu].guest = NOBODY;
+                        update_cpu_stats(cpu, STATS_IDLE);
+                    } else {
+                        shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
+                        update_cpu_stats(cpu, STATS_OWNED);
+                    }
                 }
                 returned++;
                 CPU_CLR(cpu, mask);
@@ -643,24 +648,43 @@ bool shmem_cpuinfo__acquire_cpu(int cpu, bool force) {
  */
 void shmem_cpuinfo__update_ownership(const cpu_set_t* process_mask) {
     shmem_lock(shm_handler);
+    verbose(VB_SHMEM, "Updating ownership: %s", mu_to_str(process_mask));
     int cpu;
     for (cpu = 0; cpu < mu_get_system_size(); cpu++) {
         if (CPU_ISSET(cpu, process_mask)) {
-            // CPU ownership should be mine
+            // The CPU should be mine
             if (shdata->node_info[cpu].owner != ME) {
                 // Steal CPU
                 shdata->node_info[cpu].owner = ME;
-                shdata->node_info[cpu].guest = ME;
-                shdata->node_info[cpu].state = CPU_BUSY;
-                update_cpu_stats(cpu, STATS_OWNED);
                 verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpu);
             }
-        } else if (shdata->node_info[cpu].owner == ME) {
-            // Release CPU ownership
-            shdata->node_info[cpu].owner = NOBODY;
-            shdata->node_info[cpu].state = CPU_DISABLED;
-            update_cpu_stats(cpu, STATS_IDLE);
-            verbose(VB_SHMEM, "Releasing ownership of CPU %d", cpu);
+            if (shdata->node_info[cpu].guest == NOBODY) {
+                shdata->node_info[cpu].guest = ME;
+            }
+            shdata->node_info[cpu].state = CPU_BUSY;
+            update_cpu_stats(cpu, STATS_OWNED);
+        } else {
+            // The CPU is now not mine
+            if (shdata->node_info[cpu].owner == ME) {
+                // Release CPU ownership
+                shdata->node_info[cpu].owner = NOBODY;
+                shdata->node_info[cpu].state = CPU_DISABLED;
+                if (shdata->node_info[cpu].guest == ME ) {
+                    shdata->node_info[cpu].guest = NOBODY;
+                }
+                update_cpu_stats(cpu, STATS_IDLE);
+                verbose(VB_SHMEM, "Releasing ownership of CPU %d", cpu);
+            }
+            if (shdata->node_info[cpu].guest == ME) {
+                // If I'm just the guest, return it as if claimed
+                if (shdata->node_info[cpu].owner == NOBODY) {
+                    shdata->node_info[cpu].guest = NOBODY;
+                    update_cpu_stats(cpu, STATS_IDLE);
+                } else {
+                    shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
+                    update_cpu_stats(cpu, STATS_OWNED);
+                }
+            }
         }
     }
     shmem_unlock(shm_handler);
