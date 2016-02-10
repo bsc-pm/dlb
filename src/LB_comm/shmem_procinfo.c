@@ -69,7 +69,7 @@ static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static int max_cpus;
 static int max_processes;
-static int my_process;
+static int my_process = -1;
 static struct timespec last_ttime; // Total time
 static struct timespec last_utime; // Useful time (user+system)
 static const char *shmem_name = "procinfo";
@@ -217,7 +217,6 @@ void shmem_procinfo_ext__init(void) {
         return;
     }
 
-    my_process = -1;
     max_cpus = mu_get_system_size();
     max_processes = mu_get_system_size();
     shm_ext_handler = shmem_init((void**)&shdata,
