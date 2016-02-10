@@ -392,7 +392,7 @@ void auto_lewi_mask_parallel(void) {
 }
 
 void auto_lewi_mask_notifymaskchangeto(const cpu_set_t* process_mask) {
-    pthread_mutex_lock(&mutex);
+    // We don't modify any data from the policy and getting the lock
+    // may cause deadlocks, so we won't lock here
     shmem_cpuinfo__update_ownership(process_mask);
-    pthread_mutex_unlock(&mutex);
 }
