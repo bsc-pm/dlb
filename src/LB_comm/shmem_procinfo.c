@@ -70,9 +70,9 @@ static shdata_t *shdata = NULL;
 static int max_cpus;
 static int max_processes;
 static int my_process;
-
-struct timespec last_ttime; // Total time
-struct timespec last_utime; // Useful time (user+system)
+static struct timespec last_ttime; // Total time
+static struct timespec last_utime; // Useful time (user+system)
+static const char *shmem_name = "procinfo";
 
 static void update_process_loads(void);
 static void update_process_mask(void);
@@ -98,7 +98,7 @@ void shmem_procinfo__init(void) {
 
     // Basic size + zero-length array real length
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "procinfo");
+            sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, shmem_name);
 
     shmem_lock(init_handler);
     {
@@ -217,10 +217,11 @@ void shmem_procinfo_ext__init(void) {
         return;
     }
 
+    my_process = -1;
     max_cpus = mu_get_system_size();
     max_processes = mu_get_system_size();
     shm_ext_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "procinfo" );
+            sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, shmem_name );
 
     shmem_lock(shm_ext_handler);
     {
@@ -235,6 +236,11 @@ void shmem_procinfo_ext__init(void) {
 }
 
 void shmem_procinfo_ext__finalize(void) {
+    // Protect double finalization
+    if (shm_ext_handler == NULL) {
+        return;
+    }
+
     shmem_finalize(shm_ext_handler);
     shm_ext_handler = NULL;
 }
@@ -530,37 +536,46 @@ int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems,
 }
 
 void shmem_procinfo_ext__print_info(void) {
-    max_processes = mu_get_system_size();
-
-    // Basic size + zero-length array real length
-    shmem_handler_t *handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, "procinfo");
-    pinfo_t process_info_copy[max_processes];
-
-    shmem_lock(handler);
-    {
-        memcpy(process_info_copy, shdata->process_info, sizeof(pinfo_t)*max_processes);
+    if (shm_ext_handler == NULL) {
+        warning("The shmem %s is not initialized, cannot print", shmem_name);
+        return;
     }
-    shmem_unlock(handler);
-    shmem_finalize(handler);
 
+    // Make a full copy of the shared memory. Basic size + zero-length array real length
+    shdata_t *shdata_copy = (shdata_t*) malloc(sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
+
+    shmem_lock(shm_ext_handler);
+    {
+        memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
+    }
+    shmem_unlock(shm_ext_handler);
+
+    info0("=== Processes Masks ===");
     int p;
     for (p = 0; p < max_processes; p++) {
-        if (process_info_copy[p].pid != NOBODY) {
+        if (shdata_copy->process_info[p].pid != NOBODY) {
             char current[max_processes*2+16];
             char future[max_processes*2+16];
-            strncpy(current, mu_to_str(&(process_info_copy[p].current_process_mask)),
+            char stolen[max_processes*2+16];
+            strncpy(current, mu_to_str(&shdata_copy->process_info[p].current_process_mask),
                     sizeof(current));
-            strncpy(future, mu_to_str(&(process_info_copy[p].future_process_mask)),
+            strncpy(future, mu_to_str(&shdata_copy->process_info[p].future_process_mask),
                     sizeof(future));
-            fprintf(stdout, "PID: %d, Current mask: %s, Future mask: %s, Dirty: %d\n",
-                    process_info_copy[p].pid, current, future, process_info_copy[p].dirty);
+            strncpy(stolen, mu_to_str(&shdata_copy->process_info[p].stolen_cpus),
+                    sizeof(stolen));
+            info0("PID: %d, Current: %s, Future: %s, Stolen: %s, Dirty: %d",
+                    shdata_copy->process_info[p].pid, current, future, stolen,
+                    shdata_copy->process_info[p].dirty);
         }
     }
-    fprintf(stdout, "=== DLB Statistics ===\n");
-    fprintf(stdout, "Process %d: %f CPU Avg usage\n",
-            my_process, shdata->process_info[my_process].cpu_avg_usage);
+    info0("=== Processes Statistics ===");
+    for (p = 0; p < max_processes; p++) {
+        if (shdata_copy->process_info[p].pid != NOBODY) {
+            info0("Process %d: %f CPU Avg usage", p, shdata->process_info[p].cpu_avg_usage);
+        }
+    }
 
+    free(shdata_copy);
 }
 
 /*** Helper functions, the shm lock must have been acquired beforehand ***/

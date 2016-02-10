@@ -35,9 +35,11 @@
 #include <getopt.h>
 #include <stdbool.h>
 #include "LB_core/DLB_interface.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
 
-static char * created_shm_filename = NULL;
-static char * userdef_shm_filename = NULL;
+static char *created_shm_filename = NULL;
+static char *userdef_shm_filename = NULL;
 
 void print_usage( const char * program ) {
     fprintf( stdout, "usage: %s OPTION [OPTION]...\n", program );
@@ -74,12 +76,12 @@ void list_shdata_item( const char* shm_suffix ) {
     char *p;
     if ( (p = strstr(shm_suffix, "cpuinfo")) ) {
         p = p + 8;  // remove "cpuinfo_"
+        fprintf( stdout, "Found DLB shmem with id: %s\n", p );
         setenv( "LB_SHM_KEY", p, 1);
+        setenv( "LB_VERBOSE_FORMAT", "node", 0);
         DLB_PrintShmem();
     } else if ( (p = strstr(shm_suffix, "procinfo")) ) {
-        p = p + 9;  // remove "procinfo_"
-        setenv( "LB_SHM_KEY", p, 1);
-        DLB_PrintShmem();
+        // We currently print both shmems with the same API. Skipping.
     }
 }
 
@@ -102,7 +104,6 @@ void list_shdata( void ) {
         lstat( entry->d_name, &statbuf );
         if( getuid() == statbuf.st_uid &&
                 fnmatch( "DLB_*", entry->d_name, 0) == 0 ) {
-            fprintf( stdout, "Found DLB shmem: %s\n", entry->d_name );
             // Ignore DLB_ prefix
             list_shdata_item( &(entry->d_name[4]) );
 

@@ -70,10 +70,11 @@ static shdata_t *shdata = NULL;
 static cpu_set_t dlb_mask;       // CPUs not owned by any process but usable by others
 static int node_size;
 static bool cpu_is_public_post_mortem = false;
+static const char *shmem_name = "cpuinfo";
 
 static inline bool is_idle(int cpu);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
-static float getcpustate(int cpu, stats_state_t state);
+static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
 void shmem_cpuinfo__init(void) {
     // Protect double initialization
@@ -93,7 +94,7 @@ void shmem_cpuinfo__init(void) {
 
     // Basic size + zero-length array real length
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, "cpuinfo");
+            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name);
 
     DLB_INSTR( int idle_count = 0; )
 
@@ -680,10 +681,15 @@ void shmem_cpuinfo_ext__init(void) {
 
     node_size = mu_get_system_size();
     shm_ext_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, "cpuinfo");
+            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name);
 }
 
 void shmem_cpuinfo_ext__finalize(void) {
+    // Protect multiple finalization
+    if (shm_ext_handler == NULL) {
+        return;
+    }
+
     shmem_finalize(shm_ext_handler);
     shm_ext_handler = NULL;
 }
@@ -693,45 +699,34 @@ int shmem_cpuinfo_ext__getnumcpus(void) {
 }
 
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state) {
+    if (shm_ext_handler == NULL) {
+        return -1.0f;
+    }
+
     float usage;
-    shmem_handler_t *handler;
-
-    // Initialize only if the user didn't do the Initialization
-    if (shm_ext_handler == NULL) {
-        handler = shmem_init((void**)&shdata,
-                sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, "cpuinfo");
-    } else {
-        handler = shm_ext_handler;
-    }
-
-    shmem_lock(handler);
+    shmem_lock(shm_ext_handler);
     {
-        usage = getcpustate(cpu, state);
+        usage = getcpustate(cpu, state, shdata);
     }
-    shmem_unlock(handler);
-
-    // Finalize only if the user didn't do the Initialization
-    if (shm_ext_handler == NULL) {
-        shmem_finalize(handler);
-    }
+    shmem_unlock(shm_ext_handler);
 
     return usage;
 }
 
 void shmem_cpuinfo_ext__print_info(void) {
-    node_size = mu_get_system_size();
-
-    // Basic size + zero-length array real length
-    shmem_handler_t *handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, "cpuinfo");
-    cpuinfo_t node_info_copy[node_size];
-
-    shmem_lock(handler);
-    {
-        memcpy(node_info_copy, shdata->node_info, sizeof(cpuinfo_t)*node_size);
+    if (shm_ext_handler == NULL) {
+        warning("The shmem %s is not initialized, cannot print", shmem_name);
+        return;
     }
-    shmem_unlock(handler);
-    shmem_finalize(handler);
+
+    // Make a full copy of the shared memory. Basic size + zero-length array real length
+    shdata_t *shdata_copy = (shdata_t*) malloc(sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size);
+
+    shmem_lock(shm_ext_handler);
+    {
+        memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size);
+    }
+    shmem_unlock(shm_ext_handler);
 
     char owners[512] = "OWNERS: ";
     char guests[512] = "GUESTS: ";
@@ -741,25 +736,27 @@ void shmem_cpuinfo_ext__print_info(void) {
     char *s = states+8;
     int cpu;
     for (cpu=0; cpu<node_size; cpu++) {
-        o += snprintf(o, 8, "%d, ", node_info_copy[cpu].owner);
-        g += snprintf(g, 8, "%d, ", node_info_copy[cpu].guest);
-        s += snprintf(s, 8, "%d, ", node_info_copy[cpu].state);
+        o += snprintf(o, 8, "%d, ", shdata_copy->node_info[cpu].owner);
+        g += snprintf(g, 8, "%d, ", shdata_copy->node_info[cpu].guest);
+        s += snprintf(s, 8, "%d, ", shdata_copy->node_info[cpu].state);
     }
 
+    info0("=== CPU States ===");
     info0(owners);
     info0(guests);
     info0(states);
     info0("States Legend: DISABLED=%d, BUSY=%d, LENT=%d", CPU_DISABLED, CPU_BUSY, CPU_LENT);
 
-    // TODO use info
-    info0("CPU Statistics:");
-    for (cpu = 0; cpu < node_size; ++cpu) {
-        fprintf(stdout, "CPU %d: OWNED(%.2f%%), GUESTED(%.2f%%), IDLE(%.2f%%)\n",
+    info0("=== CPU Statistics ===");
+    for (cpu=0; cpu<node_size; ++cpu) {
+        info0("CPU %d: OWNED(%.2f%%), GUESTED(%.2f%%), IDLE(%.2f%%)",
                 cpu,
-                getcpustate(cpu, STATS_OWNED)*100,
-                getcpustate(cpu, STATS_GUESTED)*100,
-                getcpustate(cpu, STATS_IDLE)*100);
+                getcpustate(cpu, STATS_OWNED, shdata_copy)*100,
+                getcpustate(cpu, STATS_GUESTED, shdata_copy)*100,
+                getcpustate(cpu, STATS_IDLE, shdata_copy)*100);
     }
+
+    free(shdata_copy);
 }
 
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
@@ -785,11 +782,11 @@ static void update_cpu_stats(int cpu, stats_state_t new_state) {
     shdata->node_info[cpu].last_update = now;
 }
 
-static float getcpustate(int cpu, stats_state_t state) {
+static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data) {
     struct timespec now;
     get_time_coarse(&now);
-    int64_t total = timespec_diff(&shdata->initial_time, &now);
-    int64_t acc = shdata->node_info[cpu].acc_time[state];
+    int64_t total = timespec_diff(&shared_data->initial_time, &now);
+    int64_t acc = shared_data->node_info[cpu].acc_time[state];
     float percentage = (float)acc/total;
     ensure(percentage >= -0.000001f && percentage <= 1.000001f,
                 "Percentage out of bounds");

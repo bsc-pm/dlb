@@ -571,6 +571,14 @@ void notifymaskchange(void) {
 }
 
 void printShmem(void) {
+    pm_init();
+    options_init();
+    debug_init();
+    shmem_cpuinfo_ext__init();
     shmem_cpuinfo_ext__print_info();
+    shmem_cpuinfo_ext__finalize();
+    shmem_procinfo_ext__init();
     shmem_procinfo_ext__print_info();
+    shmem_procinfo_ext__finalize();
+    options_finalize();
 }
