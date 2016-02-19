@@ -20,26 +20,26 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-//#include <stdio.h>
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <string.h>
-//#include <stdlib.h>
-//#include <sys/types.h>
 #include <unistd.h>
 
-#include "DLB_kernel.h"
-
-#include <LB_policies/Lend_light.h>
-#include <LB_policies/Weight.h>
-#include <LB_policies/JustProf.h>
-#include <LB_policies/Lewi_map.h>
-#include <LB_policies/lewi_mask.h>
-#include <LB_policies/autonomous_lewi_mask.h>
-#include <LB_policies/RaL.h>
-#include <LB_policies/PERaL.h>
-
-#include <LB_numThreads/numThreads.h>
+#include "LB_core/DLB_kernel.h"
 #include "LB_core/statistics.h"
 #include "LB_core/drom.h"
+#include "LB_policies/Lend_light.h"
+#include "LB_policies/Weight.h"
+#include "LB_policies/JustProf.h"
+#include "LB_policies/Lewi_map.h"
+#include "LB_policies/lewi_mask.h"
+#include "LB_policies/autonomous_lewi_mask.h"
+#include "LB_policies/RaL.h"
+#include "LB_policies/PERaL.h"
+#include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "support/debug.h"
@@ -161,6 +161,8 @@ int Initialize(void) {
         const char* policy = options_get_policy();
         stats_enabled = options_get_statistics();
         drom_enabled = options_get_drom();
+
+        info0("%s %s", PACKAGE, VERSION);
 
         if (strcasecmp(policy, "LeWI")==0) {
             info0( "Balancing policy: LeWI" );
@@ -355,14 +357,14 @@ int Initialize(void) {
         }
 #endif
 
-        info0 ( "This process starts with %d threads", _default_nthreads);
+        info0("This process starts with %d threads", _default_nthreads);
 
         if (options_get_just_barier())
-            info0 ( "Only lending resources when MPI_Barrier "
+            info0("Only lending resources when MPI_Barrier "
                     "(Env. var. LB_JUST_BARRIER is set)" );
 
         if (options_get_lend_mode() == BLOCK)
-            info0 ( "LEND mode set to BLOCKING. I will lend all "
+            info0("LEND mode set to BLOCKING. I will lend all "
                     "the resources when in an MPI call" );
 
         verbose(VB_API, "Enabled verbose mode for DLB API");
