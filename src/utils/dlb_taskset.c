@@ -25,6 +25,8 @@
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
+#include <unistd.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -81,12 +83,18 @@ static void get_cpus(unsigned int ncpus) {
     DLB_Drom_getCPUs(ncpus, steal, cpulist, &nelems, max_len);
     DLB_Drom_Finalize();
 
-    int i;
-    fprintf(stdout, "Asking for %d CPUs. CPUs given: ", ncpus);
-    for (i=0; i<nelems; ++i) {
-        fprintf(stdout, "%d ", cpulist[i]);
+    char hostname[HOST_NAME_MAX];
+    gethostname(hostname, HOST_NAME_MAX);
+
+    // Let's assume a maximum size of cpuid of 4 digits, plus 1 space per cpu, plus \0
+    char *cpulist_str = (char*) malloc((nelems*5+1)*sizeof(char));
+    int i, j;
+    for (i=0, j=0; i<nelems; ++i) {
+        j += sprintf(&cpulist_str[j], "%d ", cpulist[i]);
     }
-    fprintf(stdout, "\n");
+    cpulist_str[j] = '\0';
+
+    fprintf(stdout, "%s %s\n", hostname, cpulist_str);
 }
 
 static void set_affinity(pid_t pid, char *cpu_list) {
