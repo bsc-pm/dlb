@@ -113,7 +113,6 @@ static BalancePolicy lb_funcs = {
     .enableDLB = &dummyFunc,
     .single = &dummyFunc,
     .parallel = &dummyFunc,
-    .notifymaskchangeto = &dummyFunc
 };
 
 
@@ -229,7 +228,6 @@ int Initialize(void) {
             lb_funcs.enableDLB = &lewi_mask_enableDLB;
             lb_funcs.single = &lewi_mask_single;
             lb_funcs.parallel = &lewi_mask_parallel;
-            lb_funcs.notifymaskchangeto = &lewi_mask_notifymaskchangeto;
 
         } else if (strcasecmp(policy, "auto_LeWI_mask")==0) {
             info0( "Balancing policy: Autonomous LeWI mask" );
@@ -253,7 +251,6 @@ int Initialize(void) {
             lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
             lb_funcs.single = &auto_lewi_mask_single;
             lb_funcs.parallel = &auto_lewi_mask_parallel;
-            lb_funcs.notifymaskchangeto = &auto_lewi_mask_notifymaskchangeto;
             policy_auto=1;
 
         } else if (strcasecmp(policy, "RaL")==0) {
@@ -563,7 +560,7 @@ int is_auto( void ){
 }
 
 void notifymaskchangeto(const cpu_set_t* mask) {
-    lb_funcs.notifymaskchangeto(mask);
+    shmem_cpuinfo__update_ownership(mask);
 }
 
 void notifymaskchange(void) {

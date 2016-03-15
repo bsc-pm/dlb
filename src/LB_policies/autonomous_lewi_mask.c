@@ -390,9 +390,3 @@ void auto_lewi_mask_parallel(void) {
     verbose(VB_MICROLB, "Disabling DLB Single Mode");
     pthread_mutex_unlock (&mutex);
 }
-
-void auto_lewi_mask_notifymaskchangeto(const cpu_set_t* process_mask) {
-    // We don't modify any data from the policy and getting the lock
-    // may cause deadlocks, so we won't lock here
-    shmem_cpuinfo__update_ownership(process_mask);
-}

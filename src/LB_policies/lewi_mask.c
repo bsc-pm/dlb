@@ -288,7 +288,3 @@ void lewi_mask_parallel(void) {
     lewi_mask_OutOfBlockingCall(0);
     single = 0;
 }
-
-void lewi_mask_notifymaskchangeto(const cpu_set_t* process_mask) {
-    shmem_cpuinfo__update_ownership(process_mask);
-}
