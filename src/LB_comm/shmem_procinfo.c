@@ -125,7 +125,7 @@ void shmem_procinfo__init(void) {
                 if (error) {
                     shmem_unlock(init_handler);
                     fatal("Error trying to register CPU mask: %s",
-                        &shdata->process_info[p].current_process_mask);
+                        mu_to_str(&shdata->process_info[p].current_process_mask));
                 }
 
 #ifdef DLB_LOAD_AVERAGE
