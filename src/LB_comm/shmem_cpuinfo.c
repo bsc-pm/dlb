@@ -302,7 +302,8 @@ void shmem_cpuinfo__recover_some_cpus(cpu_set_t *mask, int max_resources) {
     {
         int cpu;
         for (cpu = 0; cpu < node_size && max_resources > 0; cpu++) {
-            if (shdata->node_info[cpu].owner == ME && mask && !CPU_ISSET(cpu, mask)) {
+            if (shdata->node_info[cpu].owner == ME &&
+                    shdata->node_info[cpu].guest != ME) {
                 shdata->node_info[cpu].state = CPU_BUSY;
                 CPU_SET(cpu, &recovered_cpus);
                 --max_resources;
