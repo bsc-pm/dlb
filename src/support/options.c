@@ -78,6 +78,9 @@ bool options_get_aggressive_init(void) { return opt_aggressive_init; }
 static bool opt_prioritize_locality;
 bool options_get_priorize_locality(void) { return opt_prioritize_locality; }
 
+static debug_opts_t opt_debug_opts;
+verbose_fmt_t options_get_debug_opts(void) { return opt_debug_opts; }
+
 
 typedef enum OptionTypes {
     OPT_BOOL_T,
@@ -85,7 +88,8 @@ typedef enum OptionTypes {
     OPT_STR_T,
     OPT_BLCK_T,     // blocking_mode_t
     OPT_VB_T,       // verbose_opts_t
-    OPT_VBFMT_T     // verbose_fmt_t
+    OPT_VBFMT_T,    // verbose_fmt_t
+    OPT_DBG_T       // debug_opts_t
 } option_type_t;
 
 typedef struct {
@@ -202,6 +206,13 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
                 parse_verbose_fmt(default_value, (verbose_fmt_t*)new_option->value);
             }
             break;
+        case(OPT_DBG_T):
+            if (user_value) {
+                parse_debug_opts(user_value, (debug_opts_t*)new_option->value);
+            } else if (default_value) {
+                parse_debug_opts(default_value, (debug_opts_t*)new_option->value);
+            }
+            break;
     }
 
     fatal_cond(!optional && !new_option->value,
@@ -311,6 +322,10 @@ void options_init(void) {
             OPT_BOOL_T, &opt_prioritize_locality, RW, OPTIONAL, &FALSE,
             "Prioritize resource sharing by HW proximity");
 
+    options[i++] = register_option("LB_DEBUG_OPTS", "--debug-opts",
+            OPT_DBG_T, &opt_debug_opts, RW, OPTIONAL, NULL,
+            "Debug options list: no-register-signals. Delimited by the character :");
+
     num_options = i;
     ensure(num_options<=MAX_OPTIONS, "Number of options registered greater than maximum" );
 }
@@ -358,6 +373,8 @@ int options_set_variable(const char *var_name, const char *value) {
         case OPT_VBFMT_T:
             parse_verbose_fmt(value, (verbose_fmt_t*)option->value);
             break;
+        case OPT_DBG_T:
+            parse_debug_opts(value, (debug_opts_t*)option->value);
     }
 
     return 0;
@@ -394,6 +411,9 @@ int options_get_variable(const char *var_name, char *value) {
             sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
             break;
         case OPT_VBFMT_T:
+            sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
+            break;
+        case OPT_DBG_T:
             sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
             break;
     }

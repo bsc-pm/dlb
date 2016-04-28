@@ -66,6 +66,8 @@
 #include <signal.h>
 #include "LB_core/DLB_kernel.h"
 #include "support/debug.h"
+#include "support/types.h"
+#include "support/options.h"
 
 #define MAX_SIGNUM 32
 
@@ -103,6 +105,10 @@ static void unregister_signal( int signum ) {
 }
 
 void register_signals( void ) {
+    if (options_get_debug_opts() & DBG_NOREGSIGNAL) {
+        warning("Debug option: no-register-signal. Skipping register_signals()");
+        return;
+    }
     /* Set up new handler */
     new_action.sa_sigaction = termination_handler;
     new_action.sa_flags = SA_SIGINFO;
@@ -129,6 +135,10 @@ void register_signals( void ) {
 }
 
 void unregister_signals( void ) {
+    if (options_get_debug_opts() & DBG_NOREGSIGNAL) {
+        warning("Debug option: no-register-signal. Skipping register_signals()");
+        return;
+    }
     int i;
     for ( i=0; i<MAX_SIGNUM; i++ ) {
         if ( registed_signals[i] ) {

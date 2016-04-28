@@ -96,3 +96,19 @@ void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     }
     free(my_str);
 }
+
+void parse_debug_opts(const char *str, debug_opts_t *value) {
+    *value = DBG_CLEAR;
+    char *my_str = (char*)malloc(strlen(str)+1);
+    strncpy(my_str, str, strlen(str)+1);
+    char *saveptr;
+    const char delimiter[2] = ":";
+    char *token = strtok_r(my_str, delimiter, &saveptr);
+    while (token != NULL) {
+        if ( !(*value & DBG_NOREGSIGNAL) && !strcasecmp(token, "no-register-signals") ) {
+            *value |= DBG_NOREGSIGNAL;
+        }
+        token = strtok_r(NULL, delimiter, &saveptr);
+    }
+    free(my_str);
+}

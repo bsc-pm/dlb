@@ -39,6 +39,7 @@ bool options_get_bind(void);
 const char* options_get_thread_distribution(void);
 bool options_get_aggressive_init(void);
 bool options_get_priorize_locality(void);
+verbose_fmt_t options_get_debug_opts(void);
 
 void options_init(void);
 void options_finalize(void);
