@@ -37,6 +37,8 @@
 
 #define SHSYNC_MAX_SIZE 64
 
+static void check_shmem(const char *filename);
+
 shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module ) {
     verbose( VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", getpid(), shmem_module );
 
@@ -54,6 +56,18 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     /* Get /dev/shm/ file names to create */
     const char *custom_shm_key = options_get_shm_key();
     snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key );
+
+    /* Create Semaphore(1): Mutex */
+    handler->semaphore = sem_open( handler->shm_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
+    if ( handler->semaphore == SEM_FAILED ) {
+        perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
+        exit( EXIT_FAILURE );
+    }
+
+    verbose( VB_SHMEM, "Check shared memory consistency");
+    sem_wait( handler->semaphore );
+    check_shmem(handler->shm_filename);
+    sem_post( handler->semaphore );
 
     verbose( VB_SHMEM, "Start Process Comm - creating shared mem, module(%s)", shmem_module );
 
@@ -74,13 +88,6 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     handler->addr = mmap( NULL, handler->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if ( handler->addr == MAP_FAILED ) {
         perror( "DLB PANIC: mmap Process" );
-        exit( EXIT_FAILURE );
-    }
-
-    /* Create Semaphore(1): Mutex */
-    handler->semaphore = sem_open( handler->shm_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
-    if ( handler->semaphore == SEM_FAILED ) {
-        perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
         exit( EXIT_FAILURE );
     }
 
@@ -171,4 +178,33 @@ void shmem_unlock( shmem_handler_t* handler ) {
 
 char *get_shm_filename( shmem_handler_t* handler ) {
     return handler->shm_filename;
+}
+
+/* Check consistency of a Shared Memory:
+ * Remove filename if exists and no process is attached to it
+ */
+static void check_shmem(const char *filename) {
+    char shm_filename[SHM_NAME_LENGTH] = {'\0'};
+    snprintf(shm_filename, SHM_NAME_LENGTH, "/dev/shm/%s", &filename[1]);
+
+    struct stat statbuf;
+    if (stat(shm_filename, &statbuf) == 0) {
+        fatal_cond(!S_ISREG(statbuf.st_mode), "Shmem already exists and it's not a regular file");
+        fatal_cond(statbuf.st_uid != getuid(), "Shmem already exists but belongs to another user");
+
+        char cmd[64];
+        snprintf(cmd, 64, "fuser -s %s", shm_filename);
+        int res = system(cmd);
+        if (WEXITSTATUS(res) != 0) {
+            // fuser returns a non-zero code if the file is not accessed by any process
+            verbose(VB_SHMEM, "Found orphan Shared Memory %s", shm_filename);
+            if (unlink(shm_filename)) {
+                fatal("can't delete %s", shm_filename);
+            } else {
+                verbose(VB_SHMEM, "Deleted orphan Shared Memory %s", shm_filename);
+            }
+        }
+    } else {
+        // File does not exist, everything is OK
+    }
 }
