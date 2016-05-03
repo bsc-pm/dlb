@@ -19,7 +19,10 @@
 
 #define _GNU_SOURCE
 #include <sched.h>
+#include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_drom.h"
+#include "support/options.h"
+#include "support/debug.h"
 
 void drom_init( void ) {
     shmem_drom__init();
@@ -35,11 +38,15 @@ void drom_update( void ) {
 
 
 void drom_ext_init( void ) {
+    pm_init();
+    options_init();
+    debug_init();
     shmem_drom_ext__init();
 }
 
 void drom_ext_finalize( void ) {
     shmem_drom_ext__finalize();
+    options_finalize();
 }
 
 int drom_ext_getnumcpus( void ) {

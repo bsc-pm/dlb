@@ -17,7 +17,10 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_stats.h"
+#include "support/options.h"
+#include "support/debug.h"
 
 void stats_init( void ) {
     shmem_stats__init();
@@ -32,11 +35,15 @@ void stats_update( void ) {
 }
 
 void stats_ext_init( void ) {
+    pm_init();
+    options_init();
+    debug_init();
     shmem_stats_ext__init();
 }
 
 void stats_ext_finalize( void ) {
     shmem_stats_ext__finalize();
+    options_finalize();
 }
 
 int stats_ext_getnumcpus( void ) {
