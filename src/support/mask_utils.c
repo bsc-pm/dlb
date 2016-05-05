@@ -270,16 +270,20 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             }
             // Range
             else if ( *ptr == '-' ) {
+                // Discard '-' and possible junk
                 ptr++;
                 if ( !isdigit(*ptr) ) { ptr++; continue; }
+
                 unsigned int end = strtoul( ptr, &endptr, 10 );
+                ptr = endptr;
+
+                // Valid range
                 if ( end > start ) {
                     int i;
                     for ( i=start; i<=end && i<sys.size; i++ ) {
                         CPU_SET( i, mask );
                     }
                 }
-                ptr++;
                 continue;
             }
             // Unexpected token
@@ -297,3 +301,8 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     }
 }
 #pragma GCC visibility pop
+
+void mu_testing_set_sys_size(int size) {
+    // For testing purposes only
+    sys.size = size;
+}

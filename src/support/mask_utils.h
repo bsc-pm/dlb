@@ -39,4 +39,6 @@ void mu_get_affinity_mask(cpu_set_t *affinity_set, const cpu_set_t *child_set, m
 const char* mu_to_str(const cpu_set_t *cpu_set);
 void mu_parse_mask(const char *str, cpu_set_t *mask);
 
+void mu_testing_set_sys_size(int size);
+
 #endif /* MASK_UTILS_H */
