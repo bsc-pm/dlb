@@ -75,8 +75,8 @@ void parse_verbose_opts(const char *str, verbose_opts_t *value) {
 
 void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     *value = VBF_CLEAR;
-    char *my_str = (char*)malloc(1+sizeof(char)*strlen(str));
-    strncpy(my_str, str, strlen(str));
+    char *my_str = (char*)malloc(strlen(str)+1);
+    strncpy(my_str, str, strlen(str)+1);
     char *saveptr;
     const char delimiter[2] = ":";
     char *token = strtok_r(my_str, delimiter, &saveptr);
@@ -92,7 +92,7 @@ void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
         } else if ( !(*value & VBF_THREAD) && !strcasecmp(token, "thread") ) {
             *value |= VBF_THREAD;
         }
-        token = strtok( NULL, delimiter );
+        token = strtok_r(NULL, delimiter, &saveptr);
     }
     free(my_str);
 }
