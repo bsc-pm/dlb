@@ -33,8 +33,8 @@
 #define NOBODY 0
 #define ME getpid()
 static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
-static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
-static const double LOG2E = 1.44269504088896340736;
+//static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
+//static const double LOG2E = 1.44269504088896340736;
 
 typedef pid_t spid_t;  // Sub-process ID
 
