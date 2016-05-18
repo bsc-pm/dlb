@@ -117,8 +117,8 @@ static BalancePolicy lb_funcs = {
 
 
 static void load_modules(void) {
-    pm_init();
     options_init();
+    pm_init();
     debug_init();
     init_tracing();
     register_signals();

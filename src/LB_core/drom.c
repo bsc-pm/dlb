@@ -23,7 +23,7 @@
 #include <sched.h>
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
-#include <LB_numThreads/numThreads.h>
+#include "LB_numThreads/numThreads.h"
 #include "support/options.h"
 #include "support/debug.h"
 

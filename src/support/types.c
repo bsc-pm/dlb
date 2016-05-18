@@ -92,7 +92,7 @@ void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
         } else if ( !(*value & VBF_THREAD) && !strcasecmp(token, "thread") ) {
             *value |= VBF_THREAD;
         }
-        token = strtok_r( NULL, delimiter, &saveptr );
+        token = strtok_r(NULL, delimiter, &saveptr);
     }
     free(my_str);
 }
