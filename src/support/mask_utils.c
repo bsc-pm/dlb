@@ -159,9 +159,6 @@ void mu_init( void ) {
         parse_lscpu();
 #endif
 
-        fatal_cond( sys.size != CPUS_NODE, "Detected cpus at runtime (%d) do not match "
-                "detected cpus at configure time(%d)", sys.size, CPUS_NODE );
-
         mu_initialized = true;
     }
 }

@@ -17,10 +17,6 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #define _GNU_SOURCE
 #include <sched.h>
 #include <pthread.h>
@@ -28,6 +24,7 @@
 #include "support/globals.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+#include "support/mask_utils.h"
 
 #define NANOS_SYMBOLS_DEFINED ( \
         nanos_omp_get_process_mask && \
@@ -99,7 +96,11 @@ static int  unknown_get_thread_num (void) { return 0; }
 static int  unknown_get_threads (void) { return 1;}
 static void unknown_set_threads (int nthreads) {}
 
+static int cpus_node;
+
 void pm_init( void ) {
+    cpus_node = mu_get_system_size();
+
     /* Nanos++ */
     if ( NANOS_SYMBOLS_DEFINED ) {
         pm_funcs.get_process_mask = nanos_omp_get_process_mask;
@@ -134,9 +135,9 @@ void pm_init( void ) {
 }
 
 void update_threads(int threads) {
-    if ( threads > CPUS_NODE ) {
-        warning( "Trying to use more CPUS (%d) than the available (%d)\n", threads, CPUS_NODE);
-        threads = CPUS_NODE;
+    if ( threads > cpus_node ) {
+        warning( "Trying to use more CPUS (%d) than available (%d)\n", threads, cpus_node);
+        threads = cpus_node;
     }
 
     add_event(THREADS_USED_EVENT, threads);
