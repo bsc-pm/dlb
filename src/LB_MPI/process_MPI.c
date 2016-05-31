@@ -195,11 +195,11 @@ void before_finalize(void) {
 
 void after_finalize(void) {}
 
-int is_mpi_ready() {
+int is_mpi_ready(void) {
     return mpi_ready;
 }
 
-MPI_Comm getNodeComm() {
+MPI_Comm getNodeComm(void) {
     return mpi_comm_node;
 }
 

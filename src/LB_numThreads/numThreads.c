@@ -45,64 +45,52 @@
         )
 
 /* Weak symbols */
-void nanos_omp_get_process_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-int  nanos_omp_set_process_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_add_process_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_get_active_mask ( cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-int  nanos_omp_set_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-void nanos_omp_add_active_mask ( const cpu_set_t *cpu_set ) __attribute__ ( ( weak ) );
-int  nanos_omp_get_thread_num  (void) __attribute__ ((weak));
-int  nanos_omp_get_max_threads (void) __attribute__ ((weak));
-void nanos_omp_set_num_threads (int nthreads) __attribute__ ((weak));
-int  omp_get_thread_num  (void) __attribute__ ((weak));
-int  omp_get_max_threads (void) __attribute__ ((weak));
-void omp_set_num_threads (int nthreads) __attribute__ ((weak));
-
-void pm_not_implemented() { print_backtrace(); /*fatal0( "Not implemented" );*/ }
+void nanos_omp_get_process_mask(cpu_set_t *cpu_set) __attribute__((weak));
+int  nanos_omp_set_process_mask(const cpu_set_t *cpu_set) __attribute__((weak));
+void nanos_omp_add_process_mask(const cpu_set_t *cpu_set) __attribute__((weak));
+void nanos_omp_get_active_mask(cpu_set_t *cpu_set) __attribute__((weak));
+int  nanos_omp_set_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
+void nanos_omp_add_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
+int  nanos_omp_get_thread_num(void) __attribute__((weak));
+int  nanos_omp_get_max_threads(void) __attribute__((weak));
+void nanos_omp_set_num_threads(int nthreads) __attribute__((weak));
+int  omp_get_thread_num(void) __attribute__((weak));
+int  omp_get_max_threads(void) __attribute__((weak));
+void omp_set_num_threads(int nthreads) __attribute__((weak));
 
 static struct {
-    void (*get_process_mask) (cpu_set_t *cpu_set);
-    int  (*set_process_mask) (const cpu_set_t *cpu_set);
-    void (*add_process_mask) (const cpu_set_t *cpu_set);
-    void (*get_active_mask) (cpu_set_t *cpu_set);
-    int  (*set_active_mask) (const cpu_set_t *cpu_set);
-    void (*add_active_mask) (const cpu_set_t *cpu_set);
-    int  (*get_thread_num) (void);
-    int  (*get_threads) (void);
-    void (*set_threads) (int nthreads);
-} pm_funcs = {
-    pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    pm_not_implemented,
-    pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    (int (*)()) pm_not_implemented,
-    pm_not_implemented
-};
+    void (*get_process_mask)(cpu_set_t *cpu_set);
+    int  (*set_process_mask)(const cpu_set_t *cpu_set);
+    void (*add_process_mask)(const cpu_set_t *cpu_set);
+    void (*get_active_mask)(cpu_set_t *cpu_set);
+    int  (*set_active_mask)(const cpu_set_t *cpu_set);
+    void (*add_active_mask)(const cpu_set_t *cpu_set);
+    int  (*get_thread_num)(void);
+    int  (*get_threads)(void);
+    void (*set_threads)(int nthreads);
+} pm_funcs;
 
 // Static functions to be called when no Prog Model is found
-static void unknown_get_process_mask (cpu_set_t *cpu_set) {
+static void unknown_get_process_mask(cpu_set_t *cpu_set) {
     CPU_ZERO( cpu_set );
     CPU_SET( 0, cpu_set );
 }
-static int  unknown_set_process_mask (const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_process_mask (const cpu_set_t *cpu_set) {}
-static void unknown_get_active_mask (cpu_set_t *cpu_set) { return unknown_get_process_mask(cpu_set); }
-static int  unknown_set_active_mask (const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_active_mask (const cpu_set_t *cpu_set) {}
-static int  unknown_get_thread_num (void) { return 0; }
-static int  unknown_get_threads (void) { return 1;}
-static void unknown_set_threads (int nthreads) {}
+static int  unknown_set_process_mask(const cpu_set_t *cpu_set) { return 0; }
+static void unknown_add_process_mask(const cpu_set_t *cpu_set) {}
+static void unknown_get_active_mask(cpu_set_t *cpu_set) { return unknown_get_process_mask(cpu_set); }
+static int  unknown_set_active_mask(const cpu_set_t *cpu_set) { return 0; }
+static void unknown_add_active_mask(const cpu_set_t *cpu_set) {}
+static int  unknown_get_thread_num(void) { return 0; }
+static int  unknown_get_threads(void) { return 1;}
+static void unknown_set_threads(int nthreads) {}
 
 static int cpus_node;
 
-void pm_init( void ) {
+void pm_init(void) {
     cpus_node = mu_get_system_size();
 
     /* Nanos++ */
-    if ( NANOS_SYMBOLS_DEFINED ) {
+    if (NANOS_SYMBOLS_DEFINED) {
         pm_funcs.get_process_mask = nanos_omp_get_process_mask;
         pm_funcs.set_process_mask = nanos_omp_set_process_mask;
         pm_funcs.add_process_mask = nanos_omp_add_process_mask;
@@ -114,7 +102,7 @@ void pm_init( void ) {
         pm_funcs.set_threads = nanos_omp_set_num_threads;
     }
     /* OpenMP */
-    else if ( OMP_SYMBOLS_DEFINED ) {
+    else if (OMP_SYMBOLS_DEFINED) {
         pm_funcs.get_thread_num = omp_get_thread_num;
         pm_funcs.get_threads = omp_get_max_threads;
         pm_funcs.set_threads = omp_set_num_threads;
@@ -135,7 +123,7 @@ void pm_init( void ) {
 }
 
 void update_threads(int threads) {
-    if ( threads > cpus_node ) {
+    if (threads > cpus_node) {
         warning( "Trying to use more CPUS (%d) than available (%d)\n", threads, cpus_node);
         threads = cpus_node;
     }
@@ -143,33 +131,33 @@ void update_threads(int threads) {
     add_event(THREADS_USED_EVENT, threads);
 
     threads = (threads<1) ? 1 : threads;
-    pm_funcs.set_threads( threads );
+    pm_funcs.set_threads(threads);
 }
 
-void get_mask( cpu_set_t *cpu_set ) {
-    pm_funcs.get_active_mask( cpu_set );
+void get_mask(cpu_set_t *cpu_set) {
+    pm_funcs.get_active_mask(cpu_set);
 }
 
-int  set_mask( const cpu_set_t *cpu_set ) {
-    return pm_funcs.set_active_mask( cpu_set );
+int  set_mask(const cpu_set_t *cpu_set) {
+    return pm_funcs.set_active_mask(cpu_set);
 }
 
-void add_mask( const cpu_set_t *cpu_set ) {
-    pm_funcs.add_active_mask( cpu_set );
+void add_mask(const cpu_set_t *cpu_set) {
+    pm_funcs.add_active_mask(cpu_set);
 }
 
-void get_process_mask( cpu_set_t *cpu_set ) {
-    pm_funcs.get_process_mask( cpu_set );
+void get_process_mask(cpu_set_t *cpu_set) {
+    pm_funcs.get_process_mask(cpu_set);
 }
 
-int  set_process_mask( const cpu_set_t *cpu_set ) {
-    return pm_funcs.set_process_mask( cpu_set );
+int  set_process_mask(const cpu_set_t *cpu_set) {
+    return pm_funcs.set_process_mask(cpu_set);
 }
 
-void add_process_mask( const cpu_set_t *cpu_set ) {
-    pm_funcs.add_process_mask( cpu_set );
+void add_process_mask(const cpu_set_t *cpu_set) {
+    pm_funcs.add_process_mask(cpu_set);
 }
 
-int get_thread_num( void ) {
+int get_thread_num(void) {
     return pm_funcs.get_thread_num();
 }

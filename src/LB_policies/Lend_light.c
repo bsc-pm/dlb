@@ -32,7 +32,7 @@ static int single = 0;
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init() {
+void Lend_light_Init(void) {
     verbose(VB_MICROLB, "Lend_light Init");
 
     default_cpus = _default_nthreads;

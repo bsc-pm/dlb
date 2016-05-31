@@ -25,7 +25,7 @@
 #include "support/types.h"
 #include "support/globals.h"
 
-void debug_init();
+void debug_init(void);
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
 void print_backtrace(void);
 

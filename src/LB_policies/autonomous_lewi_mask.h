@@ -25,40 +25,40 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void auto_lewi_mask_Init( /* TODO: should be void */ );
+void auto_lewi_mask_Init(void);
 
-void auto_lewi_mask_Finish( void );
+void auto_lewi_mask_Finish(void);
 
-void auto_lewi_mask_IntoCommunication( void );
+void auto_lewi_mask_IntoCommunication(void);
 
-void auto_lewi_mask_OutOfCommunication( void );
+void auto_lewi_mask_OutOfCommunication(void);
 
 void auto_lewi_mask_IntoBlockingCall(int is_iter, int bloking_mode);
 
 void auto_lewi_mask_OutOfBlockingCall(int is_iter);
 
-void auto_lewi_mask_UpdateResources( int max_resources );
+void auto_lewi_mask_UpdateResources(int max_resources);
 
 //DEPRECATED
 //void auto_lewi_mask_ReturnClaimedCpus( void );
 
 int auto_lewi_mask_ReleaseCpu(int cpu);
 
-void auto_lewi_mask_ClaimCpus( int cpus );
+void auto_lewi_mask_ClaimCpus(int cpus);
 
-int auto_lewi_mask_ReturnCpuIfClaimed( int cpu );
+int auto_lewi_mask_ReturnCpuIfClaimed(int cpu);
 
-int auto_lewi_mask_CheckCpuAvailability ( int cpu );
+int auto_lewi_mask_CheckCpuAvailability(int cpu);
 
-void auto_lewi_mask_resetDLB( void );
+void auto_lewi_mask_resetDLB(void);
 
-void auto_lewi_mask_acquireCpu( int cpu );
+void auto_lewi_mask_acquireCpu(int cpu);
 
-void auto_lewi_mask_acquireCpus( cpu_set_t* cpus );
+void auto_lewi_mask_acquireCpus(cpu_set_t* cpus);
 
-void auto_lewi_mask_disableDLB ( void );
+void auto_lewi_mask_disableDLB(void);
 
-void auto_lewi_mask_enableDLB ( void );
+void auto_lewi_mask_enableDLB(void);
 
 void auto_lewi_mask_single(void);
 

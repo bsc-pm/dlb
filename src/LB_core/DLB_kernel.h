@@ -33,7 +33,7 @@ typedef struct {
     void (*outOfCommunication) (void);
     void (*intoBlockingCall) (int is_iter, int blocking_mode);
     void (*outOfBlockingCall) (int is_iter);
-    void (*updateresources) ( int max_resources );
+    void (*updateresources) (int max_resources);
     void (*returnclaimed) (void);
     int (*releasecpu) (int cpu);
     int (*returnclaimedcpu) (int cpu);
@@ -69,21 +69,19 @@ void IntoBlockingCall(int is_iter, int is_single);
 
 void OutOfBlockingCall(int is_iter);
 
-void updateresources( int max_resources );
+void updateresources(int max_resources);
 
-void returnclaimed( void );
+void returnclaimed(void);
 
-int releasecpu( int cpu );
+int releasecpu(int cpu);
 
-int returnclaimedcpu( int cpu );
+int returnclaimedcpu(int cpu);
 
-void claimcpus( int cpus );
+void claimcpus(int cpus);
 
-int checkCpuAvailability ( int cpu );
+int checkCpuAvailability(int cpu);
 
-int tracing_ready();
-
-void resetDLB();
+void resetDLB(void);
 
 int is_auto(void);
 
