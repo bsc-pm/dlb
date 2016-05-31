@@ -32,7 +32,7 @@ void JustProf_IntoBlockingCall(int is_iter, int blocking_mode);
 
 void JustProf_OutOfBlockingCall(int is_iter);
 
-void JustProf_UpdateResources();
+void JustProf_UpdateResources(int max_resources);
 
 #endif //JUSTPROF_H
 

@@ -44,7 +44,7 @@ static int single=0;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void auto_lewi_mask_Init( void ) {
+void auto_lewi_mask_Init(void) {
     verbose( VB_MICROLB, "Auto LeWI Mask Balancing Init" );
 
     nthreads = _default_nthreads;
@@ -60,7 +60,7 @@ void auto_lewi_mask_Init( void ) {
     add_event( THREADS_USED_EVENT, nthreads );
 }
 
-void auto_lewi_mask_Finish( void ) {
+void auto_lewi_mask_Finish(void) {
     pthread_mutex_lock(&mutex);
     shmem_mask.recover_defmask();
     shmem_mask.finalize();
@@ -69,9 +69,9 @@ void auto_lewi_mask_Finish( void ) {
     pthread_mutex_destroy(&mutex);
 }
 
-void auto_lewi_mask_IntoCommunication( void ) {}
+void auto_lewi_mask_IntoCommunication(void) {}
 
-void auto_lewi_mask_OutOfCommunication( void ) {}
+void auto_lewi_mask_OutOfCommunication(void) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
 void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
@@ -141,7 +141,7 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
 }
 
 /* Update Resources - Try to acquire foreign threads */
-void auto_lewi_mask_UpdateResources( int max_resources ) {
+void auto_lewi_mask_UpdateResources(int max_resources) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
 
@@ -188,7 +188,7 @@ void auto_lewi_mask_UpdateResources( int max_resources ) {
     pthread_mutex_unlock(&mutex);
 }*/
 
-int auto_lewi_mask_ReturnCpuIfClaimed( int cpu ) {
+int auto_lewi_mask_ReturnCpuIfClaimed(int cpu) {
     int returned=0;
 
     if (shmem_mask.is_cpu_claimed( cpu )) {
@@ -223,7 +223,7 @@ int auto_lewi_mask_ReturnCpuIfClaimed( int cpu ) {
     return returned;
 }
 
-int auto_lewi_mask_ReleaseCpu( int cpu ) {
+int auto_lewi_mask_ReleaseCpu(int cpu) {
     int returned = 0;
     add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
 
@@ -278,11 +278,11 @@ void auto_lewi_mask_ClaimCpus(int cpus) {
     }
 }
 
-int auto_lewi_mask_CheckCpuAvailability ( int cpu ) {
-    return shmem_mask.is_cpu_borrowed( cpu );
+int auto_lewi_mask_CheckCpuAvailability(int cpu) {
+    return shmem_mask.is_cpu_borrowed(cpu);
 }
 
-void auto_lewi_mask_resetDLB(){
+void auto_lewi_mask_resetDLB(void) {
     cpu_set_t current_mask;
     CPU_ZERO( &current_mask );
 
@@ -354,7 +354,7 @@ void auto_lewi_mask_acquireCpus(cpu_set_t* cpus){
     pthread_mutex_unlock(&mutex);
 }
 
-void auto_lewi_mask_disableDLB ( void ){
+void auto_lewi_mask_disableDLB(void){
     cpu_set_t current_mask;
     CPU_ZERO( &current_mask );
 
@@ -370,7 +370,7 @@ void auto_lewi_mask_disableDLB ( void ){
     pthread_mutex_unlock(&mutex);
 }
 
-void auto_lewi_mask_enableDLB ( void ){
+void auto_lewi_mask_enableDLB(void){
     pthread_mutex_lock ( &mutex);
     single=0;
     enabled=1;

@@ -23,15 +23,14 @@
 #define _GNU_SOURCE
 #include <sched.h>
 
-void pm_init();
-
+void pm_init(void);
 void update_threads(int threads);
-void get_mask( cpu_set_t *cpu_set );
-int  set_mask( const cpu_set_t *cpu_set );
-void add_mask( const cpu_set_t *cpu_set );
-void get_process_mask( cpu_set_t *cpu_set );
-int  set_process_mask( const cpu_set_t *cpu_set );
-void add_process_mask( const cpu_set_t *cpu_set );
-int get_thread_num( void );
+void get_mask(cpu_set_t *cpu_set);
+int  set_mask(const cpu_set_t *cpu_set);
+void add_mask(const cpu_set_t *cpu_set);
+void get_process_mask(cpu_set_t *cpu_set);
+int  set_process_mask(const cpu_set_t *cpu_set);
+void add_process_mask(const cpu_set_t *cpu_set);
+int  get_thread_num(void);
 
 #endif //NUMTHREADS_H

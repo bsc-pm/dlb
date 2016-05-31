@@ -78,38 +78,53 @@ static int init_id = 0;
 static bool stats_enabled;
 static bool drom_enabled;
 
-static void dummyFunc() {}
-static int false_dummyFunc() {return 0;}
-static int true_dummyFunc() {return 1;}
-static void notImplemented()
-{
-    warning("Functionality  Not implemented in this policy");
-}
-
 // Initialize lb_funcs to dummy functions
+static void dummy_init(void) {}
+static void dummy_finish(void) {}
+static void dummy_initIteration(void) {}
+static void dummy_finishIteration(void) {}
+static void dummy_intoCommunication(void) {}
+static void dummy_outOfCommunication(void) {}
+static void dummy_intoBlockingCall(int is_iter, int blocking_mode) {}
+static void dummy_outOfBlockingCall(int is_iter) {}
+static void dummy_updateresources(int max_resources) {}
+static void dummy_returnclaimed(void) {}
+static int dummy_releasecpu(int cpu) {return 0;}
+static int dummy_returnclaimedcpu(int cpu) {return 0;}
+static void dummy_claimcpus(int cpus) {}
+static void dummy_acquirecpu(int cpu) {}
+static void dummy_acquirecpus(cpu_set_t* mask) {}
+static int dummy_checkCpuAvailability(int cpu) {return 1;}
+static void dummy_resetDLB(void) {}
+static void dummy_disableDLB(void) {}
+static void dummy_enableDLB(void) {}
+static void dummy_single(void) {}
+static void dummy_parallel(void) {}
+static void dummy_notifymaskchangeto(const cpu_set_t* mask) {}
+
 static BalancePolicy lb_funcs = {
-    .init = &dummyFunc,
-    .finish = &dummyFunc,
-    .initIteration = &dummyFunc,
-    .finishIteration = &dummyFunc,
-    .intoCommunication = &dummyFunc,
-    .outOfCommunication = &dummyFunc,
-    .intoBlockingCall = &dummyFunc,
-    .outOfBlockingCall = &dummyFunc,
-    .updateresources = &dummyFunc,
-    .returnclaimed = &dummyFunc,
-    .releasecpu = &false_dummyFunc,
-    .returnclaimedcpu = &false_dummyFunc,
-    .claimcpus = &dummyFunc,
-    .acquirecpu = &dummyFunc,
-    .acquirecpus = &dummyFunc,
-    .checkCpuAvailability = &true_dummyFunc,
-    .resetDLB = &dummyFunc,
-    .disableDLB = &dummyFunc,
-    .enableDLB = &dummyFunc,
-    .single = &dummyFunc,
-    .parallel = &dummyFunc,
-    .notifymaskchangeto = &dummyFunc
+    .init = &dummy_init,
+    .finish = &dummy_finish,
+    .initIteration = &dummy_initIteration,
+    .finishIteration = &dummy_finishIteration,
+    .intoCommunication = &dummy_intoCommunication,
+    .outOfCommunication = &dummy_outOfCommunication,
+    .intoBlockingCall = &dummy_intoBlockingCall,
+    .outOfBlockingCall = &dummy_outOfBlockingCall,
+    .updateresources = &dummy_updateresources,
+    .returnclaimed = &dummy_returnclaimed,
+    .releasecpu = &dummy_releasecpu,
+    .returnclaimedcpu = &dummy_returnclaimedcpu,
+    .claimcpus = &dummy_claimcpus,
+    .acquirecpu = &dummy_acquirecpu,
+    .acquirecpus = &dummy_acquirecpus,
+    .checkCpuAvailability = &dummy_checkCpuAvailability,
+    .resetDLB = &dummy_resetDLB,
+    .disableDLB = &dummy_disableDLB,
+    .enableDLB = &dummy_enableDLB,
+    .single = &dummy_single,
+    .parallel = &dummy_parallel,
+    .notifymaskchangeto = &dummy_notifymaskchangeto
 };
 
 
@@ -180,9 +195,6 @@ int Initialize(void) {
             lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
             lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
             lb_funcs.updateresources = &Map_updateresources;
-            lb_funcs.resetDLB= &notImplemented;
-            lb_funcs.disableDLB = &notImplemented;
-            lb_funcs.enableDLB = &notImplemented;
 
         } else if (strcasecmp(policy, "WEIGHT")==0) {
             info0( "Balancing policy: Weight balancing" );
@@ -196,9 +208,6 @@ int Initialize(void) {
             lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
             lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
             lb_funcs.updateresources = &Weight_updateresources;
-            lb_funcs.resetDLB= &notImplemented;
-            lb_funcs.disableDLB = &notImplemented;
-            lb_funcs.enableDLB = &notImplemented;
 
         } else if (strcasecmp(policy, "LeWI_mask")==0) {
             info0( "Balancing policy: LeWI mask" );
@@ -270,11 +279,6 @@ int Initialize(void) {
                 lb_funcs.updateresources = &RaL_UpdateResources;
                 lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
             }
-
-            lb_funcs.acquirecpu = &notImplemented;
-            lb_funcs.resetDLB = &notImplemented;
-            lb_funcs.disableDLB = &notImplemented;
-            lb_funcs.enableDLB = &notImplemented;
 
         } else if (strcasecmp(policy, "JustProf")==0) {
             info0( "No Load balancing" );
@@ -430,7 +434,7 @@ void Terminate(void) {
     if ( drom_enabled ) drom_finalize();
 }
 
-void Update() {
+void Update(void) {
     if ( drom_enabled ) drom_update();
     if ( stats_enabled ) stats_update();
 }
@@ -474,7 +478,7 @@ void OutOfBlockingCall(int is_iter) {
     }
 }
 
-void updateresources( int max_resources ) {
+void updateresources(int max_resources) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_UPDATE);
         lb_funcs.updateresources( max_resources );
@@ -482,7 +486,7 @@ void updateresources( int max_resources ) {
     }
 }
 
-void returnclaimed( void ) {
+void returnclaimed(void) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
         lb_funcs.returnclaimed();
@@ -490,7 +494,7 @@ void returnclaimed( void ) {
     }
 }
 
-int releasecpu( int cpu ) {
+int releasecpu(int cpu) {
     if (dlb_enabled) {
         return lb_funcs.releasecpu(cpu);
     } else {
@@ -498,7 +502,7 @@ int releasecpu( int cpu ) {
     }
 }
 
-int returnclaimedcpu( int cpu ) {
+int returnclaimedcpu(int cpu) {
     if (dlb_enabled) {
         return lb_funcs.returnclaimedcpu(cpu);
     } else {
@@ -506,7 +510,7 @@ int returnclaimedcpu( int cpu ) {
     }
 }
 
-void claimcpus( int cpus ) {
+void claimcpus(int cpus) {
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
         lb_funcs.claimcpus(cpus);
@@ -530,7 +534,7 @@ void acquirecpus(cpu_set_t* mask){
     }
 }
 
-int checkCpuAvailability (int cpu) {
+int checkCpuAvailability(int cpu) {
     if (dlb_enabled) {
         return lb_funcs.checkCpuAvailability(cpu);
     } else {
@@ -538,23 +542,23 @@ int checkCpuAvailability (int cpu) {
     }
 }
 
-void resetDLB () {
+void resetDLB(void) {
     if (dlb_enabled) {
         lb_funcs.resetDLB();
     }
 }
 
-void singlemode () {
+void singlemode(void) {
     dlb_enabled = false;
     lb_funcs.single();
 }
 
-void parallelmode () {
+void parallelmode(void) {
     dlb_enabled = true;
     lb_funcs.parallel();
 }
 
-int is_auto( void ){
+int is_auto(void){
    return policy_auto;
 }
 
@@ -570,7 +574,7 @@ void notifymaskchange(void) {
 
 
 // FIXME
-void shmem_cpuarray__print_info( void );
+void shmem_cpuarray__print_info(void);
 void printShmem(void) {
     shmem_cpuarray__print_info();
 }
