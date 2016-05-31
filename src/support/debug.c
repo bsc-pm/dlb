@@ -39,7 +39,7 @@ static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
 static __thread int thread_id;
 
-void debug_init() {
+void debug_init(void) {
     vb_opts = options_get_verbose();
     vb_fmt = options_get_verbose_fmt();
 
@@ -61,7 +61,7 @@ void debug_init() {
     thread_id = get_thread_num();
 }
 
-void vb_print( FILE *fp, const char *prefix, const char *fmt, ... ) {
+void vb_print(FILE *fp, const char *prefix, const char *fmt, ...) {
     // Print prefix and object identifier
     if ( vb_fmt & VBF_THREAD ) {
         fprintf( fp, "%s[%s:%d]: ", prefix, fmt_str, thread_id );
@@ -77,8 +77,7 @@ void vb_print( FILE *fp, const char *prefix, const char *fmt, ... ) {
     fputc( '\n', fp );
 }
 
-void print_backtrace ( void )
-{
+void print_backtrace(void) {
     void* trace_ptrs[100];
     int count = backtrace( trace_ptrs, 100 );
     char** func_names = backtrace_symbols( trace_ptrs, count );

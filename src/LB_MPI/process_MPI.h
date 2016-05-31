@@ -29,7 +29,7 @@ void before_mpi(int call, int buf, int dest);
 void after_mpi(mpi_call call_type);
 void before_finalize(void);
 void after_finalize(void);
-int is_mpi_ready();
-MPI_Comm getNodeComm();
+int is_mpi_ready(void);
+MPI_Comm getNodeComm(void);
 
 #endif //PROCESS_MPI_H

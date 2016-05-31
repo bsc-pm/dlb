@@ -38,7 +38,7 @@ struct timespec iter_cpuTime;
 struct timespec iter_compTime;
 
 int myCPUS;
-void JustProf_Init() {
+void JustProf_Init(void) {
     //Read Environment vars
 
     myCPUS = _default_nthreads;
@@ -141,4 +141,4 @@ void JustProf_OutOfBlockingCall(int is_iter) {
     }
 }
 
-void JustProf_UpdateResources() {}
+void JustProf_UpdateResources(int max_resources) {}
