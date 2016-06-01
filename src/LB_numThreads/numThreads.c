@@ -58,17 +58,6 @@ int  omp_get_thread_num(void) __attribute__((weak));
 int  omp_get_max_threads(void) __attribute__((weak));
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 
-static struct {
-    void (*get_process_mask)(cpu_set_t *cpu_set);
-    int  (*set_process_mask)(const cpu_set_t *cpu_set);
-    void (*add_process_mask)(const cpu_set_t *cpu_set);
-    void (*get_active_mask)(cpu_set_t *cpu_set);
-    int  (*set_active_mask)(const cpu_set_t *cpu_set);
-    void (*add_active_mask)(const cpu_set_t *cpu_set);
-    int  (*get_thread_num)(void);
-    int  (*get_threads)(void);
-    void (*set_threads)(int nthreads);
-} pm_funcs;
 
 // Static functions to be called when no Prog Model is found
 static void unknown_get_process_mask(cpu_set_t *cpu_set) {
@@ -83,6 +72,29 @@ static void unknown_add_active_mask(const cpu_set_t *cpu_set) {}
 static int  unknown_get_thread_num(void) { return 0; }
 static int  unknown_get_threads(void) { return 1;}
 static void unknown_set_threads(int nthreads) {}
+
+
+static struct {
+    void (*get_process_mask)(cpu_set_t *cpu_set);
+    int  (*set_process_mask)(const cpu_set_t *cpu_set);
+    void (*add_process_mask)(const cpu_set_t *cpu_set);
+    void (*get_active_mask)(cpu_set_t *cpu_set);
+    int  (*set_active_mask)(const cpu_set_t *cpu_set);
+    void (*add_active_mask)(const cpu_set_t *cpu_set);
+    int  (*get_thread_num)(void);
+    int  (*get_threads)(void);
+    void (*set_threads)(int nthreads);
+} pm_funcs = {
+    unknown_get_process_mask,
+    unknown_set_process_mask,
+    unknown_add_process_mask,
+    unknown_get_active_mask,
+    unknown_set_active_mask,
+    unknown_add_active_mask,
+    unknown_get_thread_num,
+    unknown_get_threads,
+    unknown_set_threads
+};
 
 static int cpus_node;
 
