@@ -223,6 +223,9 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
 }
 
 void options_init(void) {
+    // options_init is not thread-safe
+    if (options) return;
+
     const bool RO = true;
     const bool RW = false;
     const bool OPTIONAL = true;
@@ -326,17 +329,22 @@ void options_init(void) {
             OPT_DBG_T, &opt_debug_opts, RW, OPTIONAL, NULL,
             "Debug options list: no-register-signals. Delimited by the character :");
 
-    num_options = i;
+    ensure(num_options==i, "Number of registered options does not match");
     ensure(num_options<=MAX_OPTIONS, "Number of options registered greater than maximum" );
 }
 
 void options_finalize(void) {
     int i;
-    for (i=0; i<num_options; ++i) {
-        free(options[i]);
+    if (options) {
+        for (i=0; i<num_options; ++i) {
+            free(options[i]);
+        }
+        free(options);
+        free(lb_args);
+        options = NULL;
+        lb_args = NULL;
+        num_options = 0;
     }
-    free(options);
-    free(lb_args);
 }
 
 /* API Setter */
