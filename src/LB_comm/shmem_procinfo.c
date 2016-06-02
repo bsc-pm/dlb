@@ -30,6 +30,8 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
+#include "support/types.h"
+#include "support/options.h"
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 
@@ -740,25 +742,30 @@ static int register_mask(const cpu_set_t *mask) {
 }
 
 // Unregister CPUs. Either add them to the free_mask or give them back to their owner
+//   * update: only return CPUs if it's enabled in debug options
 static void unregister_mask(const cpu_set_t *mask) {
     verbose(VB_DROM, "Process %d unregistering mask %s", my_process, mu_to_str(mask));
     int c, p;
     for (c = 0; c < max_cpus; c++) {
         if (CPU_ISSET(c, mask)) {
-            // look if the CPU belongs to some other process
-            for (p = 0; p < max_processes; p++) {
-                if (CPU_ISSET(c, &shdata->process_info[p].stolen_cpus)) {
-                    // give it back to the process p
-                    CPU_SET(c, &shdata->process_info[p].future_process_mask);
-                    CPU_CLR(c, &shdata->process_info[p].stolen_cpus);
-                    shdata->process_info[p].dirty = true;
-                    verbose(VB_DROM, "Giving back CPU %d to process %d", c, p);
-                    break;
+            if (options_get_debug_opts() & DBG_RETURNSTOLEN) {
+                // look if the CPU belongs to some other process
+                for (p = 0; p < max_processes; p++) {
+                    if (CPU_ISSET(c, &shdata->process_info[p].stolen_cpus)) {
+                        // give it back to the process p
+                        CPU_SET(c, &shdata->process_info[p].future_process_mask);
+                        CPU_CLR(c, &shdata->process_info[p].stolen_cpus);
+                        shdata->process_info[p].dirty = true;
+                        verbose(VB_DROM, "Giving back CPU %d to process %d", c, p);
+                        break;
+                    }
                 }
-            }
 
-            // if we didn't find the owner, add it to the free_mask
-            if (p == max_processes) {
+                // if we didn't find the owner, add it to the free_mask
+                if (p == max_processes) {
+                    CPU_SET(c, &shdata->free_mask);
+                }
+            } else {
                 CPU_SET(c, &shdata->free_mask);
             }
         }

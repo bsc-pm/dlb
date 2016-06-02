@@ -48,8 +48,9 @@ typedef enum VerboseFormat {
 } verbose_fmt_t;
 
 typedef enum DebugOptions {
-    DBG_CLEAR       = 0,
-    DBG_NOREGSIGNAL = 1 << 0
+    DBG_CLEAR        = 0,
+    DBG_NOREGSIGNAL  = 1 << 0,
+    DBG_RETURNSTOLEN = 1 << 1
 } debug_opts_t;
 
 void parse_bool(const char *str, bool *value);
