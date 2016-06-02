@@ -103,7 +103,9 @@ void shmem_cpuinfo__init(void) {
         int cpu;
         // Check first that my process_mask is not already owned
         for (cpu = 0; cpu < node_size; cpu++)
-            if (CPU_ISSET(cpu, &process_mask) && shdata->node_info[cpu].owner != NOBODY) {
+            if (CPU_ISSET(cpu, &process_mask)
+                    && shdata->node_info[cpu].owner != NOBODY
+                    && shdata->node_info[cpu].owner != ME) {
                 spid_t owner = shdata->node_info[cpu].owner;
                 shmem_unlock(init_handler);
                 fatal("Error trying to acquire CPU %d, already owned by process %d", cpu, owner);
@@ -717,6 +719,61 @@ void shmem_cpuinfo_ext__finalize(void) {
 
     shmem_finalize(shm_ext_handler);
     shm_ext_handler = NULL;
+}
+
+int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
+    int error = 0;
+
+    mu_parse_mask(options_get_mask(), &dlb_mask);
+    cpu_set_t affinity_mask;
+    mu_get_affinity_mask(&affinity_mask, mask, MU_ANY_BIT);
+
+    shmem_lock(shm_ext_handler);
+    {
+        int cpu;
+        if (!steal) {
+            // Check first that my process_mask is not already owned
+            for (cpu = 0; cpu < node_size; cpu++) {
+                if (CPU_ISSET(cpu, mask) && shdata->node_info[cpu].owner != NOBODY) {
+                    spid_t owner = shdata->node_info[cpu].owner;
+                    shmem_unlock(shm_ext_handler);
+                    warning("Error trying to acquire CPU %d, already owned by process %d",
+                            cpu, owner);
+                    error = 1;
+                }
+            }
+        }
+
+        for (cpu = 0; cpu < node_size; cpu++) {
+            // Add my mask info
+            if (CPU_ISSET(cpu, mask)) {
+                shdata->node_info[cpu].owner = pid;
+                shdata->node_info[cpu].state = CPU_BUSY;
+                // My CPU could have already a guest if the DLB_mask is being used
+                if (shdata->node_info[cpu].guest == NOBODY) {
+                    shdata->node_info[cpu].guest = pid;
+                    update_cpu_stats(cpu, STATS_OWNED);
+                }
+            }
+            // Add DLB mask info
+            if (CPU_ISSET(cpu, &dlb_mask)
+                    && shdata->node_info[cpu].owner == NOBODY
+                    && shdata->node_info[cpu].state == CPU_DISABLED) {
+                shdata->node_info[cpu].state = CPU_LENT;
+            }
+        }
+
+        // Initialize initial time and CPU timing on shmem creation
+        if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
+            get_time(&shdata->initial_time);
+            for (cpu = 0; cpu < node_size; cpu++) {
+                shdata->node_info[cpu].last_update = shdata->initial_time;
+            }
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+
+    return error;
 }
 
 int shmem_cpuinfo_ext__getnumcpus(void) {

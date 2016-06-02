@@ -60,3 +60,9 @@ int drom_ext_setprocessmask(int pid, const cpu_set_t *mask) {
 int drom_ext_getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
     return shmem_procinfo_ext__getcpus(ncpus, steal, cpulist, nelems, max_len);
 }
+
+int drom_ext_preregister(int pid, const cpu_set_t *mask, int steal) {
+    int error = shmem_procinfo_ext__preregister(pid, mask, steal);
+    error = error ? error : shmem_cpuinfo_ext__preregister(pid, mask, steal);
+    return error;
+}

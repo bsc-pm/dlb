@@ -111,6 +111,7 @@ void shmem_procinfo__init(void) {
 
         int p;
         for (p = 0; p < max_processes; p++) {
+            // Register process
             if (shdata->process_info[p].pid == NOBODY) {
                 shdata->process_info[p].pid = ME;
                 shdata->process_info[p].dirty = false;
@@ -133,6 +134,11 @@ void shmem_procinfo__init(void) {
                 shdata->process_info[p].load[1] = 0.0f;
                 shdata->process_info[p].load[2] = 0.0f;
 #endif
+                my_process = p;
+                break;
+            }
+            // Process already registered
+            else if (shdata->process_info[p].pid == ME) {
                 my_process = p;
                 break;
             }
@@ -242,6 +248,44 @@ void shmem_procinfo_ext__finalize(void) {
 
     shmem_finalize(shm_ext_handler);
     shm_ext_handler = NULL;
+}
+
+int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
+    int error = 1;
+    shmem_lock(shm_ext_handler);
+    {
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            if (shdata->process_info[p].pid == NOBODY) {
+                shdata->process_info[p].pid = pid;
+                shdata->process_info[p].dirty = false;
+
+                // Register mask into the system
+                error = steal ? set_new_mask(p, mask, false) : register_mask(mask);
+                if (error) {
+                    shmem_unlock(shm_ext_handler);
+                    fatal("Error trying to register CPU mask: %s", mu_to_str(mask));
+                }
+
+                // Get process mask and set current == future
+                memcpy(&shdata->process_info[p].current_process_mask, mask, sizeof(cpu_set_t));
+                memcpy(&shdata->process_info[p].future_process_mask, mask, sizeof(cpu_set_t));
+
+#ifdef DLB_LOAD_AVERAGE
+                shdata->process_info[p].load[0] = 0.0f;
+                shdata->process_info[p].load[1] = 0.0f;
+                shdata->process_info[p].load[2] = 0.0f;
+#endif
+                break;
+            }
+        }
+        if (p == max_processes) {
+            shmem_unlock(shm_ext_handler);
+            fatal("Not enough space in the shared memory to register process %d", pid);
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+    return error;
 }
 
 void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len) {

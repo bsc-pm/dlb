@@ -39,6 +39,7 @@ typedef enum {
 
 void shmem_cpuinfo__init(void);
 void shmem_cpuinfo__finalize(void);
+int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal);
 void shmem_cpuinfo__add_mask(const cpu_set_t *cpu_mask);
 void shmem_cpuinfo__add_cpu(int cpu);
 void shmem_cpuinfo__recover_some_cpus(cpu_set_t *mask, int max_resources);

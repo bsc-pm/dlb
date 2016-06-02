@@ -344,9 +344,17 @@ int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
  * \param[out] cpulist The output list
  * \param[out] nelems Numer of element in the list
  * \param[in] max_len Max capacity of the list
- * \return 0 on sucess, -1 if not all ncpus could be given
+ * \return 0 on success, -1 if not all ncpus could be given
  */
 int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
+
+/* \brief Register PID with the given mask before the process normal registration
+ * \param[in] pid Process ID that gets the reservation
+ * \param[in] mask Process mask to register
+ * \param[in] steal whether to steal owned CPUs
+ * \return 0 on success, -1 if registration failed
+ */
+int DLB_Drom_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal);
 
 /*******************************************************/
 /*    MPI Interface                                    */

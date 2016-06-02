@@ -110,6 +110,11 @@ static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
 
 static void __attribute__((__noreturn__)) execute(char **argv, const cpu_set_t *new_mask) {
     sched_setaffinity(0, sizeof(cpu_set_t), new_mask);
+    DLB_Drom_Init();
+    pid_t pid = getpid();
+    int error = DLB_Drom_PreRegister(pid, new_mask, 1);
+    dlb_check(error, pid, __FUNCTION__);
+    DLB_Drom_Finalize();
     execvp(argv[0], argv);
     fprintf(stderr, "Failed to execute %s\n", argv[0]);
     exit(EXIT_FAILURE);

@@ -251,6 +251,10 @@ int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_le
     return drom_ext_getcpus(ncpus, steal, cpulist, nelems, max_len);
 }
 
+int DLB_Drom_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal) {
+    return drom_ext_preregister(pid, mask, steal);
+}
+
 /* MPI API */
 #ifdef MPI_LIB
 #include <mpi.h>
