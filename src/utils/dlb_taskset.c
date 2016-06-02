@@ -51,26 +51,28 @@ static void dlb_check(int error, pid_t pid, const char* func) {
     }
 }
 
-static void print_usage(const char * program) {
-    fprintf(stdout, "usage:\n");
-    fprintf(stdout, "\t%s [-l|--list] [-p <pid>]\n", program);
-    fprintf(stdout, "\t%s [-s|--set <cpu_list> -p <pid>]\n", program);
-    fprintf(stdout, "\t%s [-r|--remove <cpu_list>] [-p <pid>]\n", program);
-}
+static void __attribute__((__noreturn__)) usage(const char * program, FILE *out) {
+    fprintf(out, "DLB - Dynamic Load Balancing, version %s.\n", VERSION);
+    fprintf(out, (
+                "usage:\n"
+                "\t%1$s [-l|--list] [-p <pid>]\n"
+                "\t%1$s [-s|--set <cpu_list> -p <pid>]\n"
+                "\t%1$s [-s|--set <cpu_list> program]\n"
+                "\t%1$s [-r|--remove <cpu_list>] [-p <pid>]\n\n"
+                ), program);
 
-static void print_help(const char * program) {
-    fprintf(stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION);
-    print_usage(program);
-    fprintf(stdout, "\n");
-    fprintf(stdout, "Retrieve or modify the CPU affinity of DLB processes.\n");
-    fprintf(stdout, "\n");
-    fprintf(stdout, "Options:\n");
-    fprintf(stdout, "  -l, --list                  list all DLB processes and their masks\n");
-    fprintf(stdout, "  -s, --set <cpu_list>        set affinity according to cpu_list (e.g., -c 0,5-7)\n");
-    fprintf(stdout, "  -c, --cpus <cpu_list>       same as --set)\n");
-    fprintf(stdout, "  -r, --remove <cpu_list>     remove CPU ownership of any DLB process according to cpu_list\n");
-    fprintf(stdout, "  -p, --pid                   operate only on existing given pid\n");
-    fprintf(stdout, "  -h, --help                  print this help\n");
+    fputs("Retrieve or modify the CPU affinity of DLB processes.\n\n", out);
+
+    fputs((
+                "Options:\n"
+                "  -l, --list               list all DLB processes and their masks\n"
+                "  -s, --set <cpu_list>     set affinity according to cpu_list (e.g., -c 0,5-7)\n"
+                "  -c, --cpus <cpu_list>    same as --set\n"
+                "  -r, --remove <cpu_list>  remove CPU ownership of any DLB process according to cpu_list\n"
+                "  -p, --pid                operate only on existing given pid\n"
+                "  -h, --help               print this help\n"), out);
+
+    exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
 static void get_cpus(unsigned int ncpus) {
@@ -97,16 +99,20 @@ static void get_cpus(unsigned int ncpus) {
     fprintf(stdout, "%s %s\n", hostname, cpulist_str);
 }
 
-static void set_affinity(pid_t pid, char *cpu_list) {
-    cpu_set_t new_mask;
-    mu_parse_mask(cpu_list, &new_mask);
-
+static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
     DLB_Drom_Init();
-    int error = DLB_Drom_SetProcessMask(pid, &new_mask);
+    int error = DLB_Drom_SetProcessMask(pid, new_mask);
     dlb_check(error, pid, __FUNCTION__);
     DLB_Drom_Finalize();
 
-    fprintf(stdout, "PID %d's current affinity set to: %s\n", pid, mu_to_str(&new_mask));
+    fprintf(stdout, "PID %d's current affinity set to: %s\n", pid, mu_to_str(new_mask));
+}
+
+static void __attribute__((__noreturn__)) execute(char **argv, const cpu_set_t *new_mask) {
+    sched_setaffinity(0, sizeof(cpu_set_t), new_mask);
+    execvp(argv[0], argv);
+    fprintf(stderr, "Failed to execute %s\n", argv[0]);
+    exit(EXIT_FAILURE);
 }
 
 static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
@@ -129,14 +135,11 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
     dlb_check(error, pid, __FUNCTION__);
 }
 
-static void remove_affinity(pid_t pid, const char *cpu_list) {
-    cpu_set_t cpus_to_remove;
-    mu_parse_mask(cpu_list, &cpus_to_remove);
-
+static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
     DLB_Drom_Init();
 
     if (pid) {
-        remove_affinity_of_one(pid, &cpus_to_remove);
+        remove_affinity_of_one(pid, cpus_to_remove);
     }
     else {
         // Get PID list from DLB
@@ -147,7 +150,7 @@ static void remove_affinity(pid_t pid, const char *cpu_list) {
         // Iterate pidlist
         int i;
         for (i=0; i<nelems; ++i) {
-            remove_affinity_of_one(pidlist[i], &cpus_to_remove);
+            remove_affinity_of_one(pidlist[i], cpus_to_remove);
         }
         free(pidlist);
     }
@@ -174,17 +177,18 @@ static void show_affinity(pid_t pid) {
 
 int main(int argc, char *argv[]) {
     bool do_list = false;
-    bool do_help = false;
     bool do_set = false;
     bool do_remove = false;
     bool do_get = false;
 
     pid_t pid = 0;
-    char *cpu_list = NULL;
+    cpu_set_t cpu_list;
     unsigned int ncpus = 0;
+    sys_size = DLB_Drom_GetNumCpus();
 
     int opt;
     extern char *optarg;
+    extern int optind;
     struct option long_options[] = {
         {"list",     no_argument,       0, 'l'},
         {"get",      required_argument, 0, 'g'},
@@ -208,62 +212,44 @@ int main(int argc, char *argv[]) {
         case 'c':
         case 's':
             do_set = true;
-            cpu_list = (char*) malloc(strlen(optarg));
-            strcpy( cpu_list, optarg );
+            mu_parse_mask(optarg, &cpu_list);
             break;
         case 'r':
             do_remove = true;
-            cpu_list = (char*) malloc(strlen(optarg));
-            strcpy( cpu_list, optarg );
+            mu_parse_mask(optarg, &cpu_list);
             break;
         case 'p':
             pid = strtoul(optarg, NULL, 10);
             break;
         case 'h':
-            do_help = true;
+            usage(argv[0], stdout);
             break;
         default:
-            print_usage(argv[0]);
-            exit(EXIT_SUCCESS);
+            usage(argv[0], stderr);
+            break;
         }
     }
 
-    // Argument checks
-    if (do_set && do_remove) {
-        fprintf(stderr, "Only one option --set/--remove allowed\n");
-        print_usage(argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-    if (do_set && !pid) {
-        fprintf(stderr, "Option --set requires a pid\n");
-        print_usage(argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-    sys_size = DLB_Drom_GetNumCpus();
-
     // Actions
-    if (do_help) {
-        print_help(argv[0]);
-    }
-    else if (do_get) {
+    if (do_get) {
         get_cpus(ncpus);
     }
-    else if (do_set) {
-        set_affinity(pid, cpu_list);
+    else if (do_set && pid) {
+        set_affinity(pid, &cpu_list);
     }
-    else if (do_remove) {
-        remove_affinity(pid, cpu_list);
+    else if (do_set && !pid && argc > optind) {
+        argv += optind;
+        execute(argv, &cpu_list);
+    }
+    else if (do_remove && pid) {
+        remove_affinity(pid, &cpu_list);
     }
     else if (do_list || pid) {
         show_affinity(pid);
     }
     else {
-        print_usage(argv[0]);
-        fprintf(stdout, "Try '%s --help' for more information.\n", argv[0]);
+        usage(argv[0], stderr);
     }
 
-    free(cpu_list);
     return EXIT_SUCCESS;
 }
