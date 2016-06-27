@@ -318,7 +318,7 @@ int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask) {
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == pid) {
-                memcpy(mask, &(shdata->process_info[p].current_process_mask), sizeof(cpu_set_t));
+                memcpy(mask, &(shdata->process_info[p].future_process_mask), sizeof(cpu_set_t));
                 error = 0;
                 break;
             }
