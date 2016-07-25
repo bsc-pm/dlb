@@ -347,6 +347,11 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
             error = -1;
         }
 
+        // Process already dirty
+        if (!error && shdata->process_info[p].dirty) {
+            error = -1;
+        }
+
         // Run first a dry run to see if the mask can be completely stolen. If it's ok, run it.
         error = error ? error : set_new_mask(p, mask, true);
         error = error ? error : set_new_mask(p, mask, false);
