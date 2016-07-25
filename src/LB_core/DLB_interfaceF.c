@@ -213,7 +213,7 @@ void dlb_drom_getpidlist(int *pidlist, int *nelems, int *max_len) {
 }
 DLB_API_F_ALIAS(dlb_drom_getpidlist, (int*, int*, int*));
 
-void dlb_drom_getprocessmask (int *pid, dlb_cpu_set_t mask) {
+void dlb_drom_getprocessmask(int *pid, dlb_cpu_set_t mask) {
     fatal0("Cpu mask functions not implemented in Fortran");
 }
 DLB_API_F_ALIAS(dlb_drom_getprocessmask, (int*, dlb_cpu_set_t));
