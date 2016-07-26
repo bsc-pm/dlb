@@ -244,7 +244,15 @@ int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask) {
 }
 
 int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask) {
-    return drom_ext_setprocessmask(pid, (cpu_set_t*)mask);
+    return drom_ext_setprocessmask(pid, (const cpu_set_t*)mask);
+}
+
+int DLB_Drom_GetProcessMask_sync(int pid, dlb_cpu_set_t mask) {
+    return drom_ext_getprocessmask_sync(pid, (cpu_set_t*)mask);
+}
+
+int DLB_Drom_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask) {
+    return drom_ext_setprocessmask_sync(pid, (const cpu_set_t*)mask);
 }
 
 int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {

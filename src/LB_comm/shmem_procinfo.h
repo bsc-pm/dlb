@@ -32,6 +32,8 @@ int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal);
 void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len);
 int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask);
 int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask);
+int shmem_procinfo_ext__getprocessmask_sync(int pid, cpu_set_t *mask);
+int shmem_procinfo_ext__setprocessmask_sync(int pid, const cpu_set_t *mask);
 double shmem_procinfo_ext__getcpuusage(int pid);
 double shmem_procinfo_ext__getcpuavgusage(int pid);
 void shmem_procinfo_ext__getcpuusage_list(double *usagelist, int *nelems, int max_len);

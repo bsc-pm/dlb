@@ -39,12 +39,15 @@
 static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
 //static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
 //static const double LOG2E = 1.44269504088896340736;
+static const useconds_t SYNC_POLL_DELAY = 1000; // 1ms
+static const int64_t SYNC_POLL_TIMEOUT = 30000000000L; // 30·10^9 ns = 30s
 
 typedef pid_t spid_t;  // Sub-process ID
 
 typedef struct {
     spid_t pid;
     bool dirty;
+    int returncode;
     cpu_set_t current_process_mask;
     cpu_set_t future_process_mask;
     cpu_set_t stolen_cpus;
@@ -82,7 +85,7 @@ static void update_process_mask(void);
 static bool steal_cpu(int cpu, int process, bool dry_run);
 static int register_mask(const cpu_set_t *mask);
 static void unregister_mask(const cpu_set_t *mask);
-static int set_new_mask(int process, const cpu_set_t *mask, bool dry_run);
+static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run);
 static int steal_mask(const cpu_set_t *mask, bool dry_run);
 
 void shmem_procinfo__init(void) {
@@ -267,6 +270,7 @@ int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
                 pinfo_t *process = &shdata->process_info[p];
                 process->pid = pid;
                 process->dirty = false;
+                process->returncode = 0;
 
                 // Register mask into the system
                 error = steal ? set_new_mask(process, mask, false) : register_mask(mask);
@@ -340,11 +344,13 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
         // Find process
         pinfo_t *process = get_process(pid);
         if (process == NULL) {
+            verbose(VB_DROM, "Setting mask: cannot find process with pid %d", pid);
             error = -1;
         }
 
         // Process already dirty
         if (!error && process->dirty) {
+            verbose(VB_DROM, "Setting mask: process %d is already dirty", pid);
             error = -1;
         }
 
@@ -358,6 +364,93 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
         }
     }
     shmem_unlock(shm_ext_handler);
+    return error;
+}
+
+int shmem_procinfo_ext__getprocessmask_sync(int pid, cpu_set_t *mask) {
+    if (shm_ext_handler == NULL) return -1;
+
+    int error = -1;
+    bool done = false;
+    pinfo_t *process;
+    shmem_lock(shm_ext_handler);
+    {
+        process = get_process(pid);
+        if (process && !process->dirty) {
+            // If the process is not dirty, we return the current mask
+            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+            error = 0;
+            done = true;
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+
+    if (process && !done) {
+        // process is valid, but it's dirty so we need to poll
+        int64_t elapsed;
+        struct timespec start, now;
+        get_time_coarse(&start);
+        while(true) {
+
+            // Delay
+            usleep(SYNC_POLL_DELAY);
+
+            // Polling
+            shmem_lock(shm_ext_handler);
+            {
+                if (!process->dirty) {
+                    memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+                    error = 0;
+                    done = true;
+                }
+            }
+            shmem_unlock(shm_ext_handler);
+            if (done) break;
+
+            // Break if timeout
+            get_time_coarse(&now);
+            elapsed = timespec_diff(&start, &now);
+            if (elapsed > SYNC_POLL_TIMEOUT) break;
+        }
+    }
+
+    return error;
+}
+
+int shmem_procinfo_ext__setprocessmask_sync(int pid, const cpu_set_t *mask) {
+    // Set future mask as usual
+    int error = shmem_procinfo_ext__setprocessmask(pid, mask);
+
+    // Polling until dirty is cleared, and get returncode
+    if (!error) {
+        pinfo_t *process = get_process(pid);
+        int64_t elapsed;
+        struct timespec start, now;
+        get_time_coarse(&start);
+        while(true) {
+
+            // Delay
+            usleep(SYNC_POLL_DELAY);
+
+            // Polling
+            bool done = false;
+            shmem_lock(shm_ext_handler);
+            {
+                if (!process->dirty) {
+                    error = process->returncode;
+                    done = true;
+                }
+            }
+            shmem_unlock(shm_ext_handler);
+            if (done) break;
+
+            // Break if timeout
+            get_time_coarse(&now);
+            elapsed = timespec_diff(&start, &now);
+            if (elapsed > SYNC_POLL_TIMEOUT) break;
+        }
+    }
+
     return error;
 }
 
@@ -694,6 +787,8 @@ static void update_process_mask(void) {
     // Update local info
     memcpy(&shdata->process_info[my_process].current_process_mask, next_mask, sizeof(cpu_set_t));
     shdata->process_info[my_process].dirty = false;
+    shdata->process_info[my_process].returncode = error;
+
 }
 
 static bool steal_cpu(int cpu, int process, bool dry_run) {
@@ -727,6 +822,9 @@ static bool steal_cpu(int cpu, int process, bool dry_run) {
 
 // Register a new set of CPUs. Remove them from the free_mask
 static int register_mask(const cpu_set_t *mask) {
+    // Return if empty mask
+    if (CPU_COUNT(mask) == 0) return 0;
+
     int c;
     for (c = 0; c < max_cpus; c++) {
         if (CPU_ISSET(c, mask)) {
@@ -743,6 +841,9 @@ static int register_mask(const cpu_set_t *mask) {
 // Unregister CPUs. Either add them to the free_mask or give them back to their owner
 //   * update: only return CPUs if it's enabled in debug options
 static void unregister_mask(const cpu_set_t *mask) {
+    // Return if empty mask
+    if (CPU_COUNT(mask) == 0) return;
+
     verbose(VB_DROM, "Process %d unregistering mask %s", my_process, mu_to_str(mask));
     int c, p;
     for (c = 0; c < max_cpus; c++) {
