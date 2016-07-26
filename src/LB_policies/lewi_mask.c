@@ -58,7 +58,7 @@ void lewi_mask_Finish(void) {
     cpu_set_t mask;
     CPU_ZERO(&mask);
     shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
-    set_mask(&mask);
+    if (CPU_COUNT(&mask)>0) add_mask(&mask);
 }
 
 void lewi_mask_IntoCommunication(void) {}
