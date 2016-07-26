@@ -76,6 +76,7 @@ static struct timespec last_ttime; // Total time
 static struct timespec last_utime; // Useful time (user+system)
 static const char *shmem_name = "procinfo";
 
+static pinfo_t* get_process(spid_t pid);
 static void update_process_loads(void);
 static void update_process_mask(void);
 static bool steal_cpu(int cpu, int process, bool dry_run);
@@ -115,26 +116,28 @@ void shmem_procinfo__init(void) {
         for (p = 0; p < max_processes; p++) {
             // Register process
             if (shdata->process_info[p].pid == NOBODY) {
-                shdata->process_info[p].pid = ME;
-                shdata->process_info[p].dirty = false;
+                pinfo_t *process = &shdata->process_info[p];
+                process->pid = ME;
+                process->dirty = false;
+                process->returncode = 0;
 
                 // Get process mask and set current == future
-                get_process_mask(&shdata->process_info[p].current_process_mask);
-                memcpy(&shdata->process_info[p].future_process_mask,
-                        &shdata->process_info[p].current_process_mask, sizeof(cpu_set_t));
+                get_process_mask(&process->current_process_mask);
+                memcpy(&process->future_process_mask,
+                        &process->current_process_mask, sizeof(cpu_set_t));
 
                 // Register mask into the system
-                int error = register_mask(&shdata->process_info[p].current_process_mask);
+                int error = register_mask(&process->current_process_mask);
                 if (error) {
                     shmem_unlock(init_handler);
                     fatal("Error trying to register CPU mask: %s",
-                        mu_to_str(&shdata->process_info[p].current_process_mask));
+                        mu_to_str(&process->current_process_mask));
                 }
 
 #ifdef DLB_LOAD_AVERAGE
-                shdata->process_info[p].load[0] = 0.0f;
-                shdata->process_info[p].load[1] = 0.0f;
-                shdata->process_info[p].load[2] = 0.0f;
+                process->load[0] = 0.0f;
+                process->load[1] = 0.0f;
+                process->load[2] = 0.0f;
 #endif
                 my_process = p;
                 break;
@@ -157,27 +160,29 @@ void shmem_procinfo__init(void) {
 }
 
 void shmem_procinfo__finalize(void) {
+    pinfo_t *process = &shdata->process_info[my_process];
     shmem_lock(shm_handler);
     {
         // Unregister our process mask, or future mask if we are dirty
-        if (shdata->process_info[my_process].dirty) {
-            unregister_mask(&shdata->process_info[my_process].future_process_mask);
+        if (process->dirty) {
+            unregister_mask(&process->future_process_mask);
         } else {
-            unregister_mask(&shdata->process_info[my_process].current_process_mask);
+            unregister_mask(&process->current_process_mask);
         }
 
         // Clear process fields
-        shdata->process_info[my_process].pid = NOBODY;
-        shdata->process_info[my_process].dirty = false;
-        CPU_ZERO(&shdata->process_info[my_process].current_process_mask);
-        CPU_ZERO(&shdata->process_info[my_process].future_process_mask);
-        CPU_ZERO(&shdata->process_info[my_process].stolen_cpus);
-        shdata->process_info[my_process].active_cpus = 0;
-        shdata->process_info[my_process].cpu_usage = 0.0;
-        shdata->process_info[my_process].cpu_avg_usage = 0.0;
+        process->pid = NOBODY;
+        process->dirty = false;
+        process->returncode = 0;
+        CPU_ZERO(&process->current_process_mask);
+        CPU_ZERO(&process->future_process_mask);
+        CPU_ZERO(&process->stolen_cpus);
+        process->active_cpus = 0;
+        process->cpu_usage = 0.0;
+        process->cpu_avg_usage = 0.0;
 #ifdef DLB_LOAD_AVERAGE
-        shdata->process_info[my_process].load[3] = {0.0f, 0.0f, 0.0f};
-        shdata->process_info[my_process].last_ltime = {0};
+        process->load[3] = {0.0f, 0.0f, 0.0f};
+        process->last_ltime = {0};
 #endif
     }
     shmem_unlock(shm_handler);
@@ -259,24 +264,25 @@ int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == NOBODY) {
-                shdata->process_info[p].pid = pid;
-                shdata->process_info[p].dirty = false;
+                pinfo_t *process = &shdata->process_info[p];
+                process->pid = pid;
+                process->dirty = false;
 
                 // Register mask into the system
-                error = steal ? set_new_mask(p, mask, false) : register_mask(mask);
+                error = steal ? set_new_mask(process, mask, false) : register_mask(mask);
                 if (error) {
                     shmem_unlock(shm_ext_handler);
                     fatal("Error trying to register CPU mask: %s", mu_to_str(mask));
                 }
 
                 // Get process mask and set current == future
-                memcpy(&shdata->process_info[p].current_process_mask, mask, sizeof(cpu_set_t));
-                memcpy(&shdata->process_info[p].future_process_mask, mask, sizeof(cpu_set_t));
+                memcpy(&process->current_process_mask, mask, sizeof(cpu_set_t));
+                memcpy(&process->future_process_mask, mask, sizeof(cpu_set_t));
 
 #ifdef DLB_LOAD_AVERAGE
-                shdata->process_info[p].load[0] = 0.0f;
-                shdata->process_info[p].load[1] = 0.0f;
-                shdata->process_info[p].load[2] = 0.0f;
+                process->load[0] = 0.0f;
+                process->load[1] = 0.0f;
+                process->load[2] = 0.0f;
 #endif
                 break;
             }
@@ -315,13 +321,10 @@ int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask) {
     int error = -1;
     shmem_lock(shm_ext_handler);
     {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == pid) {
-                memcpy(mask, &(shdata->process_info[p].future_process_mask), sizeof(cpu_set_t));
-                error = 0;
-                break;
-            }
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            memcpy(mask, &process->future_process_mask, sizeof(cpu_set_t));
+            error = 0;
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -335,30 +338,23 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
     shmem_lock(shm_ext_handler);
     {
         // Find process
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == pid) {
-                break;
-            }
-        }
-
-        // PID not found
-        if (p == max_processes) {
+        pinfo_t *process = get_process(pid);
+        if (process == NULL) {
             error = -1;
         }
 
         // Process already dirty
-        if (!error && shdata->process_info[p].dirty) {
+        if (!error && process->dirty) {
             error = -1;
         }
 
         // Run first a dry run to see if the mask can be completely stolen. If it's ok, run it.
-        error = error ? error : set_new_mask(p, mask, true);
-        error = error ? error : set_new_mask(p, mask, false);
+        error = error ? error : set_new_mask(process, mask, true);
+        error = error ? error : set_new_mask(process, mask, false);
         if (!error) {
             // If everything went ok, update future_mask and dirty flag
-            memcpy(&shdata->process_info[p].future_process_mask, mask, sizeof(cpu_set_t));
-            shdata->process_info[p].dirty = true;
+            memcpy(&process->future_process_mask, mask, sizeof(cpu_set_t));
+            process->dirty = true;
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -371,12 +367,9 @@ double shmem_procinfo_ext__getcpuusage(int pid) {
     double cpu_usage = -1.0;
     shmem_lock(shm_ext_handler);
     {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == pid) {
-                cpu_usage = shdata->process_info[p].cpu_usage;
-                break;
-            }
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            cpu_usage = process->cpu_usage;
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -390,12 +383,9 @@ double shmem_procinfo_ext__getcpuavgusage(int pid) {
     double cpu_avg_usage = -1.0;
     shmem_lock(shm_ext_handler);
     {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == pid) {
-                cpu_avg_usage = shdata->process_info[p].cpu_avg_usage;
-                break;
-            }
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            cpu_avg_usage = process->cpu_avg_usage;
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -481,12 +471,9 @@ int shmem_procinfo_ext__getactivecpus(int pid) {
     int active_cpus = -1;
     shmem_lock(shm_ext_handler);
     {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == pid) {
-                active_cpus = shdata->process_info[p].active_cpus;
-                break;
-            }
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            active_cpus = process->active_cpus;
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -517,15 +504,12 @@ int shmem_procinfo_ext__getloadavg(int pid, double *load) {
 #ifdef DLB_LOAD_AVERAGE
     shmem_lock(shm_ext_handler);
     {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == pid) {
-                load[0] = shdata->process_info[p].load[0];
-                load[1] = shdata->process_info[p].load[1];
-                load[2] = shdata->process_info[p].load[2];
-                error = 0;
-                break;
-            }
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            load[0] = process->load[0];
+            load[1] = process->load[1];
+            load[2] = process->load[2];
+            error = 0;
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -629,6 +613,16 @@ void shmem_procinfo_ext__print_info(void) {
 }
 
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
+static pinfo_t* get_process(spid_t pid) {
+    int p;
+    for (p = 0; p < max_processes; p++) {
+        if (shdata->process_info[p].pid == pid) {
+            return &shdata->process_info[p];
+        }
+    }
+    return NULL;
+}
+
 static void update_process_loads(void) {
     // Get the active CPUs
     cpu_set_t mask;
@@ -780,9 +774,9 @@ static void unregister_mask(const cpu_set_t *mask) {
 // Configure a new cpu_set for the process
 //  * If the CPU is SET and unused, remove it from the free_mask
 //  * If the CPU is SET, used and not owned, try to steal it
-//  * If the CPU is UNSET and owned by thr process, unregister it
+//  * If the CPU is UNSET and owned by the process, unregister it
 // Returns true if all CPUS could be stolen
-static int set_new_mask(int process, const cpu_set_t *mask, bool dry_run) {
+static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run) {
     cpu_set_t cpus_to_acquire;
     cpu_set_t cpus_to_steal;
     cpu_set_t cpus_to_free;
@@ -797,13 +791,13 @@ static int set_new_mask(int process, const cpu_set_t *mask, bool dry_run) {
                 // CPU is not being used
                 CPU_SET(c, &cpus_to_acquire);
             } else {
-                if (!CPU_ISSET(c, &shdata->process_info[process].future_process_mask)) {
+                if (!CPU_ISSET(c, &process->future_process_mask)) {
                     // CPU is being used by other process
                     CPU_SET(c, &cpus_to_steal);
                 }
             }
         } else {
-            if (CPU_ISSET(c, &shdata->process_info[process].future_process_mask)) {
+            if (CPU_ISSET(c, &process->future_process_mask)) {
                 // CPU no longer used by this process
                 CPU_SET(c, &cpus_to_free);
             }
