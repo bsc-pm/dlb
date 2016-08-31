@@ -2,24 +2,18 @@
 Introduction to DLB
 *******************
 
-==================
-First presentation
-==================
+The DLB library will improve the load balance of the outer level of parallelism (e.g MPI) by redistributing the computational resources at the inner level of parallelism (e.g. OpenMP). This readjustment of resources will be done dynamically at runtime.
 
-blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla 
+This dynamism allows DLB to react to different sources of imbalance: Algorithm, data, hardware architecture and resource availability among others.
 
+DLB is composed by three independent modules: Micro Load Balance, Statistics and Dynamic Resource Ownership Manager (DROM).
 
-===================
-Second presentation
-===================
+===========
+DLB Modules
+===========
 
-blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla blablablabla 
-
-.. _mpi-interception:
-
-MPI interception
-----------------
-
+Micro Load Balancing
+--------------------
 
 .. _statistics:
 
@@ -28,5 +22,10 @@ Statistics
 
 .. _drom:
 
-Dynamic Resource Ownership Manager
-----------------------------------
+Dynamic Resource Ownership Manager (DROM)
+-----------------------------------------
+
+====
+
+
+

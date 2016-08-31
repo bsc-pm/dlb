@@ -10,6 +10,7 @@ Welcome to DLB's documentation!
     :maxdepth: 2
 
     intro
+    technical_requirements
     how_to_install
     how_to_run
     api
