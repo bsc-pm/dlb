@@ -496,7 +496,10 @@ void returnclaimed(void) {
 
 int releasecpu(int cpu) {
     if (dlb_enabled) {
-        return lb_funcs.releasecpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
+        int error = lb_funcs.releasecpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+        return error;
     } else {
         return 0;
     }
@@ -504,7 +507,10 @@ int releasecpu(int cpu) {
 
 int returnclaimedcpu(int cpu) {
     if (dlb_enabled) {
-        return lb_funcs.returnclaimedcpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_RETURN_CPU);
+        int error = lb_funcs.returnclaimedcpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+        return error;
     } else {
         return 0;
     }

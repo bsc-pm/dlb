@@ -22,7 +22,7 @@
 #endif
 #include <sched.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -94,11 +94,11 @@ void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
                 if (CPU_ISSET(i, &current_mask)) {
                     shmem_cpuinfo__add_cpu(i);
                     nthreads--;
+                    add_event(THREADS_USED_EVENT, nthreads);
                 }
             }
             pthread_mutex_unlock(&mutex);
         }
-
     }
 }
 
@@ -106,8 +106,8 @@ void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
 void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
 
     cpu_set_t mask;
-    CPU_ZERO( &mask );
-    sched_getaffinity( 0, sizeof(cpu_set_t), &mask);
+    CPU_ZERO(&mask);
+    sched_getaffinity(0, sizeof(cpu_set_t), &mask);
 
     int my_cpu=0;
 
@@ -122,15 +122,16 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
 
         pthread_mutex_lock(&mutex);
         if (enabled && !single){
-            get_mask( &mask );
+            get_mask(&mask);
 
                 if (shmem_cpuinfo__acquire_cpu(my_cpu, 1)) {
-                    nthreads ++;
-                    add_event( THREADS_USED_EVENT, nthreads );
+                    nthreads++;
+                    add_event(THREADS_USED_EVENT, nthreads);
                 } else {
                     CPU_CLR(my_cpu, &mask);
-                    set_mask( &mask );
-                    verbose(VB_MICROLB, "Can't recover cpu, remove from Mask, new mask: %s", mu_to_str(&mask));
+                    set_mask(&mask);
+                    verbose(VB_MICROLB, "Can't recover cpu, remove from Mask, new mask: %s",
+                            mu_to_str(&mask));
                 }
         }
         pthread_mutex_unlock(&mutex);
@@ -189,7 +190,6 @@ int auto_lewi_mask_ReturnCpuIfClaimed(int cpu) {
     int returned=0;
 
     if (shmem_cpuinfo__is_cpu_claimed(cpu)) {
-        add_event(RUNTIME_EVENT, EVENT_RETURN_CPU);
         cpu_set_t release_mask;
         CPU_ZERO( &release_mask );
         CPU_SET(cpu, &release_mask);
@@ -215,14 +215,12 @@ int auto_lewi_mask_ReturnCpuIfClaimed(int cpu) {
             }
         }
         pthread_mutex_unlock(&mutex);
-        add_event(RUNTIME_EVENT, 0);
     }
     return returned;
 }
 
 int auto_lewi_mask_ReleaseCpu(int cpu) {
     int returned = 0;
-    add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
 
     cpu_set_t current_mask;
 
@@ -244,8 +242,6 @@ int auto_lewi_mask_ReleaseCpu(int cpu) {
     }
     pthread_mutex_unlock(&mutex);
 
-    add_event(RUNTIME_EVENT, 0);
-
     return returned;
 }
 
@@ -257,14 +253,17 @@ void auto_lewi_mask_ClaimCpus(int cpus) {
             verbose(VB_MICROLB, "ClaimCpus max: %d", cpus);
             if ((cpus+nthreads)>_default_nthreads) { cpus=_default_nthreads-nthreads; }
 
-            cpu_set_t current_mask;
+            cpu_set_t current_mask, mask;
             get_mask(&current_mask);
-            shmem_cpuinfo__recover_some_cpus(&current_mask, cpus);
-            set_mask(&current_mask);
-            verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
-            nthreads += cpus;
+            memcpy(&mask, &current_mask, sizeof(cpu_set_t));
 
-            add_event( THREADS_USED_EVENT, nthreads );
+            shmem_cpuinfo__recover_some_cpus(&mask, cpus);
+            if (!CPU_EQUAL(&current_mask, &mask)) {
+                set_mask(&mask);
+                nthreads = CPU_COUNT(&mask);
+                add_event(THREADS_USED_EVENT, nthreads);
+                verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&mask));
+            }
         }
         pthread_mutex_unlock(&mutex);
     }
@@ -285,6 +284,7 @@ void auto_lewi_mask_resetDLB(void) {
         nthreads=shmem_cpuinfo__reset_default_cpus(&current_mask);
         set_mask( &current_mask);
         verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
+        add_event(THREADS_USED_EVENT, nthreads);
     }
     pthread_mutex_unlock(&mutex);
 }
@@ -356,8 +356,9 @@ void auto_lewi_mask_disableDLB(void){
         get_mask( &current_mask );
         nthreads=shmem_cpuinfo__reset_default_cpus(&current_mask);
         set_mask( &current_mask);
-        verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
         enabled=0;
+        verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
+        add_event(THREADS_USED_EVENT, nthreads);
     }
     pthread_mutex_unlock(&mutex);
 }
