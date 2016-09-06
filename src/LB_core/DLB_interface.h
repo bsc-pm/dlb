@@ -162,6 +162,10 @@ int DLB_Is_auto(void);
  */
 void DLB_Update(void);
 
+/* \brief Barrier between processes in the node
+ */
+void DLB_Barrier(void);
+
 /* \brief Notify DLB that the Process Mask has changed
  *
  * Notify DLB that the process affinity mask has been changed. DLB will then query

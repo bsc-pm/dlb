@@ -130,6 +130,12 @@ void DLB_AcquireCpus(dlb_cpu_set_t mask) {
     acquirecpus(mask);
 }
 
+void DLB_Barrier(void) {
+    add_event(RUNTIME_EVENT, EVENT_BARRIER);
+    nodebarrier();
+    add_event(RUNTIME_EVENT, 0);
+}
+
 void DLB_NotifyProcessMaskChange(void) {
     notifymaskchange();
 }

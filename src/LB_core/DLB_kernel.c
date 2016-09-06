@@ -42,6 +42,7 @@
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_barrier.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -138,9 +139,11 @@ static void load_modules(void) {
     register_signals();
     shmem_procinfo__init();
     shmem_cpuinfo__init();
+    shmem_barrier_init();
 }
 
 static void unload_modules(void) {
+    shmem_barrier_finalize();
     shmem_cpuinfo__finalize();
     shmem_procinfo__finalize();
     unregister_signals();
@@ -562,6 +565,10 @@ void singlemode(void) {
 void parallelmode(void) {
     dlb_enabled = true;
     lb_funcs.parallel();
+}
+
+void nodebarrier(void) {
+    shmem_barrier();
 }
 
 int is_auto(void){

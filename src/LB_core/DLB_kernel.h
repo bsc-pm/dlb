@@ -95,6 +95,8 @@ void singlemode(void);
 
 void parallelmode(void);
 
+void nodebarrier(void);
+
 void notifymaskchangeto(const cpu_set_t* mask);
 
 void notifymaskchange(void);

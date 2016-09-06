@@ -113,6 +113,11 @@ void dlb_acquirecpu(int *cpu) {
 }
 DLB_API_F_ALIAS(dlb_acquirecpu, (int*));
 
+void dlb_barrier(void) {
+    DLB_Barrier();
+}
+DLB_API_F_ALIAS(dlb_barrier, (void));
+
 void dlb_notifyprocessmaskchange(void) {
     DLB_NotifyProcessMaskChange();
 }
