@@ -26,6 +26,7 @@
 const char* options_get_policy(void);
 bool options_get_statistics(void);
 bool options_get_drom(void);
+bool options_get_barrier(void);
 bool options_get_just_barier(void);
 blocking_mode_t options_get_lend_mode(void);
 verbose_opts_t options_get_verbose(void);

@@ -39,6 +39,9 @@ bool options_get_statistics(void) { return opt_statistics; }
 static bool opt_drom;
 bool options_get_drom(void) { return opt_drom; }
 
+static bool opt_barrier;
+bool options_get_barrier(void) { return opt_barrier; }
+
 static bool opt_just_barrier;
 bool options_get_just_barier(void) { return opt_just_barrier; }
 
@@ -235,8 +238,8 @@ void options_init(void) {
     // Copy LB_ARGS env. variable
     char *env_lb_args = getenv("LB_ARGS");
     if (env_lb_args) {
-        size_t len = strlen(env_lb_args);
-        lb_args = (char*)malloc(1+sizeof(char)*len);
+        size_t len = strlen(env_lb_args) + 1;
+        lb_args = (char*)malloc(sizeof(char)*len);
         strncpy(lb_args, env_lb_args, len);
     }
 
@@ -261,6 +264,10 @@ void options_init(void) {
     options[i++] = register_option("LB_DROM", "--drom",
             OPT_BOOL_T, &opt_drom, RO, OPTIONAL, &FALSE,
             "Enable the Dynamic Resource Ownership Manager Module");
+
+    options[i++] = register_option("LB_BARRIER", "--barrier",
+            OPT_BOOL_T, &opt_barrier, RO, OPTIONAL, &FALSE,
+            "Enable the Shared Memory Barrier");
 
     // MPI
     options[i++] = register_option("LB_JUST_BARRIER", "--just-barrier",

@@ -80,8 +80,10 @@ static bool dlb_enabled = false;
 static bool dlb_initialized = false;
 static int init_id = 0;
 
+static const char* policy;
 static bool stats_enabled;
 static bool drom_enabled;
+static bool barrier_enabled;
 
 // Initialize lb_funcs to dummy functions
 static void dummy_init(void) {}
@@ -133,19 +135,32 @@ static BalancePolicy lb_funcs = {
 
 static void load_modules(void) {
     options_init();
+    policy = options_get_policy();
+    stats_enabled = options_get_statistics();
+    drom_enabled = options_get_drom();
+    barrier_enabled = options_get_barrier();
+
     pm_init();
     debug_init();
     init_tracing();
     register_signals();
-    shmem_procinfo__init();
-    shmem_cpuinfo__init();
-    shmem_barrier_init();
+    if (strcasecmp(policy, "no")!=0 || drom_enabled || stats_enabled) {
+        shmem_procinfo__init();
+        shmem_cpuinfo__init();
+    }
+    if (barrier_enabled) {
+        shmem_barrier_init();
+    }
 }
 
 static void unload_modules(void) {
-    shmem_barrier_finalize();
-    shmem_cpuinfo__finalize();
-    shmem_procinfo__finalize();
+    if (barrier_enabled) {
+        shmem_barrier_finalize();
+    }
+    if (strcasecmp(policy, "no")!=0 || drom_enabled || stats_enabled) {
+        shmem_cpuinfo__finalize();
+        shmem_procinfo__finalize();
+    }
     unregister_signals();
     options_finalize();
 }
@@ -172,11 +187,6 @@ int Initialize(void) {
         _process_id = (_process_id == -1) ? getpid() : _process_id;
         init_id = _process_id;
         initializer_id = _process_id;
-
-        // Read Options
-        const char* policy = options_get_policy();
-        stats_enabled = options_get_statistics();
-        drom_enabled = options_get_drom();
 
         info0("%s %s", PACKAGE, VERSION);
 

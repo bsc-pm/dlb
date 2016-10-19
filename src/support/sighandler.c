@@ -136,7 +136,6 @@ void register_signals( void ) {
 
 void unregister_signals( void ) {
     if (options_get_debug_opts() & DBG_NOREGSIGNAL) {
-        warning("Debug option: no-register-signal. Skipping register_signals()");
         return;
     }
     int i;
