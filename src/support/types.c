@@ -105,8 +105,8 @@ void parse_debug_opts(const char *str, debug_opts_t *value) {
     const char delimiter[2] = ":";
     char *token = strtok_r(my_str, delimiter, &saveptr);
     while (token != NULL) {
-        if ( !(*value & DBG_NOREGSIGNAL) && !strcasecmp(token, "no-register-signals") ) {
-            *value |= DBG_NOREGSIGNAL;
+        if ( !(*value & DBG_REGSIGNALS) && !strcasecmp(token, "register-signals") ) {
+            *value |= DBG_REGSIGNALS;
         } else if ( !(*value & DBG_RETURNSTOLEN) && !strcasecmp(token, "return-stolen") ) {
             *value |= DBG_RETURNSTOLEN;
         }

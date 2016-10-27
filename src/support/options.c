@@ -334,7 +334,7 @@ void options_init(void) {
 
     options[i++] = register_option("LB_DEBUG_OPTS", "--debug-opts",
             OPT_DBG_T, &opt_debug_opts, RW, OPTIONAL, NULL,
-            "Debug options list: no-register-signals. Delimited by the character :");
+            "Debug options list: (register-signals, return-stolen). Delimited by the character :");
 
     ensure(num_options==i, "Number of registered options does not match");
     ensure(num_options<=MAX_OPTIONS, "Number of options registered greater than maximum" );
