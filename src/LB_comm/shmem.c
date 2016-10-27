@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 #include <pthread.h>
 
 #ifndef _POSIX_THREAD_PROCESS_SHARED
@@ -38,6 +39,7 @@
 
 #define SHSYNC_MAX_SIZE 64
 
+const struct timespec sem_timeout = {.tv_sec = 1, .tv_nsec = 0};
 static void check_shmem(const char *filename);
 
 shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module ) {
@@ -66,9 +68,14 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     }
 
     verbose( VB_SHMEM, "Check shared memory consistency");
-    sem_wait( handler->semaphore );
-    check_shmem(handler->shm_filename);
-    sem_post( handler->semaphore );
+    if ( sem_timedwait(handler->semaphore, &sem_timeout) == ETIMEDOUT ) {
+        verbose( VB_SHMEM,
+                "Could not acquire exclusive access to the Shared Memory, checking anyway...");
+        check_shmem(handler->shm_filename);
+    } else {
+        check_shmem(handler->shm_filename);
+        sem_post( handler->semaphore );
+    }
 
     verbose( VB_SHMEM, "Start Process Comm - creating shared mem, module(%s)", shmem_module );
 
@@ -194,13 +201,14 @@ static void check_shmem(const char *filename) {
         fatal_cond(statbuf.st_uid != getuid(), "Shmem already exists but belongs to another user");
 
         char cmd[64];
-        snprintf(cmd, 64, "fuser -s %s", shm_filename);
+        snprintf(cmd, 64, "fuser -s %s 2> /dev/null", shm_filename);
         int res = system(cmd);
         if (WEXITSTATUS(res) != 0) {
             // fuser returns a non-zero code if the file is not accessed by any process
             verbose(VB_SHMEM, "Found orphan Shared Memory %s", shm_filename);
             if (unlink(shm_filename)) {
-                fatal("can't delete %s", shm_filename);
+                fatal_cond(errno != ENOENT,
+                    "can't delete %s, errno: %s", shm_filename, strerror(errno));
             } else {
                 verbose(VB_SHMEM, "Deleted orphan Shared Memory %s", shm_filename);
             }
