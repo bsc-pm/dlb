@@ -229,7 +229,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     CPU_ZERO( mask );
 
     /* Compile regular expression */
-    if ( regcomp(&regex_bitmask, "^[0-1][0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
+    if ( regcomp(&regex_bitmask, "^[0-1][0-1]+[bB]$", REG_EXTENDED|REG_NOSUB) ) {
         fatal0( "Could not compile regex");
     }
 
@@ -237,7 +237,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         fatal0( "Could not compile regex");
     }
 
-    /* Regular expression matches bitmask, e.g.: 11110011 */
+    /* Regular expression matches bitmask, e.g.: 11110011b */
     if ( !regexec(&regex_bitmask, str, 0, NULL, 0) ) {
         // Parse
         int i;
@@ -294,7 +294,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     regfree(&regex_range);
 
     if ( CPU_COUNT(mask) == 0 ) {
-        warning( "Parsed mask \"%s\"does not seem to be a valid mask\n", str );
+        warning( "Parsed mask \"%s\" does not seem to be a valid mask\n", str );
     }
 }
 #pragma GCC visibility pop

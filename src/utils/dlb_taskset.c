@@ -66,12 +66,17 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
     fputs((
                 "Options:\n"
                 "  -l, --list               list all DLB processes and their masks\n"
-                "  -s, --set <cpu_list>     set affinity according to cpu_list (e.g., -c 0,5-7)\n"
+                "  -s, --set <cpu_list>     set affinity according to cpu_list\n"
                 "  -c, --cpus <cpu_list>    same as --set\n"
                 "  -r, --remove <cpu_list>  remove CPU ownership of any DLB process according to cpu_list\n"
                 "  -p, --pid                operate only on existing given pid\n"
                 "  -y, --sync               use synchronous operations\n"
-                "  -h, --help               print this help\n"), out);
+                "  -h, --help               print this help\n"
+                "\n"
+                "<cpu_list> argument accepts the following formats:\n"
+                "    Decimal numbers, comma-separated list and ranges allowed, e.g.: 0,5-7\n"
+                "    Binary mask, being the first CPU the most significative bit, e.g.: 10000111b\n"
+                ), out);
 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
