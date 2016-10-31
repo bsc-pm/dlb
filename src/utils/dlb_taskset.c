@@ -108,7 +108,7 @@ static void set_affinity(pid_t pid, const cpu_set_t *new_mask, bool sync) {
     dlb_check(error, pid, __FUNCTION__);
     DLB_Drom_Finalize();
 
-    fprintf(stdout, "PID %d's current affinity set to: %s\n", pid, mu_to_str(new_mask));
+    fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(new_mask));
 }
 
 static void __attribute__((__noreturn__)) execute(char **argv, const cpu_set_t *new_mask) {
@@ -148,6 +148,7 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove, b
             DLB_Drom_SetProcessMask_sync(pid, &pid_mask) :
             DLB_Drom_SetProcessMask(pid, &pid_mask);
         dlb_check(error, pid, __FUNCTION__);
+        fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(&pid_mask));
     }
 }
 

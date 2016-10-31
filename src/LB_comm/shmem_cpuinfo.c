@@ -829,13 +829,15 @@ void shmem_cpuinfo_ext__print_info(void) {
     info0(states);
     info0("States Legend: DISABLED=%d, BUSY=%d, LENT=%d", CPU_DISABLED, CPU_BUSY, CPU_LENT);
 
-    info0("=== CPU Statistics ===");
-    for (cpu=0; cpu<node_size; ++cpu) {
-        info0("CPU %d: OWNED(%.2f%%), GUESTED(%.2f%%), IDLE(%.2f%%)",
-                cpu,
-                getcpustate(cpu, STATS_OWNED, shdata_copy)*100,
-                getcpustate(cpu, STATS_GUESTED, shdata_copy)*100,
-                getcpustate(cpu, STATS_IDLE, shdata_copy)*100);
+    if (options_get_statistics()) {
+        info0("=== CPU Statistics ===");
+        for (cpu=0; cpu<node_size; ++cpu) {
+            info0("CPU %d: OWNED(%.2f%%), GUESTED(%.2f%%), IDLE(%.2f%%)",
+                    cpu,
+                    getcpustate(cpu, STATS_OWNED, shdata_copy)*100,
+                    getcpustate(cpu, STATS_GUESTED, shdata_copy)*100,
+                    getcpustate(cpu, STATS_IDLE, shdata_copy)*100);
+        }
     }
 
     free(shdata_copy);

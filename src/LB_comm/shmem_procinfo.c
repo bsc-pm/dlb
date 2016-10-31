@@ -695,10 +695,12 @@ void shmem_procinfo_ext__print_info(void) {
                     shdata_copy->process_info[p].dirty);
         }
     }
-    info0("=== Processes Statistics ===");
-    for (p = 0; p < max_processes; p++) {
-        if (shdata_copy->process_info[p].pid != NOBODY) {
-            info0("Process %d: %f CPU Avg usage", p, shdata->process_info[p].cpu_avg_usage);
+    if (options_get_statistics()) {
+        info0("=== Processes Statistics ===");
+        for (p = 0; p < max_processes; p++) {
+            if (shdata_copy->process_info[p].pid != NOBODY) {
+                info0("Process %d: %f CPU Avg usage", p, shdata->process_info[p].cpu_avg_usage);
+            }
         }
     }
 
@@ -813,8 +815,9 @@ static bool steal_cpu(int cpu, int process, bool dry_run) {
 
             // Add the stolen mask to the free_mask so other processes can acquire it
             CPU_SET(cpu, &shdata->free_mask);
+
+            verbose(VB_DROM, "CPU %d has been removed from process %d", cpu, process);
         }
-        verbose(VB_DROM, "CPU %d has been removed from process %d", cpu, process);
     }
 
     return steal;
