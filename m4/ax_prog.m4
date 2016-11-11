@@ -36,7 +36,7 @@ AC_DEFUN([AX_PROG_MPI],
       fi
 
       # Check for MPICH2
-      AX_CHECK_DEFINED([mpi.h], [MPICH2], [MPI_IS_MPICH2="yes"], [MPI_IS_MPICH2="no"])
+      AX_CHECK_DEFINE([mpi.h], [MPICH2], [MPI_IS_MPICH2="yes"], [MPI_IS_MPICH2="no"])
 
       # Check for the MPI library.
       # We won't use neither AC_CHECK_LIB nor AC_TRY_LINK because this library may have unresolved references

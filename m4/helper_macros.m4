@@ -163,22 +163,3 @@ AC_DEFUN([AX_FIND_INSTALLATION],
       $1_INSTALLED="no"
    fi
 ])
-
-AC_DEFUN([AX_GCC_VERSION_CHECK], [
-
-   AS_IF([test "x$GCC" = "xyes"],[
-      AC_CACHE_CHECK([gcc version],[ax_cv_gcc_version],[
-         ax_cv_gcc_version="`$CC -dumpversion`"
-         ax_cv_gcc_version_major=$(echo $ax_cv_gcc_version | cut -d'.' -f1)
-         ax_cv_gcc_version_minor=$(echo $ax_cv_gcc_version | cut -d'.' -f2)
-         # GCC > 4.3
-         AS_IF([test $ax_cv_gcc_version_major = 4 -a $ax_cv_gcc_version_minor -gt 3],[
-            ax_cv_gcc_version_warnings="-Wno-unused-result "
-         ])
-         # GCC < 4.5
-         AS_IF([test $ax_cv_gcc_version_major = 4 -a $ax_cv_gcc_version_minor -lt 5],[
-            ax_cv_gcc_version_warnings+="-Wno-uninitialized "
-         ])
-      ])
-   ])
-])
