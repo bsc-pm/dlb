@@ -19,13 +19,20 @@ Micro Load Balancing
 
 Statistics
 ----------
+This feature is in development and will be added in version 1.3.
 
 .. _drom:
 
 Dynamic Resource Ownership Manager (DROM)
 -----------------------------------------
+This feature is in development and will be added in version 1.3.
 
-====
+.. _barrier:
+
+Node Barrier
+------------
+This feature is in development and will be added in version 1.3.
+
 
 
 

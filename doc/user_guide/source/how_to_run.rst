@@ -15,9 +15,7 @@ DLB library can be completely configured at run-time using Environment Variables
 
     Module configuration Env. Variables
         * LB_POLICY = [policy]
-        * LB_STATISTICS = [0, 1]
-        * LB_DROM = [0, 1]
-
+        
     MPI Env. Variables
         * LB_JUST_BARRIER = [0, 1]
         * LB_LEND_MODE = [BLOCK, 1CPU]
@@ -32,14 +30,7 @@ DLB library can be completely configured at run-time using Environment Variables
 
     Misc Env. Variables
         * LB_MASK => (CPU range) DLB Mask for LeWI_mask policies
-        * LB_GREEDY => (bool) Greedy option for LeWI
         * LB_SHM_KEY = [key]
-
-    FIXME / Currently disabled
-        * LB_BIND => (bool) Bind option for LeWI, currently disabled
-        * LB_THREAD_DISTRIBUTION
-        * LB_AGGRESSIVE_INIT => (bool) Currently aggressive init is managed by the runtime
-        * LB_PRIORIZE_LOCALITY => (bool) prioritize (fixme variable typo) locality when acquiring CPUs, currently only implemented in the shmem_bitset, which is not used anymore
 
 
 DLB Binaries
