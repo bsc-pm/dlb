@@ -345,6 +345,7 @@ dlb_shm_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_shm_LDADD = libdlb.la
 
 dlb_taskset_SOURCES = src/utils/dlb_taskset.c
+dlb_taskset_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_taskset_LDADD = libdlb.la
 
