@@ -73,16 +73,10 @@ AM_PATH_PYTHON
 AC_OPENMP
 
 # check for MPI
-AX_PROG_MPI
-AX_PROG_MPITESTS
-AM_CONDITIONAL([MPI_LIB], [test "${MPI_INSTALLED}" = "yes"])
-AM_CONDITIONAL([IGNORE_MPI_TESTS], [test "${MPI_INSTALLED}" != "yes" -o "x${mpi_tests}" = "xno"])
+AX_MPI
 
 # check for HWLOC
-AX_PROG_HWLOC
-
-# check for LSCPU
-AX_PROG_LSCPU
+AX_HWLOC
 
 # check for number of cpus on node
 AC_ARG_WITH([cpus-per-node],
@@ -96,7 +90,8 @@ AC_ARG_WITH([cpus-per-node],
 )
 
 # check for SPHINX
-AX_PROG_SPHINX
+AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
+AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -191,15 +186,32 @@ AC_SUBST([NCPUS])
 AC_OUTPUT
 
 # Summary
-echo ""
-echo "$PACKAGE_STRING configuration summary"
-echo "============================="
-echo ""
-echo " Installation prefix       : $prefix"
-echo " Debug version             : $debug"
-echo " Instrumentation version   : $instrumentation"
-echo " Instr + debug version     : $instrumentation_debug"
-echo ""
-echo " Extra Packages:"
-AX_SHOW_CONFIGURATION([MPI])
-AX_SHOW_CONFIGURATION([HWLOC])
+AS_ECHO(["
+$PACKAGE_STRING configuration summary
+=============================
+
+Installation prefix       : $prefix
+Debug version             : $debug
+Instrumentation version   : $instrumentation
+Instr + debug version     : $instrumentation_debug
+External libraries:"])
+
+AS_ECHO_N(["
+* MPI: "])
+AS_IF([test "x$with_mpi" = xno], [
+    AS_ECHO(["no"])
+], [
+    AS_ECHO(["yes
+  MPI_CPPFLAGS:   $MPI_CPPFLAGS
+  MPI_LDFLAGS:    $MPI_LDFLAGS"])
+])
+
+AS_ECHO_N(["
+* HWLOC: "])
+AS_IF([test "x$with_hwloc" = xno], [
+    AS_ECHO(["no"])
+], [
+    AS_ECHO(["yes
+  HWLOC_CPPFLAGS: $HWLOC_CPPFLAGS
+  HWLOC_LDFLAGS:  $HWLOC_LDFLAGS"])
+])
