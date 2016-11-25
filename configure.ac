@@ -110,30 +110,30 @@ AC_CONFIG_FILES([ Makefile
 AC_MSG_CHECKING([whether to compile the debug version])
 AC_ARG_ENABLE([debug],
    AS_HELP_STRING([--disable-debug], [Disable generation of debug version]),
-   [ debug="$enableval" ],
-   [ debug=yes ]
+   [], dnl Implicit: enable_debug=$enableval
+   [enable_debug=yes]
 )
-AC_MSG_RESULT([$debug])
+AC_MSG_RESULT([$enable_debug])
 
 AC_MSG_CHECKING([whether to compile the instrumentation version])
 AC_ARG_ENABLE([instrumentation],
    AS_HELP_STRING([--disable-instrumentation], [Disable generation of instrumentation version]),
-   [ instrumentation="$enableval" ],
-   [ instrumentation=yes ]
+   [], dnl Implicit: enable_instrumentation=$enableval
+   [enable_instrumentation=yes]
 )
-AC_MSG_RESULT([$instrumentation])
+AC_MSG_RESULT([$enable_instrumentation])
 
 AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
 AC_ARG_ENABLE([instrumentation-debug],
    AS_HELP_STRING([--disable-instrumentation-debug], [Disable generation of instrumentation-debug version]),
-   [ instrumentation_debug="$enableval" ],
-   [ instrumentation_debug=yes ]
+   [], dnl Implicit: enable_instrumentation_debug=$enableval
+   [enable_instrumentation_debug=yes ]
 )
 AC_MSG_RESULT([$instrumentation_debug])
 
-AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
-AM_CONDITIONAL([INSTRUMENTATION_LIB], [test x"$instrumentation" = x"yes"])
-AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test x"$instrumentation_debug" = x"yes"])
+AM_CONDITIONAL([DEBUG_LIB], [test "x$enable_debug" = xyes])
+AM_CONDITIONAL([INSTRUMENTATION_LIB], [test "x$enable_instrumentation" = xyes])
+AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test "x$enable_instrumentation_debug" = xyes])
 
 AX_CONFIG_CC_WARNINGS
 WARNING_FLAGS="-Wall -Werror -Wno-error=unknown-pragmas $ax_cv_gcc_version_warnings"
@@ -191,9 +191,9 @@ $PACKAGE_STRING configuration summary
 =============================
 
 Installation prefix       : $prefix
-Debug version             : $debug
-Instrumentation version   : $instrumentation
-Instr + debug version     : $instrumentation_debug
+Debug version             : $enable_debug
+Instrumentation version   : $enable_instrumentation
+Instr + debug version     : $enable_instrumentation_debug
 External libraries:"])
 
 AS_ECHO_N(["
