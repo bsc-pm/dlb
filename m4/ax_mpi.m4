@@ -14,7 +14,7 @@ AC_DEFUN([AX_MPI],
     AS_IF([test "x$with_mpi" != xno], [
         AS_IF([test -d "$with_mpi"], [
             AC_CHECK_SIZEOF([size_t])
-            AS_VAR_ARITH([bits], [ac_cv_sizeof_size_t \* 8])
+            bits=$((ac_cv_sizeof_size_t * 8))
             AS_IF([test -d "$with_mpi/bin"], [user_mpi_bin="$with_mpi/bin"],
                 [test -d "$with_mpi/bin$bits"], [user_mpi_bin="$with_mpi/bin$bits"])
             AS_IF([test -d "$with_mpi/include"], [user_mpi_includes="-I$with_mpi/include"],
@@ -73,13 +73,13 @@ AC_DEFUN([AX_MPI],
 
             AC_MSG_CHECKING([for mpirun binding options])
             MPIEXEC_BIND_OPTS="none found"
-            AS_IF([test "x$MPICC" != x &&
-                    { $MPICC conftest.c -o conftest $MPI_CPPFLAGS $MPI_LDFLAGS ; } ], [
-                AS_IF([$MPIEXEC -n 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
+            AS_IF([test "x$MPICC" != x && {
+                    $MPICC conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2; } ], [
+                AS_IF([$MPIEXEC -n 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
                         [MPIEXEC_BIND_OPTS="--bind-to-core"],
-                    [$MPIEXEC -n 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
+                    [$MPIEXEC -n 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
                         [MPIEXEC_BIND_OPTS="--bind-to core"],
-                    [$MPIEXEC -n 2 --bind-to hwthread ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
+                    [$MPIEXEC -n 2 --bind-to hwthread ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
                         [MPIEXEC_BIND_OPTS="--bind-to hwthread"])
             ])
             rm -f conftest
