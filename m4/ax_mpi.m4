@@ -27,35 +27,14 @@ AC_DEFUN([AX_MPI],
         AC_PATH_PROGS([MPIEXEC], [mpiexec mpirun], [], [$user_mpi_bin$PATH_SEPARATOR$PATH])
 
         ### MPI INCLUDES ###
-        AS_IF([showme_compile=$($MPICC -showme:compile 2>&AS_MESSAGE_LOG_FD)], [
-            AX_VAR_PUSHVALUE([CPPFLAGS], [$showme_compile])
-            AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$showme_compile" ; mpi_h=yes])
-            AX_VAR_POPVALUE([CPPFLAGS])
-        ])
-        AS_IF([test "x$mpi_h" != xyes], [
-            AX_VAR_PUSHVALUE([CPPFLAGS], [$user_mpi_includes])
-            AS_UNSET([ac_cv_header_mpi_h])
-            AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$user_mpi_includes" ; mpi_h=yes])
-            AX_VAR_POPVALUE([CPPFLAGS])
-        ])
-        AS_IF([test "x$mpi_h" != xyes], [AC_MSG_ERROR([Cannot find MPI headers])])
+        AX_CHECK_MPI_CPPFLAGS([MPICC], [$user_mpi_includes],
+            [],
+            [AC_MSG_ERROR([Cannot find MPI headers])])
 
         ### MPI LIBS ###
-        AS_IF([showme_link=$($MPICC -showme:link 2>&AS_MESSAGE_LOG_FD)], [
-            AX_VAR_PUSHVALUE([LDFLAGS], [$showme_link])
-            AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$showme_link" ; mpi_lib=yes])
-            AX_VAR_POPVALUE([LDFLAGS])
-        ])
-        AS_IF([test "x$mpi_lib" != xyes], [
-            AX_VAR_PUSHVALUE([LIBS], [""])
-            AX_VAR_PUSHVALUE([LDFLAGS], [$user_mpi_libdir])
-            AS_UNSET([ac_cv_search_MPI_Init])
-            AC_SEARCH_LIBS([MPI_Init], [mpi mpich],
-                [MPI_LDFLAGS="$user_mpi_libdir $LIBS" ; mpi_lib=yes])
-            AX_VAR_POPVALUE([LDFLAGS])
-            AX_VAR_POPVALUE([LIBS])
-        ])
-        AS_IF([test "x$mpi_lib" != xyes], [AC_MSG_ERROR([Cannot find MPI libraries])])
+        AX_CHECK_MPI_LDFLAGS([MPICC], [$user_mpi_libdir],
+            [],
+            [AC_MSG_ERROR([Cannot find MPI libraries])])
 
         ### MPI TESTS ###
         AC_MSG_CHECKING([whether to enable MPI test suite])
@@ -94,7 +73,8 @@ AC_DEFUN([AX_MPI],
 
             AC_MSG_CHECKING([for mpirun binding options])
             MPIEXEC_BIND_OPTS="none found"
-            AS_IF([test "x$MPICC" != x && $MPICC conftest.c -o conftest], [
+            AS_IF([test "x$MPICC" != x &&
+                    { $MPICC conftest.c -o conftest $MPI_CPPFLAGS $MPI_LDFLAGS ; } ], [
                 AS_IF([$MPIEXEC -n 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
                         [MPIEXEC_BIND_OPTS="--bind-to-core"],
                     [$MPIEXEC -n 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD] 1>&2,
@@ -117,9 +97,100 @@ AC_DEFUN([AX_MPI],
 
     AC_SUBST([MPICC])
     AC_SUBST([MPIEXEC])
-    AC_SUBST([MPI_CPPFLAGS])
-    AC_SUBST([MPI_LDFLAGS])
     AC_SUBST([MPIEXEC_BIND_OPTS])
     AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != no])
     AM_CONDITIONAL([IGNORE_MPI_TESTS], [test "x$enable_mpi_tests" != no])
+])
+
+# AX_CHECK_MPI_CPPFLAGS([MPICC], [FLAGS], [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+# ---------------------------------------------------------------------------------
+AC_DEFUN([AX_CHECK_MPI_CPPFLAGS],
+[
+    # MPICC -show checks take priority over custom flags
+    AS_IF([test -f $$1], [
+        AS_IF([mpicc_showme_compile=$($$1 -showme:compile 2>&AS_MESSAGE_LOG_FD)], [
+            AX_VAR_PUSHVALUE([CPPFLAGS], [$mpicc_showme_compile])
+            AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$mpicc_showme_compile" ; mpi_h=yes])
+            AX_VAR_POPVALUE([CPPFLAGS])
+        ])
+        AS_IF([test "x$mpi_h" != xyes], [
+            AS_IF([mpicc_show_c=$($$1 -show -c 2>&AS_MESSAGE_LOG_FD)], [
+                mpicc_show_c=$(echo $mpicc_show_c | tr -s ' ' | cut -d' ' -f3-)
+                AX_VAR_PUSHVALUE([CPPFLAGS], [$mpicc_show_c])
+                AS_UNSET([ac_cv_header_mpi_h])
+                AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$mpicc_show_c" ; mpi_h=yes])
+                AX_VAR_POPVALUE([CPPFLAGS])
+            ])
+        ])
+    ])
+    # If MPICC wrapper did not succeed, try user custom flags
+    AS_IF([test "x$mpi_h" != xyes], [
+        AX_VAR_PUSHVALUE([CPPFLAGS], [$2])
+        AS_UNSET([ac_cv_header_mpi_h])
+        AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$2" ; mpi_h=yes])
+        AX_VAR_POPVALUE([CPPFLAGS])
+    ])
+
+    # The auxiliary var mpi_h is always checked because MPI_CPPFLAGS may be empty if it's unneeded
+    AS_IF([test "x$mpi_h" != xyes], [
+        # ACTION-IF-NOT-FOUND
+        :
+        $4
+    ] , [
+        # ACTION-IF-FOUND
+        :
+        $3
+    ])
+    AC_SUBST([MPI_CPPFLAGS])
+])
+
+
+# AX_CHECK_MPI_LDFLAGS([MPICC], [FLAGS], [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+# --------------------------------------------------------------------------------
+AC_DEFUN([AX_CHECK_MPI_LDFLAGS],
+[
+    # LIBS is also pushed/popped because AC_SEARCH_LIBS adds
+    # the corresponding link flag and we do not want that
+
+    # MPICC -show checks take priority over custom flags
+    AS_IF([test -f $$1], [
+        AS_IF([mpicc_showme_link=$($$1 -showme:link 2>&AS_MESSAGE_LOG_FD)], [
+            AX_VAR_PUSHVALUE([LIBS], [""])
+            AX_VAR_PUSHVALUE([LDFLAGS], [$mpicc_showme_link])
+            AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$mpicc_showme_link"])
+            AX_VAR_POPVALUE([LDFLAGS])
+            AX_VAR_POPVALUE([LIBS])
+        ])
+        AS_IF([test "x$MPI_LDFLAGS" = x], [
+            AS_IF([mpicc_link_info=$($$1 -link_info 2>&AS_MESSAGE_LOG_FD)], [
+                mpicc_link_info=$(echo $mpicc_link_info | tr -s ' ' | cut -d' ' -f2-)
+                AX_VAR_PUSHVALUE([LIBS], [""])
+                AX_VAR_PUSHVALUE([LDFLAGS], [$mpicc_link_info])
+                AS_UNSET([ac_cv_search_MPI_Init])
+                AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$mpicc_link_info"])
+                AX_VAR_POPVALUE([LDFLAGS])
+                AX_VAR_POPVALUE([LIBS])
+            ])
+        ])
+    ])
+    # If MPICC wrapper did not succeed, try user custom flags
+    AS_IF([test "x$MPI_LDFLAGS" = x], [
+        AX_VAR_PUSHVALUE([LIBS], [""])
+        AX_VAR_PUSHVALUE([LDFLAGS], [$2])
+        AS_UNSET([ac_cv_search_MPI_Init])
+        AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$2 $LIBS"])
+        AX_VAR_POPVALUE([LDFLAGS])
+        AX_VAR_POPVALUE([LIBS])
+    ])
+
+    AS_IF([test "x$MPI_LDFLAGS" = x], [
+        # ACTION-IF-NOT-FOUND
+        :
+        $4
+    ] , [
+        # ACTION-IF-FOUND
+        :
+        $3
+    ])
+    AC_SUBST([MPI_LDFLAGS])
 ])
