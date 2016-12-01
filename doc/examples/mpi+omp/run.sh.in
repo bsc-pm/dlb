@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DLB_HOME=@PREFIX@
+DLB_HOME=@prefix@
 
 # variables to be modified by the user
 TRACE=0

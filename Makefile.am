@@ -367,24 +367,6 @@ mpiompexamples_files_nodist = \
 	doc/examples/mpi+omp/run.sh \
 	$(END)
 
-EXTRA_DIST += doc/examples/mpi+omp/Makefile.in
-CLEANFILES += doc/examples/mpi+omp/Makefile
-doc/examples/mpi+omp/Makefile: $(top_srcdir)/doc/examples/mpi+omp/Makefile.in
-	$(GEN_verbose)$(MKDIR_P) doc/examples/mpi+omp; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX\@,"$(prefix)",g' \
-	$^ > $@;
-
-EXTRA_DIST += doc/examples/mpi+omp/run.sh.in
-CLEANFILES += doc/examples/mpi+omp/run.sh
-doc/examples/mpi+omp/run.sh: $(top_srcdir)/doc/examples/mpi+omp/run.sh.in
-	$(GEN_verbose)$(MKDIR_P) doc/examples/mpi+omp; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX\@,"$(prefix)",g' \
-	$^ > $@;
-
 mpiompexamplesdir = $(docdir)/examples/MPI+OMP
 dist_mpiompexamples_DATA = $(mpiompexamples_files)
 nodist_mpiompexamples_DATA = $(mpiompexamples_files_nodist)
@@ -411,15 +393,6 @@ statsexamples_files = \
 statsexamples_files_nodist = \
 	doc/examples/statistics/Makefile \
 	$(END)
-
-EXTRA_DIST += doc/examples/statistics/Makefile.in
-CLEANFILES += doc/examples/statistics/Makefile
-doc/examples/statistics/Makefile: $(top_srcdir)/doc/examples/statistics/Makefile.in
-	$(GEN_verbose)$(MKDIR_P) doc/examples/statistics; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX\@,"$(prefix)",g' \
-	$^ > $@;
 
 statsexamplesdir = $(docdir)/examples/statistics
 dist_statsexamples_DATA = $(statsexamples_files)

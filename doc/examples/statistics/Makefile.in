@@ -1,5 +1,5 @@
 
-DLB_HOME = @PREFIX@
+DLB_HOME = @prefix@
 
 MPICC = OMPI_CC="smpcc --ompss --instrument" mpicc
 CC = gcc

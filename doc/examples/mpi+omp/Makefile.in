@@ -1,5 +1,5 @@
 
-DLB_HOME = @PREFIX@
+DLB_HOME = @prefix@
 
 MPICC = mpicc -fopenmp
 CFLAGS = -fopenmp
