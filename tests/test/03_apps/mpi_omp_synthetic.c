@@ -20,11 +20,10 @@
 /*<testinfo>
     compile_versions="gomp nanox_omp"
 
-    test_CC_gomp="mpicc"
     test_CFLAGS_gomp="-fopenmp"
     test_LDFLAGS_gomp="-Wl,--no-as-needed"
 
-    test_CC_nanox_omp="env OMPI_CC=smpcc mpicc"
+    test_CC_nanox_omp="smpcc"
     test_CFLAGS_nanox_omp="--openmp"
 
     test_generator="gens/mpi-generator"

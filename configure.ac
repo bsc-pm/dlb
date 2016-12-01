@@ -100,11 +100,12 @@ AC_CONFIG_FILES([
     Makefile
     README
     tests/Makefile
-    tests/gens/Makefile
     doc/examples/statistics/Makefile
     doc/examples/mpi+omp/Makefile
-    doc/examples/mpi+omp/run.sh
 ])
+AC_CONFIG_FILES([doc/examples/mpi+omp/run.sh], [chmod +x doc/examples/mpi+omp/run.sh])
+AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
+AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 
 
 ##########################################################################
@@ -138,6 +139,12 @@ AC_MSG_RESULT([$instrumentation_debug])
 AM_CONDITIONAL([DEBUG_LIB], [test "x$enable_debug" = xyes])
 AM_CONDITIONAL([INSTRUMENTATION_LIB], [test "x$enable_instrumentation" = xyes])
 AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test "x$enable_instrumentation_debug" = xyes])
+
+TEST_VERSIONS="performance"
+AS_IF([test "x$enable_debug" = xyes], [
+    TEST_VERSIONS="$TEST_VERSIONS debug"
+])
+AC_SUBST([TEST_VERSIONS])
 
 AX_CONFIG_CC_WARNINGS
 WARNING_FLAGS="-Wall -Werror -Wno-error=unknown-pragmas $ax_cv_gcc_version_warnings"

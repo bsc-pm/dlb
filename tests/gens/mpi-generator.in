@@ -1,43 +1,35 @@
 #!/bin/bash
 
+CC="@CC@"
+VERSIONS="@TEST_VERSIONS@"
+SRCDIR="@abs_top_srcdir@"
+BLDDIR="@abs_top_builddir@"
+
+@HAVE_HWLOC_TRUE@ HWLOC_CPPFLAGS="@HWLOC_CPPFLAGS@"
+CPPFLAGS="-I$SRCDIR/src -I$SRCDIR/src/LB_core -I$BLDDIR/src $HWLOC_CPPFLAGS @MPI_CPPFLAGS@"
+PERFO_CFLAGS="@PERFO_CFLAGS@ $CPPFLAGS"
+DEBUG_CFLAGS="@DEBUG_CFLAGS@ $CPPFLAGS --debug"
+
+@HAVE_HWLOC_TRUE@ HWLOC_LDFLAGS="@HWLOC_LDFLAGS@"
+PERFO_LDFLAGS="$BLDDIR/.libs/libdlb.a $HWLOC_LDFLAGS -lrt @MPI_LDFLAGS@"
+DEBUG_LDFLAGS="$BLDDIR/.libs/libdlb_dbg.a $HWLOC_LDFLAGS -lrt @MPI_LDFLAGS@"
+
+MPIEXEC="@MPIEXEC@"
+MPIEXEC_BIND_OPTS="@MPIEXEC_BIND_OPTS@"
+@MPI_LIB_FALSE@ TEST_IGNORE=yes
+@MPI_TESTS_FALSE@ TEST_IGNORE=yes
+
 cat <<EOF
+compile_versions="$VERSIONS"
 
-SRC=@SRCDIR@/src
-BUILD=@BUILDDIR@
+test_CC=$CC
+test_CFLAGS_performance="$PERFO_CFLAGS"
+test_CFLAGS_debug="$DEBUG_CFLAGS"
+test_LDFLAGS_performance="$PERFO_LDFLAGS"
+test_LDFLAGS_debug="$DEBUG_LDFLAGS"
 
-PERFO_CFLAGS=@PERFO_CFLAGS@
-PERFO_CXXFLAGS=@PERFO_CXXFLAGS@
-DEBUG_CFLAGS=@DEBUG_CFLAGS@
-DEBUG_CXXFLAGS=@DEBUG_CXXFLAGS@
+test_ignore=$TEST_IGNORE
+test_ENV="$MPIEXEC -n 2 $MPIEXEC_BIND_OPTS env"
 
-HWLOC_LDFLAGS=@HWLOC_LDFLAGS@
-
-common_includes="-I\$SRC -I\$SRC/LB_numThreads -I\$SRC/LB_policies -I\$SRC/LB_MPI -I\$SRC/LB_comm -I\$SRC/LB_core -I\$SRC/support"
-
-compile_versions=@COMPILE_VERSIONS@
-
-test_CC=@CONFIG_CC@
-test_CXX=@CONFIG_CXX@
-
-test_CFLAGS="\$common_includes"
-test_CXXFLAGS="\$common_includes"
-
-test_CFLAGS_performance="\$PERFO_CFLAGS"
-test_CXXFLAGS_performance="\$PERFO_CXXFLAGS"
-test_CFLAGS_debug="\$DEBUG_CFLAGS --debug"
-test_CXXFLAGS_debug="\$DEBUG_CXXFLAGS"
-test_CFLAGS_instrumentation="\$INSTR_CFLAGS"
-test_CXXFLAGS_instrumentation="\$INSTR_CXXFLAGS"
-test_CFLAGS_instrumentation_debug="\$INSTRDEBUG_CFLAGS"
-test_CXXFLAGS_instrumentation_debug="\$INSTRDEBUG_CXXFLAGS"
-
-test_LDFLAGS_performance="\$BUILD/.libs/libdlb_mpi.a \$HWLOC_LDFLAGS -lrt"
-test_LDFLAGS_debug="\$BUILD/.libs/libdlb_mpi_dbg.a \$HWLOC_LDFLAGS -lrt"
-
-test_ignore=@TEST_IGNORE@
-test_ENV="@MPIRUN@ -n 2 @MPIRUN_BIND@ env"
-
-\$BUILD/dlb_shm -d
-`@SRCDIR@/tests/gens/config.py $*`
-\$BUILD/dlb_shm -d
+$($SRCDIR/tests/gens/config.py "$@")
 EOF

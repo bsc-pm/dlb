@@ -99,7 +99,7 @@ AC_DEFUN([AX_MPI],
     AC_SUBST([MPIEXEC])
     AC_SUBST([MPIEXEC_BIND_OPTS])
     AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != no])
-    AM_CONDITIONAL([IGNORE_MPI_TESTS], [test "x$enable_mpi_tests" != no])
+    AM_CONDITIONAL([MPI_TESTS], [test "x$enable_mpi_tests" != no])
 ])
 
 # AX_CHECK_MPI_CPPFLAGS([MPICC], [FLAGS], [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
