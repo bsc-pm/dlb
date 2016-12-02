@@ -554,6 +554,11 @@ CLEANFILES += tests/test.log tests/test.log.xml
 
 clean-local: clean-rpm clean-deb clean-doc
 
+install-data-hook:
+	chmod +x $(mpiompexamplesdir)/run.sh
+	chmod +x $(mpiompssexamplesdir)/run.sh
+	chmod +x $(statsexamplesdir)/run.sh
+
 dist-hook:
 	if [ -x "$(GIT)" ]; \
 	then \

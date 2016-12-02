@@ -100,13 +100,13 @@ AC_CONFIG_FILES([
     Makefile
     README
     tests/Makefile
+    doc/examples/mpi+omp/run.sh
     doc/examples/mpi+omp/Makefile
+    doc/examples/mpi+ompss/run.sh
     doc/examples/mpi+ompss/Makefile
+    doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
 ])
-AC_CONFIG_FILES([doc/examples/mpi+omp/run.sh], [chmod +x doc/examples/mpi+omp/run.sh])
-AC_CONFIG_FILES([doc/examples/mpi+ompss/run.sh], [chmod +x doc/examples/mpi+ompss/run.sh])
-AC_CONFIG_FILES([doc/examples/statistics/run.sh], [chmod +x doc/examples/statistics/run.sh])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
 AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 
