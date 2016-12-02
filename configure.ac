@@ -132,9 +132,9 @@ AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
 AC_ARG_ENABLE([instrumentation-debug],
    AS_HELP_STRING([--disable-instrumentation-debug], [Disable generation of instrumentation-debug version]),
    [], dnl Implicit: enable_instrumentation_debug=$enableval
-   [enable_instrumentation_debug=yes ]
+   [enable_instrumentation_debug=yes]
 )
-AC_MSG_RESULT([$instrumentation_debug])
+AC_MSG_RESULT([$enable_instrumentation_debug])
 
 AM_CONDITIONAL([DEBUG_LIB], [test "x$enable_debug" = xyes])
 AM_CONDITIONAL([INSTRUMENTATION_LIB], [test "x$enable_instrumentation" = xyes])
