@@ -71,15 +71,15 @@ AC_DEFUN([AX_MPI],
             ])
             AC_LANG_POP([C])
 
-            AC_MSG_CHECKING([for mpirun binding options])
+            AC_MSG_CHECKING([for mpiexec binding options])
             MPIEXEC_BIND_OPTS="none found"
             AS_IF([test "x$MPICC" != x && {
                     $MPICC conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2; } ], [
-                AS_IF([$MPIEXEC -n 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
+                AS_IF([$MPIEXEC -np 2 --bind-to-core ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
                         [MPIEXEC_BIND_OPTS="--bind-to-core"],
-                    [$MPIEXEC -n 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
+                    [$MPIEXEC -np 2 --bind-to core ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
                         [MPIEXEC_BIND_OPTS="--bind-to core"],
-                    [$MPIEXEC -n 2 --bind-to hwthread ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
+                    [$MPIEXEC -np 2 --bind-to hwthread ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
                         [MPIEXEC_BIND_OPTS="--bind-to hwthread"])
             ])
             rm -f conftest
@@ -93,11 +93,39 @@ AC_DEFUN([AX_MPI],
                 ])
             ])
         ])
+
+        ### MPI EXPORT ENV. VAR. ###
+        AC_LANG_PUSH([C])
+        AC_LANG_CONFTEST([
+            AC_LANG_SOURCE([[
+                #include <stdlib.h>
+                #include <string.h>
+                int main(int argc, char *argv[])
+                {
+                    char *var = getenv("CONFTEST_VARIABLE");
+                    if (var && strcmp(var, "CONFTEST") == 0) return EXIT_SUCCESS;
+                    return EXIT_FAILURE;
+                }
+            ]])
+        ])
+        AC_LANG_POP([C])
+
+        AC_MSG_CHECKING([for mpiexec export flag])
+        MPIEXEC_EXPORT_FLAG="none found"
+        AS_IF([$MPICC conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
+            AS_IF([$MPIEXEC -np 1 -x CONFTEST_VARIABLE=CONFTEST ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
+                        [MPIEXEC_EXPORT_FLAG="-x"],
+                [$MPIEXEC -np 1 -genv CONFTEST_VARIABLE=CONFTEST ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
+                        [MPIEXEC_EXPORT_FLAG="-genv"])
+        ])
+        rm -f conftest
+        AC_MSG_RESULT([$MPIEXEC_EXPORT_FLAG])
     ])
 
     AC_SUBST([MPICC])
     AC_SUBST([MPIEXEC])
     AC_SUBST([MPIEXEC_BIND_OPTS])
+    AC_SUBST([MPIEXEC_EXPORT_FLAG])
     AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != xno])
     AM_CONDITIONAL([MPI_TESTS], [test "x$enable_mpi_tests" != xno])
 ])

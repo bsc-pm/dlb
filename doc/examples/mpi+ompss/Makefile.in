@@ -1,0 +1,12 @@
+
+CC = smpcc
+CFLAGS = --ompss --instrument
+CPPFLAGS = @MPI_CPPFLAGS@
+LDFLAGS = @MPI_LDFLAGS@
+
+mpi_ompss_pils: mpi_ompss_pils.c
+	$(CC) $^ -o $@ $(CFLAGS) $(CPPFLAGS) $(LDFLAGS)
+
+.PHONY: clean
+clean:
+	rm -f mpi_ompss_pils

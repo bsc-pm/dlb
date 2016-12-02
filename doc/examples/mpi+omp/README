@@ -5,8 +5,7 @@ This is a small example of an MPI+OMP application running optionally with DLB.
 
 Compilation
 -----------
-The Makefile is ready for OpenMPI. Should you want to use another MPI implementation
-modify it accordingly. It also assumes that you mpicc accepts -fopenmp.
+Check the Makefile paths are correct and run `make`.
 
 Execution
 ---------
@@ -28,4 +27,4 @@ References
 ----------
 If you don't know about EXTRAE and PARAVER and want to test the tracing capabilities
 of the example program you can download the sources and pre-built binaries at:
-* http://www.bsc.es/computer-sciences/performance-tools/downloads
+* https://tools.bsc.es/downloads
