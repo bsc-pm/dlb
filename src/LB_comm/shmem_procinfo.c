@@ -333,16 +333,59 @@ void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len) {
 int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask) {
     if (shm_ext_handler == NULL) return -1;
 
-    int error = -1;
+    int error = 0;
+    bool done = false;
+    pinfo_t *process;
     shmem_lock(shm_ext_handler);
     {
-        pinfo_t *process = get_process(pid);
-        if (process) {
-            memcpy(mask, &process->future_process_mask, sizeof(cpu_set_t));
-            error = 0;
+        // Find process
+        process = get_process(pid);
+        if (process == NULL) {
+            verbose(VB_DROM, "Getting mask: cannot find process with pid %d", pid);
+            error = -1;
+        }
+
+        // Get current mask if not dirty
+        if (!error && !process->dirty) {
+            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+            done = true;
         }
     }
     shmem_unlock(shm_ext_handler);
+
+    if (!error && !done) {
+        // process is valid, but it's dirty so we need to poll
+        int64_t elapsed;
+        struct timespec start, now;
+        get_time_coarse(&start);
+        while(true) {
+
+            // Delay
+            usleep(SYNC_POLL_DELAY);
+
+            // Polling
+            shmem_lock(shm_ext_handler);
+            {
+                if (!process->dirty) {
+                    memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+                    done = true;
+                }
+            }
+            shmem_unlock(shm_ext_handler);
+
+            // Break if done
+            if (done) break;
+
+            // Break if timeout
+            get_time_coarse(&now);
+            elapsed = timespec_diff(&start, &now);
+            if (elapsed > SYNC_POLL_TIMEOUT) {
+                error = -1;
+                break;
+            }
+        }
+    }
+
     return error;
 }
 
@@ -350,10 +393,11 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
     if (shm_ext_handler == NULL) return -1;
 
     int error = 0;
+    pinfo_t *process;
     shmem_lock(shm_ext_handler);
     {
         // Find process
-        pinfo_t *process = get_process(pid);
+        process = get_process(pid);
         if (process == NULL) {
             verbose(VB_DROM, "Setting mask: cannot find process with pid %d", pid);
             error = -1;
@@ -375,66 +419,9 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
         }
     }
     shmem_unlock(shm_ext_handler);
-    return error;
-}
-
-int shmem_procinfo_ext__getprocessmask_sync(int pid, cpu_set_t *mask) {
-    if (shm_ext_handler == NULL) return -1;
-
-    int error = -1;
-    bool done = false;
-    pinfo_t *process;
-    shmem_lock(shm_ext_handler);
-    {
-        process = get_process(pid);
-        if (process && !process->dirty) {
-            // If the process is not dirty, we return the current mask
-            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
-            error = 0;
-            done = true;
-        }
-    }
-    shmem_unlock(shm_ext_handler);
-
-    if (process && !done) {
-        // process is valid, but it's dirty so we need to poll
-        int64_t elapsed;
-        struct timespec start, now;
-        get_time_coarse(&start);
-        while(true) {
-
-            // Delay
-            usleep(SYNC_POLL_DELAY);
-
-            // Polling
-            shmem_lock(shm_ext_handler);
-            {
-                if (!process->dirty) {
-                    memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
-                    error = 0;
-                    done = true;
-                }
-            }
-            shmem_unlock(shm_ext_handler);
-            if (done) break;
-
-            // Break if timeout
-            get_time_coarse(&now);
-            elapsed = timespec_diff(&start, &now);
-            if (elapsed > SYNC_POLL_TIMEOUT) break;
-        }
-    }
-
-    return error;
-}
-
-int shmem_procinfo_ext__setprocessmask_sync(int pid, const cpu_set_t *mask) {
-    // Set future mask as usual
-    int error = shmem_procinfo_ext__setprocessmask(pid, mask);
 
     // Polling until dirty is cleared, and get returncode
     if (!error) {
-        pinfo_t *process = get_process(pid);
         int64_t elapsed;
         struct timespec start, now;
         get_time_coarse(&start);
@@ -453,12 +440,17 @@ int shmem_procinfo_ext__setprocessmask_sync(int pid, const cpu_set_t *mask) {
                 }
             }
             shmem_unlock(shm_ext_handler);
+
+            // Break if done
             if (done) break;
 
             // Break if timeout
             get_time_coarse(&now);
             elapsed = timespec_diff(&start, &now);
-            if (elapsed > SYNC_POLL_TIMEOUT) break;
+            if (elapsed > SYNC_POLL_TIMEOUT) {
+                error = -1;
+                break;
+            }
         }
     }
 

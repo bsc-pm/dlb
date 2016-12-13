@@ -57,14 +57,6 @@ int drom_ext_setprocessmask(int pid, const cpu_set_t *mask) {
     return shmem_procinfo_ext__setprocessmask(pid, mask);
 }
 
-int drom_ext_getprocessmask_sync(int pid, cpu_set_t *mask) {
-    return shmem_procinfo_ext__getprocessmask_sync(pid, mask);
-}
-
-int drom_ext_setprocessmask_sync(int pid, const cpu_set_t *mask) {
-    return shmem_procinfo_ext__setprocessmask_sync(pid, mask);
-}
-
 int drom_ext_getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
     return shmem_procinfo_ext__getcpus(ncpus, steal, cpulist, nelems, max_len);
 }

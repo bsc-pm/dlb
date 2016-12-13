@@ -352,10 +352,6 @@ int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
  */
 int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
 
-// Sync versions of set/get mask
-int DLB_Drom_GetProcessMask_sync(int pid, dlb_cpu_set_t mask);
-int DLB_Drom_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask);
-
 /* \brief Register PID with the given mask before the process normal registration
  * \param[in] pid Process ID that gets the reservation
  * \param[in] mask Process mask to register
