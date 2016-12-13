@@ -65,6 +65,12 @@ AC_PROG_CPP
 
 # use the C compiler for the following checks
 AC_LANG([C])
+AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [CFLAGS="${CFLAGS} -fvisibility=hidden"])
+AX_CHECK_COMPILE_FLAG([-Wall], [CFLAGS="${CFLAGS} -Wall"])
+AX_CHECK_COMPILE_FLAG([-Werror], [CFLAGS="${CFLAGS} -Werror"])
+AX_CHECK_COMPILE_FLAG([-Wno-error=unknown-pragmas], [CFLAGS="${CFLAGS} -Wno-error=unknown-pragmas"])
+AX_CONFIG_CC_WARNINGS
+CFLAGS="${CFLAGS} $ax_cv_gcc_version_warnings"
 
 # Check for Python
 AM_PATH_PYTHON
@@ -149,19 +155,16 @@ AS_IF([test "x$enable_debug" = xyes], [
 ])
 AC_SUBST([TEST_VERSIONS])
 
-AX_CONFIG_CC_WARNINGS
-WARNING_FLAGS="-Wall -Werror -Wno-error=unknown-pragmas $ax_cv_gcc_version_warnings"
-
-PERFO_CFLAGS="-g -O3 $WARNING_FLAGS"
+PERFO_CFLAGS="-g -O3"
 PERFO_CPPFLAGS=""
 
-DEBUG_CFLAGS="-g -O0 $WARNING_FLAGS"
+DEBUG_CFLAGS="-g -O0"
 DEBUG_CPPFLAGS="-DDEBUG_VERSION"
 
-INSTR_CFLAGS="-g -O3 $WARNING_FLAGS"
+INSTR_CFLAGS="-g -O3"
 INSTR_CPPFLAGS="-DINSTRUMENTATION_VERSION"
 
-INSTR_DEBUG_CFLAGS="-g -O0 $WARNING_FLAGS"
+INSTR_DEBUG_CFLAGS="-g -O0"
 INSTR_DEBUG_CPPFLAGS="-DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
 AC_SUBST([PERFO_CFLAGS])
@@ -172,6 +175,7 @@ AC_SUBST([INSTR_CFLAGS])
 AC_SUBST([INSTR_CPPFLAGS])
 AC_SUBST([INSTR_DEBUG_CFLAGS])
 AC_SUBST([INSTR_DEBUG_CPPFLAGS])
+
 
 ##########################################################################
 # BlueGene/Q specific options
