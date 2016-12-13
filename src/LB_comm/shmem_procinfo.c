@@ -133,6 +133,7 @@ void shmem_procinfo__init(void) {
                 int error = register_mask(&process->current_process_mask);
                 if (error) {
                     shmem_unlock(init_handler);
+                    // FIXME: we should clean the shmem before that
                     fatal("Error trying to register CPU mask: %s",
                         mu_to_str(&process->current_process_mask));
                 }
@@ -153,6 +154,7 @@ void shmem_procinfo__init(void) {
         }
         if (p == max_processes) {
             shmem_unlock(init_handler);
+            // FIXME: we should clean the shmem before that
             fatal("Not enough space in the shared memory to register process %d", ME);
         }
     }
@@ -280,6 +282,7 @@ int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
                 error = steal ? set_new_mask(process, mask, false) : register_mask(mask);
                 if (error) {
                     shmem_unlock(shm_ext_handler);
+                    // FIXME: we should clean the shmem before that
                     fatal("Error trying to register CPU mask: %s", mu_to_str(mask));
                 }
 
@@ -297,6 +300,7 @@ int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
         }
         if (p == max_processes) {
             shmem_unlock(shm_ext_handler);
+            // FIXME: we should clean the shmem before that
             fatal("Not enough space in the shared memory to register process %d", pid);
         }
     }
