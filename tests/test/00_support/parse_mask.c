@@ -66,10 +66,11 @@ int main( int argc, char **argv ) {
     error += parse_and_check("0,2", (const int[MAX_SIZE]){1, 0, 1});
 
     // Beware the range/bitmask ambiguity
-    error += parse_and_check("101", (const int[MAX_SIZE]){1, 0, 1});
-    error += parse_and_check("10", (const int[MAX_SIZE]){1});
-    error += parse_and_check("00000000001", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
-    error += parse_and_check("10,", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    error += parse_and_check("101b", (const int[MAX_SIZE]){1, 0, 1});
+    error += parse_and_check("10b", (const int[MAX_SIZE]){1});
+    error += parse_and_check("00000000001b",
+            (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    error += parse_and_check("10", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
 
     error += parse_and_check("1,3-5,6,8", (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
     error += parse_and_check("9-12", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
