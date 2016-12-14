@@ -63,6 +63,7 @@ void omp_set_num_threads(int nthreads) __attribute__((weak));
 
 // Static functions to be called when no Prog Model is found
 static void unknown_get_process_mask(cpu_set_t *cpu_set) {
+    CPU_ZERO(cpu_set);
     sched_getaffinity(0, sizeof(cpu_set), cpu_set);
 }
 static int  unknown_set_process_mask(const cpu_set_t *cpu_set) { return 0; }
