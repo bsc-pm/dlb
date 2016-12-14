@@ -87,6 +87,7 @@ static void unregister_mask(const cpu_set_t *mask);
 static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run);
 static bool steal_cpu(pinfo_t* victim, int cpu, pinfo_t* new_owner, bool dry_run);
 static int steal_mask(const cpu_set_t *mask, pinfo_t *new_owner, bool dry_run);
+static int getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask);
 
 void shmem_procinfo__init(void) {
     // Protect double initialization
@@ -222,6 +223,11 @@ void shmem_procinfo__update(bool do_drom, bool do_stats) {
     }
 }
 
+int shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask) {
+    if (shm_handler == NULL) return -1;
+    return getprocessmask(shm_handler, pid, mask);
+}
+
 /* External Functions
  * These functions are intended to be called from external processes only to consult the shdata
  * That's why we should initialize and finalize the shared memory
@@ -332,61 +338,7 @@ void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len) {
 
 int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask) {
     if (shm_ext_handler == NULL) return -1;
-
-    int error = 0;
-    bool done = false;
-    pinfo_t *process;
-    shmem_lock(shm_ext_handler);
-    {
-        // Find process
-        process = get_process(pid);
-        if (process == NULL) {
-            verbose(VB_DROM, "Getting mask: cannot find process with pid %d", pid);
-            error = -1;
-        }
-
-        // Get current mask if not dirty
-        if (!error && !process->dirty) {
-            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
-            done = true;
-        }
-    }
-    shmem_unlock(shm_ext_handler);
-
-    if (!error && !done) {
-        // process is valid, but it's dirty so we need to poll
-        int64_t elapsed;
-        struct timespec start, now;
-        get_time_coarse(&start);
-        while(true) {
-
-            // Delay
-            usleep(SYNC_POLL_DELAY);
-
-            // Polling
-            shmem_lock(shm_ext_handler);
-            {
-                if (!process->dirty) {
-                    memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
-                    done = true;
-                }
-            }
-            shmem_unlock(shm_ext_handler);
-
-            // Break if done
-            if (done) break;
-
-            // Break if timeout
-            get_time_coarse(&now);
-            elapsed = timespec_diff(&start, &now);
-            if (elapsed > SYNC_POLL_TIMEOUT) {
-                error = -1;
-                break;
-            }
-        }
-    }
-
-    return error;
+    return getprocessmask(shm_ext_handler, pid, mask);
 }
 
 int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
@@ -947,4 +899,62 @@ static int steal_mask(const cpu_set_t *mask, pinfo_t* new_owner, bool dry_run) {
         }
     }
     return 0;
+}
+
+// Generic getprocessmask function to be called using any handler
+static int getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask) {
+    int error = 0;
+    bool done = false;
+    pinfo_t *process;
+    shmem_lock(handler);
+    {
+        // Find process
+        process = get_process(pid);
+        if (process == NULL) {
+            verbose(VB_DROM, "Getting mask: cannot find process with pid %d", pid);
+            error = -1;
+        }
+
+        // Get current mask if not dirty
+        if (!error && !process->dirty) {
+            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+            done = true;
+        }
+    }
+    shmem_unlock(handler);
+
+    if (!error && !done) {
+        // process is valid, but it's dirty so we need to poll
+        int64_t elapsed;
+        struct timespec start, now;
+        get_time_coarse(&start);
+        while(true) {
+
+            // Delay
+            usleep(SYNC_POLL_DELAY);
+
+            // Polling
+            shmem_lock(handler);
+            {
+                if (!process->dirty) {
+                    memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+                    done = true;
+                }
+            }
+            shmem_unlock(handler);
+
+            // Break if done
+            if (done) break;
+
+            // Break if timeout
+            get_time_coarse(&now);
+            elapsed = timespec_diff(&start, &now);
+            if (elapsed > SYNC_POLL_TIMEOUT) {
+                error = -1;
+                break;
+            }
+        }
+    }
+
+    return error;
 }

@@ -95,8 +95,7 @@ static pid_t do_child(int id, int num_childs) {
 
         // Save our initial mask
         cpu_set_t initial_mask;
-        shmem_procinfo_ext__init();
-        shmem_procinfo_ext__getprocessmask(getpid(), &initial_mask);
+        shmem_procinfo__getprocessmask(getpid(), &initial_mask);
 
         // Wait until parent process change our mask
         sem_post(sem[id][0]);
@@ -104,7 +103,7 @@ static pid_t do_child(int id, int num_childs) {
 
         // Update process mask and signal parent
         shmem_procinfo__update(true, true);
-        shmem_procinfo_ext__getprocessmask(getpid(), &new_mask);
+        shmem_procinfo__getprocessmask(getpid(), &new_mask);
         shmem_cpuinfo__update_ownership(&new_mask);
         printf("Child running with mask: %s\n", mu_to_str(&new_mask));
         sem_post(sem[id][2]);
@@ -112,7 +111,7 @@ static pid_t do_child(int id, int num_childs) {
         // Wait until an intruder process gets and then leaves our CPUs
         sem_wait(sem[id][0]);
         shmem_procinfo__update(true, true);
-        shmem_procinfo_ext__getprocessmask(getpid(), &new_mask);
+        shmem_procinfo__getprocessmask(getpid(), &new_mask);
         shmem_cpuinfo__update_ownership(&new_mask);
         printf("Child running with mask: %s\n", mu_to_str(&new_mask));
 

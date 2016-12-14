@@ -25,6 +25,7 @@
 void shmem_procinfo__init(void);
 void shmem_procinfo__finalize(void);
 void shmem_procinfo__update(bool do_drom, bool do_stats);
+int  shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask);
 
 void shmem_procinfo_ext__init(void);
 void shmem_procinfo_ext__finalize(void);
