@@ -37,7 +37,6 @@ GEN_verbose_0 = @echo "  GEN     " $@;
 endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
-AM_CFLAGS = -fvisibility=hidden
 AM_LDFLAGS = -lrt $(AC_LDFLAGS) -avoid-version
 if HAVE_HWLOC
 AM_CPPFLAGS += $(HWLOC_CPPFLAGS)
@@ -234,14 +233,12 @@ MPI_SRCS_GEN = \
 MPI_INTR_GEN = src/LB_MPI/MPI_intercept.c
 
 AM_MPI_CPPFLAGS = $(MPI_CPPFLAGS) -DMPI_LIB
-AM_MPI_LDFLAGS = $(MPI_LDFLAGS) -R $(MPI_LIBSDIR)
-AM_MPI_LIBADD = $(MPI_LIBS)
+AM_MPI_LDFLAGS = $(MPI_LDFLAGS)
 
 lib_LTLIBRARIES += libdlb_mpi.la
 libdlb_mpi_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 libdlb_mpi_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpi_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpi_la_SOURCES = $(MPI_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpi_la_SOURCES = $(MPI_SRCS_GEN) $(MPI_INTR_GEN)
 
@@ -250,7 +247,6 @@ lib_LTLIBRARIES += libdlb_mpi_dbg.la
 libdlb_mpi_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_mpi_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpi_dbg_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS_GEN) $(MPI_INTR_GEN)
 endif
@@ -260,7 +256,6 @@ lib_LTLIBRARIES += libdlb_mpi_instr.la
 libdlb_mpi_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
 libdlb_mpi_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpi_instr_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS_GEN)
 endif
@@ -270,7 +265,6 @@ lib_LTLIBRARIES += libdlb_mpi_instr_dbg.la
 libdlb_mpi_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_mpi_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpi_instr_dbg_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_GEN)
 endif
@@ -296,7 +290,6 @@ lib_LTLIBRARIES += libdlb_mpif.la
 libdlb_mpif_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpif_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpif_la_SOURCES = $(MPIF_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpif_la_SOURCES = $(MPIF_SRCS_GEN) $(MPIF_INTR_GEN)
 
@@ -305,7 +298,6 @@ lib_LTLIBRARIES += libdlb_mpif_dbg.la
 libdlb_mpif_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpif_dbg_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS_GEN) $(MPIF_INTR_GEN)
 endif
@@ -315,7 +307,6 @@ lib_LTLIBRARIES += libdlb_mpif_instr.la
 libdlb_mpif_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpif_instr_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS_GEN)
 endif
@@ -325,7 +316,6 @@ lib_LTLIBRARIES += libdlb_mpif_instr_dbg.la
 libdlb_mpif_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
-libdlb_mpif_instr_dbg_la_LIBADD = $(AM_MPI_LIBADD)
 libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS) $(COMMON_SRCS)
 nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_GEN)
 endif
@@ -345,6 +335,7 @@ dlb_shm_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_shm_LDADD = libdlb.la
 
 dlb_taskset_SOURCES = src/utils/dlb_taskset.c
+dlb_taskset_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_taskset_LDADD = libdlb.la
 
@@ -375,24 +366,6 @@ mpiompexamples_files_nodist = \
 	doc/examples/mpi+omp/run.sh \
 	$(END)
 
-EXTRA_DIST += doc/examples/mpi+omp/Makefile.in
-CLEANFILES += doc/examples/mpi+omp/Makefile
-doc/examples/mpi+omp/Makefile: $(top_srcdir)/doc/examples/mpi+omp/Makefile.in
-	$(GEN_verbose)$(MKDIR_P) doc/examples/mpi+omp; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX\@,"$(prefix)",g' \
-	$^ > $@;
-
-EXTRA_DIST += doc/examples/mpi+omp/run.sh.in
-CLEANFILES += doc/examples/mpi+omp/run.sh
-doc/examples/mpi+omp/run.sh: $(top_srcdir)/doc/examples/mpi+omp/run.sh.in
-	$(GEN_verbose)$(MKDIR_P) doc/examples/mpi+omp; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX\@,"$(prefix)",g' \
-	$^ > $@;
-
 mpiompexamplesdir = $(docdir)/examples/MPI+OMP
 dist_mpiompexamples_DATA = $(mpiompexamples_files)
 nodist_mpiompexamples_DATA = $(mpiompexamples_files_nodist)
@@ -419,15 +392,6 @@ statsexamples_files = \
 statsexamples_files_nodist = \
 	doc/examples/statistics/Makefile \
 	$(END)
-
-EXTRA_DIST += doc/examples/statistics/Makefile.in
-CLEANFILES += doc/examples/statistics/Makefile
-doc/examples/statistics/Makefile: $(top_srcdir)/doc/examples/statistics/Makefile.in
-	$(GEN_verbose)$(MKDIR_P) doc/examples/statistics; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX\@,"$(prefix)",g' \
-	$^ > $@;
 
 statsexamplesdir = $(docdir)/examples/statistics
 dist_statsexamples_DATA = $(statsexamples_files)
@@ -577,10 +541,22 @@ clean-deb:
 
 
 ##########################################################################
+# tests                                                                ###
+##########################################################################
+EXTRA_DIST += tests/test/ tests/gens/config.py
+CLEANFILES += tests/test.log tests/test.log.xml
+
+
+##########################################################################
 # Hooks                                                                ###
 ##########################################################################
 
 clean-local: clean-rpm clean-deb clean-doc
+
+install-data-hook:
+	chmod +x $(mpiompexamplesdir)/run.sh
+	chmod +x $(mpiompssexamplesdir)/run.sh
+	chmod +x $(statsexamplesdir)/run.sh
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \

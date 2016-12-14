@@ -20,7 +20,7 @@
 /*<testinfo>
     compile_versions="nanox_ompss"
 
-    test_CC_nanox_ompss="env OMPI_CC=smpcc mpicc"
+    test_CC_nanox_ompss="smpcc"
     test_CFLAGS_nanox_ompss="--ompss"
 
     test_generator="gens/mpi-generator"

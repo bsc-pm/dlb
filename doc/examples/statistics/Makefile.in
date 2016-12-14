@@ -1,17 +1,21 @@
 
-DLB_HOME = @PREFIX@
+DLB_HOME = @prefix@
 
-MPICC = OMPI_CC="smpcc --ompss --instrument" mpicc
-CC = gcc
+CC = @CC@
 CFLAGS =
 CPPFLAGS = -I$(DLB_HOME)/include
 LDFLAGS = -L$(DLB_HOME)/lib -ldlb_dbg -Wl,-rpath,$(DLB_HOME)/lib
+
+OMPSS_CC = smpcc
+OMPSS_CFLAGS = --ompss --instrument
+OMPSS_CPPFLAGS = @MPI_CPPFLAGS@
+OMPSS_LDFLAGS = @MPI_LDFLAGS@
 
 BINARIES = mpi_ompss_pils get_cpu_usage get_pid_list
 all: $(BINARIES)
 
 mpi_ompss_pils: mpi_ompss_pils.c
-	$(MPICC) $^ -o $@
+	$(OMPSS_CC) $^ -o $@ $(OMPSS_CPPFLAGS) $(OMPSS_CFLAGS) $(OMPSS_LDFLAGS)
 
 get_cpu_usage: get_cpu_usage.c
 	$(CC) $^ -o $@ $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)

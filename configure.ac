@@ -65,6 +65,12 @@ AC_PROG_CPP
 
 # use the C compiler for the following checks
 AC_LANG([C])
+AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [CFLAGS="${CFLAGS} -fvisibility=hidden"])
+AX_CHECK_COMPILE_FLAG([-Wall], [CFLAGS="${CFLAGS} -Wall"])
+AX_CHECK_COMPILE_FLAG([-Werror], [CFLAGS="${CFLAGS} -Werror"])
+AX_CHECK_COMPILE_FLAG([-Wno-error=unknown-pragmas], [CFLAGS="${CFLAGS} -Wno-error=unknown-pragmas"])
+AX_CONFIG_CC_WARNINGS
+CFLAGS="${CFLAGS} $ax_cv_gcc_version_warnings"
 
 # Check for Python
 AM_PATH_PYTHON
@@ -73,16 +79,10 @@ AM_PATH_PYTHON
 AC_OPENMP
 
 # check for MPI
-AX_PROG_MPI
-AX_PROG_MPITESTS
-AM_CONDITIONAL([MPI_LIB], [test "${MPI_INSTALLED}" = "yes"])
-AM_CONDITIONAL([IGNORE_MPI_TESTS], [test "${MPI_INSTALLED}" != "yes" -o "x${mpi_tests}" = "xno"])
+AX_MPI
 
 # check for HWLOC
-AX_PROG_HWLOC
-
-# check for LSCPU
-AX_PROG_LSCPU
+AX_HWLOC
 
 # check for number of cpus on node
 AC_ARG_WITH([cpus-per-node],
@@ -96,16 +96,25 @@ AC_ARG_WITH([cpus-per-node],
 )
 
 # check for SPHINX
-AX_PROG_SPHINX
+AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
+AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 
 AC_CONFIG_HEADERS([config.h])
 
 # files to generate via autotools (.am or .in source files)
-AC_CONFIG_FILES([ Makefile
-                  README
-                  tests/Makefile
-                  tests/gens/Makefile
-               ])
+AC_CONFIG_FILES([
+    Makefile
+    README
+    tests/Makefile
+    doc/examples/mpi+omp/run.sh
+    doc/examples/mpi+omp/Makefile
+    doc/examples/mpi+ompss/run.sh
+    doc/examples/mpi+ompss/Makefile
+    doc/examples/statistics/run.sh
+    doc/examples/statistics/Makefile
+])
+AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
+AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 
 
 ##########################################################################
@@ -115,43 +124,47 @@ AC_CONFIG_FILES([ Makefile
 AC_MSG_CHECKING([whether to compile the debug version])
 AC_ARG_ENABLE([debug],
    AS_HELP_STRING([--disable-debug], [Disable generation of debug version]),
-   [ debug="$enableval" ],
-   [ debug=yes ]
+   [], dnl Implicit: enable_debug=$enableval
+   [enable_debug=yes]
 )
-AC_MSG_RESULT([$debug])
+AC_MSG_RESULT([$enable_debug])
 
 AC_MSG_CHECKING([whether to compile the instrumentation version])
 AC_ARG_ENABLE([instrumentation],
    AS_HELP_STRING([--disable-instrumentation], [Disable generation of instrumentation version]),
-   [ instrumentation="$enableval" ],
-   [ instrumentation=yes ]
+   [], dnl Implicit: enable_instrumentation=$enableval
+   [enable_instrumentation=yes]
 )
-AC_MSG_RESULT([$instrumentation])
+AC_MSG_RESULT([$enable_instrumentation])
 
 AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
 AC_ARG_ENABLE([instrumentation-debug],
    AS_HELP_STRING([--disable-instrumentation-debug], [Disable generation of instrumentation-debug version]),
-   [ instrumentation_debug="$enableval" ],
-   [ instrumentation_debug=yes ]
+   [], dnl Implicit: enable_instrumentation_debug=$enableval
+   [enable_instrumentation_debug=yes]
 )
-AC_MSG_RESULT([$instrumentation_debug])
+AC_MSG_RESULT([$enable_instrumentation_debug])
 
-AM_CONDITIONAL([DEBUG_LIB], [test x"$debug" = x"yes"])
-AM_CONDITIONAL([INSTRUMENTATION_LIB], [test x"$instrumentation" = x"yes"])
-AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test x"$instrumentation_debug" = x"yes"])
+AM_CONDITIONAL([DEBUG_LIB], [test "x$enable_debug" = xyes])
+AM_CONDITIONAL([INSTRUMENTATION_LIB], [test "x$enable_instrumentation" = xyes])
+AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test "x$enable_instrumentation_debug" = xyes])
 
-AX_GCC_VERSION_CHECK
-WARNING_FLAGS="-Wall -Werror -Wno-error=unknown-pragmas $ax_cv_gcc_version_warnings"
+TEST_VERSIONS="performance"
+AS_IF([test "x$enable_debug" = xyes], [
+    TEST_VERSIONS="$TEST_VERSIONS debug"
+])
+AC_SUBST([TEST_VERSIONS])
 
-PERFO_CFLAGS="-g -O3 $WARNING_FLAGS"
+PERFO_CFLAGS="-g -O3"
+PERFO_CPPFLAGS=""
 
-DEBUG_CFLAGS="-g -O0 $WARNING_FLAGS"
+DEBUG_CFLAGS="-g -O0"
 DEBUG_CPPFLAGS="-DDEBUG_VERSION"
 
-INSTR_CFLAGS="-g -O3 $WARNING_FLAGS"
+INSTR_CFLAGS="-g -O3"
 INSTR_CPPFLAGS="-DINSTRUMENTATION_VERSION"
 
-INSTR_DEBUG_CFLAGS="-g -O0 $WARNING_FLAGS"
+INSTR_DEBUG_CFLAGS="-g -O0"
 INSTR_DEBUG_CPPFLAGS="-DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
 AC_SUBST([PERFO_CFLAGS])
@@ -162,6 +175,7 @@ AC_SUBST([INSTR_CFLAGS])
 AC_SUBST([INSTR_CPPFLAGS])
 AC_SUBST([INSTR_DEBUG_CFLAGS])
 AC_SUBST([INSTR_DEBUG_CPPFLAGS])
+
 
 ##########################################################################
 # BlueGene/Q specific options
@@ -190,15 +204,32 @@ AC_SUBST([NCPUS])
 AC_OUTPUT
 
 # Summary
-echo ""
-echo "$PACKAGE_STRING configuration summary"
-echo "============================="
-echo ""
-echo " Installation prefix       : $prefix"
-echo " Debug version             : $debug"
-echo " Instrumentation version   : $instrumentation"
-echo " Instr + debug version     : $instrumentation_debug"
-echo ""
-echo " Extra Packages:"
-AX_SHOW_CONFIGURATION([MPI])
-AX_SHOW_CONFIGURATION([HWLOC])
+AS_ECHO(["
+$PACKAGE_STRING configuration summary
+=============================
+
+Installation prefix       : $prefix
+Debug version             : $enable_debug
+Instrumentation version   : $enable_instrumentation
+Instr + debug version     : $enable_instrumentation_debug
+External libraries:"])
+
+AS_ECHO_N(["
+* MPI: "])
+AS_IF([test "x$with_mpi" = xno], [
+    AS_ECHO(["no"])
+], [
+    AS_ECHO(["yes
+  MPI_CPPFLAGS:   $MPI_CPPFLAGS
+  MPI_LDFLAGS:    $MPI_LDFLAGS"])
+])
+
+AS_ECHO_N(["
+* HWLOC: "])
+AS_IF([test "x$with_hwloc" = xno], [
+    AS_ECHO(["no"])
+], [
+    AS_ECHO(["yes
+  HWLOC_CPPFLAGS: $HWLOC_CPPFLAGS
+  HWLOC_LDFLAGS:  $HWLOC_LDFLAGS"])
+])
