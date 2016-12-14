@@ -21,6 +21,7 @@
     test_LDFLAGS=-pthread
     test_generator="gens/basic-generator"
     test_generator_ENV=( "LB_TEST_MODE=single" )
+    test_exec_command="timeout 10s"
 </testinfo>*/
 
 #define _GNU_SOURCE
