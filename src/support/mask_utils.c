@@ -199,6 +199,21 @@ void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, 
     }
 }
 
+/* Returns true is all bits in subset are set in superset */
+bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset) {
+    // The condition is true if the intersection is identical to subset
+    cpu_set_t intxn;
+    CPU_AND(&intxn, subset, superset);
+    return CPU_EQUAL(&intxn, subset);
+}
+
+/* Return the minuend after substracting the bits in substrahend */
+void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend) {
+    cpu_set_t xor;
+    CPU_XOR(&xor, minuend, substrahend);
+    CPU_AND(result, minuend, &xor);
+}
+
 // mu_to_str and mu_parse_mask functions are used by DLB utilities
 // We export their dynamic symbols to avoid code duplication,
 // although they do not belong to the public API
