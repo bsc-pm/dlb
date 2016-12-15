@@ -37,6 +37,7 @@ GEN_verbose_0 = @echo "  GEN     " $@;
 endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
+AM_CFLAGS = $(AC_CFLAGS)
 AM_LDFLAGS = -lrt $(AC_LDFLAGS) -avoid-version
 if HAVE_HWLOC
 AM_CPPFLAGS += $(HWLOC_CPPFLAGS)
