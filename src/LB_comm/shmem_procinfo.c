@@ -272,9 +272,7 @@ void shmem_procinfo_ext__finalize(void) {
 }
 
 int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
-    // Allow preregister to be called without Init/Finalize
-    bool adhoc_init = shm_ext_handler == NULL;
-    if (adhoc_init) shmem_procinfo_ext__init();
+    if (shm_ext_handler == NULL) return -1;
 
     int error = 0;
     shmem_lock(shm_ext_handler);
@@ -324,9 +322,6 @@ int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
         }
     }
     shmem_unlock(shm_ext_handler);
-
-    if (adhoc_init) shmem_procinfo_ext__finalize();
-
     return error;
 }
 
