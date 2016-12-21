@@ -6,49 +6,6 @@ DLB library is originally designed to be run on applications using a Shared Memo
 (OpenMP or OmpSs), although it is not a hard requirement, it is very advisable in order to exploit
 the thread management of the underlying Programming Model runtime.
 
-Environment Variables
-=====================
-
-DLB library can be completely configured at run-time using Environment Variables.
-
-.. glossary::
-
-    Module configuration Env. Variables
-        * LB_POLICY = [policy]
-        
-    MPI Env. Variables
-        * LB_JUST_BARRIER = [0, 1]
-        * LB_LEND_MODE = [BLOCK, 1CPU]
-
-    Verbose Env. Variables
-        * LB_VERBOSE = [api|microlb|shmem|mpi_api|mpi_intercept|stats|drom]
-        * LB_VERBOSE_FORMAT = [node|pid|mpinode|mpirank|thread]
-
-    Tracing Env. Variables
-        * LB_TRACE_ENABLED = [0, 1]
-        * LB_TRACE_COUNTERS = [0, 1]
-
-    Misc Env. Variables
-        * LB_MASK => (CPU range) DLB Mask for LeWI_mask policies
-        * LB_SHM_KEY = [key]
-
-
-DLB Binaries
-============
-
-dlb
-    Basic info, help and version
-
-dlb_shm
-    Utility to manage shared memory
-
-dlb_taskset
-    Utility to change the process mask of DLB processes
-
-dlb_cpu_usage
-    Python viewer if using stats
-
-
 Examples by Programming Model
 =============================
 
@@ -111,8 +68,3 @@ process during the MPI blocking calls::
     $ export LB_POLICY="LeWI"
     $ mpirun -n 2 -x LD_PRELOAD=${DLB_PREFIX}/lib/libdlb_mpi.so ./foo
 
-
-Running with the script
-=======================
-
-TBD. Ticket #33

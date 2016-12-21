@@ -13,10 +13,10 @@ Build requirements
 Installation steps
 ==================
 
-#. Get the latest DLB *tarball* from https://pm.bsc.es/projects/dlb/wiki/Downloads. Unpack the
+#. Get the latest DLB *tarball* from https://pm.bsc.es/dlb. Unpack the
    file and enter the new directory::
 
-    $ tar xzf dlb-x.y.tar.z
+    $ tar xzf dlb-x.y.tar.gz
     $ cd dlb-x.y/
 
 #. Configure it, with optionally some of the :ref:`dlb-configure-flags`::
@@ -54,12 +54,9 @@ hardware details of the compute node. If HWLOC is not found, hardware detection 
 some OS utilities.
 
 --with-mpi=<mpi_prefix>
-    Specify where to find the MPI libraries and include files. If the MPI installation does not
-    follow the standard installation tree like ``prefix/include`` and ``prefix/lib``, you can also
-    specify each of the paths through the options ``--with-mpi-headers`` and ``--with-mpi-libs``.
+    Specify where to find the MPI libraries and include files.
 --with-hwloc=<hwloc_prefix>
-    Specify where to find the HWLOC libraries. As in the previous option, you can use
-    ``--with-hwloc-headers`` and ``--with-hwloc-libs``.
+    Specify where to find the HWLOC libraries.
 
 Some of the load balancing policies rely on the number of CPUs in a compute node. In those cases
 where this number cannot be determined at run-time or cases where the number of CPUs differs
