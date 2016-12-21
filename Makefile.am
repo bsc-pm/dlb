@@ -402,15 +402,18 @@ nodist_statsexamples_DATA = $(statsexamples_files_nodist)
 sphinx_files = \
 	doc/user_guide/source/conf.py \
 	doc/user_guide/source/api.rst \
-	doc/user_guide/source/examples.rst \
+	doc/user_guide/source/content.rst \
+	doc/user_guide/source/faq.rst \
 	doc/user_guide/source/how_to_install.rst \
 	doc/user_guide/source/how_to_run.rst \
 	doc/user_guide/source/index.rst \
 	doc/user_guide/source/intro.rst \
+	doc/user_guide/source/technical_requirements.rst \
 	doc/user_guide/source/images/dlb_logo.png \
 	doc/user_guide/source/images/dlb_logo_white.png \
 	doc/user_guide/source/images/dlb_states.png \
 	doc/user_guide/source/images/dlb_icon.png \
+	doc/user_guide/source/images/dlb_icon.ico \
 	doc/user_guide/Makefile
 
 EXTRA_DIST += $(sphinx_files)

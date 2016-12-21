@@ -19,7 +19,7 @@ Installation steps
     $ tar xzf dlb-x.y.tar.gz
     $ cd dlb-x.y/
 
-#. Configure it, with optionally some of the :ref:`dlb-configure-flags`::
+#. Configure it, with optionally some of the :ref:`DLB configure flags<dlb-configure-flags>`::
 
    $ ./configure --prefix=$DLB_PREFIX
 

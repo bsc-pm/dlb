@@ -5,21 +5,42 @@ Content of the Package
 Structure
 =========
 
-.. code-block:: shell
+.. only:: html
 
-    dlb/
-    ├── bin
-    ├── include
-    ├── lib
-    └── share
-        ├── doc
-        │   └── dlb
-        │       └── examples
-        │           ├── MPI+OMP
-        │           ├── MPI+OmpSs
-        │           └── statistics
-        └── paraver_cfgs
-            └── DLB
+    ::
+
+        dlb/
+        ├── bin
+        ├── include
+        ├── lib
+        └── share
+            ├── doc
+            │   └── dlb
+            │       └── examples
+            │           ├── MPI+OMP
+            │           ├── MPI+OmpSs
+            │           └── statistics
+            └── paraver_cfgs
+                └── DLB
+
+
+.. only:: latex
+
+    ::
+
+        dlb/
+        |-- bin
+        |-- include
+        |-- lib
+        `-- share
+            |-- doc
+            |   `-- dlb
+            |       `-- examples
+            |           |-- MPI+OMP
+            |           |-- MPI+OmpSs
+            |           `-- statistics
+            `-- paraver_cfgs
+                `-- DLB
 
 
 Binaries
