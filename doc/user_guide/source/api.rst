@@ -14,26 +14,28 @@ The DLB API can be divided into:
         The advanced set is oriented to programming model runtimes but can be used by
         applications also.  The advanced functions will be explained in detail in section
         :ref:`advanced-api`.
-
-    Statistics
-        This set of functions allows the user to obtain some statistics about CPU usage.
-        For a more detailed description see :ref:`statistics`. These functions are described
-        in section :ref:`stats-api`.
-
-    Dynamic Resource Ownership Manager
-        With these functions, the user can manage from an external process the CPU
-        ownership of each DLB running process. For a more detailed description see
-        :ref:`drom`. These functions are described in section :ref:`drom-api`.
-
+        
     MPI API
         This is a specific API for MPI. We offer an MPI interface that will be called by
         Extrae if we are tracing the application or internally in the MPI intercept API.
         All the calls of this API are of the form shown below, and thus not documented.
-        There is one API function that is aimed to be called by the user, explained in
-        section :ref:`mpi-api`.
 
         - DLB_<mpi_call_name>_enter(...)
         - DLB_<mpi_call_name>_leave(...)
+        
+..        There is one API function that is aimed to be called by the user, explained in section :ref:`mpi-api`.
+
+..     Statistics
+..         This set of functions allows the user to obtain some statistics about CPU usage.
+..         For a more detailed description see :ref:`statistics`. These functions are described
+..         in section :ref:`stats-api`.
+.. 
+..     Dynamic Resource Ownership Manager
+..         With these functions, the user can manage from an external process the CPU
+..         ownership of each DLB running process. For a more detailed description see
+..         :ref:`drom`. These functions are described in section :ref:`drom-api`.
+
+
 
 .. _basic-api:
 
@@ -192,133 +194,133 @@ level of parallelism. But advanced users can also use them from applications.
 
     Print DLB internal variables
 
-.. _stats-api:
+.. .. _stats-api:
 
-====================
-Statistics Interface
-====================
-
-The next set of functions can be used only when the user has enabled the Statistics Module (see
-:ref:`statistics`). With this interface the user can obtain different statistics about the CPU
-usage and their ownership.
-
-.. function:: void DLB_Stats_Init(void)
-
-    Initialize DLB Statistics Module
-
-.. function:: void DLB_Stats_Finalize(void)
-
-    Finalize DLB Statistics Module
-
-.. function:: int DLB_Stats_GetNumCpus(void)
-
-    Get the total number of available CPUs in the node
-
-.. function:: void DLB_Stats_GetPidList(int \*pidlist,int \*nelems,int max_len)
-
-    Get the PID's attached to this module
-
-.. function:: double DLB_Stats_GetCpuUsage(int pid)
-
-    Get the CPU Usage of the given PID
-
-.. function:: double DLB_Stats_GetCpuAvgUsage(int pid)
-
-    Get the CPU Average Usage of the given PID
-
-.. function:: void DLB_Stats_GetCpuUsageList(double \*usagelist,int \*nelems,int max_len)
-
-    Get the CPU usage of all the attached PIDs
-
-.. function:: void DLB_Stats_GetCpuAvgUsageList(double \*avgusagelist,int \*nelems,int max_len)
-
-    Get the CPU Average usage of all the attached PIDs
-
-.. function:: double DLB_Stats_GetNodeUsage(void)
-
-    Get the CPU Usage of all the DLB processes in the node
-
-.. function:: double DLB_Stats_GetNodeAvgUsage(void)
-
-    Get the number of CPUs assigned to a given process
-
-.. function:: int DLB_Stats_GetActiveCpus(int pid)
-
-    Get the number of CPUs assigned to a given process
-
-.. function:: void DLB_Stats_GetActiveCpusList(int \*cpuslist,int \*nelems,int max_len)
-
-    Get the number of CPUs assigned to each process
-
-.. function:: int DLB_Stats_GetLoadAvg(int pid, double \*load)
-
-    Get the Load Average of a given process
-
-.. function:: float DLB_Stats_GetCpuStateIdle(int cpu)
-
-    Get the percentage of time that the CPU has been in state IDLE
-
-.. function:: float DLB_Stats_GetCpuStateOwned(int cpu)
-
-    Get the percentage of time that the CPU has been in state OWNED
-
-.. function:: float DLB_Stats_GetCpuStateGuested(int cpu)
-
-    Get the percentage of time that the CPU has been in state GUESTED
-
-.. function:: void DLB_Stats_PrintShmem(void)
-
-    Print the data stored in the Stats Shared Memory
-
-.. _drom-api:
-
-==================================
-Dynamic Resource Manager Interface
-==================================
-
-The next set of functions can be used when the user has enabled the Dynamic Resource Ownership
-Manager (DROM) Module (see :ref:`drom`). With this interface the user can set or retrieve the
-process mask of each DLB process.
-
-.. function:: void DLB_Drom_Init(void)
-
-    Initialize DROM Module
-
-.. function:: void DLB_Drom_Finalize(void)
-
-    Finalize DROM Module
-
-.. function:: int DLB_Drom_GetNumCpus(void)
-
-    Get the total number of available CPUs in the node
-
-.. function:: void DLB_Drom_GetPidList(int \*pidlist, int \*nelems, int max_len)
-
-    Get the PID's attached to this module
-
-.. function:: int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask)
-
-    Get the process mask of the given PID
-
-.. function:: int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask)
-
-    Set the process mask of the given PID
-
-.. function:: void DLB_Drom_PrintShmem(void)
-
-    Print the data stored in the Drom Shared Memory
-
-.. _mpi-api:
-
-=============
-MPI Interface
-=============
-
-Unlike all the other MPI functions aimed to be called by Extrae, this one is specifically aimed to
-be used by the user. It is useful sometimes to block only a single node to synchronize the workload
-at a certain point while using the CPUs owned by the process to help other processes to reach this
-point.
-
-.. function:: void DLB_MPI_node_barrier(void)
-
-    Blocks until all processes in the same node have reached this routine.
+.. ====================
+.. Statistics Interface
+.. ====================
+.. 
+.. The next set of functions can be used only when the user has enabled the Statistics Module (see
+.. :ref:`statistics`). With this interface the user can obtain different statistics about the CPU
+.. usage and their ownership.
+.. 
+.. .. function:: void DLB_Stats_Init(void)
+.. 
+..     Initialize DLB Statistics Module
+.. 
+.. .. function:: void DLB_Stats_Finalize(void)
+.. 
+..     Finalize DLB Statistics Module
+.. 
+.. .. function:: int DLB_Stats_GetNumCpus(void)
+.. 
+..     Get the total number of available CPUs in the node
+.. 
+.. .. function:: void DLB_Stats_GetPidList(int \*pidlist,int \*nelems,int max_len)
+.. 
+..     Get the PID's attached to this module
+.. 
+.. .. function:: double DLB_Stats_GetCpuUsage(int pid)
+.. 
+..     Get the CPU Usage of the given PID
+.. 
+.. .. function:: double DLB_Stats_GetCpuAvgUsage(int pid)
+.. 
+..     Get the CPU Average Usage of the given PID
+.. 
+.. .. function:: void DLB_Stats_GetCpuUsageList(double \*usagelist,int \*nelems,int max_len)
+.. 
+..     Get the CPU usage of all the attached PIDs
+.. 
+.. .. function:: void DLB_Stats_GetCpuAvgUsageList(double \*avgusagelist,int \*nelems,int max_len)
+.. 
+..     Get the CPU Average usage of all the attached PIDs
+.. 
+.. .. function:: double DLB_Stats_GetNodeUsage(void)
+.. 
+..     Get the CPU Usage of all the DLB processes in the node
+.. 
+.. .. function:: double DLB_Stats_GetNodeAvgUsage(void)
+.. 
+..     Get the number of CPUs assigned to a given process
+.. 
+.. .. function:: int DLB_Stats_GetActiveCpus(int pid)
+.. 
+..     Get the number of CPUs assigned to a given process
+.. 
+.. .. function:: void DLB_Stats_GetActiveCpusList(int \*cpuslist,int \*nelems,int max_len)
+.. 
+..     Get the number of CPUs assigned to each process
+.. 
+.. .. function:: int DLB_Stats_GetLoadAvg(int pid, double \*load)
+.. 
+..     Get the Load Average of a given process
+.. 
+.. .. function:: float DLB_Stats_GetCpuStateIdle(int cpu)
+.. 
+..     Get the percentage of time that the CPU has been in state IDLE
+.. 
+.. .. function:: float DLB_Stats_GetCpuStateOwned(int cpu)
+.. 
+..     Get the percentage of time that the CPU has been in state OWNED
+.. 
+.. .. function:: float DLB_Stats_GetCpuStateGuested(int cpu)
+.. 
+..     Get the percentage of time that the CPU has been in state GUESTED
+.. 
+.. .. function:: void DLB_Stats_PrintShmem(void)
+.. 
+..     Print the data stored in the Stats Shared Memory
+.. 
+.. .. _drom-api:
+.. 
+.. ==================================
+.. Dynamic Resource Manager Interface
+.. ==================================
+.. 
+.. The next set of functions can be used when the user has enabled the Dynamic Resource Ownership
+.. Manager (DROM) Module (see :ref:`drom`). With this interface the user can set or retrieve the
+.. process mask of each DLB process.
+.. 
+.. .. function:: void DLB_Drom_Init(void)
+.. 
+..     Initialize DROM Module
+.. 
+.. .. function:: void DLB_Drom_Finalize(void)
+.. 
+..     Finalize DROM Module
+.. 
+.. .. function:: int DLB_Drom_GetNumCpus(void)
+.. 
+..     Get the total number of available CPUs in the node
+.. 
+.. .. function:: void DLB_Drom_GetPidList(int \*pidlist, int \*nelems, int max_len)
+.. 
+..     Get the PID's attached to this module
+.. 
+.. .. function:: int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask)
+.. 
+..     Get the process mask of the given PID
+.. 
+.. .. function:: int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask)
+.. 
+..     Set the process mask of the given PID
+.. 
+.. .. function:: void DLB_Drom_PrintShmem(void)
+.. 
+..     Print the data stored in the Drom Shared Memory
+.. 
+.. .. _mpi-api:
+.. 
+.. =============
+.. MPI Interface
+.. =============
+.. 
+.. Unlike all the other MPI functions aimed to be called by Extrae, this one is specifically aimed to
+.. be used by the user. It is useful sometimes to block only a single node to synchronize the workload
+.. at a certain point while using the CPUs owned by the process to help other processes to reach this
+.. point.
+.. 
+.. .. function:: void DLB_MPI_node_barrier(void)
+.. 
+..     Blocks until all processes in the same node have reached this routine.
