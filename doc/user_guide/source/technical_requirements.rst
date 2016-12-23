@@ -2,9 +2,9 @@
 Technical Requierements
 ***********************
 
-================
+==================
 Programming models
-================
+==================
 
 The currently supported programming models or runtimes by DLB are the following:
 
@@ -17,6 +17,8 @@ The currently supported programming models or runtimes by DLB are the following:
 Shared Memory between processes
 ===============================
 DLB can balance processes running on the same node and sharing memory. DLB is based on shared memory and needs shared memory between all the processes sharing resources.
+
+.. _mpi-interception:
 
 ======================================
 Preload mechanism for MPI applications

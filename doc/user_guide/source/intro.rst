@@ -27,7 +27,6 @@ To achieve this DLB will lend the cpus of a process waiting in a blocking MPI ca
   :width: 300pt
   :align: center
   :alt: Application balanced with LeWI
-  
 
 
 .. ===========
@@ -56,7 +55,7 @@ To achieve this DLB will lend the cpus of a process waiting in a blocking MPI ca
 .. .. _barrier:
 
 .. Node Barrier
-------------
+.. ------------
 .. This feature is in development and will be added in version 1.3.
 
 
