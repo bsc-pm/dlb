@@ -66,6 +66,8 @@
 #include <signal.h>
 #include "LB_core/DLB_kernel.h"
 #include "support/debug.h"
+#include "support/types.h"
+#include "support/options.h"
 
 #define MAX_SIGNUM 32
 
@@ -103,36 +105,42 @@ static void unregister_signal( int signum ) {
 }
 
 void register_signals( void ) {
-    /* Set up new handler */
-    new_action.sa_sigaction = termination_handler;
-    new_action.sa_flags = SA_SIGINFO;
-    sigemptyset( &new_action.sa_mask );
+    if (options_get_debug_opts() & DBG_REGSIGNALS) {
+        warning("Debug option: register-signals.");
 
-    register_signal( SIGHUP );
-    register_signal( SIGINT );
-    register_signal( SIGQUIT );
-    register_signal( SIGILL );
-    register_signal( SIGABRT );
-    register_signal( SIGFPE );
-    register_signal( SIGSEGV );
-    register_signal( SIGPIPE );
-    register_signal( SIGALRM );
-    register_signal( SIGTERM );
-    register_signal( SIGUSR1 );
-    //register_signal( SIGUSR2 );
-    //register_signal( SIGCHLD );
-    register_signal( SIGBUS );
-    register_signal( SIGURG );
-    register_signal( SIGVTALRM );
-    register_signal( SIGXCPU );
-    register_signal( SIGXFSZ );
+        /* Set up new handler */
+        new_action.sa_sigaction = termination_handler;
+        new_action.sa_flags = SA_SIGINFO;
+        sigemptyset( &new_action.sa_mask );
+
+        register_signal( SIGHUP );
+        register_signal( SIGINT );
+        register_signal( SIGQUIT );
+        register_signal( SIGILL );
+        register_signal( SIGABRT );
+        register_signal( SIGFPE );
+        register_signal( SIGSEGV );
+        register_signal( SIGPIPE );
+        register_signal( SIGALRM );
+        register_signal( SIGTERM );
+        register_signal( SIGUSR1 );
+        //register_signal( SIGUSR2 );
+        //register_signal( SIGCHLD );
+        register_signal( SIGBUS );
+        register_signal( SIGURG );
+        register_signal( SIGVTALRM );
+        register_signal( SIGXCPU );
+        register_signal( SIGXFSZ );
+    }
 }
 
 void unregister_signals( void ) {
-    int i;
-    for ( i=0; i<MAX_SIGNUM; i++ ) {
-        if ( registed_signals[i] ) {
-            unregister_signal(i);
+    if (options_get_debug_opts() & DBG_REGSIGNALS) {
+        int i;
+        for ( i=0; i<MAX_SIGNUM; i++ ) {
+            if ( registed_signals[i] ) {
+                unregister_signal(i);
+            }
         }
     }
 }

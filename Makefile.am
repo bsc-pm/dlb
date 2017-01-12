@@ -152,14 +152,14 @@ COMMON_SRCS = \
 	src/LB_comm/comm_map.h          \
 	src/LB_comm/shmem.c             \
 	src/LB_comm/shmem.h             \
+	src/LB_comm/shmem_barrier.c     \
+	src/LB_comm/shmem_barrier.h     \
 	src/LB_comm/shmem_bitset.c      \
 	src/LB_comm/shmem_bitset.h      \
-	src/LB_comm/shmem_cpuarray.c    \
-	src/LB_comm/shmem_cpuarray.h    \
-	src/LB_comm/shmem_stats.c       \
-	src/LB_comm/shmem_stats.h       \
-	src/LB_comm/shmem_drom.c        \
-	src/LB_comm/shmem_drom.h        \
+	src/LB_comm/shmem_cpuinfo.c     \
+	src/LB_comm/shmem_cpuinfo.h     \
+	src/LB_comm/shmem_procinfo.c    \
+	src/LB_comm/shmem_procinfo.h    \
 	src/LB_core/DLB_kernel.c        \
 	src/LB_core/DLB_kernel.h        \
 	src/LB_core/DLB_interface.c     \

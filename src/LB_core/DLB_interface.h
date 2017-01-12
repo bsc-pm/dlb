@@ -162,6 +162,10 @@ int DLB_Is_auto(void);
  */
 void DLB_Update(void);
 
+/* \brief Barrier between processes in the node
+ */
+void DLB_Barrier(void);
+
 /* \brief Notify DLB that the Process Mask has changed
  *
  * Notify DLB that the process affinity mask has been changed. DLB will then query
@@ -300,10 +304,6 @@ float DLB_Stats_GetCpuStateOwned(int cpu);
  */
 float DLB_Stats_GetCpuStateGuested(int cpu);
 
-/* \brief Print the data stored in the Stats shmem
- */
-void DLB_Stats_PrintShmem(void);
-
 /*******************************************************/
 /*    Dynamic Resource Manager Module                  */
 /*******************************************************/
@@ -342,9 +342,23 @@ int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
  */
 int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
 
-/* \brief Print the data stored in the Drom shmem
+/* \brief Ask for free (or stolen) CPUs in the node
+ * \param[in] cpus Number of CPUs to get
+ * \param[in] steal Whether if look only into free CPUs or force stealing
+ * \param[out] cpulist The output list
+ * \param[out] nelems Numer of element in the list
+ * \param[in] max_len Max capacity of the list
+ * \return 0 on success, -1 if not all ncpus could be given
  */
-void DLB_Drom_PrintShmem(void);
+int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
+
+/* \brief Register PID with the given mask before the process normal registration
+ * \param[in] pid Process ID that gets the reservation
+ * \param[in] mask Process mask to register
+ * \param[in] steal whether to steal owned CPUs
+ * \return 0 on success, -1 if registration failed
+ */
+int DLB_Drom_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal);
 
 /*******************************************************/
 /*    MPI Interface                                    */

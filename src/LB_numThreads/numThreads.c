@@ -17,7 +17,9 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 #include <pthread.h>
 #include "LB_numThreads/numThreads.h"
@@ -61,12 +63,14 @@ void omp_set_num_threads(int nthreads) __attribute__((weak));
 
 // Static functions to be called when no Prog Model is found
 static void unknown_get_process_mask(cpu_set_t *cpu_set) {
-    CPU_ZERO( cpu_set );
-    CPU_SET( 0, cpu_set );
+    CPU_ZERO(cpu_set);
+    sched_getaffinity(0, sizeof(cpu_set), cpu_set);
 }
 static int  unknown_set_process_mask(const cpu_set_t *cpu_set) { return 0; }
 static void unknown_add_process_mask(const cpu_set_t *cpu_set) {}
-static void unknown_get_active_mask(cpu_set_t *cpu_set) { return unknown_get_process_mask(cpu_set); }
+static void unknown_get_active_mask(cpu_set_t *cpu_set) {
+    return unknown_get_process_mask(cpu_set);
+}
 static int  unknown_set_active_mask(const cpu_set_t *cpu_set) { return 0; }
 static void unknown_add_active_mask(const cpu_set_t *cpu_set) {}
 static int  unknown_get_thread_num(void) { return 0; }
@@ -120,17 +124,7 @@ void pm_init(void) {
         pm_funcs.set_threads = omp_set_num_threads;
     }
     /* Undefined */
-    else {
-        pm_funcs.get_process_mask = unknown_get_process_mask;
-        pm_funcs.set_process_mask = unknown_set_process_mask;
-        pm_funcs.add_process_mask = unknown_add_process_mask;
-        pm_funcs.get_active_mask = unknown_get_active_mask;
-        pm_funcs.set_active_mask = unknown_set_active_mask;
-        pm_funcs.add_active_mask = unknown_add_active_mask;
-        pm_funcs.get_thread_num = unknown_get_thread_num;
-        pm_funcs.get_threads = unknown_get_threads;
-        pm_funcs.set_threads = unknown_set_threads;
-    }
+    else {}
     _default_nthreads = pm_funcs.get_threads();
 }
 

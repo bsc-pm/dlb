@@ -17,52 +17,62 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+/*<testinfo>
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
+</testinfo>*/
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
-#include "LB_comm/shmem_cpuinfo.h"
-#include "LB_comm/shmem_procinfo.h"
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/debug.h"
+#include <stdio.h>
+#include "support/mask_utils.h"
 
-void drom_ext_init(void) {
-    pm_init();
-    options_init();
-    debug_init();
-    shmem_cpuinfo_ext__init();
-    shmem_procinfo_ext__init();
+#define MAX_SIZE 16
+
+static void fill_mask(cpu_set_t *mask, const int *bits) {
+    CPU_ZERO(mask);
+    int i;
+    for (i=0; i<MAX_SIZE; ++i) {
+        if (bits[i]) CPU_SET(i, mask);
+    }
 }
 
-void drom_ext_finalize(void) {
-    shmem_cpuinfo_ext__finalize();
-    shmem_procinfo_ext__finalize();
-    options_finalize();
+static int check_mask(const cpu_set_t *mask, const int *bits) {
+    int i;
+    for (i=0; i<MAX_SIZE; ++i) {
+        if (CPU_ISSET(i, mask) && bits[i] == 0) return 1;
+        if (!CPU_ISSET(i, mask) && bits[i] == 1) return 1;
+    }
+    return 0;
 }
 
-int drom_ext_getnumcpus(void) {
-    return shmem_cpuinfo_ext__getnumcpus();
-}
+int main( int argc, char **argv ) {
+    int error = 0;
 
-void drom_ext_getpidlist(int *pidlist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getpidlist(pidlist, nelems, max_len);
-}
+    mu_init();
 
-int drom_ext_getprocessmask(int pid, cpu_set_t *mask) {
-    return shmem_procinfo_ext__getprocessmask(pid, mask);
-}
+    cpu_set_t mask0, mask1, mask2, mask3;
+    fill_mask(&mask0, (const int[MAX_SIZE]){0, 0, 0, 0});
+    fill_mask(&mask1, (const int[MAX_SIZE]){1, 1, 1, 1});
+    fill_mask(&mask2, (const int[MAX_SIZE]){1, 1, 0, 0});
 
-int drom_ext_setprocessmask(int pid, const cpu_set_t *mask) {
-    return shmem_procinfo_ext__setprocessmask(pid, mask);
-}
+    if (!mu_is_subset(&mask0, &mask0)) error++;
+    if (!mu_is_subset(&mask0, &mask1)) error++;
+    if (!mu_is_subset(&mask0, &mask2)) error++;
+    if (!mu_is_subset(&mask2, &mask1)) error++;
+    if (mu_is_subset(&mask1, &mask2)) error++;
 
-int drom_ext_getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
-    return shmem_procinfo_ext__getcpus(ncpus, steal, cpulist, nelems, max_len);
-}
+    mu_substract(&mask3, &mask1, &mask0);
+    error += check_mask(&mask3, (const int[MAX_SIZE]){1, 1, 1, 1});
+    mu_substract(&mask3, &mask1, &mask2);
+    error += check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 1, 1});
+    mu_substract(&mask3, &mask2, &mask1);
+    error += check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0});
+    mu_substract(&mask3, &mask1, &mask1);
+    error += check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0});
 
-int drom_ext_preregister(int pid, const cpu_set_t *mask, int steal) {
-    int error = shmem_procinfo_ext__preregister(pid, mask, steal);
-    error = error ? error : shmem_cpuinfo_ext__preregister(pid, mask, steal);
+    mu_finalize();
     return error;
 }

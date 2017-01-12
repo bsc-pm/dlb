@@ -20,7 +20,9 @@
 #ifndef DLB_KERNEL_H
 #define DLB_KERNEL_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 #include <stdbool.h>
 
@@ -92,6 +94,8 @@ void acquirecpus(cpu_set_t* mask);
 void singlemode(void);
 
 void parallelmode(void);
+
+void nodebarrier(void);
 
 void notifymaskchangeto(const cpu_set_t* mask);
 

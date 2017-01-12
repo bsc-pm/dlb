@@ -20,8 +20,11 @@
 #ifndef MASK_UTILS_H
 #define MASK_UTILS_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
+#include "support/types.h"
 
 typedef enum {
     MU_ANY_BIT,
@@ -31,9 +34,14 @@ typedef enum {
 void mu_init(void);
 void mu_finalize(void);
 int  mu_get_system_size(void);
+void mu_get_system_mask(cpu_set_t *mask);
 void mu_get_affinity_mask(cpu_set_t *affinity_set, const cpu_set_t *child_set, mu_opt_t condition);
+bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset);
+void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend);
 
 const char* mu_to_str(const cpu_set_t *cpu_set);
 void mu_parse_mask(const char *str, cpu_set_t *mask);
+
+void mu_testing_set_sys_size(int size);
 
 #endif /* MASK_UTILS_H */

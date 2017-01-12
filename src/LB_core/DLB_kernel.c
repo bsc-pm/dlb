@@ -17,27 +17,32 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */
-//#include <stdio.h>
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <string.h>
-//#include <stdlib.h>
-//#include <sys/types.h>
 #include <unistd.h>
 
-#include "DLB_kernel.h"
-
-#include <LB_policies/Lend_light.h>
-#include <LB_policies/Weight.h>
-#include <LB_policies/JustProf.h>
-#include <LB_policies/Lewi_map.h>
-#include <LB_policies/lewi_mask.h>
-#include <LB_policies/autonomous_lewi_mask.h>
-#include <LB_policies/RaL.h>
-#include <LB_policies/PERaL.h>
-
-#include <LB_numThreads/numThreads.h>
+#include "LB_core/DLB_kernel.h"
 #include "LB_core/statistics.h"
 #include "LB_core/drom.h"
+#include "LB_policies/Lend_light.h"
+#include "LB_policies/Weight.h"
+#include "LB_policies/JustProf.h"
+#include "LB_policies/Lewi_map.h"
+#include "LB_policies/lewi_mask.h"
+#include "LB_policies/autonomous_lewi_mask.h"
+#include "LB_policies/RaL.h"
+#include "LB_policies/PERaL.h"
+#include "LB_numThreads/numThreads.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_barrier.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -75,8 +80,10 @@ static bool dlb_enabled = false;
 static bool dlb_initialized = false;
 static int init_id = 0;
 
+static const char* policy;
 static bool stats_enabled;
 static bool drom_enabled;
+static bool barrier_enabled;
 
 // Initialize lb_funcs to dummy functions
 static void dummy_init(void) {}
@@ -100,7 +107,6 @@ static void dummy_disableDLB(void) {}
 static void dummy_enableDLB(void) {}
 static void dummy_single(void) {}
 static void dummy_parallel(void) {}
-static void dummy_notifymaskchangeto(const cpu_set_t* mask) {}
 
 static BalancePolicy lb_funcs = {
     .init = &dummy_init,
@@ -124,19 +130,46 @@ static BalancePolicy lb_funcs = {
     .enableDLB = &dummy_enableDLB,
     .single = &dummy_single,
     .parallel = &dummy_parallel,
-    .notifymaskchangeto = &dummy_notifymaskchangeto
 };
 
 
 static void load_modules(void) {
     options_init();
+    policy = options_get_policy();
+    stats_enabled = options_get_statistics();
+    drom_enabled = options_get_drom();
+    barrier_enabled = options_get_barrier();
+
     pm_init();
+
     debug_init();
+    verbose(VB_API, "Enabled verbose mode for DLB API");
+    verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
+    verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
+    verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
+    verbose(VB_DROM, "Enabled verbose mode for DROM");
+    verbose(VB_STATS, "Enabled verbose mode for STATS");
+    verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+
     init_tracing();
     register_signals();
+    if (strcasecmp(policy, "no")!=0 || drom_enabled || stats_enabled) {
+        shmem_procinfo__init();
+        shmem_cpuinfo__init();
+    }
+    if (barrier_enabled) {
+        shmem_barrier_init();
+    }
 }
 
 static void unload_modules(void) {
+    if (barrier_enabled) {
+        shmem_barrier_finalize();
+    }
+    if (strcasecmp(policy, "no")!=0 || drom_enabled || stats_enabled) {
+        shmem_cpuinfo__finalize();
+        shmem_procinfo__finalize();
+    }
     unregister_signals();
     options_finalize();
 }
@@ -164,10 +197,7 @@ int Initialize(void) {
         init_id = _process_id;
         initializer_id = _process_id;
 
-        // Read Options
-        const char* policy = options_get_policy();
-        stats_enabled = options_get_statistics();
-        drom_enabled = options_get_drom();
+        info0("%s %s", PACKAGE, VERSION);
 
         if (strcasecmp(policy, "LeWI")==0) {
             info0( "Balancing policy: LeWI" );
@@ -228,7 +258,6 @@ int Initialize(void) {
             lb_funcs.enableDLB = &lewi_mask_enableDLB;
             lb_funcs.single = &lewi_mask_single;
             lb_funcs.parallel = &lewi_mask_parallel;
-            lb_funcs.notifymaskchangeto = &lewi_mask_notifymaskchangeto;
 
         } else if (strcasecmp(policy, "auto_LeWI_mask")==0) {
             info0( "Balancing policy: Autonomous LeWI mask" );
@@ -252,7 +281,6 @@ int Initialize(void) {
             lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
             lb_funcs.single = &auto_lewi_mask_single;
             lb_funcs.parallel = &auto_lewi_mask_parallel;
-            lb_funcs.notifymaskchangeto = &auto_lewi_mask_notifymaskchangeto;
             policy_auto=1;
 
         } else if (strcasecmp(policy, "RaL")==0) {
@@ -351,23 +379,15 @@ int Initialize(void) {
         }
 #endif
 
-        info0 ( "This process starts with %d threads", _default_nthreads);
+        info0("This process starts with %d threads", _default_nthreads);
 
         if (options_get_just_barier())
-            info0 ( "Only lending resources when MPI_Barrier "
+            info0("Only lending resources when MPI_Barrier "
                     "(Env. var. LB_JUST_BARRIER is set)" );
 
         if (options_get_lend_mode() == BLOCK)
-            info0 ( "LEND mode set to BLOCKING. I will lend all "
+            info0("LEND mode set to BLOCKING. I will lend all "
                     "the resources when in an MPI call" );
-
-        verbose(VB_API, "Enabled verbose mode for DLB API");
-        verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
-        verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
-        verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
-        verbose(VB_DROM, "Enabled verbose mode for DROM");
-        verbose(VB_STATS, "Enabled verbose mode for STATS");
-        verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
 
 #if IS_BGQ_MACHINE
         int bg_threadmodel;
@@ -386,8 +406,6 @@ int Initialize(void) {
                 clock_gettime(CLOCK_REALTIME, &initComp);
             }*/
 
-        if ( drom_enabled ) drom_init();
-        if ( stats_enabled ) stats_init();
         lb_funcs.init();
         dlb_enabled = true;
         dlb_initialized = true;
@@ -403,8 +421,6 @@ void Finish(int id) {
         dlb_enabled = false;
         dlb_initialized = false;
         lb_funcs.finish();
-        if ( stats_enabled ) stats_finalize();
-        if ( drom_enabled ) drom_finalize();
         unload_modules();
     }
     /*  if (prof){
@@ -430,13 +446,13 @@ void Finish(int id) {
 
 void Terminate(void) {
     lb_funcs.finish();
-    if ( stats_enabled ) stats_finalize();
-    if ( drom_enabled ) drom_finalize();
+    unload_modules();
 }
 
 void Update(void) {
-    if ( drom_enabled ) drom_update();
-    if ( stats_enabled ) stats_update();
+    if (dlb_enabled) {
+        shmem_procinfo__update(drom_enabled, stats_enabled);
+    }
 }
 
 void IntoCommunication(void) {
@@ -496,7 +512,10 @@ void returnclaimed(void) {
 
 int releasecpu(int cpu) {
     if (dlb_enabled) {
-        return lb_funcs.releasecpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
+        int error = lb_funcs.releasecpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+        return error;
     } else {
         return 0;
     }
@@ -504,7 +523,10 @@ int releasecpu(int cpu) {
 
 int returnclaimedcpu(int cpu) {
     if (dlb_enabled) {
-        return lb_funcs.returnclaimedcpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_RETURN_CPU);
+        int error = lb_funcs.returnclaimedcpu(cpu);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+        return error;
     } else {
         return 0;
     }
@@ -558,12 +580,16 @@ void parallelmode(void) {
     lb_funcs.parallel();
 }
 
+void nodebarrier(void) {
+    shmem_barrier();
+}
+
 int is_auto(void){
    return policy_auto;
 }
 
 void notifymaskchangeto(const cpu_set_t* mask) {
-    lb_funcs.notifymaskchangeto(mask);
+    shmem_cpuinfo__update_ownership(mask);
 }
 
 void notifymaskchange(void) {
@@ -572,9 +598,15 @@ void notifymaskchange(void) {
     notifymaskchangeto(&process_mask);
 }
 
-
-// FIXME
-void shmem_cpuarray__print_info(void);
 void printShmem(void) {
-    shmem_cpuarray__print_info();
+    pm_init();
+    options_init();
+    debug_init();
+    shmem_cpuinfo_ext__init();
+    shmem_cpuinfo_ext__print_info();
+    shmem_cpuinfo_ext__finalize();
+    shmem_procinfo_ext__init();
+    shmem_procinfo_ext__print_info();
+    shmem_procinfo_ext__finalize();
+    options_finalize();
 }

@@ -26,6 +26,7 @@
 const char* options_get_policy(void);
 bool options_get_statistics(void);
 bool options_get_drom(void);
+bool options_get_barrier(void);
 bool options_get_just_barier(void);
 blocking_mode_t options_get_lend_mode(void);
 verbose_opts_t options_get_verbose(void);
@@ -39,6 +40,7 @@ bool options_get_bind(void);
 const char* options_get_thread_distribution(void);
 bool options_get_aggressive_init(void);
 bool options_get_priorize_locality(void);
+verbose_fmt_t options_get_debug_opts(void);
 
 void options_init(void);
 void options_finalize(void);

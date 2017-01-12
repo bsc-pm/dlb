@@ -50,7 +50,7 @@ void after_init(void) {
     MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
     MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
 
-    char hostname[HOST_NAME_MAX];
+    char hostname[HOST_NAME_MAX] = {'\0'};
     char recvData[_mpi_size][HOST_NAME_MAX];
 
     if (gethostname(hostname, HOST_NAME_MAX)<0) {

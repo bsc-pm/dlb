@@ -20,7 +20,9 @@
 #ifndef LEWI_MASK_H
 #define LEWI_MASK_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
@@ -56,8 +58,6 @@ void lewi_mask_enableDLB(void);
 void lewi_mask_single(void);
 
 void lewi_mask_parallel(void);
-
-void lewi_mask_notifymaskchangeto(const cpu_set_t* process_mask);
 
 #endif /* LEWI_MASK_H */
 

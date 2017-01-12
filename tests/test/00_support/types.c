@@ -17,22 +17,59 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef NUMTHREADS_H
-#define NUMTHREADS_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
+</testinfo>*/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "support/types.h"
+#include "support/options.h"
 
-void pm_init(void);
-void update_threads(int threads);
-void get_mask(cpu_set_t *cpu_set);
-int  set_mask(const cpu_set_t *cpu_set);
-void add_mask(const cpu_set_t *cpu_set);
-void get_process_mask(cpu_set_t *cpu_set);
-int  set_process_mask(const cpu_set_t *cpu_set);
-void add_process_mask(const cpu_set_t *cpu_set);
-int  get_thread_num(void);
+int main(int argc, char *argv[]) {
+    verbose_opts_t vb_opts;
+    verbose_fmt_t vbf_opts;
+    int error = 0;
 
-#endif //NUMTHREADS_H
+    parse_verbose_opts("api", &vb_opts);
+    if (vb_opts != VB_API) {
+        error++;
+        fprintf(stderr, "Simple verbose option failed\n");
+    }
+
+    parse_verbose_opts("shmem:mpi_api:drom", &vb_opts);
+    if (vb_opts != (VB_SHMEM | VB_MPI_API | VB_DROM)) {
+        error++;
+        fprintf(stderr, "Multiple verbose option failed\n");
+    }
+
+    parse_verbose_fmt("mpinode", &vbf_opts);
+    if (vbf_opts != VBF_MPINODE) {
+        error++;
+        fprintf(stderr, "Simple verbose format option failed\n");
+    }
+
+    parse_verbose_fmt("node:pid:thread", &vbf_opts);
+    if (vbf_opts != (VBF_NODE | VBF_PID | VBF_THREAD)) {
+        error++;
+        fprintf(stderr, "Multiple verbose format option failed\n");
+    }
+
+    // Check DLB defaults
+    options_init();
+    vb_opts = options_get_verbose();
+    if (vb_opts != VB_CLEAR) {
+        error++;
+        fprintf(stderr, "Default verbose option failed\n");
+    }
+
+    vbf_opts = options_get_verbose_fmt();
+    if (vbf_opts != (VBF_NODE | VBF_PID | VBF_THREAD)) {
+        error++;
+        fprintf(stderr, "Default verbose format option failed\n");
+    }
+    options_finalize();
+
+    return error;
+}

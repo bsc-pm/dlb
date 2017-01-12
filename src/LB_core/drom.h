@@ -20,12 +20,10 @@
 #ifndef DROM_H
 #define DROM_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
-
-void drom_init(void);
-void drom_finalize(void);
-void drom_update(void);
 
 void drom_ext_init(void);
 void drom_ext_finalize(void);
@@ -33,6 +31,7 @@ int drom_ext_getnumcpus(void);
 void drom_ext_getpidlist(int *pidlist, int *nelems, int max_len);
 int drom_ext_getprocessmask(int pid, cpu_set_t *mask);
 int drom_ext_setprocessmask(int pid, const cpu_set_t *mask);
-void drom_ext_printshmem(void);
+int drom_ext_getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
+int drom_ext_preregister(int pid, const cpu_set_t *mask, int steal);
 
 #endif /* DROM_H */

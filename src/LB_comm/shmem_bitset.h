@@ -20,7 +20,9 @@
 #ifndef SHMEM_BITSET_H
 #define SHMEM_BITSET_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 #include <stdbool.h>
 

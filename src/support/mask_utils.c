@@ -21,7 +21,9 @@
 #include <config.h>
 #endif
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
@@ -173,6 +175,11 @@ int mu_get_system_size( void ) {
     return sys.size;
 }
 
+void mu_get_system_mask(cpu_set_t *mask) {
+    if ( !mu_initialized ) mu_init();
+    memcpy(mask, &sys.sys_mask, sizeof(cpu_set_t));
+}
+
 /* Returns the set of parent's masks (aka: socket masks) for the given child_set being condition:
  * MU_ANY_BIT: the intersection between the socket and the child_set must be non-empty
  * MU_ALL_BITS: the socket mask must be a subset of child_set
@@ -190,6 +197,21 @@ void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, 
             CPU_OR( affinity_set, affinity_set, &(sys.parents[i]) );
         }
     }
+}
+
+/* Returns true is all bits in subset are set in superset */
+bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset) {
+    // The condition is true if the intersection is identical to subset
+    cpu_set_t intxn;
+    CPU_AND(&intxn, subset, superset);
+    return CPU_EQUAL(&intxn, subset);
+}
+
+/* Return the minuend after substracting the bits in substrahend */
+void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend) {
+    cpu_set_t xor;
+    CPU_XOR(&xor, minuend, substrahend);
+    CPU_AND(result, minuend, &xor);
 }
 
 // mu_to_str and mu_parse_mask functions are used by DLB utilities
@@ -222,7 +244,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     CPU_ZERO( mask );
 
     /* Compile regular expression */
-    if ( regcomp(&regex_bitmask, "^[0-1][0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
+    if ( regcomp(&regex_bitmask, "^[0-1][0-1]+[bB]$", REG_EXTENDED|REG_NOSUB) ) {
         fatal0( "Could not compile regex");
     }
 
@@ -230,7 +252,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         fatal0( "Could not compile regex");
     }
 
-    /* Regular expression matches bitmask, e.g.: 11110011 */
+    /* Regular expression matches bitmask, e.g.: 11110011b */
     if ( !regexec(&regex_bitmask, str, 0, NULL, 0) ) {
         // Parse
         int i;
@@ -260,16 +282,20 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             }
             // Range
             else if ( *ptr == '-' ) {
+                // Discard '-' and possible junk
                 ptr++;
                 if ( !isdigit(*ptr) ) { ptr++; continue; }
+
                 unsigned int end = strtoul( ptr, &endptr, 10 );
+                ptr = endptr;
+
+                // Valid range
                 if ( end > start ) {
                     int i;
                     for ( i=start; i<=end && i<sys.size; i++ ) {
                         CPU_SET( i, mask );
                     }
                 }
-                ptr++;
                 continue;
             }
             // Unexpected token
@@ -283,7 +309,12 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     regfree(&regex_range);
 
     if ( CPU_COUNT(mask) == 0 ) {
-        warning( "Parsed mask \"%s\"does not seem to be a valid mask\n", str );
+        warning( "Parsed mask \"%s\" does not seem to be a valid mask\n", str );
     }
 }
 #pragma GCC visibility pop
+
+void mu_testing_set_sys_size(int size) {
+    // For testing purposes only
+    sys.size = size;
+}

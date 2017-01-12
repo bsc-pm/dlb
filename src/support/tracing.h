@@ -33,6 +33,7 @@
 #define EVENT_RETRIEVE    10
 #define EVENT_RESET       11
 #define EVENT_ACQUIRE_CPU 12
+#define EVENT_BARRIER     13
 
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040

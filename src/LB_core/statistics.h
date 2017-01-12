@@ -20,10 +20,6 @@
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
-void stats_init(void);
-void stats_finalize(void);
-void stats_update(void);
-
 void stats_ext_init(void);
 void stats_ext_finalize(void);
 int stats_ext_getnumcpus(void);
@@ -40,6 +36,5 @@ int stats_ext_getloadavg(int pid,double *load);
 float stats_ext_getcpustateidle(int cpu);
 float stats_ext_getcpustateowned(int cpu);
 float stats_ext_getcpustateowned(int cpu);
-void stats_ext_printshmem(void);
 
 #endif /* STATISTICS_H */

@@ -14,7 +14,7 @@ The DLB API can be divided into:
         The advanced set is oriented to programming model runtimes but can be used by
         applications also.  The advanced functions will be explained in detail in section
         :ref:`advanced-api`.
-        
+
     MPI API
         This is a specific API for MPI. We offer an MPI interface that will be called by
         Extrae if we are tracing the application or internally in the MPI intercept API.
@@ -22,7 +22,7 @@ The DLB API can be divided into:
 
         - DLB_<mpi_call_name>_enter(...)
         - DLB_<mpi_call_name>_leave(...)
-        
+
 ..        There is one API function that is aimed to be called by the user, explained in section :ref:`mpi-api`.
 
 ..     Statistics

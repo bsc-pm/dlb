@@ -39,6 +39,9 @@ bool options_get_statistics(void) { return opt_statistics; }
 static bool opt_drom;
 bool options_get_drom(void) { return opt_drom; }
 
+static bool opt_barrier;
+bool options_get_barrier(void) { return opt_barrier; }
+
 static bool opt_just_barrier;
 bool options_get_just_barier(void) { return opt_just_barrier; }
 
@@ -78,6 +81,9 @@ bool options_get_aggressive_init(void) { return opt_aggressive_init; }
 static bool opt_prioritize_locality;
 bool options_get_priorize_locality(void) { return opt_prioritize_locality; }
 
+static debug_opts_t opt_debug_opts;
+verbose_fmt_t options_get_debug_opts(void) { return opt_debug_opts; }
+
 
 typedef enum OptionTypes {
     OPT_BOOL_T,
@@ -85,7 +91,8 @@ typedef enum OptionTypes {
     OPT_STR_T,
     OPT_BLCK_T,     // blocking_mode_t
     OPT_VB_T,       // verbose_opts_t
-    OPT_VBFMT_T     // verbose_fmt_t
+    OPT_VBFMT_T,    // verbose_fmt_t
+    OPT_DBG_T       // debug_opts_t
 } option_type_t;
 
 typedef struct {
@@ -202,6 +209,13 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
                 parse_verbose_fmt(default_value, (verbose_fmt_t*)new_option->value);
             }
             break;
+        case(OPT_DBG_T):
+            if (user_value) {
+                parse_debug_opts(user_value, (debug_opts_t*)new_option->value);
+            } else if (default_value) {
+                parse_debug_opts(default_value, (debug_opts_t*)new_option->value);
+            }
+            break;
     }
 
     fatal_cond(!optional && !new_option->value,
@@ -212,6 +226,9 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
 }
 
 void options_init(void) {
+    // options_init is not thread-safe
+    if (options) return;
+
     const bool RO = true;
     const bool RW = false;
     const bool OPTIONAL = true;
@@ -221,8 +238,8 @@ void options_init(void) {
     // Copy LB_ARGS env. variable
     char *env_lb_args = getenv("LB_ARGS");
     if (env_lb_args) {
-        size_t len = strlen(env_lb_args);
-        lb_args = (char*)malloc(1+sizeof(char)*len);
+        size_t len = strlen(env_lb_args) + 1;
+        lb_args = (char*)malloc(sizeof(char)*len);
         strncpy(lb_args, env_lb_args, len);
     }
 
@@ -247,6 +264,10 @@ void options_init(void) {
     options[i++] = register_option("LB_DROM", "--drom",
             OPT_BOOL_T, &opt_drom, RO, OPTIONAL, &FALSE,
             "Enable the Dynamic Resource Ownership Manager Module");
+
+    options[i++] = register_option("LB_BARRIER", "--barrier",
+            OPT_BOOL_T, &opt_barrier, RO, OPTIONAL, &FALSE,
+            "Enable the Shared Memory Barrier");
 
     // MPI
     options[i++] = register_option("LB_JUST_BARRIER", "--just-barrier",
@@ -311,17 +332,26 @@ void options_init(void) {
             OPT_BOOL_T, &opt_prioritize_locality, RW, OPTIONAL, &FALSE,
             "Prioritize resource sharing by HW proximity");
 
-    num_options = i;
+    options[i++] = register_option("LB_DEBUG_OPTS", "--debug-opts",
+            OPT_DBG_T, &opt_debug_opts, RW, OPTIONAL, NULL,
+            "Debug options list: (register-signals, return-stolen). Delimited by the character :");
+
+    ensure(num_options==i, "Number of registered options does not match");
     ensure(num_options<=MAX_OPTIONS, "Number of options registered greater than maximum" );
 }
 
 void options_finalize(void) {
     int i;
-    for (i=0; i<num_options; ++i) {
-        free(options[i]);
+    if (options) {
+        for (i=0; i<num_options; ++i) {
+            free(options[i]);
+        }
+        free(options);
+        free(lb_args);
+        options = NULL;
+        lb_args = NULL;
+        num_options = 0;
     }
-    free(options);
-    free(lb_args);
 }
 
 /* API Setter */
@@ -358,6 +388,8 @@ int options_set_variable(const char *var_name, const char *value) {
         case OPT_VBFMT_T:
             parse_verbose_fmt(value, (verbose_fmt_t*)option->value);
             break;
+        case OPT_DBG_T:
+            parse_debug_opts(value, (debug_opts_t*)option->value);
     }
 
     return 0;
@@ -394,6 +426,9 @@ int options_get_variable(const char *var_name, char *value) {
             sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
             break;
         case OPT_VBFMT_T:
+            sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
+            break;
+        case OPT_DBG_T:
             sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
             break;
     }

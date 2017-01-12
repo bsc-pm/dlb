@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2016 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,22 +17,11 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef NUMTHREADS_H
-#define NUMTHREADS_H
+#ifndef SHMEM_BARRIER_H
+#define SHMEM_BARRIER_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
+void shmem_barrier_init(void);
+void shmem_barrier_finalize(void);
+void shmem_barrier(void);
 
-void pm_init(void);
-void update_threads(int threads);
-void get_mask(cpu_set_t *cpu_set);
-int  set_mask(const cpu_set_t *cpu_set);
-void add_mask(const cpu_set_t *cpu_set);
-void get_process_mask(cpu_set_t *cpu_set);
-int  set_process_mask(const cpu_set_t *cpu_set);
-void add_process_mask(const cpu_set_t *cpu_set);
-int  get_thread_num(void);
-
-#endif //NUMTHREADS_H
+#endif /* SHMEM_BARRIER_H */
