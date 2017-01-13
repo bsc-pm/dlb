@@ -204,14 +204,17 @@ void shmem_procinfo__update(bool do_drom, bool do_stats) {
 
     if (shm_handler == NULL || shdata == NULL) return;
 
-    // Do not update loads if the elapsed total time is less than a predefined threshold
-    struct timespec now;
-    int64_t elapsed;
-    get_time_coarse( &now );
-    elapsed = timespec_diff( &last_ttime, &now );
-
     bool update_mask = do_drom && shdata->process_info[my_process].dirty;
-    bool update_load = do_stats && elapsed >= UPDATE_USAGE_MIN_THRESHOLD;
+
+    bool update_load = false;
+    if (do_stats) {
+        // Do not update loads if the elapsed total time is less than a predefined threshold
+        struct timespec now;
+        int64_t elapsed;
+        get_time_coarse( &now );
+        elapsed = timespec_diff( &last_ttime, &now );
+        update_load = elapsed >= UPDATE_USAGE_MIN_THRESHOLD;
+    }
 
     if (update_mask || update_load) {
         shmem_lock(shm_handler);
