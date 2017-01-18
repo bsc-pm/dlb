@@ -83,6 +83,7 @@ static const char *shmem_name = "procinfo";
 static pinfo_t* get_process(spid_t pid);
 static void update_process_loads(void);
 static void update_process_mask(void);
+static void update_process_mask_new(int *new_threads, cpu_set_t *new_mask);
 static int  register_mask(pinfo_t *new_owner, const cpu_set_t *mask);
 static int  unregister_mask(pinfo_t *owner, const cpu_set_t *mask);
 static int  set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run);
@@ -228,6 +229,32 @@ void shmem_procinfo__update(bool do_drom, bool do_stats) {
         }
         shmem_unlock(shm_handler);
     }
+}
+
+// New proposal for update function. Return nthreads and mask, and let the caller adjust.
+int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask) {
+    if (shm_handler == NULL || shdata == NULL) return DLB_ERR_NOSHMEM;
+
+    int error = DLB_ERR_NOUPDT;
+
+    bool update_mask = do_drom && shdata->process_info[my_process].dirty;
+
+    bool update_load = false; // no stats for now
+
+    if (update_mask || update_load) {
+        shmem_lock(shm_handler);
+        {
+            if (update_mask) {
+                update_process_mask_new(new_threads, new_mask);
+            }
+            //if (update_load) {
+            //    update_process_loads();
+            //}
+        }
+        shmem_unlock(shm_handler);
+        error = DLB_SUCCESS;
+    }
+    return error;
 }
 
 int shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask) {
@@ -758,6 +785,21 @@ static void update_process_mask(void) {
     memcpy(&shdata->process_info[my_process].future_process_mask, next_mask, sizeof(cpu_set_t));
     shdata->process_info[my_process].dirty = false;
     shdata->process_info[my_process].returncode = error;
+}
+
+static void update_process_mask_new(int *new_threads, cpu_set_t *new_mask) {
+    pinfo_t *process = &shdata->process_info[my_process];
+
+    // Update parameters
+    //   new_threads is optional for the user
+    //   new_mask is also optional for the user, but DLB allocates a new mask if not present
+    memcpy(new_mask, &process->future_process_mask, sizeof(cpu_set_t));
+    if (new_threads != NULL) *new_threads = CPU_COUNT(&process->future_process_mask);
+
+    // Update local info
+    memcpy(&process->current_process_mask, &process->future_process_mask, sizeof(cpu_set_t));
+    shdata->process_info[my_process].dirty = false;
+    shdata->process_info[my_process].returncode = 0;
 }
 
 // Register a new set of CPUs. Remove them from the free_mask and assign them to new_owner if ok

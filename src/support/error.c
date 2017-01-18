@@ -24,11 +24,14 @@
 static const char* error_msg[] = {
     /* DLB_SUCCESS */       "Success",
     /* DLB_ERR_UNKNOWN */   "Unknown error",
+    /* DLB_ERR_NOINIT */    "DLB is not initialized",
+    /* DLB_ERR_DISBLD */    "DLB is disabled",
     /* DLB_ERR_NOSHMEM */   "No shared memory",
     /* DLB_ERR_NOPROC */    "No pid",
     /* DLB_ERR_PDIRTY */    "pid dirty, can't update",
     /* DLB_ERR_PERM */      "permission error",
-    /* DLB_ERR_TIMEOUT */   "timeout"
+    /* DLB_ERR_TIMEOUT */   "timeout",
+    /* DLB_ERR_NOUPDT */    "no update needed"
 };
 
 const char* error_get_str(int errnum) {

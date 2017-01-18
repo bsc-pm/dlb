@@ -455,6 +455,23 @@ void Update(void) {
     }
 }
 
+// FIXME header
+int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask);
+int Update_new(int *new_threads, cpu_set_t *new_mask) {
+    int error = DLB_ERR_UNKNOWN;
+    if (dlb_enabled) {
+        cpu_set_t *mask = (new_mask != NULL) ? new_mask : (cpu_set_t*)malloc(sizeof(cpu_set_t));
+        error = shmem_procinfo__update_new(drom_enabled, stats_enabled, new_threads, mask);
+        if (error == DLB_SUCCESS) {
+            // can this function return error?
+            shmem_cpuinfo__update_ownership(mask);
+        }
+    } else {
+        error = DLB_ERR_DISBLD;
+    }
+    return error;
+}
+
 void IntoCommunication(void) {
     /*  struct timespec aux;
         clock_gettime(CLOCK_REALTIME, &initMPI);

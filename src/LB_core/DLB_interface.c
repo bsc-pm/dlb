@@ -123,6 +123,12 @@ void DLB_Update(void) {
     Update();
 }
 
+// FIXME testing API
+int Update_new(int *new_threads, cpu_set_t *new_mask);
+int DLB_poll_new_threads(int *nthreads, dlb_cpu_set_t mask) {
+    return Update_new(nthreads, mask);
+}
+
 void DLB_AcquireCpu(int cpu) {
     acquirecpu(cpu);
 }

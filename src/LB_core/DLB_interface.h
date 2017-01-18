@@ -162,6 +162,9 @@ int DLB_Is_auto(void);
  */
 void DLB_Update(void);
 
+// FIXME API in testing
+int DLB_poll_new_threads(int *nthreads, dlb_cpu_set_t mask);
+
 /* \brief Barrier between processes in the node
  */
 void DLB_Barrier(void);
