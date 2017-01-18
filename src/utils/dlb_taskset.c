@@ -46,6 +46,7 @@ static void dlb_check(int error, pid_t pid, const char* func) {
         } else {
             fprintf(stderr, "Operation %s did not succeed\n", func);
         }
+        fprintf(stderr, "Return code %d (%s)\n", error, DLB_strerror(error));
         DLB_Drom_Finalize();
         exit(EXIT_FAILURE);
     }

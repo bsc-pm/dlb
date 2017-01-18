@@ -185,6 +185,8 @@ COMMON_SRCS = \
 	src/support/options.h           \
 	src/support/types.c             \
 	src/support/types.h             \
+	src/support/error.c             \
+	src/support/error.h             \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la
