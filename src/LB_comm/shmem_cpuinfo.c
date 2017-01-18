@@ -29,6 +29,7 @@
 #include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
 #include "support/types.h"
+#include "support/error.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
 #include "support/options.h"
@@ -722,7 +723,7 @@ void shmem_cpuinfo_ext__finalize(void) {
 }
 
 int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
-    int error = 0;
+    int error = DLB_SUCCESS;
 
     mu_parse_mask(options_get_mask(), &dlb_mask);
     cpu_set_t affinity_mask;
@@ -739,7 +740,7 @@ int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
                     shmem_unlock(shm_ext_handler);
                     warning("Error trying to acquire CPU %d, already owned by process %d",
                             cpu, owner);
-                    error = 1;
+                    error = DLB_ERR_PERM;
                 }
             }
         }

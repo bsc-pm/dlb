@@ -30,6 +30,7 @@
 #include "support/tracing.h"
 #include "support/debug.h"
 #include "support/options.h"
+#include "support/error.h"
 
 // sub-process ID
 static int spid = 0;
@@ -158,6 +159,10 @@ int DLB_GetVariable(const char *variable, char *value) {
 
 void DLB_PrintVariables(void) {
     options_print_variables();
+}
+
+const char* DLB_strerror(int errnum) {
+    return error_get_str(errnum);
 }
 
 /* Statistics API */

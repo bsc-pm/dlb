@@ -206,6 +206,8 @@ int DLB_GetVariable(const char *variable, char *value);
  */
 void DLB_PrintVariables(void);
 
+const char* DLB_strerror(int errnum);
+
 /*******************************************************/
 /*    Statistics Module                                */
 /*******************************************************/

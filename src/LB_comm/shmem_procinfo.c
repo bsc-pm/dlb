@@ -31,6 +31,7 @@
 #include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
 #include "support/types.h"
+#include "support/error.h"
 #include "support/options.h"
 #include "support/mytime.h"
 #include "support/mask_utils.h"
@@ -227,7 +228,7 @@ void shmem_procinfo__update(bool do_drom, bool do_stats) {
 }
 
 int shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask) {
-    if (shm_handler == NULL) return -1;
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
     return getprocessmask(shm_handler, pid, mask);
 }
 
@@ -272,9 +273,9 @@ void shmem_procinfo_ext__finalize(void) {
 }
 
 int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
-    if (shm_ext_handler == NULL) return -1;
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
-    int error = 0;
+    int error = DLB_SUCCESS;;
     shmem_lock(shm_ext_handler);
     {
         int p;
@@ -345,14 +346,14 @@ void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len) {
 }
 
 int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask) {
-    if (shm_ext_handler == NULL) return -1;
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
     return getprocessmask(shm_ext_handler, pid, mask);
 }
 
 int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
-    if (shm_ext_handler == NULL) return -1;
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
-    int error = 0;
+    int error = DLB_SUCCESS;
     pinfo_t *process;
     shmem_lock(shm_ext_handler);
     {
@@ -360,13 +361,13 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
         process = get_process(pid);
         if (process == NULL) {
             verbose(VB_DROM, "Setting mask: cannot find process with pid %d", pid);
-            error = -1;
+            error = DLB_ERR_NOPROC;
         }
 
         // Process already dirty
         if (!error && process->dirty) {
             verbose(VB_DROM, "Setting mask: process %d is already dirty", pid);
-            error = -1;
+            error = DLB_ERR_PDIRTY;
         }
 
         // Run first a dry run to see if the mask can be completely stolen. If it's ok, run it.
@@ -381,6 +382,9 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
         struct timespec start, now;
         get_time_coarse(&start);
         while(true) {
+
+            // TODO Check if process is still valid
+            // error = DLB_ERR_NOPROC;
 
             // Delay
             usleep(SYNC_POLL_DELAY);
@@ -403,7 +407,7 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
             get_time_coarse(&now);
             elapsed = timespec_diff(&start, &now);
             if (elapsed > SYNC_POLL_TIMEOUT) {
-                error = -1;
+                error = DLB_ERR_TIMEOUT;
                 break;
             }
         }
@@ -517,7 +521,7 @@ double shmem_procinfo_ext__getnodeavgusage(void) {
 }
 
 int shmem_procinfo_ext__getactivecpus(int pid) {
-    if (shm_ext_handler == NULL) return -1;
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int active_cpus = -1;
     shmem_lock(shm_ext_handler);
@@ -550,7 +554,7 @@ void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_
 }
 
 int shmem_procinfo_ext__getloadavg(int pid, double *load) {
-    if (shm_ext_handler == NULL) return -1;
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
     int error = -1;
 #ifdef DLB_LOAD_AVERAGE
     shmem_lock(shm_ext_handler);
@@ -570,7 +574,7 @@ int shmem_procinfo_ext__getloadavg(int pid, double *load) {
 
 int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
     *nelems = 0;
-    if (shm_ext_handler == NULL) return -1;
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int n_elems = 0;
     shmem_lock(shm_ext_handler);
@@ -756,23 +760,23 @@ static void update_process_mask(void) {
 // Register a new set of CPUs. Remove them from the free_mask and assign them to new_owner if ok
 static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
     // Return if empty mask
-    if (CPU_COUNT(mask) == 0) return 0;
+    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
     verbose(VB_DROM, "Process %d registering mask %s", new_owner->pid, mu_to_str(mask));
     if (mu_is_subset(mask, &shdata->free_mask)) {
         mu_substract(&shdata->free_mask, &shdata->free_mask, mask);
         CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
         new_owner->dirty = true;
-        return 0;
+        return DLB_SUCCESS;
     }
-    return -1;
+    return DLB_ERR_PERM;
 }
 
 // Unregister CPUs. Either add them to the free_mask or give them back to their owner
 //   * update: only return CPUs if it's enabled in debug options
 static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask) {
     // Return if empty mask
-    if (CPU_COUNT(mask) == 0) return 0;
+    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
     verbose(VB_DROM, "Process %d unregistering mask %s", owner->pid, mu_to_str(mask));
     if (options_get_debug_opts() & DBG_RETURNSTOLEN) {
@@ -805,7 +809,7 @@ static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask) {
         mu_substract(&owner->future_process_mask, &owner->future_process_mask, mask);
         owner->dirty = true;
     }
-    return 0;
+    return DLB_SUCCESS;
 }
 
 // Configure a new cpu_set for the process
@@ -867,11 +871,11 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool dry_run) {
             if (p == max_processes) {
                 // No process returned a success
                 verbose(VB_DROM, "CPU %d could not get acquired", c);
-                return -1;
+                return DLB_ERR_PERM;
             }
         }
     }
-    return 0;
+    return DLB_SUCCESS;
 }
 
 // Return true if CPU can be stolen from victim. If so, set the appropriate masks.
