@@ -44,6 +44,7 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_barrier.h"
 #include "support/debug.h"
+#include "support/error.h"
 #include "support/globals.h"
 #include "support/tracing.h"
 #include "support/options.h"
