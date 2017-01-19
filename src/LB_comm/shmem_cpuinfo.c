@@ -74,6 +74,7 @@ static bool cpu_is_public_post_mortem = false;
 static const char *shmem_name = "cpuinfo";
 
 static inline bool is_idle(int cpu);
+static inline bool is_borrowed(int cpu);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
@@ -437,104 +438,122 @@ int shmem_cpuinfo__return_claimed(cpu_set_t *mask) {
  * If successful:       Guest => ME
  */
 int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources) {
+    // Do nothing if max_resources is non-positive
+    if (max_resources <= 0) return 0;
+
     int cpu;
     int collected = 0;
-    bool some_idle_cpu = false;
+    bool collect = false;
 
     DLB_DEBUG( cpu_set_t idle_cpus; )
     DLB_DEBUG( CPU_ZERO(&idle_cpus); )
 
     DLB_INSTR( int idle_count = 0; )
 
-    // Fast non-safe check to get if there is some idle CPU
+    // Fast non-safe check to get if there is any CPU available
     for (cpu = 0; cpu < node_size; cpu++) {
-        some_idle_cpu = is_idle(cpu);
-        if (some_idle_cpu) break;
+        collect = is_idle(cpu) || is_borrowed(cpu);
+        if (collect) break;
     }
 
-    if (some_idle_cpu && max_resources > 0) {
-
-        // Since the process mask may change during the execution,
-        // we need to compute the affinity_mask everytime
-        // FIXME: Fast non-safe check to get the updated process mask
-        cpu_set_t process_mask;
-        CPU_ZERO(&process_mask);
-        for (cpu = 0; cpu < node_size; cpu++) {
-            if (shdata->node_info[cpu].owner == ME) {
-                CPU_SET(cpu, &process_mask);
-            }
-        }
-
-        // FIXME: get process_mask and free_mask from the procinfo_shmem?
-        cpu_set_t free_mask;
-        CPU_ZERO(&free_mask);
-        for (cpu=0; cpu<node_size; ++cpu) {
-            if (shdata->node_info[cpu].state == CPU_LENT
-                    && shdata->node_info[cpu].guest == NOBODY) {
-                CPU_SET(cpu, &free_mask);
-            }
-        }
-
-        // Set up some masks to collect from, depending on the priority level
-        priority_opts_t priority = options_get_priority();
-        const int NUM_TARGETS = 2;
-        cpu_set_t *target_mask[NUM_TARGETS];
-
-        // mask[0]
-        int t = 0;
-        switch (priority) {
-            case PRIO_NONE:
-                target_mask[t] = &free_mask;
-                break;
-            case PRIO_AFFINITY_FIRST:
-            case PRIO_AFFINITY_FULL:
-            case PRIO_AFFINITY_ONLY:
-                target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
-                mu_get_affinity_mask(target_mask[t], &process_mask, MU_ANY_BIT);
-                CPU_AND(target_mask[t], target_mask[t], &free_mask);
-                break;
-        }
-
-        // mask[1]
-        t = 1;
-        switch (priority) {
-            case PRIO_NONE:
-            case PRIO_AFFINITY_ONLY:
-                target_mask[t] = NULL;
-                break;
-            case PRIO_AFFINITY_FIRST:
-                target_mask[t] = &free_mask;
-                break;
-            case PRIO_AFFINITY_FULL:
-                // Obtain affinity mask from free_mask, if ALL bits on the same sockets are free
-                target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
-                mu_get_affinity_mask(target_mask[t], &free_mask, MU_ALL_BITS);
-                CPU_AND(target_mask[t], target_mask[t], &free_mask);
-                break;
-        }
+    if (collect) {
 
         shmem_lock(shm_handler);
         {
-            // Collect CPUs from target_mask[] in order
-            for (t=0; t<NUM_TARGETS; ++t) {
-                if (target_mask[t] == NULL || CPU_COUNT(target_mask[t]) == 0) continue;
-                for (cpu=0; cpu<node_size && max_resources>0; ++cpu) {
-                    if (CPU_ISSET(cpu, target_mask[t])) {
+            // Collect first owned CPUs
+            for (cpu=0; cpu<node_size && max_resources>0; ++cpu) {
+                if (shdata->node_info[cpu].owner == ME &&
+                        shdata->node_info[cpu].guest != ME) {
+                    shdata->node_info[cpu].state = CPU_BUSY;
+                    --max_resources;
+
+                    if (shdata->node_info[cpu].guest == NOBODY) {
                         shdata->node_info[cpu].guest = ME;
-                        update_cpu_stats(cpu, STATS_GUESTED);
-                        CPU_SET(cpu, mask);
-                        max_resources--;
-                        collected++;
+                        update_cpu_stats(cpu, STATS_OWNED);
                     }
                 }
-                verbose(VB_SHMEM, "Getting %d Threads (%s)", collected, mu_to_str(mask));
             }
 
-            // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-            for (cpu=0; cpu<node_size; ++cpu) {
-                if (is_idle(cpu)) {
-                    DLB_INSTR(idle_count++;)
-                    DLB_DEBUG(CPU_SET(cpu, &idle_cpus);)
+            if (max_resources > 0) {
+
+                // FIXME: get process_mask from the procinfo_shmem?
+                cpu_set_t process_mask;
+                CPU_ZERO(&process_mask);
+                for (cpu = 0; cpu<node_size; ++cpu) {
+                    if (shdata->node_info[cpu].owner == ME) {
+                        CPU_SET(cpu, &process_mask);
+                    }
+                }
+
+                // FIXME: get free_mask from the procinfo_shmem?
+                cpu_set_t free_mask;
+                CPU_ZERO(&free_mask);
+                for (cpu=0; cpu<node_size; ++cpu) {
+                    if (shdata->node_info[cpu].state == CPU_LENT
+                            && shdata->node_info[cpu].guest == NOBODY) {
+                        CPU_SET(cpu, &free_mask);
+                    }
+                }
+
+                // Set up some masks to collect from, depending on the priority level
+                priority_opts_t priority = options_get_priority();
+                const int NUM_TARGETS = 2;
+                cpu_set_t *target_mask[NUM_TARGETS];
+
+                // mask[0]
+                int t = 0;
+                switch (priority) {
+                    case PRIO_NONE:
+                        target_mask[t] = &free_mask;
+                        break;
+                    case PRIO_AFFINITY_FIRST:
+                    case PRIO_AFFINITY_FULL:
+                    case PRIO_AFFINITY_ONLY:
+                        target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
+                        mu_get_affinity_mask(target_mask[t], &process_mask, MU_ANY_BIT);
+                        CPU_AND(target_mask[t], target_mask[t], &free_mask);
+                        break;
+                }
+
+                // mask[1]
+                t = 1;
+                switch (priority) {
+                    case PRIO_NONE:
+                    case PRIO_AFFINITY_ONLY:
+                        target_mask[t] = NULL;
+                        break;
+                    case PRIO_AFFINITY_FIRST:
+                        target_mask[t] = &free_mask;
+                        break;
+                    case PRIO_AFFINITY_FULL:
+                        // Get affinity mask from free_mask, only if the FULL socket is free
+                        target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
+                        mu_get_affinity_mask(target_mask[t], &free_mask, MU_ALL_BITS);
+                        CPU_AND(target_mask[t], target_mask[t], &free_mask);
+                        break;
+                }
+
+                // Collect CPUs from target_mask[] in order
+                for (t=0; t<NUM_TARGETS; ++t) {
+                    if (target_mask[t] == NULL || CPU_COUNT(target_mask[t]) == 0) continue;
+                    for (cpu=0; cpu<node_size && max_resources>0; ++cpu) {
+                        if (CPU_ISSET(cpu, target_mask[t])) {
+                            shdata->node_info[cpu].guest = ME;
+                            update_cpu_stats(cpu, STATS_GUESTED);
+                            CPU_SET(cpu, mask);
+                            max_resources--;
+                            collected++;
+                        }
+                    }
+                    verbose(VB_SHMEM, "Getting %d Threads (%s)", collected, mu_to_str(mask));
+                }
+
+                // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
+                for (cpu=0; cpu<node_size; ++cpu) {
+                    if (is_idle(cpu)) {
+                        DLB_INSTR(idle_count++;)
+                        DLB_DEBUG(CPU_SET(cpu, &idle_cpus);)
+                    }
                 }
             }
         }
@@ -854,7 +873,11 @@ void shmem_cpuinfo_ext__print_info(void) {
 
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
 static inline bool is_idle(int cpu) {
-    return (shdata->node_info[cpu].state == CPU_LENT) && (shdata->node_info[cpu].guest == NOBODY);
+    return shdata->node_info[cpu].state == CPU_LENT && shdata->node_info[cpu].guest == NOBODY;
+}
+
+static inline bool is_borrowed(int cpu) {
+    return shdata->node_info[cpu].state == CPU_BUSY && shdata->node_info[cpu].owner == ME;
 }
 
 static void update_cpu_stats(int cpu, stats_state_t new_state) {
