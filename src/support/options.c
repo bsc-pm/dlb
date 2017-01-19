@@ -78,8 +78,8 @@ const char* options_get_thread_distribution(void) { return opt_thread_distributi
 static bool opt_aggressive_init;
 bool options_get_aggressive_init(void) { return opt_aggressive_init; }
 
-static bool opt_prioritize_locality;
-bool options_get_priorize_locality(void) { return opt_prioritize_locality; }
+static priority_opts_t opt_priority;
+priority_opts_t options_get_priority(void) { return opt_priority; }
 
 static debug_opts_t opt_debug_opts;
 verbose_fmt_t options_get_debug_opts(void) { return opt_debug_opts; }
@@ -92,7 +92,8 @@ typedef enum OptionTypes {
     OPT_BLCK_T,     // blocking_mode_t
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
-    OPT_DBG_T       // debug_opts_t
+    OPT_DBG_T,      // debug_opts_t
+    OPT_PRIO_T      // priority_opts_t
 } option_type_t;
 
 typedef struct {
@@ -216,6 +217,13 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
                 parse_debug_opts(default_value, (debug_opts_t*)new_option->value);
             }
             break;
+        case(OPT_PRIO_T):
+            if (user_value) {
+                parse_priority_opts(user_value, (priority_opts_t*)new_option->value);
+            } else if (default_value) {
+                parse_priority_opts(default_value, (priority_opts_t*)new_option->value);
+            }
+            break;
     }
 
     fatal_cond(!optional && !new_option->value,
@@ -328,9 +336,9 @@ void options_init(void) {
             OPT_BOOL_T, &opt_aggressive_init, RO, OPTIONAL, &FALSE,
             "Create as many threads as necessary during the process startup");
 
-    options[i++] = register_option("LB_PRIORITIZE_LOCALITY", "--prioritize-locality",
-            OPT_BOOL_T, &opt_prioritize_locality, RW, OPTIONAL, &FALSE,
-            "Prioritize resource sharing by HW proximity");
+    options[i++] = register_option("LB_PRIORITY", "--priority",
+            OPT_PRIO_T, &opt_priority, RW, OPTIONAL, "affinity_first" ,
+            "Priorize resource sharing by HW affinity");
 
     options[i++] = register_option("LB_DEBUG_OPTS", "--debug-opts",
             OPT_DBG_T, &opt_debug_opts, RW, OPTIONAL, NULL,
@@ -390,6 +398,10 @@ int options_set_variable(const char *var_name, const char *value) {
             break;
         case OPT_DBG_T:
             parse_debug_opts(value, (debug_opts_t*)option->value);
+            break;
+        case OPT_PRIO_T:
+            parse_priority_opts(value, (priority_opts_t*)option->value);
+            break;
     }
 
     return 0;
@@ -423,12 +435,9 @@ int options_get_variable(const char *var_name, char *value) {
             sprintf(value, "%s", *(blocking_mode_t*)option->value == ONE_CPU ? "1CPU" : "BLOCK");
             break;
         case OPT_VB_T:
-            sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
-            break;
         case OPT_VBFMT_T:
-            sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
-            break;
         case OPT_DBG_T:
+        case OPT_PRIO_T:
             sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
             break;
     }

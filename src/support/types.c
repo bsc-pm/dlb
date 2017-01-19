@@ -114,3 +114,15 @@ void parse_debug_opts(const char *str, debug_opts_t *value) {
     }
     free(my_str);
 }
+
+void parse_priority_opts(const char *str, priority_opts_t *value) {
+    if (strcasecmp(str, "none") == 0) {
+        *value = PRIO_NONE;
+    } else if (strcasecmp(str, "affinity_first") == 0) {
+        *value = PRIO_AFFINITY_FIRST;
+    } else if (strcasecmp(str, "affinity_full") == 0) {
+        *value = PRIO_AFFINITY_FULL;
+    } else if (strcasecmp(str, "affinity_only") == 0) {
+        *value = PRIO_AFFINITY_ONLY;
+    }
+}
