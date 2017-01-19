@@ -231,6 +231,7 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
 
     if ( size > 0 && max_resources > 0) {
 
+        priority_opts_t priority = options_get_priority();
         cpu_set_t candidates_mask;
         cpu_set_t affinity_mask;
         mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );
@@ -255,9 +256,9 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
 
             assert(collected==CPU_COUNT(mask)-aux);
             /* Second Step: Retrieve non-affine cpus, if needed */
-            if ( size-collected > 0 && max_resources > 0 ) {
+            if ( size-collected > 0 && max_resources > 0 && priority != PRIO_AFFINITY_ONLY) {
 
-                if ( options_get_priorize_locality() ) {
+                if ( priority == PRIO_AFFINITY_FULL ) {
                     mu_get_affinity_mask( &affinity_mask, &(shdata->given_cpus), MU_ALL_BITS );
                     CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
                 } else {

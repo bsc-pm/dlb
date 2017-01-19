@@ -39,7 +39,7 @@ const char* options_get_shm_key(void);
 bool options_get_bind(void);
 const char* options_get_thread_distribution(void);
 bool options_get_aggressive_init(void);
-bool options_get_priorize_locality(void);
+priority_opts_t options_get_priority(void);
 verbose_fmt_t options_get_debug_opts(void);
 
 void options_init(void);
