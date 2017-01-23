@@ -286,4 +286,30 @@ void DLB_MPI_node_barrier(void) {
 void DLB_MPI_node_barrier(void) {}
 #endif
 
+// testing API for callbacks
+#include "LB_core/callbacks.h"
+#include "support/error.h"
+
+int pm_callback_set(dlb_callbacks_t which, dlb_callback_t callback);
+int pm_callback_get(dlb_callbacks_t which, dlb_callback_t callback);
+
+int DLB_callback_set(dlb_callbacks_t which, dlb_callback_t callback) {
+    return pm_callback_set(which, callback);
+}
+
+int DLB_callback_get(dlb_callbacks_t which, dlb_callback_t callback) {
+    return pm_callback_get(which, callback);
+}
+
+int pm_getter_set(dlb_getters_t which, dlb_getter_t getter);
+int pm_getter_get(dlb_getters_t which, dlb_getter_t getter);
+
+int DLB_getter_set(dlb_getters_t which, dlb_getter_t getter) {
+    return pm_getter_set(which, getter);
+}
+
+int DLB_getter_get(dlb_getters_t which, dlb_getter_t getter) {
+    return pm_getter_get(which, getter);
+}
+
 #pragma GCC visibility pop

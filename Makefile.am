@@ -169,6 +169,7 @@ COMMON_SRCS = \
 	src/LB_core/statistics.h        \
 	src/LB_core/drom.c              \
 	src/LB_core/drom.h              \
+	src/LB_core/callbacks.h         \
 	src/support/sighandler.c        \
 	src/support/sighandler.h        \
 	src/support/globals.c           \

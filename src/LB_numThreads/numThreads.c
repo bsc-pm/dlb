@@ -23,9 +23,11 @@
 #include <sched.h>
 #include <pthread.h>
 #include "LB_numThreads/numThreads.h"
+#include "LB_core/callbacks.h"
 #include "support/globals.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+#include "support/error.h"
 #include "support/mask_utils.h"
 
 #define NANOS_SYMBOLS_DEFINED ( \
@@ -60,45 +62,20 @@ int  omp_get_thread_num(void) __attribute__((weak));
 int  omp_get_max_threads(void) __attribute__((weak));
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 
+/* Callbacks list */
+dlb_callback_set_num_threads_t dlb_callback_set_num_threads_ptr = NULL;
+dlb_callback_set_active_mask_t dlb_callback_set_active_mask_ptr = NULL;
+dlb_callback_set_process_mask_t dlb_callback_set_process_mask_ptr = NULL;
+dlb_callback_add_active_mask_t dlb_callback_add_active_mask_ptr = NULL;
+dlb_callback_add_process_mask_t dlb_callback_add_process_mask_ptr = NULL;
+dlb_callback_enable_cpu_t dlb_callback_enable_cpu_ptr = NULL;
+dlb_callback_disable_cpu_t dlb_callback_disable_cpu_ptr = NULL;
 
-// Static functions to be called when no Prog Model is found
-static void unknown_get_process_mask(cpu_set_t *cpu_set) {
-    CPU_ZERO(cpu_set);
-    sched_getaffinity(0, sizeof(cpu_set), cpu_set);
-}
-static int  unknown_set_process_mask(const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_process_mask(const cpu_set_t *cpu_set) {}
-static void unknown_get_active_mask(cpu_set_t *cpu_set) {
-    return unknown_get_process_mask(cpu_set);
-}
-static int  unknown_set_active_mask(const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_active_mask(const cpu_set_t *cpu_set) {}
-static int  unknown_get_thread_num(void) { return 0; }
-static int  unknown_get_threads(void) { return 1;}
-static void unknown_set_threads(int nthreads) {}
-
-
-static struct {
-    void (*get_process_mask)(cpu_set_t *cpu_set);
-    int  (*set_process_mask)(const cpu_set_t *cpu_set);
-    void (*add_process_mask)(const cpu_set_t *cpu_set);
-    void (*get_active_mask)(cpu_set_t *cpu_set);
-    int  (*set_active_mask)(const cpu_set_t *cpu_set);
-    void (*add_active_mask)(const cpu_set_t *cpu_set);
-    int  (*get_thread_num)(void);
-    int  (*get_threads)(void);
-    void (*set_threads)(int nthreads);
-} pm_funcs = {
-    unknown_get_process_mask,
-    unknown_set_process_mask,
-    unknown_add_process_mask,
-    unknown_get_active_mask,
-    unknown_set_active_mask,
-    unknown_add_active_mask,
-    unknown_get_thread_num,
-    unknown_get_threads,
-    unknown_set_threads
-};
+/* Getters list */
+dlb_getter_get_thread_num_t dlb_getter_get_thread_num_ptr = NULL;
+dlb_getter_get_num_threads_t dlb_getter_get_num_threads_ptr = NULL;
+dlb_getter_get_active_mask_t dlb_getter_get_active_mask_ptr = NULL;
+dlb_getter_get_process_mask_t dlb_getter_get_process_mask_ptr = NULL;
 
 static int cpus_node;
 
@@ -107,63 +84,224 @@ void pm_init(void) {
 
     /* Nanos++ */
     if (NANOS_SYMBOLS_DEFINED) {
-        pm_funcs.get_process_mask = nanos_omp_get_process_mask;
-        pm_funcs.set_process_mask = nanos_omp_set_process_mask;
-        pm_funcs.add_process_mask = nanos_omp_add_process_mask;
-        pm_funcs.get_active_mask = nanos_omp_get_active_mask;
-        pm_funcs.set_active_mask = nanos_omp_set_active_mask;
-        pm_funcs.add_active_mask = nanos_omp_add_active_mask;
-        pm_funcs.get_thread_num = nanos_omp_get_thread_num;
-        pm_funcs.get_threads = nanos_omp_get_max_threads;
-        pm_funcs.set_threads = nanos_omp_set_num_threads;
+        dlb_callback_set_num_threads_ptr = nanos_omp_set_num_threads;
+        dlb_callback_set_active_mask_ptr = (dlb_callback_set_active_mask_t)nanos_omp_set_active_mask;
+        dlb_callback_set_process_mask_ptr = (dlb_callback_set_process_mask_t)nanos_omp_set_process_mask;
+        dlb_callback_add_active_mask_ptr = (dlb_callback_add_active_mask_t)nanos_omp_add_active_mask;
+        dlb_callback_add_process_mask_ptr = (dlb_callback_add_process_mask_t)nanos_omp_add_process_mask;
+
+        dlb_getter_get_thread_num_ptr = nanos_omp_get_thread_num;
+        dlb_getter_get_num_threads_ptr = nanos_omp_get_max_threads;
+        dlb_getter_get_active_mask_ptr = (dlb_getter_get_active_mask_t)nanos_omp_get_active_mask;
+        dlb_getter_get_process_mask_ptr = (dlb_getter_get_process_mask_t)nanos_omp_get_process_mask;
     }
     /* OpenMP */
     else if (OMP_SYMBOLS_DEFINED) {
-        pm_funcs.get_thread_num = omp_get_thread_num;
-        pm_funcs.get_threads = omp_get_max_threads;
-        pm_funcs.set_threads = omp_set_num_threads;
+        dlb_callback_set_num_threads_ptr = omp_set_num_threads;
+
+        dlb_getter_get_thread_num_ptr = omp_get_thread_num;
+        dlb_getter_get_num_threads_ptr = omp_get_max_threads;
     }
     /* Undefined */
     else {}
-    _default_nthreads = pm_funcs.get_threads();
+    _default_nthreads = (dlb_getter_get_num_threads_ptr != NULL) ?
+        dlb_getter_get_num_threads_ptr() : 1;
 }
 
-void update_threads(int threads) {
+int pm_callback_set(dlb_callbacks_t which, dlb_callback_t callback) {
+    switch(which) {
+        case dlb_callback_set_num_threads:
+            dlb_callback_set_num_threads_ptr = (dlb_callback_set_num_threads_t)callback;
+            break;
+        case dlb_callback_set_active_mask:
+            dlb_callback_set_active_mask_ptr = (dlb_callback_set_active_mask_t)callback;
+            break;
+        case dlb_callback_set_process_mask:
+            dlb_callback_set_process_mask_ptr = (dlb_callback_set_process_mask_t)callback;
+            break;
+        case dlb_callback_add_active_mask:
+            dlb_callback_add_active_mask_ptr = (dlb_callback_add_active_mask_t)callback;
+            break;
+        case dlb_callback_add_process_mask:
+            dlb_callback_add_process_mask_ptr = (dlb_callback_add_process_mask_t)callback;
+            break;
+        case dlb_callback_enable_cpu:
+            dlb_callback_enable_cpu_ptr = (dlb_callback_enable_cpu_t)callback;
+            break;
+        case dlb_callback_disable_cpu:
+            dlb_callback_disable_cpu_ptr = (dlb_callback_disable_cpu_t)callback;
+            break;
+        default:
+            return DLB_ERR_NOCBK;
+    }
+    return DLB_SUCCESS;
+}
+
+int pm_callback_get(dlb_callbacks_t which, dlb_callback_t callback) {
+    switch(which) {
+        case dlb_callback_set_num_threads:
+            callback = (dlb_callback_t)dlb_callback_set_num_threads_ptr;
+            break;
+        case dlb_callback_set_active_mask:
+            callback = (dlb_callback_t)dlb_callback_set_active_mask_ptr;
+            break;
+        case dlb_callback_set_process_mask:
+            callback = (dlb_callback_t)dlb_callback_set_process_mask_ptr;
+            break;
+        case dlb_callback_add_active_mask:
+            callback = (dlb_callback_t)dlb_callback_set_active_mask_ptr;
+            break;
+        case dlb_callback_add_process_mask:
+            callback = (dlb_callback_t)dlb_callback_set_process_mask_ptr;
+            break;
+        default:
+            return DLB_ERR_NOCBK;
+    }
+    return DLB_SUCCESS;
+}
+
+int pm_getter_set(dlb_getters_t which, dlb_getter_t getter) {
+    switch(which) {
+        case dlb_getter_get_thread_num:
+            dlb_getter_get_thread_num_ptr = (dlb_getter_get_thread_num_t)getter;
+            break;
+        case dlb_getter_get_num_threads:
+            dlb_getter_get_num_threads_ptr = (dlb_getter_get_num_threads_t)getter;
+            break;
+        case dlb_getter_get_active_mask:
+            dlb_getter_get_active_mask_ptr = (dlb_getter_get_active_mask_t)getter;
+            break;
+        case dlb_getter_get_process_mask:
+            dlb_getter_get_process_mask_ptr = (dlb_getter_get_process_mask_t)getter;
+            break;
+        default:
+            return DLB_ERR_NOGET;
+    }
+    return DLB_SUCCESS;
+}
+
+int pm_getter_get(dlb_getters_t which, dlb_getter_t getter) {
+    switch(which) {
+        case dlb_getter_get_thread_num:
+            getter = (dlb_getter_t)dlb_callback_set_num_threads_ptr;
+            break;
+        case dlb_getter_get_num_threads:
+            getter = (dlb_getter_t)dlb_getter_get_num_threads_ptr;
+            break;
+        case dlb_getter_get_active_mask:
+            getter = (dlb_getter_t)dlb_getter_get_active_mask_ptr;
+            break;
+        case dlb_getter_get_process_mask:
+            getter = (dlb_getter_t)dlb_getter_get_process_mask_ptr;
+            break;
+        default:
+            return DLB_ERR_NOGET;
+    }
+    return DLB_SUCCESS;
+}
+
+
+int update_threads(int threads) {
+    if (dlb_callback_set_num_threads_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+
     if (threads > cpus_node) {
-        warning( "Trying to use more CPUS (%d) than available (%d)\n", threads, cpus_node);
+        warning("Trying to use more CPUS (%d) than available (%d)", threads, cpus_node);
         threads = cpus_node;
+    } else if (threads < 1) {
+        warning("setting number of threads to 0 not allowed, falling back to 1");
+        threads = 1;
     }
 
     add_event(THREADS_USED_EVENT, threads);
 
-    threads = (threads<1) ? 1 : threads;
-    pm_funcs.set_threads(threads);
+    dlb_callback_set_num_threads_ptr(threads);
+    return DLB_SUCCESS;
 }
 
-void get_mask(cpu_set_t *cpu_set) {
-    pm_funcs.get_active_mask(cpu_set);
+int set_mask(const cpu_set_t *cpu_set) {
+    if (dlb_callback_set_active_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    dlb_callback_set_active_mask_ptr(cpu_set);
+    return DLB_SUCCESS;
 }
 
-int  set_mask(const cpu_set_t *cpu_set) {
-    return pm_funcs.set_active_mask(cpu_set);
+int set_process_mask(const cpu_set_t *cpu_set) {
+    if (dlb_callback_set_process_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    dlb_callback_set_process_mask_ptr(cpu_set);
+    return DLB_SUCCESS;
 }
 
-void add_mask(const cpu_set_t *cpu_set) {
-    pm_funcs.add_active_mask(cpu_set);
+int add_mask(const cpu_set_t *cpu_set) {
+    if (dlb_callback_add_active_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    dlb_callback_add_active_mask_ptr(cpu_set);
+    return DLB_SUCCESS;
 }
 
-void get_process_mask(cpu_set_t *cpu_set) {
-    pm_funcs.get_process_mask(cpu_set);
+int add_process_mask(const cpu_set_t *cpu_set) {
+    if (dlb_callback_add_process_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    dlb_callback_add_process_mask_ptr(cpu_set);
+    return DLB_SUCCESS;
 }
 
-int  set_process_mask(const cpu_set_t *cpu_set) {
-    return pm_funcs.set_process_mask(cpu_set);
+int enable_cpu(int cpuid) {
+    if (dlb_callback_enable_cpu_ptr == NULL) {
+        cpu_set_t cpu_set;
+        CPU_ZERO(&cpu_set);
+        CPU_SET(cpuid, &cpu_set);
+        return add_mask(&cpu_set);
+    }
+    dlb_callback_enable_cpu_ptr(cpuid);
+    return DLB_SUCCESS;
 }
 
-void add_process_mask(const cpu_set_t *cpu_set) {
-    pm_funcs.add_process_mask(cpu_set);
+int disable_cpu(int cpuid) {
+    if (dlb_callback_disable_cpu_ptr == NULL) {
+        cpu_set_t cpu_set;
+        get_mask(&cpu_set);
+        CPU_CLR(cpuid, &cpu_set);
+        return set_mask(&cpu_set);
+    }
+    dlb_callback_disable_cpu_ptr(cpuid);
+    return DLB_SUCCESS;
 }
 
 int get_thread_num(void) {
-    return pm_funcs.get_thread_num();
+    if (dlb_getter_get_thread_num_ptr == NULL) {
+        return 0;
+    }
+    return dlb_getter_get_thread_num_ptr();
+}
+
+int get_num_threads(void) {
+    if (dlb_getter_get_num_threads_ptr == NULL) {
+        return 1;
+    }
+    return dlb_getter_get_num_threads_ptr();
+}
+
+int get_mask(cpu_set_t *cpu_set) {
+    if (dlb_getter_get_active_mask_ptr == NULL) {
+        sched_getaffinity(0, sizeof(cpu_set_t), cpu_set);
+    } else {
+        dlb_getter_get_active_mask_ptr(cpu_set);
+    }
+    return DLB_SUCCESS;
+}
+
+int get_process_mask(cpu_set_t *cpu_set) {
+    if (dlb_getter_get_process_mask_ptr == NULL) {
+        sched_getaffinity(0, sizeof(cpu_set_t), cpu_set);
+    } else {
+        dlb_getter_get_process_mask_ptr(cpu_set);
+    }
+    return DLB_SUCCESS;
 }

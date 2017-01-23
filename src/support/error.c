@@ -31,7 +31,9 @@ static const char* error_msg[] = {
     /* DLB_ERR_PDIRTY */    "pid dirty, can't update",
     /* DLB_ERR_PERM */      "permission error",
     /* DLB_ERR_TIMEOUT */   "timeout",
-    /* DLB_ERR_NOUPDT */    "no update needed"
+    /* DLB_ERR_NOUPDT */    "no update needed",
+    /* DLB_ERR_NOCBK */     "no callback defined",
+    /* DLB_ERR_NOGTR */     "no getter defined"
 };
 
 const char* error_get_str(int errnum) {
