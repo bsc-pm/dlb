@@ -461,7 +461,7 @@ int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cp
 int Update_new(int *new_threads, cpu_set_t *new_mask) {
     int error = DLB_ERR_UNKNOWN;
     if (dlb_enabled) {
-        cpu_set_t *mask = (new_mask != NULL) ? new_mask : (cpu_set_t*)malloc(sizeof(cpu_set_t));
+        cpu_set_t *mask = (new_mask != NULL) ? new_mask : malloc(sizeof(cpu_set_t));
         error = shmem_procinfo__update_new(drom_enabled, stats_enabled, new_threads, mask);
         if (error == DLB_SUCCESS) {
             // can this function return error?

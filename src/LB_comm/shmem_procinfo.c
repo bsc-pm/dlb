@@ -661,7 +661,7 @@ void shmem_procinfo_ext__print_info(void) {
     }
 
     // Make a full copy of the shared memory. Basic size + zero-length array real length
-    shdata_t *shdata_copy = (shdata_t*) malloc(sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
+    shdata_t *shdata_copy = malloc(sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
 
     shmem_lock(shm_ext_handler);
     {

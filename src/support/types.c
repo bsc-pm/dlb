@@ -47,7 +47,7 @@ void parse_blocking_mode(const char *str, blocking_mode_t *value) {
 
 void parse_verbose_opts(const char *str, verbose_opts_t *value) {
     *value = VB_CLEAR;
-    char *my_str = (char*)malloc(strlen(str)+1);
+    char *my_str = malloc(strlen(str)+1);
     strncpy(my_str, str, strlen(str)+1);
     char *saveptr;
     const char delimiter[2] = ":";
@@ -75,7 +75,7 @@ void parse_verbose_opts(const char *str, verbose_opts_t *value) {
 
 void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     *value = VBF_CLEAR;
-    char *my_str = (char*)malloc(strlen(str)+1);
+    char *my_str = malloc(strlen(str)+1);
     strncpy(my_str, str, strlen(str)+1);
     char *saveptr;
     const char delimiter[2] = ":";
@@ -99,7 +99,7 @@ void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
 
 void parse_debug_opts(const char *str, debug_opts_t *value) {
     *value = DBG_CLEAR;
-    char *my_str = (char*)malloc(strlen(str)+1);
+    char *my_str = malloc(strlen(str)+1);
     strncpy(my_str, str, strlen(str)+1);
     char *saveptr;
     const char delimiter[2] = ":";

@@ -119,7 +119,7 @@ static char* parse_env_arg(const char *arg_name) {
     if (lb_args && arg_name) {
         // Tokenize a copy of lb_args with " " delimiter
         char *end_space;
-        char *lb_args_copy = (char*)malloc(1+sizeof(char)*strlen(lb_args));
+        char *lb_args_copy = malloc(1+sizeof(char)*strlen(lb_args));
         strncpy(lb_args_copy, lb_args, strlen(lb_args));
         char *token = strtok_r(lb_args_copy, " ", &end_space);
         while (token) {
@@ -154,7 +154,7 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
                                 void *value, bool readonly, bool optional,
                                 const void *default_value, const char *desc ) {
 
-    option_t *new_option = (option_t*) malloc(sizeof(option_t));
+    option_t *new_option = malloc(sizeof(option_t));
     strncpy(new_option->var_name, var, MAX_OPTION_LENGTH);
     strncpy(new_option->arg_name, arg, MAX_OPTION_LENGTH);
     strncpy(new_option->description, desc, MAX_DESCRIPTION);
@@ -247,12 +247,12 @@ void options_init(void) {
     char *env_lb_args = getenv("LB_ARGS");
     if (env_lb_args) {
         size_t len = strlen(env_lb_args) + 1;
-        lb_args = (char*)malloc(sizeof(char)*len);
+        lb_args = malloc(sizeof(char)*len);
         strncpy(lb_args, env_lb_args, len);
     }
 
     // Fill options array
-    options = (option_t**) malloc(sizeof(option_t*)*MAX_OPTIONS);
+    options = malloc(sizeof(option_t*)*MAX_OPTIONS);
 
     // modules
     int i = 0;
