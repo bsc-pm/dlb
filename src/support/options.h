@@ -23,7 +23,7 @@
 #include "support/types.h"
 
 // internal getters
-const char* options_get_policy(void);
+policy_t options_get_policy(void);
 bool options_get_statistics(void);
 bool options_get_drom(void);
 bool options_get_barrier(void);

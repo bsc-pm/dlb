@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include "support/types.h"
 #include "support/debug.h"
+#include "support/options.h"
 
 #define MAX_OPTIONS 32
 #define MAX_OPTION_LENGTH 32
@@ -30,8 +31,8 @@
 
 
 // Options storage and internal getters
-static char opt_policy[MAX_OPTION_LENGTH];
-const char* options_get_policy(void) { return opt_policy; }
+static policy_t opt_policy;
+policy_t options_get_policy(void) { return opt_policy; }
 
 static bool opt_statistics;
 bool options_get_statistics(void) { return opt_statistics; }
@@ -93,7 +94,8 @@ typedef enum OptionTypes {
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_DBG_T,      // debug_opts_t
-    OPT_PRIO_T      // priority_opts_t
+    OPT_PRIO_T,     // priority_opts_t
+    OPT_POL_T       // policy_t
 } option_type_t;
 
 typedef struct {
@@ -224,6 +226,13 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
                 parse_priority_opts(default_value, (priority_opts_t*)new_option->value);
             }
             break;
+        case(OPT_POL_T):
+            if (user_value) {
+                parse_policy(user_value, (policy_t*)new_option->value);
+            } else if (default_value) {
+                parse_policy(default_value, (policy_t*)new_option->value);
+            }
+            break;
     }
 
     fatal_cond(!optional && !new_option->value,
@@ -257,7 +266,7 @@ void options_init(void) {
     // modules
     int i = 0;
     options[i++] = register_option("LB_POLICY", "--policy",
-            OPT_STR_T, &opt_policy, RO, OPTIONAL, "no",
+            OPT_POL_T, &opt_policy, RO, OPTIONAL, "no",
             "Lend Balancing Policy. Choose one of: \n"
             " - No: No policy\n"
             " - LeWI: Lend When Idle, basic policy\n"
@@ -402,6 +411,9 @@ int options_set_variable(const char *var_name, const char *value) {
         case OPT_PRIO_T:
             parse_priority_opts(value, (priority_opts_t*)option->value);
             break;
+        case OPT_POL_T:
+            parse_policy(value, (policy_t*)option->value);
+            break;
     }
 
     return 0;
@@ -438,6 +450,7 @@ int options_get_variable(const char *var_name, char *value) {
         case OPT_VBFMT_T:
         case OPT_DBG_T:
         case OPT_PRIO_T:
+        case OPT_POL_T:
             sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
             break;
     }
