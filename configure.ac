@@ -60,7 +60,8 @@ AC_PROG_CPP
 
 # use the C compiler for the following checks
 AC_LANG([C])
-AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="-fvisibility=hidden"])
+AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
+AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
 AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
 AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
 AX_CHECK_COMPILE_FLAG([-Wno-error=unknown-pragmas],
