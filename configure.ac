@@ -51,6 +51,9 @@ AC_DEFINE_UNQUOTED([DLB_CONFIGURE_ARGS], [$dlb_config_args], [Configure line])
 AC_CHECK_PROG([DEB_RELEASE], [lsb_release], [$(lsb_release -sc)], [])
 AC_SUBST([DEB_RELEASE])
 
+# If CFLAGS is not user-defined, define it as empty to avoid AC_PROG_CC setting it to default '-g -O2'
+: ${CFLAGS=""}
+
 # Checks for programs
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
