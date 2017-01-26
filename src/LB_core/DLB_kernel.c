@@ -28,6 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/statistics.h"
 #include "LB_core/drom.h"
@@ -86,6 +87,9 @@ static bool stats_enabled;
 static bool drom_enabled;
 static bool barrier_enabled;
 
+/* Temporary global sub-process descriptor */
+spd_t global_spd;
+
 // Initialize lb_funcs to dummy functions
 static void dummy_init(void) {}
 static void dummy_finish(void) {}
@@ -135,11 +139,11 @@ static BalancePolicy lb_funcs = {
 
 
 static void load_modules(void) {
-    options_init();
-    policy = options_get_policy();
-    stats_enabled = options_get_statistics();
-    drom_enabled = options_get_drom();
-    barrier_enabled = options_get_barrier();
+    options_init(&global_spd.options, NULL);
+    policy = global_spd.options.lb_policy;
+    stats_enabled = global_spd.options.statistics;
+    drom_enabled = global_spd.options.drom;
+    barrier_enabled = global_spd.options.barrier;
 
     pm_init();
 
@@ -172,7 +176,6 @@ static void unload_modules(void) {
         shmem_procinfo__finalize();
     }
     unregister_signals();
-    options_finalize();
 }
 
 void set_dlb_enabled(bool enabled) {
@@ -376,11 +379,11 @@ int Initialize(void) {
 
         info0("This process starts with %d threads", _default_nthreads);
 
-        if (options_get_just_barier())
+        if (global_spd.options.mpi_just_barrier)
             info0("Only lending resources when MPI_Barrier "
                     "(Env. var. LB_JUST_BARRIER is set)" );
 
-        if (options_get_lend_mode() == BLOCK)
+        if (global_spd.options.mpi_lend_mode == BLOCK)
             info0("LEND mode set to BLOCKING. I will lend all "
                     "the resources when in an MPI call" );
 
@@ -496,7 +499,7 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
         MPISecs=iterMPITime_avg;*/
     if (dlb_enabled) {
         // We explicitly ignore the argument
-        lb_funcs.intoBlockingCall(is_iter, options_get_lend_mode());
+        lb_funcs.intoBlockingCall(is_iter, global_spd.options.mpi_lend_mode);
     }
 }
 
@@ -612,7 +615,7 @@ void notifymaskchange(void) {
 
 void printShmem(void) {
     pm_init();
-    options_init();
+    options_init(&global_spd.options, NULL);
     debug_init();
     shmem_cpuinfo_ext__init();
     shmem_cpuinfo_ext__print_info();
@@ -620,5 +623,4 @@ void printShmem(void) {
     shmem_procinfo_ext__init();
     shmem_procinfo_ext__print_info();
     shmem_procinfo_ext__finalize();
-    options_finalize();
 }

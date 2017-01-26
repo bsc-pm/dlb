@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
+
+#include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_numThreads/numThreads.h"
@@ -87,7 +89,7 @@ void shmem_cpuinfo__init(void) {
     }
 
     ME = getpid();
-    mu_parse_mask(options_get_mask(), &dlb_mask);
+    mu_parse_mask(global_spd.options.mask, &dlb_mask);
     cpu_set_t process_mask;
     get_process_mask(&process_mask);
     cpu_set_t affinity_mask;
@@ -496,7 +498,7 @@ int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources) {
                 }
 
                 // Set up some masks to collect from, depending on the priority level
-                priority_opts_t priority = options_get_priority();
+                priority_opts_t priority = global_spd.options.priority;
                 const int NUM_TARGETS = 2;
                 cpu_set_t *target_mask[NUM_TARGETS];
 
@@ -752,7 +754,7 @@ void shmem_cpuinfo_ext__finalize(void) {
 int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
     int error = DLB_SUCCESS;
 
-    mu_parse_mask(options_get_mask(), &dlb_mask);
+    mu_parse_mask(global_spd.options.mask, &dlb_mask);
     cpu_set_t affinity_mask;
     mu_get_affinity_mask(&affinity_mask, mask, MU_ANY_BIT);
 
@@ -857,7 +859,7 @@ void shmem_cpuinfo_ext__print_info(void) {
     info0(states);
     info0("States Legend: DISABLED=%d, BUSY=%d, LENT=%d", CPU_DISABLED, CPU_BUSY, CPU_LENT);
 
-    if (options_get_statistics()) {
+    if (global_spd.options.statistics) {
         info0("=== CPU Statistics ===");
         for (cpu=0; cpu<node_size; ++cpu) {
             info0("CPU %d: OWNED(%.2f%%), GUESTED(%.2f%%), IDLE(%.2f%%)",

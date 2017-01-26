@@ -17,6 +17,7 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include "LB_core/spd.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_numThreads/numThreads.h"
@@ -25,7 +26,7 @@
 
 void stats_ext_init(void) {
     pm_init();
-    options_init();
+    options_init(&global_spd.options, NULL);
     debug_init();
     shmem_cpuinfo_ext__init();
     shmem_procinfo_ext__init();
@@ -34,7 +35,6 @@ void stats_ext_init(void) {
 void stats_ext_finalize(void) {
     shmem_cpuinfo_ext__finalize();
     shmem_procinfo_ext__finalize();
-    options_finalize();
 }
 
 int stats_ext_getnumcpus(void) {

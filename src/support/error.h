@@ -33,7 +33,8 @@ typedef enum {
     DLB_ERR_NOUPDT  = -9,
     DLB_ERR_NOCBK   = -10,
     DLB_ERR_NOGET   = -11,
-    DLB_MAX_ERRORS  = -12
+    DLB_ERR_NOENT   = -12,
+    DLB_MAX_ERRORS  = -13
 } error_t;
 
 const char* error_get_str(int errnum);

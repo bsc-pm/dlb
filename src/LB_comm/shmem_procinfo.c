@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <sys/resource.h>
 
+#include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_numThreads/numThreads.h"
@@ -687,7 +688,7 @@ void shmem_procinfo_ext__print_info(void) {
                     shdata_copy->process_info[p].dirty);
         }
     }
-    if (options_get_statistics()) {
+    if (global_spd.options.statistics) {
         info0("=== Processes Statistics ===");
         for (p = 0; p < max_processes; p++) {
             if (shdata_copy->process_info[p].pid != NOBODY) {
@@ -824,7 +825,7 @@ static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask) {
     if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
     verbose(VB_DROM, "Process %d unregistering mask %s", owner->pid, mu_to_str(mask));
-    if (options_get_debug_opts() & DBG_RETURNSTOLEN) {
+    if (global_spd.options.debug_opts & DBG_RETURNSTOLEN) {
         // Look if each CPU belongs to some other process
         int c, p;
         for (c = 0; c < max_cpus; c++) {

@@ -24,6 +24,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include "support/types.h"
 #include "support/options.h"
 
 int main( int argc, char **argv ) {
@@ -33,7 +36,40 @@ int main( int argc, char **argv ) {
     setenv("LB_LEND_MODE", "huh", 1);
     setenv("LB_VERBOSE", "huh", 1);
     setenv("LB_VERBOSE_FORMAT", "huh", 1);
-    options_init();
-    options_finalize();
+    const char *lb_args = "--policy=huh --drom=huh      --mask=huh   --lend-mode=huh "
+        " this_should_be_ignored     --verbose=huh --verbose-format=huh";
+
+    // Check initialization equivalency
+    options_t options_1, options_2;
+    options_init(&options_1, NULL);     // options_1 initialized with env. vars
+    options_init(&options_2, lb_args);  // options_2 initialized with lb_args
+    assert(options_1.lb_policy == options_2.lb_policy);
+    assert(options_1.drom == options_2.drom);
+    assert(strcmp(options_1.mask, options_2.mask) == 0);
+    assert(options_1.mpi_lend_mode == options_2.mpi_lend_mode);
+    assert(options_1.verbose == options_2.verbose);
+    assert(options_1.verbose_fmt == options_2.verbose_fmt);
+
+    // Check some values
+    options_init(&options_1, "--policy=lewi --drom=1 --priority=affinity_only");
+    assert(options_1.lb_policy == POLICY_LEWI);
+    assert(options_1.drom == true);
+    assert(options_1.priority == PRIO_AFFINITY_ONLY);
+
+    // Check option overwrite
+    options_init(&options_1, "--drom=1 --drom=0");
+    assert(options_1.drom == false);
+
+    // Check setter and getter
+    char value[MAX_OPTION_LENGTH];
+    options_init(&options_1, "--just-barrier=1");
+    assert(options_1.mpi_just_barrier == true);
+    options_get_variable(&options_1, "--just-barrier", value);
+    assert(strcasecmp(value, "true") == 0);
+    options_set_variable(&options_1, "--just-barrier", "0");
+    assert(options_1.mpi_just_barrier == false);
+    options_get_variable(&options_1, "--just-barrier", value);
+    assert(strcasecmp(value, "false") == 0);
+
     return 0;
 }

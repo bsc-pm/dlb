@@ -21,6 +21,8 @@
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
+
+#include "LB_core/spd.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_numThreads/numThreads.h"
@@ -29,7 +31,7 @@
 
 void drom_ext_init(void) {
     pm_init();
-    options_init();
+    options_init(&global_spd.options, NULL);
     debug_init();
     shmem_cpuinfo_ext__init();
     shmem_procinfo_ext__init();
@@ -38,7 +40,6 @@ void drom_ext_init(void) {
 void drom_ext_finalize(void) {
     shmem_cpuinfo_ext__finalize();
     shmem_procinfo_ext__finalize();
-    options_finalize();
 }
 
 int drom_ext_getnumcpus(void) {

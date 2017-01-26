@@ -17,8 +17,6 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <stdio.h>
-
 #include "error.h"
 
 static const char* error_msg[] = {
@@ -34,6 +32,7 @@ static const char* error_msg[] = {
     /* DLB_ERR_NOUPDT */    "no update needed",
     /* DLB_ERR_NOCBK */     "no callback defined",
     /* DLB_ERR_NOGTR */     "no getter defined"
+    /* DLB_ERR_NOENT */     "no entry"
 };
 
 const char* error_get_str(int errnum) {
@@ -42,8 +41,3 @@ const char* error_get_str(int errnum) {
     }
     return error_msg[-errnum];
 }
-
-// Thread safe reentrant needed?
-// int error_get_str_r(int errnum, char *buf, size_t buflen)
-// {
-// }

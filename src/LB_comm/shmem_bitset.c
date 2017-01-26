@@ -26,6 +26,7 @@
 #include <pthread.h>
 
 #include "shmem.h"
+#include "LB_core/spd.h"
 #include "support/tracing.h"
 #include "support/globals.h"
 #include "support/debug.h"
@@ -231,7 +232,7 @@ int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
 
     if ( size > 0 && max_resources > 0) {
 
-        priority_opts_t priority = options_get_priority();
+        priority_opts_t priority = global_spd.options.priority;
         cpu_set_t candidates_mask;
         cpu_set_t affinity_mask;
         mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );

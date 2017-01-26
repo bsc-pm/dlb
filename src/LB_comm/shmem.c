@@ -33,6 +33,7 @@
 #error This system does not support process shared mutex
 #endif
 
+#include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "support/debug.h"
 #include "support/options.h"
@@ -57,8 +58,12 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     handler->size = SHSYNC_MAX_SIZE + shdata_size;
 
     /* Get /dev/shm/ file names to create */
-    const char *custom_shm_key = options_get_shm_key();
-    snprintf( handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key );
+    if (global_spd.options.shm_key) {
+        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module,
+                global_spd.options.shm_key);
+    } else {
+        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, getuid());
+    }
 
     /* Create Semaphore(1): Mutex */
     handler->semaphore = sem_open( handler->shm_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );

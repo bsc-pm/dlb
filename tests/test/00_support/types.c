@@ -57,19 +57,19 @@ int main(int argc, char *argv[]) {
     }
 
     // Check DLB defaults
-    options_init();
-    vb_opts = options_get_verbose();
+    options_t options;
+    options_init(&options, NULL);
+    vb_opts = options.verbose;
     if (vb_opts != VB_CLEAR) {
         error++;
         fprintf(stderr, "Default verbose option failed\n");
     }
 
-    vbf_opts = options_get_verbose_fmt();
+    vbf_opts = options.verbose_fmt;
     if (vbf_opts != (VBF_NODE | VBF_PID | VBF_THREAD)) {
         error++;
         fprintf(stderr, "Default verbose format option failed\n");
     }
-    options_finalize();
 
     return error;
 }

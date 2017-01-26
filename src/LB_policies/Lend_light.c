@@ -19,6 +19,7 @@
 
 #include "LB_policies/Lend_light.h"
 #include "LB_numThreads/numThreads.h"
+#include "LB_core/spd.h"
 #include "LB_comm/comm_lend_light.h"
 #include "support/globals.h"
 #include "support/mask_utils.h"
@@ -41,12 +42,7 @@ void Lend_light_Init(void) {
 
     info0("Default cpus per process: %d", default_cpus);
 
-    if (options_get_bind()) {
-        // FIXME: Not implemented
-        info0("Binding of threads to cpus enabled");
-    }
-
-    bool greedy = options_get_greedy();
+    bool greedy = global_spd.options.greedy;
     if (greedy) {
         info0("Policy mode GREEDY");
     }
@@ -54,7 +50,7 @@ void Lend_light_Init(void) {
     //Initialize shared memory
     ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy);
 
-    if (options_get_aggressive_init()) {
+    if (global_spd.options.aggressive_init) {
         setThreads_Lend_light(mu_get_system_size());
         setThreads_Lend_light(_default_nthreads);
     }

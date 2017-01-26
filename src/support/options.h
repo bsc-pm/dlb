@@ -22,30 +22,32 @@
 
 #include "support/types.h"
 
-// internal getters
-policy_t options_get_policy(void);
-bool options_get_statistics(void);
-bool options_get_drom(void);
-bool options_get_barrier(void);
-bool options_get_just_barier(void);
-blocking_mode_t options_get_lend_mode(void);
-verbose_opts_t options_get_verbose(void);
-verbose_fmt_t options_get_verbose_fmt(void);
-bool options_get_trace_enabled(void);
-bool options_get_trace_counters(void);
-const char* options_get_mask(void);
-bool options_get_greedy(void);
-const char* options_get_shm_key(void);
-bool options_get_bind(void);
-const char* options_get_thread_distribution(void);
-bool options_get_aggressive_init(void);
-priority_opts_t options_get_priority(void);
-verbose_fmt_t options_get_debug_opts(void);
+#define MAX_OPTIONS 32
+#define MAX_OPTION_LENGTH 32
+#define MAX_DESCRIPTION 1024
 
-void options_init(void);
-void options_finalize(void);
-int options_set_variable(const char *var_name, const char *value);
-int options_get_variable(const char *var_name, char *value);
-void options_print_variables(void);
+typedef struct {
+    policy_t lb_policy;
+    bool statistics;
+    bool drom;
+    bool barrier;
+    bool mpi_just_barrier;
+    blocking_mode_t mpi_lend_mode;
+    verbose_opts_t verbose;
+    verbose_fmt_t verbose_fmt;
+    bool trace_enabled;
+    bool trace_counters;
+    char mask[MAX_OPTION_LENGTH];    //parse?
+    bool greedy;
+    char shm_key[MAX_OPTION_LENGTH];
+    bool aggressive_init;
+    priority_opts_t priority;
+    debug_opts_t debug_opts;
+} options_t;
+
+void options_init(options_t *options, const char *lb_args_from_api);
+int options_set_variable(options_t *options, const char *var_name, const char *value);
+int options_get_variable(const options_t *options, const char *var_name, char *value);
+void options_print_variables(const options_t *options);
 
 #endif /* OPTIONS_H */

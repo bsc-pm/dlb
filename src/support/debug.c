@@ -28,10 +28,12 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <execinfo.h>
+
+#include "LB_core/spd.h"
+#include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/options.h"
-#include "LB_numThreads/numThreads.h"
 
 #define VBFORMAT_LEN 32
 verbose_opts_t vb_opts;
@@ -40,8 +42,8 @@ static char fmt_str[VBFORMAT_LEN];
 static __thread int thread_id;
 
 void debug_init(void) {
-    vb_opts = options_get_verbose();
-    vb_fmt = options_get_verbose_fmt();
+    vb_opts = global_spd.options.verbose;
+    vb_fmt = global_spd.options.verbose_fmt;
 
     int i = 0;
     if ( vb_fmt & VBF_NODE ) {

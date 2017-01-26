@@ -26,6 +26,7 @@
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/statistics.h"
 #include "LB_core/drom.h"
+#include "LB_core/spd.h"
 #include "support/dlb_api.h"
 #include "support/tracing.h"
 #include "support/debug.h"
@@ -156,15 +157,15 @@ void DLB_PrintShmem(void) {
 }
 
 int DLB_SetVariable(const char *variable, const char *value) {
-    return options_set_variable(variable, value);
+    return options_set_variable(&global_spd.options, variable, value);
 }
 
 int DLB_GetVariable(const char *variable, char *value) {
-    return options_set_variable(variable, value);
+    return options_set_variable(&global_spd.options, variable, value);
 }
 
 void DLB_PrintVariables(void) {
-    options_print_variables();
+    options_print_variables(&global_spd.options);
 }
 
 const char* DLB_strerror(int errnum) {

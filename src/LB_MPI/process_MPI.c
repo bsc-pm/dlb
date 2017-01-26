@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "DPD/DPD.h"
+#include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "support/tracing.h"
@@ -152,7 +153,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 
         }
 
-        if(options_get_just_barier()) {
+        if(global_spd.options.mpi_just_barrier) {
             if (call_type==Barrier) {
                 add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
                 IntoBlockingCall(is_iter, 0);
@@ -170,7 +171,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 void after_mpi(mpi_call call_type) {
     if (mpi_ready) {
 
-        if(options_get_just_barier()) {
+        if(global_spd.options.mpi_just_barrier) {
             if (call_type==Barrier) {
                 add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
                 OutOfBlockingCall(is_iter);

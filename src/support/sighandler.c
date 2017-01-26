@@ -64,6 +64,7 @@
 
 #include <stddef.h>
 #include <signal.h>
+#include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "support/debug.h"
 #include "support/types.h"
@@ -105,7 +106,7 @@ static void unregister_signal( int signum ) {
 }
 
 void register_signals( void ) {
-    if (options_get_debug_opts() & DBG_REGSIGNALS) {
+    if (global_spd.options.debug_opts & DBG_REGSIGNALS) {
         warning("Debug option: register-signals.");
 
         /* Set up new handler */
@@ -135,7 +136,7 @@ void register_signals( void ) {
 }
 
 void unregister_signals( void ) {
-    if (options_get_debug_opts() & DBG_REGSIGNALS) {
+    if (global_spd.options.debug_opts & DBG_REGSIGNALS) {
         int i;
         for ( i=0; i<MAX_SIGNUM; i++ ) {
             if ( registed_signals[i] ) {

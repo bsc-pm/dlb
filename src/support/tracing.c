@@ -17,12 +17,12 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-
-
 #ifdef INSTRUMENTATION_VERSION
+#include <stdio.h>
+
+#include "LB_core/spd.h"
 #include "support/tracing.h"
 #include "support/options.h"
-#include <stdio.h>
 
 // Extrae API calls
 void Extrae_event(unsigned type, long long value) __attribute__((weak));
@@ -39,11 +39,11 @@ void add_event( unsigned type, long long value ) {
 }
 
 void init_tracing( void ) {
-    if ( options_get_trace_enabled() && Extrae_event &&
+    if ( global_spd.options.trace_enabled && Extrae_event &&
             Extrae_eventandcounters && Extrae_define_event_type ) {
 
         // Set up function
-        if ( options_get_trace_counters() ) {
+        if ( global_spd.options.trace_counters ) {
             extrae_set_event = Extrae_eventandcounters;
         } else {
             extrae_set_event = Extrae_event;
