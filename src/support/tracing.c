@@ -20,7 +20,6 @@
 #ifdef INSTRUMENTATION_VERSION
 #include <stdio.h>
 
-#include "LB_core/spd.h"
 #include "support/tracing.h"
 #include "support/options.h"
 
@@ -30,20 +29,26 @@ void Extrae_eventandcounters(unsigned type, long long value) __attribute__((weak
 void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalues,
                                long long *values, char **values_description) __attribute__((weak));
 
+static bool tracing_initialized = false;
+
 // Pointer to store the function to call
 static void (*extrae_set_event) (unsigned type, long long value);
+
 static void dummy (unsigned type, long long value) {}
 
 void add_event( unsigned type, long long value ) {
     extrae_set_event( type, value );
 }
 
-void init_tracing( void ) {
-    if ( global_spd.options.trace_enabled && Extrae_event &&
+void init_tracing(const options_t *options) {
+    if (tracing_initialized) return;
+    tracing_initialized = true;
+
+    if (options->trace_enabled && Extrae_event &&
             Extrae_eventandcounters && Extrae_define_event_type ) {
 
         // Set up function
-        if ( global_spd.options.trace_counters ) {
+        if ( options->trace_counters ) {
             extrae_set_event = Extrae_eventandcounters;
         } else {
             extrae_set_event = Extrae_event;

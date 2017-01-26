@@ -45,11 +45,12 @@
 /*************************************/
 
 #ifdef INSTRUMENTATION_VERSION
-void add_event( unsigned type, long long value );
-void init_tracing( void );
+#include "support/options.h"
+void add_event(unsigned type, long long value);
+void init_tracing(const options_t *options);
 #else
 #define add_event(type, value)
-#define init_tracing()
+#define init_tracing(options)
 #endif
 
 

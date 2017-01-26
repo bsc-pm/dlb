@@ -156,7 +156,7 @@ static void load_modules(void) {
     verbose(VB_STATS, "Enabled verbose mode for STATS");
     verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
 
-    init_tracing();
+    init_tracing(&global_spd.options);
     register_signals(&global_spd.options, Terminate);
     if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
         shmem_procinfo__init();
