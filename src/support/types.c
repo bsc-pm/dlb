@@ -22,6 +22,7 @@
 #include "support/types.h"
 
 void parse_bool(const char *str, bool *value) {
+    *value = false;
     if (strcasecmp(str, "1")==0        ||
             strcasecmp(str, "yes")==0  ||
             strcasecmp(str, "true")==0) {
@@ -38,6 +39,7 @@ void parse_int(const char *str, int *value) {
 }
 
 void parse_blocking_mode(const char *str, blocking_mode_t *value) {
+    *value = ONE_CPU;
     if (strcasecmp(str, "1CPU") == 0) {
         *value = ONE_CPU;
     } else if (strcasecmp(str, "BLOCK") == 0) {
@@ -116,6 +118,7 @@ void parse_debug_opts(const char *str, debug_opts_t *value) {
 }
 
 void parse_priority_opts(const char *str, priority_opts_t *value) {
+    *value = PRIO_AFFINITY_FIRST;
     if (strcasecmp(str, "none") == 0) {
         *value = PRIO_NONE;
     } else if (strcasecmp(str, "affinity_first") == 0) {
