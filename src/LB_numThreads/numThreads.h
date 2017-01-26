@@ -35,6 +35,5 @@ int disable_cpu(int cpuid);
 int get_process_mask(cpu_set_t *cpu_set);
 int set_process_mask(const cpu_set_t *cpu_set);
 int add_process_mask(const cpu_set_t *cpu_set);
-int get_thread_num(void);
 
 #endif //NUMTHREADS_H

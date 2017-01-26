@@ -21,6 +21,11 @@
 #include <config.h>
 #endif
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sys/types.h>
+#include <sys/syscall.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,8 +34,6 @@
 #include <stdarg.h>
 #include <execinfo.h>
 
-#include "LB_core/spd.h"
-#include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/options.h"
@@ -39,11 +42,11 @@
 verbose_opts_t vb_opts;
 static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
-static __thread int thread_id;
 
-void debug_init(void) {
-    vb_opts = global_spd.options.verbose;
-    vb_fmt = global_spd.options.verbose_fmt;
+void debug_init(const options_t *options) {
+    vb_opts = options->verbose;
+    vb_fmt = options->verbose_fmt;
+
 
     int i = 0;
     if ( vb_fmt & VBF_NODE ) {
@@ -59,14 +62,12 @@ void debug_init(void) {
     if ( i !=0 ) {
         fmt_str[i-1] = '\0';
     }
-
-    thread_id = get_thread_num();
 }
 
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...) {
     // Print prefix and object identifier
     if ( vb_fmt & VBF_THREAD ) {
-        fprintf( fp, "%s[%s:%d]: ", prefix, fmt_str, thread_id );
+        fprintf( fp, "%s[%s:%ld]: ", prefix, fmt_str, syscall(SYS_gettid) );
     } else {
         fprintf( fp, "%s[%s]: ", prefix, fmt_str );
     }

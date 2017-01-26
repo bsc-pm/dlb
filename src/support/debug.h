@@ -23,9 +23,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "support/types.h"
+#include "support/options.h"
 #include "support/globals.h"
 
-void debug_init(void);
+void debug_init(const options_t *options);
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
 void print_backtrace(void);
 

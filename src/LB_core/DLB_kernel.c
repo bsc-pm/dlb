@@ -147,7 +147,7 @@ static void load_modules(void) {
 
     pm_init();
 
-    debug_init();
+    debug_init(&global_spd.options);
     verbose(VB_API, "Enabled verbose mode for DLB API");
     verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
     verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
@@ -616,7 +616,7 @@ void notifymaskchange(void) {
 void printShmem(void) {
     pm_init();
     options_init(&global_spd.options, NULL);
-    debug_init();
+    debug_init(&global_spd.options);
     shmem_cpuinfo_ext__init();
     shmem_cpuinfo_ext__print_info();
     shmem_cpuinfo_ext__finalize();

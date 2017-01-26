@@ -37,13 +37,11 @@
         nanos_omp_get_active_mask && \
         nanos_omp_set_process_mask && \
         nanos_omp_add_process_mask && \
-        nanos_omp_get_thread_num && \
         nanos_omp_get_max_threads && \
         nanos_omp_set_num_threads \
         )
 
 #define OMP_SYMBOLS_DEFINED ( \
-        omp_get_thread_num && \
         omp_get_max_threads && \
         omp_set_num_threads \
         )
@@ -55,10 +53,8 @@ void nanos_omp_add_process_mask(const cpu_set_t *cpu_set) __attribute__((weak));
 void nanos_omp_get_active_mask(cpu_set_t *cpu_set) __attribute__((weak));
 int  nanos_omp_set_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
 void nanos_omp_add_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-int  nanos_omp_get_thread_num(void) __attribute__((weak));
 int  nanos_omp_get_max_threads(void) __attribute__((weak));
 void nanos_omp_set_num_threads(int nthreads) __attribute__((weak));
-int  omp_get_thread_num(void) __attribute__((weak));
 int  omp_get_max_threads(void) __attribute__((weak));
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 
@@ -72,7 +68,6 @@ dlb_callback_enable_cpu_t dlb_callback_enable_cpu_ptr = NULL;
 dlb_callback_disable_cpu_t dlb_callback_disable_cpu_ptr = NULL;
 
 /* Getters list */
-dlb_getter_get_thread_num_t dlb_getter_get_thread_num_ptr = NULL;
 dlb_getter_get_num_threads_t dlb_getter_get_num_threads_ptr = NULL;
 dlb_getter_get_active_mask_t dlb_getter_get_active_mask_ptr = NULL;
 dlb_getter_get_process_mask_t dlb_getter_get_process_mask_ptr = NULL;
@@ -90,7 +85,6 @@ void pm_init(void) {
         dlb_callback_add_active_mask_ptr = (dlb_callback_add_active_mask_t)nanos_omp_add_active_mask;
         dlb_callback_add_process_mask_ptr = (dlb_callback_add_process_mask_t)nanos_omp_add_process_mask;
 
-        dlb_getter_get_thread_num_ptr = nanos_omp_get_thread_num;
         dlb_getter_get_num_threads_ptr = nanos_omp_get_max_threads;
         dlb_getter_get_active_mask_ptr = (dlb_getter_get_active_mask_t)nanos_omp_get_active_mask;
         dlb_getter_get_process_mask_ptr = (dlb_getter_get_process_mask_t)nanos_omp_get_process_mask;
@@ -99,7 +93,6 @@ void pm_init(void) {
     else if (OMP_SYMBOLS_DEFINED) {
         dlb_callback_set_num_threads_ptr = omp_set_num_threads;
 
-        dlb_getter_get_thread_num_ptr = omp_get_thread_num;
         dlb_getter_get_num_threads_ptr = omp_get_max_threads;
     }
     /* Undefined */
@@ -162,9 +155,6 @@ int pm_callback_get(dlb_callbacks_t which, dlb_callback_t callback) {
 
 int pm_getter_set(dlb_getters_t which, dlb_getter_t getter) {
     switch(which) {
-        case dlb_getter_get_thread_num:
-            dlb_getter_get_thread_num_ptr = (dlb_getter_get_thread_num_t)getter;
-            break;
         case dlb_getter_get_num_threads:
             dlb_getter_get_num_threads_ptr = (dlb_getter_get_num_threads_t)getter;
             break;
@@ -182,9 +172,6 @@ int pm_getter_set(dlb_getters_t which, dlb_getter_t getter) {
 
 int pm_getter_get(dlb_getters_t which, dlb_getter_t getter) {
     switch(which) {
-        case dlb_getter_get_thread_num:
-            getter = (dlb_getter_t)dlb_callback_set_num_threads_ptr;
-            break;
         case dlb_getter_get_num_threads:
             getter = (dlb_getter_t)dlb_getter_get_num_threads_ptr;
             break;
@@ -272,13 +259,6 @@ int disable_cpu(int cpuid) {
     }
     dlb_callback_disable_cpu_ptr(cpuid);
     return DLB_SUCCESS;
-}
-
-int get_thread_num(void) {
-    if (dlb_getter_get_thread_num_ptr == NULL) {
-        return 0;
-    }
-    return dlb_getter_get_thread_num_ptr();
 }
 
 int get_num_threads(void) {
