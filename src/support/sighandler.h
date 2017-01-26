@@ -20,7 +20,7 @@
 #ifndef SIGHANDLER_H
 #define SIGHANDLER_H
 
-void register_signals(void);
-void unregister_signals(void);
+void register_signals(const options_t *options, void(*terminate_fct)(void));
+void unregister_signals(const options_t *options);
 
 #endif /* SIGHANDLER_H */

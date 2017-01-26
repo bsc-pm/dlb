@@ -64,8 +64,6 @@
 
 #include <stddef.h>
 #include <signal.h>
-#include "LB_core/spd.h"
-#include "LB_core/DLB_kernel.h"
 #include "support/debug.h"
 #include "support/types.h"
 #include "support/options.h"
@@ -75,10 +73,11 @@
 static struct sigaction new_action;
 static struct sigaction old_actions[MAX_SIGNUM];
 static bool registed_signals[MAX_SIGNUM] = {false};
+static void (*terminate)(void) = NULL;
 
 static void termination_handler( int signum, siginfo_t *si, void *context ) {
     info( "Signal caught %d. Cleaning up DLB", signum );
-    Terminate();
+    terminate();
 
     /* Restore original action, then raise it */
     sigaction( signum, &old_actions[signum], NULL );
@@ -105,9 +104,12 @@ static void unregister_signal( int signum ) {
     registed_signals[signum] = false;
 }
 
-void register_signals( void ) {
-    if (global_spd.options.debug_opts & DBG_REGSIGNALS) {
+void register_signals(const options_t *options, void(*terminate_fct)(void)) {
+    if (options->debug_opts & DBG_REGSIGNALS) {
         warning("Debug option: register-signals.");
+
+        /* Set terminate function */
+        terminate = terminate_fct;
 
         /* Set up new handler */
         new_action.sa_sigaction = termination_handler;
@@ -135,8 +137,8 @@ void register_signals( void ) {
     }
 }
 
-void unregister_signals( void ) {
-    if (global_spd.options.debug_opts & DBG_REGSIGNALS) {
+void unregister_signals(const options_t *options) {
+    if (options->debug_opts & DBG_REGSIGNALS) {
         int i;
         for ( i=0; i<MAX_SIGNUM; i++ ) {
             if ( registed_signals[i] ) {

@@ -157,7 +157,7 @@ static void load_modules(void) {
     verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
 
     init_tracing();
-    register_signals();
+    register_signals(&global_spd.options, Terminate);
     if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
         shmem_procinfo__init();
         shmem_cpuinfo__init();
@@ -175,7 +175,7 @@ static void unload_modules(void) {
         shmem_cpuinfo__finalize();
         shmem_procinfo__finalize();
     }
-    unregister_signals();
+    unregister_signals(&global_spd.options);
 }
 
 void set_dlb_enabled(bool enabled) {
