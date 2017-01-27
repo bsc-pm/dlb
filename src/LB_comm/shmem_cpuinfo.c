@@ -91,7 +91,7 @@ void shmem_cpuinfo__init(void) {
     ME = getpid();
     mu_parse_mask(global_spd.options.mask, &dlb_mask);
     cpu_set_t process_mask;
-    get_process_mask(&process_mask);
+    get_process_mask(&global_spd.pm, &process_mask);
     cpu_set_t affinity_mask;
     mu_get_affinity_mask(&affinity_mask, &process_mask, MU_ANY_BIT);
     node_size = mu_get_system_size();

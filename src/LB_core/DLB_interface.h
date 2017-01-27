@@ -21,6 +21,7 @@
 #define DLB_INTERFACE_H
 
 /* DLB custom types */
+typedef void* dlb_handler_t;
 typedef void* dlb_cpu_set_t;
 typedef const void* const_dlb_cpu_set_t;
 

@@ -25,15 +25,40 @@
 #endif
 #include <sched.h>
 
-void pm_init(void);
-int update_threads(int threads);
-int get_mask(cpu_set_t *cpu_set);
-int set_mask(const cpu_set_t *cpu_set);
-int add_mask(const cpu_set_t *cpu_set);
-int enable_cpu(int cpuid);
-int disable_cpu(int cpuid);
-int get_process_mask(cpu_set_t *cpu_set);
-int set_process_mask(const cpu_set_t *cpu_set);
-int add_process_mask(const cpu_set_t *cpu_set);
+#include "LB_core/callbacks.h"
+
+typedef struct pm_interface {
+    /* Callbacks list */
+    dlb_callback_set_num_threads_t dlb_callback_set_num_threads_ptr;
+    dlb_callback_set_active_mask_t dlb_callback_set_active_mask_ptr;
+    dlb_callback_set_process_mask_t dlb_callback_set_process_mask_ptr;
+    dlb_callback_add_active_mask_t dlb_callback_add_active_mask_ptr;
+    dlb_callback_add_process_mask_t dlb_callback_add_process_mask_ptr;
+    dlb_callback_enable_cpu_t dlb_callback_enable_cpu_ptr;
+    dlb_callback_disable_cpu_t dlb_callback_disable_cpu_ptr;
+
+    /* Getters list */
+    dlb_getter_get_num_threads_t dlb_getter_get_num_threads_ptr;
+    dlb_getter_get_active_mask_t dlb_getter_get_active_mask_ptr;
+    dlb_getter_get_process_mask_t dlb_getter_get_process_mask_ptr;
+} pm_interface_t;
+
+void pm_init(pm_interface_t *pm);
+int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t callback);
+int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t callback);
+int pm_getter_set(pm_interface_t *pm, dlb_getters_t which, dlb_getter_t getter);
+int pm_getter_get(const pm_interface_t *pm, dlb_getters_t which, dlb_getter_t getter);
+
+int update_threads(const pm_interface_t *pm, int threads);
+int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int enable_cpu(const pm_interface_t *pm, int cpuid);
+int disable_cpu(const pm_interface_t *pm, int cpuid);
+
+int get_num_threads(const pm_interface_t *pm);
+int get_mask(const pm_interface_t *pm, cpu_set_t *cpu_set);
+int get_process_mask(const pm_interface_t *pm, cpu_set_t *cpu_set);
 
 #endif //NUMTHREADS_H

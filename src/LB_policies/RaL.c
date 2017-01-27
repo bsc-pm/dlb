@@ -27,6 +27,7 @@
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_bitset.h"
+#include "LB_core/spd.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -59,12 +60,12 @@ void RaL_Init( void ) {
 
     //Initialize shared memory
     cpu_set_t default_mask;
-    get_mask( &default_mask );
+    get_mask( &global_spd.pm, &default_mask );
     shmem_mask.init( &default_mask );
 }
 
 void RaL_Finish( void ) {
-    set_mask( shmem_mask.recover_defmask() );
+    set_mask( &global_spd.pm, shmem_mask.recover_defmask() );
     shmem_mask.finalize();
 }
 
@@ -85,7 +86,7 @@ void RaL_IntoBlockingCall(int is_iter, int blocking_mode) {
 
     cpu_set_t mask;
     CPU_ZERO( &mask );
-    get_mask( &mask );
+    get_mask( &global_spd.pm, &mask );
 
     cpu_set_t cpu;
     CPU_ZERO( &cpu );
@@ -101,7 +102,7 @@ void RaL_IntoBlockingCall(int is_iter, int blocking_mode) {
         nthreads = 0;
     }
 
-    set_mask( &cpu );
+    set_mask( &global_spd.pm, &cpu );
     shmem_mask.add_mask( &mask );
     add_event( THREADS_USED_EVENT, nthreads );
 }
@@ -147,7 +148,7 @@ void RaL_OutOfBlockingCall(int is_iter ) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
     shmem_mask.recover_some_defcpus( &mask, max_cpus );
-    set_mask( &mask );
+    set_mask( &global_spd.pm, &mask );
     nthreads = max_cpus;
 //printf(stderr, "[%d] Using %d threads\n", _mpi_rank, nthreads );
 
@@ -159,7 +160,7 @@ void RaL_OutOfBlockingCall(int is_iter ) {
 void RaL_UpdateResources( int max_resources ) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
-    get_mask( &mask );
+    get_mask( &global_spd.pm, &mask );
 
     if( max_cpus==_default_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
         //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
@@ -179,7 +180,7 @@ void RaL_UpdateResources( int max_resources ) {
             initComp=aux;
 
             nthreads += new_threads;
-            set_mask( &mask );
+            set_mask( &global_spd.pm, &mask );
             verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", new_threads, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
@@ -190,13 +191,13 @@ void RaL_UpdateResources( int max_resources ) {
 void RaL_ReturnClaimedCpus( void ) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
-    get_mask( &mask );
+    get_mask( &global_spd.pm, &mask );
 
     int returned = shmem_mask.return_claimed( &mask );
 
     if ( returned > 0 ) {
         nthreads -= returned;
-        set_mask( &mask );
+        set_mask( &global_spd.pm, &mask );
         verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
         add_event( THREADS_USED_EVENT, nthreads );
     }

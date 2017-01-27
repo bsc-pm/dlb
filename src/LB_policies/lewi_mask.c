@@ -27,6 +27,7 @@
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
+#include "LB_core/spd.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
@@ -48,7 +49,7 @@ void lewi_mask_Init(void) {
 
     //Check num threads and mask size are the same
     cpu_set_t default_mask;
-    get_mask(&default_mask);
+    get_mask(&global_spd.pm, &default_mask);
     assert(nthreads==CPU_COUNT(&default_mask));
 
     enabled = 1;
@@ -58,7 +59,7 @@ void lewi_mask_Finish(void) {
     cpu_set_t mask;
     CPU_ZERO(&mask);
     shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
-    if (CPU_COUNT(&mask)>0) add_mask(&mask);
+    if (CPU_COUNT(&mask)>0) add_mask(&global_spd.pm, &mask);
 }
 
 void lewi_mask_IntoCommunication(void) {}
@@ -70,7 +71,7 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
     if (enabled) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
-        get_mask( &mask );
+        get_mask( &global_spd.pm, &mask );
 
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
@@ -92,7 +93,7 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
 
         // Don't set application mask if it is already 1 cpu
         if ( !CPU_EQUAL( &mask, &cpu ) ) {
-            set_mask( &cpu );
+            set_mask( &global_spd.pm, &cpu );
         }
 
         // Don't add mask if empty
@@ -111,7 +112,7 @@ void lewi_mask_OutOfBlockingCall(int is_iter) {
     if (enabled) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
-        get_mask( &mask );
+        get_mask( &global_spd.pm, &mask );
         //Check num threads and mask size are the same
         //assert(nthreads+1==CPU_COUNT(&mask));
 
@@ -125,7 +126,7 @@ void lewi_mask_OutOfBlockingCall(int is_iter) {
             shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
             nthreads = _default_nthreads;
         }
-        set_mask( &mask );
+        set_mask( &global_spd.pm, &mask );
         assert(nthreads==CPU_COUNT(&mask));
         add_event( THREADS_USED_EVENT, nthreads );
     }
@@ -136,7 +137,7 @@ void lewi_mask_UpdateResources( int max_resources ) {
     if (enabled && !single) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
-        get_mask( &mask );
+        get_mask( &global_spd.pm, &mask );
 
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
@@ -145,7 +146,7 @@ void lewi_mask_UpdateResources( int max_resources ) {
 
         if ( collected > 0 ) {
             nthreads += collected;
-            set_mask( &mask );
+            set_mask( &global_spd.pm, &mask );
             verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", collected, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
@@ -159,7 +160,7 @@ void lewi_mask_ReturnClaimedCpus( void ) {
     if (enabled && !single) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
-        get_mask( &mask );
+        get_mask( &global_spd.pm, &mask );
 
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
@@ -168,7 +169,7 @@ void lewi_mask_ReturnClaimedCpus( void ) {
 
         if ( returned > 0 ) {
             nthreads -= returned;
-            set_mask( &mask );
+            set_mask( &global_spd.pm, &mask );
             verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
@@ -181,7 +182,7 @@ void lewi_mask_ClaimCpus(int cpus) {
     if (enabled && !single) {
         cpu_set_t mask;
         CPU_ZERO( &mask );
-        get_mask( &mask );
+        get_mask( &global_spd.pm, &mask );
 
         if (nthreads<_default_nthreads) {
             //Do not get more cpus than the default ones
@@ -192,13 +193,13 @@ void lewi_mask_ClaimCpus(int cpus) {
             cpu_set_t current_mask;
             CPU_ZERO( &current_mask );
 
-            get_mask( &current_mask );
+            get_mask( &global_spd.pm, &current_mask );
 
             //Check num threads and mask size are the same
             assert(nthreads==CPU_COUNT(&current_mask));
 
             shmem_cpuinfo__recover_some_cpus(&current_mask, cpus);
-            set_mask( &current_mask);
+            set_mask( &global_spd.pm, &current_mask);
             nthreads += cpus;
             assert(nthreads==CPU_COUNT(&current_mask));
 
@@ -211,14 +212,14 @@ void lewi_mask_acquireCpu(int cpu) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "AcquireCpu %d", cpu);
         cpu_set_t mask;
-        get_mask( &mask );
+        get_mask( &global_spd.pm, &mask );
 
         if (!CPU_ISSET(cpu, &mask)){
 
             if (shmem_cpuinfo__acquire_cpu(cpu, 0)) {
                 nthreads++;
                 CPU_SET(cpu, &mask);
-                set_mask( &mask );
+                set_mask( &global_spd.pm, &mask );
                 verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&mask));
                 add_event( THREADS_USED_EVENT, nthreads );
             }else{
@@ -232,7 +233,7 @@ void lewi_mask_acquireCpus(cpu_set_t* cpus) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "AcquireCpus %s", mu_to_str(cpus));
         cpu_set_t current_mask;
-        get_mask( &current_mask );
+        get_mask( &global_spd.pm, &current_mask );
 
         bool success = false;
         int cpu;
@@ -250,7 +251,7 @@ void lewi_mask_acquireCpus(cpu_set_t* cpus) {
             }
         }
         if (success) {
-            set_mask( &current_mask );
+            set_mask( &global_spd.pm, &current_mask );
             verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
             add_event( THREADS_USED_EVENT, nthreads );
         }
@@ -262,9 +263,9 @@ void lewi_mask_resetDLB( void ) {
         verbose(VB_MICROLB, "ResetDLB");
         cpu_set_t current_mask;
         CPU_ZERO( &current_mask );
-        get_mask( &current_mask );
+        get_mask( &global_spd.pm, &current_mask );
         nthreads = shmem_cpuinfo__reset_default_cpus(&current_mask);
-        set_mask( &current_mask);
+        set_mask( &global_spd.pm, &current_mask);
         verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
     }
 }

@@ -145,7 +145,7 @@ static void load_modules(void) {
     drom_enabled = global_spd.options.drom;
     barrier_enabled = global_spd.options.barrier;
 
-    pm_init();
+    pm_init(&global_spd.pm);
 
     debug_init(&global_spd.options);
     verbose(VB_API, "Enabled verbose mode for DLB API");
@@ -609,12 +609,12 @@ void notifymaskchangeto(const cpu_set_t* mask) {
 
 void notifymaskchange(void) {
     cpu_set_t process_mask;
-    get_process_mask(&process_mask);
+    get_process_mask(&global_spd.pm, &process_mask);
     notifymaskchangeto(&process_mask);
 }
 
 void printShmem(void) {
-    pm_init();
+    pm_init(&global_spd.pm);
     options_init(&global_spd.options, NULL);
     debug_init(&global_spd.options);
     shmem_cpuinfo_ext__init();

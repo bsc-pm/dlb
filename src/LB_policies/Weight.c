@@ -23,6 +23,7 @@
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_policies/Weight.h"
+#include "LB_core/spd.h"
 #include "support/globals.h"
 #include "support/debug.h"
 #include "support/mytime.h"
@@ -299,7 +300,7 @@ void* slaveThread_Weight(void* arg) {
 void Weight_updateresources() {
     if (threadsUsed!=threads2use) {
         verbose(VB_MICROLB, "Using %d cpus", threads2use);
-        update_threads(threads2use);
+        update_threads(&global_spd.pm, threads2use);
         threadsUsed=threads2use;
     }
 }

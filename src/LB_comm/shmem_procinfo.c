@@ -132,7 +132,7 @@ void shmem_procinfo__init(void) {
 
                 // Register process mask into the system
                 cpu_set_t mask;
-                get_process_mask(&mask);
+                get_process_mask(&global_spd.pm, &mask);
                 int error = register_mask(process, &mask);
                 if (error) {
                     shmem_unlock(init_handler);
@@ -714,7 +714,7 @@ static pinfo_t* get_process(spid_t pid) {
 static void update_process_loads(void) {
     // Get the active CPUs
     cpu_set_t mask;
-    get_mask(&mask);
+    get_mask(&global_spd.pm, &mask);
     shdata->process_info[my_process].active_cpus = CPU_COUNT(&mask);
 
     // Compute elapsed total time
@@ -763,11 +763,11 @@ static void update_process_mask(void) {
 
     // Notify the mask change to the PM
     verbose(VB_DROM, "Setting new mask: %s", mu_to_str(next_mask))
-    int error = set_process_mask(next_mask);
+    int error = set_process_mask(&global_spd.pm, next_mask);
 
     // On error, update local mask and steal again from other processes
     if (error) {
-        get_process_mask(next_mask);
+        get_process_mask(&global_spd.pm, next_mask);
         int c, p;
         for (c = max_cpus-1; c >= 0; c--) {
             if (CPU_ISSET( c, next_mask) ) {

@@ -30,7 +30,7 @@
 #include "support/debug.h"
 
 void drom_ext_init(void) {
-    pm_init();
+    pm_init(&global_spd.pm);
     options_init(&global_spd.options, NULL);
     debug_init(&global_spd.options);
     shmem_cpuinfo_ext__init();

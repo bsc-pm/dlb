@@ -138,7 +138,7 @@ void setThreads_Lend_light(int numThreads) {
 
     if (myCPUS!=numThreads) {
         verbose(VB_MICROLB, "Using %d cpus", numThreads);
-        update_threads(numThreads);
+        update_threads(&global_spd.pm, numThreads);
         myCPUS=numThreads;
     }
 }
