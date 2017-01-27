@@ -26,10 +26,10 @@
 #include <sys/types.h>
 #include <sys/resource.h>
 
+#include "LB_numThreads/numThreads.h"
 #include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
-#include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
 #include "support/types.h"
 #include "support/error.h"
@@ -92,7 +92,7 @@ static bool steal_cpu(pinfo_t* new_owner, pinfo_t *victim, int cpu, bool dry_run
 static int  steal_mask(pinfo_t *new_owner, const cpu_set_t *mask, bool dry_run);
 static int  getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask);
 
-void shmem_procinfo__init(void) {
+void shmem_procinfo__init(const cpu_set_t *process_mask) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -131,17 +131,15 @@ void shmem_procinfo__init(void) {
                 CPU_ZERO(&process->future_process_mask);
 
                 // Register process mask into the system
-                cpu_set_t mask;
-                get_process_mask(&global_spd.pm, &mask);
-                int error = register_mask(process, &mask);
+                int error = register_mask(process, process_mask);
                 if (error) {
                     shmem_unlock(init_handler);
                     // FIXME: we should clean the shmem before that
-                    fatal("Error trying to register CPU mask: %s", mu_to_str(&mask));
+                    fatal("Error trying to register CPU mask: %s", mu_to_str(process_mask));
                 }
 
                 // Blindly apply future mask modified inside register_mask
-                memcpy(&process->current_process_mask, &mask, sizeof(cpu_set_t));
+                memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
                 process->dirty = false;
                 process->returncode = 0;
 
@@ -765,6 +763,8 @@ static void update_process_mask(void) {
     verbose(VB_DROM, "Setting new mask: %s", mu_to_str(next_mask))
     int error = set_process_mask(&global_spd.pm, next_mask);
 
+    // we should not support set_proces_mask failure here
+#if 0
     // On error, update local mask and steal again from other processes
     if (error) {
         get_process_mask(&global_spd.pm, next_mask);
@@ -780,6 +780,7 @@ static void update_process_mask(void) {
             }
         }
     }
+#endif
 
     // Update local info
     memcpy(&shdata->process_info[my_process].current_process_mask, next_mask, sizeof(cpu_set_t));

@@ -28,7 +28,6 @@
 #include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
-#include "LB_numThreads/numThreads.h"
 #include "support/debug.h"
 #include "support/types.h"
 #include "support/error.h"
@@ -80,7 +79,7 @@ static inline bool is_borrowed(int cpu);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
-void shmem_cpuinfo__init(void) {
+void shmem_cpuinfo__init(const cpu_set_t *process_mask) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -90,10 +89,8 @@ void shmem_cpuinfo__init(void) {
 
     ME = getpid();
     mu_parse_mask(global_spd.options.mask, &dlb_mask);
-    cpu_set_t process_mask;
-    get_process_mask(&global_spd.pm, &process_mask);
     cpu_set_t affinity_mask;
-    mu_get_affinity_mask(&affinity_mask, &process_mask, MU_ANY_BIT);
+    mu_get_affinity_mask(&affinity_mask, process_mask, MU_ANY_BIT);
     node_size = mu_get_system_size();
 
     // Basic size + zero-length array real length
@@ -107,7 +104,7 @@ void shmem_cpuinfo__init(void) {
         int cpu;
         // Check first that my process_mask is not already owned
         for (cpu = 0; cpu < node_size; cpu++)
-            if (CPU_ISSET(cpu, &process_mask)
+            if (CPU_ISSET(cpu, process_mask)
                     && shdata->node_info[cpu].owner != NOBODY
                     && shdata->node_info[cpu].owner != ME) {
                 spid_t owner = shdata->node_info[cpu].owner;
@@ -117,7 +114,7 @@ void shmem_cpuinfo__init(void) {
 
         for (cpu = 0; cpu < node_size; cpu++) {
             // Add my mask info
-            if (CPU_ISSET(cpu, &process_mask)) {
+            if (CPU_ISSET(cpu, process_mask)) {
                 shdata->node_info[cpu].owner = ME;
                 shdata->node_info[cpu].state = CPU_BUSY;
                 // My CPU could have already a guest if the DLB_mask is being used
@@ -151,7 +148,7 @@ void shmem_cpuinfo__init(void) {
     shm_handler = init_handler;
 
     // TODO mask info should go in shmem_procinfo. Print something else here?
-    verbose( VB_SHMEM, "Process Mask: %s", mu_to_str(&process_mask) );
+    verbose( VB_SHMEM, "Process Mask: %s", mu_to_str(process_mask) );
     verbose( VB_SHMEM, "Process Affinity Mask: %s", mu_to_str(&affinity_mask) );
 
     add_event(IDLE_CPUS_EVENT, idle_count);

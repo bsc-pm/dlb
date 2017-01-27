@@ -159,8 +159,9 @@ static void load_modules(void) {
     init_tracing(&global_spd.options);
     register_signals(&global_spd.options, Terminate);
     if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
-        shmem_procinfo__init();
-        shmem_cpuinfo__init();
+        get_process_mask(&global_spd.pm, &global_spd.process_mask);
+        shmem_procinfo__init(&global_spd.process_mask);
+        shmem_cpuinfo__init(&global_spd.process_mask);
     }
     if (barrier_enabled) {
         shmem_barrier_init();
