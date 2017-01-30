@@ -84,7 +84,7 @@ static void parse_hwloc( void ) {
 static void set_bgq_info( void ) {
     sys.size = 64;
     sys.num_parents = 1;
-    sys.parents = (cpu_set_t *) malloc( sizeof(cpu_set_t) );
+    sys.parents = malloc( sizeof(cpu_set_t) );
     CPU_ZERO( &(sys.parents[0]) );
     CPU_ZERO( &sys.sys_mask );
     int i;

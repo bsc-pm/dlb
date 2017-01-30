@@ -81,7 +81,7 @@ static bool dlb_enabled = false;
 static bool dlb_initialized = false;
 static int init_id = 0;
 
-static const char* policy;
+static policy_t policy;
 static bool stats_enabled;
 static bool drom_enabled;
 static bool barrier_enabled;
@@ -154,7 +154,7 @@ static void load_modules(void) {
 
     init_tracing();
     register_signals();
-    if (strcasecmp(policy, "no")!=0 || drom_enabled || stats_enabled) {
+    if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
         shmem_procinfo__init();
         shmem_cpuinfo__init();
     }
@@ -167,7 +167,7 @@ static void unload_modules(void) {
     if (barrier_enabled) {
         shmem_barrier_finalize();
     }
-    if (strcasecmp(policy, "no")!=0 || drom_enabled || stats_enabled) {
+    if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
         shmem_cpuinfo__finalize();
         shmem_procinfo__finalize();
     }
@@ -200,127 +200,121 @@ int Initialize(void) {
 
         info0("%s %s", PACKAGE, VERSION);
 
-        if (strcasecmp(policy, "LeWI")==0) {
-            info0( "Balancing policy: LeWI" );
-
-            lb_funcs.init = &Lend_light_Init;
-            lb_funcs.finish = &Lend_light_Finish;
-            lb_funcs.intoCommunication = &Lend_light_IntoCommunication;
-            lb_funcs.outOfCommunication = &Lend_light_OutOfCommunication;
-            lb_funcs.intoBlockingCall = &Lend_light_IntoBlockingCall;
-            lb_funcs.outOfBlockingCall = &Lend_light_OutOfBlockingCall;
-            lb_funcs.updateresources = &Lend_light_updateresources;
-            lb_funcs.resetDLB = &Lend_light_resetDLB;
-            lb_funcs.disableDLB = &Lend_light_disableDLB;
-            lb_funcs.enableDLB = &Lend_light_enableDLB;
-            lb_funcs.single = &Lend_light_single;
-            lb_funcs.parallel = &Lend_light_parallel;
-
-        } else if (strcasecmp(policy, "Map")==0) {
-            info0( "Balancing policy: LeWI with Map of cpus version" );
-
-            lb_funcs.init = &Map_Init;
-            lb_funcs.finish = &Map_Finish;
-            lb_funcs.intoCommunication = &Map_IntoCommunication;
-            lb_funcs.outOfCommunication = &Map_OutOfCommunication;
-            lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
-            lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
-            lb_funcs.updateresources = &Map_updateresources;
-
-        } else if (strcasecmp(policy, "WEIGHT")==0) {
-            info0( "Balancing policy: Weight balancing" );
-
-            use_dpd=1;
-
-            lb_funcs.init = &Weight_Init;
-            lb_funcs.finish = &Weight_Finish;
-            lb_funcs.intoCommunication = &Weight_IntoCommunication;
-            lb_funcs.outOfCommunication = &Weight_OutOfCommunication;
-            lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
-            lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
-            lb_funcs.updateresources = &Weight_updateresources;
-
-        } else if (strcasecmp(policy, "LeWI_mask")==0) {
-            info0( "Balancing policy: LeWI mask" );
-
-            lb_funcs.init = &lewi_mask_Init;
-            lb_funcs.finish = &lewi_mask_Finish;
-            lb_funcs.intoCommunication = &lewi_mask_IntoCommunication;
-            lb_funcs.outOfCommunication = &lewi_mask_OutOfCommunication;
-            lb_funcs.intoBlockingCall = &lewi_mask_IntoBlockingCall;
-            lb_funcs.outOfBlockingCall = &lewi_mask_OutOfBlockingCall;
-            lb_funcs.updateresources = &lewi_mask_UpdateResources;
-            lb_funcs.returnclaimed = &lewi_mask_ReturnClaimedCpus;
-            lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
-            lb_funcs.resetDLB  = &lewi_mask_resetDLB;
-            lb_funcs.acquirecpu = &lewi_mask_acquireCpu;
-            lb_funcs.acquirecpus = &lewi_mask_acquireCpus;
-            lb_funcs.disableDLB = &lewi_mask_disableDLB;
-            lb_funcs.enableDLB = &lewi_mask_enableDLB;
-            lb_funcs.single = &lewi_mask_single;
-            lb_funcs.parallel = &lewi_mask_parallel;
-
-        } else if (strcasecmp(policy, "auto_LeWI_mask")==0) {
-            info0( "Balancing policy: Autonomous LeWI mask" );
-
-            lb_funcs.init = &auto_lewi_mask_Init;
-            lb_funcs.finish = &auto_lewi_mask_Finish;
-            lb_funcs.intoCommunication = &auto_lewi_mask_IntoCommunication;
-            lb_funcs.outOfCommunication = &auto_lewi_mask_OutOfCommunication;
-            lb_funcs.intoBlockingCall = &auto_lewi_mask_IntoBlockingCall;
-            lb_funcs.outOfBlockingCall = &auto_lewi_mask_OutOfBlockingCall;
-            lb_funcs.updateresources = &auto_lewi_mask_UpdateResources;
-            //lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
-            lb_funcs.releasecpu = &auto_lewi_mask_ReleaseCpu;
-            lb_funcs.returnclaimedcpu = &auto_lewi_mask_ReturnCpuIfClaimed;
-            lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
-            lb_funcs.checkCpuAvailability = &auto_lewi_mask_CheckCpuAvailability;
-            lb_funcs.resetDLB = &auto_lewi_mask_resetDLB;
-            lb_funcs.acquirecpu = &auto_lewi_mask_acquireCpu;
-            lb_funcs.acquirecpus = &auto_lewi_mask_acquireCpus;
-            lb_funcs.disableDLB = &auto_lewi_mask_disableDLB;
-            lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
-            lb_funcs.single = &auto_lewi_mask_single;
-            lb_funcs.parallel = &auto_lewi_mask_parallel;
-            policy_auto=1;
-
-        } else if (strcasecmp(policy, "RaL")==0) {
-            info( "Balancing policy: RaL: Redistribute and Lend" );
-
-            use_dpd=1;
-
-            if (_mpis_per_node>1) {
-                lb_funcs.init = &PERaL_Init;
-                lb_funcs.finish = &PERaL_Finish;
-                lb_funcs.intoCommunication = &PERaL_IntoCommunication;
-                lb_funcs.outOfCommunication = &PERaL_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &PERaL_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &PERaL_OutOfBlockingCall;
-                lb_funcs.updateresources = &PERaL_UpdateResources;
-                lb_funcs.returnclaimed = &PERaL_ReturnClaimedCpus;
-            } else {
-                lb_funcs.init = &RaL_Init;
-                lb_funcs.finish = &RaL_Finish;
-                lb_funcs.intoCommunication = &RaL_IntoCommunication;
-                lb_funcs.outOfCommunication = &RaL_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &RaL_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &RaL_OutOfBlockingCall;
-                lb_funcs.updateresources = &RaL_UpdateResources;
-                lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
-            }
-
-        } else if (strcasecmp(policy, "JustProf")==0) {
-            info0( "No Load balancing" );
-
-            use_dpd=1;
-
-            lb_funcs.init = &JustProf_Init;
-            lb_funcs.finish = &JustProf_Finish;
-            lb_funcs.intoCommunication = &JustProf_IntoCommunication;
-            lb_funcs.outOfCommunication = &JustProf_OutOfCommunication;
-            lb_funcs.intoBlockingCall = &JustProf_IntoBlockingCall;
-            lb_funcs.outOfBlockingCall = &JustProf_OutOfBlockingCall;
-            lb_funcs.updateresources = &JustProf_UpdateResources;
+        switch(policy) {
+            case POLICY_NONE:
+                break;
+            case POLICY_JUST_PROF:
+                info0( "No Load balancing" );
+                use_dpd=1;
+                lb_funcs.init = &JustProf_Init;
+                lb_funcs.finish = &JustProf_Finish;
+                lb_funcs.intoCommunication = &JustProf_IntoCommunication;
+                lb_funcs.outOfCommunication = &JustProf_OutOfCommunication;
+                lb_funcs.intoBlockingCall = &JustProf_IntoBlockingCall;
+                lb_funcs.outOfBlockingCall = &JustProf_OutOfBlockingCall;
+                lb_funcs.updateresources = &JustProf_UpdateResources;
+                break;
+            case POLICY_LEWI:
+                info0( "Balancing policy: LeWI" );
+                lb_funcs.init = &Lend_light_Init;
+                lb_funcs.finish = &Lend_light_Finish;
+                lb_funcs.intoCommunication = &Lend_light_IntoCommunication;
+                lb_funcs.outOfCommunication = &Lend_light_OutOfCommunication;
+                lb_funcs.intoBlockingCall = &Lend_light_IntoBlockingCall;
+                lb_funcs.outOfBlockingCall = &Lend_light_OutOfBlockingCall;
+                lb_funcs.updateresources = &Lend_light_updateresources;
+                lb_funcs.resetDLB = &Lend_light_resetDLB;
+                lb_funcs.disableDLB = &Lend_light_disableDLB;
+                lb_funcs.enableDLB = &Lend_light_enableDLB;
+                lb_funcs.single = &Lend_light_single;
+                lb_funcs.parallel = &Lend_light_parallel;
+                break;
+            case POLICY_MAP:
+                info0( "Balancing policy: LeWI with Map of cpus version" );
+                lb_funcs.init = &Map_Init;
+                lb_funcs.finish = &Map_Finish;
+                lb_funcs.intoCommunication = &Map_IntoCommunication;
+                lb_funcs.outOfCommunication = &Map_OutOfCommunication;
+                lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
+                lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
+                lb_funcs.updateresources = &Map_updateresources;
+                break;
+            case POLICY_WEIGHT:
+                info0( "Balancing policy: Weight balancing" );
+                use_dpd=1;
+                lb_funcs.init = &Weight_Init;
+                lb_funcs.finish = &Weight_Finish;
+                lb_funcs.intoCommunication = &Weight_IntoCommunication;
+                lb_funcs.outOfCommunication = &Weight_OutOfCommunication;
+                lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
+                lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
+                lb_funcs.updateresources = &Weight_updateresources;
+                break;
+            case POLICY_LEWI_MASK:
+                info0( "Balancing policy: LeWI mask" );
+                lb_funcs.init = &lewi_mask_Init;
+                lb_funcs.finish = &lewi_mask_Finish;
+                lb_funcs.intoCommunication = &lewi_mask_IntoCommunication;
+                lb_funcs.outOfCommunication = &lewi_mask_OutOfCommunication;
+                lb_funcs.intoBlockingCall = &lewi_mask_IntoBlockingCall;
+                lb_funcs.outOfBlockingCall = &lewi_mask_OutOfBlockingCall;
+                lb_funcs.updateresources = &lewi_mask_UpdateResources;
+                lb_funcs.returnclaimed = &lewi_mask_ReturnClaimedCpus;
+                lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
+                lb_funcs.resetDLB  = &lewi_mask_resetDLB;
+                lb_funcs.acquirecpu = &lewi_mask_acquireCpu;
+                lb_funcs.acquirecpus = &lewi_mask_acquireCpus;
+                lb_funcs.disableDLB = &lewi_mask_disableDLB;
+                lb_funcs.enableDLB = &lewi_mask_enableDLB;
+                lb_funcs.single = &lewi_mask_single;
+                lb_funcs.parallel = &lewi_mask_parallel;
+                break;
+            case POLICY_AUTO_LEWI_MASK:
+                info0( "Balancing policy: Autonomous LeWI mask" );
+                lb_funcs.init = &auto_lewi_mask_Init;
+                lb_funcs.finish = &auto_lewi_mask_Finish;
+                lb_funcs.intoCommunication = &auto_lewi_mask_IntoCommunication;
+                lb_funcs.outOfCommunication = &auto_lewi_mask_OutOfCommunication;
+                lb_funcs.intoBlockingCall = &auto_lewi_mask_IntoBlockingCall;
+                lb_funcs.outOfBlockingCall = &auto_lewi_mask_OutOfBlockingCall;
+                lb_funcs.updateresources = &auto_lewi_mask_UpdateResources;
+                //lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
+                lb_funcs.releasecpu = &auto_lewi_mask_ReleaseCpu;
+                lb_funcs.returnclaimedcpu = &auto_lewi_mask_ReturnCpuIfClaimed;
+                lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
+                lb_funcs.checkCpuAvailability = &auto_lewi_mask_CheckCpuAvailability;
+                lb_funcs.resetDLB = &auto_lewi_mask_resetDLB;
+                lb_funcs.acquirecpu = &auto_lewi_mask_acquireCpu;
+                lb_funcs.acquirecpus = &auto_lewi_mask_acquireCpus;
+                lb_funcs.disableDLB = &auto_lewi_mask_disableDLB;
+                lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
+                lb_funcs.single = &auto_lewi_mask_single;
+                lb_funcs.parallel = &auto_lewi_mask_parallel;
+                policy_auto=1;
+                break;
+            case POLICY_RAL:
+                info( "Balancing policy: RaL: Redistribute and Lend" );
+                use_dpd=1;
+                if (_mpis_per_node>1) {
+                    lb_funcs.init = &PERaL_Init;
+                    lb_funcs.finish = &PERaL_Finish;
+                    lb_funcs.intoCommunication = &PERaL_IntoCommunication;
+                    lb_funcs.outOfCommunication = &PERaL_OutOfCommunication;
+                    lb_funcs.intoBlockingCall = &PERaL_IntoBlockingCall;
+                    lb_funcs.outOfBlockingCall = &PERaL_OutOfBlockingCall;
+                    lb_funcs.updateresources = &PERaL_UpdateResources;
+                    lb_funcs.returnclaimed = &PERaL_ReturnClaimedCpus;
+                } else {
+                    lb_funcs.init = &RaL_Init;
+                    lb_funcs.finish = &RaL_Finish;
+                    lb_funcs.intoCommunication = &RaL_IntoCommunication;
+                    lb_funcs.outOfCommunication = &RaL_OutOfCommunication;
+                    lb_funcs.intoBlockingCall = &RaL_IntoBlockingCall;
+                    lb_funcs.outOfBlockingCall = &RaL_OutOfBlockingCall;
+                    lb_funcs.updateresources = &RaL_UpdateResources;
+                    lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
+                }
+                break;
         }
 
 #ifdef MPI_LIB
@@ -461,7 +455,7 @@ int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cp
 int Update_new(int *new_threads, cpu_set_t *new_mask) {
     int error = DLB_ERR_UNKNOWN;
     if (dlb_enabled) {
-        cpu_set_t *mask = (new_mask != NULL) ? new_mask : (cpu_set_t*)malloc(sizeof(cpu_set_t));
+        cpu_set_t *mask = (new_mask != NULL) ? new_mask : malloc(sizeof(cpu_set_t));
         error = shmem_procinfo__update_new(drom_enabled, stats_enabled, new_threads, mask);
         if (error == DLB_SUCCESS) {
             // can this function return error?

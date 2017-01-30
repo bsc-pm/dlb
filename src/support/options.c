@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include "support/types.h"
 #include "support/debug.h"
+#include "support/options.h"
 
 #define MAX_OPTIONS 32
 #define MAX_OPTION_LENGTH 32
@@ -30,8 +31,8 @@
 
 
 // Options storage and internal getters
-static char opt_policy[MAX_OPTION_LENGTH];
-const char* options_get_policy(void) { return opt_policy; }
+static policy_t opt_policy;
+policy_t options_get_policy(void) { return opt_policy; }
 
 static bool opt_statistics;
 bool options_get_statistics(void) { return opt_statistics; }
@@ -93,7 +94,8 @@ typedef enum OptionTypes {
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_DBG_T,      // debug_opts_t
-    OPT_PRIO_T      // priority_opts_t
+    OPT_PRIO_T,     // priority_opts_t
+    OPT_POL_T       // policy_t
 } option_type_t;
 
 typedef struct {
@@ -119,7 +121,7 @@ static char* parse_env_arg(const char *arg_name) {
     if (lb_args && arg_name) {
         // Tokenize a copy of lb_args with " " delimiter
         char *end_space;
-        char *lb_args_copy = (char*)malloc(1+sizeof(char)*strlen(lb_args));
+        char *lb_args_copy = malloc(1+sizeof(char)*strlen(lb_args));
         strncpy(lb_args_copy, lb_args, strlen(lb_args));
         char *token = strtok_r(lb_args_copy, " ", &end_space);
         while (token) {
@@ -154,7 +156,7 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
                                 void *value, bool readonly, bool optional,
                                 const void *default_value, const char *desc ) {
 
-    option_t *new_option = (option_t*) malloc(sizeof(option_t));
+    option_t *new_option = malloc(sizeof(option_t));
     strncpy(new_option->var_name, var, MAX_OPTION_LENGTH);
     strncpy(new_option->arg_name, arg, MAX_OPTION_LENGTH);
     strncpy(new_option->description, desc, MAX_DESCRIPTION);
@@ -224,6 +226,13 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
                 parse_priority_opts(default_value, (priority_opts_t*)new_option->value);
             }
             break;
+        case(OPT_POL_T):
+            if (user_value) {
+                parse_policy(user_value, (policy_t*)new_option->value);
+            } else if (default_value) {
+                parse_policy(default_value, (policy_t*)new_option->value);
+            }
+            break;
     }
 
     fatal_cond(!optional && !new_option->value,
@@ -247,17 +256,17 @@ void options_init(void) {
     char *env_lb_args = getenv("LB_ARGS");
     if (env_lb_args) {
         size_t len = strlen(env_lb_args) + 1;
-        lb_args = (char*)malloc(sizeof(char)*len);
+        lb_args = malloc(sizeof(char)*len);
         strncpy(lb_args, env_lb_args, len);
     }
 
     // Fill options array
-    options = (option_t**) malloc(sizeof(option_t*)*MAX_OPTIONS);
+    options = malloc(sizeof(option_t*)*MAX_OPTIONS);
 
     // modules
     int i = 0;
     options[i++] = register_option("LB_POLICY", "--policy",
-            OPT_STR_T, &opt_policy, RO, OPTIONAL, "no",
+            OPT_POL_T, &opt_policy, RO, OPTIONAL, "no",
             "Lend Balancing Policy. Choose one of: \n"
             " - No: No policy\n"
             " - LeWI: Lend When Idle, basic policy\n"
@@ -402,6 +411,9 @@ int options_set_variable(const char *var_name, const char *value) {
         case OPT_PRIO_T:
             parse_priority_opts(value, (priority_opts_t*)option->value);
             break;
+        case OPT_POL_T:
+            parse_policy(value, (policy_t*)option->value);
+            break;
     }
 
     return 0;
@@ -438,6 +450,7 @@ int options_get_variable(const char *var_name, char *value) {
         case OPT_VBFMT_T:
         case OPT_DBG_T:
         case OPT_PRIO_T:
+        case OPT_POL_T:
             sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
             break;
     }

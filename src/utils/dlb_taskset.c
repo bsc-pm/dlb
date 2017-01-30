@@ -95,7 +95,7 @@ static void get_cpus(unsigned int ncpus) {
     gethostname(hostname, HOST_NAME_MAX);
 
     // Let's assume a maximum size of cpuid of 4 digits, plus 1 space per cpu, plus \0
-    char *cpulist_str = (char*) malloc((nelems*5+1)*sizeof(char));
+    char *cpulist_str = malloc((nelems*5+1)*sizeof(char));
     int i, j;
     for (i=0, j=0; i<nelems; ++i) {
         j += sprintf(&cpulist_str[j], "%d ", cpulist[i]);
@@ -160,7 +160,7 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
     else {
         // Get PID list from DLB
         int nelems;
-        int *pidlist = (int*) malloc(sys_size*sizeof(int));
+        int *pidlist = malloc(sys_size*sizeof(int));
         DLB_Drom_GetPidList(pidlist, &nelems, sys_size);
 
         // Iterate pidlist

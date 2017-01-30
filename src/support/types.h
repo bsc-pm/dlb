@@ -60,6 +60,17 @@ typedef enum PriorityOptions {
     PRIO_AFFINITY_ONLY
 } priority_opts_t;
 
+typedef enum PolicyType {
+    POLICY_NONE,
+    POLICY_JUST_PROF,
+    POLICY_LEWI,
+    POLICY_MAP,
+    POLICY_WEIGHT,
+    POLICY_LEWI_MASK,
+    POLICY_AUTO_LEWI_MASK,
+    POLICY_RAL
+} policy_t;
+
 void parse_bool(const char *str, bool *value);
 void parse_int(const char *str, int *value);
 void parse_blocking_mode(const char *str, blocking_mode_t *value);
@@ -67,5 +78,6 @@ void parse_verbose_opts(const char *str, verbose_opts_t *value);
 void parse_verbose_fmt(const char *str, verbose_fmt_t *value);
 void parse_debug_opts(const char *str, debug_opts_t *value);
 void parse_priority_opts(const char *str, priority_opts_t *value);
+void parse_policy(const char *str, policy_t *value);
 
 #endif /* TYPES_H */

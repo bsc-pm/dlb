@@ -22,6 +22,7 @@
 #include "support/types.h"
 
 void parse_bool(const char *str, bool *value) {
+    *value = false;
     if (strcasecmp(str, "1")==0        ||
             strcasecmp(str, "yes")==0  ||
             strcasecmp(str, "true")==0) {
@@ -38,6 +39,7 @@ void parse_int(const char *str, int *value) {
 }
 
 void parse_blocking_mode(const char *str, blocking_mode_t *value) {
+    *value = ONE_CPU;
     if (strcasecmp(str, "1CPU") == 0) {
         *value = ONE_CPU;
     } else if (strcasecmp(str, "BLOCK") == 0) {
@@ -47,7 +49,7 @@ void parse_blocking_mode(const char *str, blocking_mode_t *value) {
 
 void parse_verbose_opts(const char *str, verbose_opts_t *value) {
     *value = VB_CLEAR;
-    char *my_str = (char*)malloc(strlen(str)+1);
+    char *my_str = malloc(strlen(str)+1);
     strncpy(my_str, str, strlen(str)+1);
     char *saveptr;
     const char delimiter[2] = ":";
@@ -75,7 +77,7 @@ void parse_verbose_opts(const char *str, verbose_opts_t *value) {
 
 void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     *value = VBF_CLEAR;
-    char *my_str = (char*)malloc(strlen(str)+1);
+    char *my_str = malloc(strlen(str)+1);
     strncpy(my_str, str, strlen(str)+1);
     char *saveptr;
     const char delimiter[2] = ":";
@@ -99,7 +101,7 @@ void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
 
 void parse_debug_opts(const char *str, debug_opts_t *value) {
     *value = DBG_CLEAR;
-    char *my_str = (char*)malloc(strlen(str)+1);
+    char *my_str = malloc(strlen(str)+1);
     strncpy(my_str, str, strlen(str)+1);
     char *saveptr;
     const char delimiter[2] = ":";
@@ -116,6 +118,7 @@ void parse_debug_opts(const char *str, debug_opts_t *value) {
 }
 
 void parse_priority_opts(const char *str, priority_opts_t *value) {
+    *value = PRIO_AFFINITY_FIRST;
     if (strcasecmp(str, "none") == 0) {
         *value = PRIO_NONE;
     } else if (strcasecmp(str, "affinity_first") == 0) {
@@ -124,5 +127,24 @@ void parse_priority_opts(const char *str, priority_opts_t *value) {
         *value = PRIO_AFFINITY_FULL;
     } else if (strcasecmp(str, "affinity_only") == 0) {
         *value = PRIO_AFFINITY_ONLY;
+    }
+}
+
+void parse_policy(const char *str, policy_t *value) {
+    *value = POLICY_NONE;
+    if (strcasecmp(str, "JustProf") == 0) {
+        *value = POLICY_JUST_PROF;
+    } else if (strcasecmp(str, "LeWI") == 0) {
+        *value = POLICY_LEWI;
+    } else if (strcasecmp(str, "Map") == 0) {
+        *value = POLICY_MAP;
+    } else if (strcasecmp(str, "WEIGHT") == 0) {
+        *value = POLICY_WEIGHT;
+    } else if (strcasecmp(str, "LeWI_mask") == 0) {
+        *value = POLICY_LEWI_MASK;
+    } else if (strcasecmp(str, "auto_LeWI_mask") == 0) {
+        *value = POLICY_AUTO_LEWI_MASK;
+    } else if (strcasecmp(str, "RaL") == 0) {
+        *value = POLICY_RAL;
     }
 }
