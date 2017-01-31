@@ -130,6 +130,8 @@ DLB_API_F_ALIAS(dlb_notifyprocessmaskchangeto, (dlb_cpu_set_t));
 
 /* Statistics API */
 
+// Termporarily disable Fortran inrterface
+#if 0
 void dlb_stats_init(void) {
     DLB_Stats_Init();
 }
@@ -194,6 +196,7 @@ void dlb_stats_getloadavg(int *pid, double *load) {
     DLB_Stats_GetLoadAvg(*pid, load);
 }
 DLB_API_F_ALIAS(dlb_stats_getloadavg, (int*, double*));
+#endif
 
 // final name not decided yet
 /* Dynamic Resource Ownership Manager API */

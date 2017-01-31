@@ -25,7 +25,6 @@
 
 #include "LB_core/dlb_types.h"
 #include "LB_core/DLB_kernel.h"
-#include "LB_core/statistics.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/error.h"
@@ -159,72 +158,6 @@ void DLB_PrintVariables(void) {
 
 const char* DLB_strerror(int errnum) {
     return error_get_str(errnum);
-}
-
-/* Statistics API */
-
-void DLB_Stats_Init(void) {
-    stats_ext_init();
-}
-
-void DLB_Stats_Finalize(void) {
-    stats_ext_finalize();
-}
-
-int DLB_Stats_GetNumCpus(void) {
-    return stats_ext_getnumcpus();
-}
-
-void DLB_Stats_GetPidList(int *pidlist, int *nelems, int max_len) {
-    stats_ext_getpidlist(pidlist, nelems, max_len);
-}
-
-double DLB_Stats_GetCpuUsage(int pid) {
-    return stats_ext_getcpuusage(pid);
-}
-
-double DLB_Stats_GetCpuAvgUsage(int pid) {
-    return stats_ext_getcpuavgusage(pid);
-}
-
-void DLB_Stats_GetCpuUsageList(double *usagelist, int *nelems, int max_len) {
-    stats_ext_getcpuusage_list(usagelist, nelems, max_len);
-}
-
-void DLB_Stats_GetCpuAvgUsageList(double *avgusagelist, int *nelems, int max_len) {
-    stats_ext_getcpuavgusage_list(avgusagelist, nelems, max_len);
-}
-
-double DLB_Stats_GetNodeUsage(void) {
-    return stats_ext_getnodeusage();
-}
-
-double DLB_Stats_GetNodeAvgUsage(void) {
-    return stats_ext_getnodeavgusage();
-}
-
-int DLB_Stats_GetActiveCpus(int pid) {
-    return stats_ext_getactivecpus(pid);
-}
-
-void DLB_Stats_GetActiveCpusList(int *cpuslist, int *nelems, int max_len) {
-    stats_ext_getactivecpus_list(cpuslist, nelems, max_len);
-}
-
-int DLB_Stats_GetLoadAvg(int pid, double *load) {
-    return stats_ext_getloadavg(pid, load);
-}
-
-float DLB_Stats_GetCpuStateIdle(int cpu) {
-    return stats_ext_getcpustateidle(cpu);
-}
-
-float DLB_Stats_GetCpuStateOwned(int cpu) {
-    return stats_ext_getcpustateowned(cpu);
-}
-
-float DLB_Stats_GetCpuStateGuested(int cpu) {
-    return stats_ext_getcpustateowned(cpu);
 }
 
 
