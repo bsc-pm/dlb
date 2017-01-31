@@ -35,7 +35,7 @@ static void print_help( void ) {
     fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
     fprintf( stdout, "\n" );
     setenv("LB_POLICY", "no", 0);
-    DLB_Init();
+    DLB_Init(NULL, NULL);
     DLB_PrintVariables();
     DLB_Finalize();
 }

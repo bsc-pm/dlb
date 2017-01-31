@@ -33,18 +33,14 @@
 #include "support/options.h"
 #include "support/error.h"
 
-// sub-process ID
-static int spid = 0;
-
 #pragma GCC visibility push(default)
 
-void DLB_Init(void) {
-    fatal_cond(spid != 0, "DLB has been already initialized\n");
-    spid = Initialize();
+int DLB_Init(const_dlb_cpu_set_t mask, const char *lb_args) {
+    return Initialize(mask, lb_args);
 }
 
-void DLB_Finalize(void) {
-    Finish(spid);
+int DLB_Finalize(void) {
+    return Finish();
 }
 
 void DLB_enable(void) {
@@ -114,10 +110,6 @@ void DLB_Retrieve(void) {
 
 int DLB_CheckCpuAvailability(int cpu) {
     return checkCpuAvailability(cpu);
-}
-
-int DLB_Is_auto(void) {
-    return is_auto();
 }
 
 void DLB_Update(void) {

@@ -36,8 +36,9 @@
 #include "support/globals.h"
 #include "support/options.h"
 #include "support/debug.h"
+#include "support/error.h"
 
-static int spid = 0;
+static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static int is_iter = 0;
 static int periodo = 0;
@@ -135,8 +136,11 @@ void after_init(void) {
 //    }else{    
         MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 //    }
-    spid = Initialize();
-    mpi_ready=1;
+
+    if (Initialize(NULL, NULL) == DLB_SUCCESS) {
+        init_from_mpi = 1;
+    }
+    mpi_ready = 1;
 }
 
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
@@ -144,7 +148,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
     if(mpi_ready) {
         IntoCommunication();
 
-        if(use_dpd) {
+        if(global_spd.use_dpd) {
             long value = (long)((((buf>>5)^dest)<<5)|call_type);
 
             valor_dpd=DPD(value,&periodo);
@@ -190,8 +194,11 @@ void after_mpi(mpi_call call_type) {
 }
 
 void before_finalize(void) {
-    Finish(spid);
     mpi_ready=0;
+    if (init_from_mpi == 1) {
+        Finish();
+        init_from_mpi = 0;
+    }
 }
 
 void after_finalize(void) {}

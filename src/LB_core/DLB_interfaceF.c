@@ -24,7 +24,7 @@
 #pragma GCC visibility push(default)
 
 void dlb_init(void) {
-    DLB_Init();
+    DLB_Init(NULL, NULL);
 }
 DLB_API_F_ALIAS(dlb_init, (void));
 

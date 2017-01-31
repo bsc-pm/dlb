@@ -23,6 +23,7 @@ static const char* error_msg[] = {
     /* DLB_SUCCESS */       "Success",
     /* DLB_ERR_UNKNOWN */   "Unknown error",
     /* DLB_ERR_NOINIT */    "DLB is not initialized",
+    /* DLB_ERR_INIT */      "DLB already initialized",
     /* DLB_ERR_DISBLD */    "DLB is disabled",
     /* DLB_ERR_NOSHMEM */   "No shared memory",
     /* DLB_ERR_NOPROC */    "No pid",
@@ -31,7 +32,7 @@ static const char* error_msg[] = {
     /* DLB_ERR_TIMEOUT */   "timeout",
     /* DLB_ERR_NOUPDT */    "no update needed",
     /* DLB_ERR_NOCBK */     "no callback defined",
-    /* DLB_ERR_NOGTR */     "no getter defined"
+    /* DLB_ERR_NOGTR */     "no getter defined",
     /* DLB_ERR_NOENT */     "no entry"
 };
 

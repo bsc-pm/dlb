@@ -25,41 +25,13 @@
 #endif
 #include <sched.h>
 #include <stdbool.h>
-
-typedef struct {
-    void (*init) (void);
-    void (*finish) (void);
-    void (*initIteration) (void);
-    void (*finishIteration) (void);
-    void (*intoCommunication) (void);
-    void (*outOfCommunication) (void);
-    void (*intoBlockingCall) (int is_iter, int blocking_mode);
-    void (*outOfBlockingCall) (int is_iter);
-    void (*updateresources) (int max_resources);
-    void (*returnclaimed) (void);
-    int (*releasecpu) (int cpu);
-    int (*returnclaimedcpu) (int cpu);
-    void (*claimcpus) (int cpus);
-    void (*acquirecpu) (int cpu);
-    void (*acquirecpus) (cpu_set_t* mask);
-    int (*checkCpuAvailability) (int cpu);
-    void (*resetDLB) (void);
-    void (*disableDLB)(void);
-    void (*enableDLB) (void);
-    void (*single) (void);
-    void (*parallel) (void);
-    void (*notifymaskchangeto) (const cpu_set_t*);
-} BalancePolicy;
-
-extern int use_dpd;
+#include "spd.h"
 
 void set_dlb_enabled(bool enabled);
 
-int Initialize(void);
+int Initialize(const cpu_set_t *mask, const char *lb_args);
 
-void Finish(int id);
-
-void Terminate(void);
+int Finish(void);
 
 void Update(void);
 
@@ -84,8 +56,6 @@ void claimcpus(int cpus);
 int checkCpuAvailability(int cpu);
 
 void resetDLB(void);
-
-int is_auto(void);
 
 void acquirecpu(int cpu);
 

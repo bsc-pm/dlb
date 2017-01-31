@@ -32,11 +32,11 @@ extern "C"
 
 /* \brief Initialize DLB library
  */
-void DLB_Init(void);
+int DLB_Init(const_dlb_cpu_set_t mask, const char *lb_args);
 
 /* \brief Finalize DLB library
  */
-void DLB_Finalize(void);
+int DLB_Finalize(void);
 
 /* \brief Disable DLB
  *
@@ -150,11 +150,6 @@ void DLB_AcquireCpus(dlb_cpu_set_t mask);
  * Check whether the specified CPU is being used by another process
  */
 int DLB_CheckCpuAvailability(int cpu);
-
-/* \brief Checks if the current policy is auto_LeWI_mask
- * \return True if the condition is met
- */
-int DLB_Is_auto(void);
 
 /* \brief Update DLB status
  *
