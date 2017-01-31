@@ -51,10 +51,16 @@ endif
 ##########################################################################
 # Headers
 ##########################################################################
-dist_include_HEADERS = src/LB_core/DLB_interface.h
+installheaders =                           \
+	src/LB_core/dlb.h               \
+	src/LB_core/dlb_stats.h         \
+	src/LB_core/dlb_drom.h          \
+	src/LB_core/dlb_types.h         \
+	$(END)
+
+dist_include_HEADERS = $(installheaders)
 nodist_include_HEADERS = src/LB_MPI/MPI_interface.h \
 			 src/LB_MPI/MPI_interfaceF.h
-EXTRA_DIST += src/support/dlb_api.h
 
 ##########################################################################
 # Built Sources
@@ -155,13 +161,9 @@ COMMON_SRCS = \
 	src/LB_core/DLB_kernel.c        \
 	src/LB_core/DLB_kernel.h        \
 	src/LB_core/DLB_interface.c     \
-	src/LB_core/DLB_interface.h     \
 	src/LB_core/DLB_interfaceF.c    \
 	src/LB_core/DLB_interface_stats.c  \
-	src/LB_core/dlb_stats.h          \
 	src/LB_core/DLB_interface_drom.c  \
-	src/LB_core/dlb_drom.h          \
-	src/LB_core/dlb_types.h         \
 	src/LB_core/callbacks.h         \
 	src/LB_core/spd.h               \
 	src/LB_core/lb_funcs.c          \
@@ -172,6 +174,7 @@ COMMON_SRCS = \
 	src/support/globals.h           \
 	src/support/debug.c             \
 	src/support/debug.h             \
+	src/support/dlb_api.h           \
 	src/support/tracing.c           \
 	src/support/tracing.h           \
 	src/support/mytime.c            \
@@ -184,6 +187,7 @@ COMMON_SRCS = \
 	src/support/types.h             \
 	src/support/error.c             \
 	src/support/error.h             \
+	$(installheaders)               \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la

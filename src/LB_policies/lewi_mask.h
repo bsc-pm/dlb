@@ -47,7 +47,7 @@ void lewi_mask_ClaimCpus( int cpus );
 
 void lewi_mask_acquireCpu( int cpu );
 
-void lewi_mask_acquireCpus(cpu_set_t* cpus);
+void lewi_mask_acquireCpus(const cpu_set_t* cpus);
 
 void lewi_mask_resetDLB( void );
 

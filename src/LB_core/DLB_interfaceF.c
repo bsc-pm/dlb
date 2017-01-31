@@ -17,12 +17,14 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "LB_core/DLB_interface.h"
+#include "LB_core/dlb.h"
 #include "support/dlb_api.h"
 #include "support/debug.h"
 
 #pragma GCC visibility push(default)
 
+// Termporarily disable Fortran inrterface
+#if 0
 void dlb_init(void) {
     DLB_Init(NULL, NULL);
 }
@@ -127,6 +129,7 @@ void dlb_notifyprocessmaskchangeto(const dlb_cpu_set_t mask) {
     fatal0("Cpu mask functions not implemented in Fortran");
 }
 DLB_API_F_ALIAS(dlb_notifyprocessmaskchangeto, (dlb_cpu_set_t));
+#endif
 
 /* Statistics API */
 

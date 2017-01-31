@@ -161,15 +161,20 @@ int Finish(void) {
     return error;
 }
 
-void Update(void) {
-    if (dlb_enabled) {
-        shmem_procinfo__update(global_spd.options.drom, global_spd.options.statistics);
-    }
+
+
+int callback_set(dlb_callbacks_t which, dlb_callback_t callback) {
+    return pm_callback_set(&global_spd.pm, which, callback);
 }
+
+int callback_get(dlb_callbacks_t which, dlb_callback_t callback) {
+    return pm_callback_get(&global_spd.pm, which, callback);
+}
+
 
 // FIXME header
 int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask);
-int Update_new(int *new_threads, cpu_set_t *new_mask) {
+int poll_drom(int *new_threads, cpu_set_t *new_mask) {
     int error = DLB_ERR_UNKNOWN;
     if (dlb_enabled) {
         cpu_set_t *mask = (new_mask != NULL) ? new_mask : malloc(sizeof(cpu_set_t));
@@ -278,7 +283,7 @@ void acquirecpu(int cpu){
     }
 }
 
-void acquirecpus(cpu_set_t* mask){
+void acquirecpus(const cpu_set_t* mask){
     if (dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE_CPU);
         global_spd.lb_funcs.acquirecpus(mask);

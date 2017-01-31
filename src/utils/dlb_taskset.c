@@ -35,8 +35,8 @@
 #include <regex.h>
 #include <stdbool.h>
 #include "support/mask_utils.h"
+#include "LB_core/dlb.h"
 #include "LB_core/dlb_drom.h"
-#include "LB_core/DLB_interface.h"
 
 static int sys_size;
 
@@ -47,7 +47,7 @@ static void dlb_check(int error, pid_t pid, const char* func) {
         } else {
             fprintf(stderr, "Operation %s did not succeed\n", func);
         }
-        fprintf(stderr, "Return code %d (%s)\n", error, DLB_strerror(error));
+        fprintf(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
         DLB_DROM_Finalize();
         exit(EXIT_FAILURE);
     }

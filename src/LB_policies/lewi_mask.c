@@ -229,7 +229,7 @@ void lewi_mask_acquireCpu(int cpu) {
     }
 }
 
-void lewi_mask_acquireCpus(cpu_set_t* cpus) {
+void lewi_mask_acquireCpus(const cpu_set_t* cpus) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "AcquireCpus %s", mu_to_str(cpus));
         cpu_set_t current_mask;

@@ -25,7 +25,7 @@ static int dummy_releasecpu(int cpu) {return 0;}
 static int dummy_returnclaimedcpu(int cpu) {return 0;}
 static void dummy_claimcpus(int cpus) {}
 static void dummy_acquirecpu(int cpu) {}
-static void dummy_acquirecpus(cpu_set_t* mask) {}
+static void dummy_acquirecpus(const cpu_set_t* mask) {}
 static int dummy_checkCpuAvailability(int cpu) {return 1;}
 static void dummy_resetDLB(void) {}
 static void dummy_disableDLB(void) {}

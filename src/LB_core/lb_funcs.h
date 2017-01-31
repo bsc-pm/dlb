@@ -19,7 +19,7 @@ typedef struct BalancePolicy {
     int (*returnclaimedcpu) (int cpu);
     void (*claimcpus) (int cpus);
     void (*acquirecpu) (int cpu);
-    void (*acquirecpus) (cpu_set_t* mask);
+    void (*acquirecpus) (const cpu_set_t* mask);
     int (*checkCpuAvailability) (int cpu);
     void (*resetDLB) (void);
     void (*disableDLB)(void);

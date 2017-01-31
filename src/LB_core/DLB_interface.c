@@ -24,6 +24,7 @@
 #include <limits.h>
 
 #include "LB_core/dlb_types.h"
+#include "LB_core/dlb.h"
 #include "LB_core/DLB_kernel.h"
 #include "support/tracing.h"
 #include "support/options.h"
@@ -31,117 +32,143 @@
 
 #pragma GCC visibility push(default)
 
-int DLB_Init(const_dlb_cpu_set_t mask, const char *lb_args) {
-    return Initialize(mask, lb_args);
+/* Status */
+
+int DLB_Init(const_dlb_cpu_set_t mask, const char *dlb_args) {
+    return Initialize(mask, dlb_args);
 }
 
 int DLB_Finalize(void) {
     return Finish();
 }
 
-void DLB_enable(void) {
-    //FIXME This hiddes the single event always
+int DLB_Enable(void) {
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     set_dlb_enabled(true);
+    return DLB_SUCCESS;
 }
 
-void DLB_disable(void) {
-    //FIXME This hiddes the single event always
+int DLB_Disable(void) {
     add_event(DLB_MODE_EVENT, EVENT_DISABLED);
     set_dlb_enabled(false);
+    return DLB_SUCCESS;
 }
 
-void DLB_reset(void) {
-    add_event(RUNTIME_EVENT, EVENT_RESET);
-    resetDLB();
-    add_event(RUNTIME_EVENT, 0);
+int DLB_SetMaxParallelism(int max) {
+    return DLB_SUCCESS;
 }
 
-void DLB_single(void) {
-    add_event(DLB_MODE_EVENT, EVENT_SINGLE);
-    singlemode();
+
+/* Callbacks */
+
+int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback) {
+    return callback_set(which, callback);
 }
 
-void DLB_parallel(void) {
-    add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-    parallelmode();
+int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t callback) {
+    return callback_get(which, callback);
 }
 
-void DLB_UpdateResources(void) {
-    updateresources(USHRT_MAX);
-}
 
-void DLB_UpdateResources_max(int max_resources) {
-    updateresources(max_resources);
-}
+/* Lend */
 
-void DLB_ReturnClaimedCpus(void) {
-    returnclaimed();
-}
-
-int DLB_ReleaseCpu(int cpu) {
-    return releasecpu(cpu);
-}
-
-int DLB_ReturnClaimedCpu(int cpu) {
-    return returnclaimedcpu(cpu);
-}
-
-void DLB_ClaimCpus(int cpus) {
-    claimcpus(cpus);
-}
-
-void DLB_Lend(void) {
+int DLB_Lend(void) {
     add_event(RUNTIME_EVENT, EVENT_LEND);
     //no iter, no single
     IntoBlockingCall(0, 0);
     add_event(RUNTIME_EVENT, 0);
+    return DLB_SUCCESS;
 }
 
-void DLB_Retrieve(void) {
+int DLB_LendCpu(int cpuid) {
+    return releasecpu(cpuid);
+}
+
+int DLB_LendCpus(int ncpus) {
+    return DLB_SUCCESS;
+}
+
+int DLB_LendCpuMask(const_dlb_cpu_set_t mask) {
+    return DLB_SUCCESS;
+}
+
+
+/* Reclaim */
+
+int DLB_Reclaim(void) {
     add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
     OutOfBlockingCall(0);
     add_event(RUNTIME_EVENT, 0);
+    return DLB_SUCCESS;
 }
 
-int DLB_CheckCpuAvailability(int cpu) {
-    return checkCpuAvailability(cpu);
+int DLB_ReclaimCpu(int cpuid) {
+    return DLB_SUCCESS;
 }
 
-void DLB_Update(void) {
-    Update();
+int DLB_ReclaimCpus(int ncpus) {
+    claimcpus(ncpus);
+    return DLB_SUCCESS;
 }
 
-// FIXME testing API
-int Update_new(int *new_threads, cpu_set_t *new_mask);
-int DLB_poll_new_threads(int *nthreads, dlb_cpu_set_t mask) {
-    return Update_new(nthreads, mask);
+int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
+    return DLB_SUCCESS;
 }
 
-void DLB_AcquireCpu(int cpu) {
-    acquirecpu(cpu);
+
+/* Acquire */
+
+int DLB_Acquire(void) {
+    updateresources(USHRT_MAX);
+    return DLB_SUCCESS;
 }
 
-void DLB_AcquireCpus(dlb_cpu_set_t mask) {
+int DLB_AcquireCpu(int cpuid) {
+    acquirecpu(cpuid);
+    return DLB_SUCCESS;
+}
+
+int DLB_AcquireCpus(int ncpus) {
+    updateresources(ncpus);
+    return DLB_SUCCESS;
+}
+
+int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
     acquirecpus(mask);
+    return DLB_SUCCESS;
 }
 
-void DLB_Barrier(void) {
+
+/* Return */
+
+int DLB_Return(void) {
+    returnclaimed();
+    return DLB_SUCCESS;
+}
+
+int DLB_ReturnCpu(int cpuid) {
+    return returnclaimedcpu(cpuid);
+}
+
+
+/* DROM Responsive */
+
+int DLB_PollDROM(int *nthreads, dlb_cpu_set_t mask) {
+    return poll_drom(nthreads, mask);
+}
+
+
+/* Misc */
+
+int DLB_CheckCpuAvailability(int cpuid) {
+    return checkCpuAvailability(cpuid);
+}
+
+int DLB_Barrier(void) {
     add_event(RUNTIME_EVENT, EVENT_BARRIER);
     nodebarrier();
     add_event(RUNTIME_EVENT, 0);
-}
-
-void DLB_NotifyProcessMaskChange(void) {
-    notifymaskchange();
-}
-
-void DLB_NotifyProcessMaskChangeTo(const_dlb_cpu_set_t mask) {
-    notifymaskchangeto(mask);
-}
-
-void DLB_PrintShmem(void) {
-    printShmem();
+    return DLB_SUCCESS;
 }
 
 int DLB_SetVariable(const char *variable, const char *value) {
@@ -152,48 +179,19 @@ int DLB_GetVariable(const char *variable, char *value) {
     return options_set_variable(&global_spd.options, variable, value);
 }
 
-void DLB_PrintVariables(void) {
+int DLB_PrintVariables(void) {
     options_print_variables(&global_spd.options);
+    return DLB_SUCCESS;
 }
 
-const char* DLB_strerror(int errnum) {
+int DLB_PrintShmem(void) {
+    printShmem();
+    return DLB_SUCCESS;
+}
+
+const char* DLB_Strerror(int errnum) {
     return error_get_str(errnum);
 }
 
-
-/* MPI API */
-#ifdef MPI_LIB
-#include <mpi.h>
-#include "LB_MPI/process_MPI.h"
-void DLB_MPI_node_barrier(void) {
-    if (is_mpi_ready()) {
-        MPI_Comm mpi_comm_node = getNodeComm();
-        MPI_Barrier(mpi_comm_node);
-    }
-}
-#else
-void DLB_MPI_node_barrier(void) {}
-#endif
-
-// testing API for callbacks
-#include "LB_core/callbacks.h"
-#include "support/error.h"
-#include "LB_numThreads/numThreads.h"
-
-int DLB_callback_set(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t callback) {
-    return pm_callback_set(&((spd_t*)handler)->pm, which, callback);
-}
-
-int DLB_callback_get(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t callback) {
-    return pm_callback_get(&((spd_t*)handler)->pm, which, callback);
-}
-
-int DLB_getter_set(dlb_handler_t handler, dlb_getters_t which, dlb_getter_t getter) {
-    return pm_getter_set(&((spd_t*)handler)->pm, which, getter);
-}
-
-int DLB_getter_get(dlb_handler_t handler, dlb_getters_t which, dlb_getter_t getter) {
-    return pm_getter_get(&((spd_t*)handler)->pm, which, getter);
-}
 
 #pragma GCC visibility pop

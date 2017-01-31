@@ -34,7 +34,7 @@
 #include <sys/stat.h>
 #include <getopt.h>
 #include <stdbool.h>
-#include "LB_core/DLB_interface.h"
+#include "LB_core/dlb.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 

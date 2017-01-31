@@ -33,7 +33,10 @@ int Initialize(const cpu_set_t *mask, const char *lb_args);
 
 int Finish(void);
 
-void Update(void);
+int callback_set(dlb_callbacks_t which, dlb_callback_t callback);
+int callback_get(dlb_callbacks_t which, dlb_callback_t callback);
+
+int poll_drom(int *new_threads, cpu_set_t *new_mask);
 
 void IntoCommunication(void);
 
@@ -59,7 +62,7 @@ void resetDLB(void);
 
 void acquirecpu(int cpu);
 
-void acquirecpus(cpu_set_t* mask);
+void acquirecpus(const cpu_set_t* mask);
 
 void singlemode(void);
 

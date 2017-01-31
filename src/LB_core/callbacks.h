@@ -1,7 +1,6 @@
 #ifndef CALLBACKS_H
 #define CALLBACKS_H
 
-#include "LB_core/DLB_interface.h"
 #include "LB_core/dlb_types.h"
 
 /*

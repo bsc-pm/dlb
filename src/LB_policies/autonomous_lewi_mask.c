@@ -305,7 +305,7 @@ void auto_lewi_mask_acquireCpu(int cpu){
     pthread_mutex_unlock(&mutex);
 }
 
-void auto_lewi_mask_acquireCpus(cpu_set_t* cpus){
+void auto_lewi_mask_acquireCpus(const cpu_set_t* cpus){
 
     pthread_mutex_lock(&mutex);
     if (enabled && !single){

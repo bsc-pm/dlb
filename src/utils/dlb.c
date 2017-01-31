@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "support/options.h"
-#include "LB_core/DLB_interface.h"
+#include "LB_core/dlb.h"
 
 static void print_usage( const char * program ) {
     fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );
