@@ -21,6 +21,7 @@ ACLOCAL_AMFLAGS=-I m4
 
 SUBDIRS = . tests
 
+lib_LTLIBRARIES =
 BUILT_SOURCES =
 CLEANFILES =
 EXTRA_DIST =
@@ -110,15 +111,6 @@ BUILT_SOURCES += src/LB_MPI/MPI_interceptF.c
 src/LB_MPI/MPI_interceptF.c: $(top_srcdir)/src/LB_MPI/MPI_interceptF.c.in $(MPICALLS_DB)
 	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
-
-##########################################################################
-# libdlb_dummy.so
-##########################################################################
-lib_LTLIBRARIES = libdlb_dummy.la
-libdlb_dummy_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
-libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
-libdlb_dummy_la_LDFLAGS = $(AM_LDFLAGS)
-libdlb_dummy_la_SOURCES = src/LB_core/DLB_dummy_interface.c
 
 ##########################################################################
 # libdlb.so
