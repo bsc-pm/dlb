@@ -31,7 +31,6 @@
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/statistics.h"
-#include "LB_core/drom.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"

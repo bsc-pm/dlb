@@ -198,6 +198,9 @@ DLB_API_F_ALIAS(dlb_stats_getloadavg, (int*, double*));
 // final name not decided yet
 /* Dynamic Resource Ownership Manager API */
 
+
+// Termporarily disable Fortran inrterface
+#if 0
 void dlb_drom_init(void) {
     DLB_Drom_Init();
 }
@@ -227,6 +230,7 @@ void dlb_drom_setprocessmask(int *pid, const dlb_cpu_set_t mask) {
     fatal0("Cpu mask functions not implemented in Fortran");
 }
 DLB_API_F_ALIAS(dlb_drom_setprocessmask, (int*, dlb_cpu_set_t));
+#endif
 
 #ifdef MPI_LIB
 #include <mpi.h>

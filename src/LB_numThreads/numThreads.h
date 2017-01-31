@@ -25,6 +25,7 @@
 #endif
 #include <sched.h>
 
+#include "LB_core/dlb_types.h"
 #include "LB_core/callbacks.h"
 
 typedef struct pm_interface {

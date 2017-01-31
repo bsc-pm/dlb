@@ -20,10 +20,7 @@
 #ifndef DLB_INTERFACE_H
 #define DLB_INTERFACE_H
 
-/* DLB custom types */
-typedef void* dlb_handler_t;
-typedef void* dlb_cpu_set_t;
-typedef const void* const_dlb_cpu_set_t;
+#include "LB_core/dlb_types.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -305,61 +302,6 @@ float DLB_Stats_GetCpuStateOwned(int cpu);
  */
 float DLB_Stats_GetCpuStateGuested(int cpu);
 
-/*******************************************************/
-/*    Dynamic Resource Manager Module                  */
-/*******************************************************/
-
-/* \brief Initialize DROM Module
- */
-void DLB_Drom_Init(void);
-
-/* \brief Finalize DROM Module
- */
-void DLB_Drom_Finalize(void);
-
-/* \brief Get the total number of available CPUs in the node
- * \return the number of CPUs
- */
-int DLB_Drom_GetNumCpus(void);
-
-/* \brief Get the PID's attached to this module
- * \param[out] pidlist The output list
- * \param[out] nelems Number of elements in the list
- * \param[in] max_len Max capacity of the list
- */
-void DLB_Drom_GetPidList(int *pidlist, int *nelems, int max_len);
-
-/* \brief Get the process mask of the given PID
- * \param[in] pid Process ID to consult
- * \param[out] mask Current process mask
- * \return 0 on success, -1 if pid not found
- */
-int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask);
-
-/* \brief Set the process mask of the given PID
- * \param[in] pid Process ID to signal
- * \param[in] mask Process mask to set
- * \return 0 on success, -1 if pid not found
- */
-int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
-
-/* \brief Ask for free (or stolen) CPUs in the node
- * \param[in] cpus Number of CPUs to get
- * \param[in] steal Whether if look only into free CPUs or force stealing
- * \param[out] cpulist The output list
- * \param[out] nelems Numer of element in the list
- * \param[in] max_len Max capacity of the list
- * \return 0 on success, -1 if not all ncpus could be given
- */
-int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
-
-/* \brief Register PID with the given mask before the process normal registration
- * \param[in] pid Process ID that gets the reservation
- * \param[in] mask Process mask to register
- * \param[in] steal whether to steal owned CPUs
- * \return 0 on success, -1 if registration failed
- */
-int DLB_Drom_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal);
 
 /*******************************************************/
 /*    MPI Interface                                    */

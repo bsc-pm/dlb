@@ -22,14 +22,11 @@
 #endif
 #include <sched.h>
 #include <limits.h>
-#include "LB_core/DLB_interface.h"
+
+#include "LB_core/dlb_types.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/statistics.h"
-#include "LB_core/drom.h"
-#include "LB_core/spd.h"
-#include "support/dlb_api.h"
 #include "support/tracing.h"
-#include "support/debug.h"
 #include "support/options.h"
 #include "support/error.h"
 
@@ -230,40 +227,6 @@ float DLB_Stats_GetCpuStateGuested(int cpu) {
     return stats_ext_getcpustateowned(cpu);
 }
 
-// final name not decided yet
-/* Dynamic Resource Ownership Manager API */
-
-void DLB_Drom_Init(void) {
-    drom_ext_init();
-}
-
-void DLB_Drom_Finalize(void) {
-    drom_ext_finalize();
-}
-
-int DLB_Drom_GetNumCpus(void) {
-    return drom_ext_getnumcpus();
-}
-
-void DLB_Drom_GetPidList(int *pidlist, int *nelems, int max_len) {
-    drom_ext_getpidlist(pidlist, nelems, max_len);
-}
-
-int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask) {
-    return drom_ext_getprocessmask(pid, (cpu_set_t*)mask);
-}
-
-int DLB_Drom_SetProcessMask(int pid, const_dlb_cpu_set_t mask) {
-    return drom_ext_setprocessmask(pid, (const cpu_set_t*)mask);
-}
-
-int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
-    return drom_ext_getcpus(ncpus, steal, cpulist, nelems, max_len);
-}
-
-int DLB_Drom_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal) {
-    return drom_ext_preregister(pid, mask, steal);
-}
 
 /* MPI API */
 #ifdef MPI_LIB

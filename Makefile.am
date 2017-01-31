@@ -167,8 +167,9 @@ COMMON_SRCS = \
 	src/LB_core/DLB_interfaceF.c    \
 	src/LB_core/statistics.c        \
 	src/LB_core/statistics.h        \
-	src/LB_core/drom.c              \
-	src/LB_core/drom.h              \
+	src/LB_core/DLB_interface_drom.c  \
+	src/LB_core/dlb_drom.h          \
+	src/LB_core/dlb_types.h         \
 	src/LB_core/callbacks.h         \
 	src/LB_core/spd.h               \
 	src/LB_core/lb_funcs.c          \

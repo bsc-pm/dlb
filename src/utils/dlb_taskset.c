@@ -35,6 +35,7 @@
 #include <regex.h>
 #include <stdbool.h>
 #include "support/mask_utils.h"
+#include "LB_core/dlb_drom.h"
 #include "LB_core/DLB_interface.h"
 
 static int sys_size;
@@ -47,7 +48,7 @@ static void dlb_check(int error, pid_t pid, const char* func) {
             fprintf(stderr, "Operation %s did not succeed\n", func);
         }
         fprintf(stderr, "Return code %d (%s)\n", error, DLB_strerror(error));
-        DLB_Drom_Finalize();
+        DLB_DROM_Finalize();
         exit(EXIT_FAILURE);
     }
 }
@@ -87,9 +88,9 @@ static void get_cpus(unsigned int ncpus) {
     int nelems;
     int steal = 1;
 
-    DLB_Drom_Init();
-    DLB_Drom_getCPUs(ncpus, steal, cpulist, &nelems, max_len);
-    DLB_Drom_Finalize();
+    DLB_DROM_Init();
+    DLB_DROM_GetCpus(ncpus, steal, cpulist, &nelems, max_len);
+    DLB_DROM_Finalize();
 
     char hostname[HOST_NAME_MAX];
     gethostname(hostname, HOST_NAME_MAX);
@@ -106,21 +107,21 @@ static void get_cpus(unsigned int ncpus) {
 }
 
 static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
-    DLB_Drom_Init();
-    int error = DLB_Drom_SetProcessMask(pid, new_mask);
+    DLB_DROM_Init();
+    int error = DLB_DROM_SetProcessMask(pid, new_mask);
     dlb_check(error, pid, __FUNCTION__);
-    DLB_Drom_Finalize();
+    DLB_DROM_Finalize();
 
     fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(new_mask));
 }
 
 static void __attribute__((__noreturn__)) execute(char **argv, const cpu_set_t *new_mask) {
     sched_setaffinity(0, sizeof(cpu_set_t), new_mask);
-    DLB_Drom_Init();
+    DLB_DROM_Init();
     pid_t pid = getpid();
-    int error = DLB_Drom_PreRegister(pid, new_mask, 1);
+    int error = DLB_DROM_PreRegister(pid, new_mask, 1);
     dlb_check(error, pid, __FUNCTION__);
-    DLB_Drom_Finalize();
+    DLB_DROM_Finalize();
     execvp(argv[0], argv);
     fprintf(stderr, "Failed to execute %s\n", argv[0]);
     exit(EXIT_FAILURE);
@@ -131,7 +132,7 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 
     // Get current PID's mask
     cpu_set_t pid_mask;
-    error = DLB_Drom_GetProcessMask(pid, &pid_mask);
+    error = DLB_DROM_GetProcessMask(pid, &pid_mask);
     dlb_check(error, pid, __FUNCTION__);
 
     // Remove cpus from the PID's mask
@@ -145,14 +146,14 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 
     // Apply final mask
     if (mask_dirty) {
-        error = DLB_Drom_SetProcessMask(pid, &pid_mask);
+        error = DLB_DROM_SetProcessMask(pid, &pid_mask);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(&pid_mask));
     }
 }
 
 static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
-    DLB_Drom_Init();
+    DLB_DROM_Init();
 
     if (pid) {
         remove_affinity_of_one(pid, cpus_to_remove);
@@ -161,7 +162,7 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
         // Get PID list from DLB
         int nelems;
         int *pidlist = malloc(sys_size*sizeof(int));
-        DLB_Drom_GetPidList(pidlist, &nelems, sys_size);
+        DLB_DROM_GetPidList(pidlist, &nelems, sys_size);
 
         // Iterate pidlist
         int i;
@@ -170,24 +171,24 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
         }
         free(pidlist);
     }
-    DLB_Drom_Finalize();
+    DLB_DROM_Finalize();
 }
 
 static void show_affinity(pid_t pid) {
     int error;
     cpu_set_t mask;
 
-    DLB_Drom_Init();
+    DLB_DROM_Init();
     if (pid) {
         // Show CPU affinity of given PID
-        error = DLB_Drom_GetProcessMask(pid, &mask);
+        error = DLB_DROM_GetProcessMask(pid, &mask);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask));
     } else {
         // Show CPU affinity of all processes attached to DLB
         DLB_PrintShmem();
     }
-    DLB_Drom_Finalize();
+    DLB_DROM_Finalize();
 }
 
 
@@ -200,7 +201,7 @@ int main(int argc, char *argv[]) {
     pid_t pid = 0;
     cpu_set_t cpu_list;
     unsigned int ncpus = 0;
-    sys_size = DLB_Drom_GetNumCpus();
+    DLB_DROM_GetNumCpus(&sys_size);
 
     int opt;
     extern char *optarg;
