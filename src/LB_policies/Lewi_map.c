@@ -32,6 +32,7 @@
 #include "LB_comm/comm_map.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+#include "LB_core/spd.h"
 
 #ifdef MPI_LIB
 
@@ -51,7 +52,8 @@ void Map_Init(const cpu_set_t *process_mask) {
     info0("Default cpus per process: %d", default_cpus);
 
     //Initialize shared memory
-    ConfigShMem_Map(_mpis_per_node, _process_id, _node_id, default_cpus, my_cpus);
+    ConfigShMem_Map(_mpis_per_node, _process_id, _node_id, default_cpus, my_cpus,
+            global_spd.options.shm_key);
     setThreads_Map(default_cpus, 1, my_cpus);
 }
 

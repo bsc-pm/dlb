@@ -60,7 +60,7 @@ void PERaL_Init(const cpu_set_t *process_mask) {
     iter_cpu=0;
 
     //Initialize shared memory
-    shmem_mask.init(process_mask);
+    shmem_mask.init(process_mask, global_spd.options.shm_key);
 }
 
 void PERaL_Finish( void ) {
@@ -163,7 +163,7 @@ void PERaL_UpdateResources( int max_resources ) {
     if( max_cpus==initial_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
         //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, initial_nthreads, max_cpus<initial_nthreads, max_resources );
 
-        int new_threads = shmem_mask.collect_mask( &mask, max_resources );
+        int new_threads = shmem_mask.collect_mask(&mask, max_resources, global_spd.options.priority);
         //printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);
 
         if ( new_threads > 0 ) {

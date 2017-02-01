@@ -20,7 +20,7 @@
 #ifndef SHMEM_BARRIER_H
 #define SHMEM_BARRIER_H
 
-void shmem_barrier_init(void);
+void shmem_barrier_init(const char *shmem_key);
 void shmem_barrier_finalize(void);
 void shmem_barrier(void);
 

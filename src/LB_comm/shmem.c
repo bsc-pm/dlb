@@ -33,17 +33,16 @@
 #error This system does not support process shared mutex
 #endif
 
-#include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "support/debug.h"
-#include "support/options.h"
 
 #define SHSYNC_MAX_SIZE 64
 
 const struct timespec sem_timeout = {.tv_sec = 1, .tv_nsec = 0};
 static void check_shmem(const char *filename);
 
-shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module ) {
+shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
+        const char *shmem_key) {
     verbose( VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", getpid(), shmem_module );
 
     /* Allocate new Shared Memory handler */
@@ -58,9 +57,8 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
     handler->size = SHSYNC_MAX_SIZE + shdata_size;
 
     /* Get /dev/shm/ file names to create */
-    if (global_spd.options.shm_key) {
-        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module,
-                global_spd.options.shm_key);
+    if (shmem_key) {
+        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, shmem_key);
     } else {
         snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, getuid());
     }

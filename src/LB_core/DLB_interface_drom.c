@@ -7,15 +7,18 @@
 #include <sched.h>
 
 #include "LB_core/dlb_drom.h"
+#include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "support/error.h"
+#include "support/options.h"
 
 #pragma GCC visibility push(default)
 
 int DLB_DROM_Init(void) {
-    shmem_cpuinfo_ext__init();
-    shmem_procinfo_ext__init();
+    const options_t *options = get_global_options();
+    shmem_cpuinfo_ext__init(options->shm_key);
+    shmem_procinfo_ext__init(options->shm_key);
     return DLB_SUCCESS;
 }
 

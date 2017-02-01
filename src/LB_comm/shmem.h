@@ -40,7 +40,8 @@ typedef struct {
     char shm_filename[SHM_NAME_LENGTH];
 } shmem_handler_t;
 
-shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shmem_module );
+shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
+        const char *shmem_key);
 void shmem_finalize( shmem_handler_t* handler );
 void shmem_lock( shmem_handler_t* handler );
 void shmem_unlock( shmem_handler_t* handler );

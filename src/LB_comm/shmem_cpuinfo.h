@@ -37,7 +37,8 @@ typedef enum {
     _NUM_STATS
 } stats_state_t;
 
-void shmem_cpuinfo__init(const cpu_set_t *process_mask);
+void shmem_cpuinfo__init(const cpu_set_t *process_mask, const cpu_set_t *dlb_mask,
+        const char *shmem_key);
 void shmem_cpuinfo__finalize(void);
 int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal);
 void shmem_cpuinfo__add_mask(const cpu_set_t *cpu_mask);
@@ -45,16 +46,16 @@ void shmem_cpuinfo__add_cpu(int cpu);
 void shmem_cpuinfo__recover_some_cpus(cpu_set_t *mask, int max_resources);
 void shmem_cpuinfo__recover_cpu(int cpu);
 int shmem_cpuinfo__return_claimed(cpu_set_t *mask);
-int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources);
+int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources, priority_t priority);
 bool shmem_cpuinfo__is_cpu_borrowed(int cpu);
 bool shmem_cpuinfo__is_cpu_claimed(int cpu);
 int shmem_cpuinfo__reset_default_cpus(cpu_set_t *mask);
 bool shmem_cpuinfo__acquire_cpu(int cpu, bool force);
 void shmem_cpuinfo__update_ownership(const cpu_set_t* process_mask);
 
-void shmem_cpuinfo_ext__init(void);
+void shmem_cpuinfo_ext__init(const char *shmem_key);
 void shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__getnumcpus(void);
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);
-void shmem_cpuinfo_ext__print_info(void);
+void shmem_cpuinfo_ext__print_info(bool statistics);
 #endif /* SHMEM_CPUINFO_H */

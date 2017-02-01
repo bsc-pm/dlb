@@ -56,7 +56,8 @@ void Lend_light_Init(const cpu_set_t *process_mask) {
     }
 
     //Initialize shared memory
-    ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy);
+    ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy,
+            global_spd.options.shm_key);
 
     if (global_spd.options.aggressive_init) {
         setThreads_Lend_light(mu_get_system_size());

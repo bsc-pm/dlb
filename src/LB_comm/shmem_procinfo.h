@@ -22,12 +22,13 @@
 
 #include "support/types.h"
 
-void shmem_procinfo__init(const cpu_set_t *process_mask);
+void shmem_procinfo__init(const cpu_set_t *process_mask, const char *shmem_key);
 void shmem_procinfo__finalize(void);
-void shmem_procinfo__update(bool do_drom, bool do_stats);
+/*void shmem_procinfo__update(bool do_drom, bool do_stats);*/
+int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask);
 int  shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask);
 
-void shmem_procinfo_ext__init(void);
+void shmem_procinfo_ext__init(const char *shmem_key);
 void shmem_procinfo_ext__finalize(void);
 int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal);
 void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len);
@@ -43,6 +44,6 @@ int shmem_procinfo_ext__getactivecpus(int pid);
 void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_len);
 int shmem_procinfo_ext__getloadavg(int pid, double *load);
 int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
-void shmem_procinfo_ext__print_info(void);
+void shmem_procinfo_ext__print_info(bool statistics);
 
 #endif /* SHMEM_PROCINFO_H */

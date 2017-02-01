@@ -53,7 +53,7 @@ static void advance_barrier() {
     local_barrier_id = (local_barrier_id+1)%2;
 }
 
-void shmem_barrier_init(void) {
+void shmem_barrier_init(const char *shmem_key) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -69,7 +69,7 @@ void shmem_barrier_init(void) {
     max_barriers = mu_get_system_size()*2;
 
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(barrier_t)*max_barriers, shmem_name);
+            sizeof(shdata_t) + sizeof(barrier_t)*max_barriers, shmem_name, shmem_key);
 
     shmem_lock(init_handler);
     {

@@ -138,7 +138,8 @@ void lewi_mask_UpdateResources( int max_resources ) {
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
 
-        int collected = shmem_cpuinfo__collect_mask(&mask, max_resources);
+        int collected = shmem_cpuinfo__collect_mask(&mask, max_resources,
+                global_spd.options.priority);
 
         if ( collected > 0 ) {
             nthreads += collected;

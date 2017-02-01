@@ -26,7 +26,6 @@
 #include <pthread.h>
 
 #include "shmem.h"
-#include "LB_core/spd.h"
 #include "support/tracing.h"
 #include "support/debug.h"
 #include "support/options.h"
@@ -54,8 +53,8 @@ static cpu_set_t default_mask;   // default mask of the process
 
 static bool has_shared_mask(void);
 
-void shmem_bitset__init( const cpu_set_t *cpu_set ) {
-    shm_handler = shmem_init( (void**)&shdata, sizeof(shdata_t), "lewi" );
+void shmem_bitset__init(const cpu_set_t *cpu_set, const char *shmem_key) {
+    shm_handler = shmem_init((void**)&shdata, sizeof(shdata_t), "lewi", shmem_key);
     add_event( IDLE_CPUS_EVENT, 0 );
 
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
@@ -224,14 +223,13 @@ int shmem_bitset__return_claimed ( cpu_set_t *mask ) {
     return returned;
 }
 
-int shmem_bitset__collect_mask ( cpu_set_t *mask, int max_resources ) {
+int shmem_bitset__collect_mask(cpu_set_t *mask, int max_resources, priority_t priority) {
     int i;
     int collected = 0;
     int size = CPU_COUNT( &(shdata->avail_cpus) );
 
     if ( size > 0 && max_resources > 0) {
 
-        priority_t priority = global_spd.options.priority;
         cpu_set_t candidates_mask;
         cpu_set_t affinity_mask;
         mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );
@@ -314,8 +312,8 @@ bool shmem_bitset__is_cpu_claimed( int cpu ) {
 /* This function is intended to be called from external processes only to consult the shdata
  * That's why we should initialize and finalize with the shared mem
  */
-void shmem_bitset__print_info( void ) {
-    shmem_handler_t *handler = shmem_init( (void**)&shdata, sizeof(shdata_t), "lewi" );
+void shmem_bitset__print_info(const char *shmem_key) {
+    shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(shdata_t), "lewi", shmem_key);
 
     cpu_set_t given, avail, not_borrowed, check;
 

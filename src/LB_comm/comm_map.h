@@ -20,7 +20,8 @@
 #ifndef COMM_LEND_LIGHT_H
 #define COMM_LEND_LIGHT_H
 
-void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_cpus);
+void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_cpus,
+        const char *shmem_key);
 
 int releaseCpus_Map(int cpus, int*released_cpus);
 

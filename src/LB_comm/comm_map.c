@@ -29,7 +29,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/syscall.h>
-#include "shmem.h"
+
+#include "LB_comm/shmem.h"
+#include "LB_comm/comm_map.h"
 #include "support/debug.h"
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
@@ -80,7 +82,8 @@ void print_map() {
     fprintf(stderr, "\n");
 }
 
-void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_cpus) {
+void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_cpus,
+        const char *shmem_key) {
     verbose(VB_SHMEM, "LoadCommonConfig");
     int i, j;
     procs=num_procs;
@@ -91,7 +94,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
     CPU_ZERO(&all_cpu);//prepare cpu_set
     for(i=0; i<CPUS_NODE; i++) { CPU_SET(i, &all_cpu); }
 
-    shm_handler = shmem_init( (void**)&shdata, sizeof(struct shdata), "lewi" );
+    shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key);
 
     if (me==0) {
         verbose(VB_SHMEM, "setting values to the shared mem");

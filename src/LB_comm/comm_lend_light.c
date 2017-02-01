@@ -18,7 +18,9 @@
 /*********************************************************************************/
 
 #include <stdlib.h>
-#include "shmem.h"
+
+#include "LB_comm/shmem.h"
+#include "LB_comm/comm_lend_light.h"
 #include "support/tracing.h"
 #include "support/debug.h"
 
@@ -38,7 +40,8 @@ struct shdata {
 struct shdata *shdata;
 static shmem_handler_t *shm_handler;
 
-void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy) {
+void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy,
+        const char *shmem_key) {
     verbose(VB_SHMEM, "LoadCommonConfig");
     procs=num_procs;
     me=meId;
@@ -46,7 +49,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
     defaultCPUS=defCPUS;
     greedy=is_greedy;
 
-    shm_handler = shmem_init( (void**)&shdata, sizeof(struct shdata), "lewi" );
+    shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key);
 
     if (me==0) {
         verbose(VB_SHMEM, "setting values to the shared mem");

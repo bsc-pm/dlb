@@ -25,7 +25,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
@@ -79,7 +78,8 @@ static inline bool is_borrowed(int cpu);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
-void shmem_cpuinfo__init(const cpu_set_t *process_mask) {
+void shmem_cpuinfo__init(const cpu_set_t *process_mask, const cpu_set_t *dlb_mask,
+        const char *shmem_key) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -88,14 +88,13 @@ void shmem_cpuinfo__init(const cpu_set_t *process_mask) {
     }
 
     ME = getpid();
-    mu_parse_mask(global_spd.options.mask, &dlb_mask);
     cpu_set_t affinity_mask;
     mu_get_affinity_mask(&affinity_mask, process_mask, MU_ANY_BIT);
     node_size = mu_get_system_size();
 
     // Basic size + zero-length array real length
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name);
+            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
 
     DLB_INSTR( int idle_count = 0; )
 
@@ -124,7 +123,7 @@ void shmem_cpuinfo__init(const cpu_set_t *process_mask) {
                 }
             }
             // Add DLB mask info
-            if (CPU_ISSET(cpu, &dlb_mask)
+            if (CPU_ISSET(cpu, dlb_mask)
                     && shdata->node_info[cpu].owner == NOBODY
                     && shdata->node_info[cpu].state == CPU_DISABLED) {
                 shdata->node_info[cpu].state = CPU_LENT;
@@ -436,7 +435,7 @@ int shmem_cpuinfo__return_claimed(cpu_set_t *mask) {
  * Idle CPUs are the ones that (state == CPU_LENT) && (guest == NOBODY)
  * If successful:       Guest => ME
  */
-int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources) {
+int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources, priority_t priority) {
     // Do nothing if max_resources is non-positive
     if (max_resources <= 0) return 0;
 
@@ -495,7 +494,6 @@ int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources) {
                 }
 
                 // Set up some masks to collect from, depending on the priority level
-                priority_t priority = global_spd.options.priority;
                 const int NUM_TARGETS = 2;
                 cpu_set_t *target_mask[NUM_TARGETS];
 
@@ -727,7 +725,7 @@ void shmem_cpuinfo__update_ownership(const cpu_set_t* process_mask) {
 
 static shmem_handler_t *shm_ext_handler = NULL;
 
-void shmem_cpuinfo_ext__init(void) {
+void shmem_cpuinfo_ext__init(const char *shmem_key) {
     // Protect multiple initialization
     if (shm_ext_handler != NULL) {
         return;
@@ -735,7 +733,7 @@ void shmem_cpuinfo_ext__init(void) {
 
     node_size = mu_get_system_size();
     shm_ext_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name);
+            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
 }
 
 void shmem_cpuinfo_ext__finalize(void) {
@@ -751,7 +749,6 @@ void shmem_cpuinfo_ext__finalize(void) {
 int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
     int error = DLB_SUCCESS;
 
-    mu_parse_mask(global_spd.options.mask, &dlb_mask);
     cpu_set_t affinity_mask;
     mu_get_affinity_mask(&affinity_mask, mask, MU_ANY_BIT);
 
@@ -781,12 +778,6 @@ int shmem_cpuinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
                     shdata->node_info[cpu].guest = pid;
                     update_cpu_stats(cpu, STATS_OWNED);
                 }
-            }
-            // Add DLB mask info
-            if (CPU_ISSET(cpu, &dlb_mask)
-                    && shdata->node_info[cpu].owner == NOBODY
-                    && shdata->node_info[cpu].state == CPU_DISABLED) {
-                shdata->node_info[cpu].state = CPU_LENT;
             }
         }
 
@@ -822,7 +813,7 @@ float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state) {
     return usage;
 }
 
-void shmem_cpuinfo_ext__print_info(void) {
+void shmem_cpuinfo_ext__print_info(bool statistics) {
     if (shm_ext_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
@@ -856,7 +847,7 @@ void shmem_cpuinfo_ext__print_info(void) {
     info0(states);
     info0("States Legend: DISABLED=%d, BUSY=%d, LENT=%d", CPU_DISABLED, CPU_BUSY, CPU_LENT);
 
-    if (global_spd.options.statistics) {
+    if (statistics) {
         info0("=== CPU Statistics ===");
         for (cpu=0; cpu<node_size; ++cpu) {
             info0("CPU %d: OWNED(%.2f%%), GUESTED(%.2f%%), IDLE(%.2f%%)",

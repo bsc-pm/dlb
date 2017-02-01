@@ -145,7 +145,8 @@ void auto_lewi_mask_UpdateResources(int max_resources) {
         cpu_set_t mask;
         memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
-        int collected = shmem_cpuinfo__collect_mask(&mask, max_resources);
+        int collected = shmem_cpuinfo__collect_mask(&mask, max_resources,
+                global_spd.options.priority);
 
         if ( collected > 0 ) {
             nthreads += collected;

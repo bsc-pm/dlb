@@ -105,11 +105,12 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
         debug_init(&global_spd.options);
         global_spd.lb_funcs.init(mask);
         if (policy != POLICY_NONE || global_spd.options.drom || global_spd.options.statistics) {
-            shmem_procinfo__init(&global_spd.process_mask);
-            shmem_cpuinfo__init(&global_spd.process_mask);
+            shmem_procinfo__init(&global_spd.process_mask, global_spd.options.shm_key);
+            shmem_cpuinfo__init(&global_spd.process_mask, &global_spd.options.dlb_mask,
+                    global_spd.options.shm_key);
         }
         if (global_spd.options.barrier) {
-            shmem_barrier_init();
+            shmem_barrier_init(global_spd.options.shm_key);
         }
 
         dlb_enabled = true;
@@ -409,11 +410,11 @@ int print_shmem(void) {
     pm_init(&global_spd.pm);
     options_init(&global_spd.options, NULL);
     debug_init(&global_spd.options);
-    shmem_cpuinfo_ext__init();
-    shmem_cpuinfo_ext__print_info();
+    shmem_cpuinfo_ext__init(global_spd.options.shm_key);
+    shmem_cpuinfo_ext__print_info(global_spd.options.statistics);
     shmem_cpuinfo_ext__finalize();
-    shmem_procinfo_ext__init();
-    shmem_procinfo_ext__print_info();
+    shmem_procinfo_ext__init(global_spd.options.shm_key);
+    shmem_procinfo_ext__print_info(global_spd.options.statistics);
     shmem_procinfo_ext__finalize();
     return DLB_SUCCESS;
 }
