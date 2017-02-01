@@ -122,8 +122,6 @@ src/LB_MPI/MPI_interceptF.c: $(top_srcdir)/src/LB_MPI/MPI_interceptF.c.in $(MPIC
 # libdlb.so
 ##########################################################################
 COMMON_SRCS = \
-	src/DPD/DPD.c                   \
-	src/DPD/DPD.h                   \
 	src/LB_numThreads/numThreads.c  \
 	src/LB_numThreads/numThreads.h  \
 	src/LB_policies/JustProf.c      \
@@ -219,6 +217,8 @@ endif
 ##########################################################################
 if MPI_LIB
 MPI_SRCS = \
+	src/LB_MPI/DPD.c                   \
+	src/LB_MPI/DPD.h                   \
 	src/LB_MPI/process_MPI.c        \
 	src/LB_MPI/process_MPI.h        \
 	$(END)

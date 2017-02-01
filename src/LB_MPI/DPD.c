@@ -17,6 +17,8 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#ifdef MPI_LIB
+
 /* FICHERO PARA DETECTAR LA PERIODICIDAD */
 
 #include <stdio.h>
@@ -241,6 +243,4 @@ void DPDWindowSize(int max) {
 
 }
 
-
-
-
+#endif /* MPI_LIB */

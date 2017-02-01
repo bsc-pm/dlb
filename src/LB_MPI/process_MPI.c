@@ -28,9 +28,10 @@
 #include <limits.h>
 #include <string.h>
 
-#include "DPD/DPD.h"
-#include "LB_core/DLB_kernel.h"
+#include "LB_MPI/DPD.h"
 #include "LB_MPI/MPI_calls_coded.h"
+#include "LB_MPI/process_MPI.h"
+#include "LB_core/DLB_kernel.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
