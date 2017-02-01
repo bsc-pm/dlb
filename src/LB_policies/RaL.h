@@ -22,7 +22,7 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void RaL_Init( /* TODO: should be void */ );
+void RaL_Init(const cpu_set_t* process_mask);
 
 void RaL_Finish( void );
 

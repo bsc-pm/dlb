@@ -11,7 +11,7 @@
 #include "LB_policies/PERaL.h"
 
 // Initialize lb_funcs to dummy functions
-static void dummy_init(void) {}
+static void dummy_init(const cpu_set_t *process_mask) {}
 static void dummy_finish(void) {}
 static void dummy_initIteration(void) {}
 static void dummy_finishIteration(void) {}

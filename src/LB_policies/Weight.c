@@ -60,7 +60,7 @@ static int my_round(double x) {
 
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(void) {
+void Weight_Init(const cpu_set_t *process_mask) {
     verbose(VB_MICROLB, "Weight Init");
 
     clock_gettime(CLOCK_REALTIME, &initAppl);

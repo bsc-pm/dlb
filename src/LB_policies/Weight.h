@@ -24,7 +24,7 @@
 #include <LB_comm/comm.h>
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(void);
+void Weight_Init(const cpu_set_t* process_mask);
 
 void Weight_Finish(void);
 

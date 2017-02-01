@@ -17,6 +17,7 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include <sched.h>
 #include "LB_policies/Lend_light.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_core/spd.h"
@@ -33,7 +34,7 @@ static int single = 0;
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init(void) {
+void Lend_light_Init(const cpu_set_t *process_mask) {
     verbose(VB_MICROLB, "Lend_light Init");
 
     default_cpus = _default_nthreads;

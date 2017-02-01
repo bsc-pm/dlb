@@ -105,7 +105,7 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
 
         // Initialize modules
         debug_init(&global_spd.options);
-        global_spd.lb_funcs.init();
+        global_spd.lb_funcs.init(mask);
         if (policy != POLICY_NONE || global_spd.options.drom || global_spd.options.statistics) {
             shmem_procinfo__init(&global_spd.process_mask);
             shmem_cpuinfo__init(&global_spd.process_mask);

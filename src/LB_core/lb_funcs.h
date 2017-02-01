@@ -5,7 +5,7 @@
 #include "support/types.h"
 
 typedef struct BalancePolicy {
-    void (*init) (void);
+    void (*init) (const cpu_set_t *process_mask);
     void (*finish) (void);
     void (*initIteration) (void);
     void (*finishIteration) (void);

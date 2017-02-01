@@ -23,11 +23,12 @@
 #define LEND_CPUS 0
 #define ACQUIRE_CPUS 1
 
+#include <sched.h>
 #include <LB_comm/comm.h>
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init(void);
+void Lend_light_Init(const cpu_set_t *process_mask);
 
 void Lend_light_Finish(void);
 

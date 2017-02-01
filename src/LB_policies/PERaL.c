@@ -22,7 +22,7 @@
 #endif
 #include <sched.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "LB_numThreads/numThreads.h"
@@ -47,7 +47,7 @@ static double previous_iter;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void PERaL_Init( void ) {
+void PERaL_Init(const cpu_set_t *process_mask) {
     verbose( VB_MICROLB, "LeWI Mask Balancing Init" );
 
     nthreads = _default_nthreads;
@@ -59,9 +59,7 @@ void PERaL_Init( void ) {
     iter_cpu=0;
 
     //Initialize shared memory
-    cpu_set_t default_mask;
-    get_mask( &global_spd.pm, &default_mask );
-    shmem_mask.init( &default_mask );
+    shmem_mask.init(process_mask);
 }
 
 void PERaL_Finish( void ) {
@@ -85,8 +83,7 @@ void PERaL_IntoBlockingCall(int is_iter, int blocking_mode) {
     iter_cpu+=to_secs(aux) * nthreads;
 
     cpu_set_t mask;
-    CPU_ZERO( &mask );
-    get_mask( &global_spd.pm, &mask );
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
     cpu_set_t cpu;
     CPU_ZERO( &cpu );
@@ -160,8 +157,7 @@ void PERaL_OutOfBlockingCall(int is_iter ) {
 /* Update Resources - Try to acquire foreign threads */
 void PERaL_UpdateResources( int max_resources ) {
     cpu_set_t mask;
-    CPU_ZERO( &mask );
-    get_mask( &global_spd.pm, &mask );
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
     if( max_cpus==_default_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
         //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
@@ -191,8 +187,7 @@ void PERaL_UpdateResources( int max_resources ) {
 /* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
 void PERaL_ReturnClaimedCpus( void ) {
     cpu_set_t mask;
-    CPU_ZERO( &mask );
-    get_mask( &global_spd.pm, &mask );
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
     int returned = shmem_mask.return_claimed( &mask );
 

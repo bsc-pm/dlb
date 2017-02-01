@@ -712,7 +712,7 @@ static pinfo_t* get_process(spid_t pid) {
 static void update_process_loads(void) {
     // Get the active CPUs
     cpu_set_t mask;
-    get_mask(&global_spd.pm, &mask);
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
     shdata->process_info[my_process].active_cpus = CPU_COUNT(&mask);
 
     // Compute elapsed total time

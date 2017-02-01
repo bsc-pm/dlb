@@ -22,6 +22,7 @@
 #endif
 
 #include <stdlib.h>
+#include <sched.h>
 #include "LB_policies/Lewi_map.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/comm_map.h"
@@ -35,7 +36,7 @@ int *my_cpus;
 
 /******* Main Functions Map Balancing Policy ********/
 
-void Map_Init() {
+void Map_Init(const cpu_set_t *process_mask) {
     verbose(VB_MICROLB, "Map Init");
     my_cpus= malloc(sizeof(int)*CPUS_NODE);
     default_cpus = _default_nthreads;

@@ -13,6 +13,7 @@
 
 typedef struct {
     cpu_set_t process_mask;
+    cpu_set_t active_mask;
     options_t options;
     pm_interface_t pm;
     balance_policy_t lb_funcs;

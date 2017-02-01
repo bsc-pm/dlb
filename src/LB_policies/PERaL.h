@@ -22,7 +22,7 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void PERaL_Init( /* TODO: should be void */ );
+void PERaL_Init(const cpu_set_t *process_mask);
 
 void PERaL_Finish( void );
 

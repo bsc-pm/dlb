@@ -27,7 +27,7 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void lewi_mask_Init( void );
+void lewi_mask_Init(const cpu_set_t *process_mask);
 
 void lewi_mask_Finish( void );
 

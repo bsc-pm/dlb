@@ -23,11 +23,11 @@
 #define LEND_CPUS 0
 #define ACQUIRE_CPUS 1
 
-#include <LB_comm/comm.h>
+#include <sched.h>
 
 /******* Main Functions Map Balancing Policy ********/
 
-void Map_Init(void);
+void Map_Init(const cpu_set_t *process_mask);
 
 void Map_Finish(void);
 

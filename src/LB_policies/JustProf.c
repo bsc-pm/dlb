@@ -17,12 +17,13 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include <stdio.h>
+#include <sched.h>
+
 #include "support/mytime.h"
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
-
-#include <stdio.h>
 
 
 int iterNum;
@@ -38,7 +39,7 @@ struct timespec iter_cpuTime;
 struct timespec iter_compTime;
 
 int myCPUS;
-void JustProf_Init(void) {
+void JustProf_Init(const cpu_set_t *process_mask) {
     //Read Environment vars
 
     myCPUS = _default_nthreads;
