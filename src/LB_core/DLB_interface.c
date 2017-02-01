@@ -26,8 +26,6 @@
 #include "LB_core/dlb_types.h"
 #include "LB_core/dlb.h"
 #include "LB_core/DLB_kernel.h"
-#include "support/tracing.h"
-#include "support/options.h"
 #include "support/error.h"
 
 #pragma GCC visibility push(default)
@@ -43,19 +41,15 @@ int DLB_Finalize(void) {
 }
 
 int DLB_Enable(void) {
-    add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-    set_dlb_enabled(true);
-    return DLB_SUCCESS;
+    return set_dlb_enabled(true);
 }
 
 int DLB_Disable(void) {
-    add_event(DLB_MODE_EVENT, EVENT_DISABLED);
-    set_dlb_enabled(false);
-    return DLB_SUCCESS;
+    return set_dlb_enabled(false);
 }
 
 int DLB_SetMaxParallelism(int max) {
-    return DLB_SUCCESS;
+    return set_max_parallelism(max);
 }
 
 
@@ -73,81 +67,68 @@ int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t callback) {
 /* Lend */
 
 int DLB_Lend(void) {
-    add_event(RUNTIME_EVENT, EVENT_LEND);
-    //no iter, no single
-    IntoBlockingCall(0, 0);
-    add_event(RUNTIME_EVENT, 0);
-    return DLB_SUCCESS;
+    return lend();
 }
 
 int DLB_LendCpu(int cpuid) {
-    return releasecpu(cpuid);
+    return lend_cpu(cpuid);
 }
 
 int DLB_LendCpus(int ncpus) {
-    return DLB_SUCCESS;
+    return lend_cpus(ncpus);
 }
 
 int DLB_LendCpuMask(const_dlb_cpu_set_t mask) {
-    return DLB_SUCCESS;
+    return lend_cpu_mask(mask);
 }
 
 
 /* Reclaim */
 
 int DLB_Reclaim(void) {
-    add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
-    OutOfBlockingCall(0);
-    add_event(RUNTIME_EVENT, 0);
-    return DLB_SUCCESS;
+    return reclaim();
 }
 
 int DLB_ReclaimCpu(int cpuid) {
-    return DLB_SUCCESS;
+    return reclaim_cpu(cpuid);
 }
 
 int DLB_ReclaimCpus(int ncpus) {
-    claimcpus(ncpus);
-    return DLB_SUCCESS;
+    return reclaim_cpus(ncpus);
 }
 
 int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
-    return DLB_SUCCESS;
+    return reclaim_cpu_mask(mask);
 }
 
 
 /* Acquire */
 
 int DLB_Acquire(void) {
-    updateresources(USHRT_MAX);
-    return DLB_SUCCESS;
+    return acquire();
 }
 
 int DLB_AcquireCpu(int cpuid) {
-    acquirecpu(cpuid);
-    return DLB_SUCCESS;
+    return acquire_cpu(cpuid);
 }
 
 int DLB_AcquireCpus(int ncpus) {
-    updateresources(ncpus);
-    return DLB_SUCCESS;
+    return acquire_cpus(ncpus);
 }
 
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
-    acquirecpus(mask);
-    return DLB_SUCCESS;
+    return acquire_cpu_mask(mask);
 }
 
 
 /* Return */
 
 int DLB_Return(void) {
-    returnclaimed();
-    return DLB_SUCCESS;
+    return return_all();
 }
 
 int DLB_ReturnCpu(int cpuid) {
-    return returnclaimedcpu(cpuid);
+    return return_cpu(cpuid);
 }
 
 
@@ -165,28 +146,23 @@ int DLB_CheckCpuAvailability(int cpuid) {
 }
 
 int DLB_Barrier(void) {
-    add_event(RUNTIME_EVENT, EVENT_BARRIER);
-    nodebarrier();
-    add_event(RUNTIME_EVENT, 0);
-    return DLB_SUCCESS;
+    return barrier();
 }
 
 int DLB_SetVariable(const char *variable, const char *value) {
-    return options_set_variable(&global_spd.options, variable, value);
+    return set_variable(variable, value);
 }
 
 int DLB_GetVariable(const char *variable, char *value) {
-    return options_set_variable(&global_spd.options, variable, value);
+    return get_variable(variable, value);
 }
 
 int DLB_PrintVariables(void) {
-    options_print_variables(&global_spd.options);
-    return DLB_SUCCESS;
+    return print_variables();
 }
 
 int DLB_PrintShmem(void) {
-    printShmem();
-    return DLB_SUCCESS;
+    return print_shmem();
 }
 
 const char* DLB_Strerror(int errnum) {

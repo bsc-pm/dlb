@@ -25,55 +25,57 @@
 #endif
 #include <sched.h>
 #include <stdbool.h>
-#include "spd.h"
+#include "LB_core/dlb_types.h"
 
-void set_dlb_enabled(bool enabled);
 
+/* Status */
 int Initialize(const cpu_set_t *mask, const char *lb_args);
-
 int Finish(void);
+int set_dlb_enabled(bool enabled);
+int set_max_parallelism(int max);
 
+/* Callbacks */
 int callback_set(dlb_callbacks_t which, dlb_callback_t callback);
 int callback_get(dlb_callbacks_t which, dlb_callback_t callback);
 
-int poll_drom(int *new_threads, cpu_set_t *new_mask);
-
+/* MPI specific */
 void IntoCommunication(void);
-
 void OutOfCommunication(void);
-
 void IntoBlockingCall(int is_iter, int is_single);
-
 void OutOfBlockingCall(int is_iter);
 
-void updateresources(int max_resources);
+/* Lend */
+int lend(void);
+int lend_cpu(int cpuid);
+int lend_cpus(int ncpus);
+int lend_cpu_mask(const cpu_set_t *mask);
 
-void returnclaimed(void);
+/* Reclaim */
+int reclaim(void);
+int reclaim_cpu(int cpuid);
+int reclaim_cpus(int ncpus);
+int reclaim_cpu_mask(const cpu_set_t *mask);
 
-int releasecpu(int cpu);
+/* Acquire */
+int acquire(void);
+int acquire_cpu(int cpuid);
+int acquire_cpus(int ncpus);
+int acquire_cpu_mask(const cpu_set_t* mask);
 
-int returnclaimedcpu(int cpu);
+/* Return */
+int return_all(void);
+int return_cpu(int cpuid);
 
-void claimcpus(int cpus);
+/* DROM Responsive */
+int poll_drom(int *new_threads, cpu_set_t *new_mask);
 
-int checkCpuAvailability(int cpu);
+/* Misc */
+int checkCpuAvailability(int cpuid);
+int barrier(void);
+int set_variable(const char *variable, const char *value);
+int get_variable(const char *variable, char *value);
+int print_variables(void);
+int print_shmem(void);
 
-void resetDLB(void);
-
-void acquirecpu(int cpu);
-
-void acquirecpus(const cpu_set_t* mask);
-
-void singlemode(void);
-
-void parallelmode(void);
-
-void nodebarrier(void);
-
-void notifymaskchangeto(const cpu_set_t* mask);
-
-void notifymaskchange(void);
-
-void printShmem(void);
 
 #endif //DLB_KERNEL_H
