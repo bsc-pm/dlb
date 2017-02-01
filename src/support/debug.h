@@ -24,7 +24,10 @@
 #include <stdio.h>
 #include "support/types.h"
 #include "support/options.h"
-#include "support/globals.h"
+
+#ifdef MPI_LIB
+#include "LB_MPI/process_MPI.h"
+#endif
 
 void debug_init(const options_t *options);
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
@@ -33,22 +36,39 @@ void print_backtrace(void);
 
 extern verbose_opts_t vb_opts;
 
+#ifdef MPI_LIB
+// verbose0 macros will print only if rank == 0 in MPI
 #define fatal0(...) \
     if (_mpi_rank <= 0) { vb_print(stderr, "DLB PANIC", __VA_ARGS__); } \
-    abort();
-
-#define fatal(...) \
-    vb_print(stderr, "DLB PANIC", __VA_ARGS__); \
     abort();
 
 #define warning0(...) \
     if (_mpi_rank <= 0) { vb_print(stderr, "DLB WARNING", __VA_ARGS__); }
 
-#define warning(...) \
+#define info0(...) \
+    if (_mpi_rank <= 0) { vb_print(stdout, "DLB", __VA_ARGS__); }
+
+#else /* MPI_LIB */
+// if MPI is not preset, do the same as the generic ones
+
+#define fatal0(...) \
+    vb_print(stderr, "DLB PANIC", __VA_ARGS__); \
+    abort();
+
+#define warning0(...) \
     vb_print(stderr, "DLB WARNING", __VA_ARGS__);
 
 #define info0(...) \
-    if (_mpi_rank <= 0) { vb_print(stdout, "DLB", __VA_ARGS__); }
+    vb_print(stdout, "DLB", __VA_ARGS__);
+
+#endif /* MPI_LIB */
+
+#define fatal(...) \
+    vb_print(stderr, "DLB PANIC", __VA_ARGS__); \
+    abort();
+
+#define warning(...) \
+    vb_print(stderr, "DLB WARNING", __VA_ARGS__);
 
 #define info(...) \
     vb_print(stdout, "DLB", __VA_ARGS__);

@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #include <regex.h>
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/mask_utils.h"
 
 #ifdef HAVE_HWLOC

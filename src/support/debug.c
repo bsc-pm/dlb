@@ -35,7 +35,6 @@
 #include <execinfo.h>
 
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/options.h"
 
 #define VBFORMAT_LEN 32
@@ -55,8 +54,10 @@ void debug_init(const options_t *options) {
         i += sprintf( &fmt_str[i], "%s:", hostname);
     }
     if ( vb_fmt & VBF_PID ) { i += sprintf( &fmt_str[i], "%d:", getpid()); }
+#ifdef MPI_LIB
     if ( vb_fmt & VBF_MPINODE ) { i += sprintf( &fmt_str[i], "%d:", _node_id); }
     if ( vb_fmt & VBF_MPIRANK ) { i += sprintf( &fmt_str[i], "%d:", _mpi_rank); }
+#endif
 
     // Remove last separator ':' if fmt_str is not empty
     if ( i !=0 ) {

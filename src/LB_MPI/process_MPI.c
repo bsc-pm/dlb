@@ -33,10 +33,16 @@
 #include "LB_core/DLB_kernel.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "support/tracing.h"
-#include "support/globals.h"
 #include "support/options.h"
 #include "support/debug.h"
 #include "support/error.h"
+
+// MPI Globals
+int _mpi_rank = -1;
+int _mpi_size = -1;
+int _mpis_per_node = -1;
+int _node_id = -1;
+int _process_id = -1;
 
 static int init_from_mpi = 0;
 static int mpi_ready = 0;

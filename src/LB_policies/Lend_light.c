@@ -17,15 +17,22 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <sched.h>
+
 #include "LB_policies/Lend_light.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_core/spd.h"
 #include "LB_comm/comm_lend_light.h"
-#include "support/globals.h"
 #include "support/mask_utils.h"
 #include "support/options.h"
 #include "support/debug.h"
+
+#ifdef MPI_LIB
+
+#include "LB_MPI/process_MPI.h"
 
 static int default_cpus;
 static int myCPUS = 0;
@@ -37,7 +44,7 @@ static int single = 0;
 void Lend_light_Init(const cpu_set_t *process_mask) {
     verbose(VB_MICROLB, "Lend_light Init");
 
-    default_cpus = _default_nthreads;
+    default_cpus = CPU_COUNT(process_mask);
 
     setThreads_Lend_light(default_cpus);
 
@@ -53,7 +60,7 @@ void Lend_light_Init(const cpu_set_t *process_mask) {
 
     if (global_spd.options.aggressive_init) {
         setThreads_Lend_light(mu_get_system_size());
-        setThreads_Lend_light(_default_nthreads);
+        setThreads_Lend_light(default_cpus);
     }
 
     enabled = 1;
@@ -143,3 +150,22 @@ void setThreads_Lend_light(int numThreads) {
         myCPUS=numThreads;
     }
 }
+
+#else /* MPI_LIB */
+
+void Lend_light_Init(const cpu_set_t *process_mask) {
+    fatal("Lend light policy can only be used if DLB intercepts MPI");
+}
+void Lend_light_Finish(void) {}
+void Lend_light_IntoCommunication(void) {}
+void Lend_light_OutOfCommunication(void) {}
+void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode) {}
+void Lend_light_OutOfBlockingCall(int is_iter) {}
+void Lend_light_updateresources(int maxResources) {}
+void Lend_light_resetDLB(void) {}
+void Lend_light_disableDLB(void) {}
+void Lend_light_enableDLB(void) {}
+void Lend_light_single(void) {}
+void Lend_light_parallel(void) {}
+
+#endif /* MPI_LIB */

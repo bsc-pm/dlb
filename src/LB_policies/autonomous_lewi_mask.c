@@ -29,7 +29,6 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_core/spd.h"
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 #include "support/mask_utils.h"
 
@@ -49,7 +48,7 @@ void auto_lewi_mask_Init(const cpu_set_t *process_mask) {
     verbose(VB_MICROLB, "Auto LeWI Mask Balancing Init");
 
     pthread_mutex_init(&mutex, NULL);
-    nthreads = _default_nthreads;
+    nthreads = CPU_COUNT(process_mask);
     enabled=1;
 
     add_event(THREADS_USED_EVENT, nthreads);
@@ -240,12 +239,14 @@ int auto_lewi_mask_ReleaseCpu(int cpu) {
 }
 
 void auto_lewi_mask_ClaimCpus(int cpus) {
-    if (nthreads<_default_nthreads) {
+    // FIXME
+    //if (nthreads<_default_nthreads) {
         //Do not get more cpus than the default ones
         pthread_mutex_lock(&mutex);
         if (enabled && !single) {
             verbose(VB_MICROLB, "ClaimCpus max: %d", cpus);
-            if ((cpus+nthreads)>_default_nthreads) { cpus=_default_nthreads-nthreads; }
+            // FIXME
+            //if ((cpus+nthreads)>_default_nthreads) { cpus=_default_nthreads-nthreads; }
 
             cpu_set_t current_mask, mask;
             memcpy(&current_mask, &global_spd.active_mask, sizeof(cpu_set_t));
@@ -260,7 +261,7 @@ void auto_lewi_mask_ClaimCpus(int cpus) {
             }
         }
         pthread_mutex_unlock(&mutex);
-    }
+    //}
 }
 
 int auto_lewi_mask_CheckCpuAvailability(int cpu) {

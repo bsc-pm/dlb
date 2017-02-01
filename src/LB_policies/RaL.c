@@ -29,12 +29,12 @@
 #include "LB_comm/shmem_bitset.h"
 #include "LB_core/spd.h"
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 
 
+static int initial_nthreads;
 static int nthreads;
 static int max_cpus;
 
@@ -50,8 +50,9 @@ static double previous_iter;
 void RaL_Init(const cpu_set_t *process_mask) {
     verbose( VB_MICROLB, "LeWI Mask Balancing Init" );
 
-    nthreads = _default_nthreads;
-    max_cpus= _default_nthreads;
+    initial_nthreads = CPU_COUNT(process_mask);
+    nthreads = initial_nthreads;
+    max_cpus = initial_nthreads;
 
     //Initialize iterative info
 //   reset(&compIter);
@@ -122,7 +123,7 @@ void RaL_OutOfBlockingCall(int is_iter ) {
             iter_duration=to_secs(aux);
             //If the iteration has been longer than the last maybe something went wrong, recover one cpu
             verbose( VB_MICROLB, "Iter %d:  %.4f (%.4f) max_cpus:%d", iterNum, to_secs(aux), iter_cpu, max_cpus);
-            if ((iter_duration>=previous_iter) && (max_cpus<_default_nthreads)) { max_cpus++; }
+            if ((iter_duration>=previous_iter) && (max_cpus<initial_nthreads)) { max_cpus++; }
             else {
                 iter_cpu=iter_cpu/(max_cpus-1);
                 //If we can do the same computations with one cpu less in less time than the iteration time, release a cpu "forever"
@@ -158,8 +159,8 @@ void RaL_UpdateResources( int max_resources ) {
     cpu_set_t mask;
     memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
-    if( max_cpus==_default_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
-        //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
+    if( max_cpus==initial_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
+        //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, initial_nthreads, max_cpus<initial_nthreads, max_resources );
 
         int new_threads = shmem_mask.collect_mask( &mask, max_resources );
         //printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);

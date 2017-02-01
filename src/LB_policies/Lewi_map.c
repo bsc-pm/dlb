@@ -21,14 +21,21 @@
 #include <config.h>
 #endif
 
-#include <stdlib.h>
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <sched.h>
+#include <stdlib.h>
+
 #include "LB_policies/Lewi_map.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/comm_map.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+
+#ifdef MPI_LIB
+
+#include "LB_MPI/process_MPI.h"
 
 int default_cpus;
 int myCPUS=0;
@@ -39,7 +46,7 @@ int *my_cpus;
 void Map_Init(const cpu_set_t *process_mask) {
     verbose(VB_MICROLB, "Map Init");
     my_cpus= malloc(sizeof(int)*CPUS_NODE);
-    default_cpus = _default_nthreads;
+    default_cpus = CPU_COUNT(process_mask);
 
     info0("Default cpus per process: %d", default_cpus);
 
@@ -116,3 +123,17 @@ void setThreads_Map(int numThreads, int action, int* cpus) {
         myCPUS=numThreads;
     }
 }
+
+#else /* MPI_LIB */
+
+void Map_Init(const cpu_set_t *process_mask) {
+    fatal("Map policy can only be used if DLB intercepts MPI");
+}
+void Map_Finish(void) {}
+void Map_IntoCommunication(void) {}
+void Map_OutOfCommunication(void) {}
+void Map_IntoBlockingCall(int is_iter, int blocking_mode) {}
+void Map_OutOfBlockingCall(int is_iter) {}
+void Map_updateresources(int max_cpus) {}
+
+#endif /* MPI_LIB */

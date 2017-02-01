@@ -17,12 +17,14 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <stdio.h>
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <sched.h>
+#include <stdio.h>
 
 #include "support/mytime.h"
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 
 
@@ -42,7 +44,7 @@ int myCPUS;
 void JustProf_Init(const cpu_set_t *process_mask) {
     //Read Environment vars
 
-    myCPUS = _default_nthreads;
+    myCPUS = CPU_COUNT(process_mask);
 
     if (clock_gettime(CLOCK_REALTIME, &initAppl)<0) {
         fprintf(stderr, "DLB ERROR: clock_gettime failed\n");

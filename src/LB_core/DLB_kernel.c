@@ -65,8 +65,8 @@ static void print_summary() {
         info0 ( "MPI processes per node: %d", _mpis_per_node );
 #endif
         info0("%s %s", PACKAGE, VERSION);
-//      info0( "Balancing policy: <name>" );
-        info0("This process starts with %d threads", _default_nthreads);
+//      info0("Balancing policy: <name>");
+        info0("This process starts with %d threads", CPU_COUNT(&global_spd.process_mask));
 
         if (global_spd.options.mpi_just_barrier)
             info0("Only lending resources when MPI_Barrier "

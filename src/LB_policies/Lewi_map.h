@@ -39,9 +39,10 @@ void Map_IntoBlockingCall(int is_iter, int blocking_mode);
 
 void Map_OutOfBlockingCall(int is_iter);
 
+void Map_updateresources(int max_cpus);
+
 /******* Auxiliar Functions Map Balancing Policy ********/
 
-void Map_updateresources(int max_cpus);
 void setThreads_Map(int numThreads, int action, int* cpus);
 
 #endif //LEND_H

@@ -29,12 +29,12 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_core/spd.h"
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 #include "support/mask_utils.h"
 
 
 static int nthreads;
+static int initial_nthreads;
 static int enabled = 0;
 static int single = 0;
 static int master_cpu;
@@ -44,7 +44,8 @@ static int master_cpu;
 void lewi_mask_Init(const cpu_set_t *process_mask) {
     verbose(VB_MICROLB, "LeWI Mask Balancing Init");
 
-    nthreads = _default_nthreads;
+    initial_nthreads = CPU_COUNT(process_mask);
+    nthreads = initial_nthreads;
     add_event(THREADS_USED_EVENT, nthreads);
 
     //Check num threads and mask size are the same
@@ -118,9 +119,9 @@ void lewi_mask_OutOfBlockingCall(int is_iter) {
             CPU_SET( master_cpu, &mask );
             nthreads = 1;
         } else {
-            verbose(VB_MICROLB, "RECOVERING %d threads", _default_nthreads - nthreads );
+            verbose(VB_MICROLB, "RECOVERING %d threads", initial_nthreads - nthreads );
             shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
-            nthreads = _default_nthreads;
+            nthreads = initial_nthreads;
         }
         set_mask( &global_spd.pm, &mask );
         assert(nthreads==CPU_COUNT(&mask));
@@ -174,10 +175,10 @@ void lewi_mask_ReturnClaimedCpus( void ) {
 
 void lewi_mask_ClaimCpus(int cpus) {
     if (enabled && !single) {
-        if (nthreads<_default_nthreads) {
+        if (nthreads<initial_nthreads) {
             //Do not get more cpus than the default ones
 
-            if ((cpus+nthreads)>_default_nthreads) { cpus=_default_nthreads-nthreads; }
+            if ((cpus+nthreads)>initial_nthreads) { cpus=initial_nthreads-nthreads; }
 
             verbose( VB_MICROLB, "Claiming %d cpus", cpus );
             cpu_set_t current_mask;

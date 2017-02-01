@@ -169,8 +169,6 @@ COMMON_SRCS = \
 	src/LB_core/lb_funcs.h          \
 	src/support/sighandler.c        \
 	src/support/sighandler.h        \
-	src/support/globals.c           \
-	src/support/globals.h           \
 	src/support/debug.c             \
 	src/support/debug.h             \
 	src/support/dlb_api.h           \

@@ -28,7 +28,6 @@
 #include "shmem.h"
 #include "LB_core/spd.h"
 #include "support/tracing.h"
-#include "support/globals.h"
 #include "support/debug.h"
 #include "support/options.h"
 #include "support/mask_utils.h"

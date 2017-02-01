@@ -21,18 +21,25 @@
 #include <config.h>
 #endif
 
-#include "LB_numThreads/numThreads.h"
-#include "LB_policies/Weight.h"
-#include "LB_core/spd.h"
-#include "support/globals.h"
-#include "support/debug.h"
-#include "support/mytime.h"
-#include "support/tracing.h"
-
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sched.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+
+#include "LB_numThreads/numThreads.h"
+#include "LB_policies/Weight.h"
+#include "LB_core/spd.h"
+#include "support/debug.h"
+#include "support/mytime.h"
+#include "support/tracing.h"
+
+#ifdef MPI_LIB
+
+#include "LB_MPI/process_MPI.h"
 
 int finished;
 int threads2use, threadsUsed;
@@ -50,6 +57,8 @@ struct timespec CpuTime;
 struct timespec MPITime;
 
 int iterNum;
+
+static int default_nthreads;
 
 static int my_round(double x) {
     int val = x;
@@ -70,6 +79,7 @@ void Weight_Init(const cpu_set_t *process_mask) {
     reset(&MPITime);
     clock_gettime(CLOCK_REALTIME, &initComp);
 
+    default_nthreads = CPU_COUNT(process_mask);
     iterNum=0;
     //Create auxiliar threads
     createThreads_Weight();
@@ -139,7 +149,7 @@ void createThreads_Weight() {
     verbose(VB_MICROLB, "Creating Threads");
 
     threadsUsed=0;
-    threads2use=_default_nthreads;
+    threads2use=default_nthreads;
 
     //The local thread won't communicate by sockets
     LoadCommConfig(_mpis_per_node, _process_id, _node_id);
@@ -177,7 +187,7 @@ void* masterThread_Weight(void* arg) {
     }
 
     //We start with equidistribution
-    for (i=0; i<_mpis_per_node; i++) { cpus[i]=_default_nthreads; }
+    for (i=0; i<_mpis_per_node; i++) { cpus[i]=default_nthreads; }
 
 //  applyNewDistribution_Weight(cpus);
 
@@ -304,3 +314,17 @@ void Weight_updateresources() {
         threadsUsed=threads2use;
     }
 }
+
+#else /* MPI_LIB */
+
+void Weight_Init(const cpu_set_t *process_mask) {
+    fatal("Weight policy can only be used if DLB intercepts MPI");
+}
+void Weight_Finish(void) {}
+void Weight_IntoCommunication(void) {}
+void Weight_OutOfCommunication(void) {}
+void Weight_IntoBlockingCall(int is_iter, int blocking_mode) {}
+void Weight_OutOfBlockingCall(int is_iter) {}
+void Weight_updateresources() {}
+
+#endif /* MPI_LIB */
