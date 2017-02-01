@@ -18,8 +18,11 @@
 /*********************************************************************************/
 
 #include "LB_core/dlb.h"
-#include "support/dlb_api.h"
 #include "support/debug.h"
+
+#define DLB_API_F_ALIAS( NameF, Params) \
+    void NameF##_ Params __attribute__((alias(#NameF))); \
+    void NameF##__ Params __attribute__((alias(#NameF)))
 
 #pragma GCC visibility push(default)
 

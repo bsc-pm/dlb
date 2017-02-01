@@ -169,7 +169,6 @@ COMMON_SRCS = \
 	src/LB_core/lb_funcs.h          \
 	src/support/debug.c             \
 	src/support/debug.h             \
-	src/support/dlb_api.h           \
 	src/support/tracing.c           \
 	src/support/tracing.h           \
 	src/support/mytime.c            \

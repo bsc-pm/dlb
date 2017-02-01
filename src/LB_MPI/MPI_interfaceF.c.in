@@ -26,7 +26,6 @@
 #include "LB_MPI/process_MPI.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_MPI/MPI_interface.h"
-#include "support/dlb_api.h"
 #include "support/debug.h"
 #include <mpi.h>
 
