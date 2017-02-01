@@ -34,7 +34,7 @@ typedef enum OptionTypes {
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_DBG_T,      // debug_opts_t
-    OPT_PRIO_T,     // priority_opts_t
+    OPT_PRIO_T,     // priority_t
     OPT_POL_T       // policy_t
 } option_type_t;
 
@@ -184,7 +184,7 @@ static void set_value(option_type_t type, void *option, const char *str_value) {
             parse_debug_opts(str_value, (debug_opts_t*)option);
             break;
         case(OPT_PRIO_T):
-            parse_priority_opts(str_value, (priority_opts_t*)option);
+            parse_priority(str_value, (priority_t*)option);
             break;
         case(OPT_POL_T):
             parse_policy(str_value, (policy_t*)option);

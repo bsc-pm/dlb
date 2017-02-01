@@ -41,7 +41,7 @@ typedef struct {
     bool greedy;
     char shm_key[MAX_OPTION_LENGTH];
     bool aggressive_init;
-    priority_opts_t priority;
+    priority_t priority;
     debug_opts_t debug_opts;
 } options_t;
 
