@@ -20,13 +20,14 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
+#include <sched.h>
 #include "support/types.h"
 
 #define MAX_OPTIONS 32
 #define MAX_OPTION_LENGTH 32
 #define MAX_DESCRIPTION 1024
 
-typedef struct {
+typedef struct Options {
     policy_t lb_policy;
     bool statistics;
     bool drom;
@@ -37,11 +38,11 @@ typedef struct {
     verbose_fmt_t verbose_fmt;
     bool trace_enabled;
     bool trace_counters;
-    char mask[MAX_OPTION_LENGTH];    //parse?
     bool greedy;
     char shm_key[MAX_OPTION_LENGTH];
     bool aggressive_init;
     priority_t priority;
+    cpu_set_t dlb_mask;
     debug_opts_t debug_opts;
 } options_t;
 

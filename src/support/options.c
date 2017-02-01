@@ -20,9 +20,10 @@
 #include <string.h>
 #include <stddef.h>
 
-#include "support/types.h"
-#include "support/debug.h"
 #include "support/options.h"
+#include "support/types.h"
+#include "support/mask_utils.h"
+#include "support/debug.h"
 #include "support/error.h"
 
 
@@ -35,7 +36,8 @@ typedef enum OptionTypes {
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_DBG_T,      // debug_opts_t
     OPT_PRIO_T,     // priority_t
-    OPT_POL_T       // policy_t
+    OPT_POL_T,      // policy_t
+    OPT_MASK_T      // cpu_set_t
 } option_type_t;
 
 typedef struct {
@@ -129,7 +131,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name = "LB_MASK", .arg_name = "--mask", .default_value = "",
         .description = "Cpuset mask owned by DLB",
-        .type = OPT_STR_T, .offset = offsetof(options_t, mask),
+        .type = OPT_MASK_T, .offset = offsetof(options_t, dlb_mask),
         .readonly = true, .optional = true
     }, {
         .var_name = "LB_SHM_KEY", .arg_name = "--shm-key", .default_value = "",
@@ -189,6 +191,9 @@ static void set_value(option_type_t type, void *option, const char *str_value) {
         case(OPT_POL_T):
             parse_policy(str_value, (policy_t*)option);
             break;
+        case(OPT_MASK_T):
+            mu_parse_mask(str_value, (cpu_set_t*)option);
+            break;
     }
 }
 
@@ -211,6 +216,7 @@ static void get_value(option_type_t type, void *option, char *str_value) {
         case OPT_DBG_T:
         case OPT_PRIO_T:
         case OPT_POL_T:
+        case OPT_MASK_T:
             sprintf(str_value, "Type non-printable. Integer value: %d", *(int*)option);
             break;
     }

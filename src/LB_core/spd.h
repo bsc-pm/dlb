@@ -11,7 +11,7 @@
 
 /* Sub-process Descriptor */
 
-typedef struct {
+typedef struct SubProcessDescriptor {
     cpu_set_t process_mask;
     cpu_set_t active_mask;
     options_t options;

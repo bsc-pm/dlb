@@ -22,7 +22,7 @@
 
 #include <stdbool.h>
 
-typedef enum {
+typedef enum BlockingMode {
     ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call
     BLOCK,   // MPI set to blocking mode
 } blocking_mode_t;
@@ -53,7 +53,7 @@ typedef enum DebugOptions {
     DBG_RETURNSTOLEN = 1 << 1
 } debug_opts_t;
 
-typedef enum PriorityOptions {
+typedef enum PriorityType {
     PRIO_NONE,
     PRIO_AFFINITY_FIRST,
     PRIO_AFFINITY_FULL,
