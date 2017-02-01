@@ -94,8 +94,6 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
         policy_t policy = global_spd.options.lb_policy;
         set_lb_funcs(&global_spd.lb_funcs, policy);
         global_spd.process_id = getpid();
-        global_spd.use_dpd = (
-                policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
         if (mask) {
             memcpy(&global_spd.process_mask, mask, sizeof(cpu_set_t));
         } else {
@@ -418,4 +416,9 @@ int print_shmem(void) {
     shmem_procinfo_ext__print_info();
     shmem_procinfo_ext__finalize();
     return DLB_SUCCESS;
+}
+
+// Others
+const options_t* get_global_options(void) {
+    return &global_spd.options;
 }

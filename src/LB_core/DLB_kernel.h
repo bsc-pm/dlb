@@ -26,6 +26,7 @@
 #include <sched.h>
 #include <stdbool.h>
 #include "LB_core/dlb_types.h"
+#include "support/options.h"
 
 
 /* Status */
@@ -77,5 +78,8 @@ int get_variable(const char *variable, char *value);
 int print_variables(void);
 int print_shmem(void);
 
+
+// Others
+const options_t* get_global_options(void);
 
 #endif //DLB_KERNEL_H

@@ -170,4 +170,3 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
 
 // Things to do outside if this function is separated from kernel:
 // Print policy name:
-// Use DPD if POLICY_RAL, POLICY_WEIGHT, POLICY_JUST_PROF

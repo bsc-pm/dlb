@@ -17,7 +17,6 @@ typedef struct {
     options_t options;
     pm_interface_t pm;
     balance_policy_t lb_funcs;
-    bool use_dpd;
     pid_t process_id;
 } spd_t;
 

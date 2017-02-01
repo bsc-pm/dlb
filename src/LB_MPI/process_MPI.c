@@ -29,7 +29,6 @@
 #include <string.h>
 
 #include "DPD/DPD.h"
-#include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "support/tracing.h"
@@ -44,6 +43,8 @@ int _mpis_per_node = -1;
 int _node_id = -1;
 int _process_id = -1;
 
+static int use_dpd = 0;
+static int just_barrier = 0;
 static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static int is_iter = 0;
@@ -146,6 +147,13 @@ void after_init(void) {
     if (Initialize(NULL, NULL) == DLB_SUCCESS) {
         init_from_mpi = 1;
     }
+
+    // Obtain MPI options
+    const options_t *options = get_global_options();
+    policy_t policy = options->lb_policy;
+    use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
+    just_barrier = options->mpi_just_barrier;
+
     mpi_ready = 1;
 }
 
@@ -154,7 +162,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
     if(mpi_ready) {
         IntoCommunication();
 
-        if(global_spd.use_dpd) {
+        if(use_dpd) {
             long value = (long)((((buf>>5)^dest)<<5)|call_type);
 
             valor_dpd=DPD(value,&periodo);
@@ -163,7 +171,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 
         }
 
-        if(global_spd.options.mpi_just_barrier) {
+        if(just_barrier) {
             if (call_type==Barrier) {
                 add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
                 IntoBlockingCall(is_iter, 0);
@@ -181,7 +189,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 void after_mpi(mpi_call call_type) {
     if (mpi_ready) {
 
-        if(global_spd.options.mpi_just_barrier) {
+        if(just_barrier) {
             if (call_type==Barrier) {
                 add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
                 OutOfBlockingCall(is_iter);
