@@ -28,7 +28,8 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include "LB_comm/comm.h"
+
+#include "LB_comm/comm_shMem.h"
 #include "support/debug.h"
 
 #ifdef MPI_LIB

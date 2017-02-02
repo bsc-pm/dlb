@@ -62,13 +62,10 @@ typedef enum PriorityType {
 
 typedef enum PolicyType {
     POLICY_NONE,
-    POLICY_JUST_PROF,
     POLICY_LEWI,
-    POLICY_MAP,
     POLICY_WEIGHT,
     POLICY_LEWI_MASK,
-    POLICY_AUTO_LEWI_MASK,
-    POLICY_RAL
+    POLICY_AUTO_LEWI_MASK
 } policy_t;
 
 void parse_bool(const char *str, bool *value);

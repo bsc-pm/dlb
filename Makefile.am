@@ -124,34 +124,22 @@ src/LB_MPI/MPI_interceptF.c: $(top_srcdir)/src/LB_MPI/MPI_interceptF.c.in $(MPIC
 COMMON_SRCS = \
 	src/LB_numThreads/numThreads.c  \
 	src/LB_numThreads/numThreads.h  \
-	src/LB_policies/JustProf.c      \
-	src/LB_policies/JustProf.h      \
 	src/LB_policies/Lend_light.c    \
 	src/LB_policies/Lend_light.h    \
-	src/LB_policies/Lewi_map.c      \
-	src/LB_policies/Lewi_map.h      \
 	src/LB_policies/Weight.c        \
 	src/LB_policies/Weight.h        \
 	src/LB_policies/lewi_mask.c     \
+	src/LB_policies/lewi_mask.h     \
 	src/LB_policies/autonomous_lewi_mask.h     \
 	src/LB_policies/autonomous_lewi_mask.c     \
-	src/LB_policies/lewi_mask.h     \
-	src/LB_policies/RaL.c           \
-	src/LB_policies/RaL.h           \
-	src/LB_policies/PERaL.c         \
-	src/LB_policies/PERaL.h         \
 	src/LB_comm/comm_shMem.c        \
-	src/LB_comm/comm.h              \
+	src/LB_comm/comm_shMem.h        \
 	src/LB_comm/comm_lend_light.c   \
 	src/LB_comm/comm_lend_light.h   \
-	src/LB_comm/comm_map.c          \
-	src/LB_comm/comm_map.h          \
 	src/LB_comm/shmem.c             \
 	src/LB_comm/shmem.h             \
 	src/LB_comm/shmem_barrier.c     \
 	src/LB_comm/shmem_barrier.h     \
-	src/LB_comm/shmem_bitset.c      \
-	src/LB_comm/shmem_bitset.h      \
 	src/LB_comm/shmem_cpuinfo.c     \
 	src/LB_comm/shmem_cpuinfo.h     \
 	src/LB_comm/shmem_procinfo.c    \

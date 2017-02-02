@@ -64,15 +64,6 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
     switch(policy) {
         case POLICY_NONE:
             break;
-        case POLICY_JUST_PROF:
-            lb_funcs->init = &JustProf_Init;
-            lb_funcs->finish = &JustProf_Finish;
-            lb_funcs->intoCommunication = &JustProf_IntoCommunication;
-            lb_funcs->outOfCommunication = &JustProf_OutOfCommunication;
-            lb_funcs->intoBlockingCall = &JustProf_IntoBlockingCall;
-            lb_funcs->outOfBlockingCall = &JustProf_OutOfBlockingCall;
-            lb_funcs->updateresources = &JustProf_UpdateResources;
-            break;
         case POLICY_LEWI:
             lb_funcs->init = &Lend_light_Init;
             lb_funcs->finish = &Lend_light_Finish;
@@ -86,15 +77,6 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->enableDLB = &Lend_light_enableDLB;
             lb_funcs->single = &Lend_light_single;
             lb_funcs->parallel = &Lend_light_parallel;
-            break;
-        case POLICY_MAP:
-            lb_funcs->init = &Map_Init;
-            lb_funcs->finish = &Map_Finish;
-            lb_funcs->intoCommunication = &Map_IntoCommunication;
-            lb_funcs->outOfCommunication = &Map_OutOfCommunication;
-            lb_funcs->intoBlockingCall = &Map_IntoBlockingCall;
-            lb_funcs->outOfBlockingCall = &Map_OutOfBlockingCall;
-            lb_funcs->updateresources = &Map_updateresources;
             break;
         case POLICY_WEIGHT:
             lb_funcs->init = &Weight_Init;
@@ -143,27 +125,6 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->enableDLB = &auto_lewi_mask_enableDLB;
             lb_funcs->single = &auto_lewi_mask_single;
             lb_funcs->parallel = &auto_lewi_mask_parallel;
-            break;
-        case POLICY_RAL:
-            if (/*_mpis_per_node>*/1) {
-                lb_funcs->init = &PERaL_Init;
-                lb_funcs->finish = &PERaL_Finish;
-                lb_funcs->intoCommunication = &PERaL_IntoCommunication;
-                lb_funcs->outOfCommunication = &PERaL_OutOfCommunication;
-                lb_funcs->intoBlockingCall = &PERaL_IntoBlockingCall;
-                lb_funcs->outOfBlockingCall = &PERaL_OutOfBlockingCall;
-                lb_funcs->updateresources = &PERaL_UpdateResources;
-                lb_funcs->returnclaimed = &PERaL_ReturnClaimedCpus;
-            } else {
-                lb_funcs->init = &RaL_Init;
-                lb_funcs->finish = &RaL_Finish;
-                lb_funcs->intoCommunication = &RaL_IntoCommunication;
-                lb_funcs->outOfCommunication = &RaL_OutOfCommunication;
-                lb_funcs->intoBlockingCall = &RaL_IntoBlockingCall;
-                lb_funcs->outOfBlockingCall = &RaL_OutOfBlockingCall;
-                lb_funcs->updateresources = &RaL_UpdateResources;
-                lb_funcs->returnclaimed = &RaL_ReturnClaimedCpus;
-            }
             break;
     }
 }

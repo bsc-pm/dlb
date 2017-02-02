@@ -20,8 +20,8 @@
 #ifndef WEIGHT_H
 #define WEIGHT_H
 
+#include <LB_comm/comm_shMem.h>
 
-#include <LB_comm/comm.h>
 /******* Main Functions Weight Balancing Policy ********/
 
 void Weight_Init(const cpu_set_t* process_mask);

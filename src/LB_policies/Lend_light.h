@@ -24,7 +24,6 @@
 #define ACQUIRE_CPUS 1
 
 #include <sched.h>
-#include <LB_comm/comm.h>
 
 /******* Main Functions Lend_light Balancing Policy ********/
 

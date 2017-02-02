@@ -132,19 +132,13 @@ void parse_priority(const char *str, priority_t *value) {
 
 void parse_policy(const char *str, policy_t *value) {
     *value = POLICY_NONE;
-    if (strcasecmp(str, "JustProf") == 0) {
-        *value = POLICY_JUST_PROF;
-    } else if (strcasecmp(str, "LeWI") == 0) {
+    if (strcasecmp(str, "LeWI") == 0) {
         *value = POLICY_LEWI;
-    } else if (strcasecmp(str, "Map") == 0) {
-        *value = POLICY_MAP;
     } else if (strcasecmp(str, "WEIGHT") == 0) {
         *value = POLICY_WEIGHT;
     } else if (strcasecmp(str, "LeWI_mask") == 0) {
         *value = POLICY_LEWI_MASK;
     } else if (strcasecmp(str, "auto_LeWI_mask") == 0) {
         *value = POLICY_AUTO_LEWI_MASK;
-    } else if (strcasecmp(str, "RaL") == 0) {
-        *value = POLICY_RAL;
     }
 }

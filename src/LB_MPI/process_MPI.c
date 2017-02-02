@@ -151,8 +151,9 @@ void after_init(void) {
 
     // Obtain MPI options
     const options_t *options = get_global_options();
-    policy_t policy = options->lb_policy;
-    use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
+    // Policies that used dpd have been temporarily disabled
+    //use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
+    use_dpd = 0;
     just_barrier = options->mpi_just_barrier;
 
     mpi_ready = 1;

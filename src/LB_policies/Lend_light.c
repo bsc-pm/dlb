@@ -22,10 +22,11 @@
 #endif
 #include <sched.h>
 
+#include "LB_comm/comm_shMem.h"
+#include "LB_comm/comm_lend_light.h"
 #include "LB_policies/Lend_light.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_core/spd.h"
-#include "LB_comm/comm_lend_light.h"
 #include "support/mask_utils.h"
 #include "support/options.h"
 #include "support/debug.h"

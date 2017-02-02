@@ -30,8 +30,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "LB_numThreads/numThreads.h"
 #include "LB_policies/Weight.h"
+#include "LB_comm/comm_shMem.h"
+#include "LB_numThreads/numThreads.h"
 #include "LB_core/spd.h"
 #include "support/debug.h"
 #include "support/mytime.h"
