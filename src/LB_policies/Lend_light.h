@@ -27,23 +27,16 @@
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init(const subprocess_descriptor_t *spd);
-void Lend_light_Finish(const subprocess_descriptor_t *spd);
-void Lend_light_enableDLB(const subprocess_descriptor_t *spd);
-void Lend_light_disableDLB(const subprocess_descriptor_t *spd);
+int Lend_light_Init(const subprocess_descriptor_t *spd);
+int Lend_light_Finish(const subprocess_descriptor_t *spd);
+int Lend_light_enableDLB(const subprocess_descriptor_t *spd);
+int Lend_light_disableDLB(const subprocess_descriptor_t *spd);
 
 void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd);
-
 void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd);
-
 void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd);
-
 void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-void Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources);
+int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources);
 
-
-
-
-#endif //LEND_H
-
+#endif /* LEND_LIGHT_H */

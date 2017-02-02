@@ -25,19 +25,15 @@
 
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(const subprocess_descriptor_t *spd);
-
-void Weight_Finish(const subprocess_descriptor_t *spd);
+int Weight_Init(const subprocess_descriptor_t *spd);
+int Weight_Finish(const subprocess_descriptor_t *spd);
 
 void Weight_IntoCommunication(const subprocess_descriptor_t *spd);
-
 void Weight_OutOfCommunication(const subprocess_descriptor_t *spd);
-
 void Weight_IntoBlockingCall(const subprocess_descriptor_t *spd);
-
 void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-void Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources);
+int Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources);
 
 /******* Auxiliar Functions Weight Balancing Policy ********/
 

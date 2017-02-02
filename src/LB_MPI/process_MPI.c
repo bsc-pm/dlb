@@ -193,13 +193,13 @@ void after_mpi(mpi_call call_type) {
 
         if(just_barrier) {
             if (call_type==Barrier) {
-                add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
+                add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
                 OutOfBlockingCall(is_iter);
                 add_event(RUNTIME_EVENT, 0);
                 is_iter=0;
             }
         } else if (is_blocking(call_type)) {
-            add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
+            add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
             OutOfBlockingCall(is_iter);
             add_event(RUNTIME_EVENT, 0);
             is_iter=0;

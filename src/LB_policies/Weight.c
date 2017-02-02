@@ -37,6 +37,7 @@
 #include "support/debug.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
+#include "support/error.h"
 
 #ifdef MPI_LIB
 
@@ -70,7 +71,7 @@ static int my_round(double x) {
 
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(const subprocess_descriptor_t *spd) {
+int Weight_Init(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "Weight Init");
 
     clock_gettime(CLOCK_REALTIME, &initAppl);
@@ -84,10 +85,12 @@ void Weight_Init(const subprocess_descriptor_t *spd) {
     iterNum=0;
     //Create auxiliar threads
     createThreads_Weight();
+    return DLB_SUCCESS;
 }
 
-void Weight_Finish(const subprocess_descriptor_t *spd) {
+int Weight_Finish(const subprocess_descriptor_t *spd) {
     comm_close();
+    return DLB_SUCCESS;
 }
 
 void Weight_IntoCommunication(const subprocess_descriptor_t *spd) {}
@@ -140,12 +143,13 @@ void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     }
 }
 
-void Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {
+int Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {
     if (threadsUsed!=threads2use) {
         verbose(VB_MICROLB, "Using %d cpus", threads2use);
         update_threads(&spd->pm, threads2use);
         threadsUsed=threads2use;
     }
+    return DLB_SUCCESS;
 }
 
 /******* Auxiliar Functions Weight Balancing Policy ********/
@@ -318,14 +322,17 @@ void* slaveThread_Weight(void* arg) {
 
 #else /* MPI_LIB */
 
-void Weight_Init(const subprocess_descriptor_t *spd) {
+int Weight_Init(const subprocess_descriptor_t *spd) {
     fatal("Weight policy can only be used if DLB intercepts MPI");
+    return DLB_ERR_NOCOMP;
 }
-void Weight_Finish(const subprocess_descriptor_t *spd) {}
+int Weight_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 void Weight_IntoCommunication(const subprocess_descriptor_t *spd) {}
 void Weight_OutOfCommunication(const subprocess_descriptor_t *spd) {}
 void Weight_IntoBlockingCall(const subprocess_descriptor_t *spd) {}
 void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {}
-void Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {}
+int Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {
+    return DLB_ERR_NOCOMP;
+}
 
 #endif /* MPI_LIB */

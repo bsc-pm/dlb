@@ -30,6 +30,7 @@
 #include "support/mask_utils.h"
 #include "support/options.h"
 #include "support/debug.h"
+#include "support/error.h"
 
 #ifdef MPI_LIB
 
@@ -43,7 +44,7 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads);
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init(const subprocess_descriptor_t *spd) {
+int Lend_light_Init(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "Lend_light Init");
 
     default_cpus = CPU_COUNT(&spd->process_mask);
@@ -66,10 +67,29 @@ void Lend_light_Init(const subprocess_descriptor_t *spd) {
     }
 
     enabled = 1;
+
+    return DLB_SUCCESS;
 }
 
-void Lend_light_Finish(const subprocess_descriptor_t *spd) {
+int Lend_light_Finish(const subprocess_descriptor_t *spd) {
     finalize_comm();
+    return DLB_SUCCESS;
+}
+
+int Lend_light_enableDLB(const subprocess_descriptor_t *spd) {
+    single = 0;
+    enabled = 1;
+    return DLB_SUCCESS;
+}
+
+int Lend_light_disableDLB(const subprocess_descriptor_t *spd) {
+    if (enabled && !single) {
+        verbose(VB_MICROLB, "ResetDLB");
+        acquireCpus(myCPUS);
+        setThreads_Lend_light(&spd->pm, default_cpus);
+    }
+    enabled = 0;
+    return DLB_SUCCESS;
 }
 
 void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {}
@@ -105,28 +125,19 @@ void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_ite
     }
 }
 
-void Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
+int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
+    int error = DLB_ERR_PERM;
     if (enabled && !single) {
         int cpus = checkIdleCpus(myCPUS, maxResources);
         if (myCPUS!=cpus) {
             verbose(VB_MICROLB, "Using %d cpus", cpus);
             setThreads_Lend_light(&spd->pm, cpus);
+            error = DLB_SUCCESS;
         }
+    } else {
+        error = DLB_ERR_DISBLD;
     }
-}
-
-void Lend_light_disableDLB(const subprocess_descriptor_t *spd) {
-    if (enabled && !single) {
-        verbose(VB_MICROLB, "ResetDLB");
-        acquireCpus(myCPUS);
-        setThreads_Lend_light(&spd->pm, default_cpus);
-    }
-    enabled = 0;
-}
-
-void Lend_light_enableDLB(const subprocess_descriptor_t *spd) {
-    single = 0;
-    enabled = 1;
+    return error;
 }
 
 /******* Auxiliar Functions Lend_light Balancing Policy ********/
@@ -141,16 +152,19 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads) {
 
 #else /* MPI_LIB */
 
-void Lend_light_Init(const subprocess_descriptor_t *spd) {
+int Lend_light_Init(const subprocess_descriptor_t *spd) {
     fatal("Lend light policy can only be used if DLB intercepts MPI");
+    return DLB_ERR_NOCOMP;
 }
-void Lend_light_Finish(const subprocess_descriptor_t *spd) {}
+int Lend_light_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Lend_light_enableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Lend_light_disableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {}
 void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) {}
 void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {}
 void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {}
-void Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {}
-void Lend_light_disableDLB(const subprocess_descriptor_t *spd) {}
-void Lend_light_enableDLB(const subprocess_descriptor_t *spd) {}
+int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
+    return DLB_ERR_NOCOMP;
+}
 
 #endif /* MPI_LIB */

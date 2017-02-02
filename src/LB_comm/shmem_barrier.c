@@ -161,7 +161,7 @@ void shmem_barrier(void) {
 
     if (!last_in) {
         // Recover resources for those processes that simulated a blocking call
-        add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
         OutOfBlockingCall(0);
         add_event(RUNTIME_EVENT, 0);
     }

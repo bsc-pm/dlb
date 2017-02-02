@@ -23,17 +23,13 @@
 #define EVENT_USER        0
 #define EVENT_INIT        1
 #define EVENT_INTO_MPI    2
-#define EVENT_OUT_MPI     3
-#define EVENT_UPDATE      4
-#define EVENT_RETURN      5
-#define EVENT_RELEASE_CPU 6
-#define EVENT_CLAIM_CPUS  7
-#define EVENT_RETURN_CPU  8
-#define EVENT_LEND        9
-#define EVENT_RETRIEVE    10
-#define EVENT_RESET       11
-#define EVENT_ACQUIRE_CPU 12
-#define EVENT_BARRIER     13
+#define EVENT_OUTOF_MPI   3
+#define EVENT_LEND        4
+#define EVENT_RECLAIM     5
+#define EVENT_ACQUIRE     6
+#define EVENT_RETURN      7
+#define EVENT_RESET       8
+#define EVENT_BARRIER     9
 
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040

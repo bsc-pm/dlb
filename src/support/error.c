@@ -32,6 +32,7 @@ static const char* error_msg[] = {
     /* DLB_ERR_TIMEOUT */   "timeout",
     /* DLB_ERR_NOUPDT */    "no update needed",
     /* DLB_ERR_NOCBK */     "no callback defined",
+    /* DLB_ERR_NOCOMP */    "no compatible",
     /* DLB_ERR_NOENT */     "no entry"
 };
 

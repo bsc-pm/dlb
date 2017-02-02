@@ -32,6 +32,7 @@
 #include "support/debug.h"
 #include "support/tracing.h"
 #include "support/mask_utils.h"
+#include "support/error.h"
 
 
 static int nthreads;
@@ -42,7 +43,7 @@ static int master_cpu;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void lewi_mask_Init(const subprocess_descriptor_t *spd) {
+int lewi_mask_Init(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "LeWI Mask Balancing Init");
 
     initial_nthreads = CPU_COUNT(&spd->process_mask);
@@ -50,14 +51,34 @@ void lewi_mask_Init(const subprocess_descriptor_t *spd) {
     add_event(THREADS_USED_EVENT, nthreads);
 
     enabled = 1;
+    return DLB_SUCCESS;
 }
 
-void lewi_mask_Finish(const subprocess_descriptor_t *spd) {
+int lewi_mask_Finish(const subprocess_descriptor_t *spd) {
     cpu_set_t mask;
     CPU_ZERO(&mask);
     shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
     if (CPU_COUNT(&mask)>0) add_mask(&spd->pm, &mask);
+    return DLB_SUCCESS;
 }
+
+int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd) {
+    single = 0;
+    enabled = 1;
+    return DLB_SUCCESS;
+}
+
+int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
+    if (enabled && !single) {
+        cpu_set_t current_mask;
+        memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
+        nthreads = shmem_cpuinfo__reset_default_cpus(&current_mask);
+        set_mask( &spd->pm, &current_mask);
+    }
+    enabled = 0;
+    return DLB_SUCCESS;
+}
+
 
 void lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd) {}
 
@@ -127,98 +148,97 @@ void lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter
     }
 }
 
-/* Update Resources - Try to acquire foreign threads */
-void lewi_mask_UpdateResources(const subprocess_descriptor_t *spd, int max_resources) {
-    if (enabled && !single) {
-        cpu_set_t mask;
-        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
-
-        //Check num threads and mask size are the same
-        assert(nthreads==CPU_COUNT(&mask));
-
-        int collected = shmem_cpuinfo__collect_mask(&mask, max_resources, spd->options.priority);
-
-        if ( collected > 0 ) {
-            nthreads += collected;
-            set_mask(&spd->pm, &mask);
-            verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", collected, nthreads );
-            add_event( THREADS_USED_EVENT, nthreads );
-        }
-        //Check num threads and mask size are the same
-        assert(nthreads==CPU_COUNT(&mask));
-    }
+int lewi_mask_Lend(const subprocess_descriptor_t *spd) {
+    lewi_mask_IntoBlockingCall(spd);
+    return DLB_SUCCESS;
 }
 
-/* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
-void lewi_mask_ReturnClaimedCpus(const subprocess_descriptor_t *spd) {
-    if (enabled && !single) {
-        cpu_set_t mask;
-        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
-
-        //Check num threads and mask size are the same
-        assert(nthreads==CPU_COUNT(&mask));
-
-        int returned = shmem_cpuinfo__return_claimed(&mask);
-
-        if ( returned > 0 ) {
-            nthreads -= returned;
-            set_mask(&spd->pm, &mask);
-            verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
-            add_event( THREADS_USED_EVENT, nthreads );
-        }
-        //Check num threads and mask size are the same
-        assert(nthreads==CPU_COUNT(&mask));
-    }
-}
-
-void lewi_mask_ClaimCpus(const subprocess_descriptor_t *spd, int cpus) {
+int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
+    int error = DLB_ERR_PERM;
     if (enabled && !single) {
         if (nthreads<initial_nthreads) {
             //Do not get more cpus than the default ones
 
-            if ((cpus+nthreads)>initial_nthreads) { cpus=initial_nthreads-nthreads; }
+            if ((ncpus+nthreads)>initial_nthreads) { ncpus=initial_nthreads-nthreads; }
 
-            verbose( VB_MICROLB, "Claiming %d cpus", cpus );
+            verbose( VB_MICROLB, "Claiming %d cpus", ncpus );
             cpu_set_t current_mask;
             memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
 
             //Check num threads and mask size are the same
             assert(nthreads==CPU_COUNT(&current_mask));
 
-            shmem_cpuinfo__recover_some_cpus(&current_mask, cpus);
+            shmem_cpuinfo__recover_some_cpus(&current_mask, ncpus);
             set_mask( &spd->pm, &current_mask);
-            nthreads += cpus;
+            nthreads += ncpus;
             assert(nthreads==CPU_COUNT(&current_mask));
 
             add_event( THREADS_USED_EVENT, nthreads );
+            error = DLB_SUCCESS;
         }
+    } else {
+        error = DLB_ERR_DISBLD;
     }
+    return error;
 }
 
-void lewi_mask_acquireCpu(const subprocess_descriptor_t *spd, int cpu) {
+int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
+    int error = DLB_ERR_PERM;
     if (enabled && !single) {
-        verbose(VB_MICROLB, "AcquireCpu %d", cpu);
+        verbose(VB_MICROLB, "AcquireCpu %d", cpuid);
         cpu_set_t mask;
         memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
 
-        if (!CPU_ISSET(cpu, &mask)){
+        if (!CPU_ISSET(cpuid, &mask)){
 
-            if (shmem_cpuinfo__acquire_cpu(cpu, 0)) {
+            if (shmem_cpuinfo__acquire_cpu(cpuid, 0)) {
                 nthreads++;
-                CPU_SET(cpu, &mask);
+                CPU_SET(cpuid, &mask);
                 set_mask( &spd->pm, &mask );
                 verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&mask));
                 add_event( THREADS_USED_EVENT, nthreads );
+                error = DLB_SUCCESS;
             }else{
-                verbose(VB_MICROLB, "Not legally acquired cpu %d, running anyway",cpu);
+                verbose(VB_MICROLB, "Not legally acquired CPU %d, running anyway",cpuid);
             }
         }
+    } else {
+        error = DLB_ERR_DISBLD;
     }
+    return error;
 }
 
-void lewi_mask_acquireCpus(const subprocess_descriptor_t *spd, const cpu_set_t* cpus) {
+/* Try to acquire foreign threads */
+int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
+    int error = DLB_ERR_PERM;
     if (enabled && !single) {
-        verbose(VB_MICROLB, "AcquireCpus %s", mu_to_str(cpus));
+        cpu_set_t mask;
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
+
+        //Check num threads and mask size are the same
+        assert(nthreads==CPU_COUNT(&mask));
+
+        int collected = shmem_cpuinfo__collect_mask(&mask, ncpus, spd->options.priority);
+
+        if ( collected > 0 ) {
+            nthreads += collected;
+            set_mask(&spd->pm, &mask);
+            verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", collected, nthreads );
+            add_event( THREADS_USED_EVENT, nthreads );
+            error = DLB_SUCCESS;
+        }
+        //Check num threads and mask size are the same
+        assert(nthreads==CPU_COUNT(&mask));
+    } else {
+        error = DLB_ERR_DISBLD;
+    }
+    return error;
+}
+
+int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t* mask) {
+    int error = DLB_ERR_PERM;
+    if (enabled && !single) {
+        verbose(VB_MICROLB, "AcquireCpus %s", mu_to_str(mask));
         cpu_set_t current_mask;
         memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
 
@@ -226,7 +246,7 @@ void lewi_mask_acquireCpus(const subprocess_descriptor_t *spd, const cpu_set_t* 
         int cpu;
         for (cpu = 0; cpu < mu_get_system_size(); ++cpu) {
             if (!CPU_ISSET(cpu, &current_mask)
-                    && CPU_ISSET(cpu, cpus)){
+                    && CPU_ISSET(cpu, mask)){
 
                 if (shmem_cpuinfo__acquire_cpu(cpu, 0)) {
                     nthreads++;
@@ -241,21 +261,38 @@ void lewi_mask_acquireCpus(const subprocess_descriptor_t *spd, const cpu_set_t* 
             set_mask( &spd->pm, &current_mask );
             verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
             add_event( THREADS_USED_EVENT, nthreads );
+            error = DLB_SUCCESS;
         }
+    } else {
+        error = DLB_ERR_DISBLD;
     }
+    return error;
 }
 
-void lewi_mask_disableDLB(const subprocess_descriptor_t *spd) {
+/* Return foreign threads that have been claimed by its owner */
+int lewi_mask_ReturnAll(const subprocess_descriptor_t *spd) {
+    int error = DLB_ERR_PERM;
     if (enabled && !single) {
-        cpu_set_t current_mask;
-        memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
-        nthreads = shmem_cpuinfo__reset_default_cpus(&current_mask);
-        set_mask( &spd->pm, &current_mask);
+        cpu_set_t mask;
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
+
+        //Check num threads and mask size are the same
+        assert(nthreads==CPU_COUNT(&mask));
+
+        int returned = shmem_cpuinfo__return_claimed(&mask);
+
+        if ( returned > 0 ) {
+            nthreads -= returned;
+            set_mask(&spd->pm, &mask);
+            verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
+            add_event( THREADS_USED_EVENT, nthreads );
+            error = DLB_SUCCESS;
+        }
+        //Check num threads and mask size are the same
+        assert(nthreads==CPU_COUNT(&mask));
+    } else {
+        error = DLB_ERR_DISBLD;
     }
-    enabled = 0;
+    return error;
 }
 
-void lewi_mask_enableDLB(const subprocess_descriptor_t *spd) {
-    single = 0;
-    enabled = 1;
-}
