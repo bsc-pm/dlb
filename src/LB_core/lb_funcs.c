@@ -134,6 +134,3 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             break;
     }
 }
-
-// Things to do outside if this function is separated from kernel:
-// Print policy name:

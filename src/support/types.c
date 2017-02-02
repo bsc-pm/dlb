@@ -142,3 +142,14 @@ void parse_policy(const char *str, policy_t *value) {
         *value = POLICY_AUTO_LEWI_MASK;
     }
 }
+
+const char* policy_tostr(policy_t policy) {
+    switch(policy) {
+        case POLICY_NONE: return "None";
+        case POLICY_LEWI: return "LeWI";
+        case POLICY_WEIGHT: return "Weight";
+        case POLICY_LEWI_MASK: return "LeWI mask";
+        case POLICY_AUTO_LEWI_MASK: return "Autonomous LeWI mask";
+    }
+    return "error";
+}

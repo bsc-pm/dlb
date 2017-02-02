@@ -76,5 +76,6 @@ void parse_verbose_fmt(const char *str, verbose_fmt_t *value);
 void parse_debug_opts(const char *str, debug_opts_t *value);
 void parse_priority(const char *str, priority_t *value);
 void parse_policy(const char *str, policy_t *value);
+const char* policy_tostr(policy_t policy);
 
 #endif /* TYPES_H */
