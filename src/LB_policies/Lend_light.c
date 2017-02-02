@@ -39,59 +39,59 @@ static int default_cpus;
 static int myCPUS = 0;
 static int enabled = 0;
 static int single = 0;
+static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads);
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init(const cpu_set_t *process_mask) {
+void Lend_light_Init(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "Lend_light Init");
 
-    default_cpus = CPU_COUNT(process_mask);
+    default_cpus = CPU_COUNT(&spd->process_mask);
 
-    setThreads_Lend_light(default_cpus);
+    setThreads_Lend_light(&spd->pm, default_cpus);
 
     info0("Default cpus per process: %d", default_cpus);
 
-    bool greedy = global_spd.options.greedy;
+    bool greedy = spd->options.greedy;
     if (greedy) {
         info0("Policy mode GREEDY");
     }
 
     //Initialize shared memory
-    ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy,
-            global_spd.options.shm_key);
+    ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy, spd->options.shm_key);
 
-    if (global_spd.options.aggressive_init) {
-        setThreads_Lend_light(mu_get_system_size());
-        setThreads_Lend_light(default_cpus);
+    if (spd->options.aggressive_init) {
+        setThreads_Lend_light(&spd->pm, mu_get_system_size());
+        setThreads_Lend_light(&spd->pm, default_cpus);
     }
 
     enabled = 1;
 }
 
-void Lend_light_Finish(void) {
+void Lend_light_Finish(const subprocess_descriptor_t *spd) {
     finalize_comm();
 }
 
-void Lend_light_IntoCommunication(void) {}
+void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {}
 
-void Lend_light_OutOfCommunication(void) {}
+void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) {}
 
-void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode) {
+void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
     if (enabled) {
-        if ( blocking_mode == ONE_CPU ) {
+        if ( spd->options.mpi_lend_mode == ONE_CPU ) {
             verbose(VB_MICROLB, "LENDING %d cpus", myCPUS-1);
             releaseCpus(myCPUS-1);
-            setThreads_Lend_light(1);
+            setThreads_Lend_light(&spd->pm, 1);
         } else {
             verbose(VB_MICROLB, "LENDING %d cpus", myCPUS);
             releaseCpus(myCPUS);
-            setThreads_Lend_light(0);
+            setThreads_Lend_light(&spd->pm, 0);
         }
     }
 }
 
-void Lend_light_OutOfBlockingCall(int is_iter) {
+void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
 
     if (enabled) {
         int cpus;
@@ -100,74 +100,57 @@ void Lend_light_OutOfBlockingCall(int is_iter) {
         } else {
             cpus = acquireCpus(myCPUS);
         }
-        setThreads_Lend_light(cpus);
+        setThreads_Lend_light(&spd->pm, cpus);
         verbose(VB_MICROLB, "ACQUIRING %d cpus", cpus);
     }
 }
 
-void Lend_light_updateresources(int maxResources) {
+void Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
     if (enabled && !single) {
         int cpus = checkIdleCpus(myCPUS, maxResources);
         if (myCPUS!=cpus) {
             verbose(VB_MICROLB, "Using %d cpus", cpus);
-            setThreads_Lend_light(cpus);
+            setThreads_Lend_light(&spd->pm, cpus);
         }
     }
 }
 
-void Lend_light_resetDLB(void) {
+void Lend_light_disableDLB(const subprocess_descriptor_t *spd) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "ResetDLB");
         acquireCpus(myCPUS);
-        setThreads_Lend_light(default_cpus);
+        setThreads_Lend_light(&spd->pm, default_cpus);
     }
-}
-
-void Lend_light_disableDLB(void) {
-    Lend_light_resetDLB();
     enabled = 0;
 }
 
-void Lend_light_enableDLB(void) {
+void Lend_light_enableDLB(const subprocess_descriptor_t *spd) {
     single = 0;
     enabled = 1;
 }
 
-void Lend_light_single(void) {
-    Lend_light_IntoBlockingCall(0, ONE_CPU);
-    single = 1;
-}
-
-void Lend_light_parallel(void) {
-    Lend_light_OutOfBlockingCall(0);
-    single = 0;
-}
-
 /******* Auxiliar Functions Lend_light Balancing Policy ********/
-void setThreads_Lend_light(int numThreads) {
+static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads) {
 
     if (myCPUS!=numThreads) {
         verbose(VB_MICROLB, "Using %d cpus", numThreads);
-        update_threads(&global_spd.pm, numThreads);
+        update_threads(pm, numThreads);
         myCPUS=numThreads;
     }
 }
 
 #else /* MPI_LIB */
 
-void Lend_light_Init(const cpu_set_t *process_mask) {
+void Lend_light_Init(const subprocess_descriptor_t *spd) {
     fatal("Lend light policy can only be used if DLB intercepts MPI");
 }
-void Lend_light_Finish(void) {}
-void Lend_light_IntoCommunication(void) {}
-void Lend_light_OutOfCommunication(void) {}
-void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode) {}
-void Lend_light_OutOfBlockingCall(int is_iter) {}
-void Lend_light_updateresources(int maxResources) {}
-void Lend_light_resetDLB(void) {}
-void Lend_light_disableDLB(void) {}
-void Lend_light_enableDLB(void) {}
-void Lend_light_single(void) {}
-void Lend_light_parallel(void) {}
+void Lend_light_Finish(const subprocess_descriptor_t *spd) {}
+void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {}
+void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) {}
+void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {}
+void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {}
+void Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {}
+void Lend_light_disableDLB(const subprocess_descriptor_t *spd) {}
+void Lend_light_enableDLB(const subprocess_descriptor_t *spd) {}
 
 #endif /* MPI_LIB */

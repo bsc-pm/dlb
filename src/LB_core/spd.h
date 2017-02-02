@@ -18,8 +18,6 @@ typedef struct SubProcessDescriptor {
     pm_interface_t pm;
     balance_policy_t lb_funcs;
     pid_t process_id;
-} spd_t;
-
-extern spd_t global_spd;
+} subprocess_descriptor_t;
 
 #endif /* SPD_H */

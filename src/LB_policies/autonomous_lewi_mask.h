@@ -25,46 +25,30 @@
 #endif
 #include <sched.h>
 
+#include "LB_core/spd.h"
+
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void auto_lewi_mask_Init(const cpu_set_t *process_mask);
+void auto_lewi_mask_Init(const subprocess_descriptor_t *spd);
+void auto_lewi_mask_Finish(const subprocess_descriptor_t *spd);
+void auto_lewi_mask_enableDLB(const subprocess_descriptor_t *spd);
+void auto_lewi_mask_disableDLB(const subprocess_descriptor_t *spd);
 
-void auto_lewi_mask_Finish(void);
+void auto_lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd);
+void auto_lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd);
+void auto_lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);
+void auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-void auto_lewi_mask_IntoCommunication(void);
-
-void auto_lewi_mask_OutOfCommunication(void);
-
-void auto_lewi_mask_IntoBlockingCall(int is_iter, int bloking_mode);
-
-void auto_lewi_mask_OutOfBlockingCall(int is_iter);
-
-void auto_lewi_mask_UpdateResources(int max_resources);
-
-//DEPRECATED
-//void auto_lewi_mask_ReturnClaimedCpus( void );
-
-int auto_lewi_mask_ReleaseCpu(int cpu);
-
-void auto_lewi_mask_ClaimCpus(int cpus);
-
-int auto_lewi_mask_ReturnCpuIfClaimed(int cpu);
+void auto_lewi_mask_UpdateResources(const subprocess_descriptor_t *spd, int max_resources);
+int auto_lewi_mask_ReleaseCpu(const subprocess_descriptor_t *spd, int cpu);
+void auto_lewi_mask_ClaimCpus(const subprocess_descriptor_t *spd, int cpus);
+int auto_lewi_mask_ReturnCpuIfClaimed(const subprocess_descriptor_t *spd, int cpu);
+void auto_lewi_mask_acquireCpu(const subprocess_descriptor_t *spd, int cpu);
+void auto_lewi_mask_acquireCpus(const subprocess_descriptor_t *spd, const cpu_set_t* cpus);
 
 int auto_lewi_mask_CheckCpuAvailability(int cpu);
 
-void auto_lewi_mask_resetDLB(void);
 
-void auto_lewi_mask_acquireCpu(int cpu);
-
-void auto_lewi_mask_acquireCpus(const cpu_set_t* cpus);
-
-void auto_lewi_mask_disableDLB(void);
-
-void auto_lewi_mask_enableDLB(void);
-
-void auto_lewi_mask_single(void);
-
-void auto_lewi_mask_parallel(void);
 
 #endif /* AUTO_LEWI_MASK_H */
 

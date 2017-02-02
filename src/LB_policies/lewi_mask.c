@@ -25,6 +25,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "LB_policies/lewi_mask.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_core/spd.h"
@@ -41,35 +42,32 @@ static int master_cpu;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void lewi_mask_Init(const cpu_set_t *process_mask) {
+void lewi_mask_Init(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "LeWI Mask Balancing Init");
 
-    initial_nthreads = CPU_COUNT(process_mask);
+    initial_nthreads = CPU_COUNT(&spd->process_mask);
     nthreads = initial_nthreads;
     add_event(THREADS_USED_EVENT, nthreads);
-
-    //Check num threads and mask size are the same
-    assert(nthreads==CPU_COUNT(process_mask));
 
     enabled = 1;
 }
 
-void lewi_mask_Finish(void) {
+void lewi_mask_Finish(const subprocess_descriptor_t *spd) {
     cpu_set_t mask;
     CPU_ZERO(&mask);
     shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
-    if (CPU_COUNT(&mask)>0) add_mask(&global_spd.pm, &mask);
+    if (CPU_COUNT(&mask)>0) add_mask(&spd->pm, &mask);
 }
 
-void lewi_mask_IntoCommunication(void) {}
+void lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd) {}
 
-void lewi_mask_OutOfCommunication(void) {}
+void lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd) {}
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
+void lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     if (enabled) {
         cpu_set_t mask;
-        memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
 
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
@@ -79,19 +77,19 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
         sched_getaffinity( 0, sizeof(cpu_set_t), &cpu);
         master_cpu = sched_getcpu();
 
-        if ( blocking_mode == ONE_CPU ) {
+        if ( spd->options.mpi_lend_mode == ONE_CPU ) {
             // Remove current cpu from the mask
             CPU_XOR( &mask, &mask, &cpu );
             verbose( VB_MICROLB, "LENDING %d threads", nthreads-1 );
             nthreads = 1;
-        } else if ( blocking_mode == BLOCK ) {
+        } else if ( spd->options.mpi_lend_mode == BLOCK ) {
             verbose( VB_MICROLB, "LENDING %d threads", nthreads );
             nthreads = 0;
         }
 
         // Don't set application mask if it is already 1 cpu
         if ( !CPU_EQUAL( &mask, &cpu ) ) {
-            set_mask( &global_spd.pm, &cpu );
+            set_mask( &spd->pm, &cpu );
         }
 
         // Don't add mask if empty
@@ -106,10 +104,10 @@ void lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
-void lewi_mask_OutOfBlockingCall(int is_iter) {
+void lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     if (enabled) {
         cpu_set_t mask;
-        memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
         //Check num threads and mask size are the same
         //assert(nthreads+1==CPU_COUNT(&mask));
 
@@ -123,27 +121,26 @@ void lewi_mask_OutOfBlockingCall(int is_iter) {
             shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
             nthreads = initial_nthreads;
         }
-        set_mask( &global_spd.pm, &mask );
+        set_mask( &spd->pm, &mask );
         assert(nthreads==CPU_COUNT(&mask));
         add_event( THREADS_USED_EVENT, nthreads );
     }
 }
 
 /* Update Resources - Try to acquire foreign threads */
-void lewi_mask_UpdateResources( int max_resources ) {
+void lewi_mask_UpdateResources(const subprocess_descriptor_t *spd, int max_resources) {
     if (enabled && !single) {
         cpu_set_t mask;
-        memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
 
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
 
-        int collected = shmem_cpuinfo__collect_mask(&mask, max_resources,
-                global_spd.options.priority);
+        int collected = shmem_cpuinfo__collect_mask(&mask, max_resources, spd->options.priority);
 
         if ( collected > 0 ) {
             nthreads += collected;
-            set_mask( &global_spd.pm, &mask );
+            set_mask(&spd->pm, &mask);
             verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", collected, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
@@ -153,10 +150,10 @@ void lewi_mask_UpdateResources( int max_resources ) {
 }
 
 /* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
-void lewi_mask_ReturnClaimedCpus( void ) {
+void lewi_mask_ReturnClaimedCpus(const subprocess_descriptor_t *spd) {
     if (enabled && !single) {
         cpu_set_t mask;
-        memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
 
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
@@ -165,7 +162,7 @@ void lewi_mask_ReturnClaimedCpus( void ) {
 
         if ( returned > 0 ) {
             nthreads -= returned;
-            set_mask( &global_spd.pm, &mask );
+            set_mask(&spd->pm, &mask);
             verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
@@ -174,7 +171,7 @@ void lewi_mask_ReturnClaimedCpus( void ) {
     }
 }
 
-void lewi_mask_ClaimCpus(int cpus) {
+void lewi_mask_ClaimCpus(const subprocess_descriptor_t *spd, int cpus) {
     if (enabled && !single) {
         if (nthreads<initial_nthreads) {
             //Do not get more cpus than the default ones
@@ -183,13 +180,13 @@ void lewi_mask_ClaimCpus(int cpus) {
 
             verbose( VB_MICROLB, "Claiming %d cpus", cpus );
             cpu_set_t current_mask;
-            memcpy(&current_mask, &global_spd.active_mask, sizeof(cpu_set_t));
+            memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
 
             //Check num threads and mask size are the same
             assert(nthreads==CPU_COUNT(&current_mask));
 
             shmem_cpuinfo__recover_some_cpus(&current_mask, cpus);
-            set_mask( &global_spd.pm, &current_mask);
+            set_mask( &spd->pm, &current_mask);
             nthreads += cpus;
             assert(nthreads==CPU_COUNT(&current_mask));
 
@@ -198,18 +195,18 @@ void lewi_mask_ClaimCpus(int cpus) {
     }
 }
 
-void lewi_mask_acquireCpu(int cpu) {
+void lewi_mask_acquireCpu(const subprocess_descriptor_t *spd, int cpu) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "AcquireCpu %d", cpu);
         cpu_set_t mask;
-        memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
 
         if (!CPU_ISSET(cpu, &mask)){
 
             if (shmem_cpuinfo__acquire_cpu(cpu, 0)) {
                 nthreads++;
                 CPU_SET(cpu, &mask);
-                set_mask( &global_spd.pm, &mask );
+                set_mask( &spd->pm, &mask );
                 verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&mask));
                 add_event( THREADS_USED_EVENT, nthreads );
             }else{
@@ -219,11 +216,11 @@ void lewi_mask_acquireCpu(int cpu) {
     }
 }
 
-void lewi_mask_acquireCpus(const cpu_set_t* cpus) {
+void lewi_mask_acquireCpus(const subprocess_descriptor_t *spd, const cpu_set_t* cpus) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "AcquireCpus %s", mu_to_str(cpus));
         cpu_set_t current_mask;
-        memcpy(&current_mask, &global_spd.active_mask, sizeof(cpu_set_t));
+        memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
 
         bool success = false;
         int cpu;
@@ -241,40 +238,24 @@ void lewi_mask_acquireCpus(const cpu_set_t* cpus) {
             }
         }
         if (success) {
-            set_mask( &global_spd.pm, &current_mask );
+            set_mask( &spd->pm, &current_mask );
             verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
             add_event( THREADS_USED_EVENT, nthreads );
         }
     }
 }
 
-void lewi_mask_resetDLB( void ) {
+void lewi_mask_disableDLB(const subprocess_descriptor_t *spd) {
     if (enabled && !single) {
-        verbose(VB_MICROLB, "ResetDLB");
         cpu_set_t current_mask;
-        memcpy(&current_mask, &global_spd.active_mask, sizeof(cpu_set_t));
+        memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
         nthreads = shmem_cpuinfo__reset_default_cpus(&current_mask);
-        set_mask( &global_spd.pm, &current_mask);
-        verbose(VB_MICROLB, "New Mask: %s", mu_to_str(&current_mask));
+        set_mask( &spd->pm, &current_mask);
     }
-}
-
-void lewi_mask_disableDLB(void) {
-    lewi_mask_resetDLB();
     enabled = 0;
 }
 
-void lewi_mask_enableDLB(void) {
+void lewi_mask_enableDLB(const subprocess_descriptor_t *spd) {
     single = 0;
     enabled = 1;
-}
-
-void lewi_mask_single(void) {
-    lewi_mask_IntoBlockingCall(0, ONE_CPU);
-    single = 1;
-}
-
-void lewi_mask_parallel(void) {
-    lewi_mask_OutOfBlockingCall(0);
-    single = 0;
 }

@@ -70,7 +70,7 @@ static int my_round(double x) {
 
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(const cpu_set_t *process_mask) {
+void Weight_Init(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "Weight Init");
 
     clock_gettime(CLOCK_REALTIME, &initAppl);
@@ -80,30 +80,30 @@ void Weight_Init(const cpu_set_t *process_mask) {
     reset(&MPITime);
     clock_gettime(CLOCK_REALTIME, &initComp);
 
-    default_nthreads = CPU_COUNT(process_mask);
+    default_nthreads = CPU_COUNT(&spd->process_mask);
     iterNum=0;
     //Create auxiliar threads
     createThreads_Weight();
 }
 
-void Weight_Finish(void) {
+void Weight_Finish(const subprocess_descriptor_t *spd) {
     comm_close();
 }
 
-void Weight_IntoCommunication(void) {}
+void Weight_IntoCommunication(const subprocess_descriptor_t *spd) {}
 
-void Weight_OutOfCommunication(void) {
-    Weight_updateresources();
+void Weight_OutOfCommunication(const subprocess_descriptor_t *spd) {
+    Weight_updateresources(spd, 0);
 }
 
-void Weight_IntoBlockingCall(int is_iter, int blocking_mode) {
+void Weight_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     struct timespec aux;
     clock_gettime(CLOCK_REALTIME, &initMPI);
     diff_time(initComp, initMPI, &aux);
     add_time(iterCpuTime, aux, &iterCpuTime);
 }
 
-void Weight_OutOfBlockingCall(int is_iter) {
+void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     struct timespec aux;
     clock_gettime(CLOCK_REALTIME, &initComp);
     diff_time(initMPI, initComp, &aux);
@@ -140,6 +140,14 @@ void Weight_OutOfBlockingCall(int is_iter) {
     }
 }
 
+void Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {
+    if (threadsUsed!=threads2use) {
+        verbose(VB_MICROLB, "Using %d cpus", threads2use);
+        update_threads(&spd->pm, threads2use);
+        threadsUsed=threads2use;
+    }
+}
+
 /******* Auxiliar Functions Weight Balancing Policy ********/
 
 /* Creates auxiliar threads */
@@ -167,7 +175,7 @@ void createThreads_Weight() {
         exit(1);
     }
 
-    Weight_updateresources();
+    Weight_updateresources(NULL, 0);
 }
 
 /******* Master Thread Functions ********/
@@ -308,24 +316,16 @@ void* slaveThread_Weight(void* arg) {
     return NULL;
 }
 
-void Weight_updateresources() {
-    if (threadsUsed!=threads2use) {
-        verbose(VB_MICROLB, "Using %d cpus", threads2use);
-        update_threads(&global_spd.pm, threads2use);
-        threadsUsed=threads2use;
-    }
-}
-
 #else /* MPI_LIB */
 
-void Weight_Init(const cpu_set_t *process_mask) {
+void Weight_Init(const subprocess_descriptor_t *spd) {
     fatal("Weight policy can only be used if DLB intercepts MPI");
 }
-void Weight_Finish(void) {}
-void Weight_IntoCommunication(void) {}
-void Weight_OutOfCommunication(void) {}
-void Weight_IntoBlockingCall(int is_iter, int blocking_mode) {}
-void Weight_OutOfBlockingCall(int is_iter) {}
-void Weight_updateresources() {}
+void Weight_Finish(const subprocess_descriptor_t *spd) {}
+void Weight_IntoCommunication(const subprocess_descriptor_t *spd) {}
+void Weight_OutOfCommunication(const subprocess_descriptor_t *spd) {}
+void Weight_IntoBlockingCall(const subprocess_descriptor_t *spd) {}
+void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {}
+void Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {}
 
 #endif /* MPI_LIB */

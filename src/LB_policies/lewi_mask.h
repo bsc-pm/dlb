@@ -25,39 +25,28 @@
 #endif
 #include <sched.h>
 
+#include "LB_core/spd.h"
+
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void lewi_mask_Init(const cpu_set_t *process_mask);
+void lewi_mask_Init(const subprocess_descriptor_t *spd);
+void lewi_mask_Finish(const subprocess_descriptor_t *spd);
+void lewi_mask_enableDLB(const subprocess_descriptor_t *spd);
+void lewi_mask_disableDLB(const subprocess_descriptor_t *spd);
 
-void lewi_mask_Finish( void );
+void lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd);
+void lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd);
+void lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);
+void lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-void lewi_mask_IntoCommunication( void );
+void lewi_mask_UpdateResources(const subprocess_descriptor_t *spd, int max_resources);
+void lewi_mask_ReturnClaimedCpus(const subprocess_descriptor_t *spd);
+void lewi_mask_ClaimCpus(const subprocess_descriptor_t *spd, int cpus);
+void lewi_mask_acquireCpu(const subprocess_descriptor_t *spd, int cpu);
+void lewi_mask_acquireCpus(const subprocess_descriptor_t *spd, const cpu_set_t* cpus);
 
-void lewi_mask_OutOfCommunication( void );
 
-void lewi_mask_IntoBlockingCall(int is_iter, int bloking_mode);
 
-void lewi_mask_OutOfBlockingCall(int is_iter);
-
-void lewi_mask_UpdateResources( int max_resources );
-
-void lewi_mask_ReturnClaimedCpus( void );
-
-void lewi_mask_ClaimCpus( int cpus );
-
-void lewi_mask_acquireCpu( int cpu );
-
-void lewi_mask_acquireCpus(const cpu_set_t* cpus);
-
-void lewi_mask_resetDLB( void );
-
-void lewi_mask_disableDLB(void);
-
-void lewi_mask_enableDLB(void);
-
-void lewi_mask_single(void);
-
-void lewi_mask_parallel(void);
 
 #endif /* LEWI_MASK_H */
 

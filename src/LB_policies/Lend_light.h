@@ -23,37 +23,27 @@
 #define LEND_CPUS 0
 #define ACQUIRE_CPUS 1
 
-#include <sched.h>
+#include "LB_core/spd.h"
 
 /******* Main Functions Lend_light Balancing Policy ********/
 
-void Lend_light_Init(const cpu_set_t *process_mask);
+void Lend_light_Init(const subprocess_descriptor_t *spd);
+void Lend_light_Finish(const subprocess_descriptor_t *spd);
+void Lend_light_enableDLB(const subprocess_descriptor_t *spd);
+void Lend_light_disableDLB(const subprocess_descriptor_t *spd);
 
-void Lend_light_Finish(void);
+void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd);
 
-void Lend_light_IntoCommunication(void);
+void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd);
 
-void Lend_light_OutOfCommunication(void);
+void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd);
 
-void Lend_light_IntoBlockingCall(int is_iter, int blocking_mode);
+void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-void Lend_light_OutOfBlockingCall(int is_iter);
+void Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources);
 
-void Lend_light_updateresources(int maxResources);
 
-void Lend_light_resetDLB(void);
 
-void Lend_light_disableDLB(void);
-
-void Lend_light_enableDLB(void);
-
-void Lend_light_single(void);
-
-void Lend_light_parallel(void);
-
-/******* Auxiliar Functions Lend_light Balancing Policy ********/
-
-void setThreads_Lend_light(int numThreads);
 
 #endif //LEND_H
 

@@ -20,23 +20,24 @@
 #ifndef WEIGHT_H
 #define WEIGHT_H
 
-#include <LB_comm/comm_shMem.h>
+#include "LB_core/spd.h"
+#include "LB_comm/comm_shMem.h"
 
 /******* Main Functions Weight Balancing Policy ********/
 
-void Weight_Init(const cpu_set_t* process_mask);
+void Weight_Init(const subprocess_descriptor_t *spd);
 
-void Weight_Finish(void);
+void Weight_Finish(const subprocess_descriptor_t *spd);
 
-void Weight_IntoCommunication(void);
+void Weight_IntoCommunication(const subprocess_descriptor_t *spd);
 
-void Weight_OutOfCommunication(void);
+void Weight_OutOfCommunication(const subprocess_descriptor_t *spd);
 
-void Weight_IntoBlockingCall(int is_iter, int blocking_mode);
+void Weight_IntoBlockingCall(const subprocess_descriptor_t *spd);
 
-void Weight_OutOfBlockingCall(int is_iter);
+void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-void Weight_updateresources();
+void Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources);
 
 /******* Auxiliar Functions Weight Balancing Policy ********/
 
