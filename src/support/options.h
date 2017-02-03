@@ -44,6 +44,7 @@ typedef struct Options {
     priority_t priority;
     cpu_set_t dlb_mask;
     debug_opts_t debug_opts;
+    interaction_mode_t mode;
 } options_t;
 
 void options_init(options_t *options, const char *lb_args_from_api);

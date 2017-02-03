@@ -37,7 +37,8 @@ typedef enum OptionTypes {
     OPT_DBG_T,      // debug_opts_t
     OPT_PRIO_T,     // priority_t
     OPT_POL_T,      // policy_t
-    OPT_MASK_T      // cpu_set_t
+    OPT_MASK_T,     // cpu_set_t
+    OPT_MODE_T      // interaction_mode_t
 } option_type_t;
 
 typedef struct {
@@ -78,6 +79,11 @@ static const opts_dict_t options_dictionary[] = {
         .var_name = "LB_BARRIER", .arg_name = "--barrier", .default_value = "",
         .description = "Enable the Shared Memory Barrier",
         .type = OPT_BOOL_T, .offset = offsetof(options_t, barrier),
+        .readonly = true, .optional = true
+    }, {
+        .var_name = "LB_MODE", .arg_name = "--mode", .default_value = "polling",
+        .description = "Select mode: polling / async",
+        .type = OPT_MODE_T, .offset = offsetof(options_t, barrier),
         .readonly = true, .optional = true
     },
     // MPI
@@ -194,6 +200,9 @@ static void set_value(option_type_t type, void *option, const char *str_value) {
         case(OPT_MASK_T):
             mu_parse_mask(str_value, (cpu_set_t*)option);
             break;
+        case(OPT_MODE_T):
+            parse_mode(str_value, (interaction_mode_t*)option);
+            break;
     }
 }
 
@@ -217,6 +226,7 @@ static void get_value(option_type_t type, void *option, char *str_value) {
         case OPT_PRIO_T:
         case OPT_POL_T:
         case OPT_MASK_T:
+        case OPT_MODE_T:
             sprintf(str_value, "Type non-printable. Integer value: %d", *(int*)option);
             break;
     }

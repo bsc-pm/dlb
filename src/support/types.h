@@ -68,6 +68,11 @@ typedef enum PolicyType {
     POLICY_AUTO_LEWI_MASK
 } policy_t;
 
+typedef enum InteractionMode {
+    MODE_POLLING,
+    MODE_ASYNC
+} interaction_mode_t;
+
 void parse_bool(const char *str, bool *value);
 void parse_int(const char *str, int *value);
 void parse_blocking_mode(const char *str, blocking_mode_t *value);
@@ -77,5 +82,6 @@ void parse_debug_opts(const char *str, debug_opts_t *value);
 void parse_priority(const char *str, priority_t *value);
 void parse_policy(const char *str, policy_t *value);
 const char* policy_tostr(policy_t policy);
+void parse_mode(const char *str, interaction_mode_t *value);
 
 #endif /* TYPES_H */

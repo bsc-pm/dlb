@@ -153,3 +153,12 @@ const char* policy_tostr(policy_t policy) {
     }
     return "error";
 }
+
+void parse_mode(const char *str, interaction_mode_t *value) {
+    *value = MODE_POLLING;
+    if (strcasecmp(str, "polling") == 0) {
+        *value = MODE_POLLING;
+    } else if (strcasecmp(str, "async") == 0) {
+        *value = MODE_ASYNC;
+    }
+}
