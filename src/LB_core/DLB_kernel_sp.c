@@ -1,0 +1,257 @@
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#define _GNU_SOURCE
+#include <sched.h>
+#include <string.h>
+//#include <unistd.h>
+
+#include "LB_core/spd.h"
+#include "LB_core/DLB_kernel_sp.h"
+#include "LB_numThreads/numThreads.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_barrier.h"
+#include "support/debug.h"
+#include "support/error.h"
+#include "support/tracing.h"
+#include "support/options.h"
+//#include "support/mask_utils.h"
+
+
+subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_args) {
+    subprocess_descriptor_t *spd = malloc(sizeof(subprocess_descriptor_t));
+
+    // Initialize first instrumentation module
+    options_init(&spd->options, lb_args);
+    init_tracing(&spd->options);
+    add_event(RUNTIME_EVENT, EVENT_INIT);
+
+    // Initialize the rest of the subprocess descriptor
+    pm_init(&spd->pm);
+    policy_t policy = spd->options.lb_policy;
+    set_lb_funcs(&spd->lb_funcs, policy);
+    spd->process_id = 12121212;
+    if (mask) {
+        memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
+    } else {
+        sched_getaffinity(0, sizeof(cpu_set_t), &spd->process_mask);
+    }
+
+
+    // Initialize modules
+    debug_init(&spd->options);
+    spd->lb_funcs.init(spd);
+    if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
+        shmem_procinfo__init(&spd->process_mask, spd->options.shm_key);
+        shmem_cpuinfo__init(&spd->process_mask, &spd->options.dlb_mask,
+                spd->options.shm_key);
+    }
+    if (spd->options.barrier) {
+        shmem_barrier_init(spd->options.shm_key);
+    }
+
+    add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+    add_event(RUNTIME_EVENT, 0);
+
+    // Print initialization summary
+    info0("%s %s", PACKAGE, VERSION);
+    info0("Balancing policy: %s", policy_tostr(spd->options.lb_policy));
+    verbose(VB_API, "Enabled verbose mode for DLB API");
+    verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
+    verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
+    verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
+    verbose(VB_DROM, "Enabled verbose mode for DROM");
+    verbose(VB_STATS, "Enabled verbose mode for STATS");
+    verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+#ifdef MPI_LIB
+    info0 ("MPI processes per node: %d", _mpis_per_node);
+#endif
+    info0("Number of threads: %d", CPU_COUNT(&spd->process_mask));
+
+    return spd;
+}
+
+int Finish_sp(subprocess_descriptor_t *spd) {
+    int error = DLB_SUCCESS;
+    if (spd) {
+        spd->lb_funcs.finish(spd);
+        // Unload modules
+        if (spd->options.barrier) {
+            shmem_barrier_finalize();
+        }
+        policy_t policy = spd->options.lb_policy;
+        if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
+            shmem_cpuinfo__finalize();
+            shmem_procinfo__finalize();
+        }
+        free(spd);
+    } else {
+        error = DLB_ERR_NOINIT;
+    }
+    return error;
+}
+
+int set_dlb_enabled_sp(subprocess_descriptor_t *spd, bool enabled) {
+    return DLB_ERR_NOCOMP;
+}
+
+int set_max_parallelism_sp(subprocess_descriptor_t *spd, int max) {
+    int error = DLB_SUCCESS;
+    // do something with max
+    return error;
+}
+
+
+/* Callbacks */
+
+int callback_set_sp(subprocess_descriptor_t *spd, dlb_callbacks_t which, dlb_callback_t callback) {
+    return pm_callback_set(&spd->pm, which, callback);
+}
+
+int callback_get_sp(subprocess_descriptor_t *spd, dlb_callbacks_t which, dlb_callback_t callback) {
+    return pm_callback_get(&spd->pm, which, callback);
+}
+
+
+/* Lend */
+
+int lend_sp(subprocess_descriptor_t *spd) {
+    add_event(RUNTIME_EVENT, EVENT_LEND);
+    int error = spd->lb_funcs.lend(spd);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int lend_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
+    add_event(RUNTIME_EVENT, EVENT_LEND);
+    int error = spd->lb_funcs.lendCpu(spd, cpuid);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int lend_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
+    add_event(RUNTIME_EVENT, EVENT_LEND);
+    int error = spd->lb_funcs.lendCpus(spd, ncpus);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int lend_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    add_event(RUNTIME_EVENT, EVENT_LEND);
+    int error = spd->lb_funcs.lendCpuMask(spd, mask);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+
+/* Reclaim */
+
+int reclaim_sp(subprocess_descriptor_t *spd) {
+    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+    int error = spd->lb_funcs.reclaim(spd);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int reclaim_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
+    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+    int error = spd->lb_funcs.reclaimCpu(spd, cpuid);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int reclaim_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
+    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+    int error = spd->lb_funcs.reclaimCpus(spd, ncpus);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int reclaim_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+    int error = spd->lb_funcs.reclaimCpuMask(spd, mask);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+
+/* Acquire */
+
+int acquire_sp(subprocess_descriptor_t *spd) {
+    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+    int error = spd->lb_funcs.acquire(spd);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int acquire_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
+    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+    int error = spd->lb_funcs.acquireCpu(spd, cpuid);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int acquire_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
+    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+    int error = spd->lb_funcs.acquireCpus(spd, ncpus);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t* mask) {
+    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+    int error = spd->lb_funcs.acquireCpuMask(spd, mask);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+
+/* Return */
+
+int return_all_sp(subprocess_descriptor_t *spd) {
+    add_event(RUNTIME_EVENT, EVENT_RETURN);
+    int error = spd->lb_funcs.returnAll(spd);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int return_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
+    add_event(RUNTIME_EVENT, EVENT_RETURN);
+    int error = spd->lb_funcs.returnCpu(spd, cpuid);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+
+/* Drom Responsive */
+
+int poll_drom_sp(subprocess_descriptor_t *spd, int *new_threads, cpu_set_t *new_mask) {
+    // FIXME memory leak
+    cpu_set_t *mask = (new_mask != NULL) ? new_mask : malloc(sizeof(cpu_set_t));
+    int error = shmem_procinfo__update_new(
+            spd->options.drom, spd->options.statistics, new_threads, mask);
+    if (error == DLB_SUCCESS) {
+        // can this function return error?
+        shmem_cpuinfo__update_ownership(mask);
+    }
+    return error;
+}
+
+
+/* Misc */
+
+int set_variable_sp(subprocess_descriptor_t *spd, const char *variable, const char *value) {
+    return options_set_variable(&spd->options, variable, value);
+}
+
+int get_variable_sp(subprocess_descriptor_t *spd, const char *variable, char *value) {
+    return options_get_variable(&spd->options, variable, value);
+}
+
+int print_variables_sp(subprocess_descriptor_t *spd) {
+    options_print_variables(&spd->options);
+    return DLB_SUCCESS;
+}

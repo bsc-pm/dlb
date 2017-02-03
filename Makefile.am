@@ -51,8 +51,9 @@ endif
 ##########################################################################
 # Headers
 ##########################################################################
-installheaders =                           \
+installheaders =                        \
 	src/LB_core/dlb.h               \
+	src/LB_core/dlb_sp.h            \
 	src/LB_core/dlb_stats.h         \
 	src/LB_core/dlb_drom.h          \
 	src/LB_core/dlb_types.h         \
@@ -146,7 +147,10 @@ COMMON_SRCS = \
 	src/LB_comm/shmem_procinfo.h    \
 	src/LB_core/DLB_kernel.c        \
 	src/LB_core/DLB_kernel.h        \
+	src/LB_core/DLB_kernel_sp.c     \
+	src/LB_core/DLB_kernel_sp.h     \
 	src/LB_core/DLB_interface.c     \
+	src/LB_core/DLB_interface_sp.c  \
 	src/LB_core/DLB_interfaceF.c    \
 	src/LB_core/DLB_interface_stats.c  \
 	src/LB_core/DLB_interface_drom.c  \
