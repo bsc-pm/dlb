@@ -20,7 +20,7 @@ typedef enum dlb_callbacks_e {
     dlb_callback_disable_cpu      = 7
 } dlb_callbacks_t;
 
-// Callbacks signature
+// Callback signatures
 typedef void (*dlb_callback_set_num_threads_t)(int num_threads);
 typedef void (*dlb_callback_set_active_mask_t)(const_dlb_cpu_set_t mask);
 typedef void (*dlb_callback_set_process_mask_t)(const_dlb_cpu_set_t mask);

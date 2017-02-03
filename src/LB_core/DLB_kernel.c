@@ -17,14 +17,12 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
+#include <sched.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -51,31 +49,6 @@ static bool dlb_initialized = false;
 
 /* Temporary global sub-process descriptor */
 static subprocess_descriptor_t spd;
-
-
-static void print_summary() {
-        verbose(VB_API, "Enabled verbose mode for DLB API");
-        verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
-        verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
-        verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
-        verbose(VB_DROM, "Enabled verbose mode for DROM");
-        verbose(VB_STATS, "Enabled verbose mode for STATS");
-        verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
-#ifdef MPI_LIB
-        info0 ( "MPI processes per node: %d", _mpis_per_node );
-#endif
-        info0("%s %s", PACKAGE, VERSION);
-        info0("Balancing policy: %s", policy_tostr(spd.options.lb_policy));
-        info0("This process starts with %d threads", CPU_COUNT(&spd.process_mask));
-
-        if (spd.options.mpi_just_barrier)
-            info0("Only lending resources when MPI_Barrier "
-                    "(Env. var. LB_JUST_BARRIER is set)" );
-
-        if (spd.options.mpi_lend_mode == BLOCK)
-            info0("LEND mode set to BLOCKING. I will lend all "
-                    "the resources when in an MPI call" );
-}
 
 
 /* Status */
@@ -118,7 +91,20 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
         add_event(DLB_MODE_EVENT, EVENT_ENABLED);
         add_event(RUNTIME_EVENT, 0);
 
-        print_summary();
+        // Print initialization summary
+        info0("%s %s", PACKAGE, VERSION);
+        info0("Balancing policy: %s", policy_tostr(spd.options.lb_policy));
+        verbose(VB_API, "Enabled verbose mode for DLB API");
+        verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
+        verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
+        verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
+        verbose(VB_DROM, "Enabled verbose mode for DROM");
+        verbose(VB_STATS, "Enabled verbose mode for STATS");
+        verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+#ifdef MPI_LIB
+        info0 ("MPI processes per node: %d", _mpis_per_node);
+#endif
+        info0("Number of threads: %d", CPU_COUNT(&spd.process_mask));
     } else {
         error = DLB_ERR_INIT;
     }
@@ -126,7 +112,6 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
 }
 
 int Finish(void) {
-
     int error = DLB_SUCCESS;
     if (dlb_initialized) {
         dlb_enabled = false;
@@ -428,6 +413,7 @@ int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cp
 int poll_drom(int *new_threads, cpu_set_t *new_mask) {
     int error = DLB_ERR_UNKNOWN;
     if (dlb_enabled) {
+        // FIXME memory leak
         cpu_set_t *mask = (new_mask != NULL) ? new_mask : malloc(sizeof(cpu_set_t));
         error = shmem_procinfo__update_new(
                 spd.options.drom, spd.options.statistics, new_threads, mask);

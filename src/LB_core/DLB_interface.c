@@ -17,12 +17,6 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <limits.h>
-
 #include "LB_core/dlb_types.h"
 #include "LB_core/dlb.h"
 #include "LB_core/DLB_kernel.h"
