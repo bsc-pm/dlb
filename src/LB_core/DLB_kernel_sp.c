@@ -229,13 +229,23 @@ int return_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
 /* Drom Responsive */
 
 int poll_drom_sp(subprocess_descriptor_t *spd, int *new_threads, cpu_set_t *new_mask) {
-    // FIXME memory leak
-    cpu_set_t *mask = (new_mask != NULL) ? new_mask : malloc(sizeof(cpu_set_t));
-    int error = shmem_procinfo__update_new(
-            spd->options.drom, spd->options.statistics, new_threads, mask);
-    if (error == DLB_SUCCESS) {
-        // can this function return error?
-        shmem_cpuinfo__update_ownership(mask);
+    int error;
+    if (new_mask) {
+        // If new_mask is provided by the user
+        error = shmem_procinfo__update_new(
+                spd->options.drom, spd->options.statistics, new_threads, new_mask);
+        if (error == DLB_SUCCESS) {
+            shmem_cpuinfo__update_ownership(new_mask);
+        }
+    } else {
+        // Otherwise, mask is allocated and freed
+        cpu_set_t *mask = malloc(sizeof(cpu_set_t));
+        error = shmem_procinfo__update_new(
+                spd->options.drom, spd->options.statistics, new_threads, mask);
+        if (error == DLB_SUCCESS) {
+            shmem_cpuinfo__update_ownership(mask);
+        }
+        free(mask);
     }
     return error;
 }
