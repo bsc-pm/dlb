@@ -101,6 +101,10 @@ AC_ARG_WITH([cpus-per-node],
 AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
 AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 
+# check for Doxygen
+AC_CHECK_PROG([doxygen], [doxygen], [yes])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
+
 AC_CONFIG_HEADERS([config.h])
 
 # files to generate via autotools (.am or .in source files)
@@ -114,6 +118,7 @@ AC_CONFIG_FILES([
     doc/examples/mpi+ompss/Makefile
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
+    doc/doxygen/Doxyfile
 ])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
 AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])

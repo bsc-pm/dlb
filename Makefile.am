@@ -442,6 +442,17 @@ pdf-local: nodoc
 install-pdf-local: nodoc
 endif
 
+if HAVE_DOXYGEN
+DOXYGEN = doxygen
+DOXYFILE = $(builddir)/doc/doxygen/Doxyfile
+
+doxygen:
+	$(DOXYGEN) $(DOXYFILE)
+else
+doxygen:
+	@echo "  doxygen (hhtp://www.doxygen.org) was not detected at configure time."
+endif
+
 clean-doc:
 	rm -rf doc/user_guide/build doc/user_guide/html doc/user_guide/pdf
 
