@@ -12,41 +12,40 @@ extern "C"
 /*    Status                                                                     */
 /*********************************************************************************/
 
-/* \brief Initialize DLB library
- * \param[in] mask
- * \param[in] dlb_args
- * \return opaque dlb handler
+/*! \brief Initialize DLB library
+ *  \param[in] mask initial CPU mask to register
+ *  \param[in] dlb_args optional parameter to overwrite LB_ARGS options, or NULL otherwise
+ *  \return dlb_handler to use on subsequent DLB calls
  */
 dlb_handler_t DLB_Init_sp(const_dlb_cpu_set_t mask, const char *dlb_args);
 
-/* \brief Finalize DLB library
- * \param[in] handler
- * \return
+/*! \brief Finalize DLB library
+ *  \return DLB_SUCCESS on success
  */
 int DLB_Finalize_sp(dlb_handler_t handler);
 
-/* \brief Enable DLB
- * \param[in] handler
- * \return
+/*! \brief Enable DLB
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
  *
- * Only if the library was previously disabled, subsequent DLB calls will be
- * attended again.
+ *  Only if the library was previously disabled, subsequent DLB calls will be
+ *  attended again.
  */
 int DLB_Enable_sp(dlb_handler_t handler);
 
-/* \brief Disable DLB
- * \param[in] handler
- * \return
+/*! \brief Disable DLB
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
  *
- * The process will recover the original status of its resources, and further DLB
- * calls will be ignored.
+ *  The process will recover the original status of its resources, and further DLB
+ *  calls will be ignored.
  */
 int DLB_Disable_sp(dlb_handler_t handler);
 
-/* \brief DLB will avoid to assign more resources that the maximum provided
- * \param[in] handler
- * \param[in] max
- * \return
+/*! \brief Set a maximum number of resources to be acquired by the calling process
+ *  \param[in] handler subprocess identifier
+ *  \param[in] max max number of CPUs
+ *  \return DLB_SUCCESS on success
  */
 int DLB_SetMaxParallelism_sp(dlb_handler_t handler, int max);
 
@@ -55,19 +54,21 @@ int DLB_SetMaxParallelism_sp(dlb_handler_t handler, int max);
 /*    Callbacks                                                                  */
 /*********************************************************************************/
 
-/* \brief Set callback
- * \param[in] handler
- * \param[in] which
- * \param[in] callback
- * \return
+/*! \brief Set callback
+ *  \param[in] handler subprocess identifier
+ *  \param[in] which callback type
+ *  \param[in] callback function pointer to register
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
 int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t callback);
 
-/* \brief Set callback
- * \param[in] handler
- * \param[in] which
- * \param[out] callback
- * \return
+/*! \brief Get callback
+ *  \param[in] handler subprocess identifier
+ *  \param[in] which callback type
+ *  \param[out] registered callback function for the specified callback type
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
 int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t callback);
 
@@ -76,31 +77,39 @@ int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callbac
 /*    Lend                                                                       */
 /*********************************************************************************/
 
-/* \brief Lend all the current CPUs
- * \param[in] handler
- * \return
+/*! \brief Lend all the current CPUs
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_Lend_sp(dlb_handler_t handler);
 
-
-/* \brief Lend a specific CPU
- * \param[in] handler
- * \param[in] cpuid
- * \return
+/*! \brief Lend a specific CPU
+ *  \param[in] handler subprocess identifier
+ *  \param[in] cpuid CPU id to lend
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpu_sp(dlb_handler_t handler, int cpuid);
 
-/* \brief
- * \param[in] handler
- * \param[in] ncpus
- * \return
+/*! \brief Lend a specific amount of CPUs, only useful for systems that do not
+ *          work with cpu masks
+ *  \param[in] handler subprocess identifier
+ *  \param[in] ncpus number of CPUs to lend
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpus_sp(dlb_handler_t handler, int ncpus);
 
-/* \brief
- * \param[in] handler
- * \param[in] mask
- * \return
+/*! \brief Lend a set of CPUs
+ *  \param[in] handler subprocess identifier
+ *  \param[in] mask CPU mask to lend
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 
@@ -109,34 +118,42 @@ int DLB_LendCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 /*    Reclaim                                                                    */
 /*********************************************************************************/
 
-/* \brief Retrieve the resources owned by the process
- * \param[in] handler
- * \return
- *
- * Retrieve the CPUs owned by the process that were previously lent to DLB.
+/*! \brief Reclaim all the CPUs that are owned by the process
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be reclaimed
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
  */
 int DLB_Reclaim_sp(dlb_handler_t handler);
 
-/* \brief Retrieve the resources owned by the process
- * \param[in] handler
- * \param[in] cpuid
- * \return
+/*! \brief Reclaim a specific CPU that are owned by the process
+ *  \param[in] handler subprocess identifier
+ *  \param[in] cpuid CPU id to reclaim
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be reclaimed
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
  */
 int DLB_ReclaimCpu_sp(dlb_handler_t handler, int cpuid);
 
-/* \brief Claim some of the CPUs owned by this process
- * \param[in] handler
- * \param[in] ncpus Number of CPUs to reclaim
- * \return
- *
- * Claim up to 'cpus' CPUs of which this process is the owner
+/*! \brief Reclaim a specific amount of CPUs that are owned by the process
+ *  \param[in] handler subprocess identifier
+ *  \param[in] ncpus Number of CPUs to reclaim
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be reclaimed
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
  */
 int DLB_ReclaimCpus_sp(dlb_handler_t handler, int ncpus);
 
-/* \brief
- * \param[in] handler
- * \param[in] mask
- * \return
+/*! \brief Reclaim a set of CPUs
+ *  \param[in] handler subprocess identifier
+ *  \param[in] mask CPU mask to reclaim
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be reclaimed
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
  */
 int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 
@@ -145,34 +162,46 @@ int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 /*    Acquire                                                                    */
 /*********************************************************************************/
 
-/* \brief
- * \param[in] handler
- * \return
+/*! \brief Acquire all the possible CPUs registered on DLB
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be acquired
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_REQST if there are too many requests for these resources
  */
 int DLB_Acquire_sp(dlb_handler_t handler);
 
-/* \brief Try to acquire a specific CPU
- * \param[in] handler
- * \param[in] cpu CPU to acquire
- * \return
- *
- * Whenever is possible, DLB will assign the specified CPU to the current process
+/*! \brief Acquire a specific CPU
+ *  \param[in] handler subprocess identifier
+ *  \param[in] cpu CPU to acquire
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be acquired
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_REQST if there are too many requests for this resource
  */
 int DLB_AcquireCpu_sp(dlb_handler_t handler, int cpuid);
 
-/* \brief
- * \param[in] handler
- * \param[in] ncpus
- * \return
+/*! \brief Acquire a specific amount of CPUs
+ *  \param[in] handler subprocess identifier
+ *  \param[in] ncpus Number of CPUs to acquire
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be acquired
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_REQST if there are too many requests for these resources
  */
 int DLB_AcquireCpus_sp(dlb_handler_t handler, int ncpus);
 
-/* \brief Try to acquire a set of CPUs
- * \param[in] handler
- * \param[in] mask CPU set to acquire
- * \return
- *
- * Whenever is possible, DLB will assign the specified CPUs to the current process
+/*! \brief Acquire a set of CPUs
+ *  \param[in] handler subprocess identifier
+ *  \param[in] mask CPU set to acquire
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be acquired
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_REQST if there are too many requests for these resources
  */
 int DLB_AcquireCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 
@@ -181,22 +210,20 @@ int DLB_AcquireCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 /*    Return                                                                     */
 /*********************************************************************************/
 
-/* \brief Return claimed CPUs of other processes
- * \param[in] handler
- * \return
- *
- * Return those external CPUs that are currently assigned to me and have been claimed
- * by their owner.
+/*! \brief Return claimed CPUs of other processes
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be returned
  */
 int DLB_Return_sp(dlb_handler_t handler);
 
-/* \brief Return the specific CPU if it has been reclaimed
- * \param[in] handler
- * \param[in] cpuid CPU to return
- * \return
- *
- * Return the specific CPU if it is currently assigned to me and has been claimed
- * by its owner.
+/*! \brief Return the specific CPU if it has been reclaimed
+ *  \param[in] handler subprocess identifier
+ *  \param[in] cpuid CPU to return
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be returned
  */
 int DLB_ReturnCpu_sp(dlb_handler_t handler, int cpuid);
 
@@ -205,11 +232,14 @@ int DLB_ReturnCpu_sp(dlb_handler_t handler, int cpuid);
 /*    DROM Responsive                                                            */
 /*********************************************************************************/
 
-/* \brief
- * \param[in] handler
- * \param[out] nthreads
- * \param[out] mask
- * \return
+/*! \brief Poll DROM module to check if the process needs to adapt to a new mask
+ *          or number of threads
+ *  \param[in] handler subprocess identifier
+ *  \param[out] nthreads optional, variable to receive the new number of threads
+ *  \param[out] mask optional, variable to receive the new mask
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  |return DLB_ERR_NOUPDT if no update id needed
  */
 int DLB_PollDROM_sp(dlb_handler_t handler, int *nthreads, dlb_cpu_set_t mask);
 
@@ -218,29 +248,28 @@ int DLB_PollDROM_sp(dlb_handler_t handler, int *nthreads, dlb_cpu_set_t mask);
 /*    Misc                                                                       */
 /*********************************************************************************/
 
-/* \brief Set DLB internal variable
- * \param[in] handler
- * \param[in] variable Internal variable to set
- * \param[in] value New value
- * \return
- *
- * Change the value of a DLB internal variable
+/*! \brief Change the value of a DLB internal variable
+ *  \param[in] handler subprocess identifier
+ *  \param[in] variable Internal variable to set
+ *  \param[in] value New value
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_PERM if the variable is readonly
+ *  \return DLB_ERR_NOENT if the variable does not exist
  */
 int DLB_SetVariable_sp(dlb_handler_t handler, const char *variable, const char *value);
 
-/* \brief Get DLB internal variable
- * \param[in] handler
- * \param[in] variable Internal variable to set
- * \param[out] value Current DLB variable value
- * \return
- *
- * Query the value of a DLB internal variable
+/*! \brief Query the value of a DLB internal variable
+ *  \param[in] handler subprocess identifier
+ *  \param[in] variable Internal variable to set
+ *  \param[out] value Current DLB variable value
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOENT if the variable does not exist
  */
 int DLB_GetVariable_sp(dlb_handler_t handler, const char *variable, char *value);
 
-/* \brief Print DLB internal variables
- * \param[in] handler
- * \return
+/*! \brief Print DLB internal variables
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
  */
 int DLB_PrintVariables_sp(dlb_handler_t handler);
 
