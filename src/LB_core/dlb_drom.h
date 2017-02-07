@@ -70,7 +70,7 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask);
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
 
 /*! \brief Ask for free (or stolen) CPUs in the node
- *  \param[in] cpus Number of CPUs to get
+ *  \param[in] ncpus Number of CPUs to get
  *  \param[in] steal Whether if look only into free CPUs or force stealing
  *  \param[out] cpulist The output list
  *  \param[out] nelems Numer of element in the list

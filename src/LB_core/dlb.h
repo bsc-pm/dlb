@@ -85,7 +85,7 @@ int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback);
 
 /*! \brief Get callback
  *  \param[in] which callback type
- *  \param[out] registered callback function for the specified callback type
+ *  \param[out] callback registered callback function for the specified callback type
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
@@ -192,7 +192,7 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask);
 int DLB_Acquire(void);
 
 /*! \brief Acquire a specific CPU
- *  \param[in] cpu CPU to acquire
+ *  \param[in] cpuid cpu CPU to acquire
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled

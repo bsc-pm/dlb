@@ -85,7 +85,7 @@ int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callbac
 /*! \brief Get callback
  *  \param[in] handler subprocess identifier
  *  \param[in] which callback type
- *  \param[out] registered callback function for the specified callback type
+ *  \param[out] callback registered callback function for the specified callback type
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
@@ -193,7 +193,7 @@ int DLB_Acquire_sp(dlb_handler_t handler);
 
 /*! \brief Acquire a specific CPU
  *  \param[in] handler subprocess identifier
- *  \param[in] cpu CPU to acquire
+ *  \param[in] cpuid CPU to acquire
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired

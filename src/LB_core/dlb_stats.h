@@ -112,7 +112,7 @@ int DLB_Stats_GetActiveCpusList(int *cpuslist,int *nelems,int max_len);
 
 /*! \brief Get the Load Average of a given process
  *  \param[in] pid Process ID to consult
- *  \param[out] load[3] Load Average ( 1min 5min 15min )
+ *  \param[out] load double[3] Load Average ( 1min 5min 15min )
  *  \return error code
  */
 int DLB_Stats_GetLoadAvg(int pid, double *load);
