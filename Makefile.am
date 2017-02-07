@@ -35,6 +35,10 @@ PYGEN_verbose_0 = @echo "  PYGEN   " $@;
 GEN_verbose = $(GEN_verbose_@AM_V@)
 GEN_verbose_ = $(GEN_verbose_@AM_DEFAULT_V@)
 GEN_verbose_0 = @echo "  GEN     " $@;
+
+DOXYMAN_verbose = $(DOXYMAN_verbose_@AM_V@)
+DOXYMAN_verbose_ = $(DOXYMAN_verbose_@AM_DEFAULT_V@)
+DOXYMAN_verbose_0 = @echo "  DOXYGEN  man pages";
 endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
@@ -465,11 +469,39 @@ doxygen:
 endif
 
 #********************************************************************************
+# Man pages
+#********************************************************************************
+if HAVE_DOXYGEN
+DOXYFILE_MAN = $(builddir)/doc/doxygen/Doxyfile_man
+manpagesbuilddir = $(builddir)/doc/doxygen/man/man3
+
+dist_man_MANS = \
+	$(manpagesbuilddir)/dlb.h.3 \
+	$(manpagesbuilddir)/dlb_drom.h.3 \
+	$(manpagesbuilddir)/dlb_sp.h.3 \
+	$(manpagesbuilddir)/dlb_stats.h.3 \
+	$(manpagesbuilddir)/dlb_types.h.3 \
+	$(END)
+
+$(manpagesbuilddir)/doxy.stamp: $(installheaders)
+	$(DOXYMAN_verbose)$(DOXYGEN) $(DOXYFILE_MAN)
+	@touch $(manpagesbuilddir)/doxy.stamp
+
+$(manpagesbuilddir)/dlb.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_drom.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_sp.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_stats.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_types.h.3: $(manpagesbuilddir)/doxy.stamp
+
+CLEANFILES += $(manpagesbuilddir)/doxy.stamp
+endif
+
+#********************************************************************************
 # Clean doc
 #********************************************************************************
 clean-doc:
 	rm -rf doc/user_guide/build doc/user_guide/html doc/user_guide/pdf
-
+	rm -rf doc/doxygen/html doc/doxygen/man
 
 #################################################################################
 ### scripts                                                                   ###

@@ -119,6 +119,7 @@ AC_CONFIG_FILES([
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
     doc/doxygen/Doxyfile
+    doc/doxygen/Doxyfile_man
 ])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
 AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
