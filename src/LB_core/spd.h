@@ -31,12 +31,12 @@
 /* Sub-process Descriptor */
 
 typedef struct SubProcessDescriptor {
+    pid_t id;
     cpu_set_t process_mask;
     cpu_set_t active_mask;
     options_t options;
     pm_interface_t pm;
     balance_policy_t lb_funcs;
-    pid_t process_id;
 } subprocess_descriptor_t;
 
 #endif /* SPD_H */

@@ -24,20 +24,30 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <string.h>
-//#include <unistd.h>
+#include <unistd.h>
 
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel_sp.h"
 #include "LB_numThreads/numThreads.h"
+#include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
-#include "LB_comm/shmem_barrier.h"
 #include "support/debug.h"
 #include "support/error.h"
 #include "support/tracing.h"
 #include "support/options.h"
-//#include "support/mask_utils.h"
 
+static int spid_seed = 0;
+
+static int get_atomic_spid(void) {
+    // pidmax is usually 32k, spid is concatenated in order to keep the pid in the first 5 digits
+    const int increment = 100000;
+#ifdef HAVE_STDATOMIC_H
+    return __atomic_add_fetch(&spid_seed, increment, __ATOMIC_RELAXED) + getpid();
+#else
+    return __sync_add_and_fetch(&spid_seed, increment) + getpid();
+#endif
+}
 
 subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_args) {
     subprocess_descriptor_t *spd = malloc(sizeof(subprocess_descriptor_t));
@@ -51,7 +61,7 @@ subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_arg
     pm_init(&spd->pm);
     policy_t policy = spd->options.lb_policy;
     set_lb_funcs(&spd->lb_funcs, policy);
-    spd->process_id = 12121212;
+    spd->id = get_atomic_spid();;
     if (mask) {
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
     } else {
@@ -63,8 +73,8 @@ subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_arg
     debug_init(&spd->options);
     spd->lb_funcs.init(spd);
     if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
-        shmem_procinfo__init(&spd->process_mask, spd->options.shm_key);
-        shmem_cpuinfo__init(&spd->process_mask, &spd->options.dlb_mask,
+        shmem_procinfo__init(spd->id, &spd->process_mask, spd->options.shm_key);
+        shmem_cpuinfo__init(spd->id, &spd->process_mask, &spd->options.dlb_mask,
                 spd->options.shm_key);
     }
     if (spd->options.barrier) {
@@ -102,8 +112,8 @@ int Finish_sp(subprocess_descriptor_t *spd) {
         }
         policy_t policy = spd->options.lb_policy;
         if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
-            shmem_cpuinfo__finalize();
-            shmem_procinfo__finalize();
+            shmem_cpuinfo__finalize(spd->id);
+            shmem_procinfo__finalize(spd->id);
         }
         free(spd);
     } else {
@@ -250,18 +260,16 @@ int poll_drom_sp(subprocess_descriptor_t *spd, int *new_threads, cpu_set_t *new_
     int error;
     if (new_mask) {
         // If new_mask is provided by the user
-        error = shmem_procinfo__update_new(
-                spd->options.drom, spd->options.statistics, new_threads, new_mask);
+        error = shmem_procinfo__poll_drom(spd->id, new_threads, new_mask);
         if (error == DLB_SUCCESS) {
-            shmem_cpuinfo__update_ownership(new_mask);
+            shmem_cpuinfo__update_ownership(spd->id, new_mask);
         }
     } else {
         // Otherwise, mask is allocated and freed
         cpu_set_t *mask = malloc(sizeof(cpu_set_t));
-        error = shmem_procinfo__update_new(
-                spd->options.drom, spd->options.statistics, new_threads, mask);
+        error = shmem_procinfo__poll_drom(spd->id, new_threads, mask);
         if (error == DLB_SUCCESS) {
-            shmem_cpuinfo__update_ownership(mask);
+            shmem_cpuinfo__update_ownership(spd->id, mask);
         }
         free(mask);
     }

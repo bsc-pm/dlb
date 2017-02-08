@@ -36,7 +36,6 @@
 #include "support/error.h"
 #include "support/tracing.h"
 #include "support/options.h"
-#include "support/mask_utils.h"
 
 
 /* These flags are used to
@@ -66,7 +65,7 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
         pm_init(&spd.pm);
         policy_t policy = spd.options.lb_policy;
         set_lb_funcs(&spd.lb_funcs, policy);
-        spd.process_id = getpid();
+        spd.id = getpid();
         if (mask) {
             memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
         } else {
@@ -78,8 +77,8 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
         debug_init(&spd.options);
         spd.lb_funcs.init(&spd);
         if (policy != POLICY_NONE || spd.options.drom || spd.options.statistics) {
-            shmem_procinfo__init(&spd.process_mask, spd.options.shm_key);
-            shmem_cpuinfo__init(&spd.process_mask, &spd.options.dlb_mask,
+            shmem_procinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
+            shmem_cpuinfo__init(spd.id, &spd.process_mask, &spd.options.dlb_mask,
                     spd.options.shm_key);
         }
         if (spd.options.barrier) {
@@ -123,8 +122,8 @@ int Finish(void) {
         }
         policy_t policy = spd.options.lb_policy;
         if (policy != POLICY_NONE || spd.options.drom || spd.options.statistics) {
-            shmem_cpuinfo__finalize();
-            shmem_procinfo__finalize();
+            shmem_cpuinfo__finalize(spd.id);
+            shmem_procinfo__finalize(spd.id);
         }
     } else {
         error = DLB_ERR_NOINIT;
@@ -409,27 +408,27 @@ int return_cpu(int cpuid) {
 /* Drom Responsive */
 
 int poll_drom(int *new_threads, cpu_set_t *new_mask) {
-    int error = DLB_ERR_UNKNOWN;
-    if (dlb_enabled) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled || !spd.options.drom) {
+        error = DLB_ERR_DISBLD;
+    } else {
         if (new_mask) {
             // If new_mask is provided by the user
-            error = shmem_procinfo__update_new(
-                    spd.options.drom, spd.options.statistics, new_threads, new_mask);
+            error = shmem_procinfo__poll_drom(spd.id, new_threads, new_mask);
             if (error == DLB_SUCCESS) {
-                shmem_cpuinfo__update_ownership(new_mask);
+                shmem_cpuinfo__update_ownership(spd.id, new_mask);
             }
         } else {
             // Otherwise, mask is allocated and freed
             cpu_set_t *mask = malloc(sizeof(cpu_set_t));
-            error = shmem_procinfo__update_new(
-                    spd.options.drom, spd.options.statistics, new_threads, mask);
+            error = shmem_procinfo__poll_drom(spd.id, new_threads, mask);
             if (error == DLB_SUCCESS) {
-                shmem_cpuinfo__update_ownership(mask);
+                shmem_cpuinfo__update_ownership(spd.id, mask);
             }
             free(mask);
         }
-    } else {
-        error = DLB_ERR_DISBLD;
     }
     return error;
 }
@@ -440,7 +439,7 @@ int poll_drom(int *new_threads, cpu_set_t *new_mask) {
 int checkCpuAvailability(int cpuid) {
     int error = DLB_SUCCESS;
     if (dlb_enabled) {
-        error = spd.lb_funcs.checkCpuAvailability(cpuid);
+        error = spd.lb_funcs.checkCpuAvailability(&spd, cpuid);
     } else {
         error = DLB_ERR_DISBLD;
     }

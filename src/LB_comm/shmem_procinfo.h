@@ -20,12 +20,12 @@
 #ifndef SHMEM_PROCINFO_H
 #define SHMEM_PROCINFO_H
 
+#include "sys/types.h"
 #include "support/types.h"
 
-void shmem_procinfo__init(const cpu_set_t *process_mask, const char *shmem_key);
-void shmem_procinfo__finalize(void);
-/*void shmem_procinfo__update(bool do_drom, bool do_stats);*/
-int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask);
+void shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key);
+void shmem_procinfo__finalize(pid_t pid);
+int shmem_procinfo__poll_drom(pid_t pid, int *new_threads, cpu_set_t *new_mask);
 int  shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask);
 
 void shmem_procinfo_ext__init(const char *shmem_key);

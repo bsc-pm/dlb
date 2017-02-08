@@ -74,6 +74,8 @@ AX_CHECK_COMPILE_FLAG([$ax_cv_gcc_version_warnings],
                       [AC_CFLAGS="${AC_CFLAGS} $ax_cv_gcc_version_warnings"])
 AC_SUBST([AC_CFLAGS])
 
+AC_CHECK_HEADERS([stdatomic.h])
+
 # Check for Python
 AM_PATH_PYTHON
 

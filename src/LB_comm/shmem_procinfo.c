@@ -43,10 +43,8 @@
 static const useconds_t SYNC_POLL_DELAY = 1000; // 1ms
 static const int64_t SYNC_POLL_TIMEOUT = 30000000000L; // 30·10^9 ns = 30s
 
-typedef pid_t spid_t;  // Sub-process ID
-
 typedef struct {
-    spid_t pid;
+    pid_t pid;
     bool dirty;
     int returncode;
     cpu_set_t current_process_mask;
@@ -70,20 +68,17 @@ typedef struct {
     pinfo_t process_info[0];
 } shdata_t;
 
-static spid_t ME;
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static int max_cpus;
 static int max_processes;
-static int my_process = -1;
 //static struct timespec last_ttime; // Total time
 //static struct timespec last_utime; // Useful time (user+system)
 static const char *shmem_name = "procinfo";
 
-static pinfo_t* get_process(spid_t pid);
+static pinfo_t* get_process(pid_t pid);
 //static void update_process_loads(void);
 //static void update_process_mask(void);
-static void update_process_mask_new(int *new_threads, cpu_set_t *new_mask);
 static int  register_mask(pinfo_t *new_owner, const cpu_set_t *mask);
 static int  unregister_mask(pinfo_t *owner, const cpu_set_t *mask);
 static int  set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run);
@@ -91,15 +86,13 @@ static bool steal_cpu(pinfo_t* new_owner, pinfo_t *victim, int cpu, bool dry_run
 static int  steal_mask(pinfo_t *new_owner, const cpu_set_t *mask, bool dry_run);
 static int  getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask);
 
-void shmem_procinfo__init(const cpu_set_t *process_mask, const char *shmem_key) {
+void shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
         print_backtrace();
         return;
     }
-
-    ME = getpid();
 
     // We will reserve enough positions assuming that there won't be more processes than cpus
     max_processes = mu_get_system_size();
@@ -123,7 +116,7 @@ void shmem_procinfo__init(const cpu_set_t *process_mask, const char *shmem_key) 
             // Register process
             if (shdata->process_info[p].pid == NOBODY) {
                 pinfo_t *process = &shdata->process_info[p];
-                process->pid = ME;
+                process->pid = pid;
                 process->dirty = false;
                 process->returncode = 0;
                 CPU_ZERO(&process->current_process_mask);
@@ -147,19 +140,17 @@ void shmem_procinfo__init(const cpu_set_t *process_mask, const char *shmem_key) 
                 process->load[1] = 0.0f;
                 process->load[2] = 0.0f;
 #endif
-                my_process = p;
                 break;
             }
             // Process already registered
-            else if (shdata->process_info[p].pid == ME) {
-                my_process = p;
+            else if (shdata->process_info[p].pid == pid) {
                 break;
             }
         }
         if (p == max_processes) {
             shmem_unlock(init_handler);
             // FIXME: we should clean the shmem before that
-            fatal("Not enough space in the shared memory to register process %d", ME);
+            fatal("Not enough space in the shared memory to register process %d", pid);
         }
     }
     shmem_unlock(init_handler);
@@ -168,8 +159,8 @@ void shmem_procinfo__init(const cpu_set_t *process_mask, const char *shmem_key) 
     shm_handler = init_handler;
 }
 
-void shmem_procinfo__finalize(void) {
-    pinfo_t *process = &shdata->process_info[my_process];
+void shmem_procinfo__finalize(pid_t pid) {
+    pinfo_t *process = get_process(pid);
     shmem_lock(shm_handler);
     {
         // Unregister our process mask, or future mask if we are dirty
@@ -232,27 +223,32 @@ void shmem_procinfo__update(bool do_drom, bool do_stats) {
 #endif
 
 // New proposal for update function. Return nthreads and mask, and let the caller adjust.
-int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask) {
-    if (shm_handler == NULL || shdata == NULL) return DLB_ERR_NOSHMEM;
+int shmem_procinfo__poll_drom(pid_t pid, int *new_threads, cpu_set_t *new_mask) {
+    int error;
+    if (shm_handler == NULL || shdata == NULL) {
+        error = DLB_ERR_NOSHMEM;
+    } else {
+        pinfo_t *process = get_process(pid);
+        if (!process) {
+            error = DLB_ERR_NOPROC;
+        } else if (!process->dirty) {
+            error = DLB_ERR_NOUPDT;
+        } else {
+            shmem_lock(shm_handler);
+            {
+                // Update output parameters
+                memcpy(new_mask, &process->future_process_mask, sizeof(cpu_set_t));
+                if (new_threads != NULL) *new_threads = CPU_COUNT(&process->future_process_mask);
 
-    int error = DLB_ERR_NOUPDT;
-
-    bool update_mask = do_drom && shdata->process_info[my_process].dirty;
-
-    bool update_load = false; // no stats for now
-
-    if (update_mask || update_load) {
-        shmem_lock(shm_handler);
-        {
-            if (update_mask) {
-                update_process_mask_new(new_threads, new_mask);
+                // Upate local info
+                memcpy(&process->current_process_mask, &process->future_process_mask,
+                        sizeof(cpu_set_t));
+                process->dirty = false;
+                process->returncode = 0;
             }
-            //if (update_load) {
-            //    update_process_loads();
-            //}
+            shmem_unlock(shm_handler);
+            error = DLB_SUCCESS;
         }
-        shmem_unlock(shm_handler);
-        error = DLB_SUCCESS;
     }
     return error;
 }
@@ -700,7 +696,7 @@ void shmem_procinfo_ext__print_info(bool statistics) {
 }
 
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
-static pinfo_t* get_process(spid_t pid) {
+static pinfo_t* get_process(pid_t pid) {
     int p;
     for (p = 0; p < max_processes; p++) {
         if (shdata->process_info[p].pid == pid) {
@@ -795,20 +791,6 @@ static void update_process_mask(void) {
 }
 #endif
 
-static void update_process_mask_new(int *new_threads, cpu_set_t *new_mask) {
-    pinfo_t *process = &shdata->process_info[my_process];
-
-    // Update parameters
-    //   new_threads is optional for the user
-    //   new_mask is also optional for the user, but DLB allocates a new mask if not present
-    memcpy(new_mask, &process->future_process_mask, sizeof(cpu_set_t));
-    if (new_threads != NULL) *new_threads = CPU_COUNT(&process->future_process_mask);
-
-    // Update local info
-    memcpy(&process->current_process_mask, &process->future_process_mask, sizeof(cpu_set_t));
-    shdata->process_info[my_process].dirty = false;
-    shdata->process_info[my_process].returncode = 0;
-}
 
 // Register a new set of CPUs. Remove them from the free_mask and assign them to new_owner if ok
 static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {

@@ -257,7 +257,7 @@ int DLB_ReturnCpu(int cpuid);
  *  \param[out] mask optional, variable to receive the new mask
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  |return DLB_ERR_NOUPDT if no update id needed
+ *  \return DLB_ERR_NOUPDT if no update id needed
  */
 int DLB_PollDROM(int *nthreads, dlb_cpu_set_t mask);
 

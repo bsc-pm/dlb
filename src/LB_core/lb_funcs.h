@@ -56,7 +56,7 @@ typedef struct BalancePolicy {
     int (*returnAll)(const subprocess_descriptor_t *spd);
     int (*returnCpu)(const subprocess_descriptor_t *spd, int cpuid);
     /* Misc */
-    int (*checkCpuAvailability)(int cpuid);
+    int (*checkCpuAvailability)(const subprocess_descriptor_t *spd, int cpuid);
 } balance_policy_t;
 
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy);

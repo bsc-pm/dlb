@@ -50,7 +50,7 @@ int auto_lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_
 
 int auto_lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid);
 
-int auto_lewi_mask_CheckCpuAvailability(int cpuid);
+int auto_lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid);
 
 
 

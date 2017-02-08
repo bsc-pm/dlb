@@ -57,7 +57,7 @@ int lewi_mask_Init(const subprocess_descriptor_t *spd) {
 int lewi_mask_Finish(const subprocess_descriptor_t *spd) {
     cpu_set_t mask;
     CPU_ZERO(&mask);
-    shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
+    shmem_cpuinfo__recover_some_cpus(spd->id, &mask, CPUINFO_RECOVER_ALL);
     if (CPU_COUNT(&mask)>0) add_mask(&spd->pm, &mask);
     return DLB_SUCCESS;
 }
@@ -72,7 +72,7 @@ int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
     if (enabled && !single) {
         cpu_set_t current_mask;
         memcpy(&current_mask, &spd->active_mask, sizeof(cpu_set_t));
-        nthreads = shmem_cpuinfo__reset_default_cpus(&current_mask);
+        nthreads = shmem_cpuinfo__reset_default_cpus(spd->id, &current_mask);
         set_mask( &spd->pm, &current_mask);
     }
     enabled = 0;
@@ -115,7 +115,7 @@ void lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
         // Don't add mask if empty
         if ( CPU_COUNT( &mask ) > 0 ) {
-            shmem_cpuinfo__add_mask(&mask);
+            shmem_cpuinfo__add_mask(spd->id, &mask);
         }
 
         add_event( THREADS_USED_EVENT, nthreads );
@@ -134,12 +134,12 @@ void lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter
 
         if (single) {
             verbose(VB_MICROLB, "RECOVERING master thread" );
-            shmem_cpuinfo__recover_cpu(master_cpu);
+            shmem_cpuinfo__recover_cpu(spd->id, master_cpu);
             CPU_SET( master_cpu, &mask );
             nthreads = 1;
         } else {
             verbose(VB_MICROLB, "RECOVERING %d threads", initial_nthreads - nthreads );
-            shmem_cpuinfo__recover_some_cpus(&mask, CPUINFO_RECOVER_ALL);
+            shmem_cpuinfo__recover_some_cpus(spd->id, &mask, CPUINFO_RECOVER_ALL);
             nthreads = initial_nthreads;
         }
         set_mask( &spd->pm, &mask );
@@ -168,7 +168,7 @@ int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
             //Check num threads and mask size are the same
             assert(nthreads==CPU_COUNT(&current_mask));
 
-            shmem_cpuinfo__recover_some_cpus(&current_mask, ncpus);
+            shmem_cpuinfo__recover_some_cpus(spd->id, &current_mask, ncpus);
             set_mask( &spd->pm, &current_mask);
             nthreads += ncpus;
             assert(nthreads==CPU_COUNT(&current_mask));
@@ -191,7 +191,7 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
         if (!CPU_ISSET(cpuid, &mask)){
 
-            if (shmem_cpuinfo__acquire_cpu(cpuid, 0)) {
+            if (shmem_cpuinfo__acquire_cpu(spd->id, cpuid, 0)) {
                 nthreads++;
                 CPU_SET(cpuid, &mask);
                 set_mask( &spd->pm, &mask );
@@ -218,7 +218,8 @@ int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
 
-        int collected = shmem_cpuinfo__collect_mask(&mask, ncpus, spd->options.priority);
+        int collected = shmem_cpuinfo__collect_mask(spd->id, &mask, ncpus,
+                spd->options.priority);
 
         if ( collected > 0 ) {
             nthreads += collected;
@@ -248,7 +249,7 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
             if (!CPU_ISSET(cpu, &current_mask)
                     && CPU_ISSET(cpu, mask)){
 
-                if (shmem_cpuinfo__acquire_cpu(cpu, 0)) {
+                if (shmem_cpuinfo__acquire_cpu(spd->id, cpu, 0)) {
                     nthreads++;
                     CPU_SET(cpu, &current_mask);
                     success = true;
@@ -279,7 +280,7 @@ int lewi_mask_ReturnAll(const subprocess_descriptor_t *spd) {
         //Check num threads and mask size are the same
         assert(nthreads==CPU_COUNT(&mask));
 
-        int returned = shmem_cpuinfo__return_claimed(&mask);
+        int returned = shmem_cpuinfo__return_claimed(spd->id, &mask);
 
         if ( returned > 0 ) {
             nthreads -= returned;
