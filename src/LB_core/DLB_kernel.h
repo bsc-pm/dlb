@@ -71,7 +71,7 @@ int return_cpu(int cpuid);
 int poll_drom(int *new_threads, cpu_set_t *new_mask);
 
 /* Misc */
-int checkCpuAvailability(int cpuid);
+int check_cpu_availability(int cpuid);
 int barrier(void);
 int set_variable(const char *variable, const char *value);
 int get_variable(const char *variable, char *value);

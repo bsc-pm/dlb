@@ -105,7 +105,7 @@ subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_arg
 int Finish_sp(subprocess_descriptor_t *spd) {
     int error = DLB_SUCCESS;
     if (spd) {
-        spd->lb_funcs.finish(spd);
+        spd->lb_funcs.finalize(spd);
         // Unload modules
         if (spd->options.barrier) {
             shmem_barrier_finalize();
@@ -155,21 +155,21 @@ int lend_sp(subprocess_descriptor_t *spd) {
 
 int lend_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
     add_event(RUNTIME_EVENT, EVENT_LEND);
-    int error = spd->lb_funcs.lendCpu(spd, cpuid);
+    int error = spd->lb_funcs.lend_cpu(spd, cpuid);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int lend_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
     add_event(RUNTIME_EVENT, EVENT_LEND);
-    int error = spd->lb_funcs.lendCpus(spd, ncpus);
+    int error = spd->lb_funcs.lend_cpus(spd, ncpus);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int lend_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     add_event(RUNTIME_EVENT, EVENT_LEND);
-    int error = spd->lb_funcs.lendCpuMask(spd, mask);
+    int error = spd->lb_funcs.lend_cpu_mask(spd, mask);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
@@ -186,21 +186,21 @@ int reclaim_sp(subprocess_descriptor_t *spd) {
 
 int reclaim_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
     add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-    int error = spd->lb_funcs.reclaimCpu(spd, cpuid);
+    int error = spd->lb_funcs.reclaim_cpu(spd, cpuid);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int reclaim_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
     add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-    int error = spd->lb_funcs.reclaimCpus(spd, ncpus);
+    int error = spd->lb_funcs.reclaim_cpus(spd, ncpus);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int reclaim_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-    int error = spd->lb_funcs.reclaimCpuMask(spd, mask);
+    int error = spd->lb_funcs.reclaim_cpu_mask(spd, mask);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
@@ -217,21 +217,21 @@ int acquire_sp(subprocess_descriptor_t *spd) {
 
 int acquire_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
     add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-    int error = spd->lb_funcs.acquireCpu(spd, cpuid);
+    int error = spd->lb_funcs.acquire_cpu(spd, cpuid);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int acquire_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
     add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-    int error = spd->lb_funcs.acquireCpus(spd, ncpus);
+    int error = spd->lb_funcs.acquire_cpus(spd, ncpus);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t* mask) {
     add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-    int error = spd->lb_funcs.acquireCpuMask(spd, mask);
+    int error = spd->lb_funcs.acquire_cpu_mask(spd, mask);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
@@ -241,14 +241,14 @@ int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t* mask) {
 
 int return_all_sp(subprocess_descriptor_t *spd) {
     add_event(RUNTIME_EVENT, EVENT_RETURN);
-    int error = spd->lb_funcs.returnAll(spd);
+    int error = spd->lb_funcs.return_all(spd);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int return_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
     add_event(RUNTIME_EVENT, EVENT_RETURN);
-    int error = spd->lb_funcs.returnCpu(spd, cpuid);
+    int error = spd->lb_funcs.return_cpu(spd, cpuid);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }

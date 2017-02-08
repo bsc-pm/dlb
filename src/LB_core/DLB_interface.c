@@ -136,7 +136,7 @@ int DLB_PollDROM(int *nthreads, dlb_cpu_set_t mask) {
 /* Misc */
 
 int DLB_CheckCpuAvailability(int cpuid) {
-    return checkCpuAvailability(cpuid);
+    return check_cpu_availability(cpuid);
 }
 
 int DLB_Barrier(void) {
