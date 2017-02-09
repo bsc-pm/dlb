@@ -45,7 +45,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
 AM_CFLAGS = $(AC_CFLAGS)
 AM_LDFLAGS = -lrt $(AC_LDFLAGS) -avoid-version
 if HAVE_HWLOC
-AM_CPPFLAGS += $(HWLOC_CPPFLAGS)
+AM_CPPFLAGS += $(HWLOC_CPPFLAGS) -DHWLOC_LIB
 AM_LDFLAGS += $(HWLOC_LDFLAGS) $(HWLOC_LIBS)
 endif
 

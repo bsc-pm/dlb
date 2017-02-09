@@ -25,7 +25,7 @@
 
 #include "support/debug.h"
 
-#ifdef HAVE_HWLOC
+#ifdef HWLOC_LIB
 #include <hwloc.h>
 #include <hwloc/bitmap.h>
 #include <hwloc/glibc-sched.h>
@@ -49,7 +49,7 @@ typedef struct {
 static mu_system_loc_t sys;
 static bool mu_initialized = false;
 
-#if defined HAVE_HWLOC
+#if defined HWLOC_LIB
 static void parse_hwloc( void ) {
     hwloc_topology_t topology;
     hwloc_topology_init( &topology );
@@ -144,14 +144,14 @@ static void parse_lscpu( void ) {
     free( line );
     pclose( pipe );
 }
-#endif /* HAVE_HWLOC */
+#endif /* HWLOC_LIB */
 
 void mu_init( void ) {
     if ( !mu_initialized ) {
         sys.num_parents = 0;
         sys.parents = NULL;
 
-#if defined HAVE_HWLOC
+#if defined HWLOC_LIB
         parse_hwloc();
 #elif defined IS_BGQ_MACHINE
         set_bgq_info();
