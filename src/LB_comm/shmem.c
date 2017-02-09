@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include "LB_comm/shmem.h"
+
+#include "support/debug.h"
+
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
@@ -32,9 +36,6 @@
 #ifndef _POSIX_THREAD_PROCESS_SHARED
 #error This system does not support process shared mutex
 #endif
-
-#include "LB_comm/shmem.h"
-#include "support/debug.h"
 
 #define SHSYNC_MAX_SIZE 64
 

@@ -20,11 +20,8 @@
 #ifndef MASK_UTILS_H
 #define MASK_UTILS_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
 #include "support/types.h"
+#include <sched.h>
 
 typedef enum {
     MU_ANY_BIT,

@@ -17,15 +17,17 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <semaphore.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "LB_comm/shmem_barrier.h"
 
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 #include "support/tracing.h"
+
+#include <semaphore.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct {
     bool initialized;

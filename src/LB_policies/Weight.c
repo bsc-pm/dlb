@@ -21,25 +21,25 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "LB_policies/Weight.h"
+
+#include "apis/dlb_errors.h"
+#include "support/debug.h"
+
+#ifdef MPI_LIB
+
 #include <sched.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "LB_policies/Weight.h"
 #include "LB_comm/comm_shMem.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_core/spd.h"
-#include "support/debug.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
-#include "support/error.h"
 
-#ifdef MPI_LIB
 
 #include "LB_MPI/process_MPI.h"
 

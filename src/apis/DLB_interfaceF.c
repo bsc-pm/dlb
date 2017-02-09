@@ -17,7 +17,7 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "LB_core/dlb.h"
+#include "apis/dlb.h"
 #include "support/debug.h"
 
 #define DLB_API_F_ALIAS( NameF, Params) \

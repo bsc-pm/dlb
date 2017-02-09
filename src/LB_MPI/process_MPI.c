@@ -23,19 +23,21 @@
 
 #ifdef MPI_LIB
 
+#include "LB_MPI/process_MPI.h"
+
+#include "LB_MPI/DPD.h"
+#include "LB_MPI/MPI_calls_coded.h"
+#include "LB_core/DLB_kernel.h"
+#include "apis/dlb_errors.h"
+#include "support/tracing.h"
+#include "support/options.h"
+#include "support/debug.h"
+
 #include <mpi.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
 
-#include "LB_MPI/DPD.h"
-#include "LB_MPI/MPI_calls_coded.h"
-#include "LB_MPI/process_MPI.h"
-#include "LB_core/DLB_kernel.h"
-#include "support/tracing.h"
-#include "support/options.h"
-#include "support/debug.h"
-#include "support/error.h"
 
 // MPI Globals
 int _mpi_rank = -1;

@@ -17,8 +17,8 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "LB_core/dlb_types.h"
-#include "LB_core/dlb.h"
+#include "apis/dlb.h"
+
 #include "LB_core/DLB_kernel.h"
 #include "support/error.h"
 

@@ -25,6 +25,7 @@
 
 #include "LB_MPI/MPI_interface.h"
 #include "support/debug.h"
+
 #include <mpi.h>
 #include <stdio.h>
 

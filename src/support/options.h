@@ -20,8 +20,8 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
-#include <sched.h>
 #include "support/types.h"
+#include <sched.h>
 
 #define MAX_OPTIONS 32
 #define MAX_OPTION_LENGTH 32

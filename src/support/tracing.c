@@ -18,10 +18,10 @@
 /*********************************************************************************/
 
 #ifdef INSTRUMENTATION_VERSION
-#include <stdio.h>
 
 #include "support/tracing.h"
 #include "support/options.h"
+#include <stdio.h>
 
 // Extrae API calls
 void Extrae_event(unsigned type, long long value) __attribute__((weak));

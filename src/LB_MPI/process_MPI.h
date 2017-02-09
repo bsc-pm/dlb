@@ -20,9 +20,10 @@
 #ifndef PROCESS_MPI_H
 #define PROCESS_MPI_H
 
+#include "LB_MPI/MPI_calls_coded.h"
+
 #include <unistd.h>
 #include <mpi.h>
-#include "LB_MPI/MPI_calls_coded.h"
 
 extern int _mpi_rank;         /* MPI rank */
 extern int _mpi_size;         /* MPI size */

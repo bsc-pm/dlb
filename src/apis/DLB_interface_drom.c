@@ -17,97 +17,60 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-/* Statistics API */
+/* Dynamic Resource Ownership Manager API */
 
-#include "LB_core/dlb_stats.h"
+#include "apis/dlb_drom.h"
+
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
-#include "support/error.h"
+#include "apis/dlb_errors.h"
 #include "support/options.h"
+
+#include <sched.h>
 
 #pragma GCC visibility push(default)
 
-int DLB_Stats_Init(void) {
+int DLB_DROM_Init(void) {
     const options_t *options = get_global_options();
     shmem_cpuinfo_ext__init(options->shm_key);
     shmem_procinfo_ext__init(options->shm_key);
     return DLB_SUCCESS;
 }
 
-int DLB_Stats_Finalize(void) {
+int DLB_DROM_Finalize(void) {
     shmem_cpuinfo_ext__finalize();
     shmem_procinfo_ext__finalize();
     return DLB_SUCCESS;
 }
 
-int DLB_Stats_GetNumCpus(int *ncpus) {
+int DLB_DROM_GetNumCpus(int *ncpus) {
     *ncpus = shmem_cpuinfo_ext__getnumcpus();
     return DLB_SUCCESS;
 }
 
-int DLB_Stats_GetPidList(int *pidlist, int *nelems, int max_len) {
+int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len) {
     shmem_procinfo_ext__getpidlist(pidlist, nelems, max_len);
     return DLB_SUCCESS;
 }
 
-int DLB_Stats_GetCpuUsage(int pid, double *usage) {
-    *usage = shmem_procinfo_ext__getcpuusage(pid);
-    return DLB_SUCCESS;
+int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask) {
+    return shmem_procinfo_ext__getprocessmask(pid, mask);
 }
 
-int DLB_Stats_GetCpuAvgUsage(int pid, double *usage) {
-    *usage = shmem_procinfo_ext__getcpuavgusage(pid);
-    return DLB_SUCCESS;
+int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask) {
+    return shmem_procinfo_ext__setprocessmask(pid, mask);
 }
 
-int DLB_Stats_GetCpuUsageList(double *usagelist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getcpuusage_list(usagelist, nelems, max_len);
-    return DLB_SUCCESS;
+// Unmaintain?
+int DLB_DROM_GetCpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
+    return shmem_procinfo_ext__getcpus(ncpus, steal, cpulist, nelems, max_len);
 }
 
-int DLB_Stats_GetCpuAvgUsageList(double *avgusagelist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getcpuavgusage_list(avgusagelist, nelems, max_len);
-    return DLB_SUCCESS;
-}
-
-int DLB_Stats_GetNodeUsage(double *usage) {
-    *usage = shmem_procinfo_ext__getnodeusage();
-    return DLB_SUCCESS;
-}
-
-int DLB_Stats_GetNodeAvgUsage(double *usage) {
-    *usage = shmem_procinfo_ext__getnodeavgusage();
-    return DLB_SUCCESS;
-}
-
-int DLB_Stats_GetActiveCpus(int pid, int *ncpus) {
-    *ncpus = shmem_procinfo_ext__getactivecpus(pid);
-    return DLB_SUCCESS;
-}
-
-int DLB_Stats_GetActiveCpusList(int *cpuslist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getactivecpus_list(cpuslist, nelems, max_len);
-    return DLB_SUCCESS;
-}
-
-int DLB_Stats_GetLoadAvg(int pid, double *load) {
-    return shmem_procinfo_ext__getloadavg(pid, load);
-}
-
-int DLB_Stats_GetCpuStateIdle(int cpu, float *percentage) {
-    *percentage = shmem_cpuinfo_ext__getcpustate(cpu, STATS_IDLE);
-    return DLB_SUCCESS;
-}
-
-int DLB_Stats_GetCpuStateOwned(int cpu, float *percentage) {
-    *percentage = shmem_cpuinfo_ext__getcpustate(cpu, STATS_OWNED);
-    return DLB_SUCCESS;
-}
-
-int DLB_Stats_GetCpuStateGuested(int cpu, float *percentage) {
-    *percentage = shmem_cpuinfo_ext__getcpustate(cpu, STATS_GUESTED);
-    return DLB_SUCCESS;
+int DLB_DROM_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal) {
+    int error = shmem_procinfo_ext__preregister(pid, mask, steal);
+    error = error ? error : shmem_cpuinfo_ext__preregister(pid, mask, steal);
+    return error;
 }
 
 #pragma GCC visibility pop

@@ -20,11 +20,8 @@
 #ifndef SHMEM_BITSET_H
 #define SHMEM_BITSET_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
 #include "support/types.h"
+#include <sched.h>
 
 void shmem_bitset__init(const cpu_set_t *cpu_set, const char *shmem_key);
 void shmem_bitset__finalize( void );

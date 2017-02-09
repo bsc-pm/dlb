@@ -21,9 +21,16 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
+#include "support/mask_utils.h"
+
+#include "support/debug.h"
+
+#ifdef HAVE_HWLOC
+#include <hwloc.h>
+#include <hwloc/bitmap.h>
+#include <hwloc/glibc-sched.h>
 #endif
+
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,14 +38,6 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <regex.h>
-#include "support/debug.h"
-#include "support/mask_utils.h"
-
-#ifdef HAVE_HWLOC
-#include <hwloc.h>
-#include <hwloc/bitmap.h>
-#include <hwloc/glibc-sched.h>
-#endif
 
 typedef struct {
     int size;

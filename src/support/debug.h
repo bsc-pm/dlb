@@ -20,10 +20,11 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#include <stdlib.h>
-#include <stdio.h>
 #include "support/types.h"
 #include "support/options.h"
+
+#include <stdlib.h>
+#include <stdio.h>
 
 #ifdef MPI_LIB
 #include "LB_MPI/process_MPI.h"

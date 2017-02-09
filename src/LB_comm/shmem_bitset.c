@@ -17,19 +17,18 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <string.h>
-#include <assert.h>
-#include <pthread.h>
+#include "LB_comm/shmem_bitset.h"
 
 #include "shmem.h"
 #include "support/tracing.h"
 #include "support/debug.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+
+#include <sched.h>
+#include <string.h>
+#include <assert.h>
+#include <pthread.h>
 
 typedef struct {
     /*

@@ -20,12 +20,9 @@
 #ifndef NUMTHREADS_H
 #define NUMTHREADS_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
+#include "apis/dlb_types.h"
 
-#include "LB_core/dlb_types.h"
+#include <sched.h>
 
 typedef struct pm_interface {
     /* Callbacks list */

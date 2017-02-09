@@ -17,24 +17,22 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "LB_comm/shmem_procinfo.h"
+
+#include "LB_comm/shmem.h"
+#include "LB_numThreads/numThreads.h"
+#include "apis/dlb_errors.h"
+#include "support/debug.h"
+#include "support/types.h"
+#include "support/options.h"
+#include "support/mytime.h"
+#include "support/mask_utils.h"
+
 #include <sched.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/resource.h>
-
-#include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem.h"
-#include "LB_comm/shmem_procinfo.h"
-#include "support/debug.h"
-#include "support/types.h"
-#include "support/error.h"
-#include "support/options.h"
-#include "support/mytime.h"
-#include "support/mask_utils.h"
 
 #define NOBODY 0
 //static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
@@ -232,7 +230,7 @@ int shmem_procinfo__poll_drom(pid_t pid, int *new_threads, cpu_set_t *new_mask) 
         if (!process) {
             error = DLB_ERR_NOPROC;
         } else if (!process->dirty) {
-            error = DLB_ERR_NOUPDT;
+            error = DLB_NOUPDT;
         } else {
             shmem_lock(shm_handler);
             {

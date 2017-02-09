@@ -17,13 +17,14 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+/* FICHERO PARA DETECTAR LA PERIODICIDAD */
+
 #ifdef MPI_LIB
 
-/* FICHERO PARA DETECTAR LA PERIODICIDAD */
+#include "DPD.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "DPD.h"
 
 int inicializar_lista=0;
 int max_period ;

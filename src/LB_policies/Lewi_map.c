@@ -21,20 +21,20 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdlib.h>
-
 #include "LB_policies/Lewi_map.h"
+
+#include <sched.h>
+
+#ifdef MPI_LIB
+
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/comm_map.h"
 #include "support/tracing.h"
 #include "support/debug.h"
 #include "LB_core/spd.h"
 
-#ifdef MPI_LIB
+#include <stdlib.h>
+
 
 #include "LB_MPI/process_MPI.h"
 

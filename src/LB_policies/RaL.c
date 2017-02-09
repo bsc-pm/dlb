@@ -17,13 +17,7 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+#include "LB_policies/RaL.h"
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_bitset.h"
@@ -33,6 +27,10 @@
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 
+#include <sched.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 static int initial_nthreads;
 static int nthreads;

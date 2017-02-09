@@ -17,9 +17,10 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include "support/types.h"
+
 #include <stdlib.h>
 #include <string.h>
-#include "support/types.h"
 
 void parse_bool(const char *str, bool *value) {
     *value = false;

@@ -17,23 +17,20 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "LB_policies/lewi_mask.h"
+
+#include "LB_numThreads/numThreads.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_core/spd.h"
+#include "apis/dlb_errors.h"
+#include "support/debug.h"
+#include "support/tracing.h"
+#include "support/mask_utils.h"
+
 #include <sched.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-#include "LB_policies/lewi_mask.h"
-#include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_cpuinfo.h"
-#include "LB_core/spd.h"
-#include "support/debug.h"
-#include "support/tracing.h"
-#include "support/mask_utils.h"
-#include "support/error.h"
-
 
 static int nthreads;
 static int initial_nthreads;

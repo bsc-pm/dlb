@@ -17,24 +17,24 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
 
-#include "LB_comm/comm_shMem.h"
-#include "LB_comm/comm_lend_light.h"
 #include "LB_policies/Lend_light.h"
-#include "LB_numThreads/numThreads.h"
+
 #include "LB_core/spd.h"
-#include "support/mask_utils.h"
-#include "support/options.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
-#include "support/error.h"
 
 #ifdef MPI_LIB
 
+#include "LB_comm/comm_shMem.h"
+#include "LB_comm/comm_lend_light.h"
+#include "LB_numThreads/numThreads.h"
+#include "support/mask_utils.h"
+#include "support/options.h"
 #include "LB_MPI/process_MPI.h"
+
+#include <sched.h>
+
 
 static int default_cpus;
 static int myCPUS = 0;

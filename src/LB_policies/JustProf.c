@@ -17,16 +17,14 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdio.h>
+#include "LB_policies/JustProf.h"
 
 #include "support/mytime.h"
 #include "support/debug.h"
 #include "support/tracing.h"
 
+#include <sched.h>
+#include <stdio.h>
 
 int iterNum;
 struct timespec initAppl;

@@ -20,43 +20,43 @@
 #ifndef LB_FUNCS_H
 #define LB_FUNCS_H
 
-#include <sched.h>
 #include "support/types.h"
 
-// FIXME: forward declaration of an already exising typedef
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
+#include <sched.h>
+
+struct SubProcessDescriptor;
 
 typedef struct BalancePolicy {
     /* Status */
-    int (*init)(const subprocess_descriptor_t *spd);
-    int (*finalize)(const subprocess_descriptor_t *spd);
-    int (*enable)(const subprocess_descriptor_t *spd);
-    int (*disable)(const subprocess_descriptor_t *spd);
+    int (*init)(const struct SubProcessDescriptor *spd);
+    int (*finalize)(const struct SubProcessDescriptor *spd);
+    int (*enable)(const struct SubProcessDescriptor *spd);
+    int (*disable)(const struct SubProcessDescriptor *spd);
     /* MPI specific */
-    void (*into_communication)(const subprocess_descriptor_t *spd);
-    void (*out_of_communication)(const subprocess_descriptor_t *spd);
-    void (*into_blocking_call)(const subprocess_descriptor_t *spd);
-    void (*out_of_blocking_call)(const subprocess_descriptor_t *spd, int is_iter);
+    void (*into_communication)(const struct SubProcessDescriptor *spd);
+    void (*out_of_communication)(const struct SubProcessDescriptor *spd);
+    void (*into_blocking_call)(const struct SubProcessDescriptor *spd);
+    void (*out_of_blocking_call)(const struct SubProcessDescriptor *spd, int is_iter);
     /* Lend */
-    int (*lend)(const subprocess_descriptor_t *spd);
-    int (*lend_cpu)(const subprocess_descriptor_t *spd, int cpuid);
-    int (*lend_cpus)(const subprocess_descriptor_t *spd, int ncpus);
-    int (*lend_cpu_mask)(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+    int (*lend)(const struct SubProcessDescriptor *spd);
+    int (*lend_cpu)(const struct SubProcessDescriptor *spd, int cpuid);
+    int (*lend_cpus)(const struct SubProcessDescriptor *spd, int ncpus);
+    int (*lend_cpu_mask)(const struct SubProcessDescriptor *spd, const cpu_set_t *mask);
     /* Reclaim */
-    int (*reclaim)(const subprocess_descriptor_t *spd);
-    int (*reclaim_cpu)(const subprocess_descriptor_t *spd, int cpuid);
-    int (*reclaim_cpus)(const subprocess_descriptor_t *spd, int ncpus);
-    int (*reclaim_cpu_mask)(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+    int (*reclaim)(const struct SubProcessDescriptor *spd);
+    int (*reclaim_cpu)(const struct SubProcessDescriptor *spd, int cpuid);
+    int (*reclaim_cpus)(const struct SubProcessDescriptor *spd, int ncpus);
+    int (*reclaim_cpu_mask)(const struct SubProcessDescriptor *spd, const cpu_set_t *mask);
     /* Acquire */
-    int (*acquire)(const subprocess_descriptor_t *spd);
-    int (*acquire_cpu)(const subprocess_descriptor_t *spd, int cpuid);
-    int (*acquire_cpus)(const subprocess_descriptor_t *spd, int ncpus);
-    int (*acquire_cpu_mask)(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+    int (*acquire)(const struct SubProcessDescriptor *spd);
+    int (*acquire_cpu)(const struct SubProcessDescriptor *spd, int cpuid);
+    int (*acquire_cpus)(const struct SubProcessDescriptor *spd, int ncpus);
+    int (*acquire_cpu_mask)(const struct SubProcessDescriptor *spd, const cpu_set_t *mask);
     /* Return */
-    int (*return_all)(const subprocess_descriptor_t *spd);
-    int (*return_cpu)(const subprocess_descriptor_t *spd, int cpuid);
+    int (*return_all)(const struct SubProcessDescriptor *spd);
+    int (*return_cpu)(const struct SubProcessDescriptor *spd, int cpuid);
     /* Misc */
-    int (*check_cpu_availability)(const subprocess_descriptor_t *spd, int cpuid);
+    int (*check_cpu_availability)(const struct SubProcessDescriptor *spd, int cpuid);
 } balance_policy_t;
 
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy);

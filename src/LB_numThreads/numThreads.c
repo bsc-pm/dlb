@@ -17,16 +17,15 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <pthread.h>
 #include "LB_numThreads/numThreads.h"
+
+#include "apis/dlb_errors.h"
 #include "support/tracing.h"
 #include "support/debug.h"
-#include "support/error.h"
 #include "support/mask_utils.h"
+
+#include <sched.h>
+#include <pthread.h>
 
 #define NANOS_SYMBOLS_DEFINED ( \
         nanos_omp_set_process_mask && \

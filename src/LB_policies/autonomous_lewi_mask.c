@@ -17,32 +17,26 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "autonomous_lewi_mask.h"
+
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_core/spd.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
 #include "support/tracing.h"
 #include "support/mask_utils.h"
-#include "support/error.h"
 
+#include <sched.h>
+#include <stdlib.h>
+#include <string.h>
 #include <pthread.h>
-#define NDEBUG
 #include <assert.h>
-
 
 static int nthreads;
 static pthread_mutex_t mutex;
 static int enabled=0;
 static int single=0;
-
 
 int auto_lewi_mask_Init(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "Auto LeWI Mask Balancing Init");

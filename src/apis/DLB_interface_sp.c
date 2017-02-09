@@ -17,8 +17,10 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "LB_core/dlb_types.h"
-#include "LB_core/dlb_sp.h"
+#include "apis/dlb_sp.h"
+
+#include "apis/dlb_types.h"
+#include "apis/dlb_sp.h"
 #include "LB_core/DLB_kernel_sp.h"
 
 #pragma GCC visibility push(default)

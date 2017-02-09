@@ -21,10 +21,8 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
+#include "apis/dlb.h"
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,9 +32,6 @@
 #include <sys/stat.h>
 #include <getopt.h>
 #include <stdbool.h>
-#include "LB_core/dlb.h"
-#include "LB_comm/shmem_cpuinfo.h"
-#include "LB_comm/shmem_procinfo.h"
 
 static char *created_shm_filename = NULL;
 static char *userdef_shm_filename = NULL;

@@ -17,9 +17,13 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "error.h"
+#include "support/error.h"
+
+#include "apis/dlb_errors.h"
 
 static const char* error_msg[] = {
+    /* DLB_NOUPDT */        "no update needed",
+    /* DLB_NOTED */         "Query is noted"
     /* DLB_SUCCESS */       "Success",
     /* DLB_ERR_UNKNOWN */   "Unknown error",
     /* DLB_ERR_NOINIT */    "DLB is not initialized",
@@ -30,7 +34,6 @@ static const char* error_msg[] = {
     /* DLB_ERR_PDIRTY */    "pid dirty, can't update",
     /* DLB_ERR_PERM */      "permission error",
     /* DLB_ERR_TIMEOUT */   "timeout",
-    /* DLB_ERR_NOUPDT */    "no update needed",
     /* DLB_ERR_NOCBK */     "no callback defined",
     /* DLB_ERR_NOENT */     "no entry",
     /* DLB_ERR_NOCOMP */    "no compatible",
@@ -38,9 +41,12 @@ static const char* error_msg[] = {
     /* DLB_ERR_REQST */     "too many requests"
 };
 
+#define ERROR_UPPER_BOUND DLB_NOUPDT
+#define ERROR_LOWER_BOUND DLB_ERR_REQST
+
 const char* error_get_str(int errnum) {
-    if (errnum > 0 || errnum < DLB_MAX_ERRORS) {
+    if (errnum > ERROR_UPPER_BOUND || errnum < ERROR_LOWER_BOUND) {
         return "unknown errnum";
     }
-    return error_msg[-errnum];
+    return error_msg[-errnum + ERROR_UPPER_BOUND];
 }

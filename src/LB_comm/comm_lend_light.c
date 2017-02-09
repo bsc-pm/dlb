@@ -17,12 +17,13 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <stdlib.h>
+#include "LB_comm/comm_lend_light.h"
 
 #include "LB_comm/shmem.h"
-#include "LB_comm/comm_lend_light.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+
+#include <stdlib.h>
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 

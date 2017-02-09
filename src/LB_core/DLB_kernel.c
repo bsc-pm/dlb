@@ -21,22 +21,21 @@
 #include <config.h>
 #endif
 
-#define _GNU_SOURCE
-#include <sched.h>
-#include <string.h>
-#include <unistd.h>
+#include "LB_core/DLB_kernel.h"
 
 #include "LB_core/spd.h"
-#include "LB_core/DLB_kernel.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_barrier.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
-#include "support/error.h"
 #include "support/tracing.h"
 #include "support/options.h"
 
+#include <sched.h>
+#include <string.h>
+#include <unistd.h>
 
 /* These flags are used to
  *  a) activate/deactive DLB functionality from the API

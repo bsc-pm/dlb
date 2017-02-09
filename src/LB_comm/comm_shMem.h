@@ -21,7 +21,6 @@
 #define COMM_H
 
 #include <netdb.h>
-
 #include <semaphore.h>
 
 typedef struct {

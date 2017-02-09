@@ -20,8 +20,9 @@
 #ifndef SHMEM_PROCINFO_H
 #define SHMEM_PROCINFO_H
 
-#include "sys/types.h"
-#include "support/types.h"
+#include <sys/types.h>
+#include <stdbool.h>
+#include <sched.h>
 
 void shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key);
 void shmem_procinfo__finalize(pid_t pid);

@@ -21,9 +21,10 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "apis/dlb.h"
+#include "apis/dlb_drom.h"
+#include "support/mask_utils.h"
+
 #include <sched.h>
 #include <unistd.h>
 #include <limits.h>
@@ -34,9 +35,6 @@
 #include <ctype.h>
 #include <regex.h>
 #include <stdbool.h>
-#include "support/mask_utils.h"
-#include "LB_core/dlb.h"
-#include "LB_core/dlb_drom.h"
 
 static int sys_size;
 

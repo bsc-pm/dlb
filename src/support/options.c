@@ -17,15 +17,16 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <string.h>
-#include <stddef.h>
-
 #include "support/options.h"
+
+#include "apis/dlb_types.h"
+#include "apis/dlb_errors.h"
 #include "support/types.h"
 #include "support/mask_utils.h"
 #include "support/debug.h"
-#include "support/error.h"
 
+#include <string.h>
+#include <stddef.h>
 
 typedef enum OptionTypes {
     OPT_BOOL_T,

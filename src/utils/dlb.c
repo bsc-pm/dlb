@@ -21,11 +21,12 @@
 #include <config.h>
 #endif
 
+#include "apis/dlb.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "support/options.h"
-#include "LB_core/dlb.h"
+#include <stdbool.h>
 
 static void print_usage( const char * program ) {
     fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );

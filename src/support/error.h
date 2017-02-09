@@ -20,26 +20,6 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-typedef enum {
-    DLB_SUCCESS     = 0,
-    DLB_ERR_UNKNOWN = -1,
-    DLB_ERR_NOINIT  = -2,
-    DLB_ERR_INIT    = -3,
-    DLB_ERR_DISBLD  = -4,
-    DLB_ERR_NOSHMEM = -5,
-    DLB_ERR_NOPROC  = -6,
-    DLB_ERR_PDIRTY  = -7,
-    DLB_ERR_PERM    = -8,
-    DLB_ERR_TIMEOUT = -9,
-    DLB_ERR_NOUPDT  = -10,
-    DLB_ERR_NOCBK   = -11,
-    DLB_ERR_NOENT   = -12,
-    DLB_ERR_NOCOMP  = -13,
-    DLB_ERR_NOTED   = -14,
-    DLB_ERR_REQST   = -15,
-    DLB_MAX_ERRORS  = -16
-} error_t;
-
 const char* error_get_str(int errnum);
 
 #endif /* ERROR_H */

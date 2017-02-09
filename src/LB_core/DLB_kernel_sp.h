@@ -20,15 +20,14 @@
 #ifndef DLB_KERNEL_SP_H
 #define DLB_KERNEL_SP_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdbool.h>
+#include "LB_core/DLB_kernel_sp.h"
 
 #include "LB_core/spd.h"
-#include "LB_core/dlb_types.h"
+#include "apis/dlb_types.h"
 #include "support/options.h"
+
+#include <sched.h>
+#include <stdbool.h>
 
 /* Status */
 subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_args);

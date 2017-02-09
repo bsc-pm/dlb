@@ -20,12 +20,11 @@
 #ifndef SHMEM_CPUINFO_H
 #define SHMEM_CPUINFO_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "support/types.h"
+
+#include <sys/types.h>
 #include <sched.h>
 #include <limits.h>
-#include "support/types.h"
 
 #define CPUINFO_RECOVER_ALL INT_MAX
 

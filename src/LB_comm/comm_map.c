@@ -21,18 +21,16 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "LB_comm/comm_map.h"
+
+#include "LB_comm/shmem.h"
+#include "support/debug.h"
+
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/syscall.h>
-
-#include "LB_comm/shmem.h"
-#include "LB_comm/comm_map.h"
-#include "support/debug.h"
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 

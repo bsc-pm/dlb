@@ -25,6 +25,7 @@
 
 #include "LB_MPI/MPI_interfaceF.h"
 #include "support/debug.h"
+
 #include <mpi.h>
 
 #ifndef MPI3_CONST

@@ -21,9 +21,10 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "support/debug.h"
+
+#include "support/options.h"
+
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <stdlib.h>
@@ -33,9 +34,6 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <execinfo.h>
-
-#include "support/debug.h"
-#include "support/options.h"
 
 #define VBFORMAT_LEN 32
 verbose_opts_t vb_opts;

@@ -21,6 +21,7 @@
 #define DLB_SP_H
 
 #include "dlb_types.h"
+#include "dlb_errors.h"
 
 #ifdef __cplusplus
 extern "C"

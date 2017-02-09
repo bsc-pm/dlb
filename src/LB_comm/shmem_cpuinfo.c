@@ -17,23 +17,22 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <string.h>
+#include "LB_comm/shmem_cpuinfo.h"
 
 #include "LB_comm/shmem.h"
-#include "LB_comm/shmem_cpuinfo.h"
+#include "apis/dlb_errors.h"
+#include "apis/dlb_types.h"
 #include "support/debug.h"
 #include "support/types.h"
-#include "support/error.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+
+#include <sched.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <string.h>
 
 /* NOTE on default values:
  * The shared memory will be initializated to 0 when created,

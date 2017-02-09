@@ -20,13 +20,12 @@
 #ifndef SPD_H
 #define SPD_H
 
-// Old gcc's need sys/types for pid_t definition
-#include <sys/types.h>
-
 #include "LB_core/lb_funcs.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/options.h"
 #include "support/types.h"
+
+#include <sys/types.h>
 
 /* Sub-process Descriptor */
 

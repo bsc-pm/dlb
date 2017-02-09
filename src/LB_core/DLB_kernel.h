@@ -20,14 +20,11 @@
 #ifndef DLB_KERNEL_H
 #define DLB_KERNEL_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdbool.h>
-#include "LB_core/dlb_types.h"
+#include "apis/dlb_types.h"
 #include "support/options.h"
 
+#include <sched.h>
+#include <stdbool.h>
 
 /* Status */
 int Initialize(const cpu_set_t *mask, const char *lb_args);
