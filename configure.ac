@@ -5,6 +5,7 @@ AC_CONFIG_SRCDIR([src/LB_core/DLB_kernel.c])
 configure_orig_arguments="$@"
 
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
+AM_EXTRA_RECURSIVE_TARGETS([coverage-report])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Enable silent rules if available
@@ -73,6 +74,7 @@ AX_CONFIG_CC_WARNINGS
 AX_CHECK_COMPILE_FLAG([$ax_cv_gcc_version_warnings],
                       [AC_CFLAGS="${AC_CFLAGS} $ax_cv_gcc_version_warnings"])
 AC_SUBST([AC_CFLAGS])
+AX_CHECK_COMPILE_FLAG([-coverage], [COVERAGE_FLAGS=-coverage])
 
 AC_CHECK_HEADERS([stdatomic.h])
 
@@ -106,6 +108,10 @@ AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 # check for Doxygen
 AC_CHECK_PROG([doxygen], [doxygen], [yes])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
+
+# check for gcovr
+AC_CHECK_PROG([gcovr], [gcovr], [yes])
+AM_CONDITIONAL([HAVE_GCOVR], [test "x$gcovr" = xyes])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -170,7 +176,7 @@ COMMON_CPPFLAGS="-D_GNU_SOURCE"
 PERFO_CFLAGS="-g -O3"
 PERFO_CPPFLAGS="$COMMON_CPPFLAGS"
 
-DEBUG_CFLAGS="-g -O0"
+DEBUG_CFLAGS="-g -O0 $COVERAGE_FLAGS"
 DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION"
 
 INSTR_CFLAGS="-g -O3"

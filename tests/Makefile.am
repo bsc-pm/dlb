@@ -18,5 +18,19 @@
 #################################################################################
 
 
-check-local: $(top_srcdir)/scripts/bets
+check-local: $(top_srcdir)/scripts/bets clean-coverage
 	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test
+
+if HAVE_GCOVR
+coverage-report:
+	$(mkdir_p) gcovr_html
+	gcovr -r $(abs_top_builddir) --html --html-details -o gcovr_html/report.html
+
+clean-local: clean-coverage
+	rm -rf gcovr_html/
+
+clean-coverage:
+	find $(abs_top_builddir) -name '*gcda' -delete
+else
+clean-coverage:
+endif
