@@ -90,7 +90,7 @@ int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callbac
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
-int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t callback);
+int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t *callback);
 
 
 /*********************************************************************************/

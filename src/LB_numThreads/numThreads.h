@@ -37,7 +37,7 @@ typedef struct pm_interface {
 
 void pm_init(pm_interface_t *pm);
 int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t callback);
-int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t callback);
+int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t *callback);
 
 int update_threads(const pm_interface_t *pm, int threads);
 int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);

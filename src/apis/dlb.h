@@ -90,7 +90,7 @@ int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback);
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
-int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t callback);
+int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback);
 
 
 /*********************************************************************************/

@@ -53,7 +53,7 @@ int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback) {
     return callback_set(which, callback);
 }
 
-int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t callback) {
+int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback) {
     return callback_get(which, callback);
 }
 

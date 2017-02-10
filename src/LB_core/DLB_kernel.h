@@ -34,7 +34,7 @@ int set_max_parallelism(int max);
 
 /* Callbacks */
 int callback_set(dlb_callbacks_t which, dlb_callback_t callback);
-int callback_get(dlb_callbacks_t which, dlb_callback_t callback);
+int callback_get(dlb_callbacks_t which, dlb_callback_t *callback);
 
 /* MPI specific */
 void IntoCommunication(void);

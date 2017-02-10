@@ -100,22 +100,28 @@ int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t ca
     return DLB_SUCCESS;
 }
 
-int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t callback) {
+int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t *callback) {
     switch(which) {
         case dlb_callback_set_num_threads:
-            callback = (dlb_callback_t)pm->dlb_callback_set_num_threads_ptr;
+            *callback = (dlb_callback_t)pm->dlb_callback_set_num_threads_ptr;
             break;
         case dlb_callback_set_active_mask:
-            callback = (dlb_callback_t)pm->dlb_callback_set_active_mask_ptr;
+            *callback = (dlb_callback_t)pm->dlb_callback_set_active_mask_ptr;
             break;
         case dlb_callback_set_process_mask:
-            callback = (dlb_callback_t)pm->dlb_callback_set_process_mask_ptr;
+            *callback = (dlb_callback_t)pm->dlb_callback_set_process_mask_ptr;
             break;
         case dlb_callback_add_active_mask:
-            callback = (dlb_callback_t)pm->dlb_callback_set_active_mask_ptr;
+            *callback = (dlb_callback_t)pm->dlb_callback_add_active_mask_ptr;
             break;
         case dlb_callback_add_process_mask:
-            callback = (dlb_callback_t)pm->dlb_callback_set_process_mask_ptr;
+            *callback = (dlb_callback_t)pm->dlb_callback_add_process_mask_ptr;
+            break;
+        case dlb_callback_enable_cpu:
+            *callback = (dlb_callback_t)pm->dlb_callback_enable_cpu_ptr;
+            break;
+        case dlb_callback_disable_cpu:
+            *callback = (dlb_callback_t)pm->dlb_callback_disable_cpu_ptr;
             break;
         default:
             return DLB_ERR_NOCBK;

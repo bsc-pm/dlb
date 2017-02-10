@@ -139,7 +139,7 @@ int callback_set_sp(subprocess_descriptor_t *spd, dlb_callbacks_t which, dlb_cal
     return pm_callback_set(&spd->pm, which, callback);
 }
 
-int callback_get_sp(subprocess_descriptor_t *spd, dlb_callbacks_t which, dlb_callback_t callback) {
+int callback_get_sp(subprocess_descriptor_t *spd, dlb_callbacks_t which, dlb_callback_t *callback) {
     return pm_callback_get(&spd->pm, which, callback);
 }
 

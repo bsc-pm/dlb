@@ -37,7 +37,7 @@ int set_max_parallelism_sp(subprocess_descriptor_t *psd, int max);
 
 /* Callbacks */
 int callback_set_sp(subprocess_descriptor_t *psd, dlb_callbacks_t which, dlb_callback_t callback);
-int callback_get_sp(subprocess_descriptor_t *psd, dlb_callbacks_t which, dlb_callback_t callback);
+int callback_get_sp(subprocess_descriptor_t *psd, dlb_callbacks_t which, dlb_callback_t *callback);
 
 /* Lend */
 int lend_sp(subprocess_descriptor_t *psd);

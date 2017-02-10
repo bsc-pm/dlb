@@ -54,7 +54,7 @@ int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callbac
     return callback_set_sp(handler, which, callback);
 }
 
-int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t callback) {
+int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t *callback) {
     return callback_get_sp(handler, which, callback);
 }
 
