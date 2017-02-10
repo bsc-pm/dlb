@@ -22,12 +22,13 @@
     test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
+#include "support/types.h"
+#include "support/options.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "support/types.h"
-#include "support/options.h"
 
 int main( int argc, char **argv ) {
     setenv("LB_POLICY", "huh", 1);
@@ -45,7 +46,6 @@ int main( int argc, char **argv ) {
     options_init(&options_2, lb_args);  // options_2 initialized with lb_args
     assert(options_1.lb_policy == options_2.lb_policy);
     assert(options_1.drom == options_2.drom);
-    assert(strcmp(options_1.mask, options_2.mask) == 0);
     assert(options_1.mpi_lend_mode == options_2.mpi_lend_mode);
     assert(options_1.verbose == options_2.verbose);
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
@@ -62,7 +62,7 @@ int main( int argc, char **argv ) {
 
     // Check setter and getter
     char value[MAX_OPTION_LENGTH];
-    options_init(&options_1, "--just-barrier=1");
+    options_init(&options_1, "--just-barrier=1 --shm-key=key --lend-mode=1cpu");
     assert(options_1.mpi_just_barrier == true);
     options_get_variable(&options_1, "--just-barrier", value);
     assert(strcasecmp(value, "true") == 0);
@@ -70,6 +70,35 @@ int main( int argc, char **argv ) {
     assert(options_1.mpi_just_barrier == false);
     options_get_variable(&options_1, "--just-barrier", value);
     assert(strcasecmp(value, "false") == 0);
+    options_get_variable(&options_1, "--shm-key", value);
+    assert(strcasecmp(value, "key") == 0);
+    int error_readonly_var = options_set_variable(&options_1, "LB_SHM_KEY", "new_key");
+    assert(error_readonly_var);
+    assert(strcasecmp(value, "key") == 0);
+    options_get_variable(&options_1,"LB_LEND_MODE", value);
+    assert(strcasecmp(value, "1CPU") == 0);
+    options_set_variable(&options_1,"LB_LEND_MODE", "block");
+    assert(options_1.mpi_lend_mode == BLOCK);
+    options_get_variable(&options_1,"--lend-mode", value);
+    assert(strcasecmp(value, "block") == 0);
+    int error_unexisting_var = options_set_variable(&options_1, "FAKEVAR", "fakevalue");
+    assert(error_unexisting_var);
+    value[0] = '\0';
+    error_unexisting_var = options_get_variable(&options_1, "FAKEVAR", value);
+    assert(error_unexisting_var);
+    assert(strcasecmp(value, "") == 0);
+
+
+    // Print variables
+    options_init(&options_1, "");
+    options_print_variables(&options_1);
+
+    // Unknown variables are silently ignored
+    //options_init(&options_1, "--polic");
+
+    // Bad format options trigger a SIGABRT
+    //options_init(&options_1, "--policy");
+    //options_init(&options_1, "--policy=");
 
     return 0;
 }

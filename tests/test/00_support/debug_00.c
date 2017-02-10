@@ -22,59 +22,24 @@
     test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdio.h>
-#include "support/mask_utils.h"
-
-#define MAX_SIZE 16
-
-static int parse_and_check(const char *str, const int *bits) {
-    int i;
-    int error = 0;
-    int nelems = 0;
-    cpu_set_t mask;
-
-    mu_parse_mask(str, &mask);
-
-    // check every elem within MAX_SIZE
-    for (i=0; i<MAX_SIZE && !error; ++i) {
-        error = error ? error : CPU_ISSET(i, &mask) != bits[i];
-        nelems += bits[i];
-    }
-
-    // check size
-    error = error ? error : CPU_COUNT(&mask) != nelems;
-
-    if (error) {
-        fprintf(stderr, "String %s parsed as %s\n", str, mu_to_str(&mask));
-    }
-
-    return error;
-}
+#include "support/debug.h"
+#include "support/options.h"
 
 int main( int argc, char **argv ) {
-    int error = 0;
+    options_t options;
+    options_init(&options, "--verbose-format=node:pid:thread");
+    debug_init(&options);
+    vb_print(stdout, "DLB TEST", "hello test %s", "!!");
 
-    mu_init();
-    mu_testing_set_sys_size(MAX_SIZE);
+    options_init(&options, "--verbose-format=:");
+    debug_init(&options);
+    vb_print(stdout, "DLB TEST", "hello test %s", "!!");
 
-    error += parse_and_check("0", (const int[MAX_SIZE]){1, 0, 0});
-    error += parse_and_check("1", (const int[MAX_SIZE]){0, 1, 0});
-    error += parse_and_check("0,2", (const int[MAX_SIZE]){1, 0, 1});
+    options_init(&options, "--verbose-format=node:");
+    debug_init(&options);
+    vb_print(stdout, "DLB TEST", "hello test %s", "!!");
 
-    // Beware the range/bitmask ambiguity
-    error += parse_and_check("101b", (const int[MAX_SIZE]){1, 0, 1});
-    error += parse_and_check("10b", (const int[MAX_SIZE]){1});
-    error += parse_and_check("00000000001b",
-            (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
-    error += parse_and_check("10", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    print_backtrace();
 
-    error += parse_and_check("1,3-5,6,8", (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
-    error += parse_and_check("9-12", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
-
-    mu_finalize();
-    return error;
+    return 0;
 }

@@ -17,32 +17,31 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "support/error.h"
+/*<testinfo>
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
+</testinfo>*/
 
-#include "apis/dlb_errors.h"
+#include "support/mask_utils.h"
 
-static const char* error_msg[] = {
-    /* DLB_NOUPDT */        "no update needed",
-    /* DLB_NOTED */         "resource not available, but petition attended",
-    /* DLB_SUCCESS */       "Success",
-    /* DLB_ERR_UNKNOWN */   "Unknown error",
-    /* DLB_ERR_NOINIT */    "DLB is not initialized",
-    /* DLB_ERR_INIT */      "DLB already initialized",
-    /* DLB_ERR_DISBLD */    "DLB is disabled",
-    /* DLB_ERR_NOSHMEM */   "No shared memory",
-    /* DLB_ERR_NOPROC */    "No pid",
-    /* DLB_ERR_PDIRTY */    "pid dirty, can't update",
-    /* DLB_ERR_PERM */      "permission error",
-    /* DLB_ERR_TIMEOUT */   "timeout",
-    /* DLB_ERR_NOCBK */     "no callback defined",
-    /* DLB_ERR_NOENT */     "no entry",
-    /* DLB_ERR_NOCOMP */    "no compatible",
-    /* DLB_ERR_REQST */     "too many requests"
-};
+#include <stdio.h>
+#include <assert.h>
 
-const char* error_get_str(int errnum) {
-    if (errnum >= _DLB_ERROR_UPPER_BOUND || errnum <= _DLB_ERROR_LOWER_BOUND) {
-        return "unknown errnum";
-    }
-    return error_msg[-errnum + _DLB_ERROR_UPPER_BOUND - 1];
+int main( int argc, char **argv ) {
+    fprintf(stdout, "System size: %d\n", mu_get_system_size());
+
+    cpu_set_t lb_mask1;
+    mu_parse_mask("0-1,3,5-7", &lb_mask1);
+    fprintf(stdout, "LB Mask: %s\n", mu_to_str(&lb_mask1));
+
+    mu_init();
+    fprintf(stdout, "System size: %d\n", mu_get_system_size());
+
+    cpu_set_t lb_mask2;
+    mu_parse_mask("0-1,3,5-7", &lb_mask2);
+    fprintf(stdout, "LB Mask: %s\n", mu_to_str(&lb_mask2));
+    mu_finalize();
+
+    assert(CPU_EQUAL(&lb_mask1, &lb_mask2));
+    return 0;
 }

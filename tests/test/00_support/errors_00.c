@@ -17,32 +17,34 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "support/error.h"
+/*<testinfo>
+    test_generator="gens/basic-generator"
+    test_generator_ENV=( "LB_TEST_MODE=single" )
+</testinfo>*/
 
 #include "apis/dlb_errors.h"
+#include "support/error.h"
 
-static const char* error_msg[] = {
-    /* DLB_NOUPDT */        "no update needed",
-    /* DLB_NOTED */         "resource not available, but petition attended",
-    /* DLB_SUCCESS */       "Success",
-    /* DLB_ERR_UNKNOWN */   "Unknown error",
-    /* DLB_ERR_NOINIT */    "DLB is not initialized",
-    /* DLB_ERR_INIT */      "DLB already initialized",
-    /* DLB_ERR_DISBLD */    "DLB is disabled",
-    /* DLB_ERR_NOSHMEM */   "No shared memory",
-    /* DLB_ERR_NOPROC */    "No pid",
-    /* DLB_ERR_PDIRTY */    "pid dirty, can't update",
-    /* DLB_ERR_PERM */      "permission error",
-    /* DLB_ERR_TIMEOUT */   "timeout",
-    /* DLB_ERR_NOCBK */     "no callback defined",
-    /* DLB_ERR_NOENT */     "no entry",
-    /* DLB_ERR_NOCOMP */    "no compatible",
-    /* DLB_ERR_REQST */     "too many requests"
-};
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
 
-const char* error_get_str(int errnum) {
-    if (errnum >= _DLB_ERROR_UPPER_BOUND || errnum <= _DLB_ERROR_LOWER_BOUND) {
-        return "unknown errnum";
+int main(int argc, char **argv) {
+
+    // Upper bound, error
+    fprintf(stderr, "invalid errnum: %d, string: %s\n",
+            _DLB_ERROR_UPPER_BOUND, error_get_str(_DLB_ERROR_UPPER_BOUND));
+    assert(strcmp(error_get_str(_DLB_ERROR_UPPER_BOUND), "unknown errnum") == 0);
+
+    int i;
+    for (i=_DLB_ERROR_UPPER_BOUND-1; i>_DLB_ERROR_LOWER_BOUND; --i) {
+        fprintf(stderr, "errnum: %d, string: %s\n", i, error_get_str(i));
     }
-    return error_msg[-errnum + _DLB_ERROR_UPPER_BOUND - 1];
+
+    // Lower bound, error
+    fprintf(stderr, "invalid errnum: %d, string: %s\n",
+            _DLB_ERROR_LOWER_BOUND, error_get_str(_DLB_ERROR_LOWER_BOUND));
+    assert(strcmp(error_get_str(_DLB_ERROR_LOWER_BOUND), "unknown errnum") == 0);
+
+    return DLB_SUCCESS;
 }
