@@ -23,7 +23,7 @@
 
 static const char* error_msg[] = {
     /* DLB_NOUPDT */        "no update needed",
-    /* DLB_NOTED */         "Query is noted"
+    /* DLB_NOTED */         "resource not available, but petition attended",
     /* DLB_SUCCESS */       "Success",
     /* DLB_ERR_UNKNOWN */   "Unknown error",
     /* DLB_ERR_NOINIT */    "DLB is not initialized",
@@ -37,16 +37,12 @@ static const char* error_msg[] = {
     /* DLB_ERR_NOCBK */     "no callback defined",
     /* DLB_ERR_NOENT */     "no entry",
     /* DLB_ERR_NOCOMP */    "no compatible",
-    /* DLB_ERR_NOTED */     "resource not available, but petition attended",
     /* DLB_ERR_REQST */     "too many requests"
 };
 
-#define ERROR_UPPER_BOUND DLB_NOUPDT
-#define ERROR_LOWER_BOUND DLB_ERR_REQST
-
 const char* error_get_str(int errnum) {
-    if (errnum > ERROR_UPPER_BOUND || errnum < ERROR_LOWER_BOUND) {
+    if (errnum > _DLB_ERROR_UPPER_BOUND || errnum < _DLB_ERROR_LOWER_BOUND) {
         return "unknown errnum";
     }
-    return error_msg[-errnum + ERROR_UPPER_BOUND];
+    return error_msg[-errnum + _DLB_ERROR_LOWER_BOUND];
 }
