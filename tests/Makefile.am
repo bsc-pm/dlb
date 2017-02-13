@@ -18,19 +18,23 @@
 #################################################################################
 
 
-check-local: $(top_srcdir)/scripts/bets clean-coverage
+check-local: $(top_srcdir)/scripts/bets clean-coverage-data
 	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test
 
-if HAVE_GCOVR
-coverage-report:
-	$(mkdir_p) gcovr_html
-	gcovr -r $(abs_top_builddir) --html --html-details -o gcovr_html/report.html
+if ENABLE_COVERAGE
+coverage-local: check-local
+	$(mkdir_p) coverage
+	gcovr -r $(abs_top_builddir) --html --html-details -o coverage/index.html
 
-clean-local: clean-coverage
-	rm -rf gcovr_html/
+clean-coverage-data:
+	find $(abs_top_builddir) -name '*.gcda' -delete
 
-clean-coverage:
-	find $(abs_top_builddir) -name '*gcda' -delete
+clean-local: clean-coverage-data
+	find $(abs_top_builddir) -name '*.gcno' -delete
+	rm -rf coverage/
 else
-clean-coverage:
+coverage-local:
+	@echo "coverage is not configured."
+clean-coverage-data:
+clean-local:
 endif

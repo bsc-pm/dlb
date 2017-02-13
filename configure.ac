@@ -5,7 +5,7 @@ AC_CONFIG_SRCDIR([src/LB_core/DLB_kernel.c])
 configure_orig_arguments="$@"
 
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
-AM_EXTRA_RECURSIVE_TARGETS([coverage-report])
+AM_EXTRA_RECURSIVE_TARGETS([coverage])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Enable silent rules if available
@@ -16,7 +16,10 @@ m4_ifdef([AM_SILENT_RULES],
 
 AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 
-# Versioning things
+
+################################################################################
+# Obtain versioning infomation
+################################################################################
 # Make sure build_version is double-quoted!
 build_version="\"unknown revision\""
 if test -d $srcdir/.git;
@@ -52,6 +55,10 @@ AC_DEFINE_UNQUOTED([DLB_CONFIGURE_ARGS], [$dlb_config_args], [Configure line])
 AC_CHECK_PROG([DEB_RELEASE], [lsb_release], [$(lsb_release -sc)], [])
 AC_SUBST([DEB_RELEASE])
 
+
+################################################################################
+# Configure compiler and compiler flags
+################################################################################
 # If CFLAGS is not user-defined, define it as empty to avoid AC_PROG_CC setting it to default '-g -O2'
 : ${CFLAGS=""}
 
@@ -74,9 +81,89 @@ AX_CONFIG_CC_WARNINGS
 AX_CHECK_COMPILE_FLAG([$ax_cv_gcc_version_warnings],
                       [AC_CFLAGS="${AC_CFLAGS} $ax_cv_gcc_version_warnings"])
 AC_SUBST([AC_CFLAGS])
-AX_CHECK_COMPILE_FLAG([-coverage], [COVERAGE_FLAGS=-coverage])
+AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 
 AC_CHECK_HEADERS([stdatomic.h])
+
+
+################################################################################
+# Configure library versions
+################################################################################
+
+AC_MSG_CHECKING([whether to compile the debug version])
+AC_ARG_ENABLE([debug],
+    AS_HELP_STRING([--disable-debug], [do not compile debug version library]),
+    [], dnl Implicit: enable_debug=$enableval
+    [enable_debug=yes]
+)
+AC_MSG_RESULT([$enable_debug])
+
+AC_MSG_CHECKING([whether to compile the instrumentation version])
+AC_ARG_ENABLE([instrumentation],
+    AS_HELP_STRING([--disable-instrumentation], [do not compile instrumentation version library]),
+   [], dnl Implicit: enable_instrumentation=$enableval
+   [enable_instrumentation=yes]
+)
+AC_MSG_RESULT([$enable_instrumentation])
+
+AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
+AC_ARG_ENABLE([instrumentation-debug],
+   AS_HELP_STRING([--disable-instrumentation-debug],
+                  [do not compile instrumentation debug version library]),
+   [], dnl Implicit: enable_instrumentation_debug=$enableval
+   [enable_instrumentation_debug=yes]
+)
+AC_MSG_RESULT([$enable_instrumentation_debug])
+
+AM_CONDITIONAL([DEBUG_LIB], [test "x$enable_debug" = xyes])
+AM_CONDITIONAL([INSTRUMENTATION_LIB], [test "x$enable_instrumentation" = xyes])
+AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test "x$enable_instrumentation_debug" = xyes])
+
+TEST_VERSIONS="performance"
+AS_IF([test "x$enable_debug" = xyes], [
+    TEST_VERSIONS="$TEST_VERSIONS debug"
+])
+AC_SUBST([TEST_VERSIONS])
+
+COMMON_CPPFLAGS="-D_GNU_SOURCE"
+
+PERFO_CFLAGS="-g -O3"
+PERFO_CPPFLAGS="$COMMON_CPPFLAGS"
+
+DEBUG_CFLAGS="-g -O0"
+DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION"
+
+INSTR_CFLAGS="-g -O3"
+INSTR_CPPFLAGS="$COMMON_CPPFLAGS -DINSTRUMENTATION_VERSION"
+
+INSTR_DEBUG_CFLAGS="-g -O0"
+INSTR_DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
+
+AC_MSG_CHECKING([whether to enable coverage profiling])
+AC_ARG_ENABLE([coverage],
+    AS_HELP_STRING([--enable-coverage], [enable coverage profiling]),
+    [], dnl Implicit: enable_coverage=$enableval
+    [enable_coverage=no]
+)
+AC_MSG_RESULT([$enable_coverage])
+
+AS_IF([test "x$enable_coverage" = xyes], [
+    DEBUG_CFLAGS="$DEBUG_CFLAGS $COVERAGE_FLAGS"
+])
+
+AC_SUBST([PERFO_CFLAGS])
+AC_SUBST([PERFO_CPPFLAGS])
+AC_SUBST([DEBUG_CFLAGS])
+AC_SUBST([DEBUG_CPPFLAGS])
+AC_SUBST([INSTR_CFLAGS])
+AC_SUBST([INSTR_CPPFLAGS])
+AC_SUBST([INSTR_DEBUG_CFLAGS])
+AC_SUBST([INSTR_DEBUG_CPPFLAGS])
+
+
+################################################################################
+# Configure external libraries and programs
+################################################################################
 
 # Check for Python
 AM_PATH_PYTHON
@@ -90,17 +177,6 @@ AX_MPI
 # check for HWLOC
 AX_HWLOC
 
-# check for number of cpus on node
-AC_ARG_WITH([cpus-per-node],
-   AS_HELP_STRING([--with-cpus-per-node=N], [Number of cpus per node]),
-   [
-      ncpus="$withval"
-   ],
-   [
-      ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
-   ]
-)
-
 # check for SPHINX
 AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
 AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
@@ -111,7 +187,18 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
 
 # check for gcovr
 AC_CHECK_PROG([gcovr], [gcovr], [yes])
-AM_CONDITIONAL([HAVE_GCOVR], [test "x$gcovr" = xyes])
+AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$gcovr" = xyes && test "x$enable_coverage" = xyes])
+
+# check for number of cpus on node
+AC_ARG_WITH([cpus-per-node],
+   AS_HELP_STRING([--with-cpus-per-node=N], [Number of cpus per node]),
+   [
+      ncpus="$withval"
+   ],
+   [
+      ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
+   ]
+)
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -133,71 +220,10 @@ AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generat
 AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 
 
-##########################################################################
-# Instrumentation & Debug compilation support
-##########################################################################
 
-AC_MSG_CHECKING([whether to compile the debug version])
-AC_ARG_ENABLE([debug],
-   AS_HELP_STRING([--disable-debug], [Disable generation of debug version]),
-   [], dnl Implicit: enable_debug=$enableval
-   [enable_debug=yes]
-)
-AC_MSG_RESULT([$enable_debug])
-
-AC_MSG_CHECKING([whether to compile the instrumentation version])
-AC_ARG_ENABLE([instrumentation],
-   AS_HELP_STRING([--disable-instrumentation], [Disable generation of instrumentation version]),
-   [], dnl Implicit: enable_instrumentation=$enableval
-   [enable_instrumentation=yes]
-)
-AC_MSG_RESULT([$enable_instrumentation])
-
-AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
-AC_ARG_ENABLE([instrumentation-debug],
-   AS_HELP_STRING([--disable-instrumentation-debug], [Disable generation of instrumentation-debug version]),
-   [], dnl Implicit: enable_instrumentation_debug=$enableval
-   [enable_instrumentation_debug=yes]
-)
-AC_MSG_RESULT([$enable_instrumentation_debug])
-
-AM_CONDITIONAL([DEBUG_LIB], [test "x$enable_debug" = xyes])
-AM_CONDITIONAL([INSTRUMENTATION_LIB], [test "x$enable_instrumentation" = xyes])
-AM_CONDITIONAL([INSTRUMENTATION_DEBUG_LIB], [test "x$enable_instrumentation_debug" = xyes])
-
-TEST_VERSIONS="performance"
-AS_IF([test "x$enable_debug" = xyes], [
-    TEST_VERSIONS="$TEST_VERSIONS debug"
-])
-AC_SUBST([TEST_VERSIONS])
-
-COMMON_CPPFLAGS="-D_GNU_SOURCE"
-
-PERFO_CFLAGS="-g -O3"
-PERFO_CPPFLAGS="$COMMON_CPPFLAGS"
-
-DEBUG_CFLAGS="-g -O0 $COVERAGE_FLAGS"
-DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION"
-
-INSTR_CFLAGS="-g -O3"
-INSTR_CPPFLAGS="$COMMON_CPPFLAGS -DINSTRUMENTATION_VERSION"
-
-INSTR_DEBUG_CFLAGS="-g -O0"
-INSTR_DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
-
-AC_SUBST([PERFO_CFLAGS])
-AC_SUBST([PERFO_CPPFLAGS])
-AC_SUBST([DEBUG_CFLAGS])
-AC_SUBST([DEBUG_CPPFLAGS])
-AC_SUBST([INSTR_CFLAGS])
-AC_SUBST([INSTR_CPPFLAGS])
-AC_SUBST([INSTR_DEBUG_CFLAGS])
-AC_SUBST([INSTR_DEBUG_CPPFLAGS])
-
-
-##########################################################################
+################################################################################
 # BlueGene/Q specific options
-##########################################################################
+################################################################################
 
 case $host in
    powerpc64-bgq-linux*)
@@ -213,10 +239,7 @@ AC_SUBST([AC_LDFLAGS])
 AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
 
 
-##########################################################################
-
-NCPUS=$ncpus
-AC_SUBST([NCPUS])
+################################################################################
 
 # generate the final Makefile etc.
 AC_OUTPUT

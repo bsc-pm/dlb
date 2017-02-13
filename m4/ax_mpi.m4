@@ -39,7 +39,7 @@ AC_DEFUN([AX_MPI],
         ### MPI TESTS ###
         AC_MSG_CHECKING([whether to enable MPI test suite])
         AC_ARG_ENABLE([mpi-tests],
-            AS_HELP_STRING([--disable-mpi-tests], [Disable MPI tests]),
+            AS_HELP_STRING([--disable-mpi-tests], [disable MPI tests]),
             [], dnl Implicit: enable_mpi_tests=$enableval
             [enable_mpi_tests=check]
         )
