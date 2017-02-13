@@ -20,32 +20,29 @@ AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 ################################################################################
 # Obtain versioning infomation
 ################################################################################
+AC_ARG_VAR([GIT], [distributed version control system])
+AC_PATH_PROG([GIT], [git], [])
 # Make sure build_version is double-quoted!
-build_version="\"unknown revision\""
-if test -d $srcdir/.git;
-then
-   AC_PATH_PROG([GIT], [git], [])
-   AC_MSG_CHECKING([revision of git repository])
-   run_git=""
-   if test x"$GIT" != x;
-   then
-      echo "$GIT" "$srcdir" >& AS_MESSAGE_LOG_FD
-      run_gitversion=`"$GIT" --git-dir=$srcdir/.git show "--pretty=format:%h %ci" HEAD | head -n 1`
-      run_gitbranch=`"$GIT" --git-dir=$srcdir/.git branch | grep ^* | sed s/*\ //g`
-      build_version="\"git $run_gitbranch $run_gitversion developer version\""
-   fi
-   if test x"$GIT" = x -o x"$run_gitversion" = x;
-   then
-       build_version="\"unknown git commit\""
-   fi
-   AC_MSG_RESULT([$build_version])
-elif test -e $srcdir/VERSION;
-then
-     AC_MSG_CHECKING([revision of distributed release])
-     run_gitversion=`cat $srcdir/VERSION`
-     build_version="\"$run_gitversion\""
-     AC_MSG_RESULT([$build_version])
-fi
+AS_IF([test -d "$srcdir/.git"], [
+    AC_MSG_CHECKING([revision of git repository])
+    AS_IF([test x"$GIT" != x], [
+        echo "$GIT" "$srcdir" >& AS_MESSAGE_LOG_FD
+        run_gitversion=`"$GIT" --git-dir=$srcdir/.git show "--pretty=format:%h %ci" HEAD | head -n 1`
+        run_gitbranch=`"$GIT" --git-dir=$srcdir/.git branch | grep ^* | sed s/*\ //g`
+        build_version="\"git $run_gitbranch $run_gitversion developer version\""
+    ], [
+        build_version="\"unknown git commit\""
+    ])
+    AC_MSG_RESULT([$build_version])
+    developer_version=yes
+], [test -e $srcdir/VERSION], [
+    AC_MSG_CHECKING([revision of distributed release])
+    run_gitversion=`cat $srcdir/VERSION`
+    build_version="\"$run_gitversion\""
+    AC_MSG_RESULT([$build_version])
+], [
+    build_version="\"unknown revision\""
+])
 AC_DEFINE_UNQUOTED([DLB_BUILD_VERSION], [$build_version], [Build version])
 
 dlb_config_args='"'$(echo "$0 $configure_orig_arguments")'"'
@@ -74,13 +71,11 @@ AC_LANG([C])
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
 AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
-AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
-AX_CHECK_COMPILE_FLAG([-Wno-error=unknown-pragmas],
-                      [AC_CFLAGS="${AC_CFLAGS} -Wno-error=unknown-pragmas"])
-AX_CONFIG_CC_WARNINGS
-AX_CHECK_COMPILE_FLAG([$ax_cv_gcc_version_warnings],
-                      [AC_CFLAGS="${AC_CFLAGS} $ax_cv_gcc_version_warnings"])
-AC_SUBST([AC_CFLAGS])
+AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])
+AS_IF([test "x$developer_version" = xyes], [
+    AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
+])
+
 AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 
 AC_CHECK_HEADERS([stdatomic.h])
@@ -235,11 +230,12 @@ case $host in
       AC_LDFLAGS=""
       ;;
 esac
-AC_SUBST([AC_LDFLAGS])
+################################################################################
+
 AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
 
-
-################################################################################
+AC_SUBST([AC_CFLAGS])
+AC_SUBST([AC_LDFLAGS])
 
 # generate the final Makefile etc.
 AC_OUTPUT

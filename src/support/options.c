@@ -237,7 +237,7 @@ static void get_value(option_type_t type, void *option, char *str_value) {
 static void parse_lb_args(char *lb_args, const char *arg_name, char* arg_value) {
     *arg_value = 0;
     // Tokenize a copy of lb_args with " "(blank) delimiter
-    char *end_space;
+    char *end_space = NULL;
     size_t len = strlen(lb_args) + 1;
     char *lb_args_copy = malloc(sizeof(char)*len);
     strncpy(lb_args_copy, lb_args, len);
