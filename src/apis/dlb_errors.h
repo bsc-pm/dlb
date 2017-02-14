@@ -20,7 +20,8 @@ enum DLBErrorCodes {
     DLB_ERR_NOENT           = -11,
     DLB_ERR_NOCOMP          = -12,
     DLB_ERR_REQST           = -13,
-    _DLB_ERROR_LOWER_BOUND  = -14
+    DLB_ERR_NOMEM           = -14,
+    _DLB_ERROR_LOWER_BOUND  = -15
 };
 
 #endif /* DLB_ERRORS_H */

@@ -26,20 +26,25 @@
 #include "apis/dlb_errors.h"
 
 #include <sched.h>
+#include <string.h>
 #include <assert.h>
 
-void cb_set_num_threads(int num_threads) {}
+int nthreads = 0;
+cpu_set_t process_mask;
+
+void cb_set_num_threads(int num_threads) { nthreads = num_threads; }
 void cb_set_active_mask(const cpu_set_t *mask) {}
-void cb_set_process_mask(const cpu_set_t *mask) {}
+void cb_set_process_mask(const cpu_set_t *mask) { memcpy(&process_mask, mask, sizeof(cpu_set_t)); }
 void cb_add_active_mask(const cpu_set_t *mask) {}
 void cb_add_process_mask(const cpu_set_t *mask) {}
-void cb_enable_cpu(int cpuid) {}
-void cb_disable_cpu(int cpuid) {}
+void cb_enable_cpu(int cpuid) { CPU_SET(cpuid, &process_mask); }
+void cb_disable_cpu(int cpuid) { CPU_CLR(cpuid, &process_mask); }
 
 int main( int argc, char **argv ) {
     int error;
     cpu_set_t mask;
     CPU_ZERO(&mask);
+    CPU_ZERO(&process_mask);
     pm_interface_t pm;
     pm_init(&pm);
 
@@ -108,6 +113,20 @@ int main( int argc, char **argv ) {
     assert(error == DLB_SUCCESS);
     error = disable_cpu(&pm, 0);
     assert(error == DLB_SUCCESS);
+
+    // Call callback and check that the parameter is correct
+    update_threads(&pm, 1);
+    assert(nthreads == 1);
+    CPU_ZERO(&mask);
+    CPU_SET(0, &mask);
+    CPU_SET(1, &mask);
+    set_process_mask(&pm, &mask);
+    assert(CPU_COUNT(&process_mask) == 2);
+    enable_cpu(&pm, 2);
+    assert(CPU_COUNT(&process_mask) == 3);
+    disable_cpu(&pm, 2);
+    assert(CPU_COUNT(&process_mask) == 2);
+
 
     return 0;
 }
