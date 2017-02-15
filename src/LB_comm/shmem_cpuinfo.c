@@ -55,6 +55,7 @@ typedef struct {
     stats_state_t stats_state;
     int64_t acc_time[_NUM_STATS];   // Accumulated time for each state
     struct timespec last_update;
+    pid_t      requested_by[1];
 } cpuinfo_t;
 
 typedef struct {
@@ -64,365 +65,543 @@ typedef struct {
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
-static cpu_set_t dlb_mask;       // CPUs not owned by any process but usable by others
 static int node_size;
 static bool cpu_is_public_post_mortem = false;
 static const char *shmem_name = "cpuinfo";
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static int subprocesses_attached = 0;
 
 static inline bool is_idle(int cpu);
 static inline bool is_borrowed(pid_t pid, int cpu);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
-void shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask,
-        const cpu_set_t *dlb_mask, const char *shmem_key) {
-    // Protect double initialization
-    if (shm_handler != NULL) {
-        warning("Shared Memory is being initialized more than once");
-        print_backtrace();
-        return;
+static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
+    pid_t new_guest;
+    if (cpuinfo->state == CPU_BUSY) {
+        new_guest = cpuinfo->owner;
+    } else {
+        // TODO: iterate requested_by and schedule if needed
+        new_guest = cpuinfo->requested_by[0];
+        cpuinfo->requested_by[0] = 0;
     }
+    return new_guest;
+}
+
+int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask,
+        const cpu_set_t *dlb_mask, const char *shmem_key) {
+    int error = DLB_SUCCESS;
+
+    // Shared memory creation
+    pthread_mutex_lock(&mutex);
+    {
+        if (shm_handler == NULL) {
+            node_size = mu_get_system_size();
+            shm_handler = shmem_init((void**)&shdata,
+                    sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
+            subprocesses_attached = 1;
+        } else {
+            ++subprocesses_attached;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+
 
     cpu_set_t affinity_mask;
     mu_get_affinity_mask(&affinity_mask, process_mask, MU_ANY_BIT);
-    node_size = mu_get_system_size();
-
-    // Basic size + zero-length array real length
-    shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
 
     DLB_INSTR( int idle_count = 0; )
 
-    shmem_lock(init_handler);
+    shmem_lock(shm_handler);
     {
-        int cpu;
-        // Check first that my process_mask is not already owned
-        for (cpu = 0; cpu < node_size; cpu++)
-            if (CPU_ISSET(cpu, process_mask)
-                    && shdata->node_info[cpu].owner != NOBODY
-                    && shdata->node_info[cpu].owner != pid) {
-                pid_t owner = shdata->node_info[cpu].owner;
-                shmem_unlock(init_handler);
-                fatal("Error trying to acquire CPU %d, already owned by process %d", cpu, owner);
-            }
-
-        for (cpu = 0; cpu < node_size; cpu++) {
-            // Add my mask info
-            if (CPU_ISSET(cpu, process_mask)) {
-                shdata->node_info[cpu].owner = pid;
-                shdata->node_info[cpu].state = CPU_BUSY;
-                // My CPU could have already a guest if the DLB_mask is being used
-                if (shdata->node_info[cpu].guest == NOBODY) {
-                    shdata->node_info[cpu].guest = pid;
-                    update_cpu_stats(cpu, STATS_OWNED);
-                }
-            }
-            // Add DLB mask info
-            if (CPU_ISSET(cpu, dlb_mask)
-                    && shdata->node_info[cpu].owner == NOBODY
-                    && shdata->node_info[cpu].state == CPU_DISABLED) {
-                shdata->node_info[cpu].state = CPU_LENT;
-            }
-
-            // Look for Idle CPUs
-            DLB_INSTR( if (is_idle(cpu)) idle_count++; )
-        }
-
-        // Initialize initial time and CPU timing on shmem creation
+        // Initialize some values if this is the 1st process attached to the shmem
         if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
             get_time(&shdata->initial_time);
-            for (cpu = 0; cpu < node_size; cpu++) {
-                shdata->node_info[cpu].last_update = shdata->initial_time;
+        }
+
+        int cpuid;
+        // Check first that my process_mask is not already owned
+        for (cpuid = 0; cpuid < node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, process_mask)
+                    && shdata->node_info[cpuid].owner != NOBODY
+                    && shdata->node_info[cpuid].owner != pid) {
+                error = DLB_ERR_PERM;
+                break;
             }
         }
-    }
-    shmem_unlock(init_handler);
 
-    // Global variable is only assigned after the initialization
-    shm_handler = init_handler;
+        if (!error) {
+            for (cpuid = 0; cpuid < node_size; ++cpuid) {
+                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+                // Add my mask info
+                if (CPU_ISSET(cpuid, process_mask)) {
+                    cpuinfo->owner = pid;
+                    cpuinfo->guest = pid;   // should we check that guest == NOBODY?
+                    cpuinfo->state = CPU_BUSY;
+                    update_cpu_stats(cpuid, STATS_OWNED);
+                }
+
+                // Look for Idle CPUs
+                DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
+            }
+
+        }
+    }
+    shmem_unlock(shm_handler);
 
     // TODO mask info should go in shmem_procinfo. Print something else here?
     verbose( VB_SHMEM, "Process Mask: %s", mu_to_str(process_mask) );
     verbose( VB_SHMEM, "Process Affinity Mask: %s", mu_to_str(&affinity_mask) );
 
     add_event(IDLE_CPUS_EVENT, idle_count);
+
+    return error;
 }
 
-void shmem_cpuinfo__finalize(pid_t pid) {
+int shmem_cpuinfo__finalize(pid_t pid) {
     DLB_INSTR( int idle_count = 0; )
 
+    // Lock the shmem to deregister CPUs
     shmem_lock(shm_handler);
     {
-        int cpu;
-        for (cpu = 0; cpu < node_size; cpu++) {
-            if (shdata->node_info[cpu].owner == pid) {
-                shdata->node_info[cpu].owner = NOBODY;
-                if (shdata->node_info[cpu].guest == pid) {
-                    shdata->node_info[cpu].guest = NOBODY;
-                    update_cpu_stats(cpu, STATS_IDLE);
+        int cpuid;
+        for (cpuid = 0; cpuid < node_size; ++cpuid) {
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->owner == pid) {
+                cpuinfo->owner = NOBODY;
+                if (cpuinfo->guest == pid) {
+                    cpuinfo->guest = NOBODY;
+                    update_cpu_stats(cpuid, STATS_IDLE);
                 }
-                if (cpu_is_public_post_mortem
-                        || CPU_ISSET( cpu, &dlb_mask)) {
-                    shdata->node_info[cpu].state = CPU_LENT;
+                if (cpu_is_public_post_mortem) {
+                    cpuinfo->state = CPU_LENT;
                 } else {
-                    shdata->node_info[cpu].state = CPU_DISABLED;
+                    cpuinfo->state = CPU_DISABLED;
                 }
             } else {
                 // Free external CPUs that I may be using
-                if (shdata->node_info[cpu].guest == pid) {
-                    shdata->node_info[cpu].guest = NOBODY;
-                    update_cpu_stats(cpu, STATS_IDLE);
+                if (cpuinfo->guest == pid) {
+                    cpuinfo->guest = NOBODY;
+                    update_cpu_stats(cpuid, STATS_IDLE);
                 }
             }
 
-            DLB_INSTR( if (is_idle(cpu)) idle_count++; )
+            DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
         }
     }
     shmem_unlock(shm_handler);
 
+    // Shared memory destruction
+    pthread_mutex_lock(&mutex);
+    {
+        if (--subprocesses_attached == 0) {
+            shmem_finalize(shm_handler);
+            shm_handler = NULL;
+            shdata = NULL;
+        }
+    }
+
     add_event(IDLE_CPUS_EVENT, idle_count);
 
-    shmem_finalize(shm_handler);
-    shm_handler = NULL;
+    return DLB_SUCCESS;
 }
+
+
+/*****************************************************************************/
+/*  Add CPU                                                                  */
+/*****************************************************************************/
 
 /* Add cpu_mask to the Shared Mask
  * If the process originally owns the CPU:      State => CPU_LENT
  * If the process is currently using the CPU:   Guest => NOBODY
  */
-void shmem_cpuinfo__add_mask(pid_t pid, const cpu_set_t *cpu_mask) {
-    DLB_DEBUG( cpu_set_t freed_cpus; )
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( CPU_ZERO( &freed_cpus ); )
-    DLB_DEBUG( CPU_ZERO( &idle_cpus ); )
+static void add_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+    cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
-    DLB_INSTR( int idle_count = 0; )
+    // If the CPU is owned by the process, just change the state
+    if (cpuinfo->owner == pid) {
+        cpuinfo->state = CPU_LENT;
+    } else {
+        // TODO: remove pid from requested_by
+    }
+
+    // If the process is the guest, free it
+    if (cpuinfo->guest == pid) {
+        cpuinfo->guest = NOBODY;
+        update_cpu_stats(cpuid, STATS_IDLE);
+    }
+
+    // If a new_pid is requested, find a new guest
+    if (new_pid && cpuinfo->guest == NOBODY) {
+        pid_t new_guest = find_new_guest(cpuinfo);
+        if (new_guest != NOBODY) {
+            *new_pid = new_guest;
+            cpuinfo->guest = new_guest;
+        }
+    }
+}
+
+int shmem_cpuinfo__add_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+    int error = DLB_SUCCESS;
+    //DLB_DEBUG( cpu_set_t freed_cpus; )
+    //DLB_DEBUG( cpu_set_t idle_cpus; )
+    //DLB_DEBUG( CPU_ZERO( &freed_cpus ); )
+    //DLB_DEBUG( CPU_ZERO( &idle_cpus ); )
+
+    //DLB_INSTR( int idle_count = 0; )
 
     shmem_lock(shm_handler);
     {
-        int cpu;
-        for (cpu = 0; cpu < node_size; cpu++) {
-            if (CPU_ISSET(cpu, cpu_mask)) {
+        add_cpu(pid, cpuid, new_pid);
 
-                // If the CPU was mine, just change the state
-                if (shdata->node_info[cpu].owner == pid) {
-                    shdata->node_info[cpu].state = CPU_LENT;
+        //// Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
+        //int i;
+        //for (i = 0; i < node_size; i++) {
+            //if (is_idle(i)) {
+                //DLB_INSTR( idle_count++; )
+                //DLB_DEBUG( CPU_SET(i, &idle_cpus); )
+            //}
+        //}
+    }
+    shmem_unlock(shm_handler);
+
+    //DLB_DEBUG( int size = CPU_COUNT(&freed_cpus); )
+    //DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
+    //verbose(VB_SHMEM, "Lending %s", mu_to_str(&freed_cpus));
+    //verbose(VB_SHMEM, "Increasing %d Idle Threads (%d now)", size, post_size);
+    //verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
+
+    //add_event(IDLE_CPUS_EVENT, idle_count);
+    return error;
+}
+
+int shmem_cpuinfo__add_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids) {
+    int error = DLB_SUCCESS;
+
+    //DLB_DEBUG( cpu_set_t freed_cpus; )
+    //DLB_DEBUG( cpu_set_t idle_cpus; )
+    //DLB_DEBUG( CPU_ZERO( &freed_cpus ); )
+    //DLB_DEBUG( CPU_ZERO( &idle_cpus ); )
+
+    //DLB_INSTR( int idle_count = 0; )
+
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid = 0; cpuid < node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, mask)) {
+
+                if (new_pids) {
+                    add_cpu(pid, cpuid, &new_pids[cpuid]);
+                } else {
+                    add_cpu(pid, cpuid, NULL);
                 }
 
-                // If am currently using the CPU, free it
-                if (shdata->node_info[cpu].guest == pid) {
-                    shdata->node_info[cpu].guest = NOBODY;
-                    update_cpu_stats(cpu, STATS_IDLE);
-                    DLB_DEBUG( CPU_SET(cpu, &freed_cpus); )
-                }
-            }
-
-            // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-            if (is_idle(cpu)) {
-                DLB_INSTR( idle_count++; )
-                DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
+            //// Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
+            //if (is_idle(cpuid)) {
+                //DLB_INSTR( idle_count++; )
+                //DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
+            //}
             }
         }
     }
     shmem_unlock(shm_handler);
 
-    DLB_DEBUG( int size = CPU_COUNT(&freed_cpus); )
-    DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
-    verbose(VB_SHMEM, "Lending %s", mu_to_str(&freed_cpus));
-    verbose(VB_SHMEM, "Increasing %d Idle Threads (%d now)", size, post_size);
-    verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
+    //DLB_DEBUG( int size = CPU_COUNT(&freed_cpus); )
+    //DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
+    //verbose(VB_SHMEM, "Lending %s", mu_to_str(&freed_cpus));
+    //verbose(VB_SHMEM, "Increasing %d Idle Threads (%d now)", size, post_size);
+    //verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
 
-    add_event(IDLE_CPUS_EVENT, idle_count);
+    //add_event(IDLE_CPUS_EVENT, idle_count);
+    return error;
 }
 
-/* Add cpu to the Shared Mask
- * If the process originally owns the CPU:      State => CPU_LENT
- * If the process is currently using the CPU:   Guest => NOBODY
- */
-void shmem_cpuinfo__add_cpu(pid_t pid, int cpu) {
-    DLB_DEBUG( cpu_set_t freed_cpus; )
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( CPU_ZERO( &freed_cpus ); )
-    DLB_DEBUG( CPU_ZERO( &idle_cpus ); )
 
-    DLB_INSTR( int idle_count = 0; )
+/*****************************************************************************/
+/*  Recover CPU                                                              */
+/*****************************************************************************/
 
-    shmem_lock(shm_handler);
-    {
-        // If the CPU was mine, just change the state
-        if (shdata->node_info[cpu].owner == pid) {
-            shdata->node_info[cpu].state = CPU_LENT;
-        }
-
-        // If am currently using the CPU, free it
-        if (shdata->node_info[cpu].guest == pid) {
-            shdata->node_info[cpu].guest = NOBODY;
-            update_cpu_stats(cpu, STATS_IDLE);
-            DLB_DEBUG( CPU_SET(cpu, &freed_cpus); )
-        }
-
-        // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-        int i;
-        for (i = 0; i < node_size; i++) {
-            if (is_idle(i)) {
-                DLB_INSTR( idle_count++; )
-                DLB_DEBUG( CPU_SET(i, &idle_cpus); )
-            }
-        }
-    }
-    shmem_unlock(shm_handler);
-
-    DLB_DEBUG( int size = CPU_COUNT(&freed_cpus); )
-    DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
-    verbose(VB_SHMEM, "Lending %s", mu_to_str(&freed_cpus));
-    verbose(VB_SHMEM, "Increasing %d Idle Threads (%d now)", size, post_size);
-    verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
-
-    add_event(IDLE_CPUS_EVENT, idle_count);
-}
-
-/* Acquire some of the CPUs owned by the process
+/* Recover CPU from the Shared Mask
  * CPUs that owner == ME:           State => CPU_BUSY
  * CPUs that guest == NOBODY        Guest => ME
  */
-void shmem_cpuinfo__recover_some_cpus(pid_t pid, cpu_set_t *mask, int max_resources) {
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( CPU_ZERO(&idle_cpus); )
+static int recover_cpu(pid_t pid, int cpuid, pid_t *victim) {
+    int error;
+    cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+    cpuinfo->state = CPU_BUSY;
+    if (cpuinfo->guest == NOBODY) {
+        cpuinfo->guest = pid;
+        update_cpu_stats(cpuid, STATS_OWNED);
+        if (victim) *victim = pid;
+        error = DLB_SUCCESS;
+    } else {
+        if (victim) *victim = cpuinfo->guest;
+        error = DLB_NOTED;
+    }
+    return error;
+}
 
-    DLB_INSTR( int idle_count = 0; )
-
-    cpu_set_t recovered_cpus;
-    CPU_ZERO(&recovered_cpus);
-    max_resources = (max_resources) ? max_resources : INT_MAX;
-
+int shmem_cpuinfo__recover_all(pid_t pid, pid_t *victimlist) {
     shmem_lock(shm_handler);
     {
-        int cpu;
-        for (cpu = 0; cpu < node_size && max_resources > 0; cpu++) {
-            if (shdata->node_info[cpu].owner == pid &&
-                    shdata->node_info[cpu].guest != pid) {
-                shdata->node_info[cpu].state = CPU_BUSY;
-                CPU_SET(cpu, &recovered_cpus);
-                --max_resources;
-
-                if (shdata->node_info[cpu].guest == NOBODY) {
-                    shdata->node_info[cpu].guest = pid;
-                    update_cpu_stats(cpu, STATS_OWNED);
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (shdata->node_info[cpuid].owner == pid) {
+                if (victimlist) {
+                    recover_cpu(pid, cpuid, &victimlist[cpuid]);
+                } else {
+                    recover_cpu(pid, cpuid, NULL);
                 }
-            }
-
-            // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-            if (is_idle(cpu)) {
-                DLB_INSTR( idle_count++; )
-                DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
             }
         }
     }
     shmem_unlock(shm_handler);
-
-    if (mask) {
-        // If a mask was provided, add the recovered CPUs
-        CPU_OR(mask, mask, &recovered_cpus);
-    }
-
-    DLB_DEBUG( int recovered = CPU_COUNT(&recovered_cpus); )
-    DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
-    verbose(VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size);
-    verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
-
-    add_event(IDLE_CPUS_EVENT, idle_count);
+    return DLB_SUCCESS;
 }
 
-/* Remove CPU from the Shared Mask
- * CPU if owner == ME:          State => CPU_BUSY
- * CPU if guest == NOBODY       Guest => ME
- */
-void shmem_cpuinfo__recover_cpu(pid_t pid, int cpu) {
-    DLB_DEBUG( cpu_set_t recovered_cpus; )
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( CPU_ZERO(&recovered_cpus); )
-    DLB_DEBUG( CPU_ZERO(&idle_cpus); )
+int shmem_cpuinfo__recover_cpu(pid_t pid, int cpuid, pid_t *victim) {
+    int error;
+    //DLB_DEBUG( cpu_set_t recovered_cpus; )
+    //DLB_DEBUG( cpu_set_t idle_cpus; )
+    //DLB_DEBUG( CPU_ZERO(&recovered_cpus); )
+    //DLB_DEBUG( CPU_ZERO(&idle_cpus); )
 
-    DLB_INSTR( int idle_count = 0; )
+    //DLB_INSTR( int idle_count = 0; )
 
     shmem_lock(shm_handler);
     {
-        if (shdata->node_info[cpu].owner == pid) {
-            shdata->node_info[cpu].state = CPU_BUSY;
-            if (shdata->node_info[cpu].guest == NOBODY) {
-                shdata->node_info[cpu].guest = pid;
-                update_cpu_stats(cpu, STATS_OWNED);
-                DLB_DEBUG( CPU_SET(cpu, &recovered_cpus); )
-            }
+        if (shdata->node_info[cpuid].owner == pid) {
+            error = recover_cpu(pid, cpuid, victim);
+            // if (!error) //DLB_DEBUG( CPU_SET(cpu, &recovered_cpus); )
+        } else {
+            error = DLB_ERR_PERM;
         }
 
         // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-        if (is_idle(cpu)) {
-            DLB_INSTR( idle_count++; )
-            DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
-        }
+        //if (is_idle(cpu)) {
+            //DLB_INSTR( idle_count++; )
+            //DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
+        //}
     }
     shmem_unlock(shm_handler);
 
-    DLB_DEBUG( int recovered = CPU_COUNT(&recovered_cpus); )
-    DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
-    verbose(VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size);
-    verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
+    //DLB_DEBUG( int recovered = CPU_COUNT(&recovered_cpus); )
+    //DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
+    //verbose(VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size);
+    //verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
 
-    add_event(IDLE_CPUS_EVENT, idle_count);
+    //add_event(IDLE_CPUS_EVENT, idle_count);
+    return error;
 }
 
-/* Remove non default CPUs that have been set as BUSY by their owner
- * or remove also CPUs that habe been set to DISABLED
- * Reclaimed CPUs:    Guest => Owner
- */
-int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask) {
-    int returned = 0;
+int shmem_cpuinfo__recover_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
+    int error = DLB_SUCCESS;
+    //DLB_DEBUG( cpu_set_t idle_cpus; )
+    //DLB_DEBUG( CPU_ZERO(&idle_cpus); )
 
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( cpu_set_t returned_cpus; )
-    DLB_DEBUG( CPU_ZERO(&idle_cpus); )
-    DLB_DEBUG( CPU_ZERO(&returned_cpus); )
+    //DLB_INSTR( int idle_count = 0; )
 
-    DLB_INSTR( int idle_count = 0; )
+    //cpu_set_t recovered_cpus;
+    //CPU_ZERO(&recovered_cpus);
+    //max_resources = (max_resources) ? max_resources : INT_MAX;
 
     shmem_lock(shm_handler);
     {
-        int cpu;
-        for (cpu = 0; cpu < node_size; cpu++) {
-            if (CPU_ISSET(cpu, mask)
-                    && shdata->node_info[cpu].owner != pid
-                    && shdata->node_info[cpu].state != CPU_LENT) {
-                if (shdata->node_info[cpu].guest == pid) {
-                    if (shdata->node_info[cpu].owner == NOBODY) {
-                        shdata->node_info[cpu].guest = NOBODY;
-                        update_cpu_stats(cpu, STATS_IDLE);
-                    } else {
-                        shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
-                        update_cpu_stats(cpu, STATS_OWNED);
-                    }
+        int cpuid;
+        for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
+            if (shdata->node_info[cpuid].owner == pid) {
+                if (victimlist) {
+                    recover_cpu(pid, cpuid, &victimlist[cpuid]);
+                } else {
+                    recover_cpu(pid, cpuid, NULL);
                 }
-                returned++;
-                CPU_CLR(cpu, mask);
-                DLB_DEBUG( CPU_SET(cpu, &returned_cpus); )
+                --ncpus;
+                // if (!error) //CPU_SET(cpuid, &recovered_cpus);
             }
-
             // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-            if ( is_idle(cpu) ) {
-                DLB_INSTR( idle_count++; )
-                DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
+            //if (is_idle(cpu)) {
+                //DLB_INSTR( idle_count++; )
+                //DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
+            //}
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    //DLB_DEBUG( int recovered = CPU_COUNT(&recovered_cpus); )
+    //DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
+    //verbose(VB_SHMEM, "Decreasing %d Idle Threads (%d now)", recovered, post_size);
+    //verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
+
+    //add_event(IDLE_CPUS_EVENT, idle_count);
+    return error;
+}
+
+int shmem_cpuinfo__recover_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
+    int error = DLB_SUCCESS;
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, mask)) {
+                if (shdata->node_info[cpuid].owner == pid) {
+                    if (victimlist) {
+                        recover_cpu(pid, cpuid, &victimlist[cpuid]);
+                    } else {
+                        recover_cpu(pid, cpuid, NULL);
+                    }
+                } else {
+                    error = DLB_ERR_PERM;
+                    break;
+                }
             }
         }
     }
     shmem_unlock(shm_handler);
-    if (returned > 0) {
-        verbose(VB_SHMEM, "Giving back %d Threads (%s)", returned, mu_to_str(&returned_cpus));
-        verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
+    return error;
+}
+
+
+/*****************************************************************************/
+/*  Collect CPU                                                              */
+/*****************************************************************************/
+
+/* Collect CPU
+ * If successful:       Guest => ME
+ */
+static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
+    int error;
+    cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+
+    if (cpuinfo->owner == pid) {
+        // CPU is owned by the process
+        cpuinfo->state = CPU_BUSY;
+        if (cpuinfo->guest == NOBODY) {
+            cpuinfo->guest = pid;
+            if (victim) *victim = pid;
+            error = DLB_SUCCESS;
+        } else {
+            if (victim) *victim = cpuinfo->guest;
+            error = DLB_NOTED;
+        }
+    } else if (cpuinfo->state == CPU_LENT && cpuinfo->guest == NOBODY) {
+        // CPU is available
+        cpuinfo->guest = pid;
+        error = DLB_SUCCESS;
+    } else if (cpuinfo->state != CPU_DISABLED) {
+        // CPU is busy, or lent to another process
+        if (cpuinfo->requested_by[0] == 0) {
+            cpuinfo->requested_by[0] = cpuid;
+            error = DLB_NOTED;
+        } else {
+            error = DLB_ERR_REQST;
+        }
+    } else {
+        // CPU is disabled
+        error = DLB_ERR_PERM;
     }
 
-    add_event(IDLE_CPUS_EVENT, idle_count);
+    return error;
+}
 
-    return returned;
+int shmem_cpuinfo__collect_all(pid_t pid, pid_t *victimlist) {
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (shdata->node_info[cpuid].guest != pid) {
+                // TODO: scheduling
+                if (victimlist) {
+                    collect_cpu(pid, cpuid, &victimlist[cpuid]);
+                } else {
+                    collect_cpu(pid, cpuid, NULL);
+                }
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+    return DLB_SUCCESS;
+}
+
+int shmem_cpuinfo__collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
+    int error;
+    shmem_lock(shm_handler);
+    {
+        error = collect_cpu(pid, cpuid, victim);
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
+int shmem_cpuinfo__collect_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
+    if (ncpus == 0) return DLB_SUCCESS;
+
+    // TODO: lock-less return if there are no CPUs to collect?
+
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        // Collect first owned CPUs
+        for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
+            if (shdata->node_info[cpuid].owner == pid
+                    && shdata->node_info[cpuid].guest != pid) {
+                if (victimlist) {
+                    collect_cpu(pid, cpuid, &victimlist[cpuid]);
+                } else {
+                    collect_cpu(pid, cpuid, NULL);
+                }
+                --ncpus;
+            }
+        }
+
+        if (ncpus > 0) {
+            // see shmem_cpuinfo__collect_mask
+            // TODO: scheduling
+            //      we could decrease the complexity of this function by passing
+            //      by reference a list of CPUs to collect in the desired order
+            //      This array of candidates should be computed in the policy
+            //      or in the mu_utils outside the shmem_lock
+            for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
+                if (shdata->node_info[cpuid].guest != pid) {
+                    if (victimlist) {
+                        collect_cpu(pid, cpuid, &victimlist[cpuid]);
+                    } else {
+                        collect_cpu(pid, cpuid, NULL);
+                    }
+                    --ncpus;
+                }
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return DLB_SUCCESS;
+}
+
+int shmem_cpuinfo__collect_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
+    int error = DLB_SUCCESS;
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, mask)) {
+                if (shdata->node_info[cpuid].guest != pid) {
+                    int err;
+                    if (victimlist) {
+                        err = collect_cpu(pid, cpuid, &victimlist[cpuid]);
+                    } else {
+                        err = collect_cpu(pid, cpuid, NULL);
+                    }
+                    if (err < 0) {
+                        error = err;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
 }
 
 /* Collect as many idle CPUs as indicated by max_resources
@@ -561,6 +740,122 @@ int shmem_cpuinfo__collect_mask(pid_t pid, cpu_set_t *mask, int max_resources, p
     return collected;
 }
 
+
+
+
+#if 0
+
+/*
+  Acquire this cpu, wether it was mine or not
+  Can have a problem if the cpu was borrowed by somebody else
+  If force take it from the owner
+ */
+bool shmem_cpuinfo__acquire_cpu(pid_t pid, int cpu, bool force) {
+
+    bool acquired=true;
+
+    shmem_lock(shm_handler);
+    //cpu is mine -> Claim it
+    if (shdata->node_info[cpu].owner == pid) {
+        shdata->node_info[cpu].state = CPU_BUSY;
+        // It is important to not modify the 'guest' field to remark that the CPU is claimed
+
+    //cpu is not mine but is free -> take it
+    } else if (shdata->node_info[cpu].state == CPU_LENT
+            && shdata->node_info[cpu].guest == NOBODY) {
+        shdata->node_info[cpu].guest = pid;
+        update_cpu_stats(cpu, STATS_GUESTED);
+
+    //cpus is not mine and the owner has recover it
+    } else if (force) {
+        //If force -> take it
+        if (shdata->node_info[cpu].guest == shdata->node_info[cpu].owner) {
+            shdata->node_info[cpu].guest = pid;
+            update_cpu_stats(cpu, STATS_GUESTED);
+
+        } else {
+            //FIXME: Another process has borrowed it
+            // or    the cpu is DISABLED in the system
+            acquired=false;
+        }
+    } else {
+        //No force -> nothing
+        acquired=false;
+    }
+
+    // add_event(IDLE_CPUS_EVENT, idle_count);
+    shmem_unlock(shm_handler);
+    return acquired;
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+/*****************************************************************************/
+/*  Return CPU                                                               */
+/*****************************************************************************/
+
+/* Remove non default CPUs that have been set as BUSY by their owner
+ * or remove also CPUs that habe been set to DISABLED
+ * Reclaimed CPUs:    Guest => Owner
+ */
+int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask) {
+    int returned = 0;
+
+    DLB_DEBUG( cpu_set_t idle_cpus; )
+    DLB_DEBUG( cpu_set_t returned_cpus; )
+    DLB_DEBUG( CPU_ZERO(&idle_cpus); )
+    DLB_DEBUG( CPU_ZERO(&returned_cpus); )
+
+    DLB_INSTR( int idle_count = 0; )
+
+    shmem_lock(shm_handler);
+    {
+        int cpu;
+        for (cpu = 0; cpu < node_size; cpu++) {
+            if (CPU_ISSET(cpu, mask)
+                    && shdata->node_info[cpu].owner != pid
+                    && shdata->node_info[cpu].state != CPU_LENT) {
+                if (shdata->node_info[cpu].guest == pid) {
+                    if (shdata->node_info[cpu].owner == NOBODY) {
+                        shdata->node_info[cpu].guest = NOBODY;
+                        update_cpu_stats(cpu, STATS_IDLE);
+                    } else {
+                        shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
+                        update_cpu_stats(cpu, STATS_OWNED);
+                    }
+                }
+                returned++;
+                CPU_CLR(cpu, mask);
+                DLB_DEBUG( CPU_SET(cpu, &returned_cpus); )
+            }
+
+            // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
+            if ( is_idle(cpu) ) {
+                DLB_INSTR( idle_count++; )
+                DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+    if (returned > 0) {
+        verbose(VB_SHMEM, "Giving back %d Threads (%s)", returned, mu_to_str(&returned_cpus));
+        verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
+    }
+
+    add_event(IDLE_CPUS_EVENT, idle_count);
+
+    return returned;
+}
+
+
 /* Return false if my CPU is being used by other process
  */
 bool shmem_cpuinfo__is_cpu_borrowed(pid_t pid, int cpu) {
@@ -621,49 +916,6 @@ int shmem_cpuinfo__reset_default_cpus(pid_t pid, cpu_set_t *mask) {
     shmem_unlock(shm_handler);
     return n;
 
-}
-
-/*
-  Acquire this cpu, wether it was mine or not
-  Can have a problem if the cpu was borrowed by somebody else
-  If force take it from the owner
- */
-bool shmem_cpuinfo__acquire_cpu(pid_t pid, int cpu, bool force) {
-
-    bool acquired=true;
-
-    shmem_lock(shm_handler);
-    //cpu is mine -> Claim it
-    if (shdata->node_info[cpu].owner == pid) {
-        shdata->node_info[cpu].state = CPU_BUSY;
-        // It is important to not modify the 'guest' field to remark that the CPU is claimed
-
-    //cpu is not mine but is free -> take it
-    } else if (shdata->node_info[cpu].state == CPU_LENT
-            && shdata->node_info[cpu].guest == NOBODY) {
-        shdata->node_info[cpu].guest = pid;
-        update_cpu_stats(cpu, STATS_GUESTED);
-
-    //cpus is not mine and the owner has recover it
-    } else if (force) {
-        //If force -> take it
-        if (shdata->node_info[cpu].guest == shdata->node_info[cpu].owner) {
-            shdata->node_info[cpu].guest = pid;
-            update_cpu_stats(cpu, STATS_GUESTED);
-
-        } else {
-            //FIXME: Another process has borrowed it
-            // or    the cpu is DISABLED in the system
-            acquired=false;
-        }
-    } else {
-        //No force -> nothing
-        acquired=false;
-    }
-
-    // add_event(IDLE_CPUS_EVENT, idle_count);
-    shmem_unlock(shm_handler);
-    return acquired;
 }
 
 /* Update CPU ownership according to the new process mask.
@@ -767,12 +1019,9 @@ int shmem_cpuinfo_ext__preregister(pid_t pid, const cpu_set_t *mask, int steal) 
             // Add my mask info
             if (CPU_ISSET(cpu, mask)) {
                 shdata->node_info[cpu].owner = pid;
+                shdata->node_info[cpu].guest = pid;
                 shdata->node_info[cpu].state = CPU_BUSY;
-                // My CPU could have already a guest if the DLB_mask is being used
-                if (shdata->node_info[cpu].guest == NOBODY) {
-                    shdata->node_info[cpu].guest = pid;
-                    update_cpu_stats(cpu, STATS_OWNED);
-                }
+                update_cpu_stats(cpu, STATS_OWNED);
             }
         }
 

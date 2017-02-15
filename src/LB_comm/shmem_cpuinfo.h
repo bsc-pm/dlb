@@ -36,20 +36,32 @@ typedef enum {
     _NUM_STATS
 } stats_state_t;
 
-void shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const cpu_set_t *dlb_mask,
-        const char *shmem_key);
-void shmem_cpuinfo__finalize(pid_t pid);
+int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask,
+        const cpu_set_t *dlb_mask, const char *shmem_key);
+int shmem_cpuinfo__finalize(pid_t pid);
 int shmem_cpuinfo_ext__preregister(pid_t pid, const cpu_set_t *mask, int steal);
-void shmem_cpuinfo__add_mask(pid_t pid, const cpu_set_t *cpu_mask);
-void shmem_cpuinfo__add_cpu(pid_t pid, int cpu);
-void shmem_cpuinfo__recover_some_cpus(pid_t pid, cpu_set_t *mask, int max_resources);
-void shmem_cpuinfo__recover_cpu(pid_t pid, int cpu);
-int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask);
+
+int shmem_cpuinfo__add_cpu(pid_t pid, int cpuid, pid_t *new_pid);
+int shmem_cpuinfo__add_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids);
+
+int shmem_cpuinfo__recover_all(pid_t pid, pid_t *victimlist);
+int shmem_cpuinfo__recover_cpu(pid_t pid, int cpuid, pid_t *victim);
+int shmem_cpuinfo__recover_cpus(pid_t pid, int ncpus, pid_t *victimlist);
+int shmem_cpuinfo__recover_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
+
+int shmem_cpuinfo__collect_all(pid_t pid, pid_t *victimlist);
+int shmem_cpuinfo__collect_cpu(pid_t pid, int cpuid, pid_t *victim);
+int shmem_cpuinfo__collect_cpus(pid_t pid, int ncpus, pid_t *victimlist);
+int shmem_cpuinfo__collect_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
+
+// old, to be deprecated
 int shmem_cpuinfo__collect_mask(pid_t pid, cpu_set_t *mask, int max_resources, priority_t priority);
+
+int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask);
+
 bool shmem_cpuinfo__is_cpu_borrowed(pid_t pid, int cpu);
 bool shmem_cpuinfo__is_cpu_claimed(pid_t pid, int cpu);
 int shmem_cpuinfo__reset_default_cpus(pid_t pid, cpu_set_t *mask);
-bool shmem_cpuinfo__acquire_cpu(pid_t pid, int cpu, bool force);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t* process_mask);
 
 void shmem_cpuinfo_ext__init(const char *shmem_key);
