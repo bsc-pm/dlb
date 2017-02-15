@@ -142,21 +142,8 @@ COMMON_SRCS = \
 	src/support/types.h                     \
 	src/support/error.c                     \
 	src/support/error.h                     \
-	src/apis/DLB_interface.c                \
-	src/apis/DLB_interface_sp.c             \
-	src/apis/DLB_interfaceF.c               \
-	src/apis/DLB_interface_stats.c          \
-	src/apis/DLB_interface_drom.c           \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
-	src/LB_policies/Lend_light.c            \
-	src/LB_policies/Lend_light.h            \
-	src/LB_policies/Weight.c                \
-	src/LB_policies/Weight.h                \
-	src/LB_policies/lewi_mask.c             \
-	src/LB_policies/lewi_mask.h             \
-	src/LB_policies/autonomous_lewi_mask.c  \
-	src/LB_policies/autonomous_lewi_mask.h  \
 	src/LB_comm/comm_shMem.c                \
 	src/LB_comm/comm_shMem.h                \
 	src/LB_comm/comm_lend_light.c           \
@@ -169,6 +156,14 @@ COMMON_SRCS = \
 	src/LB_comm/shmem_cpuinfo.h             \
 	src/LB_comm/shmem_procinfo.c            \
 	src/LB_comm/shmem_procinfo.h            \
+	src/LB_policies/Lend_light.c            \
+	src/LB_policies/Lend_light.h            \
+	src/LB_policies/Weight.c                \
+	src/LB_policies/Weight.h                \
+	src/LB_policies/lewi_mask.c             \
+	src/LB_policies/lewi_mask.h             \
+	src/LB_policies/autonomous_lewi_mask.c  \
+	src/LB_policies/autonomous_lewi_mask.h  \
 	src/LB_core/DLB_kernel.c                \
 	src/LB_core/DLB_kernel.h                \
 	src/LB_core/DLB_kernel_sp.c             \
@@ -176,6 +171,11 @@ COMMON_SRCS = \
 	src/LB_core/spd.h                       \
 	src/LB_core/lb_funcs.c                  \
 	src/LB_core/lb_funcs.h                  \
+	src/apis/DLB_interface.c                \
+	src/apis/DLB_interface_sp.c             \
+	src/apis/DLB_interfaceF.c               \
+	src/apis/DLB_interface_stats.c          \
+	src/apis/DLB_interface_drom.c           \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la
@@ -595,6 +595,8 @@ clean-deb:
 #################################################################################
 EXTRA_DIST += tests/test/ tests/gens/config.py
 CLEANFILES += tests/test.log tests/test.log.xml
+
+coverage-local: all-am
 
 
 #################################################################################
