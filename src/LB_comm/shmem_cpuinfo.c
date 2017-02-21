@@ -88,8 +88,7 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
     return new_guest;
 }
 
-int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask,
-        const cpu_set_t *dlb_mask, const char *shmem_key) {
+int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key) {
     int error = DLB_SUCCESS;
 
     // Shared memory creation

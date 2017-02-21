@@ -36,8 +36,7 @@ typedef enum {
     _NUM_STATS
 } stats_state_t;
 
-int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask,
-        const cpu_set_t *dlb_mask, const char *shmem_key);
+int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key);
 int shmem_cpuinfo__finalize(pid_t pid);
 int shmem_cpuinfo_ext__preregister(pid_t pid, const cpu_set_t *mask, int steal);
 

@@ -136,11 +136,6 @@ static const opts_dict_t options_dictionary[] = {
         .type = OPT_PRIO_T, .offset = offsetof(options_t, priority),
         .readonly = false, .optional = true
     }, {
-        .var_name = "LB_MASK", .arg_name = "--mask", .default_value = "",
-        .description = "Cpuset mask owned by DLB",
-        .type = OPT_MASK_T, .offset = offsetof(options_t, dlb_mask),
-        .readonly = true, .optional = true
-    }, {
         .var_name = "LB_SHM_KEY", .arg_name = "--shm-key", .default_value = "",
         .description = "Shared Memory key. It determines the namefile to which DLB processes can "
             "nterconnect, default: user ID",

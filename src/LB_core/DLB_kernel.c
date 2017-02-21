@@ -77,8 +77,7 @@ int Initialize(const cpu_set_t *mask, const char *lb_args) {
         spd.lb_funcs.init(&spd);
         if (policy != POLICY_NONE || spd.options.drom || spd.options.statistics) {
             shmem_procinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
-            shmem_cpuinfo__init(spd.id, &spd.process_mask, &spd.options.dlb_mask,
-                    spd.options.shm_key);
+            shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
         }
         if (spd.options.barrier) {
             shmem_barrier_init(spd.options.shm_key);

@@ -42,7 +42,6 @@ typedef struct Options {
     char shm_key[MAX_OPTION_LENGTH];
     bool aggressive_init;
     priority_t priority;
-    cpu_set_t dlb_mask;
     debug_opts_t debug_opts;
     interaction_mode_t mode;
 } options_t;

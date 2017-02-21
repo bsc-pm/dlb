@@ -44,7 +44,7 @@ int main( int argc, char **argv ) {
     int i;
 
     // Init
-    error = shmem_cpuinfo__init(pid, &process_mask, &process_mask, NULL);
+    error = shmem_cpuinfo__init(pid, &process_mask, NULL);
     assert(error == DLB_SUCCESS);
 
     // Add CPU
