@@ -126,7 +126,7 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
     } else if (pid == 0) {
         pid = getpid();
         DLB_Drom_Init();
-        int error = DLB_Drom_PreRegister(pid, new_mask, 1);
+        int error = DLB_Drom_PreInit(pid, new_mask, 1, NULL);
         dlb_check(error, pid, __FUNCTION__);
         DLB_Drom_Finalize();
         execvp(argv[0], argv);

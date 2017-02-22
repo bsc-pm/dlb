@@ -302,7 +302,7 @@ void shmem_procinfo_ext__finalize(void) {
     shm_ext_handler = NULL;
 }
 
-int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
+int shmem_procinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal) {
     if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
