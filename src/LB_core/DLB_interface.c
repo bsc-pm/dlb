@@ -272,6 +272,10 @@ int DLB_Drom_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal) {
     return drom_ext_preregister(pid, mask, steal);
 }
 
+int DLB_Drom_PostFinalize(int pid, int return_stolen) {
+    return drom_ext_postfinalize(pid, return_stolen);
+}
+
 /* MPI API */
 #ifdef MPI_LIB
 #include <mpi.h>

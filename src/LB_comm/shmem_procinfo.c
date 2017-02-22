@@ -85,7 +85,7 @@ static void update_process_loads(void);
 static void update_process_mask(void);
 static void update_process_mask_new(int *new_threads, cpu_set_t *new_mask);
 static int  register_mask(pinfo_t *new_owner, const cpu_set_t *mask);
-static int  unregister_mask(pinfo_t *owner, const cpu_set_t *mask);
+static int  unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_stolen);
 static int  set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run);
 static bool steal_cpu(pinfo_t* new_owner, pinfo_t *victim, int cpu, bool dry_run);
 static int  steal_mask(pinfo_t *new_owner, const cpu_set_t *mask, bool dry_run);
@@ -176,9 +176,9 @@ void shmem_procinfo__finalize(void) {
     {
         // Unregister our process mask, or future mask if we are dirty
         if (process->dirty) {
-            unregister_mask(process, &process->future_process_mask);
+            unregister_mask(process, &process->future_process_mask, false);
         } else {
-            unregister_mask(process, &process->current_process_mask);
+            unregister_mask(process, &process->current_process_mask, false);
         }
 
         // Clear process fields
@@ -305,7 +305,7 @@ void shmem_procinfo_ext__finalize(void) {
 int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
     if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
-    int error = DLB_SUCCESS;;
+    int error = DLB_SUCCESS;
     shmem_lock(shm_ext_handler);
     {
         int p;
@@ -350,6 +350,44 @@ int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal) {
             shmem_unlock(shm_ext_handler);
             // FIXME: we should clean the shmem before that
             fatal("Not enough space in the shared memory to register process %d", pid);
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+    return error;
+}
+
+int shmem_procinfo_ext__postfinalize(int pid, int return_stolen) {
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+
+    int error = DLB_SUCCESS;
+    shmem_lock(shm_ext_handler);
+    {
+        pinfo_t *process = get_process(pid);
+        if (process == NULL) {
+            verbose(VB_DROM, "Cannot finalize process %d", pid);
+            error = DLB_ERR_NOPROC;
+        } else {
+            // Unregister process mask, or future mask if dirty
+            if (process->dirty) {
+                unregister_mask(process, &process->future_process_mask, return_stolen);
+            } else {
+                unregister_mask(process, &process->current_process_mask, return_stolen);
+            }
+
+            // Clear process fields
+            process->pid = NOBODY;
+            process->dirty = false;
+            process->returncode = 0;
+            CPU_ZERO(&process->current_process_mask);
+            CPU_ZERO(&process->future_process_mask);
+            CPU_ZERO(&process->stolen_cpus);
+            process->active_cpus = 0;
+            process->cpu_usage = 0.0;
+            process->cpu_avg_usage = 0.0;
+#ifdef DLB_LOAD_AVERAGE
+            process->load[3] = {0.0f, 0.0f, 0.0f};
+            process->last_ltime = {0};
+#endif
         }
     }
     shmem_unlock(shm_ext_handler);
@@ -819,12 +857,13 @@ static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
 
 // Unregister CPUs. Either add them to the free_mask or give them back to their owner
 //   * update: only return CPUs if it's enabled in debug options
-static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask) {
+static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_stolen) {
     // Return if empty mask
     if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
     verbose(VB_DROM, "Process %d unregistering mask %s", owner->pid, mu_to_str(mask));
-    if (options_get_debug_opts() & DBG_RETURNSTOLEN) {
+    if (return_stolen ||
+            (options_get_debug_opts() & DBG_RETURNSTOLEN)) {
         // Look if each CPU belongs to some other process
         int c, p;
         for (c = 0; c < max_cpus; c++) {
@@ -894,7 +933,7 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run) {
 
     if (!dry_run) {
         error = error ? error : register_mask(process, &cpus_to_acquire);
-        error = error ? error : unregister_mask(process, &cpus_to_free);
+        error = error ? error : unregister_mask(process, &cpus_to_free, false);
     }
 
     return error;

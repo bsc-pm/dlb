@@ -365,6 +365,13 @@ int DLB_Drom_getCPUs(int ncpus, int steal, int *cpulist, int *nelems, int max_le
  */
 int DLB_Drom_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal);
 
+/* \brief Finalize process
+ * \param[in] pid Process ID
+ * \param[in] return_stolen whether to return stolen CPUs
+ * \return 0 on success, -1 if registration failed
+ */
+int DLB_Drom_PostFinalize(int pid, int return_stolen);
+
 /*******************************************************/
 /*    MPI Interface                                    */
 /*******************************************************/

@@ -25,6 +25,8 @@
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -58,7 +60,7 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
                 "usage:\n"
                 "\t%1$s [-l|--list] [-p <pid>]\n"
                 "\t%1$s [-s|--set <cpu_list> -p <pid>]\n"
-                "\t%1$s [-s|--set <cpu_list> program]\n"
+                "\t%1$s [-s|--set <cpu_list> [-b|--borrow] program]\n"
                 "\t%1$s [-r|--remove <cpu_list>] [-p <pid>]\n\n"
                 ), program);
 
@@ -71,6 +73,7 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
                 "  -c, --cpus <cpu_list>    same as --set\n"
                 "  -r, --remove <cpu_list>  remove CPU ownership of any DLB process according to cpu_list\n"
                 "  -p, --pid                operate only on existing given pid\n"
+                "  -b, --borrow             stolen CPUs are recovered after process finalization\n"
                 "  -h, --help               print this help\n"
                 "\n"
                 "<cpu_list> argument accepts the following formats:\n"
@@ -114,16 +117,28 @@ static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
     fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(new_mask));
 }
 
-static void __attribute__((__noreturn__)) execute(char **argv, const cpu_set_t *new_mask) {
+static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
     sched_setaffinity(0, sizeof(cpu_set_t), new_mask);
-    DLB_Drom_Init();
-    pid_t pid = getpid();
-    int error = DLB_Drom_PreRegister(pid, new_mask, 1);
-    dlb_check(error, pid, __FUNCTION__);
-    DLB_Drom_Finalize();
-    execvp(argv[0], argv);
-    fprintf(stderr, "Failed to execute %s\n", argv[0]);
-    exit(EXIT_FAILURE);
+    pid_t pid = fork();
+    if (pid < 0) {
+        fprintf(stderr, "Failed to execute %s\n", argv[0]);
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        pid = getpid();
+        DLB_Drom_Init();
+        int error = DLB_Drom_PreRegister(pid, new_mask, 1);
+        dlb_check(error, pid, __FUNCTION__);
+        DLB_Drom_Finalize();
+        execvp(argv[0], argv);
+        fprintf(stderr, "Failed to execute %s\n", argv[0]);
+        exit(EXIT_FAILURE);
+    } else {
+        wait(NULL);
+        DLB_Drom_Init();
+        int error = DLB_Drom_PostFinalize(pid, borrow);
+        dlb_check(error, pid, __FUNCTION__);
+        DLB_Drom_Finalize();
+    }
 }
 
 static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
@@ -196,6 +211,7 @@ int main(int argc, char *argv[]) {
     bool do_set = false;
     bool do_remove = false;
     bool do_get = false;
+    bool borrow = false;
 
     pid_t pid = 0;
     cpu_set_t cpu_list;
@@ -212,11 +228,12 @@ int main(int argc, char *argv[]) {
         {"cpus",     required_argument, 0, 'c'},
         {"remove",   required_argument, 0, 'r'},
         {"pid",      required_argument, 0, 'p'},
+        {"borrow",   no_argument,       0, 'b'},
         {"help",     no_argument,       0, 'h'},
         {0,          0,                 0, 0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "lg:s:c:r:p:yh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "lg:s:c:r:p:bh", long_options, NULL)) != -1) {
         switch (opt) {
         case 'l':
             do_list = true;
@@ -237,6 +254,9 @@ int main(int argc, char *argv[]) {
         case 'p':
             pid = strtoul(optarg, NULL, 10);
             break;
+        case 'b':
+            borrow = true;
+            break;
         case 'h':
             usage(argv[0], stdout);
             break;
@@ -255,7 +275,7 @@ int main(int argc, char *argv[]) {
     }
     else if (do_set && !pid && argc > optind) {
         argv += optind;
-        execute(argv, &cpu_list);
+        execute(argv, &cpu_list, borrow);
     }
     else if (do_remove) {
         remove_affinity(pid, &cpu_list);

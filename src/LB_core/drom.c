@@ -66,3 +66,9 @@ int drom_ext_preregister(int pid, const cpu_set_t *mask, int steal) {
     error = error ? error : shmem_cpuinfo_ext__preregister(pid, mask, steal);
     return error;
 }
+
+int drom_ext_postfinalize(int pid, int return_stolen) {
+    int error = shmem_procinfo_ext__postfinalize(pid, return_stolen);
+    error = error ? error : shmem_cpuinfo_ext__postfinalize(pid);
+    return error;
+}
