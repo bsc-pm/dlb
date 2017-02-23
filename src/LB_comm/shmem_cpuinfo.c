@@ -992,7 +992,8 @@ void shmem_cpuinfo_ext__finalize(void) {
     shm_ext_handler = NULL;
 }
 
-int shmem_cpuinfo_ext__preregister(pid_t pid, const cpu_set_t *mask, int steal) {
+int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
     int error = DLB_SUCCESS;
 
     cpu_set_t affinity_mask;
@@ -1034,6 +1035,38 @@ int shmem_cpuinfo_ext__preregister(pid_t pid, const cpu_set_t *mask, int steal) 
     }
     shmem_unlock(shm_ext_handler);
 
+    return error;
+}
+
+int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+    int error = DLB_SUCCESS;
+
+    shmem_lock(shm_ext_handler);
+    {
+        int cpu;
+        for (cpu = 0; cpu < node_size; cpu++) {
+            if (shdata->node_info[cpu].owner == pid) {
+                shdata->node_info[cpu].owner = NOBODY;
+                if (shdata->node_info[cpu].guest == pid) {
+                    shdata->node_info[cpu].guest = NOBODY;
+                    update_cpu_stats(cpu, STATS_IDLE);
+                }
+                if (cpu_is_public_post_mortem) {
+                    shdata->node_info[cpu].state = CPU_LENT;
+                } else {
+                    shdata->node_info[cpu].state = CPU_DISABLED;
+                }
+            } else {
+                // Free external CPUs that I may be using
+                if (shdata->node_info[cpu].guest == pid) {
+                    shdata->node_info[cpu].guest = NOBODY;
+                    update_cpu_stats(cpu, STATS_IDLE);
+                }
+            }
+        }
+    }
+    shmem_unlock(shm_ext_handler);
     return error;
 }
 

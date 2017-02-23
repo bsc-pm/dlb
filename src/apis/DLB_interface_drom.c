@@ -28,6 +28,9 @@
 #include "support/options.h"
 
 #include <sched.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #pragma GCC visibility push(default)
 
@@ -67,9 +70,42 @@ int DLB_DROM_GetCpus(int ncpus, int steal, int *cpulist, int *nelems, int max_le
     return shmem_procinfo_ext__getcpus(ncpus, steal, cpulist, nelems, max_len);
 }
 
-int DLB_DROM_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal) {
-    int error = shmem_procinfo_ext__preregister(pid, mask, steal);
-    error = error ? error : shmem_cpuinfo_ext__preregister(pid, mask, steal);
+int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ) {
+    char env_var[] = "LB_PREINIT";
+    char env_val[8];
+    snprintf(env_val, 8, "%d", pid);
+    if (environ == NULL) {
+        setenv(env_var, env_val, 1);
+    } else {
+        // warning: environ must be a malloc'ed pointer and must not contain LB_PREINIT already
+        size_t size = 0;
+        char **ep;
+        // size will contain the number of existing variables
+        for (ep=*environ; *ep != NULL; ++ep) ++size;
+        // realloc (num_existing_vars + 1(new_var) + 1(NULL))
+        char **new_environ = (char**) realloc(*environ, (size + 2)*sizeof(char*));
+        if (new_environ == NULL) return -1;
+        // set last position of environ
+        new_environ[size+1] = NULL;
+        // pointer where new variable will be
+        ep = new_environ + size;
+
+        const size_t varlen = strlen(env_var) + 1 + strlen(env_val) + 1;
+        char *np = malloc(varlen);
+        snprintf(np, varlen, "%s=%s", env_var, env_val);
+        *ep = np;
+
+        *environ = new_environ;
+    }
+
+    int error = shmem_procinfo_ext__preinit(pid, mask, steal);
+    error = error ? error : shmem_cpuinfo_ext__preinit(pid, mask, steal);
+    return error;
+}
+
+int DLB_DROM_PostFinalize(int pid, int return_stolen) {
+    int error = shmem_procinfo_ext__postfinalize(pid, return_stolen);
+    error = error ? error : shmem_cpuinfo_ext__postfinalize(pid);
     return error;
 }
 

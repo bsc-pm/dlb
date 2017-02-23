@@ -31,7 +31,8 @@ int shmem_procinfo__polldrom(pid_t pid, int *new_threads, cpu_set_t *new_mask);
 
 int shmem_procinfo_ext__init(const char *shmem_key);
 int shmem_procinfo_ext__finalize(void);
-int shmem_procinfo_ext__preregister(int pid, const cpu_set_t *mask, int steal);
+int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal);
+int shmem_procinfo_ext__postfinalize(pid_t pid, int return_stolen);
 void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len);
 int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask);
 int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask);

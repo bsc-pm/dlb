@@ -85,9 +85,17 @@ int DLB_DROM_GetCpus(int ncpus, int steal, int *cpulist, int *nelems, int max_le
  *  \param[in] pid Process ID that gets the reservation
  *  \param[in] mask Process mask to register
  *  \param[in] steal whether to steal owned CPUs
+ *  \param[inout] environ environment to modify if the subprocess may be able to fork
  *  \return error code
  */
-int DLB_DROM_PreRegister(int pid, const_dlb_cpu_set_t mask, int steal);
+int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ);
+
+/*! \brief Finalize process
+ *  \param[in] pid Process ID
+ *  \param[in] return_stolen whether to return stolen CPUs
+ *  \return error code
+ */
+int DLB_DROM_PostFinalize(int pid, int return_stolen);
 
 #ifdef __cplusplus
 }
