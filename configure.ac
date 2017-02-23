@@ -70,9 +70,10 @@ AC_PROG_CPP
 AC_LANG([C])
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
-AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
 AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])
 AS_IF([test "x$developer_version" = xyes], [
+    AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
+    AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
     AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
 ])
 
