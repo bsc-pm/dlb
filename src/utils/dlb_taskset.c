@@ -37,6 +37,7 @@
 #include <regex.h>
 #include <stdbool.h>
 #include "support/mask_utils.h"
+#include "support/error.h"
 #include "LB_core/DLB_interface.h"
 
 static int sys_size;
@@ -136,7 +137,10 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
         wait(NULL);
         DLB_Drom_Init();
         int error = DLB_Drom_PostFinalize(pid, borrow);
-        dlb_check(error, pid, __FUNCTION__);
+        if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
+            // DLB_ERR_NOPROC must be ignored here
+            dlb_check(error, pid, __FUNCTION__);
+        }
         DLB_Drom_Finalize();
     }
 }
