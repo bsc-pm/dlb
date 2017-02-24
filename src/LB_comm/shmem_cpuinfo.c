@@ -199,6 +199,7 @@ int shmem_cpuinfo__finalize(pid_t pid) {
             shdata = NULL;
         }
     }
+    pthread_mutex_unlock(&mutex);
 
     add_event(IDLE_CPUS_EVENT, idle_count);
 
@@ -329,7 +330,10 @@ static int recover_cpu(pid_t pid, int cpuid, pid_t *victim) {
     int error;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
     cpuinfo->state = CPU_BUSY;
-    if (cpuinfo->guest == NOBODY) {
+    if (cpuinfo->guest == pid) {
+        error = DLB_NOUPDT;
+    }
+    else if (cpuinfo->guest == NOBODY) {
         cpuinfo->guest = pid;
         update_cpu_stats(cpuid, STATS_OWNED);
         if (victim) *victim = pid;
@@ -342,21 +346,28 @@ static int recover_cpu(pid_t pid, int cpuid, pid_t *victim) {
 }
 
 int shmem_cpuinfo__recover_all(pid_t pid, pid_t *victimlist) {
+    int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (shdata->node_info[cpuid].owner == pid) {
-                if (victimlist) {
-                    recover_cpu(pid, cpuid, &victimlist[cpuid]);
-                } else {
-                    recover_cpu(pid, cpuid, NULL);
+                pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
+                int local_error = recover_cpu(pid, cpuid, victim);
+                switch(local_error) {
+                    case DLB_NOTED:
+                        error = DLB_NOTED;
+                        break;
+                    case DLB_SUCCESS:
+                        error = (error == DLB_NOTED) ? DLB_NOTED : DLB_SUCCESS;
+                        break;
+                    // default DLB_NOUPDT: keep error unchanged
                 }
             }
         }
     }
     shmem_unlock(shm_handler);
-    return DLB_SUCCESS;
+    return error;
 }
 
 int shmem_cpuinfo__recover_cpu(pid_t pid, int cpuid, pid_t *victim) {
@@ -490,7 +501,7 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
     } else if (cpuinfo->state != CPU_DISABLED) {
         // CPU is busy, or lent to another process
         if (cpuinfo->requested_by[0] == 0) {
-            cpuinfo->requested_by[0] = cpuid;
+            cpuinfo->requested_by[0] = pid;
             error = DLB_NOTED;
         } else {
             error = DLB_ERR_REQST;
