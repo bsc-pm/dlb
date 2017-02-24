@@ -135,7 +135,10 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
         wait(NULL);
         DLB_DROM_Init();
         int error = DLB_DROM_PostFinalize(pid, borrow);
-        dlb_check(error, pid, __FUNCTION__);
+        if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
+            // DLB_ERR_NOPROC must be ignored here
+            dlb_check(error, pid, __FUNCTION__);
+        }
         DLB_DROM_Finalize();
     }
 }

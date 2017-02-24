@@ -32,6 +32,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void modify_env(const char *name, const char *value, char ***environ) {
+    size_t size = 0;
+    char **ep;
+    // size will contain the number of existing variables
+    for (ep=*environ; *ep != NULL; ++ep) ++size;
+    // realloc (num_existing_vars + 1(new_var) + 1(NULL))
+    char **new_environ = (char**) realloc(*environ, (size + 2)*sizeof(char*));
+    // set last position of environ
+    new_environ[size+1] = NULL;
+    // pointer where new variable will be
+    ep = new_environ + size;
+
+    const size_t varlen = strlen(name) + 1 + strlen(value) + 1;
+    char *np = malloc(varlen);
+    snprintf(np, varlen, "%s=%s", name, value);
+    *ep = np;
+
+    *environ = new_environ;
+}
+
 #pragma GCC visibility push(default)
 
 int DLB_DROM_Init(void) {
@@ -71,31 +91,15 @@ int DLB_DROM_GetCpus(int ncpus, int steal, int *cpulist, int *nelems, int max_le
 }
 
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ) {
-    char env_var[] = "LB_PREINIT";
-    char env_val[8];
-    snprintf(env_val, 8, "%d", pid);
+    char preinit_value[8];
+    snprintf(preinit_value, 8, "%d", pid);
     if (environ == NULL) {
-        setenv(env_var, env_val, 1);
+        setenv("LB_PREINIT", preinit_value, 1);
+        setenv("LB_DROM", "1", 1);
     } else {
-        // warning: environ must be a malloc'ed pointer and must not contain LB_PREINIT already
-        size_t size = 0;
-        char **ep;
-        // size will contain the number of existing variables
-        for (ep=*environ; *ep != NULL; ++ep) ++size;
-        // realloc (num_existing_vars + 1(new_var) + 1(NULL))
-        char **new_environ = (char**) realloc(*environ, (size + 2)*sizeof(char*));
-        if (new_environ == NULL) return -1;
-        // set last position of environ
-        new_environ[size+1] = NULL;
-        // pointer where new variable will be
-        ep = new_environ + size;
-
-        const size_t varlen = strlen(env_var) + 1 + strlen(env_val) + 1;
-        char *np = malloc(varlen);
-        snprintf(np, varlen, "%s=%s", env_var, env_val);
-        *ep = np;
-
-        *environ = new_environ;
+        // warning: environ must be a malloc'ed pointer and must not contain these variables already
+        modify_env("LB_PREINIT", preinit_value, environ);
+        modify_env("LB_DROM", "1", environ);
     }
 
     int error = shmem_procinfo_ext__preinit(pid, mask, steal);
