@@ -70,6 +70,7 @@ static bool cpu_is_public_post_mortem = false;
 static const char *shmem_name = "cpuinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
+static shmem_handler_t *shm_ext_handler = NULL;
 
 static inline bool is_idle(int cpu);
 static inline bool is_borrowed(pid_t pid, int cpu);
@@ -86,6 +87,43 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
         cpuinfo->requested_by[0] = 0;
     }
     return new_guest;
+}
+
+
+/*****************************************************************************/
+/*  Init / Register                                                          */
+/*****************************************************************************/
+
+static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
+    int cpuid;
+    if (!steal) {
+        // Check first that my mask is not already owned
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, mask)
+                    && shdata->node_info[cpuid].owner != NOBODY
+                    && shdata->node_info[cpuid].owner != pid) {
+                return DLB_ERR_PERM;
+            }
+        }
+    }
+
+    /* Here, we're assuming that if (!steal), we come from Init() and thus the CPU
+     * is clean and has no guest.
+     * Otherwise, if (steal), the DROM module has triggered a set_process_mask that
+     * should fix the inconsistency */
+
+    // Register mask
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        if (CPU_ISSET(cpuid, mask)) {
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            cpuinfo->owner = pid;
+            cpuinfo->guest = pid;
+            cpuinfo->state = CPU_BUSY;
+            update_cpu_stats(cpuid, STATS_OWNED);
+        }
+    }
+
+    return DLB_SUCCESS;
 }
 
 int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key) {
@@ -106,10 +144,10 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
     pthread_mutex_unlock(&mutex);
 
 
-    cpu_set_t affinity_mask;
-    mu_get_affinity_mask(&affinity_mask, process_mask, MU_ANY_BIT);
+    //cpu_set_t affinity_mask;
+    //mu_get_affinity_mask(&affinity_mask, process_mask, MU_ANY_BIT);
 
-    DLB_INSTR( int idle_count = 0; )
+    //DLB_INSTR( int idle_count = 0; )
 
     shmem_lock(shm_handler);
     {
@@ -118,75 +156,84 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
             get_time(&shdata->initial_time);
         }
 
-        int cpuid;
-        // Check first that my process_mask is not already owned
-        for (cpuid = 0; cpuid < node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, process_mask)
-                    && shdata->node_info[cpuid].owner != NOBODY
-                    && shdata->node_info[cpuid].owner != pid) {
-                error = DLB_ERR_PERM;
-                break;
-            }
-        }
-
-        if (!error) {
-            for (cpuid = 0; cpuid < node_size; ++cpuid) {
-                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-                // Add my mask info
-                if (CPU_ISSET(cpuid, process_mask)) {
-                    cpuinfo->owner = pid;
-                    cpuinfo->guest = pid;   // should we check that guest == NOBODY?
-                    cpuinfo->state = CPU_BUSY;
-                    update_cpu_stats(cpuid, STATS_OWNED);
-                }
-
-                // Look for Idle CPUs
-                DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
-            }
-
-        }
+        // Register process_mask, with stealing = false always in normal Init()
+        error = register_process(pid, process_mask, false);
     }
     shmem_unlock(shm_handler);
 
     // TODO mask info should go in shmem_procinfo. Print something else here?
-    verbose( VB_SHMEM, "Process Mask: %s", mu_to_str(process_mask) );
-    verbose( VB_SHMEM, "Process Affinity Mask: %s", mu_to_str(&affinity_mask) );
+    //verbose( VB_SHMEM, "Process Mask: %s", mu_to_str(process_mask) );
+    //verbose( VB_SHMEM, "Process Affinity Mask: %s", mu_to_str(&affinity_mask) );
 
-    add_event(IDLE_CPUS_EVENT, idle_count);
+    //add_event(IDLE_CPUS_EVENT, idle_count);
 
     return error;
 }
 
+void shmem_cpuinfo_ext__init(const char *shmem_key) {
+    // Protect multiple initialization
+    if (shm_ext_handler != NULL) return;
+
+    node_size = mu_get_system_size();
+    shm_ext_handler = shmem_init((void**)&shdata,
+            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
+}
+
+int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+    int error;
+    shmem_lock(shm_ext_handler);
+    {
+        // Initialize initial time and CPU timing on shmem creation
+        if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
+            get_time(&shdata->initial_time);
+        }
+
+        error = register_process(pid, mask, steal);
+    }
+    shmem_unlock(shm_ext_handler);
+
+    return error;
+}
+
+
+/*****************************************************************************/
+/*  Finalize / Deregister                                                    */
+/*****************************************************************************/
+
+static void deregister_process(pid_t pid) {
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        if (cpuinfo->owner == pid) {
+            cpuinfo->owner = NOBODY;
+            if (cpuinfo->guest == pid) {
+                cpuinfo->guest = NOBODY;
+                update_cpu_stats(cpuid, STATS_IDLE);
+            }
+            if (cpu_is_public_post_mortem) {
+                cpuinfo->state = CPU_LENT;
+            } else {
+                cpuinfo->state = CPU_DISABLED;
+            }
+        } else {
+            // Free external CPUs that I may be using
+            if (cpuinfo->guest == pid) {
+                cpuinfo->guest = NOBODY;
+                update_cpu_stats(cpuid, STATS_IDLE);
+            }
+        }
+    }
+}
+
 int shmem_cpuinfo__finalize(pid_t pid) {
-    DLB_INSTR( int idle_count = 0; )
+    //DLB_INSTR( int idle_count = 0; )
 
     // Lock the shmem to deregister CPUs
     shmem_lock(shm_handler);
     {
-        int cpuid;
-        for (cpuid = 0; cpuid < node_size; ++cpuid) {
-            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-            if (cpuinfo->owner == pid) {
-                cpuinfo->owner = NOBODY;
-                if (cpuinfo->guest == pid) {
-                    cpuinfo->guest = NOBODY;
-                    update_cpu_stats(cpuid, STATS_IDLE);
-                }
-                if (cpu_is_public_post_mortem) {
-                    cpuinfo->state = CPU_LENT;
-                } else {
-                    cpuinfo->state = CPU_DISABLED;
-                }
-            } else {
-                // Free external CPUs that I may be using
-                if (cpuinfo->guest == pid) {
-                    cpuinfo->guest = NOBODY;
-                    update_cpu_stats(cpuid, STATS_IDLE);
-                }
-            }
-
-            DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
-        }
+        deregister_process(pid);
+        //DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
     }
     shmem_unlock(shm_handler);
 
@@ -201,11 +248,30 @@ int shmem_cpuinfo__finalize(pid_t pid) {
     }
     pthread_mutex_unlock(&mutex);
 
-    add_event(IDLE_CPUS_EVENT, idle_count);
+    //add_event(IDLE_CPUS_EVENT, idle_count);
 
     return DLB_SUCCESS;
 }
 
+void shmem_cpuinfo_ext__finalize(void) {
+    // Protect multiple finalization
+    if (shm_ext_handler == NULL) return;
+
+    shmem_finalize(shm_ext_handler);
+    shm_ext_handler = NULL;
+}
+
+int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+    int error = DLB_SUCCESS;
+
+    shmem_lock(shm_ext_handler);
+    {
+        deregister_process(pid);
+    }
+    shmem_unlock(shm_ext_handler);
+    return error;
+}
 
 /*****************************************************************************/
 /*  Add CPU                                                                  */
@@ -979,107 +1045,6 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t* process_mask) {
  * These functions are intended to be called from external processes only to consult the shdata
  * That's why we should initialize and finalize the shared memory
  */
-
-static shmem_handler_t *shm_ext_handler = NULL;
-
-void shmem_cpuinfo_ext__init(const char *shmem_key) {
-    // Protect multiple initialization
-    if (shm_ext_handler != NULL) {
-        return;
-    }
-
-    node_size = mu_get_system_size();
-    shm_ext_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
-}
-
-void shmem_cpuinfo_ext__finalize(void) {
-    // Protect multiple finalization
-    if (shm_ext_handler == NULL) {
-        return;
-    }
-
-    shmem_finalize(shm_ext_handler);
-    shm_ext_handler = NULL;
-}
-
-int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
-    int error = DLB_SUCCESS;
-
-    cpu_set_t affinity_mask;
-    mu_get_affinity_mask(&affinity_mask, mask, MU_ANY_BIT);
-
-    shmem_lock(shm_ext_handler);
-    {
-        int cpu;
-        if (!steal) {
-            // Check first that my process_mask is not already owned
-            for (cpu = 0; cpu < node_size; cpu++) {
-                if (CPU_ISSET(cpu, mask) && shdata->node_info[cpu].owner != NOBODY) {
-                    pid_t owner = shdata->node_info[cpu].owner;
-                    shmem_unlock(shm_ext_handler);
-                    warning("Error trying to acquire CPU %d, already owned by process %d",
-                            cpu, owner);
-                    error = DLB_ERR_PERM;
-                }
-            }
-        }
-
-        for (cpu = 0; cpu < node_size; cpu++) {
-            // Add my mask info
-            if (CPU_ISSET(cpu, mask)) {
-                shdata->node_info[cpu].owner = pid;
-                shdata->node_info[cpu].guest = pid;
-                shdata->node_info[cpu].state = CPU_BUSY;
-                update_cpu_stats(cpu, STATS_OWNED);
-            }
-        }
-
-        // Initialize initial time and CPU timing on shmem creation
-        if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
-            get_time(&shdata->initial_time);
-            for (cpu = 0; cpu < node_size; cpu++) {
-                shdata->node_info[cpu].last_update = shdata->initial_time;
-            }
-        }
-    }
-    shmem_unlock(shm_ext_handler);
-
-    return error;
-}
-
-int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
-    int error = DLB_SUCCESS;
-
-    shmem_lock(shm_ext_handler);
-    {
-        int cpu;
-        for (cpu = 0; cpu < node_size; cpu++) {
-            if (shdata->node_info[cpu].owner == pid) {
-                shdata->node_info[cpu].owner = NOBODY;
-                if (shdata->node_info[cpu].guest == pid) {
-                    shdata->node_info[cpu].guest = NOBODY;
-                    update_cpu_stats(cpu, STATS_IDLE);
-                }
-                if (cpu_is_public_post_mortem) {
-                    shdata->node_info[cpu].state = CPU_LENT;
-                } else {
-                    shdata->node_info[cpu].state = CPU_DISABLED;
-                }
-            } else {
-                // Free external CPUs that I may be using
-                if (shdata->node_info[cpu].guest == pid) {
-                    shdata->node_info[cpu].guest = NOBODY;
-                    update_cpu_stats(cpu, STATS_IDLE);
-                }
-            }
-        }
-    }
-    shmem_unlock(shm_ext_handler);
-    return error;
-}
 
 int shmem_cpuinfo_ext__getnumcpus(void) {
     return mu_get_system_size();
