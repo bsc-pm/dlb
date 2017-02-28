@@ -27,7 +27,7 @@
 int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key);
 int shmem_procinfo__finalize(pid_t pid);
 int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask);
-int shmem_procinfo__polldrom(pid_t pid, int *new_threads, cpu_set_t *new_mask);
+int shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask);
 
 int shmem_procinfo_ext__init(const char *shmem_key);
 int shmem_procinfo_ext__finalize(void);

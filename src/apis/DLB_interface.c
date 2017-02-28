@@ -128,8 +128,8 @@ int DLB_ReturnCpu(int cpuid) {
 
 /* DROM Responsive */
 
-int DLB_PollDROM(int *nthreads, dlb_cpu_set_t mask) {
-    return poll_drom(nthreads, mask);
+int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask) {
+    return poll_drom(ncpus, mask);
 }
 
 

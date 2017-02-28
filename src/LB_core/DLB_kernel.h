@@ -65,7 +65,7 @@ int return_all(void);
 int return_cpu(int cpuid);
 
 /* DROM Responsive */
-int poll_drom(int *new_threads, cpu_set_t *new_mask);
+int poll_drom(int *new_cpus, cpu_set_t *new_mask);
 
 /* Misc */
 int check_cpu_availability(int cpuid);

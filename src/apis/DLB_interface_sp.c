@@ -129,8 +129,8 @@ int DLB_ReturnCpu_sp(dlb_handler_t handler, int cpuid) {
 
 /* DROM Responsive */
 
-int DLB_PollDROM_sp(dlb_handler_t handler, int *nthreads, dlb_cpu_set_t mask) {
-    return poll_drom_sp(handler, nthreads, mask);
+int DLB_PollDROM_sp(dlb_handler_t handler, int *ncpus, dlb_cpu_set_t mask) {
+    return poll_drom_sp(handler, ncpus, mask);
 }
 
 

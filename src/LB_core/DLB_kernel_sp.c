@@ -255,21 +255,21 @@ int return_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
 
 /* Drom Responsive */
 
-int poll_drom_sp(subprocess_descriptor_t *spd, int *new_threads, cpu_set_t *new_mask) {
+int poll_drom_sp(subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mask) {
     int error;
     if (!spd->options.drom) {
         error = DLB_ERR_DISBLD;
     } else {
         if (new_mask) {
             // If new_mask is provided by the user
-            error = shmem_procinfo__polldrom(spd->id, new_threads, new_mask);
+            error = shmem_procinfo__polldrom(spd->id, new_cpus, new_mask);
             if (error == DLB_SUCCESS) {
                 shmem_cpuinfo__update_ownership(spd->id, new_mask);
             }
         } else {
             // Otherwise, mask is allocated and freed
             cpu_set_t *mask = malloc(sizeof(cpu_set_t));
-            error = shmem_procinfo__polldrom(spd->id, new_threads, mask);
+            error = shmem_procinfo__polldrom(spd->id, new_cpus, mask);
             if (error == DLB_SUCCESS) {
                 shmem_cpuinfo__update_ownership(spd->id, mask);
             }

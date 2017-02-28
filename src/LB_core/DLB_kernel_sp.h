@@ -62,7 +62,7 @@ int return_all_sp(subprocess_descriptor_t *psd);
 int return_cpu_sp(subprocess_descriptor_t *psd, int cpuid);
 
 /* DROM Responsive */
-int poll_drom_sp(subprocess_descriptor_t *psd, int *new_threads, cpu_set_t *new_mask);
+int poll_drom_sp(subprocess_descriptor_t *psd, int *new_cpus, cpu_set_t *new_mask);
 
 /* Misc */
 int set_variable_sp(subprocess_descriptor_t *psd, const char *variable, const char *value);

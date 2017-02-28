@@ -255,13 +255,13 @@ int DLB_ReturnCpu(int cpuid);
 
 /*! \brief Poll DROM module to check if the process needs to adapt to a new mask
  *          or number of threads
- *  \param[out] nthreads optional, variable to receive the new number of threads
+ *  \param[out] ncpus optional, variable to receive the new number of threads
  *  \param[out] mask optional, variable to receive the new mask
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_NOUPDT if no update id needed
  */
-int DLB_PollDROM(int *nthreads, dlb_cpu_set_t mask);
+int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask);
 
 
 /*********************************************************************************/

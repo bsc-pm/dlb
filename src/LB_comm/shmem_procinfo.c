@@ -220,7 +220,7 @@ int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask) {
     return getprocessmask(shm_handler, pid, mask);
 }
 
-int shmem_procinfo__polldrom(pid_t pid, int *new_threads, cpu_set_t *new_mask) {
+int shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask) {
     int error;
     if (shm_handler == NULL) {
         error = DLB_ERR_NOSHMEM;
@@ -235,7 +235,7 @@ int shmem_procinfo__polldrom(pid_t pid, int *new_threads, cpu_set_t *new_mask) {
             {
                 // Update output parameters
                 memcpy(new_mask, &process->future_process_mask, sizeof(cpu_set_t));
-                if (new_threads != NULL) *new_threads = CPU_COUNT(&process->future_process_mask);
+                if (new_cpus != NULL) *new_cpus = CPU_COUNT(&process->future_process_mask);
 
                 // Upate local info
                 memcpy(&process->current_process_mask, &process->future_process_mask,
