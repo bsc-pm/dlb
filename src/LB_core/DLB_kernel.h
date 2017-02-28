@@ -27,7 +27,7 @@
 #include <stdbool.h>
 
 /* Status */
-int Initialize(const cpu_set_t *mask, const char *lb_args);
+int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args);
 int Finish(void);
 int set_dlb_enabled(bool enabled);
 int set_max_parallelism(int max);

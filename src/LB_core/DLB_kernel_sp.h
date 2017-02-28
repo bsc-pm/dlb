@@ -30,7 +30,7 @@
 #include <stdbool.h>
 
 /* Status */
-subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_args);
+subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const char *lb_args);
 int Finish_sp(subprocess_descriptor_t *spd);
 int set_dlb_enabled_sp(subprocess_descriptor_t *psd, bool enabled);
 int set_max_parallelism_sp(subprocess_descriptor_t *psd, int max);

@@ -147,7 +147,7 @@ void after_init(void) {
         MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 //    }
 
-    if (Initialize(NULL, NULL) == DLB_SUCCESS) {
+    if (Initialize(0, NULL, NULL) == DLB_SUCCESS) {
         init_from_mpi = 1;
     }
 

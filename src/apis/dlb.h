@@ -33,12 +33,13 @@ extern "C"
 /*********************************************************************************/
 
 /*! \brief Initialize DLB library
- *  \param[in] mask initial CPU mask to register
+ *  \param[in] ncpus optional, initial number of CPUs
+ *  \param[in] mask optional, initial CPU mask to register
  *  \param[in] dlb_args optional parameter to overwrite LB_ARGS options, or NULL otherwise
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_INIT if DLB is already initialized
  */
-int DLB_Init(const_dlb_cpu_set_t mask, const char *dlb_args);
+int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args);
 
 /*! \brief Finalize DLB library
  *  \return DLB_SUCCESS on success

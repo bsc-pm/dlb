@@ -26,8 +26,8 @@
 
 /* Status */
 
-int DLB_Init(const_dlb_cpu_set_t mask, const char *dlb_args) {
-    return Initialize(mask, dlb_args);
+int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
+    return Initialize(ncpus, mask, dlb_args);
 }
 
 int DLB_Finalize(void) {

@@ -49,7 +49,7 @@ static int get_atomic_spid(void) {
 #endif
 }
 
-subprocess_descriptor_t* Initialize_sp(const cpu_set_t *mask, const char *lb_args) {
+subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const char *lb_args) {
     subprocess_descriptor_t *spd = malloc(sizeof(subprocess_descriptor_t));
 
     // Initialize first instrumentation module

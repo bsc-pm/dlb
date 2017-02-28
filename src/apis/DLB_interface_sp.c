@@ -27,8 +27,8 @@
 
 /* Status */
 
-dlb_handler_t DLB_Init_sp(const_dlb_cpu_set_t mask, const char *dlb_args) {
-    return Initialize_sp(mask, dlb_args);
+dlb_handler_t DLB_Init_sp(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
+    return Initialize_sp(ncpus, mask, dlb_args);
 }
 
 int DLB_Finalize_sp(dlb_handler_t handler) {

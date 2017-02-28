@@ -51,7 +51,7 @@ static subprocess_descriptor_t spd;
 
 /* Status */
 
-int Initialize(const cpu_set_t *mask, const char *lb_args) {
+int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
 
     int error = DLB_SUCCESS;
     if (!dlb_initialized) {
