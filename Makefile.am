@@ -55,12 +55,13 @@ endif
 #********************************************************************************
 # Headers
 #********************************************************************************
-installheaders =                        \
+installheaders =                     \
 	src/apis/dlb.h               \
 	src/apis/dlb_sp.h            \
 	src/apis/dlb_stats.h         \
 	src/apis/dlb_drom.h          \
 	src/apis/dlb_types.h         \
+	src/apis/dlb_errors.h        \
 	$(END)
 
 dist_include_HEADERS = $(installheaders)
@@ -481,6 +482,7 @@ dist_man_MANS = \
 	$(manpagesbuilddir)/dlb_sp.h.3 \
 	$(manpagesbuilddir)/dlb_stats.h.3 \
 	$(manpagesbuilddir)/dlb_types.h.3 \
+	$(manpagesbuilddir)/dlb_errors.h.3 \
 	$(END)
 
 $(manpagesbuilddir)/doxy.stamp: $(installheaders)
@@ -492,6 +494,7 @@ $(manpagesbuilddir)/dlb_drom.h.3: $(manpagesbuilddir)/doxy.stamp
 $(manpagesbuilddir)/dlb_sp.h.3: $(manpagesbuilddir)/doxy.stamp
 $(manpagesbuilddir)/dlb_stats.h.3: $(manpagesbuilddir)/doxy.stamp
 $(manpagesbuilddir)/dlb_types.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_errors.h.3: $(manpagesbuilddir)/doxy.stamp
 
 CLEANFILES += $(manpagesbuilddir)/doxy.stamp
 endif
