@@ -35,7 +35,6 @@
 // Basic checks with 1 sub-process
 
 int main( int argc, char **argv ) {
-    int error;
     pid_t pid = getpid();
     cpu_set_t process_mask, mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
@@ -44,107 +43,91 @@ int main( int argc, char **argv ) {
     int i;
 
     // Init
-    error = shmem_cpuinfo__init(pid, &process_mask, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Add CPU
-    pid_t new_owner = -1;
-    error = shmem_cpuinfo__add_cpu(pid, 0, &new_owner);
-    assert(error == DLB_SUCCESS);
-    assert(new_owner == -1);
+    victimlist[0] = -1;
+    assert( shmem_cpuinfo__add_cpu(pid, 0, &victimlist[0]) == DLB_SUCCESS );
+    assert( victimlist[0] == -1 );
 
     // Recover CPU
-    error = shmem_cpuinfo__recover_cpu(pid, 0, &new_owner);
-    assert(error == DLB_SUCCESS);
-    assert(new_owner == pid);
+    assert( shmem_cpuinfo__recover_cpu(pid, 0, &victimlist[0]) == DLB_SUCCESS );
+    assert( victimlist[0] == pid );
 
     // Add CPU
-    error = shmem_cpuinfo__add_cpu(pid, 0, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__add_cpu(pid, 0, NULL) == DLB_SUCCESS );
 
     // Recover CPUs
-    error = shmem_cpuinfo__recover_cpus(pid, 1, victimlist);
-    assert(error == DLB_SUCCESS);
-    assert(victimlist[0] == pid);
+    assert( shmem_cpuinfo__recover_cpus(pid, 1, victimlist) == DLB_SUCCESS );
+    assert( victimlist[0] == pid );
 
     // Add CPU
-    error = shmem_cpuinfo__add_cpu(pid, 0, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__add_cpu(pid, 0, NULL) == DLB_SUCCESS );
 
     // Collect CPU
-    error = shmem_cpuinfo__collect_cpu(pid, 0, victimlist);
-    assert(error == DLB_SUCCESS);
-    assert(victimlist[0] == pid);
+    assert( shmem_cpuinfo__collect_cpu(pid, 0, victimlist) == DLB_SUCCESS );
+    assert( victimlist[0] == pid );
 
     // Add CPU
-    error = shmem_cpuinfo__add_cpu(pid, 0, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__add_cpu(pid, 0, NULL) == DLB_SUCCESS );
 
     // Collect CPUs
-    error = shmem_cpuinfo__collect_cpus(pid, 1, victimlist);
-    assert(error == DLB_SUCCESS);
-    assert(victimlist[0] == pid);
+    assert( shmem_cpuinfo__collect_cpus(pid, 1, victimlist) == DLB_SUCCESS );
+    assert( victimlist[0] == pid );
 
     // Add mask
-    error = shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Recover mask
-    error = shmem_cpuinfo__recover_cpu_mask(pid, &process_mask, victimlist);
+    assert( shmem_cpuinfo__recover_cpu_mask(pid, &process_mask, victimlist) >= 0 );
     for (i=0; i<ncpus; ++i) {
-        assert(victimlist[i] == pid);
+        assert( victimlist[i] == pid );
     }
 
     // Add mask
-    error = shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Recover all
-    error = shmem_cpuinfo__recover_all(pid, victimlist);
+    assert( shmem_cpuinfo__recover_all(pid, victimlist) >= 0 );
     for (i=0; i<ncpus; ++i) {
-        assert(victimlist[i] == pid);
+        assert( victimlist[i] == pid );
     }
 
     // Add mask
-    error = shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Collect mask
-    error = shmem_cpuinfo__collect_cpu_mask(pid, &process_mask, victimlist);
+    assert( shmem_cpuinfo__collect_cpu_mask(pid, &process_mask, victimlist) >= 0 );
     for (i=0; i<ncpus; ++i) {
-        assert(victimlist[i] == pid);
+        assert( victimlist[i] == pid );
     }
 
     // Add mask
-    error = shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Collect all
-    error = shmem_cpuinfo__collect_all(pid, victimlist);
+    assert( shmem_cpuinfo__collect_all(pid, victimlist) >= 0 );
     for (i=0; i<ncpus; ++i) {
-        assert(victimlist[i] == pid);
+        assert( victimlist[i] == pid );
     }
 
     // Check errors with nonexistent CPU
-    error = shmem_cpuinfo__collect_cpu(pid, ncpus, NULL);
-    assert(error == DLB_ERR_PERM);
-    error = shmem_cpuinfo__recover_cpu(pid, ncpus, NULL);
-    assert(error == DLB_ERR_PERM);
+    assert( shmem_cpuinfo__collect_cpu(pid, ncpus, NULL) == DLB_ERR_PERM );
+    assert( shmem_cpuinfo__recover_cpu(pid, ncpus, NULL) == DLB_ERR_PERM );
     CPU_ZERO(&mask);
     CPU_SET(ncpus, &mask);
-    error = shmem_cpuinfo__collect_cpu_mask(pid, &mask, NULL);
-    assert(error == DLB_SUCCESS); // mask is not checked beyond max_cpus
-    error = shmem_cpuinfo__recover_cpu_mask(pid, &mask, NULL);
-    assert(error == DLB_SUCCESS); // mask is not checked beyond max_cpus
+    // mask is not checked beyond max_cpus
+    assert( shmem_cpuinfo__collect_cpu_mask(pid, &mask, NULL) == DLB_SUCCESS );
+    // mask is not checked beyond max_cpus
+    assert( shmem_cpuinfo__recover_cpu_mask(pid, &mask, NULL) == DLB_SUCCESS );
 
     // Finalize
-    error = shmem_cpuinfo__finalize(pid);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_cpuinfo__finalize(pid) == DLB_SUCCESS );
 
     // The shared memory file should not exist at this point
     char shm_filename[SHM_NAME_LENGTH+8];
     snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_cpuinfo_%d", getuid());
-    assert(access(shm_filename, F_OK) == -1);
+    assert( access(shm_filename, F_OK) == -1 );
 
     return 0;
 }

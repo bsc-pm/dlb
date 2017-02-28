@@ -35,7 +35,6 @@
 // Basic checks with 2+ sub-processes
 
 int main( int argc, char **argv ) {
-    int error;
     pid_t pid = getpid();
     int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
     cpu_set_t process_mask;
@@ -44,12 +43,9 @@ int main( int argc, char **argv ) {
     snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
 
     // Register two processes with the same mask, and check the error codes are ok
-    error = shmem_procinfo__init(pid, &process_mask, NULL);
-    assert(error == DLB_SUCCESS);
-    error = shmem_procinfo__init(pid+1, &process_mask, NULL);
-    assert(error == DLB_ERR_PERM);
-    error = shmem_procinfo__finalize(pid);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_procinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid+1, &process_mask, NULL) == DLB_ERR_PERM );
+    assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
 
     // The shared memory file should not exist at this point
     assert(access(shm_filename, F_OK) == -1);
@@ -59,23 +55,20 @@ int main( int argc, char **argv ) {
     for (cpuid=0; cpuid<num_cpus; ++cpuid) {
         CPU_ZERO(&process_mask);
         CPU_SET(cpuid, &process_mask);
-        error = shmem_procinfo__init(pid+cpuid, &process_mask, NULL);
-        assert(error == DLB_SUCCESS);
+        assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL) == DLB_SUCCESS );
     }
 
     // Another initialization should return error
     CPU_ZERO(&process_mask);
-    error = shmem_procinfo__init(pid+cpuid, &process_mask, NULL);
-    assert(error == DLB_ERR_NOMEM);
+    assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL) == DLB_ERR_NOMEM );
 
     // Finalize all
     for (cpuid=0; cpuid<num_cpus; ++cpuid) {
-        error = shmem_procinfo__finalize(pid+cpuid);
-        assert(error == DLB_SUCCESS);
+        assert( shmem_procinfo__finalize(pid+cpuid) == DLB_SUCCESS );
     }
 
     // The shared memory file should not exist at this point
-    assert(access(shm_filename, F_OK) == -1);
+    assert( access(shm_filename, F_OK) == -1 );
 
     return 0;
 }

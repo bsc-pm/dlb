@@ -47,7 +47,6 @@ static void* thread_start(void *arg) {
 }
 
 int main( int argc, char **argv ) {
-    int error;
     pid_t pid = getpid();
     int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
     cpu_set_t mask;
@@ -56,24 +55,21 @@ int main( int argc, char **argv ) {
     snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
 
     // Initialize sub-process
-    error = shmem_procinfo__init(pid, &process_mask, NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_procinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Initialize external
-    error = shmem_procinfo_ext__init(NULL);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_procinfo_ext__init(NULL) == DLB_SUCCESS );
 
     // Get pidlist
     int pidlist[num_cpus];
     int nelems = 0;
     shmem_procinfo_ext__getpidlist(pidlist, &nelems, num_cpus);
-    assert(nelems==1);
-    assert(pidlist[0] == pid);
+    assert( nelems == 1 );
+    assert( pidlist[0] == pid );
 
     // Get process mask
-    error = shmem_procinfo_ext__getprocessmask(pid, &mask);
-    assert(error == DLB_SUCCESS);
-    assert(CPU_EQUAL(&process_mask, &mask));
+    assert( shmem_procinfo_ext__getprocessmask(pid, &mask) == DLB_SUCCESS );
+    assert( CPU_EQUAL(&process_mask, &mask) );
 
     // Create a new thread to poll while the external sub-process sets a new mask
     {
@@ -82,28 +78,23 @@ int main( int argc, char **argv ) {
 
         // Set a new process mask (cpuid=0 to comply with single core machines)
         CPU_CLR(0, &mask);
-        error = shmem_procinfo_ext__setprocessmask(pid, &mask);
-        assert(error == DLB_SUCCESS);
+        assert( shmem_procinfo_ext__setprocessmask(pid, &mask) == DLB_SUCCESS );
 
         pthread_join(thread, NULL);
 
         // Check that masks are equivalent
-        error = shmem_procinfo_ext__getprocessmask(pid, &mask);
-        assert(error == DLB_SUCCESS);
-        assert(CPU_EQUAL(&process_mask, &mask));
+        assert( shmem_procinfo_ext__getprocessmask(pid, &mask) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&process_mask, &mask) );
     }
 
-
     //Finalize external
-    error = shmem_procinfo_ext__finalize();
-    assert(error == DLB_SUCCESS);
+    assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 
     // Finalize sub-process
-    error = shmem_procinfo__finalize(pid);
-    assert(error == DLB_SUCCESS);
+    assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
 
     // The shared memory file should not exist at this point
-    assert(access(shm_filename, F_OK) == -1);
+    assert( access(shm_filename, F_OK) == -1 );
 
     return 0;
 }

@@ -100,5 +100,11 @@ int main( int argc, char **argv ) {
     //options_init(&options_1, "--policy");
     //options_init(&options_1, "--policy=");
 
+    // Preference between environ variable and arguments
+    setenv("LB_POLICY", "LeWI", 1);
+    options_init(&options_1, "--policy=no");
+    assert(options_1.lb_policy == POLICY_NONE);
+
+
     return 0;
 }
