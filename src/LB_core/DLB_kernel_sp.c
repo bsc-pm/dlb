@@ -257,20 +257,24 @@ int return_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
 
 int poll_drom_sp(subprocess_descriptor_t *spd, int *new_threads, cpu_set_t *new_mask) {
     int error;
-    if (new_mask) {
-        // If new_mask is provided by the user
-        error = shmem_procinfo__polldrom(spd->id, new_threads, new_mask);
-        if (error == DLB_SUCCESS) {
-            shmem_cpuinfo__update_ownership(spd->id, new_mask);
-        }
+    if (!spd->options.drom) {
+        error = DLB_ERR_DISBLD;
     } else {
-        // Otherwise, mask is allocated and freed
-        cpu_set_t *mask = malloc(sizeof(cpu_set_t));
-        error = shmem_procinfo__polldrom(spd->id, new_threads, mask);
-        if (error == DLB_SUCCESS) {
-            shmem_cpuinfo__update_ownership(spd->id, mask);
+        if (new_mask) {
+            // If new_mask is provided by the user
+            error = shmem_procinfo__polldrom(spd->id, new_threads, new_mask);
+            if (error == DLB_SUCCESS) {
+                shmem_cpuinfo__update_ownership(spd->id, new_mask);
+            }
+        } else {
+            // Otherwise, mask is allocated and freed
+            cpu_set_t *mask = malloc(sizeof(cpu_set_t));
+            error = shmem_procinfo__polldrom(spd->id, new_threads, mask);
+            if (error == DLB_SUCCESS) {
+                shmem_cpuinfo__update_ownership(spd->id, mask);
+            }
+            free(mask);
         }
-        free(mask);
     }
     return error;
 }
