@@ -167,6 +167,8 @@ COMMON_SRCS = \
 	src/LB_policies/lewi_mask.h             \
 	src/LB_policies/autonomous_lewi_mask.c  \
 	src/LB_policies/autonomous_lewi_mask.h  \
+	src/LB_policies/new.c                   \
+	src/LB_policies/new.h                   \
 	src/LB_core/DLB_kernel.c                \
 	src/LB_core/DLB_kernel.h                \
 	src/LB_core/DLB_kernel_sp.c             \

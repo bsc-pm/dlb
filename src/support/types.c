@@ -141,6 +141,8 @@ void parse_policy(const char *str, policy_t *value) {
         *value = POLICY_LEWI_MASK;
     } else if (strcasecmp(str, "auto_LeWI_mask") == 0) {
         *value = POLICY_AUTO_LEWI_MASK;
+    } else if (strcasecmp(str, "new") == 0) {
+        *value = POLICY_NEW;
     }
 }
 
@@ -151,6 +153,7 @@ const char* policy_tostr(policy_t policy) {
         case POLICY_WEIGHT: return "Weight";
         case POLICY_LEWI_MASK: return "LeWI mask";
         case POLICY_AUTO_LEWI_MASK: return "Autonomous LeWI mask";
+        case POLICY_NEW: return "New (WIP)";
     }
     return "error";
 }

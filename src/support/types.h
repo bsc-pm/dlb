@@ -65,7 +65,8 @@ typedef enum PolicyType {
     POLICY_LEWI,
     POLICY_WEIGHT,
     POLICY_LEWI_MASK,
-    POLICY_AUTO_LEWI_MASK
+    POLICY_AUTO_LEWI_MASK,
+    POLICY_NEW  /* WIP */
 } policy_t;
 
 typedef enum InteractionMode {

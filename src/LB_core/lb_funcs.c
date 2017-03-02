@@ -17,13 +17,12 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-
 #include "LB_core/lb_funcs.h"
 #include "LB_policies/Lend_light.h"
 #include "LB_policies/Weight.h"
 #include "LB_policies/lewi_mask.h"
 #include "LB_policies/autonomous_lewi_mask.h"
-
+#include "LB_policies/new.h"
 
 /* Status */
 static int dummy_Init(const subprocess_descriptor_t *spd) {return 0;}
@@ -149,6 +148,15 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->acquire_cpu_mask = auto_lewi_mask_AcquireCpuMask;
             lb_funcs->return_cpu = auto_lewi_mask_ReturnCpu;
             lb_funcs->check_cpu_availability = auto_lewi_mask_CheckCpuAvailability;
+            break;
+        case POLICY_NEW:
+            lb_funcs->init = new_Init;
+            lb_funcs->finalize = new_Finish;
+            lb_funcs->lend_cpu = new_LendCpu;
+            lb_funcs->reclaim = new_Reclaim;
+            lb_funcs->reclaim_cpu = new_ReclaimCpu;
+            lb_funcs->acquire_cpu = new_AcquireCpu;
+            lb_funcs->return_cpu = new_ReturnCpu;
             break;
     }
 }
