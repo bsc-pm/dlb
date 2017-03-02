@@ -894,8 +894,34 @@ bool shmem_cpuinfo__acquire_cpu(pid_t pid, int cpu, bool force) {
 /*  Return CPU                                                                   */
 /*********************************************************************************/
 
+// Pre-requisites: owner != pid, guest == pid, state == BUSY
+static int return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+    cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
+    // Return CPU
+    cpuinfo->guest = NOBODY;
+    update_cpu_stats(cpuid, STATS_IDLE);
 
+    // If a new_pid is requested, find a new guest
+    if (new_pid) {
+        pid_t new_guest = find_new_guest(cpuinfo);
+        if (new_guest != NOBODY) {
+            *new_pid = new_guest;
+            cpuinfo->guest = new_guest;
+        }
+    }
+
+    int error = DLB_ERR_REQST;
+    pid_t p;
+    for (p=0; p<8; ++p) {
+        if (cpuinfo->requested_by[p] == NOBODY) {
+            cpuinfo->requested_by[p] = pid;
+            error = DLB_NOTED;
+            break;
+        }
+    }
+    return error;
+}
 
 /* Remove non default CPUs that have been set as BUSY by their owner
  * or remove also CPUs that habe been set to DISABLED
@@ -948,6 +974,23 @@ int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask) {
     add_event(IDLE_CPUS_EVENT, idle_count);
 
     return returned;
+}
+
+int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+    int error;
+    shmem_lock(shm_handler);
+    {
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        if (cpuinfo->owner == pid || cpuinfo->state == CPU_LENT) {
+            error = DLB_NOUPDT;
+        } else if (cpuinfo->guest != pid) {
+            error = DLB_ERR_PERM;
+        } else {
+            error = return_cpu(pid, cpuid, new_pid);
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
 }
 
 
