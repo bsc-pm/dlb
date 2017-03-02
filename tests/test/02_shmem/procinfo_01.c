@@ -44,11 +44,15 @@ int main( int argc, char **argv ) {
 
     // Register two processes with the same mask, and check the error codes are ok
     assert( shmem_procinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(pid+1, &process_mask, NULL) == DLB_ERR_PERM );
+    if (num_cpus == 1) {
+        assert( shmem_procinfo__init(pid+1, &process_mask, NULL) == DLB_ERR_NOMEM );
+    } else {
+        assert( shmem_procinfo__init(pid+1, &process_mask, NULL) == DLB_ERR_PERM );
+    }
     assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
 
     // The shared memory file should not exist at this point
-    assert(access(shm_filename, F_OK) == -1);
+    assert( access(shm_filename, F_OK) == -1 );
 
     // This loop should completely fill the shared memory
     int cpuid;
