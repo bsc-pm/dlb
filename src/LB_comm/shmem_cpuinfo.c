@@ -549,7 +549,10 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
     int error;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
-    if (cpuinfo->owner == pid) {
+    if (cpuinfo->guest == pid) {
+        // CPU already guested
+        error = DLB_NOUPDT;
+    } else if (cpuinfo->owner == pid) {
         // CPU is owned by the process
         cpuinfo->state = CPU_BUSY;
         if (cpuinfo->guest == NOBODY) {
