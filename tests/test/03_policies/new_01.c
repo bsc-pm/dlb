@@ -31,6 +31,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_numThreads/numThreads.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -63,6 +64,12 @@ static void sp2_cb_disable_cpu(int cpuid) {
 }
 
 int main( int argc, char **argv ) {
+    // This test needs at least room for 4 CPUs
+    mu_init();
+    if (mu_get_system_size() < 4) {
+        mu_testing_set_sys_size(4);
+    }
+
     // Initialize local masks to [1100] and [0011]
     CPU_ZERO(&sp1_mask);
     CPU_SET(0, &sp1_mask);
