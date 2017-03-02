@@ -49,13 +49,14 @@ typedef enum {
 } cpu_state_t;
 
 typedef struct {
-    pid_t      owner;               // Current owner, useful to resolve reclaimed CPUs
-    pid_t      guest;               // Current user of the CPU
-    cpu_state_t state;
-    stats_state_t stats_state;
-    int64_t acc_time[_NUM_STATS];   // Accumulated time for each state
-    struct timespec last_update;
-    pid_t      requested_by[1];
+    int             id;
+    pid_t           owner;                  // Current owner, useful to resolve reclaimed CPUs
+    pid_t           guest;                  // Current user of the CPU
+    cpu_state_t     state;
+    stats_state_t   stats_state;
+    int64_t         acc_time[_NUM_STATS];   // Accumulated time for each state
+    struct          timespec last_update;
+    pid_t           requested_by[8];
 } cpuinfo_t;
 
 typedef struct {
@@ -82,9 +83,10 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
     if (cpuinfo->state == CPU_BUSY) {
         new_guest = cpuinfo->owner;
     } else {
-        // TODO: iterate requested_by and schedule if needed
+        // we could improve performance by implementing requested_by as a circular buffer
         new_guest = cpuinfo->requested_by[0];
-        cpuinfo->requested_by[0] = 0;
+        memmove(cpuinfo->requested_by, &cpuinfo->requested_by[1], 7);
+        cpuinfo->requested_by[7] = NOBODY;
     }
     return new_guest;
 }
@@ -116,6 +118,7 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
     for (cpuid=0; cpuid<node_size; ++cpuid) {
         if (CPU_ISSET(cpuid, mask)) {
             cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            cpuinfo->id = cpuid;
             cpuinfo->owner = pid;
             cpuinfo->guest = pid;
             cpuinfo->state = CPU_BUSY;
@@ -288,7 +291,16 @@ static void add_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
     if (cpuinfo->owner == pid) {
         cpuinfo->state = CPU_LENT;
     } else {
-        // TODO: remove pid from requested_by
+        // TODO: remove pid from requested_by in an elegant way
+        pid_t p;
+        for (p=0; p<8; ++p) {
+            if (cpuinfo->requested_by[p] == pid) {
+                if (p < 7) {
+                    memmove(&cpuinfo->requested_by[p], &cpuinfo->requested_by[p+1], 7-p);
+                }
+                cpuinfo->requested_by[7] = NOBODY;
+            }
+        }
     }
 
     // If the process is the guest, free it
@@ -569,11 +581,14 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
         error = DLB_SUCCESS;
     } else if (cpuinfo->state != CPU_DISABLED) {
         // CPU is busy, or lent to another process
-        if (cpuinfo->requested_by[0] == 0) {
-            cpuinfo->requested_by[0] = pid;
-            error = DLB_NOTED;
-        } else {
-            error = DLB_ERR_REQST;
+        error = DLB_ERR_REQST;
+        pid_t p;
+        for (p=0; p<8; ++p) {
+            if (cpuinfo->requested_by[p] == NOBODY) {
+                cpuinfo->requested_by[p] = pid;
+                error = DLB_NOTED;
+                break;
+            }
         }
     } else {
         // CPU is disabled
