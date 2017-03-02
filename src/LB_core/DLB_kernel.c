@@ -25,9 +25,10 @@
 
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
+#include "LB_comm/shmem_async.h"
+#include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
-#include "LB_comm/shmem_barrier.h"
 #include "apis/dlb_errors.h"
 #include "support/debug.h"
 #include "support/tracing.h"
@@ -82,6 +83,9 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         if (spd.options.barrier) {
             shmem_barrier_init(spd.options.shm_key);
         }
+        if (spd.options.mode == MODE_ASYNC) {
+            shmem_async_init(spd.id, &spd.pm, spd.options.shm_key);
+        }
 
         dlb_enabled = true;
         dlb_initialized = true;
@@ -115,6 +119,9 @@ int Finish(void) {
         dlb_initialized = false;
         spd.lb_funcs.finalize(&spd);
         // Unload modules
+        if (spd.options.mode == MODE_ASYNC) {
+            shmem_async_finalize(spd.id);
+        }
         if (spd.options.barrier) {
             shmem_barrier_finalize();
         }

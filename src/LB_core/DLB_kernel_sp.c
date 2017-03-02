@@ -25,6 +25,7 @@
 
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
+#include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
@@ -79,6 +80,9 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
     if (spd->options.barrier) {
         shmem_barrier_init(spd->options.shm_key);
     }
+    if (spd->options.mode == MODE_ASYNC) {
+        shmem_async_init(spd->id, &spd->pm, spd->options.shm_key);
+    }
 
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, 0);
@@ -106,6 +110,9 @@ int Finish_sp(subprocess_descriptor_t *spd) {
     if (spd) {
         spd->lb_funcs.finalize(spd);
         // Unload modules
+        if (spd->options.mode == MODE_ASYNC) {
+            shmem_async_finalize(spd->id);
+        }
         if (spd->options.barrier) {
             shmem_barrier_finalize();
         }

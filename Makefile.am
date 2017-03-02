@@ -151,6 +151,8 @@ COMMON_SRCS = \
 	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem.c                     \
 	src/LB_comm/shmem.h                     \
+	src/LB_comm/shmem_async.c               \
+	src/LB_comm/shmem_async.h               \
 	src/LB_comm/shmem_barrier.c             \
 	src/LB_comm/shmem_barrier.h             \
 	src/LB_comm/shmem_cpuinfo.c             \
