@@ -21,6 +21,7 @@
 #define SHMEM_ASYNC_H
 
 #include <sched.h>
+#include <sys/types.h>
 
 struct pm_interface;
 
