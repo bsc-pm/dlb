@@ -84,7 +84,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name = "LB_MODE", .arg_name = "--mode", .default_value = "polling",
         .description = "Select mode: polling / async",
-        .type = OPT_MODE_T, .offset = offsetof(options_t, barrier),
+        .type = OPT_MODE_T, .offset = offsetof(options_t, mode),
         .readonly = true, .optional = true
     },
     // MPI

@@ -105,6 +105,9 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--policy=no");
     assert(options_1.lb_policy == POLICY_NONE);
 
+    // TODO: some variables are still not being checked
+    options_init(&options_1, "--mode=async");
+    assert(options_1.mode == MODE_ASYNC);
 
     return 0;
 }

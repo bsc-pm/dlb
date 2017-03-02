@@ -32,6 +32,7 @@ typedef struct Options {
     bool statistics;
     bool drom;
     bool barrier;
+    interaction_mode_t mode;
     bool mpi_just_barrier;
     blocking_mode_t mpi_lend_mode;
     verbose_opts_t verbose;
@@ -43,7 +44,6 @@ typedef struct Options {
     bool aggressive_init;
     priority_t priority;
     debug_opts_t debug_opts;
-    interaction_mode_t mode;
 } options_t;
 
 void options_init(options_t *options, const char *lb_args_from_api);
