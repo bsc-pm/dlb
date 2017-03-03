@@ -894,7 +894,9 @@ bool shmem_cpuinfo__acquire_cpu(pid_t pid, int cpu, bool force) {
 /*  Return CPU                                                                   */
 /*********************************************************************************/
 
-// Pre-requisites: owner != pid, guest == pid, state == BUSY
+/* Return CPU
+ * Abandon CPU given that state == BUSY, owner != pid, guest == pid
+ */
 static int return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
@@ -920,6 +922,43 @@ static int return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
             break;
         }
     }
+    return error;
+}
+
+int shmem_cpuinfo__return_all(pid_t pid, pid_t *new_pids) {
+    int error = DLB_NOUPDT;
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->state == CPU_BUSY
+                    && cpuinfo->owner != pid
+                    && cpuinfo->guest == pid) {
+                pid_t *new_pid = (new_pids) ? &new_pids[cpuid] : NULL;
+                int local_error = return_cpu(pid, cpuid, new_pid);
+                error = (error < 0) ? error : local_error;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
+int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+    int error;
+    shmem_lock(shm_handler);
+    {
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        if (cpuinfo->owner == pid || cpuinfo->state == CPU_LENT) {
+            error = DLB_NOUPDT;
+        } else if (cpuinfo->guest != pid) {
+            error = DLB_ERR_PERM;
+        } else {
+            error = return_cpu(pid, cpuid, new_pid);
+        }
+    }
+    shmem_unlock(shm_handler);
     return error;
 }
 
@@ -974,23 +1013,6 @@ int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask) {
     add_event(IDLE_CPUS_EVENT, idle_count);
 
     return returned;
-}
-
-int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
-    int error;
-    shmem_lock(shm_handler);
-    {
-        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-        if (cpuinfo->owner == pid || cpuinfo->state == CPU_LENT) {
-            error = DLB_NOUPDT;
-        } else if (cpuinfo->guest != pid) {
-            error = DLB_ERR_PERM;
-        } else {
-            error = return_cpu(pid, cpuid, new_pid);
-        }
-    }
-    shmem_unlock(shm_handler);
-    return error;
 }
 
 
