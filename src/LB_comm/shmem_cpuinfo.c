@@ -592,7 +592,8 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
         error = DLB_ERR_REQST;
         pid_t p;
         for (p=0; p<8; ++p) {
-            if (cpuinfo->requested_by[p] == NOBODY) {
+            if (cpuinfo->requested_by[p] == pid
+                    || cpuinfo->requested_by[p] == NOBODY) {
                 cpuinfo->requested_by[p] = pid;
                 error = DLB_NOTED;
                 break;
@@ -924,7 +925,8 @@ static int return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
     int error = DLB_ERR_REQST;
     pid_t p;
     for (p=0; p<8; ++p) {
-        if (cpuinfo->requested_by[p] == NOBODY) {
+        if (cpuinfo->requested_by[p] == pid
+                || cpuinfo->requested_by[p] == NOBODY) {
             cpuinfo->requested_by[p] = pid;
             error = DLB_SUCCESS;
             break;
