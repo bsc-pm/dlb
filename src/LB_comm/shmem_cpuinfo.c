@@ -970,6 +970,28 @@ int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
     return error;
 }
 
+int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids) {
+    int error = DLB_NOUPDT;
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, mask)) {
+                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+                if (cpuinfo->state == CPU_BUSY
+                        && cpuinfo->owner != pid
+                        && cpuinfo->guest == pid) {
+                    pid_t *new_pid = (new_pids) ? &new_pids[cpuid] : NULL;
+                    int local_error = return_cpu(pid, cpuid, new_pid);
+                    error = (error < 0) ? error : local_error;
+                }
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
 /* Remove non default CPUs that have been set as BUSY by their owner
  * or remove also CPUs that habe been set to DISABLED
  * Reclaimed CPUs:    Guest => Owner
