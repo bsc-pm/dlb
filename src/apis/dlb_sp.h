@@ -102,7 +102,6 @@ int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callbac
  *  \param[in] handler subprocess identifier
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_Lend_sp(dlb_handler_t handler);
 
@@ -111,7 +110,6 @@ int DLB_Lend_sp(dlb_handler_t handler);
  *  \param[in] cpuid CPU id to lend
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpu_sp(dlb_handler_t handler, int cpuid);
 
@@ -121,7 +119,6 @@ int DLB_LendCpu_sp(dlb_handler_t handler, int cpuid);
  *  \param[in] ncpus number of CPUs to lend
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpus_sp(dlb_handler_t handler, int ncpus);
 
@@ -130,7 +127,6 @@ int DLB_LendCpus_sp(dlb_handler_t handler, int ncpus);
  *  \param[in] mask CPU mask to lend
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 
@@ -143,8 +139,8 @@ int DLB_LendCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
  *  \param[in] handler subprocess identifier
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_Reclaim_sp(dlb_handler_t handler);
 
@@ -155,6 +151,7 @@ int DLB_Reclaim_sp(dlb_handler_t handler);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_ReclaimCpu_sp(dlb_handler_t handler, int cpuid);
 
@@ -165,6 +162,7 @@ int DLB_ReclaimCpu_sp(dlb_handler_t handler, int cpuid);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_ReclaimCpus_sp(dlb_handler_t handler, int ncpus);
 
@@ -175,6 +173,7 @@ int DLB_ReclaimCpus_sp(dlb_handler_t handler, int ncpus);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 

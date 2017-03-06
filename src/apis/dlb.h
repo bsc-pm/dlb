@@ -102,7 +102,6 @@ int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback);
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_Lend(void);
 
@@ -111,7 +110,6 @@ int DLB_Lend(void);
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpu(int cpuid);
 
@@ -121,7 +119,6 @@ int DLB_LendCpu(int cpuid);
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpus(int ncpus);
 
@@ -130,7 +127,6 @@ int DLB_LendCpus(int ncpus);
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be lent
  */
 int DLB_LendCpuMask(const_dlb_cpu_set_t mask);
 
@@ -143,8 +139,8 @@ int DLB_LendCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_Reclaim(void);
 
@@ -155,6 +151,7 @@ int DLB_Reclaim(void);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_ReclaimCpu(int cpuid);
 
@@ -165,6 +162,7 @@ int DLB_ReclaimCpu(int cpuid);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_ReclaimCpus(int ncpus);
 
@@ -175,6 +173,7 @@ int DLB_ReclaimCpus(int ncpus);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  */
 int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask);
 
