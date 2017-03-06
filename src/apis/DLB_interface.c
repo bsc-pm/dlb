@@ -125,6 +125,10 @@ int DLB_ReturnCpu(int cpuid) {
     return return_cpu(cpuid);
 }
 
+int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask) {
+    return return_cpu_mask(mask);
+}
+
 
 /* DROM Responsive */
 

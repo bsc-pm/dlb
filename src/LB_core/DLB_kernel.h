@@ -58,11 +58,12 @@ int reclaim_cpu_mask(const cpu_set_t *mask);
 int acquire(void);
 int acquire_cpu(int cpuid);
 int acquire_cpus(int ncpus);
-int acquire_cpu_mask(const cpu_set_t* mask);
+int acquire_cpu_mask(const cpu_set_t *mask);
 
 /* Return */
 int return_all(void);
 int return_cpu(int cpuid);
+int return_cpu_mask(const cpu_set_t *mask);
 
 /* DROM Responsive */
 int poll_drom(int *new_cpus, cpu_set_t *new_mask);

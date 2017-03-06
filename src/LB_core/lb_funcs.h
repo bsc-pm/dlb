@@ -55,6 +55,7 @@ typedef struct BalancePolicy {
     /* Return */
     int (*return_all)(const struct SubProcessDescriptor *spd);
     int (*return_cpu)(const struct SubProcessDescriptor *spd, int cpuid);
+    int (*return_cpu_mask)(const struct SubProcessDescriptor *spd, const cpu_set_t *mask);
     /* Misc */
     int (*check_cpu_availability)(const struct SubProcessDescriptor *spd, int cpuid);
 } balance_policy_t;

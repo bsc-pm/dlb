@@ -364,7 +364,7 @@ int acquire_cpus(int ncpus) {
     return error;
 }
 
-int acquire_cpu_mask(const cpu_set_t* mask) {
+int acquire_cpu_mask(const cpu_set_t *mask) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
@@ -404,6 +404,20 @@ int return_cpu(int cpuid) {
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
         error = spd.lb_funcs.return_cpu(&spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int return_cpu_mask(const cpu_set_t *mask) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        error = spd.lb_funcs.return_cpu_mask(&spd, mask);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;

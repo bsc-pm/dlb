@@ -247,6 +247,15 @@ int DLB_Return_sp(dlb_handler_t handler);
  */
 int DLB_ReturnCpu_sp(dlb_handler_t handler, int cpuid);
 
+/*! \brief Return a set of CPUs if some of them have been reclaimed
+ *  \param[in] handler subprocess identifier
+ *  \param[in] mask CPU set to return
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be returned
+ */
+int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
+
 
 /*********************************************************************************/
 /*    DROM Responsive                                                            */

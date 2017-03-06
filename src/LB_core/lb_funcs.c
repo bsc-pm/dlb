@@ -58,6 +58,9 @@ static int dummy_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_se
 /* Return */
 static int dummy_ReturnAll(const subprocess_descriptor_t *spd) {return 0;}
 static int dummy_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {return 0;}
+static int dummy_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    return 0;
+}
 /* Misc */
 static int dummy_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid) {return 1;}
 
@@ -87,6 +90,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .acquire_cpu_mask = dummy_AcquireCpuMask,
         .return_all = dummy_ReturnAll,
         .return_cpu = dummy_ReturnCpu,
+        .return_cpu_mask = dummy_ReturnCpuMask,
         .check_cpu_availability = dummy_CheckCpuAvailability,
     };
 

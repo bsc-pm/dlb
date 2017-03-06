@@ -55,11 +55,12 @@ int reclaim_cpu_mask_sp(subprocess_descriptor_t *psd, const cpu_set_t *mask);
 int acquire_sp(subprocess_descriptor_t *psd);
 int acquire_cpu_sp(subprocess_descriptor_t *psd, int cpuid);
 int acquire_cpus_sp(subprocess_descriptor_t *psd, int ncpus);
-int acquire_cpu_mask_sp(subprocess_descriptor_t *psd, const cpu_set_t* mask);
+int acquire_cpu_mask_sp(subprocess_descriptor_t *psd, const cpu_set_t *mask);
 
 /* Return */
 int return_all_sp(subprocess_descriptor_t *psd);
 int return_cpu_sp(subprocess_descriptor_t *psd, int cpuid);
+int return_cpu_mask_sp(subprocess_descriptor_t *psd, const cpu_set_t *mask);
 
 /* DROM Responsive */
 int poll_drom_sp(subprocess_descriptor_t *psd, int *new_cpus, cpu_set_t *new_mask);

@@ -126,6 +126,10 @@ int DLB_ReturnCpu_sp(dlb_handler_t handler, int cpuid) {
     return return_cpu_sp(handler, cpuid);
 }
 
+int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
+    return return_cpu_mask_sp(handler, mask);
+}
+
 
 /* DROM Responsive */
 

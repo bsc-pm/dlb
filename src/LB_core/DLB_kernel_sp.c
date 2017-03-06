@@ -235,7 +235,7 @@ int acquire_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
     return error;
 }
 
-int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t* mask) {
+int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
     int error = spd->lb_funcs.acquire_cpu_mask(spd, mask);
     add_event(RUNTIME_EVENT, EVENT_USER);
@@ -255,6 +255,13 @@ int return_all_sp(subprocess_descriptor_t *spd) {
 int return_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
     add_event(RUNTIME_EVENT, EVENT_RETURN);
     int error = spd->lb_funcs.return_cpu(spd, cpuid);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int return_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    add_event(RUNTIME_EVENT, EVENT_RETURN);
+    int error = spd->lb_funcs.return_cpu_mask(spd, mask);
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }

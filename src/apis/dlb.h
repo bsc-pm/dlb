@@ -247,6 +247,14 @@ int DLB_Return(void);
  */
 int DLB_ReturnCpu(int cpuid);
 
+/*! \brief Return a set of CPUs if some of them have been reclaimed
+ *  \param[in] mask CPU set to return
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be returned
+ */
+int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask);
+
 
 /*********************************************************************************/
 /*    DROM Responsive                                                            */
