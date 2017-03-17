@@ -52,8 +52,7 @@ shmem_handler_t* shmem_init( void **shdata, size_t shdata_size, const char* shme
      *   shsync_t will be allocated within the first SHSYNC_MAX_SIZE bytes
      *   shdata_t will use the rest
      */
-    ensure( sizeof(shmem_sync_t) <= SHSYNC_MAX_SIZE,
-            "Sync structure must be %d bytes maximum\n", SHSYNC_MAX_SIZE );
+    static_ensure(sizeof(shmem_sync_t) <= SHSYNC_MAX_SIZE);
     handler->size = SHSYNC_MAX_SIZE + shdata_size;
 
     /* Get /dev/shm/ file names to create */
