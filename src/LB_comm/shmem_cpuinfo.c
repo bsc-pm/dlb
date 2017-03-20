@@ -189,7 +189,7 @@ void shmem_cpuinfo__finalize(void) {
 
     add_event(IDLE_CPUS_EVENT, idle_count);
 
-    shmem_finalize(shm_handler);
+    shmem_finalize(shm_handler, SHMEM_DELETE);
     shm_handler = NULL;
 }
 
@@ -745,7 +745,7 @@ void shmem_cpuinfo_ext__finalize(void) {
         return;
     }
 
-    shmem_finalize(shm_ext_handler);
+    shmem_finalize(shm_ext_handler, SHMEM_DELETE);
     shm_ext_handler = NULL;
 }
 

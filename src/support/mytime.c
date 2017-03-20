@@ -22,13 +22,16 @@
 void get_time( struct timespec *t ) {
     clock_gettime( CLOCK_MONOTONIC, t);
 }
-
 void get_time_coarse( struct timespec *t ) {
 #ifdef CLOCK_MONOTONIC_COARSE
     clock_gettime( CLOCK_MONOTONIC_COARSE, t);
 #else
     clock_gettime( CLOCK_MONOTONIC, t);
 #endif
+}
+
+void get_time_real( struct timespec *t ) {
+    clock_gettime( CLOCK_REALTIME, t);
 }
 
 int diff_time( struct timespec init, struct timespec end, struct timespec* diff ) {

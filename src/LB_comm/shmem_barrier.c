@@ -127,7 +127,7 @@ void shmem_barrier_finalize(void) {
     }
     shmem_unlock(shm_handler);
 
-    shmem_finalize(shm_handler);
+    shmem_finalize(shm_handler, SHMEM_DELETE);
     shm_handler = NULL;
 }
 

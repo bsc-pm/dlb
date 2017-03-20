@@ -171,6 +171,7 @@ void shmem_procinfo__init(void) {
 }
 
 void shmem_procinfo__finalize(void) {
+    bool shmem_empty = true;
     pinfo_t *process = &shdata->process_info[my_process];
     shmem_lock(shm_handler);
     {
@@ -195,9 +196,18 @@ void shmem_procinfo__finalize(void) {
         process->load[3] = {0.0f, 0.0f, 0.0f};
         process->last_ltime = {0};
 #endif
+
+        // Check if shmem is empty
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            if (shdata->process_info[p].pid != NOBODY) {
+                shmem_empty = false;
+                break;
+            }
+        }
     }
     shmem_unlock(shm_handler);
-    shmem_finalize(shm_handler);
+    shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
     shm_handler = NULL;
 }
 
@@ -298,7 +308,21 @@ void shmem_procinfo_ext__finalize(void) {
         return;
     }
 
-    shmem_finalize(shm_ext_handler);
+    // Check if shmem is empty
+    bool shmem_empty = true;
+    shmem_lock(shm_ext_handler);
+    {
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            if (shdata->process_info[p].pid != NOBODY) {
+                shmem_empty = false;
+                break;
+            }
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+
+    shmem_finalize(shm_ext_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
     shm_ext_handler = NULL;
 }
 
