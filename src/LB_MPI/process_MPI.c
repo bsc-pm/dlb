@@ -186,6 +186,8 @@ void after_mpi(mpi_call call_type) {
 
         OutOfCommunication();
     }
+    // Poll DROM
+    Update();
 }
 
 void before_finalize(void) {
