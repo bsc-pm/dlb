@@ -78,7 +78,7 @@ static inline bool is_borrowed(int cpu);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
-void shmem_cpuinfo__init(void) {
+void shmem_cpuinfo__init(const cpu_set_t *new_mask) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -89,7 +89,12 @@ void shmem_cpuinfo__init(void) {
     ME = getpid();
     mu_parse_mask(options_get_mask(), &dlb_mask);
     cpu_set_t process_mask;
-    get_process_mask(&process_mask);
+    // Use the mask provided by shmem_procinfo_init
+    if (new_mask != NULL) {
+        memcpy(&process_mask, new_mask, sizeof(cpu_set_t));
+    } else {
+        get_process_mask(&process_mask);
+    }
     cpu_set_t affinity_mask;
     mu_get_affinity_mask(&affinity_mask, &process_mask, MU_ANY_BIT);
     node_size = mu_get_system_size();
@@ -114,6 +119,10 @@ void shmem_cpuinfo__init(void) {
             }
 
         for (cpu = 0; cpu < node_size; cpu++) {
+            // Skip if pre-initialized
+            if (shdata->node_info[cpu].owner == ME)
+                continue;
+
             // Add my mask info
             if (CPU_ISSET(cpu, &process_mask)) {
                 shdata->node_info[cpu].owner = ME;
@@ -158,6 +167,7 @@ void shmem_cpuinfo__init(void) {
 void shmem_cpuinfo__finalize(void) {
     DLB_INSTR( int idle_count = 0; )
 
+    bool shmem_empty = true;
     shmem_lock(shm_handler);
     {
         int cpu;
@@ -182,6 +192,12 @@ void shmem_cpuinfo__finalize(void) {
                 }
             }
 
+            // Check if shmem is empty
+            if (shdata->node_info[cpu].owner != NOBODY
+                    && shdata->node_info[cpu].owner != ME ) {
+                shmem_empty = false;
+            }
+
             DLB_INSTR( if (is_idle(cpu)) idle_count++; )
         }
     }
@@ -189,7 +205,7 @@ void shmem_cpuinfo__finalize(void) {
 
     add_event(IDLE_CPUS_EVENT, idle_count);
 
-    shmem_finalize(shm_handler, SHMEM_DELETE);
+    shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
     shm_handler = NULL;
 }
 
@@ -745,7 +761,21 @@ void shmem_cpuinfo_ext__finalize(void) {
         return;
     }
 
-    shmem_finalize(shm_ext_handler, SHMEM_DELETE);
+    // Check if shmem is empty
+    bool shmem_empty = true;
+    shmem_lock(shm_ext_handler);
+    {
+        int cpu;
+        for (cpu = 0; cpu < node_size; cpu++) {
+            if (shdata->node_info[cpu].owner != NOBODY
+                    && shdata->node_info[cpu].owner != ME ) {
+                shmem_empty = false;
+            }
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+
+    shmem_finalize(shm_ext_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
     shm_ext_handler = NULL;
 }
 

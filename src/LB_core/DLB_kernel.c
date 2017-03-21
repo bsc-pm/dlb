@@ -155,8 +155,15 @@ static void load_modules(void) {
     init_tracing();
     register_signals();
     if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
-        shmem_procinfo__init();
-        shmem_cpuinfo__init();
+        cpu_set_t new_mask;
+        CPU_ZERO(&new_mask);
+        shmem_procinfo__init(&new_mask);
+        if (CPU_COUNT(&new_mask) > 0) {
+            shmem_cpuinfo__init(&new_mask);
+            set_process_mask(&new_mask);
+        } else {
+            shmem_cpuinfo__init(NULL);
+        }
     }
     if (barrier_enabled) {
         shmem_barrier_init();

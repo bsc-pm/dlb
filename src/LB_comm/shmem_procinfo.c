@@ -91,7 +91,7 @@ static bool steal_cpu(pinfo_t* new_owner, pinfo_t *victim, int cpu, bool dry_run
 static int  steal_mask(pinfo_t *new_owner, const cpu_set_t *mask, bool dry_run);
 static int  getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask);
 
-void shmem_procinfo__init(void) {
+void shmem_procinfo__init(cpu_set_t *new_mask) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -120,8 +120,16 @@ void shmem_procinfo__init(void) {
 
         int p;
         for (p = 0; p < max_processes; p++) {
-            // Register process
-            if (shdata->process_info[p].pid == NOBODY) {
+            if (shdata->process_info[p].pid == ME) {
+                // Process already registered
+                my_process = p;
+
+                // Update mask if some CPU was stolen
+                update_process_mask_new(NULL, new_mask);
+
+                break;
+            } else if (shdata->process_info[p].pid == NOBODY) {
+                // Register process
                 pinfo_t *process = &shdata->process_info[p];
                 process->pid = ME;
                 process->dirty = false;
@@ -149,11 +157,6 @@ void shmem_procinfo__init(void) {
                 process->load[1] = 0.0f;
                 process->load[2] = 0.0f;
 #endif
-                my_process = p;
-                break;
-            }
-            // Process already registered
-            else if (shdata->process_info[p].pid == ME) {
                 my_process = p;
                 break;
             }
@@ -334,7 +337,11 @@ int shmem_procinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal) {
     {
         int p;
         for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == NOBODY) {
+            if (shdata->process_info[p].pid == pid) {
+                // PID already registered
+                shmem_unlock(shm_ext_handler);
+                fatal("already registered");
+            } else if (shdata->process_info[p].pid == NOBODY) {
                 pinfo_t *process = &shdata->process_info[p];
                 process->pid = pid;
                 process->dirty = false;
