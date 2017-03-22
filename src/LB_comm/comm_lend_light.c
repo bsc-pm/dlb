@@ -64,7 +64,7 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 }
 
 void finalize_comm() {
-    shmem_finalize( shm_handler );
+    shmem_finalize(shm_handler, SHMEM_DELETE);
 }
 
 int releaseCpus(int cpus) {

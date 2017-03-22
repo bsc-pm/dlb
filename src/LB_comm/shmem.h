@@ -22,29 +22,34 @@
 
 #include <stdlib.h>
 #include <pthread.h>
-#include <semaphore.h>
 
 #define SHM_NAME_LENGTH 32
 
 // Shared Memory Sync. Must be a struct because it will be allocated inside the shmem
 typedef struct {
+    int             initializing;   // Only the first process sets 0 -> 1
+    int             initialized;    // Only the first process sets 0 -> 1
     pthread_mutex_t shmem_mutex;    // Shared mutex. Used for shmem fast access
-    unsigned short nprocs;          // Number of processes attached
+    pid_t           pidlist[0];     // Array of attached PIDs
 } shmem_sync_t;
 
 typedef struct {
-    size_t size;
-    char *addr;
-    shmem_sync_t *shsync;
-    sem_t *semaphore;               // Sem mutex. Used for shmem setup
-    char shm_filename[SHM_NAME_LENGTH];
+    size_t          shm_size;
+    char            shm_filename[SHM_NAME_LENGTH];
+    char            *shm_addr;
+    shmem_sync_t    *shsync;
 } shmem_handler_t;
+
+typedef enum ShmemOption {
+    SHMEM_NODELETE,
+    SHMEM_DELETE
+} shmem_option_t;
 
 shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
         const char *shmem_key);
-void shmem_finalize( shmem_handler_t* handler );
-void shmem_lock( shmem_handler_t* handler );
-void shmem_unlock( shmem_handler_t* handler );
-char *get_shm_filename( shmem_handler_t* handler );
+void shmem_finalize(shmem_handler_t *handler, shmem_option_t shmem_delete);
+void shmem_lock(shmem_handler_t *handler);
+void shmem_unlock(shmem_handler_t *handler);
+char *get_shm_filename(shmem_handler_t *handler);
 
 #endif /* SHMEM_H */

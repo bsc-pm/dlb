@@ -66,7 +66,7 @@ void shmem_barrier_init(const char *shmem_key) {
     // more error checks to be done if the option is implemented
     global_barrier_ids[0] = getenv("LB_BARRIER_ID") ? atoi(getenv("LB_BARRIER_ID")) : 0;
     global_barrier_ids[1] = global_barrier_ids[0]+1;
-    int qty = getenv("LB_BARRIER_QTY") ? atoi(getenv("LB_BARRIER_QTY")) : 0;
+//    int qty = getenv("LB_BARRIER_QTY") ? atoi(getenv("LB_BARRIER_QTY")) : 0;
 
     max_barriers = mu_get_system_size()*2;
 
@@ -88,9 +88,11 @@ void shmem_barrier_init(const char *shmem_key) {
                 }
 
                 barrier->count = 0;
-                barrier->participants = qty;
+                barrier->participants = 0;
                 barrier->initialized = true;
             }
+            barrier->participants++;
+            warning("barrier participants: %d", barrier->participants)
             advance_barrier();
         }
     }
@@ -127,7 +129,7 @@ void shmem_barrier_finalize(void) {
     }
     shmem_unlock(shm_handler);
 
-    shmem_finalize(shm_handler);
+    shmem_finalize(shm_handler, SHMEM_DELETE);
     shm_handler = NULL;
 }
 

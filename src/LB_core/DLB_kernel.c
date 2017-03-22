@@ -77,7 +77,17 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         debug_init(&spd.options);
         spd.lb_funcs.init(&spd);
         if (policy != POLICY_NONE || spd.options.drom || spd.options.statistics) {
-            shmem_procinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
+            // If the process has been pre-initialized, the process mask may have changed
+            // procinfo_init must return a new_mask if so
+            cpu_set_t new_process_mask;
+            CPU_ZERO(&new_process_mask);
+
+            shmem_procinfo__init(spd.id, &spd.process_mask, &new_process_mask, spd.options.shm_key);
+            if (CPU_COUNT(&new_process_mask) > 0) {
+                memcpy(&spd.process_mask, &new_process_mask, sizeof(cpu_set_t));
+                // FIXME: this will probably fail if we can't register a callback before Init
+                set_process_mask(&spd.pm, &new_process_mask);
+            }
             shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
         }
         if (spd.options.barrier) {

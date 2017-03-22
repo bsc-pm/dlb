@@ -116,8 +116,16 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
 
     // Register mask
     for (cpuid=0; cpuid<node_size; ++cpuid) {
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+
+        // Skip if pre-initialized
+        if (cpuinfo->owner == pid) continue;
+
+        // Add CPU info
         if (CPU_ISSET(cpuid, mask)) {
-            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            fatal_cond(cpuinfo->guest != NOBODY && cpuinfo->guest != pid,
+                    "Unresolved condition, cpu %d is guested by process %d while process %d"
+                    " is trying to register it", cpuid, cpuinfo->guest, pid);
             cpuinfo->id = cpuid;
             cpuinfo->owner = pid;
             cpuinfo->guest = pid;
@@ -145,7 +153,6 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
         }
     }
     pthread_mutex_unlock(&mutex);
-
 
     //cpu_set_t affinity_mask;
     //mu_get_affinity_mask(&affinity_mask, process_mask, MU_ANY_BIT);
@@ -204,7 +211,8 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
 /*  Finalize / Deregister                                                        */
 /*********************************************************************************/
 
-static void deregister_process(pid_t pid) {
+static bool deregister_process(pid_t pid) {
+    bool shmem_empty = true;
     int cpuid;
     for (cpuid=0; cpuid<node_size; ++cpuid) {
         cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
@@ -225,17 +233,26 @@ static void deregister_process(pid_t pid) {
                 cpuinfo->guest = NOBODY;
                 update_cpu_stats(cpuid, STATS_IDLE);
             }
+
+            // Check if shmem is empty
+            if (cpuinfo->owner != NOBODY) {
+                shmem_empty = false;
+            }
         }
     }
+    return shmem_empty;
 }
 
 int shmem_cpuinfo__finalize(pid_t pid) {
     //DLB_INSTR( int idle_count = 0; )
 
+    // Boolean for now, we could make deregister_process return an integer and instrument it
+    bool shmem_empty;
+
     // Lock the shmem to deregister CPUs
     shmem_lock(shm_handler);
     {
-        deregister_process(pid);
+        shmem_empty = deregister_process(pid);
         //DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
     }
     shmem_unlock(shm_handler);
@@ -244,7 +261,7 @@ int shmem_cpuinfo__finalize(pid_t pid) {
     pthread_mutex_lock(&mutex);
     {
         if (--subprocesses_attached == 0) {
-            shmem_finalize(shm_handler);
+            shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
             shm_handler = NULL;
             shdata = NULL;
         }
@@ -260,7 +277,15 @@ void shmem_cpuinfo_ext__finalize(void) {
     // Protect multiple finalization
     if (shm_ext_handler == NULL) return;
 
-    shmem_finalize(shm_ext_handler);
+    bool shmem_empty;
+    shmem_lock(shm_ext_handler);
+    {
+        // We just call deregister_process to check if shmem is empty
+        shmem_empty = deregister_process(-1);
+    }
+    shmem_unlock(shm_ext_handler);
+
+    shmem_finalize(shm_ext_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
     shm_ext_handler = NULL;
 }
 

@@ -55,7 +55,7 @@ int main( int argc, char **argv ) {
     snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
 
     // Initialize sub-process
-    assert( shmem_procinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
 
     // Initialize external
     assert( shmem_procinfo_ext__init(NULL) == DLB_SUCCESS );

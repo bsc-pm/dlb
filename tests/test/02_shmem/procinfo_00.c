@@ -45,9 +45,10 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__polldrom(pid, NULL, NULL) == DLB_ERR_NOSHMEM );
 
     // Init
-    assert( shmem_procinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
-    // A second init would silently return success
-    assert( shmem_procinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
+    //// A second init would silently return success
+    ////    but now, it increments subprocesses_attached and causes undefined behaviour
+    //assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
 
     // Check registered mask is the same as our process mask
     assert( shmem_procinfo__getprocessmask(pid, &new_mask) == DLB_SUCCESS );
@@ -63,7 +64,7 @@ int main( int argc, char **argv ) {
     // Finalize
     assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
     // A second finalize should return error
-    assert( shmem_procinfo__finalize(pid) == DLB_ERR_NOPROC );
+    assert( shmem_procinfo__finalize(pid) == DLB_ERR_NOSHMEM );
 
     // The shared memory file should not exist at this point
     char shm_filename[SHM_NAME_LENGTH+8];

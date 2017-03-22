@@ -99,8 +99,11 @@ extern verbose_opts_t vb_opts;
 
 #ifdef DEBUG_VERSION
 #define ensure(cond, ...) if (!(cond)) { fatal(__VA_ARGS__); }
+#define static_ensure(cond, ...) \
+    do { enum { assert_static__ = 1/(cond) };} while (0)
 #else
 #define ensure(cond, ...)
+#define static_ensure(cond, ...)
 #endif
 
 #endif /* DEBUG_H */

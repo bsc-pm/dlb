@@ -24,9 +24,11 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <sys/stat.h>      /* For mode constants */
 #include <fcntl.h>         /* For O_* constants */
-#include <semaphore.h>
+#include <signal.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -37,25 +39,63 @@
 #error This system does not support process shared mutex
 #endif
 
-#define SHSYNC_MAX_SIZE 64
+#include "LB_comm/shmem.h"
+#include "support/debug.h"
+#include "support/options.h"
+#include "support/mytime.h"
+#include "support/mask_utils.h"
 
-const struct timespec sem_timeout = {.tv_sec = 1, .tv_nsec = 0};
-static void check_shmem(const char *filename);
+#define MAX_PATHNAME 64
+#define SHMEM_TIMEOUT_SECONDS 1
+
+static bool shmem_consistency_add_pid(pid_t *pidlist, pid_t pid) {
+    bool registered = false;
+    int i;
+    for(i=0; i<mu_get_system_size(); ++i) {
+        if (pidlist[i] == 0) {
+            if (!registered) {
+                pidlist[i] = pid;
+                registered = true;
+            }
+        } else {
+            if (kill(pidlist[i], 0) == -1) {
+                warning("Process %d attached to shmem not found, "
+                        "you may want to run \"dlb_shm -d\"", pidlist[i]);
+            }
+        }
+    }
+    return registered;
+}
+
+static bool shmem_consistency_remove_pid(pid_t *pidlist, pid_t pid) {
+    bool last_one = true;
+    int i;
+    for(i=0; i<mu_get_system_size(); ++i) {
+        if (pidlist[i] == pid) {
+            pidlist[i] = 0;
+        } else if (pidlist[i] != 0) {
+            last_one = false;
+        }
+    }
+    return last_one;
+}
+
 
 shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
         const char *shmem_key) {
-    verbose( VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", getpid(), shmem_module );
+    int error;
+    pid_t pid = getpid();
+    verbose(VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", pid, shmem_module);
 
     /* Allocate new Shared Memory handler */
-    shmem_handler_t *handler = malloc( sizeof(shmem_handler_t) );
+    shmem_handler_t *handler = malloc(sizeof(shmem_handler_t));
 
     /* Calculate total shmem size:
-     *   shsync_t will be allocated within the first SHSYNC_MAX_SIZE bytes
-     *   shdata_t will use the rest
+     *   shmem = shsync + shdata
+     *   shsync and shdata are both variable in size
      */
-    ensure( sizeof(shmem_sync_t) <= SHSYNC_MAX_SIZE,
-            "Sync structure must be %d bytes maximum\n", SHSYNC_MAX_SIZE );
-    handler->size = SHSYNC_MAX_SIZE + shdata_size;
+    size_t shsync_size = sizeof(shmem_sync_t) + sizeof(pid_t) * mu_get_system_size();
+    handler->shm_size = shsync_size + shdata_size;
 
     /* Get /dev/shm/ file names to create */
     if (shmem_key) {
@@ -64,160 +104,117 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, getuid());
     }
 
-    /* Create Semaphore(1): Mutex */
-    handler->semaphore = sem_open( handler->shm_filename, O_CREAT, S_IRUSR | S_IWUSR, 1 );
-    if ( handler->semaphore == SEM_FAILED ) {
-        perror( "DLB_PANIC: Process unable to create/attach to semaphore" );
-        exit( EXIT_FAILURE );
-    }
-
-    verbose( VB_SHMEM, "Check shared memory consistency");
-    if ( sem_timedwait(handler->semaphore, &sem_timeout) == ETIMEDOUT ) {
-        verbose( VB_SHMEM,
-                "Could not acquire exclusive access to the Shared Memory, checking anyway...");
-        check_shmem(handler->shm_filename);
-    } else {
-        check_shmem(handler->shm_filename);
-        sem_post( handler->semaphore );
-    }
-
-    verbose( VB_SHMEM, "Start Process Comm - creating shared mem, module(%s)", shmem_module );
-
     /* Obtain a file descriptor for the shmem */
-    int fd = shm_open( handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR );
-    if ( fd == -1 ) {
-        perror( "DLB PANIC: shm_open Process" );
-        exit( EXIT_FAILURE );
+    int fd = shm_open(handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    if (fd == -1) {
+        fatal("shm_open error: %s", strerror(errno));
     }
 
     /* Truncate the regular file to a precise size */
-    if ( ftruncate( fd, handler->size ) == -1 ) {
-        perror( "DLB PANIC: ftruncate Process" );
-        exit( EXIT_FAILURE );
+    if (ftruncate(fd, handler->shm_size) == -1) {
+        fatal("ftruncate error: %s", strerror(errno));
     }
 
     /* Map shared memory object */
-    handler->addr = mmap( NULL, handler->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if ( handler->addr == MAP_FAILED ) {
-        perror( "DLB PANIC: mmap Process" );
-        exit( EXIT_FAILURE );
+    handler->shm_addr = mmap(NULL, handler->shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (handler->shm_addr == MAP_FAILED) {
+        fatal("mmap error: %s",  strerror(errno));
     }
 
-    verbose( VB_SHMEM, "Start Process Comm - shared mem created, module(%s)", shmem_module );
-
     /* Set the address for both structs */
-    handler->shsync = (shmem_sync_t*) handler->addr;
-    *shdata = handler->addr + SHSYNC_MAX_SIZE;
+    handler->shsync = (shmem_sync_t*) handler->shm_addr;
+    *shdata = handler->shm_addr + shsync_size;
 
-    /* Set up shsync struct: increment reference counter and initialize pthread_mutex */
-    sem_wait( handler->semaphore );
-    handler->shsync->nprocs++;
-    if ( handler->shsync->nprocs == 1 ) {
+    if (__sync_bool_compare_and_swap(&handler->shsync->initializing, 0, 1)) {
+        verbose(VB_SHMEM, "Initializing Shared Memory (%s)", shmem_module);
         pthread_mutexattr_t attr;
 
         /* Init pthread attributes */
-        if ( pthread_mutexattr_init( &attr ) ) {
-            perror( "DLB ERROR: pthread_mutexattr_init" );
-        }
+        error = pthread_mutexattr_init(&attr);
+        fatal_cond(error, "pthread_mutexattr_init error: %s", strerror(error));
 
         /* Set process-shared attribute */
-        if ( pthread_mutexattr_setpshared( &attr, PTHREAD_PROCESS_SHARED ) ) {
-            perror( "DLB ERROR: pthread_mutexattr_setpshared" );
-        }
+        error = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+        fatal_cond(error, "pthread_mutexattr_setpshared error: %s", strerror(error));
 
         /* Init pthread mutex */
-        if ( pthread_mutex_init( &(handler->shsync->shmem_mutex), &attr ) ) {
-            perror( "DLB ERROR: pthread_mutex_init" );
-        }
+        error = pthread_mutex_init(&handler->shsync->shmem_mutex, &attr);
+        fatal_cond(error, "pthread_mutex_init error: %s", strerror(error));
 
         /* Destroy pthread attributes */
-        if ( pthread_mutexattr_destroy( &attr ) ) {
-            perror( "DLB ERROR: pthread_mutexattr_destroy" );
-        }
+        error = pthread_mutexattr_destroy(&attr);
+        fatal_cond(error, "pthread_mutexattr_destroy error: %s", strerror(error));
+
+        handler->shsync->initialized = 1;
+    } else {
+        while(!handler->shsync->initialized) __sync_synchronize();
+        verbose(VB_SHMEM, "Attached to Shared Memory (%s)", shmem_module);
     }
-    sem_post( handler->semaphore );
+
+    // Check consistency:
+    verbose(VB_SHMEM, "Checking shared memory consistency (%s)", shmem_module);
+    struct timespec timeout;
+    get_time_real(&timeout);
+    timeout.tv_sec += SHMEM_TIMEOUT_SECONDS;
+    error = pthread_mutex_timedlock(&handler->shsync->shmem_mutex, &timeout);
+    switch (error) {
+        case 0:
+            shmem_consistency_add_pid(handler->shsync->pidlist, pid);
+            pthread_mutex_unlock(&handler->shsync->shmem_mutex);
+            break;
+        case ETIMEDOUT:
+            fatal("Could not acquire lock for the new attached shared memory. "
+                    "You may want to clean it with \"dlb_shm -d\"");
+            break;
+        default:
+            fatal("pthread_mutex_timedlock error: %s", strerror(error));
+            break;
+    }
 
     return handler;
 }
 
-void shmem_finalize( shmem_handler_t* handler ) {
+void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete) {
 #ifdef IS_BGQ_MACHINE
     // BG/Q have some problems deallocating shmem
     // It will be cleaned after the job completion anyway
     return;
 #endif
 
-    /* Decrement reference counter */
-    sem_wait( handler->semaphore );
-    int nprocs = --(handler->shsync->nprocs);
-    sem_post( handler->semaphore );
+    shmem_lock(handler);
+    bool last_one = shmem_consistency_remove_pid(handler->shsync->pidlist, getpid());
+    shmem_unlock(handler);
 
     /* Only the last process destroys the pthread_mutex */
-    if ( nprocs == 0 ) {
-        if ( pthread_mutex_destroy( &(handler->shsync->shmem_mutex) ) ) {
-            perror ( "DLB ERROR: Shared Memory mutex destroy" );
+    if (last_one && shmem_delete == SHMEM_DELETE) {
+        int error = pthread_mutex_destroy(&handler->shsync->shmem_mutex);
+        fatal_cond(error, "pthread_mutex_destroy error: %s", strerror(error));
+    }
+
+    /* All processes must unmap shmem */
+    if (munmap(handler->shm_addr, handler->shm_size) != 0) {
+        fatal("munmap error: %s", strerror(errno));
+    }
+
+    /* Only the last process unlinks shmem */
+    if (last_one && shmem_delete == SHMEM_DELETE) {
+        verbose(VB_SHMEM, "Removing shared memory %s", handler->shm_filename);
+        if (shm_unlink(handler->shm_filename) != 0) {
+            fatal("shm_unlink error: %s", strerror(errno));
         }
     }
 
-    /* All processes must close semaphores and unmap shmem */
-    if ( sem_close( handler->semaphore ) ) { perror( "DLB ERROR: sem_close" ); }
-    if ( munmap( handler->addr, handler->size ) ) { perror( "DLB_ERROR: munmap" ); }
-
-    /* Only the last process unlinks semaphores and shmem */
-    if ( nprocs == 0 ) {
-        if ( sem_unlink( handler->shm_filename ) ) { perror( "DLB_ERROR: sem_unlink" ); }
-        if ( shm_unlink( handler->shm_filename ) ) { perror( "DLB ERROR: shm_unlink" ); }
-    }
-
-    free( handler );
+    free(handler);
 }
 
 void shmem_lock( shmem_handler_t* handler ) {
-    if ( handler->shsync != NULL ) {
-        pthread_mutex_lock( &(handler->shsync->shmem_mutex) );
-    } else {
-        sem_wait( handler->semaphore );
-    }
+    pthread_mutex_lock(&handler->shsync->shmem_mutex);
 }
 
 void shmem_unlock( shmem_handler_t* handler ) {
-    if ( handler->shsync != NULL ) {
-        pthread_mutex_unlock( &(handler->shsync->shmem_mutex) );
-    } else {
-        sem_post( handler->semaphore );
-    }
+    pthread_mutex_unlock(&handler->shsync->shmem_mutex);
 }
 
 char *get_shm_filename( shmem_handler_t* handler ) {
     return handler->shm_filename;
-}
-
-/* Check consistency of a Shared Memory:
- * Remove filename if exists and no process is attached to it
- */
-static void check_shmem(const char *filename) {
-    char shm_filename[SHM_NAME_LENGTH] = {'\0'};
-    snprintf(shm_filename, SHM_NAME_LENGTH, "/dev/shm/%s", &filename[1]);
-
-    struct stat statbuf;
-    if (stat(shm_filename, &statbuf) == 0) {
-        fatal_cond(!S_ISREG(statbuf.st_mode), "Shmem already exists and it's not a regular file");
-        fatal_cond(statbuf.st_uid != getuid(), "Shmem already exists but belongs to another user");
-
-        char cmd[64];
-        snprintf(cmd, 64, "fuser -s %s 2> /dev/null", shm_filename);
-        int res = system(cmd);
-        if (WEXITSTATUS(res) != 0) {
-            // fuser returns a non-zero code if the file is not accessed by any process
-            verbose(VB_SHMEM, "Found orphan Shared Memory %s", shm_filename);
-            if (unlink(shm_filename)) {
-                fatal_cond(errno != ENOENT,
-                    "can't delete %s, errno: %s", shm_filename, strerror(errno));
-            } else {
-                verbose(VB_SHMEM, "Deleted orphan Shared Memory %s", shm_filename);
-            }
-        }
-    } else {
-        // File does not exist, everything is OK
-    }
 }

@@ -43,11 +43,11 @@ int main( int argc, char **argv ) {
     snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
 
     // Register two processes with the same mask, and check the error codes are ok
-    assert( shmem_procinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
     if (num_cpus == 1) {
-        assert( shmem_procinfo__init(pid+1, &process_mask, NULL) == DLB_ERR_NOMEM );
+        assert( shmem_procinfo__init(pid+1, &process_mask, NULL, NULL) == DLB_ERR_NOMEM );
     } else {
-        assert( shmem_procinfo__init(pid+1, &process_mask, NULL) == DLB_ERR_PERM );
+        assert( shmem_procinfo__init(pid+1, &process_mask, NULL, NULL) == DLB_ERR_PERM );
     }
     assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
 
@@ -59,12 +59,12 @@ int main( int argc, char **argv ) {
     for (cpuid=0; cpuid<num_cpus; ++cpuid) {
         CPU_ZERO(&process_mask);
         CPU_SET(cpuid, &process_mask);
-        assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, NULL) == DLB_SUCCESS );
     }
 
     // Another initialization should return error
     CPU_ZERO(&process_mask);
-    assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL) == DLB_ERR_NOMEM );
+    assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, NULL) == DLB_ERR_NOMEM );
 
     // Finalize all
     for (cpuid=0; cpuid<num_cpus; ++cpuid) {

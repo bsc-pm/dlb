@@ -99,7 +99,7 @@ void shmem_bitset__finalize( void ) {
     shmem_unlock( shm_handler );
 #endif
 
-    shmem_finalize( shm_handler );
+    shmem_finalize(shm_handler, SHMEM_DELETE);
 }
 
 void shmem_bitset__add_mask( const cpu_set_t *cpu_set ) {
@@ -324,7 +324,7 @@ void shmem_bitset__print_info(const char *shmem_key) {
         memcpy( &check, &(shdata->check_mask), sizeof(cpu_set_t) );
     }
     shmem_unlock( handler );
-    shmem_finalize( handler );
+    shmem_finalize(handler, SHMEM_DELETE);
 
     info0( "Given CPUs:        %s", mu_to_str( &given ) );
     info0( "Available CPUs:    %s", mu_to_str( &avail ) );

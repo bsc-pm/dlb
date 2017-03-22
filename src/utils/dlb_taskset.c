@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
         {0,          0,                 0, 0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "lg:s:c:r:p:bh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+lg:s:c:r:p:bh", long_options, NULL)) != -1) {
         switch (opt) {
         case 'l':
             do_list = true;

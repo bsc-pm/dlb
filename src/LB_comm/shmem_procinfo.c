@@ -85,7 +85,8 @@ static bool steal_cpu(pinfo_t* new_owner, pinfo_t *victim, int cpu, bool dry_run
 static int  steal_mask(pinfo_t *new_owner, const cpu_set_t *mask, bool dry_run);
 static int  getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask);
 
-int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key) {
+int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *new_process_mask,
+        const char *shmem_key) {
     int error = DLB_SUCCESS;
 
     // Shared memory creation
@@ -117,8 +118,29 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *s
 
         int p;
         for (p = 0; p < max_processes; p++) {
+
+            // Process already registered
+            if (shdata->process_info[p].pid == pid) {
+                process = &shdata->process_info[p];
+
+                // FIXME: is it still needed?
+                //// Hack: We need to reverse the increment if the current process called a
+                ////      pre-register
+                //__sync_val_compare_and_swap(&subprocesses_attached, 2, 1);
+
+                // Update mask if some CPU was stolen
+                if (process->dirty && new_process_mask != NULL) {
+                    memcpy(new_process_mask, &process->future_process_mask, sizeof(cpu_set_t));
+                    memcpy(&process->current_process_mask, &process->future_process_mask,
+                            sizeof(cpu_set_t));
+                    process->dirty = false;
+                    process->returncode = 0;
+                }
+                break;
+            }
+
             // Register process
-            if (shdata->process_info[p].pid == NOBODY) {
+            else if (shdata->process_info[p].pid == NOBODY) {
                 process = &shdata->process_info[p];
 
                 // Check first if the register is successful
@@ -139,78 +161,86 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *s
                 }
                 break;
             }
-            // Process already registered
-            else if (shdata->process_info[p].pid == pid) {
-                process = &shdata->process_info[p];
-                // Hack: We need to reverse the increment if the current process called a
-                //      pre-register
-                __sync_val_compare_and_swap(&subprocesses_attached, 2, 1);
-                break;
-            }
         }
     }
     shmem_unlock(shm_handler);
-
     if (process == NULL) {
         error = DLB_ERR_NOMEM;
     }
 
-    // Hack: decrement if init went wrong
+    // FIXME
     if (error != DLB_SUCCESS) {
-        __sync_add_and_fetch(&subprocesses_attached, -1);
+        shmem_procinfo__finalize(pid);
+        // finalize shmem
     }
+    //// Hack: decrement if init went wrong
+    //if (error != DLB_SUCCESS) {
+    //    __sync_add_and_fetch(&subprocesses_attached, -1);
+    //}
 
     return error;
 }
 
-int shmem_procinfo__finalize(pid_t pid) {
-    int error;
-    pinfo_t *process = get_process(pid);
 
-    if (process) {
-        // Lock shmem to deregister the subprocess
+int shmem_procinfo__finalize(pid_t pid) {
+    bool shmem_empty = true;
+    int error;
+
+    if (shm_handler == NULL) {
+        error = DLB_ERR_NOSHMEM;
+    } else {
         shmem_lock(shm_handler);
         {
-            // Unregister our process mask, or future mask if we are dirty
-            if (process->dirty) {
-                unregister_mask(process, &process->future_process_mask, false);
+            pinfo_t *process = get_process(pid);
+            if (process) {
+                // Unregister our process mask, or future mask if we are dirty
+                if (process->dirty) {
+                    unregister_mask(process, &process->future_process_mask, false);
+                } else {
+                    unregister_mask(process, &process->current_process_mask, false);
+                }
+
+                // Clear process fields
+                process->pid = NOBODY;
+                process->dirty = false;
+                process->returncode = 0;
+                CPU_ZERO(&process->current_process_mask);
+                CPU_ZERO(&process->future_process_mask);
+                CPU_ZERO(&process->stolen_cpus);
+                process->active_cpus = 0;
+                process->cpu_usage = 0.0;
+                process->cpu_avg_usage = 0.0;
+#ifdef DLB_LOAD_AVERAGE
+                process->load[3] = {0.0f, 0.0f, 0.0f};
+                process->last_ltime = {0};
+#endif
+                error = DLB_SUCCESS;
             } else {
-                unregister_mask(process, &process->current_process_mask, false);
+                error = DLB_ERR_NOPROC;
             }
 
-            // Clear process fields
-            process->pid = NOBODY;
-            process->dirty = false;
-            process->returncode = 0;
-            CPU_ZERO(&process->current_process_mask);
-            CPU_ZERO(&process->future_process_mask);
-            CPU_ZERO(&process->stolen_cpus);
-            process->active_cpus = 0;
-            process->cpu_usage = 0.0;
-            process->cpu_avg_usage = 0.0;
-#ifdef DLB_LOAD_AVERAGE
-            process->load[3] = {0.0f, 0.0f, 0.0f};
-            process->last_ltime = {0};
-#endif
+            // Check if shmem is empty
+            int p;
+            for (p = 0; p < max_processes; p++) {
+                if (shdata->process_info[p].pid != NOBODY) {
+                    shmem_empty = false;
+                    break;
+                }
+            }
         }
         shmem_unlock(shm_handler);
-
-
-        // Shared memory destruction
-        pthread_mutex_lock(&mutex);
-        {
-            if (--subprocesses_attached == 0) {
-                shmem_finalize(shm_handler);
-                shm_handler = NULL;
-                shdata = NULL;
-            }
-        }
-        pthread_mutex_unlock(&mutex);
-
-        error = DLB_SUCCESS;
-    } else {
-        error = DLB_ERR_NOPROC;
     }
+
+    // Shared memory destruction
+    pthread_mutex_lock(&mutex);
+    {
+        if (--subprocesses_attached == 0) {
+            shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
+            shm_handler = NULL;
+            shdata = NULL;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
 
     return error;
 }
@@ -301,10 +331,25 @@ int shmem_procinfo_ext__finalize(void) {
         return DLB_ERR_INIT;
     }
 
+    // Check if shmem is empty
+    bool shmem_empty = true;
+    shmem_lock(shm_ext_handler);
+    {
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            if (shdata->process_info[p].pid != NOBODY) {
+                shmem_empty = false;
+                break;
+            }
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+
+    // Shared memory destruction
     pthread_mutex_lock(&mutex);
     {
         if (--subprocesses_attached == 0) {
-            shmem_finalize(shm_ext_handler);
+            shmem_finalize(shm_ext_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
             shm_handler = NULL;
             shdata = NULL;
         }
@@ -324,7 +369,11 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
     {
         int p;
         for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == NOBODY) {
+            if (shdata->process_info[p].pid == pid) {
+                // PID already registered
+                shmem_unlock(shm_ext_handler);
+                fatal("already registered");
+            } else if (shdata->process_info[p].pid == NOBODY) {
                 pinfo_t *process = &shdata->process_info[p];
                 process->pid = pid;
                 process->dirty = false;

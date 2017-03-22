@@ -128,7 +128,7 @@ void ConfigShMem_Map(int num_procs, int meId, int nodeId, int defCPUS, int *my_c
 }
 
 void finalize_comm_Map() {
-    shmem_finalize( shm_handler );
+    shmem_finalize(shm_handler, SHMEM_DELETE);
 }
 
 int releaseCpus_Map(int cpus, int* released_cpus) {
