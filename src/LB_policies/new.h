@@ -24,10 +24,23 @@
 
 int new_Init(const subprocess_descriptor_t *spd);
 int new_Finish(const subprocess_descriptor_t *spd);
+
+int new_Lend(const subprocess_descriptor_t *spd);
 int new_LendCpu(const subprocess_descriptor_t *spd, int cpuid);
+int new_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+
 int new_Reclaim(const subprocess_descriptor_t *spd);
 int new_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid);
+int new_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus);
+int new_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+
+int new_Acquire(const subprocess_descriptor_t *spd);
 int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid);
+int new_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus);
+int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+
+int new_Return(const subprocess_descriptor_t *spd);
 int new_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid);
+int new_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 #endif /* NEW_H */

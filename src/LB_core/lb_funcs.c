@@ -156,11 +156,20 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         case POLICY_NEW:
             lb_funcs->init = new_Init;
             lb_funcs->finalize = new_Finish;
+            lb_funcs->lend = new_Lend;
             lb_funcs->lend_cpu = new_LendCpu;
+            lb_funcs->lend_cpu_mask = new_LendCpuMask;
             lb_funcs->reclaim = new_Reclaim;
             lb_funcs->reclaim_cpu = new_ReclaimCpu;
+            lb_funcs->reclaim_cpus = new_ReclaimCpus;
+            lb_funcs->reclaim_cpu_mask = new_ReclaimCpuMask;
+            lb_funcs->acquire = new_Acquire;
             lb_funcs->acquire_cpu = new_AcquireCpu;
+            lb_funcs->acquire_cpus = new_AcquireCpus;
+            lb_funcs->acquire_cpu_mask = new_AcquireCpuMask;
+            lb_funcs->return_all = new_Return;
             lb_funcs->return_cpu = new_ReturnCpu;
+            lb_funcs->return_cpu_mask = new_ReturnCpuMask;
             break;
     }
 }
