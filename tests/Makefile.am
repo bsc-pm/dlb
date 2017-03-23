@@ -19,7 +19,7 @@
 
 
 check-local: $(top_srcdir)/scripts/bets clean-coverage-data
-	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test/$(BETS_SUBDIR)
+	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test/$(BETS_SUBDIR)*
 
 if ENABLE_COVERAGE
 coverage-local: check-local
