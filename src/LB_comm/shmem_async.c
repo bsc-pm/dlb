@@ -20,6 +20,8 @@
 #include "LB_comm/shmem_async.h"
 
 #include "LB_comm/shmem.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
 #include "LB_numThreads/numThreads.h"
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
@@ -116,6 +118,10 @@ static void* thread_start(void *arg) {
 }
 
 int shmem_async_init(pid_t pid, const pm_interface_t *pm, const char *shmem_key) {
+    ensure(shmem_cpuinfo__exists() && shmem_procinfo__exists(),
+            "shmem_async_init must be called after other shmems initializations"
+            " and either cpuinfo or procinfo shmem does not exist");
+
     // Shared memory creation
     pthread_mutex_lock(&mutex);
     {
@@ -162,6 +168,10 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const char *shmem_key)
 }
 
 int shmem_async_finalize(pid_t pid) {
+    ensure(shmem_cpuinfo__exists() && shmem_procinfo__exists(),
+            "shmem_async_finalize must be called before other shmems finalizations"
+            " and either cpuinfo or procinfo shmems does not exist");
+
     helper_t *helper = NULL;
     // Lock shmem to deregister the subprocess
     shmem_lock(shm_handler);

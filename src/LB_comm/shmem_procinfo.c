@@ -800,6 +800,11 @@ void shmem_procinfo_ext__print_info(bool statistics) {
     free(shdata_copy);
 }
 
+bool shmem_procinfo__exists(void) {
+    return shm_handler != NULL;
+}
+
+
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
 
 static pinfo_t* get_process(pid_t pid) {

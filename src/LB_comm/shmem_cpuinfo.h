@@ -54,6 +54,8 @@ int shmem_cpuinfo__collect_cpu(pid_t pid, int cpuid, pid_t *victim);
 int shmem_cpuinfo__collect_cpus(pid_t pid, int ncpus, pid_t *victimlist);
 int shmem_cpuinfo__collect_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
+bool shmem_cpuinfo__exists(void);
+
 // old, to be deprecated
 int shmem_cpuinfo__collect_mask(pid_t pid, cpu_set_t *mask, int max_resources, priority_t priority);
 

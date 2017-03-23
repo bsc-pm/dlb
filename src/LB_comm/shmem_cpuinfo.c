@@ -1258,6 +1258,10 @@ void shmem_cpuinfo_ext__print_info(bool statistics) {
     free(shdata_copy);
 }
 
+bool shmem_cpuinfo__exists(void) {
+    return shm_handler != NULL;
+}
+
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
 static inline bool is_idle(int cpu) {
     return shdata->node_info[cpu].state == CPU_LENT && shdata->node_info[cpu].guest == NOBODY;
