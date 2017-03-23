@@ -23,6 +23,7 @@
 </testinfo>*/
 
 #include "assert_loop.h"
+#include "assert_noshm.h"
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
@@ -84,7 +85,7 @@ int main( int argc, char **argv ) {
     assert( new_Finish(&spd) == DLB_SUCCESS );
 
     // Poll a limited number of times if at least enable_callback was called once
-    assert_loop(enable_times > 0);
+    assert_loop( enable_times > 0 );
 
     // Finalize shmems
     assert( shmem_async_finalize(spd.id) == DLB_SUCCESS );

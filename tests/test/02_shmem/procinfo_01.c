@@ -22,6 +22,8 @@
     test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
+#include "assert_noshm.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
@@ -51,9 +53,6 @@ int main( int argc, char **argv ) {
     }
     assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
 
-    // The shared memory file should not exist at this point
-    assert( access(shm_filename, F_OK) == -1 );
-
     // This loop should completely fill the shared memory
     int cpuid;
     for (cpuid=0; cpuid<num_cpus; ++cpuid) {
@@ -70,9 +69,6 @@ int main( int argc, char **argv ) {
     for (cpuid=0; cpuid<num_cpus; ++cpuid) {
         assert( shmem_procinfo__finalize(pid+cpuid) == DLB_SUCCESS );
     }
-
-    // The shared memory file should not exist at this point
-    assert( access(shm_filename, F_OK) == -1 );
 
     return 0;
 }

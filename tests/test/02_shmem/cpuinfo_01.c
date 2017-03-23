@@ -22,6 +22,8 @@
     test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
+#include "assert_noshm.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
@@ -135,11 +137,6 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid) == DLB_SUCCESS );
-
-    // The shared memory file should not exist at this point
-    char shm_filename[SHM_NAME_LENGTH+8];
-    snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_cpuinfo_%d", getuid());
-    assert( access(shm_filename, F_OK) == -1 );
 
     return 0;
 }

@@ -22,6 +22,8 @@
     test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
+#include "assert_noshm.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
@@ -65,11 +67,6 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
     // A second finalize should return error
     assert( shmem_procinfo__finalize(pid) == DLB_ERR_NOSHMEM );
-
-    // The shared memory file should not exist at this point
-    char shm_filename[SHM_NAME_LENGTH+8];
-    snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
-    assert( access(shm_filename, F_OK) == -1 );
 
     return 0;
 }

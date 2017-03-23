@@ -23,6 +23,7 @@
 </testinfo>*/
 
 #include "assert_loop.h"
+#include "assert_noshm.h"
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
