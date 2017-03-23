@@ -270,6 +270,14 @@ int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask);
  */
 int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask);
 
+/*! \brief Poll DROM module to check if the process needs to adapt to a new mask
+ *          and update it if necessary using the registered callbacks
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_NOUPDT if no update id needed
+ */
+int DLB_PollDROM_Update(void);
+
 
 /*********************************************************************************/
 /*    Misc                                                                       */

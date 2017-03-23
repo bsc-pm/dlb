@@ -136,6 +136,10 @@ int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask) {
     return poll_drom(ncpus, mask);
 }
 
+int DLB_PollDROM_Update(void) {
+    return poll_drom_update();
+}
+
 
 /* Misc */
 

@@ -284,23 +284,23 @@ int poll_drom_sp(subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mas
     if (!spd->options.drom) {
         error = DLB_ERR_DISBLD;
     } else {
-        if (new_mask) {
-            // If new_mask is provided by the user
-            error = shmem_procinfo__polldrom(spd->id, new_cpus, new_mask);
-            if (error == DLB_SUCCESS) {
-                shmem_cpuinfo__update_ownership(spd->id, new_mask);
-            }
-        } else {
-            // Otherwise, mask is allocated and freed
-            cpu_set_t *mask = malloc(sizeof(cpu_set_t));
-            error = shmem_procinfo__polldrom(spd->id, new_cpus, mask);
-            if (error == DLB_SUCCESS) {
-                shmem_cpuinfo__update_ownership(spd->id, mask);
-            }
-            free(mask);
+        // Use a local mask if new_mask was not provided
+        cpu_set_t local_mask;
+        cpu_set_t *mask = new_mask ? new_mask : &local_mask;
+
+        error = shmem_procinfo__polldrom(spd->id, new_cpus, mask);
+        if (error == DLB_SUCCESS) {
+            shmem_cpuinfo__update_ownership(spd->id, mask);
         }
     }
     return error;
+}
+
+int poll_drom_update_sp(subprocess_descriptor_t *spd) {
+    cpu_set_t new_mask;
+    if (poll_drom_sp(spd, NULL, &new_mask) == DLB_SUCCESS) {
+        set_process_mask(&spd->pm, &new_mask);
+    }
 }
 
 

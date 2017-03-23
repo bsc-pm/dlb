@@ -67,6 +67,7 @@ int return_cpu_mask(const cpu_set_t *mask);
 
 /* DROM Responsive */
 int poll_drom(int *new_cpus, cpu_set_t *new_mask);
+int poll_drom_update(void);
 
 /* Misc */
 int check_cpu_availability(int cpuid);

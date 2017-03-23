@@ -137,6 +137,10 @@ int DLB_PollDROM_sp(dlb_handler_t handler, int *ncpus, dlb_cpu_set_t mask) {
     return poll_drom_sp(handler, ncpus, mask);
 }
 
+int DLB_PollDROM_Update_sp(dlb_handler_t handler) {
+    return poll_drom_update_sp(handler);
+}
+
 
 /* Misc */
 

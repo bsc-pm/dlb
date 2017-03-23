@@ -272,6 +272,15 @@ int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
  */
 int DLB_PollDROM_sp(dlb_handler_t handler, int *ncpus, dlb_cpu_set_t mask);
 
+/*! \brief Poll DROM module to check if the process needs to adapt to a new mask
+ *          and update it if necessary using the registered callbacks
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_NOUPDT if no update id needed
+ */
+int DLB_PollDROM_Update_sp(dlb_handler_t handler);
+
 
 /*********************************************************************************/
 /*    Misc                                                                       */
