@@ -17,6 +17,7 @@ def cpus(max_cpus):
         ans = ans + ['OMP_NUM_THREADS='+str(i)]
     return ans
 
+# Deprecate
 def lb_policy(policies):
     ans = []
     for p in policies:
@@ -117,7 +118,7 @@ def main(argv):
         policies_large  = [test_policy]
 
     if test_mode == 'single':
-        configs = [lb_policy(policies_single)]
+        configs = cross(*addlist)
     if test_mode == 'omp-only':
         configs = cross(*[lb_policy(policies_omp)]+[lb_lend_mode(blocking_small)]+addlist)
     elif test_mode == 'small':
@@ -130,11 +131,11 @@ def main(argv):
     versions = ''
     i = 1
     for c in configs:
-        line = 'test_ENV_ver' + str(i) + '=\"'
+        line = 'test_ENV_ver' + str(i) + '=\"LB_ARGS=\$LB_ARGS\' '
         versions += 'ver' + str(i) + ' '
         for entry in c:
             line = line + ' ' + entry
-        line = line + '\"'
+        line = line + '\'\"'
         config_lines += [line]
         i +=1
 

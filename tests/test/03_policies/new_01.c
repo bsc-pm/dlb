@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator"
+    test_generator="gens/basic-generator -a --mode=polling|--mode=async"
     test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
@@ -42,6 +42,7 @@ static subprocess_descriptor_t spd1;
 static subprocess_descriptor_t spd2;
 static cpu_set_t sp1_mask;
 static cpu_set_t sp2_mask;
+static interaction_mode_t mode;
 
 /* Subprocess 1 callbacks */
 static void sp1_cb_enable_cpu(int cpuid) {
@@ -50,7 +51,9 @@ static void sp1_cb_enable_cpu(int cpuid) {
 
 static void sp1_cb_disable_cpu(int cpuid) {
     CPU_CLR(cpuid, &sp1_mask);
-    assert( new_LendCpu(&spd1, cpuid) == DLB_SUCCESS );
+    if (mode == MODE_ASYNC) {
+        new_ReturnCpu(&spd1, cpuid);
+    }
 }
 
 /* Subprocess 2 callbacks */
@@ -60,7 +63,9 @@ static void sp2_cb_enable_cpu(int cpuid) {
 
 static void sp2_cb_disable_cpu(int cpuid) {
     CPU_CLR(cpuid, &sp2_mask);
-    assert( new_LendCpu(&spd2, cpuid) == DLB_SUCCESS );
+    if (mode == MODE_ASYNC) {
+        new_ReturnCpu(&spd2, cpuid);
+    }
 }
 
 int main( int argc, char **argv ) {
@@ -80,11 +85,10 @@ int main( int argc, char **argv ) {
 
     // Subprocess 1 init
     spd1.id = 111;
-    spd1.options.mode = MODE_ASYNC;
+    options_init(&spd1.options, NULL);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, NULL) == DLB_SUCCESS);
     assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, NULL) == DLB_SUCCESS);
-    assert( shmem_async_init(spd1.id, &spd1.pm, NULL) == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_enable_cpu, (dlb_callback_t)sp1_cb_enable_cpu)
             == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu, (dlb_callback_t)sp1_cb_disable_cpu)
@@ -93,17 +97,24 @@ int main( int argc, char **argv ) {
 
     // Subprocess 2 init
     spd2.id = 222;
-    spd2.options.mode = MODE_ASYNC;
+    options_init(&spd2.options, NULL);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
     memcpy(&spd2.process_mask, &sp2_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd2.id, &spd2.process_mask, NULL, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_async_init(spd2.id, &spd2.pm, NULL) == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_enable_cpu, (dlb_callback_t)sp2_cb_enable_cpu)
             == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu, (dlb_callback_t)sp2_cb_disable_cpu)
              == DLB_SUCCESS );
     assert( new_Init(&spd2) == DLB_SUCCESS );
+
+    // Get interaction mode
+    assert( spd1.options.mode == spd2.options.mode );
+    mode = spd1.options.mode;
+    if (mode == MODE_ASYNC) {
+        assert( shmem_async_init(spd2.id, &spd2.pm, NULL) == DLB_SUCCESS );
+        assert( shmem_async_init(spd1.id, &spd1.pm, NULL) == DLB_SUCCESS );
+    }
 
     // Subprocess 1 wants to acquire CPU 3
     assert( new_AcquireCpu(&spd1, 3) == DLB_NOTED );
@@ -112,11 +123,22 @@ int main( int argc, char **argv ) {
     CPU_CLR(3, &sp2_mask);
     assert( new_LendCpu(&spd2, 3) == DLB_SUCCESS );
 
+    // Subprocess 1 needs to poll
+    if (mode == MODE_POLLING) {
+        assert( new_AcquireCpu(&spd1, 3) == DLB_SUCCESS );
+    }
+
     // Poll a certain number of times until mask1 contains CPU 3
     assert_loop( CPU_ISSET(3, &sp1_mask) );
 
     // Subprocess 2 needs again CPU 3
     assert( new_AcquireCpu(&spd2, 3) == DLB_NOTED );
+
+    // Subprocesses 1 and 2 need to poll
+    if (mode == MODE_POLLING) {
+        assert( new_ReturnCpu(&spd1, 3) == DLB_SUCCESS );
+        assert( new_AcquireCpu(&spd2, 3) == DLB_SUCCESS );
+    }
 
     // Poll a certain number of times until mask2 contains CPU 3, and mask1 don't
     assert_loop( CPU_ISSET(3, &sp2_mask) );
@@ -131,6 +153,12 @@ int main( int argc, char **argv ) {
 
     // Subprocess 1 reclaims
     assert( new_ReclaimCpu(&spd1, 1) == DLB_NOTED );
+
+    // Subprocesses 1 & 2 needs to poll
+    if (mode == MODE_POLLING) {
+        assert( new_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
+        assert( new_AcquireCpu(&spd1, 1) == DLB_SUCCESS );
+    }
     assert_loop( CPU_ISSET(1, &sp1_mask) );
     assert( !CPU_ISSET(1, &sp2_mask) );
 
@@ -138,19 +166,34 @@ int main( int argc, char **argv ) {
     assert( new_LendCpu(&spd1, 0) == DLB_SUCCESS );
     assert( new_LendCpu(&spd1, 1) == DLB_SUCCESS );
 
-    // Subprocess 2 acquire everything
-    assert( new_AcquireCpu(&spd2, 0) == DLB_SUCCESS );
-    assert( new_AcquireCpu(&spd2, 1) == DLB_SUCCESS );
+    if (mode == MODE_ASYNC) {
+        // CPU 1 was still requested
+        assert_loop( CPU_ISSET(1, &sp2_mask) );
 
-    // Subprocess 1 finalize
+        // Subprocess 2 acquire everything
+        assert( new_AcquireCpu(&spd2, 0) == DLB_SUCCESS );
+        assert( new_AcquireCpu(&spd2, 1) == DLB_NOUPDT );
+    } else {
+        // Subprocess 2 acquire everything
+        assert( new_AcquireCpu(&spd2, 0) == DLB_SUCCESS );
+        assert( new_AcquireCpu(&spd2, 1) == DLB_SUCCESS );
+    }
+
+    // Policy finalize
     assert( new_Finish(&spd1) == DLB_SUCCESS );
-    assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
+    assert( new_Finish(&spd2) == DLB_SUCCESS );
+
+    // Async finalize
+    if (mode == MODE_ASYNC) {
+        assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
+        assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
+    }
+
+    // Subprocess 1 shmems finalize
     assert( shmem_cpuinfo__finalize(spd1.id) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd1.id) == DLB_SUCCESS );
 
-    // Subprocess 2 finalize
-    assert( new_Finish(&spd2) == DLB_SUCCESS );
-    assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
+    // Subprocess 2 shmems finalize
     assert( shmem_cpuinfo__finalize(spd2.id) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd2.id) == DLB_SUCCESS );
 
