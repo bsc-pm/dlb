@@ -41,7 +41,7 @@ int diff_time( struct timespec init, struct timespec end, struct timespec* diff 
         if ( ( init.tv_sec == end.tv_sec ) && ( init.tv_nsec > end.tv_nsec ) ) {
             return -1;
         } else {
-            if ( init.tv_nsec > end.tv_sec ) {
+            if ( init.tv_nsec > end.tv_nsec ) {
                 diff->tv_sec = end.tv_sec - ( init.tv_sec + 1 );
                 diff->tv_nsec = ( end.tv_nsec + 1e9 ) - init.tv_nsec;
             } else {
@@ -90,6 +90,10 @@ double to_secs( struct timespec t1 ) {
     return secs;
 }
 
+int64_t to_nsecs( const struct timespec *ts ) {
+    return ts->tv_nsec + ts->tv_sec * 1000000000L;
+}
+
 // Return timeval diff in us
 int64_t timeval_diff( const struct timeval *init, const struct timeval *end ) {
     return (int64_t)(end->tv_sec - init->tv_sec) * 1000000L +
@@ -112,8 +116,4 @@ void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2,
     }
     res->tv_sec = sec;
     res->tv_nsec = nsec;
-}
-
-int64_t ts_to_ns( const struct timespec *ts ) {
-    return ts->tv_nsec + ts->tv_sec * 1000000000L;
 }

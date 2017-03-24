@@ -843,7 +843,7 @@ static void update_process_loads(void) {
     getrusage(RUSAGE_SELF, &usage);
     add_tv_to_ts(&usage.ru_utime, &usage.ru_stime, &current_utime);
     elapsed_utime_since_last = timespec_diff(&last_utime, &current_utime);
-    elapsed_utime_since_init = ts_to_ns(&current_utime);
+    elapsed_utime_since_init = to_nsecs(&current_utime);
 
     // Update times for next update
     last_ttime = current_ttime;

@@ -32,9 +32,9 @@ void add_time( struct timespec t1, struct timespec t2, struct timespec* sum );
 void mult_time( struct timespec t1, int factor, struct timespec* prod );
 void reset( struct timespec *t1 );
 double to_secs( struct timespec t1 );
+int64_t to_nsecs( const struct timespec *ts );
 int64_t timeval_diff( const struct timeval *init, const struct timeval *end );
 int64_t timespec_diff( const struct timespec *start, const struct timespec *finish );
 void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2, struct timespec *res );
-int64_t ts_to_ns( const struct timespec *ts );
 
 #endif /* MYTIME_H */
