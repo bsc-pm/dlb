@@ -209,8 +209,8 @@ void after_mpi(mpi_call call_type) {
 
         OutOfCommunication();
     }
-    // Poll DROM
-    Update();
+    // Poll DROM and update mask if necessary
+    poll_drom_update();
 }
 
 void before_finalize(void) {
