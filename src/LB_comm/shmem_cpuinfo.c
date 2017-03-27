@@ -180,13 +180,15 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
     return error;
 }
 
-void shmem_cpuinfo_ext__init(const char *shmem_key) {
+int shmem_cpuinfo_ext__init(const char *shmem_key) {
     // Protect multiple initialization
-    if (shm_ext_handler != NULL) return;
+    if (shm_ext_handler != NULL) return DLB_ERR_INIT;
 
     node_size = mu_get_system_size();
     shm_ext_handler = shmem_init((void**)&shdata,
             sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
+
+    return DLB_SUCCESS;
 }
 
 int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
@@ -273,9 +275,9 @@ int shmem_cpuinfo__finalize(pid_t pid) {
     return DLB_SUCCESS;
 }
 
-void shmem_cpuinfo_ext__finalize(void) {
+int shmem_cpuinfo_ext__finalize(void) {
     // Protect multiple finalization
-    if (shm_ext_handler == NULL) return;
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
     bool shmem_empty;
     shmem_lock(shm_ext_handler);
@@ -287,6 +289,8 @@ void shmem_cpuinfo_ext__finalize(void) {
 
     shmem_finalize(shm_ext_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
     shm_ext_handler = NULL;
+
+    return DLB_SUCCESS;
 }
 
 int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
