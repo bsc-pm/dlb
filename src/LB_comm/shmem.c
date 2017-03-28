@@ -98,7 +98,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
     handler->shm_size = shsync_size + shdata_size;
 
     /* Get /dev/shm/ file names to create */
-    if (shmem_key) {
+    if (shmem_key && shmem_key[0] != '\0') {
         snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, shmem_key);
     } else {
         snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, getuid());
