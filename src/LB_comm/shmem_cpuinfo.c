@@ -615,6 +615,7 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
     } else if (cpuinfo->state == CPU_LENT && cpuinfo->guest == NOBODY) {
         // CPU is available
         cpuinfo->guest = pid;
+        if (victim) *victim = pid;
         error = DLB_SUCCESS;
     } else if (cpuinfo->state != CPU_DISABLED) {
         // CPU is busy, or lent to another process
