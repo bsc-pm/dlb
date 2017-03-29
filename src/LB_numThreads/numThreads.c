@@ -27,44 +27,19 @@
 #include <sched.h>
 #include <pthread.h>
 
-#define NANOS_SYMBOLS_DEFINED ( \
-        nanos_omp_set_process_mask && \
-        nanos_omp_add_process_mask && \
-        nanos_omp_set_process_mask && \
-        nanos_omp_add_process_mask && \
-        nanos_omp_set_num_threads \
-        )
-
 #define OMP_SYMBOLS_DEFINED ( \
         omp_set_num_threads \
         )
 
 /* Weak symbols */
-int  nanos_omp_set_process_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-void nanos_omp_add_process_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-int  nanos_omp_set_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-void nanos_omp_add_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-void nanos_omp_set_num_threads(int nthreads) __attribute__((weak));
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 
 void pm_init(pm_interface_t *pm) {
 
     *pm = (pm_interface_t) {};
 
-    /* Nanos++ */
-    if (NANOS_SYMBOLS_DEFINED) {
-        pm->dlb_callback_set_num_threads_ptr = nanos_omp_set_num_threads;
-        pm->dlb_callback_set_active_mask_ptr =
-            (dlb_callback_set_active_mask_t)nanos_omp_set_active_mask;
-        pm->dlb_callback_set_process_mask_ptr =
-            (dlb_callback_set_process_mask_t)nanos_omp_set_process_mask;
-        pm->dlb_callback_add_active_mask_ptr =
-            (dlb_callback_add_active_mask_t)nanos_omp_add_active_mask;
-        pm->dlb_callback_add_process_mask_ptr =
-            (dlb_callback_add_process_mask_t)nanos_omp_add_process_mask;
-    }
     /* OpenMP */
-    else if (OMP_SYMBOLS_DEFINED) {
+    if (OMP_SYMBOLS_DEFINED) {
         pm->dlb_callback_set_num_threads_ptr = omp_set_num_threads;
     }
     /* Undefined */
