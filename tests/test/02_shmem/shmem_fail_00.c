@@ -34,6 +34,6 @@ struct data {
 int main(int argc, char **argv) {
 
     struct data *shdata;
-    shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data), "cpuinfo", NULL);
+    shmem_init((void**)&shdata, sizeof(struct data), "cpuinfo", NULL);
     return 0;
 }

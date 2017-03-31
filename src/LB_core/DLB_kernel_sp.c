@@ -329,9 +329,11 @@ int poll_drom_sp(subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mas
 
 int poll_drom_update_sp(subprocess_descriptor_t *spd) {
     cpu_set_t new_mask;
-    if (poll_drom_sp(spd, NULL, &new_mask) == DLB_SUCCESS) {
+    int error = poll_drom_sp(spd, NULL, &new_mask);
+    if (error == DLB_SUCCESS) {
         set_process_mask(&spd->pm, &new_mask);
     }
+    return error;
 }
 
 
