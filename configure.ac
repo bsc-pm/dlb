@@ -23,7 +23,7 @@ AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 AC_ARG_VAR([GIT], [distributed version control system])
 AC_PATH_PROG([GIT], [git], [])
 # Make sure build_version is double-quoted!
-AS_IF([test -d "$srcdir/.git"], [
+AS_IF([test -e "$srcdir/.git"], [
     AC_MSG_CHECKING([revision of git repository])
     AS_IF([test x"$GIT" != x], [
         echo "$GIT" "$srcdir" >& AS_MESSAGE_LOG_FD
