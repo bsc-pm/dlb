@@ -60,6 +60,12 @@ int acquire_cpu(int cpuid);
 int acquire_cpus(int ncpus);
 int acquire_cpu_mask(const cpu_set_t *mask);
 
+/* Borrow */
+int borrow(void);
+int borrow_cpu(int cpuid);
+int borrow_cpus(int ncpus);
+int borrow_cpu_mask(const cpu_set_t *mask);
+
 /* Return */
 int return_all(void);
 int return_cpu(int cpuid);

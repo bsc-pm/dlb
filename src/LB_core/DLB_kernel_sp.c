@@ -253,6 +253,37 @@ int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 }
 
 
+/* Borrow */
+
+int borrow_sp(subprocess_descriptor_t *spd) {
+    add_event(RUNTIME_EVENT, EVENT_BORROW);
+    int error = spd->lb_funcs.borrow(spd);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int borrow_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
+    add_event(RUNTIME_EVENT, EVENT_BORROW);
+    int error = spd->lb_funcs.borrow_cpu(spd, cpuid);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int borrow_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
+    add_event(RUNTIME_EVENT, EVENT_BORROW);
+    int error = spd->lb_funcs.borrow_cpus(spd, ncpus);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int borrow_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    add_event(RUNTIME_EVENT, EVENT_BORROW);
+    int error = spd->lb_funcs.borrow_cpu_mask(spd, mask);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+
 /* Return */
 
 int return_all_sp(subprocess_descriptor_t *spd) {

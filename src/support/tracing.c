@@ -56,7 +56,7 @@ void init_tracing(const options_t *options) {
 
         unsigned type;
         int n_values;
-        long long values[10]= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        long long values[11]= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
         //THREADS_USED_EVENT
         type=THREADS_USED_EVENT;
@@ -65,8 +65,9 @@ void init_tracing(const options_t *options) {
 
         //RUNTIME_EVENT
         type=RUNTIME_EVENT;
-        n_values=10;
-        char* value_desc[10]= {"User code", "Init", "Into MPI call", "Out of MPI call", "Lend", "Reclaim", "Acquire", "Return", "Reset DLB", "Barrier"};
+        n_values=11;
+        char* value_desc[11]= {"User code", "Init", "Into MPI call", "Out of MPI call", "Lend",
+            "Reclaim", "Acquire", "Borrow", "Return", "Reset DLB", "Barrier"};
         Extrae_define_event_type(&type, "DLB Runtime call", &n_values, values, value_desc);
 
         //IDLE_CPUS_EVENT

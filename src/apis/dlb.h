@@ -227,6 +227,45 @@ int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask);
 
 
 /*********************************************************************************/
+/*    Borrow                                                                     */
+/*********************************************************************************/
+
+/*! \brief Borrow all the possible CPUs registered on DLB
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if cannot borrow any resources
+ *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ */
+int DLB_Borrow(void);
+
+/*! \brief Borrow a specific CPU
+ *  \param[in] cpuid cpu CPU to borrow
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if CPU cannot borrowed
+ *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ */
+int DLB_BorrowCpu(int cpuid);
+
+/*! \brief Borrow a specific amount of CPUs
+ *  \param[in] ncpus Number of CPUs to borrow
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if cannot borrow any resources
+ *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ */
+int DLB_BorrowCpus(int ncpus);
+
+/*! \brief Borrow a set of CPUs
+ *  \param[in] mask CPU set to borrow
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if cannot borrow any resources
+ *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ */
+int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask);
+
+/*********************************************************************************/
 /*    Return                                                                     */
 /*********************************************************************************/
 

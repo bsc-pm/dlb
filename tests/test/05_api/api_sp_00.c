@@ -77,6 +77,12 @@ int main( int argc, char **argv ) {
     assert( DLB_AcquireCpus_sp(handler, 1) == DLB_SUCCESS );
     assert( DLB_AcquireCpuMask_sp(handler, &process_mask) == DLB_SUCCESS );
 
+    // Borrow
+    assert( DLB_Borrow_sp(handler) == DLB_SUCCESS );
+    assert( DLB_BorrowCpu_sp(handler, 0) == DLB_SUCCESS );
+    assert( DLB_BorrowCpus_sp(handler, 1) == DLB_SUCCESS );
+    assert( DLB_BorrowCpuMask_sp(handler, &process_mask) == DLB_SUCCESS );
+
     // Return
     assert( DLB_Return_sp(handler) == DLB_SUCCESS );
     assert( DLB_ReturnCpu_sp(handler, 0) == DLB_SUCCESS );

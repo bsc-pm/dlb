@@ -57,6 +57,11 @@ int shmem_cpuinfo__collect_cpu(pid_t pid, int cpuid, pid_t *victim);
 int shmem_cpuinfo__collect_cpus(pid_t pid, int ncpus, pid_t *victimlist);
 int shmem_cpuinfo__collect_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
+int shmem_cpuinfo__borrow_all(pid_t pid, pid_t *victimlist);
+int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
+int shmem_cpuinfo__borrow_cpus(pid_t pid, int ncpus, pid_t *victimlist);
+int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
+
 bool shmem_cpuinfo__exists(void);
 
 // old, to be deprecated

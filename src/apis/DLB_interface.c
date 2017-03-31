@@ -115,6 +115,25 @@ int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
 }
 
 
+/* Borrow */
+
+int DLB_Borrow(void) {
+    return borrow();
+}
+
+int DLB_BorrowCpu(int cpuid) {
+    return borrow_cpu(cpuid);
+}
+
+int DLB_BorrowCpus(int ncpus) {
+    return borrow_cpus(ncpus);
+}
+
+int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask) {
+    return borrow_cpu_mask(mask);
+}
+
+
 /* Return */
 
 int DLB_Return(void) {

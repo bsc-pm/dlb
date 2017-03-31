@@ -55,6 +55,13 @@ static int dummy_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {ret
 static int dummy_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     return 0;
 }
+/* Borrow */
+static int dummy_Borrow(const subprocess_descriptor_t *spd) {return 0;}
+static int dummy_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {return 0;}
+static int dummy_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {return 0;}
+static int dummy_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    return 0;
+}
 /* Return */
 static int dummy_ReturnAll(const subprocess_descriptor_t *spd) {return 0;}
 static int dummy_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {return 0;}
@@ -88,6 +95,10 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .acquire_cpu = dummy_AcquireCpu,
         .acquire_cpus = dummy_AcquireCpus,
         .acquire_cpu_mask = dummy_AcquireCpuMask,
+        .borrow = dummy_Borrow,
+        .borrow_cpu = dummy_BorrowCpu,
+        .borrow_cpus = dummy_BorrowCpus,
+        .borrow_cpu_mask = dummy_BorrowCpuMask,
         .return_all = dummy_ReturnAll,
         .return_cpu = dummy_ReturnCpu,
         .return_cpu_mask = dummy_ReturnCpuMask,
@@ -167,6 +178,10 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->acquire_cpu = new_AcquireCpu;
             lb_funcs->acquire_cpus = new_AcquireCpus;
             lb_funcs->acquire_cpu_mask = new_AcquireCpuMask;
+            lb_funcs->borrow = new_Borrow;
+            lb_funcs->borrow_cpu = new_BorrowCpu;
+            lb_funcs->borrow_cpus = new_BorrowCpus;
+            lb_funcs->borrow_cpu_mask = new_BorrowCpuMask;
             lb_funcs->return_all = new_Return;
             lb_funcs->return_cpu = new_ReturnCpu;
             lb_funcs->return_cpu_mask = new_ReturnCpuMask;

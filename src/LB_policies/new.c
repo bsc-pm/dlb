@@ -304,6 +304,72 @@ int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 
 
 /*********************************************************************************/
+/*    Borrow                                                                     */
+/*********************************************************************************/
+
+int new_Borrow(const subprocess_descriptor_t *spd) {
+    int nelems = mu_get_system_size();
+    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    int error = shmem_cpuinfo__borrow_all(spd->id, victimlist);
+    if (error == DLB_SUCCESS) {
+        int cpuid;
+        for (cpuid=0; cpuid<nelems; ++cpuid) {
+            pid_t victim = victimlist[cpuid];
+            if (victim == spd->id) {
+                enable_cpu(&spd->pm, cpuid);
+            }
+        }
+    }
+    free(victimlist);
+    return error;
+}
+
+int new_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
+    pid_t victim = 0;
+    int error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &victim);
+    // ignore victim? if error == DLB_SUCCESS victim should always be == pid
+    if (error == DLB_SUCCESS) {
+        enable_cpu(&spd->pm, cpuid);
+    }
+    return error;
+}
+
+int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
+    int nelems = mu_get_system_size();
+    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    int error = shmem_cpuinfo__borrow_cpus(spd->id, ncpus, victimlist);
+    if (error == DLB_SUCCESS) {
+        int cpuid;
+        for (cpuid=0; cpuid<nelems; ++cpuid) {
+            pid_t victim = victimlist[cpuid];
+            if (victim == spd->id) {
+                enable_cpu(&spd->pm, cpuid);
+            }
+        }
+    }
+    free(victimlist);
+    return error;
+}
+
+int new_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    int nelems = mu_get_system_size();
+    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    int error = shmem_cpuinfo__collect_cpu_mask(spd->id, mask, victimlist);
+    if (error == DLB_SUCCESS) {
+        int cpuid;
+        for (cpuid=0; cpuid<nelems; ++cpuid) {
+            pid_t victim = victimlist[cpuid];
+            if (victim == spd->id) {
+                enable_cpu(&spd->pm, cpuid);
+            }
+        }
+    }
+    free(victimlist);
+    return error;
+}
+
+
+/*********************************************************************************/
 /*    Return                                                                     */
 /*********************************************************************************/
 

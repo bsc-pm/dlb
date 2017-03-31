@@ -27,9 +27,10 @@
 #define EVENT_LEND        4
 #define EVENT_RECLAIM     5
 #define EVENT_ACQUIRE     6
-#define EVENT_RETURN      7
-#define EVENT_RESET       8
-#define EVENT_BARRIER     9
+#define EVENT_BORROW      7
+#define EVENT_RETURN      8
+#define EVENT_RESET       9
+#define EVENT_BARRIER     10
 
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040
