@@ -986,12 +986,42 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
 
 int shmem_cpuinfo__borrow_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
     int error = DLB_NOUPDT;
+
+    // FIXME: we need something generic, and based on LB_PRIORITY
+    //          for now, simply iterate twice to do first owned + rest
+    // Construct a list of candidates without lock
+    int *cpuid_candidates = calloc(node_size, sizeof(int));
+    int candidates_id = 0;
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        // Owned
+        if (shdata->node_info[cpuid].owner == pid) {
+            cpuid_candidates[candidates_id++] = cpuid;
+        }
+    }
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        // Rest
+        if (shdata->node_info[cpuid].owner != pid) {
+            cpuid_candidates[candidates_id++] = cpuid;
+        }
+    }
+
     shmem_lock(shm_handler);
     {
-        // TODO scheduling
+        for (candidates_id=0; ncpus>0 && candidates_id<node_size; ++candidates_id) {
+            cpuid = cpuid_candidates[candidates_id];
+            pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
+            int local_error = borrow_cpu(pid, cpuid, victim);
+            if (local_error == DLB_SUCCESS) {
+                --ncpus;
+            }
+
+        }
     }
     shmem_unlock(shm_handler);
-    return error;
+
+    // FIXME: what to return if some CPUs were borrowed but not all?
+    return (ncpus == 0) ? DLB_SUCCESS : error;
 }
 
 int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
