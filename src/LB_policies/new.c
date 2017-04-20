@@ -202,32 +202,6 @@ int new_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 /*    Acquire                                                                    */
 /*********************************************************************************/
 
-int new_Acquire(const subprocess_descriptor_t *spd) {
-    int nelems = mu_get_system_size();
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
-    int error = shmem_cpuinfo__collect_all(spd->id, victimlist);
-    if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
-            if (async) {
-                if (victim == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (victim != 0) {
-                    shmem_async_disable_cpu(victim, cpuid);
-                }
-            } else {
-                if (victim == spd->id) {
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
-    }
-    free(victimlist);
-    return error;
-}
-
 int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t victim = 0;
     bool async = spd->options.mode == MODE_ASYNC;
@@ -247,32 +221,6 @@ int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
             shmem_async_disable_cpu(victim, cpuid);
         }
     }
-    return error;
-}
-
-int new_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    int nelems = mu_get_system_size();
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
-    int error = shmem_cpuinfo__collect_cpus(spd->id, ncpus, victimlist);
-    if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
-            if (async) {
-                if (victim == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (victim != 0) {
-                    shmem_async_disable_cpu(victim, cpuid);
-                }
-            } else {
-                if (victim == spd->id) {
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
-    }
-    free(victimlist);
     return error;
 }
 

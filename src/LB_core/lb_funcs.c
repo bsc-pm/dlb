@@ -49,9 +49,7 @@ static int dummy_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_se
     return 0;
 }
 /* Acquire */
-static int dummy_Acquire(const subprocess_descriptor_t *spd) {return 0;}
 static int dummy_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {return 0;}
-static int dummy_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {return 0;}
 static int dummy_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     return 0;
 }
@@ -91,9 +89,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .reclaim_cpu = dummy_ReclaimCpu,
         .reclaim_cpus = dummy_ReclaimCpus,
         .reclaim_cpu_mask = dummy_ReclaimCpuMask,
-        .acquire = dummy_Acquire,
         .acquire_cpu = dummy_AcquireCpu,
-        .acquire_cpus = dummy_AcquireCpus,
         .acquire_cpu_mask = dummy_AcquireCpuMask,
         .borrow = dummy_Borrow,
         .borrow_cpu = dummy_BorrowCpu,
@@ -119,7 +115,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->out_of_communication = Lend_light_OutOfCommunication;
             lb_funcs->into_blocking_call = Lend_light_IntoBlockingCall;
             lb_funcs->out_of_blocking_call = Lend_light_OutOfBlockingCall;
-            lb_funcs->acquire_cpus = Lend_light_updateresources;
+            lb_funcs->borrow_cpus = Lend_light_updateresources;
             break;
         case POLICY_WEIGHT:
             lb_funcs->init = Weight_Init;
@@ -128,7 +124,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->out_of_communication = Weight_OutOfCommunication;
             lb_funcs->into_blocking_call = Weight_IntoBlockingCall;
             lb_funcs->out_of_blocking_call = Weight_OutOfBlockingCall;
-            lb_funcs->acquire_cpus = Weight_updateresources;
+            lb_funcs->borrow_cpus = Weight_updateresources;
             break;
         case POLICY_LEWI_MASK:
             lb_funcs->init = lewi_mask_Init;
@@ -142,8 +138,8 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->lend = lewi_mask_Lend;
             lb_funcs->reclaim_cpus = lewi_mask_ReclaimCpus;
             lb_funcs->acquire_cpu = lewi_mask_AcquireCpu;
-            lb_funcs->acquire_cpus = lewi_mask_AcquireCpus;
             lb_funcs->acquire_cpu_mask = lewi_mask_AcquireCpuMask;
+            lb_funcs->borrow_cpus = lewi_mask_BorrowCpus;
             lb_funcs->return_all = lewi_mask_ReturnAll;
             break;
         case POLICY_AUTO_LEWI_MASK:
@@ -159,8 +155,8 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->lend_cpu = auto_lewi_mask_LendCpu;
             lb_funcs->reclaim_cpus = auto_lewi_mask_ReclaimCpus;
             lb_funcs->acquire_cpu = auto_lewi_mask_AcquireCpu;
-            lb_funcs->acquire_cpus = auto_lewi_mask_AcquireCpus;
             lb_funcs->acquire_cpu_mask = auto_lewi_mask_AcquireCpuMask;
+            lb_funcs->borrow_cpus = auto_lewi_mask_BorrowCpus;
             lb_funcs->return_cpu = auto_lewi_mask_ReturnCpu;
             lb_funcs->check_cpu_availability = auto_lewi_mask_CheckCpuAvailability;
             break;
@@ -174,9 +170,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->reclaim_cpu = new_ReclaimCpu;
             lb_funcs->reclaim_cpus = new_ReclaimCpus;
             lb_funcs->reclaim_cpu_mask = new_ReclaimCpuMask;
-            lb_funcs->acquire = new_Acquire;
             lb_funcs->acquire_cpu = new_AcquireCpu;
-            lb_funcs->acquire_cpus = new_AcquireCpus;
             lb_funcs->acquire_cpu_mask = new_AcquireCpuMask;
             lb_funcs->borrow = new_Borrow;
             lb_funcs->borrow_cpu = new_BorrowCpu;

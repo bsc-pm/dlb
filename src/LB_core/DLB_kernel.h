@@ -55,9 +55,7 @@ int reclaim_cpus(int ncpus);
 int reclaim_cpu_mask(const cpu_set_t *mask);
 
 /* Acquire */
-int acquire(void);
 int acquire_cpu(int cpuid);
-int acquire_cpus(int ncpus);
 int acquire_cpu_mask(const cpu_set_t *mask);
 
 /* Borrow */

@@ -98,16 +98,8 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
 
 /* Acquire */
 
-int DLB_Acquire(void) {
-    return acquire();
-}
-
 int DLB_AcquireCpu(int cpuid) {
     return acquire_cpu(cpuid);
-}
-
-int DLB_AcquireCpus(int ncpus) {
-    return acquire_cpus(ncpus);
 }
 
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {

@@ -74,8 +74,8 @@ int main( int argc, char **argv ) {
     // Add CPU
     assert( shmem_cpuinfo__add_cpu(pid, 0, NULL) == DLB_SUCCESS );
 
-    // Collect CPUs
-    assert( shmem_cpuinfo__collect_cpus(pid, 1, victimlist) == DLB_SUCCESS );
+    // Borrow CPUs
+    assert( shmem_cpuinfo__borrow_cpus(pid, 1, victimlist) == DLB_SUCCESS );
     assert( victimlist[0] == pid );
 
     // Add mask
@@ -108,8 +108,8 @@ int main( int argc, char **argv ) {
     // Add mask
     assert( shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
 
-    // Collect all
-    assert( shmem_cpuinfo__collect_all(pid, victimlist) >= 0 );
+    // Borrow all
+    assert( shmem_cpuinfo__borrow_all(pid, victimlist) >= 0 );
     for (i=0; i<ncpus; ++i) {
         assert( victimlist[i] == pid );
     }

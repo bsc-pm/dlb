@@ -41,8 +41,9 @@ int auto_lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid);
 int auto_lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus);
 
 int auto_lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid);
-int auto_lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus);
 int auto_lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+
+int auto_lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus);
 
 int auto_lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid);
 

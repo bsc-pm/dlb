@@ -205,34 +205,6 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
-/* Try to acquire foreign threads */
-int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    int error = DLB_ERR_PERM;
-    if (enabled && !single) {
-        cpu_set_t mask;
-        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
-
-        //Check num threads and mask size are the same
-        assert(nthreads==CPU_COUNT(&mask));
-
-        int collected = shmem_cpuinfo__collect_mask(spd->id, &mask, ncpus,
-                spd->options.priority);
-
-        if ( collected > 0 ) {
-            nthreads += collected;
-            set_mask(&spd->pm, &mask);
-            verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", collected, nthreads );
-            add_event( THREADS_USED_EVENT, nthreads );
-            error = DLB_SUCCESS;
-        }
-        //Check num threads and mask size are the same
-        assert(nthreads==CPU_COUNT(&mask));
-    } else {
-        error = DLB_ERR_DISBLD;
-    }
-    return error;
-}
-
 int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t* mask) {
     int error = DLB_ERR_PERM;
     if (enabled && !single) {
@@ -261,6 +233,34 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
             add_event( THREADS_USED_EVENT, nthreads );
             error = DLB_SUCCESS;
         }
+    } else {
+        error = DLB_ERR_DISBLD;
+    }
+    return error;
+}
+
+/* Try to acquire foreign threads */
+int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
+    int error = DLB_ERR_PERM;
+    if (enabled && !single) {
+        cpu_set_t mask;
+        memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
+
+        //Check num threads and mask size are the same
+        assert(nthreads==CPU_COUNT(&mask));
+
+        int collected = shmem_cpuinfo__collect_mask(spd->id, &mask, ncpus,
+                spd->options.priority);
+
+        if ( collected > 0 ) {
+            nthreads += collected;
+            set_mask(&spd->pm, &mask);
+            verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", collected, nthreads );
+            add_event( THREADS_USED_EVENT, nthreads );
+            error = DLB_SUCCESS;
+        }
+        //Check num threads and mask size are the same
+        assert(nthreads==CPU_COUNT(&mask));
     } else {
         error = DLB_ERR_DISBLD;
     }

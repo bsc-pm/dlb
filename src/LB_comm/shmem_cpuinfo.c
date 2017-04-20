@@ -639,39 +639,6 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-int shmem_cpuinfo__collect_all(pid_t pid, pid_t *victimlist) {
-    int error = DLB_NOUPDT;
-    shmem_lock(shm_handler);
-    {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (shdata->node_info[cpuid].guest != pid) {
-                // TODO: scheduling
-                int local_error = collect_cpu(pid, cpuid, &victimlist[cpuid]);
-                switch(local_error) {
-                    case DLB_ERR_REQST:
-                        // should be max?
-                        // return?
-                        break;
-                    case DLB_NOTED:
-                        // max priority, always overwrite
-                        error = DLB_NOTED;
-                        break;
-                    case DLB_SUCCESS:
-                        // medium priority, only update if error is in lowest priority
-                        error = (error == DLB_NOTED) ? DLB_NOTED : DLB_SUCCESS;
-                        break;
-                    case DLB_NOUPDT:
-                        // lowest priority, default value
-                        break;
-                }
-            }
-        }
-    }
-    shmem_unlock(shm_handler);
-    return error;
-}
-
 int shmem_cpuinfo__collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
     int error;
     shmem_lock(shm_handler);
@@ -680,45 +647,6 @@ int shmem_cpuinfo__collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
     }
     shmem_unlock(shm_handler);
     return error;
-}
-
-int shmem_cpuinfo__collect_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
-    if (ncpus == 0) return DLB_SUCCESS;
-
-    // TODO: lock-less return if there are no CPUs to collect?
-
-    shmem_lock(shm_handler);
-    {
-        int cpuid;
-        // Collect first owned CPUs
-        for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
-            if (shdata->node_info[cpuid].owner == pid
-                    && shdata->node_info[cpuid].guest != pid) {
-                pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                collect_cpu(pid, cpuid, victim);
-                --ncpus;
-            }
-        }
-
-        if (ncpus > 0) {
-            // see shmem_cpuinfo__collect_mask
-            // TODO: scheduling
-            //      we could decrease the complexity of this function by passing
-            //      by reference a list of CPUs to collect in the desired order
-            //      This array of candidates should be computed in the policy
-            //      or in the mu_utils outside the shmem_lock
-            for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
-                if (shdata->node_info[cpuid].guest != pid) {
-                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                    collect_cpu(pid, cpuid, victim);
-                    --ncpus;
-                }
-            }
-        }
-    }
-    shmem_unlock(shm_handler);
-
-    return DLB_SUCCESS;
 }
 
 int shmem_cpuinfo__collect_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {

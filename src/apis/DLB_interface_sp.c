@@ -99,16 +99,8 @@ int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
 
 /* Acquire */
 
-int DLB_Acquire_sp(dlb_handler_t handler) {
-    return acquire_sp(handler);
-}
-
 int DLB_AcquireCpu_sp(dlb_handler_t handler, int cpuid) {
     return acquire_cpu_sp(handler, cpuid);
-}
-
-int DLB_AcquireCpus_sp(dlb_handler_t handler, int ncpus) {
-    return acquire_cpus_sp(handler, ncpus);
 }
 
 int DLB_AcquireCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {

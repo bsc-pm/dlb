@@ -182,16 +182,6 @@ int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 /*    Acquire                                                                    */
 /*********************************************************************************/
 
-/*! \brief Acquire all the possible CPUs registered on DLB
- *  \param[in] handler subprocess identifier
- *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be acquired
- *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
- *  \return DLB_ERR_REQST if there are too many requests for these resources
- */
-int DLB_Acquire_sp(dlb_handler_t handler);
-
 /*! \brief Acquire a specific CPU
  *  \param[in] handler subprocess identifier
  *  \param[in] cpuid CPU to acquire
@@ -202,17 +192,6 @@ int DLB_Acquire_sp(dlb_handler_t handler);
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  */
 int DLB_AcquireCpu_sp(dlb_handler_t handler, int cpuid);
-
-/*! \brief Acquire a specific amount of CPUs
- *  \param[in] handler subprocess identifier
- *  \param[in] ncpus Number of CPUs to acquire
- *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_PERM if the resources cannot be acquired
- *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
- *  \return DLB_ERR_REQST if there are too many requests for these resources
- */
-int DLB_AcquireCpus_sp(dlb_handler_t handler, int ncpus);
 
 /*! \brief Acquire a set of CPUs
  *  \param[in] handler subprocess identifier
