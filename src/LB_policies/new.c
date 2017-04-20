@@ -429,3 +429,10 @@ int new_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask)
     }
     return error;
 }
+
+
+// Others
+
+int new_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid) {
+    return shmem_cpuinfo__is_cpu_available(spd->id, cpuid);
+}

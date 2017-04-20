@@ -48,4 +48,6 @@ int new_Return(const subprocess_descriptor_t *spd);
 int new_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid);
 int new_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
+int new_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid);
+
 #endif /* NEW_H */

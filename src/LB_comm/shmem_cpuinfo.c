@@ -1168,6 +1168,10 @@ int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask) {
 /*                                                                               */
 /*********************************************************************************/
 
+bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpuid) {
+    return shdata->node_info[cpuid].guest == pid;
+}
+
 /* Return false if my CPU is being used by other process
  */
 bool shmem_cpuinfo__is_cpu_borrowed(pid_t pid, int cpu) {

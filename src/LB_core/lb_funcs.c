@@ -185,6 +185,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->return_all = new_Return;
             lb_funcs->return_cpu = new_ReturnCpu;
             lb_funcs->return_cpu_mask = new_ReturnCpuMask;
+            lb_funcs->check_cpu_availability = new_CheckCpuAvailability;
             break;
     }
 }
