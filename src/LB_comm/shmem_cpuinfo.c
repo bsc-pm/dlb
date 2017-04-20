@@ -608,6 +608,7 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
             cpuinfo->guest = pid;
             if (victim) *victim = pid;
             error = DLB_SUCCESS;
+            update_cpu_stats(cpuid, STATS_OWNED);
         } else {
             if (victim) *victim = cpuinfo->guest;
             error = DLB_NOTED;
@@ -617,6 +618,7 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
         cpuinfo->guest = pid;
         if (victim) *victim = pid;
         error = DLB_SUCCESS;
+        update_cpu_stats(cpuid, STATS_GUESTED);
     } else if (cpuinfo->state != CPU_DISABLED) {
         // CPU is busy, or lent to another process
         error = DLB_ERR_REQST;
@@ -942,11 +944,13 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
         cpuinfo->guest = pid;
         if (victim) *victim = pid;
         error = DLB_SUCCESS;
+        update_cpu_stats(cpuid, STATS_OWNED);
     } else if (cpuinfo->state == CPU_LENT && cpuinfo->guest == NOBODY) {
         // CPU is available
         cpuinfo->guest = pid;
         if (victim) *victim = pid;
         error = DLB_SUCCESS;
+        update_cpu_stats(cpuid, STATS_GUESTED);
     }
 
     return error;
