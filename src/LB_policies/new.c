@@ -29,7 +29,10 @@
 #include <sched.h>
 #include <stdlib.h>
 
+static int node_size;
+
 int new_Init(const subprocess_descriptor_t *spd) {
+    node_size = mu_get_system_size();
     return DLB_SUCCESS;
 }
 
@@ -76,15 +79,14 @@ int new_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int new_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    int nelems = mu_get_system_size();
     bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *new_pids = async ? calloc(nelems, sizeof(pid_t)) : NULL;
+    pid_t *new_pids = async ? calloc(node_size, sizeof(pid_t)) : NULL;
     int error = shmem_cpuinfo__add_cpu_mask(spd->id, mask, new_pids);
     if (error == DLB_SUCCESS) {
         //mu_substract(&spd->active_mask, &spd->active_mask, mask);
         if (async) {
             int cpuid;
-            for (cpuid=0; cpuid<nelems; ++cpuid) {
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
                 pid_t new_pid = new_pids[cpuid];
                 if (new_pid == spd->id) {
                     shmem_async_enable_cpu(new_pid, cpuid);
@@ -101,13 +103,12 @@ int new_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 /*********************************************************************************/
 
 int new_Reclaim(const subprocess_descriptor_t *spd) {
-    int nelems = mu_get_system_size();
     bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__recover_all(spd->id, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t victim = victimlist[cpuid];
             if (async) {
                 if (victim == spd->id) {
@@ -146,13 +147,12 @@ int new_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int new_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    int nelems = mu_get_system_size();
     bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__recover_cpus(spd->id, ncpus, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t victim = victimlist[cpuid];
             if (async) {
                 if (victim == spd->id) {
@@ -172,13 +172,12 @@ int new_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
 }
 
 int new_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    int nelems = mu_get_system_size();
     bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__recover_cpu_mask(spd->id, mask, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t victim = victimlist[cpuid];
             if (async) {
                 if (victim == spd->id) {
@@ -225,13 +224,12 @@ int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    int nelems = mu_get_system_size();
     bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__acquire_cpu_mask(spd->id, mask, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t victim = victimlist[cpuid];
             if (async) {
                 if (victim == spd->id) {
@@ -256,12 +254,11 @@ int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 /*********************************************************************************/
 
 int new_Borrow(const subprocess_descriptor_t *spd) {
-    int nelems = mu_get_system_size();
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__borrow_all(spd->id, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t victim = victimlist[cpuid];
             if (victim == spd->id) {
                 enable_cpu(&spd->pm, cpuid);
@@ -283,12 +280,11 @@ int new_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    int nelems = mu_get_system_size();
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__borrow_cpus(spd->id, ncpus, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t victim = victimlist[cpuid];
             if (victim == spd->id) {
                 enable_cpu(&spd->pm, cpuid);
@@ -300,12 +296,11 @@ int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
 }
 
 int new_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    int nelems = mu_get_system_size();
-    pid_t *victimlist = calloc(nelems, sizeof(pid_t));
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__borrow_cpu_mask(spd->id, mask, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t victim = victimlist[cpuid];
             if (victim == spd->id) {
                 enable_cpu(&spd->pm, cpuid);
@@ -327,12 +322,11 @@ int new_Return(const subprocess_descriptor_t *spd) {
         return DLB_ERR_NOCOMP;
     }
 
-    int nelems = mu_get_system_size();
-    pid_t *new_pids = calloc(nelems, sizeof(pid_t));
+    pid_t *new_pids = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__return_all(spd->id, new_pids);
     if (error == DLB_SUCCESS) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (new_pids[cpuid] != 0) {
                 disable_cpu(&spd->pm, cpuid);
             }
@@ -359,12 +353,11 @@ int new_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int new_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
-    int nelems = mu_get_system_size();
-    pid_t *new_pids = calloc(nelems, sizeof(pid_t));
+    pid_t *new_pids = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, new_pids);
     if (error == DLB_SUCCESS) {
         int cpuid;
-        for (cpuid=0; cpuid<nelems; ++cpuid) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t new_pid = new_pids[cpuid];
             if (new_pid != 0) {
                 if (async) {
