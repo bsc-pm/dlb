@@ -205,7 +205,7 @@ int new_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t victim = 0;
     bool async = spd->options.mode == MODE_ASYNC;
-    int error = shmem_cpuinfo__collect_cpu(spd->id, cpuid, &victim);
+    int error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &victim);
     // FIXME: in polling mode, we may return DLB_NOUPDT here becase of the guest field
     if (!async && error == DLB_NOUPDT) error = DLB_SUCCESS;
     // EOFixme
@@ -228,7 +228,7 @@ int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
     int nelems = mu_get_system_size();
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(nelems, sizeof(pid_t));
-    int error = shmem_cpuinfo__collect_cpu_mask(spd->id, mask, victimlist);
+    int error = shmem_cpuinfo__acquire_cpu_mask(spd->id, mask, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
         for (cpuid=0; cpuid<nelems; ++cpuid) {
@@ -302,7 +302,7 @@ int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
 int new_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int nelems = mu_get_system_size();
     pid_t *victimlist = calloc(nelems, sizeof(pid_t));
-    int error = shmem_cpuinfo__collect_cpu_mask(spd->id, mask, victimlist);
+    int error = shmem_cpuinfo__borrow_cpu_mask(spd->id, mask, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
         for (cpuid=0; cpuid<nelems; ++cpuid) {

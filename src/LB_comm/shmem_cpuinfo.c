@@ -588,13 +588,13 @@ int shmem_cpuinfo__recover_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
 
 
 /*********************************************************************************/
-/*  Collect CPU                                                                  */
+/*  Acquire CPU                                                                  */
 /*********************************************************************************/
 
-/* Collect CPU
+/* Aquire CPU
  * If successful:       Guest => ME
  */
-static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
+static int acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
     int error;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
@@ -639,17 +639,17 @@ static int collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-int shmem_cpuinfo__collect_cpu(pid_t pid, int cpuid, pid_t *victim) {
+int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
     int error;
     shmem_lock(shm_handler);
     {
-        error = collect_cpu(pid, cpuid, victim);
+        error = acquire_cpu(pid, cpuid, victim);
     }
     shmem_unlock(shm_handler);
     return error;
 }
 
-int shmem_cpuinfo__collect_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
+int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
     int error = DLB_SUCCESS;
     shmem_lock(shm_handler);
     {
@@ -658,7 +658,7 @@ int shmem_cpuinfo__collect_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
             if (CPU_ISSET(cpuid, mask)) {
                 if (shdata->node_info[cpuid].guest != pid) {
                     pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                    int local_error = collect_cpu(pid, cpuid, victim);
+                    int local_error = acquire_cpu(pid, cpuid, victim);
                     error = (error < 0) ? error : local_error;
                 }
             }

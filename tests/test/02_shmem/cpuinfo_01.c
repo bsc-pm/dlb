@@ -67,7 +67,7 @@ int main( int argc, char **argv ) {
     {
         // Process 1 wants CPU 3
         victim = 0;
-        assert( shmem_cpuinfo__collect_cpu(p1_pid, 3, &victim) == DLB_NOTED );
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &victim) == DLB_NOTED );
         assert( victim == 0 );
 
         // Process 2 releases CPU 3
@@ -114,7 +114,7 @@ int main( int argc, char **argv ) {
     {
         // Process 1 wants CPU 3
         victim = 0;
-        assert( shmem_cpuinfo__collect_cpu(p1_pid, 3, &victim) == DLB_NOTED );
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &victim) == DLB_NOTED );
         assert( victim == 0 );
 
         // Process 1 no longer wants CPU 3

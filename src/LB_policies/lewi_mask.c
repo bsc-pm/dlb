@@ -188,7 +188,7 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
         if (!CPU_ISSET(cpuid, &mask)){
 
-            if (shmem_cpuinfo__collect_cpu(spd->id, cpuid, NULL)) {
+            if (shmem_cpuinfo__borrow_cpu(spd->id, cpuid, NULL)) {
                 nthreads++;
                 CPU_SET(cpuid, &mask);
                 set_mask( &spd->pm, &mask );
@@ -218,7 +218,7 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
             if (!CPU_ISSET(cpu, &current_mask)
                     && CPU_ISSET(cpu, mask)){
 
-                if (shmem_cpuinfo__collect_cpu(spd->id, cpu, NULL)) {
+                if (shmem_cpuinfo__borrow_cpu(spd->id, cpu, NULL)) {
                     nthreads++;
                     CPU_SET(cpu, &current_mask);
                     success = true;

@@ -145,7 +145,7 @@ void auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is
             memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
 
             // FIXME: steal force is disabled
-                if (shmem_cpuinfo__collect_cpu(spd->id, my_cpu, NULL)) {
+                if (shmem_cpuinfo__borrow_cpu(spd->id, my_cpu, NULL)) {
                     nthreads++;
                     add_event(THREADS_USED_EVENT, nthreads);
                 } else {
@@ -220,7 +220,7 @@ int auto_lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error = DLB_ERR_PERM;
     pthread_mutex_lock(&mutex);
     if (enabled && !single){
-        if (shmem_cpuinfo__collect_cpu(spd->id, cpuid, NULL)) {
+        if (shmem_cpuinfo__borrow_cpu(spd->id, cpuid, NULL)) {
             nthreads++;
             enable_cpu(&spd->pm, cpuid);
             verbose(VB_MICROLB, "Acquiring CPU %d", cpuid);
@@ -250,7 +250,7 @@ int auto_lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_
             if (!CPU_ISSET(cpu, &current_mask)
                     && CPU_ISSET(cpu, mask)){
 
-                if (shmem_cpuinfo__collect_cpu(spd->id, cpu, NULL)) {
+                if (shmem_cpuinfo__borrow_cpu(spd->id, cpu, NULL)) {
                     nthreads++;
                     CPU_SET(cpu, &current_mask);
                     success = true;

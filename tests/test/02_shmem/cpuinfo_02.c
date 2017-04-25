@@ -68,7 +68,7 @@ int main( int argc, char **argv ) {
     {
         // Process 1 wants CPUs 2 & 3
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__collect_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_NOTED );
+        assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_NOTED );
         assert( victimlist[2] == 0 && victimlist[3] == 0 );
 
         // Process 2 releases CPUs 2 & 3
@@ -118,7 +118,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants CPUs 2 & 3
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__collect_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 2 reclaims all
@@ -158,7 +158,7 @@ int main( int argc, char **argv ) {
     {
         // Process 1 wants CPUs 2 & 3
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__collect_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_NOTED );
+        assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_NOTED );
         assert( victimlist[2] == 0  && victimlist[3] == 0 );
 
         // Process 1 no longer wants CPUs 2 & 3
