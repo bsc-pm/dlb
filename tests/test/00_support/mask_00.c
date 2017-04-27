@@ -31,13 +31,13 @@ int main(int argc, char *argv[]) {
     mu_get_system_mask(&system_mask);
 
     cpu_set_t affinity_mask;
-    mu_get_affinity_mask(&affinity_mask, &system_mask, MU_ANY_BIT);
-    mu_get_affinity_mask(&affinity_mask, &system_mask, MU_ALL_BITS);
+    mu_get_parents_covering_cpuset(&affinity_mask, &system_mask);
+    mu_get_parents_inside_cpuset(&affinity_mask, &system_mask);
 
     cpu_set_t zero_mask;
     CPU_ZERO(&zero_mask);
-    mu_get_affinity_mask(&affinity_mask, &zero_mask, MU_ANY_BIT);
-    mu_get_affinity_mask(&affinity_mask, &zero_mask, MU_ALL_BITS);
+    mu_get_parents_covering_cpuset(&affinity_mask, &zero_mask);
+    mu_get_parents_inside_cpuset(&affinity_mask, &zero_mask);
 
     mu_init();
     mu_finalize();

@@ -59,7 +59,7 @@ void shmem_bitset__init(const cpu_set_t *cpu_set, const char *shmem_key) {
     memcpy( &default_mask, cpu_set, sizeof(cpu_set_t) );
     cpu_set_t affinity_mask;
     // Get the parent mask of any bit present in the default mask
-    mu_get_affinity_mask( &affinity_mask, &default_mask, MU_ANY_BIT );
+    mu_get_parents_covering_cpuset( &affinity_mask, &default_mask );
 
     // We have to check the shared_mask first before screwing up the shdata
     fatal_cond( has_shared_mask(), "Another process in the same node is using one of your cpus\n" );
@@ -231,7 +231,7 @@ int shmem_bitset__collect_mask(cpu_set_t *mask, int max_resources, priority_t pr
 
         cpu_set_t candidates_mask;
         cpu_set_t affinity_mask;
-        mu_get_affinity_mask( &affinity_mask, mask, MU_ANY_BIT );
+        mu_get_parents_covering_cpuset( &affinity_mask, mask );
         int aux=CPU_COUNT(mask);
         shmem_lock( shm_handler );
         {
@@ -256,7 +256,7 @@ int shmem_bitset__collect_mask(cpu_set_t *mask, int max_resources, priority_t pr
             if ( size-collected > 0 && max_resources > 0 && priority != PRIO_AFFINITY_ONLY) {
 
                 if ( priority == PRIO_AFFINITY_FULL ) {
-                    mu_get_affinity_mask( &affinity_mask, &(shdata->given_cpus), MU_ALL_BITS );
+                    mu_get_parents_inside_cpuset( &affinity_mask, &(shdata->given_cpus) );
                     CPU_AND( &candidates_mask, &affinity_mask, &(shdata->avail_cpus) );
                 } else {
                     memcpy( &candidates_mask, &(shdata->avail_cpus), sizeof(cpu_set_t) );

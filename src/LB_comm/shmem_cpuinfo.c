@@ -155,7 +155,7 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
     pthread_mutex_unlock(&mutex);
 
     //cpu_set_t affinity_mask;
-    //mu_get_affinity_mask(&affinity_mask, process_mask, MU_ANY_BIT);
+    //mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
 
     //DLB_INSTR( int idle_count = 0; )
 
@@ -745,7 +745,7 @@ int shmem_cpuinfo__collect_mask(pid_t pid, cpu_set_t *mask, int max_resources, p
                     case PRIO_AFFINITY_FULL:
                     case PRIO_AFFINITY_ONLY:
                         target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
-                        mu_get_affinity_mask(target_mask[t], &process_mask, MU_ANY_BIT);
+                        mu_get_parents_covering_cpuset(target_mask[t], &process_mask);
                         CPU_AND(target_mask[t], target_mask[t], &free_mask);
                         break;
                 }
@@ -763,7 +763,7 @@ int shmem_cpuinfo__collect_mask(pid_t pid, cpu_set_t *mask, int max_resources, p
                     case PRIO_AFFINITY_FULL:
                         // Get affinity mask from free_mask, only if the FULL socket is free
                         target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
-                        mu_get_affinity_mask(target_mask[t], &free_mask, MU_ALL_BITS);
+                        mu_get_parents_inside_cpuset(target_mask[t], &free_mask);
                         CPU_AND(target_mask[t], target_mask[t], &free_mask);
                         break;
                 }

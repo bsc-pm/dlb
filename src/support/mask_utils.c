@@ -178,21 +178,28 @@ void mu_get_system_mask(cpu_set_t *mask) {
     memcpy(mask, &sys.sys_mask, sizeof(cpu_set_t));
 }
 
-/* Returns the set of parent's masks (aka: socket masks) for the given child_set being condition:
- * MU_ANY_BIT: the intersection between the socket and the child_set must be non-empty
- * MU_ALL_BITS: the socket mask must be a subset of child_set
- */
-void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, mu_opt_t condition ) {
-    if ( !mu_initialized ) mu_init();
-
-    CPU_ZERO( affinity_set );
-    cpu_set_t intxn;
+// Return Mask of sockets covering at least 1 CPU of cpuset
+void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
+    if (!mu_initialized) mu_init();
+    CPU_ZERO(parent_set);
     int i;
-    for ( i=0; i<sys.num_parents; i++ ) {
-        CPU_AND( &intxn, &(sys.parents[i]), child_set );
-        if ( (condition == MU_ANY_BIT && CPU_COUNT( &intxn ) > 0) ||                     /* intxn non-empty */
-                (condition == MU_ALL_BITS && CPU_EQUAL( &intxn, &(sys.parents[i]) )) ) {    /* subset ? */
-            CPU_OR( affinity_set, affinity_set, &(sys.parents[i]) );
+    for (i=0; i<sys.num_parents; ++i) {
+        cpu_set_t intxn;
+        CPU_AND(&intxn, &sys.parents[i], cpuset);
+        if (CPU_COUNT(&intxn) > 0) {
+            CPU_OR(parent_set, parent_set, &sys.parents[i]);
+        }
+    }
+}
+
+// Return Mask of sockets containing all CPUs in cpuset
+void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
+    if (!mu_initialized) mu_init();
+    CPU_ZERO(parent_set);
+    int i;
+    for (i=0; i<sys.num_parents; ++i) {
+        if (mu_is_subset(&sys.parents[i], cpuset)) {
+            CPU_OR(parent_set, parent_set, &sys.parents[i]);
         }
     }
 }
