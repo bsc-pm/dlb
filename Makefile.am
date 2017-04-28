@@ -600,7 +600,7 @@ clean-deb:
 #################################################################################
 ### tests                                                                     ###
 #################################################################################
-EXTRA_DIST += tests/test/ tests/gens/config.py
+EXTRA_DIST += tests/test tests/gens/config.py
 CLEANFILES += tests/test.log tests/test.log.xml
 
 coverage-local: all-am
