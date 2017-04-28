@@ -33,6 +33,7 @@
 #include "support/debug.h"
 #include "support/tracing.h"
 #include "support/options.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <string.h>
@@ -66,6 +67,7 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         policy_t policy = spd.options.lb_policy;
         set_lb_funcs(&spd.lb_funcs, policy);
         spd.id = getpid();
+        spd.cpus_priority_array = malloc(mu_get_system_size()*sizeof(int));
         if (mask) {
             memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
         } else {
@@ -140,6 +142,7 @@ int Finish(void) {
             shmem_cpuinfo__finalize(spd.id);
             shmem_procinfo__finalize(spd.id);
         }
+        free(spd.cpus_priority_array);
     } else {
         error = DLB_ERR_NOINIT;
     }
@@ -481,6 +484,7 @@ int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
         error = shmem_procinfo__polldrom(spd.id, new_cpus, mask);
         if (error == DLB_SUCCESS) {
             shmem_cpuinfo__update_ownership(spd.id, mask);
+            spd.lb_funcs.update_priority_cpus(&spd, mask);
         }
     }
     return error;

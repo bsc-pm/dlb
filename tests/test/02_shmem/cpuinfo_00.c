@@ -42,7 +42,11 @@ int main( int argc, char **argv ) {
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
     int ncpus = CPU_COUNT(&process_mask);
     pid_t victimlist[ncpus];
+    int cpus_priority_array[ncpus];
     int i;
+
+    // Setup dummy priority CPUs
+    for (i=0; i<ncpus; ++i) cpus_priority_array[i] = i;
 
     // Init
     assert( shmem_cpuinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
@@ -75,7 +79,8 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__add_cpu(pid, 0, NULL) == DLB_SUCCESS );
 
     // Borrow CPUs
-    assert( shmem_cpuinfo__borrow_cpus(pid, 1, victimlist) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_NONE, cpus_priority_array, 1, victimlist)
+            == DLB_SUCCESS );
     assert( victimlist[0] == pid );
 
     // Add mask
@@ -109,7 +114,7 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__add_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Borrow all
-    assert( shmem_cpuinfo__borrow_all(pid, victimlist) >= 0 );
+    assert( shmem_cpuinfo__borrow_all(pid, PRIO_NONE, cpus_priority_array, victimlist) >= 0 );
     for (i=0; i<ncpus; ++i) {
         assert( victimlist[i] == pid );
     }

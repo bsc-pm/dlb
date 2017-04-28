@@ -68,6 +68,8 @@ static int dummy_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set
 }
 /* Misc */
 static int dummy_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid) {return 1;}
+static int dummy_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask)
+{ return 0; }
 
 
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
@@ -99,6 +101,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .return_cpu = dummy_ReturnCpu,
         .return_cpu_mask = dummy_ReturnCpuMask,
         .check_cpu_availability = dummy_CheckCpuAvailability,
+        .update_priority_cpus = dummy_UpdatePriorityCpus,
     };
 
 
@@ -180,6 +183,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->return_cpu = new_ReturnCpu;
             lb_funcs->return_cpu_mask = new_ReturnCpuMask;
             lb_funcs->check_cpu_availability = new_CheckCpuAvailability;
+            lb_funcs->update_priority_cpus = new_UpdatePriorityCpus;
             break;
     }
 }

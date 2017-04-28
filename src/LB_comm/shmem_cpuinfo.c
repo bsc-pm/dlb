@@ -884,22 +884,48 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-int shmem_cpuinfo__borrow_all(pid_t pid, pid_t *victimlist) {
-    int error = DLB_NOUPDT;
+int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
+        pid_t *victimlist) {
+
+    bool one_sucess = false;
     shmem_lock(shm_handler);
     {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (shdata->node_info[cpuid].guest != pid) {
-                // TODO: scheduling
-                if (borrow_cpu(pid, cpuid, &victimlist[cpuid]) == DLB_SUCCESS) {
-                    error = DLB_SUCCESS;
+        int i;
+        for (i=0; i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            if (cpuid == -1) break;
+            pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
+            if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                one_sucess = true;
+            }
+        }
+
+        if (priority == PRIO_AFFINITY_FULL) {
+            // Check also empty sockets
+            cpu_set_t free_mask;
+            CPU_ZERO(&free_mask);
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                if (shdata->node_info[cpuid].state == CPU_LENT
+                        && shdata->node_info[cpuid].guest == NOBODY) {
+                    CPU_SET(cpuid, &free_mask);
+                }
+            }
+            cpu_set_t free_sockets;
+            mu_get_parents_inside_cpuset(&free_sockets, &free_mask);
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                if (CPU_ISSET(cpuid, &free_sockets)) {
+                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
+                    if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                        one_sucess = true;
+                    }
                 }
             }
         }
     }
     shmem_unlock(shm_handler);
-    return error;
+
+    return one_sucess ? DLB_SUCCESS : DLB_NOUPDT;
 }
 
 int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
@@ -912,44 +938,47 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-int shmem_cpuinfo__borrow_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
-    int error = DLB_NOUPDT;
-
-    // FIXME: we need something generic, and based on LB_PRIORITY
-    //          for now, simply iterate twice to do first owned + rest
-    // Construct a list of candidates without lock
-    int *cpuid_candidates = calloc(node_size, sizeof(int));
-    int candidates_id = 0;
-    int cpuid;
-    for (cpuid=0; cpuid<node_size; ++cpuid) {
-        // Owned
-        if (shdata->node_info[cpuid].owner == pid) {
-            cpuid_candidates[candidates_id++] = cpuid;
-        }
-    }
-    for (cpuid=0; cpuid<node_size; ++cpuid) {
-        // Rest
-        if (shdata->node_info[cpuid].owner != pid) {
-            cpuid_candidates[candidates_id++] = cpuid;
-        }
-    }
+int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
+        int ncpus, pid_t *victimlist) {
 
     shmem_lock(shm_handler);
     {
-        for (candidates_id=0; ncpus>0 && candidates_id<node_size; ++candidates_id) {
-            cpuid = cpuid_candidates[candidates_id];
+        int i;
+        for (i=0; ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            if (cpuid == -1) break;
             pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-            int local_error = borrow_cpu(pid, cpuid, victim);
-            if (local_error == DLB_SUCCESS) {
+            if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
                 --ncpus;
             }
+        }
 
+        if (ncpus>0 && priority == PRIO_AFFINITY_FULL) {
+            // Check also empty sockets
+            cpu_set_t free_mask;
+            CPU_ZERO(&free_mask);
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                if (shdata->node_info[cpuid].state == CPU_LENT
+                        && shdata->node_info[cpuid].guest == NOBODY) {
+                    CPU_SET(cpuid, &free_mask);
+                }
+            }
+            cpu_set_t free_sockets;
+            mu_get_parents_inside_cpuset(&free_sockets, &free_mask);
+            for (cpuid=0; ncpus>0 && cpuid<node_size; ++cpuid) {
+                if (CPU_ISSET(cpuid, &free_sockets)) {
+                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
+                    if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                        --ncpus;
+                    }
+                }
+            }
         }
     }
     shmem_unlock(shm_handler);
 
-    // FIXME: what to return if some CPUs were borrowed but not all?
-    return (ncpus == 0) ? DLB_SUCCESS : error;
+    return (ncpus == 0) ? DLB_SUCCESS : DLB_NOUPDT;
 }
 
 int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
@@ -1195,7 +1224,7 @@ int shmem_cpuinfo__reset_default_cpus(pid_t pid, cpu_set_t *mask) {
 /* Update CPU ownership according to the new process mask.
  * To avoid collisions, we only release the ownership if we still own it
  */
-void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t* process_mask) {
+void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
     shmem_lock(shm_handler);
     verbose(VB_SHMEM, "Updating ownership: %s", mu_to_str(process_mask));
     int cpu;

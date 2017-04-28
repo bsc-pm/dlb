@@ -28,6 +28,7 @@
 
 #include <sched.h>
 #include <stdlib.h>
+#include <string.h>
 
 static int node_size;
 
@@ -255,7 +256,8 @@ int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 
 int new_Borrow(const subprocess_descriptor_t *spd) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__borrow_all(spd->id, victimlist);
+    int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.priority, spd->cpus_priority_array,
+            victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
@@ -281,7 +283,8 @@ int new_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__borrow_cpus(spd->id, ncpus, victimlist);
+    int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.priority, spd->cpus_priority_array,
+            ncpus, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
@@ -376,4 +379,54 @@ int new_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask)
 
 int new_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid) {
     return shmem_cpuinfo__is_cpu_available(spd->id, cpuid);
+}
+
+int new_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask) {
+    int *prio1 = malloc(node_size*sizeof(int));
+    int *prio2 = malloc(node_size*sizeof(int));
+    int *prio3 = malloc(node_size*sizeof(int));
+    int i, i1 = 0, i2 = 0, i3 = 0;
+
+    priority_t priority = spd->options.priority;
+    cpu_set_t affinity_mask;
+    mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        if (CPU_ISSET(cpuid, process_mask)) {
+            prio1[i1++] = cpuid;
+        } else {
+            switch (priority) {
+                case PRIO_NONE:
+                    prio2[i2++] = cpuid;
+                    break;
+                case PRIO_AFFINITY_FIRST:
+                    if (CPU_ISSET(cpuid, &affinity_mask)) {
+                        prio2[i2++] = cpuid;
+                    } else {
+                        prio3[i3++] = cpuid;
+                    }
+                    break;
+                case PRIO_AFFINITY_ONLY:
+                    if (CPU_ISSET(cpuid, &affinity_mask)) {
+                        prio2[i2++] = cpuid;
+                    }
+                    break;
+                case PRIO_AFFINITY_FULL:
+                    // This case cannot be pre-computed
+                    break;
+            }
+        }
+    }
+
+    /* Merge [<[prio1][prio2][prio3][-1]>] */
+    memmove(&spd->cpus_priority_array[0], prio1, sizeof(int)*i1);
+    memmove(&spd->cpus_priority_array[i1], prio2, sizeof(int)*i2);
+    memmove(&spd->cpus_priority_array[i1+i2], prio3, sizeof(int)*i3);
+    for (i=i1+i2+i3; i<node_size; ++i) spd->cpus_priority_array[i] = -1;
+
+    free(prio1);
+    free(prio2);
+    free(prio3);
+
+    return 0;
 }
