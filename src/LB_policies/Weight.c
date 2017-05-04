@@ -93,20 +93,22 @@ int Weight_Finish(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-void Weight_IntoCommunication(const subprocess_descriptor_t *spd) {}
+int Weight_IntoCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
-void Weight_OutOfCommunication(const subprocess_descriptor_t *spd) {
+int Weight_OutOfCommunication(const subprocess_descriptor_t *spd) {
     Weight_updateresources(spd, 0);
+    return DLB_SUCCESS;
 }
 
-void Weight_IntoBlockingCall(const subprocess_descriptor_t *spd) {
+int Weight_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     struct timespec aux;
     clock_gettime(CLOCK_REALTIME, &initMPI);
     diff_time(initComp, initMPI, &aux);
     add_time(iterCpuTime, aux, &iterCpuTime);
+    return DLB_SUCCESS;
 }
 
-void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     struct timespec aux;
     clock_gettime(CLOCK_REALTIME, &initComp);
     diff_time(initMPI, initComp, &aux);
@@ -141,6 +143,7 @@ void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
         reset(&iterCpuTime);
         reset(&iterMPITime);
     }
+    return DLB_SUCCESS;
 }
 
 int Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {
@@ -327,10 +330,12 @@ int Weight_Init(const subprocess_descriptor_t *spd) {
     return DLB_ERR_NOCOMP;
 }
 int Weight_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-void Weight_IntoCommunication(const subprocess_descriptor_t *spd) {}
-void Weight_OutOfCommunication(const subprocess_descriptor_t *spd) {}
-void Weight_IntoBlockingCall(const subprocess_descriptor_t *spd) {}
-void Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {}
+int Weight_IntoCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Weight_OutOfCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Weight_IntoBlockingCall(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Weight_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+    return DLB_ERR_NOCOMP;
+}
 int Weight_updateresources(const subprocess_descriptor_t *spd, int max_resources) {
     return DLB_ERR_NOCOMP;
 }

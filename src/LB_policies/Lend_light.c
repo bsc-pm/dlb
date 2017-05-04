@@ -92,11 +92,11 @@ int Lend_light_disableDLB(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {}
+int Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
-void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) {}
+int Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS;}
 
-void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {
+int Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
     if (enabled) {
         if ( spd->options.mpi_lend_mode == ONE_CPU ) {
@@ -109,9 +109,10 @@ void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {
             setThreads_Lend_light(&spd->pm, 0);
         }
     }
+    return DLB_SUCCESS;
 }
 
-void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
 
     if (enabled) {
         int cpus;
@@ -123,6 +124,7 @@ void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_ite
         setThreads_Lend_light(&spd->pm, cpus);
         verbose(VB_MICROLB, "ACQUIRING %d cpus", cpus);
     }
+    return DLB_SUCCESS;
 }
 
 int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
@@ -159,10 +161,12 @@ int Lend_light_Init(const subprocess_descriptor_t *spd) {
 int Lend_light_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int Lend_light_enableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int Lend_light_disableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {}
-void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) {}
-void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {}
-void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {}
+int Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+    return DLB_ERR_NOCOMP;
+}
 int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
     return DLB_ERR_NOCOMP;
 }

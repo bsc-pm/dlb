@@ -58,33 +58,33 @@ int main( int argc, char **argv ) {
     assert( DLB_SetMaxParallelism(1) == DLB_SUCCESS );
 
     // Lend
-    assert( DLB_Lend() == DLB_SUCCESS );
-    assert( DLB_LendCpu(0) == DLB_SUCCESS );
-    assert( DLB_LendCpus(1) == DLB_SUCCESS );
-    assert( DLB_LendCpuMask(&process_mask) == DLB_SUCCESS );
+    assert( DLB_Lend() == DLB_ERR_NOPOL );
+    assert( DLB_LendCpu(0) == DLB_ERR_NOPOL );
+    assert( DLB_LendCpus(1) == DLB_ERR_NOPOL );
+    assert( DLB_LendCpuMask(&process_mask) == DLB_ERR_NOPOL );
 
     // Reclaim
-    assert( DLB_Reclaim() == DLB_SUCCESS );
-    assert( DLB_ReclaimCpu(0) == DLB_SUCCESS );
-    assert( DLB_ReclaimCpus(1) == DLB_SUCCESS );
-    assert( DLB_ReclaimCpuMask(&process_mask) == DLB_SUCCESS );
+    assert( DLB_Reclaim() == DLB_ERR_NOPOL );
+    assert( DLB_ReclaimCpu(0) == DLB_ERR_NOPOL );
+    assert( DLB_ReclaimCpus(1) == DLB_ERR_NOPOL );
+    assert( DLB_ReclaimCpuMask(&process_mask) == DLB_ERR_NOPOL );
 
     // Acquire
-    assert( DLB_AcquireCpu(0) == DLB_SUCCESS );
-    assert( DLB_AcquireCpuMask(&process_mask) == DLB_SUCCESS );
+    assert( DLB_AcquireCpu(0) == DLB_ERR_NOPOL );
+    assert( DLB_AcquireCpuMask(&process_mask) == DLB_ERR_NOPOL );
 
     // Borrow
-    assert( DLB_Borrow() == DLB_SUCCESS );
-    assert( DLB_BorrowCpu(1) == DLB_SUCCESS );
-    assert( DLB_BorrowCpus(1) == DLB_SUCCESS );
-    assert( DLB_BorrowCpuMask(&process_mask) == DLB_SUCCESS );
+    assert( DLB_Borrow() == DLB_ERR_NOPOL );
+    assert( DLB_BorrowCpu(1) == DLB_ERR_NOPOL );
+    assert( DLB_BorrowCpus(1) == DLB_ERR_NOPOL );
+    assert( DLB_BorrowCpuMask(&process_mask) == DLB_ERR_NOPOL );
 
     // Return
-    assert( DLB_Return() == DLB_SUCCESS );
-    assert( DLB_ReturnCpu(0) == DLB_SUCCESS );
+    assert( DLB_Return() == DLB_ERR_NOPOL );
+    assert( DLB_ReturnCpu(0) == DLB_ERR_NOPOL );
 
     // Misc */
-    assert( DLB_CheckCpuAvailability(0) == 1 );
+    assert( DLB_CheckCpuAvailability(0) == DLB_ERR_NOPOL );
     assert( DLB_Barrier() == DLB_SUCCESS );
     assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_DISBLD );
     assert( DLB_SetVariable("LB_JUST_BARRIER", "1") == DLB_SUCCESS );

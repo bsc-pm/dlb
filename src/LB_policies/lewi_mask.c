@@ -77,12 +77,12 @@ int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
 }
 
 
-void lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd) {}
+int lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
-void lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd) {}
+int lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
+int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     if (enabled) {
         cpu_set_t mask;
         memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
@@ -119,10 +119,11 @@ void lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
         //Check num threads and mask size are the same (this is the only case where they don't match)
         //assert(nthreads+1==CPU_COUNT(&cpu));
     }
+    return DLB_SUCCESS;
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
-void lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     if (enabled) {
         cpu_set_t mask;
         memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
@@ -143,6 +144,7 @@ void lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter
         assert(nthreads==CPU_COUNT(&mask));
         add_event( THREADS_USED_EVENT, nthreads );
     }
+    return DLB_SUCCESS;
 }
 
 int lewi_mask_Lend(const subprocess_descriptor_t *spd) {

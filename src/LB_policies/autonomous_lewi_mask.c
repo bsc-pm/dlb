@@ -86,12 +86,12 @@ int auto_lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-void auto_lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd) {}
+int auto_lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
-void auto_lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd) {}
+int auto_lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
 /* Into Blocking Call - Lend the maximum number of threads */
-void auto_lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
+int auto_lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
     if ( spd->options.mpi_lend_mode == BLOCK ) {
         cpu_set_t cpu;
@@ -120,10 +120,11 @@ void auto_lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
             pthread_mutex_unlock(&mutex);
         }
     }
+    return DLB_SUCCESS;
 }
 
 /* Out of Blocking Call - Recover the default number of threads */
-void auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
 
     cpu_set_t mask;
     CPU_ZERO(&mask);
@@ -157,6 +158,7 @@ void auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is
         }
         pthread_mutex_unlock(&mutex);
     }
+    return DLB_SUCCESS;
 }
 
 int auto_lewi_mask_Lend(const subprocess_descriptor_t *spd) {

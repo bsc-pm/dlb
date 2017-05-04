@@ -38,7 +38,8 @@ static const char* error_msg[] = {
     /* DLB_ERR_NOENT */     "no entry",
     /* DLB_ERR_NOCOMP */    "no compatible",
     /* DLB_ERR_REQST */     "too many requests",
-    /* DLB_ERR_NOMEM */     "not enough space"
+    /* DLB_ERR_NOMEM */     "not enough space",
+    /* DLB_ERR_NOPOL */     "not defined in current policy"
 };
 
 const char* error_get_str(int errnum) {

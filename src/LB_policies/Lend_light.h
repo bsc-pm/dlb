@@ -32,10 +32,10 @@ int Lend_light_Finish(const subprocess_descriptor_t *spd);
 int Lend_light_enableDLB(const subprocess_descriptor_t *spd);
 int Lend_light_disableDLB(const subprocess_descriptor_t *spd);
 
-void Lend_light_IntoCommunication(const subprocess_descriptor_t *spd);
-void Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd);
-void Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd);
-void Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
+int Lend_light_IntoCommunication(const subprocess_descriptor_t *spd);
+int Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd);
+int Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd);
+int Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
 int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources);
 

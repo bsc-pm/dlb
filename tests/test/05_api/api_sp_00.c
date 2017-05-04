@@ -60,30 +60,30 @@ int main( int argc, char **argv ) {
     assert( DLB_SetMaxParallelism_sp(handler, 1) == DLB_SUCCESS );
 
     // Lend
-    assert( DLB_Lend_sp(handler) == DLB_SUCCESS );
-    assert( DLB_LendCpu_sp(handler, 0) == DLB_SUCCESS );
-    assert( DLB_LendCpus_sp(handler, 1) == DLB_SUCCESS );
-    assert( DLB_LendCpuMask_sp(handler, &process_mask) == DLB_SUCCESS );
+    assert( DLB_Lend_sp(handler) == DLB_ERR_NOPOL );
+    assert( DLB_LendCpu_sp(handler, 0) == DLB_ERR_NOPOL );
+    assert( DLB_LendCpus_sp(handler, 1) == DLB_ERR_NOPOL );
+    assert( DLB_LendCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
 
     // Reclaim
-    assert( DLB_Reclaim_sp(handler) == DLB_SUCCESS );
-    assert( DLB_ReclaimCpu_sp(handler, 0) == DLB_SUCCESS );
-    assert( DLB_ReclaimCpus_sp(handler, 1) == DLB_SUCCESS );
-    assert( DLB_ReclaimCpuMask_sp(handler, &process_mask) == DLB_SUCCESS );
+    assert( DLB_Reclaim_sp(handler) == DLB_ERR_NOPOL );
+    assert( DLB_ReclaimCpu_sp(handler, 0) == DLB_ERR_NOPOL );
+    assert( DLB_ReclaimCpus_sp(handler, 1) == DLB_ERR_NOPOL );
+    assert( DLB_ReclaimCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
 
     // Acquire
-    assert( DLB_AcquireCpu_sp(handler, 0) == DLB_SUCCESS );
-    assert( DLB_AcquireCpuMask_sp(handler, &process_mask) == DLB_SUCCESS );
+    assert( DLB_AcquireCpu_sp(handler, 0) == DLB_ERR_NOPOL );
+    assert( DLB_AcquireCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
 
     // Borrow
-    assert( DLB_Borrow_sp(handler) == DLB_SUCCESS );
-    assert( DLB_BorrowCpu_sp(handler, 0) == DLB_SUCCESS );
-    assert( DLB_BorrowCpus_sp(handler, 1) == DLB_SUCCESS );
-    assert( DLB_BorrowCpuMask_sp(handler, &process_mask) == DLB_SUCCESS );
+    assert( DLB_Borrow_sp(handler) == DLB_ERR_NOPOL );
+    assert( DLB_BorrowCpu_sp(handler, 0) == DLB_ERR_NOPOL );
+    assert( DLB_BorrowCpus_sp(handler, 1) == DLB_ERR_NOPOL );
+    assert( DLB_BorrowCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
 
     // Return
-    assert( DLB_Return_sp(handler) == DLB_SUCCESS );
-    assert( DLB_ReturnCpu_sp(handler, 0) == DLB_SUCCESS );
+    assert( DLB_Return_sp(handler) == DLB_ERR_NOPOL );
+    assert( DLB_ReturnCpu_sp(handler, 0) == DLB_ERR_NOPOL );
 
     // Misc */
     assert( DLB_PollDROM_sp(handler, NULL, NULL) == DLB_ERR_DISBLD );

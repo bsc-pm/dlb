@@ -33,10 +33,10 @@ typedef struct BalancePolicy {
     int (*enable)(const struct SubProcessDescriptor *spd);
     int (*disable)(const struct SubProcessDescriptor *spd);
     /* MPI specific */
-    void (*into_communication)(const struct SubProcessDescriptor *spd);
-    void (*out_of_communication)(const struct SubProcessDescriptor *spd);
-    void (*into_blocking_call)(const struct SubProcessDescriptor *spd);
-    void (*out_of_blocking_call)(const struct SubProcessDescriptor *spd, int is_iter);
+    int (*into_communication)(const struct SubProcessDescriptor *spd);
+    int (*out_of_communication)(const struct SubProcessDescriptor *spd);
+    int (*into_blocking_call)(const struct SubProcessDescriptor *spd);
+    int (*out_of_blocking_call)(const struct SubProcessDescriptor *spd, int is_iter);
     /* Lend */
     int (*lend)(const struct SubProcessDescriptor *spd);
     int (*lend_cpu)(const struct SubProcessDescriptor *spd, int cpuid);

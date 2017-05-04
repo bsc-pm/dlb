@@ -30,10 +30,10 @@ int auto_lewi_mask_Finish(const subprocess_descriptor_t *spd);
 int auto_lewi_mask_EnableDLB(const subprocess_descriptor_t *spd);
 int auto_lewi_mask_DisableDLB(const subprocess_descriptor_t *spd);
 
-void auto_lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd);
-void auto_lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd);
-void auto_lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);
-void auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
+int auto_lewi_mask_IntoCommunication(const subprocess_descriptor_t *spd);
+int auto_lewi_mask_OutOfCommunication(const subprocess_descriptor_t *spd);
+int auto_lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);
+int auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
 int auto_lewi_mask_Lend(const subprocess_descriptor_t *spd);
 int auto_lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid);
