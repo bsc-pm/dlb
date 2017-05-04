@@ -77,7 +77,6 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
 
         // Initialize modules
         debug_init(&spd.options);
-        spd.lb_funcs.init(&spd);
         if (policy != POLICY_NONE || spd.options.drom || spd.options.statistics) {
             // If the process has been pre-initialized, the process mask may have changed
             // procinfo_init must return a new_mask if so
@@ -98,6 +97,8 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         if (spd.options.mode == MODE_ASYNC) {
             shmem_async_init(spd.id, &spd.pm, spd.options.shm_key);
         }
+        spd.lb_funcs.init(&spd);
+        spd.lb_funcs.update_priority_cpus(&spd, &spd.process_mask);
 
         dlb_enabled = true;
         dlb_initialized = true;
