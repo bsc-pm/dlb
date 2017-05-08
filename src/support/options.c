@@ -60,13 +60,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_POLICY",
         .arg_name       = "--policy",
         .default_value  = "no",
-        .description    =
-            "Lend Balancing Policy. Choose one of: \n"
-            " - No: No policy\n"
-            " - LeWI: Lend When Idle, basic policy\n"
-            " - LeWI_mask: LeWI with mask support\n"
-            " - auto_LeWI_mask: autonomous LeWI. To be used with highly malleable runtimes\n"
-            " - RaL:",
+        .description    = "Lend Balancing Policy",
         .type           = OPT_POL_T,
         .offset         = offsetof(options_t, lb_policy),
         .readonly       = true,
@@ -122,8 +116,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_LEND_MODE",
         .arg_name       = "--lend-mode",
         .default_value  = "1CPU",
-        .description    = "When in MPI, whether to keep at least <1CPU> (default), "
-            "or lend all of them <BLOCK>",
+        .description    = "When in MPI, whether to keep at least 1 CPU or lend all of them",
         .type           = OPT_BLCK_T,
         .offset         = offsetof(options_t, mpi_lend_mode),
         .readonly       = false,
@@ -134,11 +127,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name      = "LB_VERBOSE",
         .arg_name      = "--verbose",
         .default_value = "",
-        .description   =
-            "Verbose components. It may contain the tags: api, microlb, shmem, mpi_api, "
-            "mpi_intercept, stats, drom. They can appear in any order, delimited by the "
-            "character ':'\n"
-            "  e.g.:  LB_VERBOSE=\"api:shmem:drom\"",
+        .description   = "Verbose components",
         .type          = OPT_VB_T,
         .offset        = offsetof(options_t, verbose),
         .readonly      = true,
@@ -147,8 +136,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name      = "LB_VERBOSE_FORMAT",
         .arg_name      = "--verbose-format",
         .default_value = "node:pid:thread",
-        .description   = "Verbose format. It may contain the tags: node, pid, mpinode, "
-            "mpirank, thread. They can appear in any order, delimited by the character :",
+        .description   = "Verbose format",
         .type          = OPT_VBFMT_T,
         .offset        = offsetof(options_t, verbose_fmt),
         .readonly      = true,
@@ -225,7 +213,7 @@ static const opts_dict_t options_dictionary[] = {
     }
 };
 
-static const size_t NUM_OPTIONS = sizeof(options_dictionary)/sizeof(opts_dict_t);
+enum { NUM_OPTIONS = sizeof(options_dictionary)/sizeof(opts_dict_t) };
 
 
 static void set_value(option_type_t type, void *option, const char *str_value) {
@@ -266,30 +254,34 @@ static void set_value(option_type_t type, void *option, const char *str_value) {
     }
 }
 
-static void get_value(option_type_t type, void *option, char *str_value) {
+static const char * get_value(option_type_t type, void *option/*, char *str_value*/) {
+    static char int_value[8];
     switch(type) {
         case OPT_BOOL_T:
-            sprintf(str_value, "%s", *(bool*)option ? "true" : "false");
-            break;
+            return *(bool*)option ? "yes" : "no";
         case OPT_INT_T:
-            sprintf(str_value, "%d", *(int*)option);
-            break;
+            sprintf(int_value, "%d", *(int*)option);
+            return int_value;
         case OPT_STR_T:
-            strncpy(str_value, (char*)option, MAX_OPTION_LENGTH);
-            break;
+            return (char*)option;
         case OPT_BLCK_T:
-            sprintf(str_value, "%s", *(blocking_mode_t*)option == ONE_CPU ? "1CPU" : "BLOCK");
-            break;
+            return blocking_mode_tostr(*(blocking_mode_t*)option);
         case OPT_VB_T:
+            return verbose_opts_tostr(*(verbose_opts_t*)option);
         case OPT_VBFMT_T:
+            return verbose_fmt_tostr(*(verbose_fmt_t*)option);
         case OPT_DBG_T:
+            return debug_opts_tostr(*(debug_opts_t*)option);
         case OPT_PRIO_T:
+            return priority_tostr(*(priority_t*)option);
         case OPT_POL_T:
+            return policy_tostr(*(policy_t*)option);
         case OPT_MASK_T:
+            return mu_to_str((cpu_set_t*)option);
         case OPT_MODE_T:
-            sprintf(str_value, "Type non-printable. Integer value: %d", *(int*)option);
-            break;
+            return mode_tostr(*(interaction_mode_t*)option);
     }
+    return "unknown";
 }
 
 /* Parse LB_ARGS and remove argument if found */
@@ -404,7 +396,7 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
         const opts_dict_t *entry = &options_dictionary[i];
         if (strcasecmp(entry->var_name, var_name) == 0
                 || strcasecmp(entry->arg_name, var_name) == 0) {
-            get_value(entry->type, (char*)options+entry->offset, value);
+            sprintf(value, "%s", get_value(entry->type, (char*)options+entry->offset));
             error = DLB_SUCCESS;
             break;
         }
@@ -415,26 +407,59 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
 
 /* API Printer */
 void options_print_variables(const options_t *options) {
-    char buffer[1024*16] = "DLB Options:\n";
+    enum { buffer_size = 1024 };
+    char buffer[buffer_size] = "DLB Options:\n";
     char *b = buffer + strlen(buffer);
     int i;
     for (i=0; i<NUM_OPTIONS; ++i) {
         const opts_dict_t *entry = &options_dictionary[i];
-        b += sprintf(b, "%s, %s", entry->var_name, entry->arg_name);
+
+        /* Name */
+        size_t name_len = strlen(entry->arg_name) + 1;
+        b += sprintf(b, "%s:%s", entry->arg_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+
+        /* Value */
+        const char *value = get_value(entry->type, (char*)options+entry->offset);
+        size_t value_len = strlen(value) + 1;
+        b += sprintf(b, "%s %s", value, value_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+
+        /* Choices */
         switch(entry->type) {
             case OPT_BOOL_T:
-                b += sprintf(b, " (bool)");
+                b += sprintf(b, "(bool)");
                 break;
             case OPT_INT_T:
-                b += sprintf(b, " (int)");
+                b += sprintf(b, "(int)");
+                break;
+            case OPT_STR_T:
+                b += sprintf(b, "(string)");
+                break;
+            case OPT_BLCK_T:
+                b += sprintf(b, "[%s]", get_blocking_mode_choices());
+                break;
+            case OPT_VB_T:
+                b += sprintf(b, "{%s}", get_verbose_opts_choices());
+                break;
+            case OPT_VBFMT_T:
+                b += sprintf(b, "{%s}", get_verbose_fmt_choices());
+                break;
+            case OPT_DBG_T:
+                b += sprintf(b, "{%s}", get_debug_opts_choices());
+                break;
+            case OPT_PRIO_T:
+                b += sprintf(b, "[%s]", get_priority_choices());
+                break;
+            case OPT_POL_T:
+                b += sprintf(b, "[%s]", get_policy_choices());
+                break;
+            case OPT_MODE_T:
+                b += sprintf(b, "[%s]", get_mode_choices());
                 break;
             default:
-                b += sprintf(b, " (string)");
-        }
-        if (entry->readonly) {
-            b += sprintf(b, " - (readonly)");
+                b += sprintf(b, "(unknown)");
         }
         b += sprintf(b, "\n");
     }
+    fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
     info0(buffer);
 }

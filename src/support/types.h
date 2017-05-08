@@ -76,13 +76,40 @@ typedef enum InteractionMode {
 
 void parse_bool(const char *str, bool *value);
 void parse_int(const char *str, int *value);
+
+/* blocking_mode_t */
 void parse_blocking_mode(const char *str, blocking_mode_t *value);
+const char* blocking_mode_tostr(blocking_mode_t value);
+const char* get_blocking_mode_choices(void);
+
+/* verbose_opts_t */
 void parse_verbose_opts(const char *str, verbose_opts_t *value);
+const char* verbose_opts_tostr(verbose_opts_t value);
+const char* get_verbose_opts_choices(void);
+
+/* verbose_fmt_t */
 void parse_verbose_fmt(const char *str, verbose_fmt_t *value);
+const char* verbose_fmt_tostr(verbose_fmt_t value);
+const char* get_verbose_fmt_choices(void);
+
+/* debug_opts_t */
 void parse_debug_opts(const char *str, debug_opts_t *value);
+const char* debug_opts_tostr(debug_opts_t value);
+const char* get_debug_opts_choices(void);
+
+/* priority_t */
 void parse_priority(const char *str, priority_t *value);
+const char* priority_tostr(priority_t value);
+const char* get_priority_choices(void);
+
+/* policy_t */
 void parse_policy(const char *str, policy_t *value);
 const char* policy_tostr(policy_t policy);
+const char* get_policy_choices(void);
+/* interaction_mode_t */
+
 void parse_mode(const char *str, interaction_mode_t *value);
+const char* mode_tostr(interaction_mode_t value);
+const char* get_mode_choices(void);
 
 #endif /* TYPES_H */

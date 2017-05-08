@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 void parse_bool(const char *str, bool *value) {
     *value = false;
@@ -39,110 +40,209 @@ void parse_int(const char *str, int *value) {
     *value = atoi(str);
 }
 
+/* blocking_mode_t */
+static const blocking_mode_t blocking_mode_values[] = {ONE_CPU, BLOCK};
+static const char* const blocking_mode_choices[] = {"1CPU", "BLOCK"};
+static const char* const blocking_mode_choices_str = "1CPU, BLOCK";
+enum { blocking_mode_nelems = sizeof(blocking_mode_values) / sizeof(blocking_mode_values[0]) };
+
 void parse_blocking_mode(const char *str, blocking_mode_t *value) {
     *value = ONE_CPU;
-    if (strcasecmp(str, "1CPU") == 0) {
-        *value = ONE_CPU;
-    } else if (strcasecmp(str, "BLOCK") == 0) {
-        *value = BLOCK;
+    int i;
+    for (i=0; i<blocking_mode_nelems; ++i) {
+        if (strcasecmp(str, blocking_mode_choices[i]) == 0) {
+            *value = blocking_mode_values[i];
+            break;
+        }
     }
 }
+
+const char* blocking_mode_tostr(blocking_mode_t value) {
+    int i;
+    for (i=0; i<blocking_mode_nelems; ++i) {
+        if (blocking_mode_values[i] == value) {
+            return blocking_mode_choices[i];
+        }
+    }
+    return "unknown";
+}
+
+const char* get_blocking_mode_choices(void) {
+    return blocking_mode_choices_str;
+}
+
+
+/* verbose_opts_t */
+static const verbose_opts_t verbose_opts_values[] =
+    {VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS, VB_DROM};
+static const char* const verbose_opts_choices[] =
+    {"api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom"};
+static const char* const verbose_opts_choices_str =
+    "api:microlb:shmem:mpi_api:mpi_intercept:stats:drom";
+enum { verbose_opts_nelems = sizeof(verbose_opts_values) / sizeof(verbose_opts_values[0]) };
 
 void parse_verbose_opts(const char *str, verbose_opts_t *value) {
     *value = VB_CLEAR;
-    char *my_str = malloc(strlen(str)+1);
-    strncpy(my_str, str, strlen(str)+1);
-    char *saveptr;
-    const char delimiter[2] = ":";
-    char *token = strtok_r(my_str, delimiter, &saveptr);
-    while (token != NULL) {
-        if ( !(*value & VB_API) && !strcasecmp(token, "api") ) {
-            *value |= VB_API;
-        } else if ( !(*value & VB_MICROLB) && !strcasecmp(token, "microlb") ) {
-            *value |= VB_MICROLB;
-        } else if ( !(*value & VB_SHMEM) && !strcasecmp(token, "shmem") ) {
-            *value |= VB_SHMEM;
-        } else if ( !(*value & VB_MPI_API) && !strcasecmp(token, "mpi_api") ) {
-            *value |= VB_MPI_API;
-        } else if ( !(*value & VB_MPI_INT) && !strcasecmp(token, "mpi_intercept") ) {
-            *value |= VB_MPI_INT;
-        } else if ( !(*value & VB_STATS) && !strcasecmp(token, "stats") ) {
-            *value |= VB_STATS;
-        } else if ( !(*value & VB_DROM) && !strcasecmp(token, "drom") ) {
-            *value |= VB_DROM;
+    int i;
+    for (i=0; i<verbose_opts_nelems; ++i) {
+        if (strstr(str, verbose_opts_choices[i]) != NULL) {
+            *value |= verbose_opts_values[i];
         }
-        token = strtok_r(NULL, delimiter, &saveptr);
     }
-    free(my_str);
 }
+
+const char* verbose_opts_tostr(verbose_opts_t value) {
+    static char str[sizeof(verbose_opts_choices)] = "";
+    char *p = str;
+    int i;
+    for (i=0; i<verbose_opts_nelems; ++i) {
+        if (value & verbose_opts_values[i]) {
+            if (p!=str) {
+                *p = ':';
+                ++p;
+                *p = '\0';
+            }
+            p += sprintf(p, "%s", verbose_opts_choices[i]);
+        }
+    }
+    return str;
+}
+
+const char* get_verbose_opts_choices(void) {
+    return verbose_opts_choices_str;
+}
+
+
+/* verbose_fmt_t */
+static const verbose_fmt_t verbose_fmt_values[] =
+    {VBF_NODE, VBF_PID, VBF_MPINODE, VBF_MPIRANK, VBF_THREAD};
+static const char* const verbose_fmt_choices[] =
+    {"node", "pid", "mpinode", "mpirank", "thread"};
+static const char* const verbose_fmt_choices_str =
+    "node:pid:mpinode:mpirank:thread";
+enum { verbose_fmt_nelems = sizeof(verbose_fmt_values) / sizeof(verbose_fmt_values[0]) };
 
 void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     *value = VBF_CLEAR;
-    char *my_str = malloc(strlen(str)+1);
-    strncpy(my_str, str, strlen(str)+1);
-    char *saveptr;
-    const char delimiter[2] = ":";
-    char *token = strtok_r(my_str, delimiter, &saveptr);
-    while (token != NULL) {
-        if ( !(*value & VBF_NODE) && !strcasecmp(token, "node") ) {
-            *value |= VBF_NODE;
-        } else if ( !(*value & VBF_PID) && !strcasecmp(token, "pid") ) {
-            *value |= VBF_PID;
-        } else if ( !(*value & VBF_MPINODE) && !strcasecmp(token, "mpinode") ) {
-            *value |= VBF_MPINODE;
-        } else if ( !(*value & VBF_MPIRANK) && !strcasecmp(token, "mpirank") ) {
-            *value |= VBF_MPIRANK;
-        } else if ( !(*value & VBF_THREAD) && !strcasecmp(token, "thread") ) {
-            *value |= VBF_THREAD;
+    int i;
+    for (i=0; i<verbose_fmt_nelems; ++i) {
+        if (strstr(str, verbose_fmt_choices[i]) != NULL) {
+            *value |= verbose_fmt_values[i];
         }
-        token = strtok_r(NULL, delimiter, &saveptr);
     }
-    free(my_str);
 }
+
+const char* verbose_fmt_tostr(verbose_fmt_t value) {
+    static char str[sizeof(verbose_fmt_choices)] = "";
+    char *p = str;
+    int i;
+    for (i=0; i<verbose_fmt_nelems; ++i) {
+        if (value & verbose_fmt_values[i]) {
+            if (p!=str) {
+                *p = ':';
+                ++p;
+                *p = '\0';
+            }
+            p += sprintf(p, "%s", verbose_fmt_choices[i]);
+        }
+    }
+    return str;
+}
+
+const char* get_verbose_fmt_choices(void) {
+    return verbose_fmt_choices_str;
+}
+
+
+/* debug_opts_t */
+static const debug_opts_t debug_opts_values[] = {DBG_REGSIGNALS, DBG_RETURNSTOLEN};
+static const char* const debug_opts_choices[] = {"register-signals", "return-stolen"};
+static const char* const debug_opts_choices_str = "register-signals:return-stolen";
+enum { debug_opts_nelems = sizeof(debug_opts_values) / sizeof(debug_opts_values[0]) };
 
 void parse_debug_opts(const char *str, debug_opts_t *value) {
     *value = DBG_CLEAR;
-    char *my_str = malloc(strlen(str)+1);
-    strncpy(my_str, str, strlen(str)+1);
-    char *saveptr;
-    const char delimiter[2] = ":";
-    char *token = strtok_r(my_str, delimiter, &saveptr);
-    while (token != NULL) {
-        if ( !(*value & DBG_REGSIGNALS) && !strcasecmp(token, "register-signals") ) {
-            *value |= DBG_REGSIGNALS;
-        } else if ( !(*value & DBG_RETURNSTOLEN) && !strcasecmp(token, "return-stolen") ) {
-            *value |= DBG_RETURNSTOLEN;
+    int i;
+    for (i=0; i<debug_opts_nelems; ++i) {
+        if (strstr(str, debug_opts_choices[i]) != NULL) {
+            *value |= debug_opts_values[i];
         }
-        token = strtok_r(NULL, delimiter, &saveptr);
     }
-    free(my_str);
 }
+
+const char* debug_opts_tostr(debug_opts_t value) {
+    static char str[sizeof(debug_opts_choices)] = "";
+    char *p = str;
+    int i;
+    for (i=0; i<debug_opts_nelems; ++i) {
+        if (value & debug_opts_values[i]) {
+            if (p!=str) {
+                *p = ':';
+                ++p;
+                *p = '\0';
+            }
+            p += sprintf(p, "%s", debug_opts_choices[i]);
+        }
+    }
+    return str;
+}
+
+const char* get_debug_opts_choices(void) {
+    return debug_opts_choices_str;
+}
+
+
+/* priority_t */
+static const priority_t priority_values[] =
+    {PRIO_NONE, PRIO_AFFINITY_FIRST, PRIO_AFFINITY_FULL, PRIO_AFFINITY_ONLY};
+static const char* const priority_choices[] =
+    {"none", "affinity_first", "affinity_full", "affinity_only"};
+static const char* const priority_choices_str =
+    "none, affinity_first, affinity_full, affinity_only";
+enum { priority_nelems = sizeof(priority_values) / sizeof(priority_values[0]) };
 
 void parse_priority(const char *str, priority_t *value) {
     *value = PRIO_AFFINITY_FIRST;
-    if (strcasecmp(str, "none") == 0) {
-        *value = PRIO_NONE;
-    } else if (strcasecmp(str, "affinity_first") == 0) {
-        *value = PRIO_AFFINITY_FIRST;
-    } else if (strcasecmp(str, "affinity_full") == 0) {
-        *value = PRIO_AFFINITY_FULL;
-    } else if (strcasecmp(str, "affinity_only") == 0) {
-        *value = PRIO_AFFINITY_ONLY;
+    int i;
+    for (i=0; i<priority_nelems; ++i) {
+        if (strcasecmp(str, priority_choices[i]) == 0) {
+            *value = priority_values[i];
+            break;
+        }
     }
 }
 
+const char* priority_tostr(priority_t value) {
+    int i;
+    for (i=0; i<priority_nelems; ++i) {
+        if (priority_values[i] == value) {
+            return priority_choices[i];
+        }
+    }
+    return "unknown";
+}
+
+const char* get_priority_choices(void) {
+    return priority_choices_str;
+}
+
+/* policy_t */
+static const policy_t policy_values[] =
+    {POLICY_NONE, POLICY_LEWI, POLICY_WEIGHT, POLICY_LEWI_MASK, POLICY_AUTO_LEWI_MASK, POLICY_NEW};
+static const char* const policy_choices[] =
+    {"no", "LeWI", "WEIGHT", "LeWI_mask", "auto_LeWI_mask", "new"};
+static const char* const policy_choices_str =
+    "no, LeWI, WEIGHT, LeWI_mask, auto_LeWI_mask, new";
+enum { policy_nelems = sizeof(policy_values) / sizeof(policy_values[0]) };
+
 void parse_policy(const char *str, policy_t *value) {
     *value = POLICY_NONE;
-    if (strcasecmp(str, "LeWI") == 0) {
-        *value = POLICY_LEWI;
-    } else if (strcasecmp(str, "WEIGHT") == 0) {
-        *value = POLICY_WEIGHT;
-    } else if (strcasecmp(str, "LeWI_mask") == 0) {
-        *value = POLICY_LEWI_MASK;
-    } else if (strcasecmp(str, "auto_LeWI_mask") == 0) {
-        *value = POLICY_AUTO_LEWI_MASK;
-    } else if (strcasecmp(str, "new") == 0) {
-        *value = POLICY_NEW;
+    int i;
+    for (i=0; i<policy_nelems; ++i) {
+        if (strcasecmp(str, policy_choices[i]) == 0) {
+            *value = policy_values[i];
+            break;
+        }
     }
 }
 
@@ -158,11 +258,37 @@ const char* policy_tostr(policy_t policy) {
     return "error";
 }
 
+const char* get_policy_choices(void) {
+    return policy_choices_str;
+}
+
+/* interaction_mode_t */
+static const interaction_mode_t mode_values[] = {MODE_POLLING, MODE_ASYNC};
+static const char* const mode_choices[] = {"polling", "async"};
+static const char* const mode_choices_str = "polling, async";
+enum { mode_nelems = sizeof(mode_values) / sizeof(mode_values[0]) };
+
 void parse_mode(const char *str, interaction_mode_t *value) {
     *value = MODE_POLLING;
-    if (strcasecmp(str, "polling") == 0) {
-        *value = MODE_POLLING;
-    } else if (strcasecmp(str, "async") == 0) {
-        *value = MODE_ASYNC;
+    int i;
+    for (i=0; i<mode_nelems; ++i) {
+        if (strcasecmp(str, mode_choices[i]) == 0) {
+            *value = mode_values[i];
+            break;
+        }
     }
+}
+
+const char* mode_tostr(interaction_mode_t value) {
+    int i;
+    for (i=0; i<mode_nelems; ++i) {
+        if (mode_values[i] == value) {
+            return mode_choices[i];
+        }
+    }
+    return "unknown";
+}
+
+const char* get_mode_choices(void) {
+    return mode_choices_str;
 }

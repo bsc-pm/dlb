@@ -65,11 +65,11 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--just-barrier=1 --shm-key=key --lend-mode=1cpu");
     assert(options_1.mpi_just_barrier == true);
     options_get_variable(&options_1, "--just-barrier", value);
-    assert(strcasecmp(value, "true") == 0);
+    assert(strcasecmp(value, "yes") == 0);
     options_set_variable(&options_1, "--just-barrier", "0");
     assert(options_1.mpi_just_barrier == false);
     options_get_variable(&options_1, "--just-barrier", value);
-    assert(strcasecmp(value, "false") == 0);
+    assert(strcasecmp(value, "no") == 0);
     options_get_variable(&options_1, "--shm-key", value);
     assert(strcasecmp(value, "key") == 0);
     int error_readonly_var = options_set_variable(&options_1, "LB_SHM_KEY", "new_key");
