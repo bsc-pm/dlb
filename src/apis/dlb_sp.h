@@ -285,9 +285,9 @@ int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 /*********************************************************************************/
 
 /*! \brief Poll DROM module to check if the process needs to adapt to a new mask
- *          or number of threads
+ *          or number of CPUs
  *  \param[in] handler subprocess identifier
- *  \param[out] ncpus optional, variable to receive the new number of threads
+ *  \param[out] ncpus optional, variable to receive the new number of CPUs
  *  \param[out] mask optional, variable to receive the new mask
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_DISBLD if DLB is disabled

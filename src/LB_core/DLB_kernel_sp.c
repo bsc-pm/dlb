@@ -112,7 +112,7 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
 #ifdef MPI_LIB
     info0 ("MPI processes per node: %d", _mpis_per_node);
 #endif
-    info0("Number of threads: %d", CPU_COUNT(&spd->process_mask));
+    info0("Number of CPUs: %d", CPU_COUNT(&spd->process_mask));
 
     return spd;
 }

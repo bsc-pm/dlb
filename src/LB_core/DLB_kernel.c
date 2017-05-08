@@ -118,7 +118,7 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
 #ifdef MPI_LIB
         info0 ("MPI processes per node: %d", _mpis_per_node);
 #endif
-        info0("Number of threads: %d", CPU_COUNT(&spd.process_mask));
+        info0("Number of CPUs: %d", CPU_COUNT(&spd.process_mask));
     } else {
         error = DLB_ERR_INIT;
     }
