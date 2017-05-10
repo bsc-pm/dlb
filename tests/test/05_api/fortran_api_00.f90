@@ -27,7 +27,7 @@ program test
     implicit none
     include 'dlbf.h'
     integer :: err
-    type(c_ptr) :: process_mask
+    type(c_ptr) :: process_mask = C_NULL_PTR
 
     err = dlb_init(4, C_NULL_PTR, c_char_"--drom=1"//C_NULL_CHAR)
     if (err /= DLB_SUCCESS) call abort

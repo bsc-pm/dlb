@@ -77,10 +77,19 @@ AS_IF([test "x$developer_version" = xyes], [
     AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
     AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
 ])
-
 AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
-
 AC_CHECK_HEADERS([stdatomic.h])
+
+# use the Fortran compiler for the following checks
+AC_LANG_PUSH([Fortran])
+AX_CHECK_COMPILE_FLAG([-pthread], [AC_FFLAGS="${AC_FFLAGS} -pthread"])
+AS_IF([test "x$developer_version" = xyes], [
+    AX_CHECK_COMPILE_FLAG([-Wall], [AC_FFLAGS="${AC_FFLAGS} -Wall"])
+    AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_FFLAGS="${AC_FFLAGS} -Wshadow"])
+    AX_CHECK_COMPILE_FLAG([-Werror], [AC_FFLAGS="${AC_FFLAGS} -Werror"])
+])
+AC_LANG_POP([Fortran])
+
 
 
 ################################################################################
@@ -125,15 +134,19 @@ AC_SUBST([TEST_VERSIONS])
 COMMON_CPPFLAGS="-D_GNU_SOURCE"
 
 PERFO_CFLAGS="-g -O3"
+PERFO_FFLAGS="-g -O3"
 PERFO_CPPFLAGS="$COMMON_CPPFLAGS"
 
 DEBUG_CFLAGS="-g -O0"
+DEBUG_FFLAGS="-g -O0"
 DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION"
 
 INSTR_CFLAGS="-g -O3"
+INSTR_FFLAGS="-g -O3"
 INSTR_CPPFLAGS="$COMMON_CPPFLAGS -DINSTRUMENTATION_VERSION"
 
 INSTR_DEBUG_CFLAGS="-g -O0"
+INSTR_DEBUG_FFLAGS="-g -O0"
 INSTR_DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
 AC_MSG_CHECKING([whether to enable coverage profiling])
@@ -146,15 +159,20 @@ AC_MSG_RESULT([$enable_coverage])
 
 AS_IF([test "x$enable_coverage" = xyes], [
     DEBUG_CFLAGS="$DEBUG_CFLAGS $COVERAGE_FLAGS"
+    DEBUG_FFLAGS="$DEBUG_FFLAGS $COVERAGE_FLAGS"
 ])
 
 AC_SUBST([PERFO_CFLAGS])
+AC_SUBST([PERFO_FFLAGS])
 AC_SUBST([PERFO_CPPFLAGS])
 AC_SUBST([DEBUG_CFLAGS])
+AC_SUBST([DEBUG_FFLAGS])
 AC_SUBST([DEBUG_CPPFLAGS])
 AC_SUBST([INSTR_CFLAGS])
+AC_SUBST([INSTR_FFLAGS])
 AC_SUBST([INSTR_CPPFLAGS])
 AC_SUBST([INSTR_DEBUG_CFLAGS])
+AC_SUBST([INSTR_DEBUG_FFLAGS])
 AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 
@@ -237,6 +255,7 @@ esac
 AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
 
 AC_SUBST([AC_CFLAGS])
+AC_SUBST([AC_FFLAGS])
 AC_SUBST([AC_LDFLAGS])
 
 # generate the final Makefile etc.
