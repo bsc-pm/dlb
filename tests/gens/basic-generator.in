@@ -1,6 +1,7 @@
 #!/bin/bash
 
 CC="@CC@"
+FC="@FC@"
 VERSIONS="@TEST_VERSIONS@"
 SRCDIR="@abs_top_srcdir@"
 BLDDIR="@abs_top_builddir@"
@@ -25,6 +26,7 @@ cat << EOF
 compile_versions="$VERSIONS"
 
 test_CC=$CC
+test_FC=$FC
 test_CPPFLAGS_performance="$PERFO_CPPFLAGS"
 test_CPPFLAGS_debug="$DEBUG_CPPFLAGS"
 test_CFLAGS_performance="$PERFO_CFLAGS"

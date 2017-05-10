@@ -65,6 +65,7 @@ LT_INIT
 AC_PROG_CC([$CC])
 AM_PROG_CC_C_O
 AC_PROG_CPP
+AC_PROG_FC
 
 # use the C compiler for the following checks
 AC_LANG([C])
