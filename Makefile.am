@@ -62,6 +62,8 @@ installheaders =                     \
 	src/apis/dlb_drom.h          \
 	src/apis/dlb_types.h         \
 	src/apis/dlb_errors.h        \
+	src/apis/dlbf.h              \
+	src/apis/dlbf-errors.h       \
 	$(END)
 
 dist_include_HEADERS = $(installheaders)
