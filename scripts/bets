@@ -183,9 +183,10 @@ compile_c ()
 
    local cc
    local cflags
+   local cppflags
    local ldflags
    local tmp
-   
+
    #defaults
    cc=${CC:=cc}
 
@@ -230,10 +231,11 @@ compile_cpp ()
    local srcdir=$4
 
    local cxx
+   local cppflags
    local cxxflags
    local ldflags
    local tmp
-   
+
    #defaults
    cxx=${CXX:=c++}
 
@@ -282,7 +284,7 @@ compile_fortran ()
    local fflags
    local ldflags
    local tmp
-   
+
    #defaults
    fc_=${FC:=f95}
 
@@ -309,7 +311,7 @@ compile_fortran ()
    unset current_test_nolink
 
    pushd $tmpdir
-   logcmd $fc_ $fflags $ldflags $out_param $srcdir/$source 
+   logcmd $fc_ $fflags $out_param $srcdir/$source $ldflags
    local ret=$?
    popd
 
