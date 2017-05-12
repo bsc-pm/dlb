@@ -24,6 +24,7 @@
 
 int new_Init(const subprocess_descriptor_t *spd);
 int new_Finish(const subprocess_descriptor_t *spd);
+int new_DisableDLB(const subprocess_descriptor_t *spd);
 
 int new_Lend(const subprocess_descriptor_t *spd);
 int new_LendCpu(const subprocess_descriptor_t *spd, int cpuid);

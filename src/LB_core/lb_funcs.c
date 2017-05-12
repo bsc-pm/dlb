@@ -120,6 +120,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         case POLICY_NEW:
             lb_funcs->init                   = new_Init;
             lb_funcs->finalize               = new_Finish;
+            lb_funcs->disable                = new_DisableDLB;
             lb_funcs->lend                   = new_Lend;
             lb_funcs->lend_cpu               = new_LendCpu;
             lb_funcs->lend_cpu_mask          = new_LendCpuMask;

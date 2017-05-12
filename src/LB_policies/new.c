@@ -42,6 +42,10 @@ int new_Finish(const subprocess_descriptor_t *spd) {
     return (error >= 0) ? DLB_SUCCESS : error;
 }
 
+int new_DisableDLB(const subprocess_descriptor_t *spd) {
+    return new_AcquireCpuMask(spd, &spd->process_mask);
+}
+
 
 /* Keep active_mask updated?
  *  Update it requires:
