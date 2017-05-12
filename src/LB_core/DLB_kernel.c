@@ -153,13 +153,16 @@ int Finish(void) {
 int set_dlb_enabled(bool enabled) {
     int error = DLB_SUCCESS;
     if (dlb_initialized) {
-        dlb_enabled = enabled;
-        if (enabled){
-            spd.lb_funcs.enable(&spd);
-            add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-        }else{
-            spd.lb_funcs.disable(&spd);
-            add_event(DLB_MODE_EVENT, EVENT_DISABLED);
+        if (__sync_bool_compare_and_swap(&dlb_enabled, !enabled, enabled)) {
+            if (enabled) {
+                spd.lb_funcs.enable(&spd);
+                add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+            } else {
+                spd.lb_funcs.disable(&spd);
+                add_event(DLB_MODE_EVENT, EVENT_DISABLED);
+            }
+        } else {
+            error = DLB_NOUPDT;
         }
     } else {
         error = DLB_ERR_NOINIT;
