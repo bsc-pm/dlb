@@ -220,8 +220,8 @@ endif
 #********************************************************************************
 if MPI_LIB
 MPI_SRCS = \
-	src/LB_MPI/DPD.c                   \
-	src/LB_MPI/DPD.h                   \
+	src/LB_MPI/DPD.c                \
+	src/LB_MPI/DPD.h                \
 	src/LB_MPI/process_MPI.c        \
 	src/LB_MPI/process_MPI.h        \
 	$(END)
@@ -276,6 +276,8 @@ endif #MPI_LIB
 #********************************************************************************
 if MPI_LIB
 MPIF_SRCS = \
+	src/LB_MPI/DPD.c                \
+	src/LB_MPI/DPD.h                \
 	src/LB_MPI/process_MPI.c        \
 	src/LB_MPI/process_MPI.h        \
 	$(END)
