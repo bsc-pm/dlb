@@ -18,11 +18,6 @@
 !   along with DLB.  If not, see <http://www.gnu.org/licenses/>.                  !
 !---------------------------------------------------------------------------------!
 
-!use iso_c_binding, only: c_char, c_int, c_ptr, c_funptr
-!type dlb_callbacks_t
-!    integer(c_int) :: foo
-!end type dlb_callbacks_t
-
 include 'dlbf-errors.h'
 interface
     function dlb_init(ncpus, mask, dlb_args) result (ierr) bind(c, name='DLB_Init')

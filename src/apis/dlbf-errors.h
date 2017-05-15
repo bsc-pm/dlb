@@ -18,21 +18,21 @@
 !   along with DLB.  If not, see <http://www.gnu.org/licenses/>.                  !
 !---------------------------------------------------------------------------------!
 
-integer(kind=c_int), parameter :: DLB_NOUPDT        = 2
-integer(kind=c_int), parameter :: DLB_NOTED         = 1
-integer(kind=c_int), parameter :: DLB_SUCCESS       = 0
-integer(kind=c_int), parameter :: DLB_ERR_UNKNOWN   = -1
-integer(kind=c_int), parameter :: DLB_ERR_NOINIT    = -2
-integer(kind=c_int), parameter :: DLB_ERR_INIT      = -3
-integer(kind=c_int), parameter :: DLB_ERR_DISBLD    = -4
-integer(kind=c_int), parameter :: DLB_ERR_NOSHMEM   = -5
-integer(kind=c_int), parameter :: DLB_ERR_NOPROC    = -6
-integer(kind=c_int), parameter :: DLB_ERR_PDIRTY    = -7
-integer(kind=c_int), parameter :: DLB_ERR_PERM      = -8
-integer(kind=c_int), parameter :: DLB_ERR_TIMEOUT   = -9
-integer(kind=c_int), parameter :: DLB_ERR_NOCBK     = -10
-integer(kind=c_int), parameter :: DLB_ERR_NOENT     = -11
-integer(kind=c_int), parameter :: DLB_ERR_NOCOMP    = -12
-integer(kind=c_int), parameter :: DLB_ERR_REQST     = -13
-integer(kind=c_int), parameter :: DLB_ERR_NOMEM     = -14
-integer(kind=c_int), parameter :: DLB_ERR_NOPOL     = -15
+integer, parameter :: DLB_NOUPDT        = 2
+integer, parameter :: DLB_NOTED         = 1
+integer, parameter :: DLB_SUCCESS       = 0
+integer, parameter :: DLB_ERR_UNKNOWN   = -1
+integer, parameter :: DLB_ERR_NOINIT    = -2
+integer, parameter :: DLB_ERR_INIT      = -3
+integer, parameter :: DLB_ERR_DISBLD    = -4
+integer, parameter :: DLB_ERR_NOSHMEM   = -5
+integer, parameter :: DLB_ERR_NOPROC    = -6
+integer, parameter :: DLB_ERR_PDIRTY    = -7
+integer, parameter :: DLB_ERR_PERM      = -8
+integer, parameter :: DLB_ERR_TIMEOUT   = -9
+integer, parameter :: DLB_ERR_NOCBK     = -10
+integer, parameter :: DLB_ERR_NOENT     = -11
+integer, parameter :: DLB_ERR_NOCOMP    = -12
+integer, parameter :: DLB_ERR_REQST     = -13
+integer, parameter :: DLB_ERR_NOMEM     = -14
+integer, parameter :: DLB_ERR_NOPOL     = -15
