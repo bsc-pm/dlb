@@ -138,7 +138,8 @@ int main( int argc, char **argv ) {
     // Subprocesses 1 and 2 need to poll
     if (mode == MODE_POLLING) {
         assert( new_ReturnCpu(&spd1, 3) == DLB_SUCCESS );
-        assert( new_AcquireCpu(&spd2, 3) == DLB_SUCCESS );
+        int err = new_AcquireCpu(&spd2, 3);
+        assert( err == DLB_SUCCESS || err == DLB_NOUPDT );
     }
 
     // Poll a certain number of times until mask2 contains CPU 3, and mask1 don't
@@ -158,7 +159,8 @@ int main( int argc, char **argv ) {
     // Subprocesses 1 & 2 needs to poll
     if (mode == MODE_POLLING) {
         assert( new_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
-        assert( new_AcquireCpu(&spd1, 1) == DLB_SUCCESS );
+        int err = new_AcquireCpu(&spd1, 1);
+        assert( err == DLB_SUCCESS || err == DLB_NOUPDT );
     }
     assert_loop( CPU_ISSET(1, &sp1_mask) );
     assert( !CPU_ISSET(1, &sp2_mask) );

@@ -226,18 +226,15 @@ int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t victim = 0;
     bool async = spd->options.mode == MODE_ASYNC;
     int error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &victim);
-    // FIXME: in polling mode, we may return DLB_NOUPDT here becase of the guest field
-    if (!async && error == DLB_NOUPDT) error = DLB_SUCCESS;
-    // EOFixme
-    if (error == DLB_SUCCESS) {
-        if (async) {
+    if (!async && error >= 0 ) {
+        // In polling mode, enable CPU even if that causes oversubscription (DLB_NOTED err)
+        // The acquired CPU **may** prevent CPU sharing by polling checkCPUAvailability,
+        // but it's entirely decided by the caller runtime
+        enable_cpu(&spd->pm, cpuid);
+    } else if (async) {
+        if (error == DLB_SUCCESS) {
             shmem_async_enable_cpu(spd->id, cpuid);
-        } else {
-            enable_cpu(&spd->pm, cpuid);
-        }
-    }
-    if (error == DLB_NOTED) {
-        if (async) {
+        } else if (error == DLB_NOTED) {
             shmem_async_disable_cpu(victim, cpuid);
         }
     }

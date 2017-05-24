@@ -1156,6 +1156,16 @@ int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask) {
 /*********************************************************************************/
 
 bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpuid) {
+    // If the CPU is free, assign it to myself
+    if (shdata->node_info[cpuid].guest == NOBODY) {
+        shmem_lock(shm_handler);
+        if (shdata->node_info[cpuid].guest == NOBODY) {
+            shdata->node_info[cpuid].guest = pid;
+            update_cpu_stats(cpuid, STATS_OWNED);
+        }
+        shmem_unlock(shm_handler);
+    }
+
     return shdata->node_info[cpuid].guest == pid;
 }
 
