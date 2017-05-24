@@ -58,6 +58,22 @@ int new_DisableDLB(const subprocess_descriptor_t *spd) {
  *
  */
 
+int new_IntoBlockingCall(const subprocess_descriptor_t *spd) {
+    int error = DLB_NOUPDT;
+    if (spd->options.mpi_lend_mode == BLOCK) {
+        error = new_LendCpu(spd, sched_getcpu());
+    }
+    return error;
+}
+
+int new_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+    int error = DLB_NOUPDT;
+    if (spd->options.mpi_lend_mode == BLOCK) {
+        error = new_AcquireCpu(spd, sched_getcpu());
+    }
+    return error;
+}
+
 
 /*********************************************************************************/
 /*    Lend                                                                       */

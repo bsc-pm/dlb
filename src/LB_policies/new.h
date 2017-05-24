@@ -26,6 +26,9 @@ int new_Init(const subprocess_descriptor_t *spd);
 int new_Finish(const subprocess_descriptor_t *spd);
 int new_DisableDLB(const subprocess_descriptor_t *spd);
 
+int new_IntoBlockingCall(const subprocess_descriptor_t *spd);
+int new_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
+
 int new_Lend(const subprocess_descriptor_t *spd);
 int new_LendCpu(const subprocess_descriptor_t *spd, int cpuid);
 int new_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
