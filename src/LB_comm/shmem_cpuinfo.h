@@ -75,6 +75,7 @@ int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask);
 bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpu);
 bool shmem_cpuinfo__is_cpu_borrowed(pid_t pid, int cpu);
 bool shmem_cpuinfo__is_cpu_claimed(pid_t pid, int cpu);
+void shmem_cpuinfo__reset(pid_t pid);
 int shmem_cpuinfo__reset_default_cpus(pid_t pid, cpu_set_t *mask);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
 

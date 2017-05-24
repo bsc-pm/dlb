@@ -43,7 +43,9 @@ int new_Finish(const subprocess_descriptor_t *spd) {
 }
 
 int new_DisableDLB(const subprocess_descriptor_t *spd) {
-    return new_AcquireCpuMask(spd, &spd->process_mask);
+    shmem_cpuinfo__reset(spd->id);
+    set_mask(&spd->pm, &spd->process_mask);
+    return DLB_SUCCESS;
 }
 
 

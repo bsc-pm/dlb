@@ -1200,6 +1200,23 @@ bool shmem_cpuinfo__is_cpu_claimed(pid_t pid, int cpu) {
     return (shdata->node_info[cpu].owner != pid) && (shdata->node_info[cpu].state == CPU_BUSY);
 }
 
+void shmem_cpuinfo__reset(pid_t pid) {
+    /* int error = DLB_NOUPDT; */
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->owner == pid) {
+                acquire_cpu(pid, cpuid, NULL);
+            } else {
+                add_cpu(pid, cpuid, NULL);
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+}
+
 /*Reset current mask to use my default cpus
   I.e: Release borrowed cpus and claim lend cpus
  */
