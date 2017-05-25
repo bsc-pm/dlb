@@ -30,10 +30,6 @@ void get_time_coarse( struct timespec *t ) {
 #endif
 }
 
-void get_time_real( struct timespec *t ) {
-    clock_gettime( CLOCK_REALTIME, t);
-}
-
 int diff_time( struct timespec init, struct timespec end, struct timespec* diff ) {
     if ( init.tv_sec > end.tv_sec ) {
         return -1;

@@ -26,7 +26,6 @@
 
 void get_time( struct timespec *t );
 void get_time_coarse( struct timespec *t );
-void get_time_real( struct timespec *t );
 int diff_time( struct timespec init, struct timespec end, struct timespec* diff );
 void add_time( struct timespec t1, struct timespec t2, struct timespec* sum );
 void mult_time( struct timespec t1, int factor, struct timespec* prod );

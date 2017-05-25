@@ -27,10 +27,10 @@
 
 // Shared Memory Sync. Must be a struct because it will be allocated inside the shmem
 typedef struct {
-    int             initializing;   // Only the first process sets 0 -> 1
-    int             initialized;    // Only the first process sets 0 -> 1
-    pthread_mutex_t shmem_mutex;    // Shared mutex. Used for shmem fast access
-    pid_t           pidlist[0];     // Array of attached PIDs
+    int                 initializing;   // Only the first process sets 0 -> 1
+    int                 initialized;    // Only the first process sets 0 -> 1
+    pthread_spinlock_t  shmem_lock;     // Spin-lock to grant exclusive access to the shmem
+    pid_t               pidlist[0];     // Array of attached PIDs
 } shmem_sync_t;
 
 typedef struct {
