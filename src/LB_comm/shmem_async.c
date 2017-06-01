@@ -77,7 +77,7 @@ static helper_t* get_helper(pid_t pid) {
 
 static void* thread_start(void *arg) {
     helper_t *helper = arg;
-    const pm_interface_t const *pm = helper->pm;
+    const pm_interface_t* const pm = helper->pm;
     bool join = false;
     while(!join) {
         action_t action;
