@@ -91,6 +91,29 @@ escape_xml ()
     cat $1 | sed -e 's~&~\&amp;~g' -e 's~<~\&lt;~g'  -e  's~>~\&gt;~g' 1> $2
 }
 
+utility=
+for u in bc awk perl ; do
+    hash $u && utility=$u && break
+done
+
+arithmetic ()
+{
+    case "$utility" in
+        bc)
+            echo $* | bc -l
+            ;;
+        awk)
+            awk "BEGIN{print $* }"
+            ;;
+        perl)
+            echo print $* | perl
+            ;;
+        *)
+            echo 0
+            ;;
+    esac
+}
+
 # action functions
 
 passfail ()
@@ -109,7 +132,7 @@ passfail ()
    $* 1>> $junit_log_OUT 2>> $junit_log_ERR || ret=1
    END=$(date "+%s.%N")
 
-   ELAPSED=$(echo $END - $START | bc -l)
+   ELAPSED=$(arithmetic $END - $START)
 
    cat $junit_log_ERR $junit_log_OUT >> $logfile
 
@@ -922,6 +945,7 @@ do_run ()
    export TMPDIR=$tmpdir
    declare -r tmpfile=$(mktemp)
    local old_dir=""
+   local ret=0
 
    if [ "${logfile:0:1}" != "/" ]; then
      logfile=$basedir/$logfile
@@ -985,10 +1009,12 @@ EOF
        message "Pass tests: $pass"
        message "${YELLOW}Faulty tests: $faulty${NORMAL}"
        message "${RED}Failed tests: $fail${NORMAL}"
+       ret=1
      fi
      message
    fi
-   return $fail
+
+   return $ret
 }
 
 do_list()
