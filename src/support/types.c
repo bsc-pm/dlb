@@ -43,7 +43,7 @@ void parse_int(const char *str, int *value) {
 /* blocking_mode_t */
 static const blocking_mode_t blocking_mode_values[] = {ONE_CPU, BLOCK};
 static const char* const blocking_mode_choices[] = {"1CPU", "BLOCK"};
-static const char* const blocking_mode_choices_str = "1CPU, BLOCK";
+static const char blocking_mode_choices_str[] = "1CPU, BLOCK";
 enum { blocking_mode_nelems = sizeof(blocking_mode_values) / sizeof(blocking_mode_values[0]) };
 
 void parse_blocking_mode(const char *str, blocking_mode_t *value) {
@@ -77,7 +77,7 @@ static const verbose_opts_t verbose_opts_values[] =
     {VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS, VB_DROM};
 static const char* const verbose_opts_choices[] =
     {"api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom"};
-static const char* const verbose_opts_choices_str =
+static const char verbose_opts_choices_str[] =
     "api:microlb:shmem:mpi_api:mpi_intercept:stats:drom";
 enum { verbose_opts_nelems = sizeof(verbose_opts_values) / sizeof(verbose_opts_values[0]) };
 
@@ -92,7 +92,7 @@ void parse_verbose_opts(const char *str, verbose_opts_t *value) {
 }
 
 const char* verbose_opts_tostr(verbose_opts_t value) {
-    static char str[sizeof(verbose_opts_choices)] = "";
+    static char str[sizeof(verbose_opts_choices_str)] = "";
     char *p = str;
     int i;
     for (i=0; i<verbose_opts_nelems; ++i) {
@@ -118,7 +118,7 @@ static const verbose_fmt_t verbose_fmt_values[] =
     {VBF_NODE, VBF_PID, VBF_MPINODE, VBF_MPIRANK, VBF_THREAD};
 static const char* const verbose_fmt_choices[] =
     {"node", "pid", "mpinode", "mpirank", "thread"};
-static const char* const verbose_fmt_choices_str =
+static const char verbose_fmt_choices_str[] =
     "node:pid:mpinode:mpirank:thread";
 enum { verbose_fmt_nelems = sizeof(verbose_fmt_values) / sizeof(verbose_fmt_values[0]) };
 
@@ -133,7 +133,7 @@ void parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
 }
 
 const char* verbose_fmt_tostr(verbose_fmt_t value) {
-    static char str[sizeof(verbose_fmt_choices)] = "";
+    static char str[sizeof(verbose_fmt_choices_str)] = "";
     char *p = str;
     int i;
     for (i=0; i<verbose_fmt_nelems; ++i) {
@@ -157,7 +157,7 @@ const char* get_verbose_fmt_choices(void) {
 /* debug_opts_t */
 static const debug_opts_t debug_opts_values[] = {DBG_REGSIGNALS, DBG_RETURNSTOLEN};
 static const char* const debug_opts_choices[] = {"register-signals", "return-stolen"};
-static const char* const debug_opts_choices_str = "register-signals:return-stolen";
+static const char debug_opts_choices_str[] = "register-signals:return-stolen";
 enum { debug_opts_nelems = sizeof(debug_opts_values) / sizeof(debug_opts_values[0]) };
 
 void parse_debug_opts(const char *str, debug_opts_t *value) {
@@ -171,7 +171,7 @@ void parse_debug_opts(const char *str, debug_opts_t *value) {
 }
 
 const char* debug_opts_tostr(debug_opts_t value) {
-    static char str[sizeof(debug_opts_choices)] = "";
+    static char str[sizeof(debug_opts_choices_str)] = "";
     char *p = str;
     int i;
     for (i=0; i<debug_opts_nelems; ++i) {
@@ -197,7 +197,7 @@ static const priority_t priority_values[] =
     {PRIO_NONE, PRIO_AFFINITY_FIRST, PRIO_AFFINITY_FULL, PRIO_AFFINITY_ONLY};
 static const char* const priority_choices[] =
     {"none", "affinity_first", "affinity_full", "affinity_only"};
-static const char* const priority_choices_str =
+static const char priority_choices_str[] =
     "none, affinity_first, affinity_full, affinity_only";
 enum { priority_nelems = sizeof(priority_values) / sizeof(priority_values[0]) };
 
@@ -231,7 +231,7 @@ static const policy_t policy_values[] =
     {POLICY_NONE, POLICY_LEWI, POLICY_WEIGHT, POLICY_LEWI_MASK, POLICY_AUTO_LEWI_MASK, POLICY_NEW};
 static const char* const policy_choices[] =
     {"no", "LeWI", "WEIGHT", "LeWI_mask", "auto_LeWI_mask", "new"};
-static const char* const policy_choices_str =
+static const char policy_choices_str[] =
     "no, LeWI, WEIGHT, LeWI_mask, auto_LeWI_mask, new";
 enum { policy_nelems = sizeof(policy_values) / sizeof(policy_values[0]) };
 
@@ -265,7 +265,7 @@ const char* get_policy_choices(void) {
 /* interaction_mode_t */
 static const interaction_mode_t mode_values[] = {MODE_POLLING, MODE_ASYNC};
 static const char* const mode_choices[] = {"polling", "async"};
-static const char* const mode_choices_str = "polling, async";
+static const char mode_choices_str[] = "polling, async";
 enum { mode_nelems = sizeof(mode_values) / sizeof(mode_values[0]) };
 
 void parse_mode(const char *str, interaction_mode_t *value) {
