@@ -43,10 +43,10 @@ int DLB_DROM_Init(void);
 int DLB_DROM_Finalize(void);
 
 /*! \brief Get the total number of available CPUs in the node
- *  \param[out] nthreads the number of CPUs
+ *  \param[out] ncpus the number of CPUs
  *  \return error code
  */
-int DLB_DROM_GetNumCpus(int *nthreads);
+int DLB_DROM_GetNumCpus(int *ncpus);
 
 /*! \brief Get the PID's attached to this module
  *  \param[out] pidlist The output list
