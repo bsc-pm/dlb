@@ -228,7 +228,7 @@ const char* mu_to_str( const cpu_set_t *mask ) {
 
     int i;
     static char str[CPU_SETSIZE*4];
-    char str_i[8];
+    char str_i[16];
     strcpy( str, "[ " );
     for ( i=0; i<sys.size; i++ ) {
         if ( CPU_ISSET(i, mask) ) {
