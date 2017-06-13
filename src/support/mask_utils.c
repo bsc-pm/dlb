@@ -227,7 +227,7 @@ const char* mu_to_str( const cpu_set_t *mask ) {
     if ( !mu_initialized ) mu_init();
 
     int i;
-    static char str[CPU_SETSIZE*4];
+    static __thread char str[CPU_SETSIZE*4];
     char str_i[16];
     strcpy( str, "[ " );
     for ( i=0; i<sys.size; i++ ) {

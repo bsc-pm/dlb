@@ -147,6 +147,7 @@ COMMON_SRCS = \
 	src/support/error.h                     \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
+	src/LB_numThreads/ompt.c                \
 	src/LB_comm/comm_shMem.c                \
 	src/LB_comm/comm_shMem.h                \
 	src/LB_comm/comm_lend_light.c           \
