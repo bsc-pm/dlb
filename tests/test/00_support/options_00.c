@@ -109,5 +109,17 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--mode=async");
     assert(options_1.mode == MODE_ASYNC);
 
+    // Unset all variables and check that default values are preserved
+    unsetenv("LB_ARGS");
+    unsetenv("LB_POLICY");
+    unsetenv("LB_DROM");
+    unsetenv("LB_MASK");
+    unsetenv("LB_LEND_MODE");
+    unsetenv("LB_VERBOSE");
+    unsetenv("LB_VERBOSE_FORMAT");
+    options_init(&options_1, NULL);
+    options_init(&options_2, "");
+    assert(options_1.verbose_fmt == options_2.verbose_fmt);
+
     return 0;
 }

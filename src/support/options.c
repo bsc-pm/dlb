@@ -285,7 +285,7 @@ static const char * get_value(option_type_t type, void *option/*, char *str_valu
 }
 
 /* Parse LB_ARGS and remove argument if found */
-static void parse_lb_args(char *lb_args, const char *arg_name, char* arg_value) {
+static void parse_lb_args(const char *lb_args, const char *arg_name, char* arg_value) {
     *arg_value = 0;
     // Tokenize a copy of lb_args with " "(blank) delimiter
     char *end_space = NULL;
@@ -339,13 +339,13 @@ void options_init(options_t *options, const char *lb_args_from_api) {
 
         // Obtain str_value from precedence: lb_args -> LB_var -> default
         const char *str_value = NULL;
-        char *arg_value;
+        char *arg_value = NULL;
         if (lb_args) {
             arg_value = malloc(MAX_OPTION_LENGTH*sizeof(char));
             parse_lb_args(lb_args, entry->arg_name, arg_value);
             str_value = arg_value;
         }
-        str_value = (str_value) ? str_value : getenv(entry->var_name);
+        str_value = (str_value && strlen(str_value)>0) ? str_value : getenv(entry->var_name);
         if (!str_value) {
             fatal_cond(!entry->optional, "Variable %s must be defined", entry->var_name);
             str_value = entry->default_value;
