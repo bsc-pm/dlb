@@ -3,6 +3,30 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [1.4 alpha]
+### Added
+- Callback system
+- API for subprocesses
+- New interaction mode choice (synchronous as it was before, or asynchronous)
+- Doxygen HTML and man pages documentation
+- Test coverage support
+- OMPT support
+
+### Changed
+- API reworked
+- A petition of a CPU now register the process into a petition queue. If this CPU becomes available, DLB can schedule which process will acquire it
+- DLB acquire now does not schedule because it forces the acquisition, DLB Borrow now does that ??
+- DLB options print format reworked
+- Fortran Interface now is a include Fortran Interface ? (weird wording)
+- Shared Memory synchronization mechanism is now managed using a pthread spinlock
+
+### Fixed
+- Test suite now follows a Unit Testing approach and does not need undocumented external tools
+- Several minor bugs
+
+### Deprecated
+- `DLB_MASK` is no longer used, only registered CPUs may be used by other processes
+
 ## [Unreleased]
 ### Added
 - This CHANGELOG file
