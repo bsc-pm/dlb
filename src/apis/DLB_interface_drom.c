@@ -26,30 +26,56 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
 #include "support/options.h"
+#include "support/debug.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static void modify_env(const char *name, const char *value, char ***environ) {
+typedef enum {
+    add_only_if_present,
+    add_always
+} add_kind_t;
+
+/* Implementation based on glibc's setenv:
+ *  https://sourceware.org/git/?p=glibc.git;a=blob;f=stdlib/setenv.c
+ */
+static void add_to_environ(const char *name, const char *value, char ***environ, add_kind_t add) {
+    const size_t namelen = strlen (name);
     size_t size = 0;
     char **ep;
-    // size will contain the number of existing variables
-    for (ep=*environ; *ep != NULL; ++ep) ++size;
-    // realloc (num_existing_vars + 1(new_var) + 1(NULL))
-    char **new_environ = (char**) realloc(*environ, (size + 2)*sizeof(char*));
-    // set last position of environ
-    new_environ[size+1] = NULL;
-    // pointer where new variable will be
-    ep = new_environ + size;
+
+    for (ep=*environ; *ep != NULL; ++ep) {
+        if (!strncmp(*ep, name, namelen) && (*ep)[namelen] == '=')
+            break;
+        else
+            ++size;
+    }
+
+    if (*ep == NULL) {
+        /* Variable does not exist */
+        if (add == add_only_if_present) return;
+
+        /* Allocate new variable */
+        // realloc (num_existing_vars + 1(new_var) + 1(NULL))
+        char **new_environ = realloc(*environ, (size + 2)*sizeof(char*));
+        if (new_environ) *environ = new_environ;
+        // set last position of environ
+        new_environ[size+1] = NULL;
+        // pointer where new variable will be
+        ep = new_environ + size;
+
+    } else {
+        /* Variable does exist */
+        // ep already points to the variable we will overwrite
+    }
 
     const size_t varlen = strlen(name) + 1 + strlen(value) + 1;
     char *np = malloc(varlen);
     snprintf(np, varlen, "%s=%s", name, value);
     *ep = np;
-
-    *environ = new_environ;
 }
 
 #pragma GCC visibility push(default)
@@ -91,15 +117,32 @@ int DLB_DROM_GetCpus(int ncpus, int steal, int *cpulist, int *nelems, int max_le
 }
 
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ) {
+    // Obtain PreInit value
     char preinit_value[8];
     snprintf(preinit_value, 8, "%d", pid);
+
+    // Obtain OMP_NUM_THREADS new value
+    int new_num_threads = CPU_COUNT(mask);
+    char omp_value[8];
+    snprintf(omp_value, 8, "%d", new_num_threads);
+
     if (environ == NULL) {
+        // These internal DLB variables are mandatory
         setenv("LB_PREINIT", preinit_value, 1);
         setenv("LB_DROM", "1", 1);
+
+        // If OMP_NUM_THREADS is set, it must match the current mask size
+        const char *str = getenv("OMP_NUM_THREADS");
+        if (str && strtol(str, NULL, 0) != new_num_threads) {
+            warning("Re-setting OMP_NUM_THREADS to %d due to the new mask: %s",
+                    new_num_threads, mu_to_str(mask));
+            setenv("OMP_NUM_THREADS", omp_value, 1);
+        }
     } else {
         // warning: environ must be a malloc'ed pointer and must not contain these variables already
-        modify_env("LB_PREINIT", preinit_value, environ);
-        modify_env("LB_DROM", "1", environ);
+        add_to_environ("LB_PREINIT", preinit_value, environ, add_always);
+        add_to_environ("LB_DROM", "1", environ, add_always);
+        add_to_environ("OMP_NUM_THREADS", omp_value, environ, add_only_if_present);
     }
 
     int error = shmem_procinfo_ext__preinit(pid, mask, steal);
