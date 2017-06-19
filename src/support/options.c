@@ -183,6 +183,15 @@ static const opts_dict_t options_dictionary[] = {
         .readonly      = true,
         .optional      = true
     }, {
+        .var_name      = "LB_PREINIT_PID",
+        .arg_name      = "--preinit-pid",
+        .default_value = "",
+        .description   = "Process ID that pre-initializes the DLB process",
+        .type          = OPT_INT_T,
+        .offset        = offsetof(options_t, preinit_pid),
+        .readonly      = true,
+        .optional      = true
+    }, {
         .var_name      = "LB_GREEDY",
         .arg_name      = "--greedy",
         .default_value = "no",
@@ -254,7 +263,7 @@ static void set_value(option_type_t type, void *option, const char *str_value) {
     }
 }
 
-static const char * get_value(option_type_t type, void *option/*, char *str_value*/) {
+static const char * get_value(option_type_t type, void *option) {
     static char int_value[8];
     switch(type) {
         case OPT_BOOL_T:

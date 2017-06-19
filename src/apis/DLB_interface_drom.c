@@ -128,8 +128,8 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***envir
 
     if (environ == NULL) {
         // These internal DLB variables are mandatory
-        setenv("LB_PREINIT", preinit_value, 1);
         setenv("LB_DROM", "1", 1);
+        setenv("LB_PREINIT_PID", preinit_value, 1);
 
         // If OMP_NUM_THREADS is set, it must match the current mask size
         const char *str = getenv("OMP_NUM_THREADS");
@@ -139,9 +139,9 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***envir
             setenv("OMP_NUM_THREADS", omp_value, 1);
         }
     } else {
-        // warning: environ must be a malloc'ed pointer and must not contain these variables already
-        add_to_environ("LB_PREINIT", preinit_value, environ, add_always);
+        // warning: environ must be a malloc'ed pointer
         add_to_environ("LB_DROM", "1", environ, add_always);
+        add_to_environ("LB_PREINIT_PID", preinit_value, environ, add_always);
         add_to_environ("OMP_NUM_THREADS", omp_value, environ, add_only_if_present);
     }
 

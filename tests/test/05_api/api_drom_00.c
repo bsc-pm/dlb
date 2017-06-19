@@ -49,7 +49,7 @@ void test_fork(const cpu_set_t *mask, char ***environ) {
 
         // Exec into a shell process to check if the environment is correctly modified
         const char *shell_command =
-            "if  [ -z ${LB_PREINIT+x} ]         || "
+            "if  [ -z ${LB_PREINIT_PID+x} ]     || "
                 "[ ${LB_DROM:=0} != 1 ]         || "
                 "[ ${OMP_NUM_THREADS:=0} != 1 ] ; "
             "then exit 1 ; fi";

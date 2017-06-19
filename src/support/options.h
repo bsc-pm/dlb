@@ -41,6 +41,7 @@ typedef struct Options {
     bool trace_counters;
     bool greedy;
     char shm_key[MAX_OPTION_LENGTH];
+    pid_t preinit_pid;
     bool aggressive_init;
     priority_t priority;
     debug_opts_t debug_opts;

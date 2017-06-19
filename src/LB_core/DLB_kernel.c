@@ -66,7 +66,7 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         pm_init(&spd.pm);
         policy_t policy = spd.options.lb_policy;
         set_lb_funcs(&spd.lb_funcs, policy);
-        spd.id = getpid();
+        spd.id = spd.options.preinit_pid ? spd.options.preinit_pid : getpid();
         spd.cpus_priority_array = malloc(mu_get_system_size()*sizeof(int));
         if (mask) {
             memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
