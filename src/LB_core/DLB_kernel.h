@@ -75,7 +75,7 @@ int poll_drom_update(void);
 
 /* Misc */
 int check_cpu_availability(int cpuid);
-int barrier(void);
+int node_barrier(void);
 int set_variable(const char *variable, const char *value);
 int get_variable(const char *variable, char *value);
 int print_variables(void);

@@ -159,7 +159,7 @@ int DLB_CheckCpuAvailability(int cpuid) {
 }
 
 int DLB_Barrier(void) {
-    return barrier();
+    return node_barrier();
 }
 
 int DLB_SetVariable(const char *variable, const char *value) {

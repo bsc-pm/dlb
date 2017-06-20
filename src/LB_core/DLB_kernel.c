@@ -516,7 +516,7 @@ int check_cpu_availability(int cpuid) {
     return error;
 }
 
-int barrier(void) {
+int node_barrier(void) {
     add_event(RUNTIME_EVENT, EVENT_BARRIER);
     shmem_barrier();
     add_event(RUNTIME_EVENT, 0);
