@@ -92,6 +92,7 @@ typedef void (*ompt_callback_thread_end_t) (
 /********************************************************************************************/
 
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 #include "apis/dlb_errors.h"
@@ -136,45 +137,15 @@ static void cb_implicit_task(
         unsigned int team_size,
         unsigned int thread_num) {
     if (endpoint == ompt_scope_begin) {
-        /* warning("Implicit task, size: %d, thread: %d, parallel_data id: %" PRIu64 "," */
-        /*         " task_data id: %" PRIu64 "", team_size, thread_num, parallel_data->value, */ 
-        /*         task_data->value); */
-        /* warning("Implicit task, size: %d, thread: %d", team_size, thread_num); */
-        cpu_set_t mask;
-        if (shmem_procinfo__getprocessmask(getpid(), &mask) == DLB_ERR_NOSHMEM) {
-            warning("FIXME: cb_implicit_task invoked before SHMEM creation.");
-        }
-
-        // Safe check, does mask size match with team_size?
-        if (CPU_COUNT(&mask) != team_size) {
-            warning("FIXME: Process mask does not match with the current team_size");
-        }
-
-        // Iterate mask to find CPU for this thread
-        cpu_set_t thread_mask;
-        CPU_ZERO(&thread_mask);
-        int next_cpuid = thread_num;
-        int i;
-        for (i=0; i<mu_get_system_size(); ++i) {
-            if (CPU_ISSET(i, &mask)) {
-                if (next_cpuid == 0) {
-                    CPU_SET(i, &thread_mask);
-                    break;
-                } else {
-                    --next_cpuid;
-                }
+        if (shmem_cpuinfo__is_dirty()) {
+            int cpuid = shmem_cpuinfo__get_thread_binding(getpid(), thread_num);
+            if (cpuid >= 0) {
+                cpu_set_t thread_mask;
+                CPU_ZERO(&thread_mask);
+                CPU_SET(cpuid, &thread_mask);
+                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
             }
         }
-
-        if (next_cpuid < 0) {
-            warning("FIXME: next_cpuid: %d", next_cpuid);
-        }
-
-        if (CPU_COUNT(&thread_mask) != 1) {
-            warning("FIXME: thread_mask: %s", mu_to_str(&thread_mask));
-        }
-
-        pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
     }
 }
 
