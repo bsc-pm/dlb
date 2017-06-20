@@ -109,26 +109,18 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
         }
     }
 
-    /* Here, we're assuming that if (!steal), we come from Init() and thus the CPU
-     * is clean and has no guest.
-     * Otherwise, if (steal), the DROM module has triggered a set_process_mask that
-     * should fix the inconsistency */
-
     // Register mask
     for (cpuid=0; cpuid<node_size; ++cpuid) {
-        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-
-        // Skip if pre-initialized
-        if (cpuinfo->owner == pid) continue;
-
-        // Add CPU info
         if (CPU_ISSET(cpuid, mask)) {
-            fatal_cond(cpuinfo->guest != NOBODY && cpuinfo->guest != pid,
-                    "Unresolved condition, cpu %d is guested by process %d while process %d"
-                    " is trying to register it", cpuid, cpuinfo->guest, pid);
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (steal && cpuinfo->owner != NOBODY && cpuinfo->owner != pid) {
+                verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpuid);
+            }
+            if (cpuinfo->guest == NOBODY) {
+                cpuinfo->guest = pid;
+            }
             cpuinfo->id = cpuid;
             cpuinfo->owner = pid;
-            cpuinfo->guest = pid;
             cpuinfo->state = CPU_BUSY;
             update_cpu_stats(cpuid, STATS_OWNED);
         }
