@@ -22,6 +22,7 @@
 
 #include "support/types.h"
 #include <sched.h>
+#include <sys/types.h>
 
 #define MAX_OPTIONS 32
 #define MAX_OPTION_LENGTH 32
