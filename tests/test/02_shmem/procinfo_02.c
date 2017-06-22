@@ -42,7 +42,7 @@ static cpu_set_t process_mask;
 
 static void* thread_start(void *arg) {
     pid_t pid = *(pid_t*)arg;
-    while (shmem_procinfo__polldrom(pid, NULL, &process_mask) != DLB_NOUPDT) {
+    while (shmem_procinfo__polldrom(pid, NULL, &process_mask) != DLB_SUCCESS) {
         usleep(1000);
     }
     return NULL;
