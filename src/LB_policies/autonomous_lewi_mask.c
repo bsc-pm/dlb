@@ -29,6 +29,7 @@
 #include "support/debug.h"
 #include "support/globals.h"
 #include "support/tracing.h"
+#include "support/options.h"
 #include "support/mask_utils.h"
 
 #include "autonomous_lewi_mask.h"
@@ -105,24 +106,25 @@ void auto_lewi_mask_IntoBlockingCall(int is_iter, int blocking_mode) {
 /* Out of Blocking Call - Recover the default number of threads */
 void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
 
-    cpu_set_t mask;
-    CPU_ZERO(&mask);
-    sched_getaffinity(0, sizeof(cpu_set_t), &mask);
+    if ( options_get_lend_mode() == BLOCK ) {
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+        sched_getaffinity(0, sizeof(cpu_set_t), &mask);
 
-    int my_cpu=0;
+        int my_cpu=0;
 
-    while (my_cpu < mu_get_system_size()){
-        if (CPU_ISSET(my_cpu, &mask)) break;
-        my_cpu++;
-    }
+        while (my_cpu < mu_get_system_size()){
+            if (CPU_ISSET(my_cpu, &mask)) break;
+            my_cpu++;
+        }
 
-    if (my_cpu!=mu_get_system_size()){
-        verbose(VB_MICROLB, "OutOfBlockingCall: recovering cpu: %d", my_cpu);
-        CPU_ZERO( &mask );
+        if (my_cpu!=mu_get_system_size()){
+            verbose(VB_MICROLB, "OutOfBlockingCall: recovering cpu: %d", my_cpu);
+            CPU_ZERO( &mask );
 
-        pthread_mutex_lock(&mutex);
-        if (enabled && !single){
-            get_mask(&mask);
+            pthread_mutex_lock(&mutex);
+            if (enabled && !single){
+                get_mask(&mask);
 
                 if (shmem_cpuinfo__acquire_cpu(my_cpu, 1)) {
                     nthreads++;
@@ -133,8 +135,9 @@ void auto_lewi_mask_OutOfBlockingCall(int is_iter) {
                     verbose(VB_MICROLB, "Can't recover cpu, remove from Mask, new mask: %s",
                             mu_to_str(&mask));
                 }
+            }
+            pthread_mutex_unlock(&mutex);
         }
-        pthread_mutex_unlock(&mutex);
     }
 }
 
