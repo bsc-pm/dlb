@@ -71,7 +71,6 @@ static bool cpu_is_public_post_mortem = false;
 static const char *shmem_name = "cpuinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
-static shmem_handler_t *shm_ext_handler = NULL;
 
 static inline bool is_idle(int cpu);
 static inline bool is_borrowed(pid_t pid, int cpu);
@@ -95,6 +94,21 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
 /*********************************************************************************/
 /*  Init / Register                                                              */
 /*********************************************************************************/
+
+static void open_shmem(const char *shmem_key) {
+    pthread_mutex_lock(&mutex);
+    {
+        if (shm_handler == NULL) {
+            node_size = mu_get_system_size();
+            shm_handler = shmem_init((void**)&shdata,
+                    sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
+            subprocesses_attached = 1;
+        } else {
+            ++subprocesses_attached;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
 
 static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
     int cpuid;
@@ -133,18 +147,7 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
     int error = DLB_SUCCESS;
 
     // Shared memory creation
-    pthread_mutex_lock(&mutex);
-    {
-        if (shm_handler == NULL) {
-            node_size = mu_get_system_size();
-            shm_handler = shmem_init((void**)&shdata,
-                    sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
-            subprocesses_attached = 1;
-        } else {
-            ++subprocesses_attached;
-        }
-    }
-    pthread_mutex_unlock(&mutex);
+    open_shmem(shmem_key);
 
     //cpu_set_t affinity_mask;
     //mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
@@ -173,20 +176,14 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
 }
 
 int shmem_cpuinfo_ext__init(const char *shmem_key) {
-    // Protect multiple initialization
-    if (shm_ext_handler != NULL) return DLB_ERR_INIT;
-
-    node_size = mu_get_system_size();
-    shm_ext_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
-
+    open_shmem(shmem_key);
     return DLB_SUCCESS;
 }
 
 int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
     int error;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         // Initialize initial time and CPU timing on shmem creation
         if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
@@ -195,7 +192,7 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
 
         error = register_process(pid, mask, steal);
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     return error;
 }
@@ -204,6 +201,18 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
 /*********************************************************************************/
 /*  Finalize / Deregister                                                        */
 /*********************************************************************************/
+
+static void close_shmem(bool shmem_empty) {
+    pthread_mutex_lock(&mutex);
+    {
+        if (--subprocesses_attached == 0) {
+            shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
+            shm_handler = NULL;
+            shdata = NULL;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
 
 static bool deregister_process(pid_t pid) {
     bool shmem_empty = true;
@@ -252,15 +261,7 @@ int shmem_cpuinfo__finalize(pid_t pid) {
     shmem_unlock(shm_handler);
 
     // Shared memory destruction
-    pthread_mutex_lock(&mutex);
-    {
-        if (--subprocesses_attached == 0) {
-            shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
-            shm_handler = NULL;
-            shdata = NULL;
-        }
-    }
-    pthread_mutex_unlock(&mutex);
+    close_shmem(shmem_empty);
 
     //add_event(IDLE_CPUS_EVENT, idle_count);
 
@@ -268,32 +269,28 @@ int shmem_cpuinfo__finalize(pid_t pid) {
 }
 
 int shmem_cpuinfo_ext__finalize(void) {
-    // Protect multiple finalization
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
-
     bool shmem_empty;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         // We just call deregister_process to check if shmem is empty
         shmem_empty = deregister_process(-1);
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
-    shmem_finalize(shm_ext_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
-    shm_ext_handler = NULL;
+    close_shmem(shmem_empty);
 
     return DLB_SUCCESS;
 }
 
 int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
     int error = DLB_SUCCESS;
 
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         deregister_process(pid);
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
     return error;
 }
 
@@ -1299,22 +1296,22 @@ int shmem_cpuinfo_ext__getnumcpus(void) {
 }
 
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state) {
-    if (shm_ext_handler == NULL) {
+    if (shm_handler == NULL) {
         return -1.0f;
     }
 
     float usage;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         usage = getcpustate(cpu, state, shdata);
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     return usage;
 }
 
 void shmem_cpuinfo_ext__print_info(bool statistics) {
-    if (shm_ext_handler == NULL) {
+    if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
     }
@@ -1322,11 +1319,11 @@ void shmem_cpuinfo_ext__print_info(bool statistics) {
     // Make a full copy of the shared memory. Basic size + zero-length array real length
     shdata_t *shdata_copy = malloc(sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size);
 
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size);
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     char owners[512] = "OWNERS: ";
     char guests[512] = "GUESTS: ";
