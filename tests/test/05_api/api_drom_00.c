@@ -36,14 +36,14 @@
 
 void __gcov_flush() __attribute__((weak));
 
-void test_fork(const cpu_set_t *mask, char ***environ) {
+static void test_fork(const cpu_set_t *mask, char ***env) {
     pid_t pid = fork();
     assert( pid >= 0 );
     if (pid == 0) {
         pid = getpid();
-        assert( DLB_DROM_Init()                         == DLB_SUCCESS );
-        assert( DLB_DROM_PreInit(pid, mask, 1, environ) == DLB_SUCCESS );
-        assert( DLB_DROM_Finalize()                     == DLB_SUCCESS );
+        assert( DLB_DROM_Init()                     == DLB_SUCCESS );
+        assert( DLB_DROM_PreInit(pid, mask, 1, env) == DLB_SUCCESS );
+        assert( DLB_DROM_Finalize()                 == DLB_SUCCESS );
 
         if (__gcov_flush) __gcov_flush();
 
@@ -54,8 +54,8 @@ void test_fork(const cpu_set_t *mask, char ***environ) {
                 "[ ${OMP_NUM_THREADS:=0} != 1 ] ; "
             "then exit 1 ; fi";
 
-        if (environ) {
-            execle("/bin/sh", "sh", "-c", shell_command, NULL, *environ);
+        if (env) {
+            execle("/bin/sh", "sh", "-c", shell_command, NULL, *env);
         } else {
             execl("/bin/sh", "sh", "-c", shell_command, NULL);
         }
