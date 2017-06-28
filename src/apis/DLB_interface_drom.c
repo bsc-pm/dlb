@@ -99,16 +99,16 @@ int DLB_DROM_GetNumCpus(int *ncpus) {
 }
 
 int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getpidlist(pidlist, nelems, max_len);
+    shmem_procinfo__getpidlist(pidlist, nelems, max_len);
     return DLB_SUCCESS;
 }
 
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask) {
-    return shmem_procinfo_ext__getprocessmask(pid, mask);
+    return shmem_procinfo__getprocessmask(pid, mask);
 }
 
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask) {
-    return shmem_procinfo_ext__setprocessmask(pid, mask);
+    return shmem_procinfo__setprocessmask(pid, mask);
 }
 
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ) {

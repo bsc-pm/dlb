@@ -48,52 +48,52 @@ int DLB_Stats_GetNumCpus(int *ncpus) {
 }
 
 int DLB_Stats_GetPidList(int *pidlist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getpidlist(pidlist, nelems, max_len);
+    shmem_procinfo__getpidlist(pidlist, nelems, max_len);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetCpuUsage(int pid, double *usage) {
-    *usage = shmem_procinfo_ext__getcpuusage(pid);
+    *usage = shmem_procinfo__getcpuusage(pid);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetCpuAvgUsage(int pid, double *usage) {
-    *usage = shmem_procinfo_ext__getcpuavgusage(pid);
+    *usage = shmem_procinfo__getcpuavgusage(pid);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetCpuUsageList(double *usagelist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getcpuusage_list(usagelist, nelems, max_len);
+    shmem_procinfo__getcpuusage_list(usagelist, nelems, max_len);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetCpuAvgUsageList(double *avgusagelist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getcpuavgusage_list(avgusagelist, nelems, max_len);
+    shmem_procinfo__getcpuavgusage_list(avgusagelist, nelems, max_len);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetNodeUsage(double *usage) {
-    *usage = shmem_procinfo_ext__getnodeusage();
+    *usage = shmem_procinfo__getnodeusage();
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetNodeAvgUsage(double *usage) {
-    *usage = shmem_procinfo_ext__getnodeavgusage();
+    *usage = shmem_procinfo__getnodeavgusage();
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetActiveCpus(int pid, int *ncpus) {
-    *ncpus = shmem_procinfo_ext__getactivecpus(pid);
+    *ncpus = shmem_procinfo__getactivecpus(pid);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetActiveCpusList(int *cpuslist, int *nelems, int max_len) {
-    shmem_procinfo_ext__getactivecpus_list(cpuslist, nelems, max_len);
+    shmem_procinfo__getactivecpus_list(cpuslist, nelems, max_len);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetLoadAvg(int pid, double *load) {
-    return shmem_procinfo_ext__getloadavg(pid, load);
+    return shmem_procinfo__getloadavg(pid, load);
 }
 
 int DLB_Stats_GetCpuStateIdle(int cpu, float *percentage) {
