@@ -48,7 +48,6 @@ double shmem_procinfo_ext__getnodeavgusage(void);
 int shmem_procinfo_ext__getactivecpus(int pid);
 void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_len);
 int shmem_procinfo_ext__getloadavg(int pid, double *load);
-int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
 void shmem_procinfo_ext__print_info(bool statistics);
 bool shmem_procinfo__exists(void);
 

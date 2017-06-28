@@ -111,11 +111,6 @@ int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask) {
     return shmem_procinfo_ext__setprocessmask(pid, mask);
 }
 
-// Unmaintain?
-int DLB_DROM_GetCpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
-    return shmem_procinfo_ext__getcpus(ncpus, steal, cpulist, nelems, max_len);
-}
-
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ) {
     // Obtain PreInit value
     char preinit_value[8];

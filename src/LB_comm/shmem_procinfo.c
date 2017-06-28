@@ -742,58 +742,6 @@ int shmem_procinfo_ext__getloadavg(int pid, double *load) {
     return error;
 }
 
-int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
-    *nelems = 0;
-    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
-
-    int n_elems = 0;
-    shmem_lock(shm_handler);
-    {
-        int c, p;
-        // Get CPUs from the free_mask
-        for (c = 0; c < max_cpus; c++) {
-            if (CPU_ISSET(c, &shdata->free_mask)) {
-                CPU_CLR(c, &shdata->free_mask);
-                cpulist[n_elems++] = c;
-            }
-            if (n_elems == ncpus || n_elems == max_len) {
-                break;
-            }
-        }
-
-        // If 'steal' is enabled, get more CPUs from other processes in round-robin
-        if (steal && n_elems < ncpus && n_elems < max_len) {
-            while(true) {
-                // We won't keep looping unless we found at least one candidate
-                bool keep_looping = false;
-
-                for (p = 0; p < max_processes; p++) {
-                    if (shdata->process_info[p].pid != NOBODY) {
-                        for (c = max_cpus-1; c >= 0; c--) {
-                            bool success = steal_cpu(NULL, &shdata->process_info[p], c, false);
-                            if (success) {
-                                // keep going from the next process
-                                cpulist[n_elems++] = c;
-                                keep_looping = true;
-                                break;
-                            }
-                        }
-                        if (n_elems == ncpus || n_elems == max_len) {
-                            keep_looping = false;
-                            break;
-                        }
-                    }
-                }
-                if (!keep_looping) break;
-            }
-        }
-    }
-    shmem_unlock(shm_handler);
-
-    *nelems = n_elems;
-    return (n_elems == ncpus) ? 0 : -1;
-}
-
 void shmem_procinfo_ext__print_info(bool statistics) {
     if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);

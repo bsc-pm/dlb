@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Deprecated
 - `DLB_MASK` is no longer used, only registered CPUs may be used by other processes
+- `DLB_DROM_GetCpus` service has been removed
 
 ## [Unreleased]
 ### Added

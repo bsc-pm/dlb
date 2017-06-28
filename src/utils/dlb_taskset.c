@@ -83,30 +83,6 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
-static void get_cpus(unsigned int ncpus) {
-    int max_len = sys_size;
-    int cpulist[max_len];
-    int nelems;
-    int steal = 1;
-
-    DLB_DROM_Init();
-    DLB_DROM_GetCpus(ncpus, steal, cpulist, &nelems, max_len);
-    DLB_DROM_Finalize();
-
-    char hostname[HOST_NAME_MAX];
-    gethostname(hostname, HOST_NAME_MAX);
-
-    // Let's assume a maximum size of cpuid of 4 digits, plus 1 space per cpu, plus \0
-    char *cpulist_str = malloc((nelems*5+1)*sizeof(char));
-    int i, j;
-    for (i=0, j=0; i<nelems; ++i) {
-        j += sprintf(&cpulist_str[j], "%d ", cpulist[i]);
-    }
-    cpulist_str[j] = '\0';
-
-    fprintf(stdout, "%s %s\n", hostname, cpulist_str);
-}
-
 static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
     DLB_DROM_Init();
     int error = DLB_DROM_SetProcessMask(pid, new_mask);
@@ -212,12 +188,10 @@ int main(int argc, char *argv[]) {
     bool do_list = false;
     bool do_set = false;
     bool do_remove = false;
-    bool do_get = false;
     bool borrow = false;
 
     pid_t pid = 0;
     cpu_set_t cpu_list;
-    unsigned int ncpus = 0;
     DLB_DROM_GetNumCpus(&sys_size);
 
     int opt;
@@ -225,7 +199,6 @@ int main(int argc, char *argv[]) {
     extern int optind;
     struct option long_options[] = {
         {"list",     no_argument,       0, 'l'},
-        {"get",      required_argument, 0, 'g'},
         {"set",      required_argument, 0, 's'},
         {"cpus",     required_argument, 0, 'c'},
         {"remove",   required_argument, 0, 'r'},
@@ -239,10 +212,6 @@ int main(int argc, char *argv[]) {
         switch (opt) {
         case 'l':
             do_list = true;
-            break;
-        case 'g':
-            do_get = true;
-            ncpus = strtoul(optarg, NULL, 10);
             break;
         case 'c':
         case 's':
@@ -269,10 +238,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Actions
-    if (do_get) {
-        get_cpus(ncpus);
-    }
-    else if (do_set && pid) {
+    if (do_set && pid) {
         set_affinity(pid, &cpu_list);
     }
     else if (do_set && !pid && argc > optind) {

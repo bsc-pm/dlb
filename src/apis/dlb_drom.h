@@ -70,17 +70,6 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask);
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
 
-/*! \brief Ask for free (or stolen) CPUs in the node
- *  \param[in] ncpus Number of CPUs to get
- *  \param[in] steal Whether if look only into free CPUs or force stealing
- *  \param[out] cpulist The output list
- *  \param[out] nelems Numer of element in the list
- *  \param[in] max_len Max capacity of the list
- *  \return error code
- *  \deprecated This method will be deprecated and should not be used
- */
-int DLB_DROM_GetCpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
-
 /*! \brief Register PID with the given mask before the process normal registration
  *  \param[in] pid Process ID that gets the reservation
  *  \param[in] mask Process mask to register
