@@ -19,10 +19,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - DLB options print format reworked
 - Fortran Interface now is a include Fortran Interface ? (weird wording)
 - Shared Memory synchronization mechanism is now managed using a pthread spinlock
+- DROM services now use the same shmem handler so no need to call `DLB_Init` and `DLB_DROM_Init`
 
 ### Fixed
 - Test suite now follows a Unit Testing approach and does not need undocumented external tools
 - Several minor bugs
+- PreInit service now correctly handles environment variables and allows forks
 
 ### Deprecated
 - `DLB_MASK` is no longer used, only registered CPUs may be used by other processes
