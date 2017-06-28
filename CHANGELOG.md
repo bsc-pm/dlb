@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Fortran Interface now is a include Fortran Interface ? (weird wording)
 - Shared Memory synchronization mechanism is now managed using a pthread spinlock
 - DROM services now use the same shmem handler so no need to call `DLB_Init` and `DLB_DROM_Init`
+- DROM services Get/Set process mask are now asynchronous functions
 
 ### Fixed
 - Test suite now follows a Unit Testing approach and does not need undocumented external tools

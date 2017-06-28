@@ -70,7 +70,7 @@ int main( int argc, char **argv ) {
     assert( pidlist[0] == pid );
 
     // Get process mask
-    assert( shmem_procinfo__getprocessmask(pid, &mask) == DLB_SUCCESS );
+    assert( shmem_procinfo__getprocessmask(pid, &mask, QUERY_SYNC) == DLB_SUCCESS );
     assert( CPU_EQUAL(&process_mask, &mask) );
 
     // Create a new thread to poll while the external sub-process sets a new mask
@@ -80,12 +80,12 @@ int main( int argc, char **argv ) {
 
         // Set a new process mask (cpuid=0 to comply with single core machines)
         CPU_CLR(0, &mask);
-        assert( shmem_procinfo__setprocessmask(pid, &mask) == DLB_SUCCESS );
+        assert( shmem_procinfo__setprocessmask(pid, &mask, QUERY_SYNC) == DLB_SUCCESS );
 
         pthread_join(thread, NULL);
 
         // Check that masks are equivalent
-        assert( shmem_procinfo__getprocessmask(pid, &mask) == DLB_SUCCESS );
+        assert( shmem_procinfo__getprocessmask(pid, &mask, QUERY_SYNC) == DLB_SUCCESS );
         assert( CPU_EQUAL(&process_mask, &mask) );
     }
 

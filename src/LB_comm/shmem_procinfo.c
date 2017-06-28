@@ -456,7 +456,7 @@ int shmem_procinfo_ext__postfinalize(pid_t pid, int return_stolen) {
 /* Get / Set Process mask                                                        */
 /*********************************************************************************/
 
-int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask) {
+int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, query_t query) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
@@ -471,10 +471,16 @@ int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask) {
             error = DLB_ERR_NOPROC;
         }
 
-        // Get current mask if not dirty
-        if (!error && !process->dirty) {
-            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
-            done = true;
+        if (!error) {
+            if (!process->dirty) {
+                // Get current mask if not dirty
+                memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+                done = true;
+            } else if (query == QUERY_ASYNC) {
+                // Get future mask if query is non-blocking
+                memcpy(mask, &process->future_process_mask, sizeof(cpu_set_t));
+                done = true;
+            }
         }
     }
     shmem_unlock(shm_handler);
@@ -515,7 +521,7 @@ int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask) {
     return error;
 }
 
-int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask) {
+int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, query_t query) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
@@ -542,7 +548,7 @@ int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask) {
     shmem_unlock(shm_handler);
 
     // Polling until dirty is cleared, and get returncode
-    if (!error) {
+    if (!error && query == QUERY_SYNC) {
         int64_t elapsed;
         struct timespec start, now;
         get_time_coarse(&start);

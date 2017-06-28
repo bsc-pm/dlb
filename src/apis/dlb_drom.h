@@ -70,6 +70,20 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask);
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
 
+/*! \brief Get the process mask of the given PID
+ *  \param[in] pid Process ID to consult
+ *  \param[out] mask Current process mask
+ *  \return error code
+ */
+int DLB_DROM_GetProcessMask_sync(int pid, dlb_cpu_set_t mask);
+
+/*! \brief Set the process mask of the given PID
+ *  \param[in] pid Process ID to signal
+ *  \param[in] mask Process mask to set
+ *  \return error code
+ */
+int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask);
+
 /*! \brief Register PID with the given mask before the process normal registration
  *  \param[in] pid Process ID that gets the reservation
  *  \param[in] mask Process mask to register

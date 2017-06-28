@@ -43,7 +43,7 @@ int main( int argc, char **argv ) {
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
 
     // Check shmem not initialized
-    assert( shmem_procinfo__getprocessmask(pid, NULL) == DLB_ERR_NOSHMEM );
+    assert( shmem_procinfo__getprocessmask(pid, NULL, QUERY_SYNC) == DLB_ERR_NOSHMEM );
     assert( shmem_procinfo__polldrom(pid, NULL, NULL) == DLB_ERR_NOSHMEM );
 
     // Init
@@ -53,14 +53,14 @@ int main( int argc, char **argv ) {
     //assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
 
     // Check registered mask is the same as our process mask
-    assert( shmem_procinfo__getprocessmask(pid, &new_mask) == DLB_SUCCESS );
+    assert( shmem_procinfo__getprocessmask(pid, &new_mask, QUERY_SYNC) == DLB_SUCCESS );
     assert( CPU_EQUAL(&process_mask, &new_mask) );
 
     // process mask should not be dirty
     assert( shmem_procinfo__polldrom(pid, &new_threads, NULL) == DLB_NOUPDT );
 
     // Check unknown pid
-    assert( shmem_procinfo__getprocessmask(pid+1, NULL) == DLB_ERR_NOPROC );
+    assert( shmem_procinfo__getprocessmask(pid+1, NULL, QUERY_SYNC) == DLB_ERR_NOPROC );
     assert( shmem_procinfo__polldrom(pid+1, NULL, NULL) == DLB_ERR_NOPROC );
 
     // Finalize

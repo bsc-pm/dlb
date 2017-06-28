@@ -104,11 +104,19 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len) {
 }
 
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask) {
-    return shmem_procinfo__getprocessmask(pid, mask);
+    return shmem_procinfo__getprocessmask(pid, mask, QUERY_ASYNC);
 }
 
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask) {
-    return shmem_procinfo__setprocessmask(pid, mask);
+    return shmem_procinfo__setprocessmask(pid, mask, QUERY_ASYNC);
+}
+
+int DLB_DROM_GetProcessMask_sync(int pid, dlb_cpu_set_t mask) {
+    return shmem_procinfo__getprocessmask(pid, mask, QUERY_SYNC);
+}
+
+int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask) {
+    return shmem_procinfo__setprocessmask(pid, mask, QUERY_SYNC);
 }
 
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ) {
