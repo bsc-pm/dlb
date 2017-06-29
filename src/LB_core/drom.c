@@ -72,3 +72,7 @@ int drom_ext_postfinalize(int pid, int return_stolen) {
     error = error ? error : shmem_cpuinfo_ext__postfinalize(pid);
     return error;
 }
+
+int drom_ext_recover_stolen_cpus(int pid) {
+    return shmem_procinfo_ext__recover_stolen_cpus(pid);
+}

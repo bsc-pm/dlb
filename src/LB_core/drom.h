@@ -34,5 +34,6 @@ int drom_ext_setprocessmask(int pid, const cpu_set_t *mask);
 int drom_ext_getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
 int drom_ext_preinit(int pid, const cpu_set_t *mask, int steal);
 int drom_ext_postfinalize(int pid, int return_stolen);
+int drom_ext_recover_stolen_cpus(int pid);
 
 #endif /* DROM_H */

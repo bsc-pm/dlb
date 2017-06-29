@@ -308,6 +308,10 @@ int DLB_Drom_PostFinalize(int pid, int return_stolen) {
     return drom_ext_postfinalize(pid, return_stolen);
 }
 
+int DLB_Drom_RecoverStolenCpus(int pid) {
+    return drom_ext_recover_stolen_cpus(pid);
+}
+
 /* MPI API */
 #ifdef MPI_LIB
 #include <mpi.h>

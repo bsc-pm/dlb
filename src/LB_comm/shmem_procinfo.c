@@ -425,6 +425,30 @@ int shmem_procinfo_ext__postfinalize(int pid, int return_stolen) {
     return error;
 }
 
+int shmem_procinfo_ext__recover_stolen_cpus(int pid) {
+    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+
+    int error = DLB_SUCCESS;
+    shmem_lock(shm_ext_handler);
+    {
+        pinfo_t *process = get_process(pid);
+        if (process == NULL) {
+            verbose(VB_DROM, "Cannot find process %d", pid);
+            error = DLB_ERR_NOPROC;
+        } else {
+            // Recover all stolen CPUs only if the CPU is set in the free_mask
+            cpu_set_t recovered_cpus;
+            CPU_AND(&recovered_cpus, &process->stolen_cpus, &shdata->free_mask);
+            error = register_mask(process, &recovered_cpus);
+            if (error == DLB_SUCCESS) {
+                mu_substract(&process->stolen_cpus, &process->stolen_cpus, &recovered_cpus);
+            }
+        }
+    }
+    shmem_unlock(shm_ext_handler);
+    return error;
+}
+
 void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len) {
     *nelems = 0;
     if (shm_ext_handler == NULL) return;

@@ -373,6 +373,12 @@ int DLB_Drom_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***envir
  */
 int DLB_Drom_PostFinalize(int pid, int return_stolen);
 
+/* \brief Recover previously stolen CPUs if they are idle
+ * \param[in] pid Process ID
+ * \return 0 on success, -1 otherwise
+ */
+int DLB_Drom_RecoverStolenCpus(int pid);
+
 /*******************************************************/
 /*    MPI Interface                                    */
 /*******************************************************/

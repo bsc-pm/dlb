@@ -31,6 +31,7 @@ void shmem_procinfo_ext__init(void);
 void shmem_procinfo_ext__finalize(void);
 int shmem_procinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal);
 int shmem_procinfo_ext__postfinalize(int pid, int return_stolen);
+int shmem_procinfo_ext__recover_stolen_cpus(int pid);
 void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len);
 int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask);
 int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask);
