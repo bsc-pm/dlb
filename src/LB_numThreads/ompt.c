@@ -13,10 +13,10 @@ typedef int (*ompt_set_callback_t) ( ompt_callbacks_t event, ompt_callback_t cal
 typedef void (*ompt_interface_fn_t)(void);
 typedef ompt_interface_fn_t (*ompt_function_lookup_t)(const char*);
 
-typedef struct ompt_fns_t ompt_fns_t;
+struct ompt_fns_t;
 
-typedef int (*ompt_initialize_t)(ompt_function_lookup_t ompt_fn_lookup, ompt_fns_t *fns);
-typedef void (*ompt_finalize_t)(ompt_fns_t *fns);
+typedef int (*ompt_initialize_t)(ompt_function_lookup_t ompt_fn_lookup, struct ompt_fns_t *fns);
+typedef void (*ompt_finalize_t)(struct ompt_fns_t *fns);
 
 typedef struct ompt_fns_t {
     ompt_initialize_t initialize;
@@ -63,7 +63,6 @@ typedef enum ompt_scope_endpoint_e {
     ompt_scope_begin = 1,
     ompt_scope_end = 2
 } ompt_scope_endpoint_t;
-typedef union ompt_data_u ompt_data_t;
 
 typedef void (*ompt_callback_implicit_task_t) (
     ompt_scope_endpoint_t endpoint,
