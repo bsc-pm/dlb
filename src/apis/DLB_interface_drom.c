@@ -42,12 +42,13 @@ typedef enum {
 /* Implementation based on glibc's setenv:
  *  https://sourceware.org/git/?p=glibc.git;a=blob;f=stdlib/setenv.c
  */
-static void add_to_environ(const char *name, const char *value, char ***environ, add_kind_t add) {
+static void add_to_environ(const char *name, const char *value, char ***next_environ,
+        add_kind_t add) {
     const size_t namelen = strlen (name);
     size_t size = 0;
     char **ep;
 
-    for (ep=*environ; *ep != NULL; ++ep) {
+    for (ep=*next_environ; *ep != NULL; ++ep) {
         if (!strncmp(*ep, name, namelen) && (*ep)[namelen] == '=')
             break;
         else
@@ -60,9 +61,9 @@ static void add_to_environ(const char *name, const char *value, char ***environ,
 
         /* Allocate new variable */
         // realloc (num_existing_vars + 1(new_var) + 1(NULL))
-        char **new_environ = realloc(*environ, (size + 2)*sizeof(char*));
-        if (new_environ) *environ = new_environ;
-        // set last position of environ
+        char **new_environ = realloc(*next_environ, (size + 2)*sizeof(char*));
+        if (new_environ) *next_environ = new_environ;
+        // set last position of next_environ
         new_environ[size+1] = NULL;
         // pointer where new variable will be
         ep = new_environ + size;
@@ -119,7 +120,7 @@ int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask) {
     return shmem_procinfo__setprocessmask(pid, mask, QUERY_SYNC);
 }
 
-int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ) {
+int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***next_environ) {
     // Obtain PreInit value
     char preinit_value[8];
     snprintf(preinit_value, 8, "%d", pid);
@@ -129,7 +130,7 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***envir
     char omp_value[8];
     snprintf(omp_value, 8, "%d", new_num_threads);
 
-    if (environ == NULL) {
+    if (next_environ == NULL) {
         // These internal DLB variables are mandatory
         setenv("LB_DROM", "1", 1);
         setenv("LB_PREINIT_PID", preinit_value, 1);
@@ -142,10 +143,10 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***envir
             setenv("OMP_NUM_THREADS", omp_value, 1);
         }
     } else {
-        // warning: environ must be a malloc'ed pointer
-        add_to_environ("LB_DROM", "1", environ, add_always);
-        add_to_environ("LB_PREINIT_PID", preinit_value, environ, add_always);
-        add_to_environ("OMP_NUM_THREADS", omp_value, environ, add_only_if_present);
+        // warning: next_environ must be a malloc'ed pointer
+        add_to_environ("LB_DROM", "1", next_environ, add_always);
+        add_to_environ("LB_PREINIT_PID", preinit_value, next_environ, add_always);
+        add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
     }
 
     int error = shmem_procinfo_ext__preinit(pid, mask, steal);
