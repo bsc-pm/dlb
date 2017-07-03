@@ -78,6 +78,8 @@ bool shmem_cpuinfo__is_cpu_claimed(pid_t pid, int cpu);
 void shmem_cpuinfo__reset(pid_t pid);
 int shmem_cpuinfo__reset_default_cpus(pid_t pid, cpu_set_t *mask);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
+int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
+bool shmem_cpuinfo__is_dirty(void);
 
 int shmem_cpuinfo_ext__getnumcpus(void);
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);

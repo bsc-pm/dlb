@@ -52,6 +52,7 @@ typedef struct {
     int             id;
     pid_t           owner;                  // Current owner, useful to resolve reclaimed CPUs
     pid_t           guest;                  // Current user of the CPU
+    bool            dirty;
     cpu_state_t     state;
     stats_state_t   stats_state;
     int64_t         acc_time[_NUM_STATS];   // Accumulated time for each state
@@ -60,6 +61,7 @@ typedef struct {
 } cpuinfo_t;
 
 typedef struct {
+    bool dirty;
     struct timespec initial_time;
     cpuinfo_t node_info[0];
 } shdata_t;
@@ -136,6 +138,7 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
             cpuinfo->id = cpuid;
             cpuinfo->owner = pid;
             cpuinfo->state = CPU_BUSY;
+            cpuinfo->dirty = false;
             update_cpu_stats(cpuid, STATS_OWNED);
         }
     }
@@ -159,6 +162,7 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
         // Initialize some values if this is the 1st process attached to the shmem
         if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
             get_time(&shdata->initial_time);
+            shdata->dirty = false;
         }
 
         // Register process_mask, with stealing = false always in normal Init()
@@ -1259,6 +1263,10 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
             cpuinfo->state = CPU_BUSY;
             update_cpu_stats(cpuid, STATS_OWNED);
 
+            // Dirty flags
+            cpuinfo->dirty = true;
+            shdata->dirty = true;
+
         } else {
             // The CPU is now not mine
             if (cpuinfo->owner == pid) {
@@ -1284,6 +1292,47 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
         }
     }
     shmem_unlock(shm_handler);
+}
+
+int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
+    if (shm_handler == NULL) return -1;
+
+    int binding = -1;
+    shmem_lock(shm_handler);
+    {
+        bool all_cpus_clean = true;
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (shdata->node_info[cpuid].owner == pid) {
+                if (thread_num == 0) {
+                    /* CPU that belongs to provided pid and thread_num */
+                    binding = cpuid;
+                    shdata->node_info[cpuid].dirty = false;
+                }
+                --thread_num;
+            }
+            /* Keep iterating all shmem to check if some CPU is dirty */
+            if (all_cpus_clean && shdata->node_info[cpuid].dirty) {
+                all_cpus_clean = false;
+            }
+
+            /* Do not keep iterating if we already found the binding and some CPU dirty */
+            if (binding != 1 && !all_cpus_clean) {
+                break;
+            }
+        }
+        /* Clean shmem dirty flag if this was the last queried CPU */
+        if (all_cpus_clean) {
+            shdata->dirty = false;
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return binding;
+}
+
+bool shmem_cpuinfo__is_dirty(void) {
+    return shdata->dirty;
 }
 
 /* External Functions
