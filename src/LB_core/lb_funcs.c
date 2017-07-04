@@ -27,36 +27,41 @@
 
 static int disabled() { return DLB_ERR_NOPOL; }
 
+typedef int (*lb_func_kind1)(const struct SubProcessDescriptor*);
+typedef int (*lb_func_kind2)(const struct SubProcessDescriptor*, int);
+typedef int (*lb_func_kind3)(const struct SubProcessDescriptor*, const cpu_set_t*);
+typedef int (*lb_func_kind4)(struct SubProcessDescriptor*, const cpu_set_t*);
+
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
     // Initialize all fields to a valid, but disabled, function
     *lb_funcs = (balance_policy_t){
-        .init                   = disabled,
-        .finalize               = disabled,
-        .enable                 = disabled,
-        .disable                = disabled,
-        .into_communication     = disabled,
-        .out_of_communication   = disabled,
-        .into_blocking_call     = disabled,
-        .out_of_blocking_call   = disabled,
-        .lend                   = disabled,
-        .lend_cpu               = disabled,
-        .lend_cpus              = disabled,
-        .lend_cpu_mask          = disabled,
-        .reclaim                = disabled,
-        .reclaim_cpu            = disabled,
-        .reclaim_cpus           = disabled,
-        .reclaim_cpu_mask       = disabled,
-        .acquire_cpu            = disabled,
-        .acquire_cpu_mask       = disabled,
-        .borrow                 = disabled,
-        .borrow_cpu             = disabled,
-        .borrow_cpus            = disabled,
-        .borrow_cpu_mask        = disabled,
-        .return_all             = disabled,
-        .return_cpu             = disabled,
-        .return_cpu_mask        = disabled,
-        .check_cpu_availability = disabled,
-        .update_priority_cpus   = disabled,
+        .init                   = (lb_func_kind1)disabled,
+        .finalize               = (lb_func_kind1)disabled,
+        .enable                 = (lb_func_kind1)disabled,
+        .disable                = (lb_func_kind1)disabled,
+        .into_communication     = (lb_func_kind1)disabled,
+        .out_of_communication   = (lb_func_kind1)disabled,
+        .into_blocking_call     = (lb_func_kind1)disabled,
+        .out_of_blocking_call   = (lb_func_kind2)disabled,
+        .lend                   = (lb_func_kind1)disabled,
+        .lend_cpu               = (lb_func_kind2)disabled,
+        .lend_cpus              = (lb_func_kind2)disabled,
+        .lend_cpu_mask          = (lb_func_kind3)disabled,
+        .reclaim                = (lb_func_kind1)disabled,
+        .reclaim_cpu            = (lb_func_kind2)disabled,
+        .reclaim_cpus           = (lb_func_kind2)disabled,
+        .reclaim_cpu_mask       = (lb_func_kind3)disabled,
+        .acquire_cpu            = (lb_func_kind2)disabled,
+        .acquire_cpu_mask       = (lb_func_kind3)disabled,
+        .borrow                 = (lb_func_kind1)disabled,
+        .borrow_cpu             = (lb_func_kind2)disabled,
+        .borrow_cpus            = (lb_func_kind2)disabled,
+        .borrow_cpu_mask        = (lb_func_kind3)disabled,
+        .return_all             = (lb_func_kind1)disabled,
+        .return_cpu             = (lb_func_kind2)disabled,
+        .return_cpu_mask        = (lb_func_kind3)disabled,
+        .check_cpu_availability = (lb_func_kind2)disabled,
+        .update_priority_cpus   = (lb_func_kind4)disabled,
     };
 
     // Set according to policy
