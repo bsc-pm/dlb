@@ -221,7 +221,12 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
 
     // Obtain str_value from precedence: dlb_args -> LB_var -> default
     char *user_value = parse_env_arg(arg);
-    if (!user_value) user_value = getenv(var);
+    if (!user_value) {
+        user_value = getenv(var);
+        if (user_value && strlen(user_value)>0) {
+            warning("Option %s will be deprecated in future releases (see dlb --help)", var);
+        }
+    }
     const char *str_value = (user_value && strlen(user_value)>0) ? user_value : default_value;
 
     set_value(type, (char*)new_option->value, str_value);
@@ -398,8 +403,11 @@ void options_print_variables(void) {
 
     if (!options) return;
 
-    enum { buffer_size = 1024 };
-    char buffer[buffer_size] = "DLB Options:\n";
+    enum { buffer_size = 2048 };
+    char buffer[buffer_size] = "DLB Options:\n\n"
+                                "The library configuration can be set using arguments\n"
+                                "added to the DLB_ARGS environment variable.\n"
+                                "All possible options are listed below:\n\n";
     char *b = buffer + strlen(buffer);
     option_t *option = NULL;
     int i;
@@ -407,8 +415,8 @@ void options_print_variables(void) {
         option = options[i];
         if (option) {
             /* Name */
-            size_t name_len = strlen(option->var_name) + 1;
-            b += sprintf(b, "%s:%s", option->var_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+            size_t name_len = strlen(option->arg_name) + 1;
+            b += sprintf(b, "%s:%s", option->arg_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
 
             /* Value */
             const char *value = get_value(option->type, (char*)option->value);
@@ -450,6 +458,18 @@ void options_print_variables(void) {
             b += sprintf(b, "\n");
         }
     }
+
+    b += sprintf(b, "\n"
+                    "For compatibility reasons, these environment variables\n"
+                    "are still supported but will be deprecated in future releases:\n\n");
+    for (i=0; i<num_options; ++i) {
+        option = options[i];
+        if (option) {
+            /* Name */
+            b += sprintf(b, "%s\n", option->var_name);
+        }
+    }
+
     fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
     info0(buffer);
 }

@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - Refactor policy based Shared Memory into two general purpose `cpuinfo` and `procinfo`
 - DROM interface is now considered stable. External processes can manage the CPU ownership of DLB processes
+- DLB options are now parsed through the environment variable `DLB_ARGS`
 
 ### Fixed
 - Several minor bugs
