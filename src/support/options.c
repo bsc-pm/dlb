@@ -110,7 +110,7 @@ typedef struct {
 
 static option_t **options = NULL;
 static int num_options = 0;
-static char *lb_args = NULL;
+static char *dlb_args = NULL;
 
 
 static void set_value(option_type_t type, void *option, const char *str_value) {
@@ -171,30 +171,30 @@ static const char * get_value(option_type_t type, void *option) {
     return "unknown";
 }
 
-/* Parse LB_ARGS and remove argument if found */
+/* Parse DLB_ARGS and remove argument if found */
 static char* parse_env_arg(const char *arg_name) {
     static char value[MAX_OPTION_LENGTH];
     value[0] = 0;
-    if (lb_args && arg_name) {
-        // Tokenize a copy of lb_args with " " delimiter
+    if (dlb_args && arg_name) {
+        // Tokenize a copy of dlb_args with " " delimiter
         char *end_space;
-        char *lb_args_copy = malloc(1+sizeof(char)*strlen(lb_args));
-        strncpy(lb_args_copy, lb_args, strlen(lb_args));
-        char *token = strtok_r(lb_args_copy, " ", &end_space);
+        char *dlb_args_copy = malloc(1+sizeof(char)*strlen(dlb_args));
+        strncpy(dlb_args_copy, dlb_args, strlen(dlb_args));
+        char *token = strtok_r(dlb_args_copy, " ", &end_space);
         while (token) {
             // Break token into two tokens "--argument" = "value"
             char *end_equal;
             char *current_arg = strtok_r(token, "=", &end_equal);
-            fatal_cond(!current_arg, "Bad format parsing LB_ARGS: --argument=value");
+            fatal_cond(!current_arg, "Bad format parsing DLB_ARGS: --argument=value");
 
             if (strcmp(current_arg, arg_name) == 0) {
                 // Get value to return
                 char *val = strtok_r(NULL, "=", &end_equal);
-                fatal_cond(!val, "Bad format parsing LB_ARGS: --argument=value");
+                fatal_cond(!val, "Bad format parsing DLB_ARGS: --argument=value");
                 strncpy(value, val, MAX_OPTION_LENGTH);
 
-                // Remove "token=value" from lb_args
-                char *dest = strstr(lb_args, token);
+                // Remove "token=value" from dlb_args
+                char *dest = strstr(dlb_args, token);
                 char *src = dest+strlen(token)+1+strlen(value);
                 size_t n = 1+strlen(dest+strlen(token)+1+strlen(value));
                 memmove(dest, src, n);
@@ -204,7 +204,7 @@ static char* parse_env_arg(const char *arg_name) {
             // next token
             token = strtok_r(NULL, " ", &end_space);
         }
-        free(lb_args_copy);
+        free(dlb_args_copy);
     }
     return (value[0]==0) ? NULL : value;
 }
@@ -222,7 +222,7 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
     new_option->readonly = readonly;
     new_option->optional = optional;
 
-    // Obtain str_value from precedence: lb_args -> LB_var -> default
+    // Obtain str_value from precedence: dlb_args -> LB_var -> default
     char *user_value = parse_env_arg(arg);
     if (!user_value) user_value = getenv(var);
     const char *str_value = (user_value && strlen(user_value)>0) ? user_value : default_value;
@@ -244,12 +244,12 @@ void options_init(void) {
     const bool RW = false;
     const bool OPTIONAL = true;
 
-    // Copy LB_ARGS env. variable
-    char *env_lb_args = getenv("LB_ARGS");
-    if (env_lb_args) {
-        size_t len = strlen(env_lb_args) + 1;
-        lb_args = malloc(sizeof(char)*len);
-        strncpy(lb_args, env_lb_args, len);
+    // Copy DLB_ARGS env. variable
+    char *env_dlb_args = getenv("DLB_ARGS");
+    if (env_dlb_args) {
+        size_t len = strlen(env_dlb_args) + 1;
+        dlb_args = malloc(sizeof(char)*len);
+        strncpy(dlb_args, env_dlb_args, len);
     }
 
     // Fill options array
@@ -356,9 +356,9 @@ void options_finalize(void) {
             free(options[i]);
         }
         free(options);
-        free(lb_args);
+        free(dlb_args);
         options = NULL;
-        lb_args = NULL;
+        dlb_args = NULL;
         num_options = 0;
     }
 }
