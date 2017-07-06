@@ -512,7 +512,7 @@ int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources) {
                 }
 
                 // Set up some masks to collect from, depending on the priority level
-                priority_opts_t priority = options_get_priority();
+                priority_t priority = options_get_priority();
                 const int NUM_TARGETS = 2;
                 cpu_set_t *target_mask[NUM_TARGETS];
 

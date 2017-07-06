@@ -79,8 +79,8 @@ const char* options_get_thread_distribution(void) { return opt_thread_distributi
 static bool opt_aggressive_init;
 bool options_get_aggressive_init(void) { return opt_aggressive_init; }
 
-static priority_opts_t opt_priority;
-priority_opts_t options_get_priority(void) { return opt_priority; }
+static priority_t opt_priority;
+priority_t options_get_priority(void) { return opt_priority; }
 
 static debug_opts_t opt_debug_opts;
 verbose_fmt_t options_get_debug_opts(void) { return opt_debug_opts; }
@@ -94,7 +94,7 @@ typedef enum OptionTypes {
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_DBG_T,      // debug_opts_t
-    OPT_PRIO_T,     // priority_opts_t
+    OPT_PRIO_T,     // priority_t
     OPT_POL_T       // policy_t
 } option_type_t;
 
@@ -113,6 +113,63 @@ static int num_options = 0;
 static char *lb_args = NULL;
 
 
+static void set_value(option_type_t type, void *option, const char *str_value) {
+    switch(type) {
+        case(OPT_BOOL_T):
+            parse_bool(str_value, (bool*)option);
+            break;
+        case(OPT_INT_T):
+            parse_int(str_value, (int*)option);
+            break;
+        case(OPT_STR_T):
+            strncpy(option, str_value, MAX_OPTION_LENGTH);
+            break;
+        case(OPT_BLCK_T):
+            parse_blocking_mode(str_value, (blocking_mode_t*)option);
+            break;
+        case(OPT_VB_T):
+            parse_verbose_opts(str_value, (verbose_opts_t*)option);
+            break;
+        case(OPT_VBFMT_T):
+            parse_verbose_fmt(str_value, (verbose_fmt_t*)option);
+            break;
+        case(OPT_DBG_T):
+            parse_debug_opts(str_value, (debug_opts_t*)option);
+            break;
+        case(OPT_PRIO_T):
+            parse_priority(str_value, (priority_t*)option);
+            break;
+        case(OPT_POL_T):
+            parse_policy(str_value, (policy_t*)option);
+            break;
+    }
+}
+
+static const char * get_value(option_type_t type, void *option) {
+    static char int_value[8];
+    switch(type) {
+        case OPT_BOOL_T:
+            return *(bool*)option ? "yes" : "no";
+        case OPT_INT_T:
+            sprintf(int_value, "%d", *(int*)option);
+            return int_value;
+        case OPT_STR_T:
+            return (char*)option;
+        case OPT_BLCK_T:
+            return blocking_mode_tostr(*(blocking_mode_t*)option);
+        case OPT_VB_T:
+            return verbose_opts_tostr(*(verbose_opts_t*)option);
+        case OPT_VBFMT_T:
+            return verbose_fmt_tostr(*(verbose_fmt_t*)option);
+        case OPT_DBG_T:
+            return debug_opts_tostr(*(debug_opts_t*)option);
+        case OPT_PRIO_T:
+            return priority_tostr(*(priority_t*)option);
+        case OPT_POL_T:
+            return policy_tostr(*(policy_t*)option);
+    }
+    return "unknown";
+}
 
 /* Parse LB_ARGS and remove argument if found */
 static char* parse_env_arg(const char *arg_name) {
@@ -154,7 +211,7 @@ static char* parse_env_arg(const char *arg_name) {
 
 static option_t* register_option(const char *var, const char *arg, option_type_t type,
                                 void *value, bool readonly, bool optional,
-                                const void *default_value, const char *desc ) {
+                                const char *default_value, const char *desc ) {
 
     option_t *new_option = malloc(sizeof(option_t));
     strncpy(new_option->var_name, var, MAX_OPTION_LENGTH);
@@ -165,75 +222,12 @@ static option_t* register_option(const char *var, const char *arg, option_type_t
     new_option->readonly = readonly;
     new_option->optional = optional;
 
-    // LB_ARGS takes precedence over LB_var
+    // Obtain str_value from precedence: lb_args -> LB_var -> default
     char *user_value = parse_env_arg(arg);
     if (!user_value) user_value = getenv(var);
+    const char *str_value = (user_value && strlen(user_value)>0) ? user_value : default_value;
 
-    switch(type) {
-        case(OPT_BOOL_T):
-            if (user_value) {
-                parse_bool(user_value, (bool*)new_option->value);
-            } else if (default_value) {
-                *(bool*)new_option->value = *(bool*)default_value;
-            }
-            break;
-        case(OPT_INT_T):
-            if (user_value) {
-                parse_int(user_value, (int*)new_option->value);
-            } else if (default_value) {
-                *(int*)new_option->value = *(int*)default_value;
-            }
-            break;
-        case(OPT_STR_T):
-            if (user_value) {
-                strncpy(new_option->value, user_value, MAX_OPTION_LENGTH);
-            } else if (default_value) {
-                strncpy(new_option->value, default_value, MAX_OPTION_LENGTH);
-            }
-            break;
-        case(OPT_BLCK_T):
-            if (user_value) {
-                parse_blocking_mode(user_value, (blocking_mode_t*)new_option->value);
-            } else if (default_value) {
-                parse_blocking_mode(default_value, (blocking_mode_t*)new_option->value);
-            }
-            break;
-        case(OPT_VB_T):
-            if (user_value) {
-                parse_verbose_opts(user_value, (verbose_opts_t*)new_option->value);
-            } else if (default_value) {
-                parse_verbose_opts(default_value, (verbose_opts_t*)new_option->value);
-            }
-            break;
-        case(OPT_VBFMT_T):
-            if (user_value) {
-                parse_verbose_fmt(user_value, (verbose_fmt_t*)new_option->value);
-            } else if (default_value) {
-                parse_verbose_fmt(default_value, (verbose_fmt_t*)new_option->value);
-            }
-            break;
-        case(OPT_DBG_T):
-            if (user_value) {
-                parse_debug_opts(user_value, (debug_opts_t*)new_option->value);
-            } else if (default_value) {
-                parse_debug_opts(default_value, (debug_opts_t*)new_option->value);
-            }
-            break;
-        case(OPT_PRIO_T):
-            if (user_value) {
-                parse_priority_opts(user_value, (priority_opts_t*)new_option->value);
-            } else if (default_value) {
-                parse_priority_opts(default_value, (priority_opts_t*)new_option->value);
-            }
-            break;
-        case(OPT_POL_T):
-            if (user_value) {
-                parse_policy(user_value, (policy_t*)new_option->value);
-            } else if (default_value) {
-                parse_policy(default_value, (policy_t*)new_option->value);
-            }
-            break;
-    }
+    set_value(type, (char*)new_option->value, str_value);
 
     fatal_cond(!optional && !new_option->value,
             "Variable %s must be defined", new_option->var_name);
@@ -249,8 +243,6 @@ void options_init(void) {
     const bool RO = true;
     const bool RW = false;
     const bool OPTIONAL = true;
-    const bool FALSE = false;
-    const bool TRUE = true;
 
     // Copy LB_ARGS env. variable
     char *env_lb_args = getenv("LB_ARGS");
@@ -275,20 +267,20 @@ void options_init(void) {
             " - RaL:");
 
     options[i++] = register_option("LB_STATISTICS", "--statistics",
-            OPT_BOOL_T, &opt_statistics, RO, OPTIONAL, &FALSE,
+            OPT_BOOL_T, &opt_statistics, RO, OPTIONAL, "no",
             "Enable the Statistics Module");
 
     options[i++] = register_option("LB_DROM", "--drom",
-            OPT_BOOL_T, &opt_drom, RO, OPTIONAL, &FALSE,
+            OPT_BOOL_T, &opt_drom, RO, OPTIONAL, "no",
             "Enable the Dynamic Resource Ownership Manager Module");
 
     options[i++] = register_option("LB_BARRIER", "--barrier",
-            OPT_BOOL_T, &opt_barrier, RO, OPTIONAL, &FALSE,
+            OPT_BOOL_T, &opt_barrier, RO, OPTIONAL, "no",
             "Enable the Shared Memory Barrier");
 
     // MPI
     options[i++] = register_option("LB_JUST_BARRIER", "--just-barrier",
-            OPT_BOOL_T, &opt_just_barrier, RW, OPTIONAL, &FALSE,
+            OPT_BOOL_T, &opt_just_barrier, RW, OPTIONAL, "no",
             "When in MPI, lend resources only in MPI_Barrier calls");
 
     options[i++] = register_option("LB_LEND_MODE", "--lend-mode",
@@ -303,27 +295,27 @@ void options_init(void) {
             "character :\n"
             "  e.g.:  LB_VERBOSE=\"api:shmem:drom\"");
 
-    options[i++] = register_option("LB_VERBOSE_FORMAT", "--verbose_format",
+    options[i++] = register_option("LB_VERBOSE_FORMAT", "--verbose-format",
             OPT_VBFMT_T, &opt_verbose_fmt, RO, OPTIONAL, "node:pid:thread",
             "Verbose format. It may contain the tags: node, pid, mpinode, mpirank, thread. "
             "They can appear in any order, delimited by the character :");
 
     // tracing
     options[i++] = register_option("LB_TRACE_ENABLED", "--trace-enabled",
-            OPT_BOOL_T, &opt_trace_enabled, RO, OPTIONAL, &TRUE,
+            OPT_BOOL_T, &opt_trace_enabled, RO, OPTIONAL, "yes",
             "Enable tracing, default: true.");
 
     options[i++] = register_option("LB_TRACE_COUNTERS", "--trace-counters",
-            OPT_BOOL_T, &opt_trace_counters, RW, OPTIONAL, &TRUE,
+            OPT_BOOL_T, &opt_trace_counters, RW, OPTIONAL, "yes",
             "Enable counters tracing, default: true.");
 
     // misc
     options[i++] = register_option("LB_MASK", "--mask",
-            OPT_STR_T, &opt_mask, RO, OPTIONAL, NULL,
+            OPT_STR_T, &opt_mask, RO, OPTIONAL, "",
             "Cpuset mask owned by DLB");
 
     options[i++] = register_option("LB_GREEDY", "--greedy",
-            OPT_BOOL_T, &opt_greedy, RW, OPTIONAL, &FALSE,
+            OPT_BOOL_T, &opt_greedy, RW, OPTIONAL, "no",
             "Greedy option for LeWI policy");
 
     char default_key[8];
@@ -334,15 +326,15 @@ void options_init(void) {
             "interconnect, default: user ID");
 
     options[i++] = register_option("LB_BIND", "--bind",
-            OPT_BOOL_T, &opt_bind, RO, OPTIONAL, &FALSE,
+            OPT_BOOL_T, &opt_bind, RO, OPTIONAL, "no",
             "Bind option for LeWI, currently disabled");
 
     options[i++] = register_option("LB_THREAD_DISTRIBUTION", "--thread-distribution",
-            OPT_STR_T, &opt_thread_distribution, RO, OPTIONAL, NULL,
+            OPT_STR_T, &opt_thread_distribution, RO, OPTIONAL, "",
             "Thread distribution");
 
-    options[i++] = register_option("LB_AGGRESSIVE_INIT", "--aggressive_init",
-            OPT_BOOL_T, &opt_aggressive_init, RO, OPTIONAL, &FALSE,
+    options[i++] = register_option("LB_AGGRESSIVE_INIT", "--aggressive-init",
+            OPT_BOOL_T, &opt_aggressive_init, RO, OPTIONAL, "no",
             "Create as many threads as necessary during the process startup");
 
     options[i++] = register_option("LB_PRIORITY", "--priority",
@@ -350,7 +342,7 @@ void options_init(void) {
             "Priorize resource sharing by HW affinity");
 
     options[i++] = register_option("LB_DEBUG_OPTS", "--debug-opts",
-            OPT_DBG_T, &opt_debug_opts, RW, OPTIONAL, NULL,
+            OPT_DBG_T, &opt_debug_opts, RW, OPTIONAL, "",
             "Debug options list: (register-signals, return-stolen). Delimited by the character :");
 
     ensure(num_options==i, "Number of registered options does not match");
@@ -386,36 +378,7 @@ int options_set_variable(const char *var_name, const char *value) {
     if (option->readonly) return -1;
     if (!value) return -1;
 
-    switch(option->type) {
-        case OPT_BOOL_T:
-            parse_bool(value, (bool*)option->value);
-            break;
-        case OPT_INT_T:
-            parse_int(value, (int*)option->value);
-            break;
-        case OPT_STR_T:
-            strncpy((char*)option->value, value, MAX_OPTION_LENGTH);
-            break;
-        case OPT_BLCK_T:
-            parse_blocking_mode(value, (blocking_mode_t*)option->value);
-            break;
-        case OPT_VB_T:
-            parse_verbose_opts(value, (verbose_opts_t*)option->value);
-            break;
-        case OPT_VBFMT_T:
-            parse_verbose_fmt(value, (verbose_fmt_t*)option->value);
-            break;
-        case OPT_DBG_T:
-            parse_debug_opts(value, (debug_opts_t*)option->value);
-            break;
-        case OPT_PRIO_T:
-            parse_priority_opts(value, (priority_opts_t*)option->value);
-            break;
-        case OPT_POL_T:
-            parse_policy(value, (policy_t*)option->value);
-            break;
-    }
-
+    set_value(option->type, (char*)option->value, value);
     return 0;
 }
 
@@ -433,28 +396,7 @@ int options_get_variable(const char *var_name, char *value) {
     if (!option) return -1;
     if (!value) return -1;
 
-    switch(option->type) {
-        case OPT_BOOL_T:
-            sprintf(value, "%s", *(bool*)option->value ? "true" : "false");
-            break;
-        case OPT_INT_T:
-            sprintf(value, "%d", *(int*)option->value);
-            break;
-        case OPT_STR_T:
-            strncpy(value, (char*)option->value, MAX_OPTION_LENGTH);
-            break;
-        case OPT_BLCK_T:
-            sprintf(value, "%s", *(blocking_mode_t*)option->value == ONE_CPU ? "1CPU" : "BLOCK");
-            break;
-        case OPT_VB_T:
-        case OPT_VBFMT_T:
-        case OPT_DBG_T:
-        case OPT_PRIO_T:
-        case OPT_POL_T:
-            sprintf(value, "Type non-printable. Integer value: %d", *(int*)option->value);
-            break;
-    }
-
+    sprintf(value, "%s", get_value(option->type, (char*)option->value));
     return 0;
 }
 
@@ -463,29 +405,58 @@ void options_print_variables(void) {
 
     if (!options) return;
 
-    char buffer[1024*16] = "DLB Options:\n";
+    enum { buffer_size = 1024 };
+    char buffer[buffer_size] = "DLB Options:\n";
     char *b = buffer + strlen(buffer);
     option_t *option = NULL;
     int i;
     for (i=0; i<num_options; ++i) {
         option = options[i];
         if (option) {
-            b += sprintf(b, "%s, %s", option->var_name, option->arg_name);
+            /* Name */
+            size_t name_len = strlen(option->var_name) + 1;
+            b += sprintf(b, "%s:%s", option->var_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+
+            /* Value */
+            const char *value = get_value(option->type, (char*)option->value);
+            size_t value_len = strlen(value) + 1;
+            b += sprintf(b, "%s %s", value, value_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+
+            /* Choices */
             switch(option->type) {
                 case OPT_BOOL_T:
-                    b += sprintf(b, " (bool)");
+                    b += sprintf(b, "(bool)");
                     break;
                 case OPT_INT_T:
-                    b += sprintf(b, " (int)");
+                    b += sprintf(b, "(int)");
+                    break;
+                case OPT_STR_T:
+                    b += sprintf(b, "(string)");
+                    break;
+                case OPT_BLCK_T:
+                    b += sprintf(b, "[%s]", get_blocking_mode_choices());
+                    break;
+                case OPT_VB_T:
+                    b += sprintf(b, "{%s}", get_verbose_opts_choices());
+                    break;
+                case OPT_VBFMT_T:
+                    b += sprintf(b, "{%s}", get_verbose_fmt_choices());
+                    break;
+                case OPT_DBG_T:
+                    b += sprintf(b, "{%s}", get_debug_opts_choices());
+                    break;
+                case OPT_PRIO_T:
+                    b += sprintf(b, "[%s]", get_priority_choices());
+                    break;
+                case OPT_POL_T:
+                    b += sprintf(b, "[%s]", get_policy_choices());
                     break;
                 default:
-                    b += sprintf(b, " (string)");
-            }
-            if (option->readonly) {
-                b += sprintf(b, " - (readonly)");
+                    b += sprintf(b, "(unknown)");
             }
             b += sprintf(b, "\n");
         }
     }
+    fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
     info0(buffer);
 }
