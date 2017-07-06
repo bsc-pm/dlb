@@ -73,9 +73,6 @@ const char* options_get_shm_key(void) { return opt_shm_key; }
 static bool opt_bind;
 bool options_get_bind(void) { return opt_bind; }
 
-static char opt_thread_distribution[MAX_OPTION_LENGTH];
-const char* options_get_thread_distribution(void) { return opt_thread_distribution; }
-
 static bool opt_aggressive_init;
 bool options_get_aggressive_init(void) { return opt_aggressive_init; }
 
@@ -328,10 +325,6 @@ void options_init(void) {
     options[i++] = register_option("LB_BIND", "--bind",
             OPT_BOOL_T, &opt_bind, RO, OPTIONAL, "no",
             "Bind option for LeWI, currently disabled");
-
-    options[i++] = register_option("LB_THREAD_DISTRIBUTION", "--thread-distribution",
-            OPT_STR_T, &opt_thread_distribution, RO, OPTIONAL, "",
-            "Thread distribution");
 
     options[i++] = register_option("LB_AGGRESSIVE_INIT", "--aggressive-init",
             OPT_BOOL_T, &opt_aggressive_init, RO, OPTIONAL, "no",

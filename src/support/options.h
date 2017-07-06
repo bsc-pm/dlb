@@ -37,7 +37,6 @@ const char* options_get_mask(void);
 bool options_get_greedy(void);
 const char* options_get_shm_key(void);
 bool options_get_bind(void);
-const char* options_get_thread_distribution(void);
 bool options_get_aggressive_init(void);
 priority_t options_get_priority(void);
 verbose_fmt_t options_get_debug_opts(void);
