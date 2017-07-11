@@ -27,7 +27,7 @@ Which policy should I use for DLB?
 ==================================
 
 In some cases each policy should be considered for study, but as a general rule, use
-``LB_POLICY=LeWI`` in OpenMP applications and ``LB_POLICY=auto_LeWI_mask`` in OmpSs applications.
+``--policy=LeWI`` in OpenMP applications and ``--policy=auto_LeWI_mask`` in OmpSs applications.
 
 .. errors
 
@@ -76,7 +76,7 @@ procesess in the same node.
 
 To use this future you need to preload the DLB MPI library and to set this environment variable::
 
-    export LB_MODE=BLOCKING
+    export DLB_ARGS+=" --lend-mode=block"
 
 I'm running a well allocated hybrid MPI + OpenMP but DLB still doesn't do anything.
 ===================================================================================
@@ -109,10 +109,10 @@ For OpenMP programs: You can link your application with the library ``libdlb_ins
 
 For MPI programs: Use the DLB version of any Extrae library (ending in -lb.so). If you don't find
 the library in the Extrae installation path, reconfigure it using the option
-``--with-load-balance=${DLB_PREFIX}``.
+``--with-load-balance=<<DLB_PREFIX>>``.
 
 Can I disable DLB tracing in an OmpSs execution?
 ================================================
 
-Yes, simply export the evironment variable ``LB_TRACE_ENABLED=0``.
+Yes, simply set the option ``--trace-enabled=no`` in ``DLB_ARGS``.
 
