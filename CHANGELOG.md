@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+
+## [1.3] - 2017-07-12
 ### Added
 - This CHANGELOG file
 - Shared Memory consistency checks upon registration
@@ -87,6 +89,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[Unreleased]: https://github.com/bsc-pm/dlb/compare/v1.2...HEAD
+[Unreleased]: https://github.com/bsc-pm/dlb/compare/v1.3...HEAD
+[1.3]: https://github.com/bsc-pm/dlb/compare/v1.2...v1.3
 [1.2]: https://github.com/bsc-pm/dlb/compare/v1.1...v1.2
 [1.1]: https://github.com/bsc-pm/dlb/compare/v1.0...v1.1
