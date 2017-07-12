@@ -68,7 +68,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Fotran interfaces now use the correct types
 - Several minor bugs
 
-## [1.0] - 2013-12-11
+## 1.0 - 2013-12-11
 ### Added
 - DLB Interface
 - MPI Interception Interface
@@ -86,3 +86,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - HWLOC optional dependency to query HW info
 - Scheduling decisions based on HW locality
 - Binary `dlb`
+
+[Unreleased]: https://github.com/bsc-pm/dlb/compare/v1.2...HEAD
+[1.2]: https://github.com/bsc-pm/dlb/compare/v1.1...v1.2
+[1.1]: https://github.com/bsc-pm/dlb/compare/v1.0...v1.1
