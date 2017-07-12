@@ -55,15 +55,14 @@ OpenMP).
 
 .. Statistics
 .. ----------
-.. This feature is in development and will be added in version 1.3.
-
+.. This feature is in development and will be added in future versions.
 
 
 .. .. _barrier:
 
 .. Node Barrier
 .. ------------
-.. This feature is in development and will be added in version 1.3.
+.. This feature is in development and will be added in future versions.
 
 
 

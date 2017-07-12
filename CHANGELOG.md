@@ -85,4 +85,4 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - RaL and PERaL policies for redistribution of resources
 - HWLOC optional dependency to query HW info
 - Scheduling decisions based on HW locality
-- Binary `dlb_info`
+- Binary `dlb`
