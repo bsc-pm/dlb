@@ -481,6 +481,7 @@ int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
     } else if (!dlb_enabled || !spd.options.drom) {
         error = DLB_ERR_DISBLD;
     } else {
+        add_event(RUNTIME_EVENT, EVENT_POLLDROM);
         // Use a local mask if new_mask was not provided
         cpu_set_t local_mask;
         cpu_set_t *mask = new_mask ? new_mask : &local_mask;
@@ -490,6 +491,7 @@ int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
             shmem_cpuinfo__update_ownership(spd.id, mask);
             spd.lb_funcs.update_priority_cpus(&spd, mask);
         }
+        add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }

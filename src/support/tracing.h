@@ -31,6 +31,7 @@
 #define EVENT_RETURN      8
 #define EVENT_RESET       9
 #define EVENT_BARRIER     10
+#define EVENT_POLLDROM    11
 
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040
