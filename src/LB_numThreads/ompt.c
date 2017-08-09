@@ -94,6 +94,7 @@ typedef void (*ompt_callback_thread_end_t) (
 #include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
+#include "support/tracing.h"
 #include "apis/dlb_errors.h"
 
 #include <inttypes.h>
@@ -143,6 +144,7 @@ static void cb_implicit_task(
                 CPU_ZERO(&thread_mask);
                 CPU_SET(cpuid, &thread_mask);
                 pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+                add_event(REBIND_EVENT, cpuid);
             }
         }
     }
