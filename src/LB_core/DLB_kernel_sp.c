@@ -74,7 +74,6 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
 
     // Initialize modules
     debug_init(&spd->options);
-    spd->lb_funcs.init(spd);
     if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
         // If the process has been pre-initialized, the process mask may have changed
         // procinfo_init must return a new_mask if so
@@ -95,6 +94,8 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
     if (spd->options.mode == MODE_ASYNC) {
         shmem_async_init(spd->id, &spd->pm, spd->options.shm_key);
     }
+    spd->lb_funcs.init(spd);
+    spd->lb_funcs.update_priority_cpus(spd, &spd->process_mask);
 
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, 0);
