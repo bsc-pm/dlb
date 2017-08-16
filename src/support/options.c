@@ -293,29 +293,29 @@ static const char * get_value(option_type_t type, void *option) {
     return "unknown";
 }
 
-/* Parse LB_ARGS and remove argument if found */
-static void parse_lb_args(const char *lb_args, const char *arg_name, char* arg_value) {
+/* Parse DLB_ARGS and remove argument if found */
+static void parse_dlb_args(const char *dlb_args, const char *arg_name, char* arg_value) {
     *arg_value = 0;
-    // Tokenize a copy of lb_args with " "(blank) delimiter
+    // Tokenize a copy of dlb_args with " "(blank) delimiter
     char *end_space = NULL;
-    size_t len = strlen(lb_args) + 1;
+    size_t len = strlen(dlb_args) + 1;
     char *lb_args_copy = malloc(sizeof(char)*len);
-    strncpy(lb_args_copy, lb_args, len);
+    strncpy(lb_args_copy, dlb_args, len);
     char *token = strtok_r(lb_args_copy, " ", &end_space);
     while (token) {
         // Break token into two tokens "--argument" = "value"
         char *end_equal;
         char *argument = strtok_r(token, "=", &end_equal);
-        fatal_cond(!argument, "Bad format parsing LB_ARGS: --argument=value");
+        fatal_cond(!argument, "Bad format parsing DLB_ARGS: --argument=value");
 
         if (strcmp(argument, arg_name) == 0) {
             // Get value to return
             char *value = strtok_r(NULL, "=", &end_equal);
-            fatal_cond(!value, "Bad format parsing LB_ARGS: --argument=value");
+            fatal_cond(!value, "Bad format parsing DLB_ARGS: --argument=value");
             strncpy(arg_value, value, MAX_OPTION_LENGTH);
 
-            // Remove "--argument=value" from lb_args
-            char *dest = strstr(lb_args, argument);
+            // Remove "--argument=value" from dlb_args
+            char *dest = strstr(dlb_args, argument);
             char *src = dest+strlen(argument)+1+strlen(value);
             size_t n = strlen(src) + 1;
             memmove(dest, src, n);
@@ -329,15 +329,15 @@ static void parse_lb_args(const char *lb_args, const char *arg_name, char* arg_v
 }
 
 /* Initialize options struct from either argument, or env. variable */
-void options_init(options_t *options, const char *lb_args_from_api) {
-    // Copy lb_args_from_api if present, or LB_ARGS env. variable otherwise
-    char *lb_args = NULL;
-    const char *lb_args_from_env = getenv("LB_ARGS");
-    const char *lb_args_to_copy = (lb_args_from_api) ? lb_args_from_api : lb_args_from_env;
-    if (lb_args_to_copy) {
-        size_t len = strlen(lb_args_to_copy) + 1;
-        lb_args = malloc(sizeof(char)*len);
-        strncpy(lb_args, lb_args_to_copy, len);
+void options_init(options_t *options, const char *dlb_args_from_api) {
+    // Copy dlb_args_from_api if present, or DLB_ARGS env. variable otherwise
+    char *dlb_args = NULL;
+    const char *dlb_args_from_env = getenv("DLB_ARGS");
+    const char *dlb_args_to_copy = (dlb_args_from_api) ? dlb_args_from_api : dlb_args_from_env;
+    if (dlb_args_to_copy) {
+        size_t len = strlen(dlb_args_to_copy) + 1;
+        dlb_args = malloc(sizeof(char)*len);
+        strncpy(dlb_args, dlb_args_to_copy, len);
     }
 
     int i;
@@ -349,9 +349,9 @@ void options_init(options_t *options, const char *lb_args_from_api) {
         // Obtain str_value from precedence: lb_args -> LB_var -> default
         const char *str_value = NULL;
         char *arg_value = NULL;
-        if (lb_args) {
+        if (dlb_args) {
             arg_value = malloc(MAX_OPTION_LENGTH*sizeof(char));
-            parse_lb_args(lb_args, entry->arg_name, arg_value);
+            parse_dlb_args(dlb_args, entry->arg_name, arg_value);
             str_value = arg_value;
         }
         str_value = (str_value && strlen(str_value)>0) ? str_value : getenv(entry->var_name);
@@ -362,13 +362,13 @@ void options_init(options_t *options, const char *lb_args_from_api) {
 
         set_value(entry->type, (char*)options+entry->offset, str_value);
 
-        if (lb_args) {
+        if (dlb_args) {
             free(arg_value);
         }
     }
 
-    if (lb_args) {
-        free(lb_args);
+    if (dlb_args) {
+        free(dlb_args);
     }
 }
 
@@ -416,8 +416,11 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
 
 /* API Printer */
 void options_print_variables(const options_t *options) {
-    enum { buffer_size = 1024 };
-    char buffer[buffer_size] = "DLB Options:\n";
+    enum { buffer_size = 2048 };
+    char buffer[buffer_size] = "DLB Options:\n\n"
+                                "The library configuration can be set using arguments\n"
+                                "added to the DLB_ARGS environment variable.\n"
+                                "All possible options are listed below:\n\n";
     char *b = buffer + strlen(buffer);
     int i;
     for (i=0; i<NUM_OPTIONS; ++i) {
@@ -469,6 +472,15 @@ void options_print_variables(const options_t *options) {
         }
         b += sprintf(b, "\n");
     }
+
+    b += sprintf(b, "\n"
+                    "For compatibility reasons, these environment variables\n"
+                    "are still supported but will be deprecated in future releases:\n\n");
+    for (i=0; i<NUM_OPTIONS; ++i) {
+        const opts_dict_t *entry = &options_dictionary[i];
+        b += sprintf(b, "%s\n", entry->var_name);
+    }
+
     fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
     info0(buffer);
 }

@@ -23,18 +23,18 @@ The DLB API can be divided into:
         - DLB_<mpi_call_name>_enter(...)
         - DLB_<mpi_call_name>_leave(...)
 
+    Dynamic Resource Ownership Manager
+        With these functions, the user can manage from an external process the CPU
+        ownership of each DLB running process. For a more detailed description see
+        :ref:`drom`. These functions are described in section :ref:`drom-api`.
+
+
 ..        There is one API function that is aimed to be called by the user, explained in section :ref:`mpi-api`.
 
 ..     Statistics
 ..         This set of functions allows the user to obtain some statistics about CPU usage.
 ..         For a more detailed description see :ref:`statistics`. These functions are described
 ..         in section :ref:`stats-api`.
-.. 
-..     Dynamic Resource Ownership Manager
-..         With these functions, the user can manage from an external process the CPU
-..         ownership of each DLB running process. For a more detailed description see
-..         :ref:`drom`. These functions are described in section :ref:`drom-api`.
-
 
 
 .. _basic-api:
@@ -271,45 +271,45 @@ level of parallelism. But advanced users can also use them from applications.
 .. .. function:: void DLB_Stats_PrintShmem(void)
 .. 
 ..     Print the data stored in the Stats Shared Memory
-.. 
-.. .. _drom-api:
-.. 
-.. ==================================
-.. Dynamic Resource Manager Interface
-.. ==================================
-.. 
-.. The next set of functions can be used when the user has enabled the Dynamic Resource Ownership
-.. Manager (DROM) Module (see :ref:`drom`). With this interface the user can set or retrieve the
-.. process mask of each DLB process.
-.. 
-.. .. function:: void DLB_Drom_Init(void)
-.. 
-..     Initialize DROM Module
-.. 
-.. .. function:: void DLB_Drom_Finalize(void)
-.. 
-..     Finalize DROM Module
-.. 
-.. .. function:: int DLB_Drom_GetNumCpus(void)
-.. 
-..     Get the total number of available CPUs in the node
-.. 
-.. .. function:: void DLB_Drom_GetPidList(int \*pidlist, int \*nelems, int max_len)
-.. 
-..     Get the PID's attached to this module
-.. 
-.. .. function:: int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask)
-.. 
-..     Get the process mask of the given PID
-.. 
-.. .. function:: int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask)
-.. 
-..     Set the process mask of the given PID
-.. 
-.. .. function:: void DLB_Drom_PrintShmem(void)
-.. 
-..     Print the data stored in the Drom Shared Memory
-.. 
+
+.. _drom-api:
+
+==================================
+Dynamic Resource Manager Interface
+==================================
+
+The next set of functions can be used when the user has enabled the Dynamic Resource Ownership
+Manager (DROM) Module (see :ref:`drom`). With this interface the user can set or retrieve the
+process mask of each DLB process.
+
+.. function:: void DLB_Drom_Init(void)
+
+    Initialize DROM Module
+
+.. function:: void DLB_Drom_Finalize(void)
+
+    Finalize DROM Module
+
+.. function:: int DLB_Drom_GetNumCpus(void)
+
+    Get the total number of available CPUs in the node
+
+.. function:: void DLB_Drom_GetPidList(int \*pidlist, int \*nelems, int max_len)
+
+    Get the PID's attached to this module
+
+.. function:: int DLB_Drom_GetProcessMask(int pid, dlb_cpu_set_t mask)
+
+    Get the process mask of the given PID
+
+.. function:: int DLB_Drom_SetProcessMask(int pid, const dlb_cpu_set_t mask)
+
+    Set the process mask of the given PID
+
+.. function:: void DLB_Drom_PrintShmem(void)
+
+    Print the data stored in the Drom Shared Memory
+
 .. .. _mpi-api:
 .. 
 .. =============

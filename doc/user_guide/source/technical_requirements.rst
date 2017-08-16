@@ -38,5 +38,5 @@ Non-busy waiting for MPI calls
 ==============================
 When using MPI applications we need the MPI blocking calls not to be busy waiting. However, DLB offers a mode where one CPU is reserved to wait for the MPI blocking call and is not lent to other processes.
 
-If the MPI library does not offer a Non-busy waiting mode, or we do not want ot use it of any other reason, We can tell DLB to use a non blocking mode with the environment variable ``LB_LEND_MODE=1CPU``.
+If the MPI library does not offer a Non-busy waiting mode, or we do not want ot use it of any other reason, We can tell DLB to use a non blocking mode with the option ``--lend-mode=1CPU``.
 

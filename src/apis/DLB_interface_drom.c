@@ -160,4 +160,8 @@ int DLB_DROM_PostFinalize(int pid, int return_stolen) {
     return error;
 }
 
+int DLB_DROM_RecoverStolenCpus(int pid) {
+    return shmem_procinfo_ext__recover_stolen_cpus(pid);
+}
+
 #pragma GCC visibility pop

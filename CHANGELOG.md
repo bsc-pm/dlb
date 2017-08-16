@@ -32,6 +32,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - `DLB_DROM_GetCpus` service has been removed
 
 ## [Unreleased]
+
+## [1.3] - 2017-07-12
 ### Added
 - This CHANGELOG file
 - Shared Memory consistency checks upon registration
@@ -45,6 +47,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - Refactor policy based Shared Memory into two general purpose `cpuinfo` and `procinfo`
 - DROM interface is now considered stable. External processes can manage the CPU ownership of DLB processes
+- DLB options are now parsed through the environment variable `DLB_ARGS`
 
 ### Fixed
 - Several minor bugs
@@ -95,7 +98,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Fotran interfaces now use the correct types
 - Several minor bugs
 
-## [1.0] - 2013-12-11
+## 1.0 - 2013-12-11
 ### Added
 - DLB Interface
 - MPI Interception Interface
@@ -112,4 +115,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - RaL and PERaL policies for redistribution of resources
 - HWLOC optional dependency to query HW info
 - Scheduling decisions based on HW locality
-- Binary `dlb_info`
+- Binary `dlb`
+
+[Unreleased]: https://github.com/bsc-pm/dlb/compare/v1.3...HEAD
+[1.3]: https://github.com/bsc-pm/dlb/compare/v1.2...v1.3
+[1.2]: https://github.com/bsc-pm/dlb/compare/v1.1...v1.2
+[1.1]: https://github.com/bsc-pm/dlb/compare/v1.0...v1.1

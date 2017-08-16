@@ -25,6 +25,7 @@
 #include "apis/dlb_errors.h"
 #include "support/debug.h"
 #include "support/tracing.h"
+#include "support/options.h"
 #include "support/mask_utils.h"
 
 #include <sched.h>
@@ -126,24 +127,25 @@ int auto_lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 /* Out of Blocking Call - Recover the default number of threads */
 int auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
 
-    cpu_set_t mask;
-    CPU_ZERO(&mask);
-    sched_getaffinity(0, sizeof(cpu_set_t), &mask);
+    if ( spd->options.mpi_lend_mode == BLOCK ) {
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+        sched_getaffinity(0, sizeof(cpu_set_t), &mask);
 
-    int my_cpu=0;
+        int my_cpu=0;
 
-    while (my_cpu < mu_get_system_size()){
-        if (CPU_ISSET(my_cpu, &mask)) break;
-        my_cpu++;
-    }
+        while (my_cpu < mu_get_system_size()){
+            if (CPU_ISSET(my_cpu, &mask)) break;
+            my_cpu++;
+        }
 
-    if (my_cpu!=mu_get_system_size()){
-        verbose(VB_MICROLB, "OutOfBlockingCall: recovering cpu: %d", my_cpu);
-        CPU_ZERO( &mask );
+        if (my_cpu!=mu_get_system_size()){
+            verbose(VB_MICROLB, "OutOfBlockingCall: recovering cpu: %d", my_cpu);
+            CPU_ZERO( &mask );
 
-        pthread_mutex_lock(&mutex);
-        if (enabled && !single){
-            memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
+            pthread_mutex_lock(&mutex);
+            if (enabled && !single){
+                memcpy(&mask, &spd->active_mask, sizeof(cpu_set_t));
 
             // FIXME: steal force is disabled
                 if (shmem_cpuinfo__borrow_cpu(spd->id, my_cpu, NULL)) {
@@ -155,8 +157,9 @@ int auto_lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_
                     verbose(VB_MICROLB, "Can't recover cpu, remove from Mask, new mask: %s",
                             mu_to_str(&mask));
                 }
+            }
+            pthread_mutex_unlock(&mutex);
         }
-        pthread_mutex_unlock(&mutex);
     }
     return DLB_SUCCESS;
 }

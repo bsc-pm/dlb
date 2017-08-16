@@ -106,8 +106,8 @@ const char* get_priority_choices(void);
 void parse_policy(const char *str, policy_t *value);
 const char* policy_tostr(policy_t policy);
 const char* get_policy_choices(void);
-/* interaction_mode_t */
 
+/* interaction_mode_t */
 void parse_mode(const char *str, interaction_mode_t *value);
 const char* mode_tostr(interaction_mode_t value);
 const char* get_mode_choices(void);

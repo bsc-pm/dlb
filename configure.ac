@@ -220,7 +220,6 @@ AC_CONFIG_HEADERS([config.h])
 # files to generate via autotools (.am or .in source files)
 AC_CONFIG_FILES([
     Makefile
-    README
     tests/Makefile
     doc/examples/mpi+omp/run.sh
     doc/examples/mpi+omp/Makefile

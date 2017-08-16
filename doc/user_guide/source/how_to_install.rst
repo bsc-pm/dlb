@@ -6,14 +6,14 @@ Build requirements
 ==================
 
 * A supported platform running Linux (i386, x86-64, ARM, PowerPC or IA64).
-* GNU C/C++ compiler versions 4.4 or better.
-* Python 2.4 or better
+* GNU C/C++ compiler versions 4.4 or newer.
+* Python 2.4 or newer.
 
 
 Installation steps
 ==================
 
-#. Get the latest DLB *tarball* from https://pm.bsc.es/dlb. Unpack the
+#. Get the latest DLB *tarball* from https://pm.bsc.es/dlb-downloads. Unpack the
    file and enter the new directory::
 
     $ tar xzf dlb-x.y.tar.gz
@@ -21,13 +21,19 @@ Installation steps
 
 #. Configure it, with optionally some of the :ref:`DLB configure flags<dlb-configure-flags>`::
 
-   $ ./configure --prefix=$DLB_PREFIX
+   $ ./configure --prefix=<<DLB_PREFIX>>
 
 #. Build and install::
 
    $ make
    $ make install
 
+.. note::
+    If you plan to compile `Nanos++`_ and `Mercurium`_ later, consider adding
+    ``--with-dlb=<<DLB_PREFIX>>`` to their configure options.
+
+.. _Nanos++: https://pm.bsc.es/nanox
+.. _Mercurium: https://pm.bsc.es/mcxx
 
 .. _dlb-configure-flags:
 
