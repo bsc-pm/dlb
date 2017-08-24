@@ -1332,7 +1332,7 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
 }
 
 bool shmem_cpuinfo__is_dirty(void) {
-    return shdata->dirty;
+    return shdata && shdata->dirty;
 }
 
 /* External Functions
