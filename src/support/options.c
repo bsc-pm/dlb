@@ -332,7 +332,17 @@ static void parse_dlb_args(const char *dlb_args, const char *arg_name, char* arg
 void options_init(options_t *options, const char *dlb_args_from_api) {
     // Copy dlb_args_from_api if present, or DLB_ARGS env. variable otherwise
     char *dlb_args = NULL;
+
+    /* If LB_ARGS is set and DLB_ARGS is not, we should use the
+     * former but emit a deprecation warning */
     const char *dlb_args_from_env = getenv("DLB_ARGS");
+    if (!dlb_args_from_env) {
+        dlb_args_from_env = getenv("LB_ARGS");
+        if (dlb_args_from_env) {
+            warning("LB_ARGS is deprected, please use DLB_ARGS");
+        }
+    }
+
     const char *dlb_args_to_copy = (dlb_args_from_api) ? dlb_args_from_api : dlb_args_from_env;
     if (dlb_args_to_copy) {
         size_t len = strlen(dlb_args_to_copy) + 1;
