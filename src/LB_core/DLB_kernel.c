@@ -128,6 +128,7 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
 int Finish(void) {
     int error = DLB_SUCCESS;
     if (dlb_initialized) {
+        add_event(RUNTIME_EVENT, EVENT_FINALIZE);
         dlb_enabled = false;
         dlb_initialized = false;
         spd.lb_funcs.finalize(&spd);
@@ -144,6 +145,7 @@ int Finish(void) {
             shmem_procinfo__finalize(spd.id);
         }
         free(spd.cpus_priority_array);
+        add_event(RUNTIME_EVENT, 0);
     } else {
         error = DLB_ERR_NOINIT;
     }
