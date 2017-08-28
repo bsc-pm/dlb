@@ -59,8 +59,8 @@ class ArgOptions:
                       help=("Comma separated lists of aditional options ('|' separates incompatible "
                       "alternatives ) combined in the configurations generated"))
         parser.add_option("-m", choices=['single','omp','small','large'], dest="mode",
-                      help=("Determines the number of execution versions for each test combining "
-                      "different runtime options."))
+                      default='single', help=("Determines the number of execution versions "
+                      "for each test combining different runtime options."))
         parser.add_option("-c","--cpus", metavar="n", type='int', dest="cpus",
                       help="Each configuration will be tested from 1 to n CPUS")
 
@@ -80,7 +80,6 @@ class ArgOptions:
     def getMode(self):
         test_mode = os.environ.get('LB_TEST_MODE')
         test_mode = test_mode or self._options.mode
-        test_mode = test_mode or 'small'
         return test_mode
 
     def getMaxCpus(self):

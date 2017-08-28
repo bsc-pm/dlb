@@ -19,7 +19,6 @@
 
 /*<testinfo>
     test_generator="gens/basic-generator -a --mode=polling|--mode=async"
-    test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
 #include "assert_loop.h"

@@ -19,7 +19,6 @@
 
 /*<testinfo>
     test_generator="gens/basic-generator"
-    test_generator_ENV=( "LB_TEST_MODE=single" )
 </testinfo>*/
 
 #include "support/mytime.h"
