@@ -37,13 +37,13 @@ int main( int argc, char **argv ) {
     setenv("LB_LEND_MODE", "huh", 1);
     setenv("LB_VERBOSE", "huh", 1);
     setenv("LB_VERBOSE_FORMAT", "huh", 1);
-    const char *lb_args = "--policy=huh --drom=huh      --mask=huh   --lend-mode=huh "
+    const char *dlb_args = "--policy=huh --drom=huh      --mask=huh   --lend-mode=huh "
         " this_should_be_ignored     --verbose=huh --verbose-format=huh";
 
     // Check initialization equivalency
     options_t options_1, options_2;
     options_init(&options_1, NULL);     // options_1 initialized with env. vars
-    options_init(&options_2, lb_args);  // options_2 initialized with lb_args
+    options_init(&options_2, dlb_args); // options_2 initialized with dlb_args
     assert(options_1.lb_policy == options_2.lb_policy);
     assert(options_1.drom == options_2.drom);
     assert(options_1.mpi_lend_mode == options_2.mpi_lend_mode);
@@ -110,6 +110,7 @@ int main( int argc, char **argv ) {
     assert(options_1.mode == MODE_ASYNC);
 
     // Unset all variables and check that default values are preserved
+    unsetenv("DLB_ARGS");
     unsetenv("LB_ARGS");
     unsetenv("LB_POLICY");
     unsetenv("LB_DROM");
