@@ -110,6 +110,7 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
     verbose(VB_DROM, "Enabled verbose mode for DROM");
     verbose(VB_STATS, "Enabled verbose mode for STATS");
     verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+    verbose(VB_ASYNC, "Enabled verbose mode for Asynchronous thread");
 #ifdef MPI_LIB
     info0 ("MPI processes per node: %d", _mpis_per_node);
 #endif
