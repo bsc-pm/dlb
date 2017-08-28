@@ -92,7 +92,7 @@ void shmem_barrier_init(const char *shmem_key) {
                 barrier->initialized = true;
             }
             barrier->participants++;
-            warning("barrier participants: %d", barrier->participants)
+            warning("barrier participants: %d", barrier->participants);
             advance_barrier();
         }
     }
