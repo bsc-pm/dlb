@@ -17,37 +17,23 @@ def cpus(max_cpus):
         ans = ans + ['OMP_NUM_THREADS='+str(i)]
     return ans
 
-# Deprecate
-def lb_policy(policies):
+def dlb_policy(policies):
     ans = []
     for p in policies:
-        if p == 'LeWI':
-            ans = ans + ['NX_ARGS=--disable-binding LB_POLICY='+p]
-        else:
-            ans = ans + ['LB_POLICY='+p]
+        ans = ans + ['--policy='+p]
     return ans
 
-def lb_barrier(bar):
+def dlb_barrier(bar):
     ans = []
     for b in bar:
-        ans = ans + ['LB_JUST_BARRIER='+str(b)]
+        ans = ans + ['--just-barrier='+str(b)]
     return ans
 
-def lb_lend_mode(mode):
+def dlb_lend_mode(mode):
     ans = []
     for m in mode:
-        ans = ans + ['LB_LEND_MODE='+m]
+        ans = ans + ['--lend-mode='+m]
     return ans
-
-def print_header(argv):
-    header = ( "DLB config generator 0.2\n\n"
-            "Environment variables that affect this script:\n"
-            "   LB_TEST_MODE=\'single\'|\'omp\'|\'small\'|\'large\'   -  \'small\' by default\n"
-            "   LB_TEST_MAX_CPUS=#CPUS                        -  2 by default\n"
-            "   LB_TEST_POLICY=[policy]\n\n" )
-    if '-h' in argv or '--help' in argv:
-        print header
-
 
 class ArgOptions:
     _options = None
@@ -56,12 +42,14 @@ class ArgOptions:
     def __init__(self):
         parser = OptionParser()
         parser.add_option("-a", metavar="\"a1|a2,b1|b2,..\"", dest="additional",
-                      help=("Comma separated lists of aditional options ('|' separates incompatible "
-                      "alternatives ) combined in the configurations generated"))
-        parser.add_option("-m", choices=['single','omp','small','large'], dest="mode",
-                      default='single', help=("Determines the number of execution versions "
-                      "for each test combining different runtime options."))
-        parser.add_option("-c","--cpus", metavar="n", type='int', dest="cpus",
+                      help=("Comma separated lists of additional options ('|' separates incompatible "
+                      "alternatives ) combined in the generated configurations"))
+        mode_choices = ['single','omp','small','large']
+        parser.add_option("-m", choices=mode_choices, dest="mode",
+                      default=mode_choices[0], help=("Determines the number of execution versions "
+                          "for each test combining different runtime options: "
+                           + ", ".join(mode_choices)))
+        parser.add_option("-c","--cpus", metavar="n", type='int', dest="cpus", default=2,
                       help="Each configuration will be tested from 1 to n CPUS")
 
         (self._options, self._args) = parser.parse_args()
@@ -78,28 +66,18 @@ class ArgOptions:
         return addlist
 
     def getMode(self):
-        test_mode = os.environ.get('LB_TEST_MODE')
-        test_mode = test_mode or self._options.mode
-        return test_mode
+        return self._options.mode
 
     def getMaxCpus(self):
-        max_cpus = os.environ.get('LB_TEST_MAX_CPUS')
-        max_cpus = max_cpus or self._options.cpus
-        max_cpus = max_cpus or 2
-        return int(max_cpus)
-
-    def getPolicy(self):
-        return os.environ.get('LB_TEST_POLICY')
+        type(self._options.cpus)
+        return self._options.cpus
 
 
 def main(argv):
-    print_header(argv)
-
     ### Parse options ###
     options     = ArgOptions()
     test_mode   = options.getMode()
     max_cpus    = options.getMaxCpus()
-    test_policy = options.getPolicy()
     addlist     = options.getAdditional()
 
     barriers        = [0,1]
@@ -110,27 +88,21 @@ def main(argv):
     policies_small  = ['No','LeWI','LeWI_mask']
     policies_large  = ['No','LeWI','LeWI_mask']
 
-    if test_policy is not None:
-        policies_single = [test_policy]
-        policies_omp    = [test_policy]
-        policies_small  = [test_policy]
-        policies_large  = [test_policy]
-
     if test_mode == 'single':
         configs = cross(*addlist)
     if test_mode == 'omp-only':
-        configs = cross(*[lb_policy(policies_omp)]+[lb_lend_mode(blocking_small)]+addlist)
+        configs = cross(*[dlb_policy(policies_omp)]+[dlb_lend_mode(blocking_small)]+addlist)
     elif test_mode == 'small':
-        configs = cross(*[lb_policy(policies_small)]+[lb_lend_mode(blocking_small)]+addlist)
+        configs = cross(*[dlb_policy(policies_small)]+[dlb_lend_mode(blocking_small)]+addlist)
     elif test_mode == 'large':
-        configs = cross(*[cpus(max_cpus)]+[lb_policy(policies_large)]+[lb_barrier(barriers)]
-                +[lb_lend_mode(blocking_large)]+addlist)
+        configs = cross(*[cpus(max_cpus)]+[dlb_policy(policies_large)]+[dlb_barrier(barriers)]
+                +[dlb_lend_mode(blocking_large)]+addlist)
 
     config_lines = []
     versions = ''
     i = 1
     for c in configs:
-        line = 'test_ENV_ver' + str(i) + '=\"LB_ARGS=\$LB_ARGS\' '
+        line = 'test_ENV_ver' + str(i) + '=\"DLB_ARGS=\$DLB_ARGS\' '
         versions += 'ver' + str(i) + ' '
         for entry in c:
             line = line + ' ' + entry
