@@ -32,27 +32,38 @@
 #include <errno.h>
 #include <pthread.h>
 #include <string.h>
-#include <semaphore.h>
 
-#define NOBODY 0
+enum { NOBODY = 0 };
+enum { QUEUE_SIZE = 100 };
 
 typedef enum HelperAction {
-    ACTION_NONE,
+    ACTION_NONE = 0,
     ACTION_ENABLE_CPU,
     ACTION_DISABLE_CPU,
     ACTION_SET_MASK,
     ACTION_JOIN
 } action_t;
 
-typedef struct {
-    pid_t pid;
+typedef struct Message {
     action_t action;
     int cpuid;
-    sem_t sem;
     cpu_set_t mask;
-    pthread_t thread;
+} message_t;
+
+typedef struct {
+    /* Queue attributes */
+    message_t       queue[QUEUE_SIZE];
+    unsigned int    q_head;
+    unsigned int    q_tail;
+    pthread_mutex_t q_lock;
+    pthread_cond_t  q_wait_data;
+
+    /* Helper metadata */
     const pm_interface_t *pm;
+    pthread_t thread;
+    pid_t pid;
 } helper_t;
+
 
 typedef struct {
     helper_t helpers[0];
@@ -75,34 +86,64 @@ static helper_t* get_helper(pid_t pid) {
     return NULL;
 }
 
+static void enqueue_message(helper_t *helper, const message_t *message) {
+    pthread_mutex_lock(&helper->q_lock);
+
+    /* Get next_head index and check that buffer is not full */
+    unsigned int next_head = (helper->q_head + 1) % QUEUE_SIZE;
+    if (__builtin_expect((next_head == helper->q_tail), 0)) {
+        pthread_mutex_unlock(&helper->q_lock);
+        fatal("Max petitions requested for asynchronous thread");
+    }
+
+    /* Enqueue message and update head */
+    verbose(VB_ASYNC, "Writing message %d, head is now %d", helper->q_head, next_head);
+    helper->queue[helper->q_head] = *message;
+    helper->q_head = next_head;
+
+    /* Signal helper */
+    pthread_cond_signal(&helper->q_wait_data);
+
+    pthread_mutex_unlock(&helper->q_lock);
+}
+
+static void dequeue_message(helper_t *helper, message_t *message) {
+    pthread_mutex_lock(&helper->q_lock);
+
+    /* Block until there's some message in the queue */
+    while (helper->q_head == helper->q_tail) {
+        pthread_cond_wait(&helper->q_wait_data, &helper->q_lock);
+    }
+
+    /* Dequeue message and update tail */
+    unsigned int next_tail = (helper->q_tail + 1) % QUEUE_SIZE;
+    verbose(VB_ASYNC, "Reading message %d, tail is now %d", helper->q_tail, next_tail);
+    *message = helper->queue[helper->q_tail];
+    helper->q_tail = next_tail;
+
+    pthread_mutex_unlock(&helper->q_lock);
+}
+
 static void* thread_start(void *arg) {
+    verbose(VB_ASYNC, "Helper thread started");
     helper_t *helper = arg;
     const pm_interface_t* const pm = helper->pm;
-    bool join = false;
-    while(!join) {
-        action_t action;
-        int cpuid;
 
-        sem_wait(&helper->sem);
-        shmem_lock(shm_handler);
-        {
-            // We can't attend the petition with the shmem locked
-            // We could even consider using atomic exchange operations instead of locks
-            action = helper->action;
-            cpuid = helper->cpuid;
-            helper->action = ACTION_NONE;
-        }
-        shmem_unlock(shm_handler);
+    bool join = false;
+    while(!join || helper->q_head != helper->q_tail) {
+        message_t message;
+        dequeue_message(helper, &message);
+        verbose(VB_ASYNC, "Helper thread attending petition %d", message.action);
 
         int error = 0;
-        switch(action) {
+        switch(message.action) {
             case ACTION_NONE:
                 break;
             case ACTION_ENABLE_CPU:
-                error = enable_cpu(pm, cpuid);
+                error = enable_cpu(pm, message.cpuid);
                 break;
             case ACTION_DISABLE_CPU:
-                error = disable_cpu(pm, cpuid);
+                error = disable_cpu(pm, message.cpuid);
                 break;
             case ACTION_SET_MASK:
                 break;
@@ -114,13 +155,12 @@ static void* thread_start(void *arg) {
             // error ?
         }
     }
+    verbose(VB_ASYNC, "Helper thread finalizing");
     return NULL;
 }
 
 int shmem_async_init(pid_t pid, const pm_interface_t *pm, const char *shmem_key) {
-    ensure(shmem_cpuinfo__exists() && shmem_procinfo__exists(),
-            "shmem_async_init must be called after other shmems initializations"
-            " and either cpuinfo or procinfo shmem does not exist");
+    verbose(VB_ASYNC, "Creating helper thread");
 
     // Shared memory creation
     pthread_mutex_lock(&mutex);
@@ -146,103 +186,87 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const char *shmem_key)
             if (shdata->helpers[h].pid == NOBODY) {
                 helper = &shdata->helpers[h];
 
-                // Initialize helper structure
-                //warning("Initializing helper for pid %d", pid);
-                helper->pid = pid;
+                /* Initialize queue structure */
+                memset(helper->queue, 0, sizeof(helper->queue));
+                helper->q_head = 0;
+                helper->q_tail = 0;
+
+                /* Initialize queue sync attributes */
+                pthread_mutexattr_t mutex_attr;
+                fatal_cond_strerror( pthread_mutexattr_init(&mutex_attr) );
+                fatal_cond_strerror( pthread_mutexattr_setpshared(&mutex_attr,
+                            PTHREAD_PROCESS_SHARED) );
+                fatal_cond_strerror( pthread_mutex_init(&helper->q_lock, &mutex_attr) );
+                fatal_cond_strerror( pthread_mutexattr_destroy(&mutex_attr) );
+                pthread_condattr_t cond_attr;
+                fatal_cond_strerror( pthread_condattr_init(&cond_attr) );
+                fatal_cond_strerror( pthread_condattr_setpshared(&cond_attr,
+                            PTHREAD_PROCESS_SHARED) );
+                fatal_cond_strerror( pthread_cond_init(&helper->q_wait_data, &cond_attr) );
+                fatal_cond_strerror( pthread_condattr_destroy(&cond_attr) );
+
+                // Initialize helper metadata and create thread
                 helper->pm = pm;
-                helper->action = ACTION_NONE;
-                sem_init(&helper->sem, /*shared*/ 1, /*value*/ 0);
+                helper->pid = pid;
+                pthread_create(&helper->thread, NULL, thread_start, (void*)helper);
                 break;
             }
         }
     }
     shmem_unlock(shm_handler);
 
-    // return DLB_ERR_NOMEM ?
-    fatal_cond(!helper, "no space");
-
-    // is it secure to create out of lock?
-    pthread_create(&helper->thread, NULL, thread_start, (void*)helper);
-
-    return DLB_SUCCESS;
+    return helper ? DLB_SUCCESS : DLB_ERR_NOMEM;
 }
 
 int shmem_async_finalize(pid_t pid) {
-    ensure(shmem_cpuinfo__exists() && shmem_procinfo__exists(),
-            "shmem_async_finalize must be called before other shmems finalizations"
-            " and either cpuinfo or procinfo shmems does not exist");
+    verbose(VB_ASYNC, "Finalizing helper thread for pid: %d", pid);
+    helper_t *helper = get_helper(pid);
+    if (helper) {
+        /* Enqueue JOIN message  */
+        message_t message = { .action = ACTION_JOIN };
+        enqueue_message(helper, &message);
 
-    helper_t *helper = NULL;
-    // Lock shmem to deregister the subprocess
-    shmem_lock(shm_handler);
-    {
-        helper = get_helper(pid);
-        if (helper) {
-            // Reset helper fields
+        /* Wait helper thread to finish */
+        pthread_join(helper->thread, NULL);
+        verbose(VB_ASYNC, "Helper thread joined");
+
+        /* Clear helper data */
+        shmem_lock(shm_handler);
+        {
+            helper->pm = NULL;
             helper->pid = NOBODY;
-            helper->cpuid = 0;
-            CPU_ZERO(&helper->mask);
-
-            // Join pthread
-            helper->action = ACTION_JOIN;
-        } else {
-            // error ?
+            pthread_mutex_destroy(&helper->q_lock);
+            pthread_cond_destroy(&helper->q_wait_data);
         }
-    }
-    shmem_unlock(shm_handler);
+        shmem_unlock(shm_handler);
 
-    // return DLB_ERR_NOPROC ?
-    fatal_cond(!helper, "no space");
-
-    // is it secure to join out of lock?
-    sem_post(&helper->sem);
-    pthread_join(helper->thread, NULL);
-    sem_destroy(&helper->sem);
-
-    // Shared memory destruction
-    pthread_mutex_lock(&mutex);
-    {
-        if (--subprocesses_attached == 0) {
-            shmem_finalize(shm_handler, SHMEM_DELETE);
-            shm_handler = NULL;
+        /* Shared memory destruction */
+        pthread_mutex_lock(&mutex);
+        {
+            if (--subprocesses_attached == 0) {
+                shmem_finalize(shm_handler, SHMEM_DELETE);
+                shm_handler = NULL;
+            }
         }
+        pthread_mutex_unlock(&mutex);
     }
-    pthread_mutex_unlock(&mutex);
-    return DLB_SUCCESS;
+
+    return helper ? DLB_SUCCESS : DLB_ERR_NOPROC;
 }
 
-// FIXME: what if helper->action contains a pending action?
 
 void shmem_async_enable_cpu(pid_t pid, int cpuid) {
-    helper_t *helper = NULL;
-    shmem_lock(shm_handler);
-    {
-        helper = get_helper(pid);
-        if (helper) {
-            helper->cpuid = cpuid;
-            helper->action = ACTION_ENABLE_CPU;
-        }
-    }
-    shmem_unlock(shm_handler);
-
-    if (helper) {
-        sem_post(&helper->sem);
-    }
+    verbose(VB_ASYNC, "Enqueuing petition for pid: %d, enable cpuid %d", pid, cpuid);
+    helper_t *helper = get_helper(pid);
+    ensure(helper, "No helper found in enable_cpu function");
+    message_t message = { .action = ACTION_ENABLE_CPU, .cpuid = cpuid };
+    enqueue_message(helper, &message);
 }
 
 void shmem_async_disable_cpu(pid_t pid, int cpuid) {
-    helper_t *helper = NULL;
-    shmem_lock(shm_handler);
-    {
-        helper = get_helper(pid);
-        if (helper) {
-            helper->cpuid = cpuid;
-            helper->action = ACTION_DISABLE_CPU;
-        }
-    }
-    shmem_unlock(shm_handler);
-
-    if (helper) {
-        sem_post(&helper->sem);
-    }
+    verbose(VB_ASYNC, "Enqueuing petition for pid: %d, disable cpuid %d", pid, cpuid);
+    helper_t *helper = get_helper(pid);
+    ensure(helper, "No helper found in disable_cpu function");
+    message_t message = { .action = ACTION_DISABLE_CPU, .cpuid = cpuid };
+    enqueue_message(helper, &message);
 }
