@@ -100,6 +100,7 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == p2_pid );
         assert( shmem_cpuinfo__add_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
+        assert( victim == p2_pid );
 
         // Process 2 releases CPU 3, checks no victim and reclaims
         victim = 0;

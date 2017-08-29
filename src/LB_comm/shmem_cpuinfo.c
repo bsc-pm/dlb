@@ -40,7 +40,44 @@
  * A CPU, by default, is DISABLED and owned by NOBODY
  */
 
-#define NOBODY 0
+enum { NOBODY = 0 };
+
+/****** CPU request queue: Processes make request for this specific CPU ******/
+enum { CPU_QUEUE_SIZE = 8 };
+typedef struct {
+    pid_t        queue[CPU_QUEUE_SIZE];
+    unsigned int head;
+    unsigned int tail;
+} cpu_request_t;
+
+static void remove_cpu_request(cpu_request_t *queue, pid_t pid) {
+    unsigned int i;
+    for (i=0; i<CPU_QUEUE_SIZE; ++i) {
+        if (queue->queue[i] == pid) {
+            queue->queue[i] = NOBODY;
+        }
+    }
+}
+
+static int push_cpu_request(cpu_request_t *queue, pid_t applicant) {
+    unsigned int next_head = (queue->head + 1) % CPU_QUEUE_SIZE;
+    if (__builtin_expect((next_head == queue->tail), 0)) {
+        return DLB_ERR_REQST;
+    }
+    queue->queue[queue->head] = applicant;
+    queue->head = next_head;
+    return DLB_NOTED;
+}
+
+static void pop_cpu_request(cpu_request_t *queue, pid_t *new_guest) {
+    *new_guest = NOBODY;
+    while(queue->head != queue->tail && *new_guest == NOBODY) {
+        *new_guest = queue->queue[queue->tail];
+        queue->tail = (queue->tail + 1) % CPU_QUEUE_SIZE;
+    }
+}
+/*****************************************************************************/
+
 
 typedef enum {
     CPU_DISABLED = 0,       // Not owned by any process nor part of the DLB mask
@@ -57,7 +94,7 @@ typedef struct {
     stats_state_t   stats_state;
     int64_t         acc_time[_NUM_STATS];   // Accumulated time for each state
     struct          timespec last_update;
-    pid_t           requested_by[8];
+    cpu_request_t   requests;
 } cpuinfo_t;
 
 typedef struct {
@@ -84,10 +121,7 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
     if (cpuinfo->state == CPU_BUSY) {
         new_guest = cpuinfo->owner;
     } else {
-        // we could improve performance by implementing requested_by as a circular buffer
-        new_guest = cpuinfo->requested_by[0];
-        memmove(cpuinfo->requested_by, &cpuinfo->requested_by[1], 7);
-        cpuinfo->requested_by[7] = NOBODY;
+        pop_cpu_request(&cpuinfo->requests, &new_guest);
     }
     return new_guest;
 }
@@ -310,20 +344,12 @@ int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
 static void add_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
-    // If the CPU is owned by the process, just change the state
     if (cpuinfo->owner == pid) {
+        // If the CPU is owned by the process, just change the state
         cpuinfo->state = CPU_LENT;
     } else {
-        // TODO: remove pid from requested_by in an elegant way
-        pid_t p;
-        for (p=0; p<8; ++p) {
-            if (cpuinfo->requested_by[p] == pid) {
-                if (p < 7) {
-                    memmove(&cpuinfo->requested_by[p], &cpuinfo->requested_by[p+1], 7-p);
-                }
-                cpuinfo->requested_by[7] = NOBODY;
-            }
-        }
+        // Otherwise, remove any previous request
+        remove_cpu_request(&cpuinfo->requests, pid);
     }
 
     // If the process is the guest, free it
@@ -614,16 +640,7 @@ static int acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
         update_cpu_stats(cpuid, STATS_GUESTED);
     } else if (cpuinfo->state != CPU_DISABLED) {
         // CPU is busy, or lent to another process
-        error = DLB_ERR_REQST;
-        pid_t p;
-        for (p=0; p<8; ++p) {
-            if (cpuinfo->requested_by[p] == pid
-                    || cpuinfo->requested_by[p] == NOBODY) {
-                cpuinfo->requested_by[p] = pid;
-                error = DLB_NOTED;
-                break;
-            }
-        }
+        error = push_cpu_request(&cpuinfo->requests, pid);
     } else {
         // CPU is disabled
         error = DLB_ERR_PERM;
@@ -1018,16 +1035,17 @@ static int return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
         }
     }
 
-    int error = DLB_ERR_REQST;
-    pid_t p;
-    for (p=0; p<8; ++p) {
-        if (cpuinfo->requested_by[p] == pid
-                || cpuinfo->requested_by[p] == NOBODY) {
-            cpuinfo->requested_by[p] = pid;
-            error = DLB_SUCCESS;
-            break;
-        }
-    }
+    // Add another CPU request
+    int error = push_cpu_request(&cpuinfo->requests, pid);
+
+    /* FIXME: return DLB_SUCCESS in order to not break API. An alternative
+     * could be to return DLB_NOTED here (as current process is doing a
+     * request) and DLB_SUCCESS if the CPU is not claimed anymore by the time
+     * ReturnCpu is called
+     */
+    if (error == DLB_NOTED)
+        error = DLB_SUCCESS;
+
     return error;
 }
 
