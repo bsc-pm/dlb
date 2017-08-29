@@ -186,7 +186,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name      = "LB_PREINIT_PID",
         .arg_name      = "--preinit-pid",
-        .default_value = "",
+        .default_value = "0",
         .description   = "Process ID that pre-initializes the DLB process",
         .type          = OPT_INT_T,
         .offset        = offsetof(options_t, preinit_pid),
@@ -203,7 +203,8 @@ static const opts_dict_t options_dictionary[] = {
         .optional      = true
     }, {
         .var_name      = "LB_AGGRESSIVE_INIT",
-        .arg_name      = "--aggressive-init", .default_value = "",
+        .arg_name      = "--aggressive-init",
+        .default_value = "no",
         .description   = "Create as many threads as necessary during the process startup, "
             "only for LeWI",
         .type          = OPT_BOOL_T,
@@ -226,42 +227,34 @@ static const opts_dict_t options_dictionary[] = {
 enum { NUM_OPTIONS = sizeof(options_dictionary)/sizeof(opts_dict_t) };
 
 
-static void set_value(option_type_t type, void *option, const char *str_value) {
+static int set_value(option_type_t type, void *option, const char *str_value) {
     switch(type) {
         case(OPT_BOOL_T):
-            parse_bool(str_value, (bool*)option);
-            break;
+            return parse_bool(str_value, (bool*)option);
         case(OPT_INT_T):
-            parse_int(str_value, (int*)option);
-            break;
+            return parse_int(str_value, (int*)option);
         case(OPT_STR_T):
             strncpy(option, str_value, MAX_OPTION_LENGTH);
-            break;
+            return DLB_SUCCESS;
         case(OPT_BLCK_T):
-            parse_blocking_mode(str_value, (blocking_mode_t*)option);
-            break;
+            return parse_blocking_mode(str_value, (blocking_mode_t*)option);
         case(OPT_VB_T):
-            parse_verbose_opts(str_value, (verbose_opts_t*)option);
-            break;
+            return parse_verbose_opts(str_value, (verbose_opts_t*)option);
         case(OPT_VBFMT_T):
-            parse_verbose_fmt(str_value, (verbose_fmt_t*)option);
-            break;
+            return parse_verbose_fmt(str_value, (verbose_fmt_t*)option);
         case(OPT_DBG_T):
-            parse_debug_opts(str_value, (debug_opts_t*)option);
-            break;
+            return parse_debug_opts(str_value, (debug_opts_t*)option);
         case(OPT_PRIO_T):
-            parse_priority(str_value, (priority_t*)option);
-            break;
+            return parse_priority(str_value, (priority_t*)option);
         case(OPT_POL_T):
-            parse_policy(str_value, (policy_t*)option);
-            break;
+            return parse_policy(str_value, (policy_t*)option);
         case(OPT_MASK_T):
             mu_parse_mask(str_value, (cpu_set_t*)option);
-            break;
+            return DLB_SUCCESS;
         case(OPT_MODE_T):
-            parse_mode(str_value, (interaction_mode_t*)option);
-            break;
+            return parse_mode(str_value, (interaction_mode_t*)option);
     }
+    return DLB_ERR_NOENT;
 }
 
 static const char * get_value(option_type_t type, void *option) {
@@ -394,15 +387,23 @@ void options_init(options_t *options, const char *dlb_args) {
                 rhs = arg_value;
             }
         }
+        /* Assing option = rhs, and nullify rhs if error */
+        if (rhs) {
+            int error = set_value(entry->type, (char*)options+entry->offset, rhs);
+            if (error) {
+                warning("Unrecognized %s value: %s. Setting default %s",
+                        entry->arg_name, rhs, entry->default_value);
+                rhs = NULL;
+            }
+
+        }
 
         /* Set default value if needed */
         if (!rhs) {
             fatal_cond(!entry->optional, "Variable %s must be defined", entry->arg_name);
-            rhs = entry->default_value;
+            int error = set_value(entry->type, (char*)options+entry->offset, entry->default_value);
+            fatal_cond(error, "Bad parsing of default value %s", entry->default_value);
         }
-
-        /* Assing option = rhs */
-        set_value(entry->type, (char*)options+entry->offset, rhs);
     }
 
     /* Safety cheks and free local buffers */
@@ -437,8 +438,7 @@ int options_set_variable(options_t *options, const char *var_name, const char *v
             if (entry->readonly) {
                 error = DLB_ERR_PERM;
             } else {
-                set_value(entry->type, (char*)options+entry->offset, value);
-                error = DLB_SUCCESS;
+                error = set_value(entry->type, (char*)options+entry->offset, value);
             }
             break;
         }
