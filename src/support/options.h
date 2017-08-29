@@ -24,9 +24,8 @@
 #include <sched.h>
 #include <sys/types.h>
 
-#define MAX_OPTIONS 32
-#define MAX_OPTION_LENGTH 32
-#define MAX_DESCRIPTION 1024
+enum { MAX_OPTION_LENGTH = 64 };
+enum { MAX_DESCRIPTION = 1024 };
 
 typedef struct Options {
     policy_t lb_policy;
@@ -48,7 +47,7 @@ typedef struct Options {
     debug_opts_t debug_opts;
 } options_t;
 
-void options_init(options_t *options, const char *lb_args_from_api);
+void options_init(options_t *options, const char *dlb_args);
 int options_set_variable(options_t *options, const char *var_name, const char *value);
 int options_get_variable(const options_t *options, const char *var_name, char *value);
 void options_print_variables(const options_t *options);

@@ -27,6 +27,7 @@
 
 #include <string.h>
 #include <stddef.h>
+#include <ctype.h>
 
 typedef enum OptionTypes {
     OPT_BOOL_T,
@@ -294,14 +295,14 @@ static const char * get_value(option_type_t type, void *option) {
 }
 
 /* Parse DLB_ARGS and remove argument if found */
-static void parse_dlb_args(const char *dlb_args, const char *arg_name, char* arg_value) {
+static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value) {
     *arg_value = 0;
     // Tokenize a copy of dlb_args with " "(blank) delimiter
     char *end_space = NULL;
     size_t len = strlen(dlb_args) + 1;
-    char *lb_args_copy = malloc(sizeof(char)*len);
-    strncpy(lb_args_copy, dlb_args, len);
-    char *token = strtok_r(lb_args_copy, " ", &end_space);
+    char *dlb_args_copy = malloc(sizeof(char)*len);
+    strncpy(dlb_args_copy, dlb_args, len);
+    char *token = strtok_r(dlb_args_copy, " ", &end_space);
     while (token) {
         // Break token into two tokens "--argument" = "value"
         char *end_equal;
@@ -325,60 +326,101 @@ static void parse_dlb_args(const char *dlb_args, const char *arg_name, char* arg
         // next token
         token = strtok_r(NULL, " ", &end_space);
     }
-    free(lb_args_copy);
+    free(dlb_args_copy);
 }
 
 /* Initialize options struct from either argument, or env. variable */
-void options_init(options_t *options, const char *dlb_args_from_api) {
-    // Copy dlb_args_from_api if present, or DLB_ARGS env. variable otherwise
-    char *dlb_args = NULL;
-
-    /* If LB_ARGS is set and DLB_ARGS is not, we should use the
-     * former but emit a deprecation warning */
-    const char *dlb_args_from_env = getenv("DLB_ARGS");
-    if (!dlb_args_from_env) {
-        dlb_args_from_env = getenv("LB_ARGS");
-        if (dlb_args_from_env) {
-            warning("LB_ARGS is deprected, please use DLB_ARGS");
-        }
+void options_init(options_t *options, const char *dlb_args) {
+    /* Copy dlb_args into a local buffer */
+    char *dlb_args_from_api = NULL;
+    if (dlb_args) {
+        size_t len = strlen(dlb_args) + 1;
+        dlb_args_from_api = malloc(sizeof(char)*len);
+        strncpy(dlb_args_from_api, dlb_args, len);
     }
 
-    const char *dlb_args_to_copy = (dlb_args_from_api) ? dlb_args_from_api : dlb_args_from_env;
-    if (dlb_args_to_copy) {
-        size_t len = strlen(dlb_args_to_copy) + 1;
-        dlb_args = malloc(sizeof(char)*len);
-        strncpy(dlb_args, dlb_args_to_copy, len);
+    /* Copy either DLB_ARGS or LB_ARGS into a local buffer */
+    char *dlb_args_from_env = NULL;
+    const char *env = getenv("DLB_ARGS");
+    if (!env) {
+        env = getenv("LB_ARGS");
+        if (env) {
+            warning("LB_ARGS is deprecated, please use DLB_ARGS");
+        }
+    }
+    if (env) {
+        size_t len = strlen(env) + 1;
+        dlb_args_from_env = malloc(sizeof(char)*len);
+        strncpy(dlb_args_from_env, env, len);
     }
 
     int i;
     for (i=0; i<NUM_OPTIONS; ++i) {
-        // For each entry in the dictionary, check the corresponding LB_OPT and --opt fields
-        // and set the associated variable in the struct options
         const opts_dict_t *entry = &options_dictionary[i];
+        const char *rhs = NULL;                             /* pointer to rhs to be parsed */
+        char arg_value_from_api[MAX_OPTION_LENGTH] = "";    /* */
+        char arg_value_from_env[MAX_OPTION_LENGTH] = "";    /* */
 
-        // Obtain str_value from precedence: lb_args -> LB_var -> default
-        const char *str_value = NULL;
-        char *arg_value = NULL;
-        if (dlb_args) {
-            arg_value = malloc(MAX_OPTION_LENGTH*sizeof(char));
-            parse_dlb_args(dlb_args, entry->arg_name, arg_value);
-            str_value = arg_value;
-        }
-        str_value = (str_value && strlen(str_value)>0) ? str_value : getenv(entry->var_name);
-        if (!str_value) {
-            fatal_cond(!entry->optional, "Variable %s must be defined", entry->var_name);
-            str_value = entry->default_value;
+        /* Parse dlb_args from API */
+        if (dlb_args_from_api) {
+            parse_dlb_args(dlb_args_from_api, entry->arg_name, arg_value_from_api);
+            if (strlen(arg_value_from_api) > 0) {
+                rhs = arg_value_from_api;
+            }
         }
 
-        set_value(entry->type, (char*)options+entry->offset, str_value);
-
-        if (dlb_args) {
-            free(arg_value);
+        /* Parse DLB_ARGS from env */
+        if (dlb_args_from_env) {
+            parse_dlb_args(dlb_args_from_env, entry->arg_name, arg_value_from_env);
+            if (strlen(arg_value_from_env) > 0) {
+                if (rhs) {
+                    warning("Ignoring option %s = %s due to DLB_Init precedence",
+                            entry->arg_name, arg_value_from_env);
+                } else {
+                    rhs = arg_value_from_env;
+                }
+            }
         }
+
+        /* Parse LB_option (to be deprecated soon) */
+        const char *arg_value = getenv(entry->var_name);
+        if (arg_value) {
+            if (rhs) {
+                warning("Ignoring option %s = %s due to DLB_ARGS precedence",
+                        entry->var_name, arg_value);
+            } else {
+                warning("Option %s is to be deprecated in the near future, please use DLB_ARGS",
+                        entry->var_name);
+                rhs = arg_value;
+            }
+        }
+
+        /* Set default value if needed */
+        if (!rhs) {
+            fatal_cond(!entry->optional, "Variable %s must be defined", entry->arg_name);
+            rhs = entry->default_value;
+        }
+
+        /* Assing option = rhs */
+        set_value(entry->type, (char*)options+entry->offset, rhs);
     }
 
-    if (dlb_args) {
-        free(dlb_args);
+    /* Safety cheks and free local buffers */
+    if (dlb_args_from_api) {
+        char *str = dlb_args_from_api;
+        while(isspace((unsigned char)*str)) str++;
+        if (strlen(str) > 0) {
+            warning("Unrecognized flags from DLB_Init: %s", str);
+        }
+        free(dlb_args_from_api);
+    }
+    if (dlb_args_from_env) {
+        char *str = dlb_args_from_env;
+        while(isspace((unsigned char)*str)) str++;
+        if (strlen(str) > 0) {
+            warning("Unrecognized flags from DLB_ARGS: %s", str);
+        }
+        free(dlb_args_from_env);
     }
 }
 

@@ -121,5 +121,12 @@ int main( int argc, char **argv ) {
     options_init(&options_2, "");
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
+    // Check that different options are parsed using both methods
+    setenv("DLB_ARGS", "--drom=1", 1);
+    options_init(&options_1, "--policy=lewi");
+    assert(options_1.lb_policy == POLICY_LEWI);
+    assert(options_1.drom == true);
+
+
     return 0;
 }
