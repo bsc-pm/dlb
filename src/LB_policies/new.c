@@ -244,7 +244,27 @@ int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int new_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    return DLB_SUCCESS;
+    int error;
+    if (spd->options.mode == MODE_POLLING) {
+        /* In polling mode, just borrow idle CPUs */
+        error = new_BorrowCpus(spd, ncpus);
+    } else {
+        /* In async mode, only enable acquired idle CPUs, don't reclaim any */
+        pid_t *victimlist = calloc(node_size, sizeof(pid_t));
+        error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.priority,
+                spd->cpus_priority_array, ncpus, victimlist);
+        if (error == DLB_SUCCESS || error == DLB_NOTED) {
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                pid_t victim = victimlist[cpuid];
+                if (victim == spd->id) {
+                    shmem_async_enable_cpu(spd->id, cpuid);
+                }
+            }
+        }
+        free(victimlist);
+    }
+    return error;
 }
 
 int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
@@ -308,6 +328,7 @@ int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.priority,
             spd->cpus_priority_array, ncpus, victimlist);
+    /* FIXME: success only if ncpus == 0 ??? */
     if (error == DLB_SUCCESS) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {

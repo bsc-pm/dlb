@@ -42,6 +42,62 @@
 
 enum { NOBODY = 0 };
 
+
+/*** Global request queue: Processes make requests for N non-specific CPUs ***/
+enum { GLOBAL_QUEUE_SIZE = 100 };
+typedef struct {
+    pid_t        pid;
+    unsigned int howmany;
+} process_request_t;
+typedef struct {
+    process_request_t queue[GLOBAL_QUEUE_SIZE];
+    unsigned int      head;
+    unsigned int      tail;
+} global_request_t;
+
+static void remove_global_request(global_request_t *queue, pid_t pid) {
+    unsigned int i;
+    for (i=0; i<GLOBAL_QUEUE_SIZE; ++i) {
+        if (queue->queue[i].pid == pid) {
+            queue->queue[i].pid = NOBODY;
+            queue->queue[i].howmany = 0;
+        }
+    }
+}
+
+static int push_global_request(global_request_t *queue, pid_t applicant, unsigned int howmany) {
+    if (howmany == 0) {
+        remove_global_request(queue, applicant);
+        return DLB_SUCCESS;
+    }
+    unsigned int next_head = (queue->head + 1) % GLOBAL_QUEUE_SIZE;
+    if (__builtin_expect((next_head == queue->tail), 0)) {
+        return DLB_ERR_REQST;
+    }
+    queue->queue[queue->head].pid = applicant;
+    queue->queue[queue->head].howmany = howmany;
+    queue->head = next_head;
+    return DLB_NOTED;
+}
+
+static void pop_global_request(global_request_t *queue, pid_t *new_guest) {
+    *new_guest = NOBODY;
+    while(queue->head != queue->tail && *new_guest == NOBODY) {
+        process_request_t *request = &queue->queue[queue->tail];
+        if (request->pid != NOBODY && request->howmany > 0) {
+            /* request is valid */
+            *new_guest = request->pid;
+            if (request->howmany-- == 0) {
+                queue->tail = (queue->tail + 1) % GLOBAL_QUEUE_SIZE;
+            }
+        } else {
+            /* request is not valid, advance tail */
+            queue->tail = (queue->tail + 1) % GLOBAL_QUEUE_SIZE;
+        }
+    }
+}
+/*****************************************************************************/
+
 /****** CPU request queue: Processes make request for this specific CPU ******/
 enum { CPU_QUEUE_SIZE = 8 };
 typedef struct {
@@ -98,9 +154,10 @@ typedef struct {
 } cpuinfo_t;
 
 typedef struct {
-    bool dirty;
-    struct timespec initial_time;
-    cpuinfo_t node_info[0];
+    bool             dirty;
+    struct           timespec initial_time;
+    global_request_t global_requests;
+    cpuinfo_t        node_info[0];
 } shdata_t;
 
 static shmem_handler_t *shm_handler = NULL;
@@ -116,16 +173,23 @@ static inline bool is_borrowed(pid_t pid, int cpu);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
+
 static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
     pid_t new_guest;
     if (cpuinfo->state == CPU_BUSY) {
+        /* If CPU is claimed, ignore requests an assign owner */
         new_guest = cpuinfo->owner;
     } else {
+        /* Pop first in CPU queue */
         pop_cpu_request(&cpuinfo->requests, &new_guest);
+
+        /* If CPU did noy have requests, pop global queue */
+        if (new_guest == NOBODY) {
+            pop_global_request(&shdata->global_requests, &new_guest);
+        }
     }
     return new_guest;
 }
-
 
 /*********************************************************************************/
 /*  Init / Register                                                              */
@@ -659,6 +723,29 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
+/* FIXME */
+typedef enum {
+    BORROW_REQUEST_NONE,
+    BORROW_REQUEST_REST
+} borrow_epilog_t;
+static int shmem_cpuinfo__borrow_cpus_local(pid_t pid, priority_t priority,
+        int *cpus_priority_array, int ncpus, pid_t *victimlist, borrow_epilog_t epilog);
+int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
+        int ncpus, pid_t *victimlist) {
+    int error;
+    if (ncpus == 0) {
+        /* AcquireCPUs(0) has a special meaning of removing any previous request */
+        remove_global_request(&shdata->global_requests, pid);
+        error = DLB_SUCCESS;
+    } else {
+        /* Acquire N CPUs has the same logic as Borrow CPUs, except that we do
+         * a global request if not all CPUs could be borrowed */
+        error = shmem_cpuinfo__borrow_cpus_local(pid, priority, cpus_priority_array,
+                ncpus, victimlist, BORROW_REQUEST_REST);
+    }
+    return error;
+}
+
 int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
     int error = DLB_SUCCESS;
     shmem_lock(shm_handler);
@@ -948,11 +1035,13 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t *victimlist) {
+static int shmem_cpuinfo__borrow_cpus_local(pid_t pid, priority_t priority,
+        int *cpus_priority_array, int ncpus, pid_t *victimlist, borrow_epilog_t epilog) {
 
+    int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
+        /* Borrow CPUs following the priority of cpus_priority_array, */
         int i;
         for (i=0; ncpus>0 && i<node_size; ++i) {
             int cpuid = cpus_priority_array[i];
@@ -963,7 +1052,10 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
             }
         }
 
-        if (ncpus>0 && priority == PRIO_AFFINITY_FULL) {
+        /* Only in case --priority=affinity_full, the CPU candidates cannot
+         * be precomputed since it depends on the current state of each CPU
+         */
+        if (priority == PRIO_AFFINITY_FULL && ncpus > 0) {
             // Check also empty sockets
             cpu_set_t free_mask;
             CPU_ZERO(&free_mask);
@@ -985,10 +1077,22 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
                 }
             }
         }
+
+        /* Add global petition for remaining CPUs if needed */
+        if (epilog == BORROW_REQUEST_REST && ncpus > 0) {
+            verbose(VB_SHMEM, "Requesting %d CPUs more after borrowing", ncpus);
+            error = push_global_request(&shdata->global_requests, pid, ncpus);
+        }
     }
     shmem_unlock(shm_handler);
 
-    return (ncpus == 0) ? DLB_SUCCESS : DLB_NOUPDT;
+    return (ncpus == 0) ? DLB_SUCCESS : error;
+}
+
+int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
+        int ncpus, pid_t *victimlist) {
+    return shmem_cpuinfo__borrow_cpus_local(pid, priority, cpus_priority_array, ncpus,
+            victimlist, BORROW_REQUEST_NONE);
 }
 
 int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {

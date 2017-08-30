@@ -53,6 +53,8 @@ int shmem_cpuinfo__recover_cpus(pid_t pid, int ncpus, pid_t *victimlist);
 int shmem_cpuinfo__recover_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
 int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim);
+int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
+        int ncpus, pid_t *victimlist);
 int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
 int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
