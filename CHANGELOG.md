@@ -14,9 +14,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 - API reworked
-- A petition of a CPU now register the process into a petition queue. If this CPU becomes available, DLB can schedule which process will acquire it
-- DLB acquire now does not schedule because it forces the acquisition, DLB Borrow now does that ??
-- DLB options print format reworked
+- A petition of a CPU now registers the process into a CPU petition queue. If this CPU becomes available, DLB can schedule which process will acquire it
+- A petition of an unspecified CPU registers the process into a global petition queue, this queue has
+  less priority than the CPU queue
+- DLB acquire now does not schedule because it forces the acquisition, DLB Borrow does scheduling but only looks for idle CPUs and never creates a CPU request
+- DLB options print format reworked, DLB_ARGS is now used to pass options to DLB.
 - Fortran Interface now is a include Fortran Interface ? (weird wording)
 - Shared Memory synchronization mechanism is now managed using a pthread spinlock
 - DROM services now use the same shmem handler so no need to call `DLB_Init` and `DLB_DROM_Init`
@@ -30,6 +32,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Deprecated
 - `DLB_MASK` is no longer used, only registered CPUs may be used by other processes
 - `DLB_DROM_GetCpus` service has been removed
+- `LB_OPTION` type of environment variables is deprecated
 
 ## [Unreleased]
 
