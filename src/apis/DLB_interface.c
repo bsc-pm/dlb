@@ -102,6 +102,10 @@ int DLB_AcquireCpu(int cpuid) {
     return acquire_cpu(cpuid);
 }
 
+int DLB_AquireCpus(int ncpus) {
+    return acquire_cpus(ncpus);
+}
+
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
     return acquire_cpu_mask(mask);
 }

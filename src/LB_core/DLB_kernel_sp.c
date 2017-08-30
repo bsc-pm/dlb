@@ -236,6 +236,13 @@ int acquire_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
+int acquire_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
+    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+    int error = spd->lb_funcs.acquire_cpus(spd, ncpus);
+    add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
 int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
     int error = spd->lb_funcs.acquire_cpu_mask(spd, mask);

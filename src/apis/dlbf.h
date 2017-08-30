@@ -115,6 +115,12 @@ interface
         integer(kind=c_int), value, intent(in) :: cpuid
     end function dlb_acquirecpu
 
+    function dlb_acquirecpus(ncpus) result (ierr) bind(c, name='DLB_AcquireCpus')
+        use iso_c_binding
+        integer(kind=c_int) :: ierr
+        integer(kind=c_int), value, intent(in) :: ncpus
+    end function dlb_acquirecpus
+
     function dlb_acquirecpumask(mask) result (ierr) bind(c, name='DLB_AcquireCpuMask')
         use iso_c_binding
         integer(kind=c_int) :: ierr

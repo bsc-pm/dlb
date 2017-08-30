@@ -39,6 +39,7 @@ int new_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus);
 int new_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid);
+int new_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus);
 int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 int new_Borrow(const subprocess_descriptor_t *spd);

@@ -193,6 +193,17 @@ int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
  */
 int DLB_AcquireCpu_sp(dlb_handler_t handler, int cpuid);
 
+/*! \brief Aquire a specific amount of CPUs.
+ *  \param[in] handler subprocess identifier
+ *  \param[in] ncpus Number of CPUs to acquire
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_NOUPDT if cannot borrow any resources
+ *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
+ *  \return DLB_ERR_REQST if there are too many requests for this resource
+ */
+int DLB_AquireCpus_sp(dlb_handler_t handler, int ncpus);
+
 /*! \brief Acquire a set of CPUs
  *  \param[in] handler subprocess identifier
  *  \param[in] mask CPU set to acquire

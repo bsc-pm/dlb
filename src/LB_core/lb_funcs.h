@@ -49,6 +49,7 @@ typedef struct BalancePolicy {
     int (*reclaim_cpu_mask)(const struct SubProcessDescriptor *spd, const cpu_set_t *mask);
     /* Acquire */
     int (*acquire_cpu)(const struct SubProcessDescriptor *spd, int cpuid);
+    int (*acquire_cpus)(const struct SubProcessDescriptor *spd, int ncpus);
     int (*acquire_cpu_mask)(const struct SubProcessDescriptor *spd, const cpu_set_t *mask);
     /* Borrow */
     int (*borrow)(const struct SubProcessDescriptor *spd);

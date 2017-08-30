@@ -52,6 +52,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .reclaim_cpus           = (lb_func_kind2)disabled,
         .reclaim_cpu_mask       = (lb_func_kind3)disabled,
         .acquire_cpu            = (lb_func_kind2)disabled,
+        .acquire_cpus           = (lb_func_kind2)disabled,
         .acquire_cpu_mask       = (lb_func_kind3)disabled,
         .borrow                 = (lb_func_kind1)disabled,
         .borrow_cpu             = (lb_func_kind2)disabled,
@@ -136,6 +137,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->reclaim_cpus           = new_ReclaimCpus;
             lb_funcs->reclaim_cpu_mask       = new_ReclaimCpuMask;
             lb_funcs->acquire_cpu            = new_AcquireCpu;
+            lb_funcs->acquire_cpus           = new_AcquireCpus;
             lb_funcs->acquire_cpu_mask       = new_AcquireCpuMask;
             lb_funcs->borrow                 = new_Borrow;
             lb_funcs->borrow_cpu             = new_BorrowCpu;

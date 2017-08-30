@@ -243,6 +243,10 @@ int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
+int new_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
+    return DLB_SUCCESS;
+}
+
 int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
@@ -275,8 +279,8 @@ int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 
 int new_Borrow(const subprocess_descriptor_t *spd) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.priority, spd->cpus_priority_array,
-            victimlist);
+    int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.priority,
+            spd->cpus_priority_array, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
@@ -302,8 +306,8 @@ int new_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.priority, spd->cpus_priority_array,
-            ncpus, victimlist);
+    int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.priority,
+            spd->cpus_priority_array, ncpus, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
