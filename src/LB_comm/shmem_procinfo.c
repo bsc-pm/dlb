@@ -147,45 +147,40 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
             shdata->initialized = true;
         }
 
+        // Find whether the process is preregistered
+        bool preregistered = false;
         int p;
         for (p = 0; p < max_processes; p++) {
-
-            // Process already registered
             if (shdata->process_info[p].pid == pid) {
+                // If the process is preregistered, we must only return the new_process_mask
+                // to cpuinfo to avoid conflicts, we cannot resolve the dirty flag yet
                 process = &shdata->process_info[p];
-
-                // Update mask if some CPU was stolen
-                if (process->dirty && new_process_mask != NULL) {
+                if (process->dirty) {
                     memcpy(new_process_mask, &process->future_process_mask, sizeof(cpu_set_t));
-                    memcpy(&process->current_process_mask, &process->future_process_mask,
-                            sizeof(cpu_set_t));
-                    process->dirty = false;
-                    process->returncode = 0;
                 }
+                preregistered = true;
                 break;
-            }
-
-            // Register process
-            else if (shdata->process_info[p].pid == NOBODY) {
+            } else if (!process && shdata->process_info[p].pid == NOBODY) {
+                // We obtain the first free spot, but we cannot break
                 process = &shdata->process_info[p];
+            }
+        }
 
-                // Check first if the register is successful
-                error = register_mask(process, process_mask);
-
-                if (error == DLB_SUCCESS) {
-                    process->pid = pid;
-                    process->dirty = false;
-                    process->returncode = 0;
-                    memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
-                    memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
+        // Register if needed
+        if (process && !preregistered) {
+            error = register_mask(process, process_mask);
+            if (error == DLB_SUCCESS) {
+                process->pid = pid;
+                process->dirty = false;
+                process->returncode = 0;
+                memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
+                memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
 
 #ifdef DLB_LOAD_AVERAGE
-                    process->load[0] = 0.0f;
-                    process->load[1] = 0.0f;
-                    process->load[2] = 0.0f;
+                process->load[0] = 0.0f;
+                process->load[1] = 0.0f;
+                process->load[2] = 0.0f;
 #endif
-                }
-                break;
             }
         }
     }
