@@ -31,15 +31,50 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 
-/* Basic DROM init / pre / post / finalize within 1 process */
+/* Basic DROM init / pre / post / finalize and child checking the environment  */
 
-static void test(const cpu_set_t *mask, char ***env) {
-    pid_t pid = getpid();
+void __gcov_flush() __attribute__((weak));
 
-    assert( DLB_DROM_Init()                     == DLB_SUCCESS );
-    assert( DLB_DROM_PreInit(pid, mask, 1, env) == DLB_SUCCESS );
-    assert( DLB_DROM_Finalize()                 == DLB_SUCCESS );
+static void test_fork(const cpu_set_t *mask, char ***env) {
+    pid_t pid = fork();
+    assert( pid >= 0 );
+    if (pid == 0) {
+        pid = getpid();
+        assert( DLB_DROM_Init()                     == DLB_SUCCESS );
+        assert( DLB_DROM_PreInit(pid, mask, 1, env) == DLB_SUCCESS );
+        assert( DLB_DROM_Finalize()                 == DLB_SUCCESS );
+
+        if (__gcov_flush) __gcov_flush();
+
+        // Exec into a shell process to check if the environment is correctly modified
+        const char *shell_command =
+            "if  [ -n \"${DLB_ARGS##*--drom=1*}\" ]       || "
+                "[ -n \"${DLB_ARGS##*--preinit-pid=*}\" ] || "
+                "[ -n \"${DLB_ARGS##*--opt=foo*}\" ]      || "
+                "[ ${OMP_NUM_THREADS:=0} != 1 ] ; "
+            "then exit 1 ; fi";
+
+        if (env) {
+            execle("/bin/sh", "sh", "-c", shell_command, NULL, *env);
+        } else {
+            execl("/bin/sh", "sh", "-c", shell_command, NULL);
+        }
+        perror("exec failed");
+        exit(EXIT_FAILURE);
+    }
+    // Wait for all child processes
+    int wstatus;
+    while(wait(&wstatus) > 0) {
+        if (!WIFEXITED(wstatus))
+            exit(EXIT_FAILURE);
+        int rc = WEXITSTATUS(wstatus);
+        if (rc != 0) {
+            printf("Child return status: %d\n", rc);
+            exit(EXIT_FAILURE);
+        }
+    }
 
     assert( DLB_DROM_Init()                 == DLB_SUCCESS );
     assert( DLB_DROM_PostFinalize(pid, 0)   == DLB_SUCCESS );
@@ -54,7 +89,7 @@ int main(int argc, char **argv) {
     setenv("DLB_ARGS", "--opt=foo", 1); // to ensure we don't overwrite existing opts
 
     /* Fork with CURRENT environment */
-    test(&mask, NULL);
+    test_fork(&mask, NULL);
 
     /* Fork with CUSTOM environment */
     char **new_environ = malloc(3*sizeof(char*)); // 2 variables + NULL
@@ -70,7 +105,7 @@ int main(int argc, char **argv) {
     snprintf(new_environ[1], var2len, "%s", var2);
     //
     new_environ[2] = NULL;
-    test(&mask, &new_environ);
+    test_fork(&mask, &new_environ);
     free(new_environ[0]);
     free(new_environ[1]);
     free(new_environ);

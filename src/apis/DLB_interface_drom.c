@@ -36,7 +36,8 @@
 
 typedef enum {
     add_only_if_present,
-    add_always
+    add_always,
+    append
 } add_kind_t;
 
 /* Implementation based on glibc's setenv:
@@ -71,6 +72,16 @@ static void add_to_environ(const char *name, const char *value, char ***next_env
     } else {
         /* Variable does exist */
         // ep already points to the variable we will overwrite
+
+        /* Only if the variable exists and needs appending, allocate new buffer */
+        if (add == append) {
+            const size_t origlen = strlen(*ep);
+            const size_t newlen = origlen + 1 + strlen(value) +1;
+            char *new_np = realloc(*ep, newlen);
+            if (new_np) *ep = new_np;
+            sprintf(new_np+origlen, " %s", value);
+            return;
+        }
     }
 
     const size_t varlen = strlen(name) + 1 + strlen(value) + 1;
@@ -121,21 +132,30 @@ int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask) {
 }
 
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***next_environ) {
-    // Obtain PreInit value
-    char preinit_value[8];
-    snprintf(preinit_value, 8, "%d", pid);
+    /* Set up DROM args */
+    char drom_args[32];
+    int __attribute__((unused)) n = snprintf(drom_args, 32, "--drom=1 --preinit-pid=%d", pid);
+    ensure(n<32, "snprintf overflow");
 
-    // Obtain OMP_NUM_THREADS new value
+    /* Set up OMP_NUM_THREADS new value */
     int new_num_threads = CPU_COUNT(mask);
     char omp_value[8];
     snprintf(omp_value, 8, "%d", new_num_threads);
 
     if (next_environ == NULL) {
-        // These internal DLB variables are mandatory
-        setenv("LB_DROM", "1", 1);
-        setenv("LB_PREINIT_PID", preinit_value, 1);
+        /* Append DROM args to DLB_ARGS */
+        const char *dlb_args_env = getenv("DLB_ARGS");
+        if (dlb_args_env) {
+            size_t len = strlen(dlb_args_env) + 1 + strlen(drom_args) + 1;
+            char *new_dlb_args = malloc(sizeof(char)*len);
+            sprintf(new_dlb_args, "%s %s", dlb_args_env, drom_args);
+            setenv("DLB_ARGS", new_dlb_args, 1);
+            free(new_dlb_args);
+        } else {
+            setenv("DLB_ARGS", drom_args, 1);
+        }
 
-        // If OMP_NUM_THREADS is set, it must match the current mask size
+        /* Modify OMP_NUM_THREADS only if already set */
         const char *str = getenv("OMP_NUM_THREADS");
         if (str && strtol(str, NULL, 0) != new_num_threads) {
             warning("Re-setting OMP_NUM_THREADS to %d due to the new mask: %s",
@@ -144,8 +164,7 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***next_
         }
     } else {
         // warning: next_environ must be a malloc'ed pointer
-        add_to_environ("LB_DROM", "1", next_environ, add_always);
-        add_to_environ("LB_PREINIT_PID", preinit_value, next_environ, add_always);
+        add_to_environ("DLB_ARGS", drom_args, next_environ, append);
         add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
     }
 
