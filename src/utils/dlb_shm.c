@@ -54,12 +54,6 @@ void print_help( const char * program ) {
 void create_shdata( void ) {
     fprintf( stdout, "Create shdata: Function currently disabled\n" );
 #if 0
-    char *policy = getenv( "LB_POLICY" );
-    if ( policy == NULL ) {
-        fprintf( stdout, "Creating shmem without policy... Setting auto_LeWI_mask as default.\n" );
-        setenv( "LB_POLICY", "auto_LeWI_mask", 1 );
-    }
-
     DLB_Init();
     created_shm_filename = get_shm_filename();
     fprintf( stdout, "Succesfully created Shared Memory: %s\n", created_shm_filename );
@@ -70,10 +64,18 @@ void create_shdata( void ) {
 void list_shdata_item( const char* shm_suffix ) {
     char *p;
     if ( (p = strstr(shm_suffix, "cpuinfo")) ) {
+        /* Get pointer to shm_key */
         p = p + 8;  // remove "cpuinfo_"
         fprintf( stdout, "Found DLB shmem with id: %s\n", p );
-        setenv( "LB_SHM_KEY", p, 1);
-        setenv( "LB_VERBOSE_FORMAT", "node", 0);
+        /* Modify DLB_ARGS */
+        const char *dlb_args_env = getenv("DLB_ARGS");
+        size_t dlb_args_env_len = dlb_args_env ? strlen(dlb_args_env) + 1 : 0;
+        const char * const new_dlb_args_base = "--verbose-format=node --preinit-pid=";
+        char *dlb_args = malloc(dlb_args_env_len + strlen(new_dlb_args_base) + strlen(p) + 1);
+        sprintf(dlb_args, "%s %s%s", dlb_args_env ? dlb_args_env : "", new_dlb_args_base, p);
+        setenv("DLB_ARGS", dlb_args, 1);
+        free(dlb_args);
+        /* Print */
         DLB_PrintShmem();
     } else if ( (p = strstr(shm_suffix, "procinfo")) ) {
         // We currently print both shmems with the same API. Skipping.

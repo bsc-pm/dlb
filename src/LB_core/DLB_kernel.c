@@ -555,6 +555,10 @@ int print_variables(void) {
 }
 
 int print_shmem(void) {
+    if (!dlb_initialized) {
+        options_init(&spd.options, NULL);
+        debug_init(&spd.options);
+    }
     shmem_cpuinfo_ext__init(spd.options.shm_key);
     shmem_cpuinfo_ext__print_info(spd.options.statistics);
     shmem_cpuinfo_ext__finalize();
