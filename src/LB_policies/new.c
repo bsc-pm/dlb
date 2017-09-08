@@ -82,9 +82,11 @@ int new_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
 /*********************************************************************************/
 
 int new_Lend(const subprocess_descriptor_t *spd) {
-    // what mask to lend?
-    // implement shmem_lend_all_except_one() ?
-    return 0;
+    /* Lend all the CPUs except the current one */
+    cpu_set_t mask;
+    mu_get_system_mask(&mask);
+    CPU_CLR(sched_getcpu(), &mask);
+    return new_LendCpuMask(spd, &mask);
 }
 
 int new_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
