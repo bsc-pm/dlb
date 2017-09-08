@@ -90,6 +90,7 @@ typedef void (*ompt_callback_thread_end_t) (
 
 /********************************************************************************************/
 
+#include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
@@ -104,6 +105,49 @@ typedef void (*ompt_callback_thread_end_t) (
 
 int omp_get_thread_num(void) __attribute__((weak));
 void omp_set_num_threads(int nthreads) __attribute__((weak));
+int omp_get_level(void) __attribute__((weak));
+
+
+/******************* OMP Thread Manager ********************/
+static cpu_set_t active_mask;
+static policy_t policy;
+
+static void cb_enable_cpu(int cpuid) {
+    CPU_SET(cpuid, &active_mask);
+}
+
+static void omp_thread_manager_acquire(void) {
+    if (policy == POLICY_NEW) {
+        borrow();
+        int nthreads = CPU_COUNT(&active_mask);
+        omp_set_num_threads(nthreads);
+        verbose(VB_OMPT, "Acquire - Setting new mask to %s", mu_to_str(&active_mask));
+    }
+}
+
+static void omp_thread_manager_release(void) {
+    if (policy == POLICY_NEW) {
+        omp_set_num_threads(1);
+        CPU_ZERO(&active_mask);
+        CPU_SET(sched_getcpu(), &active_mask);
+        verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
+        lend();
+    }
+}
+
+static void omp_thread_manager_init(void) {
+    Initialize(0,0,0);
+    policy = get_global_options()->lb_policy;
+    if (policy == POLICY_NEW) {
+        callback_set(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu);
+        omp_thread_manager_release();
+    }
+}
+
+static void omp_thread_manager_finalize(void) {
+    Finish();
+}
+/***********************************************************/
 
 static void cb_parallel_begin(
         ompt_data_t *parent_task_data,
@@ -112,6 +156,9 @@ static void cb_parallel_begin(
         unsigned int requested_team_size,
         ompt_invoker_t invoker,
         const void *codeptr_ra) {
+    if (omp_get_level() == 0) {
+        omp_thread_manager_acquire();
+    }
     /* warning("[%d] Encountered Parallel Construct, requested size: %u, invoker: %s", */
     /*         omp_get_thread_num(), */
     /*         requested_team_size, invoker == ompt_invoker_program ? "program" : "runtime"); */
@@ -126,6 +173,9 @@ static void cb_parallel_end(
         ompt_task_data_t *task_data,
         ompt_invoker_t invoker,
         const void *codeptr_ra) {
+    if (omp_get_level() == 0) {
+        omp_thread_manager_release();
+    }
     /* warning("[%d] End of Parallel Construct, invoker: %s", omp_get_thread_num(), */
     /*         invoker == ompt_invoker_program ? "program" : "runtime"); */
 }
@@ -162,7 +212,6 @@ static void cb_thread_end(
     /* warning("Ending thread"); */
 }
 
-
 static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_fns_t *fns) {
     ompt_set_callback_t set_callback_fn = (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
     if (set_callback_fn) {
@@ -171,11 +220,14 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_fns_t *fn
         set_callback_fn(ompt_callback_implicit_task,  (ompt_callback_t)cb_implicit_task);
         set_callback_fn(ompt_callback_thread_begin,   (ompt_callback_t)cb_thread_begin);
         set_callback_fn(ompt_callback_thread_end,     (ompt_callback_t)cb_thread_end);
+
+        omp_thread_manager_init();
     }
     return 0;
 }
 
 static void ompt_finalize(ompt_fns_t *fns) {
+    omp_thread_manager_finalize();
 }
 
 static ompt_fns_t ompt_fns = { ompt_initialize, ompt_finalize };
