@@ -85,11 +85,11 @@ const char* get_blocking_mode_choices(void) {
 
 /* verbose_opts_t */
 static const verbose_opts_t verbose_opts_values[] =
-    {VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS, VB_DROM, VB_ASYNC};
+    {VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS, VB_DROM, VB_ASYNC, VB_OMPT};
 static const char* const verbose_opts_choices[] =
-    {"api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom", "async"};
+    {"api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom", "async", "ompt"};
 static const char verbose_opts_choices_str[] =
-    "api:microlb:shmem:mpi_api:mpi_intercept:stats:drom:async";
+    "api:microlb:shmem:mpi_api:mpi_intercept:stats:drom:async:ompt";
 enum { verbose_opts_nelems = sizeof(verbose_opts_values) / sizeof(verbose_opts_values[0]) };
 
 int parse_verbose_opts(const char *str, verbose_opts_t *value) {

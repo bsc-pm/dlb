@@ -36,7 +36,8 @@ typedef enum VerboseOptions {
     VB_MPI_INT  = 1 << 4,
     VB_STATS    = 1 << 5,
     VB_DROM     = 1 << 6,
-    VB_ASYNC    = 1 << 7
+    VB_ASYNC    = 1 << 7,
+    VB_OMPT     = 1 << 8
 } verbose_opts_t;
 
 typedef enum VerboseFormat {

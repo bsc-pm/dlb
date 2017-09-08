@@ -104,6 +104,7 @@ extern verbose_opts_t vb_opts;
         else if ( flag & vb_opts & VB_STATS )   { vb_print(stdout, "DLB STATS", __VA_ARGS__); } \
         else if ( flag & vb_opts & VB_DROM )    { vb_print(stdout, "DLB DROM", __VA_ARGS__); } \
         else if ( flag & vb_opts & VB_ASYNC )   { vb_print(stdout, "DLB ASYNC", __VA_ARGS__); } \
+        else if ( flag & vb_opts & VB_OMPT )    { vb_print(stdout, "DLB OMPT", __VA_ARGS__); } \
     } while(0)
 #else
 #define verbose(flag, ...)
