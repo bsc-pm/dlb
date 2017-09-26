@@ -102,7 +102,7 @@ int DLB_AcquireCpu(int cpuid) {
     return acquire_cpu(cpuid);
 }
 
-int DLB_AquireCpus(int ncpus) {
+int DLB_AcquireCpus(int ncpus) {
     return acquire_cpus(ncpus);
 }
 

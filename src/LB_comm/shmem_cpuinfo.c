@@ -674,7 +674,7 @@ int shmem_cpuinfo__recover_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
 /*  Acquire CPU                                                                  */
 /*********************************************************************************/
 
-/* Aquire CPU
+/* Acquire CPU
  * If successful:       Guest => ME
  */
 static int acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {

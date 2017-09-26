@@ -193,7 +193,7 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask);
  */
 int DLB_AcquireCpu(int cpuid);
 
-/*! \brief Aquire a specific amount of CPUs.
+/*! \brief Acquire a specific amount of CPUs.
  *  \param[in] ncpus Number of CPUs to acquire
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
@@ -202,7 +202,7 @@ int DLB_AcquireCpu(int cpuid);
  *  \return DLB_ERR_NOTED if the petition cannot be immediatelly fulfilled
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  */
-int DLB_AquireCpus(int ncpus);
+int DLB_AcquireCpus(int ncpus);
 
 /*! \brief Acquire a set of CPUs
  *  \param[in] mask CPU set to acquire

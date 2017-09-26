@@ -98,7 +98,7 @@ int main( int argc, char **argv ) {
         assert( victim == p2_pid );
     }
 
-    /*** AquireCpus test ***/
+    /*** AcquireCpus test ***/
     {
         // Process 2 releases CPU 3
         victim = 0;
@@ -128,7 +128,7 @@ int main( int argc, char **argv ) {
         assert( victim == p2_pid );
     }
 
-    /*** AquireCpus with late reply ***/
+    /*** AcquireCpus with late reply ***/
     {
         // Process 2 releases CPU 3
         victim = 0;
