@@ -175,8 +175,9 @@ static char* parse_env_arg(const char *arg_name) {
     if (dlb_args && arg_name) {
         // Tokenize a copy of dlb_args with " " delimiter
         char *end_space;
-        char *dlb_args_copy = malloc(1+sizeof(char)*strlen(dlb_args));
-        strncpy(dlb_args_copy, dlb_args, strlen(dlb_args));
+        size_t len = strlen(dlb_args) + 1;
+        char *dlb_args_copy = malloc(sizeof(char)*len);
+        strncpy(dlb_args_copy, dlb_args, len);
         char *token = strtok_r(dlb_args_copy, " ", &end_space);
         while (token) {
             // Break token into two tokens "--argument" = "value"
