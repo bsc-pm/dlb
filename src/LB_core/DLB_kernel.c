@@ -324,10 +324,6 @@ int Initialize(void) {
                 break;
         }
 
-#ifdef MPI_LIB
-        info0 ( "MPI processes per node: %d", _mpis_per_node );
-#endif
-
 #if 0
         if (thread_distrib==NULL) {
             if ( nanos_get_pm ) {
