@@ -127,9 +127,6 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         verbose(VB_DROM, "Enabled verbose mode for DROM");
         verbose(VB_STATS, "Enabled verbose mode for STATS");
         verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
-#ifdef MPI_LIB
-        info0 ("MPI processes per node: %d", _mpis_per_node);
-#endif
         if (ncpus || mask) {
             info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd.process_mask));
         }
