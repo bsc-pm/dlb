@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2017-10-12
+### Fixed
+- Bug parsing `DLB_ARGS`
+
 ## [1.3] - 2017-07-12
 ### Added
 - This CHANGELOG file
