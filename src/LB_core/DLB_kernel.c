@@ -154,7 +154,8 @@ static void load_modules(void) {
 
     init_tracing();
     register_signals();
-    if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
+    if (policy == POLICY_LEWI_MASK || policy == POLICY_AUTO_LEWI_MASK
+            || drom_enabled || stats_enabled) {
         cpu_set_t new_mask;
         CPU_ZERO(&new_mask);
         shmem_procinfo__init(&new_mask);
@@ -174,7 +175,8 @@ static void unload_modules(void) {
     if (barrier_enabled) {
         shmem_barrier_finalize();
     }
-    if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
+    if (policy == POLICY_LEWI_MASK || policy == POLICY_AUTO_LEWI_MASK
+            || drom_enabled || stats_enabled) {
         shmem_cpuinfo__finalize();
         shmem_procinfo__finalize();
     }
