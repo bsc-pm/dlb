@@ -5,7 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
 
-## [1.3.1] - 2017-10-12
+## [1.3.2] - 2017-10-9
+### Fixed
+- Bug initialing shared memory when using non-mask policies
+
+## [1.3.1] - 2017-10-4
 ### Fixed
 - Bug parsing `DLB_ARGS`
 
