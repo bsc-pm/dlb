@@ -24,9 +24,9 @@ fi
 
 if [[ $DLB == 1 ]] ; then
     export NX_ARGS+=" --thread-manager=dlb"
-    export LB_POLICY="auto_LeWI_mask"
+    export DLB_ARGS+=" --policy=auto_LeWI_mask"
 else
-    export LB_POLICY="No"
+    export DLB_ARGS+=" --policy=no"
 fi
 
 $MPIEXEC -np 2 $MPIEXEC_EXPORT_FLAG LD_PRELOAD=$PRELOAD $APP $ARGS

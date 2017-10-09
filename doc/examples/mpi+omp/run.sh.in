@@ -8,6 +8,7 @@ MPIEXEC_EXPORT_FLAG=@MPIEXEC_EXPORT_FLAG@
 # variables to be modified by the user
 TRACE=0
 DLB=0
+NUMTHREADS=1
 
 APP="./mpi_omp_pils"
 ARGS="/dev/null 1 150 50"
@@ -15,21 +16,22 @@ ARGS="/dev/null 1 150 50"
 if [[ $DLB == 1 ]] ; then
     if [[ $TRACE == 1 ]] ; then
         TRACENAME="pils_dlb.prv"
-        PRELOAD="$EXTRAE_HOME/lib/libompitrace-lb.so:$DLB_HOME/lib/libdlb_mpi_instr_dbg.so"
+        PRELOAD="$EXTRAE_HOME/lib/libompitrace.so:$DLB_HOME/lib/libdlb_mpi_instr_dbg.so"
         export EXTRAE_CONFIG_FILE="extrae.xml"
     else
         PRELOAD="$DLB_HOME/lib/libdlb_mpi_dbg.so"
     fi
-    export LB_POLICY="LeWI"
+    export DLB_ARGS+=" --policy=LeWI"
 else
     if [[ $TRACE == 1 ]] ; then
         TRACENAME="pils.prv"
         PRELOAD="$EXTRAE_HOME/lib/libompitrace.so"
         export EXTRAE_CONFIG_FILE="extrae.xml"
     fi
-    export LB_POLICY="No"
+    export DLB_ARGS+=" --policy=no"
 fi
 
+export OMP_NUM_THREADS=$NUMTHREADS
 $MPIEXEC -np 2 $MPIEXEC_EXPORT_FLAG LD_PRELOAD=$PRELOAD $APP $ARGS
 
 if [[ $TRACE == 1 ]] ; then
