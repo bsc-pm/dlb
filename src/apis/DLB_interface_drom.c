@@ -131,11 +131,13 @@ int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask) {
     return shmem_procinfo__setprocessmask(pid, mask, QUERY_SYNC);
 }
 
-int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***next_environ) {
+int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_preinit_flags_t flags,
+        char ***next_environ) {
     /* Set up DROM args */
-    char drom_args[32];
-    int __attribute__((unused)) n = snprintf(drom_args, 32, "--drom=1 --preinit-pid=%d", pid);
-    ensure(n<32, "snprintf overflow");
+    char drom_args[64];
+    int __attribute__((unused)) n = snprintf(drom_args, 64, "--drom=1 --preinit-pid=%d %s",
+            pid, flags & dlb_return_stolen ? "--debug-opts=return-stolen" : "");
+    ensure(n<64, "snprintf overflow");
 
     /* Set up OMP_NUM_THREADS new value */
     int new_num_threads = CPU_COUNT(mask);
@@ -168,8 +170,8 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***next_
         add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
     }
 
-    int error = shmem_procinfo_ext__preinit(pid, mask, steal);
-    error = error ? error : shmem_cpuinfo_ext__preinit(pid, mask, steal);
+    int error = shmem_procinfo_ext__preinit(pid, mask, flags & dlb_steal_cpus);
+    error = error ? error : shmem_cpuinfo_ext__preinit(pid, mask, flags & dlb_steal_cpus);
     return error;
 }
 

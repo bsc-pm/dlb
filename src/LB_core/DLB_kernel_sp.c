@@ -133,7 +133,7 @@ int Finish_sp(subprocess_descriptor_t *spd) {
         policy_t policy = spd->options.lb_policy;
         if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
             shmem_cpuinfo__finalize(spd->id);
-            shmem_procinfo__finalize(spd->id);
+            shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
         }
         free(spd->cpus_priority_array);
         free(spd);

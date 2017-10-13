@@ -142,7 +142,7 @@ int Finish(void) {
         policy_t policy = spd.options.lb_policy;
         if (policy != POLICY_NONE || spd.options.drom || spd.options.statistics) {
             shmem_cpuinfo__finalize(spd.id);
-            shmem_procinfo__finalize(spd.id);
+            shmem_procinfo__finalize(spd.id, spd.options.debug_opts & DBG_RETURNSTOLEN);
         }
         free(spd.cpus_priority_array);
         add_event(RUNTIME_EVENT, 0);

@@ -25,6 +25,12 @@ typedef void* dlb_handler_t;
 typedef void* dlb_cpu_set_t;
 typedef const void* const_dlb_cpu_set_t;
 
+// PreInit flags
+typedef enum dlb_preinit_flags_e {
+    dlb_steal_cpus      = 1,
+    dlb_return_stolen   = 2
+} dlb_preinit_flags_t;
+
 // Generic dummy callback type
 typedef void (*dlb_callback_t)(void);
 

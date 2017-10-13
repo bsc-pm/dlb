@@ -87,11 +87,11 @@ int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask);
 /*! \brief Register PID with the given mask before the process normal registration
  *  \param[in] pid Process ID that gets the reservation
  *  \param[in] mask Process mask to register
- *  \param[in] steal whether to steal owned CPUs
+ *  \param[in] flags stealing options
  *  \param[inout] environ environment to modify if the subprocess may be able to fork
  *  \return error code
  */
-int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, int steal, char ***environ);
+int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_preinit_flags_t flags, char ***environ);
 
 /*! \brief Finalize process
  *  \param[in] pid Process ID

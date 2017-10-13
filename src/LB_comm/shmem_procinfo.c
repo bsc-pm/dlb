@@ -190,7 +190,7 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
     }
 
     if (error != DLB_SUCCESS) {
-        shmem_procinfo__finalize(pid);
+        shmem_procinfo__finalize(pid, false);
     }
 
     return error;
@@ -288,12 +288,13 @@ static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_st
         for (c = 0; c < max_cpus; c++) {
             if (CPU_ISSET(c, mask)) {
                 for (p = 0; p < max_processes; p++) {
-                    if (CPU_ISSET(c, &shdata->process_info[p].stolen_cpus)) {
-                        // give it back to the process p
-                        CPU_SET(c, &shdata->process_info[p].future_process_mask);
-                        CPU_CLR(c, &shdata->process_info[p].stolen_cpus);
-                        shdata->process_info[p].dirty = true;
-                        verbose(VB_DROM, "Giving back CPU %d to process %d", c, p);
+                    pinfo_t *process = &shdata->process_info[p];
+                    if (process->pid != NOBODY && CPU_ISSET(c, &process->stolen_cpus)) {
+                        // give it back to the process
+                        CPU_SET(c, &process->future_process_mask);
+                        CPU_CLR(c, &process->stolen_cpus);
+                        process->dirty = true;
+                        verbose(VB_DROM, "Giving back CPU %d to process %d", c, process->pid);
                         break;
                     }
                 }
@@ -327,7 +328,7 @@ static void close_shmem(bool shmem_empty) {
     pthread_mutex_unlock(&mutex);
 }
 
-int shmem_procinfo__finalize(pid_t pid) {
+int shmem_procinfo__finalize(pid_t pid, bool return_stolen) {
     bool shmem_empty = true;
     int error;
 
@@ -340,9 +341,9 @@ int shmem_procinfo__finalize(pid_t pid) {
             if (process) {
                 // Unregister our process mask, or future mask if we are dirty
                 if (process->dirty) {
-                    unregister_mask(process, &process->future_process_mask, false);
+                    unregister_mask(process, &process->future_process_mask, return_stolen);
                 } else {
-                    unregister_mask(process, &process->current_process_mask, false);
+                    unregister_mask(process, &process->current_process_mask, return_stolen);
                 }
 
                 // Clear process fields
@@ -408,7 +409,7 @@ int shmem_procinfo_ext__finalize(void) {
     return DLB_SUCCESS;
 }
 
-int shmem_procinfo_ext__postfinalize(pid_t pid, int return_stolen) {
+int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
