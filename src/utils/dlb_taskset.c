@@ -167,6 +167,28 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
     DLB_DROM_Finalize();
 }
 
+static void getpidof(int process_pseudo_id) {
+    // Get PID list from DLB
+    int nelems;
+    int *pidlist = malloc(sys_size*sizeof(int));
+    DLB_DROM_Init();
+    DLB_DROM_GetPidList(pidlist, &nelems, sys_size);
+    // Iterate pidlist
+    int i;
+    for (i=0; i<nelems; ++i) {
+        if (pidlist[i] > 0) {
+            if (process_pseudo_id == 0) {
+                fprintf(stdout, "%d\n", pidlist[i]);
+                break;
+            } else {
+                --process_pseudo_id;
+            }
+        }
+    }
+    free(pidlist);
+    DLB_DROM_Finalize();
+}
+
 static void show_affinity(pid_t pid) {
     int error;
     cpu_set_t mask;
@@ -189,8 +211,10 @@ int main(int argc, char *argv[]) {
     bool do_list = false;
     bool do_set = false;
     bool do_remove = false;
+    bool do_getpid = false;
     bool borrow = false;
 
+    int process_pseudo_id = 0;
     pid_t pid = 0;
     cpu_set_t cpu_list;
     DLB_DROM_GetNumCpus(&sys_size);
@@ -203,13 +227,14 @@ int main(int argc, char *argv[]) {
         {"set",      required_argument, 0, 's'},
         {"cpus",     required_argument, 0, 'c'},
         {"remove",   required_argument, 0, 'r'},
+        {"getpid",   required_argument, 0, 'g'},
         {"pid",      required_argument, 0, 'p'},
         {"borrow",   no_argument,       0, 'b'},
         {"help",     no_argument,       0, 'h'},
         {0,          0,                 0, 0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "+lg:s:c:r:p:bh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+lg:s:c:r:g:p:bh", long_options, NULL)) != -1) {
         switch (opt) {
         case 'l':
             do_list = true;
@@ -223,6 +248,9 @@ int main(int argc, char *argv[]) {
             do_remove = true;
             mu_parse_mask(optarg, &cpu_list);
             break;
+        case 'g':
+            do_getpid = true;
+            process_pseudo_id = strtoul(optarg, NULL, 10);
         case 'p':
             pid = strtoul(optarg, NULL, 10);
             break;
@@ -238,6 +266,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Check only one action is enabled
+    if (do_list + do_set + do_remove + do_getpid != 1) {
+        usage(argv[0], stderr);
+    }
+
     // Actions
     if (do_set && pid) {
         set_affinity(pid, &cpu_list);
@@ -248,6 +281,9 @@ int main(int argc, char *argv[]) {
     }
     else if (do_remove) {
         remove_affinity(pid, &cpu_list);
+    }
+    else if (do_getpid) {
+        getpidof(process_pseudo_id);
     }
     else if (do_list || pid) {
         show_affinity(pid);
