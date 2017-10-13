@@ -43,7 +43,7 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo_ext__finalize()                   == DLB_SUCCESS );
     assert( shmem_procinfo_ext__finalize()                  == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(42)                     == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(42)                    == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(42, false)             == DLB_SUCCESS );
 
     return 0;
 }

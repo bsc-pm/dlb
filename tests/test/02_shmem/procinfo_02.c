@@ -92,7 +92,7 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 
     // Finalize sub-process
-    assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false) == DLB_SUCCESS );
 
     return 0;
 }

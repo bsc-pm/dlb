@@ -50,7 +50,7 @@ int main( int argc, char **argv ) {
     } else {
         assert( shmem_procinfo__init(pid+1, &process_mask, NULL, NULL) == DLB_ERR_PERM );
     }
-    assert( shmem_procinfo__finalize(pid) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false) == DLB_SUCCESS );
 
     // This loop should completely fill the shared memory
     int cpuid;
@@ -66,7 +66,7 @@ int main( int argc, char **argv ) {
 
     // Finalize all
     for (cpuid=0; cpuid<num_cpus; ++cpuid) {
-        assert( shmem_procinfo__finalize(pid+cpuid) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(pid+cpuid, false) == DLB_SUCCESS );
     }
 
     return 0;
