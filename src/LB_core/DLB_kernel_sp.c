@@ -74,7 +74,8 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
 
     // Initialize modules
     debug_init(&spd->options);
-    if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
+    if (policy == POLICY_LEWI_MASK || policy == POLICY_AUTO_LEWI_MASK
+            || spd->options.drom || spd->options.statistics) {
         // If the process has been pre-initialized, the process mask may have changed
         // procinfo_init must return a new_mask if so
         cpu_set_t new_process_mask;
@@ -131,7 +132,8 @@ int Finish_sp(subprocess_descriptor_t *spd) {
             shmem_barrier_finalize();
         }
         policy_t policy = spd->options.lb_policy;
-        if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
+        if (policy == POLICY_LEWI_MASK || policy == POLICY_AUTO_LEWI_MASK
+                || spd->options.drom || spd->options.statistics) {
             shmem_cpuinfo__finalize(spd->id);
             shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
         }
