@@ -83,6 +83,8 @@ int main( int argc, char **argv ) {
     CPU_SET(2, &sp2_mask);
     CPU_SET(3, &sp2_mask);
 
+    cpu_set_t sys_mask = { .__bits = {0xf} }; /* [1111] */
+
     // Subprocess 1 init
     spd1.id = 111;
     options_init(&spd1.options, NULL);
@@ -141,7 +143,7 @@ int main( int argc, char **argv ) {
         assert( err == DLB_SUCCESS || err == DLB_NOUPDT );
     }
 
-    // Poll a certain number of times until mask2 contains CPU 3, and mask1 don't
+    // Poll a certain number of times until mask2 contains CPU 3, and mask1 doesn't
     assert_loop( CPU_ISSET(3, &sp2_mask) );
     assert( !CPU_ISSET(3, &sp1_mask) );
 
@@ -165,21 +167,21 @@ int main( int argc, char **argv ) {
     assert( !CPU_ISSET(1, &sp2_mask) );
 
     // Subprocess 1 lends everything
-    assert( new_LendCpu(&spd1, 0) == DLB_SUCCESS );
-    assert( new_LendCpu(&spd1, 1) == DLB_SUCCESS );
+    assert( new_LendCpuMask(&spd1, &sys_mask) == DLB_SUCCESS );
 
     if (mode == MODE_ASYNC) {
         // CPU 1 was still requested
         assert_loop( CPU_ISSET(1, &sp2_mask) );
-
-        // Subprocess 2 acquire everything
-        assert( new_AcquireCpu(&spd2, 0) == DLB_SUCCESS );
-        assert( new_AcquireCpu(&spd2, 1) == DLB_NOUPDT );
-    } else {
-        // Subprocess 2 acquire everything
-        assert( new_AcquireCpu(&spd2, 0) == DLB_SUCCESS );
-        assert( new_AcquireCpu(&spd2, 1) == DLB_SUCCESS );
     }
+
+    // Subprocess 2 acquires everything
+    assert( new_AcquireCpuMask(&spd2, &sys_mask) == DLB_SUCCESS );
+
+    // Subprocess 1 reclaims everything
+    assert( new_ReclaimCpuMask(&spd1, &sys_mask) == DLB_ERR_PERM );
+    cpu_set_t aux_mask = {.__bits={0x3}};
+    assert( new_ReclaimCpuMask(&spd1, &aux_mask) == DLB_NOTED );
+
 
     // Policy finalize
     assert( new_Finish(&spd1) == DLB_SUCCESS );

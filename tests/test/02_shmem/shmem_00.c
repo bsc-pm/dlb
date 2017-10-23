@@ -31,6 +31,8 @@
 #include <pthread.h>
 #include <sys/wait.h>
 
+/* Fill node with processes, everyone attaches to the shared memory, then everyone dettaches */
+
 void __gcov_flush() __attribute__((weak));
 
 struct data {

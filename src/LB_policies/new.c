@@ -113,7 +113,7 @@ int new_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
             int cpuid;
             for (cpuid=0; cpuid<node_size; ++cpuid) {
                 pid_t new_pid = new_pids[cpuid];
-                if (new_pid == spd->id) {
+                if (new_pid) {
                     shmem_async_enable_cpu(new_pid, cpuid);
                 }
             }
