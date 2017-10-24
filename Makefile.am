@@ -133,23 +133,21 @@ COMMON_SRCS = \
 	$(installheaders)                       \
 	src/support/debug.c                     \
 	src/support/debug.h                     \
-	src/support/tracing.c                   \
-	src/support/tracing.h                   \
-	src/support/mytime.c                    \
-	src/support/mytime.h                    \
-	src/support/mask_utils.c                \
-	src/support/mask_utils.h                \
-	src/support/options.c                   \
-	src/support/options.h                   \
-	src/support/types.c                     \
-	src/support/types.h                     \
 	src/support/error.c                     \
 	src/support/error.h                     \
+	src/support/mask_utils.c                \
+	src/support/mask_utils.h                \
+	src/support/mytime.c                    \
+	src/support/mytime.h                    \
+	src/support/options.c                   \
+	src/support/options.h                   \
+	src/support/tracing.c                   \
+	src/support/tracing.h                   \
+	src/support/types.c                     \
+	src/support/types.h                     \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
 	src/LB_numThreads/ompt.c                \
-	src/LB_comm/comm_shMem.c                \
-	src/LB_comm/comm_shMem.h                \
 	src/LB_comm/comm_lend_light.c           \
 	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem.c                     \
@@ -164,26 +162,20 @@ COMMON_SRCS = \
 	src/LB_comm/shmem_procinfo.h            \
 	src/LB_policies/Lend_light.c            \
 	src/LB_policies/Lend_light.h            \
-	src/LB_policies/Weight.c                \
-	src/LB_policies/Weight.h                \
-	src/LB_policies/lewi_mask.c             \
-	src/LB_policies/lewi_mask.h             \
-	src/LB_policies/autonomous_lewi_mask.c  \
-	src/LB_policies/autonomous_lewi_mask.h  \
 	src/LB_policies/new.c                   \
 	src/LB_policies/new.h                   \
 	src/LB_core/DLB_kernel.c                \
 	src/LB_core/DLB_kernel.h                \
 	src/LB_core/DLB_kernel_sp.c             \
 	src/LB_core/DLB_kernel_sp.h             \
-	src/LB_core/spd.h                       \
 	src/LB_core/lb_funcs.c                  \
 	src/LB_core/lb_funcs.h                  \
+	src/LB_core/spd.h                       \
 	src/apis/DLB_interface.c                \
-	src/apis/DLB_interface_sp.c             \
 	src/apis/DLB_interfaceF.c               \
-	src/apis/DLB_interface_stats.c          \
 	src/apis/DLB_interface_drom.c           \
+	src/apis/DLB_interface_sp.c             \
+	src/apis/DLB_interface_stats.c          \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la

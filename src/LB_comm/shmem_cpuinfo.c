@@ -1284,37 +1284,6 @@ bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpuid) {
     return shdata->node_info[cpuid].guest == pid;
 }
 
-/* Return false if my CPU is being used by other process
- */
-bool shmem_cpuinfo__is_cpu_borrowed(pid_t pid, int cpu) {
-    // If the CPU is not mine, skip check
-    if (shdata->node_info[cpu].owner != pid) {
-        return true;
-    }
-
-    // If the CPU is free, assign it to myself
-    if (shdata->node_info[cpu].guest == NOBODY) {
-        shmem_lock(shm_handler);
-        if (shdata->node_info[cpu].guest == NOBODY) {
-            shdata->node_info[cpu].guest = pid;
-            update_cpu_stats(cpu, STATS_OWNED);
-        }
-        shmem_unlock(shm_handler);
-    }
-
-    return shdata->node_info[cpu].guest == pid;
-}
-
-/* Return true if the CPU is foreign and reclaimed
- */
-bool shmem_cpuinfo__is_cpu_claimed(pid_t pid, int cpu) {
-    if (shdata->node_info[cpu].state == CPU_DISABLED) {
-        return true;
-    }
-
-    return (shdata->node_info[cpu].owner != pid) && (shdata->node_info[cpu].state == CPU_BUSY);
-}
-
 void shmem_cpuinfo__reset(pid_t pid) {
     /* int error = DLB_NOUPDT; */
     shmem_lock(shm_handler);
@@ -1330,37 +1299,6 @@ void shmem_cpuinfo__reset(pid_t pid) {
         }
     }
     shmem_unlock(shm_handler);
-}
-
-/*Reset current mask to use my default cpus
-  I.e: Release borrowed cpus and claim lend cpus
- */
-int shmem_cpuinfo__reset_default_cpus(pid_t pid, cpu_set_t *mask) {
-    int cpu;
-    int n=0;
-    shmem_lock(shm_handler);
-    for (cpu = 0; cpu < mu_get_system_size(); cpu++) {
-        //CPU is mine --> claim it and set in my mask
-        if (shdata->node_info[cpu].owner == pid) {
-            shdata->node_info[cpu].state = CPU_BUSY;
-            if (shdata->node_info[cpu].guest == NOBODY) {
-                shdata->node_info[cpu].guest = pid;
-                update_cpu_stats(cpu, STATS_OWNED);
-            }
-            CPU_SET(cpu, mask);
-            n++;
-        //CPU is not mine and I have it --> release it and clear from my mask
-        } else if (CPU_ISSET(cpu, mask)) {
-            if (shdata->node_info[cpu].guest == pid){
-                shdata->node_info[cpu].guest = NOBODY;
-                update_cpu_stats(cpu, STATS_IDLE);
-            }
-            CPU_CLR(cpu, mask);
-        }
-    }
-    shmem_unlock(shm_handler);
-    return n;
-
 }
 
 /* Update CPU ownership according to the new process mask.

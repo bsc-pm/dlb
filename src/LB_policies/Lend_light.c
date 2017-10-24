@@ -26,7 +26,6 @@
 
 #ifdef MPI_LIB
 
-#include "LB_comm/comm_shMem.h"
 #include "LB_comm/comm_lend_light.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/mask_utils.h"
