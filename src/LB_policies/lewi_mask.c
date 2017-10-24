@@ -17,7 +17,7 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "LB_policies/new.h"
+#include "LB_policies/lewi_mask.h"
 
 #include "LB_core/spd.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -32,17 +32,17 @@
 
 static int node_size;
 
-int new_Init(const subprocess_descriptor_t *spd) {
+int lewi_mask_Init(const subprocess_descriptor_t *spd) {
     node_size = mu_get_system_size();
     return DLB_SUCCESS;
 }
 
-int new_Finish(const subprocess_descriptor_t *spd) {
-    int error = new_Reclaim(spd);
+int lewi_mask_Finish(const subprocess_descriptor_t *spd) {
+    int error = lewi_mask_Reclaim(spd);
     return (error >= 0) ? DLB_SUCCESS : error;
 }
 
-int new_DisableDLB(const subprocess_descriptor_t *spd) {
+int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
     shmem_cpuinfo__reset(spd->id);
     set_mask(&spd->pm, &spd->process_mask);
     return DLB_SUCCESS;
@@ -60,18 +60,18 @@ int new_DisableDLB(const subprocess_descriptor_t *spd) {
  *
  */
 
-int new_IntoBlockingCall(const subprocess_descriptor_t *spd) {
+int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
     if (spd->options.mpi_lend_mode == BLOCK) {
-        error = new_LendCpu(spd, sched_getcpu());
+        error = lewi_mask_LendCpu(spd, sched_getcpu());
     }
     return error;
 }
 
-int new_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     int error = DLB_NOUPDT;
     if (spd->options.mpi_lend_mode == BLOCK) {
-        error = new_AcquireCpu(spd, sched_getcpu());
+        error = lewi_mask_AcquireCpu(spd, sched_getcpu());
     }
     return error;
 }
@@ -81,15 +81,15 @@ int new_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
 /*    Lend                                                                       */
 /*********************************************************************************/
 
-int new_Lend(const subprocess_descriptor_t *spd) {
+int lewi_mask_Lend(const subprocess_descriptor_t *spd) {
     /* Lend all the CPUs except the current one */
     cpu_set_t mask;
     mu_get_system_mask(&mask);
     CPU_CLR(sched_getcpu(), &mask);
-    return new_LendCpuMask(spd, &mask);
+    return lewi_mask_LendCpuMask(spd, &mask);
 }
 
-int new_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
+int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
     /* lock spd? */
     pid_t new_pid = 0;
     bool async = spd->options.mode == MODE_ASYNC;
@@ -103,7 +103,7 @@ int new_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
-int new_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *new_pids = async ? calloc(node_size, sizeof(pid_t)) : NULL;
     int error = shmem_cpuinfo__add_cpu_mask(spd->id, mask, new_pids);
@@ -127,7 +127,7 @@ int new_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 /*    Reclaim                                                                    */
 /*********************************************************************************/
 
-int new_Reclaim(const subprocess_descriptor_t *spd) {
+int lewi_mask_Reclaim(const subprocess_descriptor_t *spd) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__recover_all(spd->id, victimlist);
@@ -152,7 +152,7 @@ int new_Reclaim(const subprocess_descriptor_t *spd) {
     return error;
 }
 
-int new_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
+int lewi_mask_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t victim = 0;
     bool async = spd->options.mode == MODE_ASYNC;
     int error = shmem_cpuinfo__recover_cpu(spd->id, cpuid, &victim);
@@ -171,7 +171,7 @@ int new_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
-int new_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
+int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__recover_cpus(spd->id, ncpus, victimlist);
@@ -196,7 +196,7 @@ int new_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
     return error;
 }
 
-int new_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__recover_cpu_mask(spd->id, mask, victimlist);
@@ -226,7 +226,7 @@ int new_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 /*    Acquire                                                                    */
 /*********************************************************************************/
 
-int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
+int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t victim = 0;
     bool async = spd->options.mode == MODE_ASYNC;
     int error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &victim);
@@ -245,11 +245,11 @@ int new_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
-int new_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
+int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
     if (spd->options.mode == MODE_POLLING) {
         /* In polling mode, just borrow idle CPUs */
-        error = new_BorrowCpus(spd, ncpus);
+        error = lewi_mask_BorrowCpus(spd, ncpus);
     } else {
         /* In async mode, only enable acquired idle CPUs, don't reclaim any */
         pid_t *victimlist = calloc(node_size, sizeof(pid_t));
@@ -269,7 +269,7 @@ int new_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
     return error;
 }
 
-int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__acquire_cpu_mask(spd->id, mask, victimlist);
@@ -299,7 +299,7 @@ int new_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask
 /*    Borrow                                                                     */
 /*********************************************************************************/
 
-int new_Borrow(const subprocess_descriptor_t *spd) {
+int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.priority,
             spd->cpus_priority_array, victimlist);
@@ -316,7 +316,7 @@ int new_Borrow(const subprocess_descriptor_t *spd) {
     return error;
 }
 
-int new_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
+int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t victim = 0;
     int error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &victim);
     // ignore victim? if error == DLB_SUCCESS victim should always be == pid
@@ -326,7 +326,7 @@ int new_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
-int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
+int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.priority,
             spd->cpus_priority_array, ncpus, victimlist);
@@ -344,7 +344,7 @@ int new_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     return error;
 }
 
-int new_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+int lewi_mask_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__borrow_cpu_mask(spd->id, mask, victimlist);
     if (error == DLB_SUCCESS) {
@@ -365,7 +365,7 @@ int new_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask)
 /*    Return                                                                     */
 /*********************************************************************************/
 
-int new_Return(const subprocess_descriptor_t *spd) {
+int lewi_mask_Return(const subprocess_descriptor_t *spd) {
     if (spd->options.mode == MODE_ASYNC) {
         // ReturnAll should not be called in async mode
         return DLB_ERR_NOCOMP;
@@ -385,7 +385,7 @@ int new_Return(const subprocess_descriptor_t *spd) {
     return error;
 }
 
-int new_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
+int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t new_pid = 0;
     bool async = spd->options.mode == MODE_ASYNC;
     int error = shmem_cpuinfo__return_cpu(spd->id, cpuid, &new_pid);
@@ -400,7 +400,7 @@ int new_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
     return error;
 }
 
-int new_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *new_pids = calloc(node_size, sizeof(pid_t));
     int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, new_pids);
@@ -423,11 +423,11 @@ int new_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask)
 
 // Others
 
-int new_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid) {
+int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid) {
     return shmem_cpuinfo__is_cpu_available(spd->id, cpuid);
 }
 
-int new_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask) {
+int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask) {
     int *prio1 = malloc(node_size*sizeof(int));
     int *prio2 = malloc(node_size*sizeof(int));
     int *prio3 = malloc(node_size*sizeof(int));

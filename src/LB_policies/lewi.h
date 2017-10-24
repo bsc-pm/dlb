@@ -17,26 +17,21 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef LEND_LIGHT_H
-#define LEND_LIGHT_H
-
-#define LEND_CPUS 0
-#define ACQUIRE_CPUS 1
+#ifndef LEWI_H
+#define LEWI_H
 
 #include "LB_core/spd.h"
 
-/******* Main Functions Lend_light Balancing Policy ********/
+int lewi_Init(const subprocess_descriptor_t *spd);
+int lewi_Finish(const subprocess_descriptor_t *spd);
+int lewi_EnableDLB(const subprocess_descriptor_t *spd);
+int lewi_DisableDLB(const subprocess_descriptor_t *spd);
 
-int Lend_light_Init(const subprocess_descriptor_t *spd);
-int Lend_light_Finish(const subprocess_descriptor_t *spd);
-int Lend_light_enableDLB(const subprocess_descriptor_t *spd);
-int Lend_light_disableDLB(const subprocess_descriptor_t *spd);
+int lewi_IntoCommunication(const subprocess_descriptor_t *spd);
+int lewi_OutOfCommunication(const subprocess_descriptor_t *spd);
+int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd);
+int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-int Lend_light_IntoCommunication(const subprocess_descriptor_t *spd);
-int Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd);
-int Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd);
-int Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
+int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus);
 
-int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources);
-
-#endif /* LEND_LIGHT_H */
+#endif /* LEWI_H */

@@ -26,7 +26,7 @@
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
-#include "LB_policies/new.h"
+#include "LB_policies/lewi_mask.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_async.h"
@@ -63,25 +63,25 @@ int main( int argc, char **argv ) {
             == DLB_SUCCESS );
 
     // Init
-    assert( new_Init(&spd) == DLB_SUCCESS );
+    assert( lewi_mask_Init(&spd) == DLB_SUCCESS );
 
     // Reclaim a non-lent CPU (this should not trigger a callback)
-    assert( new_ReclaimCpu(&spd, 0) == DLB_NOUPDT );
+    assert( lewi_mask_ReclaimCpu(&spd, 0) == DLB_NOUPDT );
 
     // Lend (this should not trigger a callback)
-    assert( new_LendCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_LendCpu(&spd, 0) == DLB_SUCCESS );
 
     // Reclaim a lent CPU (callback enable)
-    assert( new_ReclaimCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_ReclaimCpu(&spd, 0) == DLB_SUCCESS );
 
     // Lend
-    assert( new_LendCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_LendCpu(&spd, 0) == DLB_SUCCESS );
 
     // Acquire a lent CPU (callback enable)
-    assert( new_AcquireCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_AcquireCpu(&spd, 0) == DLB_SUCCESS );
 
     // Finalize
-    assert( new_Finish(&spd) == DLB_SUCCESS );
+    assert( lewi_mask_Finish(&spd) == DLB_SUCCESS );
 
     // Poll a limited number of times if at least enable_callback was called once
     assert_loop( enable_times > 0 );

@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 
-#include "LB_policies/Lend_light.h"
+#include "LB_policies/lewi.h"
 
 #include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
@@ -41,10 +41,10 @@ static int enabled = 0;
 static int single = 0;
 static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads);
 
-/******* Main Functions Lend_light Balancing Policy ********/
+/******* Main Functions LeWI Balancing Policy ********/
 
-int Lend_light_Init(const subprocess_descriptor_t *spd) {
-    verbose(VB_MICROLB, "Lend_light Init");
+int lewi_Init(const subprocess_descriptor_t *spd) {
+    verbose(VB_MICROLB, "LeWI Init");
 
     default_cpus = CPU_COUNT(&spd->process_mask);
 
@@ -70,18 +70,18 @@ int Lend_light_Init(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-int Lend_light_Finish(const subprocess_descriptor_t *spd) {
+int lewi_Finish(const subprocess_descriptor_t *spd) {
     finalize_comm();
     return DLB_SUCCESS;
 }
 
-int Lend_light_enableDLB(const subprocess_descriptor_t *spd) {
+int lewi_EnableDLB(const subprocess_descriptor_t *spd) {
     single = 0;
     enabled = 1;
     return DLB_SUCCESS;
 }
 
-int Lend_light_disableDLB(const subprocess_descriptor_t *spd) {
+int lewi_DisableDLB(const subprocess_descriptor_t *spd) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "ResetDLB");
         acquireCpus(myCPUS);
@@ -91,11 +91,11 @@ int Lend_light_disableDLB(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-int Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
+int lewi_IntoCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
-int Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS;}
+int lewi_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS;}
 
-int Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {
+int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
     if (enabled) {
         if ( spd->options.mpi_lend_mode == ONE_CPU ) {
@@ -111,7 +111,7 @@ int Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-int Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
 
     if (enabled) {
         int cpus;
@@ -126,7 +126,7 @@ int Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter
     return DLB_SUCCESS;
 }
 
-int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
+int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     int error = DLB_ERR_PERM;
     if (enabled && !single) {
         int cpus = checkIdleCpus(myCPUS, maxResources);
@@ -141,7 +141,7 @@ int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResour
     return error;
 }
 
-/******* Auxiliar Functions Lend_light Balancing Policy ********/
+/******* Auxiliar Functions LeWI Balancing Policy ********/
 static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads) {
 
     if (myCPUS!=numThreads) {
@@ -153,20 +153,20 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads) {
 
 #else /* MPI_LIB */
 
-int Lend_light_Init(const subprocess_descriptor_t *spd) {
+int lewi_Init(const subprocess_descriptor_t *spd) {
     fatal("Lend light policy can only be used if DLB intercepts MPI");
     return DLB_ERR_NOCOMP;
 }
-int Lend_light_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int Lend_light_enableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int Lend_light_disableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int Lend_light_IntoCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int Lend_light_OutOfCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int Lend_light_IntoBlockingCall(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int Lend_light_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int lewi_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_EnableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_DisableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_IntoCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_OutOfCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     return DLB_ERR_NOCOMP;
 }
-int Lend_light_updateresources(const subprocess_descriptor_t *spd, int maxResources) {
+int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     return DLB_ERR_NOCOMP;
 }
 

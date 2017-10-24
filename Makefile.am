@@ -160,10 +160,10 @@ COMMON_SRCS = \
 	src/LB_comm/shmem_cpuinfo.h             \
 	src/LB_comm/shmem_procinfo.c            \
 	src/LB_comm/shmem_procinfo.h            \
-	src/LB_policies/Lend_light.c            \
-	src/LB_policies/Lend_light.h            \
-	src/LB_policies/new.c                   \
-	src/LB_policies/new.h                   \
+	src/LB_policies/lewi.c                  \
+	src/LB_policies/lewi.h                  \
+	src/LB_policies/lewi_mask.c             \
+	src/LB_policies/lewi_mask.h             \
 	src/LB_core/DLB_kernel.c                \
 	src/LB_core/DLB_kernel.h                \
 	src/LB_core/DLB_kernel_sp.c             \

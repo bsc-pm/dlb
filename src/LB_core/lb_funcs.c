@@ -18,8 +18,8 @@
 /*********************************************************************************/
 
 #include "LB_core/lb_funcs.h"
-#include "LB_policies/Lend_light.h"
-#include "LB_policies/new.h"
+#include "LB_policies/lewi.h"
+#include "LB_policies/lewi_mask.h"
 #include "apis/dlb_errors.h"
 
 static int disabled() { return DLB_ERR_NOPOL; }
@@ -67,41 +67,41 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         case POLICY_NONE:
             break;
         case POLICY_LEWI:
-            lb_funcs->init                   = Lend_light_Init;
-            lb_funcs->finalize               = Lend_light_Finish;
-            lb_funcs->enable                 = Lend_light_enableDLB;
-            lb_funcs->disable                = Lend_light_disableDLB;
-            lb_funcs->into_communication     = Lend_light_IntoCommunication;
-            lb_funcs->out_of_communication   = Lend_light_OutOfCommunication;
-            lb_funcs->into_blocking_call     = Lend_light_IntoBlockingCall;
-            lb_funcs->out_of_blocking_call   = Lend_light_OutOfBlockingCall;
-            lb_funcs->borrow_cpus            = Lend_light_updateresources;
+            lb_funcs->init                   = lewi_Init;
+            lb_funcs->finalize               = lewi_Finish;
+            lb_funcs->enable                 = lewi_EnableDLB;
+            lb_funcs->disable                = lewi_DisableDLB;
+            lb_funcs->into_communication     = lewi_IntoCommunication;
+            lb_funcs->out_of_communication   = lewi_OutOfCommunication;
+            lb_funcs->into_blocking_call     = lewi_IntoBlockingCall;
+            lb_funcs->out_of_blocking_call   = lewi_OutOfBlockingCall;
+            lb_funcs->borrow_cpus            = lewi_BorrowCpus;
             break;
         case POLICY_LEWI_MASK:
-            lb_funcs->init                   = new_Init;
-            lb_funcs->finalize               = new_Finish;
-            lb_funcs->disable                = new_DisableDLB;
-            lb_funcs->into_blocking_call     = new_IntoBlockingCall;
-            lb_funcs->out_of_blocking_call   = new_OutOfBlockingCall;
-            lb_funcs->lend                   = new_Lend;
-            lb_funcs->lend_cpu               = new_LendCpu;
-            lb_funcs->lend_cpu_mask          = new_LendCpuMask;
-            lb_funcs->reclaim                = new_Reclaim;
-            lb_funcs->reclaim_cpu            = new_ReclaimCpu;
-            lb_funcs->reclaim_cpus           = new_ReclaimCpus;
-            lb_funcs->reclaim_cpu_mask       = new_ReclaimCpuMask;
-            lb_funcs->acquire_cpu            = new_AcquireCpu;
-            lb_funcs->acquire_cpus           = new_AcquireCpus;
-            lb_funcs->acquire_cpu_mask       = new_AcquireCpuMask;
-            lb_funcs->borrow                 = new_Borrow;
-            lb_funcs->borrow_cpu             = new_BorrowCpu;
-            lb_funcs->borrow_cpus            = new_BorrowCpus;
-            lb_funcs->borrow_cpu_mask        = new_BorrowCpuMask;
-            lb_funcs->return_all             = new_Return;
-            lb_funcs->return_cpu             = new_ReturnCpu;
-            lb_funcs->return_cpu_mask        = new_ReturnCpuMask;
-            lb_funcs->check_cpu_availability = new_CheckCpuAvailability;
-            lb_funcs->update_priority_cpus   = new_UpdatePriorityCpus;
+            lb_funcs->init                   = lewi_mask_Init;
+            lb_funcs->finalize               = lewi_mask_Finish;
+            lb_funcs->disable                = lewi_mask_DisableDLB;
+            lb_funcs->into_blocking_call     = lewi_mask_IntoBlockingCall;
+            lb_funcs->out_of_blocking_call   = lewi_mask_OutOfBlockingCall;
+            lb_funcs->lend                   = lewi_mask_Lend;
+            lb_funcs->lend_cpu               = lewi_mask_LendCpu;
+            lb_funcs->lend_cpu_mask          = lewi_mask_LendCpuMask;
+            lb_funcs->reclaim                = lewi_mask_Reclaim;
+            lb_funcs->reclaim_cpu            = lewi_mask_ReclaimCpu;
+            lb_funcs->reclaim_cpus           = lewi_mask_ReclaimCpus;
+            lb_funcs->reclaim_cpu_mask       = lewi_mask_ReclaimCpuMask;
+            lb_funcs->acquire_cpu            = lewi_mask_AcquireCpu;
+            lb_funcs->acquire_cpus           = lewi_mask_AcquireCpus;
+            lb_funcs->acquire_cpu_mask       = lewi_mask_AcquireCpuMask;
+            lb_funcs->borrow                 = lewi_mask_Borrow;
+            lb_funcs->borrow_cpu             = lewi_mask_BorrowCpu;
+            lb_funcs->borrow_cpus            = lewi_mask_BorrowCpus;
+            lb_funcs->borrow_cpu_mask        = lewi_mask_BorrowCpuMask;
+            lb_funcs->return_all             = lewi_mask_Return;
+            lb_funcs->return_cpu             = lewi_mask_ReturnCpu;
+            lb_funcs->return_cpu_mask        = lewi_mask_ReturnCpuMask;
+            lb_funcs->check_cpu_availability = lewi_mask_CheckCpuAvailability;
+            lb_funcs->update_priority_cpus   = lewi_mask_UpdatePriorityCpus;
             break;
     }
 }

@@ -26,7 +26,7 @@
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
-#include "LB_policies/new.h"
+#include "LB_policies/lewi_mask.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_async.h"
@@ -52,7 +52,7 @@ static void sp1_cb_enable_cpu(int cpuid) {
 static void sp1_cb_disable_cpu(int cpuid) {
     CPU_CLR(cpuid, &sp1_mask);
     if (mode == MODE_ASYNC) {
-        new_ReturnCpu(&spd1, cpuid);
+        lewi_mask_ReturnCpu(&spd1, cpuid);
     }
 }
 
@@ -64,7 +64,7 @@ static void sp2_cb_enable_cpu(int cpuid) {
 static void sp2_cb_disable_cpu(int cpuid) {
     CPU_CLR(cpuid, &sp2_mask);
     if (mode == MODE_ASYNC) {
-        new_ReturnCpu(&spd2, cpuid);
+        lewi_mask_ReturnCpu(&spd2, cpuid);
     }
 }
 
@@ -95,7 +95,7 @@ int main( int argc, char **argv ) {
             == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu, (dlb_callback_t)sp1_cb_disable_cpu)
             == DLB_SUCCESS);
-    assert( new_Init(&spd1) == DLB_SUCCESS);
+    assert( lewi_mask_Init(&spd1) == DLB_SUCCESS);
 
     // Subprocess 2 init
     spd2.id = 222;
@@ -108,7 +108,7 @@ int main( int argc, char **argv ) {
             == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu, (dlb_callback_t)sp2_cb_disable_cpu)
              == DLB_SUCCESS );
-    assert( new_Init(&spd2) == DLB_SUCCESS );
+    assert( lewi_mask_Init(&spd2) == DLB_SUCCESS );
 
     // Get interaction mode
     assert( spd1.options.mode == spd2.options.mode );
@@ -119,27 +119,27 @@ int main( int argc, char **argv ) {
     }
 
     // Subprocess 1 wants to acquire CPU 3
-    assert( new_AcquireCpu(&spd1, 3) == DLB_NOTED );
+    assert( lewi_mask_AcquireCpu(&spd1, 3) == DLB_NOTED );
 
     // Subprocess 2 no longer needs CPU 3
     CPU_CLR(3, &sp2_mask);
-    assert( new_LendCpu(&spd2, 3) == DLB_SUCCESS );
+    assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
 
     // Subprocess 1 needs to poll
     if (mode == MODE_POLLING) {
-        assert( new_AcquireCpu(&spd1, 3) == DLB_SUCCESS );
+        assert( lewi_mask_AcquireCpu(&spd1, 3) == DLB_SUCCESS );
     }
 
     // Poll a certain number of times until mask1 contains CPU 3
     assert_loop( CPU_ISSET(3, &sp1_mask) );
 
     // Subprocess 2 needs again CPU 3
-    assert( new_AcquireCpu(&spd2, 3) == DLB_NOTED );
+    assert( lewi_mask_AcquireCpu(&spd2, 3) == DLB_NOTED );
 
     // Subprocesses 1 and 2 need to poll
     if (mode == MODE_POLLING) {
-        assert( new_ReturnCpu(&spd1, 3) == DLB_SUCCESS );
-        int err = new_AcquireCpu(&spd2, 3);
+        assert( lewi_mask_ReturnCpu(&spd1, 3) == DLB_SUCCESS );
+        int err = lewi_mask_AcquireCpu(&spd2, 3);
         assert( err == DLB_SUCCESS || err == DLB_NOUPDT );
     }
 
@@ -149,25 +149,25 @@ int main( int argc, char **argv ) {
 
     // Subprocess 1 no longer needs CPU 1
     CPU_CLR(1, &sp1_mask);
-    assert( new_LendCpu(&spd1, 1) == DLB_SUCCESS );
+    assert( lewi_mask_LendCpu(&spd1, 1) == DLB_SUCCESS );
 
     // Subprocess 2 needs CPU 1
-    assert( new_AcquireCpu(&spd2, 1) == DLB_SUCCESS );
+    assert( lewi_mask_AcquireCpu(&spd2, 1) == DLB_SUCCESS );
 
     // Subprocess 1 reclaims
-    assert( new_ReclaimCpu(&spd1, 1) == DLB_NOTED );
+    assert( lewi_mask_ReclaimCpu(&spd1, 1) == DLB_NOTED );
 
     // Subprocesses 1 & 2 needs to poll
     if (mode == MODE_POLLING) {
-        assert( new_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
-        int err = new_AcquireCpu(&spd1, 1);
+        assert( lewi_mask_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
+        int err = lewi_mask_AcquireCpu(&spd1, 1);
         assert( err == DLB_SUCCESS || err == DLB_NOUPDT );
     }
     assert_loop( CPU_ISSET(1, &sp1_mask) );
     assert( !CPU_ISSET(1, &sp2_mask) );
 
     // Subprocess 1 lends everything
-    assert( new_LendCpuMask(&spd1, &sys_mask) == DLB_SUCCESS );
+    assert( lewi_mask_LendCpuMask(&spd1, &sys_mask) == DLB_SUCCESS );
 
     if (mode == MODE_ASYNC) {
         // CPU 1 was still requested
@@ -175,17 +175,17 @@ int main( int argc, char **argv ) {
     }
 
     // Subprocess 2 acquires everything
-    assert( new_AcquireCpuMask(&spd2, &sys_mask) == DLB_SUCCESS );
+    assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask) == DLB_SUCCESS );
 
     // Subprocess 1 reclaims everything
-    assert( new_ReclaimCpuMask(&spd1, &sys_mask) == DLB_ERR_PERM );
+    assert( lewi_mask_ReclaimCpuMask(&spd1, &sys_mask) == DLB_ERR_PERM );
     cpu_set_t aux_mask = {.__bits={0x3}};
-    assert( new_ReclaimCpuMask(&spd1, &aux_mask) == DLB_NOTED );
+    assert( lewi_mask_ReclaimCpuMask(&spd1, &aux_mask) == DLB_NOTED );
 
 
     // Policy finalize
-    assert( new_Finish(&spd1) == DLB_SUCCESS );
-    assert( new_Finish(&spd2) == DLB_SUCCESS );
+    assert( lewi_mask_Finish(&spd1) == DLB_SUCCESS );
+    assert( lewi_mask_Finish(&spd2) == DLB_SUCCESS );
 
     // Async finalize
     if (mode == MODE_ASYNC) {
