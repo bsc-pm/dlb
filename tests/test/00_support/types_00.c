@@ -85,11 +85,7 @@ int main(int argc, char *argv[]) {
     printf("Policy: %s\n", policy_tostr(pol));
     err = parse_policy("lewi", &pol);               assert(!err && pol==POLICY_LEWI);
     printf("Policy: %s\n", policy_tostr(pol));
-    err = parse_policy("weight", &pol);             assert(!err && pol==POLICY_WEIGHT);
-    printf("Policy: %s\n", policy_tostr(pol));
     err = parse_policy("lewi_mask", &pol);          assert(!err && pol==POLICY_LEWI_MASK);
-    printf("Policy: %s\n", policy_tostr(pol));
-    err = parse_policy("auto_lewi_mask", &pol);     assert(!err && pol==POLICY_AUTO_LEWI_MASK);
     printf("Policy: %s\n", policy_tostr(pol));
 
     interaction_mode_t mode;

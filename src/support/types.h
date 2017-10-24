@@ -65,10 +65,7 @@ typedef enum PriorityType {
 typedef enum PolicyType {
     POLICY_NONE,
     POLICY_LEWI,
-    POLICY_WEIGHT,
-    POLICY_LEWI_MASK,
-    POLICY_AUTO_LEWI_MASK,
-    POLICY_NEW  /* WIP */
+    POLICY_LEWI_MASK
 } policy_t;
 
 typedef enum InteractionMode {

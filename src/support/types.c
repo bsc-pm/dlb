@@ -241,12 +241,9 @@ const char* get_priority_choices(void) {
 }
 
 /* policy_t */
-static const policy_t policy_values[] =
-    {POLICY_NONE, POLICY_LEWI, POLICY_WEIGHT, POLICY_LEWI_MASK, POLICY_AUTO_LEWI_MASK, POLICY_NEW};
-static const char* const policy_choices[] =
-    {"no", "LeWI", "WEIGHT", "LeWI_mask", "auto_LeWI_mask", "new"};
-static const char policy_choices_str[] =
-    "no, LeWI, WEIGHT, LeWI_mask, auto_LeWI_mask, new";
+static const policy_t policy_values[] = {POLICY_NONE, POLICY_LEWI, POLICY_LEWI_MASK};
+static const char* const policy_choices[] = {"no", "LeWI", "LeWI_mask"};
+static const char policy_choices_str[] = "no, LeWI, LeWI_mask";
 enum { policy_nelems = sizeof(policy_values) / sizeof(policy_values[0]) };
 
 int parse_policy(const char *str, policy_t *value) {
@@ -260,14 +257,12 @@ int parse_policy(const char *str, policy_t *value) {
     return DLB_ERR_NOENT;
 }
 
-const char* policy_tostr(policy_t policy) {
-    switch(policy) {
-        case POLICY_NONE: return "None";
-        case POLICY_LEWI: return "LeWI";
-        case POLICY_WEIGHT: return "Weight";
-        case POLICY_LEWI_MASK: return "LeWI mask";
-        case POLICY_AUTO_LEWI_MASK: return "Autonomous LeWI mask";
-        case POLICY_NEW: return "New (WIP)";
+const char* policy_tostr(policy_t value) {
+    int i;
+    for (i=0; i<policy_nelems; ++i) {
+        if (policy_values[i] == value) {
+            return policy_choices[i];
+        }
     }
     return "error";
 }

@@ -19,9 +19,6 @@
 
 #include "LB_core/lb_funcs.h"
 #include "LB_policies/Lend_light.h"
-#include "LB_policies/Weight.h"
-#include "LB_policies/lewi_mask.h"
-#include "LB_policies/autonomous_lewi_mask.h"
 #include "LB_policies/new.h"
 #include "apis/dlb_errors.h"
 
@@ -80,50 +77,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->out_of_blocking_call   = Lend_light_OutOfBlockingCall;
             lb_funcs->borrow_cpus            = Lend_light_updateresources;
             break;
-        case POLICY_WEIGHT:
-            lb_funcs->init                   = Weight_Init;
-            lb_funcs->finalize               = Weight_Finish;
-            lb_funcs->into_communication     = Weight_IntoCommunication;
-            lb_funcs->out_of_communication   = Weight_OutOfCommunication;
-            lb_funcs->into_blocking_call     = Weight_IntoBlockingCall;
-            lb_funcs->out_of_blocking_call   = Weight_OutOfBlockingCall;
-            lb_funcs->borrow_cpus            = Weight_updateresources;
-            break;
         case POLICY_LEWI_MASK:
-            lb_funcs->init                   = lewi_mask_Init;
-            lb_funcs->finalize               = lewi_mask_Finish;
-            lb_funcs->enable                 = lewi_mask_EnableDLB;
-            lb_funcs->disable                = lewi_mask_DisableDLB;
-            lb_funcs->into_communication     = lewi_mask_IntoCommunication;
-            lb_funcs->out_of_communication   = lewi_mask_OutOfCommunication;
-            lb_funcs->into_blocking_call     = lewi_mask_IntoBlockingCall;
-            lb_funcs->out_of_blocking_call   = lewi_mask_OutOfBlockingCall;
-            lb_funcs->lend                   = lewi_mask_Lend;
-            lb_funcs->reclaim_cpus           = lewi_mask_ReclaimCpus;
-            lb_funcs->acquire_cpu            = lewi_mask_AcquireCpu;
-            lb_funcs->acquire_cpu_mask       = lewi_mask_AcquireCpuMask;
-            lb_funcs->borrow_cpus            = lewi_mask_BorrowCpus;
-            lb_funcs->return_all             = lewi_mask_ReturnAll;
-            break;
-        case POLICY_AUTO_LEWI_MASK:
-            lb_funcs->init                   = auto_lewi_mask_Init;
-            lb_funcs->finalize               = auto_lewi_mask_Finish;
-            lb_funcs->enable                 = auto_lewi_mask_EnableDLB;
-            lb_funcs->disable                = auto_lewi_mask_DisableDLB;
-            lb_funcs->into_communication     = auto_lewi_mask_IntoCommunication;
-            lb_funcs->out_of_communication   = auto_lewi_mask_OutOfCommunication;
-            lb_funcs->into_blocking_call     = auto_lewi_mask_IntoBlockingCall;
-            lb_funcs->out_of_blocking_call   = auto_lewi_mask_OutOfBlockingCall;
-            lb_funcs->lend                   = auto_lewi_mask_Lend;
-            lb_funcs->lend_cpu               = auto_lewi_mask_LendCpu;
-            lb_funcs->reclaim_cpus           = auto_lewi_mask_ReclaimCpus;
-            lb_funcs->acquire_cpu            = auto_lewi_mask_AcquireCpu;
-            lb_funcs->acquire_cpu_mask       = auto_lewi_mask_AcquireCpuMask;
-            lb_funcs->borrow_cpus            = auto_lewi_mask_BorrowCpus;
-            lb_funcs->return_cpu             = auto_lewi_mask_ReturnCpu;
-            lb_funcs->check_cpu_availability = auto_lewi_mask_CheckCpuAvailability;
-            break;
-        case POLICY_NEW:
             lb_funcs->init                   = new_Init;
             lb_funcs->finalize               = new_Finish;
             lb_funcs->disable                = new_DisableDLB;
