@@ -29,6 +29,7 @@ enum { MAX_DESCRIPTION = 1024 };
 
 typedef struct Options {
     policy_t lb_policy;
+    bool lewi;
     bool statistics;
     bool drom;
     bool barrier;

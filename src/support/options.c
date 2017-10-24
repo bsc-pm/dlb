@@ -72,6 +72,14 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_POL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED
     }, {
+        .var_name       = "LB_LEWI",
+        .arg_name       = "--lewi",
+        .default_value  = "no",
+        .description    = "Lend When Idle",
+        .offset         = offsetof(options_t, lewi),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    }, {
         .var_name       = "LB_STATISTICS",
         .arg_name       = "--statistics",
         .default_value  = "no",

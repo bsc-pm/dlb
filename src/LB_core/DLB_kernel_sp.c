@@ -59,22 +59,33 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
     init_tracing(&spd->options);
     add_event(RUNTIME_EVENT, EVENT_INIT);
 
+    // Infer LeWI mode
+    spd->lb_policy = !spd->options.lewi ? POLICY_NONE :
+                                  !mask ? POLICY_LEWI :
+                                          POLICY_LEWI_MASK;
+
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm);
-    policy_t policy = spd->options.lb_policy;
-    set_lb_funcs(&spd->lb_funcs, policy);
+    set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
     spd->id = get_atomic_spid();;
     spd->cpus_priority_array = malloc(mu_get_system_size()*sizeof(int));
     if (mask) {
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
-    } else {
-        sched_getaffinity(0, sizeof(cpu_set_t), &spd->process_mask);
+    } else if (spd->lb_policy == POLICY_LEWI) {
+        fatal_cond(!ncpus, "LeWI without mask support needs a positive ncpus argument");
+        // We need to pass ncpus through spd, CPU order doesn't matter
+        CPU_ZERO(&spd->process_mask);
+        int i;
+        for (i=0; i<ncpus; ++i) CPU_SET(i, &spd->process_mask);
     }
 
 
     // Initialize modules
     debug_init(&spd->options);
-    if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
+    if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
+        // Mandatory: obtain mask
+        fatal_cond(!mask, "DROM and TALP modules require mask support");
+
         // If the process has been pre-initialized, the process mask may have changed
         // procinfo_init must return a new_mask if so
         cpu_set_t new_process_mask;
@@ -94,6 +105,8 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
     if (spd->options.mode == MODE_ASYNC) {
         shmem_async_init(spd->id, &spd->pm, spd->options.shm_key);
     }
+
+    // Initialise LeWI
     spd->lb_funcs.init(spd);
     spd->lb_funcs.update_priority_cpus(spd, &spd->process_mask);
 
@@ -102,7 +115,7 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
 
     // Print initialization summary
     info0("%s %s", PACKAGE, VERSION);
-    info0("Balancing policy: %s", policy_tostr(spd->options.lb_policy));
+    info0("Balancing policy: %s", policy_tostr(spd->lb_policy));
     verbose(VB_API, "Enabled verbose mode for DLB API");
     verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
     verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
@@ -114,7 +127,9 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
 #ifdef MPI_LIB
     info0 ("MPI processes per node: %d", _mpis_per_node);
 #endif
-    info0("Number of CPUs: %d", CPU_COUNT(&spd->process_mask));
+    if (ncpus || mask) {
+        info0("Number of CPUs: %d", CPU_COUNT(&spd->process_mask));
+    }
 
     return spd;
 }
@@ -130,8 +145,7 @@ int Finish_sp(subprocess_descriptor_t *spd) {
         if (spd->options.barrier) {
             shmem_barrier_finalize();
         }
-        policy_t policy = spd->options.lb_policy;
-        if (policy != POLICY_NONE || spd->options.drom || spd->options.statistics) {
+        if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
             shmem_cpuinfo__finalize(spd->id);
             shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
         }
