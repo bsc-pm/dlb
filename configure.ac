@@ -204,17 +204,6 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
 AC_CHECK_PROG([gcovr], [gcovr], [yes])
 AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$gcovr" = xyes && test "x$enable_coverage" = xyes])
 
-# check for number of cpus on node
-AC_ARG_WITH([cpus-per-node],
-   AS_HELP_STRING([--with-cpus-per-node=N], [Number of cpus per node]),
-   [
-      ncpus="$withval"
-   ],
-   [
-      ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
-   ]
-)
-
 AC_CONFIG_HEADERS([config.h])
 
 # files to generate via autotools (.am or .in source files)
@@ -243,15 +232,12 @@ case $host in
    powerpc64-bgq-linux*)
       AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
       AC_LDFLAGS="-dynamic"
-      ncpus=64
       ;;
    *)
       AC_LDFLAGS=""
       ;;
 esac
 ################################################################################
-
-AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
 
 AC_SUBST([AC_CFLAGS])
 AC_SUBST([AC_FFLAGS])

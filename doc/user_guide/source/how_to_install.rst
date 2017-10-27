@@ -63,10 +63,3 @@ some OS utilities.
     Specify where to find the MPI libraries and include files.
 --with-hwloc=<hwloc_prefix>
     Specify where to find the HWLOC libraries.
-
-Some of the load balancing policies rely on the number of CPUs in a compute node. In those cases
-where this number cannot be determined at run-time or cases where the number of CPUs differs
-between run-time and compile-time, the user may overwrite the value using the following flag.
-
---with-cpus-per-node=<N>
-    Overwrite value of CPUs per node detected at configure time.
