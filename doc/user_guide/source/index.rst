@@ -14,5 +14,6 @@ Welcome to DLB's documentation!
     how_to_install
     how_to_run
     api
+    advance_usage
     faq
     content
