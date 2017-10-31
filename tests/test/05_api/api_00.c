@@ -43,7 +43,7 @@ int main( int argc, char **argv ) {
     CPU_SET(0, &process_mask);
     CPU_SET(1, &process_mask);
 
-    DLB_Init(0, &process_mask, "--policy=no");
+    assert( DLB_Init(0, &process_mask, "--policy=no") == DLB_SUCCESS );
     assert( DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu)
             == DLB_SUCCESS);
     assert( DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu)
@@ -52,7 +52,9 @@ int main( int argc, char **argv ) {
     assert( DLB_CallbackGet(dlb_callback_enable_cpu, &cb) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_enable_cpu );
 
+    // Basic enable-disable test
     assert( DLB_Disable() == DLB_SUCCESS );
+    assert( DLB_Lend() == DLB_ERR_DISBLD );
     assert( DLB_Enable() == DLB_SUCCESS );
     assert( DLB_SetMaxParallelism(1) == DLB_SUCCESS );
 
@@ -93,6 +95,14 @@ int main( int argc, char **argv ) {
     assert( DLB_PrintShmem() == DLB_SUCCESS );
     assert( DLB_Strerror(0) != NULL );
 
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    // Check init again
+    CPU_ZERO(&process_mask);
+    CPU_SET(0, &process_mask);
+    CPU_SET(1, &process_mask);
+    assert( DLB_Init(0, &process_mask, NULL) == DLB_SUCCESS );
+    assert( DLB_Init(0, &process_mask, NULL) == DLB_ERR_INIT );
     assert( DLB_Finalize() == DLB_SUCCESS );
 
     return 0;
