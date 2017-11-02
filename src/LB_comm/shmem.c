@@ -80,9 +80,16 @@ static bool shmem_consistency_remove_pid(pid_t *pidlist, pid_t pid) {
     return last_one;
 }
 
+void shmem_consistency_check_version(unsigned int creator_version, unsigned int process_version) {
+    if (creator_version != SHMEM_VERSION_IGNORE) {
+        fatal_cond(creator_version != process_version,
+                "Attaching to a different version of shared memory");
+    }
+}
+
 
 shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
-        const char *shmem_key) {
+        const char *shmem_key, unsigned int shmem_version) {
     int error;
     pid_t pid = getpid();
     verbose(VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", pid, shmem_module);
@@ -127,14 +134,19 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
     *shdata = handler->shm_addr + shsync_size;
 
     if (__sync_bool_compare_and_swap(&handler->shsync->initializing, 0, 1)) {
+        /* Shared Memory creator */
         verbose(VB_SHMEM, "Initializing Shared Memory (%s)", shmem_module);
 
         /* Init pthread spinlock */
         error = pthread_spin_init(&handler->shsync->shmem_lock, PTHREAD_PROCESS_SHARED);
         fatal_cond(error, "pthread_spin_init error: %s", strerror(error));
 
+        /* Set Shared Memory version */
+        handler->shsync->shmem_version = shmem_version;
+
         handler->shsync->initialized = 1;
     } else {
+        /* Shared Memory already created */
         while(!handler->shsync->initialized) __sync_synchronize();
         verbose(VB_SHMEM, "Attached to Shared Memory (%s)", shmem_module);
     }
@@ -154,6 +166,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         }
     }
     shmem_consistency_add_pid(handler->shsync->pidlist, pid);
+    shmem_consistency_check_version(handler->shsync->shmem_version, shmem_version);
     pthread_spin_unlock(&handler->shsync->shmem_lock);
 
     return handler;

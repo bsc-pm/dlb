@@ -40,6 +40,8 @@ typedef struct {
     barrier_t barriers[0];
 } shdata_t;
 
+enum { SHMEM_BARRIER_VERSION = 1 };
+
 static int global_barrier_ids[2] = {0, 1};
 static int local_barrier_id = 0;
 static int max_barriers;
@@ -71,7 +73,8 @@ void shmem_barrier_init(const char *shmem_key) {
     max_barriers = mu_get_system_size()*2;
 
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(barrier_t)*max_barriers, shmem_name, shmem_key);
+            sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
+            shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
 
     shmem_lock(init_handler);
     {

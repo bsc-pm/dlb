@@ -26,13 +26,14 @@
 
 #include "LB_comm/shmem.h"
 
+/* Check unfinalized shared memory */
+
 struct data {
     int foo;
 };
 
 int main(int argc, char **argv) {
-
     struct data *shdata;
-    shmem_init((void**)&shdata, sizeof(struct data), "cpuinfo", NULL);
+    shmem_init((void**)&shdata, sizeof(struct data), "cpuinfo", NULL, SHMEM_VERSION_IGNORE);
     return 0;
 }

@@ -69,6 +69,8 @@ typedef struct {
     helper_t helpers[0];
 } shdata_t;
 
+enum { SHMEM_ASYNC_VERSION = 1 };
+
 static int max_helpers = 0;
 static shdata_t *shdata = NULL;
 static const char *shmem_name = "async";
@@ -168,7 +170,8 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const char *shmem_key)
         if (shm_handler == NULL) {
             max_helpers = mu_get_system_size();
             shm_handler = shmem_init((void**)&shdata,
-                    sizeof(shdata_t) + sizeof(helper_t)*max_helpers, shmem_name, shmem_key);
+                    sizeof(shdata_t) + sizeof(helper_t)*max_helpers,
+                    shmem_name, shmem_key, SHMEM_ASYNC_VERSION);
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

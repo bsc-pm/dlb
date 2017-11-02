@@ -66,6 +66,8 @@ typedef struct {
     pinfo_t process_info[0];
 } shdata_t;
 
+enum { SHMEM_PROCINFO_VERSION = 1 };
+
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static int max_cpus;
@@ -106,7 +108,8 @@ static void open_shmem(const char *shmem_key) {
             max_processes = max_cpus;
 
             shm_handler = shmem_init((void**)&shdata,
-                    sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, shmem_name, shmem_key);
+                    sizeof(shdata_t) + sizeof(pinfo_t)*max_processes,
+                    shmem_name, shmem_key, SHMEM_PROCINFO_VERSION);
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

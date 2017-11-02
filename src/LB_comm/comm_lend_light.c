@@ -50,7 +50,8 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
     defaultCPUS=defCPUS;
     greedy=is_greedy;
 
-    shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key);
+    shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key,
+            SHMEM_VERSION_IGNORE);
 
     if (me==0) {
         verbose(VB_SHMEM, "setting values to the shared mem");

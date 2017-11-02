@@ -17,42 +17,29 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef SHMEM_H
-#define SHMEM_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+    test_exec_fail=yes
+</testinfo>*/
 
-#include <stdlib.h>
-#include <pthread.h>
+#include "assert_noshm.h"
 
-#define SHM_NAME_LENGTH 32
+#include "LB_comm/shmem.h"
 
-// Shared Memory Sync. Must be a struct because it will be allocated inside the shmem
-typedef struct {
-    int                 initializing;   // Only the first process sets 0 -> 1
-    int                 initialized;    // Only the first process sets 0 -> 1
-    unsigned int        shmem_version;  // Shared Memory version, set by the first process
-    pthread_spinlock_t  shmem_lock;     // Spin-lock to grant exclusive access to the shmem
-    pid_t               pidlist[0];     // Array of attached PIDs
-} shmem_sync_t;
+/* Check different shared memory version */
 
-typedef struct {
-    size_t          shm_size;
-    char            shm_filename[SHM_NAME_LENGTH];
-    char            *shm_addr;
-    shmem_sync_t    *shsync;
-} shmem_handler_t;
+struct data {
+    int foo;
+};
 
-typedef enum ShmemOption {
-    SHMEM_NODELETE,
-    SHMEM_DELETE
-} shmem_option_t;
+int main(int argc, char **argv) {
+    struct data *shdata;
+    shmem_handler_t *handler1 = shmem_init((void**)&shdata, sizeof(struct data),
+            "cpuinfo", NULL, 1);
+    shmem_handler_t *handler2 = shmem_init((void**)&shdata, sizeof(struct data),
+            "cpuinfo", NULL, 2);
+    shmem_finalize(handler1, SHMEM_DELETE);
+    shmem_finalize(handler2, SHMEM_DELETE);
 
-enum { SHMEM_VERSION_IGNORE = 0 };
-
-shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
-        const char *shmem_key, unsigned int shmem_version);
-void shmem_finalize(shmem_handler_t *handler, shmem_option_t shmem_delete);
-void shmem_lock(shmem_handler_t *handler);
-void shmem_unlock(shmem_handler_t *handler);
-char *get_shm_filename(shmem_handler_t *handler);
-
-#endif /* SHMEM_H */
+    return 0;
+}

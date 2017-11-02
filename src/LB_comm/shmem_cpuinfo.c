@@ -160,6 +160,8 @@ typedef struct {
     cpuinfo_t        node_info[0];
 } shdata_t;
 
+enum { SHMEM_CPUINFO_VERSION = 1 };
+
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static int node_size;
@@ -201,7 +203,8 @@ static void open_shmem(const char *shmem_key) {
         if (shm_handler == NULL) {
             node_size = mu_get_system_size();
             shm_handler = shmem_init((void**)&shdata,
-                    sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size, shmem_name, shmem_key);
+                    sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size,
+                    shmem_name, shmem_key, SHMEM_CPUINFO_VERSION);
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

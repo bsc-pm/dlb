@@ -33,6 +33,7 @@
 
 /* Create two shmems with different key */
 
+enum { SHMEM_VERSION = 42 };
 
 struct data {
     /* pthread_barrier_t barrier; */
@@ -44,16 +45,16 @@ int main(int argc, char **argv) {
     shmem_handler_t *handler1, *handler2;
 
     // Create a shmem
-    handler1 = shmem_init((void**)&shdata1, sizeof(struct data), "cpuinfo", NULL);
+    handler1 = shmem_init((void**)&shdata1, sizeof(struct data), "cpuinfo", NULL, SHMEM_VERSION);
     shdata1->foo = 1;
 
     // Try to create another shmem with the same name, it maps another region but same content
-    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo", NULL);
+    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo", NULL, SHMEM_VERSION);
     assert( &shdata1 != &shdata2 );
     assert( shdata1->foo == shdata2->foo );
 
     // Create a shmem with custom key
-    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo","42");
+    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo","42", SHMEM_VERSION);
     shdata2->foo = 2;
     assert( &shdata1 != &shdata2 );
     assert( shdata1->foo != shdata2->foo );
