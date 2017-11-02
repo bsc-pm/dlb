@@ -33,6 +33,7 @@
 void debug_init(const options_t *options);
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
 void print_backtrace(void);
+void dlb_clean(void);
 
 extern verbose_opts_t vb_opts;
 
@@ -40,6 +41,7 @@ extern verbose_opts_t vb_opts;
 #define fatal(...) \
     do { \
         vb_print(stderr, "DLB PANIC", __VA_ARGS__); \
+        dlb_clean(); \
         abort(); \
     } while(0)
 

@@ -24,6 +24,11 @@
 #include "support/debug.h"
 
 #include "support/options.h"
+#include "LB_comm/comm_lend_light.h"
+#include "LB_comm/shmem_async.h"
+#include "LB_comm/shmem_barrier.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
 
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -95,4 +100,16 @@ void print_backtrace(void) {
     free( func_names );
     fprintf( stderr, "+--------------------------------------\n" );
 
+}
+
+void dlb_clean(void) {
+    // Best effort, finalize current pid on all shmems
+    pid_t pid = getpid();
+    shmem_cpuinfo__finalize(pid);
+    shmem_cpuinfo_ext__finalize();
+    shmem_procinfo__finalize(pid, false);
+    shmem_procinfo_ext__finalize();
+    shmem_barrier_finalize();
+    shmem_async_finalize(pid);
+    finalize_comm();
 }

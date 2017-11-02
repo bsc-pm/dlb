@@ -349,6 +349,8 @@ static bool deregister_process(pid_t pid) {
 }
 
 int shmem_cpuinfo__finalize(pid_t pid) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+
     //DLB_INSTR( int idle_count = 0; )
 
     // Boolean for now, we could make deregister_process return an integer and instrument it
@@ -371,6 +373,8 @@ int shmem_cpuinfo__finalize(pid_t pid) {
 }
 
 int shmem_cpuinfo_ext__finalize(void) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+
     bool shmem_empty;
     shmem_lock(shm_handler);
     {
@@ -386,8 +390,8 @@ int shmem_cpuinfo_ext__finalize(void) {
 
 int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
-    int error = DLB_SUCCESS;
 
+    int error = DLB_SUCCESS;
     shmem_lock(shm_handler);
     {
         deregister_process(pid);

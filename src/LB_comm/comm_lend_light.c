@@ -39,7 +39,7 @@ struct shdata {
 };
 
 struct shdata *shdata;
-static shmem_handler_t *shm_handler;
+static shmem_handler_t *shm_handler = NULL;;
 
 void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy,
         const char *shmem_key) {
@@ -64,7 +64,9 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 }
 
 void finalize_comm() {
-    shmem_finalize(shm_handler, SHMEM_DELETE);
+    if (shm_handler) {
+        shmem_finalize(shm_handler, SHMEM_DELETE);
+    }
 }
 
 int releaseCpus(int cpus) {
