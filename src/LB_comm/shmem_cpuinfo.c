@@ -57,7 +57,7 @@ typedef struct {
 
 static void remove_global_request(global_request_t *queue, pid_t pid) {
     unsigned int i;
-    for (i=0; i<GLOBAL_QUEUE_SIZE; ++i) {
+    for (i=queue->tail; i!=queue->head; i=(i+1)%GLOBAL_QUEUE_SIZE) {
         if (queue->queue[i].pid == pid) {
             queue->queue[i].pid = NOBODY;
             queue->queue[i].howmany = 0;
@@ -108,7 +108,7 @@ typedef struct {
 
 static void remove_cpu_request(cpu_request_t *queue, pid_t pid) {
     unsigned int i;
-    for (i=0; i<CPU_QUEUE_SIZE; ++i) {
+    for (i=queue->tail; i!=queue->head; i=(i+1)%CPU_QUEUE_SIZE) {
         if (queue->queue[i] == pid) {
             queue->queue[i] = NOBODY;
         }
