@@ -88,9 +88,10 @@ int main( int argc, char **argv ) {
     assert( DLB_CheckCpuAvailability(0) == DLB_ERR_NOPOL );
     assert( DLB_Barrier() == DLB_SUCCESS );
     assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_DISBLD );
-    assert( DLB_SetVariable("LB_JUST_BARRIER", "1") == DLB_SUCCESS );
+    assert( DLB_SetVariable("LB_DROM", "1") == DLB_ERR_PERM );
+    assert( DLB_SetVariable("LB_PRIORITY", "affinity_first") == DLB_SUCCESS );
     char value[32];
-    assert( DLB_GetVariable("LB_JUST_BARRIER", value) == DLB_SUCCESS );
+    assert( DLB_GetVariable("LB_DROM", value) == DLB_SUCCESS );
     assert( DLB_PrintVariables() == DLB_SUCCESS );
     assert( DLB_PrintShmem() == DLB_SUCCESS );
     assert( DLB_Strerror(0) != NULL );

@@ -86,9 +86,10 @@ int main( int argc, char **argv ) {
 
     // Misc */
     assert( DLB_PollDROM_sp(handler, NULL, NULL) == DLB_ERR_DISBLD );
-    assert( DLB_SetVariable_sp(handler, "LB_JUST_BARRIER", "1") == DLB_SUCCESS );
+    assert( DLB_SetVariable_sp(handler, "LB_DROM", "1") == DLB_ERR_PERM );
+    assert( DLB_SetVariable_sp(handler, "LB_PRIORITY", "affinity_first") == DLB_SUCCESS );
     char value[32];
-    assert( DLB_GetVariable_sp(handler, "LB_JUST_BARRIER", value) == DLB_SUCCESS );
+    assert( DLB_GetVariable_sp(handler, "LB_DROM", value) == DLB_SUCCESS );
     assert( DLB_PrintVariables_sp(handler) == DLB_SUCCESS );
 
     assert( DLB_Finalize_sp(handler) == DLB_SUCCESS );

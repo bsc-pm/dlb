@@ -47,7 +47,8 @@ typedef enum OptionTypes {
     OPT_PRIO_T,     // priority_t
     OPT_POL_T,      // policy_t
     OPT_MASK_T,     // cpu_set_t
-    OPT_MODE_T      // interaction_mode_t
+    OPT_MODE_T,     // interaction_mode_t
+    OPT_MPISET_T    // mpi_set_t
 } option_type_t;
 
 typedef struct {
@@ -114,14 +115,6 @@ static const opts_dict_t options_dictionary[] = {
     },
     // MPI
     {
-        .var_name       = "LB_JUST_BARRIER",
-        .arg_name       = "--just-barrier",
-        .default_value  = "no",
-        .description    = "When in MPI, lend resources only in MPI_Barrier calls",
-        .offset         = offsetof(options_t, mpi_just_barrier),
-        .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL
-    }, {
         .var_name       = "LB_LEND_MODE",
         .arg_name       = "--lend-mode",
         .default_value  = "1CPU",
@@ -165,6 +158,16 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, trace_counters),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
+    // LeWI
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-mpi-calls",
+        .default_value  = "all",
+        .description    = "Set of MPI calls in which LeWI will perform",
+        .offset         = offsetof(options_t, lewi_mpi_calls),
+        .type           = OPT_MPISET_T,
+        .flags          = OPT_OPTIONAL
     },
     // misc
     {
@@ -250,6 +253,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return DLB_SUCCESS;
         case(OPT_MODE_T):
             return parse_mode(str_value, (interaction_mode_t*)option);
+        case(OPT_MPISET_T):
+            return parse_mpiset(str_value, (mpi_set_t*)option);
     }
     return DLB_ERR_NOENT;
 }
@@ -280,6 +285,8 @@ static const char * get_value(option_type_t type, void *option) {
             return mu_to_str((cpu_set_t*)option);
         case OPT_MODE_T:
             return mode_tostr(*(interaction_mode_t*)option);
+        case OPT_MPISET_T:
+            return mpiset_tostr(*(mpi_set_t*)option);
     }
     return "unknown";
 }
@@ -521,6 +528,9 @@ void options_print_variables(const options_t *options) {
                 break;
             case OPT_MODE_T:
                 b += sprintf(b, "[%s]", get_mode_choices());
+                break;
+            case OPT_MPISET_T:
+                b += sprintf(b, "[%s]", get_mpiset_choices());
                 break;
             default:
                 b += sprintf(b, "(unknown)");

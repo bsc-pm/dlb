@@ -73,6 +73,12 @@ typedef enum InteractionMode {
     MODE_ASYNC
 } interaction_mode_t;
 
+typedef enum MPISet {
+    MPISET_ALL,
+    MPISET_BARRIER,
+    MPISET_COLLECTIVES
+} mpi_set_t;
+
 int parse_bool(const char *str, bool *value);
 int parse_int(const char *str, int *value);
 
@@ -110,5 +116,10 @@ const char* get_policy_choices(void);
 int parse_mode(const char *str, interaction_mode_t *value);
 const char* mode_tostr(interaction_mode_t value);
 const char* get_mode_choices(void);
+
+/* mpi_set_t */
+int parse_mpiset(const char *str, mpi_set_t *value);
+const char* mpiset_tostr(mpi_set_t value);
+const char* get_mpiset_choices(void);
 
 #endif /* TYPES_H */

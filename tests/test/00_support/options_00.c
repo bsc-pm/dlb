@@ -61,14 +61,14 @@ int main( int argc, char **argv ) {
 
     // Check setter and getter
     char value[MAX_OPTION_LENGTH];
-    options_init(&options_1, "--just-barrier=1 --shm-key=key --lend-mode=1cpu");
-    assert(options_1.mpi_just_barrier == true);
-    options_get_variable(&options_1, "--just-barrier", value);
-    assert(strcasecmp(value, "yes") == 0);
-    options_set_variable(&options_1, "--just-barrier", "0");
-    assert(options_1.mpi_just_barrier == false);
-    options_get_variable(&options_1, "--just-barrier", value);
-    assert(strcasecmp(value, "no") == 0);
+    options_init(&options_1, "--lewi-mpi-calls=barrier --shm-key=key --lend-mode=1cpu");
+    assert(options_1.lewi_mpi_calls == MPISET_BARRIER);
+    options_get_variable(&options_1, "--lewi-mpi-calls", value);
+    assert(strcasecmp(value, "barrier") == 0);
+    options_set_variable(&options_1, "--lewi-mpi-calls", "all");
+    assert(options_1.lewi_mpi_calls == MPISET_ALL);
+    options_get_variable(&options_1, "--lewi-mpi-calls", value);
+    assert(strcasecmp(value, "all") == 0);
     options_get_variable(&options_1, "--shm-key", value);
     assert(strcasecmp(value, "key") == 0);
     int error_readonly_var = options_set_variable(&options_1, "LB_SHM_KEY", "new_key");

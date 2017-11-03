@@ -34,7 +34,7 @@ typedef struct Options {
     bool drom;
     bool barrier;
     interaction_mode_t mode;
-    bool mpi_just_barrier;
+    mpi_set_t lewi_mpi_calls;
     blocking_mode_t mpi_lend_mode;
     verbose_opts_t verbose;
     verbose_fmt_t verbose_fmt;

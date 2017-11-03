@@ -32,6 +32,7 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
+#include "support/types.h"
 
 #include <mpi.h>
 #include <unistd.h>
@@ -47,11 +48,11 @@ int _node_id = -1;
 int _process_id = -1;
 
 static int use_dpd = 0;
-static int just_barrier = 0;
 static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static int is_iter = 0;
 static int periodo = 0;
+static mpi_set_t lewi_mpi_calls = MPISET_ALL;
 static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
 
 void before_init(void) {
@@ -156,7 +157,7 @@ void after_init(void) {
     // Policies that used dpd have been temporarily disabled
     //use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
     use_dpd = 0;
-    just_barrier = options->mpi_just_barrier;
+    lewi_mpi_calls = options->lewi_mpi_calls;
 
     mpi_ready = 1;
 }
@@ -175,32 +176,21 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 
         }
 
-        if(just_barrier) {
-            if (call_type==Barrier) {
-                add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
-                IntoBlockingCall(is_iter, 0);
-                add_event(RUNTIME_EVENT, 0);
-            }
-        } else if (is_blocking(call_type)) {
+        if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
+                (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
+                (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
             add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
             IntoBlockingCall(is_iter, 0);
             add_event(RUNTIME_EVENT, 0);
         }
-
     }
 }
 
 void after_mpi(mpi_call call_type) {
     if (mpi_ready) {
-
-        if(just_barrier) {
-            if (call_type==Barrier) {
-                add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
-                OutOfBlockingCall(is_iter);
-                add_event(RUNTIME_EVENT, 0);
-                is_iter=0;
-            }
-        } else if (is_blocking(call_type)) {
+        if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
+                (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
+                (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
             add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
             OutOfBlockingCall(is_iter);
             add_event(RUNTIME_EVENT, 0);

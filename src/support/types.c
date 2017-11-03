@@ -301,3 +301,35 @@ const char* mode_tostr(interaction_mode_t value) {
 const char* get_mode_choices(void) {
     return mode_choices_str;
 }
+
+/* mpi_set_t */
+static const mpi_set_t mpiset_values[] = {MPISET_ALL, MPISET_BARRIER, MPISET_COLLECTIVES};
+static const char* const mpiset_choices[] = {"all", "barrier", "collectives"};
+static const char mpiset_choices_str[] = "all, barrier, collectives";
+enum { mpiset_nelems = sizeof(mpiset_values) / sizeof(mpiset_values[0]) };
+
+int parse_mpiset(const char *str, mpi_set_t *value) {
+    int i;
+    for (i=0; i<mpiset_nelems; ++i) {
+        if (strcasecmp(str, mpiset_choices[i]) == 0) {
+            *value = mpiset_values[i];
+            return DLB_SUCCESS;
+        }
+    }
+    return DLB_ERR_NOENT;
+}
+
+const char* mpiset_tostr(mpi_set_t value) {
+    int i;
+    for (i=0; i<mpiset_nelems; ++i) {
+        if (mpiset_values[i] == value) {
+            return mpiset_choices[i];
+        }
+    }
+    return "unknown";
+}
+
+const char* get_mpiset_choices(void) {
+    return mpiset_choices_str;
+}
+
