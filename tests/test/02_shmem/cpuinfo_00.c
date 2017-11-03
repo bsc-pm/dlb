@@ -78,7 +78,7 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__lend_cpu(pid, 0, NULL) == DLB_SUCCESS );
 
     // Borrow CPUs
-    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_NONE, cpus_priority_array, 1, victimlist)
+    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_ANY, cpus_priority_array, 1, victimlist)
             == DLB_SUCCESS );
     assert( victimlist[0] == pid );
 
@@ -113,7 +113,7 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Borrow all
-    assert( shmem_cpuinfo__borrow_all(pid, PRIO_NONE, cpus_priority_array, victimlist) >= 0 );
+    assert( shmem_cpuinfo__borrow_all(pid, PRIO_ANY, cpus_priority_array, victimlist) >= 0 );
     for (i=0; i<ncpus; ++i) {
         assert( victimlist[i] == pid );
     }

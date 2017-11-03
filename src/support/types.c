@@ -208,11 +208,11 @@ const char* get_debug_opts_choices(void) {
 
 /* priority_t */
 static const priority_t priority_values[] =
-    {PRIO_NONE, PRIO_AFFINITY_FIRST, PRIO_AFFINITY_FULL, PRIO_AFFINITY_ONLY};
+    {PRIO_ANY, PRIO_NEARBY_FIRST, PRIO_NEARBY_ONLY, PRIO_SPREAD_IFEMPTY};
 static const char* const priority_choices[] =
-    {"none", "affinity_first", "affinity_full", "affinity_only"};
+    {"any", "nearby-first", "nearby-only", "spread-ifempty"};
 static const char priority_choices_str[] =
-    "none, affinity_first, affinity_full, affinity_only";
+    "any, nearby-first, nearby-only, spread-ifempty";
 enum { priority_nelems = sizeof(priority_values) / sizeof(priority_values[0]) };
 
 int parse_priority(const char *str, priority_t *value) {

@@ -248,7 +248,7 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.priority,
+    int error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.lewi_affinity,
             spd->cpus_priority_array, ncpus, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
@@ -303,7 +303,7 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 
 int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.priority,
+    int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.lewi_affinity,
             spd->cpus_priority_array, victimlist);
     if (error == DLB_SUCCESS) {
         int cpuid;
@@ -330,7 +330,7 @@ int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.priority,
+    int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.lewi_affinity,
             spd->cpus_priority_array, ncpus, victimlist);
     /* FIXME: success only if ncpus == 0 ??? */
     if (error == DLB_SUCCESS) {
@@ -441,7 +441,7 @@ int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *
     int *prio3 = malloc(node_size*sizeof(int));
     int i, i1 = 0, i2 = 0, i3 = 0;
 
-    priority_t priority = spd->options.priority;
+    priority_t priority = spd->options.lewi_affinity;
     cpu_set_t affinity_mask;
     mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
     int cpuid;
@@ -450,22 +450,22 @@ int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *
             prio1[i1++] = cpuid;
         } else {
             switch (priority) {
-                case PRIO_NONE:
+                case PRIO_ANY:
                     prio2[i2++] = cpuid;
                     break;
-                case PRIO_AFFINITY_FIRST:
+                case PRIO_NEARBY_FIRST:
                     if (CPU_ISSET(cpuid, &affinity_mask)) {
                         prio2[i2++] = cpuid;
                     } else {
                         prio3[i3++] = cpuid;
                     }
                     break;
-                case PRIO_AFFINITY_ONLY:
+                case PRIO_NEARBY_ONLY:
                     if (CPU_ISSET(cpuid, &affinity_mask)) {
                         prio2[i2++] = cpuid;
                     }
                     break;
-                case PRIO_AFFINITY_FULL:
+                case PRIO_SPREAD_IFEMPTY:
                     // This case cannot be pre-computed
                     break;
             }

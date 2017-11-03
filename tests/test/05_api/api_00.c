@@ -89,7 +89,7 @@ int main( int argc, char **argv ) {
     assert( DLB_Barrier() == DLB_SUCCESS );
     assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_DISBLD );
     assert( DLB_SetVariable("LB_DROM", "1") == DLB_ERR_PERM );
-    assert( DLB_SetVariable("LB_PRIORITY", "affinity_first") == DLB_SUCCESS );
+    assert( DLB_SetVariable("LB_DEBUG_OPTS", "foo") == DLB_SUCCESS );
     char value[32];
     assert( DLB_GetVariable("LB_DROM", value) == DLB_SUCCESS );
     assert( DLB_PrintVariables() == DLB_SUCCESS );

@@ -44,7 +44,7 @@ typedef struct Options {
     char shm_key[MAX_OPTION_LENGTH];
     pid_t preinit_pid;
     bool aggressive_init;
-    priority_t priority;
+    priority_t lewi_affinity;
     debug_opts_t debug_opts;
 } options_t;
 

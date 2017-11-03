@@ -171,11 +171,11 @@ static const opts_dict_t options_dictionary[] = {
     },
     // misc
     {
-        .var_name       = "LB_PRIORITY",
-        .arg_name       = "--priority",
-        .default_value  = "affinity_first",
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-affinity",
+        .default_value  = "nearby-first",
         .description    = "Priorize resource sharing by HW affinity",
-        .offset         = offsetof(options_t, priority),
+        .offset         = offsetof(options_t, lewi_affinity),
         .type           = OPT_PRIO_T,
         .flags          = OPT_OPTIONAL
     }, {

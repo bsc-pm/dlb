@@ -50,10 +50,10 @@ int main( int argc, char **argv ) {
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
     // Check some values
-    options_init(&options_1, "--policy=lewi --drom=1 --priority=affinity_only");
+    options_init(&options_1, "--policy=lewi --drom=1 --lewi-affinity=nearby-only");
     assert(options_1.lb_policy == POLICY_LEWI);
     assert(options_1.drom == true);
-    assert(options_1.priority == PRIO_AFFINITY_ONLY);
+    assert(options_1.lewi_affinity == PRIO_NEARBY_ONLY);
 
     // Check option overwrite
     options_init(&options_1, "--drom=1 --drom=0");

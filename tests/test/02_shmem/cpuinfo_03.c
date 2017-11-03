@@ -79,7 +79,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to BORROW 2 CPUs
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__borrow_cpus(p1_pid, PRIO_NONE, cpus_priority_array,
+        assert( shmem_cpuinfo__borrow_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
                     2, victimlist) == DLB_NOUPDT ); // ?
         assert( victimlist[3] == p1_pid );
 
@@ -107,7 +107,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to ACQUIRE 2 CPUs
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_NONE, cpus_priority_array,
+        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
                     2, victimlist) == DLB_NOTED ); // ?
         assert( victimlist[2] == 0 && victimlist[3] == p1_pid );
 
@@ -137,12 +137,12 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to ACQUIRE 2 CPUs
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_NONE, cpus_priority_array,
+        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
                     2, victimlist) == DLB_NOTED ); // ?
         assert( victimlist[2] == 0 && victimlist[3] == p1_pid );
 
         // Process 1 wants to cancel previous request
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_NONE, NULL, 0, NULL)
+        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, NULL, 0, NULL)
                 == DLB_SUCCESS );
 
         // Process 1 releases CPU 3

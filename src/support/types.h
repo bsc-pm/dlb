@@ -56,10 +56,10 @@ typedef enum DebugOptions {
 } debug_opts_t;
 
 typedef enum PriorityType {
-    PRIO_NONE,
-    PRIO_AFFINITY_FIRST,
-    PRIO_AFFINITY_FULL,
-    PRIO_AFFINITY_ONLY
+    PRIO_ANY,
+    PRIO_NEARBY_FIRST,
+    PRIO_NEARBY_ONLY,
+    PRIO_SPREAD_IFEMPTY
 } priority_t;
 
 typedef enum PolicyType {

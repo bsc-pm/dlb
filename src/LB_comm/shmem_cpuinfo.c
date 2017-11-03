@@ -842,7 +842,7 @@ int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority
             }
         }
 
-        if (priority == PRIO_AFFINITY_FULL) {
+        if (priority == PRIO_SPREAD_IFEMPTY) {
             // Check also empty sockets
             cpu_set_t free_mask;
             CPU_ZERO(&free_mask);
@@ -899,7 +899,7 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
         /* Only in case --priority=affinity_full, the CPU candidates cannot
          * be precomputed since it depends on the current state of each CPU
          */
-        if (priority == PRIO_AFFINITY_FULL && ncpus > 0) {
+        if (priority == PRIO_SPREAD_IFEMPTY && ncpus > 0) {
             // Check also empty sockets
             cpu_set_t free_mask;
             CPU_ZERO(&free_mask);

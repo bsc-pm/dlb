@@ -71,10 +71,10 @@ int main(int argc, char *argv[]) {
     priority_t prio;
     err = parse_priority("", &prio);                assert(err);
     err = parse_priority("null", &prio);            assert(err);
-    err = parse_priority("none", &prio);            assert(!err && prio==PRIO_NONE);
-    err = parse_priority("affinity_first", &prio);  assert(!err && prio==PRIO_AFFINITY_FIRST);
-    err = parse_priority("affinity_full", &prio);   assert(!err && prio==PRIO_AFFINITY_FULL);
-    err = parse_priority("affinity_only", &prio);   assert(!err && prio==PRIO_AFFINITY_ONLY);
+    err = parse_priority("any", &prio);             assert(!err && prio==PRIO_ANY);
+    err = parse_priority("nearby-first", &prio);    assert(!err && prio==PRIO_NEARBY_FIRST);
+    err = parse_priority("nearby-only", &prio);     assert(!err && prio==PRIO_NEARBY_ONLY);
+    err = parse_priority("spread-ifempty", &prio);  assert(!err && prio==PRIO_SPREAD_IFEMPTY);
 
     policy_t pol;
     err = parse_policy("", &pol);                   assert(err);
