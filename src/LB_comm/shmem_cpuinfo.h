@@ -37,14 +37,14 @@ int shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__postfinalize(pid_t pid);
 
 /* Lend */
-int shmem_cpuinfo__add_cpu(pid_t pid, int cpuid, pid_t *new_pid);
-int shmem_cpuinfo__add_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids);
+int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_pid);
+int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids);
 
 /* Reclaim */
-int shmem_cpuinfo__recover_all(pid_t pid, pid_t *victimlist);
-int shmem_cpuinfo__recover_cpu(pid_t pid, int cpuid, pid_t *victim);
-int shmem_cpuinfo__recover_cpus(pid_t pid, int ncpus, pid_t *victimlist);
-int shmem_cpuinfo__recover_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
+int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t *victimlist);
+int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *victim);
+int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t *victimlist);
+int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
 /* Acquire */
 int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim);

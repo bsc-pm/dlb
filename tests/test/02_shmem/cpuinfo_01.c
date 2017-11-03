@@ -71,13 +71,13 @@ int main( int argc, char **argv ) {
 
         // Process 2 releases CPU 3
         victim = 0;
-        assert( shmem_cpuinfo__add_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == p1_pid );
 
         // Process 2 reclaims CPU 3
-        assert( shmem_cpuinfo__recover_cpu(p1_pid, 3, &victim) == DLB_ERR_PERM );
+        assert( shmem_cpuinfo__reclaim_cpu(p1_pid, 3, &victim) == DLB_ERR_PERM );
         victim = 0;
-        assert( shmem_cpuinfo__recover_cpu(p2_pid, 3, &victim) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_NOTED );
         assert( victim == p1_pid );
 
         // Process 1 returns CPU 3
@@ -87,26 +87,26 @@ int main( int argc, char **argv ) {
 
         // Process 2 releases CPU 3 again
         victim = 0;
-        assert( shmem_cpuinfo__add_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == p1_pid );
 
         // Process 2 reclaims CPU 3 again
         victim = 0;
-        assert( shmem_cpuinfo__recover_cpu(p2_pid, 3, &victim) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_NOTED );
         assert( victim == p1_pid );
 
         // Process 1 returns CPU 3 and removes petition
         victim = 0;
         assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == p2_pid );
-        assert( shmem_cpuinfo__add_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == p2_pid );
 
         // Process 2 releases CPU 3, checks no victim and reclaims
         victim = 0;
-        assert( shmem_cpuinfo__add_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == 0 );
-        assert( shmem_cpuinfo__recover_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
     }
 
 
@@ -118,15 +118,15 @@ int main( int argc, char **argv ) {
         assert( victim == 0 );
 
         // Process 1 no longer wants CPU 3
-        assert( shmem_cpuinfo__add_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == 0 );
 
         // Process 2 releases CPU 3
-        assert( shmem_cpuinfo__add_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == 0 );
 
         // Process 2 reclaims CPU 3
-        assert( shmem_cpuinfo__recover_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
         assert( victim == p2_pid );
     }
 

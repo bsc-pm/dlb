@@ -71,13 +71,13 @@ int main( int argc, char **argv ) {
         assert( victimlist[2] == 0 && victimlist[3] == 0 );
 
         // Process 2 releases CPUs 2 & 3
-        assert( shmem_cpuinfo__add_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 2 reclaims CPUs 2 & 3
-        assert( shmem_cpuinfo__recover_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_ERR_PERM );
+        assert( shmem_cpuinfo__reclaim_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_ERR_PERM );
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__recover_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_NOTED );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 1 returns CPUs 2 & 3
@@ -87,32 +87,32 @@ int main( int argc, char **argv ) {
 
         // Process 2 releases CPUs 2 & 3 again
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__add_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 2 reclaims CPUs 2 & 3 again
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__recover_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_NOTED );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 1 returns CPUs 2 & 3 and removes petition
         memset(victimlist, 0, sizeof(victimlist));
         assert( shmem_cpuinfo__return_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == p2_pid && victimlist[3] == p2_pid );
-        assert( shmem_cpuinfo__add_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
 
         // Process 2 releases CPUs 2 & 3, checks no victim and reclaims
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__add_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == 0  && victimlist[3] == 0 );
-        assert( shmem_cpuinfo__recover_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__reclaim_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
     }
 
-    /*** Successful ping-pong, but using recover_all and return_all ***/
+    /*** Successful ping-pong, but using reclaim_all and return_all ***/
     {
         // Process 2 releases CPUs 2 & 3
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__add_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == 0 && victimlist[3] == 0 );
 
         // Process 1 wants CPUs 2 & 3
@@ -122,7 +122,7 @@ int main( int argc, char **argv ) {
 
         // Process 2 reclaims all
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__recover_all(p2_pid, victimlist) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, victimlist) == DLB_NOTED );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 1 returns all
@@ -132,25 +132,25 @@ int main( int argc, char **argv ) {
 
         // Process 2 releases CPUs 2 & 3 again
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__add_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 2 reclaims all again
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__recover_all(p2_pid, victimlist) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, victimlist) == DLB_NOTED );
         assert( victimlist[2] == p1_pid && victimlist[3] == p1_pid );
 
         // Process 1 returns all and removes petition
         memset(victimlist, 0, sizeof(victimlist));
         assert( shmem_cpuinfo__return_all(p1_pid, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == p2_pid && victimlist[3] == p2_pid );
-        assert( shmem_cpuinfo__add_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
 
         // Process 2 releases CPUs 2 & 3, checks no victim and reclaims
         memset(victimlist, 0, sizeof(victimlist));
-        assert( shmem_cpuinfo__add_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == 0  && victimlist[3] == 0 );
-        assert( shmem_cpuinfo__recover_all(p2_pid, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, victimlist) == DLB_SUCCESS );
     }
 
     /*** Late reply ***/
@@ -161,15 +161,15 @@ int main( int argc, char **argv ) {
         assert( victimlist[2] == 0  && victimlist[3] == 0 );
 
         // Process 1 no longer wants CPUs 2 & 3
-        assert( shmem_cpuinfo__add_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == 0  && victimlist[3] == 0 );
 
         // Process 2 releases CPUs 2 & 3
-        assert( shmem_cpuinfo__add_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == 0  && victimlist[3] == 0 );
 
         // Process 2 reclaims CPUs 2 & 3
-        assert( shmem_cpuinfo__recover_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__reclaim_cpu_mask(p2_pid, &p2_mask, victimlist) == DLB_SUCCESS );
         assert( victimlist[2] == p2_pid && victimlist[3] == p2_pid );
     }
 

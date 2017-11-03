@@ -93,7 +93,7 @@ int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
     /* lock spd? */
     pid_t new_pid = 0;
     bool async = spd->options.mode == MODE_ASYNC;
-    int error = shmem_cpuinfo__add_cpu(spd->id, cpuid, async ? &new_pid : NULL);
+    int error = shmem_cpuinfo__lend_cpu(spd->id, cpuid, async ? &new_pid : NULL);
     if (error == DLB_SUCCESS) {
         //CPU_CLR(cpuid, &spd->active_mask);
         if (async && new_pid) {
@@ -106,7 +106,7 @@ int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
 int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *new_pids = async ? calloc(node_size, sizeof(pid_t)) : NULL;
-    int error = shmem_cpuinfo__add_cpu_mask(spd->id, mask, new_pids);
+    int error = shmem_cpuinfo__lend_cpu_mask(spd->id, mask, new_pids);
     if (error == DLB_SUCCESS) {
         //mu_substract(&spd->active_mask, &spd->active_mask, mask);
         if (async) {
@@ -130,7 +130,7 @@ int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *m
 int lewi_mask_Reclaim(const subprocess_descriptor_t *spd) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__recover_all(spd->id, victimlist);
+    int error = shmem_cpuinfo__reclaim_all(spd->id, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
@@ -155,7 +155,7 @@ int lewi_mask_Reclaim(const subprocess_descriptor_t *spd) {
 int lewi_mask_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
     pid_t victim = 0;
     bool async = spd->options.mode == MODE_ASYNC;
-    int error = shmem_cpuinfo__recover_cpu(spd->id, cpuid, &victim);
+    int error = shmem_cpuinfo__reclaim_cpu(spd->id, cpuid, &victim);
     if (error == DLB_SUCCESS) {
         if (async) {
             shmem_async_enable_cpu(spd->id, cpuid);
@@ -174,7 +174,7 @@ int lewi_mask_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
 int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__recover_cpus(spd->id, ncpus, victimlist);
+    int error = shmem_cpuinfo__reclaim_cpus(spd->id, ncpus, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
@@ -199,7 +199,7 @@ int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
 int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     bool async = spd->options.mode == MODE_ASYNC;
     pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__recover_cpu_mask(spd->id, mask, victimlist);
+    int error = shmem_cpuinfo__reclaim_cpu_mask(spd->id, mask, victimlist);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
