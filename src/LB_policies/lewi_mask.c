@@ -246,26 +246,28 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    int error;
-    if (spd->options.mode == MODE_POLLING) {
-        /* In polling mode, just borrow idle CPUs */
-        error = lewi_mask_BorrowCpus(spd, ncpus);
-    } else {
-        /* In async mode, only enable acquired idle CPUs, don't reclaim any */
-        pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-        error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.priority,
-                spd->cpus_priority_array, ncpus, victimlist);
-        if (error == DLB_SUCCESS || error == DLB_NOTED) {
-            int cpuid;
-            for (cpuid=0; cpuid<node_size; ++cpuid) {
-                pid_t victim = victimlist[cpuid];
+    bool async = spd->options.mode == MODE_ASYNC;
+    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
+    int error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.priority,
+            spd->cpus_priority_array, ncpus, victimlist);
+    if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            pid_t victim = victimlist[cpuid];
+            if (async) {
                 if (victim == spd->id) {
                     shmem_async_enable_cpu(spd->id, cpuid);
+                } else if (victim != 0) {
+                    shmem_async_disable_cpu(victim, cpuid);
+                }
+            } else {
+                if (victim == spd->id) {
+                    enable_cpu(&spd->pm, cpuid);
                 }
             }
         }
-        free(victimlist);
     }
+    free(victimlist);
     return error;
 }
 
@@ -427,6 +429,12 @@ int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid
     return shmem_cpuinfo__is_cpu_available(spd->id, cpuid);
 }
 
+/* Construct a priority list of CPUs merging 4 lists:
+ *  prio1: always owned CPUs
+ *  prio2: nearby CPUs depending on the affinity option
+ *  prio3: other CPUs in some affinity options
+ *  rest:  fill '-1' to indicate non eligible CPUs
+ */
 int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask) {
     int *prio1 = malloc(node_size*sizeof(int));
     int *prio2 = malloc(node_size*sizeof(int));

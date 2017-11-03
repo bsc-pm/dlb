@@ -730,26 +730,53 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-/* FIXME */
-typedef enum {
-    BORROW_REQUEST_NONE,
-    BORROW_REQUEST_REST
-} borrow_epilog_t;
-static int shmem_cpuinfo__borrow_cpus_local(pid_t pid, priority_t priority,
-        int *cpus_priority_array, int ncpus, pid_t *victimlist, borrow_epilog_t epilog);
+/* exceptional case: acquire_cpus may need borrow_cpu  */
+static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
+
 int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
         int ncpus, pid_t *victimlist) {
-    int error;
-    if (ncpus == 0) {
-        /* AcquireCPUs(0) has a special meaning of removing any previous request */
-        remove_global_request(&shdata->global_requests, pid);
-        error = DLB_SUCCESS;
-    } else {
-        /* Acquire N CPUs has the same logic as Borrow CPUs, except that we do
-         * a global request if not all CPUs could be borrowed */
-        error = shmem_cpuinfo__borrow_cpus_local(pid, priority, cpus_priority_array,
-                ncpus, victimlist, BORROW_REQUEST_REST);
+    int error = DLB_NOUPDT;
+    shmem_lock(shm_handler);
+    {
+        if (ncpus == 0) {
+            /* AcquireCPUs(0) has a special meaning of removing any previous request */
+            remove_global_request(&shdata->global_requests, pid);
+            error = DLB_SUCCESS;
+        } else {
+            /* Note: cpus_priority_array always have owned CPUs first so we split the
+             * algorithm in two loops with different body for owned and non-owned CPUs
+             */
+
+            /* Acquire owned CPUs following the priority of cpus_priority_array */
+            int i;
+            for (i=0; ncpus>0 && i<node_size; ++i) {
+                int cpuid = cpus_priority_array[i];
+                if (cpuid == -1) break;
+                if(shdata->node_info[cpuid].owner != pid) break;
+                pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
+                if (acquire_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                    --ncpus;
+                }
+            }
+
+            /* Borrow non-owned CPUs following the priority of cpus_priority_array */
+            for (;ncpus>0 && i<node_size; ++i) {
+                int cpuid = cpus_priority_array[i];
+                if (cpuid == -1) break;
+                pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
+                if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                    --ncpus;
+                }
+            }
+
+            /* Add global petition for remaining CPUs if needed */
+            if (ncpus > 0) {
+                verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
+                error = push_global_request(&shdata->global_requests, pid, ncpus);
+            }
+        }
     }
+    shmem_unlock(shm_handler);
     return error;
 }
 
@@ -1042,9 +1069,8 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-static int shmem_cpuinfo__borrow_cpus_local(pid_t pid, priority_t priority,
-        int *cpus_priority_array, int ncpus, pid_t *victimlist, borrow_epilog_t epilog) {
-
+int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
+        int ncpus, pid_t *victimlist) {
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
@@ -1084,22 +1110,10 @@ static int shmem_cpuinfo__borrow_cpus_local(pid_t pid, priority_t priority,
                 }
             }
         }
-
-        /* Add global petition for remaining CPUs if needed */
-        if (epilog == BORROW_REQUEST_REST && ncpus > 0) {
-            verbose(VB_SHMEM, "Requesting %d CPUs more after borrowing", ncpus);
-            error = push_global_request(&shdata->global_requests, pid, ncpus);
-        }
     }
     shmem_unlock(shm_handler);
 
     return (ncpus == 0) ? DLB_SUCCESS : error;
-}
-
-int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t *victimlist) {
-    return shmem_cpuinfo__borrow_cpus_local(pid, priority, cpus_priority_array, ncpus,
-            victimlist, BORROW_REQUEST_NONE);
 }
 
 int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
