@@ -24,39 +24,35 @@
 
 #include <sys/types.h>
 #include <sched.h>
-#include <limits.h>
 
-#define CPUINFO_RECOVER_ALL INT_MAX
 
-// Simplified states to keep statistics
-typedef enum {
-    STATS_IDLE = 0,
-    STATS_OWNED,
-    STATS_GUESTED,
-    _NUM_STATS
-} stats_state_t;
-
+/* Init */
 int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key);
 int shmem_cpuinfo_ext__init(const char *shmem_key);
 int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal);
 
+/* Finalize */
 int shmem_cpuinfo__finalize(pid_t pid);
 int shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__postfinalize(pid_t pid);
 
+/* Lend */
 int shmem_cpuinfo__add_cpu(pid_t pid, int cpuid, pid_t *new_pid);
 int shmem_cpuinfo__add_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids);
 
+/* Reclaim */
 int shmem_cpuinfo__recover_all(pid_t pid, pid_t *victimlist);
 int shmem_cpuinfo__recover_cpu(pid_t pid, int cpuid, pid_t *victim);
 int shmem_cpuinfo__recover_cpus(pid_t pid, int ncpus, pid_t *victimlist);
 int shmem_cpuinfo__recover_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
+/* Acquire */
 int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim);
 int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
         int ncpus, pid_t *victimlist);
 int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
+/* Borrow */
 int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
         pid_t *victimlist);
 int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
@@ -64,19 +60,27 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
         int ncpus, pid_t *victimlist);
 int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
 
-bool shmem_cpuinfo__exists(void);
-
-
+/* Return */
 int shmem_cpuinfo__return_all(pid_t pid, pid_t *new_pids);
 int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid);
 int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids);
-int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask);
 
-bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpu);
+/* Others */
 void shmem_cpuinfo__reset(pid_t pid);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
+bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpu);
+bool shmem_cpuinfo__exists(void);
 bool shmem_cpuinfo__is_dirty(void);
+
+/* WIP: TALP */
+// Simplified states to keep statistics
+typedef enum {
+    STATS_IDLE = 0,
+    STATS_OWNED,
+    STATS_GUESTED,
+    _NUM_STATS
+} stats_state_t;
 
 int shmem_cpuinfo_ext__getnumcpus(void);
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);

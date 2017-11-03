@@ -799,195 +799,6 @@ int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
     return error;
 }
 
-/* Collect as many idle CPUs as indicated by max_resources
- * Affine CPUs have preference depending on the PRIORITY option value
- * Idle CPUs are the ones that (state == CPU_LENT) && (guest == NOBODY)
- * If successful:       Guest => ME
- */
-int shmem_cpuinfo__collect_mask(pid_t pid, cpu_set_t *mask, int max_resources, priority_t priority) {
-    // Do nothing if max_resources is non-positive
-    if (max_resources <= 0) return 0;
-
-    int cpu;
-    int collected = 0;
-    bool collect = false;
-
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( CPU_ZERO(&idle_cpus); )
-
-    DLB_INSTR( int idle_count = 0; )
-
-    // Fast non-safe check to get if there is any CPU available
-    for (cpu = 0; cpu < node_size; cpu++) {
-        collect = is_idle(cpu) || is_borrowed(pid, cpu);
-        if (collect) break;
-    }
-
-    if (collect) {
-
-        shmem_lock(shm_handler);
-        {
-            // Collect first owned CPUs
-            for (cpu=0; cpu<node_size && max_resources>0; ++cpu) {
-                if (shdata->node_info[cpu].owner == pid &&
-                        shdata->node_info[cpu].guest != pid) {
-                    shdata->node_info[cpu].state = CPU_BUSY;
-                    --max_resources;
-
-                    if (shdata->node_info[cpu].guest == NOBODY) {
-                        shdata->node_info[cpu].guest = pid;
-                        update_cpu_stats(cpu, STATS_OWNED);
-                    }
-                }
-            }
-
-            if (max_resources > 0) {
-
-                // FIXME: get process_mask from the procinfo_shmem?
-                cpu_set_t process_mask;
-                CPU_ZERO(&process_mask);
-                for (cpu = 0; cpu<node_size; ++cpu) {
-                    if (shdata->node_info[cpu].owner == pid) {
-                        CPU_SET(cpu, &process_mask);
-                    }
-                }
-
-                // FIXME: get free_mask from the procinfo_shmem?
-                cpu_set_t free_mask;
-                CPU_ZERO(&free_mask);
-                for (cpu=0; cpu<node_size; ++cpu) {
-                    if (shdata->node_info[cpu].state == CPU_LENT
-                            && shdata->node_info[cpu].guest == NOBODY) {
-                        CPU_SET(cpu, &free_mask);
-                    }
-                }
-
-                // Set up some masks to collect from, depending on the priority level
-                const int NUM_TARGETS = 2;
-                cpu_set_t *target_mask[NUM_TARGETS];
-
-                // mask[0]
-                int t = 0;
-                switch (priority) {
-                    case PRIO_NONE:
-                        target_mask[t] = &free_mask;
-                        break;
-                    case PRIO_AFFINITY_FIRST:
-                    case PRIO_AFFINITY_FULL:
-                    case PRIO_AFFINITY_ONLY:
-                        target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
-                        mu_get_parents_covering_cpuset(target_mask[t], &process_mask);
-                        CPU_AND(target_mask[t], target_mask[t], &free_mask);
-                        break;
-                }
-
-                // mask[1]
-                t = 1;
-                switch (priority) {
-                    case PRIO_NONE:
-                    case PRIO_AFFINITY_ONLY:
-                        target_mask[t] = NULL;
-                        break;
-                    case PRIO_AFFINITY_FIRST:
-                        target_mask[t] = &free_mask;
-                        break;
-                    case PRIO_AFFINITY_FULL:
-                        // Get affinity mask from free_mask, only if the FULL socket is free
-                        target_mask[t] = (cpu_set_t*) alloca(sizeof(cpu_set_t));
-                        mu_get_parents_inside_cpuset(target_mask[t], &free_mask);
-                        CPU_AND(target_mask[t], target_mask[t], &free_mask);
-                        break;
-                }
-
-                // Collect CPUs from target_mask[] in order
-                for (t=0; t<NUM_TARGETS; ++t) {
-                    if (target_mask[t] == NULL || CPU_COUNT(target_mask[t]) == 0) continue;
-                    for (cpu=0; cpu<node_size && max_resources>0; ++cpu) {
-                        if (CPU_ISSET(cpu, target_mask[t])) {
-                            shdata->node_info[cpu].guest = pid;
-                            update_cpu_stats(cpu, STATS_GUESTED);
-                            CPU_SET(cpu, mask);
-                            max_resources--;
-                            collected++;
-                        }
-                    }
-                    verbose(VB_SHMEM, "Getting %d Threads (%s)", collected, mu_to_str(mask));
-                }
-
-                // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-                for (cpu=0; cpu<node_size; ++cpu) {
-                    if (is_idle(cpu)) {
-                        DLB_INSTR(idle_count++;)
-                        DLB_DEBUG(CPU_SET(cpu, &idle_cpus);)
-                    }
-                }
-            }
-        }
-        shmem_unlock(shm_handler);
-    }
-
-    if (collected > 0) {
-        DLB_DEBUG(int post_size = CPU_COUNT(&idle_cpus);)
-        verbose(VB_SHMEM, "Clearing %d Idle Threads (%d left)", collected, post_size);
-        verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
-        add_event(IDLE_CPUS_EVENT, idle_count);
-    }
-    return collected;
-}
-
-
-
-
-#if 0
-
-/*
-  Acquire this cpu, wether it was mine or not
-  Can have a problem if the cpu was borrowed by somebody else
-  If force take it from the owner
- */
-bool shmem_cpuinfo__acquire_cpu(pid_t pid, int cpu, bool force) {
-
-    bool acquired=true;
-
-    shmem_lock(shm_handler);
-    //cpu is mine -> Claim it
-    if (shdata->node_info[cpu].owner == pid) {
-        shdata->node_info[cpu].state = CPU_BUSY;
-        // It is important to not modify the 'guest' field to remark that the CPU is claimed
-
-    //cpu is not mine but is free -> take it
-    } else if (shdata->node_info[cpu].state == CPU_LENT
-            && shdata->node_info[cpu].guest == NOBODY) {
-        shdata->node_info[cpu].guest = pid;
-        update_cpu_stats(cpu, STATS_GUESTED);
-
-    //cpus is not mine and the owner has recover it
-    } else if (force) {
-        //If force -> take it
-        if (shdata->node_info[cpu].guest == shdata->node_info[cpu].owner) {
-            shdata->node_info[cpu].guest = pid;
-            update_cpu_stats(cpu, STATS_GUESTED);
-
-        } else {
-            //FIXME: Another process has borrowed it
-            // or    the cpu is DISABLED in the system
-            acquired=false;
-        }
-    } else {
-        //No force -> nothing
-        acquired=false;
-    }
-
-    // add_event(IDLE_CPUS_EVENT, idle_count);
-    shmem_unlock(shm_handler);
-    return acquired;
-}
-#endif
-
-
-
-
-
 
 /*********************************************************************************/
 /*  Borrow CPU                                                                   */
@@ -1233,77 +1044,10 @@ int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_
     return error;
 }
 
-/* Remove non default CPUs that have been set as BUSY by their owner
- * or remove also CPUs that habe been set to DISABLED
- * Reclaimed CPUs:    Guest => Owner
- */
-int shmem_cpuinfo__return_claimed(pid_t pid, cpu_set_t *mask) {
-    int returned = 0;
-
-    DLB_DEBUG( cpu_set_t idle_cpus; )
-    DLB_DEBUG( cpu_set_t returned_cpus; )
-    DLB_DEBUG( CPU_ZERO(&idle_cpus); )
-    DLB_DEBUG( CPU_ZERO(&returned_cpus); )
-
-    DLB_INSTR( int idle_count = 0; )
-
-    shmem_lock(shm_handler);
-    {
-        int cpu;
-        for (cpu = 0; cpu < node_size; cpu++) {
-            if (CPU_ISSET(cpu, mask)
-                    && shdata->node_info[cpu].owner != pid
-                    && shdata->node_info[cpu].state != CPU_LENT) {
-                if (shdata->node_info[cpu].guest == pid) {
-                    if (shdata->node_info[cpu].owner == NOBODY) {
-                        shdata->node_info[cpu].guest = NOBODY;
-                        update_cpu_stats(cpu, STATS_IDLE);
-                    } else {
-                        shdata->node_info[cpu].guest = shdata->node_info[cpu].owner;
-                        update_cpu_stats(cpu, STATS_OWNED);
-                    }
-                }
-                returned++;
-                CPU_CLR(cpu, mask);
-                DLB_DEBUG( CPU_SET(cpu, &returned_cpus); )
-            }
-
-            // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
-            if ( is_idle(cpu) ) {
-                DLB_INSTR( idle_count++; )
-                DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
-            }
-        }
-    }
-    shmem_unlock(shm_handler);
-    if (returned > 0) {
-        verbose(VB_SHMEM, "Giving back %d Threads (%s)", returned, mu_to_str(&returned_cpus));
-        verbose(VB_SHMEM, "Available mask: %s", mu_to_str(&idle_cpus));
-    }
-
-    add_event(IDLE_CPUS_EVENT, idle_count);
-
-    return returned;
-}
-
 
 /*********************************************************************************/
 /*                                                                               */
 /*********************************************************************************/
-
-bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpuid) {
-    // If the CPU is free, assign it to myself
-    if (shdata->node_info[cpuid].guest == NOBODY) {
-        shmem_lock(shm_handler);
-        if (shdata->node_info[cpuid].guest == NOBODY) {
-            shdata->node_info[cpuid].guest = pid;
-            update_cpu_stats(cpuid, STATS_OWNED);
-        }
-        shmem_unlock(shm_handler);
-    }
-
-    return shdata->node_info[cpuid].guest == pid;
-}
 
 void shmem_cpuinfo__reset(pid_t pid) {
     /* int error = DLB_NOUPDT; */
@@ -1412,6 +1156,24 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
     return binding;
 }
 
+bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpuid) {
+    // If the CPU is free, assign it to myself
+    if (shdata->node_info[cpuid].guest == NOBODY) {
+        shmem_lock(shm_handler);
+        if (shdata->node_info[cpuid].guest == NOBODY) {
+            shdata->node_info[cpuid].guest = pid;
+            update_cpu_stats(cpuid, STATS_OWNED);
+        }
+        shmem_unlock(shm_handler);
+    }
+
+    return shdata->node_info[cpuid].guest == pid;
+}
+
+bool shmem_cpuinfo__exists(void) {
+    return shm_handler != NULL;
+}
+
 bool shmem_cpuinfo__is_dirty(void) {
     return shdata && shdata->dirty;
 }
@@ -1486,10 +1248,6 @@ void shmem_cpuinfo_ext__print_info(bool statistics) {
     }
 
     free(shdata_copy);
-}
-
-bool shmem_cpuinfo__exists(void) {
-    return shm_handler != NULL;
 }
 
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
