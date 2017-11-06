@@ -30,7 +30,6 @@
 #include <assert.h>
 
 int main( int argc, char **argv ) {
-    setenv("LB_POLICY", "huh", 1);
     setenv("LB_DROM", "huh", 1);
     setenv("LB_MASK", "huh", 1);
     setenv("LB_LEND_MODE", "huh", 1);
@@ -43,15 +42,15 @@ int main( int argc, char **argv ) {
     options_t options_1, options_2;
     options_init(&options_1, NULL);     // options_1 initialized with env. vars
     options_init(&options_2, dlb_args); // options_2 initialized with dlb_args
-    assert(options_1.lb_policy == options_2.lb_policy);
+    assert(options_1.lewi == options_2.lewi);
     assert(options_1.drom == options_2.drom);
-    assert(options_1.mpi_lend_mode == options_2.mpi_lend_mode);
+    assert(options_1.lewi_mpi == options_2.lewi_mpi);
     assert(options_1.verbose == options_2.verbose);
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
     // Check some values
-    options_init(&options_1, "--policy=lewi --drom=1 --lewi-affinity=nearby-only");
-    assert(options_1.lb_policy == POLICY_LEWI);
+    options_init(&options_1, "--lewi=yes --drom=1 --lewi-affinity=nearby-only");
+    assert(options_1.lewi == true);
     assert(options_1.drom == true);
     assert(options_1.lewi_affinity == PRIO_NEARBY_ONLY);
 
@@ -74,12 +73,12 @@ int main( int argc, char **argv ) {
     int error_readonly_var = options_set_variable(&options_1, "LB_SHM_KEY", "new_key");
     assert(error_readonly_var);
     assert(strcasecmp(value, "key") == 0);
-    options_get_variable(&options_1,"LB_LEND_MODE", value);
-    assert(strcasecmp(value, "1CPU") == 0);
-    options_set_variable(&options_1,"LB_LEND_MODE", "block");
-    assert(options_1.mpi_lend_mode == BLOCK);
-    options_get_variable(&options_1,"--lend-mode", value);
-    assert(strcasecmp(value, "block") == 0);
+    options_get_variable(&options_1,"--lewi-mpi", value);
+    assert(strcasecmp(value, "no") == 0);
+    options_set_variable(&options_1,"--lewi-mpi", "1");
+    assert(options_1.lewi_mpi == true);
+    options_get_variable(&options_1,"--lewi-mpi", value);
+    assert(strcasecmp(value, "yes") == 0);
     int error_unexisting_var = options_set_variable(&options_1, "FAKEVAR", "fakevalue");
     assert(error_unexisting_var);
     value[0] = '\0';
@@ -100,9 +99,9 @@ int main( int argc, char **argv ) {
     //options_init(&options_1, "--policy=");
 
     // Preference between environ variable and arguments
-    setenv("LB_POLICY", "LeWI", 1);
-    options_init(&options_1, "--policy=no");
-    assert(options_1.lb_policy == POLICY_NONE);
+    setenv("LB_DROM", "1", 1);
+    options_init(&options_1, "--drom=no");
+    assert(options_1.drom == false);
 
     // TODO: some variables are still not being checked
     options_init(&options_1, "--mode=async");
@@ -111,7 +110,6 @@ int main( int argc, char **argv ) {
     // Unset all variables and check that default values are preserved
     unsetenv("DLB_ARGS");
     unsetenv("LB_ARGS");
-    unsetenv("LB_POLICY");
     unsetenv("LB_DROM");
     unsetenv("LB_MASK");
     unsetenv("LB_LEND_MODE");
@@ -123,8 +121,8 @@ int main( int argc, char **argv ) {
 
     // Check that different options are parsed using both methods
     setenv("DLB_ARGS", "--drom=1", 1);
-    options_init(&options_1, "--policy=lewi");
-    assert(options_1.lb_policy == POLICY_LEWI);
+    options_init(&options_1, "--lewi=1");
+    assert(options_1.lewi == true);
     assert(options_1.drom == true);
 
 

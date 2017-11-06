@@ -33,14 +33,14 @@ typedef enum OptionFlags {
     OPT_CLEAR      = 0,
     OPT_READONLY   = 1 << 0,
     OPT_OPTIONAL   = 1 << 1,
-    OPT_DEPRECATED = 1 << 2
+    OPT_DEPRECATED = 1 << 2,
+    OPT_ADVANCED   = 1 << 3
 } option_flags_t;
 
 typedef enum OptionTypes {
     OPT_BOOL_T,
     OPT_INT_T,
     OPT_STR_T,
-    OPT_BLCK_T,     // blocking_mode_t
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_DBG_T,      // debug_opts_t
@@ -63,13 +63,13 @@ typedef struct {
 
 
 static const opts_dict_t options_dictionary[] = {
-    // modules
+    // general options
     {
         .var_name       = "LB_POLICY",
         .arg_name       = "--policy",
         .default_value  = "no",
         .description    = "Lend Balancing Policy",
-        .offset         = offsetof(options_t, lb_policy),
+        .offset         = 0,
         .type           = OPT_POL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED
     }, {
@@ -81,14 +81,6 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
-        .var_name       = "LB_STATISTICS",
-        .arg_name       = "--statistics",
-        .default_value  = "no",
-        .description    = "Enable the Statistics Module",
-        .offset         = offsetof(options_t, statistics),
-        .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
-    }, {
         .var_name       = "LB_DROM",
         .arg_name       = "--drom",
         .default_value  = "no",
@@ -97,13 +89,22 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
+        /* to be replaced with --talp */
+        .var_name       = "LB_STATISTICS",
+        .arg_name       = "--statistics",
+        .default_value  = "no",
+        .description    = "Enable the Statistics Module",
+        .offset         = offsetof(options_t, statistics),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED
+    }, {
         .var_name       = "LB_BARRIER",
         .arg_name       = "--barrier",
         .default_value  = "no",
         .description    = "Enable the Shared Memory Barrier",
         .offset         = offsetof(options_t, barrier),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     }, {
         .var_name       = "LB_MODE",
         .arg_name       = "--mode",
@@ -112,16 +113,6 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, mode),
         .type           = OPT_MODE_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
-    },
-    // MPI
-    {
-        .var_name       = "LB_LEND_MODE",
-        .arg_name       = "--lend-mode",
-        .default_value  = "1CPU",
-        .description    = "When in MPI, whether to keep at least 1 CPU or lend all of them",
-        .offset         = offsetof(options_t, mpi_lend_mode),
-        .type           = OPT_BLCK_T,
-        .flags          = OPT_OPTIONAL
     },
     // verbose
     {
@@ -141,26 +132,34 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_VBFMT_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     },
-    // tracing
+    // instrument
     {
-        .var_name       = "LB_TRACE_ENABLED",
-        .arg_name       = "--trace-enabled",
+        .var_name       = "LB_NULL",
+        .arg_name       = "--instrument",
         .default_value  = "yes",
-        .description    = "Enable tracing",
-        .offset         = offsetof(options_t, trace_enabled),
+        .description    = "Enable Extrae instrumentation",
+        .offset         = offsetof(options_t, instrument),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
-        .var_name       = "LB_TRACE_COUNTERS",
-        .arg_name       = "--trace-counters",
+        .var_name       = "LB_NULL",
+        .arg_name       = "--instrument-counters",
         .default_value  = "no",
         .description    = "Enable counters on DLB events",
-        .offset         = offsetof(options_t, trace_counters),
+        .offset         = offsetof(options_t, instrument_counters),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     },
     // LeWI
     {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-mpi",
+        .default_value  = "no",
+        .description    = "When in MPI, whether to lend the current CPU",
+        .offset         = offsetof(options_t, lewi_mpi),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_OPTIONAL
+    }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-mpi-calls",
         .default_value  = "all",
@@ -168,9 +167,7 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, lewi_mpi_calls),
         .type           = OPT_MPISET_T,
         .flags          = OPT_OPTIONAL
-    },
-    // misc
-    {
+    }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-affinity",
         .default_value  = "nearby-first",
@@ -179,6 +176,25 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_PRIO_T,
         .flags          = OPT_OPTIONAL
     }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-greedy",
+        .default_value  = "no",
+        .description    = "Greedy option for LeWI policy",
+        .offset         = offsetof(options_t, lewi_greedy),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-warmup",
+        .default_value  = "no",
+        .description    = "Create as many threads as necessary during the process startup, "
+                            "only for LeWI",
+        .offset         = offsetof(options_t, lewi_warmup),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
+    // misc
+    {
         .var_name       = "LB_SHM_KEY",
         .arg_name       = "--shm-key",
         .default_value  = "",
@@ -186,7 +202,7 @@ static const opts_dict_t options_dictionary[] = {
                             "DLB processes can interconnect, default: user ID",
         .offset         = offsetof(options_t, shm_key),
         .type           = OPT_STR_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     }, {
         .var_name       = "LB_PREINIT_PID",
         .arg_name       = "--preinit-pid",
@@ -194,24 +210,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = "Process ID that pre-initializes the DLB process",
         .offset         = offsetof(options_t, preinit_pid),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
-    }, {
-        .var_name       = "LB_GREEDY",
-        .arg_name       = "--greedy",
-        .default_value  = "no",
-        .description    = "Greedy option for LeWI policy",
-        .offset         = offsetof(options_t, greedy),
-        .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL
-    }, {
-        .var_name       = "LB_AGGRESSIVE_INIT",
-        .arg_name       = "--aggressive-init",
-        .default_value  = "no",
-        .description    = "Create as many threads as necessary during the process startup, "
-                            "only for LeWI",
-        .offset         = offsetof(options_t, aggressive_init),
-        .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     }, {
         .var_name       = "LB_DEBUG_OPTS",
         .arg_name       = "--debug-opts",
@@ -220,7 +219,7 @@ static const opts_dict_t options_dictionary[] = {
                             "Delimited by the character :",
         .offset         = offsetof(options_t, debug_opts),
         .type           = OPT_DBG_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = OPT_OPTIONAL | OPT_ADVANCED
     }
 };
 
@@ -236,8 +235,6 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
         case(OPT_STR_T):
             strncpy(option, str_value, MAX_OPTION_LENGTH);
             return DLB_SUCCESS;
-        case(OPT_BLCK_T):
-            return parse_blocking_mode(str_value, (blocking_mode_t*)option);
         case(OPT_VB_T):
             return parse_verbose_opts(str_value, (verbose_opts_t*)option);
         case(OPT_VBFMT_T):
@@ -269,8 +266,6 @@ static const char * get_value(option_type_t type, void *option) {
             return int_value;
         case OPT_STR_T:
             return (char*)option;
-        case OPT_BLCK_T:
-            return blocking_mode_tostr(*(blocking_mode_t*)option);
         case OPT_VB_T:
             return verbose_opts_tostr(*(verbose_opts_t*)option);
         case OPT_VBFMT_T:
@@ -391,6 +386,13 @@ void options_init(options_t *options, const char *dlb_args) {
                 rhs = arg_value;
             }
         }
+
+        /* Warn if option is deprecated and has rhs, then skip iteration */
+        if (entry->flags & OPT_DEPRECATED && rhs) {
+            warning("Option %s is deprecated, please see the documentation", entry->arg_name);
+            continue;
+        }
+
         /* Assing option = rhs, and nullify rhs if error */
         if (rhs) {
             int error = set_value(entry->type, (char*)options+entry->offset, rhs);
@@ -398,9 +400,6 @@ void options_init(options_t *options, const char *dlb_args) {
                 warning("Unrecognized %s value: %s. Setting default %s",
                         entry->arg_name, rhs, entry->default_value);
                 rhs = NULL;
-            }
-            if (entry->flags & OPT_DEPRECATED) {
-                warning("Option %s is deprecated, please see the documentation", entry->arg_name);
             }
         }
 
@@ -495,7 +494,7 @@ void options_print_variables(const options_t *options) {
         /* Value */
         const char *value = get_value(entry->type, (char*)options+entry->offset);
         size_t value_len = strlen(value) + 1;
-        b += sprintf(b, "%s %s", value, value_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+        b += sprintf(b, "%s %s", value, value_len<8?"\t\t":value_len<16?"\t":"");
 
         /* Choices */
         switch(entry->type) {
@@ -507,9 +506,6 @@ void options_print_variables(const options_t *options) {
                 break;
             case OPT_STR_T:
                 b += sprintf(b, "(string)");
-                break;
-            case OPT_BLCK_T:
-                b += sprintf(b, "[%s]", get_blocking_mode_choices());
                 break;
             case OPT_VB_T:
                 b += sprintf(b, "{%s}", get_verbose_opts_choices());

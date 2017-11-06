@@ -52,7 +52,7 @@ int lewi_Init(const subprocess_descriptor_t *spd) {
 
     info0("Default cpus per process: %d", default_cpus);
 
-    bool greedy = spd->options.greedy;
+    bool greedy = spd->options.lewi_greedy;
     if (greedy) {
         info0("Policy mode GREEDY");
     }
@@ -60,7 +60,7 @@ int lewi_Init(const subprocess_descriptor_t *spd) {
     //Initialize shared memory
     ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy, spd->options.shm_key);
 
-    if (spd->options.aggressive_init) {
+    if (spd->options.lewi_warmup) {
         setThreads_Lend_light(&spd->pm, mu_get_system_size());
         setThreads_Lend_light(&spd->pm, default_cpus);
     }
@@ -98,11 +98,13 @@ int lewi_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUC
 int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
     if (enabled) {
-        if ( spd->options.mpi_lend_mode == ONE_CPU ) {
+        if ( !spd->options.lewi_mpi ) {
+            /* 1CPU */
             verbose(VB_MICROLB, "LENDING %d cpus", myCPUS-1);
             releaseCpus(myCPUS-1);
             setThreads_Lend_light(&spd->pm, 1);
         } else {
+            /* BLOCK */
             verbose(VB_MICROLB, "LENDING %d cpus", myCPUS);
             releaseCpus(myCPUS);
             setThreads_Lend_light(&spd->pm, 0);

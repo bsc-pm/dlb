@@ -51,37 +51,6 @@ int parse_int(const char *str, int *value) {
     return DLB_SUCCESS;
 }
 
-/* blocking_mode_t */
-static const blocking_mode_t blocking_mode_values[] = {ONE_CPU, BLOCK};
-static const char* const blocking_mode_choices[] = {"1CPU", "BLOCK"};
-static const char blocking_mode_choices_str[] = "1CPU, BLOCK";
-enum { blocking_mode_nelems = sizeof(blocking_mode_values) / sizeof(blocking_mode_values[0]) };
-
-int parse_blocking_mode(const char *str, blocking_mode_t *value) {
-    int i;
-    for (i=0; i<blocking_mode_nelems; ++i) {
-        if (strcasecmp(str, blocking_mode_choices[i]) == 0) {
-            *value = blocking_mode_values[i];
-            return DLB_SUCCESS;
-        }
-    }
-    return DLB_ERR_NOENT;
-}
-
-const char* blocking_mode_tostr(blocking_mode_t value) {
-    int i;
-    for (i=0; i<blocking_mode_nelems; ++i) {
-        if (blocking_mode_values[i] == value) {
-            return blocking_mode_choices[i];
-        }
-    }
-    return "unknown";
-}
-
-const char* get_blocking_mode_choices(void) {
-    return blocking_mode_choices_str;
-}
-
 
 /* verbose_opts_t */
 static const verbose_opts_t verbose_opts_values[] =

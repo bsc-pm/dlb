@@ -119,7 +119,9 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
 
         // Print initialization summary
         info0("%s %s", PACKAGE, VERSION);
-        info0("Balancing policy: %s", policy_tostr(spd.lb_policy));
+        if (spd.lb_policy != POLICY_NONE) {
+            info0("Balancing policy: %s", policy_tostr(spd.lb_policy));
+        }
         verbose(VB_API, "Enabled verbose mode for DLB API");
         verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
         verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");

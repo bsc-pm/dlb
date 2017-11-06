@@ -44,11 +44,11 @@ void init_tracing(const options_t *options) {
     if (tracing_initialized) return;
     tracing_initialized = true;
 
-    if (options->trace_enabled && Extrae_event &&
+    if (options->instrument && Extrae_event &&
             Extrae_eventandcounters && Extrae_define_event_type ) {
 
         // Set up function
-        if ( options->trace_counters ) {
+        if ( options->instrument_counters ) {
             extrae_set_event = Extrae_eventandcounters;
         } else {
             extrae_set_event = Extrae_event;

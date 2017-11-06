@@ -46,11 +46,6 @@ int main(int argc, char *argv[]) {
     err = parse_int("42", &i_value);                assert(!err && i_value==42);
     err = parse_int("42zzzzz", &i_value);           assert(!err && i_value==42);
 
-    blocking_mode_t mpi_mode;
-    err = parse_blocking_mode("", &mpi_mode);       assert(err);
-    err = parse_blocking_mode("1cpu", &mpi_mode);   assert(!err && mpi_mode==ONE_CPU);
-    err = parse_blocking_mode("block", &mpi_mode);  assert(!err && mpi_mode==BLOCK);
-
     verbose_opts_t vb;
     parse_verbose_opts("", &vb);                    assert(vb==VB_CLEAR);
     parse_verbose_opts("null", &vb);                assert(vb==VB_CLEAR);

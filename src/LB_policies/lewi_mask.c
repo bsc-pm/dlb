@@ -62,7 +62,7 @@ int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
 
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
-    if (spd->options.mpi_lend_mode == BLOCK) {
+    if (spd->options.lewi_mpi) {
         error = lewi_mask_LendCpu(spd, sched_getcpu());
     }
     return error;
@@ -70,7 +70,7 @@ int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
 int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     int error = DLB_NOUPDT;
-    if (spd->options.mpi_lend_mode == BLOCK) {
+    if (spd->options.lewi_mpi) {
         error = lewi_mask_AcquireCpu(spd, sched_getcpu());
     }
     return error;

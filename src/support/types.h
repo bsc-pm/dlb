@@ -22,11 +22,6 @@
 
 #include <stdbool.h>
 
-typedef enum BlockingMode {
-    ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call
-    BLOCK,   // MPI set to blocking mode
-} blocking_mode_t;
-
 typedef enum VerboseOptions {
     VB_CLEAR    = 0,
     VB_API      = 1 << 0,
@@ -81,11 +76,6 @@ typedef enum MPISet {
 
 int parse_bool(const char *str, bool *value);
 int parse_int(const char *str, int *value);
-
-/* blocking_mode_t */
-int parse_blocking_mode(const char *str, blocking_mode_t *value);
-const char* blocking_mode_tostr(blocking_mode_t value);
-const char* get_blocking_mode_choices(void);
 
 /* verbose_opts_t */
 int parse_verbose_opts(const char *str, verbose_opts_t *value);
