@@ -58,6 +58,16 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--drom=1 --drom=0");
     assert(options_1.drom == false);
 
+    // Check different forms of parsing a boolean
+    options_init(&options_1, "--lewi");
+    assert(options_1.lewi == true);
+    options_init(&options_1, "--no-lewi");
+    assert(options_1.lewi == false);
+    options_init(&options_1, "--lewi=yes");
+    assert(options_1.lewi == true);
+    options_init(&options_1, "--lewi=no");
+    assert(options_1.lewi == false);
+
     // Check setter and getter
     char value[MAX_OPTION_LENGTH];
     options_init(&options_1, "--lewi-mpi-calls=barrier --shm-key=key --lend-mode=1cpu");

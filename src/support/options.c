@@ -289,33 +289,52 @@ static const char * get_value(option_type_t type, void *option) {
 /* Parse DLB_ARGS and remove argument if found */
 static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value) {
     *arg_value = 0;
-    // Tokenize a copy of dlb_args with " "(blank) delimiter
+    /* Tokenize a copy of dlb_args with " "(blank) delimiter */
     char *end_space = NULL;
     size_t len = strlen(dlb_args) + 1;
     char *dlb_args_copy = malloc(sizeof(char)*len);
     strncpy(dlb_args_copy, dlb_args, len);
     char *token = strtok_r(dlb_args_copy, " ", &end_space);
     while (token) {
-        // Break token into two tokens "--argument" = "value"
-        char *end_equal;
-        char *argument = strtok_r(token, "=", &end_equal);
-        fatal_cond(!argument, "Bad format parsing DLB_ARGS: --argument=value");
+        /* Each token is a complete string representing an option */
+        bool remove_token = false;
+        size_t token_len = strlen(token);
 
-        if (strcmp(argument, arg_name) == 0) {
-            // Get value to return
-            char *value = strtok_r(NULL, "=", &end_equal);
-            fatal_cond(!value, "Bad format parsing DLB_ARGS: --argument=value");
-            strncpy(arg_value, value, MAX_OPTION_LENGTH);
+        if (strchr(token, '=')) {
+            /* Option is of the form --argument=value */
+            char *end_equal;
+            char *argument = strtok_r(token, "=", &end_equal);
+            if (strcmp(argument, arg_name) == 0) {
+                /* Obtain value */
+                char *value = strtok_r(NULL, "=", &end_equal);
+                fatal_cond(!value, "Bad format parsing DLB_ARGS: --argument=value");
+                strncpy(arg_value, value, MAX_OPTION_LENGTH);
+                remove_token = true;
+            }
+        } else{
+            /* Option is of the form --argument/--no-argument */
+            char *argument = token;
+            if (strcmp(argument, arg_name) == 0) {
+                /* Option value is 'yes' */
+                strcpy(arg_value, "yes");
+                remove_token = true;
+            } else if (strncmp(argument, "--no-", 5) == 0
+                    && strcmp(argument+5, arg_name+2) == 0) {
+                /* Option value is 'no' */
+                strcpy(arg_value, "no");
+                remove_token = true;
+            }
+        }
 
-            // Remove "--argument=value" from dlb_args
-            char *dest = strstr(dlb_args, argument);
-            char *src = dest+strlen(argument)+1+strlen(value);
+        if (remove_token) {
+            /* Remove token from dlb_args */
+            char *dest = strstr(dlb_args, token);
+            char *src = dest + token_len;
             size_t n = strlen(src) + 1;
             memmove(dest, src, n);
-
-            // We do not break here, we keep looping to allow option overwriting
         }
-        // next token
+
+        /* next token */
         token = strtok_r(NULL, " ", &end_space);
     }
     free(dlb_args_copy);
