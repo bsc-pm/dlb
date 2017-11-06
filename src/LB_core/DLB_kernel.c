@@ -75,7 +75,6 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         if (mask) {
             memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
         } else if (spd.lb_policy == POLICY_LEWI) {
-            fatal_cond(!ncpus, "LeWI without mask support needs a positive ncpus argument");
             // We need to pass ncpus through spd, CPU order doesn't matter
             CPU_ZERO(&spd.process_mask);
             int i;

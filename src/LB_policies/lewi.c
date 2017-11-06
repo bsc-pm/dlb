@@ -155,10 +155,7 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads) {
 
 #else /* MPI_LIB */
 
-int lewi_Init(const subprocess_descriptor_t *spd) {
-    fatal("Lend light policy can only be used if DLB intercepts MPI");
-    return DLB_ERR_NOCOMP;
-}
+int lewi_Init(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_EnableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_DisableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
