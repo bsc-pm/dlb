@@ -342,9 +342,10 @@ int DLB_SetVariable(const char *variable, const char *value);
 int DLB_GetVariable(const char *variable, char *value);
 
 /*! \brief Print DLB internal variables
+ *  \param[in] print_extra If different to 0, print also advanced and experimental options
  *  \return DLB_SUCCESS on success
  */
-int DLB_PrintVariables(void);
+int DLB_PrintVariables(int print_extra);
 
 /*! \brief Print the data stored in the shmem
  *  \return DLB_SUCCESS on success

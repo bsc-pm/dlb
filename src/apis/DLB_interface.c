@@ -174,8 +174,8 @@ int DLB_GetVariable(const char *variable, char *value) {
     return get_variable(variable, value);
 }
 
-int DLB_PrintVariables(void) {
-    return print_variables();
+int DLB_PrintVariables(int print_extra) {
+    return print_variables(print_extra);
 }
 
 int DLB_PrintShmem(void) {

@@ -362,7 +362,11 @@ int get_variable_sp(subprocess_descriptor_t *spd, const char *variable, char *va
     return options_get_variable(&spd->options, variable, value);
 }
 
-int print_variables_sp(subprocess_descriptor_t *spd) {
-    options_print_variables(&spd->options);
+int print_variables_sp(subprocess_descriptor_t *spd, bool print_extra) {
+    if (!print_extra) {
+        options_print_variables(&spd->options);
+    } else {
+        options_print_variables_extra(&spd->options);
+    }
     return DLB_SUCCESS;
 }

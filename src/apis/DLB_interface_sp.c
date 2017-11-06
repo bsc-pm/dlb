@@ -167,8 +167,8 @@ int DLB_GetVariable_sp(dlb_handler_t handler, const char *variable, char *value)
     return get_variable_sp(handler, variable, value);
 }
 
-int DLB_PrintVariables_sp(dlb_handler_t handler) {
-    return print_variables_sp(handler);
+int DLB_PrintVariables_sp(dlb_handler_t handler, int print_extra) {
+    return print_variables_sp(handler, print_extra);
 }
 
 #pragma GCC visibility pop

@@ -74,6 +74,6 @@ int poll_drom_update_sp(subprocess_descriptor_t *spd);
 /* Misc */
 int set_variable_sp(subprocess_descriptor_t *spd, const char *variable, const char *value);
 int get_variable_sp(subprocess_descriptor_t *spd, const char *variable, char *value);
-int print_variables_sp(subprocess_descriptor_t *spd);
+int print_variables_sp(subprocess_descriptor_t *spd, bool print_extra);
 
 #endif /* DLB_KERNEL_SP_H */

@@ -561,8 +561,12 @@ int get_variable(const char *variable, char *value) {
     return options_get_variable(&spd.options, variable, value);
 }
 
-int print_variables(void) {
-    options_print_variables(&spd.options);
+int print_variables(bool print_extra) {
+    if (!print_extra) {
+        options_print_variables(&spd.options);
+    } else {
+        options_print_variables_extra(&spd.options);
+    }
     return DLB_SUCCESS;
 }
 

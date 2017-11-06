@@ -79,7 +79,7 @@ int check_cpu_availability(int cpuid);
 int node_barrier(void);
 int set_variable(const char *variable, const char *value);
 int get_variable(const char *variable, char *value);
-int print_variables(void);
+int print_variables(bool print_extra);
 int print_shmem(void);
 
 

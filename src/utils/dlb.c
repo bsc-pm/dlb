@@ -29,14 +29,12 @@
 #include <stdbool.h>
 
 static void print_usage( const char * program ) {
-    fprintf( stdout, "usage: %s [-h] [--help] [-v] [--version]\n", program );
+    fprintf( stdout, "usage: %s [-h] [--help] [--help-extra] [-v] [--version]\n", program );
 }
 
-static void print_help( void ) {
-    fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
-    fprintf( stdout, "\n" );
+static void print_help(bool print_extra) {
     DLB_Init(0, NULL, NULL);
-    DLB_PrintVariables();
+    DLB_PrintVariables(print_extra);
     DLB_Finalize();
 }
 
@@ -47,6 +45,7 @@ static void print_version( void ) {
 
 int main ( int argc, char *argv[] ) {
     bool do_help = false;
+    bool do_help_extra = false;
     bool do_version = false;
 
     int i;
@@ -54,6 +53,9 @@ int main ( int argc, char *argv[] ) {
         if ( strcmp( argv[i], "--help" ) == 0 ||
                 strcmp( argv[i], "-h" ) == 0 ) {
             do_help = true;
+        } else if ( strcmp( argv[i], "--help-extra" ) == 0 ) {
+            do_help = true;
+            do_help_extra = true;
         } else if ( strcmp( argv[i], "--version" ) == 0 ||
                     strcmp( argv[i], "-v" ) == 0 ) {
             do_version = true;
@@ -69,7 +71,7 @@ int main ( int argc, char *argv[] ) {
     }
 
     if ( do_help ) {
-        print_help();
+        print_help(do_help_extra);
     }
 
     if ( do_version ) {
