@@ -186,7 +186,8 @@ int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
                     shmem_async_disable_cpu(victim, cpuid);
                 }
             } else {
-                if (victim == spd->id) {
+                /* See note about oversubscription in lewi_mask_AcquireCpu */
+                if (victim > 0) {
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
@@ -211,7 +212,8 @@ int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
                     shmem_async_disable_cpu(victim, cpuid);
                 }
             } else {
-                if (victim == spd->id) {
+                /* See note about oversubscription in lewi_mask_AcquireCpu */
+                if (victim > 0) {
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
@@ -261,7 +263,8 @@ int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
                     shmem_async_disable_cpu(victim, cpuid);
                 }
             } else {
-                if (victim == spd->id) {
+                /* See note about oversubscription in lewi_mask_AcquireCpu */
+                if (victim > 0) {
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
@@ -286,7 +289,8 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
                     shmem_async_disable_cpu(victim, cpuid);
                 }
             } else {
-                if (victim == spd->id) {
+                /* See note about oversubscription in lewi_mask_AcquireCpu */
+                if (victim > 0) {
                     enable_cpu(&spd->pm, cpuid);
                 }
             }

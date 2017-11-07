@@ -649,7 +649,17 @@ int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (CPU_ISSET(cpuid, mask)) {
-                if (shdata->node_info[cpuid].owner == pid) {
+                if (shdata->node_info[cpuid].owner != pid) {
+                    // check first that every CPU in the mask can be reclaimed
+                    error = DLB_ERR_PERM;
+                    break;
+                }
+            }
+        }
+
+        if (error != DLB_ERR_PERM) {
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                if (CPU_ISSET(cpuid, mask)) {
                     pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
                     int local_error = reclaim_cpu(pid, cpuid, victim);
                     switch(local_error) {
@@ -665,9 +675,6 @@ int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
                             // lowest priority, default value
                             break;
                     }
-                } else {
-                    error = DLB_ERR_PERM;
-                    break;
                 }
             }
         }
@@ -751,21 +758,30 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
             int i;
             for (i=0; ncpus>0 && i<node_size; ++i) {
                 int cpuid = cpus_priority_array[i];
+                /* Break if cpu array does not contain more valid CPU ids */
                 if (cpuid == -1) break;
-                if(shdata->node_info[cpuid].owner != pid) break;
+                /* Go to next loop if cpu array does not contain owned CPUs */
+                if (shdata->node_info[cpuid].owner != pid) break;
+
                 pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                if (acquire_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                int local_error = acquire_cpu(pid, cpuid, victim);
+                if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
                     --ncpus;
+                    if (error != DLB_NOTED) error = local_error;
                 }
             }
 
             /* Borrow non-owned CPUs following the priority of cpus_priority_array */
             for (;ncpus>0 && i<node_size; ++i) {
                 int cpuid = cpus_priority_array[i];
+                /* Break if cpu array does not contain more valid CPU ids */
                 if (cpuid == -1) break;
+
                 pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                int local_error = borrow_cpu(pid, cpuid, victim);
+                if (local_error == DLB_SUCCESS) {
                     --ncpus;
+                    if (error != DLB_NOTED) error = local_error;
                 }
             }
 
