@@ -92,7 +92,7 @@ int main( int argc, char **argv ) {
     assert( DLB_SetVariable("LB_DEBUG_OPTS", "foo") == DLB_SUCCESS );
     char value[32];
     assert( DLB_GetVariable("LB_DROM", value) == DLB_SUCCESS );
-    assert( DLB_PrintVariables() == DLB_SUCCESS );
+    assert( DLB_PrintVariables(0) == DLB_SUCCESS );
     assert( DLB_PrintShmem() == DLB_SUCCESS );
     assert( DLB_Strerror(0) != NULL );
 
