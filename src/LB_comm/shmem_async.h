@@ -25,7 +25,8 @@
 
 struct pm_interface;
 
-int shmem_async_init(pid_t pid, const struct pm_interface *pm, const char *shmem_key);
+int shmem_async_init(pid_t pid, const struct pm_interface *pm,
+        const cpu_set_t *process_mask, const char *shmem_key);
 int shmem_async_finalize(pid_t pid);
 
 void shmem_async_enable_cpu(pid_t pid, int cpuid);

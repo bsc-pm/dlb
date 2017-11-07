@@ -114,8 +114,8 @@ int main( int argc, char **argv ) {
     assert( spd1.options.mode == spd2.options.mode );
     mode = spd1.options.mode;
     if (mode == MODE_ASYNC) {
-        assert( shmem_async_init(spd2.id, &spd2.pm, NULL) == DLB_SUCCESS );
-        assert( shmem_async_init(spd1.id, &spd1.pm, NULL) == DLB_SUCCESS );
+        assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask, NULL) == DLB_SUCCESS );
     }
 
     // Subprocess 1 wants to acquire CPU 3

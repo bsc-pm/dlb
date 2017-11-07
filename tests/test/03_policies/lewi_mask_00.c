@@ -56,7 +56,7 @@ int main( int argc, char **argv ) {
     // Initialize shmems and callbacks
     assert( shmem_procinfo__init(spd.id, &spd.process_mask, NULL, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(spd.id, &spd.process_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_async_init(spd.id, &spd.pm, NULL) == DLB_SUCCESS );
+    assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask, NULL) == DLB_SUCCESS );
     assert( pm_callback_set(&spd.pm, dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu)
             == DLB_SUCCESS );
     assert( pm_callback_set(&spd.pm, dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu)

@@ -102,7 +102,7 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
         shmem_barrier_init(spd->options.shm_key);
     }
     if (spd->options.mode == MODE_ASYNC) {
-        shmem_async_init(spd->id, &spd->pm, spd->options.shm_key);
+        shmem_async_init(spd->id, &spd->pm, &spd->process_mask, spd->options.shm_key);
     }
 
     // Initialise LeWI

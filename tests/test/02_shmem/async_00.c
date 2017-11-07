@@ -41,8 +41,9 @@ int main(int argc, char **argv) {
         .dlb_callback_disable_cpu_ptr = cb_disable_cpu
     };
     pid_t pid = 42;
+    cpu_set_t mask = { .__bits = { 0xf } };
 
-    assert( shmem_async_init(pid, &pm, NULL) == DLB_SUCCESS );
+    assert( shmem_async_init(pid, &pm, &mask, NULL) == DLB_SUCCESS );
     shmem_async_enable_cpu(pid, 1);
     shmem_async_disable_cpu(pid, 1);
     assert( shmem_async_finalize(pid) == DLB_SUCCESS );

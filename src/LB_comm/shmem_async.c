@@ -59,9 +59,10 @@ typedef struct {
     pthread_cond_t  q_wait_data;
 
     /* Helper metadata */
-    const pm_interface_t *pm;
-    pthread_t thread;
     pid_t pid;
+    pthread_t pth;
+    cpu_set_t mask;
+    const pm_interface_t *pm;
 } helper_t;
 
 
@@ -127,9 +128,10 @@ static void dequeue_message(helper_t *helper, message_t *message) {
 }
 
 static void* thread_start(void *arg) {
-    verbose(VB_ASYNC, "Helper thread started");
     helper_t *helper = arg;
     const pm_interface_t* const pm = helper->pm;
+    pthread_setaffinity_np(helper->pth, sizeof(cpu_set_t), &helper->mask);
+    verbose(VB_ASYNC, "Helper thread started, pinned to %s", mu_to_str(&helper->mask));
 
     bool join = false;
     while(!join || helper->q_head != helper->q_tail) {
@@ -161,7 +163,8 @@ static void* thread_start(void *arg) {
     return NULL;
 }
 
-int shmem_async_init(pid_t pid, const pm_interface_t *pm, const char *shmem_key) {
+int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *process_mask,
+        const char *shmem_key) {
     verbose(VB_ASYNC, "Creating helper thread");
 
     // Shared memory creation
@@ -211,7 +214,8 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const char *shmem_key)
                 // Initialize helper metadata and create thread
                 helper->pm = pm;
                 helper->pid = pid;
-                pthread_create(&helper->thread, NULL, thread_start, (void*)helper);
+                memcpy(&helper->mask, process_mask, sizeof(cpu_set_t));
+                pthread_create(&helper->pth, NULL, thread_start, (void*)helper);
                 break;
             }
         }
@@ -230,7 +234,7 @@ int shmem_async_finalize(pid_t pid) {
         enqueue_message(helper, &message);
 
         /* Wait helper thread to finish */
-        pthread_join(helper->thread, NULL);
+        pthread_join(helper->pth, NULL);
         verbose(VB_ASYNC, "Helper thread joined");
 
         /* Clear helper data */
