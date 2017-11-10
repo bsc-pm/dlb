@@ -24,6 +24,7 @@
 
 int lewi_mask_Init(const subprocess_descriptor_t *spd);
 int lewi_mask_Finish(const subprocess_descriptor_t *spd);
+int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd);
 int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd);
 
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);

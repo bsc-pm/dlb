@@ -40,7 +40,8 @@ int main( int argc, char **argv ) {
     cpu_set_t process_mask, mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
     int ncpus = CPU_COUNT(&process_mask);
-    pid_t victimlist[ncpus];
+    pid_t new_guests[ncpus];
+    pid_t victims[ncpus];
     int cpus_priority_array[ncpus];
     int i;
 
@@ -51,87 +52,97 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
 
     // Lend CPU
-    victimlist[0] = -1;
-    assert( shmem_cpuinfo__lend_cpu(pid, 0, &victimlist[0]) == DLB_SUCCESS );
-    assert( victimlist[0] == -1 );
+    assert( shmem_cpuinfo__lend_cpu(pid, 0, &victims[0]) == DLB_SUCCESS );
+    assert( victims[0] == 0 );
 
     // Reclaim CPU
-    assert( shmem_cpuinfo__reclaim_cpu(pid, 0, &victimlist[0]) == DLB_SUCCESS );
-    assert( victimlist[0] == pid );
+    assert( shmem_cpuinfo__reclaim_cpu(pid, 0, &new_guests[0], &victims[0]) == DLB_SUCCESS );
+    assert( new_guests[0] == pid );
+    assert( victims[0] == -1 );
 
     // Lend CPU
-    assert( shmem_cpuinfo__lend_cpu(pid, 0, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu(pid, 0, &victims[0]) == DLB_SUCCESS );
+    assert( victims[0] == 0 );
 
     // Reclaim CPUs
-    assert( shmem_cpuinfo__reclaim_cpus(pid, 1, victimlist) == DLB_SUCCESS );
-    assert( victimlist[0] == pid );
+    assert( shmem_cpuinfo__reclaim_cpus(pid, 1, new_guests, victims) == DLB_SUCCESS );
+    assert( new_guests[0] == pid );
+    assert( victims[0] == -1 );
 
     // Lend CPU
-    assert( shmem_cpuinfo__lend_cpu(pid, 0, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu(pid, 0, &victims[0]) == DLB_SUCCESS );
+    assert( victims[0] == 0 );
 
     // Acquire CPU
-    assert( shmem_cpuinfo__acquire_cpu(pid, 0, victimlist) == DLB_SUCCESS );
-    assert( victimlist[0] == pid );
-    assert( shmem_cpuinfo__acquire_cpu(pid, 0, victimlist) == DLB_NOUPDT );
+    assert( shmem_cpuinfo__acquire_cpu(pid, 0, &new_guests[0], &victims[0]) == DLB_SUCCESS );
+    assert( new_guests[0] == pid );
+    assert( victims[0] == -1 );
+    assert( shmem_cpuinfo__acquire_cpu(pid, 0, &new_guests[0], &victims[0]) == DLB_NOUPDT );
+    assert( new_guests[0] == -1 );
+    assert( victims[0] == -1 );
 
     // Lend CPU
-    assert( shmem_cpuinfo__lend_cpu(pid, 0, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu(pid, 0, &victims[0]) == DLB_SUCCESS );
+    assert( victims[0] == 0 );
 
     // Borrow CPUs
-    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_ANY, cpus_priority_array, 1, victimlist)
+    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_ANY, cpus_priority_array, 1, new_guests)
             == DLB_SUCCESS );
-    assert( victimlist[0] == pid );
+    assert( new_guests[0] == pid );
+    for (i=1; i<ncpus; ++i) { assert( new_guests[i] == -1 ); }
 
     // Lend mask
-    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, new_guests) == DLB_SUCCESS );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == 0 ); }
 
     // Reclaim mask
-    assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &process_mask, victimlist) >= 0 );
-    for (i=0; i<ncpus; ++i) {
-        assert( victimlist[i] == pid );
-    }
+    assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &process_mask, new_guests, victims) >= 0 );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == pid ); }
+    for (i=0; i<ncpus; ++i) { assert( victims[i] == -1 ); }
 
     // Lend mask
-    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, new_guests) == DLB_SUCCESS );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == 0 ); }
 
     // Reclaim all
-    assert( shmem_cpuinfo__reclaim_all(pid, victimlist) >= 0 );
-    for (i=0; i<ncpus; ++i) {
-        assert( victimlist[i] == pid );
-    }
+    assert( shmem_cpuinfo__reclaim_all(pid, new_guests, victims) >= 0 );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == pid ); }
+    for (i=0; i<ncpus; ++i) { assert( victims[i] == -1 ); }
 
     // Lend mask
-    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, new_guests) == DLB_SUCCESS );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == 0 ); }
 
     // Acquire mask
-    assert( shmem_cpuinfo__acquire_cpu_mask(pid, &process_mask, victimlist) >= 0 );
-    for (i=0; i<ncpus; ++i) {
-        assert( victimlist[i] == pid );
-    }
+    assert( shmem_cpuinfo__acquire_cpu_mask(pid, &process_mask, new_guests, victims) >= 0 );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == pid ); }
+    for (i=0; i<ncpus; ++i) { assert( victims[i] == -1 ); }
 
     // Lend mask
-    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, new_guests) == DLB_SUCCESS );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == 0 ); }
 
     // Borrow all
-    assert( shmem_cpuinfo__borrow_all(pid, PRIO_ANY, cpus_priority_array, victimlist) >= 0 );
-    for (i=0; i<ncpus; ++i) {
-        assert( victimlist[i] == pid );
-    }
+    assert( shmem_cpuinfo__borrow_all(pid, PRIO_ANY, cpus_priority_array, new_guests) >= 0 );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == pid ); }
 
     // Return
-    assert( shmem_cpuinfo__return_all(pid, NULL) == DLB_NOUPDT );
-    assert( shmem_cpuinfo__return_cpu(pid, 0, NULL) == DLB_NOUPDT );
-    assert( shmem_cpuinfo__return_cpu_mask(pid, &process_mask, NULL) == DLB_NOUPDT );
+    assert( shmem_cpuinfo__return_all(pid, new_guests) == DLB_NOUPDT );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == -1 ); }
+    assert( shmem_cpuinfo__return_cpu(pid, 0, &new_guests[0]) == DLB_NOUPDT );
+    assert( new_guests[0] == -1 );
+    assert( shmem_cpuinfo__return_cpu_mask(pid, &process_mask, new_guests) == DLB_NOUPDT );
+    for (i=0; i<ncpus; ++i) { assert( new_guests[i] == -1 ); }
 
     // Check errors with a nonexistent CPU
-    assert( shmem_cpuinfo__acquire_cpu(pid, ncpus, NULL) == DLB_ERR_PERM );
-    assert( shmem_cpuinfo__reclaim_cpu(pid, ncpus, NULL) == DLB_ERR_PERM );
+    assert( shmem_cpuinfo__acquire_cpu(pid, ncpus, &new_guests[0], &victims[0]) == DLB_ERR_PERM );
+    assert( shmem_cpuinfo__reclaim_cpu(pid, ncpus, &new_guests[0], &victims[0]) == DLB_ERR_PERM );
     CPU_ZERO(&mask);
     CPU_SET(ncpus, &mask);
     // mask is not checked beyond max_cpus
-    assert( shmem_cpuinfo__acquire_cpu_mask(pid, &mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__acquire_cpu_mask(pid, &mask, new_guests, victims) == DLB_SUCCESS );
     // mask is not checked beyond max_cpus
-    assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &mask, NULL) == DLB_NOUPDT );
+    assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &mask, new_guests, victims) == DLB_NOUPDT );
 
     // Finalize
     assert( shmem_cpuinfo__finalize(pid) == DLB_SUCCESS );

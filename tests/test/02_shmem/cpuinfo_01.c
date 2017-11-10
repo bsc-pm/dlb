@@ -54,7 +54,7 @@ int main( int argc, char **argv ) {
     CPU_ZERO(&p2_mask);
     CPU_SET(2, &p2_mask);
     CPU_SET(3, &p2_mask);
-    pid_t victim;
+    pid_t new_guest, victim;
 
     // Init
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
@@ -65,73 +65,73 @@ int main( int argc, char **argv ) {
     /*** Successful ping-pong ***/
     {
         // Process 1 wants CPU 3
-        victim = 0;
-        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &victim) == DLB_NOTED );
-        assert( victim == 0 );
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim) == DLB_NOTED );
+        assert( new_guest == -1 );
+        assert( victim == -1 );
 
         // Process 2 releases CPU 3
-        victim = 0;
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == p1_pid );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == p1_pid );
+
+        // Process 1 cannot reclaim CPU 3
+        assert( shmem_cpuinfo__reclaim_cpu(p1_pid, 3, &new_guest, &victim) == DLB_ERR_PERM );
 
         // Process 2 reclaims CPU 3
-        assert( shmem_cpuinfo__reclaim_cpu(p1_pid, 3, &victim) == DLB_ERR_PERM );
-        victim = 0;
-        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &new_guest, &victim) == DLB_NOTED );
+        assert( new_guest == p2_pid );
         assert( victim == p1_pid );
 
         // Process 1 returns CPU 3
-        victim = 0;
-        assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == p2_pid );
+        assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == p2_pid );
 
         // Process 2 releases CPU 3 again
-        victim = 0;
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == p1_pid );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == p1_pid );
 
         // Process 2 reclaims CPU 3 again
-        victim = 0;
-        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_NOTED );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &new_guest, &victim) == DLB_NOTED );
+        assert( new_guest == p2_pid );
         assert( victim == p1_pid );
 
         // Process 1 returns CPU 3 and removes petition
-        victim = 0;
-        assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == p2_pid );
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == p2_pid );
+        assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == p2_pid );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == -1 );
 
         // Process 2 releases CPU 3, checks no victim and reclaims
-        victim = 0;
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == 0 );
-        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest <= 0 );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p2_pid );
+        assert( victim == -1 );
     }
 
 
     /*** Late reply ***/
     {
         // Process 1 wants CPU 3
-        victim = 0;
-        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &victim) == DLB_NOTED );
-        assert( victim == 0 );
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim) == DLB_NOTED );
+        assert( new_guest == -1 );
+        assert( victim == -1 );
 
         // Process 1 no longer wants CPU 3
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest <= 0 );
 
         // Process 2 releases CPU 3
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest <= 0 );
 
         // Process 2 reclaims CPU 3
-        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &victim) == DLB_SUCCESS );
-        assert( victim == p2_pid );
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p2_pid );
+        assert( victim == -1 );
     }
 
     /*** Errors ***/
-    assert( shmem_cpuinfo__return_cpu(p1_pid, 3, NULL) == DLB_ERR_PERM );
+    assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guest) == DLB_ERR_PERM );
 
     // Finalize
     assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );

@@ -80,6 +80,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         case POLICY_LEWI_MASK:
             lb_funcs->init                   = lewi_mask_Init;
             lb_funcs->finalize               = lewi_mask_Finish;
+            lb_funcs->enable                 = lewi_mask_EnableDLB;
             lb_funcs->disable                = lewi_mask_DisableDLB;
             lb_funcs->into_blocking_call     = lewi_mask_IntoBlockingCall;
             lb_funcs->out_of_blocking_call   = lewi_mask_OutOfBlockingCall;

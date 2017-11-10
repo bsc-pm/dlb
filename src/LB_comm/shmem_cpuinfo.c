@@ -412,7 +412,7 @@ int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
  * If the process originally owns the CPU:      State => CPU_LENT
  * If the process is currently using the CPU:   Guest => NOBODY
  */
-static void lend_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+static void lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
     if (cpuinfo->owner == pid) {
@@ -429,17 +429,18 @@ static void lend_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
         update_cpu_stats(cpuid, STATS_IDLE);
     }
 
-    // If a new_pid is requested, find a new guest
-    if (new_pid && cpuinfo->guest == NOBODY) {
-        pid_t new_guest = find_new_guest(cpuinfo);
-        if (new_guest != NOBODY) {
-            *new_pid = new_guest;
-            cpuinfo->guest = new_guest;
+    // If the CPU is free, find a new guest
+    if (cpuinfo->guest == NOBODY) {
+        *new_guest = find_new_guest(cpuinfo);
+        if (*new_guest != NOBODY) {
+            cpuinfo->guest = *new_guest;
         }
+    } else {
+        *new_guest = -1;
     }
 }
 
-int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     int error = DLB_SUCCESS;
     //DLB_DEBUG( cpu_set_t freed_cpus; )
     //DLB_DEBUG( cpu_set_t idle_cpus; )
@@ -450,7 +451,7 @@ int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
 
     shmem_lock(shm_handler);
     {
-        lend_cpu(pid, cpuid, new_pid);
+        lend_cpu(pid, cpuid, new_guest);
 
         //// Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
         //int i;
@@ -473,7 +474,7 @@ int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
     return error;
 }
 
-int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids) {
+int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]) {
     int error = DLB_SUCCESS;
 
     //DLB_DEBUG( cpu_set_t freed_cpus; )
@@ -488,14 +489,15 @@ int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pi
         int cpuid;
         for (cpuid = 0; cpuid < node_size; ++cpuid) {
             if (CPU_ISSET(cpuid, mask)) {
-                pid_t *new_pid = (new_pids) ? &new_pids[cpuid] : NULL;
-                lend_cpu(pid, cpuid, new_pid);
+                lend_cpu(pid, cpuid, &new_guests[cpuid]);
 
             //// Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
             //if (is_idle(cpuid)) {
                 //DLB_INSTR( idle_count++; )
                 //DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
             //}
+            } else {
+                new_guests[cpuid] = -1;
             }
         }
     }
@@ -520,34 +522,37 @@ int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pi
  * CPUs that owner == ME:           State => CPU_BUSY
  * CPUs that guest == NOBODY        Guest => ME
  */
-static int reclaim_cpu(pid_t pid, int cpuid, pid_t *victim) {
+static int reclaim_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
     int error;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
     cpuinfo->state = CPU_BUSY;
     if (cpuinfo->guest == pid) {
+        *new_guest = -1;
+        *victim = -1;
         error = DLB_NOUPDT;
     }
     else if (cpuinfo->guest == NOBODY) {
         cpuinfo->guest = pid;
         update_cpu_stats(cpuid, STATS_OWNED);
-        if (victim) *victim = pid;
+        *new_guest = pid;
+        *victim = -1;
         error = DLB_SUCCESS;
     } else {
-        if (victim) *victim = cpuinfo->guest;
+        *new_guest = pid;
+        *victim = cpuinfo->guest;
         error = DLB_NOTED;
     }
     return error;
 }
 
-int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t *victimlist) {
+int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t new_guests[], pid_t victims[]) {
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (shdata->node_info[cpuid].owner == pid) {
-                // victimlist is mandatory in reclaim_all
-                int local_error = reclaim_cpu(pid, cpuid, &victimlist[cpuid]);
+                int local_error = reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
                 switch(local_error) {
                     case DLB_NOTED:
                         // max priority, always overwrite
@@ -561,6 +566,9 @@ int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t *victimlist) {
                         // lowest priority, default value
                         break;
                 }
+            } else {
+                new_guests[cpuid] = -1;
+                victims[cpuid] = -1;
             }
         }
     }
@@ -568,7 +576,7 @@ int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t *victimlist) {
     return error;
 }
 
-int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *victim) {
+int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
     int error;
     //DLB_DEBUG( cpu_set_t recovered_cpus; )
     //DLB_DEBUG( cpu_set_t idle_cpus; )
@@ -580,7 +588,7 @@ int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *victim) {
     shmem_lock(shm_handler);
     {
         if (shdata->node_info[cpuid].owner == pid) {
-            error = reclaim_cpu(pid, cpuid, victim);
+            error = reclaim_cpu(pid, cpuid, new_guest, victim);
             // if (!error) //DLB_DEBUG( CPU_SET(cpu, &recovered_cpus); )
         } else {
             error = DLB_ERR_PERM;
@@ -603,7 +611,7 @@ int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
+int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t new_guests[], pid_t victims[]) {
     int error = DLB_SUCCESS;
     //DLB_DEBUG( cpu_set_t idle_cpus; )
     //DLB_DEBUG( CPU_ZERO(&idle_cpus); )
@@ -612,23 +620,26 @@ int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
 
     //cpu_set_t recovered_cpus;
     //CPU_ZERO(&recovered_cpus);
-    //max_resources = (max_resources) ? max_resources : INT_MAX;
 
     shmem_lock(shm_handler);
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
             if (shdata->node_info[cpuid].owner == pid) {
-                // victimlist is mandatory in recover_cpus
-                reclaim_cpu(pid, cpuid, &victimlist[cpuid]);
+                reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
                 --ncpus;
-                // if (!error) //CPU_SET(cpuid, &recovered_cpus);
             }
             // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
             //if (is_idle(cpu)) {
                 //DLB_INSTR( idle_count++; )
                 //DLB_DEBUG( CPU_SET(cpu, &idle_cpus); )
             //}
+        }
+
+        /* Invalidate arguments out of ncpus */
+        for (; cpuid<node_size; ++cpuid) {
+            new_guests[cpuid] = -1;
+            victims[cpuid] = -1;
         }
     }
     shmem_unlock(shm_handler);
@@ -642,7 +653,8 @@ int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t *victimlist) {
     return error;
 }
 
-int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
+int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
+        pid_t victims[]) {
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
@@ -660,8 +672,8 @@ int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
         if (error != DLB_ERR_PERM) {
             for (cpuid=0; cpuid<node_size; ++cpuid) {
                 if (CPU_ISSET(cpuid, mask)) {
-                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                    int local_error = reclaim_cpu(pid, cpuid, victim);
+                    int local_error = reclaim_cpu(pid, cpuid, &new_guests[cpuid],
+                            &victims[cpuid]);
                     switch(local_error) {
                         case DLB_NOTED:
                             // max priority, always overwrite
@@ -675,6 +687,9 @@ int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
                             // lowest priority, default value
                             break;
                     }
+                } else {
+                    new_guests[cpuid] = -1;
+                    victims[cpuid] = -1;
                 }
             }
         }
@@ -691,33 +706,40 @@ int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
 /* Acquire CPU
  * If successful:       Guest => ME
  */
-static int acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
+static int acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
     int error;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
     if (cpuinfo->guest == pid) {
         // CPU already guested
+        *new_guest = -1;
+        *victim = -1;
         error = DLB_NOUPDT;
     } else if (cpuinfo->owner == pid) {
         // CPU is owned by the process
         cpuinfo->state = CPU_BUSY;
         if (cpuinfo->guest == NOBODY) {
             cpuinfo->guest = pid;
-            if (victim) *victim = pid;
+            *new_guest = pid;
+            *victim = -1;
             error = DLB_SUCCESS;
             update_cpu_stats(cpuid, STATS_OWNED);
         } else {
-            if (victim) *victim = cpuinfo->guest;
+            *new_guest = pid;
+            *victim = cpuinfo->guest;
             error = DLB_NOTED;
         }
     } else if (cpuinfo->state == CPU_LENT && cpuinfo->guest == NOBODY) {
         // CPU is available
         cpuinfo->guest = pid;
-        if (victim) *victim = pid;
+        *new_guest = pid;
+        *victim = -1;
         error = DLB_SUCCESS;
         update_cpu_stats(cpuid, STATS_GUESTED);
     } else if (cpuinfo->state != CPU_DISABLED) {
         // CPU is busy, or lent to another process
+        *new_guest = -1;
+        *victim = -1;
         error = push_cpu_request(&cpuinfo->requests, pid);
     } else {
         // CPU is disabled
@@ -727,11 +749,11 @@ static int acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
     return error;
 }
 
-int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
+int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
     int error;
     shmem_lock(shm_handler);
     {
-        error = acquire_cpu(pid, cpuid, victim);
+        error = acquire_cpu(pid, cpuid, new_guest, victim);
     }
     shmem_unlock(shm_handler);
     return error;
@@ -741,7 +763,16 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim) {
 static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
 
 int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t *victimlist) {
+        int ncpus, pid_t new_guests[], pid_t victims[]) {
+    /* Functions that iterate cpus_priority_array may not check every CPU,
+     * output arrays need to be properly initialized
+     */
+    int i;
+    for (i=0; i<node_size; ++i) {
+        new_guests[i] = -1;
+        victims[i] = -1;
+    }
+
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
@@ -750,12 +781,12 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
             remove_global_request(&shdata->global_requests, pid);
             error = DLB_SUCCESS;
         } else {
+
             /* Note: cpus_priority_array always have owned CPUs first so we split the
              * algorithm in two loops with different body for owned and non-owned CPUs
              */
 
             /* Acquire owned CPUs following the priority of cpus_priority_array */
-            int i;
             for (i=0; ncpus>0 && i<node_size; ++i) {
                 int cpuid = cpus_priority_array[i];
                 /* Break if cpu array does not contain more valid CPU ids */
@@ -763,8 +794,8 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
                 /* Go to next loop if cpu array does not contain owned CPUs */
                 if (shdata->node_info[cpuid].owner != pid) break;
 
-                pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                int local_error = acquire_cpu(pid, cpuid, victim);
+                int local_error = acquire_cpu(pid, cpuid,
+                        &new_guests[cpuid], &victims[cpuid]);
                 if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
                     --ncpus;
                     if (error != DLB_NOTED) error = local_error;
@@ -777,8 +808,7 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
                 /* Break if cpu array does not contain more valid CPU ids */
                 if (cpuid == -1) break;
 
-                pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                int local_error = borrow_cpu(pid, cpuid, victim);
+                int local_error = borrow_cpu(pid, cpuid, &new_guests[cpuid]);
                 if (local_error == DLB_SUCCESS) {
                     --ncpus;
                     if (error != DLB_NOTED) error = local_error;
@@ -796,18 +826,20 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
     return error;
 }
 
-int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
+int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
+        pid_t victims[]) {
     int error = DLB_SUCCESS;
     shmem_lock(shm_handler);
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, mask)) {
-                if (shdata->node_info[cpuid].guest != pid) {
-                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                    int local_error = acquire_cpu(pid, cpuid, victim);
-                    error = (error < 0) ? error : local_error;
-                }
+            if (CPU_ISSET(cpuid, mask) && shdata->node_info[cpuid].guest != pid) {
+                int local_error = acquire_cpu(pid, cpuid,
+                        &new_guests[cpuid], &victims[cpuid]);
+                error = (error < 0) ? error : local_error;
+            } else {
+                new_guests[cpuid] = -1;
+                victims[cpuid] = -1;
             }
         }
     }
@@ -820,7 +852,7 @@ int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vic
 /*  Borrow CPU                                                                   */
 /*********************************************************************************/
 
-static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
+static int borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     int error = DLB_NOUPDT;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
@@ -828,32 +860,39 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
         // CPU is owned by the process
         cpuinfo->state = CPU_BUSY;
         cpuinfo->guest = pid;
-        if (victim) *victim = pid;
+        *new_guest = pid;
         error = DLB_SUCCESS;
         update_cpu_stats(cpuid, STATS_OWNED);
     } else if (cpuinfo->state == CPU_LENT && cpuinfo->guest == NOBODY) {
         // CPU is available
         cpuinfo->guest = pid;
-        if (victim) *victim = pid;
+        *new_guest = pid;
         error = DLB_SUCCESS;
         update_cpu_stats(cpuid, STATS_GUESTED);
+    } else {
+        *new_guest = -1;
     }
 
     return error;
 }
 
 int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
-        pid_t *victimlist) {
+        pid_t new_guests[]) {
+    /* Functions that iterate cpus_priority_array may not check every CPU,
+     * output arrays need to be properly initialized
+     */
+    int i;
+    for (i=0; i<node_size; ++i) {
+        new_guests[i] = -1;
+    }
 
     bool one_sucess = false;
     shmem_lock(shm_handler);
     {
-        int i;
         for (i=0; i<node_size; ++i) {
             int cpuid = cpus_priority_array[i];
             if (cpuid == -1) break;
-            pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-            if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+            if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
                 one_sucess = true;
             }
         }
@@ -873,8 +912,7 @@ int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority
             mu_get_parents_inside_cpuset(&free_sockets, &free_mask);
             for (cpuid=0; cpuid<node_size; ++cpuid) {
                 if (CPU_ISSET(cpuid, &free_sockets)) {
-                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                    if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+                    if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
                         one_sucess = true;
                     }
                 }
@@ -897,20 +935,28 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
 }
 
 int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t *victimlist) {
+        int ncpus, pid_t new_guests[]) {
+    /* Functions that iterate cpus_priority_array may not check every CPU,
+     * output arrays need to be properly initialized
+     */
+    int i;
+    for (i=0; i<node_size; ++i) {
+        new_guests[i] = -1;
+    }
+
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
         /* Borrow CPUs following the priority of cpus_priority_array, */
-        int i;
         for (i=0; ncpus>0 && i<node_size; ++i) {
             int cpuid = cpus_priority_array[i];
             if (cpuid == -1) break;
-            pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-            if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
+            if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
                 --ncpus;
+                error = DLB_SUCCESS;
             }
         }
+
 
         /* Only in case --priority=affinity_full, the CPU candidates cannot
          * be precomputed since it depends on the current state of each CPU
@@ -930,9 +976,8 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
             mu_get_parents_inside_cpuset(&free_sockets, &free_mask);
             for (cpuid=0; ncpus>0 && cpuid<node_size; ++cpuid) {
                 if (CPU_ISSET(cpuid, &free_sockets)) {
-                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                    if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
-                        --ncpus;
+                    if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
+                        error = DLB_SUCCESS;
                     }
                 }
             }
@@ -940,22 +985,21 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
     }
     shmem_unlock(shm_handler);
 
-    return (ncpus == 0) ? DLB_SUCCESS : error;
+    return error;
 }
 
-int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist) {
+int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]) {
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, mask)) {
-                if (shdata->node_info[cpuid].guest != pid) {
-                    pid_t *victim = (victimlist) ? &victimlist[cpuid] : NULL;
-                    if (borrow_cpu(pid, cpuid, victim) == DLB_SUCCESS) {
-                        error = DLB_SUCCESS;
-                    }
+            if (CPU_ISSET(cpuid, mask) && shdata->node_info[cpuid].guest != pid) {
+                if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
+                    error = DLB_SUCCESS;
                 }
+            } else {
+                new_guests[cpuid] = -1;
             }
         }
     }
@@ -971,37 +1015,26 @@ int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *vict
 /* Return CPU
  * Abandon CPU given that state == BUSY, owner != pid, guest == pid
  */
-static int return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+static int return_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
     // Return CPU
     cpuinfo->guest = NOBODY;
     update_cpu_stats(cpuid, STATS_IDLE);
 
-    // If a new_pid is requested, find a new guest
-    if (new_pid) {
-        pid_t new_guest = find_new_guest(cpuinfo);
-        if (new_guest != NOBODY) {
-            *new_pid = new_guest;
-            cpuinfo->guest = new_guest;
-        }
+    // Find a new guest
+    *new_guest = find_new_guest(cpuinfo);
+    if (*new_guest != NOBODY) {
+        cpuinfo->guest = *new_guest;
     }
 
     // Add another CPU request
     int error = push_cpu_request(&cpuinfo->requests, pid);
 
-    /* FIXME: return DLB_SUCCESS in order to not break API. An alternative
-     * could be to return DLB_NOTED here (as current process is doing a
-     * request) and DLB_SUCCESS if the CPU is not claimed anymore by the time
-     * ReturnCpu is called
-     */
-    if (error == DLB_NOTED)
-        error = DLB_SUCCESS;
-
-    return error;
+    return error < 0 ? error : DLB_SUCCESS;
 }
 
-int shmem_cpuinfo__return_all(pid_t pid, pid_t *new_pids) {
+int shmem_cpuinfo__return_all(pid_t pid, pid_t new_guests[]) {
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
@@ -1011,9 +1044,10 @@ int shmem_cpuinfo__return_all(pid_t pid, pid_t *new_pids) {
             if (cpuinfo->state == CPU_BUSY
                     && cpuinfo->owner != pid
                     && cpuinfo->guest == pid) {
-                pid_t *new_pid = (new_pids) ? &new_pids[cpuid] : NULL;
-                int local_error = return_cpu(pid, cpuid, new_pid);
+                int local_error = return_cpu(pid, cpuid, &new_guests[cpuid]);
                 error = (error < 0) ? error : local_error;
+            } else {
+                new_guests[cpuid] = -1;
             }
         }
     }
@@ -1021,7 +1055,7 @@ int shmem_cpuinfo__return_all(pid_t pid, pid_t *new_pids) {
     return error;
 }
 
-int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
+int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     int error;
     shmem_lock(shm_handler);
     {
@@ -1031,28 +1065,28 @@ int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid) {
         } else if (cpuinfo->guest != pid) {
             error = DLB_ERR_PERM;
         } else {
-            error = return_cpu(pid, cpuid, new_pid);
+            error = return_cpu(pid, cpuid, new_guest);
         }
     }
     shmem_unlock(shm_handler);
     return error;
 }
 
-int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids) {
+int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]) {
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, mask)) {
-                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-                if (cpuinfo->state == CPU_BUSY
-                        && cpuinfo->owner != pid
-                        && cpuinfo->guest == pid) {
-                    pid_t *new_pid = (new_pids) ? &new_pids[cpuid] : NULL;
-                    int local_error = return_cpu(pid, cpuid, new_pid);
-                    error = (error < 0) ? error : local_error;
-                }
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (CPU_ISSET(cpuid, mask)
+                    && cpuinfo->state == CPU_BUSY
+                    && cpuinfo->owner != pid
+                    && cpuinfo->guest == pid) {
+                int local_error = return_cpu(pid, cpuid, &new_guests[cpuid]);
+                error = (error < 0) ? error : local_error;
+            } else {
+                new_guests[cpuid] = -1;
             }
         }
     }
@@ -1065,21 +1099,25 @@ int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_
 /*                                                                               */
 /*********************************************************************************/
 
-void shmem_cpuinfo__reset(pid_t pid) {
-    /* int error = DLB_NOUPDT; */
+int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]) {
+    int error = DLB_SUCCESS;
     shmem_lock(shm_handler);
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
             if (cpuinfo->owner == pid) {
-                acquire_cpu(pid, cpuid, NULL);
+                int local_error = acquire_cpu(pid, cpuid,
+                        &new_guests[cpuid], &victims[cpuid]);
+                error = (local_error < 0) ? local_error : DLB_SUCCESS;
             } else {
-                lend_cpu(pid, cpuid, NULL);
+                lend_cpu(pid, cpuid, &new_guests[cpuid]);
+                victims[cpuid] = -1;
             }
         }
     }
     shmem_unlock(shm_handler);
+    return error;
 }
 
 /* Update CPU ownership according to the new process mask.

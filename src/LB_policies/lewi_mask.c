@@ -42,23 +42,39 @@ int lewi_mask_Finish(const subprocess_descriptor_t *spd) {
     return (error >= 0) ? DLB_SUCCESS : error;
 }
 
-int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
-    shmem_cpuinfo__reset(spd->id);
-    set_mask(&spd->pm, &spd->process_mask);
+int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-
-/* Keep active_mask updated?
- *  Update it requires:
- *      spd->lock
- *      spd passed as non-const
- *      info replicated
- *  If it wasn't updated:
- *      spd lock not needed?
- *      IntoBlocking and OutOfBlocking should trust the mask to the shmem
- *
- */
+int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
+    pid_t new_guests[node_size];
+    pid_t victims[node_size];
+    int error = shmem_cpuinfo__reset(spd->id, new_guests, victims);
+    if (error == DLB_SUCCESS) {
+        bool async = spd->options.mode == MODE_ASYNC;
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            pid_t new_guest = new_guests[cpuid];
+            pid_t victim = victims[cpuid];
+            if (async) {
+                if (victim > 0) {
+                    shmem_async_disable_cpu(victim, cpuid);
+                } else if (new_guest == spd->id) {
+                    shmem_async_enable_cpu(spd->id, cpuid);
+                } else if (new_guest >= 0) {
+                    shmem_async_disable_cpu(spd->id, cpuid);
+                }
+            } else {
+                if (new_guest == spd->id) {
+                    enable_cpu(&spd->pm, cpuid);
+                } else if (new_guest >= 0) {
+                    disable_cpu(&spd->pm, cpuid);
+                }
+            }
+        }
+    }
+    return error;
+}
 
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
@@ -90,31 +106,26 @@ int lewi_mask_Lend(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    /* lock spd? */
-    pid_t new_pid = 0;
-    bool async = spd->options.mode == MODE_ASYNC;
-    int error = shmem_cpuinfo__lend_cpu(spd->id, cpuid, async ? &new_pid : NULL);
+    pid_t new_guest;
+    int error = shmem_cpuinfo__lend_cpu(spd->id, cpuid, &new_guest);
     if (error == DLB_SUCCESS) {
-        //CPU_CLR(cpuid, &spd->active_mask);
-        if (async && new_pid) {
-            shmem_async_enable_cpu(new_pid, cpuid);
+        if (spd->options.mode == MODE_ASYNC && new_guest > 0) {
+            shmem_async_enable_cpu(new_guest, cpuid);
         }
     }
     return error;
 }
 
 int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *new_pids = async ? calloc(node_size, sizeof(pid_t)) : NULL;
-    int error = shmem_cpuinfo__lend_cpu_mask(spd->id, mask, new_pids);
+    pid_t new_guests[node_size];
+    int error = shmem_cpuinfo__lend_cpu_mask(spd->id, mask, new_guests);
     if (error == DLB_SUCCESS) {
-        //mu_substract(&spd->active_mask, &spd->active_mask, mask);
-        if (async) {
+        if (spd->options.mode == MODE_ASYNC) {
             int cpuid;
             for (cpuid=0; cpuid<node_size; ++cpuid) {
-                pid_t new_pid = new_pids[cpuid];
-                if (new_pid) {
-                    shmem_async_enable_cpu(new_pid, cpuid);
+                pid_t new_guest = new_guests[cpuid];
+                if (new_guest > 0) {
+                    shmem_async_enable_cpu(new_guest, cpuid);
                 }
             }
         }
@@ -128,98 +139,112 @@ int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *m
 /*********************************************************************************/
 
 int lewi_mask_Reclaim(const subprocess_descriptor_t *spd) {
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__reclaim_all(spd->id, victimlist);
+    pid_t new_guests[node_size];
+    pid_t victims[node_size];
+    int error = shmem_cpuinfo__reclaim_all(spd->id, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
+            pid_t new_guest = new_guests[cpuid];
+            pid_t victim = victims[cpuid];
             if (async) {
-                if (victim == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (victim != 0) {
+                if (victim > 0) {
+                    /* If the CPU is guested, just disable visitor */
                     shmem_async_disable_cpu(victim, cpuid);
+                } else if (new_guest == spd->id) {
+                    /* Only enable if the CPU is free */
+                    shmem_async_enable_cpu(new_guest, cpuid);
                 }
             } else {
-                if (victim == spd->id) {
+                if (new_guest == spd->id) {
+                    /* Oversubscribe even if the CPU is guested */
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
 int lewi_mask_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t victim = 0;
-    bool async = spd->options.mode == MODE_ASYNC;
-    int error = shmem_cpuinfo__reclaim_cpu(spd->id, cpuid, &victim);
-    if (error == DLB_SUCCESS) {
-        if (async) {
-            shmem_async_enable_cpu(spd->id, cpuid);
+    pid_t new_guest;
+    pid_t victim;
+    int error = shmem_cpuinfo__reclaim_cpu(spd->id, cpuid, &new_guest, &victim);
+    if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        if (spd->options.mode == MODE_ASYNC) {
+            if (victim > 0) {
+                /* If the CPU is guested, just disable visitor */
+                shmem_async_disable_cpu(victim, cpuid);
+            } else if (new_guest == spd->id) {
+                /* Only enable if the CPU is free */
+                shmem_async_enable_cpu(new_guest, cpuid);
+            }
         } else {
-            enable_cpu(&spd->pm, cpuid);
-        }
-    }
-    if (error == DLB_NOTED) {
-        if (async) {
-            shmem_async_disable_cpu(victim, cpuid);
+            if (new_guest == spd->id) {
+                /* Oversubscribe even if the CPU is guested */
+                enable_cpu(&spd->pm, cpuid);
+            }
         }
     }
     return error;
 }
 
 int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__reclaim_cpus(spd->id, ncpus, victimlist);
+    pid_t new_guests[node_size];
+    pid_t victims[node_size];
+    int error = shmem_cpuinfo__reclaim_cpus(spd->id, ncpus, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
+            pid_t new_guest = new_guests[cpuid];
+            pid_t victim = victims[cpuid];
             if (async) {
-                if (victim == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (victim != 0) {
+                if (victim > 0) {
+                    /* If the CPU is guested, just disable visitor */
                     shmem_async_disable_cpu(victim, cpuid);
+                } else if (new_guest == spd->id) {
+                    /* Only enable if the CPU is free */
+                    shmem_async_enable_cpu(new_guest, cpuid);
                 }
             } else {
-                /* See note about oversubscription in lewi_mask_AcquireCpu */
-                if (victim > 0) {
+                if (new_guest == spd->id) {
+                    /* Oversubscribe even if the CPU is guested */
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
 int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__reclaim_cpu_mask(spd->id, mask, victimlist);
+    pid_t new_guests[node_size];
+    pid_t victims[node_size];
+    int error = shmem_cpuinfo__reclaim_cpu_mask(spd->id, mask, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
+            pid_t new_guest = new_guests[cpuid];
+            pid_t victim = victims[cpuid];
             if (async) {
-                if (victim == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (victim != 0) {
+                if (victim > 0) {
+                    /* If the CPU is guested, just disable visitor */
                     shmem_async_disable_cpu(victim, cpuid);
+                } else if (new_guest == spd->id) {
+                    /* Only enable if the CPU is free */
+                    shmem_async_enable_cpu(new_guest, cpuid);
                 }
             } else {
-                /* See note about oversubscription in lewi_mask_AcquireCpu */
-                if (victim > 0) {
+                if (new_guest == spd->id) {
+                    /* Oversubscribe even if the CPU is guested */
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
@@ -229,74 +254,85 @@ int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 /*********************************************************************************/
 
 int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t victim = 0;
-    bool async = spd->options.mode == MODE_ASYNC;
-    int error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &victim);
-    if (!async && error >= 0 ) {
-        // In polling mode, enable CPU even if that causes oversubscription (DLB_NOTED err)
-        // The acquired CPU **may** prevent CPU sharing by polling checkCPUAvailability,
-        // but it's entirely decided by the caller runtime
-        enable_cpu(&spd->pm, cpuid);
-    } else if (async) {
-        if (error == DLB_SUCCESS) {
-            shmem_async_enable_cpu(spd->id, cpuid);
-        } else if (error == DLB_NOTED) {
-            shmem_async_disable_cpu(victim, cpuid);
+    pid_t new_guest;
+    pid_t victim;
+    int error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &new_guest, &victim);
+    if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        if (spd->options.mode == MODE_ASYNC) {
+            if (victim > 0) {
+                /* If the CPU is guested, just disable visitor */
+                shmem_async_disable_cpu(victim, cpuid);
+            } else if (new_guest == spd->id) {
+                /* Only enable if the CPU is free */
+                shmem_async_enable_cpu(new_guest, cpuid);
+            }
+        } else {
+            if (new_guest == spd->id) {
+                /* Oversubscribe even if the CPU is guested */
+                warning("Enabling cpu %d", cpuid);
+                enable_cpu(&spd->pm, cpuid);
+            }
         }
     }
     return error;
 }
 
 int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
+    pid_t new_guests[node_size];
+    pid_t victims[node_size];
     int error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.lewi_affinity,
-            spd->cpus_priority_array, ncpus, victimlist);
+            spd->cpus_priority_array, ncpus, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
+            pid_t new_guest = new_guests[cpuid];
+            pid_t victim = victims[cpuid];
             if (async) {
-                if (victim == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (victim != 0) {
+                if (victim > 0) {
+                    /* If the CPU is guested, just disable visitor */
                     shmem_async_disable_cpu(victim, cpuid);
+                } else if (new_guest == spd->id) {
+                    /* Only enable if the CPU is free */
+                    shmem_async_enable_cpu(new_guest, cpuid);
                 }
             } else {
-                /* See note about oversubscription in lewi_mask_AcquireCpu */
-                if (victim > 0) {
+                if (new_guest == spd->id) {
+                    /* Oversubscribe even if the CPU is guested */
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
 int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__acquire_cpu_mask(spd->id, mask, victimlist);
+    pid_t new_guests[node_size];
+    pid_t victims[node_size];
+    int error = shmem_cpuinfo__acquire_cpu_mask(spd->id, mask, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
+            pid_t new_guest = new_guests[cpuid];
+            pid_t victim = victims[cpuid];
             if (async) {
-                if (victim == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (victim != 0) {
+                if (victim > 0) {
+                    /* If the CPU is guested, just disable visitor */
                     shmem_async_disable_cpu(victim, cpuid);
+                } else if (new_guest == spd->id) {
+                    /* Only enable if the CPU is free */
+                    shmem_async_enable_cpu(new_guest, cpuid);
                 }
             } else {
-                /* See note about oversubscription in lewi_mask_AcquireCpu */
-                if (victim > 0) {
+                if (new_guest == spd->id) {
+                    /* Oversubscribe even if the CPU is guested */
                     enable_cpu(&spd->pm, cpuid);
                 }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
@@ -306,63 +342,76 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 /*********************************************************************************/
 
 int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
+    pid_t new_guests[node_size];
     int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.lewi_affinity,
-            spd->cpus_priority_array, victimlist);
+            spd->cpus_priority_array, new_guests);
     if (error == DLB_SUCCESS) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
-            if (victim == spd->id) {
-                enable_cpu(&spd->pm, cpuid);
+            if (new_guests[cpuid] == spd->id) {
+                if (async) {
+                    shmem_async_enable_cpu(spd->id, cpuid);
+                } else {
+                    enable_cpu(&spd->pm, cpuid);
+                }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
 int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t victim = 0;
-    int error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &victim);
-    // ignore victim? if error == DLB_SUCCESS victim should always be == pid
+    pid_t new_guest;
+    int error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &new_guest);
     if (error == DLB_SUCCESS) {
-        enable_cpu(&spd->pm, cpuid);
+        if (new_guest == spd->id) {
+            if (spd->options.mode == MODE_ASYNC) {
+                shmem_async_enable_cpu(spd->id, cpuid);
+            } else {
+                enable_cpu(&spd->pm, cpuid);
+            }
+        }
     }
     return error;
 }
 
 int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
+    pid_t new_guests[node_size];
     int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.lewi_affinity,
-            spd->cpus_priority_array, ncpus, victimlist);
-    /* FIXME: success only if ncpus == 0 ??? */
+            spd->cpus_priority_array, ncpus, new_guests);
     if (error == DLB_SUCCESS) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
-            if (victim == spd->id) {
-                enable_cpu(&spd->pm, cpuid);
+            if (new_guests[cpuid] == spd->id) {
+                if (async) {
+                    shmem_async_enable_cpu(spd->id, cpuid);
+                } else {
+                    enable_cpu(&spd->pm, cpuid);
+                }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
 int lewi_mask_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    pid_t *victimlist = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__borrow_cpu_mask(spd->id, mask, victimlist);
+    pid_t new_guests[node_size];
+    int error = shmem_cpuinfo__borrow_cpu_mask(spd->id, mask, new_guests);
     if (error == DLB_SUCCESS) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t victim = victimlist[cpuid];
-            if (victim == spd->id) {
-                enable_cpu(&spd->pm, cpuid);
+            if (new_guests[cpuid] == spd->id) {
+                if (async) {
+                    shmem_async_enable_cpu(spd->id, cpuid);
+                } else {
+                    enable_cpu(&spd->pm, cpuid);
+                }
             }
         }
     }
-    free(victimlist);
     return error;
 }
 
@@ -377,47 +426,51 @@ int lewi_mask_Return(const subprocess_descriptor_t *spd) {
         return DLB_ERR_NOCOMP;
     }
 
-    pid_t *new_pids = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__return_all(spd->id, new_pids);
+    pid_t new_guests[node_size];
+    int error = shmem_cpuinfo__return_all(spd->id, new_guests);
     if (error == DLB_SUCCESS) {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (new_pids[cpuid] != 0) {
+            pid_t new_guest = new_guests[cpuid];
+            if (new_guest >= 0 && new_guest != spd->id) {
                 disable_cpu(&spd->pm, cpuid);
             }
         }
     }
-    free(new_pids);
     return error;
 }
 
 int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t new_pid = 0;
-    bool async = spd->options.mode == MODE_ASYNC;
-    int error = shmem_cpuinfo__return_cpu(spd->id, cpuid, &new_pid);
+    pid_t new_guest;
+    int error = shmem_cpuinfo__return_cpu(spd->id, cpuid, &new_guest);
     if (error == DLB_SUCCESS) {
-        //CPU_CLR(cpuid, &spd->active_mask);
-        if (async) {
-            shmem_async_enable_cpu(new_pid, cpuid);
+        if (spd->options.mode == MODE_ASYNC) {
+            if (new_guest > 0) {
+                shmem_async_enable_cpu(new_guest, cpuid);
+            }
         } else {
-            disable_cpu(&spd->pm, cpuid);
+            if (new_guest >= 0 && new_guest != spd->id) {
+                disable_cpu(&spd->pm, cpuid);
+            }
         }
     }
     return error;
 }
 
 int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    bool async = spd->options.mode == MODE_ASYNC;
-    pid_t *new_pids = calloc(node_size, sizeof(pid_t));
-    int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, new_pids);
+    pid_t new_guests[node_size];
+    int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, new_guests);
     if (error == DLB_SUCCESS) {
+        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_pid = new_pids[cpuid];
-            if (new_pid != 0) {
-                if (async) {
-                    shmem_async_enable_cpu(new_pid, cpuid);
-                } else {
+            pid_t new_guest = new_guests[cpuid];
+            if (async) {
+                if (new_guest > 0) {
+                    shmem_async_enable_cpu(new_guest, cpuid);
+                }
+            } else {
+                if (new_guest >= 0 && new_guest != spd->id) {
                     disable_cpu(&spd->pm, cpuid);
                 }
             }

@@ -37,36 +37,38 @@ int shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__postfinalize(pid_t pid);
 
 /* Lend */
-int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_pid);
-int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids);
+int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_guest);
+int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
 
 /* Reclaim */
-int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t *victimlist);
-int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *victim);
-int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t *victimlist);
-int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
+int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t new_guests[], pid_t victims[]);
+int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim);
+int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t new_guests[], pid_t victims[]);
+int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
+        pid_t victims[]);
 
 /* Acquire */
-int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *victim);
+int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim);
 int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t *victimlist);
-int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
+        int ncpus, pid_t new_guests[], pid_t victims[]);
+int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
+        pid_t victims[]);
 
 /* Borrow */
 int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
-        pid_t *victimlist);
-int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
+        pid_t new_guests[]);
+int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest);
 int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t *victimlist);
-int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *victimlist);
+        int ncpus, pid_t new_guests[]);
+int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
 
 /* Return */
-int shmem_cpuinfo__return_all(pid_t pid, pid_t *new_pids);
-int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_pid);
-int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t *new_pids);
+int shmem_cpuinfo__return_all(pid_t pid, pid_t new_guests[]);
+int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_guest);
+int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
 
 /* Others */
-void shmem_cpuinfo__reset(pid_t pid);
+int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
 bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpu);

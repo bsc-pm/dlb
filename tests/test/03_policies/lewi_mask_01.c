@@ -138,9 +138,10 @@ int main( int argc, char **argv ) {
         CPU_CLR(3, &sp2_mask);
         assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
 
-        // Subprocess 1 needs to poll
+        // Subprocess 1 may need to poll and explicitly enable CPU 3 */
         if (mode == MODE_POLLING) {
-            assert( lewi_mask_AcquireCpu(&spd1, 3) == DLB_SUCCESS );
+            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 3) );
+            sp1_cb_enable_cpu(3);
         }
 
         // Poll a certain number of times until mask1 contains CPU 3
@@ -237,6 +238,8 @@ int main( int argc, char **argv ) {
 
         // Subprocess 2 returns CPU 1 (async returns by callback)
         if (mode == MODE_POLLING) {
+            assert( CPU_ISSET(1, &sp2_mask) );
+            CPU_CLR(1, &sp2_mask);
             assert( lewi_mask_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
         }
 
@@ -244,6 +247,28 @@ int main( int argc, char **argv ) {
         if (mode == MODE_POLLING) {
             assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 1) );
         }
+
+        // Subprocess 2 no longer wants external CPUs
+        assert( lewi_mask_AcquireCpus(&spd2, 0) == DLB_SUCCESS );   /* general queue */
+        assert( lewi_mask_LendCpu(&spd2, 1) == DLB_SUCCESS );       /* CPU queue */
+    }
+
+    /* Reset test */
+    {
+        // Subprocess 2 lends CPU 3
+        CPU_CLR(3, &sp2_mask);
+        assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
+
+        // Subprocess 1 acquires one CPU
+        assert( lewi_mask_AcquireCpus(&spd1, 1) == DLB_SUCCESS );
+        assert_loop( CPU_ISSET(3, &sp1_mask) && CPU_COUNT(&sp1_mask) == 3 );
+
+        // Subprocess 1 decides to shut down CPU 1 without notifying DLB
+        CPU_CLR(1, &sp1_mask);
+
+        // Subprocess 1 resets. CPU 1 should not be re-enabled
+        assert( lewi_mask_DisableDLB(&spd1) == DLB_SUCCESS );
+        assert_loop( CPU_ISSET(0, &sp1_mask) && CPU_COUNT(&sp1_mask) == 1 );
     }
 
     // Policy finalize
