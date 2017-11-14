@@ -1225,17 +1225,22 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
 }
 
 bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpuid) {
-    // If the CPU is free, assign it to myself
-    if (shdata->node_info[cpuid].guest == NOBODY) {
+    cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+
+    if (cpuinfo->owner != pid && cpuinfo->state == CPU_BUSY) {
+        // The CPU is busy or reclaimed
+        return false;
+    } else if (cpuinfo->guest == NOBODY) {
+        // Double check that the CPU is empty
         shmem_lock(shm_handler);
-        if (shdata->node_info[cpuid].guest == NOBODY) {
-            shdata->node_info[cpuid].guest = pid;
+        if (cpuinfo->guest == NOBODY) {
+            cpuinfo->guest = pid;
             update_cpu_stats(cpuid, STATS_OWNED);
         }
         shmem_unlock(shm_handler);
     }
 
-    return shdata->node_info[cpuid].guest == pid;
+    return cpuinfo->guest == pid;
 }
 
 bool shmem_cpuinfo__exists(void) {
