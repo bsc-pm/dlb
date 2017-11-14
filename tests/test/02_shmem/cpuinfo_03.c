@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator"
+    test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
 #include "assert_noshm.h"
@@ -27,6 +27,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
+#include "support/options.h"
 
 #include <sched.h>
 #include <sys/types.h>
@@ -66,10 +67,20 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__init(p2_pid, &p1_mask, NULL) == DLB_ERR_PERM );
     assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
 
+    // Initialize options and enable queues if needed
+    options_t options;
+    options_init(&options, NULL);
+    bool async = options.mode == MODE_ASYNC;
+    if (async) {
+        shmem_cpuinfo__enable_request_queues();
+    }
+
     // Setup dummy priority CPUs
     int cpus_priority_array[ncpus];
     int i;
     for (i=0; i<ncpus; ++i) cpus_priority_array[i] = i;
+
+    int err;
 
     /*** BorrowCpus test ***/
     {
@@ -106,15 +117,25 @@ int main( int argc, char **argv ) {
         assert( new_guests[0] <= 0 );
 
         // Process 1 wants to ACQUIRE 2 CPUs
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    2, new_guests, victims) == DLB_NOTED );
+        err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
+                    2, new_guests, victims);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
         // Process 2 releases CPU 2
         assert( shmem_cpuinfo__lend_cpu(p2_pid, 2, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == p1_pid );
+        assert( async ? new_guests[0] == p1_pid : new_guests[0] == 0 );
+
+        // If polling, process 1 needs to ask again for the last CPU
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
+                        1, new_guests, victims) == DLB_SUCCESS );
+            assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[3] == -1 );
+            assert( new_guests[2] == p1_pid );
+            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        }
 
         // Process 2 reclaims all
         assert( shmem_cpuinfo__reclaim_all(p2_pid, new_guests, victims) == DLB_NOTED );
@@ -137,8 +158,9 @@ int main( int argc, char **argv ) {
         assert( new_guests[0] <= 0 );
 
         // Process 1 wants to ACQUIRE 2 CPUs
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    2, new_guests, victims) == DLB_NOTED );
+        err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
+                    2, new_guests, victims);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }

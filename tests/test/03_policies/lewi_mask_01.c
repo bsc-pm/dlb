@@ -32,6 +32,7 @@
 #include "LB_comm/shmem_async.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/mask_utils.h"
+#include "support/debug.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -89,6 +90,7 @@ int main( int argc, char **argv ) {
     // Subprocess 1 init
     spd1.id = 111;
     options_init(&spd1.options, NULL);
+    debug_init(&spd1.options);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, NULL) == DLB_SUCCESS);
     assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, NULL) == DLB_SUCCESS);
@@ -129,19 +131,21 @@ int main( int argc, char **argv ) {
         assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask, NULL) == DLB_SUCCESS );
     }
 
+    int err;
+
     /* Cpu tests */
     {
         // Subprocess 1 wants to acquire CPU 3
-        assert( lewi_mask_AcquireCpu(&spd1, 3) == DLB_NOTED );
+        err = lewi_mask_AcquireCpu(&spd1, 3);
+        assert( mode == MODE_ASYNC ? err == DLB_NOTED : err == DLB_NOUPDT );
 
         // Subprocess 2 no longer needs CPU 3
         CPU_CLR(3, &sp2_mask);
         assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
 
-        // Subprocess 1 may need to poll and explicitly enable CPU 3 */
+        // Subprocess 1 may need to poll again */
         if (mode == MODE_POLLING) {
-            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 3) );
-            sp1_cb_enable_cpu(3);
+            assert( lewi_mask_AcquireCpu(&spd1, 3) == DLB_SUCCESS );
         }
 
         // Poll a certain number of times until mask1 contains CPU 3
@@ -152,9 +156,9 @@ int main( int argc, char **argv ) {
 
         // Subprocesses 1 and 2 need to poll
         if (mode == MODE_POLLING) {
+            assert( lewi_mask_CheckCpuAvailability(&spd2, 3) == false );
             assert( lewi_mask_ReturnCpu(&spd1, 3) == DLB_SUCCESS );
-            int err = lewi_mask_AcquireCpu(&spd2, 3);
-            assert( err == DLB_SUCCESS || err == DLB_NOUPDT );
+            assert( lewi_mask_CheckCpuAvailability(&spd2, 3) == true );
         }
 
         // Poll a certain number of times until mask2 contains CPU 3, and mask1 doesn't
@@ -173,9 +177,9 @@ int main( int argc, char **argv ) {
 
         // Subprocesses 1 & 2 needs to poll
         if (mode == MODE_POLLING) {
+            assert( lewi_mask_CheckCpuAvailability(&spd1, 1) == false );
             assert( lewi_mask_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
-            int err = lewi_mask_AcquireCpu(&spd1, 1);
-            assert( err == DLB_SUCCESS || err == DLB_NOUPDT );
+            assert( lewi_mask_CheckCpuAvailability(&spd1, 1) == true );
         }
         assert_loop( CPU_ISSET(1, &sp1_mask) );
         assert( !CPU_ISSET(1, &sp2_mask) );
@@ -230,7 +234,8 @@ int main( int argc, char **argv ) {
         assert_loop( CPU_ISSET(1, &sp2_mask) );
 
         // Subprocess 2 acquires one CPU again
-        assert( lewi_mask_AcquireCpus(&spd2, 1) == DLB_NOTED );
+        err = lewi_mask_AcquireCpus(&spd2, 1);
+        assert( mode == MODE_ASYNC ? err == DLB_NOTED : err == DLB_NOUPDT );
 
         // Subprocess 1 acquires 1 CPU, it should reclaim CPU 1
         assert( lewi_mask_AcquireCpus(&spd1, 1) == DLB_NOTED );
@@ -243,7 +248,7 @@ int main( int argc, char **argv ) {
             assert( lewi_mask_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
         }
 
-        // Subprocesses 1 needs to poll to set guest field
+        // Subprocess 1 needs to poll to set guest field
         if (mode == MODE_POLLING) {
             assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 1) );
         }

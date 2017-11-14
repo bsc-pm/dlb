@@ -34,6 +34,9 @@ static int node_size;
 
 int lewi_mask_Init(const subprocess_descriptor_t *spd) {
     node_size = mu_get_system_size();
+    if (spd->options.mode == MODE_ASYNC) {
+        shmem_cpuinfo__enable_request_queues();
+    }
     return DLB_SUCCESS;
 }
 

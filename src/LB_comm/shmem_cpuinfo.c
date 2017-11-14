@@ -53,9 +53,12 @@ typedef struct {
     process_request_t queue[GLOBAL_QUEUE_SIZE];
     unsigned int      head;
     unsigned int      tail;
+    bool              enabled;
 } global_request_t;
 
 static void remove_global_request(global_request_t *queue, pid_t pid) {
+    if (!queue->enabled) return;
+
     unsigned int i;
     for (i=queue->tail; i!=queue->head; i=(i+1)%GLOBAL_QUEUE_SIZE) {
         if (queue->queue[i].pid == pid) {
@@ -66,6 +69,8 @@ static void remove_global_request(global_request_t *queue, pid_t pid) {
 }
 
 static int push_global_request(global_request_t *queue, pid_t applicant, unsigned int howmany) {
+    if (!queue->enabled) return DLB_NOUPDT;
+
     if (howmany == 0) {
         remove_global_request(queue, applicant);
         return DLB_SUCCESS;
@@ -82,6 +87,8 @@ static int push_global_request(global_request_t *queue, pid_t applicant, unsigne
 
 static void pop_global_request(global_request_t *queue, pid_t *new_guest) {
     *new_guest = NOBODY;
+    if (!queue->enabled) return;
+
     while(queue->head != queue->tail && *new_guest == NOBODY) {
         process_request_t *request = &queue->queue[queue->tail];
         if (request->pid != NOBODY && request->howmany > 0) {
@@ -104,9 +111,12 @@ typedef struct {
     pid_t        queue[CPU_QUEUE_SIZE];
     unsigned int head;
     unsigned int tail;
+    bool         enabled;
 } cpu_request_t;
 
 static void remove_cpu_request(cpu_request_t *queue, pid_t pid) {
+    if (!queue->enabled) return;
+
     unsigned int i;
     for (i=queue->tail; i!=queue->head; i=(i+1)%CPU_QUEUE_SIZE) {
         if (queue->queue[i] == pid) {
@@ -116,6 +126,8 @@ static void remove_cpu_request(cpu_request_t *queue, pid_t pid) {
 }
 
 static int push_cpu_request(cpu_request_t *queue, pid_t applicant) {
+    if (!queue->enabled) return DLB_NOUPDT;
+
     unsigned int next_head = (queue->head + 1) % CPU_QUEUE_SIZE;
     if (__builtin_expect((next_head == queue->tail), 0)) {
         return DLB_ERR_REQST;
@@ -127,6 +139,8 @@ static int push_cpu_request(cpu_request_t *queue, pid_t applicant) {
 
 static void pop_cpu_request(cpu_request_t *queue, pid_t *new_guest) {
     *new_guest = NOBODY;
+    if (!queue->enabled) return;
+
     while(queue->head != queue->tail && *new_guest == NOBODY) {
         *new_guest = queue->queue[queue->tail];
         queue->tail = (queue->tail + 1) % CPU_QUEUE_SIZE;
@@ -1230,6 +1244,27 @@ bool shmem_cpuinfo__exists(void) {
 
 bool shmem_cpuinfo__is_dirty(void) {
     return shdata && shdata->dirty;
+}
+
+void shmem_cpuinfo__enable_request_queues(void) {
+    if (shm_handler == NULL) return;
+
+    /* All queues are enabled by the same process
+     * this functon can be skipped if at least one of them is already enabled */
+    if (shdata->global_requests.enabled) return;
+
+    shmem_lock(shm_handler);
+    {
+        /* Enable global request queue */
+        shdata->global_requests.enabled = true;
+
+        /* Enable all CPU request queues */
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            shdata->node_info[cpuid].requests.enabled = true;
+        }
+    }
+    shmem_unlock(shm_handler);
 }
 
 /* External Functions

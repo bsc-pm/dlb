@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator"
+    test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
 #include "assert_noshm.h"
@@ -27,6 +27,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
+#include "support/options.h"
 
 #include <sched.h>
 #include <sys/types.h>
@@ -61,17 +62,34 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__init(p2_pid, &p1_mask, NULL) == DLB_ERR_PERM );
     assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
 
+    // Initialize options and enable queues if needed
+    options_t options;
+    options_init(&options, NULL);
+    bool async = options.mode == MODE_ASYNC;
+    if (async) {
+        shmem_cpuinfo__enable_request_queues();
+    }
+
+    int err;
 
     /*** Successful ping-pong ***/
     {
         // Process 1 wants CPU 3
-        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim) == DLB_NOTED );
+        err = shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( new_guest == -1 );
         assert( victim == -1 );
 
         // Process 2 releases CPU 3
         assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest) == DLB_SUCCESS );
-        assert( new_guest == p1_pid );
+        assert( async ? new_guest == p1_pid : new_guest == 0 );
+
+        // If polling, process 1 needs to ask again for CPU 3
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim) == DLB_SUCCESS );
+            assert( new_guest == p1_pid );
+            assert( victim == -1 );
+        }
 
         // Process 1 cannot reclaim CPU 3
         assert( shmem_cpuinfo__reclaim_cpu(p1_pid, 3, &new_guest, &victim) == DLB_ERR_PERM );
@@ -87,18 +105,27 @@ int main( int argc, char **argv ) {
 
         // Process 2 releases CPU 3 again
         assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest) == DLB_SUCCESS );
-        assert( new_guest == p1_pid );
+        assert( async ? new_guest == p1_pid : new_guest == 0 );
+
+        // If polling, process 1 needs to ask again for CPU 3
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim) == DLB_SUCCESS );
+            assert( new_guest == p1_pid );
+            assert( victim == -1 );
+        }
 
         // Process 2 reclaims CPU 3 again
         assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 3, &new_guest, &victim) == DLB_NOTED );
         assert( new_guest == p2_pid );
         assert( victim == p1_pid );
 
-        // Process 1 returns CPU 3 and removes petition
+        // Process 1 returns CPU 3
         assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
         assert( new_guest == p2_pid );
+
+        // Process removes petition of CPU 3
         assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
-        assert( new_guest == -1 );
+        assert( new_guest <= 0 );
 
         // Process 2 releases CPU 3, checks no victim and reclaims
         assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest) == DLB_SUCCESS );
@@ -112,7 +139,8 @@ int main( int argc, char **argv ) {
     /*** Late reply ***/
     {
         // Process 1 wants CPU 3
-        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim) == DLB_NOTED );
+        err = shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( new_guest == -1 );
         assert( victim == -1 );
 

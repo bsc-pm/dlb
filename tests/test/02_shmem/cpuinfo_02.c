@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator"
+    test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
 #include "assert_noshm.h"
@@ -27,6 +27,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
+#include "support/options.h"
 
 #include <sched.h>
 #include <sys/types.h>
@@ -65,19 +66,38 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__init(p2_pid, &p1_mask, NULL) == DLB_ERR_PERM );
     assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
 
+    // Initialize options and enable queues if needed
+    options_t options;
+    options_init(&options, NULL);
+    bool async = options.mode == MODE_ASYNC;
+    if (async) {
+        shmem_cpuinfo__enable_request_queues();
+    }
+
+    int err;
 
     /*** Successful ping-pong ***/
     {
         // Process 1 wants CPUs 2 & 3
-        assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
-                == DLB_NOTED );
+        err = shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
         // Process 2 releases CPUs 2 & 3
         assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, new_guests) == DLB_SUCCESS );
-        assert( new_guests[0] == -1     && new_guests[1] == -1 );
-        assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
+        assert(          new_guests[0] == -1     && new_guests[1] == -1 );
+        assert(  async ? new_guests[2] == p1_pid && new_guests[3] == p1_pid :
+                         new_guests[2] == 0      && new_guests[3] == 0 );
+
+        // If polling, process 1 needs to ask again for CPUs 2 & 3
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
+                    == DLB_SUCCESS );
+            assert( new_guests[0] == -1     && new_guests[1] == -1 );
+            assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
+            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        }
 
         // Process 1 cannot reclaim CPUs 2 & 3
         assert( shmem_cpuinfo__reclaim_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
@@ -98,8 +118,18 @@ int main( int argc, char **argv ) {
 
         // Process 2 releases CPUs 2 & 3 again
         assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, new_guests) == DLB_SUCCESS );
-        assert( new_guests[0] == -1     && new_guests[1] == -1 );
-        assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
+        assert(         new_guests[0] == -1     && new_guests[1] == -1 );
+        assert( async ? new_guests[2] == p1_pid && new_guests[3] == p1_pid :
+                        new_guests[2] == 0      && new_guests[3] == 0 );
+
+        // If polling, process 1 needs to ask again for CPUs 2 & 3
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
+                    == DLB_SUCCESS );
+            assert( new_guests[0] == -1     && new_guests[1] == -1 );
+            assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
+            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        }
 
         // Process 2 reclaims CPUs 2 & 3 again
         assert( shmem_cpuinfo__reclaim_cpu_mask(p2_pid, &p2_mask, new_guests, victims)
@@ -153,8 +183,18 @@ int main( int argc, char **argv ) {
 
         // Process 2 releases CPUs 2 & 3 again
         assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, new_guests) == DLB_SUCCESS );
-        assert( new_guests[0] == -1     && new_guests[1] == -1 );
-        assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
+        assert(         new_guests[0] == -1     && new_guests[1] == -1 );
+        assert( async ? new_guests[2] == p1_pid && new_guests[3] == p1_pid :
+                        new_guests[2] == 0      && new_guests[3] == 0 );
+
+        // If polling, process 1 needs to ask again for CPUs 2 & 3
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
+                    == DLB_SUCCESS );
+            assert( new_guests[0] == -1     && new_guests[1] == -1 );
+            assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
+            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        }
 
         // Process 2 reclaims all again
         assert( shmem_cpuinfo__reclaim_all(p2_pid, new_guests, victims) == DLB_NOTED );
@@ -182,8 +222,8 @@ int main( int argc, char **argv ) {
     /*** Late reply ***/
     {
         // Process 1 wants CPUs 2 & 3
-        assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
-                == DLB_NOTED );
+        err = shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
