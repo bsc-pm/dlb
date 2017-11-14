@@ -272,7 +272,6 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
         } else {
             if (new_guest == spd->id) {
                 /* Oversubscribe even if the CPU is guested */
-                warning("Enabling cpu %d", cpuid);
                 enable_cpu(&spd->pm, cpuid);
             }
         }
