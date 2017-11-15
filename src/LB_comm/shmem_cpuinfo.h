@@ -71,7 +71,7 @@ int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_g
 int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
-bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpu);
+int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpu);
 bool shmem_cpuinfo__exists(void);
 bool shmem_cpuinfo__is_dirty(void);
 void shmem_cpuinfo__enable_request_queues(void);

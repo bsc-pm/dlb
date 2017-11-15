@@ -1224,23 +1224,31 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
     return binding;
 }
 
-bool shmem_cpuinfo__is_cpu_available(pid_t pid, int cpuid) {
+int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpuid) {
+    int error = DLB_NOTED;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
-    if (cpuinfo->owner != pid && cpuinfo->state == CPU_BUSY) {
-        // The CPU is busy or reclaimed
-        return false;
-    } else if (cpuinfo->guest == NOBODY) {
-        // Double check that the CPU is empty
+    if (cpuinfo->owner != pid
+            && (cpuinfo->state == CPU_BUSY || cpuinfo->state == CPU_DISABLED) ) {
+        /* The CPU is reclaimed or disabled */
+        error = DLB_ERR_PERM;
+    } else if (cpuinfo->guest == pid) {
+        /* The CPU is already guested by the process */
+        error = DLB_SUCCESS;
+    } else if (cpuinfo->guest == NOBODY ) {
+        /* Assign new guest if the CPU is empty */
         shmem_lock(shm_handler);
-        if (cpuinfo->guest == NOBODY) {
-            cpuinfo->guest = pid;
-            update_cpu_stats(cpuid, STATS_OWNED);
+        {
+            if (cpuinfo->guest == NOBODY) {
+                cpuinfo->guest = pid;
+                update_cpu_stats(cpuid, STATS_OWNED);
+                error = DLB_SUCCESS;
+            }
         }
         shmem_unlock(shm_handler);
     }
 
-    return cpuinfo->guest == pid;
+    return error;
 }
 
 bool shmem_cpuinfo__exists(void) {

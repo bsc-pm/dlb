@@ -485,7 +485,7 @@ int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t 
 // Others
 
 int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid) {
-    return shmem_cpuinfo__is_cpu_available(spd->id, cpuid);
+    return shmem_cpuinfo__check_cpu_availability(spd->id, cpuid);
 }
 
 /* Construct a priority list of CPUs merging 4 lists:

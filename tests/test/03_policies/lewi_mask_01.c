@@ -156,9 +156,9 @@ int main( int argc, char **argv ) {
 
         // Subprocesses 1 and 2 need to poll
         if (mode == MODE_POLLING) {
-            assert( lewi_mask_CheckCpuAvailability(&spd2, 3) == false );
+            assert( lewi_mask_CheckCpuAvailability(&spd2, 3) == DLB_NOTED );
             assert( lewi_mask_ReturnCpu(&spd1, 3) == DLB_SUCCESS );
-            assert( lewi_mask_CheckCpuAvailability(&spd2, 3) == true );
+            assert( lewi_mask_CheckCpuAvailability(&spd2, 3) == DLB_SUCCESS );
         }
 
         // Poll a certain number of times until mask2 contains CPU 3, and mask1 doesn't
@@ -177,9 +177,9 @@ int main( int argc, char **argv ) {
 
         // Subprocesses 1 & 2 needs to poll
         if (mode == MODE_POLLING) {
-            assert( lewi_mask_CheckCpuAvailability(&spd1, 1) == false );
+            assert( lewi_mask_CheckCpuAvailability(&spd1, 1) == DLB_NOTED );
             assert( lewi_mask_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
-            assert( lewi_mask_CheckCpuAvailability(&spd1, 1) == true );
+            assert( lewi_mask_CheckCpuAvailability(&spd1, 1) == DLB_SUCCESS );
         }
         assert_loop( CPU_ISSET(1, &sp1_mask) );
         assert( !CPU_ISSET(1, &sp2_mask) );
@@ -214,8 +214,8 @@ int main( int argc, char **argv ) {
 
         // Subprocesses 1 needs to poll to set guest field
         if (mode == MODE_POLLING) {
-            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 0) );
-            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 1) );
+            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 0) == DLB_SUCCESS );
+            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 1) == DLB_SUCCESS );
         }
 
         // Check everyone has their CPUs
@@ -250,7 +250,7 @@ int main( int argc, char **argv ) {
 
         // Subprocess 1 needs to poll to set guest field
         if (mode == MODE_POLLING) {
-            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 1) );
+            assert_loop( lewi_mask_CheckCpuAvailability(&spd1, 1) == DLB_SUCCESS );
         }
 
         // Subprocess 2 no longer wants external CPUs
