@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,15 +20,63 @@
 #ifndef SHMEM_CPUINFO_H
 #define SHMEM_CPUINFO_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <limits.h>
 #include "support/types.h"
 
-#define CPUINFO_RECOVER_ALL INT_MAX
+#include <sys/types.h>
+#include <sched.h>
 
+
+/* Init */
+int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key);
+int shmem_cpuinfo_ext__init(const char *shmem_key);
+int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal);
+
+/* Finalize */
+int shmem_cpuinfo__finalize(pid_t pid);
+int shmem_cpuinfo_ext__finalize(void);
+int shmem_cpuinfo_ext__postfinalize(pid_t pid);
+
+/* Lend */
+int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_guest);
+int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
+
+/* Reclaim */
+int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t new_guests[], pid_t victims[]);
+int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim);
+int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t new_guests[], pid_t victims[]);
+int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
+        pid_t victims[]);
+
+/* Acquire */
+int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim);
+int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
+        int ncpus, pid_t new_guests[], pid_t victims[]);
+int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
+        pid_t victims[]);
+
+/* Borrow */
+int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
+        pid_t new_guests[]);
+int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest);
+int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
+        int ncpus, pid_t new_guests[]);
+int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
+
+/* Return */
+int shmem_cpuinfo__return_all(pid_t pid, pid_t new_guests[]);
+int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_guest);
+int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
+
+/* Others */
+int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]);
+void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
+int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
+int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpu);
+bool shmem_cpuinfo__exists(void);
+bool shmem_cpuinfo__is_dirty(void);
+void shmem_cpuinfo__enable_request_queues(void);
+
+/* WIP: TALP */
 // Simplified states to keep statistics
 typedef enum {
     STATS_IDLE = 0,
@@ -37,25 +85,7 @@ typedef enum {
     _NUM_STATS
 } stats_state_t;
 
-void shmem_cpuinfo__init(const cpu_set_t *new_mask);
-void shmem_cpuinfo__finalize(void);
-int shmem_cpuinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal);
-int shmem_cpuinfo_ext__postfinalize(int pid);
-void shmem_cpuinfo__add_mask(const cpu_set_t *cpu_mask);
-void shmem_cpuinfo__add_cpu(int cpu);
-void shmem_cpuinfo__recover_some_cpus(cpu_set_t *mask, int max_resources);
-void shmem_cpuinfo__recover_cpu(int cpu);
-int shmem_cpuinfo__return_claimed(cpu_set_t *mask);
-int shmem_cpuinfo__collect_mask(cpu_set_t *mask, int max_resources);
-bool shmem_cpuinfo__is_cpu_borrowed(int cpu);
-bool shmem_cpuinfo__is_cpu_claimed(int cpu);
-int shmem_cpuinfo__reset_default_cpus(cpu_set_t *mask);
-bool shmem_cpuinfo__acquire_cpu(int cpu, bool force);
-void shmem_cpuinfo__update_ownership(const cpu_set_t* process_mask);
-
-void shmem_cpuinfo_ext__init(void);
-void shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__getnumcpus(void);
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);
-void shmem_cpuinfo_ext__print_info(void);
+void shmem_cpuinfo_ext__print_info(bool statistics);
 #endif /* SHMEM_CPUINFO_H */

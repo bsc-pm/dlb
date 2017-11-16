@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,13 +17,14 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include "LB_policies/JustProf.h"
+
 #include "support/mytime.h"
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 
+#include <sched.h>
 #include <stdio.h>
-
 
 int iterNum;
 struct timespec initAppl;
@@ -38,10 +39,10 @@ struct timespec iter_cpuTime;
 struct timespec iter_compTime;
 
 int myCPUS;
-void JustProf_Init(void) {
+void JustProf_Init(const cpu_set_t *process_mask) {
     //Read Environment vars
 
-    myCPUS = _default_nthreads;
+    myCPUS = CPU_COUNT(process_mask);
 
     if (clock_gettime(CLOCK_REALTIME, &initAppl)<0) {
         fprintf(stderr, "DLB ERROR: clock_gettime failed\n");

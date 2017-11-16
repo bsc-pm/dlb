@@ -1,10 +1,11 @@
 
-AC_INIT([DLB],[1.4a],[pm-tools@bsc.es])
+AC_INIT([DLB],[2.0a],[pm-tools@bsc.es])
 AC_CONFIG_SRCDIR([src/LB_core/DLB_kernel.c])
 
 configure_orig_arguments="$@"
 
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
+AM_EXTRA_RECURSIVE_TARGETS([coverage])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Enable silent rules if available
@@ -15,33 +16,33 @@ m4_ifdef([AM_SILENT_RULES],
 
 AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 
-# Versioning things
+
+################################################################################
+# Obtain versioning infomation
+################################################################################
+AC_ARG_VAR([GIT], [distributed version control system])
+AC_PATH_PROG([GIT], [git], [])
 # Make sure build_version is double-quoted!
-build_version="\"unknown revision\""
-if test -d $srcdir/.git;
-then
-   AC_PATH_PROG([GIT], [git], [])
-   AC_MSG_CHECKING([revision of git repository])
-   run_git=""
-   if test x"$GIT" != x;
-   then
-      echo "$GIT" "$srcdir" >& AS_MESSAGE_LOG_FD
-      run_gitversion=`"$GIT" --git-dir=$srcdir/.git show "--pretty=format:%h %ci" HEAD | head -n 1`
-      run_gitbranch=`"$GIT" --git-dir=$srcdir/.git branch | grep ^* | sed s/*\ //g`
-      build_version="\"git $run_gitbranch $run_gitversion developer version\""
-   fi
-   if test x"$GIT" = x -o x"$run_gitversion" = x;
-   then
-       build_version="\"unknown git commit\""
-   fi
-   AC_MSG_RESULT([$build_version])
-elif test -e $srcdir/VERSION;
-then
-     AC_MSG_CHECKING([revision of distributed release])
-     run_gitversion=`cat $srcdir/VERSION`
-     build_version="\"$run_gitversion\""
-     AC_MSG_RESULT([$build_version])
-fi
+AS_IF([test -e "$srcdir/.git"], [
+    AC_MSG_CHECKING([revision of git repository])
+    AS_IF([test x"$GIT" != x], [
+        echo "$GIT" "$srcdir" >& AS_MESSAGE_LOG_FD
+        run_gitversion=`"$GIT" --git-dir=$srcdir/.git show "--pretty=format:%h %ci" HEAD | head -n 1`
+        run_gitbranch=`"$GIT" --git-dir=$srcdir/.git branch | grep ^* | sed s/*\ //g`
+        build_version="\"git $run_gitbranch $run_gitversion developer version\""
+    ], [
+        build_version="\"unknown git commit\""
+    ])
+    AC_MSG_RESULT([$build_version])
+    developer_version=yes
+], [test -e $srcdir/VERSION], [
+    AC_MSG_CHECKING([revision of distributed release])
+    run_gitversion=`cat $srcdir/VERSION`
+    build_version="\"$run_gitversion\""
+    AC_MSG_RESULT([$build_version])
+], [
+    build_version="\"unknown revision\""
+])
 AC_DEFINE_UNQUOTED([DLB_BUILD_VERSION], [$build_version], [Build version])
 
 dlb_config_args='"'$(echo "$0 $configure_orig_arguments")'"'
@@ -51,6 +52,10 @@ AC_DEFINE_UNQUOTED([DLB_CONFIGURE_ARGS], [$dlb_config_args], [Configure line])
 AC_CHECK_PROG([DEB_RELEASE], [lsb_release], [$(lsb_release -sc)], [])
 AC_SUBST([DEB_RELEASE])
 
+
+################################################################################
+# Configure compiler and compiler flags
+################################################################################
 # If CFLAGS is not user-defined, define it as empty to avoid AC_PROG_CC setting it to default '-g -O2'
 : ${CFLAGS=""}
 
@@ -60,79 +65,48 @@ LT_INIT
 AC_PROG_CC([$CC])
 AM_PROG_CC_C_O
 AC_PROG_CPP
+AC_PROG_FC
 
 # use the C compiler for the following checks
 AC_LANG([C])
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
-AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
-AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
-AX_CHECK_COMPILE_FLAG([-Wno-error=unknown-pragmas],
-                      [AC_CFLAGS="${AC_CFLAGS} -Wno-error=unknown-pragmas"])
-AX_CONFIG_CC_WARNINGS
-AX_CHECK_COMPILE_FLAG([$ax_cv_gcc_version_warnings],
-                      [AC_CFLAGS="${AC_CFLAGS} $ax_cv_gcc_version_warnings"])
-AC_SUBST([AC_CFLAGS])
-
-# Check for Python
-AM_PATH_PYTHON
-
-# check for OpenMP availability
-AC_OPENMP
-
-# check for MPI
-AX_MPI
-
-# check for HWLOC
-AX_HWLOC
-
-# check for number of cpus on node
-AC_ARG_WITH([cpus-per-node],
-   AS_HELP_STRING([--with-cpus-per-node=N], [Number of cpus per node]),
-   [
-      ncpus="$withval"
-   ],
-   [
-      ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
-   ]
-)
-
-# check for SPHINX
-AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
-AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
-
-AC_CONFIG_HEADERS([config.h])
-
-# files to generate via autotools (.am or .in source files)
-AC_CONFIG_FILES([
-    Makefile
-    tests/Makefile
-    doc/examples/mpi+omp/run.sh
-    doc/examples/mpi+omp/Makefile
-    doc/examples/mpi+ompss/run.sh
-    doc/examples/mpi+ompss/Makefile
-    doc/examples/statistics/run.sh
-    doc/examples/statistics/Makefile
+AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])
+AS_IF([test "x$developer_version" = xyes], [
+    AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
+    AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
+    AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
 ])
-AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
-AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
+AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
+AC_CHECK_HEADERS([stdatomic.h])
+
+# use the Fortran compiler for the following checks
+AC_LANG_PUSH([Fortran])
+AX_CHECK_COMPILE_FLAG([-pthread], [AC_FFLAGS="${AC_FFLAGS} -pthread"])
+AS_IF([test "x$developer_version" = xyes], [
+    AX_CHECK_COMPILE_FLAG([-Wall], [AC_FFLAGS="${AC_FFLAGS} -Wall"])
+    AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_FFLAGS="${AC_FFLAGS} -Wshadow"])
+    AX_CHECK_COMPILE_FLAG([-Werror], [AC_FFLAGS="${AC_FFLAGS} -Werror"])
+])
+AC_LANG_POP([Fortran])
 
 
-##########################################################################
-# Instrumentation & Debug compilation support
-##########################################################################
+
+################################################################################
+# Configure library versions
+################################################################################
 
 AC_MSG_CHECKING([whether to compile the debug version])
 AC_ARG_ENABLE([debug],
-   AS_HELP_STRING([--disable-debug], [Disable generation of debug version]),
-   [], dnl Implicit: enable_debug=$enableval
-   [enable_debug=yes]
+    AS_HELP_STRING([--disable-debug], [do not compile debug version library]),
+    [], dnl Implicit: enable_debug=$enableval
+    [enable_debug=yes]
 )
 AC_MSG_RESULT([$enable_debug])
 
 AC_MSG_CHECKING([whether to compile the instrumentation version])
 AC_ARG_ENABLE([instrumentation],
-   AS_HELP_STRING([--disable-instrumentation], [Disable generation of instrumentation version]),
+    AS_HELP_STRING([--disable-instrumentation], [do not compile instrumentation version library]),
    [], dnl Implicit: enable_instrumentation=$enableval
    [enable_instrumentation=yes]
 )
@@ -140,7 +114,8 @@ AC_MSG_RESULT([$enable_instrumentation])
 
 AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
 AC_ARG_ENABLE([instrumentation-debug],
-   AS_HELP_STRING([--disable-instrumentation-debug], [Disable generation of instrumentation-debug version]),
+   AS_HELP_STRING([--disable-instrumentation-debug],
+                  [do not compile instrumentation debug version library]),
    [], dnl Implicit: enable_instrumentation_debug=$enableval
    [enable_instrumentation_debug=yes]
 )
@@ -156,50 +131,117 @@ AS_IF([test "x$enable_debug" = xyes], [
 ])
 AC_SUBST([TEST_VERSIONS])
 
+COMMON_CPPFLAGS="-D_GNU_SOURCE"
+
 PERFO_CFLAGS="-g -O3"
-PERFO_CPPFLAGS=""
+PERFO_FFLAGS="-g -O3"
+PERFO_CPPFLAGS="$COMMON_CPPFLAGS"
 
 DEBUG_CFLAGS="-g -O0"
-DEBUG_CPPFLAGS="-DDEBUG_VERSION"
+DEBUG_FFLAGS="-g -O0"
+DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION"
 
 INSTR_CFLAGS="-g -O3"
-INSTR_CPPFLAGS="-DINSTRUMENTATION_VERSION"
+INSTR_FFLAGS="-g -O3"
+INSTR_CPPFLAGS="$COMMON_CPPFLAGS -DINSTRUMENTATION_VERSION"
 
 INSTR_DEBUG_CFLAGS="-g -O0"
-INSTR_DEBUG_CPPFLAGS="-DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
+INSTR_DEBUG_FFLAGS="-g -O0"
+INSTR_DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
+
+AC_MSG_CHECKING([whether to enable coverage profiling])
+AC_ARG_ENABLE([coverage],
+    AS_HELP_STRING([--enable-coverage], [enable coverage profiling]),
+    [], dnl Implicit: enable_coverage=$enableval
+    [enable_coverage=no]
+)
+AC_MSG_RESULT([$enable_coverage])
+
+AS_IF([test "x$enable_coverage" = xyes], [
+    DEBUG_CFLAGS="$DEBUG_CFLAGS $COVERAGE_FLAGS"
+    DEBUG_FFLAGS="$DEBUG_FFLAGS $COVERAGE_FLAGS"
+])
 
 AC_SUBST([PERFO_CFLAGS])
+AC_SUBST([PERFO_FFLAGS])
 AC_SUBST([PERFO_CPPFLAGS])
 AC_SUBST([DEBUG_CFLAGS])
+AC_SUBST([DEBUG_FFLAGS])
 AC_SUBST([DEBUG_CPPFLAGS])
 AC_SUBST([INSTR_CFLAGS])
+AC_SUBST([INSTR_FFLAGS])
 AC_SUBST([INSTR_CPPFLAGS])
 AC_SUBST([INSTR_DEBUG_CFLAGS])
+AC_SUBST([INSTR_DEBUG_FFLAGS])
 AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 
-##########################################################################
+################################################################################
+# Configure external libraries and programs
+################################################################################
+
+# Check for Python
+AM_PATH_PYTHON
+
+# check for OpenMP availability
+AC_OPENMP
+
+# check for MPI
+AX_MPI
+
+# check for HWLOC
+AX_HWLOC
+
+# check for SPHINX
+AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
+AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
+
+# check for Doxygen
+AC_CHECK_PROG([doxygen], [doxygen], [yes])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
+
+# check for gcovr
+AC_CHECK_PROG([gcovr], [gcovr], [yes])
+AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$gcovr" = xyes && test "x$enable_coverage" = xyes])
+
+AC_CONFIG_HEADERS([config.h])
+
+# files to generate via autotools (.am or .in source files)
+AC_CONFIG_FILES([
+    Makefile
+    tests/Makefile
+    doc/examples/mpi+omp/run.sh
+    doc/examples/mpi+omp/Makefile
+    doc/examples/mpi+ompss/run.sh
+    doc/examples/mpi+ompss/Makefile
+    doc/examples/statistics/run.sh
+    doc/examples/statistics/Makefile
+    doc/doxygen/Doxyfile
+    doc/doxygen/Doxyfile_man
+])
+AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
+AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
+
+
+
+################################################################################
 # BlueGene/Q specific options
-##########################################################################
+################################################################################
 
 case $host in
    powerpc64-bgq-linux*)
       AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
       AC_LDFLAGS="-dynamic"
-      ncpus=64
       ;;
    *)
       AC_LDFLAGS=""
       ;;
 esac
+################################################################################
+
+AC_SUBST([AC_CFLAGS])
+AC_SUBST([AC_FFLAGS])
 AC_SUBST([AC_LDFLAGS])
-AC_DEFINE_UNQUOTED([CPUS_NODE], [$ncpus], [Number of cpus per node])
-
-
-##########################################################################
-
-NCPUS=$ncpus
-AC_SUBST([NCPUS])
 
 # generate the final Makefile etc.
 AC_OUTPUT

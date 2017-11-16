@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,17 +23,16 @@
 #define EVENT_USER        0
 #define EVENT_INIT        1
 #define EVENT_INTO_MPI    2
-#define EVENT_OUT_MPI     3
-#define EVENT_UPDATE      4
-#define EVENT_RETURN      5
-#define EVENT_RELEASE_CPU 6
-#define EVENT_CLAIM_CPUS  7
-#define EVENT_RETURN_CPU  8
-#define EVENT_LEND        9
-#define EVENT_RETRIEVE    10
-#define EVENT_RESET       11
-#define EVENT_ACQUIRE_CPU 12
-#define EVENT_BARRIER     13
+#define EVENT_OUTOF_MPI   3
+#define EVENT_LEND        4
+#define EVENT_RECLAIM     5
+#define EVENT_ACQUIRE     6
+#define EVENT_BORROW      7
+#define EVENT_RETURN      8
+#define EVENT_RESET       9
+#define EVENT_BARRIER     10
+#define EVENT_POLLDROM    11
+#define EVENT_FINALIZE    12
 
 #define IDLE_CPUS_EVENT    800030
 #define ITERATION_EVENT    800040
@@ -41,15 +40,17 @@
 #define EVENT_ENABLED        1
 #define EVENT_DISABLED       2
 #define EVENT_SINGLE         3
+#define REBIND_EVENT       800060
 
 /*************************************/
 
 #ifdef INSTRUMENTATION_VERSION
-void add_event( unsigned type, long long value );
-void init_tracing( void );
+#include "support/options.h"
+void add_event(unsigned type, long long value);
+void init_tracing(const options_t *options);
 #else
 #define add_event(type, value)
-#define init_tracing()
+#define init_tracing(options)
 #endif
 
 

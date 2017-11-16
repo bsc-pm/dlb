@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,7 +20,8 @@
 #ifndef COMM_LEND_LIGHT_H
 #define COMM_LEND_LIGHT_H
 
-void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy);
+void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy,
+        const char *shmem_key);
 
 int releaseCpus(int cpus);
 

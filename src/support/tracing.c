@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,9 +17,8 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-
-
 #ifdef INSTRUMENTATION_VERSION
+
 #include "support/tracing.h"
 #include "support/options.h"
 #include <stdio.h>
@@ -30,20 +29,26 @@ void Extrae_eventandcounters(unsigned type, long long value) __attribute__((weak
 void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalues,
                                long long *values, char **values_description) __attribute__((weak));
 
+static bool tracing_initialized = false;
+
 // Pointer to store the function to call
 static void (*extrae_set_event) (unsigned type, long long value);
+
 static void dummy (unsigned type, long long value) {}
 
 void add_event( unsigned type, long long value ) {
     extrae_set_event( type, value );
 }
 
-void init_tracing( void ) {
-    if ( options_get_trace_enabled() && Extrae_event &&
+void init_tracing(const options_t *options) {
+    if (tracing_initialized) return;
+    tracing_initialized = true;
+
+    if (options->instrument && Extrae_event &&
             Extrae_eventandcounters && Extrae_define_event_type ) {
 
         // Set up function
-        if ( options_get_trace_counters() ) {
+        if ( options->instrument_counters ) {
             extrae_set_event = Extrae_eventandcounters;
         } else {
             extrae_set_event = Extrae_event;
@@ -51,7 +56,7 @@ void init_tracing( void ) {
 
         unsigned type;
         int n_values;
-        long long values[14]= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+        long long values[13]= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
         //THREADS_USED_EVENT
         type=THREADS_USED_EVENT;
@@ -60,8 +65,10 @@ void init_tracing( void ) {
 
         //RUNTIME_EVENT
         type=RUNTIME_EVENT;
-        n_values=14;
-        char* value_desc[14]= {"User code", "Init", "Into MPI call", "Out of MPI call", "Update Resources", "Return Claimed", "Release my cpu", "Claim my cpus", "Return my cpu if claimed", "Lend cpus", "Retrieve cpus", "Reset DLB", "Acquire Cpu", "Barrier"};
+        n_values=13;
+        char* value_desc[13]= {"User code", "Init", "Into MPI call", "Out of MPI call", "Lend",
+            "Reclaim", "Acquire", "Borrow", "Return", "Reset DLB", "Barrier", "PollDROM",
+            "Finalize"};
         Extrae_define_event_type(&type, "DLB Runtime call", &n_values, values, value_desc);
 
         //IDLE_CPUS_EVENT
@@ -79,6 +86,11 @@ void init_tracing( void ) {
         n_values=4;
         char* value_desc2[4]= {"not ready", "Enabled", "Disabled", "Single"};
         Extrae_define_event_type(&type, "DLB mode", &n_values, values, value_desc2);
+
+        //REBIND_EVENT
+        type=REBIND_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB thread rebind", &n_values, NULL, NULL);
     } else {
         extrae_set_event = dummy;
     }

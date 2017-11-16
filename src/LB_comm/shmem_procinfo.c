@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,36 +17,32 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/resource.h>
+#include "LB_comm/shmem_procinfo.h"
 
 #include "LB_comm/shmem.h"
-#include "LB_comm/shmem_procinfo.h"
 #include "LB_numThreads/numThreads.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
 #include "support/types.h"
-#include "support/error.h"
-#include "support/options.h"
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 
+#include <sched.h>
+#include <unistd.h>
+#include <string.h>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/resource.h>
+
 #define NOBODY 0
-static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
+//static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
 //static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
 //static const double LOG2E = 1.44269504088896340736;
 static const useconds_t SYNC_POLL_DELAY = 1000; // 1ms
 static const int64_t SYNC_POLL_TIMEOUT = 30000000000L; // 30·10^9 ns = 30s
 
-typedef pid_t spid_t;  // Sub-process ID
-
 typedef struct {
-    spid_t pid;
+    pid_t pid;
     bool dirty;
     int returncode;
     cpu_set_t current_process_mask;
@@ -70,46 +66,82 @@ typedef struct {
     pinfo_t process_info[0];
 } shdata_t;
 
-static spid_t ME;
+enum { SHMEM_PROCINFO_VERSION = 1 };
+
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static int max_cpus;
 static int max_processes;
-static int my_process = -1;
-static struct timespec last_ttime; // Total time
-static struct timespec last_utime; // Useful time (user+system)
+//static struct timespec last_ttime; // Total time
+//static struct timespec last_utime; // Useful time (user+system)
 static const char *shmem_name = "procinfo";
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static int subprocesses_attached = 0;
 
-static pinfo_t* get_process(spid_t pid);
-static void update_process_loads(void);
-static void update_process_mask(void);
-static void update_process_mask_new(int *new_threads, cpu_set_t *new_mask);
-static int  register_mask(pinfo_t *new_owner, const cpu_set_t *mask);
-static int  unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_stolen);
 static int  set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool dry_run);
 static bool steal_cpu(pinfo_t* new_owner, pinfo_t *victim, int cpu, bool dry_run);
 static int  steal_mask(pinfo_t *new_owner, const cpu_set_t *mask, bool dry_run);
-static int  getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask);
 
-void shmem_procinfo__init(cpu_set_t *new_mask) {
-    // Protect double initialization
-    if (shm_handler != NULL) {
-        warning("Shared Memory is being initialized more than once");
-        print_backtrace();
-        return;
+
+static pinfo_t* get_process(pid_t pid) {
+    if (shdata) {
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            if (shdata->process_info[p].pid == pid) {
+                return &shdata->process_info[p];
+            }
+        }
     }
+    return NULL;
+}
 
-    ME = getpid();
+/*********************************************************************************/
+/*  Init / Register                                                              */
+/*********************************************************************************/
 
-    // We will reserve enough positions assuming that there won't be more processes than cpus
-    max_processes = mu_get_system_size();
-    max_cpus = mu_get_system_size();
+static void open_shmem(const char *shmem_key) {
+    pthread_mutex_lock(&mutex);
+    {
+        if (shm_handler == NULL) {
+            // We assume no more processes than CPUs
+            max_cpus = mu_get_system_size();
+            max_processes = max_cpus;
 
-    // Basic size + zero-length array real length
-    shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, shmem_name);
+            shm_handler = shmem_init((void**)&shdata,
+                    sizeof(shdata_t) + sizeof(pinfo_t)*max_processes,
+                    shmem_name, shmem_key, SHMEM_PROCINFO_VERSION);
+            subprocesses_attached = 1;
+        } else {
+            ++subprocesses_attached;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
 
-    shmem_lock(init_handler);
+// Register a new set of CPUs. Remove them from the free_mask and assign them to new_owner if ok
+static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
+    // Return if empty mask
+    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
+
+    verbose(VB_DROM, "Process %d registering mask %s", new_owner->pid, mu_to_str(mask));
+    if (mu_is_subset(mask, &shdata->free_mask)) {
+        mu_substract(&shdata->free_mask, &shdata->free_mask, mask);
+        CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
+        new_owner->dirty = true;
+        return DLB_SUCCESS;
+    }
+    return DLB_ERR_PERM;
+}
+
+int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *new_process_mask,
+        const char *shmem_key) {
+    int error = DLB_SUCCESS;
+
+    // Shared memory creation
+    open_shmem(shmem_key);
+
+    pinfo_t *process = NULL;
+    shmem_lock(shm_handler);
     {
         // Initialize some values if this is the 1st process attached to the shmem
         if (!shdata->initialized) {
@@ -118,182 +150,60 @@ void shmem_procinfo__init(cpu_set_t *new_mask) {
             shdata->initialized = true;
         }
 
+        // Find whether the process is preregistered
+        bool preregistered = false;
         int p;
         for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == ME) {
-                // Process already registered
-                my_process = p;
-
-                // Update mask if some CPU was stolen
-                update_process_mask_new(NULL, new_mask);
-
-                break;
-            } else if (shdata->process_info[p].pid == NOBODY) {
-                // Register process
-                pinfo_t *process = &shdata->process_info[p];
-                process->pid = ME;
-                process->dirty = false;
-                process->returncode = 0;
-                CPU_ZERO(&process->current_process_mask);
-                CPU_ZERO(&process->future_process_mask);
-
-                // Register process mask into the system
-                cpu_set_t mask;
-                get_process_mask(&mask);
-                int error = register_mask(process, &mask);
-                if (error) {
-                    shmem_unlock(init_handler);
-                    // FIXME: we should clean the shmem before that
-                    fatal("Error trying to register CPU mask: %s", mu_to_str(&mask));
+            if (shdata->process_info[p].pid == pid) {
+                // If the process is preregistered, we must only return the new_process_mask
+                // to cpuinfo to avoid conflicts, we cannot resolve the dirty flag yet
+                process = &shdata->process_info[p];
+                if (process->dirty) {
+                    memcpy(new_process_mask, &process->future_process_mask, sizeof(cpu_set_t));
                 }
+                preregistered = true;
+                break;
+            } else if (!process && shdata->process_info[p].pid == NOBODY) {
+                // We obtain the first free spot, but we cannot break
+                process = &shdata->process_info[p];
+            }
+        }
 
-                // Blindly apply future mask modified inside register_mask
-                memcpy(&process->current_process_mask, &mask, sizeof(cpu_set_t));
+        // Register if needed
+        if (process && !preregistered) {
+            error = register_mask(process, process_mask);
+            if (error == DLB_SUCCESS) {
+                process->pid = pid;
                 process->dirty = false;
                 process->returncode = 0;
+                memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
+                memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
 
 #ifdef DLB_LOAD_AVERAGE
                 process->load[0] = 0.0f;
                 process->load[1] = 0.0f;
                 process->load[2] = 0.0f;
 #endif
-                my_process = p;
-                break;
-            }
-        }
-        if (p == max_processes) {
-            shmem_unlock(init_handler);
-            // FIXME: we should clean the shmem before that
-            fatal("Not enough space in the shared memory to register process %d", ME);
-        }
-    }
-    shmem_unlock(init_handler);
-
-    // Global variable is only assigned after the initialization
-    shm_handler = init_handler;
-}
-
-void shmem_procinfo__finalize(void) {
-    bool shmem_empty = true;
-    pinfo_t *process = &shdata->process_info[my_process];
-    shmem_lock(shm_handler);
-    {
-        // Unregister our process mask, or future mask if we are dirty
-        if (process->dirty) {
-            unregister_mask(process, &process->future_process_mask, false);
-        } else {
-            unregister_mask(process, &process->current_process_mask, false);
-        }
-
-        // Clear process fields
-        process->pid = NOBODY;
-        process->dirty = false;
-        process->returncode = 0;
-        CPU_ZERO(&process->current_process_mask);
-        CPU_ZERO(&process->future_process_mask);
-        CPU_ZERO(&process->stolen_cpus);
-        process->active_cpus = 0;
-        process->cpu_usage = 0.0;
-        process->cpu_avg_usage = 0.0;
-#ifdef DLB_LOAD_AVERAGE
-        process->load[3] = {0.0f, 0.0f, 0.0f};
-        process->last_ltime = {0};
-#endif
-
-        // Check if shmem is empty
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid != NOBODY) {
-                shmem_empty = false;
-                break;
             }
         }
     }
     shmem_unlock(shm_handler);
-    shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
-    shm_handler = NULL;
-}
-
-void shmem_procinfo__update(bool do_drom, bool do_stats) {
-
-    if (shm_handler == NULL || shdata == NULL) return;
-
-    bool update_mask = do_drom && shdata->process_info[my_process].dirty;
-
-    bool update_load = false;
-    if (do_stats) {
-        // Do not update loads if the elapsed total time is less than a predefined threshold
-        struct timespec now;
-        int64_t elapsed;
-        get_time_coarse( &now );
-        elapsed = timespec_diff( &last_ttime, &now );
-        update_load = elapsed >= UPDATE_USAGE_MIN_THRESHOLD;
+    if (process == NULL) {
+        error = DLB_ERR_NOMEM;
     }
 
-    if (update_mask || update_load) {
-        shmem_lock(shm_handler);
-        {
-            if (update_mask) {
-                update_process_mask();
-            }
-            if (update_load) {
-                update_process_loads();
-            }
-        }
-        shmem_unlock(shm_handler);
+    if (error != DLB_SUCCESS) {
+        shmem_procinfo__finalize(pid, false);
     }
-}
 
-// New proposal for update function. Return nthreads and mask, and let the caller adjust.
-int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask) {
-    if (shm_handler == NULL || shdata == NULL) return DLB_ERR_NOSHMEM;
-
-    int error = DLB_ERR_NOUPDT;
-
-    bool update_mask = do_drom && shdata->process_info[my_process].dirty;
-
-    bool update_load = false; // no stats for now
-
-    if (update_mask || update_load) {
-        shmem_lock(shm_handler);
-        {
-            if (update_mask) {
-                update_process_mask_new(new_threads, new_mask);
-            }
-            //if (update_load) {
-            //    update_process_loads();
-            //}
-        }
-        shmem_unlock(shm_handler);
-        error = DLB_SUCCESS;
-    }
     return error;
 }
 
-int shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask) {
-    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
-    return getprocessmask(shm_handler, pid, mask);
-}
+int shmem_procinfo_ext__init(const char *shmem_key) {
+    // Shared memory creation
+    open_shmem(shmem_key);
 
-/* External Functions
- * These functions are intended to be called from external processes only to consult the shdata
- * That's why we should initialize and finalize the shared memory
- */
-
-static shmem_handler_t *shm_ext_handler = NULL;
-
-void shmem_procinfo_ext__init(void) {
-    // Protect double initialization
-    if (shm_ext_handler != NULL) {
-        return;
-    }
-
-    max_cpus = mu_get_system_size();
-    max_processes = mu_get_system_size();
-    shm_ext_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(pinfo_t)*max_processes, shmem_name );
-
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         // Initialize some values if this is the 1st process attached to the shmem
         if (!shdata->initialized) {
@@ -302,44 +212,22 @@ void shmem_procinfo_ext__init(void) {
             shdata->initialized = true;
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
+
+    return DLB_SUCCESS;
 }
 
-void shmem_procinfo_ext__finalize(void) {
-    // Protect double finalization
-    if (shm_ext_handler == NULL) {
-        return;
-    }
-
-    // Check if shmem is empty
-    bool shmem_empty = true;
-    shmem_lock(shm_ext_handler);
-    {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid != NOBODY) {
-                shmem_empty = false;
-                break;
-            }
-        }
-    }
-    shmem_unlock(shm_ext_handler);
-
-    shmem_finalize(shm_ext_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
-    shm_ext_handler = NULL;
-}
-
-int shmem_procinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == pid) {
                 // PID already registered
-                shmem_unlock(shm_ext_handler);
+                shmem_unlock(shm_handler);
                 fatal("already registered");
             } else if (shdata->process_info[p].pid == NOBODY) {
                 pinfo_t *process = &shdata->process_info[p];
@@ -359,7 +247,7 @@ int shmem_procinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal) {
                     error = error ? error : set_new_mask(process, mask, false);
                 }
                 if (error) {
-                    shmem_unlock(shm_ext_handler);
+                    shmem_unlock(shm_handler);
                     // FIXME: we should clean the shmem before that
                     fatal("Error trying to register CPU mask: %s", mu_to_str(mask));
                 }
@@ -378,20 +266,157 @@ int shmem_procinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal) {
             }
         }
         if (p == max_processes) {
-            shmem_unlock(shm_ext_handler);
-            // FIXME: we should clean the shmem before that
+            shmem_unlock(shm_handler);
             fatal("Not enough space in the shared memory to register process %d", pid);
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
     return error;
 }
 
-int shmem_procinfo_ext__postfinalize(int pid, int return_stolen) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+
+/*********************************************************************************/
+/*  Finalize / Unregister                                                        */
+/*********************************************************************************/
+
+// Unregister CPUs. Add them to the free_mask or give them back to their owner
+static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_stolen) {
+    // Return if empty mask
+    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
+
+    verbose(VB_DROM, "Process %d unregistering mask %s", owner->pid, mu_to_str(mask));
+    if (return_stolen) {
+        // Look if each CPU belongs to some other process
+        int c, p;
+        for (c = 0; c < max_cpus; c++) {
+            if (CPU_ISSET(c, mask)) {
+                for (p = 0; p < max_processes; p++) {
+                    pinfo_t *process = &shdata->process_info[p];
+                    if (process->pid != NOBODY && CPU_ISSET(c, &process->stolen_cpus)) {
+                        // give it back to the process
+                        CPU_SET(c, &process->future_process_mask);
+                        CPU_CLR(c, &process->stolen_cpus);
+                        process->dirty = true;
+                        verbose(VB_DROM, "Giving back CPU %d to process %d", c, process->pid);
+                        break;
+                    }
+                }
+                // if we didn't find the owner, add it to the free_mask
+                if (p == max_processes) {
+                    CPU_SET(c, &shdata->free_mask);
+                }
+                // remove CPU from owner
+                CPU_CLR(c, &owner->future_process_mask);
+                owner->dirty = true;
+            }
+        }
+    } else {
+        // Add mask to free_mask and remove them from owner
+        CPU_OR(&shdata->free_mask, &shdata->free_mask, mask);
+        mu_substract(&owner->future_process_mask, &owner->future_process_mask, mask);
+        owner->dirty = true;
+    }
+    return DLB_SUCCESS;
+}
+
+static void close_shmem(bool shmem_empty) {
+    pthread_mutex_lock(&mutex);
+    {
+        if (--subprocesses_attached == 0) {
+            shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
+            shm_handler = NULL;
+            shdata = NULL;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
+
+int shmem_procinfo__finalize(pid_t pid, bool return_stolen) {
+    bool shmem_empty = true;
+    int error;
+
+    if (shm_handler == NULL) {
+        error = DLB_ERR_NOSHMEM;
+    } else {
+        shmem_lock(shm_handler);
+        {
+            pinfo_t *process = get_process(pid);
+            if (process) {
+                // Unregister our process mask, or future mask if we are dirty
+                if (process->dirty) {
+                    unregister_mask(process, &process->future_process_mask, return_stolen);
+                } else {
+                    unregister_mask(process, &process->current_process_mask, return_stolen);
+                }
+
+                // Clear process fields
+                process->pid = NOBODY;
+                process->dirty = false;
+                process->returncode = 0;
+                CPU_ZERO(&process->current_process_mask);
+                CPU_ZERO(&process->future_process_mask);
+                CPU_ZERO(&process->stolen_cpus);
+                process->active_cpus = 0;
+                process->cpu_usage = 0.0;
+                process->cpu_avg_usage = 0.0;
+#ifdef DLB_LOAD_AVERAGE
+                process->load[3] = {0.0f, 0.0f, 0.0f};
+                process->last_ltime = {0};
+#endif
+                error = DLB_SUCCESS;
+            } else {
+                error = DLB_ERR_NOPROC;
+            }
+
+            // Check if shmem is empty
+            int p;
+            for (p = 0; p < max_processes; p++) {
+                if (shdata->process_info[p].pid != NOBODY) {
+                    shmem_empty = false;
+                    break;
+                }
+            }
+        }
+        shmem_unlock(shm_handler);
+    }
+
+    // Shared memory destruction
+    close_shmem(shmem_empty);
+
+    return error;
+}
+
+int shmem_procinfo_ext__finalize(void) {
+    // Protect double finalization
+    if (shm_handler == NULL) {
+        return DLB_ERR_INIT;
+    }
+
+    // Check if shmem is empty
+    bool shmem_empty = true;
+    shmem_lock(shm_handler);
+    {
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            if (shdata->process_info[p].pid != NOBODY) {
+                shmem_empty = false;
+                break;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    // Shared memory destruction
+    close_shmem(shmem_empty);
+
+    return DLB_SUCCESS;
+}
+
+int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(pid);
         if (process == NULL) {
@@ -421,15 +446,15 @@ int shmem_procinfo_ext__postfinalize(int pid, int return_stolen) {
 #endif
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
     return error;
 }
 
 int shmem_procinfo_ext__recover_stolen_cpus(int pid) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(pid);
         if (process == NULL) {
@@ -445,40 +470,86 @@ int shmem_procinfo_ext__recover_stolen_cpus(int pid) {
             }
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
     return error;
 }
 
-void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len) {
-    *nelems = 0;
-    if (shm_ext_handler == NULL) return;
-    shmem_lock(shm_ext_handler);
+
+/*********************************************************************************/
+/* Get / Set Process mask                                                        */
+/*********************************************************************************/
+
+int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, query_t query) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+
+    int error = DLB_SUCCESS;
+    bool done = false;
+    pinfo_t *process;
+    shmem_lock(shm_handler);
     {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            int pid = shdata->process_info[p].pid;
-            if (pid != NOBODY) {
-                pidlist[(*nelems)++] = pid;
+        // Find process
+        process = get_process(pid);
+        if (process == NULL) {
+            verbose(VB_DROM, "Getting mask: cannot find process with pid %d", pid);
+            error = DLB_ERR_NOPROC;
+        }
+
+        if (!error) {
+            if (!process->dirty) {
+                // Get current mask if not dirty
+                memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+                done = true;
+            } else if (query == QUERY_ASYNC) {
+                // Get future mask if query is non-blocking
+                memcpy(mask, &process->future_process_mask, sizeof(cpu_set_t));
+                done = true;
             }
-            if (*nelems == max_len) {
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    if (!error && !done) {
+        // process is valid, but it's dirty so we need to poll
+        int64_t elapsed;
+        struct timespec start, now;
+        get_time_coarse(&start);
+        while(true) {
+
+            // Delay
+            usleep(SYNC_POLL_DELAY);
+
+            // Polling
+            shmem_lock(shm_handler);
+            {
+                if (!process->dirty) {
+                    memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+                    done = true;
+                }
+            }
+            shmem_unlock(shm_handler);
+
+            // Break if done
+            if (done) break;
+
+            // Break if timeout
+            get_time_coarse(&now);
+            elapsed = timespec_diff(&start, &now);
+            if (elapsed > SYNC_POLL_TIMEOUT) {
+                error = DLB_ERR_TIMEOUT;
                 break;
             }
         }
     }
-    shmem_unlock(shm_ext_handler);
+
+    return error;
 }
 
-int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
-    return getprocessmask(shm_ext_handler, pid, mask);
-}
-
-int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, query_t query) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
     pinfo_t *process;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         // Find process
         process = get_process(pid);
@@ -497,10 +568,10 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
         error = error ? error : set_new_mask(process, mask, true);
         error = error ? error : set_new_mask(process, mask, false);
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     // Polling until dirty is cleared, and get returncode
-    if (!error) {
+    if (!error && query == QUERY_SYNC) {
         int64_t elapsed;
         struct timespec start, now;
         get_time_coarse(&start);
@@ -514,14 +585,14 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
 
             // Polling
             bool done = false;
-            shmem_lock(shm_ext_handler);
+            shmem_lock(shm_handler);
             {
                 if (!process->dirty) {
                     error = process->returncode;
                     done = true;
                 }
             }
-            shmem_unlock(shm_ext_handler);
+            shmem_unlock(shm_handler);
 
             // Break if done
             if (done) break;
@@ -539,42 +610,101 @@ int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask) {
     return error;
 }
 
-double shmem_procinfo_ext__getcpuusage(int pid) {
-    if (shm_ext_handler == NULL) return -1.0;
+
+/*********************************************************************************/
+/* Generic Getters                                                               */
+/*********************************************************************************/
+
+int shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask) {
+    int error;
+    if (shm_handler == NULL) {
+        error = DLB_ERR_NOSHMEM;
+    } else {
+        pinfo_t *process = get_process(pid);
+        if (!process) {
+            error = DLB_ERR_NOPROC;
+        } else if (!process->dirty) {
+            error = DLB_NOUPDT;
+        } else {
+            shmem_lock(shm_handler);
+            {
+                // Update output parameters
+                memcpy(new_mask, &process->future_process_mask, sizeof(cpu_set_t));
+                if (new_cpus != NULL) *new_cpus = CPU_COUNT(&process->future_process_mask);
+
+                // Upate local info
+                memcpy(&process->current_process_mask, &process->future_process_mask,
+                        sizeof(cpu_set_t));
+                process->dirty = false;
+                process->returncode = 0;
+            }
+            shmem_unlock(shm_handler);
+            error = DLB_SUCCESS;
+        }
+    }
+    return error;
+}
+
+void shmem_procinfo__getpidlist(pid_t *pidlist, int *nelems, int max_len) {
+    *nelems = 0;
+    if (shm_handler == NULL) return;
+    shmem_lock(shm_handler);
+    {
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            pid_t pid = shdata->process_info[p].pid;
+            if (pid != NOBODY) {
+                pidlist[(*nelems)++] = pid;
+            }
+            if (*nelems == max_len) {
+                break;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+}
+
+
+/*********************************************************************************/
+/* Statistics                                                                    */
+/*********************************************************************************/
+
+double shmem_procinfo__getcpuusage(pid_t pid) {
+    if (shm_handler == NULL) return -1.0;
 
     double cpu_usage = -1.0;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(pid);
         if (process) {
             cpu_usage = process->cpu_usage;
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     return cpu_usage;
 }
 
-double shmem_procinfo_ext__getcpuavgusage(int pid) {
-    if (shm_ext_handler == NULL) return -1.0;
+double shmem_procinfo__getcpuavgusage(pid_t pid) {
+    if (shm_handler == NULL) return -1.0;
 
     double cpu_avg_usage = -1.0;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(pid);
         if (process) {
             cpu_avg_usage = process->cpu_avg_usage;
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     return cpu_avg_usage;
 }
 
-void shmem_procinfo_ext__getcpuusage_list(double *usagelist, int *nelems, int max_len) {
+void shmem_procinfo__getcpuusage_list(double *usagelist, int *nelems, int max_len) {
     *nelems = 0;
-    if (shm_ext_handler == NULL) return;
-    shmem_lock(shm_ext_handler);
+    if (shm_handler == NULL) return;
+    shmem_lock(shm_handler);
     {
         int p;
         for (p = 0; p < max_processes; p++) {
@@ -586,13 +716,13 @@ void shmem_procinfo_ext__getcpuusage_list(double *usagelist, int *nelems, int ma
             }
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 }
 
-void shmem_procinfo_ext__getcpuavgusage_list(double *avgusagelist, int *nelems, int max_len) {
+void shmem_procinfo__getcpuavgusage_list(double *avgusagelist, int *nelems, int max_len) {
     *nelems = 0;
-    if (shm_ext_handler == NULL) return;
-    shmem_lock(shm_ext_handler);
+    if (shm_handler == NULL) return;
+    shmem_lock(shm_handler);
     {
         int p;
         for (p = 0; p < max_processes; p++) {
@@ -604,14 +734,14 @@ void shmem_procinfo_ext__getcpuavgusage_list(double *avgusagelist, int *nelems, 
             }
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 }
 
-double shmem_procinfo_ext__getnodeusage(void) {
-    if (shm_ext_handler == NULL) return -1.0;
+double shmem_procinfo__getnodeusage(void) {
+    if (shm_handler == NULL) return -1.0;
 
     double cpu_usage = 0.0;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         int p;
         for (p = 0; p < max_processes; p++) {
@@ -620,16 +750,16 @@ double shmem_procinfo_ext__getnodeusage(void) {
             }
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     return cpu_usage;
 }
 
-double shmem_procinfo_ext__getnodeavgusage(void) {
-    if (shm_ext_handler == NULL) return -1.0;
+double shmem_procinfo__getnodeavgusage(void) {
+    if (shm_handler == NULL) return -1.0;
 
     double cpu_avg_usage = 0.0;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         int p;
         for (p = 0; p < max_processes; p++) {
@@ -638,30 +768,30 @@ double shmem_procinfo_ext__getnodeavgusage(void) {
             }
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     return cpu_avg_usage;
 }
 
-int shmem_procinfo_ext__getactivecpus(int pid) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
+int shmem_procinfo__getactivecpus(pid_t pid) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int active_cpus = -1;
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(pid);
         if (process) {
             active_cpus = process->active_cpus;
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
     return active_cpus;
 }
 
-void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_len) {
+void shmem_procinfo__getactivecpus_list(pid_t *cpuslist, int *nelems, int max_len) {
     *nelems = 0;
-    if (shm_ext_handler == NULL) return;
-    shmem_lock(shm_ext_handler);
+    if (shm_handler == NULL) return;
+    shmem_lock(shm_handler);
     {
         int p;
         for (p = 0; p < max_processes; p++) {
@@ -673,14 +803,14 @@ void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_
             }
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 }
 
-int shmem_procinfo_ext__getloadavg(int pid, double *load) {
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
-    int error = -1;
+int shmem_procinfo__getloadavg(pid_t pid, double *load) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+    int error = DLB_ERR_UNKNOWN;
 #ifdef DLB_LOAD_AVERAGE
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(pid);
         if (process) {
@@ -690,65 +820,18 @@ int shmem_procinfo_ext__getloadavg(int pid, double *load) {
             error = 0;
         }
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 #endif
     return error;
 }
 
-int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len) {
-    *nelems = 0;
-    if (shm_ext_handler == NULL) return DLB_ERR_NOSHMEM;
 
-    int n_elems = 0;
-    shmem_lock(shm_ext_handler);
-    {
-        int c, p;
-        // Get CPUs from the free_mask
-        for (c = 0; c < max_cpus; c++) {
-            if (CPU_ISSET(c, &shdata->free_mask)) {
-                CPU_CLR(c, &shdata->free_mask);
-                cpulist[n_elems++] = c;
-            }
-            if (n_elems == ncpus || n_elems == max_len) {
-                break;
-            }
-        }
+/*********************************************************************************/
+/* Misc                                                                          */
+/*********************************************************************************/
 
-        // If 'steal' is enabled, get more CPUs from other processes in round-robin
-        if (steal && n_elems < ncpus && n_elems < max_len) {
-            while(true) {
-                // We won't keep looping unless we found at least one candidate
-                bool keep_looping = false;
-
-                for (p = 0; p < max_processes; p++) {
-                    if (shdata->process_info[p].pid != NOBODY) {
-                        for (c = max_cpus-1; c >= 0; c--) {
-                            bool success = steal_cpu(NULL, &shdata->process_info[p], c, false);
-                            if (success) {
-                                // keep going from the next process
-                                cpulist[n_elems++] = c;
-                                keep_looping = true;
-                                break;
-                            }
-                        }
-                        if (n_elems == ncpus || n_elems == max_len) {
-                            keep_looping = false;
-                            break;
-                        }
-                    }
-                }
-                if (!keep_looping) break;
-            }
-        }
-    }
-    shmem_unlock(shm_ext_handler);
-
-    *nelems = n_elems;
-    return (n_elems == ncpus) ? 0 : -1;
-}
-
-void shmem_procinfo_ext__print_info(void) {
-    if (shm_ext_handler == NULL) {
+void shmem_procinfo__print_info(bool statistics) {
+    if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
     }
@@ -756,11 +839,11 @@ void shmem_procinfo_ext__print_info(void) {
     // Make a full copy of the shared memory. Basic size + zero-length array real length
     shdata_t *shdata_copy = malloc(sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
 
-    shmem_lock(shm_ext_handler);
+    shmem_lock(shm_handler);
     {
         memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
     }
-    shmem_unlock(shm_ext_handler);
+    shmem_unlock(shm_handler);
 
     info0("=== Processes Masks ===");
     int p;
@@ -780,7 +863,7 @@ void shmem_procinfo_ext__print_info(void) {
                     shdata_copy->process_info[p].dirty);
         }
     }
-    if (options_get_statistics()) {
+    if (statistics) {
         info0("=== Processes Statistics ===");
         for (p = 0; p < max_processes; p++) {
             if (shdata_copy->process_info[p].pid != NOBODY) {
@@ -792,21 +875,20 @@ void shmem_procinfo_ext__print_info(void) {
     free(shdata_copy);
 }
 
-/*** Helper functions, the shm lock must have been acquired beforehand ***/
-static pinfo_t* get_process(spid_t pid) {
-    int p;
-    for (p = 0; p < max_processes; p++) {
-        if (shdata->process_info[p].pid == pid) {
-            return &shdata->process_info[p];
-        }
-    }
-    return NULL;
+bool shmem_procinfo__exists(void) {
+    return shm_handler != NULL;
 }
 
+
+/*** Helper functions, the shm lock must have been acquired beforehand ***/
+
+
+// FIXME Update statistics temporarily disabled
+#if 0
 static void update_process_loads(void) {
     // Get the active CPUs
     cpu_set_t mask;
-    get_mask(&mask);
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
     shdata->process_info[my_process].active_cpus = CPU_COUNT(&mask);
 
     // Compute elapsed total time
@@ -825,7 +907,7 @@ static void update_process_loads(void) {
     getrusage(RUSAGE_SELF, &usage);
     add_tv_to_ts(&usage.ru_utime, &usage.ru_stime, &current_utime);
     elapsed_utime_since_last = timespec_diff(&last_utime, &current_utime);
-    elapsed_utime_since_init = ts_to_ns(&current_utime);
+    elapsed_utime_since_init = to_nsecs(&current_utime);
 
     // Update times for next update
     last_ttime = current_ttime;
@@ -847,7 +929,9 @@ static void update_process_loads(void) {
     }
 #endif
 }
+#endif
 
+#if 0
 static void update_process_mask(void) {
 
     // Set up our next mask. We cannot blindly use the future_mask because the PM might reject it
@@ -855,11 +939,13 @@ static void update_process_mask(void) {
 
     // Notify the mask change to the PM
     verbose(VB_DROM, "Setting new mask: %s", mu_to_str(next_mask))
-    int error = set_process_mask(next_mask);
+    int error = set_process_mask(&global_spd.pm, next_mask);
 
+    // we should not support set_proces_mask failure here
+#if 0
     // On error, update local mask and steal again from other processes
     if (error) {
-        get_process_mask(next_mask);
+        get_process_mask(&global_spd.pm, next_mask);
         int c, p;
         for (c = max_cpus-1; c >= 0; c--) {
             if (CPU_ISSET( c, next_mask) ) {
@@ -872,6 +958,7 @@ static void update_process_mask(void) {
             }
         }
     }
+#endif
 
     // Update local info
     memcpy(&shdata->process_info[my_process].current_process_mask, next_mask, sizeof(cpu_set_t));
@@ -879,77 +966,8 @@ static void update_process_mask(void) {
     shdata->process_info[my_process].dirty = false;
     shdata->process_info[my_process].returncode = error;
 }
+#endif
 
-static void update_process_mask_new(int *new_threads, cpu_set_t *new_mask) {
-    pinfo_t *process = &shdata->process_info[my_process];
-
-    // Update parameters
-    //   new_threads is optional for the user
-    //   new_mask is also optional for the user, but DLB allocates a new mask if not present
-    memcpy(new_mask, &process->future_process_mask, sizeof(cpu_set_t));
-    if (new_threads != NULL) *new_threads = CPU_COUNT(&process->future_process_mask);
-
-    // Update local info
-    memcpy(&process->current_process_mask, &process->future_process_mask, sizeof(cpu_set_t));
-    shdata->process_info[my_process].dirty = false;
-    shdata->process_info[my_process].returncode = 0;
-}
-
-// Register a new set of CPUs. Remove them from the free_mask and assign them to new_owner if ok
-static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
-    // Return if empty mask
-    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
-
-    verbose(VB_DROM, "Process %d registering mask %s", new_owner->pid, mu_to_str(mask));
-    if (mu_is_subset(mask, &shdata->free_mask)) {
-        mu_substract(&shdata->free_mask, &shdata->free_mask, mask);
-        CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
-        new_owner->dirty = true;
-        return DLB_SUCCESS;
-    }
-    return DLB_ERR_PERM;
-}
-
-// Unregister CPUs. Either add them to the free_mask or give them back to their owner
-//   * update: only return CPUs if it's enabled in debug options
-static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_stolen) {
-    // Return if empty mask
-    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
-
-    verbose(VB_DROM, "Process %d unregistering mask %s", owner->pid, mu_to_str(mask));
-    if (return_stolen ||
-            (options_get_debug_opts() & DBG_RETURNSTOLEN)) {
-        // Look if each CPU belongs to some other process
-        int c, p;
-        for (c = 0; c < max_cpus; c++) {
-            if (CPU_ISSET(c, mask)) {
-                for (p = 0; p < max_processes; p++) {
-                    if (CPU_ISSET(c, &shdata->process_info[p].stolen_cpus)) {
-                        // give it back to the process p
-                        CPU_SET(c, &shdata->process_info[p].future_process_mask);
-                        CPU_CLR(c, &shdata->process_info[p].stolen_cpus);
-                        shdata->process_info[p].dirty = true;
-                        verbose(VB_DROM, "Giving back CPU %d to process %d", c, p);
-                        break;
-                    }
-                }
-                // if we didn't find the owner, add it to the free_mask
-                if (p == max_processes) {
-                    CPU_SET(c, &shdata->free_mask);
-                }
-                // remove CPU from owner
-                CPU_CLR(c, &owner->future_process_mask);
-                owner->dirty = true;
-            }
-        }
-    } else {
-        // Add mask to free_mask and remove them from owner
-        CPU_OR(&shdata->free_mask, &shdata->free_mask, mask);
-        mu_substract(&owner->future_process_mask, &owner->future_process_mask, mask);
-        owner->dirty = true;
-    }
-    return DLB_SUCCESS;
-}
 
 // Configure a new cpu_set for the process
 //  * If the CPU is SET and unused -> register
@@ -1051,62 +1069,4 @@ static bool steal_cpu(pinfo_t* new_owner, pinfo_t* victim, int cpu, bool dry_run
     }
 
     return steal;
-}
-
-// Generic getprocessmask function to be called using any handler
-static int getprocessmask(shmem_handler_t *handler, int pid, cpu_set_t *mask) {
-    int error = 0;
-    bool done = false;
-    pinfo_t *process;
-    shmem_lock(handler);
-    {
-        // Find process
-        process = get_process(pid);
-        if (process == NULL) {
-            verbose(VB_DROM, "Getting mask: cannot find process with pid %d", pid);
-            error = -1;
-        }
-
-        // Get current mask if not dirty
-        if (!error && !process->dirty) {
-            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
-            done = true;
-        }
-    }
-    shmem_unlock(handler);
-
-    if (!error && !done) {
-        // process is valid, but it's dirty so we need to poll
-        int64_t elapsed;
-        struct timespec start, now;
-        get_time_coarse(&start);
-        while(true) {
-
-            // Delay
-            usleep(SYNC_POLL_DELAY);
-
-            // Polling
-            shmem_lock(handler);
-            {
-                if (!process->dirty) {
-                    memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
-                    done = true;
-                }
-            }
-            shmem_unlock(handler);
-
-            // Break if done
-            if (done) break;
-
-            // Break if timeout
-            get_time_coarse(&now);
-            elapsed = timespec_diff(&start, &now);
-            if (elapsed > SYNC_POLL_TIMEOUT) {
-                error = -1;
-                break;
-            }
-        }
-    }
-
-    return error;
 }

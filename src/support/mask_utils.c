@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -21,9 +21,16 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
+#include "support/mask_utils.h"
+
+#include "support/debug.h"
+
+#ifdef HWLOC_LIB
+#include <hwloc.h>
+#include <hwloc/bitmap.h>
+#include <hwloc/glibc-sched.h>
 #endif
+
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,15 +38,6 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <regex.h>
-#include "support/debug.h"
-#include "support/globals.h"
-#include "support/mask_utils.h"
-
-#ifdef HAVE_HWLOC
-#include <hwloc.h>
-#include <hwloc/bitmap.h>
-#include <hwloc/glibc-sched.h>
-#endif
 
 typedef struct {
     int size;
@@ -51,7 +49,7 @@ typedef struct {
 static mu_system_loc_t sys;
 static bool mu_initialized = false;
 
-#if defined HAVE_HWLOC
+#if defined HWLOC_LIB
 static void parse_hwloc( void ) {
     hwloc_topology_t topology;
     hwloc_topology_init( &topology );
@@ -146,14 +144,14 @@ static void parse_lscpu( void ) {
     free( line );
     pclose( pipe );
 }
-#endif /* HAVE_HWLOC */
+#endif /* HWLOC_LIB */
 
 void mu_init( void ) {
     if ( !mu_initialized ) {
         sys.num_parents = 0;
         sys.parents = NULL;
 
-#if defined HAVE_HWLOC
+#if defined HWLOC_LIB
         parse_hwloc();
 #elif defined IS_BGQ_MACHINE
         set_bgq_info();
@@ -180,21 +178,28 @@ void mu_get_system_mask(cpu_set_t *mask) {
     memcpy(mask, &sys.sys_mask, sizeof(cpu_set_t));
 }
 
-/* Returns the set of parent's masks (aka: socket masks) for the given child_set being condition:
- * MU_ANY_BIT: the intersection between the socket and the child_set must be non-empty
- * MU_ALL_BITS: the socket mask must be a subset of child_set
- */
-void mu_get_affinity_mask( cpu_set_t *affinity_set, const cpu_set_t *child_set, mu_opt_t condition ) {
-    if ( !mu_initialized ) mu_init();
-
-    CPU_ZERO( affinity_set );
-    cpu_set_t intxn;
+// Return Mask of sockets covering at least 1 CPU of cpuset
+void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
+    if (!mu_initialized) mu_init();
+    CPU_ZERO(parent_set);
     int i;
-    for ( i=0; i<sys.num_parents; i++ ) {
-        CPU_AND( &intxn, &(sys.parents[i]), child_set );
-        if ( (condition == MU_ANY_BIT && CPU_COUNT( &intxn ) > 0) ||                     /* intxn non-empty */
-                (condition == MU_ALL_BITS && CPU_EQUAL( &intxn, &(sys.parents[i]) )) ) {    /* subset ? */
-            CPU_OR( affinity_set, affinity_set, &(sys.parents[i]) );
+    for (i=0; i<sys.num_parents; ++i) {
+        cpu_set_t intxn;
+        CPU_AND(&intxn, &sys.parents[i], cpuset);
+        if (CPU_COUNT(&intxn) > 0) {
+            CPU_OR(parent_set, parent_set, &sys.parents[i]);
+        }
+    }
+}
+
+// Return Mask of sockets containing all CPUs in cpuset
+void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
+    if (!mu_initialized) mu_init();
+    CPU_ZERO(parent_set);
+    int i;
+    for (i=0; i<sys.num_parents; ++i) {
+        if (mu_is_subset(&sys.parents[i], cpuset)) {
+            CPU_OR(parent_set, parent_set, &sys.parents[i]);
         }
     }
 }
@@ -222,7 +227,7 @@ const char* mu_to_str( const cpu_set_t *mask ) {
     if ( !mu_initialized ) mu_init();
 
     int i;
-    static char str[CPU_SETSIZE*4];
+    static __thread char str[CPU_SETSIZE*4];
     char str_i[16];
     strcpy( str, "[ " );
     for ( i=0; i<sys.size; i++ ) {
@@ -317,4 +322,8 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
 void mu_testing_set_sys_size(int size) {
     // For testing purposes only
     sys.size = size;
+    int i;
+    for (i=0; i<size; ++i) {
+        CPU_SET(i, &sys.sys_mask);
+    }
 }

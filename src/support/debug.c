@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -21,6 +21,17 @@
 #include <config.h>
 #endif
 
+#include "support/debug.h"
+
+#include "support/options.h"
+#include "LB_comm/comm_lend_light.h"
+#include "LB_comm/shmem_async.h"
+#include "LB_comm/shmem_barrier.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
+
+#include <sys/types.h>
+#include <sys/syscall.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,20 +39,16 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <execinfo.h>
-#include "support/debug.h"
-#include "support/globals.h"
-#include "support/options.h"
-#include "LB_numThreads/numThreads.h"
 
 #define VBFORMAT_LEN 32
 verbose_opts_t vb_opts;
 static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
-static __thread int thread_id;
 
-void debug_init(void) {
-    vb_opts = options_get_verbose();
-    vb_fmt = options_get_verbose_fmt();
+void debug_init(const options_t *options) {
+    vb_opts = options->verbose;
+    vb_fmt = options->verbose_fmt;
+
 
     int i = 0;
     if ( vb_fmt & VBF_NODE ) {
@@ -50,21 +57,21 @@ void debug_init(void) {
         i += sprintf( &fmt_str[i], "%s:", hostname);
     }
     if ( vb_fmt & VBF_PID ) { i += sprintf( &fmt_str[i], "%d:", getpid()); }
+#ifdef MPI_LIB
     if ( vb_fmt & VBF_MPINODE ) { i += sprintf( &fmt_str[i], "%d:", _node_id); }
     if ( vb_fmt & VBF_MPIRANK ) { i += sprintf( &fmt_str[i], "%d:", _mpi_rank); }
+#endif
 
     // Remove last separator ':' if fmt_str is not empty
     if ( i !=0 ) {
         fmt_str[i-1] = '\0';
     }
-
-    thread_id = get_thread_num();
 }
 
 void vb_print(FILE *fp, const char *prefix, const char *fmt, ...) {
     // Print prefix and object identifier
     if ( vb_fmt & VBF_THREAD ) {
-        fprintf( fp, "%s[%s:%d]: ", prefix, fmt_str, thread_id );
+        fprintf( fp, "%s[%s:%ld]: ", prefix, fmt_str, syscall(SYS_gettid) );
     } else {
         fprintf( fp, "%s[%s]: ", prefix, fmt_str );
     }
@@ -93,4 +100,16 @@ void print_backtrace(void) {
     free( func_names );
     fprintf( stderr, "+--------------------------------------\n" );
 
+}
+
+void dlb_clean(void) {
+    // Best effort, finalize current pid on all shmems
+    pid_t pid = getpid();
+    shmem_cpuinfo__finalize(pid);
+    shmem_cpuinfo_ext__finalize();
+    shmem_procinfo__finalize(pid, false);
+    shmem_procinfo_ext__finalize();
+    shmem_barrier_finalize();
+    shmem_async_finalize(pid);
+    finalize_comm();
 }

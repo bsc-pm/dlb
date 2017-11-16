@@ -3,6 +3,37 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [1.4 alpha]
+### Added
+- Callback system
+- API for subprocesses
+- New interaction mode choice (synchronous as it was before, or asynchronous)
+- Doxygen HTML and man pages documentation
+- Test coverage support
+- OMPT support
+
+### Changed
+- API reworked
+- A petition of a CPU now registers the process into a CPU petition queue. If this CPU becomes available, DLB can schedule which process will acquire it
+- A petition of an unspecified CPU registers the process into a global petition queue, this queue has
+  less priority than the CPU queue
+- DLB acquire now does not schedule because it forces the acquisition, DLB Borrow does scheduling but only looks for idle CPUs and never creates a CPU request
+- DLB options print format reworked, DLB_ARGS is now used to pass options to DLB.
+- Fortran Interface now is a include Fortran Interface ? (weird wording)
+- Shared Memory synchronization mechanism is now managed using a pthread spinlock
+- DROM services now use the same shmem handler so no need to call `DLB_Init` and `DLB_DROM_Init`
+- DROM services Get/Set process mask are now asynchronous functions
+
+### Fixed
+- Test suite now follows a Unit Testing approach and does not need undocumented external tools
+- Several minor bugs
+- PreInit service now correctly handles environment variables and allows forks
+
+### Deprecated
+- `DLB_MASK` is no longer used, only registered CPUs may be used by other processes
+- `DLB_DROM_GetCpus` service has been removed
+- `LB_OPTION` type of environment variables is deprecated
+
 ## [Unreleased]
 
 ## [1.3] - 2017-07-12

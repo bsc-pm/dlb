@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,44 +20,39 @@
 #ifndef LEWI_MASK_H
 #define LEWI_MASK_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
+#include "LB_core/spd.h"
 
-/******* Main Functions - LeWI Mask Balancing Policy ********/
+int lewi_mask_Init(const subprocess_descriptor_t *spd);
+int lewi_mask_Finish(const subprocess_descriptor_t *spd);
+int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd);
+int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd);
 
-void lewi_mask_Init( void );
+int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);
+int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
-void lewi_mask_Finish( void );
+int lewi_mask_Lend(const subprocess_descriptor_t *spd);
+int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid);
+int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
-void lewi_mask_IntoCommunication( void );
+int lewi_mask_Reclaim(const subprocess_descriptor_t *spd);
+int lewi_mask_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid);
+int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus);
+int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
-void lewi_mask_OutOfCommunication( void );
+int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid);
+int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus);
+int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
-void lewi_mask_IntoBlockingCall(int is_iter, int bloking_mode);
+int lewi_mask_Borrow(const subprocess_descriptor_t *spd);
+int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid);
+int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus);
+int lewi_mask_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
-void lewi_mask_OutOfBlockingCall(int is_iter);
+int lewi_mask_Return(const subprocess_descriptor_t *spd);
+int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid);
+int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
-void lewi_mask_UpdateResources( int max_resources );
-
-void lewi_mask_ReturnClaimedCpus( void );
-
-void lewi_mask_ClaimCpus( int cpus );
-
-void lewi_mask_acquireCpu( int cpu );
-
-void lewi_mask_acquireCpus(cpu_set_t* cpus);
-
-void lewi_mask_resetDLB( void );
-
-void lewi_mask_disableDLB(void);
-
-void lewi_mask_enableDLB(void);
-
-void lewi_mask_single(void);
-
-void lewi_mask_parallel(void);
+int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid);
+int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask);
 
 #endif /* LEWI_MASK_H */
-

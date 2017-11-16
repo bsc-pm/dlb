@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,23 +23,36 @@
 
 #ifdef MPI_LIB
 
+#include "LB_MPI/process_MPI.h"
+
+#include "LB_MPI/DPD.h"
+#include "LB_MPI/MPI_calls_coded.h"
+#include "LB_core/DLB_kernel.h"
+#include "apis/dlb_errors.h"
+#include "support/tracing.h"
+#include "support/options.h"
+#include "support/debug.h"
+#include "support/types.h"
+
 #include <mpi.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
 
-#include "DPD/DPD.h"
-#include "LB_core/DLB_kernel.h"
-#include "LB_MPI/MPI_calls_coded.h"
-#include "support/tracing.h"
-#include "support/globals.h"
-#include "support/options.h"
-#include "support/debug.h"
 
-static int spid = 0;
+// MPI Globals
+int _mpi_rank = -1;
+int _mpi_size = -1;
+int _mpis_per_node = -1;
+int _node_id = -1;
+int _process_id = -1;
+
+static int use_dpd = 0;
+static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static int is_iter = 0;
 static int periodo = 0;
+static mpi_set_t lewi_mpi_calls = MPISET_ALL;
 static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
 
 void before_init(void) {
@@ -134,8 +147,19 @@ void after_init(void) {
 //    }else{    
         MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 //    }
-    spid = Initialize();
-    mpi_ready=1;
+
+    if (Initialize(0, NULL, NULL) == DLB_SUCCESS) {
+        init_from_mpi = 1;
+    }
+
+    // Obtain MPI options
+    const options_t *options = get_global_options();
+    // Policies that used dpd have been temporarily disabled
+    //use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
+    use_dpd = 0;
+    lewi_mpi_calls = options->lewi_mpi_calls;
+
+    mpi_ready = 1;
 }
 
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
@@ -152,33 +176,22 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
 
         }
 
-        if(options_get_just_barier()) {
-            if (call_type==Barrier) {
-                add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
-                IntoBlockingCall(is_iter, 0);
-                add_event(RUNTIME_EVENT, 0);
-            }
-        } else if (is_blocking(call_type)) {
+        if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
+                (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
+                (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
             add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
             IntoBlockingCall(is_iter, 0);
             add_event(RUNTIME_EVENT, 0);
         }
-
     }
 }
 
 void after_mpi(mpi_call call_type) {
     if (mpi_ready) {
-
-        if(options_get_just_barier()) {
-            if (call_type==Barrier) {
-                add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
-                OutOfBlockingCall(is_iter);
-                add_event(RUNTIME_EVENT, 0);
-                is_iter=0;
-            }
-        } else if (is_blocking(call_type)) {
-            add_event(RUNTIME_EVENT, EVENT_OUT_MPI);
+        if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
+                (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
+                (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
+            add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
             OutOfBlockingCall(is_iter);
             add_event(RUNTIME_EVENT, 0);
             is_iter=0;
@@ -186,13 +199,16 @@ void after_mpi(mpi_call call_type) {
 
         OutOfCommunication();
     }
-    // Poll DROM
-    Update();
+    // Poll DROM and update mask if necessary
+    poll_drom_update();
 }
 
 void before_finalize(void) {
-    Finish(spid);
     mpi_ready=0;
+    if (init_from_mpi == 1) {
+        Finish();
+        init_from_mpi = 0;
+    }
 }
 
 void after_finalize(void) {}

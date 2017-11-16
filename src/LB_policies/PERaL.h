@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -22,7 +22,7 @@
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void PERaL_Init( /* TODO: should be void */ );
+void PERaL_Init(const cpu_set_t *process_mask);
 
 void PERaL_Finish( void );
 

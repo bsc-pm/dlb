@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2016 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,7 +20,7 @@
 #ifndef SHMEM_BARRIER_H
 #define SHMEM_BARRIER_H
 
-void shmem_barrier_init(void);
+void shmem_barrier_init(const char *shmem_key);
 void shmem_barrier_finalize(void);
 void shmem_barrier(void);
 

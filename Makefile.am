@@ -1,5 +1,5 @@
 #################################################################################
-#  Copyright 2015 Barcelona Supercomputing Center                               #
+#  Copyright 2017 Barcelona Supercomputing Center                               #
 #                                                                               #
 #  This file is part of the DLB library.                                        #
 #                                                                               #
@@ -21,6 +21,7 @@ ACLOCAL_AMFLAGS=-I m4
 
 SUBDIRS = . tests
 
+lib_LTLIBRARIES =
 BUILT_SOURCES =
 CLEANFILES =
 EXTRA_DIST =
@@ -34,30 +35,44 @@ PYGEN_verbose_0 = @echo "  PYGEN   " $@;
 GEN_verbose = $(GEN_verbose_@AM_V@)
 GEN_verbose_ = $(GEN_verbose_@AM_DEFAULT_V@)
 GEN_verbose_0 = @echo "  GEN     " $@;
+
+DOXYMAN_verbose = $(DOXYMAN_verbose_@AM_V@)
+DOXYMAN_verbose_ = $(DOXYMAN_verbose_@AM_DEFAULT_V@)
+DOXYMAN_verbose_0 = @echo "  DOXYGEN  man pages";
 endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
 AM_CFLAGS = $(AC_CFLAGS)
 AM_LDFLAGS = -lrt $(AC_LDFLAGS) -avoid-version
 if HAVE_HWLOC
-AM_CPPFLAGS += $(HWLOC_CPPFLAGS)
+AM_CPPFLAGS += $(HWLOC_CPPFLAGS) -DHWLOC_LIB
 AM_LDFLAGS += $(HWLOC_LDFLAGS) $(HWLOC_LIBS)
 endif
 
-##########################################################################
-# src                                                                  ###
-##########################################################################
-##########################################################################
+#################################################################################
+### src                                                                       ###
+#################################################################################
+#********************************************************************************
 # Headers
-##########################################################################
-dist_include_HEADERS = src/LB_core/DLB_interface.h
+#********************************************************************************
+installheaders =                     \
+	src/apis/dlb.h               \
+	src/apis/dlb_sp.h            \
+	src/apis/dlb_stats.h         \
+	src/apis/dlb_drom.h          \
+	src/apis/dlb_types.h         \
+	src/apis/dlb_errors.h        \
+	src/apis/dlbf.h              \
+	src/apis/dlbf-errors.h       \
+	$(END)
+
+dist_include_HEADERS = $(installheaders)
 nodist_include_HEADERS = src/LB_MPI/MPI_interface.h \
 			 src/LB_MPI/MPI_interfaceF.h
-EXTRA_DIST += src/support/dlb_api.h
 
-##########################################################################
+#********************************************************************************
 # Built Sources
-##########################################################################
+#********************************************************************************
 MPI_GENERATOR = $(top_srcdir)/scripts/pygen.py
 MPICALLS_DB = $(top_srcdir)/src/LB_MPI/mpicalls.json
 EXTRA_DIST    += src/LB_MPI/mpicalls.json
@@ -111,82 +126,56 @@ src/LB_MPI/MPI_interceptF.c: $(top_srcdir)/src/LB_MPI/MPI_interceptF.c.in $(MPIC
 	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 
-##########################################################################
-# libdlb_dummy.so
-##########################################################################
-lib_LTLIBRARIES = libdlb_dummy.la
-libdlb_dummy_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
-libdlb_dummy_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
-libdlb_dummy_la_LDFLAGS = $(AM_LDFLAGS)
-libdlb_dummy_la_SOURCES = src/LB_core/DLB_dummy_interface.c
-
-##########################################################################
+#********************************************************************************
 # libdlb.so
-##########################################################################
+#********************************************************************************
 COMMON_SRCS = \
-	src/DPD/DPD.c                   \
-	src/DPD/DPD.h                   \
-	src/LB_numThreads/numThreads.c  \
-	src/LB_numThreads/numThreads.h  \
-	src/LB_policies/JustProf.c      \
-	src/LB_policies/JustProf.h      \
-	src/LB_policies/Lend_light.c    \
-	src/LB_policies/Lend_light.h    \
-	src/LB_policies/Lewi_map.c      \
-	src/LB_policies/Lewi_map.h      \
-	src/LB_policies/Weight.c        \
-	src/LB_policies/Weight.h        \
-	src/LB_policies/lewi_mask.c     \
-	src/LB_policies/autonomous_lewi_mask.h     \
-	src/LB_policies/autonomous_lewi_mask.c     \
-	src/LB_policies/lewi_mask.h     \
-	src/LB_policies/RaL.c           \
-	src/LB_policies/RaL.h           \
-	src/LB_policies/PERaL.c         \
-	src/LB_policies/PERaL.h         \
-	src/LB_comm/comm_shMem.c        \
-	src/LB_comm/comm.h              \
-	src/LB_comm/comm_lend_light.c   \
-	src/LB_comm/comm_lend_light.h   \
-	src/LB_comm/comm_map.c          \
-	src/LB_comm/comm_map.h          \
-	src/LB_comm/shmem.c             \
-	src/LB_comm/shmem.h             \
-	src/LB_comm/shmem_barrier.c     \
-	src/LB_comm/shmem_barrier.h     \
-	src/LB_comm/shmem_bitset.c      \
-	src/LB_comm/shmem_bitset.h      \
-	src/LB_comm/shmem_cpuinfo.c     \
-	src/LB_comm/shmem_cpuinfo.h     \
-	src/LB_comm/shmem_procinfo.c    \
-	src/LB_comm/shmem_procinfo.h    \
-	src/LB_core/DLB_kernel.c        \
-	src/LB_core/DLB_kernel.h        \
-	src/LB_core/DLB_interface.c     \
-	src/LB_core/DLB_interface.h     \
-	src/LB_core/DLB_interfaceF.c    \
-	src/LB_core/statistics.c        \
-	src/LB_core/statistics.h        \
-	src/LB_core/drom.c              \
-	src/LB_core/drom.h              \
-	src/support/sighandler.c        \
-	src/support/sighandler.h        \
-	src/support/globals.c           \
-	src/support/globals.h           \
-	src/support/debug.c             \
-	src/support/debug.h             \
-	src/support/tracing.c           \
-	src/support/tracing.h           \
-	src/support/mytime.c            \
-	src/support/mytime.h            \
-	src/support/mask_utils.c        \
-	src/support/mask_utils.h        \
-	src/support/options.c           \
-	src/support/options.h           \
-	src/support/types.c             \
-	src/support/types.h             \
-	src/support/error.c             \
-	src/support/error.h             \
+	$(installheaders)                       \
+	src/support/debug.c                     \
+	src/support/debug.h                     \
+	src/support/error.c                     \
+	src/support/error.h                     \
+	src/support/mask_utils.c                \
+	src/support/mask_utils.h                \
+	src/support/mytime.c                    \
+	src/support/mytime.h                    \
+	src/support/options.c                   \
+	src/support/options.h                   \
+	src/support/tracing.c                   \
+	src/support/tracing.h                   \
+	src/support/types.c                     \
+	src/support/types.h                     \
+	src/LB_numThreads/numThreads.c          \
+	src/LB_numThreads/numThreads.h          \
+	src/LB_numThreads/ompt.c                \
+	src/LB_comm/comm_lend_light.c           \
+	src/LB_comm/comm_lend_light.h           \
+	src/LB_comm/shmem.c                     \
+	src/LB_comm/shmem.h                     \
+	src/LB_comm/shmem_async.c               \
+	src/LB_comm/shmem_async.h               \
+	src/LB_comm/shmem_barrier.c             \
+	src/LB_comm/shmem_barrier.h             \
+	src/LB_comm/shmem_cpuinfo.c             \
+	src/LB_comm/shmem_cpuinfo.h             \
+	src/LB_comm/shmem_procinfo.c            \
+	src/LB_comm/shmem_procinfo.h            \
+	src/LB_policies/lewi.c                  \
+	src/LB_policies/lewi.h                  \
+	src/LB_policies/lewi_mask.c             \
+	src/LB_policies/lewi_mask.h             \
+	src/LB_core/DLB_kernel.c                \
+	src/LB_core/DLB_kernel.h                \
+	src/LB_core/DLB_kernel_sp.c             \
+	src/LB_core/DLB_kernel_sp.h             \
+	src/LB_core/lb_funcs.c                  \
+	src/LB_core/lb_funcs.h                  \
+	src/LB_core/spd.h                       \
+	src/apis/DLB_interface.c                \
+	src/apis/DLB_interfaceF.c               \
+	src/apis/DLB_interface_drom.c           \
+	src/apis/DLB_interface_sp.c             \
+	src/apis/DLB_interface_stats.c          \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la
@@ -219,11 +208,13 @@ libdlb_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_instr_dbg_la_SOURCES = $(COMMON_SRCS)
 endif
 
-##########################################################################
+#********************************************************************************
 # libdlb_mpi.so
-##########################################################################
+#********************************************************************************
 if MPI_LIB
 MPI_SRCS = \
+	src/LB_MPI/DPD.c                \
+	src/LB_MPI/DPD.h                \
 	src/LB_MPI/process_MPI.c        \
 	src/LB_MPI/process_MPI.h        \
 	$(END)
@@ -273,11 +264,13 @@ nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_GEN)
 endif
 endif #MPI_LIB
 
-##########################################################################
+#********************************************************************************
 # libdlb_mpif.so
-##########################################################################
+#********************************************************************************
 if MPI_LIB
 MPIF_SRCS = \
+	src/LB_MPI/DPD.c                \
+	src/LB_MPI/DPD.h                \
 	src/LB_MPI/process_MPI.c        \
 	src/LB_MPI/process_MPI.h        \
 	$(END)
@@ -324,9 +317,9 @@ nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_GEN)
 endif
 endif #MPI_LIB
 
-##########################################################################
+#********************************************************************************
 # Support binaries
-##########################################################################
+#********************************************************************************
 bin_PROGRAMS = dlb dlb_shm dlb_taskset
 
 dlb_SOURCES = src/utils/dlb.c
@@ -342,9 +335,12 @@ dlb_taskset_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_taskset_LDADD = libdlb.la
 
-##########################################################################
-# doc                                                                  ###
-##########################################################################
+#################################################################################
+### doc                                                                       ###
+#################################################################################
+#********************************************************************************
+# Paraver cfgs
+#********************************************************************************
 paraver_cfgs = \
 	doc/paraver_cfgs/DLB_cpus(4).cfg \
 	doc/paraver_cfgs/DLB_cpus(8).cfg \
@@ -358,6 +354,9 @@ paraver_cfgs = \
 paravercfgsdir = $(datadir)/paraver_cfgs/DLB
 dist_paravercfgs_DATA = $(paraver_cfgs)
 
+#********************************************************************************
+# Examples
+#********************************************************************************
 mpiompexamples_files = \
 	doc/examples/mpi+omp/README \
 	doc/examples/mpi+omp/mpi_omp_pils.c \
@@ -400,7 +399,9 @@ statsexamplesdir = $(docdir)/examples/statistics
 dist_statsexamples_DATA = $(statsexamples_files)
 nodist_statsexamples_DATA = $(statsexamples_files_nodist)
 
-
+#********************************************************************************
+# User Guide
+#********************************************************************************
 sphinx_files = \
 	doc/user_guide/source/conf.py \
 	doc/user_guide/source/api.rst \
@@ -455,13 +456,60 @@ pdf-local: nodoc
 install-pdf-local: nodoc
 endif
 
+#********************************************************************************
+# Doxygen
+#********************************************************************************
+if HAVE_DOXYGEN
+DOXYGEN = doxygen
+DOXYFILE = $(builddir)/doc/doxygen/Doxyfile
+
+doxygen:
+	$(DOXYGEN) $(DOXYFILE)
+else
+doxygen:
+	@echo "  doxygen (hhtp://www.doxygen.org) was not detected at configure time."
+endif
+
+#********************************************************************************
+# Man pages
+#********************************************************************************
+if HAVE_DOXYGEN
+DOXYFILE_MAN = $(builddir)/doc/doxygen/Doxyfile_man
+manpagesbuilddir = $(builddir)/doc/doxygen/man/man3
+
+dist_man_MANS = \
+	$(manpagesbuilddir)/dlb.h.3 \
+	$(manpagesbuilddir)/dlb_drom.h.3 \
+	$(manpagesbuilddir)/dlb_sp.h.3 \
+	$(manpagesbuilddir)/dlb_stats.h.3 \
+	$(manpagesbuilddir)/dlb_types.h.3 \
+	$(manpagesbuilddir)/dlb_errors.h.3 \
+	$(END)
+
+$(manpagesbuilddir)/doxy.stamp: $(installheaders)
+	$(DOXYMAN_verbose)$(DOXYGEN) $(DOXYFILE_MAN)
+	@touch $(manpagesbuilddir)/doxy.stamp
+
+$(manpagesbuilddir)/dlb.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_drom.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_sp.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_stats.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_types.h.3: $(manpagesbuilddir)/doxy.stamp
+$(manpagesbuilddir)/dlb_errors.h.3: $(manpagesbuilddir)/doxy.stamp
+
+CLEANFILES += $(manpagesbuilddir)/doxy.stamp
+endif
+
+#********************************************************************************
+# Clean doc
+#********************************************************************************
 clean-doc:
 	rm -rf doc/user_guide/build doc/user_guide/html doc/user_guide/pdf
+	rm -rf doc/doxygen/html doc/doxygen/man
 
-
-##########################################################################
-# scripts                                                              ###
-##########################################################################
+#################################################################################
+### scripts                                                                   ###
+#################################################################################
 python_PYTHON = scripts/viewer/dlb_wrapper.py \
 		scripts/viewer/progressmeter.py
 
@@ -546,16 +594,18 @@ clean-deb:
 		$(PACKAGE_TARNAME)_$(DEB_RELEASE)*.changes *.deb
 
 
-##########################################################################
-# tests                                                                ###
-##########################################################################
-EXTRA_DIST += tests/test/ tests/gens/config.py
+#################################################################################
+### tests                                                                     ###
+#################################################################################
+EXTRA_DIST += tests/test tests/gens/config.py
 CLEANFILES += tests/test.log tests/test.log.xml
 
+coverage-local: all-am
 
-##########################################################################
-# Hooks                                                                ###
-##########################################################################
+
+#################################################################################
+### Hooks                                                                     ###
+#################################################################################
 
 clean-local: clean-rpm clean-deb clean-doc
 
@@ -570,7 +620,7 @@ dist-hook:
 	    "$(GIT)" --git-dir=$(top_srcdir)/.git log --pretty=format:"[%h] %cd : %s (%an)" --date=short > $(distdir)/ChangeLog; \
 	    git_run_version=`"$(GIT)" --git-dir=$(top_srcdir)/.git show --pretty=format:"%h %ci" HEAD | head -n 1`; \
 	    git_run_branch=`"$(GIT)" --git-dir=$(top_srcdir)/.git branch | grep ^* | sed s/*\ //g`; \
-	    git_version="git $${git_run_branch} $${git_run_version} developer version"; \
+	    git_version="git $${git_run_branch} $${git_run_version}"; \
 	    echo $${git_version} > ${distdir}/VERSION; \
 	elif [ -e $(top_srcdir)/VERSION ]; \
 	then \

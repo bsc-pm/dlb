@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,10 +17,13 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <stdlib.h>
-#include "shmem.h"
+#include "LB_comm/comm_lend_light.h"
+
+#include "LB_comm/shmem.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+
+#include <stdlib.h>
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
@@ -36,9 +39,10 @@ struct shdata {
 };
 
 struct shdata *shdata;
-static shmem_handler_t *shm_handler;
+static shmem_handler_t *shm_handler = NULL;;
 
-void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy) {
+void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy,
+        const char *shmem_key) {
     verbose(VB_SHMEM, "LoadCommonConfig");
     procs=num_procs;
     me=meId;
@@ -46,7 +50,8 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
     defaultCPUS=defCPUS;
     greedy=is_greedy;
 
-    shm_handler = shmem_init( (void**)&shdata, sizeof(struct shdata), "lewi" );
+    shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key,
+            SHMEM_VERSION_IGNORE);
 
     if (me==0) {
         verbose(VB_SHMEM, "setting values to the shared mem");
@@ -60,7 +65,9 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 }
 
 void finalize_comm() {
-    shmem_finalize(shm_handler, SHMEM_DELETE);
+    if (shm_handler) {
+        shmem_finalize(shm_handler, SHMEM_DELETE);
+    }
 }
 
 int releaseCpus(int cpus) {

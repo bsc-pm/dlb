@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,23 +17,22 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <stdlib.h>
-#include <strings.h>
-#include <stdio.h>
+#include "LB_policies/PERaL.h"
 
 #include "LB_numThreads/numThreads.h"
 #include "LB_comm/shmem_bitset.h"
+#include "LB_core/spd.h"
 #include "support/debug.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 
+#include <sched.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
+static int initial_nthreads;
 static int nthreads;
 static int max_cpus;
 
@@ -46,11 +45,12 @@ static double previous_iter;
 
 /******* Main Functions - LeWI Mask Balancing Policy ********/
 
-void PERaL_Init( void ) {
+void PERaL_Init(const cpu_set_t *process_mask) {
     verbose( VB_MICROLB, "LeWI Mask Balancing Init" );
 
-    nthreads = _default_nthreads;
-    max_cpus= _default_nthreads;
+    initial_nthreads = CPU_COUNT(process_mask);
+    nthreads = initial_nthreads;
+    max_cpus = initial_nthreads;
 
     //Initialize iterative info
 //   reset(&compIter);
@@ -58,13 +58,11 @@ void PERaL_Init( void ) {
     iter_cpu=0;
 
     //Initialize shared memory
-    cpu_set_t default_mask;
-    get_mask( &default_mask );
-    shmem_mask.init( &default_mask );
+    shmem_mask.init(process_mask, global_spd.options.shm_key);
 }
 
 void PERaL_Finish( void ) {
-    set_mask( shmem_mask.recover_defmask() );
+    set_mask( &global_spd.pm, shmem_mask.recover_defmask() );
     shmem_mask.finalize();
 }
 
@@ -84,8 +82,7 @@ void PERaL_IntoBlockingCall(int is_iter, int blocking_mode) {
     iter_cpu+=to_secs(aux) * nthreads;
 
     cpu_set_t mask;
-    CPU_ZERO( &mask );
-    get_mask( &mask );
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
     cpu_set_t cpu;
     CPU_ZERO( &cpu );
@@ -101,7 +98,7 @@ void PERaL_IntoBlockingCall(int is_iter, int blocking_mode) {
         nthreads = 0;
     }
 
-    set_mask( &cpu );
+    set_mask( &global_spd.pm, &cpu );
     shmem_mask.add_mask( &mask );
     add_event( THREADS_USED_EVENT, nthreads );
 }
@@ -125,7 +122,7 @@ void PERaL_OutOfBlockingCall(int is_iter ) {
             add_event(1001, iter_cpu);
             //If the iteration has been longer than the last maybe something went wrong, recover one cpu
             verbose( VB_MICROLB, "Iter %d:  %.4f (%.4f) max_cpus:%d", iterNum, to_secs(aux), iter_cpu, max_cpus);
-            if ((iter_duration>=previous_iter) && (max_cpus<_default_nthreads)) { max_cpus++; }
+            if ((iter_duration>=previous_iter) && (max_cpus<initial_nthreads)) { max_cpus++; }
             else {
                 iter_cpu=iter_cpu/(max_cpus-1);
                 //If we can do the same computations with one cpu less in less time than the iteration time, release a cpu "forever"
@@ -148,7 +145,7 @@ void PERaL_OutOfBlockingCall(int is_iter ) {
     cpu_set_t mask;
     CPU_ZERO( &mask );
     shmem_mask.recover_some_defcpus( &mask, max_cpus );
-    set_mask( &mask );
+    set_mask( &global_spd.pm, &mask );
     nthreads = max_cpus;
 //printf(stderr, "[%d] Using %d threads\n", _mpi_rank, nthreads );
 
@@ -159,13 +156,12 @@ void PERaL_OutOfBlockingCall(int is_iter ) {
 /* Update Resources - Try to acquire foreign threads */
 void PERaL_UpdateResources( int max_resources ) {
     cpu_set_t mask;
-    CPU_ZERO( &mask );
-    get_mask( &mask );
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
-    if( max_cpus==_default_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
-        //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, _default_nthreads, max_cpus<_default_nthreads, max_resources );
+    if( max_cpus==initial_nthreads || ((iter_cpu/max_cpus)>(previous_iter/2))) {
+        //fprintf(stderr, "[%d] max_cpus %d < default_threads %d = %d (max_resources=%d)\n", _mpi_rank, max_cpus, initial_nthreads, max_cpus<initial_nthreads, max_resources );
 
-        int new_threads = shmem_mask.collect_mask( &mask, max_resources );
+        int new_threads = shmem_mask.collect_mask(&mask, max_resources, global_spd.options.priority);
         //printf(stderr, "[%d] dirty:%d new_threads:%d\n", _mpi_rank, dirty, new_threads);
 
         if ( new_threads > 0 ) {
@@ -180,7 +176,7 @@ void PERaL_UpdateResources( int max_resources ) {
             initComp=aux;
 
             nthreads += new_threads;
-            set_mask( &mask );
+            set_mask( &global_spd.pm, &mask );
             verbose( VB_MICROLB, "ACQUIRING %d threads for a total of %d", new_threads, nthreads );
             add_event( THREADS_USED_EVENT, nthreads );
         }
@@ -190,14 +186,13 @@ void PERaL_UpdateResources( int max_resources ) {
 /* Return Claimed CPUs - Return foreign threads that have been claimed by its owner */
 void PERaL_ReturnClaimedCpus( void ) {
     cpu_set_t mask;
-    CPU_ZERO( &mask );
-    get_mask( &mask );
+    memcpy(&mask, &global_spd.active_mask, sizeof(cpu_set_t));
 
     int returned = shmem_mask.return_claimed( &mask );
 
     if ( returned > 0 ) {
         nthreads -= returned;
-        set_mask( &mask );
+        set_mask( &global_spd.pm, &mask );
         verbose( VB_MICROLB, "RETURNING %d threads for a total of %d", returned, nthreads );
         add_event( THREADS_USED_EVENT, nthreads );
     }

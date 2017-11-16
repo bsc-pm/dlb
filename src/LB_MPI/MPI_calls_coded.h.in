@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -19,8 +19,6 @@
 
 #ifndef MPI_CALLS_CODED_H
 #define MPI_CALLS_CODED_H
-
-#define is_blocking(x) (x) & 0x10
 
 enum type_mpi_call {
     _Unknown=0,
@@ -43,6 +41,16 @@ enum type_mpi_call {
 // y : type mpi call [0-15]
     _Blocking=0x10
 };
+
+#define is_blocking(x) (x) & 0x10
+#define is_collective(x) (         \
+        (((x) & 0xf) == _Barrier) || \
+        (((x) & 0xf) == _Bcast)   || \
+        (((x) & 0xf) == _All2All) || \
+        (((x) & 0xf) == _Gather)  || \
+        (((x) & 0xf) == _Scatter) || \
+        (((x) & 0xf) == _Reduce)     \
+        )
 
 typedef enum {
     Unknown=0,

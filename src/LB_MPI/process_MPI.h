@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,12 +20,20 @@
 #ifndef PROCESS_MPI_H
 #define PROCESS_MPI_H
 
-#include <mpi.h>
 #include "LB_MPI/MPI_calls_coded.h"
+
+#include <unistd.h>
+#include <mpi.h>
+
+extern int _mpi_rank;         /* MPI rank */
+extern int _mpi_size;         /* MPI size */
+extern int _node_id;          /* Node ID */
+extern int _process_id;       /* Process ID per node */
+extern int _mpis_per_node;    /* Numer of MPI processes per node */
 
 void before_init(void);
 void after_init(void);
-void before_mpi(int call, int buf, int dest);
+void before_mpi(mpi_call call, intptr_t buf, intptr_t dest);
 void after_mpi(mpi_call call_type);
 void before_finalize(void);
 void after_finalize(void);

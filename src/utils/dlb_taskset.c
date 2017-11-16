@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -21,9 +21,10 @@
 #include <config.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "apis/dlb.h"
+#include "apis/dlb_drom.h"
+#include "support/mask_utils.h"
+
 #include <sched.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -36,9 +37,6 @@
 #include <ctype.h>
 #include <regex.h>
 #include <stdbool.h>
-#include "support/mask_utils.h"
-#include "support/error.h"
-#include "LB_core/DLB_interface.h"
 
 static int sys_size;
 
@@ -49,8 +47,8 @@ static void dlb_check(int error, pid_t pid, const char* func) {
         } else {
             fprintf(stderr, "Operation %s did not succeed\n", func);
         }
-        fprintf(stderr, "Return code %d (%s)\n", error, DLB_strerror(error));
-        DLB_Drom_Finalize();
+        fprintf(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
+        DLB_DROM_Finalize();
         exit(EXIT_FAILURE);
     }
 }
@@ -85,35 +83,11 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
-static void get_cpus(unsigned int ncpus) {
-    int max_len = sys_size;
-    int cpulist[max_len];
-    int nelems;
-    int steal = 1;
-
-    DLB_Drom_Init();
-    DLB_Drom_getCPUs(ncpus, steal, cpulist, &nelems, max_len);
-    DLB_Drom_Finalize();
-
-    char hostname[HOST_NAME_MAX];
-    gethostname(hostname, HOST_NAME_MAX);
-
-    // Let's assume a maximum size of cpuid of 4 digits, plus 1 space per cpu, plus \0
-    char *cpulist_str = malloc((nelems*5+1)*sizeof(char));
-    int i, j;
-    for (i=0, j=0; i<nelems; ++i) {
-        j += sprintf(&cpulist_str[j], "%d ", cpulist[i]);
-    }
-    cpulist_str[j] = '\0';
-
-    fprintf(stdout, "%s %s\n", hostname, cpulist_str);
-}
-
 static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
-    DLB_Drom_Init();
-    int error = DLB_Drom_SetProcessMask(pid, new_mask);
+    DLB_DROM_Init();
+    int error = DLB_DROM_SetProcessMask(pid, new_mask);
     dlb_check(error, pid, __FUNCTION__);
-    DLB_Drom_Finalize();
+    DLB_DROM_Finalize();
 
     fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(new_mask));
 }
@@ -126,22 +100,23 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
         exit(EXIT_FAILURE);
     } else if (pid == 0) {
         pid = getpid();
-        DLB_Drom_Init();
-        int error = DLB_Drom_PreInit(pid, new_mask, 1, NULL);
+        DLB_DROM_Init();
+        dlb_preinit_flags_t flags = dlb_steal_cpus | (borrow ? dlb_return_stolen : 0);
+        int error = DLB_DROM_PreInit(pid, new_mask, flags, NULL);
         dlb_check(error, pid, __FUNCTION__);
-        DLB_Drom_Finalize();
+        DLB_DROM_Finalize();
         execvp(argv[0], argv);
         fprintf(stderr, "Failed to execute %s\n", argv[0]);
         exit(EXIT_FAILURE);
     } else {
         wait(NULL);
-        DLB_Drom_Init();
-        int error = DLB_Drom_PostFinalize(pid, borrow);
+        DLB_DROM_Init();
+        int error = DLB_DROM_PostFinalize(pid, borrow);
         if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
             // DLB_ERR_NOPROC must be ignored here
             dlb_check(error, pid, __FUNCTION__);
         }
-        DLB_Drom_Finalize();
+        DLB_DROM_Finalize();
     }
 }
 
@@ -150,7 +125,7 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 
     // Get current PID's mask
     cpu_set_t pid_mask;
-    error = DLB_Drom_GetProcessMask(pid, &pid_mask);
+    error = DLB_DROM_GetProcessMask(pid, &pid_mask);
     dlb_check(error, pid, __FUNCTION__);
 
     // Remove cpus from the PID's mask
@@ -164,14 +139,14 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 
     // Apply final mask
     if (mask_dirty) {
-        error = DLB_Drom_SetProcessMask(pid, &pid_mask);
+        error = DLB_DROM_SetProcessMask(pid, &pid_mask);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(&pid_mask));
     }
 }
 
 static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
-    DLB_Drom_Init();
+    DLB_DROM_Init();
 
     if (pid) {
         remove_affinity_of_one(pid, cpus_to_remove);
@@ -180,7 +155,7 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
         // Get PID list from DLB
         int nelems;
         int *pidlist = malloc(sys_size*sizeof(int));
-        DLB_Drom_GetPidList(pidlist, &nelems, sys_size);
+        DLB_DROM_GetPidList(pidlist, &nelems, sys_size);
 
         // Iterate pidlist
         int i;
@@ -189,24 +164,46 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
         }
         free(pidlist);
     }
-    DLB_Drom_Finalize();
+    DLB_DROM_Finalize();
+}
+
+static void getpidof(int process_pseudo_id) {
+    // Get PID list from DLB
+    int nelems;
+    int *pidlist = malloc(sys_size*sizeof(int));
+    DLB_DROM_Init();
+    DLB_DROM_GetPidList(pidlist, &nelems, sys_size);
+    // Iterate pidlist
+    int i;
+    for (i=0; i<nelems; ++i) {
+        if (pidlist[i] > 0) {
+            if (process_pseudo_id == 0) {
+                fprintf(stdout, "%d\n", pidlist[i]);
+                break;
+            } else {
+                --process_pseudo_id;
+            }
+        }
+    }
+    free(pidlist);
+    DLB_DROM_Finalize();
 }
 
 static void show_affinity(pid_t pid) {
     int error;
     cpu_set_t mask;
 
-    DLB_Drom_Init();
+    DLB_DROM_Init();
     if (pid) {
         // Show CPU affinity of given PID
-        error = DLB_Drom_GetProcessMask(pid, &mask);
+        error = DLB_DROM_GetProcessMask(pid, &mask);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask));
     } else {
         // Show CPU affinity of all processes attached to DLB
         DLB_PrintShmem();
     }
-    DLB_Drom_Finalize();
+    DLB_DROM_Finalize();
 }
 
 
@@ -214,37 +211,33 @@ int main(int argc, char *argv[]) {
     bool do_list = false;
     bool do_set = false;
     bool do_remove = false;
-    bool do_get = false;
+    bool do_getpid = false;
     bool borrow = false;
 
+    int process_pseudo_id = 0;
     pid_t pid = 0;
     cpu_set_t cpu_list;
-    unsigned int ncpus = 0;
-    sys_size = DLB_Drom_GetNumCpus();
+    DLB_DROM_GetNumCpus(&sys_size);
 
     int opt;
     extern char *optarg;
     extern int optind;
     struct option long_options[] = {
         {"list",     no_argument,       0, 'l'},
-        {"get",      required_argument, 0, 'g'},
         {"set",      required_argument, 0, 's'},
         {"cpus",     required_argument, 0, 'c'},
         {"remove",   required_argument, 0, 'r'},
+        {"getpid",   required_argument, 0, 'g'},
         {"pid",      required_argument, 0, 'p'},
         {"borrow",   no_argument,       0, 'b'},
         {"help",     no_argument,       0, 'h'},
         {0,          0,                 0, 0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "+lg:s:c:r:p:bh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+lg:s:c:r:g:p:bh", long_options, NULL)) != -1) {
         switch (opt) {
         case 'l':
             do_list = true;
-            break;
-        case 'g':
-            do_get = true;
-            ncpus = strtoul(optarg, NULL, 10);
             break;
         case 'c':
         case 's':
@@ -255,6 +248,9 @@ int main(int argc, char *argv[]) {
             do_remove = true;
             mu_parse_mask(optarg, &cpu_list);
             break;
+        case 'g':
+            do_getpid = true;
+            process_pseudo_id = strtoul(optarg, NULL, 10);
         case 'p':
             pid = strtoul(optarg, NULL, 10);
             break;
@@ -270,11 +266,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Actions
-    if (do_get) {
-        get_cpus(ncpus);
+    // Check only one action is enabled
+    if (do_list + do_set + do_remove + do_getpid != 1) {
+        usage(argv[0], stderr);
     }
-    else if (do_set && pid) {
+
+    // Actions
+    if (do_set && pid) {
         set_affinity(pid, &cpu_list);
     }
     else if (do_set && !pid && argc > optind) {
@@ -283,6 +281,9 @@ int main(int argc, char *argv[]) {
     }
     else if (do_remove) {
         remove_affinity(pid, &cpu_list);
+    }
+    else if (do_getpid) {
+        getpidof(process_pseudo_id);
     }
     else if (do_list || pid) {
         show_affinity(pid);

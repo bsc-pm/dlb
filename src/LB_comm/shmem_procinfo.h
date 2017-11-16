@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,31 +20,49 @@
 #ifndef SHMEM_PROCINFO_H
 #define SHMEM_PROCINFO_H
 
-#include "support/types.h"
+#include <sys/types.h>
+#include <stdbool.h>
+#include <sched.h>
 
-void shmem_procinfo__init(cpu_set_t *new_mask);
-void shmem_procinfo__finalize(void);
-void shmem_procinfo__update(bool do_drom, bool do_stats);
-int  shmem_procinfo__getprocessmask(int pid, cpu_set_t *mask);
+/* Init / Register */
+int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *new_process_mask,
+        const char *shmem_key);
+int shmem_procinfo_ext__init(const char *shmem_key);
+int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal);
 
-void shmem_procinfo_ext__init(void);
-void shmem_procinfo_ext__finalize(void);
-int shmem_procinfo_ext__preinit(int pid, const cpu_set_t *mask, int steal);
-int shmem_procinfo_ext__postfinalize(int pid, int return_stolen);
+/* Finalize / Unregister */
+int shmem_procinfo__finalize(pid_t pid, bool return_stolen);
+int shmem_procinfo_ext__finalize(void);
+int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen);
 int shmem_procinfo_ext__recover_stolen_cpus(int pid);
-void shmem_procinfo_ext__getpidlist(int *pidlist, int *nelems, int max_len);
-int shmem_procinfo_ext__getprocessmask(int pid, cpu_set_t *mask);
-int shmem_procinfo_ext__setprocessmask(int pid, const cpu_set_t *mask);
-double shmem_procinfo_ext__getcpuusage(int pid);
-double shmem_procinfo_ext__getcpuavgusage(int pid);
-void shmem_procinfo_ext__getcpuusage_list(double *usagelist, int *nelems, int max_len);
-void shmem_procinfo_ext__getcpuavgusage_list(double *avgusagelist, int *nelems, int max_len);
-double shmem_procinfo_ext__getnodeusage(void);
-double shmem_procinfo_ext__getnodeavgusage(void);
-int shmem_procinfo_ext__getactivecpus(int pid);
-void shmem_procinfo_ext__getactivecpus_list(int *cpuslist, int *nelems, int max_len);
-int shmem_procinfo_ext__getloadavg(int pid, double *load);
-int shmem_procinfo_ext__getcpus(int ncpus, int steal, int *cpulist, int *nelems, int max_len);
-void shmem_procinfo_ext__print_info(void);
+
+/* Get / Set Process mask */
+typedef enum QueryType {
+    QUERY_SYNC,
+    QUERY_ASYNC
+} query_t;
+
+int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, query_t query);
+int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, query_t query);
+
+/* Generic Getters */
+int  shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask);
+void shmem_procinfo__getpidlist(pid_t *pidlist, int *nelems, int max_len);
+
+/* Statistics */
+double  shmem_procinfo__getcpuusage(pid_t pid);
+double  shmem_procinfo__getcpuavgusage(pid_t pid);
+void    shmem_procinfo__getcpuusage_list(double *usagelist, int *nelems, int max_len);
+void    shmem_procinfo__getcpuavgusage_list(double *avgusagelist, int *nelems, int max_len);
+double  shmem_procinfo__getnodeusage(void);
+double  shmem_procinfo__getnodeavgusage(void);
+int     shmem_procinfo__getactivecpus(pid_t pid);
+void    shmem_procinfo__getactivecpus_list(pid_t *cpuslist, int *nelems, int max_len);
+int     shmem_procinfo__getloadavg(pid_t pid, double *load);
+
+/* Misc */
+void shmem_procinfo__print_info(bool statistics);
+bool shmem_procinfo__exists(void);
+
 
 #endif /* SHMEM_PROCINFO_H */

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,87 +20,70 @@
 #ifndef DLB_KERNEL_H
 #define DLB_KERNEL_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "apis/dlb_types.h"
+#include "support/options.h"
+
 #include <sched.h>
 #include <stdbool.h>
 
-typedef struct {
-    void (*init) (void);
-    void (*finish) (void);
-    void (*initIteration) (void);
-    void (*finishIteration) (void);
-    void (*intoCommunication) (void);
-    void (*outOfCommunication) (void);
-    void (*intoBlockingCall) (int is_iter, int blocking_mode);
-    void (*outOfBlockingCall) (int is_iter);
-    void (*updateresources) (int max_resources);
-    void (*returnclaimed) (void);
-    int (*releasecpu) (int cpu);
-    int (*returnclaimedcpu) (int cpu);
-    void (*claimcpus) (int cpus);
-    void (*acquirecpu) (int cpu);
-    void (*acquirecpus) (cpu_set_t* mask);
-    int (*checkCpuAvailability) (int cpu);
-    void (*resetDLB) (void);
-    void (*disableDLB)(void);
-    void (*enableDLB) (void);
-    void (*single) (void);
-    void (*parallel) (void);
-    void (*notifymaskchangeto) (const cpu_set_t*);
-} BalancePolicy;
+/* Status */
+int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args);
+int Finish(void);
+int set_dlb_enabled(bool enabled);
+int set_max_parallelism(int max);
 
-extern int use_dpd;
+/* Callbacks */
+int callback_set(dlb_callbacks_t which, dlb_callback_t callback, void *arg);
+int callback_get(dlb_callbacks_t which, dlb_callback_t *callback, void **arg);
 
-void set_dlb_enabled(bool enabled);
-
-int Initialize(void);
-
-void Finish(int id);
-
-void Terminate(void);
-
-void Update(void);
-
+/* MPI specific */
 void IntoCommunication(void);
-
 void OutOfCommunication(void);
-
 void IntoBlockingCall(int is_iter, int is_single);
-
 void OutOfBlockingCall(int is_iter);
 
-void updateresources(int max_resources);
+/* Lend */
+int lend(void);
+int lend_cpu(int cpuid);
+int lend_cpus(int ncpus);
+int lend_cpu_mask(const cpu_set_t *mask);
 
-void returnclaimed(void);
+/* Reclaim */
+int reclaim(void);
+int reclaim_cpu(int cpuid);
+int reclaim_cpus(int ncpus);
+int reclaim_cpu_mask(const cpu_set_t *mask);
 
-int releasecpu(int cpu);
+/* Acquire */
+int acquire_cpu(int cpuid);
+int acquire_cpus(int ncpus);
+int acquire_cpu_mask(const cpu_set_t *mask);
 
-int returnclaimedcpu(int cpu);
+/* Borrow */
+int borrow(void);
+int borrow_cpu(int cpuid);
+int borrow_cpus(int ncpus);
+int borrow_cpu_mask(const cpu_set_t *mask);
 
-void claimcpus(int cpus);
+/* Return */
+int return_all(void);
+int return_cpu(int cpuid);
+int return_cpu_mask(const cpu_set_t *mask);
 
-int checkCpuAvailability(int cpu);
+/* DROM Responsive */
+int poll_drom(int *new_cpus, cpu_set_t *new_mask);
+int poll_drom_update(void);
 
-void resetDLB(void);
+/* Misc */
+int check_cpu_availability(int cpuid);
+int node_barrier(void);
+int set_variable(const char *variable, const char *value);
+int get_variable(const char *variable, char *value);
+int print_variables(bool print_extra);
+int print_shmem(void);
 
-int is_auto(void);
 
-void acquirecpu(int cpu);
-
-void acquirecpus(cpu_set_t* mask);
-
-void singlemode(void);
-
-void parallelmode(void);
-
-void nodebarrier(void);
-
-void notifymaskchangeto(const cpu_set_t* mask);
-
-void notifymaskchange(void);
-
-void printShmem(void);
+// Others
+const options_t* get_global_options(void);
 
 #endif //DLB_KERNEL_H

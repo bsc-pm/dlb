@@ -1,5 +1,5 @@
 #################################################################################
-#  Copyright 2015 Barcelona Supercomputing Center                               #
+#  Copyright 2017 Barcelona Supercomputing Center                               #
 #                                                                               #
 #  This file is part of the DLB library.                                        #
 #                                                                               #
@@ -18,5 +18,23 @@
 #################################################################################
 
 
-check-local: $(top_srcdir)/scripts/bets
-	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test
+check-local: $(top_srcdir)/scripts/bets clean-coverage-data
+	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test/$(BETS_SUBDIR)*
+
+if ENABLE_COVERAGE
+coverage-local: check-local
+	$(mkdir_p) coverage
+	gcovr -r $(abs_top_builddir) --html --html-details -o coverage/index.html
+
+clean-coverage-data:
+	find $(abs_top_builddir) -name '*.gcda' -delete
+
+clean-local: clean-coverage-data
+	find $(abs_top_builddir) -name '*.gcno' -delete
+	rm -rf coverage/
+else
+coverage-local:
+	@echo "coverage is not configured."
+clean-coverage-data:
+clean-local:
+endif

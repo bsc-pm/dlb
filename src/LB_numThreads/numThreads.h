@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,19 +20,40 @@
 #ifndef NUMTHREADS_H
 #define NUMTHREADS_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include "apis/dlb_types.h"
+
 #include <sched.h>
 
-void pm_init(void);
-void update_threads(int threads);
-void get_mask(cpu_set_t *cpu_set);
-int  set_mask(const cpu_set_t *cpu_set);
-void add_mask(const cpu_set_t *cpu_set);
-void get_process_mask(cpu_set_t *cpu_set);
-int  set_process_mask(const cpu_set_t *cpu_set);
-void add_process_mask(const cpu_set_t *cpu_set);
-int  get_thread_num(void);
+typedef struct pm_interface {
+    /* Callbacks list */
+    dlb_callback_set_num_threads_t   dlb_callback_set_num_threads_ptr;
+    void                            *dlb_callback_set_num_threads_arg;
+    dlb_callback_set_active_mask_t   dlb_callback_set_active_mask_ptr;
+    void                            *dlb_callback_set_active_mask_arg;
+    dlb_callback_set_process_mask_t  dlb_callback_set_process_mask_ptr;
+    void                            *dlb_callback_set_process_mask_arg;
+    dlb_callback_add_active_mask_t   dlb_callback_add_active_mask_ptr;
+    void                            *dlb_callback_add_active_mask_arg;
+    dlb_callback_add_process_mask_t  dlb_callback_add_process_mask_ptr;
+    void                            *dlb_callback_add_process_mask_arg;
+    dlb_callback_enable_cpu_t        dlb_callback_enable_cpu_ptr;
+    void                            *dlb_callback_enable_cpu_arg;
+    dlb_callback_disable_cpu_t       dlb_callback_disable_cpu_ptr;
+    void                            *dlb_callback_disable_cpu_arg;
+} pm_interface_t;
+
+void pm_init(pm_interface_t *pm);
+int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t callback, void *arg);
+int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t *callback, void **arg);
+
+int update_threads(const pm_interface_t *pm, int threads);
+int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int enable_cpu(const pm_interface_t *pm, int cpuid);
+int disable_cpu(const pm_interface_t *pm, int cpuid);
 
 #endif //NUMTHREADS_H

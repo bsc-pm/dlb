@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,7 +20,9 @@
 #ifndef JUSTPROF_H
 #define JUSTPROF_H
 
-void JustProf_Init(void);
+#include <sched.h>
+
+void JustProf_Init(const cpu_set_t *process_mask);
 
 void JustProf_Finish(void);
 

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2016 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,15 +17,17 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <semaphore.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "LB_comm/shmem_barrier.h"
 
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 #include "support/tracing.h"
+
+#include <semaphore.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct {
     bool initialized;
@@ -37,6 +39,8 @@ typedef struct {
 typedef struct {
     barrier_t barriers[0];
 } shdata_t;
+
+enum { SHMEM_BARRIER_VERSION = 1 };
 
 static int global_barrier_ids[2] = {0, 1};
 static int local_barrier_id = 0;
@@ -53,7 +57,7 @@ static void advance_barrier() {
     local_barrier_id = (local_barrier_id+1)%2;
 }
 
-void shmem_barrier_init(void) {
+void shmem_barrier_init(const char *shmem_key) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -69,7 +73,8 @@ void shmem_barrier_init(void) {
     max_barriers = mu_get_system_size()*2;
 
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(barrier_t)*max_barriers, shmem_name);
+            sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
+            shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
 
     shmem_lock(init_handler);
     {
@@ -90,7 +95,7 @@ void shmem_barrier_init(void) {
                 barrier->initialized = true;
             }
             barrier->participants++;
-            warning("barrier participants: %d", barrier->participants)
+            warning("barrier participants: %d", barrier->participants);
             advance_barrier();
         }
     }
@@ -163,7 +168,7 @@ void shmem_barrier(void) {
 
     if (!last_in) {
         // Recover resources for those processes that simulated a blocking call
-        add_event(RUNTIME_EVENT, EVENT_RETRIEVE);
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
         OutOfBlockingCall(0);
         add_event(RUNTIME_EVENT, 0);
     }

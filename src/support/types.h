@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -22,11 +22,6 @@
 
 #include <stdbool.h>
 
-typedef enum BlockingMode {
-    ONE_CPU, // MPI not set to blocking, leave a cpu while in a MPI blockin call
-    BLOCK,   // MPI set to blocking mode
-} blocking_mode_t;
-
 typedef enum VerboseOptions {
     VB_CLEAR    = 0,
     VB_API      = 1 << 0,
@@ -35,7 +30,9 @@ typedef enum VerboseOptions {
     VB_MPI_API  = 1 << 3,
     VB_MPI_INT  = 1 << 4,
     VB_STATS    = 1 << 5,
-    VB_DROM     = 1 << 6
+    VB_DROM     = 1 << 6,
+    VB_ASYNC    = 1 << 7,
+    VB_OMPT     = 1 << 8
 } verbose_opts_t;
 
 typedef enum VerboseFormat {
@@ -54,55 +51,65 @@ typedef enum DebugOptions {
 } debug_opts_t;
 
 typedef enum PriorityType {
-    PRIO_NONE,
-    PRIO_AFFINITY_FIRST,
-    PRIO_AFFINITY_FULL,
-    PRIO_AFFINITY_ONLY
+    PRIO_ANY,
+    PRIO_NEARBY_FIRST,
+    PRIO_NEARBY_ONLY,
+    PRIO_SPREAD_IFEMPTY
 } priority_t;
 
 typedef enum PolicyType {
     POLICY_NONE,
-    POLICY_JUST_PROF,
     POLICY_LEWI,
-    POLICY_MAP,
-    POLICY_WEIGHT,
-    POLICY_LEWI_MASK,
-    POLICY_AUTO_LEWI_MASK,
-    POLICY_RAL
+    POLICY_LEWI_MASK
 } policy_t;
 
-void parse_bool(const char *str, bool *value);
-void parse_int(const char *str, int *value);
+typedef enum InteractionMode {
+    MODE_POLLING,
+    MODE_ASYNC
+} interaction_mode_t;
 
-/* blocking_mode_t */
-void parse_blocking_mode(const char *str, blocking_mode_t *value);
-const char* blocking_mode_tostr(blocking_mode_t value);
-const char* get_blocking_mode_choices(void);
+typedef enum MPISet {
+    MPISET_ALL,
+    MPISET_BARRIER,
+    MPISET_COLLECTIVES
+} mpi_set_t;
+
+int parse_bool(const char *str, bool *value);
+int parse_int(const char *str, int *value);
 
 /* verbose_opts_t */
-void parse_verbose_opts(const char *str, verbose_opts_t *value);
+int parse_verbose_opts(const char *str, verbose_opts_t *value);
 const char* verbose_opts_tostr(verbose_opts_t value);
 const char* get_verbose_opts_choices(void);
 
 /* verbose_fmt_t */
-void parse_verbose_fmt(const char *str, verbose_fmt_t *value);
+int parse_verbose_fmt(const char *str, verbose_fmt_t *value);
 const char* verbose_fmt_tostr(verbose_fmt_t value);
 const char* get_verbose_fmt_choices(void);
 
 /* debug_opts_t */
-void parse_debug_opts(const char *str, debug_opts_t *value);
+int parse_debug_opts(const char *str, debug_opts_t *value);
 const char* debug_opts_tostr(debug_opts_t value);
 const char* get_debug_opts_choices(void);
 
 /* priority_t */
-void parse_priority(const char *str, priority_t *value);
+int parse_priority(const char *str, priority_t *value);
 const char* priority_tostr(priority_t value);
 const char* get_priority_choices(void);
 
 /* policy_t */
-void parse_policy(const char *str, policy_t *value);
+int parse_policy(const char *str, policy_t *value);
 const char* policy_tostr(policy_t policy);
 const char* get_policy_choices(void);
+
 /* interaction_mode_t */
+int parse_mode(const char *str, interaction_mode_t *value);
+const char* mode_tostr(interaction_mode_t value);
+const char* get_mode_choices(void);
+
+/* mpi_set_t */
+int parse_mpiset(const char *str, mpi_set_t *value);
+const char* mpiset_tostr(mpi_set_t value);
+const char* get_mpiset_choices(void);
 
 #endif /* TYPES_H */

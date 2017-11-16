@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -27,10 +27,11 @@
 
 // Shared Memory Sync. Must be a struct because it will be allocated inside the shmem
 typedef struct {
-    int             initializing;   // Only the first process sets 0 -> 1
-    int             initialized;    // Only the first process sets 0 -> 1
-    pthread_mutex_t shmem_mutex;    // Shared mutex. Used for shmem fast access
-    pid_t           pidlist[0];     // Array of attached PIDs
+    int                 initializing;   // Only the first process sets 0 -> 1
+    int                 initialized;    // Only the first process sets 0 -> 1
+    unsigned int        shmem_version;  // Shared Memory version, set by the first process
+    pthread_spinlock_t  shmem_lock;     // Spin-lock to grant exclusive access to the shmem
+    pid_t               pidlist[0];     // Array of attached PIDs
 } shmem_sync_t;
 
 typedef struct {
@@ -45,10 +46,13 @@ typedef enum ShmemOption {
     SHMEM_DELETE
 } shmem_option_t;
 
-shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char* shmem_module);
-void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete);
-void shmem_lock(shmem_handler_t* handler);
-void shmem_unlock(shmem_handler_t* handler);
-char *get_shm_filename(shmem_handler_t* handler);
+enum { SHMEM_VERSION_IGNORE = 0 };
+
+shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
+        const char *shmem_key, unsigned int shmem_version);
+void shmem_finalize(shmem_handler_t *handler, shmem_option_t shmem_delete);
+void shmem_lock(shmem_handler_t *handler);
+void shmem_unlock(shmem_handler_t *handler);
+char *get_shm_filename(shmem_handler_t *handler);
 
 #endif /* SHMEM_H */

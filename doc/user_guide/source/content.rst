@@ -20,6 +20,8 @@ Structure
             │           ├── MPI+OMP
             │           ├── MPI+OmpSs
             │           └── statistics
+            ├── man
+            │   └── man3
             └── paraver_cfgs
                 └── DLB
 
@@ -39,6 +41,8 @@ Structure
             |           |-- MPI+OMP
             |           |-- MPI+OmpSs
             |           `-- statistics
+            |-- man
+            |   `-- man3
             `-- paraver_cfgs
                 `-- DLB
 

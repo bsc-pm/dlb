@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,153 +17,184 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#include <pthread.h>
 #include "LB_numThreads/numThreads.h"
-#include "support/globals.h"
+
+#include "apis/dlb_errors.h"
 #include "support/tracing.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 
-#define NANOS_SYMBOLS_DEFINED ( \
-        nanos_omp_get_process_mask && \
-        nanos_omp_set_process_mask && \
-        nanos_omp_add_process_mask && \
-        nanos_omp_get_active_mask && \
-        nanos_omp_set_process_mask && \
-        nanos_omp_add_process_mask && \
-        nanos_omp_get_thread_num && \
-        nanos_omp_get_max_threads && \
-        nanos_omp_set_num_threads \
-        )
+#include <sched.h>
+#include <pthread.h>
 
 #define OMP_SYMBOLS_DEFINED ( \
-        omp_get_thread_num && \
-        omp_get_max_threads && \
         omp_set_num_threads \
         )
 
 /* Weak symbols */
-void nanos_omp_get_process_mask(cpu_set_t *cpu_set) __attribute__((weak));
-int  nanos_omp_set_process_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-void nanos_omp_add_process_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-void nanos_omp_get_active_mask(cpu_set_t *cpu_set) __attribute__((weak));
-int  nanos_omp_set_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-void nanos_omp_add_active_mask(const cpu_set_t *cpu_set) __attribute__((weak));
-int  nanos_omp_get_thread_num(void) __attribute__((weak));
-int  nanos_omp_get_max_threads(void) __attribute__((weak));
-void nanos_omp_set_num_threads(int nthreads) __attribute__((weak));
-int  omp_get_thread_num(void) __attribute__((weak));
-int  omp_get_max_threads(void) __attribute__((weak));
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 
-
-// Static functions to be called when no Prog Model is found
-static void unknown_get_process_mask(cpu_set_t *cpu_set) {
-    CPU_ZERO(cpu_set);
-    sched_getaffinity(0, sizeof(cpu_set), cpu_set);
+static void packed_omp_set_num_threads(int nthreads, void *arg) {
+    omp_set_num_threads(nthreads);
 }
-static int  unknown_set_process_mask(const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_process_mask(const cpu_set_t *cpu_set) {}
-static void unknown_get_active_mask(cpu_set_t *cpu_set) {
-    return unknown_get_process_mask(cpu_set);
-}
-static int  unknown_set_active_mask(const cpu_set_t *cpu_set) { return 0; }
-static void unknown_add_active_mask(const cpu_set_t *cpu_set) {}
-static int  unknown_get_thread_num(void) { return 0; }
-static int  unknown_get_threads(void) { return 1;}
-static void unknown_set_threads(int nthreads) {}
 
 
-static struct {
-    void (*get_process_mask)(cpu_set_t *cpu_set);
-    int  (*set_process_mask)(const cpu_set_t *cpu_set);
-    void (*add_process_mask)(const cpu_set_t *cpu_set);
-    void (*get_active_mask)(cpu_set_t *cpu_set);
-    int  (*set_active_mask)(const cpu_set_t *cpu_set);
-    void (*add_active_mask)(const cpu_set_t *cpu_set);
-    int  (*get_thread_num)(void);
-    int  (*get_threads)(void);
-    void (*set_threads)(int nthreads);
-} pm_funcs = {
-    unknown_get_process_mask,
-    unknown_set_process_mask,
-    unknown_add_process_mask,
-    unknown_get_active_mask,
-    unknown_set_active_mask,
-    unknown_add_active_mask,
-    unknown_get_thread_num,
-    unknown_get_threads,
-    unknown_set_threads
-};
+void pm_init(pm_interface_t *pm) {
 
-static int cpus_node;
+    *pm = (pm_interface_t) {};
 
-void pm_init(void) {
-    cpus_node = mu_get_system_size();
-
-    /* Nanos++ */
-    if (NANOS_SYMBOLS_DEFINED) {
-        pm_funcs.get_process_mask = nanos_omp_get_process_mask;
-        pm_funcs.set_process_mask = nanos_omp_set_process_mask;
-        pm_funcs.add_process_mask = nanos_omp_add_process_mask;
-        pm_funcs.get_active_mask = nanos_omp_get_active_mask;
-        pm_funcs.set_active_mask = nanos_omp_set_active_mask;
-        pm_funcs.add_active_mask = nanos_omp_add_active_mask;
-        pm_funcs.get_thread_num = nanos_omp_get_thread_num;
-        pm_funcs.get_threads = nanos_omp_get_max_threads;
-        pm_funcs.set_threads = nanos_omp_set_num_threads;
-    }
     /* OpenMP */
-    else if (OMP_SYMBOLS_DEFINED) {
-        pm_funcs.get_thread_num = omp_get_thread_num;
-        pm_funcs.get_threads = omp_get_max_threads;
-        pm_funcs.set_threads = omp_set_num_threads;
+    if (OMP_SYMBOLS_DEFINED) {
+        pm->dlb_callback_set_num_threads_ptr = packed_omp_set_num_threads;
     }
     /* Undefined */
     else {}
-    _default_nthreads = pm_funcs.get_threads();
 }
 
-void update_threads(int threads) {
+int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t callback, void *arg) {
+    switch(which) {
+        case dlb_callback_set_num_threads:
+            pm->dlb_callback_set_num_threads_ptr = (dlb_callback_set_num_threads_t)callback;
+            pm->dlb_callback_set_num_threads_arg = arg;
+            break;
+        case dlb_callback_set_active_mask:
+            pm->dlb_callback_set_active_mask_ptr = (dlb_callback_set_active_mask_t)callback;
+            pm->dlb_callback_set_active_mask_arg = arg;
+            break;
+        case dlb_callback_set_process_mask:
+            pm->dlb_callback_set_process_mask_ptr = (dlb_callback_set_process_mask_t)callback;
+            pm->dlb_callback_set_process_mask_arg = arg;
+            break;
+        case dlb_callback_add_active_mask:
+            pm->dlb_callback_add_active_mask_ptr = (dlb_callback_add_active_mask_t)callback;
+            pm->dlb_callback_add_active_mask_arg = arg;
+            break;
+        case dlb_callback_add_process_mask:
+            pm->dlb_callback_add_process_mask_ptr = (dlb_callback_add_process_mask_t)callback;
+            pm->dlb_callback_add_process_mask_arg = arg;
+            break;
+        case dlb_callback_enable_cpu:
+            pm->dlb_callback_enable_cpu_ptr = (dlb_callback_enable_cpu_t)callback;
+            pm->dlb_callback_enable_cpu_arg = arg;
+            break;
+        case dlb_callback_disable_cpu:
+            pm->dlb_callback_disable_cpu_ptr = (dlb_callback_disable_cpu_t)callback;
+            pm->dlb_callback_disable_cpu_arg = arg;
+            break;
+        default:
+            return DLB_ERR_NOCBK;
+    }
+    return DLB_SUCCESS;
+}
+
+int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t *callback, void **arg) {
+    switch(which) {
+        case dlb_callback_set_num_threads:
+            *callback = (dlb_callback_t)pm->dlb_callback_set_num_threads_ptr;
+            *arg = pm->dlb_callback_set_num_threads_arg;
+            break;
+        case dlb_callback_set_active_mask:
+            *callback = (dlb_callback_t)pm->dlb_callback_set_active_mask_ptr;
+            *arg = pm->dlb_callback_set_active_mask_arg;
+            break;
+        case dlb_callback_set_process_mask:
+            *callback = (dlb_callback_t)pm->dlb_callback_set_process_mask_ptr;
+            *arg = pm->dlb_callback_set_process_mask_arg;
+            break;
+        case dlb_callback_add_active_mask:
+            *callback = (dlb_callback_t)pm->dlb_callback_add_active_mask_ptr;
+            *arg = pm->dlb_callback_add_active_mask_arg;
+            break;
+        case dlb_callback_add_process_mask:
+            *callback = (dlb_callback_t)pm->dlb_callback_add_process_mask_ptr;
+            *arg = pm->dlb_callback_add_process_mask_arg;
+            break;
+        case dlb_callback_enable_cpu:
+            *callback = (dlb_callback_t)pm->dlb_callback_enable_cpu_ptr;
+            *arg = pm->dlb_callback_enable_cpu_arg;
+            break;
+        case dlb_callback_disable_cpu:
+            *callback = (dlb_callback_t)pm->dlb_callback_disable_cpu_ptr;
+            *arg = pm->dlb_callback_disable_cpu_arg;
+            break;
+        default:
+            return DLB_ERR_NOCBK;
+    }
+    return DLB_SUCCESS;
+}
+
+int update_threads(const pm_interface_t *pm, int threads) {
+    if (pm->dlb_callback_set_num_threads_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+
+    int cpus_node = mu_get_system_size();
     if (threads > cpus_node) {
-        warning( "Trying to use more CPUS (%d) than available (%d)\n", threads, cpus_node);
+        warning("Trying to use more CPUS (%d) than available (%d)", threads, cpus_node);
         threads = cpus_node;
+    } else if (threads < 1) {
+        warning("setting number of threads to 0 not allowed, falling back to 1");
+        threads = 1;
     }
 
     add_event(THREADS_USED_EVENT, threads);
 
-    threads = (threads<1) ? 1 : threads;
-    pm_funcs.set_threads(threads);
+    pm->dlb_callback_set_num_threads_ptr(threads, pm->dlb_callback_set_num_threads_arg);
+    return DLB_SUCCESS;
 }
 
-void get_mask(cpu_set_t *cpu_set) {
-    pm_funcs.get_active_mask(cpu_set);
+int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    if (pm->dlb_callback_set_active_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    pm->dlb_callback_set_active_mask_ptr(cpu_set, pm->dlb_callback_set_active_mask_arg);
+    return DLB_SUCCESS;
 }
 
-int  set_mask(const cpu_set_t *cpu_set) {
-    return pm_funcs.set_active_mask(cpu_set);
+int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    if (pm->dlb_callback_set_process_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    pm->dlb_callback_set_process_mask_ptr(cpu_set, pm->dlb_callback_set_process_mask_arg);
+    return DLB_SUCCESS;
 }
 
-void add_mask(const cpu_set_t *cpu_set) {
-    pm_funcs.add_active_mask(cpu_set);
+int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    if (pm->dlb_callback_add_active_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    pm->dlb_callback_add_active_mask_ptr(cpu_set, pm->dlb_callback_add_active_mask_arg);
+    return DLB_SUCCESS;
 }
 
-void get_process_mask(cpu_set_t *cpu_set) {
-    pm_funcs.get_process_mask(cpu_set);
+int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    if (pm->dlb_callback_add_process_mask_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
+    pm->dlb_callback_add_process_mask_ptr(cpu_set, pm->dlb_callback_add_process_mask_arg);
+    return DLB_SUCCESS;
 }
 
-int  set_process_mask(const cpu_set_t *cpu_set) {
-    return pm_funcs.set_process_mask(cpu_set);
+int enable_cpu(const pm_interface_t *pm, int cpuid) {
+    if (pm->dlb_callback_enable_cpu_ptr == NULL) {
+        cpu_set_t cpu_set;
+        CPU_ZERO(&cpu_set);
+        CPU_SET(cpuid, &cpu_set);
+        return add_mask(pm, &cpu_set);
+    }
+    pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
+    return DLB_SUCCESS;
 }
 
-void add_process_mask(const cpu_set_t *cpu_set) {
-    pm_funcs.add_process_mask(cpu_set);
-}
-
-int get_thread_num(void) {
-    return pm_funcs.get_thread_num();
+int disable_cpu(const pm_interface_t *pm, int cpuid) {
+    if (pm->dlb_callback_disable_cpu_ptr == NULL) {
+        cpu_set_t cpu_set;
+        sched_getaffinity(0, sizeof(cpu_set_t), &cpu_set);
+        CPU_CLR(cpuid, &cpu_set);
+        return set_mask(pm, &cpu_set);
+    }
+    pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
+    return DLB_SUCCESS;
 }

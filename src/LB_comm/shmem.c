@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include "LB_comm/shmem.h"
+
+#include "support/debug.h"
+
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
@@ -32,7 +36,7 @@
 #include <pthread.h>
 
 #ifndef _POSIX_THREAD_PROCESS_SHARED
-#error This system does not support process shared mutex
+#error This system does not support process shared spinlocks
 #endif
 
 #include "LB_comm/shmem.h"
@@ -76,8 +80,16 @@ static bool shmem_consistency_remove_pid(pid_t *pidlist, pid_t pid) {
     return last_one;
 }
 
+void shmem_consistency_check_version(unsigned int creator_version, unsigned int process_version) {
+    if (creator_version != SHMEM_VERSION_IGNORE) {
+        fatal_cond(creator_version != process_version,
+                "Attaching to a different version of shared memory");
+    }
+}
 
-shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char* shmem_module) {
+
+shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
+        const char *shmem_key, unsigned int shmem_version) {
     int error;
     pid_t pid = getpid();
     verbose(VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", pid, shmem_module);
@@ -90,11 +102,15 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char* shmem
      *   shsync and shdata are both variable in size
      */
     size_t shsync_size = sizeof(shmem_sync_t) + sizeof(pid_t) * mu_get_system_size();
+    shsync_size = (shsync_size + 7) & ~7; // round up to 8 bytes
     handler->shm_size = shsync_size + shdata_size;
 
     /* Get /dev/shm/ file names to create */
-    const char *custom_shm_key = options_get_shm_key();
-    snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, custom_shm_key);
+    if (shmem_key && shmem_key[0] != '\0') {
+        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, shmem_key);
+    } else {
+        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, getuid());
+    }
 
     /* Obtain a file descriptor for the shmem */
     int fd = shm_open(handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
@@ -118,50 +134,40 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char* shmem
     *shdata = handler->shm_addr + shsync_size;
 
     if (__sync_bool_compare_and_swap(&handler->shsync->initializing, 0, 1)) {
+        /* Shared Memory creator */
         verbose(VB_SHMEM, "Initializing Shared Memory (%s)", shmem_module);
-        pthread_mutexattr_t attr;
 
-        /* Init pthread attributes */
-        error = pthread_mutexattr_init(&attr);
-        fatal_cond(error, "pthread_mutexattr_init error: %s", strerror(error));
+        /* Init pthread spinlock */
+        error = pthread_spin_init(&handler->shsync->shmem_lock, PTHREAD_PROCESS_SHARED);
+        fatal_cond(error, "pthread_spin_init error: %s", strerror(error));
 
-        /* Set process-shared attribute */
-        error = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-        fatal_cond(error, "pthread_mutexattr_setpshared error: %s", strerror(error));
-
-        /* Init pthread mutex */
-        error = pthread_mutex_init(&handler->shsync->shmem_mutex, &attr);
-        fatal_cond(error, "pthread_mutex_init error: %s", strerror(error));
-
-        /* Destroy pthread attributes */
-        error = pthread_mutexattr_destroy(&attr);
-        fatal_cond(error, "pthread_mutexattr_destroy error: %s", strerror(error));
+        /* Set Shared Memory version */
+        handler->shsync->shmem_version = shmem_version;
 
         handler->shsync->initialized = 1;
     } else {
+        /* Shared Memory already created */
         while(!handler->shsync->initialized) __sync_synchronize();
         verbose(VB_SHMEM, "Attached to Shared Memory (%s)", shmem_module);
     }
 
-    // Check consistency:
+    /* Check consistency */
     verbose(VB_SHMEM, "Checking shared memory consistency (%s)", shmem_module);
-    struct timespec timeout;
-    get_time_real(&timeout);
-    timeout.tv_sec += SHMEM_TIMEOUT_SECONDS;
-    error = pthread_mutex_timedlock(&handler->shsync->shmem_mutex, &timeout);
-    switch (error) {
-        case 0:
-            shmem_consistency_add_pid(handler->shsync->pidlist, pid);
-            pthread_mutex_unlock(&handler->shsync->shmem_mutex);
-            break;
-        case ETIMEDOUT:
+    struct timespec start;
+    get_time_coarse(&start);
+    // sort of spinlock_timedlock
+    while (pthread_spin_trylock(&handler->shsync->shmem_lock) != 0) {
+        struct timespec now;
+        get_time_coarse(&now);
+        if (timespec_diff(&start, &now) > SHMEM_TIMEOUT_SECONDS * 1e9) {
+            // timeout
             fatal("Could not acquire lock for the new attached shared memory. "
                     "You may want to clean it with \"dlb_shm -d\"");
-            break;
-        default:
-            fatal("pthread_mutex_timedlock error: %s", strerror(error));
-            break;
+        }
     }
+    shmem_consistency_add_pid(handler->shsync->pidlist, pid);
+    shmem_consistency_check_version(handler->shsync->shmem_version, shmem_version);
+    pthread_spin_unlock(&handler->shsync->shmem_lock);
 
     return handler;
 }
@@ -179,7 +185,7 @@ void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete) {
 
     /* Only the last process destroys the pthread_mutex */
     if (last_one && shmem_delete == SHMEM_DELETE) {
-        int error = pthread_mutex_destroy(&handler->shsync->shmem_mutex);
+        int error = pthread_spin_destroy(&handler->shsync->shmem_lock);
         fatal_cond(error, "pthread_mutex_destroy error: %s", strerror(error));
     }
 
@@ -200,11 +206,11 @@ void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete) {
 }
 
 void shmem_lock( shmem_handler_t* handler ) {
-    pthread_mutex_lock(&handler->shsync->shmem_mutex);
+    pthread_spin_lock(&handler->shsync->shmem_lock);
 }
 
 void shmem_unlock( shmem_handler_t* handler ) {
-    pthread_mutex_unlock(&handler->shsync->shmem_mutex);
+    pthread_spin_unlock(&handler->shsync->shmem_lock);
 }
 
 char *get_shm_filename( shmem_handler_t* handler ) {

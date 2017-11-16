@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,22 +20,15 @@
 #ifndef MASK_UTILS_H
 #define MASK_UTILS_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
 #include "support/types.h"
-
-typedef enum {
-    MU_ANY_BIT,
-    MU_ALL_BITS
-} mu_opt_t;
+#include <sched.h>
 
 void mu_init(void);
 void mu_finalize(void);
 int  mu_get_system_size(void);
 void mu_get_system_mask(cpu_set_t *mask);
-void mu_get_affinity_mask(cpu_set_t *affinity_set, const cpu_set_t *child_set, mu_opt_t condition);
+void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset);
+void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset);
 bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset);
 void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend);
 

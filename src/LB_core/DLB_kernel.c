@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2015 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,60 +17,27 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
-#include <string.h>
-#include <unistd.h>
-
 #include "LB_core/DLB_kernel.h"
-#include "LB_core/statistics.h"
-#include "LB_core/drom.h"
-#include "LB_policies/Lend_light.h"
-#include "LB_policies/Weight.h"
-#include "LB_policies/JustProf.h"
-#include "LB_policies/Lewi_map.h"
-#include "LB_policies/lewi_mask.h"
-#include "LB_policies/autonomous_lewi_mask.h"
-#include "LB_policies/RaL.h"
-#include "LB_policies/PERaL.h"
+
+#include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
+#include "LB_comm/shmem_async.h"
+#include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
-#include "LB_comm/shmem_barrier.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
-#include "support/error.h"
-#include "support/globals.h"
 #include "support/tracing.h"
 #include "support/options.h"
-#include "support/mytime.h"
 #include "support/mask_utils.h"
-#include "support/sighandler.h"
 
-//int iterNum = 0;
-//struct timespec initAppl;
-//struct timespec initComp;
-//struct timespec initMPI;
-
-//struct timespec iterCpuTime;
-//struct timespec iterMPITime;
-
-//struct timespec CpuTime;
-//struct timespec MPITime;
-
-//double iterCpuTime_avg=0, iterMPITime_avg=0 ;
-
-// Global
-int use_dpd = 0;
-
-//static char prof = 0;
-static int policy_auto = 0;
-
+#include <sched.h>
+#include <string.h>
+#include <unistd.h>
 
 /* These flags are used to
  *  a) activate/deactive DLB functionality from the API
@@ -79,558 +46,544 @@ static int policy_auto = 0;
  */
 static bool dlb_enabled = false;
 static bool dlb_initialized = false;
-static int init_id = 0;
 
-static policy_t policy;
-static bool stats_enabled;
-static bool drom_enabled;
-static bool barrier_enabled;
-
-// Initialize lb_funcs to dummy functions
-static void dummy_init(void) {}
-static void dummy_finish(void) {}
-static void dummy_initIteration(void) {}
-static void dummy_finishIteration(void) {}
-static void dummy_intoCommunication(void) {}
-static void dummy_outOfCommunication(void) {}
-static void dummy_intoBlockingCall(int is_iter, int blocking_mode) {}
-static void dummy_outOfBlockingCall(int is_iter) {}
-static void dummy_updateresources(int max_resources) {}
-static void dummy_returnclaimed(void) {}
-static int dummy_releasecpu(int cpu) {return 0;}
-static int dummy_returnclaimedcpu(int cpu) {return 0;}
-static void dummy_claimcpus(int cpus) {}
-static void dummy_acquirecpu(int cpu) {}
-static void dummy_acquirecpus(cpu_set_t* mask) {}
-static int dummy_checkCpuAvailability(int cpu) {return 1;}
-static void dummy_resetDLB(void) {}
-static void dummy_disableDLB(void) {}
-static void dummy_enableDLB(void) {}
-static void dummy_single(void) {}
-static void dummy_parallel(void) {}
-
-static BalancePolicy lb_funcs = {
-    .init = &dummy_init,
-    .finish = &dummy_finish,
-    .initIteration = &dummy_initIteration,
-    .finishIteration = &dummy_finishIteration,
-    .intoCommunication = &dummy_intoCommunication,
-    .outOfCommunication = &dummy_outOfCommunication,
-    .intoBlockingCall = &dummy_intoBlockingCall,
-    .outOfBlockingCall = &dummy_outOfBlockingCall,
-    .updateresources = &dummy_updateresources,
-    .returnclaimed = &dummy_returnclaimed,
-    .releasecpu = &dummy_releasecpu,
-    .returnclaimedcpu = &dummy_returnclaimedcpu,
-    .claimcpus = &dummy_claimcpus,
-    .acquirecpu = &dummy_acquirecpu,
-    .acquirecpus = &dummy_acquirecpus,
-    .checkCpuAvailability = &dummy_checkCpuAvailability,
-    .resetDLB = &dummy_resetDLB,
-    .disableDLB = &dummy_disableDLB,
-    .enableDLB = &dummy_enableDLB,
-    .single = &dummy_single,
-    .parallel = &dummy_parallel,
-};
+/* Temporary global sub-process descriptor */
+static subprocess_descriptor_t spd;
 
 
-static void load_modules(void) {
-    options_init();
-    policy = options_get_policy();
-    stats_enabled = options_get_statistics();
-    drom_enabled = options_get_drom();
-    barrier_enabled = options_get_barrier();
+/* Status */
 
-    pm_init();
+int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
 
-    debug_init();
-    verbose(VB_API, "Enabled verbose mode for DLB API");
-    verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
-    verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
-    verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
-    verbose(VB_DROM, "Enabled verbose mode for DROM");
-    verbose(VB_STATS, "Enabled verbose mode for STATS");
-    verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
-
-    init_tracing();
-    register_signals();
-    if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
-        cpu_set_t new_mask;
-        CPU_ZERO(&new_mask);
-        shmem_procinfo__init(&new_mask);
-        if (CPU_COUNT(&new_mask) > 0) {
-            shmem_cpuinfo__init(&new_mask);
-            set_process_mask(&new_mask);
-        } else {
-            shmem_cpuinfo__init(NULL);
-        }
-    }
-    if (barrier_enabled) {
-        shmem_barrier_init();
-    }
-}
-
-static void unload_modules(void) {
-    if (barrier_enabled) {
-        shmem_barrier_finalize();
-    }
-    if (policy != POLICY_NONE || drom_enabled || stats_enabled) {
-        shmem_cpuinfo__finalize();
-        shmem_procinfo__finalize();
-    }
-    unregister_signals();
-    options_finalize();
-}
-
-void set_dlb_enabled(bool enabled) {
-    if (dlb_initialized) {
-        dlb_enabled = enabled;
-        if (enabled){
-            lb_funcs.enableDLB();
-        }else{
-            lb_funcs.disableDLB();
-        }
-    }
-}
-
-int Initialize(void) {
-    int initializer_id = 0;
-
+    int error = DLB_SUCCESS;
     if (!dlb_initialized) {
-        load_modules();
+        // Initialize first instrumentation module
+        options_init(&spd.options, lb_args);
+        init_tracing(&spd.options);
         add_event(RUNTIME_EVENT, EVENT_INIT);
 
-        // Set IDs
-        _process_id = (_process_id == -1) ? getpid() : _process_id;
-        init_id = _process_id;
-        initializer_id = _process_id;
+        // Infer LeWI mode
+        spd.lb_policy = !spd.options.lewi ? POLICY_NONE :
+                                    !mask ? POLICY_LEWI :
+                                            POLICY_LEWI_MASK;
 
-        info0("%s %s", PACKAGE, VERSION);
-
-        switch(policy) {
-            case POLICY_NONE:
-                break;
-            case POLICY_JUST_PROF:
-                info0( "No Load balancing" );
-                use_dpd=1;
-                lb_funcs.init = &JustProf_Init;
-                lb_funcs.finish = &JustProf_Finish;
-                lb_funcs.intoCommunication = &JustProf_IntoCommunication;
-                lb_funcs.outOfCommunication = &JustProf_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &JustProf_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &JustProf_OutOfBlockingCall;
-                lb_funcs.updateresources = &JustProf_UpdateResources;
-                break;
-            case POLICY_LEWI:
-                info0( "Balancing policy: LeWI" );
-                lb_funcs.init = &Lend_light_Init;
-                lb_funcs.finish = &Lend_light_Finish;
-                lb_funcs.intoCommunication = &Lend_light_IntoCommunication;
-                lb_funcs.outOfCommunication = &Lend_light_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &Lend_light_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &Lend_light_OutOfBlockingCall;
-                lb_funcs.updateresources = &Lend_light_updateresources;
-                lb_funcs.resetDLB = &Lend_light_resetDLB;
-                lb_funcs.disableDLB = &Lend_light_disableDLB;
-                lb_funcs.enableDLB = &Lend_light_enableDLB;
-                lb_funcs.single = &Lend_light_single;
-                lb_funcs.parallel = &Lend_light_parallel;
-                break;
-            case POLICY_MAP:
-                info0( "Balancing policy: LeWI with Map of cpus version" );
-                lb_funcs.init = &Map_Init;
-                lb_funcs.finish = &Map_Finish;
-                lb_funcs.intoCommunication = &Map_IntoCommunication;
-                lb_funcs.outOfCommunication = &Map_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &Map_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &Map_OutOfBlockingCall;
-                lb_funcs.updateresources = &Map_updateresources;
-                break;
-            case POLICY_WEIGHT:
-                info0( "Balancing policy: Weight balancing" );
-                use_dpd=1;
-                lb_funcs.init = &Weight_Init;
-                lb_funcs.finish = &Weight_Finish;
-                lb_funcs.intoCommunication = &Weight_IntoCommunication;
-                lb_funcs.outOfCommunication = &Weight_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &Weight_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &Weight_OutOfBlockingCall;
-                lb_funcs.updateresources = &Weight_updateresources;
-                break;
-            case POLICY_LEWI_MASK:
-                info0( "Balancing policy: LeWI mask" );
-                lb_funcs.init = &lewi_mask_Init;
-                lb_funcs.finish = &lewi_mask_Finish;
-                lb_funcs.intoCommunication = &lewi_mask_IntoCommunication;
-                lb_funcs.outOfCommunication = &lewi_mask_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &lewi_mask_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &lewi_mask_OutOfBlockingCall;
-                lb_funcs.updateresources = &lewi_mask_UpdateResources;
-                lb_funcs.returnclaimed = &lewi_mask_ReturnClaimedCpus;
-                lb_funcs.claimcpus = &lewi_mask_ClaimCpus;
-                lb_funcs.resetDLB  = &lewi_mask_resetDLB;
-                lb_funcs.acquirecpu = &lewi_mask_acquireCpu;
-                lb_funcs.acquirecpus = &lewi_mask_acquireCpus;
-                lb_funcs.disableDLB = &lewi_mask_disableDLB;
-                lb_funcs.enableDLB = &lewi_mask_enableDLB;
-                lb_funcs.single = &lewi_mask_single;
-                lb_funcs.parallel = &lewi_mask_parallel;
-                break;
-            case POLICY_AUTO_LEWI_MASK:
-                info0( "Balancing policy: Autonomous LeWI mask" );
-                lb_funcs.init = &auto_lewi_mask_Init;
-                lb_funcs.finish = &auto_lewi_mask_Finish;
-                lb_funcs.intoCommunication = &auto_lewi_mask_IntoCommunication;
-                lb_funcs.outOfCommunication = &auto_lewi_mask_OutOfCommunication;
-                lb_funcs.intoBlockingCall = &auto_lewi_mask_IntoBlockingCall;
-                lb_funcs.outOfBlockingCall = &auto_lewi_mask_OutOfBlockingCall;
-                lb_funcs.updateresources = &auto_lewi_mask_UpdateResources;
-                //lb_funcs.returnclaimed = &auto_lewi_mask_ReturnClaimedCpus;
-                lb_funcs.releasecpu = &auto_lewi_mask_ReleaseCpu;
-                lb_funcs.returnclaimedcpu = &auto_lewi_mask_ReturnCpuIfClaimed;
-                lb_funcs.claimcpus = &auto_lewi_mask_ClaimCpus;
-                lb_funcs.checkCpuAvailability = &auto_lewi_mask_CheckCpuAvailability;
-                lb_funcs.resetDLB = &auto_lewi_mask_resetDLB;
-                lb_funcs.acquirecpu = &auto_lewi_mask_acquireCpu;
-                lb_funcs.acquirecpus = &auto_lewi_mask_acquireCpus;
-                lb_funcs.disableDLB = &auto_lewi_mask_disableDLB;
-                lb_funcs.enableDLB = &auto_lewi_mask_enableDLB;
-                lb_funcs.single = &auto_lewi_mask_single;
-                lb_funcs.parallel = &auto_lewi_mask_parallel;
-                policy_auto=1;
-                break;
-            case POLICY_RAL:
-                info( "Balancing policy: RaL: Redistribute and Lend" );
-                use_dpd=1;
-                if (_mpis_per_node>1) {
-                    lb_funcs.init = &PERaL_Init;
-                    lb_funcs.finish = &PERaL_Finish;
-                    lb_funcs.intoCommunication = &PERaL_IntoCommunication;
-                    lb_funcs.outOfCommunication = &PERaL_OutOfCommunication;
-                    lb_funcs.intoBlockingCall = &PERaL_IntoBlockingCall;
-                    lb_funcs.outOfBlockingCall = &PERaL_OutOfBlockingCall;
-                    lb_funcs.updateresources = &PERaL_UpdateResources;
-                    lb_funcs.returnclaimed = &PERaL_ReturnClaimedCpus;
-                } else {
-                    lb_funcs.init = &RaL_Init;
-                    lb_funcs.finish = &RaL_Finish;
-                    lb_funcs.intoCommunication = &RaL_IntoCommunication;
-                    lb_funcs.outOfCommunication = &RaL_OutOfCommunication;
-                    lb_funcs.intoBlockingCall = &RaL_IntoBlockingCall;
-                    lb_funcs.outOfBlockingCall = &RaL_OutOfBlockingCall;
-                    lb_funcs.updateresources = &RaL_UpdateResources;
-                    lb_funcs.returnclaimed = &RaL_ReturnClaimedCpus;
-                }
-                break;
+        // Initialize the rest of the subprocess descriptor
+        pm_init(&spd.pm);
+        set_lb_funcs(&spd.lb_funcs, spd.lb_policy);
+        spd.id = spd.options.preinit_pid ? spd.options.preinit_pid : getpid();
+        spd.cpus_priority_array = malloc(mu_get_system_size()*sizeof(int));
+        if (mask) {
+            memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
+        } else if (spd.lb_policy == POLICY_LEWI) {
+            // We need to pass ncpus through spd, CPU order doesn't matter
+            CPU_ZERO(&spd.process_mask);
+            int i;
+            for (i=0; i<ncpus; ++i) CPU_SET(i, &spd.process_mask);
         }
 
-#if 0
-        if (thread_distrib==NULL) {
-            if ( nanos_get_pm ) {
-                const char *pm = nanos_get_pm();
-                if ( strcmp( pm, "OpenMP" ) == 0 ) {
-                    _default_nthreads = nanos_omp_get_max_threads();
-                } else if ( strcmp( pm, "OmpSs" ) == 0 ) {
-                    _default_nthreads = nanos_omp_get_num_threads();
-                } else {
-                    fatal0( "Unknown Programming Model\n" );
-                }
-            } else {
-                if ( omp_get_max_threads ) {
-                    _default_nthreads = omp_get_max_threads();
-                } else {
-                    _default_nthreads = 1;
-                }
+        // Initialize modules
+        debug_init(&spd.options);
+        if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
+            // Mandatory: obtain mask
+            fatal_cond(!mask, "DROM and TALP modules require mask support");
+
+            // If the process has been pre-initialized, the process mask may have changed
+            // procinfo_init must return a new_mask if so
+            cpu_set_t new_process_mask;
+            CPU_ZERO(&new_process_mask);
+
+            shmem_procinfo__init(spd.id, &spd.process_mask, &new_process_mask, spd.options.shm_key);
+            if (CPU_COUNT(&new_process_mask) > 0) {
+                memcpy(&spd.process_mask, &new_process_mask, sizeof(cpu_set_t));
+                // FIXME: this will probably fail if we can't register a callback before Init
+                set_process_mask(&spd.pm, &new_process_mask);
             }
-
-            //Initial thread distribution specified
-        } else {
-
-            char* token = strtok(thread_distrib, "-");
-            int i=0;
-            while(i<_process_id && (token = strtok(NULL, "-"))) {
-                i++;
-            }
-
-            if (i!=_process_id) {
-                warning0 ("Error parsing the LB_THREAD_DISTRIBUTION (%s), using default\n");
-                if ( nanos_get_pm ) {
-                    const char *pm = nanos_get_pm();
-                    if ( strcmp( pm, "OpenMP" ) == 0 ) {
-                        _default_nthreads = nanos_omp_get_max_threads();
-                    } else if ( strcmp( pm, "OmpSs" ) == 0 ) {
-                        _default_nthreads = nanos_omp_get_num_threads();
-                    } else {
-                        fatal0( "Unknown Programming Model\n" );
-                    }
-                } else {
-                    if ( omp_get_max_threads ) {
-                        _default_nthreads = omp_get_max_threads();
-                    } else {
-                        _default_nthreads = 1;
-                    }
-                }
-
-            } else {
-                _default_nthreads=atoi(token);
-            }
+            shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
         }
-#endif
+        if (spd.options.barrier) {
+            shmem_barrier_init(spd.options.shm_key);
+        }
+        if (spd.options.mode == MODE_ASYNC) {
+            shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key);
+        }
 
-        info0("This process starts with %d threads", _default_nthreads);
+        // Initialise LeWI
+        spd.lb_funcs.init(&spd);
+        spd.lb_funcs.update_priority_cpus(&spd, &spd.process_mask);
 
-        if (options_get_just_barier())
-            info0("Only lending resources when MPI_Barrier "
-                    "(Env. var. LB_JUST_BARRIER is set)" );
-
-        if (options_get_lend_mode() == BLOCK)
-            info0("LEND mode set to BLOCKING. I will lend all "
-                    "the resources when in an MPI call" );
-
-#if IS_BGQ_MACHINE
-        int bg_threadmodel;
-        parse_env_int( "BG_THREADMODEL", &bg_threadmodel );
-        fatal_cond0( bg_threadmodel!=2,
-                     "BlueGene/Q jobs need to enable Extended thread affinity control in order to "
-                     "active external threads. To do so, export BG_THREADMODEL=2" );
-#endif
-
-        /*  if (prof){
-                clock_gettime(CLOCK_REALTIME, &initAppl);
-                reset(&iterCpuTime);
-                reset(&iterMPITime);
-                reset(&CpuTime);
-                reset(&MPITime);
-                clock_gettime(CLOCK_REALTIME, &initComp);
-            }*/
-
-        lb_funcs.init();
         dlb_enabled = true;
         dlb_initialized = true;
         add_event(DLB_MODE_EVENT, EVENT_ENABLED);
         add_event(RUNTIME_EVENT, 0);
+
+        // Print initialization summary
+        info0("%s %s", PACKAGE, VERSION);
+        if (spd.lb_policy != POLICY_NONE) {
+            info0("Balancing policy: %s", policy_tostr(spd.lb_policy));
+        }
+        verbose(VB_API, "Enabled verbose mode for DLB API");
+        verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
+        verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
+        verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
+        verbose(VB_DROM, "Enabled verbose mode for DROM");
+        verbose(VB_STATS, "Enabled verbose mode for STATS");
+        verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+        if (ncpus || mask) {
+            info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd.process_mask));
+        }
+    } else {
+        error = DLB_ERR_INIT;
     }
-    return initializer_id;
+    return error;
 }
 
-
-void Finish(int id) {
-    if ( dlb_initialized && init_id == id ) {
+int Finish(void) {
+    int error = DLB_SUCCESS;
+    if (dlb_initialized) {
+        add_event(RUNTIME_EVENT, EVENT_FINALIZE);
         dlb_enabled = false;
         dlb_initialized = false;
-        lb_funcs.finish();
-        unload_modules();
+        spd.lb_funcs.finalize(&spd);
+        // Unload modules
+        if (spd.options.mode == MODE_ASYNC) {
+            shmem_async_finalize(spd.id);
+        }
+        if (spd.options.barrier) {
+            shmem_barrier_finalize();
+        }
+        if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
+            shmem_cpuinfo__finalize(spd.id);
+            shmem_procinfo__finalize(spd.id, spd.options.debug_opts & DBG_RETURNSTOLEN);
+        }
+        free(spd.cpus_priority_array);
+        add_event(RUNTIME_EVENT, 0);
+    } else {
+        error = DLB_ERR_NOINIT;
     }
-    /*  if (prof){
-            struct timespec aux, aux2;
-
-            clock_gettime(CLOCK_REALTIME, &aux);
-            diff_time(initComp, aux, &aux2);
-            add_time(CpuTime, aux2, &CpuTime);
-
-            add_time(CpuTime, iterCpuTime, &CpuTime);
-            add_time(MPITime, iterMPITime, &MPITime);
-
-            diff_time(initAppl, aux, &aux);
-
-            if (meId==0 && _node_idId==0){
-                fprintf(stdout, "DLB: Application time: %.4f\n", to_secs(aux));
-                fprintf(stdout, "DLB: Iterations detected: %d\n", iterNum);
-            }
-            fprintf(stdout, "DLB: (%d:%d) - CPU time: %.4f\n", _node_idId, meId, to_secs(CpuTime));
-            fprintf(stdout, "DLB: (%d:%d) - MPI time: %.4f\n", _node_idId, meId, to_secs(MPITime));
-        }*/
+    return error;
 }
 
-void Terminate(void) {
-    lb_funcs.finish();
-    unload_modules();
-}
-
-void Update(void) {
-    if (dlb_enabled) {
-        shmem_procinfo__update(drom_enabled, stats_enabled);
-    }
-}
-
-// FIXME header
-int shmem_procinfo__update_new(bool do_drom, bool do_stats, int *new_threads, cpu_set_t *new_mask);
-int Update_new(int *new_threads, cpu_set_t *new_mask) {
-    int error = DLB_ERR_UNKNOWN;
-    if (dlb_enabled) {
-        if (new_mask) {
-            // If new_mask is provided by the user
-            error = shmem_procinfo__update_new(drom_enabled, stats_enabled, new_threads, new_mask);
-            if (error == DLB_SUCCESS) {
-                shmem_cpuinfo__update_ownership(new_mask);
+int set_dlb_enabled(bool enabled) {
+    int error = DLB_SUCCESS;
+    if (dlb_initialized) {
+        if (__sync_bool_compare_and_swap(&dlb_enabled, !enabled, enabled)) {
+            if (enabled) {
+                spd.lb_funcs.enable(&spd);
+                add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+            } else {
+                spd.lb_funcs.disable(&spd);
+                add_event(DLB_MODE_EVENT, EVENT_DISABLED);
             }
         } else {
-            // Otherwise, mask is allocated and freed
-            cpu_set_t *mask = malloc(sizeof(cpu_set_t));
-            error = shmem_procinfo__update_new(drom_enabled, stats_enabled, new_threads, mask);
-            if (error == DLB_SUCCESS) {
-                shmem_cpuinfo__update_ownership(mask);
-            }
-            free(mask);
+            error = DLB_NOUPDT;
         }
+    } else {
+        error = DLB_ERR_NOINIT;
+    }
+    return error;
+}
+
+int set_max_parallelism(int max) {
+    int error = DLB_SUCCESS;
+    if (dlb_initialized) {
+        // do something with max
+    } else {
+        error = DLB_ERR_NOINIT;
+    }
+    return error;
+}
+
+
+/* Callbacks */
+
+int callback_set(dlb_callbacks_t which, dlb_callback_t callback, void *arg) {
+    return pm_callback_set(&spd.pm, which, callback, arg);
+}
+
+int callback_get(dlb_callbacks_t which, dlb_callback_t *callback, void **arg) {
+    return pm_callback_get(&spd.pm, which, callback, arg);
+}
+
+
+/* MPI specific */
+
+void IntoCommunication(void) {
+    if (dlb_enabled) {
+        spd.lb_funcs.into_communication(&spd);
+    }
+}
+
+void OutOfCommunication(void) {
+    if (dlb_enabled) {
+        spd.lb_funcs.out_of_communication(&spd);
+    }
+}
+
+void IntoBlockingCall(int is_iter, int blocking_mode) {
+    if (dlb_enabled) {
+        spd.lb_funcs.into_blocking_call(&spd);
+    }
+}
+
+void OutOfBlockingCall(int is_iter) {
+    if (dlb_enabled) {
+        spd.lb_funcs.out_of_blocking_call(&spd, is_iter);
+    }
+}
+
+
+/* Lend */
+
+int lend(void) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd.lb_funcs.lend(&spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int lend_cpu(int cpuid) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd.lb_funcs.lend_cpu(&spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int lend_cpus(int ncpus) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd.lb_funcs.lend_cpus(&spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int lend_cpu_mask(const cpu_set_t *mask) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd.lb_funcs.lend_cpu_mask(&spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+
+/* Reclaim */
+
+int reclaim(void) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd.lb_funcs.reclaim(&spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int reclaim_cpu(int cpuid) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd.lb_funcs.reclaim_cpu(&spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int reclaim_cpus(int ncpus) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd.lb_funcs.reclaim_cpus(&spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int reclaim_cpu_mask(const cpu_set_t *mask) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd.lb_funcs.reclaim_cpu_mask(&spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+
+/* Acquire */
+
+int acquire_cpu(int cpuid) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+        error = spd.lb_funcs.acquire_cpu(&spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int acquire_cpus(int ncpus) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+        error = spd.lb_funcs.acquire_cpus(&spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int acquire_cpu_mask(const cpu_set_t *mask) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+        error = spd.lb_funcs.acquire_cpu_mask(&spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+
+/* Borrow */
+
+int borrow(void) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd.lb_funcs.borrow(&spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int borrow_cpu(int cpuid) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd.lb_funcs.borrow_cpu(&spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int borrow_cpus(int ncpus) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd.lb_funcs.borrow_cpus(&spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int borrow_cpu_mask(const cpu_set_t *mask) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd.lb_funcs.borrow_cpu_mask(&spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+
+/* Return */
+
+int return_all(void) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        error = spd.lb_funcs.return_all(&spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int return_cpu(int cpuid) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        error = spd.lb_funcs.return_cpu(&spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int return_cpu_mask(const cpu_set_t *mask) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        error = spd.lb_funcs.return_cpu_mask(&spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+
+/* Drom Responsive */
+
+int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
+    int error;
+    if (!dlb_initialized) {
+        error = DLB_ERR_NOINIT;
+    } else if (!dlb_enabled || !spd.options.drom) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_POLLDROM);
+        // Use a local mask if new_mask was not provided
+        cpu_set_t local_mask;
+        cpu_set_t *mask = new_mask ? new_mask : &local_mask;
+
+        error = shmem_procinfo__polldrom(spd.id, new_cpus, mask);
+        if (error == DLB_SUCCESS) {
+            shmem_cpuinfo__update_ownership(spd.id, mask);
+            spd.lb_funcs.update_priority_cpus(&spd, mask);
+        }
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
+    return error;
+}
+
+int poll_drom_update(void) {
+    cpu_set_t new_mask;
+    int error = poll_drom(NULL, &new_mask);
+    if (error == DLB_SUCCESS) {
+        set_process_mask(&spd.pm, &new_mask);
+    }
+    return error;
+}
+
+
+/* Misc */
+
+int check_cpu_availability(int cpuid) {
+    int error = DLB_SUCCESS;
+    if (dlb_enabled) {
+        error = spd.lb_funcs.check_cpu_availability(&spd, cpuid);
     } else {
         error = DLB_ERR_DISBLD;
     }
     return error;
 }
 
-void IntoCommunication(void) {
-    /*  struct timespec aux;
-        clock_gettime(CLOCK_REALTIME, &initMPI);
-        diff_time(initComp, initMPI, &aux);
-        add_time(iterCpuTime, aux, &iterCpuTime);*/
-
-    if (dlb_enabled) {
-        lb_funcs.intoCommunication();
-    }
-}
-
-void OutOfCommunication(void) {
-    /*  struct timespec aux;
-        clock_gettime(CLOCK_REALTIME, &initComp);
-        diff_time(initMPI, initComp, &aux);
-        add_time(iterMPITime, aux, &iterMPITime);*/
-
-    if (dlb_enabled) {
-        lb_funcs.outOfCommunication();
-    }
-}
-
-void IntoBlockingCall(int is_iter, int blocking_mode) {
-    /*  double cpuSecs;
-        double MPISecs;
-        cpuSecs=iterCpuTime_avg;
-        MPISecs=iterMPITime_avg;*/
-    if (dlb_enabled) {
-        // We explicitly ignore the argument
-        lb_funcs.intoBlockingCall(is_iter, options_get_lend_mode());
-    }
-}
-
-void OutOfBlockingCall(int is_iter) {
-    if (dlb_enabled) {
-        lb_funcs.outOfBlockingCall(is_iter);
-    }
-}
-
-void updateresources(int max_resources) {
-    if (dlb_enabled) {
-        add_event(RUNTIME_EVENT, EVENT_UPDATE);
-        lb_funcs.updateresources( max_resources );
-        add_event(RUNTIME_EVENT, EVENT_USER);
-    }
-}
-
-void returnclaimed(void) {
-    if (dlb_enabled) {
-        add_event(RUNTIME_EVENT, EVENT_RETURN);
-        lb_funcs.returnclaimed();
-        add_event(RUNTIME_EVENT, EVENT_USER);
-    }
-}
-
-int releasecpu(int cpu) {
-    if (dlb_enabled) {
-        add_event(RUNTIME_EVENT, EVENT_RELEASE_CPU);
-        int error = lb_funcs.releasecpu(cpu);
-        add_event(RUNTIME_EVENT, EVENT_USER);
-        return error;
-    } else {
-        return 0;
-    }
-}
-
-int returnclaimedcpu(int cpu) {
-    if (dlb_enabled) {
-        add_event(RUNTIME_EVENT, EVENT_RETURN_CPU);
-        int error = lb_funcs.returnclaimedcpu(cpu);
-        add_event(RUNTIME_EVENT, EVENT_USER);
-        return error;
-    } else {
-        return 0;
-    }
-}
-
-void claimcpus(int cpus) {
-    if (dlb_enabled) {
-        add_event(RUNTIME_EVENT, EVENT_CLAIM_CPUS);
-        lb_funcs.claimcpus(cpus);
-        add_event(RUNTIME_EVENT, EVENT_USER);
-    }
-}
-
-void acquirecpu(int cpu){
-    if (dlb_enabled) {
-        add_event(RUNTIME_EVENT, EVENT_ACQUIRE_CPU);
-        lb_funcs.acquirecpu(cpu);
-        add_event(RUNTIME_EVENT, EVENT_USER);
-    }
-}
-
-void acquirecpus(cpu_set_t* mask){
-    if (dlb_enabled) {
-        add_event(RUNTIME_EVENT, EVENT_ACQUIRE_CPU);
-        lb_funcs.acquirecpus(mask);
-        add_event(RUNTIME_EVENT, EVENT_USER);
-    }
-}
-
-int checkCpuAvailability(int cpu) {
-    if (dlb_enabled) {
-        return lb_funcs.checkCpuAvailability(cpu);
-    } else {
-        return 1;
-    }
-}
-
-void resetDLB(void) {
-    if (dlb_enabled) {
-        lb_funcs.resetDLB();
-    }
-}
-
-void singlemode(void) {
-    dlb_enabled = false;
-    lb_funcs.single();
-}
-
-void parallelmode(void) {
-    dlb_enabled = true;
-    lb_funcs.parallel();
-}
-
-void nodebarrier(void) {
+int node_barrier(void) {
+    add_event(RUNTIME_EVENT, EVENT_BARRIER);
     shmem_barrier();
+    add_event(RUNTIME_EVENT, 0);
+    return DLB_SUCCESS;
 }
 
-int is_auto(void){
-   return policy_auto;
+int set_variable(const char *variable, const char *value) {
+    return options_set_variable(&spd.options, variable, value);
 }
 
-void notifymaskchangeto(const cpu_set_t* mask) {
-    shmem_cpuinfo__update_ownership(mask);
+int get_variable(const char *variable, char *value) {
+    return options_get_variable(&spd.options, variable, value);
 }
 
-void notifymaskchange(void) {
-    cpu_set_t process_mask;
-    get_process_mask(&process_mask);
-    notifymaskchangeto(&process_mask);
+int print_variables(bool print_extra) {
+    if (!print_extra) {
+        options_print_variables(&spd.options);
+    } else {
+        options_print_variables_extra(&spd.options);
+    }
+    return DLB_SUCCESS;
 }
 
-void printShmem(void) {
-    pm_init();
-    options_init();
-    debug_init();
-    shmem_cpuinfo_ext__init();
-    shmem_cpuinfo_ext__print_info();
+int print_shmem(void) {
+    if (!dlb_initialized) {
+        options_init(&spd.options, NULL);
+        debug_init(&spd.options);
+    }
+    shmem_cpuinfo_ext__init(spd.options.shm_key);
+    shmem_cpuinfo_ext__print_info(spd.options.statistics);
     shmem_cpuinfo_ext__finalize();
-    shmem_procinfo_ext__init();
-    shmem_procinfo_ext__print_info();
+    shmem_procinfo_ext__init(spd.options.shm_key);
+    shmem_procinfo__print_info(spd.options.statistics);
     shmem_procinfo_ext__finalize();
-    options_finalize();
+    return DLB_SUCCESS;
+}
+
+// Others
+const options_t* get_global_options(void) {
+    return &spd.options;
 }

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2016 Barcelona Supercomputing Center                               */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,31 +17,34 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include <stdio.h>
+#include "support/error.h"
 
-#include "error.h"
+#include "apis/dlb_errors.h"
 
 static const char* error_msg[] = {
+    /* DLB_NOUPDT */        "no update needed",
+    /* DLB_NOTED */         "resource not available, but petition attended",
     /* DLB_SUCCESS */       "Success",
     /* DLB_ERR_UNKNOWN */   "Unknown error",
     /* DLB_ERR_NOINIT */    "DLB is not initialized",
+    /* DLB_ERR_INIT */      "DLB already initialized",
     /* DLB_ERR_DISBLD */    "DLB is disabled",
     /* DLB_ERR_NOSHMEM */   "No shared memory",
     /* DLB_ERR_NOPROC */    "No pid",
     /* DLB_ERR_PDIRTY */    "pid dirty, can't update",
     /* DLB_ERR_PERM */      "permission error",
     /* DLB_ERR_TIMEOUT */   "timeout",
-    /* DLB_ERR_NOUPDT */    "no update needed"
+    /* DLB_ERR_NOCBK */     "no callback defined",
+    /* DLB_ERR_NOENT */     "no entry",
+    /* DLB_ERR_NOCOMP */    "no compatible",
+    /* DLB_ERR_REQST */     "too many requests",
+    /* DLB_ERR_NOMEM */     "not enough space",
+    /* DLB_ERR_NOPOL */     "not defined in current policy"
 };
 
 const char* error_get_str(int errnum) {
-    if (errnum > 0 || errnum < DLB_MAX_ERRORS) {
+    if (errnum >= _DLB_ERROR_UPPER_BOUND || errnum <= _DLB_ERROR_LOWER_BOUND) {
         return "unknown errnum";
     }
-    return error_msg[-errnum];
+    return error_msg[-errnum + _DLB_ERROR_UPPER_BOUND - 1];
 }
-
-// Thread safe reentrant needed?
-// int error_get_str_r(int errnum, char *buf, size_t buflen)
-// {
-// }
