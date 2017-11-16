@@ -33,10 +33,10 @@ static void print_usage( const char * program ) {
     fprintf( stdout, "usage: %s [-h] [--help] [--help-extra] [-v] [--version]\n", program );
 }
 
-static void print_help(bool print_help, bool print_extra) {
+static void print_help(bool list_help, bool list_extra) {
     DLB_Init(0, NULL, NULL);
-    if (print_help) DLB_PrintVariables(false);
-    if (print_extra) DLB_PrintVariables(true);
+    if (list_help) DLB_PrintVariables(false);
+    if (list_extra) DLB_PrintVariables(true);
     DLB_Finalize();
 }
 
