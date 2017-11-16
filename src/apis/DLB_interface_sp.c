@@ -50,12 +50,14 @@ int DLB_SetMaxParallelism_sp(dlb_handler_t handler, int max) {
 
 /* Callbacks */
 
-int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t callback) {
-    return callback_set_sp(handler, which, callback);
+int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which,
+        dlb_callback_t callback, void *arg) {
+    return callback_set_sp(handler, which, callback, arg);
 }
 
-int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which, dlb_callback_t *callback) {
-    return callback_get_sp(handler, which, callback);
+int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which,
+        dlb_callback_t *callback, void **arg) {
+    return callback_get_sp(handler, which, callback, arg);
 }
 
 

@@ -26,18 +26,27 @@
 
 typedef struct pm_interface {
     /* Callbacks list */
-    dlb_callback_set_num_threads_t dlb_callback_set_num_threads_ptr;
-    dlb_callback_set_active_mask_t dlb_callback_set_active_mask_ptr;
-    dlb_callback_set_process_mask_t dlb_callback_set_process_mask_ptr;
-    dlb_callback_add_active_mask_t dlb_callback_add_active_mask_ptr;
-    dlb_callback_add_process_mask_t dlb_callback_add_process_mask_ptr;
-    dlb_callback_enable_cpu_t dlb_callback_enable_cpu_ptr;
-    dlb_callback_disable_cpu_t dlb_callback_disable_cpu_ptr;
+    dlb_callback_set_num_threads_t   dlb_callback_set_num_threads_ptr;
+    void                            *dlb_callback_set_num_threads_arg;
+    dlb_callback_set_active_mask_t   dlb_callback_set_active_mask_ptr;
+    void                            *dlb_callback_set_active_mask_arg;
+    dlb_callback_set_process_mask_t  dlb_callback_set_process_mask_ptr;
+    void                            *dlb_callback_set_process_mask_arg;
+    dlb_callback_add_active_mask_t   dlb_callback_add_active_mask_ptr;
+    void                            *dlb_callback_add_active_mask_arg;
+    dlb_callback_add_process_mask_t  dlb_callback_add_process_mask_ptr;
+    void                            *dlb_callback_add_process_mask_arg;
+    dlb_callback_enable_cpu_t        dlb_callback_enable_cpu_ptr;
+    void                            *dlb_callback_enable_cpu_arg;
+    dlb_callback_disable_cpu_t       dlb_callback_disable_cpu_ptr;
+    void                            *dlb_callback_disable_cpu_arg;
 } pm_interface_t;
 
 void pm_init(pm_interface_t *pm);
-int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t callback);
-int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t *callback);
+int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t callback, void *arg);
+int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t *callback, void **arg);
 
 int update_threads(const pm_interface_t *pm, int threads);
 int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);

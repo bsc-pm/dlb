@@ -34,40 +34,53 @@
 /* Weak symbols */
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 
+static void packed_omp_set_num_threads(int nthreads, void *arg) {
+    omp_set_num_threads(nthreads);
+}
+
+
 void pm_init(pm_interface_t *pm) {
 
     *pm = (pm_interface_t) {};
 
     /* OpenMP */
     if (OMP_SYMBOLS_DEFINED) {
-        pm->dlb_callback_set_num_threads_ptr = omp_set_num_threads;
+        pm->dlb_callback_set_num_threads_ptr = packed_omp_set_num_threads;
     }
     /* Undefined */
     else {}
 }
 
-int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t callback) {
+int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t callback, void *arg) {
     switch(which) {
         case dlb_callback_set_num_threads:
             pm->dlb_callback_set_num_threads_ptr = (dlb_callback_set_num_threads_t)callback;
+            pm->dlb_callback_set_num_threads_arg = arg;
             break;
         case dlb_callback_set_active_mask:
             pm->dlb_callback_set_active_mask_ptr = (dlb_callback_set_active_mask_t)callback;
+            pm->dlb_callback_set_active_mask_arg = arg;
             break;
         case dlb_callback_set_process_mask:
             pm->dlb_callback_set_process_mask_ptr = (dlb_callback_set_process_mask_t)callback;
+            pm->dlb_callback_set_process_mask_arg = arg;
             break;
         case dlb_callback_add_active_mask:
             pm->dlb_callback_add_active_mask_ptr = (dlb_callback_add_active_mask_t)callback;
+            pm->dlb_callback_add_active_mask_arg = arg;
             break;
         case dlb_callback_add_process_mask:
             pm->dlb_callback_add_process_mask_ptr = (dlb_callback_add_process_mask_t)callback;
+            pm->dlb_callback_add_process_mask_arg = arg;
             break;
         case dlb_callback_enable_cpu:
             pm->dlb_callback_enable_cpu_ptr = (dlb_callback_enable_cpu_t)callback;
+            pm->dlb_callback_enable_cpu_arg = arg;
             break;
         case dlb_callback_disable_cpu:
             pm->dlb_callback_disable_cpu_ptr = (dlb_callback_disable_cpu_t)callback;
+            pm->dlb_callback_disable_cpu_arg = arg;
             break;
         default:
             return DLB_ERR_NOCBK;
@@ -75,28 +88,36 @@ int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t ca
     return DLB_SUCCESS;
 }
 
-int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which, dlb_callback_t *callback) {
+int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which,
+        dlb_callback_t *callback, void **arg) {
     switch(which) {
         case dlb_callback_set_num_threads:
             *callback = (dlb_callback_t)pm->dlb_callback_set_num_threads_ptr;
+            *arg = pm->dlb_callback_set_num_threads_arg;
             break;
         case dlb_callback_set_active_mask:
             *callback = (dlb_callback_t)pm->dlb_callback_set_active_mask_ptr;
+            *arg = pm->dlb_callback_set_active_mask_arg;
             break;
         case dlb_callback_set_process_mask:
             *callback = (dlb_callback_t)pm->dlb_callback_set_process_mask_ptr;
+            *arg = pm->dlb_callback_set_process_mask_arg;
             break;
         case dlb_callback_add_active_mask:
             *callback = (dlb_callback_t)pm->dlb_callback_add_active_mask_ptr;
+            *arg = pm->dlb_callback_add_active_mask_arg;
             break;
         case dlb_callback_add_process_mask:
             *callback = (dlb_callback_t)pm->dlb_callback_add_process_mask_ptr;
+            *arg = pm->dlb_callback_add_process_mask_arg;
             break;
         case dlb_callback_enable_cpu:
             *callback = (dlb_callback_t)pm->dlb_callback_enable_cpu_ptr;
+            *arg = pm->dlb_callback_enable_cpu_arg;
             break;
         case dlb_callback_disable_cpu:
             *callback = (dlb_callback_t)pm->dlb_callback_disable_cpu_ptr;
+            *arg = pm->dlb_callback_disable_cpu_arg;
             break;
         default:
             return DLB_ERR_NOCBK;
@@ -120,7 +141,7 @@ int update_threads(const pm_interface_t *pm, int threads) {
 
     add_event(THREADS_USED_EVENT, threads);
 
-    pm->dlb_callback_set_num_threads_ptr(threads);
+    pm->dlb_callback_set_num_threads_ptr(threads, pm->dlb_callback_set_num_threads_arg);
     return DLB_SUCCESS;
 }
 
@@ -128,7 +149,7 @@ int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_set_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    pm->dlb_callback_set_active_mask_ptr(cpu_set);
+    pm->dlb_callback_set_active_mask_ptr(cpu_set, pm->dlb_callback_set_active_mask_arg);
     return DLB_SUCCESS;
 }
 
@@ -136,7 +157,7 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_set_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    pm->dlb_callback_set_process_mask_ptr(cpu_set);
+    pm->dlb_callback_set_process_mask_ptr(cpu_set, pm->dlb_callback_set_process_mask_arg);
     return DLB_SUCCESS;
 }
 
@@ -144,7 +165,7 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_add_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    pm->dlb_callback_add_active_mask_ptr(cpu_set);
+    pm->dlb_callback_add_active_mask_ptr(cpu_set, pm->dlb_callback_add_active_mask_arg);
     return DLB_SUCCESS;
 }
 
@@ -152,7 +173,7 @@ int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_add_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    pm->dlb_callback_add_process_mask_ptr(cpu_set);
+    pm->dlb_callback_add_process_mask_ptr(cpu_set, pm->dlb_callback_add_process_mask_arg);
     return DLB_SUCCESS;
 }
 
@@ -163,7 +184,7 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
         CPU_SET(cpuid, &cpu_set);
         return add_mask(pm, &cpu_set);
     }
-    pm->dlb_callback_enable_cpu_ptr(cpuid);
+    pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
     return DLB_SUCCESS;
 }
 
@@ -174,6 +195,6 @@ int disable_cpu(const pm_interface_t *pm, int cpuid) {
         CPU_CLR(cpuid, &cpu_set);
         return set_mask(pm, &cpu_set);
     }
-    pm->dlb_callback_disable_cpu_ptr(cpuid);
+    pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
     return DLB_SUCCESS;
 }

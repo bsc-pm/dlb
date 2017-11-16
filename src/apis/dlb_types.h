@@ -46,12 +46,12 @@ typedef enum dlb_callbacks_e {
 } dlb_callbacks_t;
 
 // Callback signatures
-typedef void (*dlb_callback_set_num_threads_t)(int num_threads);
-typedef void (*dlb_callback_set_active_mask_t)(const_dlb_cpu_set_t mask);
-typedef void (*dlb_callback_set_process_mask_t)(const_dlb_cpu_set_t mask);
-typedef void (*dlb_callback_add_active_mask_t)(const_dlb_cpu_set_t mask);
-typedef void (*dlb_callback_add_process_mask_t)(const_dlb_cpu_set_t mask);
-typedef void (*dlb_callback_enable_cpu_t)(int cpuid);
-typedef void (*dlb_callback_disable_cpu_t)(int cpuid);
+typedef void (*dlb_callback_set_num_threads_t)(int num_threads, void *arg);
+typedef void (*dlb_callback_set_active_mask_t)(const_dlb_cpu_set_t mask, void *arg);
+typedef void (*dlb_callback_set_process_mask_t)(const_dlb_cpu_set_t mask, void *arg);
+typedef void (*dlb_callback_add_active_mask_t)(const_dlb_cpu_set_t mask, void *arg);
+typedef void (*dlb_callback_add_process_mask_t)(const_dlb_cpu_set_t mask, void *arg);
+typedef void (*dlb_callback_enable_cpu_t)(int cpuid, void *arg);
+typedef void (*dlb_callback_disable_cpu_t)(int cpuid, void *arg);
 
 #endif /* DLB_TYPES_H */

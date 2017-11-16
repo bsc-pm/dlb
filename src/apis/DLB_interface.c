@@ -49,12 +49,12 @@ int DLB_SetMaxParallelism(int max) {
 
 /* Callbacks */
 
-int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback) {
-    return callback_set(which, callback);
+int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void *arg) {
+    return callback_set(which, callback, arg);
 }
 
-int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback) {
-    return callback_get(which, callback);
+int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg) {
+    return callback_get(which, callback, arg);
 }
 
 

@@ -80,18 +80,20 @@ int DLB_SetMaxParallelism(int max);
 /*! \brief Set callback
  *  \param[in] which callback type
  *  \param[in] callback function pointer to register
+ *  \param[in] arg opaque argument to pass in each callback invocation
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
-int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback);
+int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void *arg);
 
 /*! \brief Get callback
  *  \param[in] which callback type
  *  \param[out] callback registered callback function for the specified callback type
+ *  \param[out] arg opaque argument to pass in each callback invocation
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOCBK if the callback type does not exist
  */
-int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback);
+int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg);
 
 
 /*********************************************************************************/

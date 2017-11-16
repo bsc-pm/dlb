@@ -32,13 +32,15 @@
 /* Test message queue */
 
 static int num_cb_called = 0;
-static void cb_enable_cpu(int cpuid) { ++num_cb_called; }
-static void cb_disable_cpu(int cpuid) { ++num_cb_called; }
+static void cb_enable_cpu(int cpuid, void *arg) { ++num_cb_called; }
+static void cb_disable_cpu(int cpuid, void *arg) { ++num_cb_called; }
 
 int main(int argc, char **argv) {
     pm_interface_t pm = {
         .dlb_callback_enable_cpu_ptr = cb_enable_cpu,
-        .dlb_callback_disable_cpu_ptr = cb_disable_cpu
+        .dlb_callback_enable_cpu_arg = NULL,
+        .dlb_callback_disable_cpu_ptr = cb_disable_cpu,
+        .dlb_callback_disable_cpu_arg = NULL
     };
     pid_t pid = 42;
     cpu_set_t mask = { .__bits = { 0xf } };

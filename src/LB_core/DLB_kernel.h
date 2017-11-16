@@ -33,8 +33,8 @@ int set_dlb_enabled(bool enabled);
 int set_max_parallelism(int max);
 
 /* Callbacks */
-int callback_set(dlb_callbacks_t which, dlb_callback_t callback);
-int callback_get(dlb_callbacks_t which, dlb_callback_t *callback);
+int callback_set(dlb_callbacks_t which, dlb_callback_t callback, void *arg);
+int callback_get(dlb_callbacks_t which, dlb_callback_t *callback, void **arg);
 
 /* MPI specific */
 void IntoCommunication(void);

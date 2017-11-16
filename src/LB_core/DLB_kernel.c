@@ -196,12 +196,12 @@ int set_max_parallelism(int max) {
 
 /* Callbacks */
 
-int callback_set(dlb_callbacks_t which, dlb_callback_t callback) {
-    return pm_callback_set(&spd.pm, which, callback);
+int callback_set(dlb_callbacks_t which, dlb_callback_t callback, void *arg) {
+    return pm_callback_set(&spd.pm, which, callback, arg);
 }
 
-int callback_get(dlb_callbacks_t which, dlb_callback_t *callback) {
-    return pm_callback_get(&spd.pm, which, callback);
+int callback_get(dlb_callbacks_t which, dlb_callback_t *callback, void **arg) {
+    return pm_callback_get(&spd.pm, which, callback, arg);
 }
 
 

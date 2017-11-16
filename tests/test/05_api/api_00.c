@@ -29,11 +29,11 @@
 
 static cpu_set_t process_mask;
 
-static void cb_enable_cpu(int cpuid) {
+static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &process_mask);
 }
 
-static void cb_disable_cpu(int cpuid) {
+static void cb_disable_cpu(int cpuid, void *arg) {
     CPU_CLR(cpuid, &process_mask);
     DLB_LendCpu(cpuid);
 }
@@ -44,13 +44,15 @@ int main( int argc, char **argv ) {
     CPU_SET(1, &process_mask);
 
     assert( DLB_Init(0, &process_mask, "--policy=no") == DLB_SUCCESS );
-    assert( DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu)
-            == DLB_SUCCESS);
-    assert( DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu)
-            == DLB_SUCCESS);
+    assert( DLB_CallbackSet(dlb_callback_disable_cpu,
+                (dlb_callback_t)cb_disable_cpu, NULL) == DLB_SUCCESS);
+    assert( DLB_CallbackSet(dlb_callback_enable_cpu,
+                (dlb_callback_t)cb_enable_cpu, NULL) == DLB_SUCCESS);
     dlb_callback_t cb;
-    assert( DLB_CallbackGet(dlb_callback_enable_cpu, &cb) == DLB_SUCCESS );
+    void *arg;
+    assert( DLB_CallbackGet(dlb_callback_enable_cpu, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_enable_cpu );
+    assert( arg == NULL );
 
     // Basic enable-disable test
     assert( DLB_Disable() == DLB_SUCCESS );

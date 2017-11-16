@@ -47,11 +47,11 @@ static cpu_set_t sp2_mask;
 static interaction_mode_t mode;
 
 /* Subprocess 1 callbacks */
-static void sp1_cb_enable_cpu(int cpuid) {
+static void sp1_cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &sp1_mask);
 }
 
-static void sp1_cb_disable_cpu(int cpuid) {
+static void sp1_cb_disable_cpu(int cpuid, void *arg) {
     CPU_CLR(cpuid, &sp1_mask);
     if (mode == MODE_ASYNC) {
         lewi_mask_ReturnCpu(&spd1, cpuid);
@@ -59,11 +59,11 @@ static void sp1_cb_disable_cpu(int cpuid) {
 }
 
 /* Subprocess 2 callbacks */
-static void sp2_cb_enable_cpu(int cpuid) {
+static void sp2_cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &sp2_mask);
 }
 
-static void sp2_cb_disable_cpu(int cpuid) {
+static void sp2_cb_disable_cpu(int cpuid, void *arg) {
     CPU_CLR(cpuid, &sp2_mask);
     if (mode == MODE_ASYNC) {
         lewi_mask_ReturnCpu(&spd2, cpuid);
@@ -94,10 +94,10 @@ int main( int argc, char **argv ) {
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, NULL) == DLB_SUCCESS);
     assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, NULL) == DLB_SUCCESS);
-    assert( pm_callback_set(&spd1.pm, dlb_callback_enable_cpu, (dlb_callback_t)sp1_cb_enable_cpu)
-            == DLB_SUCCESS);
-    assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu, (dlb_callback_t)sp1_cb_disable_cpu)
-            == DLB_SUCCESS);
+    assert( pm_callback_set(&spd1.pm, dlb_callback_enable_cpu,
+                (dlb_callback_t)sp1_cb_enable_cpu, NULL) == DLB_SUCCESS);
+    assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu,
+                (dlb_callback_t)sp1_cb_disable_cpu, NULL) == DLB_SUCCESS);
     assert( lewi_mask_Init(&spd1) == DLB_SUCCESS );
     spd1.cpus_priority_array = malloc(4*sizeof(int));
     assert( lewi_mask_UpdatePriorityCpus(&spd1, &spd1.process_mask) == DLB_SUCCESS );
@@ -112,10 +112,10 @@ int main( int argc, char **argv ) {
     memcpy(&spd2.process_mask, &sp2_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd2.id, &spd2.process_mask, NULL, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, NULL) == DLB_SUCCESS );
-    assert( pm_callback_set(&spd2.pm, dlb_callback_enable_cpu, (dlb_callback_t)sp2_cb_enable_cpu)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu, (dlb_callback_t)sp2_cb_disable_cpu)
-             == DLB_SUCCESS );
+    assert( pm_callback_set(&spd2.pm, dlb_callback_enable_cpu,
+                (dlb_callback_t)sp2_cb_enable_cpu, NULL) == DLB_SUCCESS );
+    assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu,
+                (dlb_callback_t)sp2_cb_disable_cpu, NULL) == DLB_SUCCESS );
     assert( lewi_mask_Init(&spd2) == DLB_SUCCESS );
     spd2.cpus_priority_array = malloc(4*sizeof(int));
     assert( lewi_mask_UpdatePriorityCpus(&spd2, &spd2.process_mask) == DLB_SUCCESS );

@@ -39,11 +39,11 @@
 static volatile int enable_times = 0;
 static volatile int disable_times = 0;
 
-static void cb_enable_cpu(int cpuid) {
+static void cb_enable_cpu(int cpuid, void *arg) {
     __sync_add_and_fetch(&enable_times, 1);
 }
 
-static void cb_disable_cpu(int cpuid) {
+static void cb_disable_cpu(int cpuid, void *arg) {
     __sync_add_and_fetch(&disable_times, 1);
 }
 
@@ -57,10 +57,10 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__init(spd.id, &spd.process_mask, NULL, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(spd.id, &spd.process_mask, NULL) == DLB_SUCCESS );
     assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask, NULL) == DLB_SUCCESS );
-    assert( pm_callback_set(&spd.pm, dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&spd.pm, dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu)
-            == DLB_SUCCESS );
+    assert( pm_callback_set(&spd.pm, dlb_callback_enable_cpu,
+                (dlb_callback_t)cb_enable_cpu, NULL) == DLB_SUCCESS );
+    assert( pm_callback_set(&spd.pm, dlb_callback_disable_cpu,
+                (dlb_callback_t)cb_disable_cpu, NULL) == DLB_SUCCESS );
 
     // Init
     assert( lewi_mask_Init(&spd) == DLB_SUCCESS );

@@ -112,7 +112,7 @@ int omp_get_level(void) __attribute__((weak));
 static cpu_set_t active_mask;
 static bool lewi = false;
 
-static void cb_enable_cpu(int cpuid) {
+static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
 }
 
@@ -139,7 +139,7 @@ static void omp_thread_manager_init(void) {
     Initialize(0,0,0);
     lewi = get_global_options()->lewi;
     if (lewi) {
-        callback_set(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu);
+        callback_set(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
         omp_thread_manager_release();
     }
 }

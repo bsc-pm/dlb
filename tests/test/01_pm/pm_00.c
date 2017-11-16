@@ -28,16 +28,51 @@
 #include <string.h>
 #include <assert.h>
 
-int nthreads = 0;
-cpu_set_t process_mask;
+typedef struct MyObject {
+    int n;
+} object_t;
 
-void cb_set_num_threads(int num_threads) { nthreads = num_threads; }
-void cb_set_active_mask(const cpu_set_t *mask) {}
-void cb_set_process_mask(const cpu_set_t *mask) { memcpy(&process_mask, mask, sizeof(cpu_set_t)); }
-void cb_add_active_mask(const cpu_set_t *mask) {}
-void cb_add_process_mask(const cpu_set_t *mask) {}
-void cb_enable_cpu(int cpuid) { CPU_SET(cpuid, &process_mask); }
-void cb_disable_cpu(int cpuid) { CPU_CLR(cpuid, &process_mask); }
+static int nthreads = 0;
+static cpu_set_t process_mask;
+
+static object_t cb_set_num_threads_arg = { .n = 1 };
+static void cb_set_num_threads(int num_threads, void *arg) {
+    assert( ((object_t*)arg)->n == cb_set_num_threads_arg.n );
+    nthreads = num_threads;
+}
+
+static object_t cb_set_active_mask_arg = { .n = 2 };
+static void cb_set_active_mask(const cpu_set_t *mask, void *arg) {
+    assert( ((object_t*)arg)->n == cb_set_active_mask_arg.n );
+}
+
+static object_t cb_set_process_mask_arg = { .n = 3 };
+static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
+    assert( ((object_t*)arg)->n == cb_set_process_mask_arg.n );
+    memcpy(&process_mask, mask, sizeof(cpu_set_t));
+}
+
+static object_t cb_add_active_mask_arg = { .n = 4 };
+static void cb_add_active_mask(const cpu_set_t *mask, void *arg) {
+    assert( ((object_t*)arg)->n == cb_add_active_mask_arg.n );
+}
+
+static object_t cb_add_process_mask_arg = { .n = 5 };
+static void cb_add_process_mask(const cpu_set_t *mask, void *arg) {
+    assert( ((object_t*)arg)->n == cb_add_process_mask_arg.n );
+}
+
+static object_t cb_enable_cpu_arg = { .n = 6 };
+static void cb_enable_cpu(int cpuid, void *arg) {
+    assert( ((object_t*)arg)->n == cb_enable_cpu_arg.n );
+    CPU_SET(cpuid, &process_mask);
+}
+
+static object_t cb_disable_cpu_arg = { .n = 7 };
+static void cb_disable_cpu(int cpuid, void *arg) {
+    assert( ((object_t*)arg)->n == cb_disable_cpu_arg.n );
+    CPU_CLR(cpuid, &process_mask);
+}
 
 int main( int argc, char **argv ) {
     cpu_set_t mask;
@@ -56,40 +91,47 @@ int main( int argc, char **argv ) {
     assert( disable_cpu(&pm, 0) == DLB_ERR_NOCBK );
 
     // Set callbacks
-    assert( pm_callback_set(&pm, dlb_callback_set_num_threads, (dlb_callback_t)cb_set_num_threads)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, dlb_callback_set_active_mask, (dlb_callback_t)cb_set_active_mask)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, dlb_callback_set_process_mask, (dlb_callback_t)cb_set_process_mask)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, dlb_callback_add_active_mask, (dlb_callback_t)cb_add_active_mask)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, dlb_callback_add_process_mask, (dlb_callback_t)cb_add_process_mask)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu)
-            == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, 42, (dlb_callback_t)main)
-            == DLB_ERR_NOCBK );
+    assert( pm_callback_set(&pm, dlb_callback_set_num_threads,
+                (dlb_callback_t)cb_set_num_threads, &cb_set_num_threads_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_set_active_mask,
+                (dlb_callback_t)cb_set_active_mask, &cb_set_active_mask_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_set_process_mask,
+                (dlb_callback_t)cb_set_process_mask, &cb_set_process_mask_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_add_active_mask,
+                (dlb_callback_t)cb_add_active_mask, &cb_add_active_mask_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_add_process_mask,
+                (dlb_callback_t)cb_add_process_mask, &cb_add_process_mask_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_enable_cpu,
+                (dlb_callback_t)cb_enable_cpu, &cb_enable_cpu_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_disable_cpu,
+                (dlb_callback_t)cb_disable_cpu, &cb_disable_cpu_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, 42, (dlb_callback_t)main, NULL) == DLB_ERR_NOCBK );
 
     // Get callbacks
     dlb_callback_t cb;
-    assert( pm_callback_get(&pm, dlb_callback_set_num_threads, &cb) == DLB_SUCCESS );
+    void *arg;
+    assert( pm_callback_get(&pm, dlb_callback_set_num_threads, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_set_num_threads );
-    assert( pm_callback_get(&pm, dlb_callback_set_active_mask, &cb) == DLB_SUCCESS );
+    assert( arg == &cb_set_num_threads_arg );
+    assert( pm_callback_get(&pm, dlb_callback_set_active_mask, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_set_active_mask );
-    assert( pm_callback_get(&pm, dlb_callback_set_process_mask, &cb) == DLB_SUCCESS );
+    assert( arg == &cb_set_active_mask_arg );
+    assert( pm_callback_get(&pm, dlb_callback_set_process_mask, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_set_process_mask );
-    assert( pm_callback_get(&pm, dlb_callback_add_active_mask, &cb) == DLB_SUCCESS );
+    assert( arg == &cb_set_process_mask_arg );
+    assert( pm_callback_get(&pm, dlb_callback_add_active_mask, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_add_active_mask );
-    assert( pm_callback_get(&pm, dlb_callback_add_process_mask, &cb) == DLB_SUCCESS );
+    assert( arg == &cb_add_active_mask_arg );
+    assert( pm_callback_get(&pm, dlb_callback_add_process_mask, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_add_process_mask );
-    assert( pm_callback_get(&pm, dlb_callback_enable_cpu, &cb) == DLB_SUCCESS );
+    assert( arg == &cb_add_process_mask_arg );
+    assert( pm_callback_get(&pm, dlb_callback_enable_cpu, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_enable_cpu );
-    assert( pm_callback_get(&pm, dlb_callback_disable_cpu, &cb) == DLB_SUCCESS );
+    assert( arg == &cb_enable_cpu_arg );
+    assert( pm_callback_get(&pm, dlb_callback_disable_cpu, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_disable_cpu );
-    assert( pm_callback_get(&pm, 42, &cb) == DLB_ERR_NOCBK );
+    assert( arg == &cb_disable_cpu_arg );
+    assert( pm_callback_get(&pm, 42, &cb, &arg) == DLB_ERR_NOCBK );
 
     // Call callback and check DLB_SUCCESS
     assert( update_threads(&pm, 0) == DLB_SUCCESS );
