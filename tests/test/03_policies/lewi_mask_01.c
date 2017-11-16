@@ -72,10 +72,9 @@ static void sp2_cb_disable_cpu(int cpuid, void *arg) {
 
 int main( int argc, char **argv ) {
     // This test needs at least room for 4 CPUs
+    enum { SYS_SIZE = 4 };
     mu_init();
-    if (mu_get_system_size() < 4) {
-        mu_testing_set_sys_size(4);
-    }
+    mu_testing_set_sys_size(SYS_SIZE);
 
     // Initialize local masks to [1100] and [0011]
     CPU_ZERO(&sp1_mask);

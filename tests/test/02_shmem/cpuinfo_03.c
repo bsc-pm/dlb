@@ -40,13 +40,9 @@
 
 int main( int argc, char **argv ) {
     // This test needs at least room for 4 CPUs
-    enum {SYS_SIZE = 4};
+    enum { SYS_SIZE = 4 };
     mu_init();
-    int ncpus = mu_get_system_size();
-    if (ncpus < SYS_SIZE) {
-        ncpus = SYS_SIZE;
-        mu_testing_set_sys_size(SYS_SIZE);
-    }
+    mu_testing_set_sys_size(SYS_SIZE);
 
     // Initialize local masks to [1100] and [0011]
     pid_t p1_pid = 111;
@@ -76,9 +72,9 @@ int main( int argc, char **argv ) {
     }
 
     // Setup dummy priority CPUs
-    int cpus_priority_array[ncpus];
+    int cpus_priority_array[SYS_SIZE];
     int i;
-    for (i=0; i<ncpus; ++i) cpus_priority_array[i] = i;
+    for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i;
 
     int err;
 
