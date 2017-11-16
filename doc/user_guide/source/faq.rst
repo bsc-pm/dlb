@@ -23,11 +23,15 @@ If Mercurium was configured with DLB support, it will accept the ``--dlb`` optio
 automatically include the DLB headers and link with the correspondig library. If your application
 does not use any DLB API function you don't need to use this flag.
 
-Which policy should I use for DLB?
-==================================
+Which should I use, LeWI or DROM for my application?
+====================================================
 
-In some cases each policy should be considered for study, but as a general rule, use
-``--policy=LeWI`` in OpenMP applications and ``--policy=auto_LeWI_mask`` in OmpSs applications.
+LeWI and DROM modules serve different purposes. Their use is completely independent from
+each other so you can enable one of them or both.
+
+Use LeWI (``DLB_ARGS+=" --lewi "``) to enable dynamic resource sharing between processes
+due to load imbalance. Use DROM (``DLB_ARGS+=" --drom"``) to enable on-deman resource
+management.
 
 .. errors
 
@@ -76,7 +80,7 @@ procesess in the same node.
 
 To use this future you need to preload the DLB MPI library and to set this environment variable::
 
-    export DLB_ARGS+=" --lend-mode=block"
+    export DLB_ARGS+=" --lewi-mpi"
 
 I'm running a well allocated hybrid MPI + OpenMP but DLB still doesn't do anything.
 ===================================================================================
@@ -114,5 +118,5 @@ the library in the Extrae installation path, reconfigure it using the option
 Can I disable DLB tracing in an OmpSs execution?
 ================================================
 
-Yes, simply set the option ``--trace-enabled=no`` in ``DLB_ARGS``.
+Yes, simply set the option ``--no-instrument`` in ``DLB_ARGS``.
 

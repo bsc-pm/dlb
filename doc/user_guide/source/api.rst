@@ -72,8 +72,8 @@ These functions make the basic API to be used independently from which DLB mode 
     time, subsequent calls to borrow CPUs will be ignored until some of them are returned.
 
 
-.. function:: int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback)
-              int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t \*callback)
+.. function:: int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void \*arg)
+              int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t \*callback, void \*\*arg)
 
     Setter and Getter for DLB callbacks. See section :ref:`callbacks`.
 

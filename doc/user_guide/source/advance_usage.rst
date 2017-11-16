@@ -53,18 +53,18 @@ an example::
         dlb_callback_disable_cpu
     } dlb_callbacks_t;
 
-    int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback);
-    int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback);
+    int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void *arg);
+    int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg);
     /********************************************************************/
 
-    void enable_cpu_callback(int cpuid);
-    void disable_cpu_callback(int cpuid);
+    void enable_cpu_callback(int cpuid, void *arg);
+    void disable_cpu_callback(int cpuid, void *arg);
 
     int main(int argc, char *argv[])
     {
         DLB_Init(...);
-        DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t) enable_cpu_callback);
-        DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t) disable_cpu_callback);
+        DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t) enable_cpu_callback, arg);
+        DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t) disable_cpu_callback, arg);
         ...
         DLB_Finalize();
     }
