@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [1.4 alpha]
+## [Unreleased]
 ### Added
 - Callback system
 - API for subprocesses
@@ -14,10 +14,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 - API reworked
-- A petition of a CPU now registers the process into a CPU petition queue. If this CPU becomes available, DLB can schedule which process will acquire it
-- A petition of an unspecified CPU registers the process into a global petition queue, this queue has
-  less priority than the CPU queue
-- DLB acquire now does not schedule because it forces the acquisition, DLB Borrow does scheduling but only looks for idle CPUs and never creates a CPU request
+- A petition of a CPU now registers the process into a CPU petition queue. If this CPU
+  becomes available, DLB can schedule which process will acquire it
+- A petition of an unspecified CPU registers the process into a global petition queue,
+  this queue has less priority than the CPU queue
+- DLB acquire now does not schedule because it forces the acquisition, DLB Borrow does
+  scheduling but only looks for idle CPUs and never creates a CPU request
 - DLB options print format reworked, DLB_ARGS is now used to pass options to DLB.
 - Fortran Interface now is a include Fortran Interface ? (weird wording)
 - Shared Memory synchronization mechanism is now managed using a pthread spinlock
@@ -34,7 +36,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - `DLB_DROM_GetCpus` service has been removed
 - `LB_OPTION` type of environment variables is deprecated
 
-## [Unreleased]
+## [1.3.2] - 2017-10-9
+### Fixed
+- Bug initialing shared memory when using non-mask policies
+
+## [1.3.1] - 2017-10-4
+### Fixed
+- Bug parsing `DLB_ARGS`
 
 ## [1.3] - 2017-07-12
 ### Added
@@ -121,6 +129,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Binary `dlb`
 
 [Unreleased]: https://github.com/bsc-pm/dlb/compare/v1.3...HEAD
+[1.3.2]: https://github.com/bsc-pm/dlb/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/bsc-pm/dlb/compare/v1.3...v1.3.1
 [1.3]: https://github.com/bsc-pm/dlb/compare/v1.2...v1.3
 [1.2]: https://github.com/bsc-pm/dlb/compare/v1.1...v1.2
 [1.1]: https://github.com/bsc-pm/dlb/compare/v1.0...v1.1
