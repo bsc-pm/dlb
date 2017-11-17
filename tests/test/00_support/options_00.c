@@ -21,6 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "apis/dlb_errors.h"
 #include "support/types.h"
 #include "support/options.h"
 
@@ -30,23 +31,32 @@
 #include <assert.h>
 
 int main( int argc, char **argv ) {
-    setenv("LB_DROM", "huh", 1);
-    setenv("LB_MASK", "huh", 1);
-    setenv("LB_LEND_MODE", "huh", 1);
-    setenv("LB_VERBOSE", "huh", 1);
-    setenv("LB_VERBOSE_FORMAT", "huh", 1);
-    const char *dlb_args = "--policy=huh --drom=huh      --mask=huh   --lend-mode=huh "
-        " this_should_be_ignored     --verbose=huh --verbose-format=huh";
+
+    options_t options_1, options_2;
 
     // Check initialization equivalency
-    options_t options_1, options_2;
-    options_init(&options_1, NULL);     // options_1 initialized with env. vars
-    options_init(&options_2, dlb_args); // options_2 initialized with dlb_args
+    const char *dlb_args = "--lewi --no-drom    this_should_be_ignored   --verbose=api     ";
+    options_init(&options_1, dlb_args);         // options_1 initialized with dlb_args
+    setenv("DLB_ARGS", "--lewi --non-existent-flag --no-drom --verbose=api", 1);
+    options_init(&options_2, NULL);             // options_2 initialized with env. vars
     assert(options_1.lewi == options_2.lewi);
     assert(options_1.drom == options_2.drom);
     assert(options_1.lewi_mpi == options_2.lewi_mpi);
     assert(options_1.verbose == options_2.verbose);
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
+
+    // Check dlb_args precedence
+    setenv("DLB_ARGS", "--no-lewi", 1);
+    options_init(&options_1, "--lewi");
+    assert(options_1.lewi == true);
+
+    // Check that different options are parsed using both methods
+    setenv("DLB_ARGS", "--drom", 1);
+    options_init(&options_1, "--lewi");
+    assert(options_1.lewi == true);
+    assert(options_1.drom == true);
+
+    unsetenv("DLB_ARGS");
 
     // Check some values
     options_init(&options_1, "--lewi=yes --drom=1 --lewi-affinity=nearby-only");
@@ -70,7 +80,7 @@ int main( int argc, char **argv ) {
 
     // Check setter and getter
     char value[MAX_OPTION_LENGTH];
-    options_init(&options_1, "--lewi-mpi-calls=barrier --shm-key=key --lend-mode=1cpu");
+    options_init(&options_1, "--no-lewi-mpi --lewi-mpi-calls=barrier --shm-key=key");
     assert(options_1.lewi_mpi_calls == MPISET_BARRIER);
     options_get_variable(&options_1, "--lewi-mpi-calls", value);
     assert(strcasecmp(value, "barrier") == 0);
@@ -80,8 +90,8 @@ int main( int argc, char **argv ) {
     assert(strcasecmp(value, "all") == 0);
     options_get_variable(&options_1, "--shm-key", value);
     assert(strcasecmp(value, "key") == 0);
-    int error_readonly_var = options_set_variable(&options_1, "LB_SHM_KEY", "new_key");
-    assert(error_readonly_var);
+    int error_readonly_var = options_set_variable(&options_1, "--shm-key", "new_key");
+    assert(error_readonly_var == DLB_ERR_PERM);
     assert(strcasecmp(value, "key") == 0);
     options_get_variable(&options_1,"--lewi-mpi", value);
     assert(strcasecmp(value, "no") == 0);
@@ -93,7 +103,7 @@ int main( int argc, char **argv ) {
     assert(error_unexisting_var);
     value[0] = '\0';
     error_unexisting_var = options_get_variable(&options_1, "FAKEVAR", value);
-    assert(error_unexisting_var);
+    assert(error_unexisting_var == DLB_ERR_NOENT);
     assert(strcasecmp(value, "") == 0);
 
 
@@ -108,32 +118,14 @@ int main( int argc, char **argv ) {
     //options_init(&options_1, "--policy");
     //options_init(&options_1, "--policy=");
 
-    // Preference between environ variable and arguments
-    setenv("LB_DROM", "1", 1);
-    options_init(&options_1, "--drom=no");
-    assert(options_1.drom == false);
-
     // TODO: some variables are still not being checked
     options_init(&options_1, "--mode=async");
     assert(options_1.mode == MODE_ASYNC);
 
     // Unset all variables and check that default values are preserved
-    unsetenv("DLB_ARGS");
-    unsetenv("LB_ARGS");
-    unsetenv("LB_DROM");
-    unsetenv("LB_MASK");
-    unsetenv("LB_LEND_MODE");
-    unsetenv("LB_VERBOSE");
-    unsetenv("LB_VERBOSE_FORMAT");
     options_init(&options_1, NULL);
     options_init(&options_2, "");
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
-
-    // Check that different options are parsed using both methods
-    setenv("DLB_ARGS", "--drom=1", 1);
-    options_init(&options_1, "--lewi=1");
-    assert(options_1.lewi == true);
-    assert(options_1.drom == true);
 
 
     return 0;

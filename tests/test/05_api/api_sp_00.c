@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "assert_noshm.h"
+
 #include "apis/dlb_sp.h"
 
 #include <sched.h>
@@ -44,7 +46,7 @@ int main( int argc, char **argv ) {
     CPU_SET(0, &process_mask);
     CPU_SET(1, &process_mask);
 
-    handler = DLB_Init_sp(0, &process_mask, "--policy=no");
+    handler = DLB_Init_sp(0, &process_mask, "--no-lewi");
     assert( DLB_CallbackSet_sp(handler, dlb_callback_disable_cpu,
                 (dlb_callback_t)cb_disable_cpu, NULL) == DLB_SUCCESS);
     assert( DLB_CallbackSet_sp(handler, dlb_callback_enable_cpu,
@@ -88,10 +90,10 @@ int main( int argc, char **argv ) {
 
     // Misc */
     assert( DLB_PollDROM_sp(handler, NULL, NULL) == DLB_ERR_DISBLD );
-    assert( DLB_SetVariable_sp(handler, "LB_DROM", "1") == DLB_ERR_PERM );
-    assert( DLB_SetVariable_sp(handler, "LB_DEBUG_OPTS", "foo") == DLB_SUCCESS );
+    assert( DLB_SetVariable_sp(handler, "--drom", "1") == DLB_ERR_PERM );
+    assert( DLB_SetVariable_sp(handler, "--debug-opts", "foo") == DLB_SUCCESS );
     char value[32];
-    assert( DLB_GetVariable_sp(handler, "LB_DROM", value) == DLB_SUCCESS );
+    assert( DLB_GetVariable_sp(handler, "--drom", value) == DLB_SUCCESS );
     assert( DLB_PrintVariables_sp(handler, 0) == DLB_SUCCESS );
 
     assert( DLB_Finalize_sp(handler) == DLB_SUCCESS );
