@@ -350,9 +350,10 @@ int DLB_GetVariable(const char *variable, char *value);
 int DLB_PrintVariables(int print_extra);
 
 /*! \brief Print the data stored in the shmem
+ *  \param[in] num_columns Number of columns to use when printing
  *  \return DLB_SUCCESS on success
  */
-int DLB_PrintShmem(void);
+int DLB_PrintShmem(int num_columns);
 
 /*! \brief Obtaing a pointer to a string that describes the error code passed by argument
  *  \param[in] errnum error code to consult

@@ -61,7 +61,7 @@ void create_shdata( void ) {
 #endif
 }
 
-void list_shdata_item( const char* shm_suffix ) {
+void list_shdata_item(const char* shm_suffix, int list_columns) {
     char *p;
     if ( (p = strstr(shm_suffix, "cpuinfo")) ) {
         /* Get pointer to shm_key */
@@ -76,13 +76,13 @@ void list_shdata_item( const char* shm_suffix ) {
         setenv("DLB_ARGS", dlb_args, 1);
         free(dlb_args);
         /* Print */
-        DLB_PrintShmem();
+        DLB_PrintShmem(list_columns);
     } else if ( (p = strstr(shm_suffix, "procinfo")) ) {
         // We currently print both shmems with the same API. Skipping.
     }
 }
 
-void list_shdata( void ) {
+void list_shdata(int list_columns) {
     // Ignore them if the filename is not specified
     bool created_shm_listed = created_shm_filename == NULL;
     bool userdef_shm_listed = userdef_shm_filename == NULL;
@@ -102,7 +102,7 @@ void list_shdata( void ) {
         if( getuid() == statbuf.st_uid &&
                 fnmatch( "DLB_*", entry->d_name, 0) == 0 ) {
             // Ignore DLB_ prefix
-            list_shdata_item( &(entry->d_name[4]) );
+            list_shdata_item(&entry->d_name[4], list_columns);
 
             // Double-check if recently created or user defined
             // Shared Memories are detected. (BG/Q needs it)
@@ -114,13 +114,13 @@ void list_shdata( void ) {
     if ( !created_shm_listed ) {
         fprintf( stderr, "Previously created Shared Memory file not found.\n" );
         fprintf( stderr, "Looking for %s...\n", created_shm_filename );
-        list_shdata_item( &(created_shm_filename[9]) );
+        list_shdata_item(&created_shm_filename[9], list_columns);
     }
 
     if ( !userdef_shm_listed ) {
         fprintf( stderr, "User defined Shared Memory file not found.\n" );
         fprintf( stderr, "Looking for %s...\n", userdef_shm_filename );
-        list_shdata_item( &(userdef_shm_filename[9]) );
+        list_shdata_item(&userdef_shm_filename[9], list_columns);
     }
 }
 
@@ -184,18 +184,19 @@ int main ( int argc, char *argv[] ) {
     bool do_create = false;
     bool do_list = false;
     bool do_delete = false;
+    int list_columns = 0;
 
     int opt;
     struct option long_options[] = {
         {"help",   no_argument,       0, 'h'},
         {"create", no_argument,       0, 'c'},
-        {"list",   no_argument,       0, 'l'},
+        {"list",   optional_argument, 0, 'l'},
         {"delete", no_argument,       0, 'd'},
         {"file",   required_argument, 0, 'f'},
         {0,        0,                 0, 0 }
     };
 
-    while ( (opt = getopt_long(argc, argv, "hcldf:", long_options, NULL)) != -1 ) {
+    while ( (opt = getopt_long(argc, argv, "hcl::df:", long_options, NULL)) != -1 ) {
         switch (opt) {
         case 'h':
             do_help = true;
@@ -205,6 +206,9 @@ int main ( int argc, char *argv[] ) {
             break;
         case 'l':
             do_list = true;
+            if (optarg) {
+                list_columns = strtol(optarg, NULL, 0);
+            }
             break;
         case 'd':
             do_delete = true;
@@ -235,7 +239,7 @@ int main ( int argc, char *argv[] ) {
     }
 
     if ( do_list ) {
-        list_shdata();
+        list_shdata(list_columns);
     }
 
     if ( do_delete ) {

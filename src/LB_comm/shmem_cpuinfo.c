@@ -1313,28 +1313,24 @@ static const char * get_cpu_state_str(cpu_state_t state) {
     return NULL;
 }
 
-void shmem_cpuinfo_ext__print_info(bool statistics) {
+void shmem_cpuinfo_ext__print_info(int columns) {
     if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
     }
 
-    // Make a full copy of the shared memory. Basic size + zero-length array real length
+    /* Make a full copy of the shared memory */
     shdata_t *shdata_copy = malloc(sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size);
-
     shmem_lock(shm_handler);
     {
         memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size);
     }
     shmem_unlock(shm_handler);
 
-    /* Pre-allocate buffer */
-    enum { BUFFER_SIZE_CHUNK = 1024 };
-    size_t buffer_len = 0;
-    size_t buffer_size = BUFFER_SIZE_CHUNK;
-    char *buffer = malloc(buffer_size*sizeof(char));
-    char *b = buffer;
-    *b = '\0';
+    /* Print 2 columns by default */
+    if (columns <= 0) {
+        columns = 2;
+    }
 
     /* Find the largest pid registered in the shared memory */
     pid_t max_pid = 0;
@@ -1345,31 +1341,46 @@ void shmem_cpuinfo_ext__print_info(bool statistics) {
     }
     int max_digits = snprintf(NULL, 0, "%d", max_pid);
 
-    /* Print two columns at the same time */
+    /* Pre-allocate buffer */
+    enum { INITIAL_BUFFER_SIZE = 1024 };
+    size_t buffer_len = 0;
+    size_t buffer_size = INITIAL_BUFFER_SIZE;
+    char *buffer = malloc(buffer_size*sizeof(char));
+    char *b = buffer;
+    *b = '\0';
+
+    /* Setup line buffer and cpuinfo pointers */
     enum { MAX_LINE_LEN = 512 };
     char line[MAX_LINE_LEN];
-    int cpuid1, cpuid2;
-    for (cpuid1=0, cpuid2=(node_size+1)/2; cpuid1<(node_size+1)/2; ++cpuid1, ++cpuid2) {
+    int cpuids[columns];
+    cpuinfo_t *cpuinfos[columns];
+    int offset = ((node_size-1)/columns)+1;
+
+    for (cpuids[0]=0; cpuids[0]<offset; ++cpuids[0]) {
+        /* Init variables */
         char *l = line;
-        cpuinfo_t *cpuinfo1 = &shdata->node_info[cpuid1];
-        cpuinfo_t *cpuinfo2 = cpuid2 < node_size ? &shdata->node_info[cpuid2] : NULL;
+        *l = '\0';
+        int i;
+        for (i=1; i<columns; ++i) {
+            cpuids[i] = cpuids[i-1] + offset;
+        }
 
-        /* 1st column */
-        l += snprintf(l, MAX_LINE_LEN, "%4d [ %*d / %*d / %s ] ",
-                cpuid1, max_digits, cpuinfo1->owner, max_digits, cpuinfo1->guest,
-                get_cpu_state_str(cpuinfo1->state));
-
-        /* 2n column */
-        if (__builtin_expect(cpuinfo2 != NULL, 1)) {
-            l += snprintf(l, MAX_LINE_LEN-strlen(line), "%4d [ %*d / %*d / %s ]",
-                    cpuid2, max_digits, cpuinfo2->owner, max_digits, cpuinfo2->guest,
-                    get_cpu_state_str(cpuinfo2->state));
+        /* Iterate columns */
+        for (i=0; i<columns; ++i) {
+            if (cpuids[i] < node_size) {
+                cpuinfos[i] = &shdata->node_info[cpuids[i]];
+                l += snprintf(l, MAX_LINE_LEN-strlen(line), "%4d [ %*d / %*d / %s ] ",
+                        cpuids[i],
+                        max_digits, cpuinfos[i]->owner,
+                        max_digits, cpuinfos[i]->guest,
+                        get_cpu_state_str(cpuinfos[i]->state));
+            }
         }
 
         /* Realloc buffer if needed */
         size_t line_len = strlen(line) + 2; /* + '\n\0' */
         if (buffer_len + line_len > buffer_size) {
-            buffer_size += BUFFER_SIZE_CHUNK;
+            buffer_size = buffer_size*2;
             void *p = realloc(buffer, buffer_size*sizeof(char));
             if (p) {
                 buffer = p;
@@ -1382,10 +1393,7 @@ void shmem_cpuinfo_ext__print_info(bool statistics) {
         /* Append line to buffer */
         b += sprintf(b, "%s\n", line);
         buffer_len = b - buffer;
-        buffer_len = strlen(buffer);
-        ensure(strlen(buffer) == buffer_len,
-                "buffer_len is not correctly computed, strlen(buffer): %d, buffer_len: %d",
-                strlen(buffer), buffer_len);
+        ensure(strlen(buffer) == buffer_len, "buffer_len is not correctly computed");
     }
 
     info0("=== CPU States ===\n%s", buffer);

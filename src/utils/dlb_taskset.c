@@ -189,7 +189,7 @@ static void getpidof(int process_pseudo_id) {
     DLB_DROM_Finalize();
 }
 
-static void show_affinity(pid_t pid) {
+static void show_affinity(pid_t pid, int list_columns) {
     int error;
     cpu_set_t mask;
 
@@ -201,7 +201,7 @@ static void show_affinity(pid_t pid) {
         fprintf(stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask));
     } else {
         // Show CPU affinity of all processes attached to DLB
-        DLB_PrintShmem();
+        DLB_PrintShmem(list_columns);
     }
     DLB_DROM_Finalize();
 }
@@ -214,6 +214,7 @@ int main(int argc, char *argv[]) {
     bool do_getpid = false;
     bool borrow = false;
 
+    int list_columns = 0;
     int process_pseudo_id = 0;
     pid_t pid = 0;
     cpu_set_t cpu_list;
@@ -223,7 +224,7 @@ int main(int argc, char *argv[]) {
     extern char *optarg;
     extern int optind;
     struct option long_options[] = {
-        {"list",     no_argument,       0, 'l'},
+        {"list",     optional_argument, 0, 'l'},
         {"set",      required_argument, 0, 's'},
         {"cpus",     required_argument, 0, 'c'},
         {"remove",   required_argument, 0, 'r'},
@@ -234,10 +235,13 @@ int main(int argc, char *argv[]) {
         {0,          0,                 0, 0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "+lg:s:c:r:g:p:bh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+l::g:s:c:r:g:p:bh", long_options, NULL)) != -1) {
         switch (opt) {
         case 'l':
             do_list = true;
+            if (optarg) {
+                list_columns = strtol(optarg, NULL, 0);
+            }
             break;
         case 'c':
         case 's':
@@ -286,7 +290,7 @@ int main(int argc, char *argv[]) {
         getpidof(process_pseudo_id);
     }
     else if (do_list || pid) {
-        show_affinity(pid);
+        show_affinity(pid, list_columns);
     }
     else {
         usage(argv[0], stderr);

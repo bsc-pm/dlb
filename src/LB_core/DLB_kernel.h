@@ -80,7 +80,7 @@ int node_barrier(void);
 int set_variable(const char *variable, const char *value);
 int get_variable(const char *variable, char *value);
 int print_variables(bool print_extra);
-int print_shmem(void);
+int print_shmem(int num_columns);
 
 
 // Others

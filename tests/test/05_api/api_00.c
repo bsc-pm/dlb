@@ -97,7 +97,7 @@ int main( int argc, char **argv ) {
     char value[32];
     assert( DLB_GetVariable("--drom", value) == DLB_SUCCESS );
     assert( DLB_PrintVariables(0) == DLB_SUCCESS );
-    assert( DLB_PrintShmem() == DLB_SUCCESS );
+    assert( DLB_PrintShmem(0) == DLB_SUCCESS );
     assert( DLB_Strerror(0) != NULL );
 
     assert( DLB_Finalize() == DLB_SUCCESS );
@@ -108,6 +108,13 @@ int main( int argc, char **argv ) {
     CPU_SET(1, &process_mask);
     assert( DLB_Init(0, &process_mask, NULL) == DLB_SUCCESS );
     assert( DLB_Init(0, &process_mask, NULL) == DLB_ERR_INIT );
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    // Call DLB_PrintShmem with full node
+    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+    assert( DLB_Init(0, &process_mask, "--lewi") == DLB_SUCCESS );
+    DLB_LendCpu(0);
+    assert( DLB_PrintShmem(0) == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_SUCCESS );
 
     return 0;

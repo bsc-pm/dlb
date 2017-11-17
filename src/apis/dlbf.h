@@ -209,9 +209,10 @@ interface
         integer(kind=c_int) :: ierr
     end function dlb_printvariables
 
-    function dlb_printshmem() result (ierr) bind(c, name='DLB_PrintShmem')
+    function dlb_printshmem(num_columns) result (ierr) bind(c, name='DLB_PrintShmem')
         use iso_c_binding
         integer(kind=c_int) :: ierr
+        integer(kind=c_int), value, intent(in) :: num_columns
     end function dlb_printshmem
 
     function dlb_strerror(errnum) result(str) bind(c, name='DLB_Strerror')
