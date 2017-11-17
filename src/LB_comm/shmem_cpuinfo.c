@@ -1304,6 +1304,15 @@ float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state) {
     return usage;
 }
 
+static const char * get_cpu_state_str(cpu_state_t state) {
+    switch(state) {
+        case CPU_DISABLED: return " off";
+        case CPU_BUSY: return "busy";
+        case CPU_LENT: return "lent";
+    }
+    return NULL;
+}
+
 void shmem_cpuinfo_ext__print_info(bool statistics) {
     if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
@@ -1319,36 +1328,68 @@ void shmem_cpuinfo_ext__print_info(bool statistics) {
     }
     shmem_unlock(shm_handler);
 
-    char owners[512] = "OWNERS: ";
-    char guests[512] = "GUESTS: ";
-    char states[512] = "STATES: ";
-    char *o = owners+8;
-    char *g = guests+8;
-    char *s = states+8;
-    int cpu;
-    for (cpu=0; cpu<node_size; cpu++) {
-        o += snprintf(o, 8, "%d, ", shdata_copy->node_info[cpu].owner);
-        g += snprintf(g, 8, "%d, ", shdata_copy->node_info[cpu].guest);
-        s += snprintf(s, 8, "%d, ", shdata_copy->node_info[cpu].state);
+    /* Pre-allocate buffer */
+    enum { BUFFER_SIZE_CHUNK = 1024 };
+    size_t buffer_len = 0;
+    size_t buffer_size = BUFFER_SIZE_CHUNK;
+    char *buffer = malloc(buffer_size*sizeof(char));
+    char *b = buffer;
+    *b = '\0';
+
+    /* Find the largest pid registered in the shared memory */
+    pid_t max_pid = 0;
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        pid_t pid = shdata_copy->node_info[cpuid].owner;
+        max_pid = pid > max_pid ? pid : max_pid;
     }
+    int max_digits = snprintf(NULL, 0, "%d", max_pid);
 
-    info0("=== CPU States ===");
-    info0(owners);
-    info0(guests);
-    info0(states);
-    info0("States Legend: DISABLED=%d, BUSY=%d, LENT=%d", CPU_DISABLED, CPU_BUSY, CPU_LENT);
+    /* Print two columns at the same time */
+    enum { MAX_LINE_LEN = 512 };
+    char line[MAX_LINE_LEN];
+    int cpuid1, cpuid2;
+    for (cpuid1=0, cpuid2=(node_size+1)/2; cpuid1<(node_size+1)/2; ++cpuid1, ++cpuid2) {
+        char *l = line;
+        cpuinfo_t *cpuinfo1 = &shdata->node_info[cpuid1];
+        cpuinfo_t *cpuinfo2 = cpuid2 < node_size ? &shdata->node_info[cpuid2] : NULL;
 
-    if (statistics) {
-        info0("=== CPU Statistics ===");
-        for (cpu=0; cpu<node_size; ++cpu) {
-            info0("CPU %d: OWNED(%.2f%%), GUESTED(%.2f%%), IDLE(%.2f%%)",
-                    cpu,
-                    getcpustate(cpu, STATS_OWNED, shdata_copy)*100,
-                    getcpustate(cpu, STATS_GUESTED, shdata_copy)*100,
-                    getcpustate(cpu, STATS_IDLE, shdata_copy)*100);
+        /* 1st column */
+        l += snprintf(l, MAX_LINE_LEN, "%4d [ %*d / %*d / %s ] ",
+                cpuid1, max_digits, cpuinfo1->owner, max_digits, cpuinfo1->guest,
+                get_cpu_state_str(cpuinfo1->state));
+
+        /* 2n column */
+        if (__builtin_expect(cpuinfo2 != NULL, 1)) {
+            l += snprintf(l, MAX_LINE_LEN-strlen(line), "%4d [ %*d / %*d / %s ]",
+                    cpuid2, max_digits, cpuinfo2->owner, max_digits, cpuinfo2->guest,
+                    get_cpu_state_str(cpuinfo2->state));
         }
+
+        /* Realloc buffer if needed */
+        size_t line_len = strlen(line) + 2; /* + '\n\0' */
+        if (buffer_len + line_len > buffer_size) {
+            buffer_size += BUFFER_SIZE_CHUNK;
+            void *p = realloc(buffer, buffer_size*sizeof(char));
+            if (p) {
+                buffer = p;
+                b = buffer + buffer_len;
+            } else {
+                fatal("realloc failed");
+            }
+        }
+
+        /* Append line to buffer */
+        b += sprintf(b, "%s\n", line);
+        buffer_len = b - buffer;
+        buffer_len = strlen(buffer);
+        ensure(strlen(buffer) == buffer_len,
+                "buffer_len is not correctly computed, strlen(buffer): %d, buffer_len: %d",
+                strlen(buffer), buffer_len);
     }
 
+    info0("=== CPU States ===\n%s", buffer);
+    free(buffer);
     free(shdata_copy);
 }
 
