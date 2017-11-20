@@ -1369,11 +1369,15 @@ void shmem_cpuinfo__print_info(int columns, bool color) {
             if (cpuids[i] < node_size) {
                 cpuinfos[i] = &shdata_copy->node_info[cpuids[i]];
                 if (color) {
+                    pid_t owner = cpuinfos[i]->owner;
+                    pid_t guest = cpuinfos[i]->guest;
+                    cpu_state_t state = cpuinfos[i]->state;
                     const char *code_color =
-                        cpuinfos[i]->state == CPU_DISABLED ? ANSI_COLOR_RESET:
-                        cpuinfos[i]->state == CPU_BUSY     ? ANSI_COLOR_RED :
-                        cpuinfos[i]->guest == NOBODY       ? ANSI_COLOR_GREEN :
-                                                             ANSI_COLOR_BLUE;
+                        state == CPU_DISABLED               ? ANSI_COLOR_RESET :
+                        state == CPU_BUSY && guest == owner ? ANSI_COLOR_RED :
+                        state == CPU_BUSY                   ? ANSI_COLOR_YELLOW :
+                        guest == NOBODY                     ? ANSI_COLOR_GREEN :
+                                                              ANSI_COLOR_BLUE;
                     l += snprintf(l, MAX_LINE_LEN-strlen(line),
                             " %4d %s[ %*d / %*d ]" ANSI_COLOR_RESET " ",
                             cpuids[i],
