@@ -836,42 +836,77 @@ void shmem_procinfo__print_info(bool statistics) {
         return;
     }
 
-    // Make a full copy of the shared memory. Basic size + zero-length array real length
+    /* Make a full copy of the shared memory */
     shdata_t *shdata_copy = malloc(sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
-
     shmem_lock(shm_handler);
     {
         memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
     }
     shmem_unlock(shm_handler);
 
-    info0("=== Processes Masks ===");
+    /* Pre-allocate buffer */
+    enum { INITIAL_BUFFER_SIZE = 1024 };
+    size_t buffer_len = 0;
+    size_t buffer_size = INITIAL_BUFFER_SIZE;
+    char *buffer = malloc(buffer_size*sizeof(char));
+    char *b = buffer;
+    *b = '\0';
+
     int p;
     for (p = 0; p < max_processes; p++) {
-        if (shdata_copy->process_info[p].pid != NOBODY) {
-            char current[max_processes*2+16];
-            char future[max_processes*2+16];
-            char stolen[max_processes*2+16];
-            strncpy(current, mu_to_str(&shdata_copy->process_info[p].current_process_mask),
-                    sizeof(current));
-            strncpy(future, mu_to_str(&shdata_copy->process_info[p].future_process_mask),
-                    sizeof(future));
-            strncpy(stolen, mu_to_str(&shdata_copy->process_info[p].stolen_cpus),
-                    sizeof(stolen));
-            info0("PID: %d, Current: %s, Future: %s, Stolen: %s, Dirty: %d",
-                    shdata_copy->process_info[p].pid, current, future, stolen,
-                    shdata_copy->process_info[p].dirty);
-        }
-    }
-    if (statistics) {
-        info0("=== Processes Statistics ===");
-        for (p = 0; p < max_processes; p++) {
-            if (shdata_copy->process_info[p].pid != NOBODY) {
-                info0("Process %d: %f CPU Avg usage", p, shdata->process_info[p].cpu_avg_usage);
+        pinfo_t *process = &shdata_copy->process_info[p];
+        if (process->pid != NOBODY) {
+            const char *mask_str;
+
+            /* Copy current mask */
+            mask_str = mu_to_str(&process->current_process_mask);
+            char *current = malloc((strlen(mask_str)+1)*sizeof(char));
+            strcpy(current, mask_str);
+
+            /* Copy future mask */
+            mask_str = mu_to_str(&process->future_process_mask);
+            char *future = malloc((strlen(mask_str)+1)*sizeof(char));
+            strcpy(future, mask_str);
+
+            /* Copy stolen mask */
+            mask_str = mu_to_str(&process->stolen_cpus);
+            char *stolen = malloc((strlen(mask_str)+1)*sizeof(char));
+            strcpy(stolen, mask_str);
+
+            /* Construct output per process */
+            const char *fmt =
+                "  Process ID: %d\n"
+                "  Current Mask: %s\n"
+                "  Future Mask:  %s\n"
+                "  Stolen Mask:  %s\n"
+                "  Process Dirty: %d\n\n";
+
+            /* Realloc buffer if needed */
+            size_t proc_len = 1 + snprintf(NULL, 0, fmt,
+                    process->pid, current, future, stolen, process->dirty);
+            if (buffer_len + proc_len > buffer_size) {
+                buffer_size = buffer_size*2;
+                void *nb = realloc(buffer, buffer_size*sizeof(char));
+                if (nb) {
+                    buffer = nb;
+                    b = buffer + buffer_len;
+                } else {
+                    fatal("realloc failed");
+                }
             }
+
+            /* Append to buffer */
+            b += sprintf(b, fmt,
+                    process->pid, current, future, stolen, process->dirty);
+            buffer_len = b - buffer;
+
+            free(current);
+            free(future);
+            free(stolen);
         }
     }
 
+    info0("=== Processes Masks ===\n%s", buffer);
     free(shdata_copy);
 }
 
