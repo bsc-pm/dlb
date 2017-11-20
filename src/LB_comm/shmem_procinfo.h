@@ -61,7 +61,7 @@ void    shmem_procinfo__getactivecpus_list(pid_t *cpuslist, int *nelems, int max
 int     shmem_procinfo__getloadavg(pid_t pid, double *load);
 
 /* Misc */
-void shmem_procinfo__print_info(bool statistics);
+void shmem_procinfo__print_info(void);
 bool shmem_procinfo__exists(void);
 
 

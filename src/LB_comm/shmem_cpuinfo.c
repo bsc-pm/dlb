@@ -1313,7 +1313,7 @@ static const char * get_cpu_state_str(cpu_state_t state) {
     return NULL;
 }
 
-void shmem_cpuinfo_ext__print_info(int columns, bool color) {
+void shmem_cpuinfo__print_info(int columns, bool color) {
     if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
@@ -1367,7 +1367,7 @@ void shmem_cpuinfo_ext__print_info(int columns, bool color) {
         /* Iterate columns */
         for (i=0; i<columns; ++i) {
             if (cpuids[i] < node_size) {
-                cpuinfos[i] = &shdata->node_info[cpuids[i]];
+                cpuinfos[i] = &shdata_copy->node_info[cpuids[i]];
                 if (color) {
                     const char *code_color =
                         cpuinfos[i]->state == CPU_DISABLED ? ANSI_COLOR_RESET:

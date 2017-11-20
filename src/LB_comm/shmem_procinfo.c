@@ -830,7 +830,7 @@ int shmem_procinfo__getloadavg(pid_t pid, double *load) {
 /* Misc                                                                          */
 /*********************************************************************************/
 
-void shmem_procinfo__print_info(bool statistics) {
+void shmem_procinfo__print_info(void) {
     if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
