@@ -1313,7 +1313,7 @@ static const char * get_cpu_state_str(cpu_state_t state) {
     return NULL;
 }
 
-void shmem_cpuinfo_ext__print_info(int columns) {
+void shmem_cpuinfo_ext__print_info(int columns, bool color) {
     if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
@@ -1327,10 +1327,9 @@ void shmem_cpuinfo_ext__print_info(int columns) {
     }
     shmem_unlock(shm_handler);
 
-    /* Print 2 columns by default */
-    if (columns <= 0) {
-        columns = 2;
-    }
+    /* Set up arguments */
+    columns = columns > 0 ? columns : 2;
+    color = color && isatty(STDOUT_FILENO);
 
     /* Find the largest pid registered in the shared memory */
     pid_t max_pid = 0;
@@ -1369,11 +1368,26 @@ void shmem_cpuinfo_ext__print_info(int columns) {
         for (i=0; i<columns; ++i) {
             if (cpuids[i] < node_size) {
                 cpuinfos[i] = &shdata->node_info[cpuids[i]];
-                l += snprintf(l, MAX_LINE_LEN-strlen(line), "%4d [ %*d / %*d / %s ] ",
-                        cpuids[i],
-                        max_digits, cpuinfos[i]->owner,
-                        max_digits, cpuinfos[i]->guest,
-                        get_cpu_state_str(cpuinfos[i]->state));
+                if (color) {
+                    const char *code_color =
+                        cpuinfos[i]->state == CPU_DISABLED ? ANSI_COLOR_RESET:
+                        cpuinfos[i]->state == CPU_BUSY     ? ANSI_COLOR_RED :
+                        cpuinfos[i]->guest == NOBODY       ? ANSI_COLOR_GREEN :
+                                                             ANSI_COLOR_BLUE;
+                    l += snprintf(l, MAX_LINE_LEN-strlen(line),
+                            " %4d %s[ %*d / %*d ]" ANSI_COLOR_RESET " ",
+                            cpuids[i],
+                            code_color,
+                            max_digits, cpuinfos[i]->owner,
+                            max_digits, cpuinfos[i]->guest);
+                } else {
+                    l += snprintf(l, MAX_LINE_LEN-strlen(line),
+                            " %4d [ %*d / %*d / %s ]",
+                            cpuids[i],
+                            max_digits, cpuinfos[i]->owner,
+                            max_digits, cpuinfos[i]->guest,
+                            get_cpu_state_str(cpuinfos[i]->state));
+                }
             }
         }
 

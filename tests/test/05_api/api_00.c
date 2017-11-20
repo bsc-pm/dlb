@@ -88,7 +88,7 @@ int main( int argc, char **argv ) {
     assert( DLB_Return() == DLB_ERR_NOPOL );
     assert( DLB_ReturnCpu(0) == DLB_ERR_NOPOL );
 
-    // Misc */
+    // Misc
     assert( DLB_CheckCpuAvailability(0) == DLB_ERR_NOPOL );
     assert( DLB_Barrier() == DLB_SUCCESS );
     assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_DISBLD );
@@ -114,7 +114,7 @@ int main( int argc, char **argv ) {
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
     assert( DLB_Init(0, &process_mask, "--lewi") == DLB_SUCCESS );
     DLB_LendCpu(0);
-    assert( DLB_PrintShmem(0) == DLB_SUCCESS );
+    assert( DLB_PrintShmem(4) == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_SUCCESS );
 
     return 0;

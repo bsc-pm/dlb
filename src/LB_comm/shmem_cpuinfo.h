@@ -87,5 +87,5 @@ typedef enum {
 
 int shmem_cpuinfo_ext__getnumcpus(void);
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);
-void shmem_cpuinfo_ext__print_info(int columns);
+void shmem_cpuinfo_ext__print_info(int columns, bool color);
 #endif /* SHMEM_CPUINFO_H */
