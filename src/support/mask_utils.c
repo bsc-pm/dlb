@@ -226,18 +226,45 @@ void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *
 const char* mu_to_str( const cpu_set_t *mask ) {
     if ( !mu_initialized ) mu_init();
 
+    static __thread char buffer[CPU_SETSIZE*4];
+    char *b = buffer;
+    *(b++) = '[';
+    bool entry_made = false;
     int i;
-    static __thread char str[CPU_SETSIZE*4];
-    char str_i[16];
-    strcpy( str, "[ " );
-    for ( i=0; i<sys.size; i++ ) {
-        if ( CPU_ISSET(i, mask) ) {
-            snprintf(str_i, sizeof(str_i), "%d ", i);
-            strcat( str, str_i );
-        } else { strcat( str,"- " ); }
+    for (i=0; i<sys.size; ++i) {
+        if (CPU_ISSET(i, mask)) {
+
+            /* Find range size */
+            int run = 0;
+            int j;
+            for (j=i+1; j<sys.size; ++j) {
+                if (CPU_ISSET(j, mask)) ++run;
+                else break;
+            }
+
+            /* Add ',' separator for subsequent entries */
+            if (entry_made) {
+                *(b++) = ',';
+            } else {
+                entry_made = true;
+            }
+
+            /* Write element, pair or range */
+            if (run == 0) {
+                b += sprintf(b, "%d", i);
+            } else if (run == 1) {
+                b += sprintf(b, "%d,%d", i, i+1);
+                ++i;
+            } else {
+                b += sprintf(b, "%d-%d", i, i+run);
+                i += run;
+            }
+        }
     }
-    strcat( str, "]\0" );
-    return str;
+    *(b++) = ']';
+    *b = '\0';
+
+    return buffer;
 }
 
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
