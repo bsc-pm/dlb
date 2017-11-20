@@ -19,6 +19,10 @@
 
 #include "support/mytime.h"
 
+enum { MS_PER_SECOND = 1000LL };
+enum { US_PER_SECOND = 1000000LL };
+enum { NS_PER_SECOND = 1000000000LL };
+
 void get_time( struct timespec *t ) {
     clock_gettime( CLOCK_MONOTONIC, t);
 }
@@ -39,7 +43,7 @@ int diff_time( struct timespec init, struct timespec end, struct timespec* diff 
         } else {
             if ( init.tv_nsec > end.tv_nsec ) {
                 diff->tv_sec = end.tv_sec - ( init.tv_sec + 1 );
-                diff->tv_nsec = ( end.tv_nsec + 1e9 ) - init.tv_nsec;
+                diff->tv_nsec = ( end.tv_nsec + NS_PER_SECOND ) - init.tv_nsec;
             } else {
                 diff->tv_sec = end.tv_sec - init.tv_sec;
                 diff->tv_nsec = end.tv_nsec - init.tv_nsec;
@@ -53,21 +57,21 @@ int diff_time( struct timespec init, struct timespec end, struct timespec* diff 
 void add_time( struct timespec t1, struct timespec t2, struct timespec* sum ) {
     sum->tv_nsec = t1.tv_nsec + t2.tv_nsec;
 
-    if ( sum->tv_nsec >= 1e9 ) {
-        sum->tv_sec = t1.tv_sec + t2.tv_sec + ( sum->tv_nsec/1e9 );
-        sum->tv_nsec = ( sum->tv_nsec % ( long )1e9 );
+    if ( sum->tv_nsec >= NS_PER_SECOND ) {
+        sum->tv_sec = t1.tv_sec + t2.tv_sec + ( sum->tv_nsec/NS_PER_SECOND );
+        sum->tv_nsec = ( sum->tv_nsec % NS_PER_SECOND );
     } else {
         sum->tv_sec = t1.tv_sec + t2.tv_sec;
     }
 }
 
 void mult_time( struct timespec t1, int factor, struct timespec* prod ) {
-    prod->tv_nsec = t1.tv_nsec * factor;
-
-    if ( prod->tv_nsec >= 1e9 ) {
-        prod->tv_sec = (t1.tv_sec * factor) + ( prod->tv_nsec/1e9 );
-        prod->tv_nsec = ( prod->tv_nsec % ( long )1e9 );
+    int64_t nsec = (int64_t)t1.tv_nsec * factor;
+    if (nsec >= NS_PER_SECOND) {
+        prod->tv_sec = t1.tv_sec * factor + nsec / NS_PER_SECOND;
+        prod->tv_nsec = nsec % NS_PER_SECOND;
     } else {
+        prod->tv_nsec = nsec;
         prod->tv_sec = t1.tv_sec * factor;
     }
 }
@@ -78,36 +82,31 @@ void reset( struct timespec *t1 ) {
 }
 
 double to_secs( struct timespec t1 ) {
-    double secs;
-
-    secs = t1.tv_sec;
-    secs += ( t1.tv_nsec ) / 1e9;
-
-    return secs;
+    return t1.tv_sec + (double)t1.tv_nsec / NS_PER_SECOND;
 }
 
 int64_t to_nsecs( const struct timespec *ts ) {
-    return ts->tv_nsec + ts->tv_sec * 1000000000L;
+    return ts->tv_nsec + (int64_t)ts->tv_sec * NS_PER_SECOND;
 }
 
 // Return timeval diff in us
 int64_t timeval_diff( const struct timeval *init, const struct timeval *end ) {
-    return (int64_t)(end->tv_sec - init->tv_sec) * 1000000L +
+    return (int64_t)(end->tv_sec - init->tv_sec) * US_PER_SECOND +
         (int64_t)(end->tv_usec - init->tv_usec);
 }
 
 // Return timespec diff in ns
 int64_t timespec_diff( const struct timespec *init, const struct timespec *end ) {
-    return (int64_t)(end->tv_sec - init->tv_sec) * 1000000000L +
+    return (int64_t)(end->tv_sec - init->tv_sec) * NS_PER_SECOND +
         (int64_t)(end->tv_nsec - init->tv_nsec);
 }
 
 void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2,
                     struct timespec *res ) {
     long sec = t2->tv_sec + t1->tv_sec;
-    long nsec = (t2->tv_usec + t1->tv_usec) * 1000L;
-    if (nsec >= 1000000000L) {
-        nsec -= 1000000000L;
+    long nsec = (t2->tv_usec + t1->tv_usec) * MS_PER_SECOND;
+    if (nsec >= NS_PER_SECOND) {
+        nsec -= NS_PER_SECOND;
         sec++;
     }
     res->tv_sec = sec;
