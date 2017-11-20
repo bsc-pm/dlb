@@ -80,4 +80,6 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__finalize(p2_pid) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p1_pid, false) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false) == DLB_SUCCESS );
+
+    return 0;
 }
