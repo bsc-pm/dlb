@@ -90,23 +90,34 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
         cpu_set_t new_process_mask;
         CPU_ZERO(&new_process_mask);
 
-        shmem_procinfo__init(spd->id, &spd->process_mask, &new_process_mask, spd->options.shm_key);
+        // Initialize procinfo
+        if (shmem_procinfo__init(spd->id, &spd->process_mask,
+                    &new_process_mask, spd->options.shm_key) != DLB_SUCCESS)
+            return NULL;
+
+        // Update process_mask if procinfo informs of a new mask
         if (CPU_COUNT(&new_process_mask) > 0) {
             memcpy(&spd->process_mask, &new_process_mask, sizeof(cpu_set_t));
             // FIXME: this will probably fail if we can't register a callback before Init
             set_process_mask(&spd->pm, &new_process_mask);
         }
-        shmem_cpuinfo__init(spd->id, &spd->process_mask, spd->options.shm_key);
+
+        // Initialize cpuinfo
+        if (shmem_cpuinfo__init(spd->id, &spd->process_mask, spd->options.shm_key)
+                != DLB_SUCCESS)
+            return NULL;
     }
     if (spd->options.barrier) {
         shmem_barrier_init(spd->options.shm_key);
     }
     if (spd->options.mode == MODE_ASYNC) {
-        shmem_async_init(spd->id, &spd->pm, &spd->process_mask, spd->options.shm_key);
+        if (shmem_async_init(spd->id, &spd->pm, &spd->process_mask, spd->options.shm_key)
+                != DLB_SUCCESS)
+            return NULL;
     }
 
     // Initialise LeWI
-    spd->lb_funcs.init(spd);
+    if (spd->lb_funcs.init(spd) != DLB_SUCCESS) return NULL;
     spd->lb_funcs.update_priority_cpus(spd, &spd->process_mask);
 
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);

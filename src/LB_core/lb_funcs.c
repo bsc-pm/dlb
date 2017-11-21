@@ -23,6 +23,7 @@
 #include "apis/dlb_errors.h"
 
 static int disabled() { return DLB_ERR_NOPOL; }
+static int dummy(const struct SubProcessDescriptor *spd) { return DLB_SUCCESS; }
 
 typedef int (*lb_func_kind1)(const struct SubProcessDescriptor*);
 typedef int (*lb_func_kind2)(const struct SubProcessDescriptor*, int);
@@ -32,8 +33,8 @@ typedef int (*lb_func_kind4)(struct SubProcessDescriptor*, const cpu_set_t*);
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
     // Initialize all fields to a valid, but disabled, function
     *lb_funcs = (balance_policy_t){
-        .init                   = (lb_func_kind1)disabled,
-        .finalize               = (lb_func_kind1)disabled,
+        .init                   = dummy,
+        .finalize               = dummy,
         .enable                 = (lb_func_kind1)disabled,
         .disable                = (lb_func_kind1)disabled,
         .into_communication     = (lb_func_kind1)disabled,

@@ -228,14 +228,20 @@ static void open_shmem(const char *shmem_key) {
 }
 
 static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
+    verbose(VB_SHMEM, "Registering process %d with mask %s", pid, mu_to_str(mask));
+
     int cpuid;
     if (!steal) {
         // Check first that my mask is not already owned
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, mask)
-                    && shdata->node_info[cpuid].owner != NOBODY
-                    && shdata->node_info[cpuid].owner != pid) {
-                return DLB_ERR_PERM;
+            if (CPU_ISSET(cpuid, mask)) {
+                pid_t owner = shdata->node_info[cpuid].owner;
+                if (owner != NOBODY && owner != pid) {
+                    verbose(VB_SHMEM,
+                            "Error registering CPU %d, already owned by %d",
+                            cpuid, owner);
+                    return DLB_ERR_PERM;
+                }
             }
         }
     }
@@ -290,6 +296,12 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
     //verbose( VB_SHMEM, "Process Affinity Mask: %s", mu_to_str(&affinity_mask) );
 
     //add_event(IDLE_CPUS_EVENT, idle_count);
+
+    if (error != DLB_SUCCESS) {
+        verbose(VB_SHMEM,
+                "Error during shmem_cpuinfo initialization, finalizing shared memory");
+        shmem_cpuinfo__finalize(pid);
+    }
 
     return error;
 }

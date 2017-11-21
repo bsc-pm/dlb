@@ -120,17 +120,21 @@ static void open_shmem(const char *shmem_key) {
 
 // Register a new set of CPUs. Remove them from the free_mask and assign them to new_owner if ok
 static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
-    // Return if empty mask
-    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
-
     verbose(VB_DROM, "Process %d registering mask %s", new_owner->pid, mu_to_str(mask));
+
+    int error = DLB_SUCCESS;
     if (mu_is_subset(mask, &shdata->free_mask)) {
         mu_substract(&shdata->free_mask, &shdata->free_mask, mask);
         CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
         new_owner->dirty = true;
-        return DLB_SUCCESS;
+    } else {
+        cpu_set_t wrong_cpus;
+        mu_substract(&wrong_cpus, mask, &shdata->free_mask);
+        verbose(VB_SHMEM, "Error registering CPUs: %s, already belong to other processes",
+                mu_to_str(&wrong_cpus));
+        error = DLB_ERR_PERM;
     }
-    return DLB_ERR_PERM;
+    return error;
 }
 
 int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *new_process_mask,
@@ -193,6 +197,8 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
     }
 
     if (error != DLB_SUCCESS) {
+        verbose(VB_SHMEM,
+                "Error during shmem_procinfo initialization, finalizing shared memory");
         shmem_procinfo__finalize(pid, false);
     }
 

@@ -162,8 +162,8 @@ int main( int argc, char **argv ) {
 
     // Finalize
     assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid) == DLB_ERR_NOSHMEM );
 
     return 0;
 }
