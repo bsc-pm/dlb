@@ -43,6 +43,7 @@ typedef struct pm_interface {
 } pm_interface_t;
 
 void pm_init(pm_interface_t *pm);
+int pm_get_num_threads(void);
 int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,
         dlb_callback_t callback, void *arg);
 int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which,

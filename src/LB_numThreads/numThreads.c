@@ -33,6 +33,7 @@
 
 /* Weak symbols */
 void omp_set_num_threads(int nthreads) __attribute__((weak));
+int omp_get_max_threads(void) __attribute__((weak));
 
 static void packed_omp_set_num_threads(int nthreads, void *arg) {
     omp_set_num_threads(nthreads);
@@ -49,6 +50,10 @@ void pm_init(pm_interface_t *pm) {
     }
     /* Undefined */
     else {}
+}
+
+int pm_get_num_threads(void) {
+    return omp_get_max_threads ? omp_get_max_threads() : 0;
 }
 
 int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,
