@@ -32,6 +32,9 @@ int lewi_OutOfCommunication(const subprocess_descriptor_t *spd);
 int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd);
 int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
 
+int lewi_Lend(const subprocess_descriptor_t *spd);
+
+int lewi_Borrow(const subprocess_descriptor_t *spd);
 int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus);
 
 #endif /* LEWI_H */

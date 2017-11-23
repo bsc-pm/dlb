@@ -33,6 +33,7 @@
 #include "LB_MPI/process_MPI.h"
 
 #include <sched.h>
+#include <limits.h>
 
 
 static int default_cpus;
@@ -128,6 +129,17 @@ int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     return DLB_SUCCESS;
 }
 
+int lewi_Lend(const subprocess_descriptor_t *spd) {
+    verbose(VB_MICROLB, "LENDING %d cpus", myCPUS-1);
+    releaseCpus(myCPUS-1);
+    setThreads_Lend_light(&spd->pm, 1);
+    return DLB_SUCCESS;
+}
+
+int lewi_Borrow(const subprocess_descriptor_t *spd) {
+    return lewi_BorrowCpus(spd, INT_MAX);
+}
+
 int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     int error = DLB_ERR_PERM;
     if (enabled && !single) {
@@ -165,6 +177,8 @@ int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {return DLB_ERR_NO
 int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     return DLB_ERR_NOCOMP;
 }
+int lewi_Lend(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_Borrow(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     return DLB_ERR_NOCOMP;
 }
