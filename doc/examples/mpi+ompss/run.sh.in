@@ -23,10 +23,10 @@ if [[ $TRACE == 1 ]] ; then
 fi
 
 if [[ $DLB == 1 ]] ; then
-    export NX_ARGS+=" --thread-manager=dlb"
-    export DLB_ARGS+=" --policy=auto_LeWI_mask"
+    export NX_ARGS+=" --enable-block --enable-dlb"
+    export DLB_ARGS+=" --lewi"
 else
-    export DLB_ARGS+=" --policy=no"
+    export DLB_ARGS+=" --no-lewi"
 fi
 
 $MPIEXEC -np 2 $MPIEXEC_EXPORT_FLAG LD_PRELOAD=$PRELOAD $APP $ARGS

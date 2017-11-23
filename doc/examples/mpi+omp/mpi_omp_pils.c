@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <mpi.h>
-#include <DLB_interface.h>
+#include <dlb.h>
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
             tope=MIN(steps, i+BS);
 
             int j;
-            DLB_UpdateResources();
+            DLB_Borrow();
             #pragma omp parallel for private(j) reduction(+:iter_time) private(fib)
             for(j=i; j<tope; j++){
                 iter(&iter_time, &fib, usec);

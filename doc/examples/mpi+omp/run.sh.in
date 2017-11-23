@@ -21,14 +21,14 @@ if [[ $DLB == 1 ]] ; then
     else
         PRELOAD="$DLB_HOME/lib/libdlb_mpi_dbg.so"
     fi
-    export DLB_ARGS+=" --policy=LeWI"
+    export DLB_ARGS+=" --lewi"
 else
     if [[ $TRACE == 1 ]] ; then
         TRACENAME="pils.prv"
         PRELOAD="$EXTRAE_HOME/lib/libompitrace.so"
         export EXTRAE_CONFIG_FILE="extrae.xml"
     fi
-    export DLB_ARGS+=" --policy=no"
+    export DLB_ARGS+=" --no-lewi"
 fi
 
 export OMP_NUM_THREADS=$NUMTHREADS
