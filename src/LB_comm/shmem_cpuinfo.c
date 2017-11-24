@@ -1350,17 +1350,24 @@ void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) 
     int max_digits = snprintf(NULL, 0, "%d", max_pid);
 
     /* Set up color */
+    bool is_tty = isatty(STDOUT_FILENO);
     bool color = print_flags & DLB_COLOR_ALWAYS
-        || (print_flags & DLB_COLOR_AUTO && isatty(STDOUT_FILENO));
+        || (print_flags & DLB_COLOR_AUTO && is_tty);
 
     /* Set up number of columns */
     if (columns <= 0) {
-        struct winsize w;
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-        if (color) {
-            columns = w.ws_col / (13+max_digits*2);
+        unsigned short width;
+        if (is_tty) {
+            struct winsize w;
+            ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+            width = w.ws_col;
         } else {
-            columns = w.ws_col / (20+max_digits*2);
+            width = 80;
+        }
+        if (color) {
+            columns = width / (13+max_digits*2);
+        } else {
+            columns = width / (20+max_digits*2);
         }
     }
 
