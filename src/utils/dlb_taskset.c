@@ -189,7 +189,7 @@ static void getpidof(int process_pseudo_id) {
     DLB_DROM_Finalize();
 }
 
-static void show_affinity(pid_t pid, int list_columns) {
+static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t print_flags) {
     int error;
     cpu_set_t mask;
 
@@ -201,7 +201,7 @@ static void show_affinity(pid_t pid, int list_columns) {
         fprintf(stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask));
     } else {
         // Show CPU affinity of all processes attached to DLB
-        DLB_PrintShmem(list_columns);
+        DLB_PrintShmem(list_columns, print_flags);
     }
     DLB_DROM_Finalize();
 }
@@ -214,59 +214,74 @@ int main(int argc, char *argv[]) {
     bool do_getpid = false;
     bool borrow = false;
 
+    dlb_preinit_flags_t print_flags = DLB_COLOR_AUTO;
     int list_columns = 0;
     int process_pseudo_id = 0;
     pid_t pid = 0;
     cpu_set_t cpu_list;
     DLB_DROM_GetNumCpus(&sys_size);
 
+    /* Long options that have no corresponding short option */
+    enum {
+        COLOR_OPTION = CHAR_MAX + 1
+    };
+
     int opt;
     extern char *optarg;
     extern int optind;
     struct option long_options[] = {
-        {"list",     optional_argument, 0, 'l'},
-        {"set",      required_argument, 0, 's'},
-        {"cpus",     required_argument, 0, 'c'},
-        {"remove",   required_argument, 0, 'r'},
-        {"getpid",   required_argument, 0, 'g'},
-        {"pid",      required_argument, 0, 'p'},
-        {"borrow",   no_argument,       0, 'b'},
-        {"help",     no_argument,       0, 'h'},
-        {0,          0,                 0, 0 }
+        {"color",    optional_argument, NULL, COLOR_OPTION},
+        {"list",     optional_argument, NULL, 'l'},
+        {"set",      required_argument, NULL, 's'},
+        {"cpus",     required_argument, NULL, 'c'},
+        {"remove",   required_argument, NULL, 'r'},
+        {"getpid",   required_argument, NULL, 'g'},
+        {"pid",      required_argument, NULL, 'p'},
+        {"borrow",   no_argument,       NULL, 'b'},
+        {"help",     no_argument,       NULL, 'h'},
+        {0,          0,                 NULL, 0 }
     };
 
     while ((opt = getopt_long(argc, argv, "+l::g:s:c:r:g:p:bh", long_options, NULL)) != -1) {
         switch (opt) {
-        case 'l':
-            do_list = true;
-            if (optarg) {
-                list_columns = strtol(optarg, NULL, 0);
-            }
-            break;
-        case 'c':
-        case 's':
-            do_set = true;
-            mu_parse_mask(optarg, &cpu_list);
-            break;
-        case 'r':
-            do_remove = true;
-            mu_parse_mask(optarg, &cpu_list);
-            break;
-        case 'g':
-            do_getpid = true;
-            process_pseudo_id = strtoul(optarg, NULL, 10);
-        case 'p':
-            pid = strtoul(optarg, NULL, 10);
-            break;
-        case 'b':
-            borrow = true;
-            break;
-        case 'h':
-            usage(argv[0], stdout);
-            break;
-        default:
-            usage(argv[0], stderr);
-            break;
+            case COLOR_OPTION:
+                if (optarg && strcasecmp (optarg, "no") == 0) {
+                    print_flags &= ~DLB_COLOR_AUTO;
+                    print_flags &= ~DLB_COLOR_ALWAYS;
+                } else {
+                    print_flags |= DLB_COLOR_ALWAYS;
+                }
+                break;
+            case 'l':
+                do_list = true;
+                if (optarg) {
+                    list_columns = strtol(optarg, NULL, 0);
+                }
+                break;
+            case 'c':
+            case 's':
+                do_set = true;
+                mu_parse_mask(optarg, &cpu_list);
+                break;
+            case 'r':
+                do_remove = true;
+                mu_parse_mask(optarg, &cpu_list);
+                break;
+            case 'g':
+                do_getpid = true;
+                process_pseudo_id = strtoul(optarg, NULL, 10);
+            case 'p':
+                pid = strtoul(optarg, NULL, 10);
+                break;
+            case 'b':
+                borrow = true;
+                break;
+            case 'h':
+                usage(argv[0], stdout);
+                break;
+            default:
+                usage(argv[0], stderr);
+                break;
         }
     }
 
@@ -290,7 +305,7 @@ int main(int argc, char *argv[]) {
         getpidof(process_pseudo_id);
     }
     else if (do_list || pid) {
-        show_affinity(pid, list_columns);
+        show_affinity(pid, list_columns, print_flags);
     }
     else {
         usage(argv[0], stderr);

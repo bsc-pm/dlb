@@ -31,6 +31,12 @@ typedef enum dlb_preinit_flags_e {
     dlb_return_stolen   = 2
 } dlb_preinit_flags_t;
 
+// PrintShmem flags
+typedef enum dlb_printshmem_flags_e {
+    DLB_COLOR_AUTO      = 1,
+    DLB_COLOR_ALWAYS    = 2
+} dlb_printshmem_flags_t;
+
 // Generic dummy callback type
 typedef void (*dlb_callback_t)(void);
 

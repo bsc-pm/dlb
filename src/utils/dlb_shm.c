@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <limits.h>
 
 static char *created_shm_filename = NULL;
 static char *userdef_shm_filename = NULL;
@@ -61,7 +62,8 @@ void create_shdata( void ) {
 #endif
 }
 
-void list_shdata_item(const char* shm_suffix, int list_columns) {
+void list_shdata_item(const char* shm_suffix, int list_columns,
+        dlb_printshmem_flags_t print_flags) {
     char *p;
     if ( (p = strstr(shm_suffix, "cpuinfo")) ) {
         /* Get pointer to shm_key */
@@ -76,13 +78,13 @@ void list_shdata_item(const char* shm_suffix, int list_columns) {
         setenv("DLB_ARGS", dlb_args, 1);
         free(dlb_args);
         /* Print */
-        DLB_PrintShmem(list_columns);
+        DLB_PrintShmem(list_columns, print_flags);
     } else if ( (p = strstr(shm_suffix, "procinfo")) ) {
         // We currently print both shmems with the same API. Skipping.
     }
 }
 
-void list_shdata(int list_columns) {
+void list_shdata(int list_columns, dlb_printshmem_flags_t print_flags) {
     // Ignore them if the filename is not specified
     bool created_shm_listed = created_shm_filename == NULL;
     bool userdef_shm_listed = userdef_shm_filename == NULL;
@@ -102,7 +104,7 @@ void list_shdata(int list_columns) {
         if( getuid() == statbuf.st_uid &&
                 fnmatch( "DLB_*", entry->d_name, 0) == 0 ) {
             // Ignore DLB_ prefix
-            list_shdata_item(&entry->d_name[4], list_columns);
+            list_shdata_item(&entry->d_name[4], list_columns, print_flags);
 
             // Double-check if recently created or user defined
             // Shared Memories are detected. (BG/Q needs it)
@@ -114,13 +116,13 @@ void list_shdata(int list_columns) {
     if ( !created_shm_listed ) {
         fprintf( stderr, "Previously created Shared Memory file not found.\n" );
         fprintf( stderr, "Looking for %s...\n", created_shm_filename );
-        list_shdata_item(&created_shm_filename[9], list_columns);
+        list_shdata_item(&created_shm_filename[9], list_columns, print_flags);
     }
 
     if ( !userdef_shm_listed ) {
         fprintf( stderr, "User defined Shared Memory file not found.\n" );
         fprintf( stderr, "Looking for %s...\n", userdef_shm_filename );
-        list_shdata_item(&userdef_shm_filename[9], list_columns);
+        list_shdata_item(&userdef_shm_filename[9], list_columns, print_flags);
     }
 }
 
@@ -185,15 +187,22 @@ int main ( int argc, char *argv[] ) {
     bool do_list = false;
     bool do_delete = false;
     int list_columns = 0;
+    dlb_preinit_flags_t print_flags = DLB_COLOR_AUTO;
+
+    /* Long options that have no corresponding short option */
+    enum {
+        COLOR_OPTION = CHAR_MAX + 1
+    };
 
     int opt;
     struct option long_options[] = {
-        {"help",   no_argument,       0, 'h'},
-        {"create", no_argument,       0, 'c'},
-        {"list",   optional_argument, 0, 'l'},
-        {"delete", no_argument,       0, 'd'},
-        {"file",   required_argument, 0, 'f'},
-        {0,        0,                 0, 0 }
+        {"help",   no_argument,       NULL, 'h'},
+        {"create", no_argument,       NULL, 'c'},
+        {"list",   optional_argument, NULL, 'l'},
+        {"delete", no_argument,       NULL, 'd'},
+        {"file",   required_argument, NULL, 'f'},
+        {"color",  optional_argument, NULL, COLOR_OPTION},
+        {0,        0,                 NULL, 0 }
     };
 
     while ( (opt = getopt_long(argc, argv, "hcl::df:", long_options, NULL)) != -1 ) {
@@ -219,6 +228,14 @@ int main ( int argc, char *argv[] ) {
             // Prepend '/' if needed
             sprintf( userdef_shm_filename, "%s%s", optarg[0] == '/' ? "" : "/", optarg );
             break;
+        case COLOR_OPTION:
+            if (optarg && strcasecmp (optarg, "no") == 0) {
+                print_flags &= ~DLB_COLOR_AUTO;
+                print_flags &= ~DLB_COLOR_ALWAYS;
+            } else {
+                print_flags |= DLB_COLOR_ALWAYS;
+            }
+            break;
         default:
             print_usage( argv[0] );
             exit( EXIT_SUCCESS );
@@ -239,7 +256,7 @@ int main ( int argc, char *argv[] ) {
     }
 
     if ( do_list ) {
-        list_shdata(list_columns);
+        list_shdata(list_columns, print_flags);
     }
 
     if ( do_delete ) {

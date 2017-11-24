@@ -20,6 +20,7 @@
 #ifndef SHMEM_CPUINFO_H
 #define SHMEM_CPUINFO_H
 
+#include "apis/dlb_types.h"
 #include "support/types.h"
 
 #include <sys/types.h>
@@ -87,5 +88,5 @@ typedef enum {
 
 int shmem_cpuinfo_ext__getnumcpus(void);
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);
-void shmem_cpuinfo__print_info(int columns, bool color);
+void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags);
 #endif /* SHMEM_CPUINFO_H */

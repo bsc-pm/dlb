@@ -1325,7 +1325,7 @@ static const char * get_cpu_state_str(cpu_state_t state) {
     return NULL;
 }
 
-void shmem_cpuinfo__print_info(int columns, bool color) {
+void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) {
     if (shm_handler == NULL) {
         warning("The shmem %s is not initialized, cannot print", shmem_name);
         return;
@@ -1341,7 +1341,8 @@ void shmem_cpuinfo__print_info(int columns, bool color) {
 
     /* Set up arguments */
     columns = columns > 0 ? columns : 2;
-    color = color && isatty(STDOUT_FILENO);
+    bool color = print_flags & DLB_COLOR_ALWAYS
+        || (print_flags & DLB_COLOR_AUTO && isatty(STDOUT_FILENO));
 
     /* Find the largest pid registered in the shared memory */
     pid_t max_pid = 0;

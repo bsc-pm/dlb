@@ -580,18 +580,14 @@ int print_variables(bool print_extra) {
     return DLB_SUCCESS;
 }
 
-int print_shmem(int num_columns) {
+int print_shmem(int num_columns, dlb_printshmem_flags_t print_flags) {
     if (!dlb_initialized) {
         options_init(&spd.options, NULL);
         debug_init(&spd.options);
     }
 
-    /* color is true be default for now,
-     * we could use some option in DLB_ARGS */
-    bool color = true;
-
     shmem_cpuinfo_ext__init(spd.options.shm_key);
-    shmem_cpuinfo__print_info(num_columns, color);
+    shmem_cpuinfo__print_info(num_columns, print_flags);
     shmem_cpuinfo_ext__finalize();
     shmem_procinfo_ext__init(spd.options.shm_key);
     shmem_procinfo__print_info();

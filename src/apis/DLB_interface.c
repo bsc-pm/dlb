@@ -178,8 +178,8 @@ int DLB_PrintVariables(int print_extra) {
     return print_variables(print_extra);
 }
 
-int DLB_PrintShmem(int num_columns) {
-    return print_shmem(num_columns);
+int DLB_PrintShmem(int num_columns, dlb_printshmem_flags_t print_flags) {
+    return print_shmem(num_columns, print_flags);
 }
 
 const char* DLB_Strerror(int errnum) {
