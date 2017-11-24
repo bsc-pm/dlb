@@ -101,7 +101,7 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
     } else if (pid == 0) {
         pid = getpid();
         DLB_DROM_Init();
-        dlb_preinit_flags_t flags = dlb_steal_cpus | (borrow ? dlb_return_stolen : 0);
+        dlb_preinit_flags_t flags = DLB_STEAL_CPUS | (borrow ? DLB_RETURN_STOLEN : 0);
         int error = DLB_DROM_PreInit(pid, new_mask, flags, NULL);
         dlb_check(error, pid, __FUNCTION__);
         DLB_DROM_Finalize();

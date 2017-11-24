@@ -27,8 +27,8 @@ typedef const void* const_dlb_cpu_set_t;
 
 // PreInit flags
 typedef enum dlb_preinit_flags_e {
-    dlb_steal_cpus      = 1,
-    dlb_return_stolen   = 2
+    DLB_STEAL_CPUS      = 1,
+    DLB_RETURN_STOLEN   = 2
 } dlb_preinit_flags_t;
 
 // PrintShmem flags

@@ -136,7 +136,7 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_preinit_flags_t flag
     /* Set up DROM args */
     char drom_args[64];
     int __attribute__((unused)) n = snprintf(drom_args, 64, "--drom=1 --preinit-pid=%d %s",
-            pid, flags & dlb_return_stolen ? "--debug-opts=return-stolen" : "");
+            pid, flags & DLB_RETURN_STOLEN ? "--debug-opts=return-stolen" : "");
     ensure(n<64, "snprintf overflow");
 
     /* Set up OMP_NUM_THREADS new value */
@@ -170,8 +170,8 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_preinit_flags_t flag
         add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
     }
 
-    int error = shmem_procinfo_ext__preinit(pid, mask, flags & dlb_steal_cpus);
-    error = error ? error : shmem_cpuinfo_ext__preinit(pid, mask, flags & dlb_steal_cpus);
+    int error = shmem_procinfo_ext__preinit(pid, mask, flags & DLB_STEAL_CPUS);
+    error = error ? error : shmem_cpuinfo_ext__preinit(pid, mask, flags & DLB_STEAL_CPUS);
     return error;
 }
 
