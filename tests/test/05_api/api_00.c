@@ -24,6 +24,7 @@
 #include "assert_noshm.h"
 
 #include "apis/dlb.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -115,6 +116,15 @@ int main( int argc, char **argv ) {
     assert( DLB_Init(0, &process_mask, "--lewi") == DLB_SUCCESS );
     DLB_LendCpu(0);
     assert( DLB_PrintShmem(4, DLB_COLOR_AUTO) == DLB_SUCCESS );
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    // Call DLB_PrintShmem with different sizes
+    mu_testing_set_sys_size(64);
+    int i;
+    for(i=0; i<64; ++i) CPU_SET(i, &process_mask);
+    assert( DLB_Init(0, &process_mask, "--lewi") == DLB_SUCCESS );
+    DLB_LendCpu(0);
+    assert( DLB_PrintShmem(0, DLB_COLOR_AUTO) == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_SUCCESS );
 
     return 0;

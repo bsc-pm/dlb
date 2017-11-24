@@ -31,8 +31,9 @@
 
 #include <sched.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
 
 /* NOTE on default values:
  * The shared memory will be initializated to 0 when created,
@@ -1339,11 +1340,6 @@ void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) 
     }
     shmem_unlock(shm_handler);
 
-    /* Set up arguments */
-    columns = columns > 0 ? columns : 2;
-    bool color = print_flags & DLB_COLOR_ALWAYS
-        || (print_flags & DLB_COLOR_AUTO && isatty(STDOUT_FILENO));
-
     /* Find the largest pid registered in the shared memory */
     pid_t max_pid = 0;
     int cpuid;
@@ -1352,6 +1348,21 @@ void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) 
         max_pid = pid > max_pid ? pid : max_pid;
     }
     int max_digits = snprintf(NULL, 0, "%d", max_pid);
+
+    /* Set up color */
+    bool color = print_flags & DLB_COLOR_ALWAYS
+        || (print_flags & DLB_COLOR_AUTO && isatty(STDOUT_FILENO));
+
+    /* Set up number of columns */
+    if (columns <= 0) {
+        struct winsize w;
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+        if (color) {
+            columns = w.ws_col / (13+max_digits*2);
+        } else {
+            columns = w.ws_col / (20+max_digits*2);
+        }
+    }
 
     /* Pre-allocate buffer */
     enum { INITIAL_BUFFER_SIZE = 1024 };
@@ -1366,7 +1377,7 @@ void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) 
     char line[MAX_LINE_LEN];
     int cpuids[columns];
     cpuinfo_t *cpuinfos[columns];
-    int offset = ((node_size-1)/columns)+1;
+    int offset = (node_size+columns-1)/columns;
 
     for (cpuids[0]=0; cpuids[0]<offset; ++cpuids[0]) {
         /* Init variables */
@@ -1392,7 +1403,7 @@ void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) 
                         guest == NOBODY                     ? ANSI_COLOR_GREEN :
                                                               ANSI_COLOR_BLUE;
                     l += snprintf(l, MAX_LINE_LEN-strlen(line),
-                            " %4d %s[ %*d / %*d ]" ANSI_COLOR_RESET " ",
+                            " %4d %s[ %*d / %*d ]" ANSI_COLOR_RESET,
                             cpuids[i],
                             code_color,
                             max_digits, cpuinfos[i]->owner,
