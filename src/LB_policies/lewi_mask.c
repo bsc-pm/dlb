@@ -308,11 +308,12 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t new_guests[node_size];
     pid_t victims[node_size];
+    bool async = spd->options.mode == MODE_ASYNC;
+    int64_t *last_borrow = async ? NULL : &((lewi_info_t*)spd->lewi_info)->last_borrow;
     int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
     int error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.lewi_affinity,
-            cpus_priority_array, ncpus, new_guests, victims);
+            cpus_priority_array, last_borrow, ncpus, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             pid_t new_guest = new_guests[cpuid];
@@ -372,11 +373,12 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 
 int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
     pid_t new_guests[node_size];
+    bool async = spd->options.mode == MODE_ASYNC;
+    int64_t *last_borrow = async ? NULL : &((lewi_info_t*)spd->lewi_info)->last_borrow;
     int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
     int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.lewi_affinity,
-            cpus_priority_array, new_guests);
+            cpus_priority_array, last_borrow, new_guests);
     if (error == DLB_SUCCESS) {
-        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (new_guests[cpuid] == spd->id) {
@@ -408,11 +410,12 @@ int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t new_guests[node_size];
+    bool async = spd->options.mode == MODE_ASYNC;
+    int64_t *last_borrow = async ? NULL : &((lewi_info_t*)spd->lewi_info)->last_borrow;
     int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
     int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.lewi_affinity,
-            cpus_priority_array, ncpus, new_guests);
+            cpus_priority_array, last_borrow, ncpus, new_guests);
     if (error == DLB_SUCCESS) {
-        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (new_guests[cpuid] == spd->id) {

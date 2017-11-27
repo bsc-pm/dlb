@@ -41,6 +41,12 @@ void get_time_coarse( struct timespec *t ) {
 #endif
 }
 
+int64_t get_time_in_ns(void) {
+    struct timespec t;
+    get_time(&t);
+    return to_nsecs(&t);
+}
+
 int diff_time( struct timespec init, struct timespec end, struct timespec* diff ) {
     if ( init.tv_sec > end.tv_sec ) {
         return -1;

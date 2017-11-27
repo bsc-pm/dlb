@@ -171,6 +171,7 @@ typedef struct {
 typedef struct {
     bool             dirty;
     struct           timespec initial_time;
+    int64_t          timestamp_cpu_lent;
     global_request_t global_requests;
     cpuinfo_t        node_info[0];
 } shdata_t;
@@ -285,6 +286,7 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
         if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
             get_time(&shdata->initial_time);
             shdata->dirty = false;
+            shdata->timestamp_cpu_lent = 0;
         }
 
         // Register process_mask, with stealing = false always in normal Init()
@@ -465,6 +467,8 @@ static void lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     } else {
         *new_guest = -1;
     }
+
+    shdata->timestamp_cpu_lent = get_time_in_ns();
 }
 
 int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
@@ -790,11 +794,31 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *vi
 static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
 
 int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t new_guests[], pid_t victims[]) {
+        int64_t *last_borrow, int ncpus, pid_t new_guests[], pid_t victims[]) {
+    int i;
+
+    /* Optimization: check first that one of these conditions are met:
+     *  - Some owned CPU is not guested by pid
+     *  - Timestamp of last borrow is older than last CPU lent
+     */
+    if (ncpus != 0 && last_borrow != NULL) {
+        bool try_acquire = false;
+        // Iterate owned CPUs only
+        for (i=0; ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->owner != pid) break;
+            if (cpuinfo->guest == pid) continue;
+            try_acquire = true;
+        }
+        try_acquire = try_acquire || *last_borrow < shdata->timestamp_cpu_lent;
+        if (!try_acquire) return DLB_NOUPDT;
+        *last_borrow = get_time_in_ns();
+    }
+
     /* Functions that iterate cpus_priority_array may not check every CPU,
      * output arrays need to be properly initialized
      */
-    int i;
     for (i=0; i<node_size; ++i) {
         new_guests[i] = -1;
         victims[i] = -1;
@@ -904,7 +928,13 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
 }
 
 int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
-        pid_t new_guests[]) {
+        int64_t *last_borrow, pid_t new_guests[]) {
+    /* Optimization: check first that last borrow is older than last CPU lent */
+    if (last_borrow != NULL) {
+        if (*last_borrow > shdata->timestamp_cpu_lent) return DLB_NOUPDT;
+        *last_borrow = get_time_in_ns();
+    }
+
     /* Functions that iterate cpus_priority_array may not check every CPU,
      * output arrays need to be properly initialized
      */
@@ -962,7 +992,13 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
 }
 
 int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int ncpus, pid_t new_guests[]) {
+        int64_t *last_borrow, int ncpus, pid_t new_guests[]) {
+    /* Optimization: check first that last borrow is older than last CPU lent */
+    if (last_borrow != NULL) {
+        if (*last_borrow > shdata->timestamp_cpu_lent) return DLB_NOUPDT;
+        *last_borrow = get_time_in_ns();
+    }
+
     /* Functions that iterate cpus_priority_array may not check every CPU,
      * output arrays need to be properly initialized
      */

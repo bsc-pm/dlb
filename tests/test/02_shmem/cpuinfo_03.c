@@ -57,6 +57,7 @@ int main( int argc, char **argv ) {
     CPU_SET(3, &p2_mask);
     pid_t new_guests[SYS_SIZE];
     pid_t victims[SYS_SIZE];
+    int64_t last_borrow = 0;
 
     // Init
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
@@ -86,7 +87,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to BORROW up to 2 CPUs
         assert( shmem_cpuinfo__borrow_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    2, new_guests) == DLB_SUCCESS );
+                    &last_borrow, 2, new_guests) == DLB_SUCCESS );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1);
         assert( new_guests[3] == p1_pid );
 
@@ -114,7 +115,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to ACQUIRE 2 CPUs
         err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    2, new_guests, victims);
+                    &last_borrow, 2, new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
@@ -127,7 +128,7 @@ int main( int argc, char **argv ) {
         // If polling, process 1 needs to ask again for the last CPU
         if (!async) {
             assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                        1, new_guests, victims) == DLB_SUCCESS );
+                        &last_borrow, 1, new_guests, victims) == DLB_SUCCESS );
             assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[3] == -1 );
             assert( new_guests[2] == p1_pid );
             for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -155,15 +156,15 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to ACQUIRE 2 CPUs
         err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    2, new_guests, victims);
+                    &last_borrow, 2, new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
         // Process 1 wants to cancel previous request
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, NULL, 0, new_guests, victims)
-                == DLB_SUCCESS );
+        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, NULL, &last_borrow, 0,
+                    new_guests, victims) == DLB_SUCCESS );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 

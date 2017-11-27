@@ -43,6 +43,7 @@ int main( int argc, char **argv ) {
     pid_t new_guests[ncpus];
     pid_t victims[ncpus];
     int cpus_priority_array[ncpus];
+    int64_t last_borrow = 0;
     int i;
 
     // Setup dummy priority CPUs
@@ -86,7 +87,8 @@ int main( int argc, char **argv ) {
     assert( victims[0] == 0 );
 
     // Borrow CPUs
-    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_ANY, cpus_priority_array, 1, new_guests)
+    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_ANY, cpus_priority_array, &last_borrow,
+                1, new_guests)
             == DLB_SUCCESS );
     assert( new_guests[0] == pid );
     for (i=1; i<ncpus; ++i) { assert( new_guests[i] == -1 ); }
@@ -123,7 +125,8 @@ int main( int argc, char **argv ) {
     for (i=0; i<ncpus; ++i) { assert( new_guests[i] == 0 ); }
 
     // Borrow all
-    assert( shmem_cpuinfo__borrow_all(pid, PRIO_ANY, cpus_priority_array, new_guests) >= 0 );
+    assert( shmem_cpuinfo__borrow_all(pid, PRIO_ANY, cpus_priority_array, &last_borrow,
+                new_guests) >= 0 );
     for (i=0; i<ncpus; ++i) { assert( new_guests[i] == pid ); }
 
     // Return
