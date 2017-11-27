@@ -31,13 +31,13 @@
 
 typedef struct SubProcessDescriptor {
     pid_t id;
-    int *cpus_priority_array;
     cpu_set_t process_mask;
     cpu_set_t active_mask;
     options_t options;
     pm_interface_t pm;
     policy_t lb_policy;
     balance_policy_t lb_funcs;
+    void *lewi_info;
 } subprocess_descriptor_t;
 
 #endif /* SPD_H */

@@ -23,12 +23,11 @@
 #include "apis/dlb_errors.h"
 
 static int disabled() { return DLB_ERR_NOPOL; }
-static int dummy(const struct SubProcessDescriptor *spd) { return DLB_SUCCESS; }
+static int dummy(struct SubProcessDescriptor *spd) { return DLB_SUCCESS; }
 
 typedef int (*lb_func_kind1)(const struct SubProcessDescriptor*);
 typedef int (*lb_func_kind2)(const struct SubProcessDescriptor*, int);
 typedef int (*lb_func_kind3)(const struct SubProcessDescriptor*, const cpu_set_t*);
-typedef int (*lb_func_kind4)(struct SubProcessDescriptor*, const cpu_set_t*);
 
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
     // Initialize all fields to a valid, but disabled, function
@@ -60,7 +59,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .return_cpu             = (lb_func_kind2)disabled,
         .return_cpu_mask        = (lb_func_kind3)disabled,
         .check_cpu_availability = (lb_func_kind2)disabled,
-        .update_priority_cpus   = (lb_func_kind4)disabled,
+        .update_ownership_info  = (lb_func_kind3)disabled,
     };
 
     // Set according to policy
@@ -69,7 +68,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             break;
         case POLICY_LEWI:
             lb_funcs->init                   = lewi_Init;
-            lb_funcs->finalize               = lewi_Finish;
+            lb_funcs->finalize               = lewi_Finalize;
             lb_funcs->enable                 = lewi_EnableDLB;
             lb_funcs->disable                = lewi_DisableDLB;
             lb_funcs->into_communication     = lewi_IntoCommunication;
@@ -83,7 +82,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             break;
         case POLICY_LEWI_MASK:
             lb_funcs->init                   = lewi_mask_Init;
-            lb_funcs->finalize               = lewi_mask_Finish;
+            lb_funcs->finalize               = lewi_mask_Finalize;
             lb_funcs->enable                 = lewi_mask_EnableDLB;
             lb_funcs->disable                = lewi_mask_DisableDLB;
             lb_funcs->into_blocking_call     = lewi_mask_IntoBlockingCall;
@@ -106,7 +105,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->return_cpu             = lewi_mask_ReturnCpu;
             lb_funcs->return_cpu_mask        = lewi_mask_ReturnCpuMask;
             lb_funcs->check_cpu_availability = lewi_mask_CheckCpuAvailability;
-            lb_funcs->update_priority_cpus   = lewi_mask_UpdatePriorityCpus;
+            lb_funcs->update_ownership_info  = lewi_mask_UpdateOwnershipInfo;
             break;
     }
 }

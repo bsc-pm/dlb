@@ -68,7 +68,6 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
     pm_init(&spd->pm);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
     spd->id = get_atomic_spid();;
-    spd->cpus_priority_array = malloc(mu_get_system_size()*sizeof(int));
     if (mask) {
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
     } else if (spd->lb_policy == POLICY_LEWI) {
@@ -118,7 +117,6 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
 
     // Initialise LeWI
     if (spd->lb_funcs.init(spd) != DLB_SUCCESS) return NULL;
-    spd->lb_funcs.update_priority_cpus(spd, &spd->process_mask);
 
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, 0);
@@ -161,7 +159,6 @@ int Finish_sp(subprocess_descriptor_t *spd) {
             shmem_cpuinfo__finalize(spd->id);
             shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
         }
-        free(spd->cpus_priority_array);
         free(spd);
     } else {
         error = DLB_ERR_NOINIT;
@@ -348,7 +345,7 @@ int poll_drom_sp(subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mas
         error = shmem_procinfo__polldrom(spd->id, new_cpus, mask);
         if (error == DLB_SUCCESS) {
             shmem_cpuinfo__update_ownership(spd->id, mask);
-            spd->lb_funcs.update_priority_cpus(spd, mask);
+            spd->lb_funcs.update_ownership_info(spd, mask);
         }
     }
     return error;

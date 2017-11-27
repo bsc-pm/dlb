@@ -81,7 +81,7 @@ int main( int argc, char **argv ) {
     assert( lewi_mask_AcquireCpu(&spd, 0) == DLB_SUCCESS );
 
     // Finalize
-    assert( lewi_mask_Finish(&spd) == DLB_SUCCESS );
+    assert( lewi_mask_Finalize(&spd) == DLB_SUCCESS );
 
     // Poll a limited number of times if at least enable_callback was called once
     assert_loop( enable_times > 0 );

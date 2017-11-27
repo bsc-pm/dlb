@@ -30,18 +30,44 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int node_size;
+/* Node size is constant across subprocesses, it is safe to be shared */
+static int node_size = -1;
 
-int lewi_mask_Init(const subprocess_descriptor_t *spd) {
+/* These variables cannot be shared, so they need a private allocation */
+typedef struct LeWI_mask_info {
+    int64_t last_borrow;
+    int *cpus_priority_array;
+} lewi_info_t;
+
+
+int lewi_mask_Init(subprocess_descriptor_t *spd) {
+    /* Value is always updated to allow testing different node sizes */
     node_size = mu_get_system_size();
+
+    /* Allocate and initialize private structure */
+    spd->lewi_info = malloc(sizeof(lewi_info_t));
+    lewi_info_t *lewi_info = spd->lewi_info;
+    lewi_info->last_borrow = 0;
+    lewi_info->cpus_priority_array = malloc(node_size*sizeof(int));
+    lewi_mask_UpdateOwnershipInfo(spd, &spd->process_mask);
+
+    /* Enable request queues only in async mode */
     if (spd->options.mode == MODE_ASYNC) {
         shmem_cpuinfo__enable_request_queues();
     }
+
     return DLB_SUCCESS;
 }
 
-int lewi_mask_Finish(const subprocess_descriptor_t *spd) {
+int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
+    /* Reclaim all CPUs just before de-registering process */
     int error = lewi_mask_Reclaim(spd);
+
+    /* De-allocate private structure */
+    free(((lewi_info_t*)spd->lewi_info)->cpus_priority_array);
+    free(spd->lewi_info);
+    spd->lewi_info = NULL;
+
     return (error >= 0) ? DLB_SUCCESS : error;
 }
 
@@ -282,8 +308,9 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t new_guests[node_size];
     pid_t victims[node_size];
+    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
     int error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.lewi_affinity,
-            spd->cpus_priority_array, ncpus, new_guests, victims);
+            cpus_priority_array, ncpus, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
@@ -345,8 +372,9 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 
 int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
     pid_t new_guests[node_size];
+    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
     int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.lewi_affinity,
-            spd->cpus_priority_array, new_guests);
+            cpus_priority_array, new_guests);
     if (error == DLB_SUCCESS) {
         bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
@@ -380,8 +408,9 @@ int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
     pid_t new_guests[node_size];
+    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
     int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.lewi_affinity,
-            spd->cpus_priority_array, ncpus, new_guests);
+            cpus_priority_array, ncpus, new_guests);
     if (error == DLB_SUCCESS) {
         bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
@@ -494,7 +523,8 @@ int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid
  *  prio3: other CPUs in some affinity options
  *  rest:  fill '-1' to indicate non eligible CPUs
  */
-int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask) {
+int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
+        const cpu_set_t *process_mask) {
     int *prio1 = malloc(node_size*sizeof(int));
     int *prio2 = malloc(node_size*sizeof(int));
     int *prio3 = malloc(node_size*sizeof(int));
@@ -532,10 +562,11 @@ int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *
     }
 
     /* Merge [<[prio1][prio2][prio3][-1]>] */
-    memmove(&spd->cpus_priority_array[0], prio1, sizeof(int)*i1);
-    memmove(&spd->cpus_priority_array[i1], prio2, sizeof(int)*i2);
-    memmove(&spd->cpus_priority_array[i1+i2], prio3, sizeof(int)*i3);
-    for (i=i1+i2+i3; i<node_size; ++i) spd->cpus_priority_array[i] = -1;
+    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
+    memmove(&cpus_priority_array[0], prio1, sizeof(int)*i1);
+    memmove(&cpus_priority_array[i1], prio2, sizeof(int)*i2);
+    memmove(&cpus_priority_array[i1+i2], prio3, sizeof(int)*i3);
+    for (i=i1+i2+i3; i<node_size; ++i) cpus_priority_array[i] = -1;
 
     free(prio1);
     free(prio2);

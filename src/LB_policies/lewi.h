@@ -22,8 +22,8 @@
 
 #include "LB_core/spd.h"
 
-int lewi_Init(const subprocess_descriptor_t *spd);
-int lewi_Finish(const subprocess_descriptor_t *spd);
+int lewi_Init(subprocess_descriptor_t *spd);
+int lewi_Finalize(subprocess_descriptor_t *spd);
 int lewi_EnableDLB(const subprocess_descriptor_t *spd);
 int lewi_DisableDLB(const subprocess_descriptor_t *spd);
 

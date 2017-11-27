@@ -44,7 +44,7 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads);
 
 /******* Main Functions LeWI Balancing Policy ********/
 
-int lewi_Init(const subprocess_descriptor_t *spd) {
+int lewi_Init(subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "LeWI Init");
 
     default_cpus = CPU_COUNT(&spd->process_mask);
@@ -71,7 +71,7 @@ int lewi_Init(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-int lewi_Finish(const subprocess_descriptor_t *spd) {
+int lewi_Finalize(subprocess_descriptor_t *spd) {
     finalize_comm();
     return DLB_SUCCESS;
 }
@@ -174,8 +174,8 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads) {
 
 #else /* MPI_LIB */
 
-int lewi_Init(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_Finish(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_Init(subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_Finalize(subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_EnableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_DisableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_IntoCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}

@@ -98,11 +98,7 @@ int main( int argc, char **argv ) {
     assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu,
                 (dlb_callback_t)sp1_cb_disable_cpu, NULL) == DLB_SUCCESS);
     assert( lewi_mask_Init(&spd1) == DLB_SUCCESS );
-    spd1.cpus_priority_array = malloc(4*sizeof(int));
-    assert( lewi_mask_UpdatePriorityCpus(&spd1, &spd1.process_mask) == DLB_SUCCESS );
-    printf("spd1 priority array: %d %d %d %d\n",
-            spd1.cpus_priority_array[0], spd1.cpus_priority_array[1],
-            spd1.cpus_priority_array[2], spd1.cpus_priority_array[3]);
+    assert( lewi_mask_UpdateOwnershipInfo(&spd1, &spd1.process_mask) == DLB_SUCCESS );
 
     // Subprocess 2 init
     spd2.id = 222;
@@ -116,11 +112,7 @@ int main( int argc, char **argv ) {
     assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu,
                 (dlb_callback_t)sp2_cb_disable_cpu, NULL) == DLB_SUCCESS );
     assert( lewi_mask_Init(&spd2) == DLB_SUCCESS );
-    spd2.cpus_priority_array = malloc(4*sizeof(int));
-    assert( lewi_mask_UpdatePriorityCpus(&spd2, &spd2.process_mask) == DLB_SUCCESS );
-    printf("spd2 priority array: %d %d %d %d\n",
-            spd2.cpus_priority_array[0], spd2.cpus_priority_array[1],
-            spd2.cpus_priority_array[2], spd2.cpus_priority_array[3]);
+    assert( lewi_mask_UpdateOwnershipInfo(&spd2, &spd2.process_mask) == DLB_SUCCESS );
 
     // Get interaction mode
     assert( spd1.options.mode == spd2.options.mode );
@@ -276,8 +268,8 @@ int main( int argc, char **argv ) {
     }
 
     // Policy finalize
-    assert( lewi_mask_Finish(&spd1) == DLB_SUCCESS );
-    assert( lewi_mask_Finish(&spd2) == DLB_SUCCESS );
+    assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
+    assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
 
     // Async finalize
     if (mode == MODE_ASYNC) {

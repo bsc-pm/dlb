@@ -22,8 +22,8 @@
 
 #include "LB_core/spd.h"
 
-int lewi_mask_Init(const subprocess_descriptor_t *spd);
-int lewi_mask_Finish(const subprocess_descriptor_t *spd);
+int lewi_mask_Init(subprocess_descriptor_t *spd);
+int lewi_mask_Finalize(subprocess_descriptor_t *spd);
 int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd);
 int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd);
 
@@ -53,6 +53,7 @@ int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid);
 int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid);
-int lewi_mask_UpdatePriorityCpus(subprocess_descriptor_t *spd, const cpu_set_t *process_mask);
+int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
+        const cpu_set_t *process_mask);
 
 #endif /* LEWI_MASK_H */
