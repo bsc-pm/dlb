@@ -1223,7 +1223,7 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
             }
 
             /* Do not keep iterating if we already found the binding and some CPU dirty */
-            if (binding != 1 && !all_cpus_clean) {
+            if (binding != -1 && !all_cpus_clean) {
                 break;
             }
         }
