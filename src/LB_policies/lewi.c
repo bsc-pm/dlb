@@ -136,6 +136,13 @@ int lewi_Lend(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
+int lewi_Reclaim(const subprocess_descriptor_t *spd) {
+    int cpus = acquireCpus(myCPUS);
+    setThreads_Lend_light(&spd->pm, cpus);
+    verbose(VB_MICROLB, "ACQUIRING %d cpus", cpus);
+    return DLB_SUCCESS;
+}
+
 int lewi_Borrow(const subprocess_descriptor_t *spd) {
     return lewi_BorrowCpus(spd, INT_MAX);
 }
@@ -178,6 +185,7 @@ int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     return DLB_ERR_NOCOMP;
 }
 int lewi_Lend(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_Reclaim(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_Borrow(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     return DLB_ERR_NOCOMP;

@@ -77,6 +77,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->into_blocking_call     = lewi_IntoBlockingCall;
             lb_funcs->out_of_blocking_call   = lewi_OutOfBlockingCall;
             lb_funcs->lend                   = lewi_Lend;
+            lb_funcs->reclaim                = lewi_Reclaim;
             lb_funcs->borrow                 = lewi_Borrow;
             lb_funcs->borrow_cpus            = lewi_BorrowCpus;
             break;
