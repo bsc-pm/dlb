@@ -1326,10 +1326,13 @@ static const char * get_cpu_state_str(cpu_state_t state) {
     return NULL;
 }
 
-void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) {
-    if (shm_handler == NULL) {
-        warning("The shmem %s is not initialized, cannot print", shmem_name);
-        return;
+void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
+        dlb_printshmem_flags_t print_flags) {
+
+    /* If the shmem is not opened, obtain a temporary fd */
+    bool temporary_shmem = shm_handler == NULL;
+    if (temporary_shmem) {
+        shmem_cpuinfo_ext__init(shmem_key);
     }
 
     /* Make a full copy of the shared memory */
@@ -1339,6 +1342,11 @@ void shmem_cpuinfo__print_info(int columns, dlb_printshmem_flags_t print_flags) 
         memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size);
     }
     shmem_unlock(shm_handler);
+
+    /* Close shmem if needed */
+    if (temporary_shmem) {
+        shmem_cpuinfo_ext__finalize();
+    }
 
     /* Find the largest pid registered in the shared memory */
     pid_t max_pid = 0;

@@ -836,10 +836,12 @@ int shmem_procinfo__getloadavg(pid_t pid, double *load) {
 /* Misc                                                                          */
 /*********************************************************************************/
 
-void shmem_procinfo__print_info(void) {
-    if (shm_handler == NULL) {
-        warning("The shmem %s is not initialized, cannot print", shmem_name);
-        return;
+void shmem_procinfo__print_info(const char *shmem_key) {
+
+    /* If the shmem is not opened, obtain a temporary fd */
+    bool temporary_shmem = shm_handler == NULL;
+    if (temporary_shmem) {
+        shmem_procinfo_ext__init(shmem_key);
     }
 
     /* Make a full copy of the shared memory */
@@ -849,6 +851,11 @@ void shmem_procinfo__print_info(void) {
         memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
     }
     shmem_unlock(shm_handler);
+
+    /* Close shmem if needed */
+    if (temporary_shmem) {
+        shmem_procinfo_ext__finalize();
+    }
 
     /* Pre-allocate buffer */
     enum { INITIAL_BUFFER_SIZE = 1024 };

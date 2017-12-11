@@ -72,8 +72,8 @@ int main(int argc, char *argv[]) {
             == DLB_NOTED );
 
     /* Print */
-    shmem_cpuinfo__print_info(4, true);
-    shmem_procinfo__print_info();
+    shmem_cpuinfo__print_info(NULL, 4, true);
+    shmem_procinfo__print_info(NULL);
 
     /* Finalize shared memories */
     assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );

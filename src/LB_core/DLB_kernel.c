@@ -523,12 +523,9 @@ int print_shmem(int num_columns, dlb_printshmem_flags_t print_flags) {
         debug_init(&spd.options);
     }
 
-    shmem_cpuinfo_ext__init(spd.options.shm_key);
-    shmem_cpuinfo__print_info(num_columns, print_flags);
-    shmem_cpuinfo_ext__finalize();
-    shmem_procinfo_ext__init(spd.options.shm_key);
-    shmem_procinfo__print_info();
-    shmem_procinfo_ext__finalize();
+    shmem_cpuinfo__print_info(spd.options.shm_key, num_columns, print_flags);
+    shmem_procinfo__print_info(spd.options.shm_key);
+
     return DLB_SUCCESS;
 }
 
