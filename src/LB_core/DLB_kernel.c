@@ -112,7 +112,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     spd->dlb_enabled = true;
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-    add_event(RUNTIME_EVENT, 0);
+    add_event(RUNTIME_EVENT, EVENT_USER);
 
     // Print initialization summary
     info0("%s %s", PACKAGE, VERSION);
