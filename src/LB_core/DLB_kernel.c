@@ -39,14 +39,9 @@
 #include <string.h>
 #include <unistd.h>
 
-/* This flag is used to
- *  - protect DLB functionality before the initialization
- *  - protect DLB_Init / DLB_MPI_Init twice
- */
-static bool dlb_initialized = false;
 
 /* Temporary global sub-process descriptor */
-static subprocess_descriptor_t spd;
+static subprocess_descriptor_t spd = { 0 };
 
 
 /* Status */
@@ -54,148 +49,132 @@ static subprocess_descriptor_t spd;
 int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
 
     int error = DLB_SUCCESS;
-    if (!dlb_initialized) {
-        // Initialize first instrumentation module
-        options_init(&spd.options, lb_args);
-        init_tracing(&spd.options);
-        add_event(RUNTIME_EVENT, EVENT_INIT);
 
-        // Infer LeWI mode
-        spd.lb_policy = !spd.options.lewi ? POLICY_NONE :
-                                    !mask ? POLICY_LEWI :
-                                            POLICY_LEWI_MASK;
+    // Initialize first instrumentation module
+    options_init(&spd.options, lb_args);
+    init_tracing(&spd.options);
+    add_event(RUNTIME_EVENT, EVENT_INIT);
 
-        // Initialize the rest of the subprocess descriptor
-        pm_init(&spd.pm);
-        set_lb_funcs(&spd.lb_funcs, spd.lb_policy);
-        spd.id = spd.options.preinit_pid ? spd.options.preinit_pid : getpid();
-        if (mask) {
-            memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
-        } else if (spd.lb_policy == POLICY_LEWI) {
-            if (ncpus <= 0) ncpus = pm_get_num_threads();
-            // We need to pass ncpus through spd, CPU order doesn't matter
-            CPU_ZERO(&spd.process_mask);
-            int i;
-            for (i=0; i<ncpus; ++i) CPU_SET(i, &spd.process_mask);
-        }
+    // Infer LeWI mode
+    spd.lb_policy = !spd.options.lewi ? POLICY_NONE :
+        !mask ? POLICY_LEWI :
+        POLICY_LEWI_MASK;
 
-        // Initialize modules
-        debug_init(&spd.options);
-        if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
-            // Mandatory: obtain mask
-            fatal_cond(!mask, "DROM and TALP modules require mask support");
+    // Initialize the rest of the subprocess descriptor
+    pm_init(&spd.pm);
+    set_lb_funcs(&spd.lb_funcs, spd.lb_policy);
+    spd.id = spd.options.preinit_pid ? spd.options.preinit_pid : getpid();
+    if (mask) {
+        memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
+    } else if (spd.lb_policy == POLICY_LEWI) {
+        if (ncpus <= 0) ncpus = pm_get_num_threads();
+        // We need to pass ncpus through spd, CPU order doesn't matter
+        CPU_ZERO(&spd.process_mask);
+        int i;
+        for (i=0; i<ncpus; ++i) CPU_SET(i, &spd.process_mask);
+    }
 
-            // If the process has been pre-initialized, the process mask may have changed
-            // procinfo_init must return a new_mask if so
-            cpu_set_t new_process_mask;
-            CPU_ZERO(&new_process_mask);
+    // Initialize modules
+    debug_init(&spd.options);
+    if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
+        // Mandatory: obtain mask
+        fatal_cond(!mask, "DROM and TALP modules require mask support");
 
-            // Initialize procinfo
-            error = shmem_procinfo__init(spd.id, &spd.process_mask,
-                    &new_process_mask, spd.options.shm_key);
-            if (error != DLB_SUCCESS) return error;
+        // If the process has been pre-initialized, the process mask may have changed
+        // procinfo_init must return a new_mask if so
+        cpu_set_t new_process_mask;
+        CPU_ZERO(&new_process_mask);
 
-            // Update process_mask if procinfo informs of a new mask
-            if (CPU_COUNT(&new_process_mask) > 0) {
-                memcpy(&spd.process_mask, &new_process_mask, sizeof(cpu_set_t));
-                // FIXME: this will probably fail if we can't register a callback before Init
-                set_process_mask(&spd.pm, &new_process_mask);
-            }
-
-            // Initialize cpuinfo
-            error = shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
-            if (error != DLB_SUCCESS) return error;
-        }
-        if (spd.options.barrier) {
-            shmem_barrier_init(spd.options.shm_key);
-        }
-        if (spd.options.mode == MODE_ASYNC) {
-            error = shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key);
-            if (error != DLB_SUCCESS) return error;
-        }
-
-        // Initialise LeWI
-        error = spd.lb_funcs.init(&spd);
+        // Initialize procinfo
+        error = shmem_procinfo__init(spd.id, &spd.process_mask,
+                &new_process_mask, spd.options.shm_key);
         if (error != DLB_SUCCESS) return error;
 
-        spd.dlb_enabled = true;
-        dlb_initialized = true;
-        add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-        add_event(RUNTIME_EVENT, 0);
+        // Update process_mask if procinfo informs of a new mask
+        if (CPU_COUNT(&new_process_mask) > 0) {
+            memcpy(&spd.process_mask, &new_process_mask, sizeof(cpu_set_t));
+            // FIXME: this will probably fail if we can't register a callback before Init
+            set_process_mask(&spd.pm, &new_process_mask);
+        }
 
-        // Print initialization summary
-        info0("%s %s", PACKAGE, VERSION);
-        if (spd.lb_policy != POLICY_NONE) {
-            info0("Balancing policy: %s", policy_tostr(spd.lb_policy));
-        }
-        verbose(VB_API, "Enabled verbose mode for DLB API");
-        verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
-        verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
-        verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
-        verbose(VB_DROM, "Enabled verbose mode for DROM");
-        verbose(VB_STATS, "Enabled verbose mode for STATS");
-        verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
-        if (ncpus || mask) {
-            info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd.process_mask));
-        }
-    } else {
-        error = DLB_ERR_INIT;
+        // Initialize cpuinfo
+        error = shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
+        if (error != DLB_SUCCESS) return error;
     }
+    if (spd.options.barrier) {
+        shmem_barrier_init(spd.options.shm_key);
+    }
+    if (spd.options.mode == MODE_ASYNC) {
+        error = shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key);
+        if (error != DLB_SUCCESS) return error;
+    }
+
+    // Initialise LeWI
+    error = spd.lb_funcs.init(&spd);
+    if (error != DLB_SUCCESS) return error;
+
+    spd.dlb_enabled = true;
+    add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+    add_event(RUNTIME_EVENT, 0);
+
+    // Print initialization summary
+    info0("%s %s", PACKAGE, VERSION);
+    if (spd.lb_policy != POLICY_NONE) {
+        info0("Balancing policy: %s", policy_tostr(spd.lb_policy));
+    }
+    verbose(VB_API, "Enabled verbose mode for DLB API");
+    verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
+    verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
+    verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
+    verbose(VB_DROM, "Enabled verbose mode for DROM");
+    verbose(VB_STATS, "Enabled verbose mode for STATS");
+    verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+    if (ncpus || mask) {
+        info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd.process_mask));
+    }
+
     return error;
 }
 
 int Finish(void) {
     int error = DLB_SUCCESS;
-    if (dlb_initialized) {
-        add_event(RUNTIME_EVENT, EVENT_FINALIZE);
-        spd.dlb_enabled = false;
-        dlb_initialized = false;
-        spd.lb_funcs.finalize(&spd);
-        // Unload modules
-        if (spd.options.mode == MODE_ASYNC) {
-            shmem_async_finalize(spd.id);
-        }
-        if (spd.options.barrier) {
-            shmem_barrier_finalize();
-        }
-        if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
-            shmem_cpuinfo__finalize(spd.id);
-            shmem_procinfo__finalize(spd.id, spd.options.debug_opts & DBG_RETURNSTOLEN);
-        }
-        add_event(RUNTIME_EVENT, EVENT_USER);
-    } else {
-        error = DLB_ERR_NOINIT;
+    add_event(RUNTIME_EVENT, EVENT_FINALIZE);
+    spd.dlb_enabled = false;
+    spd.lb_funcs.finalize(&spd);
+    // Unload modules
+    if (spd.options.mode == MODE_ASYNC) {
+        shmem_async_finalize(spd.id);
     }
+    if (spd.options.barrier) {
+        shmem_barrier_finalize();
+    }
+    if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
+        shmem_cpuinfo__finalize(spd.id);
+        shmem_procinfo__finalize(spd.id, spd.options.debug_opts & DBG_RETURNSTOLEN);
+    }
+    add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
 int set_dlb_enabled(bool enabled) {
     int error = DLB_SUCCESS;
-    if (dlb_initialized) {
-        if (__sync_bool_compare_and_swap(&spd.dlb_enabled, !enabled, enabled)) {
-            if (enabled) {
-                spd.lb_funcs.enable(&spd);
-                add_event(DLB_MODE_EVENT, EVENT_ENABLED);
-            } else {
-                spd.lb_funcs.disable(&spd);
-                add_event(DLB_MODE_EVENT, EVENT_DISABLED);
-            }
+    if (__sync_bool_compare_and_swap(&spd.dlb_enabled, !enabled, enabled)) {
+        if (enabled) {
+            spd.lb_funcs.enable(&spd);
+            add_event(DLB_MODE_EVENT, EVENT_ENABLED);
         } else {
-            error = DLB_NOUPDT;
+            spd.lb_funcs.disable(&spd);
+            add_event(DLB_MODE_EVENT, EVENT_DISABLED);
         }
     } else {
-        error = DLB_ERR_NOINIT;
+        error = DLB_NOUPDT;
     }
     return error;
 }
 
 int set_max_parallelism(int max) {
     int error = DLB_SUCCESS;
-    if (dlb_initialized) {
-        // do something with max
-    } else {
-        error = DLB_ERR_NOINIT;
-    }
+    // do something with max
     return error;
 }
 
@@ -242,9 +221,7 @@ void OutOfBlockingCall(int is_iter) {
 
 int lend(void) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -256,9 +233,7 @@ int lend(void) {
 
 int lend_cpu(int cpuid) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -270,9 +245,7 @@ int lend_cpu(int cpuid) {
 
 int lend_cpus(int ncpus) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -284,9 +257,7 @@ int lend_cpus(int ncpus) {
 
 int lend_cpu_mask(const cpu_set_t *mask) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -301,9 +272,7 @@ int lend_cpu_mask(const cpu_set_t *mask) {
 
 int reclaim(void) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -315,9 +284,7 @@ int reclaim(void) {
 
 int reclaim_cpu(int cpuid) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -329,9 +296,7 @@ int reclaim_cpu(int cpuid) {
 
 int reclaim_cpus(int ncpus) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -343,9 +308,7 @@ int reclaim_cpus(int ncpus) {
 
 int reclaim_cpu_mask(const cpu_set_t *mask) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -360,9 +323,7 @@ int reclaim_cpu_mask(const cpu_set_t *mask) {
 
 int acquire_cpu(int cpuid) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
@@ -374,9 +335,7 @@ int acquire_cpu(int cpuid) {
 
 int acquire_cpus(int ncpus) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
@@ -388,9 +347,7 @@ int acquire_cpus(int ncpus) {
 
 int acquire_cpu_mask(const cpu_set_t *mask) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
@@ -405,9 +362,7 @@ int acquire_cpu_mask(const cpu_set_t *mask) {
 
 int borrow(void) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -419,9 +374,7 @@ int borrow(void) {
 
 int borrow_cpu(int cpuid) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -433,9 +386,7 @@ int borrow_cpu(int cpuid) {
 
 int borrow_cpus(int ncpus) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -447,9 +398,7 @@ int borrow_cpus(int ncpus) {
 
 int borrow_cpu_mask(const cpu_set_t *mask) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -464,9 +413,7 @@ int borrow_cpu_mask(const cpu_set_t *mask) {
 
 int return_all(void) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
@@ -478,9 +425,7 @@ int return_all(void) {
 
 int return_cpu(int cpuid) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
@@ -492,9 +437,7 @@ int return_cpu(int cpuid) {
 
 int return_cpu_mask(const cpu_set_t *mask) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled) {
+    if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
@@ -509,9 +452,7 @@ int return_cpu_mask(const cpu_set_t *mask) {
 
 int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
     int error;
-    if (!dlb_initialized) {
-        error = DLB_ERR_NOINIT;
-    } else if (!spd.dlb_enabled || !spd.options.drom) {
+    if (!spd.dlb_enabled || !spd.options.drom) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_POLLDROM);
@@ -576,7 +517,8 @@ int print_variables(bool print_extra) {
 }
 
 int print_shmem(int num_columns, dlb_printshmem_flags_t print_flags) {
-    if (!dlb_initialized) {
+    /* Temporary workaround to only initialize options if spd is not initialized */
+    if (spd.id == 0) {
         options_init(&spd.options, NULL);
         debug_init(&spd.options);
     }

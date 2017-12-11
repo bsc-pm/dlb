@@ -22,27 +22,45 @@
 #include "LB_core/DLB_kernel.h"
 #include "support/error.h"
 
+/* This flag is used to
+ *  - protect DLB functionality before the initialization
+ *  - protect DLB_Init / DLB_MPI_Init twice
+ */
+static bool dlb_initialized = false;
+
+
 #pragma GCC visibility push(default)
 
 /* Status */
 
 int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
-    return Initialize(ncpus, mask, dlb_args);
+    if (__sync_bool_compare_and_swap(&dlb_initialized, false, true)) {
+        return Initialize(ncpus, mask, dlb_args);
+    } else {
+        return DLB_ERR_INIT;
+    }
 }
 
 int DLB_Finalize(void) {
-    return Finish();
+    if (__sync_bool_compare_and_swap(&dlb_initialized, true, false)) {
+        return Finish();
+    } else {
+        return DLB_ERR_NOINIT;
+    }
 }
 
 int DLB_Enable(void) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return set_dlb_enabled(true);
 }
 
 int DLB_Disable(void) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return set_dlb_enabled(false);
 }
 
 int DLB_SetMaxParallelism(int max) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return set_max_parallelism(max);
 }
 
@@ -61,18 +79,22 @@ int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg)
 /* Lend */
 
 int DLB_Lend(void) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return lend();
 }
 
 int DLB_LendCpu(int cpuid) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return lend_cpu(cpuid);
 }
 
 int DLB_LendCpus(int ncpus) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return lend_cpus(ncpus);
 }
 
 int DLB_LendCpuMask(const_dlb_cpu_set_t mask) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return lend_cpu_mask(mask);
 }
 
@@ -80,18 +102,22 @@ int DLB_LendCpuMask(const_dlb_cpu_set_t mask) {
 /* Reclaim */
 
 int DLB_Reclaim(void) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return reclaim();
 }
 
 int DLB_ReclaimCpu(int cpuid) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return reclaim_cpu(cpuid);
 }
 
 int DLB_ReclaimCpus(int ncpus) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return reclaim_cpus(ncpus);
 }
 
 int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return reclaim_cpu_mask(mask);
 }
 
@@ -99,14 +125,17 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
 /* Acquire */
 
 int DLB_AcquireCpu(int cpuid) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return acquire_cpu(cpuid);
 }
 
 int DLB_AcquireCpus(int ncpus) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return acquire_cpus(ncpus);
 }
 
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return acquire_cpu_mask(mask);
 }
 
@@ -114,18 +143,22 @@ int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
 /* Borrow */
 
 int DLB_Borrow(void) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return borrow();
 }
 
 int DLB_BorrowCpu(int cpuid) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return borrow_cpu(cpuid);
 }
 
 int DLB_BorrowCpus(int ncpus) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return borrow_cpus(ncpus);
 }
 
 int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return borrow_cpu_mask(mask);
 }
 
@@ -133,14 +166,17 @@ int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask) {
 /* Return */
 
 int DLB_Return(void) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return return_all();
 }
 
 int DLB_ReturnCpu(int cpuid) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return return_cpu(cpuid);
 }
 
 int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return return_cpu_mask(mask);
 }
 
@@ -148,10 +184,12 @@ int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask) {
 /* DROM Responsive */
 
 int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return poll_drom(ncpus, mask);
 }
 
 int DLB_PollDROM_Update(void) {
+    if (!dlb_initialized) return DLB_ERR_NOINIT;
     return poll_drom_update();
 }
 

@@ -28,7 +28,7 @@
 #include "LB_MPI/DPD.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
-#include "apis/dlb_errors.h"
+#include "apis/dlb.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
@@ -148,7 +148,7 @@ void after_init(void) {
         MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 //    }
 
-    if (Initialize(0, NULL, NULL) == DLB_SUCCESS) {
+    if (DLB_Init(0, NULL, NULL) == DLB_SUCCESS) {
         init_from_mpi = 1;
     }
 
@@ -206,7 +206,7 @@ void after_mpi(mpi_call call_type) {
 void before_finalize(void) {
     mpi_ready=0;
     if (init_from_mpi == 1) {
-        Finish();
+        DLB_Finalize();
         init_from_mpi = 0;
     }
 }
