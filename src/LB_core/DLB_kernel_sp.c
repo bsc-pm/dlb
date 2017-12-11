@@ -118,6 +118,7 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
     // Initialise LeWI
     if (spd->lb_funcs.init(spd) != DLB_SUCCESS) return NULL;
 
+    spd->dlb_enabled = true;
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, 0);
 
@@ -147,6 +148,8 @@ subprocess_descriptor_t* Initialize_sp(int ncpus, const cpu_set_t *mask, const c
 int Finish_sp(subprocess_descriptor_t *spd) {
     int error = DLB_SUCCESS;
     if (spd) {
+        add_event(RUNTIME_EVENT, EVENT_FINALIZE);
+        spd->dlb_enabled = false;
         spd->lb_funcs.finalize(spd);
         // Unload modules
         if (spd->options.mode == MODE_ASYNC) {
@@ -160,6 +163,7 @@ int Finish_sp(subprocess_descriptor_t *spd) {
             shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
         }
         free(spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
     } else {
         error = DLB_ERR_NOINIT;
     }
@@ -167,7 +171,19 @@ int Finish_sp(subprocess_descriptor_t *spd) {
 }
 
 int set_dlb_enabled_sp(subprocess_descriptor_t *spd, bool enabled) {
-    return DLB_ERR_NOCOMP;
+    int error = DLB_SUCCESS;
+    if (__sync_bool_compare_and_swap(&spd->dlb_enabled, !enabled, enabled)) {
+        if (enabled) {
+            spd->lb_funcs.enable(spd);
+            add_event(DLB_MODE_EVENT, EVENT_ENABLED);
+        } else {
+            spd->lb_funcs.disable(spd);
+            add_event(DLB_MODE_EVENT, EVENT_DISABLED);
+        }
+    } else {
+        error = DLB_NOUPDT;
+    }
+    return error;
 }
 
 int set_max_parallelism_sp(subprocess_descriptor_t *spd, int max) {
@@ -193,30 +209,50 @@ int callback_get_sp(subprocess_descriptor_t *spd, dlb_callbacks_t which,
 /* Lend */
 
 int lend_sp(subprocess_descriptor_t *spd) {
-    add_event(RUNTIME_EVENT, EVENT_LEND);
-    int error = spd->lb_funcs.lend(spd);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd->lb_funcs.lend(spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int lend_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
-    add_event(RUNTIME_EVENT, EVENT_LEND);
-    int error = spd->lb_funcs.lend_cpu(spd, cpuid);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd->lb_funcs.lend_cpu(spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int lend_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
-    add_event(RUNTIME_EVENT, EVENT_LEND);
-    int error = spd->lb_funcs.lend_cpus(spd, ncpus);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd->lb_funcs.lend_cpus(spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int lend_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    add_event(RUNTIME_EVENT, EVENT_LEND);
-    int error = spd->lb_funcs.lend_cpu_mask(spd, mask);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_LEND);
+        error = spd->lb_funcs.lend_cpu_mask(spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
@@ -224,30 +260,50 @@ int lend_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 /* Reclaim */
 
 int reclaim_sp(subprocess_descriptor_t *spd) {
-    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-    int error = spd->lb_funcs.reclaim(spd);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd->lb_funcs.reclaim(spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int reclaim_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
-    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-    int error = spd->lb_funcs.reclaim_cpu(spd, cpuid);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd->lb_funcs.reclaim_cpu(spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int reclaim_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
-    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-    int error = spd->lb_funcs.reclaim_cpus(spd, ncpus);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd->lb_funcs.reclaim_cpus(spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int reclaim_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-    int error = spd->lb_funcs.reclaim_cpu_mask(spd, mask);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RECLAIM);
+        error = spd->lb_funcs.reclaim_cpu_mask(spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
@@ -255,23 +311,38 @@ int reclaim_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 /* Acquire */
 
 int acquire_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
-    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-    int error = spd->lb_funcs.acquire_cpu(spd, cpuid);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+        error = spd->lb_funcs.acquire_cpu(spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int acquire_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
-    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-    int error = spd->lb_funcs.acquire_cpus(spd, ncpus);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+        error = spd->lb_funcs.acquire_cpus(spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-    int error = spd->lb_funcs.acquire_cpu_mask(spd, mask);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
+        error = spd->lb_funcs.acquire_cpu_mask(spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
@@ -279,30 +350,50 @@ int acquire_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 /* Borrow */
 
 int borrow_sp(subprocess_descriptor_t *spd) {
-    add_event(RUNTIME_EVENT, EVENT_BORROW);
-    int error = spd->lb_funcs.borrow(spd);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd->lb_funcs.borrow(spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int borrow_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
-    add_event(RUNTIME_EVENT, EVENT_BORROW);
-    int error = spd->lb_funcs.borrow_cpu(spd, cpuid);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd->lb_funcs.borrow_cpu(spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int borrow_cpus_sp(subprocess_descriptor_t *spd, int ncpus) {
-    add_event(RUNTIME_EVENT, EVENT_BORROW);
-    int error = spd->lb_funcs.borrow_cpus(spd, ncpus);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd->lb_funcs.borrow_cpus(spd, ncpus);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int borrow_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    add_event(RUNTIME_EVENT, EVENT_BORROW);
-    int error = spd->lb_funcs.borrow_cpu_mask(spd, mask);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_BORROW);
+        error = spd->lb_funcs.borrow_cpu_mask(spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
@@ -310,23 +401,38 @@ int borrow_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 /* Return */
 
 int return_all_sp(subprocess_descriptor_t *spd) {
-    add_event(RUNTIME_EVENT, EVENT_RETURN);
-    int error = spd->lb_funcs.return_all(spd);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        error = spd->lb_funcs.return_all(spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int return_cpu_sp(subprocess_descriptor_t *spd, int cpuid) {
-    add_event(RUNTIME_EVENT, EVENT_RETURN);
-    int error = spd->lb_funcs.return_cpu(spd, cpuid);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        error = spd->lb_funcs.return_cpu(spd, cpuid);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
 int return_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    add_event(RUNTIME_EVENT, EVENT_RETURN);
-    int error = spd->lb_funcs.return_cpu_mask(spd, mask);
-    add_event(RUNTIME_EVENT, EVENT_USER);
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        add_event(RUNTIME_EVENT, EVENT_RETURN);
+        error = spd->lb_funcs.return_cpu_mask(spd, mask);
+        add_event(RUNTIME_EVENT, EVENT_USER);
+    }
     return error;
 }
 
@@ -335,9 +441,10 @@ int return_cpu_mask_sp(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 
 int poll_drom_sp(subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mask) {
     int error;
-    if (!spd->options.drom) {
+    if (!spd->dlb_enabled || !spd->options.drom) {
         error = DLB_ERR_DISBLD;
     } else {
+        add_event(RUNTIME_EVENT, EVENT_POLLDROM);
         // Use a local mask if new_mask was not provided
         cpu_set_t local_mask;
         cpu_set_t *mask = new_mask ? new_mask : &local_mask;
@@ -347,6 +454,7 @@ int poll_drom_sp(subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mas
             shmem_cpuinfo__update_ownership(spd->id, mask);
             spd->lb_funcs.update_ownership_info(spd, mask);
         }
+        add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }

@@ -39,12 +39,10 @@
 #include <string.h>
 #include <unistd.h>
 
-/* These flags are used to
- *  a) activate/deactive DLB functionality from the API
- *  b) protect DLB functionality before the initialization
- *  c) protect DLB_Init / DLB_MPI_Init twice
+/* This flag is used to
+ *  - protect DLB functionality before the initialization
+ *  - protect DLB_Init / DLB_MPI_Init twice
  */
-static bool dlb_enabled = false;
 static bool dlb_initialized = false;
 
 /* Temporary global sub-process descriptor */
@@ -120,7 +118,7 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         error = spd.lb_funcs.init(&spd);
         if (error != DLB_SUCCESS) return error;
 
-        dlb_enabled = true;
+        spd.dlb_enabled = true;
         dlb_initialized = true;
         add_event(DLB_MODE_EVENT, EVENT_ENABLED);
         add_event(RUNTIME_EVENT, 0);
@@ -150,7 +148,7 @@ int Finish(void) {
     int error = DLB_SUCCESS;
     if (dlb_initialized) {
         add_event(RUNTIME_EVENT, EVENT_FINALIZE);
-        dlb_enabled = false;
+        spd.dlb_enabled = false;
         dlb_initialized = false;
         spd.lb_funcs.finalize(&spd);
         // Unload modules
@@ -164,7 +162,7 @@ int Finish(void) {
             shmem_cpuinfo__finalize(spd.id);
             shmem_procinfo__finalize(spd.id, spd.options.debug_opts & DBG_RETURNSTOLEN);
         }
-        add_event(RUNTIME_EVENT, 0);
+        add_event(RUNTIME_EVENT, EVENT_USER);
     } else {
         error = DLB_ERR_NOINIT;
     }
@@ -174,7 +172,7 @@ int Finish(void) {
 int set_dlb_enabled(bool enabled) {
     int error = DLB_SUCCESS;
     if (dlb_initialized) {
-        if (__sync_bool_compare_and_swap(&dlb_enabled, !enabled, enabled)) {
+        if (__sync_bool_compare_and_swap(&spd.dlb_enabled, !enabled, enabled)) {
             if (enabled) {
                 spd.lb_funcs.enable(&spd);
                 add_event(DLB_MODE_EVENT, EVENT_ENABLED);
@@ -216,25 +214,25 @@ int callback_get(dlb_callbacks_t which, dlb_callback_t *callback, void **arg) {
 /* MPI specific */
 
 void IntoCommunication(void) {
-    if (dlb_enabled) {
+    if (spd.dlb_enabled) {
         spd.lb_funcs.into_communication(&spd);
     }
 }
 
 void OutOfCommunication(void) {
-    if (dlb_enabled) {
+    if (spd.dlb_enabled) {
         spd.lb_funcs.out_of_communication(&spd);
     }
 }
 
 void IntoBlockingCall(int is_iter, int blocking_mode) {
-    if (dlb_enabled) {
+    if (spd.dlb_enabled) {
         spd.lb_funcs.into_blocking_call(&spd);
     }
 }
 
 void OutOfBlockingCall(int is_iter) {
-    if (dlb_enabled) {
+    if (spd.dlb_enabled) {
         spd.lb_funcs.out_of_blocking_call(&spd, is_iter);
     }
 }
@@ -246,7 +244,7 @@ int lend(void) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -260,7 +258,7 @@ int lend_cpu(int cpuid) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -274,7 +272,7 @@ int lend_cpus(int ncpus) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -288,7 +286,7 @@ int lend_cpu_mask(const cpu_set_t *mask) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
@@ -305,7 +303,7 @@ int reclaim(void) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -319,7 +317,7 @@ int reclaim_cpu(int cpuid) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -333,7 +331,7 @@ int reclaim_cpus(int ncpus) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -347,7 +345,7 @@ int reclaim_cpu_mask(const cpu_set_t *mask) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
@@ -364,7 +362,7 @@ int acquire_cpu(int cpuid) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
@@ -378,7 +376,7 @@ int acquire_cpus(int ncpus) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
@@ -392,7 +390,7 @@ int acquire_cpu_mask(const cpu_set_t *mask) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
@@ -409,7 +407,7 @@ int borrow(void) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -423,7 +421,7 @@ int borrow_cpu(int cpuid) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -437,7 +435,7 @@ int borrow_cpus(int ncpus) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -451,7 +449,7 @@ int borrow_cpu_mask(const cpu_set_t *mask) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
@@ -468,7 +466,7 @@ int return_all(void) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
@@ -482,7 +480,7 @@ int return_cpu(int cpuid) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
@@ -496,7 +494,7 @@ int return_cpu_mask(const cpu_set_t *mask) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled) {
+    } else if (!spd.dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
@@ -513,7 +511,7 @@ int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
     int error;
     if (!dlb_initialized) {
         error = DLB_ERR_NOINIT;
-    } else if (!dlb_enabled || !spd.options.drom) {
+    } else if (!spd.dlb_enabled || !spd.options.drom) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_POLLDROM);
@@ -545,7 +543,7 @@ int poll_drom_update(void) {
 
 int check_cpu_availability(int cpuid) {
     int error = DLB_SUCCESS;
-    if (dlb_enabled) {
+    if (spd.dlb_enabled) {
         error = spd.lb_funcs.check_cpu_availability(&spd, cpuid);
     } else {
         error = DLB_ERR_DISBLD;

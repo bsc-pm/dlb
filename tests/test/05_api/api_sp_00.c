@@ -57,9 +57,10 @@ int main( int argc, char **argv ) {
     assert( cb == (dlb_callback_t)cb_enable_cpu );
     assert( arg == NULL );
 
-    // Enable/Disable API is no compatible wtih sp for now
-    assert( DLB_Disable_sp(handler) == DLB_ERR_NOCOMP );
-    assert( DLB_Enable_sp(handler) == DLB_ERR_NOCOMP );
+    // Basic enable-disable test
+    assert( DLB_Disable_sp(handler) == DLB_SUCCESS );
+    assert( DLB_Lend_sp(handler) == DLB_ERR_DISBLD );
+    assert( DLB_Enable_sp(handler) == DLB_SUCCESS );
     assert( DLB_SetMaxParallelism_sp(handler, 1) == DLB_SUCCESS );
 
     // Lend
