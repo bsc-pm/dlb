@@ -23,6 +23,7 @@
 #include "LB_core/DLB_kernel.h"
 #include "support/error.h"
 
+#include <unistd.h>
 
 /* Global sub-process descriptor */
 static subprocess_descriptor_t spd = { 0 };
@@ -45,7 +46,7 @@ const options_t* get_global_options(void) {
 
 int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
     if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true)) {
-        return Initialize(&spd, ncpus, mask, dlb_args);
+        return Initialize(&spd, getpid(), ncpus, mask, dlb_args);
     } else {
         return DLB_ERR_INIT;
     }

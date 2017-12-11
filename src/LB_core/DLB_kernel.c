@@ -38,13 +38,12 @@
 
 #include <sched.h>
 #include <string.h>
-#include <unistd.h>
 
 
 /* Status */
 
-int Initialize(subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask,
-        const char *lb_args) {
+int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
+        const cpu_set_t *mask, const char *lb_args) {
 
     int error = DLB_SUCCESS;
 
@@ -61,7 +60,7 @@ int Initialize(subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask,
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
-    spd->id = spd->options.preinit_pid ? spd->options.preinit_pid : getpid();
+    spd->id = spd->options.preinit_pid ? spd->options.preinit_pid : id;
     if (mask) {
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
     } else if (spd->lb_policy == POLICY_LEWI) {
@@ -127,6 +126,7 @@ int Initialize(subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask,
     verbose(VB_DROM, "Enabled verbose mode for DROM");
     verbose(VB_STATS, "Enabled verbose mode for STATS");
     verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
+    verbose(VB_ASYNC, "Enabled verbose mode for Asynchronous thread");
     if (ncpus || mask) {
         info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd->process_mask));
     }
