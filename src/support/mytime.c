@@ -19,6 +19,12 @@
 
 #include "support/mytime.h"
 
+#include "support/debug.h"
+
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
 enum { MS_PER_SECOND = 1000LL };
 enum { US_PER_SECOND = 1000000LL };
 enum { NS_PER_SECOND = 1000000000LL };
@@ -26,6 +32,7 @@ enum { NS_PER_SECOND = 1000000000LL };
 void get_time( struct timespec *t ) {
     clock_gettime( CLOCK_MONOTONIC, t);
 }
+
 void get_time_coarse( struct timespec *t ) {
 #ifdef CLOCK_MONOTONIC_COARSE
     clock_gettime( CLOCK_MONOTONIC_COARSE, t);
@@ -111,4 +118,85 @@ void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2,
     }
     res->tv_sec = sec;
     res->tv_nsec = nsec;
+}
+
+/* Timers */
+
+enum { TIMER_MAX_KEY_LEN = 128 };
+
+typedef struct TimerData {
+    char key[TIMER_MAX_KEY_LEN];
+    int64_t acc;
+    int64_t asq;
+    int64_t max;
+    int64_t count;
+    struct timespec start;
+    struct timespec stop;
+} timer_data_t;
+
+static timer_data_t *timers = NULL;;
+static size_t ntimers = 0;
+
+void timer_init(void) {
+}
+
+void *timer_register(const char *key) {
+    /* Found key if already registered */
+    int i;
+    for (i=0; i<ntimers; ++i) {
+        if (strncmp(timers[i].key, key, TIMER_MAX_KEY_LEN) == 0) {
+            return &timers[i];
+        }
+    }
+
+    /* Reallocate new position in timers array */
+    ++ntimers;
+    void *p = realloc(timers, sizeof(timer_data_t)*ntimers);
+    if (p) timers = p;
+    else fatal("realloc failed");
+
+    /* Initialize timer */
+    timer_data_t *timer = &timers[ntimers-1];
+    strncpy(&timer->key[0], key, TIMER_MAX_KEY_LEN);
+    timer->acc = 0;
+    timer->asq = 0;
+    timer->max = 0;
+    timer->count = 0;
+    reset(&timer->start);
+    reset(&timer->stop);
+
+    return timer;
+}
+
+void timer_start(void *handler) {
+    timer_data_t *timer = (timer_data_t*) handler;
+    timer->count++;
+    get_time(&timer->start);
+}
+
+void timer_stop(void *handler) {
+    timer_data_t *timer = (timer_data_t*) handler;
+    get_time(&timer->stop);
+    int64_t elapsed = timespec_diff(&timer->start, &timer->stop);
+    timer->acc += elapsed;
+    timer->asq += elapsed*elapsed;
+    timer->max = elapsed > timer->max ? elapsed : timer->max;
+}
+
+void timer_finalize(void) {
+    /* Timers Report */
+    int i;
+    for (i=0; i<ntimers; ++i) {
+        timer_data_t *timer = &timers[i];
+        int64_t avg = timer->acc/timer->count;
+        int64_t stdev = sqrt(timer->asq/timer->count - avg*avg);
+        info("Timer \"%s\" "
+                "n: %"PRId64", avg: %"PRId64", stdev: %"PRId64", max: %"PRId64,
+                timer->key, timer->count, avg, stdev, timer->max);
+    }
+
+    /* De-allocate timers */
+    free(timers);
+    timers = NULL;
+    ntimers = 0;
 }

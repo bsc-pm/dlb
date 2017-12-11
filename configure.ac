@@ -78,6 +78,7 @@ AS_IF([test "x$developer_version" = xyes], [
     AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
 ])
 AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
+AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])
 AC_CHECK_HEADERS([stdatomic.h])
 
 # use the Fortran compiler for the following checks
@@ -231,10 +232,7 @@ AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 case $host in
    powerpc64-bgq-linux*)
       AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
-      AC_LDFLAGS="-dynamic"
-      ;;
-   *)
-      AC_LDFLAGS=""
+      AC_LDFLAGS="${AC_LDFLAGS} -dynamic"
       ;;
 esac
 ################################################################################

@@ -32,6 +32,7 @@
 #include "apis/dlb_errors.h"
 #include "apis/DLB_interface.h"
 #include "support/debug.h"
+#include "support/mytime.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
@@ -73,6 +74,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     // Initialize modules
     debug_init(&spd->options);
+    timer_init();
     if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
         // Mandatory: obtain mask
         fatal_cond(!mask, "DROM and TALP modules require mask support");
@@ -150,6 +152,7 @@ int Finish(subprocess_descriptor_t *spd) {
         shmem_cpuinfo__finalize(spd->id);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
     }
+    timer_finalize();
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }

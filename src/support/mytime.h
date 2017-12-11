@@ -36,4 +36,10 @@ int64_t timeval_diff( const struct timeval *init, const struct timeval *end );
 int64_t timespec_diff( const struct timespec *start, const struct timespec *finish );
 void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2, struct timespec *res );
 
+void timer_init(void);
+void *timer_register(const char *key);
+void timer_start(void *handler);
+void timer_stop(void *handler);
+void timer_finalize(void);
+
 #endif /* MYTIME_H */
