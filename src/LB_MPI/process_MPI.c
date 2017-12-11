@@ -28,7 +28,7 @@
 #include "LB_MPI/DPD.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
-#include "apis/dlb.h"
+#include "apis/DLB_interface.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
@@ -38,7 +38,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
-
 
 // MPI Globals
 int _mpi_rank = -1;
@@ -200,7 +199,7 @@ void after_mpi(mpi_call call_type) {
         OutOfCommunication();
     }
     // Poll DROM and update mask if necessary
-    poll_drom_update();
+    DLB_PollDROM_Update();
 }
 
 void before_finalize(void) {

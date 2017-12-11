@@ -20,6 +20,7 @@
 #ifndef DLB_KERNEL_H
 #define DLB_KERNEL_H
 
+#include "LB_core/spd.h"
 #include "apis/dlb_types.h"
 #include "support/options.h"
 
@@ -27,14 +28,11 @@
 #include <stdbool.h>
 
 /* Status */
-int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args);
-int Finish(void);
-int set_dlb_enabled(bool enabled);
-int set_max_parallelism(int max);
-
-/* Callbacks */
-int callback_set(dlb_callbacks_t which, dlb_callback_t callback, void *arg);
-int callback_get(dlb_callbacks_t which, dlb_callback_t *callback, void **arg);
+int Initialize(subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask,
+        const char *lb_args);
+int Finish(subprocess_descriptor_t *spd);
+int set_dlb_enabled(subprocess_descriptor_t *spd, bool enabled);
+int set_max_parallelism(subprocess_descriptor_t *spd, int max);
 
 /* MPI specific */
 void IntoCommunication(void);
@@ -43,47 +41,41 @@ void IntoBlockingCall(int is_iter, int is_single);
 void OutOfBlockingCall(int is_iter);
 
 /* Lend */
-int lend(void);
-int lend_cpu(int cpuid);
-int lend_cpus(int ncpus);
-int lend_cpu_mask(const cpu_set_t *mask);
+int lend(const subprocess_descriptor_t *spd);
+int lend_cpu(const subprocess_descriptor_t *spd, int cpuid);
+int lend_cpus(const subprocess_descriptor_t *spd, int ncpus);
+int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 /* Reclaim */
-int reclaim(void);
-int reclaim_cpu(int cpuid);
-int reclaim_cpus(int ncpus);
-int reclaim_cpu_mask(const cpu_set_t *mask);
+int reclaim(const subprocess_descriptor_t *spd);
+int reclaim_cpu(const subprocess_descriptor_t *spd, int cpuid);
+int reclaim_cpus(const subprocess_descriptor_t *spd, int ncpus);
+int reclaim_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 /* Acquire */
-int acquire_cpu(int cpuid);
-int acquire_cpus(int ncpus);
-int acquire_cpu_mask(const cpu_set_t *mask);
+int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid);
+int acquire_cpus(const subprocess_descriptor_t *spd, int ncpus);
+int acquire_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 /* Borrow */
-int borrow(void);
-int borrow_cpu(int cpuid);
-int borrow_cpus(int ncpus);
-int borrow_cpu_mask(const cpu_set_t *mask);
+int borrow(const subprocess_descriptor_t *spd);
+int borrow_cpu(const subprocess_descriptor_t *spd, int cpuid);
+int borrow_cpus(const subprocess_descriptor_t *spd, int ncpus);
+int borrow_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 /* Return */
-int return_all(void);
-int return_cpu(int cpuid);
-int return_cpu_mask(const cpu_set_t *mask);
+int return_all(const subprocess_descriptor_t *spd);
+int return_cpu(const subprocess_descriptor_t *spd, int cpuid);
+int return_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 
 /* DROM Responsive */
-int poll_drom(int *new_cpus, cpu_set_t *new_mask);
-int poll_drom_update(void);
+int poll_drom(const subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mask);
+int poll_drom_update(const subprocess_descriptor_t *spd);
 
 /* Misc */
-int check_cpu_availability(int cpuid);
+int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid);
 int node_barrier(void);
-int set_variable(const char *variable, const char *value);
-int get_variable(const char *variable, char *value);
-int print_variables(bool print_extra);
-int print_shmem(int num_columns, dlb_printshmem_flags_t print_flags);
-
-
-// Others
-const options_t* get_global_options(void);
+int print_shmem(subprocess_descriptor_t *spd, int num_columns,
+        dlb_printshmem_flags_t print_flags);
 
 #endif //DLB_KERNEL_H

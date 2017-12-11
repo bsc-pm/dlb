@@ -21,7 +21,7 @@
 
 #include "apis/dlb_drom.h"
 
-#include "LB_core/DLB_kernel.h"
+#include "apis/DLB_interface.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
@@ -93,9 +93,17 @@ static void add_to_environ(const char *name, const char *value, char ***next_env
 #pragma GCC visibility push(default)
 
 int DLB_DROM_Init(void) {
-    const options_t *options = get_global_options();
-    shmem_cpuinfo_ext__init(options->shm_key);
-    shmem_procinfo_ext__init(options->shm_key);
+    const char *shm_key;
+    const options_t *global_options = get_global_options();
+    if (global_options) {
+        shm_key = global_options->shm_key;
+    } else {
+        options_t options;
+        options_init(&options, NULL);
+        shm_key = options.shm_key;
+    }
+    shmem_cpuinfo_ext__init(shm_key);
+    shmem_procinfo_ext__init(shm_key);
     return DLB_SUCCESS;
 }
 

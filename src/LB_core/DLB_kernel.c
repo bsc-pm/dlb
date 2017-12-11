@@ -30,6 +30,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
+#include "apis/DLB_interface.h"
 #include "support/debug.h"
 #include "support/tracing.h"
 #include "support/options.h"
@@ -40,43 +41,40 @@
 #include <unistd.h>
 
 
-/* Temporary global sub-process descriptor */
-static subprocess_descriptor_t spd = { 0 };
-
-
 /* Status */
 
-int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
+int Initialize(subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask,
+        const char *lb_args) {
 
     int error = DLB_SUCCESS;
 
     // Initialize first instrumentation module
-    options_init(&spd.options, lb_args);
-    init_tracing(&spd.options);
+    options_init(&spd->options, lb_args);
+    init_tracing(&spd->options);
     add_event(RUNTIME_EVENT, EVENT_INIT);
 
     // Infer LeWI mode
-    spd.lb_policy = !spd.options.lewi ? POLICY_NONE :
+    spd->lb_policy = !spd->options.lewi ? POLICY_NONE :
         !mask ? POLICY_LEWI :
         POLICY_LEWI_MASK;
 
     // Initialize the rest of the subprocess descriptor
-    pm_init(&spd.pm);
-    set_lb_funcs(&spd.lb_funcs, spd.lb_policy);
-    spd.id = spd.options.preinit_pid ? spd.options.preinit_pid : getpid();
+    pm_init(&spd->pm);
+    set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
+    spd->id = spd->options.preinit_pid ? spd->options.preinit_pid : getpid();
     if (mask) {
-        memcpy(&spd.process_mask, mask, sizeof(cpu_set_t));
-    } else if (spd.lb_policy == POLICY_LEWI) {
+        memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
+    } else if (spd->lb_policy == POLICY_LEWI) {
         if (ncpus <= 0) ncpus = pm_get_num_threads();
         // We need to pass ncpus through spd, CPU order doesn't matter
-        CPU_ZERO(&spd.process_mask);
+        CPU_ZERO(&spd->process_mask);
         int i;
-        for (i=0; i<ncpus; ++i) CPU_SET(i, &spd.process_mask);
+        for (i=0; i<ncpus; ++i) CPU_SET(i, &spd->process_mask);
     }
 
     // Initialize modules
-    debug_init(&spd.options);
-    if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
+    debug_init(&spd->options);
+    if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
         // Mandatory: obtain mask
         fatal_cond(!mask, "DROM and TALP modules require mask support");
 
@@ -86,41 +84,41 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
         CPU_ZERO(&new_process_mask);
 
         // Initialize procinfo
-        error = shmem_procinfo__init(spd.id, &spd.process_mask,
-                &new_process_mask, spd.options.shm_key);
+        error = shmem_procinfo__init(spd->id, &spd->process_mask,
+                &new_process_mask, spd->options.shm_key);
         if (error != DLB_SUCCESS) return error;
 
         // Update process_mask if procinfo informs of a new mask
         if (CPU_COUNT(&new_process_mask) > 0) {
-            memcpy(&spd.process_mask, &new_process_mask, sizeof(cpu_set_t));
+            memcpy(&spd->process_mask, &new_process_mask, sizeof(cpu_set_t));
             // FIXME: this will probably fail if we can't register a callback before Init
-            set_process_mask(&spd.pm, &new_process_mask);
+            set_process_mask(&spd->pm, &new_process_mask);
         }
 
         // Initialize cpuinfo
-        error = shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key);
+        error = shmem_cpuinfo__init(spd->id, &spd->process_mask, spd->options.shm_key);
         if (error != DLB_SUCCESS) return error;
     }
-    if (spd.options.barrier) {
-        shmem_barrier_init(spd.options.shm_key);
+    if (spd->options.barrier) {
+        shmem_barrier_init(spd->options.shm_key);
     }
-    if (spd.options.mode == MODE_ASYNC) {
-        error = shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key);
+    if (spd->options.mode == MODE_ASYNC) {
+        error = shmem_async_init(spd->id, &spd->pm, &spd->process_mask, spd->options.shm_key);
         if (error != DLB_SUCCESS) return error;
     }
 
     // Initialise LeWI
-    error = spd.lb_funcs.init(&spd);
+    error = spd->lb_funcs.init(spd);
     if (error != DLB_SUCCESS) return error;
 
-    spd.dlb_enabled = true;
+    spd->dlb_enabled = true;
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, 0);
 
     // Print initialization summary
     info0("%s %s", PACKAGE, VERSION);
-    if (spd.lb_policy != POLICY_NONE) {
-        info0("Balancing policy: %s", policy_tostr(spd.lb_policy));
+    if (spd->lb_policy != POLICY_NONE) {
+        info0("Balancing policy: %s", policy_tostr(spd->lb_policy));
     }
     verbose(VB_API, "Enabled verbose mode for DLB API");
     verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
@@ -130,40 +128,40 @@ int Initialize(int ncpus, const cpu_set_t *mask, const char *lb_args) {
     verbose(VB_STATS, "Enabled verbose mode for STATS");
     verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
     if (ncpus || mask) {
-        info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd.process_mask));
+        info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd->process_mask));
     }
 
     return error;
 }
 
-int Finish(void) {
+int Finish(subprocess_descriptor_t *spd) {
     int error = DLB_SUCCESS;
     add_event(RUNTIME_EVENT, EVENT_FINALIZE);
-    spd.dlb_enabled = false;
-    spd.lb_funcs.finalize(&spd);
+    spd->dlb_enabled = false;
+    spd->lb_funcs.finalize(spd);
     // Unload modules
-    if (spd.options.mode == MODE_ASYNC) {
-        shmem_async_finalize(spd.id);
+    if (spd->options.mode == MODE_ASYNC) {
+        shmem_async_finalize(spd->id);
     }
-    if (spd.options.barrier) {
+    if (spd->options.barrier) {
         shmem_barrier_finalize();
     }
-    if (spd.lb_policy == POLICY_LEWI_MASK || spd.options.drom || spd.options.statistics) {
-        shmem_cpuinfo__finalize(spd.id);
-        shmem_procinfo__finalize(spd.id, spd.options.debug_opts & DBG_RETURNSTOLEN);
+    if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
+        shmem_cpuinfo__finalize(spd->id);
+        shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
     }
     add_event(RUNTIME_EVENT, EVENT_USER);
     return error;
 }
 
-int set_dlb_enabled(bool enabled) {
+int set_dlb_enabled(subprocess_descriptor_t *spd, bool enabled) {
     int error = DLB_SUCCESS;
-    if (__sync_bool_compare_and_swap(&spd.dlb_enabled, !enabled, enabled)) {
+    if (__sync_bool_compare_and_swap(&spd->dlb_enabled, !enabled, enabled)) {
         if (enabled) {
-            spd.lb_funcs.enable(&spd);
+            spd->lb_funcs.enable(spd);
             add_event(DLB_MODE_EVENT, EVENT_ENABLED);
         } else {
-            spd.lb_funcs.disable(&spd);
+            spd->lb_funcs.disable(spd);
             add_event(DLB_MODE_EVENT, EVENT_DISABLED);
         }
     } else {
@@ -172,96 +170,89 @@ int set_dlb_enabled(bool enabled) {
     return error;
 }
 
-int set_max_parallelism(int max) {
+int set_max_parallelism(subprocess_descriptor_t *spd, int max) {
     int error = DLB_SUCCESS;
     // do something with max
     return error;
 }
 
 
-/* Callbacks */
-
-int callback_set(dlb_callbacks_t which, dlb_callback_t callback, void *arg) {
-    return pm_callback_set(&spd.pm, which, callback, arg);
-}
-
-int callback_get(dlb_callbacks_t which, dlb_callback_t *callback, void **arg) {
-    return pm_callback_get(&spd.pm, which, callback, arg);
-}
-
-
 /* MPI specific */
 
 void IntoCommunication(void) {
-    if (spd.dlb_enabled) {
-        spd.lb_funcs.into_communication(&spd);
+    const subprocess_descriptor_t *spd = get_global_spd();
+    if (spd->dlb_enabled) {
+        spd->lb_funcs.into_communication(spd);
     }
 }
 
 void OutOfCommunication(void) {
-    if (spd.dlb_enabled) {
-        spd.lb_funcs.out_of_communication(&spd);
+    const subprocess_descriptor_t *spd = get_global_spd();
+    if (spd->dlb_enabled) {
+        spd->lb_funcs.out_of_communication(spd);
     }
 }
 
 void IntoBlockingCall(int is_iter, int blocking_mode) {
-    if (spd.dlb_enabled) {
-        spd.lb_funcs.into_blocking_call(&spd);
+    const subprocess_descriptor_t *spd = get_global_spd();
+    if (spd->dlb_enabled) {
+        spd->lb_funcs.into_blocking_call(spd);
     }
 }
 
 void OutOfBlockingCall(int is_iter) {
-    if (spd.dlb_enabled) {
-        spd.lb_funcs.out_of_blocking_call(&spd, is_iter);
+    const subprocess_descriptor_t *spd = get_global_spd();
+    if (spd->dlb_enabled) {
+        spd->lb_funcs.out_of_blocking_call(spd, is_iter);
     }
 }
 
 
 /* Lend */
 
-int lend(void) {
+int lend(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
-        error = spd.lb_funcs.lend(&spd);
+        error = spd->lb_funcs.lend(spd);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int lend_cpu(int cpuid) {
+int lend_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
-        error = spd.lb_funcs.lend_cpu(&spd, cpuid);
+        error = spd->lb_funcs.lend_cpu(spd, cpuid);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int lend_cpus(int ncpus) {
+int lend_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
-        error = spd.lb_funcs.lend_cpus(&spd, ncpus);
+        error = spd->lb_funcs.lend_cpus(spd, ncpus);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int lend_cpu_mask(const cpu_set_t *mask) {
+int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
-        error = spd.lb_funcs.lend_cpu_mask(&spd, mask);
+        error = spd->lb_funcs.lend_cpu_mask(spd, mask);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
@@ -270,49 +261,49 @@ int lend_cpu_mask(const cpu_set_t *mask) {
 
 /* Reclaim */
 
-int reclaim(void) {
+int reclaim(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-        error = spd.lb_funcs.reclaim(&spd);
+        error = spd->lb_funcs.reclaim(spd);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int reclaim_cpu(int cpuid) {
+int reclaim_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-        error = spd.lb_funcs.reclaim_cpu(&spd, cpuid);
+        error = spd->lb_funcs.reclaim_cpu(spd, cpuid);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int reclaim_cpus(int ncpus) {
+int reclaim_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-        error = spd.lb_funcs.reclaim_cpus(&spd, ncpus);
+        error = spd->lb_funcs.reclaim_cpus(spd, ncpus);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int reclaim_cpu_mask(const cpu_set_t *mask) {
+int reclaim_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RECLAIM);
-        error = spd.lb_funcs.reclaim_cpu_mask(&spd, mask);
+        error = spd->lb_funcs.reclaim_cpu_mask(spd, mask);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
@@ -321,37 +312,37 @@ int reclaim_cpu_mask(const cpu_set_t *mask) {
 
 /* Acquire */
 
-int acquire_cpu(int cpuid) {
+int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-        error = spd.lb_funcs.acquire_cpu(&spd, cpuid);
+        error = spd->lb_funcs.acquire_cpu(spd, cpuid);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int acquire_cpus(int ncpus) {
+int acquire_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-        error = spd.lb_funcs.acquire_cpus(&spd, ncpus);
+        error = spd->lb_funcs.acquire_cpus(spd, ncpus);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int acquire_cpu_mask(const cpu_set_t *mask) {
+int acquire_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
-        error = spd.lb_funcs.acquire_cpu_mask(&spd, mask);
+        error = spd->lb_funcs.acquire_cpu_mask(spd, mask);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
@@ -360,49 +351,49 @@ int acquire_cpu_mask(const cpu_set_t *mask) {
 
 /* Borrow */
 
-int borrow(void) {
+int borrow(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
-        error = spd.lb_funcs.borrow(&spd);
+        error = spd->lb_funcs.borrow(spd);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int borrow_cpu(int cpuid) {
+int borrow_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
-        error = spd.lb_funcs.borrow_cpu(&spd, cpuid);
+        error = spd->lb_funcs.borrow_cpu(spd, cpuid);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int borrow_cpus(int ncpus) {
+int borrow_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
-        error = spd.lb_funcs.borrow_cpus(&spd, ncpus);
+        error = spd->lb_funcs.borrow_cpus(spd, ncpus);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int borrow_cpu_mask(const cpu_set_t *mask) {
+int borrow_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_BORROW);
-        error = spd.lb_funcs.borrow_cpu_mask(&spd, mask);
+        error = spd->lb_funcs.borrow_cpu_mask(spd, mask);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
@@ -411,37 +402,37 @@ int borrow_cpu_mask(const cpu_set_t *mask) {
 
 /* Return */
 
-int return_all(void) {
+int return_all(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
-        error = spd.lb_funcs.return_all(&spd);
+        error = spd->lb_funcs.return_all(spd);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int return_cpu(int cpuid) {
+int return_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
-        error = spd.lb_funcs.return_cpu(&spd, cpuid);
+        error = spd->lb_funcs.return_cpu(spd, cpuid);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int return_cpu_mask(const cpu_set_t *mask) {
+int return_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd.dlb_enabled) {
+    if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_RETURN);
-        error = spd.lb_funcs.return_cpu_mask(&spd, mask);
+        error = spd->lb_funcs.return_cpu_mask(spd, mask);
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
@@ -450,9 +441,9 @@ int return_cpu_mask(const cpu_set_t *mask) {
 
 /* Drom Responsive */
 
-int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
+int poll_drom(const subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mask) {
     int error;
-    if (!spd.dlb_enabled || !spd.options.drom) {
+    if (!spd->dlb_enabled || !spd->options.drom) {
         error = DLB_ERR_DISBLD;
     } else {
         add_event(RUNTIME_EVENT, EVENT_POLLDROM);
@@ -460,21 +451,21 @@ int poll_drom(int *new_cpus, cpu_set_t *new_mask) {
         cpu_set_t local_mask;
         cpu_set_t *mask = new_mask ? new_mask : &local_mask;
 
-        error = shmem_procinfo__polldrom(spd.id, new_cpus, mask);
+        error = shmem_procinfo__polldrom(spd->id, new_cpus, mask);
         if (error == DLB_SUCCESS) {
-            shmem_cpuinfo__update_ownership(spd.id, mask);
-            spd.lb_funcs.update_ownership_info(&spd, mask);
+            shmem_cpuinfo__update_ownership(spd->id, mask);
+            spd->lb_funcs.update_ownership_info(spd, mask);
         }
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
 }
 
-int poll_drom_update(void) {
+int poll_drom_update(const subprocess_descriptor_t *spd) {
     cpu_set_t new_mask;
-    int error = poll_drom(NULL, &new_mask);
+    int error = poll_drom(spd, NULL, &new_mask);
     if (error == DLB_SUCCESS) {
-        set_process_mask(&spd.pm, &new_mask);
+        set_process_mask(&spd->pm, &new_mask);
     }
     return error;
 }
@@ -482,10 +473,10 @@ int poll_drom_update(void) {
 
 /* Misc */
 
-int check_cpu_availability(int cpuid) {
+int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid) {
     int error = DLB_SUCCESS;
-    if (spd.dlb_enabled) {
-        error = spd.lb_funcs.check_cpu_availability(&spd, cpuid);
+    if (spd->dlb_enabled) {
+        error = spd->lb_funcs.check_cpu_availability(spd, cpuid);
     } else {
         error = DLB_ERR_DISBLD;
     }
@@ -499,37 +490,15 @@ int node_barrier(void) {
     return DLB_SUCCESS;
 }
 
-int set_variable(const char *variable, const char *value) {
-    return options_set_variable(&spd.options, variable, value);
-}
-
-int get_variable(const char *variable, char *value) {
-    return options_get_variable(&spd.options, variable, value);
-}
-
-int print_variables(bool print_extra) {
-    if (!print_extra) {
-        options_print_variables(&spd.options);
-    } else {
-        options_print_variables_extra(&spd.options);
-    }
-    return DLB_SUCCESS;
-}
-
-int print_shmem(int num_columns, dlb_printshmem_flags_t print_flags) {
-    /* Temporary workaround to only initialize options if spd is not initialized */
-    if (spd.id == 0) {
-        options_init(&spd.options, NULL);
-        debug_init(&spd.options);
+int print_shmem(subprocess_descriptor_t *spd, int num_columns,
+        dlb_printshmem_flags_t print_flags) {
+    if (!spd->dlb_initialized) {
+        options_init(&spd->options, NULL);
+        debug_init(&spd->options);
     }
 
-    shmem_cpuinfo__print_info(spd.options.shm_key, num_columns, print_flags);
-    shmem_procinfo__print_info(spd.options.shm_key);
+    shmem_cpuinfo__print_info(spd->options.shm_key, num_columns, print_flags);
+    shmem_procinfo__print_info(spd->options.shm_key);
 
     return DLB_SUCCESS;
-}
-
-// Others
-const options_t* get_global_options(void) {
-    return &spd.options;
 }

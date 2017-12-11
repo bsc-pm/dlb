@@ -17,29 +17,16 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef SPD_H
-#define SPD_H
+#ifndef DLB_INTERFACE_H
+#define DLB_INTERFACE_H
 
-#include "LB_core/lb_funcs.h"
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+#include "apis/dlb.h"
 
-#include <sys/types.h>
+/* Forward declarations */
+struct SubProcessDescriptor;
+struct Options;
 
-/* Sub-process Descriptor */
+const struct SubProcessDescriptor* get_global_spd(void);
+const struct Options* get_global_options(void);
 
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_enabled;
-    cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    void *lewi_info;
-} subprocess_descriptor_t;
-
-#endif /* SPD_H */
+#endif /* DLB_INTERFACE_H */

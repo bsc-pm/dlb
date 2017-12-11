@@ -17,187 +17,197 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#include "apis/dlb.h"
+#include "apis/DLB_interface.h"
 
+#include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "support/error.h"
 
-/* This flag is used to
- *  - protect DLB functionality before the initialization
- *  - protect DLB_Init / DLB_MPI_Init twice
- */
-static bool dlb_initialized = false;
 
+/* Global sub-process descriptor */
+static subprocess_descriptor_t spd = { 0 };
+
+/* Private functions not exposed to the API */
+
+const subprocess_descriptor_t* get_global_spd(void) {
+    if (!spd.dlb_initialized) return NULL;
+    return &spd;
+}
+
+const options_t* get_global_options(void) {
+    if (!spd.dlb_initialized) return NULL;
+    return &spd.options;
+}
 
 #pragma GCC visibility push(default)
 
 /* Status */
 
 int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
-    if (__sync_bool_compare_and_swap(&dlb_initialized, false, true)) {
-        return Initialize(ncpus, mask, dlb_args);
+    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true)) {
+        return Initialize(&spd, ncpus, mask, dlb_args);
     } else {
         return DLB_ERR_INIT;
     }
 }
 
 int DLB_Finalize(void) {
-    if (__sync_bool_compare_and_swap(&dlb_initialized, true, false)) {
-        return Finish();
+    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, true, false)) {
+        return Finish(&spd);
     } else {
         return DLB_ERR_NOINIT;
     }
 }
 
 int DLB_Enable(void) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return set_dlb_enabled(true);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return set_dlb_enabled(&spd, true);
 }
 
 int DLB_Disable(void) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return set_dlb_enabled(false);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return set_dlb_enabled(&spd, false);
 }
 
 int DLB_SetMaxParallelism(int max) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return set_max_parallelism(max);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return set_max_parallelism(&spd, max);
 }
 
 
 /* Callbacks */
 
 int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void *arg) {
-    return callback_set(which, callback, arg);
+    return pm_callback_set(&spd.pm, which, callback, arg);
 }
 
 int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg) {
-    return callback_get(which, callback, arg);
+    return pm_callback_get(&spd.pm, which, callback, arg);
 }
 
 
 /* Lend */
 
 int DLB_Lend(void) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return lend();
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return lend(&spd);
 }
 
 int DLB_LendCpu(int cpuid) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return lend_cpu(cpuid);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return lend_cpu(&spd, cpuid);
 }
 
 int DLB_LendCpus(int ncpus) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return lend_cpus(ncpus);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return lend_cpus(&spd, ncpus);
 }
 
 int DLB_LendCpuMask(const_dlb_cpu_set_t mask) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return lend_cpu_mask(mask);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return lend_cpu_mask(&spd, mask);
 }
 
 
 /* Reclaim */
 
 int DLB_Reclaim(void) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return reclaim();
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return reclaim(&spd);
 }
 
 int DLB_ReclaimCpu(int cpuid) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return reclaim_cpu(cpuid);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return reclaim_cpu(&spd, cpuid);
 }
 
 int DLB_ReclaimCpus(int ncpus) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return reclaim_cpus(ncpus);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return reclaim_cpus(&spd, ncpus);
 }
 
 int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return reclaim_cpu_mask(mask);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return reclaim_cpu_mask(&spd, mask);
 }
 
 
 /* Acquire */
 
 int DLB_AcquireCpu(int cpuid) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return acquire_cpu(cpuid);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return acquire_cpu(&spd, cpuid);
 }
 
 int DLB_AcquireCpus(int ncpus) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return acquire_cpus(ncpus);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return acquire_cpus(&spd, ncpus);
 }
 
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return acquire_cpu_mask(mask);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return acquire_cpu_mask(&spd, mask);
 }
 
 
 /* Borrow */
 
 int DLB_Borrow(void) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return borrow();
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return borrow(&spd);
 }
 
 int DLB_BorrowCpu(int cpuid) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return borrow_cpu(cpuid);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return borrow_cpu(&spd, cpuid);
 }
 
 int DLB_BorrowCpus(int ncpus) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return borrow_cpus(ncpus);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return borrow_cpus(&spd, ncpus);
 }
 
 int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return borrow_cpu_mask(mask);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return borrow_cpu_mask(&spd, mask);
 }
 
 
 /* Return */
 
 int DLB_Return(void) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return return_all();
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return return_all(&spd);
 }
 
 int DLB_ReturnCpu(int cpuid) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return return_cpu(cpuid);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return return_cpu(&spd, cpuid);
 }
 
 int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return return_cpu_mask(mask);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return return_cpu_mask(&spd, mask);
 }
 
 
 /* DROM Responsive */
 
 int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return poll_drom(ncpus, mask);
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return poll_drom(&spd, ncpus, mask);
 }
 
 int DLB_PollDROM_Update(void) {
-    if (!dlb_initialized) return DLB_ERR_NOINIT;
-    return poll_drom_update();
+    if (!spd.dlb_initialized) return DLB_ERR_NOINIT;
+    return poll_drom_update(&spd);
 }
 
 
 /* Misc */
 
 int DLB_CheckCpuAvailability(int cpuid) {
-    return check_cpu_availability(cpuid);
+    return check_cpu_availability(&spd, cpuid);
 }
 
 int DLB_Barrier(void) {
@@ -205,19 +215,24 @@ int DLB_Barrier(void) {
 }
 
 int DLB_SetVariable(const char *variable, const char *value) {
-    return set_variable(variable, value);
+    return options_set_variable(&spd.options, variable, value);
 }
 
 int DLB_GetVariable(const char *variable, char *value) {
-    return get_variable(variable, value);
+    return options_get_variable(&spd.options, variable, value);
 }
 
 int DLB_PrintVariables(int print_extra) {
-    return print_variables(print_extra);
+    if (!print_extra) {
+        options_print_variables(&spd.options);
+    } else {
+        options_print_variables_extra(&spd.options);
+    }
+    return DLB_SUCCESS;
 }
 
 int DLB_PrintShmem(int num_columns, dlb_printshmem_flags_t print_flags) {
-    return print_shmem(num_columns, print_flags);
+    return print_shmem(&spd, num_columns, print_flags);
 }
 
 const char* DLB_Strerror(int errnum) {

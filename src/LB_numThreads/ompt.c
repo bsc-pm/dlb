@@ -90,7 +90,7 @@ typedef void (*ompt_callback_thread_end_t) (
 
 /********************************************************************************************/
 
-#include "LB_core/DLB_kernel.h"
+#include "apis/DLB_interface.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
@@ -118,7 +118,7 @@ static void cb_enable_cpu(int cpuid, void *arg) {
 
 static void omp_thread_manager_acquire(void) {
     if (lewi) {
-        borrow();
+        DLB_Borrow();
         int nthreads = CPU_COUNT(&active_mask);
         omp_set_num_threads(nthreads);
         verbose(VB_OMPT, "Acquire - Setting new mask to %s", mu_to_str(&active_mask));
@@ -131,21 +131,21 @@ static void omp_thread_manager_release(void) {
         CPU_ZERO(&active_mask);
         CPU_SET(sched_getcpu(), &active_mask);
         verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
-        lend();
+        DLB_Lend();
     }
 }
 
 static void omp_thread_manager_init(void) {
-    Initialize(0,0,0);
+    DLB_Init(0, NULL, NULL);
     lewi = get_global_options()->lewi;
     if (lewi) {
-        callback_set(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
+        DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
         omp_thread_manager_release();
     }
 }
 
 static void omp_thread_manager_finalize(void) {
-    Finish();
+    DLB_Finalize();
 }
 /***********************************************************/
 
