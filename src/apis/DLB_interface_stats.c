@@ -27,6 +27,8 @@
 #include "apis/dlb_errors.h"
 #include "support/options.h"
 
+#include <stddef.h>
+
 #pragma GCC visibility push(default)
 
 int DLB_Stats_Init(void) {
