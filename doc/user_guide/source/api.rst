@@ -44,12 +44,12 @@ These functions make the basic API to be used independently from which DLB mode 
 
 .. function:: int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char \*dlb_args)
 
-    Initialize the DLB library and all its internal data structures. Must be called once and only
-    one by each process in the DLB system.
+    Initialize DLB library and all its internal data structures. Must be called once and only
+    once by each process in the DLB system.
 
 .. function:: int DLB_Finalize(void)
 
-    Finalize the DLB library and clean up all its data structures. Must be called by each process
+    Finalize DLB library and clean up all its data structures. Must be called by each process
     before exiting the system.
 
 .. function:: int DLB_Enable(void)
@@ -84,8 +84,8 @@ These functions make the basic API to be used independently from which DLB mode 
     although not all of them can be modified at runtime. If the variable is readonly the setter
     function will return an error.
 
-.. function:: int DLB_PrintVariables(void)
-              int DLB_PrintShmem(void)
+.. function:: int DLB_PrintVariables(int print_extra)
+              int DLB_PrintShmem(int num_columns, dlb_printshmem_flags_t print_flags)
 
     Print to stdout the information about the DLB internal variables and the status of the shared
     memories.
