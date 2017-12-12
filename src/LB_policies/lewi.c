@@ -40,6 +40,7 @@ static int default_cpus;
 static int myCPUS = 0;
 static int enabled = 0;
 static int single = 0;
+static int max_parallelism = 0;
 static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads);
 
 /******* Main Functions LeWI Balancing Policy ********/
@@ -89,6 +90,11 @@ int lewi_DisableDLB(const subprocess_descriptor_t *spd) {
         setThreads_Lend_light(&spd->pm, default_cpus);
     }
     enabled = 0;
+    return DLB_SUCCESS;
+}
+
+int lewi_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
+    max_parallelism = max;
     return DLB_SUCCESS;
 }
 
@@ -150,7 +156,8 @@ int lewi_Borrow(const subprocess_descriptor_t *spd) {
 int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     int error = DLB_ERR_PERM;
     if (enabled && !single) {
-        int cpus = checkIdleCpus(myCPUS, maxResources);
+        int max_resources = max_parallelism > 0 ? max_parallelism - myCPUS : maxResources;
+        int cpus = checkIdleCpus(myCPUS, max_resources);
         if (myCPUS!=cpus) {
             verbose(VB_MICROLB, "Using %d cpus", cpus);
             setThreads_Lend_light(&spd->pm, cpus);
@@ -178,6 +185,7 @@ int lewi_Init(subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_Finalize(subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_EnableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_DisableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
+int lewi_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {return DLB_ERR_NOCOMP;}
 int lewi_IntoCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_OutOfCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
 int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}

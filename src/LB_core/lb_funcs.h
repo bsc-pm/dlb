@@ -32,6 +32,7 @@ typedef struct BalancePolicy {
     int (*finalize)(struct SubProcessDescriptor *spd);
     int (*enable)(const struct SubProcessDescriptor *spd);
     int (*disable)(const struct SubProcessDescriptor *spd);
+    int (*set_max_parallelism)(const struct SubProcessDescriptor *spd, int max);
     /* MPI specific */
     int (*into_communication)(const struct SubProcessDescriptor *spd);
     int (*out_of_communication)(const struct SubProcessDescriptor *spd);

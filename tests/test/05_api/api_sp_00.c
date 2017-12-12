@@ -61,7 +61,7 @@ int main( int argc, char **argv ) {
     assert( DLB_Disable_sp(handler) == DLB_SUCCESS );
     assert( DLB_Lend_sp(handler) == DLB_ERR_DISBLD );
     assert( DLB_Enable_sp(handler) == DLB_SUCCESS );
-    assert( DLB_SetMaxParallelism_sp(handler, 1) == DLB_SUCCESS );
+    assert( DLB_SetMaxParallelism_sp(handler, 1) == DLB_ERR_NOPOL );
 
     // Lend
     assert( DLB_Lend_sp(handler) == DLB_ERR_NOPOL );

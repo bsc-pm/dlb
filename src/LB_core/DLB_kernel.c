@@ -174,8 +174,12 @@ int set_dlb_enabled(subprocess_descriptor_t *spd, bool enabled) {
 }
 
 int set_max_parallelism(subprocess_descriptor_t *spd, int max) {
-    int error = DLB_SUCCESS;
-    // do something with max
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        error = spd->lb_funcs.set_max_parallelism(spd, max);
+    }
     return error;
 }
 

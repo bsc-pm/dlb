@@ -36,6 +36,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .finalize               = dummy,
         .enable                 = (lb_func_kind1)disabled,
         .disable                = (lb_func_kind1)disabled,
+        .set_max_parallelism    = (lb_func_kind2)disabled,
         .into_communication     = (lb_func_kind1)disabled,
         .out_of_communication   = (lb_func_kind1)disabled,
         .into_blocking_call     = (lb_func_kind1)disabled,
@@ -71,6 +72,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->finalize               = lewi_Finalize;
             lb_funcs->enable                 = lewi_EnableDLB;
             lb_funcs->disable                = lewi_DisableDLB;
+            lb_funcs->set_max_parallelism    = lewi_SetMaxParallelism;
             lb_funcs->into_communication     = lewi_IntoCommunication;
             lb_funcs->out_of_communication   = lewi_OutOfCommunication;
             lb_funcs->into_blocking_call     = lewi_IntoBlockingCall;
@@ -85,6 +87,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->finalize               = lewi_mask_Finalize;
             lb_funcs->enable                 = lewi_mask_EnableDLB;
             lb_funcs->disable                = lewi_mask_DisableDLB;
+            lb_funcs->set_max_parallelism    = lewi_mask_SetMaxParallelism;
             lb_funcs->into_blocking_call     = lewi_mask_IntoBlockingCall;
             lb_funcs->out_of_blocking_call   = lewi_mask_OutOfBlockingCall;
             lb_funcs->lend                   = lewi_mask_Lend;
