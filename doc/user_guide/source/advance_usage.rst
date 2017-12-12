@@ -7,9 +7,6 @@ Advanced Usage
 .. note::
     Section in progress
 
-.. _callbacks:
-
-
 =================
 DLB Return Errors
 =================
@@ -34,6 +31,9 @@ DLB Return Errors
     DLB_ERR_REQST
     DLB_ERR_NOMEM
     DLB_ERR_NOPOL
+
+
+.. _callbacks:
 
 =========
 Callbacks
