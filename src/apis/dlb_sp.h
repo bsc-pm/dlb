@@ -428,6 +428,16 @@ int DLB_PollDROM_Update_sp(dlb_handler_t handler);
 /*    Misc                                                                       */
 /*********************************************************************************/
 
+/*! \brief Check whether the specified CPU is being used by another subprocess
+ *  \param[in] handler subprocess identifier
+ *  \param[in] cpuid CPU to be checked
+ *  \return DLB_SUCCESS if the CPU is available
+ *  \return DLB_NOTED if the CPU is owned but still guested by other process
+ *  \return DLB_ERR_PERM if the CPU cannot be acquired or has been disabled
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ */
+int DLB_CheckCpuAvailability_sp(dlb_handler_t handler, int cpuid);
+
 /*! \brief Change the value of a DLB internal variable
  *  \param[in] handler subprocess identifier
  *  \param[in] variable Internal variable to set

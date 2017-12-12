@@ -182,6 +182,10 @@ int DLB_PollDROM_Update_sp(dlb_handler_t handler) {
 
 /* Misc */
 
+int DLB_CheckCpuAvailability_sp(dlb_handler_t handler, int cpuid) {
+    return check_cpu_availability(handler, cpuid);
+}
+
 int DLB_SetVariable_sp(dlb_handler_t handler, const char *variable, const char *value) {
     options_t *options = &((subprocess_descriptor_t*)handler)->options;
     return options_set_variable(options, variable, value);
