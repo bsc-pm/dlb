@@ -72,7 +72,7 @@ void list_shdata_item(const char* shm_suffix, int list_columns,
         /* Modify DLB_ARGS */
         const char *dlb_args_env = getenv("DLB_ARGS");
         size_t dlb_args_env_len = dlb_args_env ? strlen(dlb_args_env) + 1 : 0;
-        const char * const new_dlb_args_base = "--verbose-format=node --preinit-pid=";
+        const char * const new_dlb_args_base = "--verbose-format=node --shm-key=";
         char *dlb_args = malloc(dlb_args_env_len + strlen(new_dlb_args_base) + strlen(p) + 1);
         sprintf(dlb_args, "%s %s%s", dlb_args_env ? dlb_args_env : "", new_dlb_args_base, p);
         setenv("DLB_ARGS", dlb_args, 1);
@@ -90,6 +90,7 @@ void list_shdata(int list_columns, dlb_printshmem_flags_t print_flags) {
     bool userdef_shm_listed = userdef_shm_filename == NULL;
 
     const char dir[] = "/dev/shm";
+    char *filename;
     DIR *dp;
     struct dirent *entry;
     struct stat statbuf;
@@ -100,7 +101,12 @@ void list_shdata(int list_columns, dlb_printshmem_flags_t print_flags) {
     }
 
     while ( (entry = readdir(dp)) != NULL ) {
-        lstat( entry->d_name, &statbuf );
+        /* Obtain absolute path to filename */
+        int filename_size = snprintf(NULL, 0, "%s/%s", dir, entry->d_name);
+        filename = malloc(filename_size*sizeof(char));
+        sprintf(filename, "%s/%s", dir, entry->d_name);
+        /* Only list if filename is same UID and matches DLB_* */
+        stat( filename, &statbuf );
         if( getuid() == statbuf.st_uid &&
                 fnmatch( "DLB_*", entry->d_name, 0) == 0 ) {
             // Ignore DLB_ prefix
