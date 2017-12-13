@@ -137,9 +137,9 @@ const char* get_verbose_fmt_choices(void) {
 
 
 /* debug_opts_t */
-static const debug_opts_t debug_opts_values[] = {DBG_REGSIGNALS, DBG_RETURNSTOLEN};
-static const char* const debug_opts_choices[] = {"register-signals", "return-stolen"};
-static const char debug_opts_choices_str[] = "register-signals:return-stolen";
+static const debug_opts_t debug_opts_values[] = {DBG_REGSIGNALS, DBG_RETURNSTOLEN, DBG_LEWI_OMPT};
+static const char* const debug_opts_choices[] = {"register-signals", "return-stolen", "lewi-ompt"};
+static const char debug_opts_choices_str[] = "register-signals:return-stolen:lewi-ompt";
 enum { debug_opts_nelems = sizeof(debug_opts_values) / sizeof(debug_opts_values[0]) };
 
 int parse_debug_opts(const char *str, debug_opts_t *value) {
