@@ -348,6 +348,7 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_mode.cfg \
 	doc/paraver_cfgs/DLB_runtime.cfg \
 	doc/paraver_cfgs/DLB_num_threads.cfg \
+	doc/paraver_cfgs/DLB_rebind_threads.cfg \
 	$(END)
 
 paravercfgsdir = $(datadir)/paraver_cfgs/DLB
