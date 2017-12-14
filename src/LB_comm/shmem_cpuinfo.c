@@ -1224,6 +1224,8 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
             if (cpuinfo->owner == pid) {
                 // Release CPU ownership
                 some_cpu_released = true;
+                cpuinfo->thread_id = -1;
+                cpuinfo->dirty = false;
                 cpuinfo->owner = NOBODY;
                 cpuinfo->state = CPU_DISABLED;
                 if (cpuinfo->guest == pid ) {
