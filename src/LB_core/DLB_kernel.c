@@ -129,6 +129,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     verbose(VB_STATS, "Enabled verbose mode for STATS");
     verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
     verbose(VB_ASYNC, "Enabled verbose mode for Asynchronous thread");
+    verbose(VB_OMPT, "Enabled verbose mode for OMPT experimental features");
     if (ncpus || mask) {
         info0("Number of CPUs: %d", ncpus ? ncpus : CPU_COUNT(&spd->process_mask));
     }

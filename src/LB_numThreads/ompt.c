@@ -136,9 +136,6 @@ static void omp_thread_manager_release(void) {
 }
 
 static void omp_thread_manager_init(void) {
-    options_t options;
-    options_init(&options, NULL);
-    lewi = options.lewi && options.debug_opts & DBG_LEWI_OMPT;
     if (lewi) {
         cpu_set_t process_mask;
         sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
@@ -219,6 +216,15 @@ static void cb_thread_end(
 }
 
 static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_fns_t *fns) {
+    /* Initialize minimal modules */
+    options_t options;
+    options_init(&options, NULL);
+    debug_init(&options);
+    verbose(VB_OMPT, "Initializing OMPT module");
+
+    /* Enable experimental LeWI features only if requested */
+    lewi = options.lewi && options.debug_opts & DBG_LEWI_OMPT;
+
     ompt_set_callback_t set_callback_fn = (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
     if (set_callback_fn) {
         set_callback_fn(ompt_callback_parallel_begin, (ompt_callback_t)cb_parallel_begin);
@@ -233,6 +239,7 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_fns_t *fn
 }
 
 static void ompt_finalize(ompt_fns_t *fns) {
+    verbose(VB_OMPT, "Finalizing OMPT module");
     omp_thread_manager_finalize();
 }
 
