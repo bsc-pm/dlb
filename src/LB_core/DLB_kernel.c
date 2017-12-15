@@ -63,22 +63,25 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
     spd->id = spd->options.preinit_pid ? spd->options.preinit_pid : id;
     if (mask) {
+        // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
     } else if (spd->lb_policy == POLICY_LEWI) {
+        // If LeWI, we don't want the process mask, just a mask of size 'ncpus'
         if (ncpus <= 0) ncpus = pm_get_num_threads();
-        // We need to pass ncpus through spd, CPU order doesn't matter
         CPU_ZERO(&spd->process_mask);
         int i;
         for (i=0; i<ncpus; ++i) CPU_SET(i, &spd->process_mask);
+    } else if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom) {
+        // These modes require mask support, best effort querying the system
+        cpu_set_t process_mask;
+        sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+        memcpy(&spd->process_mask, &process_mask, sizeof(cpu_set_t));
     }
 
     // Initialize modules
     debug_init(&spd->options);
     timer_init();
     if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
-        // Mandatory: obtain mask
-        fatal_cond(!mask, "DROM and TALP modules require mask support");
-
         // If the process has been pre-initialized, the process mask may have changed
         // procinfo_init must return a new_mask if so
         cpu_set_t new_process_mask;
