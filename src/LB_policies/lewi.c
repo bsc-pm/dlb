@@ -22,15 +22,11 @@
 
 #include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
-#include "support/debug.h"
-
-#ifdef MPI_LIB
-
 #include "LB_comm/comm_lend_light.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/mask_utils.h"
 #include "support/options.h"
-#include "LB_MPI/process_MPI.h"
+#include "support/debug.h"
 
 #include <sched.h>
 #include <limits.h>
@@ -60,7 +56,7 @@ int lewi_Init(subprocess_descriptor_t *spd) {
     }
 
     //Initialize shared memory
-    ConfigShMem(_mpis_per_node, _process_id, _node_id, default_cpus, greedy, spd->options.shm_key);
+    ConfigShMem(default_cpus, greedy, spd->options.shm_key);
 
     if (spd->options.lewi_warmup) {
         setThreads_Lend_light(&spd->pm, mu_get_system_size());
@@ -178,25 +174,3 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads) {
         myCPUS=numThreads;
     }
 }
-
-#else /* MPI_LIB */
-
-int lewi_Init(subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_Finalize(subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_EnableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_DisableDLB(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {return DLB_ERR_NOCOMP;}
-int lewi_IntoCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_OutOfCommunication(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
-    return DLB_ERR_NOCOMP;
-}
-int lewi_Lend(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_Reclaim(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_Borrow(const subprocess_descriptor_t *spd) {return DLB_ERR_NOCOMP;}
-int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
-    return DLB_ERR_NOCOMP;
-}
-
-#endif /* MPI_LIB */

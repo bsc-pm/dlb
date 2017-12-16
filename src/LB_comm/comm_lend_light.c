@@ -27,33 +27,27 @@
 
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
-int procs;
-int me;
-int node;
-
 int defaultCPUS;
 int greedy;
 //pointers to the shared memory structures
 struct shdata {
     int   idleCpus;
+    int   attached_nprocs;
 };
 
 struct shdata *shdata;
 static shmem_handler_t *shm_handler = NULL;;
 
-void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy,
-        const char *shmem_key) {
+void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key) {
     verbose(VB_SHMEM, "LoadCommonConfig");
-    procs=num_procs;
-    me=meId;
-    node=nodeId;
     defaultCPUS=defCPUS;
     greedy=is_greedy;
 
     shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key,
             SHMEM_VERSION_IGNORE);
 
-    if (me==0) {
+    if (__sync_fetch_and_add(&shdata->attached_nprocs, 1) == 0) {
+        // Initialize shared memory if this is the 1st process attached
         verbose(VB_SHMEM, "setting values to the shared mem");
 
         /* idleCPUS */
@@ -66,7 +60,8 @@ void ConfigShMem(int num_procs, int meId, int nodeId, int defCPUS, int is_greedy
 
 void finalize_comm() {
     if (shm_handler) {
-        shmem_finalize(shm_handler, SHMEM_DELETE);
+        bool shmem_empty = __sync_fetch_and_sub(&shdata->attached_nprocs, 1) == 1;
+        shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
     }
 }
 
