@@ -300,7 +300,6 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
     while (token) {
         /* Each token is a complete string representing an option */
         bool remove_token = false;
-        size_t token_len = strlen(token);
 
         if (strchr(token, '=')) {
             /* Option is of the form --argument=value */
@@ -330,7 +329,9 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
 
         if (remove_token) {
             /* Remove token from dlb_args */
-            char *dest = strstr(dlb_args, token);
+            size_t token_offset = token - dlb_args_copy;
+            size_t token_len = strlen(token);
+            char *dest = dlb_args + token_offset;
             char *src = dest + token_len;
             size_t n = strlen(src) + 1;
             memmove(dest, src, n);

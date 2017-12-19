@@ -127,6 +127,11 @@ int main( int argc, char **argv ) {
     options_init(&options_2, "");
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
+    // Found bug: "--lewi --lewi-mpi" is well parsed but "--lewi-mpi --lewi" is not.
+    options_init(&options_1, "--lewi --lewi-mpi");
+    assert(options_1.lewi && options_1.lewi_mpi);
+    options_init(&options_1, "--lewi-mpi --lewi");
+    assert(options_1.lewi && options_1.lewi_mpi);
 
     return 0;
 }
