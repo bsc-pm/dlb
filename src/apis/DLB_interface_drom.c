@@ -123,23 +123,15 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len) {
     return DLB_SUCCESS;
 }
 
-int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask) {
-    return shmem_procinfo__getprocessmask(pid, mask, QUERY_ASYNC);
+int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
+    return shmem_procinfo__getprocessmask(pid, mask, flags);
 }
 
-int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask) {
-    return shmem_procinfo__setprocessmask(pid, mask, QUERY_ASYNC);
+int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
+    return shmem_procinfo__setprocessmask(pid, mask, flags);
 }
 
-int DLB_DROM_GetProcessMask_sync(int pid, dlb_cpu_set_t mask) {
-    return shmem_procinfo__getprocessmask(pid, mask, QUERY_SYNC);
-}
-
-int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask) {
-    return shmem_procinfo__setprocessmask(pid, mask, QUERY_SYNC);
-}
-
-int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_preinit_flags_t flags,
+int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
         char ***next_environ) {
     /* Set up DROM args */
     char drom_args[64];
@@ -183,8 +175,8 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_preinit_flags_t flag
     return error;
 }
 
-int DLB_DROM_PostFinalize(int pid, int return_stolen) {
-    int error = shmem_procinfo_ext__postfinalize(pid, return_stolen);
+int DLB_DROM_PostFinalize(int pid, dlb_drom_flags_t flags) {
+    int error = shmem_procinfo_ext__postfinalize(pid, flags & DLB_RETURN_STOLEN);
     error = error ? error : shmem_cpuinfo_ext__postfinalize(pid);
     return error;
 }

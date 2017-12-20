@@ -20,6 +20,8 @@
 #ifndef SHMEM_PROCINFO_H
 #define SHMEM_PROCINFO_H
 
+#include "apis/dlb_types.h"
+
 #include <sys/types.h>
 #include <stdbool.h>
 #include <sched.h>
@@ -36,14 +38,8 @@ int shmem_procinfo_ext__finalize(void);
 int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen);
 int shmem_procinfo_ext__recover_stolen_cpus(int pid);
 
-/* Get / Set Process mask */
-typedef enum QueryType {
-    QUERY_SYNC,
-    QUERY_ASYNC
-} query_t;
-
-int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, query_t query);
-int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, query_t query);
+int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, dlb_drom_flags_t flags);
+int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags);
 
 /* Generic Getters */
 int  shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask);

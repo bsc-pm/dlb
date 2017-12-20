@@ -59,46 +59,35 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
 /*! \brief Get the process mask of the given PID
  *  \param[in] pid Process ID to consult
  *  \param[out] mask Current process mask
+ *  \param[in] flags flags
  *  \return error code
  */
-int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask);
+int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
 /*! \brief Set the process mask of the given PID
  *  \param[in] pid Process ID to signal
  *  \param[in] mask Process mask to set
+ *  \param[in] flags flags
  *  \return error code
  */
-int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask);
-
-/*! \brief Get the process mask of the given PID
- *  \param[in] pid Process ID to consult
- *  \param[out] mask Current process mask
- *  \return error code
- */
-int DLB_DROM_GetProcessMask_sync(int pid, dlb_cpu_set_t mask);
-
-/*! \brief Set the process mask of the given PID
- *  \param[in] pid Process ID to signal
- *  \param[in] mask Process mask to set
- *  \return error code
- */
-int DLB_DROM_SetProcessMask_sync(int pid, const_dlb_cpu_set_t mask);
+int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
 /*! \brief Register PID with the given mask before the process normal registration
  *  \param[in] pid Process ID that gets the reservation
  *  \param[in] mask Process mask to register
  *  \param[in] flags stealing options
- *  \param[inout] environ environment to modify if the subprocess may be able to fork
+ *  \param[inout] next_environ environment to modify if the subprocess may be able to fork
  *  \return error code
  */
-int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_preinit_flags_t flags, char ***environ);
+int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
+        char ***next_environ);
 
 /*! \brief Finalize process
  *  \param[in] pid Process ID
- *  \param[in] return_stolen whether to return stolen CPUs
+ *  \param[in] flags stealing options
  *  \return error code
  */
-int DLB_DROM_PostFinalize(int pid, int return_stolen);
+int DLB_DROM_PostFinalize(int pid, dlb_drom_flags_t flags);
 
 /* \brief Recover previously stolen CPUs if they are idle
  * \param[in] pid Process ID

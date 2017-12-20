@@ -27,6 +27,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
+#include "apis/dlb_types.h"
 #include "support/error.h"
 #include "support/mask_utils.h"
 
@@ -49,7 +50,7 @@ static void* thread_start(void *arg) {
 
     // External sets new mask
     cpu_set_t new_mask = { .__bits = {0x3} }; // [01--]
-    assert( shmem_procinfo__setprocessmask(pid, &new_mask, QUERY_SYNC) == DLB_SUCCESS );
+    assert( shmem_procinfo__setprocessmask(pid, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
 
     //Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );

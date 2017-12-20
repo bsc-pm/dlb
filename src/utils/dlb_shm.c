@@ -193,7 +193,7 @@ int main ( int argc, char *argv[] ) {
     bool do_list = false;
     bool do_delete = false;
     int list_columns = 0;
-    dlb_preinit_flags_t print_flags = DLB_COLOR_AUTO;
+    dlb_printshmem_flags_t print_flags = DLB_COLOR_AUTO;
 
     /* Long options that have no corresponding short option */
     enum {

@@ -85,7 +85,7 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
 
 static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
     DLB_DROM_Init();
-    int error = DLB_DROM_SetProcessMask(pid, new_mask);
+    int error = DLB_DROM_SetProcessMask(pid, new_mask, 0);
     dlb_check(error, pid, __FUNCTION__);
     DLB_DROM_Finalize();
 
@@ -101,7 +101,7 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
     } else if (pid == 0) {
         pid = getpid();
         DLB_DROM_Init();
-        dlb_preinit_flags_t flags = DLB_STEAL_CPUS | (borrow ? DLB_RETURN_STOLEN : 0);
+        dlb_drom_flags_t flags = DLB_STEAL_CPUS | (borrow ? DLB_RETURN_STOLEN : 0);
         int error = DLB_DROM_PreInit(pid, new_mask, flags, NULL);
         dlb_check(error, pid, __FUNCTION__);
         DLB_DROM_Finalize();
@@ -125,7 +125,7 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 
     // Get current PID's mask
     cpu_set_t pid_mask;
-    error = DLB_DROM_GetProcessMask(pid, &pid_mask);
+    error = DLB_DROM_GetProcessMask(pid, &pid_mask, 0);
     dlb_check(error, pid, __FUNCTION__);
 
     // Remove cpus from the PID's mask
@@ -139,7 +139,7 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 
     // Apply final mask
     if (mask_dirty) {
-        error = DLB_DROM_SetProcessMask(pid, &pid_mask);
+        error = DLB_DROM_SetProcessMask(pid, &pid_mask, 0);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(&pid_mask));
     }
@@ -196,7 +196,7 @@ static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t pr
     DLB_DROM_Init();
     if (pid) {
         // Show CPU affinity of given PID
-        error = DLB_DROM_GetProcessMask(pid, &mask);
+        error = DLB_DROM_GetProcessMask(pid, &mask, 0);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask));
     } else {
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
     bool do_getpid = false;
     bool borrow = false;
 
-    dlb_preinit_flags_t print_flags = DLB_COLOR_AUTO;
+    dlb_printshmem_flags_t print_flags = DLB_COLOR_AUTO;
     int list_columns = 0;
     int process_pseudo_id = 0;
     pid_t pid = 0;

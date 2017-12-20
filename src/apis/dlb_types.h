@@ -25,11 +25,12 @@ typedef void* dlb_handler_t;
 typedef void* dlb_cpu_set_t;
 typedef const void* const_dlb_cpu_set_t;
 
-// PreInit flags
-typedef enum dlb_preinit_flags_e {
-    DLB_STEAL_CPUS      = 1,
-    DLB_RETURN_STOLEN   = 2
-} dlb_preinit_flags_t;
+// DROM flags
+typedef enum dlb_drom_flags_e {
+    DLB_STEAL_CPUS      = 1 << 0,
+    DLB_RETURN_STOLEN   = 1 << 1,
+    DLB_SYNC_QUERY      = 1 << 2
+} dlb_drom_flags_t;
 
 // PrintShmem flags
 typedef enum dlb_printshmem_flags_e {
