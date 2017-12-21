@@ -3,14 +3,14 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased]
+## [2.0] 2017-12-21
 ### Added
 - Callback system
 - API for subprocesses
 - New interaction mode choice (synchronous as it was before, or asynchronous)
 - Doxygen HTML and man pages documentation
 - Test coverage support
-- OMPT support
+- OMPT experimental support
 
 ### Changed
 - API reworked
@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   this queue has less priority than the CPU queue
 - DLB acquire now does not schedule because it forces the acquisition, DLB Borrow does
   scheduling but only looks for idle CPUs and never creates a CPU request
-- DLB options print format reworked, DLB_ARGS is now used to pass options to DLB.
+- DLB options print format reworked, `DLB_ARGS` is now used to pass options to DLB.
 - Fortran Interface now is a include Fortran Interface ? (weird wording)
 - Shared Memory synchronization mechanism is now managed using a pthread spinlock
 - DROM services now use the same shmem handler so no need to call `DLB_Init` and `DLB_DROM_Init`
@@ -128,7 +128,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[Unreleased]: https://github.com/bsc-pm/dlb/compare/v1.3...HEAD
+[2.0]: https://github.com/bsc-pm/dlb/compare/v1.3...2.0
 [1.3.2]: https://github.com/bsc-pm/dlb/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/bsc-pm/dlb/compare/v1.3...v1.3.1
 [1.3]: https://github.com/bsc-pm/dlb/compare/v1.2...v1.3
