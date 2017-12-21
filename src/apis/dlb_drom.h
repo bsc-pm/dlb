@@ -32,66 +32,140 @@ extern "C"
 /*    Dynamic Resource Manager Module                                            */
 /*********************************************************************************/
 
-/*! \brief Initialize DROM Module
- *  \return error code
+/*! \brief Attach current process to DLB system as DROM administrator
+ *  \return DLB_SUCCESS on success
+ *
+ *  Once the process is attached to DLB as DROM administrator, it may perform the
+ *  below actions described in this file. This way, the process is able to query
+ *  or modify other DLB running processes' IDs and processes masks, as well as to
+ *  make room in the system for creating another running process.
  */
-int DLB_DROM_Init(void);
+int DLB_DROM_Attach(void);
 
-/*! \brief Finalize DROM Module
- *  \return error code
+/*! \brief Deattach current process from DLB system
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory to dettach from
+ *
+ *  If previously attached, a process must call this function to correctly close
+ *  file descriptors and clean data.
  */
-int DLB_DROM_Finalize(void);
+int DLB_DROM_Deattach(void);
 
-/*! \brief Get the total number of available CPUs in the node
+/*! \brief Get the number of CPUs in the node
  *  \param[out] ncpus the number of CPUs
- *  \return error code
+ *  \return DLB_SUCCESS on success
  */
 int DLB_DROM_GetNumCpus(int *ncpus);
 
-/*! \brief Get the PID's attached to this module
+/*! \brief Get the list of running processes registered in the DLB system
  *  \param[out] pidlist The output list
  *  \param[out] nelems Number of elements in the list
  *  \param[in] max_len Max capacity of the list
- *  \return error code
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  */
 int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
 
 /*! \brief Get the process mask of the given PID
- *  \param[in] pid Process ID to consult
- *  \param[out] mask Current process mask
- *  \param[in] flags flags
- *  \return error code
+ *  \param[in] pid Process ID to query its process mask
+ *  \param[out] mask Current process mask of the target process
+ *  \param[in] flags DROM options
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
+ *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
+ *
+ *  Accepted flags for this function:\n
+ *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
+ *                      operations, the caller process gets blocked until the target
+ *                      process resolves them, or the query times out.
  */
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
 /*! \brief Set the process mask of the given PID
- *  \param[in] pid Process ID to signal
+ *  \param[in] pid Target Process ID to apply a new process mask
  *  \param[in] mask Process mask to set
- *  \param[in] flags flags
+ *  \param[in] flags DROM options
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
+ *  \return DLB_ERR_PDIRTY if target pid already has a pending operation
+ *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
  *  \return error code
+ *
+ *  Accepted flags for this function:\n
+ *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
+ *                      operations, the caller process gets blocked until the target
+ *                      process resolves them, or the query times out.
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
-/*! \brief Register PID with the given mask before the process normal registration
+/*! \brief Make room in the system for a new process with the given mask
  *  \param[in] pid Process ID that gets the reservation
  *  \param[in] mask Process mask to register
- *  \param[in] flags stealing options
- *  \param[inout] next_environ environment to modify if the subprocess may be able to fork
- *  \return error code
+ *  \param[in] flags DROM options
+ *  \param[inout] next_environ environment to modify if the process is going to fork-exec
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
+ *  \return DLB_ERR_PERM if the provided mask overlaps with an existing registered
+ *                      process and stealing option is not set
+ *
+ *  Accepted flags for this function:\n
+ *      DLB_STEAL_CPUS:     Steal CPU ownership if necessary. If any CPU in mask is already
+ *                          registered in the system, steal the ownership from their
+ *                          original process.\n
+ *      DLB_RETURN_STOLEN:  Return stolen CPUs when this process finalizes. If any CPU
+ *                          was stolen during the preinitialization, try to return those
+ *                          CPUs to their owners if they still exist.\n
+ *      DLB_SYNC_QUERY:     Synchronous query. If the preinitialization needs to steal
+ *                          some CPU, the stealing operation is synchronous and thus will
+ *                          wait until the target process can release its CPU instead of
+ *                          causing oversubscription. This option may cause a time out
+ *                          if the target process does not update its mask in time.
+ *
+ *  This function can be called to preinitialize a future DLB running process, even
+ *  if the current process ID does not match the future process, probably due to
+ *  fork-exec mechanisms. Though in this case we need to modify the environment in order
+ *  to not loose the preinitialization info.
+ *
+ *  Even if preinialized, a running process still needs to call DLB_Init() and
+ *  DLB_Finalize() to take full advantage of all DLB features, but it is not mandatory.
  */
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
         char ***next_environ);
 
-/*! \brief Finalize process
- *  \param[in] pid Process ID
- *  \param[in] flags stealing options
- *  \return error code
+/*! \brief Unregister a process from the DLB system
+ *  \param[in] pid Process ID to unregister
+ *  \param[in] flags DROM options
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
+ *
+ *  Accepted flags for this function:\n
+ *      DLB_RETURN_STOLEN:  Return stolen CPUs when this process finalizes. If any CPU
+ *                          was stolen during the preinitialization, try to return those
+ *                          CPUs to their owners if they still exist.
+ *
+ *  This function should be called after a preinitialized child process has finished
+ *  its execution.
+ *
+ *  If the child process was DLB aware and called DLB_Init() and DLB_Finalize(), this
+ *  function will return DLB_ERR_NOPROC, although that should not be considered as a
+ *  wrong scenario.
+ *
  */
 int DLB_DROM_PostFinalize(int pid, dlb_drom_flags_t flags);
 
-/* \brief Recover previously stolen CPUs if they are idle
- * \param[in] pid Process ID
- * \return 0 on success, -1 otherwise
+/*! \brief Recover previously stolen CPUs if they are idle
+ *  \param[in] pid Process ID
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
+ *
+ *  If a running process abandoned the system without returning the previously stolen
+ *  CPUs, this function may be called at any time to check if the target process is
+ *  able to recover some of its original CPUs.
  */
 int DLB_DROM_RecoverStolenCpus(int pid);
 

@@ -42,8 +42,8 @@ int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, dlb_drom_flags_t 
 int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags);
 
 /* Generic Getters */
-int  shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask);
-void shmem_procinfo__getpidlist(pid_t *pidlist, int *nelems, int max_len);
+int shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask);
+int shmem_procinfo__getpidlist(pid_t *pidlist, int *nelems, int max_len);
 
 /* Statistics */
 double  shmem_procinfo__getcpuusage(pid_t pid);

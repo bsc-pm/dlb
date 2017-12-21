@@ -37,13 +37,13 @@
 static void test(const cpu_set_t *mask, char ***env) {
     pid_t pid = getpid();
 
-    assert( DLB_DROM_Init()                     == DLB_SUCCESS );
-    assert( DLB_DROM_PreInit(pid, mask, 1, env) == DLB_SUCCESS );
-    assert( DLB_DROM_Finalize()                 == DLB_SUCCESS );
+    assert( DLB_DROM_Attach()                                   == DLB_SUCCESS );
+    assert( DLB_DROM_PreInit(pid, mask, DLB_STEAL_CPUS, env)    == DLB_SUCCESS );
+    assert( DLB_DROM_Deattach()                                 == DLB_SUCCESS );
 
-    assert( DLB_DROM_Init()                 == DLB_SUCCESS );
-    assert( DLB_DROM_PostFinalize(pid, 0)   == DLB_SUCCESS );
-    assert( DLB_DROM_Finalize()             == DLB_SUCCESS );
+    assert( DLB_DROM_Attach()                                   == DLB_SUCCESS );
+    assert( DLB_DROM_PostFinalize(pid, 0)                       == DLB_SUCCESS );
+    assert( DLB_DROM_Deattach()                                 == DLB_SUCCESS );
 }
 
 int main(int argc, char **argv) {

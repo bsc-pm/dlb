@@ -395,7 +395,7 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen) {
 int shmem_procinfo_ext__finalize(void) {
     // Protect double finalization
     if (shm_handler == NULL) {
-        return DLB_ERR_INIT;
+        return DLB_ERR_NOSHMEM;
     }
 
     // Check if shmem is empty
@@ -651,9 +651,9 @@ int shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask) {
     return error;
 }
 
-void shmem_procinfo__getpidlist(pid_t *pidlist, int *nelems, int max_len) {
+int shmem_procinfo__getpidlist(pid_t *pidlist, int *nelems, int max_len) {
     *nelems = 0;
-    if (shm_handler == NULL) return;
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
     shmem_lock(shm_handler);
     {
         int p;
@@ -668,6 +668,7 @@ void shmem_procinfo__getpidlist(pid_t *pidlist, int *nelems, int max_len) {
         }
     }
     shmem_unlock(shm_handler);
+    return DLB_SUCCESS;
 }
 
 

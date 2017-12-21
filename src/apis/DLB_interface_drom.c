@@ -92,7 +92,7 @@ static void add_to_environ(const char *name, const char *value, char ***next_env
 
 #pragma GCC visibility push(default)
 
-int DLB_DROM_Init(void) {
+int DLB_DROM_Attach(void) {
     const char *shm_key;
     const options_t *global_options = get_global_options();
     if (global_options) {
@@ -107,10 +107,10 @@ int DLB_DROM_Init(void) {
     return DLB_SUCCESS;
 }
 
-int DLB_DROM_Finalize(void) {
-    shmem_cpuinfo_ext__finalize();
-    shmem_procinfo_ext__finalize();
-    return DLB_SUCCESS;
+int DLB_DROM_Deattach(void) {
+    int error = shmem_cpuinfo_ext__finalize();
+    error = error ? error : shmem_procinfo_ext__finalize();
+    return error;
 }
 
 int DLB_DROM_GetNumCpus(int *ncpus) {
@@ -119,8 +119,7 @@ int DLB_DROM_GetNumCpus(int *ncpus) {
 }
 
 int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len) {
-    shmem_procinfo__getpidlist(pidlist, nelems, max_len);
-    return DLB_SUCCESS;
+    return shmem_procinfo__getpidlist(pidlist, nelems, max_len);
 }
 
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags) {

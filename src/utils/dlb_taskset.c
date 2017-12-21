@@ -48,7 +48,7 @@ static void dlb_check(int error, pid_t pid, const char* func) {
             fprintf(stderr, "Operation %s did not succeed\n", func);
         }
         fprintf(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
-        DLB_DROM_Finalize();
+        DLB_DROM_Deattach();
         exit(EXIT_FAILURE);
     }
 }
@@ -84,10 +84,10 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
 }
 
 static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
-    DLB_DROM_Init();
+    DLB_DROM_Attach();
     int error = DLB_DROM_SetProcessMask(pid, new_mask, 0);
     dlb_check(error, pid, __FUNCTION__);
-    DLB_DROM_Finalize();
+    DLB_DROM_Deattach();
 
     fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(new_mask));
 }
@@ -100,23 +100,23 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
         exit(EXIT_FAILURE);
     } else if (pid == 0) {
         pid = getpid();
-        DLB_DROM_Init();
+        DLB_DROM_Attach();
         dlb_drom_flags_t flags = DLB_STEAL_CPUS | (borrow ? DLB_RETURN_STOLEN : 0);
         int error = DLB_DROM_PreInit(pid, new_mask, flags, NULL);
         dlb_check(error, pid, __FUNCTION__);
-        DLB_DROM_Finalize();
+        DLB_DROM_Deattach();
         execvp(argv[0], argv);
         fprintf(stderr, "Failed to execute %s\n", argv[0]);
         exit(EXIT_FAILURE);
     } else {
         wait(NULL);
-        DLB_DROM_Init();
+        DLB_DROM_Attach();
         int error = DLB_DROM_PostFinalize(pid, borrow);
         if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
             // DLB_ERR_NOPROC must be ignored here
             dlb_check(error, pid, __FUNCTION__);
         }
-        DLB_DROM_Finalize();
+        DLB_DROM_Deattach();
     }
 }
 
@@ -146,7 +146,7 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 }
 
 static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
-    DLB_DROM_Init();
+    DLB_DROM_Attach();
 
     if (pid) {
         remove_affinity_of_one(pid, cpus_to_remove);
@@ -164,14 +164,14 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
         }
         free(pidlist);
     }
-    DLB_DROM_Finalize();
+    DLB_DROM_Deattach();
 }
 
 static void getpidof(int process_pseudo_id) {
     // Get PID list from DLB
     int nelems;
     int *pidlist = malloc(sys_size*sizeof(int));
-    DLB_DROM_Init();
+    DLB_DROM_Attach();
     DLB_DROM_GetPidList(pidlist, &nelems, sys_size);
     // Iterate pidlist
     int i;
@@ -186,14 +186,14 @@ static void getpidof(int process_pseudo_id) {
         }
     }
     free(pidlist);
-    DLB_DROM_Finalize();
+    DLB_DROM_Deattach();
 }
 
 static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t print_flags) {
     int error;
     cpu_set_t mask;
 
-    DLB_DROM_Init();
+    DLB_DROM_Attach();
     if (pid) {
         // Show CPU affinity of given PID
         error = DLB_DROM_GetProcessMask(pid, &mask, 0);
@@ -203,7 +203,7 @@ static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t pr
         // Show CPU affinity of all processes attached to DLB
         DLB_PrintShmem(list_columns, print_flags);
     }
-    DLB_DROM_Finalize();
+    DLB_DROM_Deattach();
 }
 
 

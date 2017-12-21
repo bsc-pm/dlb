@@ -42,9 +42,9 @@ static void test_fork(const cpu_set_t *mask, char ***env) {
     assert( pid >= 0 );
     if (pid == 0) {
         pid = getpid();
-        assert( DLB_DROM_Init()                     == DLB_SUCCESS );
-        assert( DLB_DROM_PreInit(pid, mask, 1, env) == DLB_SUCCESS );
-        assert( DLB_DROM_Finalize()                 == DLB_SUCCESS );
+        assert( DLB_DROM_Attach()                                   == DLB_SUCCESS );
+        assert( DLB_DROM_PreInit(pid, mask, DLB_STEAL_CPUS, env)    == DLB_SUCCESS );
+        assert( DLB_DROM_Deattach()                                 == DLB_SUCCESS );
 
         if (__gcov_flush) __gcov_flush();
 
@@ -76,9 +76,9 @@ static void test_fork(const cpu_set_t *mask, char ***env) {
         }
     }
 
-    assert( DLB_DROM_Init()                 == DLB_SUCCESS );
-    assert( DLB_DROM_PostFinalize(pid, 0)   == DLB_SUCCESS );
-    assert( DLB_DROM_Finalize()             == DLB_SUCCESS );
+    assert( DLB_DROM_Attach()                                   == DLB_SUCCESS );
+    assert( DLB_DROM_PostFinalize(pid, 0)                       == DLB_SUCCESS );
+    assert( DLB_DROM_Deattach()                                 == DLB_SUCCESS );
 }
 
 int main(int argc, char **argv) {
