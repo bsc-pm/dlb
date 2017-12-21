@@ -35,35 +35,10 @@ To achieve this DLB will lend the cpus of a process waiting in a blocking MPI ca
 Dynamic Resource Ownership Manager (DROM)
 =========================================
 
-DROM (Dynamic Resource Ownership Manager) is the algorithm used to manage the
-CPU affinity of a process running a shared memory programming model (e.g.,
-OpenMP).
+DROM is a new module included in the DLB library, it offers an API to change
+the computational resources assigned to a process at runtime.
 
-
-.. ===========
-.. DLB Modules
-.. ===========
-
-.. Micro Load Balancing
-.. --------------------
-
-.. The micro load balance module will try to obtain an efficient use of the resources inside the computational node. This module can lend the cpus from one proces to another (different MPI processes of the same application or processes from two different applications).
-
-.. We call it micro load balance because it can react to very fine granularities.
-
-.. .. _statistics:
-
-.. Statistics
-.. ----------
-.. This feature is in development and will be added in future versions.
-
-
-.. .. _barrier:
-
-.. Node Barrier
-.. ------------
-.. This feature is in development and will be added in future versions.
-
-
-
-
+.. image:: images/drom.png
+  :width: 300pt
+  :align: center
+  :alt: DROM
