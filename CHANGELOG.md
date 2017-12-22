@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - DLB acquire now does not schedule because it forces the acquisition, DLB Borrow does
   scheduling but only looks for idle CPUs and never creates a CPU request
 - DLB options print format reworked, `DLB_ARGS` is now used to pass options to DLB.
-- Fortran Interface now is a include Fortran Interface ? (weird wording)
+- Fortran Interface is now provided using an include with ISO C bindings.
 - Shared Memory synchronization mechanism is now managed using a pthread spinlock
 - DROM services now use the same shmem handler so no need to call `DLB_Init` and `DLB_DROM_Init`
 - DROM services Get/Set process mask are now asynchronous functions
