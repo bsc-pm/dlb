@@ -1,6 +1,6 @@
-***********************
-Technical Requierements
-***********************
+**********************
+Technical Requirements
+**********************
 
 ==================
 Programming models

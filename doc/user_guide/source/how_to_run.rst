@@ -60,7 +60,7 @@ need to pass the compile and linker flags to your compiler::
 
 .. note::
     OMPT support is in progress, if your OpenMP runtime supports it DLB can automatically
-    intercept parallel constructs and modifify the number of threads at that time.
+    intercept parallel constructs and modify the number of threads at that time.
 
 MPI + OpenMP
 ------------
