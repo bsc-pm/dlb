@@ -16,4 +16,4 @@ Welcome to DLB's documentation!
     api
     advance_usage
     faq
-    content
+    contents

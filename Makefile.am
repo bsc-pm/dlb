@@ -406,7 +406,7 @@ sphinx_files = \
 	doc/user_guide/source/conf.py \
 	doc/user_guide/source/advance_usage.rst \
 	doc/user_guide/source/api.rst \
-	doc/user_guide/source/content.rst \
+	doc/user_guide/source/contents.rst \
 	doc/user_guide/source/faq.rst \
 	doc/user_guide/source/how_to_install.rst \
 	doc/user_guide/source/how_to_run.rst \

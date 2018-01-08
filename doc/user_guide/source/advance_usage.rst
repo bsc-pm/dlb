@@ -76,11 +76,12 @@ an example::
 Asynchronous mode
 =================
 
-DLB works on polling mode but the asynchronous mode can be enabled using the option
-``DLB_ARGS+=" --mode=async"``.
+DLB works on polling mode by default, this means that each process needs to poll to check
+if a certain resource can be either acquired or must be returned.
 
-In this mode, DLB creates a helper thread that will manage all the callbacks whenever the
-status of a CPU changes.
+From DLB 2.0, the library can also start in asynchronous mode using the option
+``DLB_ARGS+=" --mode=async"``. In this mode, DLB creates a helper thread that will invoke
+the appropriate callbacks from each process whenever necessary.
 
 Requests
 ========
@@ -97,9 +98,9 @@ anything, but a few points to consider:
 * Don't ignore return errors from DLB. The petition queue is finite and DLB can return
   ``DLB_ERR_REQST`` if the system cannot accept more petitions from a certain CPU.
 * If some CPU request was made through ``DLB_AcquireCpu(int cpuid)``, this request can be
-  revoked calling ``DLB_LendCpu(int cpuid)`` or ``DLB_Lend()``. [#f1]_
+  revoked by calling ``DLB_LendCpu(int cpuid)`` or ``DLB_Lend()``. [#f1]_
 * If some CPU request was made through ``DLB_AcquireCpus(int ncpus)``, this request can be
-  revoked calling ``DLB_AcquireCpus(0)``. [#f1]_
+  revoked by calling ``DLB_AcquireCpus(0)``. [#f1]_
 
 .. [#f1] This logic may change in the future. Currently there are two types of queues
         (specific CPUs, and unspecific) and we could consider to clear both queues using

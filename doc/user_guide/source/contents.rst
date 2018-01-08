@@ -1,6 +1,6 @@
-**********************
-Content of the Package
-**********************
+***********************
+Contents of the Package
+***********************
 
 Structure
 =========
@@ -73,10 +73,10 @@ should only focus on these ones:
 
 **libdlb_mpi.so**
     Link in the correct order or just preload it using ``LD_PRELOAD`` environment variable
-    if you want DLB to intercetp MPI calls.
+    if you want DLB to intercept MPI calls.
 
 **libdlb_mpif.so**
-    Same case as above, but to intercep MPI Fortran calls.
+    Same case as above, but to intercept MPI Fortran calls.
 
 Remember that if the programming model already supports DLB (as in Nanos++), you don't need
 to link against any library.
@@ -96,11 +96,6 @@ in the ``PATH``.
 .. note::
     In order to enable tracing you need an Extrae installation and to correctly set the
     ``EXTRAE_HOME`` environment variable.
-
-.. note::
-    Some examples preload the DLB Extrae library (ending in trace-lb.so). If you
-    don't have those libraries installed reconfigure your Extrae installation with the
-    option ``--with-load-balancing=${DLB_PREFIX}``
 
 MPI + OpenMP
 ------------
