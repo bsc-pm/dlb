@@ -439,7 +439,11 @@ void options_init(options_t *options, const char *dlb_args) {
         char *str = dlb_args_from_api;
         while(isspace((unsigned char)*str)) str++;
         if (strlen(str) > 0) {
-            warning("Unrecognized flags from DLB_Init: %s", str);
+            if (options->debug_opts & DBG_WERROR) {
+                fatal("Unrecognized flags from DLB_Init: %s", str);
+            } else {
+                warning("Unrecognized flags from DLB_Init: %s", str);
+            }
         }
         free(dlb_args_from_api);
     }
@@ -447,7 +451,11 @@ void options_init(options_t *options, const char *dlb_args) {
         char *str = dlb_args_from_env;
         while(isspace((unsigned char)*str)) str++;
         if (strlen(str) > 0) {
-            warning("Unrecognized flags from DLB_ARGS: %s", str);
+            if (options->debug_opts & DBG_WERROR) {
+                fatal("Unrecognized flags from DLB_ARGS: %s", str);
+            } else {
+                warning("Unrecognized flags from DLB_ARGS: %s", str);
+            }
         }
         free(dlb_args_from_env);
     }

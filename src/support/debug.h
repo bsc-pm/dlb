@@ -35,7 +35,8 @@ void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
 void print_backtrace(void);
 void dlb_clean(void);
 
-extern verbose_opts_t vb_opts;
+extern bool             vb_werror;
+extern verbose_opts_t   vb_opts;
 
 
 #define fatal(...) \
@@ -46,7 +47,10 @@ extern verbose_opts_t vb_opts;
     } while(0)
 
 #define warning(...) \
-    vb_print(stderr, "DLB WARNING", __VA_ARGS__)
+    do { \
+        if (!vb_werror) { vb_print(stderr, "DLB WARNING", __VA_ARGS__); } \
+        else { fatal(__VA_ARGS__); } \
+    } while(0)
 
 #define info(...) \
     vb_print(stdout, "DLB", __VA_ARGS__)
@@ -55,19 +59,18 @@ extern verbose_opts_t vb_opts;
 // verbose0 macros will print only if rank == 0 in MPI
 #define fatal0(...) \
     do { \
-        if (_mpi_rank <= 0) { vb_print(stderr, "DLB PANIC", __VA_ARGS__); } \
-        abort(); \
+        if (_mpi_rank <= 0) { fatal(__VA_ARGS__); } \
+        else { dlb_clean(); abort(); } \
     } while(0)
-
 
 #define warning0(...) \
     do { \
-        if (_mpi_rank <= 0) { vb_print(stderr, "DLB WARNING", __VA_ARGS__); } \
+        if (_mpi_rank <= 0) { warning(__VA_ARGS__); } \
     } while(0)
 
 #define info0(...) \
     do { \
-        if (_mpi_rank <= 0) { vb_print(stdout, "DLB", __VA_ARGS__); } \
+        if (_mpi_rank <= 0) { info(__VA_ARGS__); } \
     } while(0)
 
 #else /* MPI_LIB */

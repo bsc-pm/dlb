@@ -40,15 +40,18 @@
 #include <stdarg.h>
 #include <execinfo.h>
 
-#define VBFORMAT_LEN 32
-verbose_opts_t vb_opts;
+/* Global variables needed for debug macros */
+bool vb_werror = false;
+verbose_opts_t vb_opts = VB_CLEAR;
+
+enum { VBFORMAT_LEN = 32 };
 static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
 
 void debug_init(const options_t *options) {
+    vb_werror = options->debug_opts & DBG_WERROR;
     vb_opts = options->verbose;
     vb_fmt = options->verbose_fmt;
-
 
     int i = 0;
     if ( vb_fmt & VBF_NODE ) {
