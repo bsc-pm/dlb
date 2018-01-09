@@ -64,8 +64,8 @@ int main( int argc, char **argv ) {
     assert(options_1.drom == true);
     assert(options_1.lewi_affinity == PRIO_NEARBY_ONLY);
 
-    // Check option overwrite
-    options_init(&options_1, "--drom=1 --drom=0");
+    // Check option overwrite (werror because both arguments need to be cleaned)
+    options_init(&options_1, "--debug-opts=werror --drom=1 --drom=0");
     assert(options_1.drom == false);
 
     // Check different forms of parsing a boolean
@@ -127,11 +127,16 @@ int main( int argc, char **argv ) {
     options_init(&options_2, "");
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
-    // Found bug: "--lewi --lewi-mpi" is well parsed but "--lewi-mpi --lewi" is not.
+    // bug: "--lewi --lewi-mpi" is well parsed but "--lewi-mpi --lewi" is not.
     options_init(&options_1, "--lewi --lewi-mpi");
     assert(options_1.lewi && options_1.lewi_mpi);
     options_init(&options_1, "--lewi-mpi --lewi");
     assert(options_1.lewi && options_1.lewi_mpi);
+
+    // bug: "--option=arg" is well parsed but "=arg" remains in the argument
+    //      (werror will cause "Unrecognized options" warning to fail)
+    options_init(&options_1, "--debug-opts=werror");
+    assert(options_1.debug_opts & DBG_WERROR);
 
     return 0;
 }

@@ -297,9 +297,14 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
     char *dlb_args_copy = malloc(sizeof(char)*len);
     strncpy(dlb_args_copy, dlb_args, len);
     char *token = strtok_r(dlb_args_copy, " ", &end_space);
+    size_t removed_chars = 0;
     while (token) {
         /* Each token is a complete string representing an option */
+
+        /* token sizes need to be computed before tokenizing token into arg=val */
         bool remove_token = false;
+        size_t token_offset = token - dlb_args_copy;
+        size_t token_len = strlen(token);
 
         if (strchr(token, '=')) {
             /* Option is of the form --argument=value */
@@ -329,11 +334,10 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
 
         if (remove_token) {
             /* Remove token from dlb_args */
-            size_t token_offset = token - dlb_args_copy;
-            size_t token_len = strlen(token);
-            char *dest = dlb_args + token_offset;
+            char *dest = dlb_args + token_offset - removed_chars;
             char *src = dest + token_len;
             size_t n = strlen(src) + 1;
+            removed_chars += n;
             memmove(dest, src, n);
         }
 
