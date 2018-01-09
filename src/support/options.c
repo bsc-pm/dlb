@@ -292,6 +292,7 @@ static const char * get_value(option_type_t type, void *option) {
 static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value) {
     *arg_value = 0;
     /* Tokenize a copy of dlb_args with " "(blank) delimiter */
+    char *progress = dlb_args;
     char *end_space = NULL;
     size_t len = strlen(dlb_args) + 1;
     char *dlb_args_copy = malloc(sizeof(char)*len);
@@ -299,7 +300,12 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
     char *token = strtok_r(dlb_args_copy, " ", &end_space);
     while (token) {
         /* Each token is a complete string representing an option */
+
         bool remove_token = false;
+        /* token length must be computed before tokenizing into arg=val */
+        size_t token_len = strlen(token);
+        /* progress pointer must be updated each iteration to skip spaces */
+        while(isspace((unsigned char)*progress)) progress++;
 
         if (strchr(token, '=')) {
             /* Option is of the form --argument=value */
@@ -312,7 +318,7 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
                 strncpy(arg_value, value, MAX_OPTION_LENGTH);
                 remove_token = true;
             }
-        } else{
+        } else {
             /* Option is of the form --argument/--no-argument */
             char *argument = token;
             if (strcmp(argument, arg_name) == 0) {
@@ -329,12 +335,13 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
 
         if (remove_token) {
             /* Remove token from dlb_args */
-            size_t token_offset = token - dlb_args_copy;
-            size_t token_len = strlen(token);
-            char *dest = dlb_args + token_offset;
-            char *src = dest + token_len;
+            char *dest = progress;
+            char *src  = progress + token_len;
             size_t n = strlen(src) + 1;
             memmove(dest, src, n);
+        } else {
+            /* Token is not removed, update parsed progress pointer  */
+            progress += token_len;
         }
 
         /* next token */
