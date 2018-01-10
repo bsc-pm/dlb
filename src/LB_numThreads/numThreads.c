@@ -140,7 +140,6 @@ int update_threads(const pm_interface_t *pm, int threads) {
         warning("Trying to use more CPUS (%d) than available (%d)", threads, cpus_node);
         threads = cpus_node;
     } else if (threads < 1) {
-        warning("setting number of threads to 0 not allowed, falling back to 1");
         threads = 1;
     }
 
