@@ -91,6 +91,10 @@ int lewi_DisableDLB(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
+    if (myCPUS>max){
+        releaseCpus(myCPUS-max);
+        setThreads_Lend_light(&spd->pm, max);
+    }
     max_parallelism = max;
     return DLB_SUCCESS;
 }
