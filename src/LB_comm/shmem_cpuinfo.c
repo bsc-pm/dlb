@@ -946,17 +946,21 @@ int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority
         new_guests[i] = -1;
     }
 
-    bool one_sucess = false;
+    bool one_success = false;
     shmem_lock(shm_handler);
     {
+        /* Borrow CPUs following the priority of cpus_priority_array, */
         for (i=0; i<node_size; ++i) {
             int cpuid = cpus_priority_array[i];
             if (cpuid == -1) break;
             if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
-                one_sucess = true;
+                one_success = true;
             }
         }
 
+        /* Only in case --priority=spread-ifempty, the CPU candidates cannot
+         * be precomputed since it depends on the current state of each CPU
+         */
         if (priority == PRIO_SPREAD_IFEMPTY) {
             // Check also empty sockets
             cpu_set_t free_mask;
@@ -973,7 +977,7 @@ int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority
             for (cpuid=0; cpuid<node_size; ++cpuid) {
                 if (CPU_ISSET(cpuid, &free_sockets)) {
                     if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
-                        one_sucess = true;
+                        one_success = true;
                     }
                 }
             }
@@ -981,7 +985,7 @@ int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority
     }
     shmem_unlock(shm_handler);
 
-    return one_sucess ? DLB_SUCCESS : DLB_NOUPDT;
+    return one_success ? DLB_SUCCESS : DLB_NOUPDT;
 }
 
 int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
@@ -1024,7 +1028,7 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
         }
 
 
-        /* Only in case --priority=affinity_full, the CPU candidates cannot
+        /* Only in case --priority=spread-ifempty, the CPU candidates cannot
          * be precomputed since it depends on the current state of each CPU
          */
         if (priority == PRIO_SPREAD_IFEMPTY && ncpus > 0) {
