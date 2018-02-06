@@ -802,7 +802,7 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
 
     /* Optimization: check first that one of these conditions are met:
      *  - Some owned CPU is not guested by pid
-     *  - Timestamp of last borrow is older than last CPU lent
+     *  - Timestamp of last unsuccessful borrow is older than last CPU lent
      */
     if (ncpus != 0 && last_borrow != NULL) {
         bool try_acquire = false;
@@ -816,7 +816,6 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
         }
         try_acquire = try_acquire || *last_borrow < shdata->timestamp_cpu_lent;
         if (!try_acquire) return DLB_NOUPDT;
-        *last_borrow = get_time_in_ns();
     }
 
     /* Functions that iterate cpus_priority_array may not check every CPU,
@@ -873,6 +872,11 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
             if (ncpus > 0) {
                 verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
                 error = push_global_request(&shdata->global_requests, pid, ncpus);
+            }
+
+            /* Update timestamp if borrow did not succeed */
+            if (last_borrow != NULL && error != DLB_SUCCESS && error != DLB_NOTED) {
+                *last_borrow = get_time_in_ns();
             }
         }
     }
@@ -932,11 +936,10 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
 
 int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
         int64_t *last_borrow, pid_t new_guests[]) {
+
     /* Optimization: check first that last borrow is older than last CPU lent */
-    if (last_borrow != NULL) {
-        if (*last_borrow > shdata->timestamp_cpu_lent) return DLB_NOUPDT;
-        *last_borrow = get_time_in_ns();
-    }
+    if (last_borrow != NULL && *last_borrow > shdata->timestamp_cpu_lent)
+        return DLB_NOUPDT;
 
     /* Functions that iterate cpus_priority_array may not check every CPU,
      * output arrays need to be properly initialized
@@ -982,6 +985,11 @@ int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority
                 }
             }
         }
+
+        /* Update timestamp if borrow did not succeed */
+        if (last_borrow != NULL && !one_success) {
+            *last_borrow = get_time_in_ns();
+        }
     }
     shmem_unlock(shm_handler);
 
@@ -1000,11 +1008,10 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
 
 int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
         int64_t *last_borrow, int ncpus, pid_t new_guests[]) {
+
     /* Optimization: check first that last borrow is older than last CPU lent */
-    if (last_borrow != NULL) {
-        if (*last_borrow > shdata->timestamp_cpu_lent) return DLB_NOUPDT;
-        *last_borrow = get_time_in_ns();
-    }
+    if (last_borrow != NULL && *last_borrow > shdata->timestamp_cpu_lent)
+        return DLB_NOUPDT;
 
     /* Functions that iterate cpus_priority_array may not check every CPU,
      * output arrays need to be properly initialized
@@ -1051,6 +1058,11 @@ int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priorit
                     }
                 }
             }
+        }
+
+        /* Update timestamp if borrow did not succeed */
+        if (last_borrow != NULL && error != DLB_SUCCESS) {
+            *last_borrow = get_time_in_ns();
         }
     }
     shmem_unlock(shm_handler);
