@@ -72,6 +72,8 @@ int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd) {
+    /* Reset value of last_borrow */
+    ((lewi_info_t*)spd->lewi_info)->last_borrow = 0;
     return DLB_SUCCESS;
 }
 

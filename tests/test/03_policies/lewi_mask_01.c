@@ -76,15 +76,14 @@ int main( int argc, char **argv ) {
     mu_init();
     mu_testing_set_sys_size(SYS_SIZE);
 
-    // Initialize local masks to [1100] and [0011]
-    CPU_ZERO(&sp1_mask);
-    CPU_SET(0, &sp1_mask);
-    CPU_SET(1, &sp1_mask);
-    CPU_ZERO(&sp2_mask);
-    CPU_SET(2, &sp2_mask);
-    CPU_SET(3, &sp2_mask);
+    // Initialize constant masks for fast reference
+    const cpu_set_t sys_mask = { .__bits = {0xf} };       /* [1111] */
+    const cpu_set_t sp1_process_mask = {.__bits={0x3}};   /* [0011] */
+    const cpu_set_t sp2_process_mask = {.__bits={0xc}};   /* [1100] */
 
-    cpu_set_t sys_mask = { .__bits = {0xf} }; /* [1111] */
+    // Initialize local masks to [1100] and [0011]
+    memcpy(&sp1_mask, &sp1_process_mask, sizeof(cpu_set_t));
+    memcpy(&sp2_mask, &sp2_process_mask, sizeof(cpu_set_t));
 
     // Subprocess 1 init
     spd1.id = 111;
@@ -194,8 +193,6 @@ int main( int argc, char **argv ) {
         assert( lewi_mask_ReclaimCpuMask(&spd1, &sys_mask) == DLB_ERR_PERM );
 
         // Subprocess 1 reclaims its CPUs
-        cpu_set_t sp1_process_mask = {.__bits={0x3}};
-        cpu_set_t sp2_process_mask = {.__bits={0xc}};
         assert( lewi_mask_ReclaimCpuMask(&spd1, &sp1_process_mask) == DLB_NOTED );
 
         // Subprocess 2 lends external CPUs
@@ -265,6 +262,33 @@ int main( int argc, char **argv ) {
         // Subprocess 1 resets. CPU 1 should not be re-enabled
         assert( lewi_mask_DisableDLB(&spd1) == DLB_SUCCESS );
         assert_loop( CPU_ISSET(0, &sp1_mask) && CPU_COUNT(&sp1_mask) == 1 );
+
+        // Subprocess 2 recovers CPU 3
+        assert( lewi_mask_AcquireCpu(&spd2, 3) == DLB_SUCCESS );
+        assert_loop( CPU_ISSET(3, &sp2_mask) );
+    }
+
+    /* Last borrow optimization test */
+    {
+        // Subprocess 1 lends everything
+        CPU_ZERO(&sp1_mask);
+        assert( lewi_mask_LendCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+
+        // Subprocess 2 borrows 1 CPU 3 times
+        assert( lewi_mask_BorrowCpus(&spd2, 1) == DLB_SUCCESS );
+        assert( lewi_mask_BorrowCpus(&spd2, 1) == DLB_SUCCESS );
+        assert( lewi_mask_BorrowCpus(&spd2, 1) == DLB_NOUPDT );
+        assert_loop( CPU_COUNT(&sp2_mask) == 4
+                && CPU_ISSET(0, &sp2_mask) && CPU_ISSET(1, &sp2_mask) );
+
+        // Subprocess 2 returns borrowed CPUs
+        CPU_CLR(0, &sp2_mask);
+        CPU_CLR(1, &sp2_mask);
+        assert( lewi_mask_LendCpuMask(&spd2, &sp1_process_mask) == DLB_SUCCESS );
+
+        // Subprocess 1 acquire its CPUs
+        assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+        assert_loop( CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
     }
 
     // Policy finalize
