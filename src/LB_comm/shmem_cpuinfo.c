@@ -846,6 +846,8 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
                 if (cpuid == -1) break;
                 /* Go to next loop if cpu array does not contain owned CPUs */
                 if (shdata->node_info[cpuid].owner != pid) break;
+                /* Skip CPU if state is BUSY (it's either guested or already reclaimed) */
+                if (shdata->node_info[cpuid].state == CPU_BUSY) continue;
 
                 int local_error = acquire_cpu(pid, cpuid,
                         &new_guests[cpuid], &victims[cpuid]);
