@@ -154,7 +154,7 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
             shdata->initialized = true;
         }
 
-        // Find whether the process is preregistered
+        // Find whether the process is preregistered or get a free spot otherwise
         bool preregistered = false;
         int p;
         for (p = 0; p < max_processes; p++) {
@@ -192,7 +192,10 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
         }
     }
     shmem_unlock(shm_handler);
+
     if (process == NULL) {
+        verbose(VB_SHMEM,
+            "Not enough space in the shared memory to register process %d", pid);
         error = DLB_ERR_NOMEM;
     }
 
@@ -227,16 +230,17 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error = DLB_SUCCESS;
+    pinfo_t *process = NULL;
     shmem_lock(shm_handler);
     {
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == pid) {
                 // PID already registered
-                shmem_unlock(shm_handler);
-                fatal("already registered");
+                error = DLB_ERR_INIT;
+                break;
             } else if (shdata->process_info[p].pid == NOBODY) {
-                pinfo_t *process = &shdata->process_info[p];
+                process = &shdata->process_info[p];
                 process->pid = pid;
                 process->dirty = false;
                 process->returncode = 0;
@@ -253,9 +257,9 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
                     error = error ? error : set_new_mask(process, mask, false);
                 }
                 if (error) {
-                    shmem_unlock(shm_handler);
-                    // FIXME: we should clean the shmem before that
-                    fatal("Error trying to register CPU mask: %s", mu_to_str(mask));
+                    // Release shared memory spot
+                    process->pid = NOBODY;
+                    break;
                 }
 
                 // Blindly apply future mask modified inside register_mask or set_new_mask
@@ -271,12 +275,20 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
                 break;
             }
         }
-        if (p == max_processes) {
-            shmem_unlock(shm_handler);
-            fatal("Not enough space in the shared memory to register process %d", pid);
-        }
     }
     shmem_unlock(shm_handler);
+
+    if (error == DLB_ERR_INIT) {
+        verbose(VB_SHMEM, "Process %d already registered", pid);
+    } else if (error == DLB_ERR_PERM) {
+        verbose(VB_SHMEM,
+                "Error trying to register CPU mask: %s", mu_to_str(mask));
+    } else if (process == NULL) {
+        verbose(VB_SHMEM,
+            "Not enough space in the shared memory to register process %d", pid);
+        error = DLB_ERR_NOMEM;
+    }
+
     return error;
 }
 

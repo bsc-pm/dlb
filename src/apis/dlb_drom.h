@@ -107,6 +107,7 @@ int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t 
  *  \param[inout] next_environ environment to modify if the process is going to fork-exec
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_INIT if the process is already registered
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
  *  \return DLB_ERR_PERM if the provided mask overlaps with an existing registered
  *                      process and stealing option is not set

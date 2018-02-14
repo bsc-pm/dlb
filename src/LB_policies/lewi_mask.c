@@ -30,10 +30,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Node size is constant across subprocesses, it is safe to be shared */
+/* Node size will be the same for all processes in the node,
+ * it is safe to be out of the shared memory */
 static int node_size = -1;
 
-/* These variables cannot be shared, so they need a private allocation */
+/* LeWI_mask data is private for each process */
 typedef struct LeWI_mask_info {
     int64_t last_borrow;
     int *cpus_priority_array;
