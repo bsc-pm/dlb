@@ -53,8 +53,6 @@ int main( int argc, char **argv ) {
     int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
     cpu_set_t mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-    char shm_filename[SHM_NAME_LENGTH+8];
-    snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
 
     // Initialize sub-process
     assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
@@ -89,7 +87,7 @@ int main( int argc, char **argv ) {
         assert( CPU_EQUAL(&process_mask, &mask) );
     }
 
-    //Finalize external
+    // Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 
     // Finalize sub-process

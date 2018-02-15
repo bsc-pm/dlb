@@ -169,8 +169,8 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
         add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
     }
 
-    int error = shmem_procinfo_ext__preinit(pid, mask, flags & DLB_STEAL_CPUS);
-    error = error ? error : shmem_cpuinfo_ext__preinit(pid, mask, flags & DLB_STEAL_CPUS);
+    int error = shmem_procinfo_ext__preinit(pid, mask, flags);
+    error = error ? error : shmem_cpuinfo_ext__preinit(pid, mask, flags);
     return error;
 }
 

@@ -317,7 +317,7 @@ int shmem_cpuinfo_ext__init(const char *shmem_key) {
     return DLB_SUCCESS;
 }
 
-int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
+int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
     int error;
     shmem_lock(shm_handler);
@@ -327,7 +327,7 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal) {
             get_time(&shdata->initial_time);
         }
 
-        error = register_process(pid, mask, steal);
+        error = register_process(pid, mask, flags & DLB_STEAL_CPUS);
     }
     shmem_unlock(shm_handler);
 

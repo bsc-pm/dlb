@@ -40,14 +40,10 @@ int main( int argc, char **argv ) {
     int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
     cpu_set_t process_mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-    char shm_filename[SHM_NAME_LENGTH+8];
-    snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
 
     // Register two processes with the same mask, and check the error codes are ok
     assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
-    if (num_cpus == 1) {
-        assert( shmem_procinfo__init(pid+1, &process_mask, NULL, NULL) == DLB_ERR_NOMEM );
-    } else {
+    if (num_cpus > 1) {
         assert( shmem_procinfo__init(pid+1, &process_mask, NULL, NULL) == DLB_ERR_PERM );
     }
     assert( shmem_procinfo__finalize(pid, false) == DLB_SUCCESS );

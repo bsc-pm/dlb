@@ -30,7 +30,7 @@
 int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *new_process_mask,
         const char *shmem_key);
 int shmem_procinfo_ext__init(const char *shmem_key);
-int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, int steal);
+int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags);
 
 /* Finalize / Unregister */
 int shmem_procinfo__finalize(pid_t pid, bool return_stolen);
