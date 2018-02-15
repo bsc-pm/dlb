@@ -45,7 +45,6 @@ enum { SYNC_POLL_TIMEOUT = 1000000000 };    /* 10^9 ns = 1s */
 typedef struct {
     pid_t pid;
     bool dirty;
-    int returncode;
     cpu_set_t current_process_mask;
     cpu_set_t future_process_mask;
     cpu_set_t stolen_cpus;
@@ -179,7 +178,6 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
             if (error == DLB_SUCCESS) {
                 process->pid = pid;
                 process->dirty = false;
-                process->returncode = 0;
                 memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
                 memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
 
@@ -245,7 +243,6 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
                 process = &shdata->process_info[p];
                 process->pid = pid;
                 process->dirty = false;
-                process->returncode = 0;
                 CPU_ZERO(&process->current_process_mask);
                 CPU_ZERO(&process->future_process_mask);
 
@@ -266,7 +263,6 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
                 // Blindly apply future mask modified inside register_mask or set_new_mask
                 memcpy(&process->current_process_mask, mask, sizeof(cpu_set_t));
                 process->dirty = false;
-                process->returncode = 0;
 
 #ifdef DLB_LOAD_AVERAGE
                 process->load[0] = 0.0f;
@@ -371,7 +367,6 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen) {
                 // Clear process fields
                 process->pid = NOBODY;
                 process->dirty = false;
-                process->returncode = 0;
                 CPU_ZERO(&process->current_process_mask);
                 CPU_ZERO(&process->future_process_mask);
                 CPU_ZERO(&process->stolen_cpus);
@@ -452,7 +447,6 @@ int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen) {
             // Clear process fields
             process->pid = NOBODY;
             process->dirty = false;
-            process->returncode = 0;
             CPU_ZERO(&process->current_process_mask);
             CPU_ZERO(&process->future_process_mask);
             CPU_ZERO(&process->stolen_cpus);
@@ -574,13 +568,11 @@ int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_fl
         // Find process
         process = get_process(pid);
         if (process == NULL) {
-            verbose(VB_DROM, "Setting mask: cannot find process with pid %d", pid);
             error = DLB_ERR_NOPROC;
         }
 
         // Process already dirty
         if (!error && process->dirty) {
-            verbose(VB_DROM, "Setting mask: process %d is already dirty", pid);
             error = DLB_ERR_PDIRTY;
         }
 
@@ -589,41 +581,47 @@ int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_fl
     }
     shmem_unlock(shm_handler);
 
-    // Polling until dirty is cleared, and get returncode
+    // Polling until dirty is cleared
     if (!error && sync) {
-        int64_t elapsed;
+        bool done = false;
         struct timespec start, now;
         get_time_coarse(&start);
-        while(true) {
-
-            // TODO Check if process is still valid
-            // error = DLB_ERR_NOPROC;
+        do {
 
             // Delay
             usleep(SYNC_POLL_DELAY);
 
-            // Polling
-            bool done = false;
+            // Poll
             shmem_lock(shm_handler);
             {
+                if (process->pid != pid) {
+                    // process no longer valid
+                    error = DLB_ERR_NOPROC;
+                    done = true;
+                }
+
                 if (!process->dirty) {
-                    error = process->returncode;
                     done = true;
                 }
             }
             shmem_unlock(shm_handler);
 
-            // Break if done
-            if (done) break;
-
-            // Break if timeout
-            get_time_coarse(&now);
-            elapsed = timespec_diff(&start, &now);
-            if (elapsed > SYNC_POLL_TIMEOUT) {
-                error = DLB_ERR_TIMEOUT;
-                break;
+            // Check timeout
+            if (!done) {
+                get_time_coarse(&now);
+                if (timespec_diff(&start, &now) > SYNC_POLL_TIMEOUT) {
+                    error = DLB_ERR_TIMEOUT;
+                }
             }
-        }
+        } while (!done && error == DLB_SUCCESS);
+    }
+
+    if (error == DLB_ERR_NOPROC) {
+        verbose(VB_DROM, "Setting mask: cannot find process with pid %d", pid);
+    } else if (error == DLB_ERR_PDIRTY) {
+        verbose(VB_DROM, "Setting mask: process %d is already dirty", pid);
+    } else if (error == DLB_ERR_PERM) {
+        verbose(VB_DROM, "Setting mask: cannot steal mask %s", mu_to_str(mask));
     }
 
     return error;
@@ -655,7 +653,6 @@ int shmem_procinfo__polldrom(pid_t pid, int *new_cpus, cpu_set_t *new_mask) {
                 memcpy(&process->current_process_mask, &process->future_process_mask,
                         sizeof(cpu_set_t));
                 process->dirty = false;
-                process->returncode = 0;
             }
             shmem_unlock(shm_handler);
             error = DLB_SUCCESS;
