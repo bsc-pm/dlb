@@ -1,0 +1,28 @@
+image: bscpm/citools
+
+cache:
+    untracked: true
+    key: "$CI_PIPELINE_ID"
+
+stages:
+    - configure
+    - build
+    - test
+
+configure:
+    stage: configure
+    script:
+        - ./bootstrap
+        - ./configure --disable-instrumentation --disable-instrumentation-debug --enable-coverage
+
+build:
+    stage: build
+    script:
+        - make
+
+coverage:
+    stage: test
+    script:
+        - make check
+        - gcovr -r .
+    coverage: '/TOTAL.*\s+(\d+\%)/'
