@@ -150,6 +150,7 @@ INSTR_DEBUG_CFLAGS="-g -O0"
 INSTR_DEBUG_FFLAGS="-g -O0"
 INSTR_DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
+### Coverage ###
 AC_MSG_CHECKING([whether to enable coverage profiling])
 AC_ARG_ENABLE([coverage],
     AS_HELP_STRING([--enable-coverage], [enable coverage profiling]),
@@ -161,7 +162,14 @@ AC_MSG_RESULT([$enable_coverage])
 AS_IF([test "x$enable_coverage" = xyes], [
     DEBUG_CFLAGS="$DEBUG_CFLAGS $COVERAGE_FLAGS"
     DEBUG_FFLAGS="$DEBUG_FFLAGS $COVERAGE_FLAGS"
+
+    AC_CHECK_PROG([gcovr], [gcovr], [yes])
+    AS_IF([test "x$gcovr" != xyes], [
+        AC_MSG_ERROR([Coverage profiling requires gcovr tool])
+    ])
 ])
+AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$enable_coverage" = xyes])
+
 
 AC_SUBST([PERFO_CFLAGS])
 AC_SUBST([PERFO_FFLAGS])
@@ -200,10 +208,6 @@ AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 # check for Doxygen
 AC_CHECK_PROG([doxygen], [doxygen], [yes])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
-
-# check for gcovr
-AC_CHECK_PROG([gcovr], [gcovr], [yes])
-AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$gcovr" = xyes && test "x$enable_coverage" = xyes])
 
 AC_CONFIG_HEADERS([config.h])
 
