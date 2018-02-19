@@ -38,7 +38,10 @@
 #include <limits.h>
 #include <unistd.h>
 #include <stdarg.h>
+
+#ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
+#endif
 
 /* Global variables needed for debug macros */
 bool vb_werror = false;
@@ -88,6 +91,7 @@ void vb_print(FILE *fp, const char *prefix, const char *fmt, ...) {
 }
 
 void print_backtrace(void) {
+#ifdef HAVE_EXECINFO_H
     void* trace_ptrs[100];
     int count = backtrace( trace_ptrs, 100 );
     char** func_names = backtrace_symbols( trace_ptrs, count );
@@ -102,7 +106,11 @@ void print_backtrace(void) {
     // Free the string pointers
     free( func_names );
     fprintf( stderr, "+--------------------------------------\n" );
-
+#else
+    fprintf( stderr, "+--------------------------------------\n" );
+    fprintf( stderr, "  Backtrace not supported\n") ;
+    fprintf( stderr, "+--------------------------------------\n" );
+#endif
 }
 
 void dlb_clean(void) {
