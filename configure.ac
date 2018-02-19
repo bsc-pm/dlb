@@ -80,6 +80,7 @@ AS_IF([test "x$developer_version" = xyes], [
 AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])
 AC_CHECK_HEADERS([stdatomic.h])
+AC_CHECK_HEADERS([execinfo.h])
 
 # use the Fortran compiler for the following checks
 AC_LANG_PUSH([Fortran])
