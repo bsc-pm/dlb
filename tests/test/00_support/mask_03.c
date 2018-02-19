@@ -25,53 +25,50 @@
 
 #include <sched.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #define MAX_SIZE 16
 
-static int parse_and_check(const char *str, const int *bits) {
+static void parse_and_check(const char *str, const int *bits) {
     int i;
-    int error = 0;
-    int nelems = 0;
+    size_t nelems = 0;
+    bool error = false;
     cpu_set_t mask;
 
     mu_parse_mask(str, &mask);
 
     // check every elem within MAX_SIZE
     for (i=0; i<MAX_SIZE && !error; ++i) {
-        error = error ? error : CPU_ISSET(i, &mask) != bits[i];
+        error = (bool)CPU_ISSET(i, &mask) != (bool)bits[i];
         nelems += bits[i];
     }
 
     // check size
     error = error ? error : CPU_COUNT(&mask) != nelems;
 
-    if (error) {
-        fprintf(stderr, "String %s parsed as %s\n", str, mu_to_str(&mask));
-    }
-
-    return error;
+    printf("String %s parsed as %s\n", str, mu_to_str(&mask));
+    assert( !error );
 }
 
 int main( int argc, char **argv ) {
-    int error = 0;
-
     mu_init();
     mu_testing_set_sys_size(MAX_SIZE);
 
-    error += parse_and_check("0", (const int[MAX_SIZE]){1, 0, 0});
-    error += parse_and_check("1", (const int[MAX_SIZE]){0, 1, 0});
-    error += parse_and_check("0,2", (const int[MAX_SIZE]){1, 0, 1});
+    parse_and_check("0", (const int[MAX_SIZE]){1, 0, 0});
+    parse_and_check("1", (const int[MAX_SIZE]){0, 1, 0});
+    parse_and_check("0,2", (const int[MAX_SIZE]){1, 0, 1});
 
     // Beware the range/bitmask ambiguity
-    error += parse_and_check("101b", (const int[MAX_SIZE]){1, 0, 1});
-    error += parse_and_check("10b", (const int[MAX_SIZE]){1});
-    error += parse_and_check("00000000001b",
-            (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
-    error += parse_and_check("10", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    parse_and_check("101b", (const int[MAX_SIZE]){1, 0, 1});
+    parse_and_check("10b", (const int[MAX_SIZE]){1});
+    parse_and_check("00000000001b", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    parse_and_check("10", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
 
-    error += parse_and_check("1,3-5,6,8", (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
-    error += parse_and_check("9-12", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
+    parse_and_check("1,3-5,6,8", (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
+    parse_and_check("9-12", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
 
     mu_finalize();
-    return error;
+    return EXIT_SUCCESS;
 }
