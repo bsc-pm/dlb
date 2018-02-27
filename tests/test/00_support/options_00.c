@@ -68,6 +68,12 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--drom=1 --drom=0");
     assert(options_1.drom == false);
 
+    // Check option overwrite (werror because both arguments need to be cleaned)
+    options_init(&options_1, "--debug-opts=werror --drom=1 --drom=0");
+    assert(options_1.drom == false);
+    options_init(&options_1, "    --debug-opts=werror   --drom=1   --drom=0  ");
+    assert(options_1.drom == false);
+
     // Check different forms of parsing a boolean
     options_init(&options_1, "--lewi");
     assert(options_1.lewi == true);
