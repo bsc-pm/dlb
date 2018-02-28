@@ -646,7 +646,7 @@ int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *vi
 }
 
 int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t new_guests[], pid_t victims[]) {
-    int error = DLB_SUCCESS;
+    int error = DLB_NOUPDT;
     //DLB_DEBUG( cpu_set_t idle_cpus; )
     //DLB_DEBUG( CPU_ZERO(&idle_cpus); )
 
@@ -660,8 +660,25 @@ int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t new_guests[], pid_t 
         int cpuid;
         for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
             if (shdata->node_info[cpuid].owner == pid) {
-                reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
-                --ncpus;
+                int local_error = reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
+                switch(local_error) {
+                    case DLB_NOTED:
+                        // max priority, always overwrite
+                        error = DLB_NOTED;
+                        --ncpus;
+                        break;
+                    case DLB_SUCCESS:
+                        // medium priority, only update if error is in lowest priority
+                        error = (error == DLB_NOTED) ? DLB_NOTED : DLB_SUCCESS;
+                        --ncpus;
+                        break;
+                    case DLB_NOUPDT:
+                        // lowest priority, default value
+                        break;
+                }
+            } else {
+                new_guests[cpuid] = -1;
+                victims[cpuid] = -1;
             }
             // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
             //if (is_idle(cpu)) {
