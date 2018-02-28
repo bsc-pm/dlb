@@ -51,6 +51,7 @@ int main( int argc, char **argv ) {
     subprocess_descriptor_t spd;
     spd.id = getpid();
     spd.options.mode = MODE_ASYNC;
+    int mycpu = sched_getcpu();
     sched_getaffinity(0, sizeof(cpu_set_t), &spd.process_mask);
 
     // Initialize shmems and callbacks
@@ -66,19 +67,19 @@ int main( int argc, char **argv ) {
     assert( lewi_mask_Init(&spd) == DLB_SUCCESS );
 
     // Reclaim a non-lent CPU (this should not trigger a callback)
-    assert( lewi_mask_ReclaimCpu(&spd, 0) == DLB_NOUPDT );
+    assert( lewi_mask_ReclaimCpu(&spd, mycpu) == DLB_NOUPDT );
 
     // Lend (this should not trigger a callback)
-    assert( lewi_mask_LendCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_LendCpu(&spd, mycpu) == DLB_SUCCESS );
 
     // Reclaim a lent CPU (callback enable)
-    assert( lewi_mask_ReclaimCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_ReclaimCpu(&spd, mycpu) == DLB_SUCCESS );
 
     // Lend
-    assert( lewi_mask_LendCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_LendCpu(&spd, mycpu) == DLB_SUCCESS );
 
     // Acquire a lent CPU (callback enable)
-    assert( lewi_mask_AcquireCpu(&spd, 0) == DLB_SUCCESS );
+    assert( lewi_mask_AcquireCpu(&spd, mycpu) == DLB_SUCCESS );
 
     // Finalize
     assert( lewi_mask_Finalize(&spd) == DLB_SUCCESS );

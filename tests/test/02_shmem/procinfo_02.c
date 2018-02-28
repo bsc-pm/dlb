@@ -28,11 +28,13 @@
 #include "apis/dlb_errors.h"
 #include "apis/dlb_types.h"
 #include "support/error.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <pthread.h>
 #include <assert.h>
 
@@ -48,15 +50,41 @@ static void* thread_start(void *arg) {
     return NULL;
 }
 
+enum { MIN_CPUS = 2 };
+
 int main( int argc, char **argv ) {
-    pid_t pid = getpid();
-    int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
-    cpu_set_t mask;
+    int num_cpus = mu_get_system_size();
+    if (num_cpus < MIN_CPUS) {
+        mu_testing_set_sys_size(MIN_CPUS);
+    }
+
+    /* Current process mask */
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
     char shm_filename[SHM_NAME_LENGTH+8];
     snprintf(shm_filename, SHM_NAME_LENGTH+8, "/dev/shm/DLB_procinfo_%d", getuid());
 
+    /* Obtain a new_mask */
+    cpu_set_t new_mask;
+    CPU_ZERO(&new_mask);
+    if (CPU_COUNT(&process_mask) > 1) {
+        // Current process mask contains at least 2 CPUs, use the first one
+        int i;
+        for (i=0; i<num_cpus; ++i) {
+            if (CPU_ISSET(i, &process_mask)) {
+                CPU_SET(i, &new_mask);
+                break;
+            }
+        }
+    } else {
+        // Current mask only contains 1 CPU, use a 'system mask'
+        int i;
+        for (i=0; i<num_cpus; ++i) {
+            CPU_SET(i, &new_mask);
+        }
+    }
+
     // Initialize sub-process
+    pid_t pid = getpid();
     assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
 
     // Initialize external
@@ -70,6 +98,7 @@ int main( int argc, char **argv ) {
     assert( pidlist[0] == pid );
 
     // Get process mask
+    cpu_set_t mask;
     assert( shmem_procinfo__getprocessmask(pid, &mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
     assert( CPU_EQUAL(&process_mask, &mask) );
 
@@ -78,15 +107,14 @@ int main( int argc, char **argv ) {
         pthread_t thread;
         pthread_create(&thread, NULL, thread_start, (void*)&pid);
 
-        // Set a new process mask (cpuid=0 to comply with single core machines)
-        CPU_CLR(0, &mask);
-        assert( shmem_procinfo__setprocessmask(pid, &mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
+        // Set a new process mask
+        assert( shmem_procinfo__setprocessmask(pid, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
 
         pthread_join(thread, NULL);
 
         // Check that masks are equivalent
         assert( shmem_procinfo__getprocessmask(pid, &mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
-        assert( CPU_EQUAL(&process_mask, &mask) );
+        assert( CPU_EQUAL(&new_mask, &mask) );
     }
 
     //Finalize external

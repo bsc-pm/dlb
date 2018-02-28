@@ -348,6 +348,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
 
 void mu_testing_set_sys_size(int size) {
     // For testing purposes only
+    CPU_ZERO(&sys.sys_mask);
     sys.size = size;
     int i;
     for (i=0; i<size; ++i) {
