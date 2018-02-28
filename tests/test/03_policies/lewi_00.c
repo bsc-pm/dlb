@@ -36,10 +36,6 @@ static void cb_set_num_threads(int num_threads, void *arg) {
     nthreads = num_threads;
 }
 
-static int min(int a, int b) {
-    return a < b ? a : b;
-}
-
 int main( int argc, char **argv ) {
     subprocess_descriptor_t spd;
     options_init(&spd.options, NULL);
@@ -73,8 +69,10 @@ int main( int argc, char **argv ) {
     assert( nthreads == 1 );
 
     // Borrow some CPUs
-    assert( lewi_BorrowCpus(&spd, 2) == DLB_SUCCESS );
-    assert( nthreads == min(original_nthreads, 3) );
+    if (original_nthreads >= 3) {
+        assert( lewi_BorrowCpus(&spd, 2) == DLB_SUCCESS );
+        assert( nthreads == 3 );
+    }
 
     // MaxParallelism test with Borrow
     {
@@ -86,8 +84,10 @@ int main( int argc, char **argv ) {
         assert( lewi_SetMaxParallelism(&spd, 4) == DLB_SUCCESS);
 
         // Borrow
-        assert( lewi_Borrow(&spd) == DLB_SUCCESS );
-        assert( nthreads == min(original_nthreads, 4) );
+        if (original_nthreads >= 4) {
+            assert( lewi_Borrow(&spd) == DLB_SUCCESS );
+            assert( nthreads == 4 );
+        }
     }
 
     // MaxParallelism test with BorrowCpu
