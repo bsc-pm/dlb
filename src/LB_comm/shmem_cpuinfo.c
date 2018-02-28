@@ -231,6 +231,8 @@ static void open_shmem(const char *shmem_key) {
 }
 
 static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
+    if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
+
     verbose(VB_SHMEM, "Registering process %d with mask %s", pid, mu_to_str(mask));
 
     int cpuid;

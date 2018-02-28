@@ -82,22 +82,21 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     debug_init(&spd->options);
     timer_init();
     if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
-        // If the process has been pre-initialized, the process mask may have changed
-        // procinfo_init must return a new_mask if so
-        cpu_set_t new_process_mask;
-        CPU_ZERO(&new_process_mask);
 
         // Initialize procinfo
+        cpu_set_t new_process_mask;
         error = shmem_procinfo__init(spd->id, &spd->process_mask,
                 &new_process_mask, spd->options.shm_key);
-        if (error != DLB_SUCCESS) return error;
 
-        // Update process_mask if procinfo informs of a new mask
-        if (CPU_COUNT(&new_process_mask) > 0) {
-            memcpy(&spd->process_mask, &new_process_mask, sizeof(cpu_set_t));
-            // FIXME: this will probably fail if we can't register a callback before Init
+        // If the process has been pre-initialized (error=DLB_NOTED),
+        // the mask provided by shmem_procinfo__init must overwrite the process mask
+        if (error == DLB_NOTED) {
             set_process_mask(&spd->pm, &new_process_mask);
+            memcpy(&spd->process_mask, &new_process_mask, sizeof(cpu_set_t));
+            error = DLB_SUCCESS;
         }
+
+        if (error != DLB_SUCCESS) return error;
 
         // Initialize cpuinfo
         error = shmem_cpuinfo__init(spd->id, &spd->process_mask, spd->options.shm_key);

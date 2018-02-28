@@ -139,7 +139,7 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
     ensure(n<64, "snprintf overflow");
 
     /* Set up OMP_NUM_THREADS new value */
-    int new_num_threads = CPU_COUNT(mask);
+    int new_num_threads = mask ? CPU_COUNT(mask) : 0;
     char omp_value[8];
     snprintf(omp_value, 8, "%d", new_num_threads);
 
@@ -156,17 +156,21 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
             setenv("DLB_ARGS", drom_args, 1);
         }
 
-        /* Modify OMP_NUM_THREADS only if already set */
-        const char *str = getenv("OMP_NUM_THREADS");
-        if (str && strtol(str, NULL, 0) != new_num_threads) {
-            warning("Re-setting OMP_NUM_THREADS to %d due to the new mask: %s",
-                    new_num_threads, mu_to_str(mask));
-            setenv("OMP_NUM_THREADS", omp_value, 1);
+        /* Modify OMP_NUM_THREADS only if mask is valid and variable already set */
+        if (new_num_threads > 0 ) {
+            const char *str = getenv("OMP_NUM_THREADS");
+            if (str && strtol(str, NULL, 0) != new_num_threads) {
+                warning("Re-setting OMP_NUM_THREADS to %d due to the new mask: %s",
+                        new_num_threads, mu_to_str(mask));
+                setenv("OMP_NUM_THREADS", omp_value, 1);
+            }
         }
     } else {
         // warning: next_environ must be a malloc'ed pointer
         add_to_environ("DLB_ARGS", drom_args, next_environ, append);
-        add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
+        if (new_num_threads > 0) {
+            add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
+        }
     }
 
     int error = shmem_procinfo_ext__preinit(pid, mask, flags);

@@ -161,10 +161,12 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
                 // If the process is preregistered, we must only return the new_process_mask
                 // to cpuinfo to avoid conflicts, we cannot resolve the dirty flag yet
                 process = &shdata->process_info[p];
-                if (process->dirty) {
-                    memcpy(new_process_mask, &process->future_process_mask, sizeof(cpu_set_t));
-                }
+                memcpy(new_process_mask,
+                        process->dirty ? &process->future_process_mask
+                                       : &process->current_process_mask,
+                        sizeof(cpu_set_t));
                 preregistered = true;
+                error = DLB_NOTED;
                 break;
             } else if (!process && shdata->process_info[p].pid == NOBODY) {
                 // We obtain the first free spot, but we cannot break
@@ -197,7 +199,7 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
         error = DLB_ERR_NOMEM;
     }
 
-    if (error != DLB_SUCCESS) {
+    if (error < DLB_SUCCESS) {
         verbose(VB_SHMEM,
                 "Error during shmem_procinfo initialization, finalizing shared memory");
         shmem_procinfo__finalize(pid, false);
