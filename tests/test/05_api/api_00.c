@@ -120,6 +120,7 @@ int main( int argc, char **argv ) {
 
     // Call DLB_PrintShmem with different sizes
     mu_testing_set_sys_size(64);
+    CPU_ZERO(&process_mask);
     int i;
     for(i=0; i<64; ++i) CPU_SET(i, &process_mask);
     assert( DLB_Init(0, &process_mask, "--lewi") == DLB_SUCCESS );
