@@ -42,14 +42,14 @@ extern "C"
  */
 int DLB_DROM_Attach(void);
 
-/*! \brief Deattach current process from DLB system
+/*! \brief Detach current process from DLB system
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOSHMEM if cannot find shared memory to dettach from
  *
  *  If previously attached, a process must call this function to correctly close
  *  file descriptors and clean data.
  */
-int DLB_DROM_Deattach(void);
+int DLB_DROM_Detach(void);
 
 /*! \brief Get the number of CPUs in the node
  *  \param[out] ncpus the number of CPUs
