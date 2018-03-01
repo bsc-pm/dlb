@@ -48,7 +48,7 @@ static void dlb_check(int error, pid_t pid, const char* func) {
             fprintf(stderr, "Operation %s did not succeed\n", func);
         }
         fprintf(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
-        DLB_DROM_Deattach();
+        DLB_DROM_Detach();
         exit(EXIT_FAILURE);
     }
 }
@@ -87,7 +87,7 @@ static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
     DLB_DROM_Attach();
     int error = DLB_DROM_SetProcessMask(pid, new_mask, 0);
     dlb_check(error, pid, __FUNCTION__);
-    DLB_DROM_Deattach();
+    DLB_DROM_Detach();
 
     fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(new_mask));
 }
@@ -104,7 +104,7 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
         dlb_drom_flags_t flags = DLB_STEAL_CPUS | (borrow ? DLB_RETURN_STOLEN : 0);
         int error = DLB_DROM_PreInit(pid, new_mask, flags, NULL);
         dlb_check(error, pid, __FUNCTION__);
-        DLB_DROM_Deattach();
+        DLB_DROM_Detach();
         execvp(argv[0], argv);
         fprintf(stderr, "Failed to execute %s\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -116,7 +116,7 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
             // DLB_ERR_NOPROC must be ignored here
             dlb_check(error, pid, __FUNCTION__);
         }
-        DLB_DROM_Deattach();
+        DLB_DROM_Detach();
     }
 }
 
@@ -164,7 +164,7 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
         }
         free(pidlist);
     }
-    DLB_DROM_Deattach();
+    DLB_DROM_Detach();
 }
 
 static void getpidof(int process_pseudo_id) {
@@ -186,7 +186,7 @@ static void getpidof(int process_pseudo_id) {
         }
     }
     free(pidlist);
-    DLB_DROM_Deattach();
+    DLB_DROM_Detach();
 }
 
 static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t print_flags) {
@@ -203,7 +203,7 @@ static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t pr
         // Show CPU affinity of all processes attached to DLB
         DLB_PrintShmem(list_columns, print_flags);
     }
-    DLB_DROM_Deattach();
+    DLB_DROM_Detach();
 }
 
 

@@ -107,7 +107,7 @@ int DLB_DROM_Attach(void) {
     return DLB_SUCCESS;
 }
 
-int DLB_DROM_Deattach(void) {
+int DLB_DROM_Detach(void) {
     int error = shmem_cpuinfo_ext__finalize();
     error = error ? error : shmem_procinfo_ext__finalize();
     return error;

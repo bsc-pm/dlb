@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     assert( CPU_EQUAL(&mask, &process_mask) );
 
     assert( DLB_Finalize() == DLB_SUCCESS );
-    assert( DLB_DROM_Deattach() == DLB_SUCCESS );
+    assert( DLB_DROM_Detach() == DLB_SUCCESS );
 
     return 0;
 }

@@ -39,11 +39,11 @@ static void test(const cpu_set_t *mask, char ***env) {
 
     assert( DLB_DROM_Attach()                                   == DLB_SUCCESS );
     assert( DLB_DROM_PreInit(pid, mask, DLB_STEAL_CPUS, env)    == DLB_SUCCESS );
-    assert( DLB_DROM_Deattach()                                 == DLB_SUCCESS );
+    assert( DLB_DROM_Detach()                                   == DLB_SUCCESS );
 
     assert( DLB_DROM_Attach()                                   == DLB_SUCCESS );
     assert( DLB_DROM_PostFinalize(pid, 0)                       == DLB_SUCCESS );
-    assert( DLB_DROM_Deattach()                                 == DLB_SUCCESS );
+    assert( DLB_DROM_Detach()                                   == DLB_SUCCESS );
 }
 
 int main(int argc, char **argv) {
