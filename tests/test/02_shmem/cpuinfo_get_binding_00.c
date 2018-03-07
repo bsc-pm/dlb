@@ -65,6 +65,8 @@ int main(int argc, char *argv[]) {
     // Reduce p2 mask (thread 1)
     CPU_CLR(3, &p2_mask);
     shmem_cpuinfo__update_ownership(p2_pid, &p2_mask);
+    assert( shmem_cpuinfo__is_dirty() == true );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
     assert( shmem_cpuinfo__is_dirty() == false );
 
     // Restore p2 mask
@@ -98,6 +100,8 @@ int main(int argc, char *argv[]) {
     CPU_CLR(1, &p1_mask);
     CPU_CLR(2, &p1_mask);
     shmem_cpuinfo__update_ownership(p1_pid, &p1_mask);
+    assert( shmem_cpuinfo__is_dirty() == true );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 0) == 0 );
     assert( shmem_cpuinfo__is_dirty() == false );
 
     // P2 acquires CPUs 1 and 2
@@ -105,11 +109,11 @@ int main(int argc, char *argv[]) {
     CPU_SET(2, &p2_mask);
     shmem_cpuinfo__update_ownership(p2_pid, &p2_mask);
     assert( shmem_cpuinfo__is_dirty() == true );
-    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 3 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 1 );
     assert( shmem_cpuinfo__is_dirty() == true );
-    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 1 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 2 );
     assert( shmem_cpuinfo__is_dirty() == true );
-    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 2 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 3 );
     assert( shmem_cpuinfo__is_dirty() == false );
 
     // Finalize
