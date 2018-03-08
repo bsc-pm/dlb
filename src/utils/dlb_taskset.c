@@ -59,7 +59,7 @@ static void __attribute__((__noreturn__)) usage(const char * program, FILE *out)
                 "usage:\n"
                 "\t%1$s [-l|--list] [-p <pid>]\n"
                 "\t%1$s [-s|--set <cpu_list> -p <pid>]\n"
-                "\t%1$s [-s|--set <cpu_list> [-b|--borrow] program]\n"
+                "\t%1$s [-s|--set <cpu_list>] [-b|--borrow] program\n"
                 "\t%1$s [-r|--remove <cpu_list>] [-p <pid>]\n\n"
                 ), program);
 
@@ -212,6 +212,7 @@ int main(int argc, char *argv[]) {
     bool do_set = false;
     bool do_remove = false;
     bool do_getpid = false;
+    bool do_execute = false;
     bool borrow = false;
 
     dlb_printshmem_flags_t print_flags = DLB_COLOR_AUTO;
@@ -285,8 +286,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Check only one action is enabled
-    if (do_list + do_set + do_remove + do_getpid != 1) {
+    do_execute = argc > optind;
+
+    // Incompatible options
+    if ((do_execute && (do_list + do_remove + do_getpid + pid > 0)) ||
+            (!do_execute && (do_list + do_set + do_remove + do_getpid != 1))) {
         usage(argv[0], stderr);
     }
 
@@ -294,8 +298,9 @@ int main(int argc, char *argv[]) {
     if (do_set && pid) {
         set_affinity(pid, &cpu_list);
     }
-    else if (do_set && !pid && argc > optind) {
+    else if (do_execute) {
         argv += optind;
+        if (!do_set) sched_getaffinity(0, sizeof(cpu_set_t), &cpu_list);
         execute(argv, &cpu_list, borrow);
     }
     else if (do_remove) {
@@ -304,7 +309,7 @@ int main(int argc, char *argv[]) {
     else if (do_getpid) {
         getpidof(process_pseudo_id);
     }
-    else if (do_list || pid) {
+    else if (do_list) {
         show_affinity(pid, list_columns, print_flags);
     }
     else {
