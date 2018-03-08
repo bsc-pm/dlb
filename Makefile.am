@@ -324,10 +324,12 @@ endif #MPI_LIB
 bin_PROGRAMS = dlb dlb_shm dlb_taskset
 
 dlb_SOURCES = src/utils/dlb.c
+dlb_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_LDADD = libdlb.la
 
 dlb_shm_SOURCES = src/utils/dlb_shm.c
+dlb_shm_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_shm_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_shm_LDADD = libdlb.la
 

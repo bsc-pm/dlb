@@ -37,19 +37,34 @@
 static char *created_shm_filename = NULL;
 static char *userdef_shm_filename = NULL;
 
-void print_usage( const char * program ) {
-    fprintf( stdout, "usage: %s OPTION [OPTION]...\n", program );
-    fprintf( stdout, "Try '%s --help' for more information.\n", program );
+static void __attribute__((__noreturn__)) version(void) {
+    fprintf(stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION);
+    fprintf(stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS);
+    exit(EXIT_SUCCESS);
 }
 
-void print_help( const char * program ) {
-    fprintf( stdout, "DLB - Dynamic Load Balancing, version %s.\n", VERSION );
-    fprintf( stdout, "usage: %s OPTION [OPTION]...\n", program );
-    fprintf( stdout, "  -h, --help         Print this help\n" );
-    fprintf( stdout, "  -c, --create       Create and empty Shared Memory file\n" );
-    fprintf( stdout, "  -l, --list         Print DLB shmem data, if any\n" );
-    fprintf( stdout, "  -d, --delete       Delete shmem data\n" );
-    fprintf( stdout, "  -f, --file=FILE    Specify manually a Shared Memory file\n" );
+static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) {
+    fprintf(out, "DLB - Dynamic Load Balancing, version %s.\n", VERSION);
+    fprintf(out, (
+                "usage:\n"
+                "\t%1$s --list\n"
+                "\t%1$s --delete\n"
+                "\n"
+                ), program);
+
+    fputs("Manage DLB shared memory.\n\n", out);
+
+    fputs((
+                "Options:\n"
+                "  -l, --list               print DLB shmem data, if any\n"
+                "  -d, --delete             delete shmem data\n"
+                /* Options --create and --file are experimental */
+                /* "  -c, --create             create and empty Shared Memory file\n" */
+                /* "  -f, --file=FILE          use only this specific Shared Memory file\n" */
+                "  -h, --help               print this help\n"
+                ), out);
+
+    exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
 void create_shdata( void ) {
@@ -187,8 +202,7 @@ void delete_shdata( void ) {
     closedir(dp);
 }
 
-int main ( int argc, char *argv[] ) {
-    bool do_help = false;
+int main(int argc, char *argv[]) {
     bool do_create = false;
     bool do_list = false;
     bool do_delete = false;
@@ -202,73 +216,73 @@ int main ( int argc, char *argv[] ) {
 
     int opt;
     struct option long_options[] = {
-        {"help",   no_argument,       NULL, 'h'},
-        {"create", no_argument,       NULL, 'c'},
-        {"list",   optional_argument, NULL, 'l'},
-        {"delete", no_argument,       NULL, 'd'},
-        {"file",   required_argument, NULL, 'f'},
-        {"color",  optional_argument, NULL, COLOR_OPTION},
-        {0,        0,                 NULL, 0 }
+        {"create",   no_argument,       NULL, 'c'},
+        {"list",     optional_argument, NULL, 'l'},
+        {"delete",   no_argument,       NULL, 'd'},
+        {"file",     required_argument, NULL, 'f'},
+        {"color",    optional_argument, NULL, COLOR_OPTION},
+        {"help",     no_argument,       NULL, 'h'},
+        {"version",  no_argument,       NULL, 'v'},
+        {0,          0,                 NULL, 0 }
     };
 
-    while ( (opt = getopt_long(argc, argv, "hcl::df:", long_options, NULL)) != -1 ) {
+    while ( (opt = getopt_long(argc, argv, "cl::df:hv", long_options, NULL)) != -1 ) {
         switch (opt) {
-        case 'h':
-            do_help = true;
-            break;
-        case 'c':
-            do_create = true;
-            break;
-        case 'l':
-            do_list = true;
-            if (optarg) {
-                list_columns = strtol(optarg, NULL, 0);
-            }
-            break;
-        case 'd':
-            do_delete = true;
-            break;
-        case 'f':
-            // Make enough space for '/' and '\0' characters
-            userdef_shm_filename = malloc( strlen(optarg) + 2 );
-            // Prepend '/' if needed
-            sprintf( userdef_shm_filename, "%s%s", optarg[0] == '/' ? "" : "/", optarg );
-            break;
-        case COLOR_OPTION:
-            if (optarg && strcasecmp (optarg, "no") == 0) {
-                print_flags &= ~DLB_COLOR_AUTO;
-                print_flags &= ~DLB_COLOR_ALWAYS;
-            } else {
-                print_flags |= DLB_COLOR_ALWAYS;
-            }
-            break;
-        default:
-            print_usage( argv[0] );
-            exit( EXIT_SUCCESS );
+            case 'c':
+                do_create = true;
+                break;
+            case 'l':
+                do_list = true;
+                if (optarg) {
+                    list_columns = strtol(optarg, NULL, 0);
+                }
+                break;
+            case 'd':
+                do_delete = true;
+                break;
+            case 'f':
+                // Make enough space for '/' and '\0' characters
+                userdef_shm_filename = malloc( strlen(optarg) + 2 );
+                // Prepend '/' if needed
+                sprintf( userdef_shm_filename, "%s%s", optarg[0] == '/' ? "" : "/", optarg );
+                break;
+            case COLOR_OPTION:
+                if (optarg && strcasecmp (optarg, "no") == 0) {
+                    print_flags &= ~DLB_COLOR_AUTO;
+                    print_flags &= ~DLB_COLOR_ALWAYS;
+                } else {
+                    print_flags |= DLB_COLOR_ALWAYS;
+                }
+                break;
+            case 'h':
+                usage(argv[0], stdout);
+                break;
+            case 'v':
+                version();
+                break;
+            default:
+                usage(argv[0], stderr);
         }
     }
 
-    if ( !do_help && !do_create && !do_list && !do_delete ) {
-        print_usage( argv[0] );
-        exit( EXIT_SUCCESS );
+    // Incompatible options
+    if (do_create + do_list + do_delete != 1) {
+        usage(argv[0], stderr);
     }
 
-    if ( do_help ) {
-        print_help(argv[0] );
-    }
-
-    if ( do_create ) {
+    if (do_create) {
         create_shdata();
     }
-
-    if ( do_list ) {
+    else if (do_list) {
         list_shdata(list_columns, print_flags);
     }
-
-    if ( do_delete ) {
+    else if (do_delete) {
         delete_shdata();
     }
+    else {
+        usage(argv[0], stderr);
+    }
 
-    free( userdef_shm_filename );
-    return 0;
+    free(userdef_shm_filename);
+    return EXIT_SUCCESS;
 }

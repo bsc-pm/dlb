@@ -26,71 +26,90 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
 #include <getopt.h>
 
-static void print_usage( const char * program ) {
-    fprintf( stdout, "usage: %s [-h] [--help] [--help-extra] [-v] [--version]\n", program );
+
+static void dlb_check(int error, const char *func) {
+    if (error) {
+        fprintf(stderr, "Operation %s did not succeed\n", func);
+        fprintf(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
+        exit(EXIT_FAILURE);
+    }
 }
 
-static void print_help(bool list_help, bool list_extra) {
-    DLB_Init(0, NULL, NULL);
-    if (list_help) DLB_PrintVariables(false);
-    if (list_extra) DLB_PrintVariables(true);
-    DLB_Finalize();
+static void __attribute__((__noreturn__)) version(void) {
+    fprintf(stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION);
+    fprintf(stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS);
+    exit(EXIT_SUCCESS);
 }
 
-static void print_version( void ) {
-    fprintf( stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION );
-    fprintf( stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS );
+static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) {
+    fprintf(out, "DLB - Dynamic Load Balancing, version %s.\n", VERSION);
+    fprintf(out, (
+                "usage:\n"
+                "\t%1$s --help\n"
+                "\t%1$s --help-extra\n"
+                "\t%1$s --version\n"
+                "\n"
+                ), program);
+
+    fputs("DLB binary.\n\n", out);
+
+    fputs((
+                "Options:\n"
+                "  -h, --help               print DLB variables and current value\n"
+                "  -x, --help-extra         print DLB variables, including experimental\n"
+                "  -v, --version            print version info\n"
+                ), out);
+
+    exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
-int main ( int argc, char *argv[] ) {
-    bool do_help = false;
-    bool do_help_extra = false;
-    bool do_version = false;
+typedef enum print_level_e {
+    PRINT_SIMPLE,
+    PRINT_EXTRA
+} print_level_t;
+
+static void __attribute__((__noreturn__)) print_variables(print_level_t level) {
+    int error = DLB_Init(0, NULL, NULL);
+    dlb_check(error, __FUNCTION__);
+    DLB_PrintVariables(0);
+    if (level == PRINT_EXTRA) DLB_PrintVariables(1);
+    error = DLB_Finalize();
+    dlb_check(error, __FUNCTION__);
+    exit(EXIT_SUCCESS);
+}
+
+
+int main(int argc, char *argv[]) {
 
     int opt;
     extern char *optarg;
     extern int optind;
     struct option long_options[] = {
-        {"help",        no_argument,       0, 'h'},
-        {"help-extra",  no_argument,       0, 'x'},
-        {"version",     no_argument,       0, 'v'},
-        {0,             0,                 0, 0 }
+        {"help",        no_argument,    NULL, 'h'},
+        {"help-extra",  no_argument,    NULL, 'x'},
+        {"version",     no_argument,    NULL, 'v'},
+        {0,             0,              NULL, 0 }
     };
 
     while ((opt = getopt_long(argc, argv, "hxv", long_options, NULL)) != -1) {
         switch (opt) {
-        case 'h':
-            do_help = true;
-            break;
-        case 'x':
-            do_help_extra = true;
-            break;
-        case 'v':
-            do_version = true;
-            break;
-        default:
-            print_usage( argv[0] );
-            exit(0);
+            case 'h':
+                print_variables(PRINT_SIMPLE);
+                break;
+            case 'x':
+                print_variables(PRINT_EXTRA);
+                break;
+            case 'v':
+                version();
+                break;
+            default:
+                usage(argv[0], stderr);
         }
     }
 
-    if (!(do_help || do_help_extra || do_version)) {
-        print_usage( argv[0] );
-        exit(0);
-    }
+    usage(argv[0], stderr);
 
-    /* --help* takes precedence over --version */
-    if (do_help || do_help_extra) {
-        print_help(do_help, do_help_extra);
-        exit(0);
-    }
-
-    if (do_version) {
-        print_version();
-    }
-
-    return 0;
+    return EXIT_SUCCESS;
 }

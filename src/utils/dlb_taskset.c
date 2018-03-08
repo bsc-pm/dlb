@@ -53,14 +53,21 @@ static void dlb_check(int error, pid_t pid, const char* func) {
     }
 }
 
-static void __attribute__((__noreturn__)) usage(const char * program, FILE *out) {
+static void __attribute__((__noreturn__)) version(void) {
+    fprintf(stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION);
+    fprintf(stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS);
+    exit(EXIT_SUCCESS);
+}
+
+static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) {
     fprintf(out, "DLB - Dynamic Load Balancing, version %s.\n", VERSION);
     fprintf(out, (
                 "usage:\n"
-                "\t%1$s [-l|--list] [-p <pid>]\n"
-                "\t%1$s [-s|--set <cpu_list> -p <pid>]\n"
-                "\t%1$s [-s|--set <cpu_list>] [-b|--borrow] program\n"
-                "\t%1$s [-r|--remove <cpu_list>] [-p <pid>]\n\n"
+                "\t%1$s --list [--pid <pid>]\n"
+                "\t%1$s --set <cpu_list> --pid <pid>\n"
+                "\t%1$s --set <cpu_list> [--borrow] <application>\n"
+                "\t%1$s --remove <cpu_list> [--pid <pid>]\n"
+                "\n"
                 ), program);
 
     fputs("Retrieve or modify the CPU affinity of DLB processes.\n\n", out);
@@ -240,10 +247,11 @@ int main(int argc, char *argv[]) {
         {"pid",      required_argument, NULL, 'p'},
         {"borrow",   no_argument,       NULL, 'b'},
         {"help",     no_argument,       NULL, 'h'},
+        {"version",  no_argument,       NULL, 'v'},
         {0,          0,                 NULL, 0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "+l::g:s:c:r:g:p:bh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+l::g:s:c:r:g:p:bhv", long_options, NULL)) != -1) {
         switch (opt) {
             case COLOR_OPTION:
                 if (optarg && strcasecmp (optarg, "no") == 0) {
@@ -279,6 +287,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'h':
                 usage(argv[0], stdout);
+                break;
+            case 'v':
+                version();
                 break;
             default:
                 usage(argv[0], stderr);
