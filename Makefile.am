@@ -133,6 +133,8 @@ COMMON_SRCS = \
 	$(installheaders)                       \
 	src/support/debug.c                     \
 	src/support/debug.h                     \
+	src/support/env.c                       \
+	src/support/env.h                       \
 	src/support/error.c                     \
 	src/support/error.h                     \
 	src/support/mask_utils.c                \

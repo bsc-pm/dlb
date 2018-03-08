@@ -27,6 +27,7 @@
 #include "apis/dlb_errors.h"
 #include "support/options.h"
 #include "support/debug.h"
+#include "support/env.h"
 #include "support/mask_utils.h"
 
 #include <sched.h>
@@ -34,61 +35,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum {
-    add_only_if_present,
-    add_always,
-    append
-} add_kind_t;
-
-/* Implementation based on glibc's setenv:
- *  https://sourceware.org/git/?p=glibc.git;a=blob;f=stdlib/setenv.c
- */
-static void add_to_environ(const char *name, const char *value, char ***next_environ,
-        add_kind_t add) {
-    const size_t namelen = strlen (name);
-    size_t size = 0;
-    char **ep;
-
-    for (ep=*next_environ; *ep != NULL; ++ep) {
-        if (!strncmp(*ep, name, namelen) && (*ep)[namelen] == '=')
-            break;
-        else
-            ++size;
-    }
-
-    if (*ep == NULL) {
-        /* Variable does not exist */
-        if (add == add_only_if_present) return;
-
-        /* Allocate new variable */
-        // realloc (num_existing_vars + 1(new_var) + 1(NULL))
-        char **new_environ = realloc(*next_environ, (size + 2)*sizeof(char*));
-        if (new_environ) *next_environ = new_environ;
-        // set last position of next_environ
-        new_environ[size+1] = NULL;
-        // pointer where new variable will be
-        ep = new_environ + size;
-
-    } else {
-        /* Variable does exist */
-        // ep already points to the variable we will overwrite
-
-        /* Only if the variable exists and needs appending, allocate new buffer */
-        if (add == append) {
-            const size_t origlen = strlen(*ep);
-            const size_t newlen = origlen + 1 + strlen(value) +1;
-            char *new_np = realloc(*ep, newlen);
-            if (new_np) *ep = new_np;
-            sprintf(new_np+origlen, " %s", value);
-            return;
-        }
-    }
-
-    const size_t varlen = strlen(name) + 1 + strlen(value) + 1;
-    char *np = malloc(varlen);
-    snprintf(np, varlen, "%s=%s", name, value);
-    *ep = np;
-}
 
 #pragma GCC visibility push(default)
 
@@ -167,9 +113,9 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
         }
     } else {
         // warning: next_environ must be a malloc'ed pointer
-        add_to_environ("DLB_ARGS", drom_args, next_environ, append);
+        add_to_environ("DLB_ARGS", drom_args, next_environ, ENV_APPEND);
         if (new_num_threads > 0) {
-            add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, add_only_if_present);
+            add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, ENV_UPDATE_IF_EXISTS);
         }
     }
 
