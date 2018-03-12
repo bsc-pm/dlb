@@ -308,7 +308,7 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
     if (error != DLB_SUCCESS) {
         verbose(VB_SHMEM,
                 "Error during shmem_cpuinfo initialization, finalizing shared memory");
-        shmem_cpuinfo__finalize(pid);
+        shmem_cpuinfo__finalize(pid, shmem_key);
     }
 
     return error;
@@ -385,8 +385,16 @@ static bool deregister_process(pid_t pid) {
     return shmem_empty;
 }
 
-int shmem_cpuinfo__finalize(pid_t pid) {
-    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key) {
+    if (shm_handler == NULL) {
+        /* cpuinfo_finalize may be called to finalize existing process
+         * even if the file descriptor is not opened. (DLB_PreInit + forc-exec case) */
+        if (shmem_exists(shmem_name, shmem_key)) {
+            open_shmem(shmem_key);
+        } else {
+            return DLB_ERR_NOSHMEM;
+        }
+    }
 
     //DLB_INSTR( int idle_count = 0; )
 

@@ -216,8 +216,8 @@ int main( int argc, char **argv ) {
     }
 
     // Finalize sub-processes
-    assert( shmem_procinfo__finalize(p1_pid, false) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p2_pid, false) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p1_pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, NULL) == DLB_SUCCESS );
 
     // Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );

@@ -89,8 +89,8 @@ int main( int argc, char **argv ) {
 
     // Finalize shmems
     assert( shmem_async_finalize(spd.id) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(spd.id) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd.id, false) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd.id, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd.id, false, NULL) == DLB_SUCCESS );
 
     return 0;
 }

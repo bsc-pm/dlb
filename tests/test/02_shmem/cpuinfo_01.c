@@ -159,9 +159,9 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guest) == DLB_ERR_PERM );
 
     // Finalize
-    assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p2_pid) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p2_pid) == DLB_ERR_NOSHMEM );
+    assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_ERR_NOSHMEM );
 
     return 0;
 }

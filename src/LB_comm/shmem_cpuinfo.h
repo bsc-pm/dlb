@@ -33,7 +33,7 @@ int shmem_cpuinfo_ext__init(const char *shmem_key);
 int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags);
 
 /* Finalize */
-int shmem_cpuinfo__finalize(pid_t pid);
+int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key);
 int shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__postfinalize(pid_t pid);
 

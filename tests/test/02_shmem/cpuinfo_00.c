@@ -181,7 +181,7 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &mask, new_guests, victims) == DLB_NOUPDT );
 
     // Finalize
-    assert( shmem_cpuinfo__finalize(pid) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(pid, NULL) == DLB_SUCCESS );
 
     return 0;
 }

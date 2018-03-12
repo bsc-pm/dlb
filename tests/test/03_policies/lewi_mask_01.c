@@ -302,12 +302,12 @@ int main( int argc, char **argv ) {
     }
 
     // Subprocess 1 shmems finalize
-    assert( shmem_cpuinfo__finalize(spd1.id) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd1.id, false) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd1.id, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd1.id, false, NULL) == DLB_SUCCESS );
 
     // Subprocess 2 shmems finalize
-    assert( shmem_cpuinfo__finalize(spd2.id) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd2.id, false) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd2.id, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd2.id, false, NULL) == DLB_SUCCESS );
 
     return 0;
 }

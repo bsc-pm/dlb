@@ -74,10 +74,10 @@ int main(int argc, char *argv[]) {
     shmem_procinfo__print_info(NULL);
 
     /* Finalize shared memories */
-    assert( shmem_cpuinfo__finalize(p1_pid) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p2_pid) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p1_pid, false) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p2_pid, false) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p1_pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, NULL) == DLB_SUCCESS );
 
     return 0;
 }

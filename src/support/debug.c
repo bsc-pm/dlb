@@ -122,14 +122,14 @@ void dlb_clean(void) {
     const char *shmem_key = options ? options->shm_key : NULL;
 
     if (shmem_cpuinfo__exists()) {
-        shmem_cpuinfo__finalize(pid);
+        shmem_cpuinfo__finalize(pid, shmem_key);
     }
     else if (shmem_exists("cpuinfo", shmem_key)) {
         shmem_destroy("cpuinfo", shmem_key);
     }
 
     if (shmem_procinfo__exists()) {
-        shmem_procinfo__finalize(pid, false);
+        shmem_procinfo__finalize(pid, false, shmem_key);
     }
     else if (shmem_exists("procinfo", shmem_key)) {
         shmem_destroy("procinfo", shmem_key);

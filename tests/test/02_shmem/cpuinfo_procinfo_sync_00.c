@@ -104,8 +104,8 @@ int main( int argc, char **argv ) {
     assert( !shmem_cpuinfo__is_dirty() );
 
     // Finalize sub-process
-    assert( shmem_cpuinfo__finalize(pid) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(pid, false) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(pid, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_SUCCESS );
 
     return 0;
 }

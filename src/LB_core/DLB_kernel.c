@@ -152,8 +152,9 @@ int Finish(subprocess_descriptor_t *spd) {
         shmem_barrier_finalize();
     }
     if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
-        shmem_cpuinfo__finalize(spd->id);
-        shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN);
+        shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
+        shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
+                spd->options.shm_key);
     }
     timer_finalize();
     add_event(RUNTIME_EVENT, EVENT_USER);

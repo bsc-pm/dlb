@@ -62,9 +62,9 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__polldrom(pid+1, NULL, NULL) == DLB_ERR_NOPROC );
 
     // Finalize
-    assert( shmem_procinfo__finalize(pid, false) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_SUCCESS );
     // A second finalize should return error
-    assert( shmem_procinfo__finalize(pid, false) == DLB_ERR_NOSHMEM );
+    assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_ERR_NOSHMEM );
 
     return 0;
 }
