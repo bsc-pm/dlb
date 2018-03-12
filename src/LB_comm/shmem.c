@@ -45,7 +45,6 @@
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 
-#define MAX_PATHNAME 64
 #define SHMEM_TIMEOUT_SECONDS 1
 
 static bool shmem_consistency_add_pid(pid_t *pidlist, pid_t pid) {
@@ -215,4 +214,24 @@ void shmem_unlock( shmem_handler_t* handler ) {
 
 char *get_shm_filename( shmem_handler_t* handler ) {
     return handler->shm_filename;
+}
+
+bool shmem_exists(const char *shmem_module, const char *shmem_key) {
+    char shm_filename[SHM_NAME_LENGTH*2];
+    if (shmem_key && shmem_key[0] != '\0') {
+        snprintf(shm_filename, SHM_NAME_LENGTH*2, "/dev/shm/DLB_%s_%s", shmem_module, shmem_key);
+    } else {
+        snprintf(shm_filename, SHM_NAME_LENGTH*2, "/dev/shm/DLB_%s_%d", shmem_module, getuid());
+    }
+    return access(shm_filename, F_OK) != -1;
+}
+
+void shmem_destroy(const char *shmem_module, const char *shmem_key) {
+    char shm_filename[SHM_NAME_LENGTH*2];
+    if (shmem_key && shmem_key[0] != '\0') {
+        snprintf(shm_filename, SHM_NAME_LENGTH*2, "/dev/shm/DLB_%s_%s", shmem_module, shmem_key);
+    } else {
+        snprintf(shm_filename, SHM_NAME_LENGTH*2, "/dev/shm/DLB_%s_%d", shmem_module, getuid());
+    }
+    shm_unlink(shm_filename);
 }

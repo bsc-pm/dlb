@@ -21,6 +21,7 @@
 #define SHMEM_H
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <pthread.h>
 
 #define SHM_NAME_LENGTH 32
@@ -54,5 +55,7 @@ void shmem_finalize(shmem_handler_t *handler, shmem_option_t shmem_delete);
 void shmem_lock(shmem_handler_t *handler);
 void shmem_unlock(shmem_handler_t *handler);
 char *get_shm_filename(shmem_handler_t *handler);
+bool shmem_exists(const char *shmem_module, const char *shmem_key);
+void shmem_destroy(const char *shmem_module, const char *shmem_key);
 
 #endif /* SHMEM_H */

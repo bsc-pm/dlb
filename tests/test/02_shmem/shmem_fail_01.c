@@ -36,6 +36,10 @@ int main(int argc, char **argv) {
             "cpuinfo", NULL, 1);
     shmem_handler_t *handler2 = shmem_init((void**)&shdata, sizeof(struct data),
             "cpuinfo", NULL, 2);
+
+    /* This should not be reached, but it's here to ensure that the test fails
+     * due to the shmem_init abort, and not due to the unfinished shmem destructor
+     */
     shmem_finalize(handler1, SHMEM_DELETE);
     shmem_finalize(handler2, SHMEM_DELETE);
 
