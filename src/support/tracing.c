@@ -31,10 +31,9 @@ void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalu
 
 static bool tracing_initialized = false;
 
-// Pointer to store the function to call
-static void (*extrae_set_event) (unsigned type, long long value);
-
 static void dummy (unsigned type, long long value) {}
+
+static void (*extrae_set_event) (unsigned type, long long value) = dummy;
 
 void add_event( unsigned type, long long value ) {
     extrae_set_event( type, value );
