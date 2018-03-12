@@ -21,8 +21,6 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-#include "assert_noshm.h"
-
 #include "LB_comm/shmem_async.h"
 #include "LB_numThreads/numThreads.h"
 #include "apis/dlb_errors.h"

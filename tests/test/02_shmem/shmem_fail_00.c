@@ -22,8 +22,6 @@
     test_exec_fail=yes
 </testinfo>*/
 
-#include "assert_noshm.h"
-
 #include "LB_comm/shmem.h"
 
 /* Check unfinalized shared memory */

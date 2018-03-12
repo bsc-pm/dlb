@@ -21,8 +21,6 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-#include "assert_noshm.h"
-
 #include "apis/dlb.h"
 #include "support/mask_utils.h"
 

@@ -22,7 +22,6 @@
 </testinfo>*/
 
 #include "assert_loop.h"
-#include "assert_noshm.h"
 
 #include "apis/dlb_sp.h"
 #include "support/mask_utils.h"

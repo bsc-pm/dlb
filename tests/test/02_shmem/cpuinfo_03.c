@@ -21,8 +21,6 @@
     test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
-#include "assert_noshm.h"
-
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
