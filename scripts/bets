@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #constants
-readonly bets_version=0.9.8
+readonly bets_version=0.9.11
 
 #color constants
 
@@ -119,7 +119,7 @@ arithmetic ()
 passfail ()
 {
    local reverse
-   local ret=0
+   local ret
 
    local full_test_name=$1
    shift
@@ -129,14 +129,17 @@ passfail ()
 
    # Note that >> is right here since $* may have appended stuff already
    START=$(date "+%s.%N")
-   $* 1>> $junit_log_OUT 2>> $junit_log_ERR || ret=1
+   $* 1>> $junit_log_OUT 2>> $junit_log_ERR
+   ret=$?
    END=$(date "+%s.%N")
 
    ELAPSED=$(arithmetic $END - $START)
 
    cat $junit_log_ERR $junit_log_OUT >> $logfile
 
-   if [ "$test_fail" ]; then
+   # test_fail negates the return code check,
+   # unless the test was killed (128 + 9(SIGKILL))
+   if [ "$test_fail" -a "$ret" -ne 137 ]; then
      reverse='!'
    fi
 
@@ -150,16 +153,16 @@ passfail ()
      else
        filtered_message "${YELLOW}passed (faulty)${NORMAL}"
        log "passed (faulty)"
-       let faulty=faulty+1
+       let run_faulty=run_faulty+1
        # Note in jUnit output these tests are not flagged in any special way!
      fi
-     let pass=pass+1
+     let run_pass=run_pass+1
    else
      if [ ! "$test_ignore_fail" ]; then
        filtered_message "${RED}failed${NORMAL}!"
        log "failed!"
        junit_log "<error />"
-       let fail=fail+1
+       let run_fail=run_fail+1
      else
        # Note in jUnit output these tests are not flagged in any special way!
        filtered_message "${YELLOW}failed (ignored)${NORMAL}!"
@@ -411,6 +414,42 @@ runner_sde ()
    return $ret
 }
 
+
+# Given a process mask and a number of requested cores, this function computes
+# a mask that exaclty enables that number of cores.
+compute_mask ()
+{
+    local hex_mask=`taskset -p $$ | cut -d':' -f 2 | cut -d' ' -f 2`
+
+    local dec_mask=$((0x${hex_mask}))
+
+    local req_cores=$1
+    local ena_cores=0
+
+    local res_mask=0
+    local num_bit=0
+    while [ $dec_mask -ne 0 -a $ena_cores -lt $req_cores ];
+    do
+        current_bit=$(($dec_mask & 1))
+        if [ $current_bit -eq 1 ];
+        then
+            res_mask=$(($res_mask | (1 << $num_bit)))
+            ena_cores=$(($ena_cores + 1))
+        fi
+        dec_mask=$(($dec_mask >> 1))
+        num_bit=$(($num_bit + 1))
+    done
+
+    if [ $ena_cores -ne $req_cores ];
+    then
+        echo REQUESTING MORE CORES THAN AVAILABLE RESOURCES
+        exit -1
+    fi
+
+    local res_hex_mask=`echo "obase=16; ibase=10; $res_mask" | bc`
+    echo 0x${res_hex_mask}
+}
+
 runner_taskset ()
 {
    local tmpdir
@@ -431,7 +470,8 @@ runner_taskset ()
       # We need to evaluate ENV to pass ${TASKSET_NUM_CPUS}
       echo "set -x" >> $tmpfile
       eval $env;
-      echo $env taskset -c 0-$((${TASKSET_NUM_CPUS}-1)) $tmpdir/$exec $args >> $tmpfile
+      local hex_mask=$(compute_mask ${TASKSET_NUM_CPUS})
+      echo $env taskset ${hex_mask} $tmpdir/$exec $args >> $tmpfile
       echo "ret=\$?" >> $tmpfile
       echo "set +x" >> $tmpfile
       echo "exit \$ret" >> $tmpfile
@@ -506,114 +546,37 @@ merge_exec_vars ()
    eval test_ARGS_$1=\"\${test_ARGS_$2} \${test_ARGS_$3}\"
 }
 
-clean_c_compile_vars ()
-{
-   unset test_CC
-   unset test_CPPFLAGS
-   unset test_CFLAGS
-   unset test_LDFLAGS
-}
-
-clean_fortran_compile_vars ()
-{
-   unset test_FC
-   unset test_FFLAGS
-   unset test_LDFLAGS
-}
-
-clean_cpp_compile_vars ()
-{
-   unset test_CXX
-   unset test_CPPFLAGS
-   unset test_CXXFLAGS
-   unset test_LDFLAGS
-}
-
-clean_common_compile_version_vars ()
-{
-    unset test_nolink_$1
-}
-
-clean_c_compile_version_vars ()
-{
-   unset test_CC_$1
-   unset test_CPPFLAGS_$1
-   unset test_CFLAGS_$1
-   unset test_LDFLAGS_$1
-   unset test_compile_fail_$1
-   unset test_compile_faulty_$1
-}
-
-clean_fortran_compile_version_vars ()
-{
-   unset test_FC_$1
-   unset test_FFLAGS_$1
-   unset test_LDFLAGS_$1
-   unset test_compile_fail_$1
-   unset test_compile_faulty_$1
-}
-
-clean_cpp_compile_version_vars ()
-{
-   unset test_CXX_$1
-   unset test_CPPFLAGS_$1
-   unset test_CXXFLAGS_$1
-   unset test_LDFLAGS_$1
-   unset test_compile_fail_$1
-   unset test_compile_faulty_$1
-}
-
-clean_exec_vars()
-{
-   unset test_ENV
-   unset test_ARGS
-}
-
-clean_exec_version_vars()
-{
-   local v=$1
-   local e=$2
-   unset test_ENV_$e
-   unset test_ARGS_$e
-   unset test_exec_fail_$e
-   unset test_exec_faulty_$e
-   unset test_exec_fail_${v}_${e}
-   unset test_exec_faulty_${v}_${e}
-   unset test_noexec_$e
-   unset test_noexec_${v}_${e}
-}
-
-clean_test_vars ()
-{
-   unset test_generator_ENV
-   unset test_generator
-   unset test_compile_fail
-   unset test_compile_faulty
-   unset test_exec_fail
-   unset test_exec_faulty
-   unset test_exec_command
-   unset test_nolink
-   unset test_noexec
-   unset test_ignore
-   unset test_ignore_reason
-   unset test_ignore_fail
-   unset runner
-}
-
 allow_all_versions()
 {
     return 0
 }
 
+mark_test_as_ignored()
+{
+    local name=$1
+    local test_ignore_reason=$2
+    junit_log "<testcase name=\"${name}\"><skipped>Ignored test</skipped></testcase>"
+    local test_ignore_message="${YELLOW}ignored${NORMAL}"
+    if [ "$test_ignore_reason" ]; then
+        test_ignore_message="$test_ignore_message (${test_ignore_reason})"
+    fi
+    filtered_message "Test $name $test_ignore_message"
+}
+
+
 # run functions
 
-run_gen_test ()
-{
+run_test ()
+(
    local source=$1
    local type=$2
    local compressed=$3
    local name=$(basename ${source%.*})
    local srcdir=$(pwd)
+
+   run_pass=0
+   run_fail=0
+   run_faulty=0
 
    if [ "$compressed" = compressed ];
    then
@@ -632,14 +595,6 @@ run_gen_test ()
    local all_exec_versions=
    local exec_versions=
    local compile_versions=
-   local test_max_cpus=
-   local test_schedule=
-   local test_deps_plugins=
-   local test_mode=
-   local generator_args=
-   clean_test_vars
-   clean_${type}_compile_vars
-   clean_exec_vars
 
    SED_SCRIPT='/<testinfo>/,/<\/testinfo>/{
        /<testinfo>/d
@@ -652,13 +607,14 @@ run_gen_test ()
    }'
 
    sed -e "${SED_SCRIPT}" -n $srcdir/$source > $tmpfile
+
+   ## Executing the embedded script at the beginning of each test
    source $tmpfile >> $logfile
 
+   ## Saving some variables of the embedded script
    test_generator=${test_generator:-$TEST_GENERATOR}
-
-   #build versions
-   all_compile_versions=$compile_versions
-   all_exec_versions=$exec_versions
+   test_compile_versions=$compile_versions
+   test_exec_versions=$exec_versions
    compile_versions=
    exec_versions=
 
@@ -667,152 +623,133 @@ run_gen_test ()
    then
           test_generator_env="declare -x \"\${test_generator_ENV[@]}\"";
    fi
-   
-   if [ "$test_max_cpus" ]; then
-      export NX_TEST_MAX_CPUS="$test_max_cpus"
-   fi
-   if [ "$test_schedule" ]; then
-      export NX_TEST_SCHEDULE="$test_schedule"
-   fi
-   if [ "$test_deps_plugins" ]; then
-      generator_args="-d $test_deps_plugins"
-   fi
-   if [ "$test_mode" ]; then
-      generator_args="-m $test_mode"
-   fi
-
-   if [ "$test_generator" ]; then
-      debug "Using version generator $test_generator"
-      export TEST_LANGUAGE=$type
-      export TEST_SOURCE=$source
-      ( eval "$test_generator_env" ; $basedir/$test_generator $generator_args > $tmpfile )
-      unset TEST_LANGUAGE
-      unset TEST_SOURCE
-      source $tmpfile >> $logfile
-      if [ "$compile_versions" -a ! "$test_ignore" ]; then
-        if [ "$all_compile_versions" ]; then
-          local tmp=
-          for v1 in $all_compile_versions; do
-             for v2 in $compile_versions; do
-                v="$v1"_"$v2"
-                tmp="$tmp $v" 
-
-                merge_common_compile_vars $v $v1 $v2
-                merge_${type}_compile_vars $v $v1 $v2
-                merge_exec_vars $v $v1 $v2
-             done
-          done
-          for v in $all_compile_versions $compile_versions; do
-             clean_common_compile_version_vars $v
-             clean_${type}_compile_version_vars $v
-          done
-          all_compile_versions=$tmp
-        else
-          all_compile_versions=$compile_versions
-        fi
-      fi
-      if [ "$exec_versions" -a ! "$test_ignore" ]; then
-        if [ "$all_exec_versions" ]; then
-          local tmp=
-          for v1 in $all_exec_versions; do
-             for v2 in $exec_versions; do
-                v="$v1"_"$v2"
-                tmp="$tmp $v" 
-                merge_exec_vars $v $v1 $v2
-             done
-          done
-          for v in $all_compile_versions $compile_versions; do
-            for e in $all_exec_versions $exec_versions; do
-               clean_exec_version_vars $v $e
-            done
-          done
-          all_exec_versions=$tmp
-        else
-          all_exec_versions=$exec_versions
-        fi
-      fi
-   fi
-
-   if [ ! "$all_compile_versions" ]; then
-       all_compile_versions="default"
-   fi
-
-   if [ ! "$all_exec_versions" ]; then
-       all_exec_versions="default"
-   fi
-
-   filter_test_versions=${filter_test_versions:-allow_all_versions}
 
    if [ "$test_ignore" ]; then
-      junit_log "<testcase name=\"${name}\"><skipped>Ignored test</skipped></testcase>"
-      local test_ignore_message="${YELLOW}ignored${NORMAL}"
-      if [ "$test_ignore_reason" ];
-      then
-          test_ignore_message="$test_ignore_message (${test_ignore_reason})"
-      fi
-      filtered_message "Test $name $test_ignore_message"
-   else
-     for v in $all_compile_versions; do
-        filtered_message -n "Compile test $name-$v "
-        log "***Start compile test $name-$v"
-        eval test_fail=\${test_compile_fail_$v}
-        test_fail=${test_fail:-$test_compile_fail}
-        eval test_faulty=\${test_compile_faulty_$v}
-        test_faulty=${test_faulty:-$test_compile_faulty}
-        passfail "$name-$v" compile_$type $v $source $name $srcdir
-        local ok=$?
+       mark_test_as_ignored $name "$test_ignore_reason"
+       return
+   fi
 
-        log "***End compile test $name-$v"
-        if [ "$ok" -eq "0" ]; then
-          for e in $all_exec_versions; do
+   if [ ! "$test_generator" ]; then
+      echo "Invalid $name test: missing test_generator"
+      exit -1
+   fi
 
-             if ! $filter_test_versions $v $e;
-             then
-                 continue
+   for gen in "${test_generator[@]}"
+   do
+       debug "Using version generator $gen"
+
+       export TEST_LANGUAGE=$type
+       export TEST_SOURCE=$source
+       ( eval "$test_generator_env" ; $basedir/$gen > $tmpfile )
+       unset TEST_LANGUAGE
+       unset TEST_SOURCE
+
+       (
+           ## Executing the output of each test generator
+           source $tmpfile >> $logfile
+
+           if [ "$test_ignore" ]; then
+              mark_test_as_ignored $name "$test_ignore_reason"
+              exit 0
+           fi
+
+           ## By default, all_compile_versions = test_compile_versions(embedded script)
+           local all_compile_versions=$test_compile_versions
+           if [ "$compile_versions" ]; then
+             if [ "$test_compile_versions" ]; then
+                ## all_compile_versions =
+                ##        compile_versions(test_generator) x test_compile_versions(embedded script)
+                all_compile_versions=
+                for v1 in $compile_versions; do
+                  for v2 in $test_compile_versions; do
+                     v="$v1"_"$v2"
+                     all_compile_versions="$all_compile_versions $v"
+
+                     merge_common_compile_vars $v $v1 $v2
+                     merge_${type}_compile_vars $v $v1 $v2
+                     merge_exec_vars $v $v1 $v2
+                  done
+               done
+             else
+               all_compile_versions=$compile_versions
              fi
+           fi
 
-             current_test_noexec=${test_noexec:-${test_nolink}}
-             eval current_test_noexec=\${current_test_noexec:-\${test_noexec_$e}}
-             eval current_test_noexec=\${current_test_noexec:-\${test_noexec_${v}_${e}}}
-             eval current_test_noexec=\${current_test_noexec:-\${test_nolink_$v}}
-
-             if [ -z "$current_test_noexec" ]; then
-                 filtered_message -n "Execute test $name-$v-$e "
-                 log "***Start execute test $name-$v-$e"
-                 eval test_fail=\${test_exec_fail_${v}_${e}}
-                 eval test_fail=\${test_fail:-\$test_exec_fail_${e}}
-                 test_fail=${test_fail:-$test_exec_fail}
-                 eval test_faulty=\${test_exec_faulty_${v}_${e}}
-                 eval test_faulty=\${test_faulty:-\$test_exec_faulty_${e}}
-                 test_faulty=${test_faulty:-$test_exec_faulty}
-                 eval test_ignore_fail=\${test_ignore_fail}
-                 eval test_exec_command=\${test_exec_command}
-                 passfail "$name-$v-$e" execute $e $name $v
-                 log "***End execute test $name-$v-$e"
+           ## By default, all_exec_versions = test_exec_versions(embedded script)
+           local all_exec_versions=$test_exec_versions
+           if [ "$exec_versions" ]; then
+             if [ "$test_exec_versions" ]; then
+               ## all_exec_versions =
+               ##        compile_versions(test_generator) x test_compile_versions(embedded script)
+               all_exec_versions=
+               for v1 in $test_exec_versions; do
+                  for v2 in $exec_versions; do
+                     v="$v1"_"$v2"
+                     all_exec_versions="$all_exec_versions $v"
+                     merge_exec_vars $v $v1 $v2
+                  done
+               done
+             else
+               all_exec_versions=$exec_versions
              fi
+           fi
 
-             unset current_test_noexec
-          done
-        fi
+           if [ ! "$all_compile_versions" ]; then
+               all_compile_versions="default"
+           fi
 
-     done
-   fi
-   
-   if [ "$test_max_cpus" ]; then
-      unset NX_TEST_MAX_CPUS
-   fi
+           if [ ! "$all_exec_versions" ]; then
+               all_exec_versions="default"
+           fi
 
-   if [ "$test_schedule" ]; then
-      unset NX_TEST_SCHEDULE
-   fi
-   
-   for v in $all_compile_versions; do
-      clean_${type}_compile_version_vars $v
-   done
-   for v in $all_compile_versions; do
-     for e in $all_exec_versions; do
-        clean_exec_version_vars $v $e
-     done
+           filter_test_versions=${filter_test_versions:-allow_all_versions}
+
+           for v in $all_compile_versions; do
+              filtered_message -n "Compile test $name-$v "
+              log "***Start compile test $name-$v"
+              eval test_fail=\${test_compile_fail_$v}
+              test_fail=${test_fail:-$test_compile_fail}
+              eval test_faulty=\${test_compile_faulty_$v}
+              test_faulty=${test_faulty:-$test_compile_faulty}
+              passfail "$name-$v" compile_$type $v $source $name $srcdir
+              local ok=$?
+
+              log "***End compile test $name-$v"
+              if [ "$ok" -eq "0" ]; then
+                for e in $all_exec_versions; do
+
+                   if ! $filter_test_versions $v $e; then
+                       continue
+                   fi
+
+                   current_test_noexec=${test_noexec:-${test_nolink}}
+                   eval current_test_noexec=\${current_test_noexec:-\${test_noexec_$e}}
+                   eval current_test_noexec=\${current_test_noexec:-\${test_noexec_${v}_${e}}}
+                   eval current_test_noexec=\${current_test_noexec:-\${test_nolink_$v}}
+
+                   if [ -z "$current_test_noexec" ]; then
+                       filtered_message -n "Execute test $name-$v-$e "
+                       log "***Start execute test $name-$v-$e"
+                       eval test_fail=\${test_exec_fail_${v}_${e}}
+                       eval test_fail=\${test_fail:-\$test_exec_fail_${e}}
+                       test_fail=${test_fail:-$test_exec_fail}
+                       eval test_faulty=\${test_exec_faulty_${v}_${e}}
+                       eval test_faulty=\${test_faulty:-\$test_exec_faulty_${e}}
+                       test_faulty=${test_faulty:-$test_exec_faulty}
+                       eval test_ignore_fail=\${test_ignore_fail}
+                       eval test_exec_command=\${test_exec_command}
+                       passfail "$name-$v-$e" execute $e $name $v
+                       log "***End execute test $name-$v-$e"
+                   fi
+
+                   unset current_test_noexec
+                done
+              fi
+           done
+
+           # Allow results to go out the subshell
+           output_results
+       )
    done
 
    if [ "$compressed" = compressed ];
@@ -820,12 +757,16 @@ run_gen_test ()
        log "***Removing uncompressed file $uncompressed_name"
        rm -f $tmpdir/$uncompressed_name
    fi
-}
+)
 
 run_package()
 {
     local name=$1
     local compressed=$2
+
+    run_pass=0
+    run_fail=0
+    run_faulty=0
 
     if [ "$compressed" = compressed ]; then
         local file=$name
@@ -855,31 +796,66 @@ run_package()
         log "***Removing uncompressed package directory '$tmpdir/$name'"
         rm -rf "$tmpdir/$name"
     fi
+
+    # This is not a subshell but it should behave like run_test
+    output_results
+    unset run_pass
+    unset run_fail
+    unset run_faulty
+}
+
+init_results()
+{
+    cat /dev/null > $runresults
+}
+
+output_results()
+{
+    echo $run_pass $run_fail $run_faulty >> $runresults
+}
+
+update_results()
+{
+   # Read output values and update the global counters
+   local run_pass=0
+   local run_fail=0
+   local run_faulty=0
+   while read run_pass run_fail run_faulty;
+   do
+     let pass=pass+run_pass
+     let fail=fail+run_fail
+     let faulty=faulty+run_faulty
+   done < $runresults
 }
 
 run_file()
 {
    local file=$1
-   case $file in 
+
+   init_results
+
+   case $file in
      *.c)
-       run_gen_test $file c 
+       run_test $file c
        ;;
      *.f|*.F|*.f77|*.F77|*.f90|*.F90|*.f95|*.F95)
-       run_gen_test $file fortran
+       run_test $file fortran
        ;;
      *.c.bz2)
-       run_gen_test $file c compressed
+       run_test $file c compressed
        ;;
-     *.cpp|*.cu) 
-       run_gen_test $file cpp 
+     *.cpp|*.cu)
+       run_test $file cpp
        ;;
      *.cpp.bz2)
-       run_gen_test $file cpp compressed
+       run_test $file cpp compressed
        ;;
      *.pkg.bz2)
        run_package $file compressed
        ;;
    esac
+
+   update_results
 }
 
 run_dir()
@@ -944,6 +920,7 @@ do_run ()
    declare -r tmpdir=$(mktemp -d)
    export TMPDIR=$tmpdir
    declare -r tmpfile=$(mktemp)
+   declare -r runresults=$(mktemp)
    local old_dir=""
    local ret=0
 
@@ -987,6 +964,7 @@ EOF
    
    #clean-up
    rm -fr $tmpdir
+   rm -f $runresults
 
    # End junit log
    cat >> $junit_logfile << EOF
