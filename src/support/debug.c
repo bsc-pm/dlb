@@ -45,16 +45,15 @@
 #include <execinfo.h>
 #endif
 
-/* Global variables needed for debug macros */
-bool vb_werror = false;
 verbose_opts_t vb_opts = VB_CLEAR;
 
 enum { VBFORMAT_LEN = 32 };
 static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
+static bool werror = false;
 
 void debug_init(const options_t *options) {
-    vb_werror = options->debug_opts & DBG_WERROR;
+    werror = options->debug_opts & DBG_WERROR;
     vb_opts = options->verbose;
     vb_fmt = options->verbose_fmt;
 
@@ -76,20 +75,112 @@ void debug_init(const options_t *options) {
     }
 }
 
-void vb_print(FILE *fp, const char *prefix, const char *fmt, ...) {
+static void vprint(FILE *fp, const char *prefix, const char *fmt, va_list list) {
     // Print prefix and object identifier
-    if ( vb_fmt & VBF_THREAD ) {
-        fprintf( fp, "%s[%s:%ld]: ", prefix, fmt_str, syscall(SYS_gettid) );
+    if (vb_fmt & VBF_THREAD) {
+        fprintf(fp, "%s[%s:%ld]: ", prefix, fmt_str, syscall(SYS_gettid));
     } else {
-        fprintf( fp, "%s[%s]: ", prefix, fmt_str );
+        fprintf(fp, "%s[%s]: ", prefix, fmt_str);
     }
 
     // Print va_list
-    va_list args;
-    va_start( args, fmt );
-    vfprintf( fp, fmt, args );
-    va_end( args );
-    fputc( '\n', fp );
+    vfprintf(fp, fmt, list);
+    fputc('\n', fp);
+}
+
+static void __attribute__((__noreturn__)) vfatal(const char *fmt, va_list list) {
+    vprint(stderr, "DLB PANIC", fmt, list);
+    dlb_clean();
+    abort();
+}
+
+void fatal(const char *fmt, ...) {
+    va_list list;
+    va_start(list, fmt);
+    vfatal(fmt, list);
+    va_end(list);
+}
+
+void fatal0(const char *fmt, ...) {
+#ifdef MPI_LIB
+    if (_mpi_rank <= 0) {
+#endif
+        va_list list;
+        va_start(list, fmt);
+        vfatal(fmt, list);
+        va_end(list);
+#ifdef MPI_LIB
+    } else {
+        dlb_clean();
+        abort();
+    }
+#endif
+}
+
+static void vwarning(const char *fmt, va_list list) {
+    vprint(stderr, "DLB WARNING", fmt, list);
+}
+
+void warning(const char *fmt, ...) {
+    va_list list;
+    va_start(list, fmt);
+    if (!werror) vwarning(fmt, list);
+    else vfatal(fmt, list);
+    va_end(list);
+}
+
+void warning0(const char *fmt, ...) {
+#ifdef MPI_LIB
+    if (_mpi_rank <= 0) {
+#endif
+        va_list list;
+        va_start(list, fmt);
+        if (!werror) vwarning(fmt, list);
+        else vfatal(fmt, list);
+        va_end(list);
+#ifdef MPI_LIB
+    }
+#endif
+}
+
+static void vinfo(const char *fmt, va_list list) {
+    vprint(stdout, "DLB", fmt, list);
+}
+
+void info(const char *fmt, ...) {
+    va_list list;
+    va_start(list, fmt);
+    vinfo(fmt, list);
+    va_end(list);
+}
+
+void info0(const char *fmt, ...) {
+#ifdef MPI_LIB
+    if (_mpi_rank <= 0) {
+#endif
+        va_list list;
+        va_start(list, fmt);
+        vinfo(fmt, list);
+        va_end(list);
+#ifdef MPI_LIB
+    }
+#endif
+}
+
+#undef verbose
+void verbose(verbose_opts_t flag, const char *fmt, ...) {
+    va_list list;
+    va_start(list, fmt);
+    if      (vb_opts & flag & VB_API)     { vprint(stdout, "DLB API", fmt, list); }
+    else if (vb_opts & flag & VB_MICROLB) { vprint(stdout, "DLB MICROLB", fmt, list); }
+    else if (vb_opts & flag & VB_SHMEM)   { vprint(stdout, "DLB SHMEM", fmt, list); }
+    else if (vb_opts & flag & VB_MPI_API) { vprint(stdout, "DLB MPI API", fmt, list); }
+    else if (vb_opts & flag & VB_MPI_INT) { vprint(stdout, "DLB MPI INT", fmt, list); }
+    else if (vb_opts & flag & VB_STATS)   { vprint(stdout, "DLB STATS", fmt, list); }
+    else if (vb_opts & flag & VB_DROM)    { vprint(stdout, "DLB DROM", fmt, list); }
+    else if (vb_opts & flag & VB_ASYNC)   { vprint(stdout, "DLB ASYNC", fmt, list); }
+    else if (vb_opts & flag & VB_OMPT)    { vprint(stdout, "DLB OMPT", fmt, list); }
+    va_end(list);
 }
 
 void print_backtrace(void) {

@@ -28,15 +28,15 @@ int main( int argc, char **argv ) {
     options_t options;
     options_init(&options, "--verbose-format=node:pid:thread");
     debug_init(&options);
-    vb_print(stdout, "DLB TEST", "hello test %s", "!!");
+    info("hello test %s", "!!");
 
     options_init(&options, "--verbose-format=:");
     debug_init(&options);
-    vb_print(stdout, "DLB TEST", "hello test %s", "!!");
+    info("hello test %s", "!!");
 
     options_init(&options, "--verbose-format=node:");
     debug_init(&options);
-    vb_print(stdout, "DLB TEST", "hello test %s", "!!");
+    info("hello test %s", "!!");
 
     print_backtrace();
 

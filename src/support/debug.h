@@ -31,55 +31,17 @@
 #endif
 
 void debug_init(const options_t *options);
-void vb_print(FILE *fp, const char *prefix, const char *fmt, ...);
+void fatal(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2),__noreturn__));
+void fatal0(const char *fmt, ...)   __attribute__ ((format (printf, 1, 2),__noreturn__));
+void warning(const char *fmt, ...)  __attribute__ ((format (printf, 1, 2)));
+void warning0(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+void info(const char *fmt, ...)     __attribute__ ((format (printf, 1, 2)));
+void info0(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
+void verbose(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
 void print_backtrace(void);
 void dlb_clean(void);
 
-extern bool             vb_werror;
 extern verbose_opts_t   vb_opts;
-
-
-#define fatal(...) \
-    do { \
-        vb_print(stderr, "DLB PANIC", __VA_ARGS__); \
-        dlb_clean(); \
-        abort(); \
-    } while(0)
-
-#define warning(...) \
-    do { \
-        if (!vb_werror) { vb_print(stderr, "DLB WARNING", __VA_ARGS__); } \
-        else { fatal(__VA_ARGS__); } \
-    } while(0)
-
-#define info(...) \
-    vb_print(stdout, "DLB", __VA_ARGS__)
-
-#ifdef MPI_LIB
-// verbose0 macros will print only if rank == 0 in MPI
-#define fatal0(...) \
-    do { \
-        if (_mpi_rank <= 0) { fatal(__VA_ARGS__); } \
-        else { dlb_clean(); abort(); } \
-    } while(0)
-
-#define warning0(...) \
-    do { \
-        if (_mpi_rank <= 0) { warning(__VA_ARGS__); } \
-    } while(0)
-
-#define info0(...) \
-    do { \
-        if (_mpi_rank <= 0) { info(__VA_ARGS__); } \
-    } while(0)
-
-#else /* MPI_LIB */
-// if MPI is not preset, do the same as the generic ones
-#define fatal0(...)     fatal(__VA_ARGS__)
-#define warning0(...)   warning(__VA_ARGS__)
-#define info0(...)      info(__VA_ARGS__)
-#endif /* MPI_LIB */
-
 
 #define fatal_cond(cond, ...) \
     do { \
@@ -97,23 +59,11 @@ extern verbose_opts_t   vb_opts;
         if (_error) fatal(#cond ":%s", strerror(_error)); \
     } while(0)
 
-
-#ifdef DEBUG_VERSION
 #define verbose(flag, ...) \
     do { \
-        if ( flag & vb_opts & VB_API )          { vb_print(stdout, "DLB API", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_MICROLB ) { vb_print(stdout, "DLB MICROLB", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_SHMEM )   { vb_print(stdout, "DLB SHMEM", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_MPI_API ) { vb_print(stdout, "DLB MPI API", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_MPI_INT ) { vb_print(stdout, "DLB MPI INT", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_STATS )   { vb_print(stdout, "DLB STATS", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_DROM )    { vb_print(stdout, "DLB DROM", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_ASYNC )   { vb_print(stdout, "DLB ASYNC", __VA_ARGS__); } \
-        else if ( flag & vb_opts & VB_OMPT )    { vb_print(stdout, "DLB OMPT", __VA_ARGS__); } \
+        if (__builtin_expect(vb_opts, 0)) { verbose(flag, __VA_ARGS__); } \
     } while(0)
-#else
-#define verbose(flag, ...)
-#endif
+
 
 #ifdef DEBUG_VERSION
 #define DLB_DEBUG(f) f
