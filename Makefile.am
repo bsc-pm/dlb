@@ -321,12 +321,17 @@ endif #MPI_LIB
 #********************************************************************************
 # Support binaries
 #********************************************************************************
-bin_PROGRAMS = dlb dlb_shm dlb_taskset
+bin_PROGRAMS = dlb dlb_run dlb_shm dlb_taskset
 
 dlb_SOURCES = src/utils/dlb.c
 dlb_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_LDADD = libdlb.la
+
+dlb_run_SOURCES = src/utils/dlb_run.c
+dlb_run_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+dlb_run_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+dlb_run_LDADD = libdlb.la
 
 dlb_shm_SOURCES = src/utils/dlb_shm.c
 dlb_shm_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
