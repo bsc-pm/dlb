@@ -74,8 +74,9 @@ AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibili
 AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])
 AS_IF([test "x$developer_version" = xyes], [
     AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
-    AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
     AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
+    AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
+    AX_CHECK_COMPILE_FLAG([-Wno-error=shadow], [AC_CFLAGS="${AC_CFLAGS} -Wno-error=shadow"])
 ])
 AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])
@@ -87,7 +88,6 @@ AC_LANG_PUSH([Fortran])
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_FFLAGS="${AC_FFLAGS} -pthread"])
 AS_IF([test "x$developer_version" = xyes], [
     AX_CHECK_COMPILE_FLAG([-Wall], [AC_FFLAGS="${AC_FFLAGS} -Wall"])
-    AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_FFLAGS="${AC_FFLAGS} -Wshadow"])
     AX_CHECK_COMPILE_FLAG([-Werror], [AC_FFLAGS="${AC_FFLAGS} -Werror"])
 ])
 AC_LANG_POP([Fortran])
