@@ -21,9 +21,15 @@
 
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
+#include "support/env.h"
 #include "support/error.h"
 
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 /* Global sub-process descriptor */
 static subprocess_descriptor_t spd = { 0 };
@@ -45,7 +51,8 @@ const options_t* get_global_options(void) {
 /* Status */
 
 int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
-    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true)) {
+    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true)
+            || spd.options.preinit_pid) {
         return Initialize(&spd, getpid(), ncpus, mask, dlb_args);
     } else {
         return DLB_ERR_INIT;
@@ -53,10 +60,36 @@ int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
 }
 
 int DLB_Finalize(void) {
-    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, true, false)) {
-        return Finish(&spd);
+    spd.dlb_initialized = false;
+    return Finish(&spd);
+}
+
+int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ) {
+    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true)) {
+        pid_t pid = getpid();
+        char arg[32];
+        snprintf(arg, 32, "--preinit-pid=%d", pid);
+
+        if (next_environ == NULL) {
+            /* Modify current environment */
+            const char *dlb_args_env = getenv("DLB_ARGS");
+            if (dlb_args_env) {
+                size_t len = strlen(dlb_args_env) + 1 + strlen(arg) + 1;
+                char *new_dlb_args = malloc(sizeof(char)*len);
+                sprintf(new_dlb_args, "%s %s", dlb_args_env, arg);
+                setenv("DLB_ARGS", new_dlb_args, 1);
+                free(new_dlb_args);
+            } else {
+                setenv("DLB_ARGS", arg, 1);
+            }
+        } else {
+            /* Modify next_environ */
+            add_to_environ("DLB_ARGS", arg, next_environ, ENV_APPEND);
+        }
+
+        return PreInitialize(&spd, mask);
     } else {
-        return DLB_ERR_NOINIT;
+        return DLB_ERR_INIT;
     }
 }
 

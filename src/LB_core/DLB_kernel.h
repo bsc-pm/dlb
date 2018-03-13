@@ -31,6 +31,7 @@
 int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         const cpu_set_t *mask, const char *lb_args);
 int Finish(subprocess_descriptor_t *spd);
+int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask);
 int set_dlb_enabled(subprocess_descriptor_t *spd, bool enabled);
 int set_max_parallelism(subprocess_descriptor_t *spd, int max);
 

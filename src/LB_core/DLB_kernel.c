@@ -55,8 +55,9 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     // Infer LeWI mode
     spd->lb_policy = !spd->options.lewi ? POLICY_NONE :
-        !mask ? POLICY_LEWI :
-        POLICY_LEWI_MASK;
+        spd->options.preinit_pid ? POLICY_LEWI_MASK :
+        mask ? POLICY_LEWI_MASK :
+        POLICY_LEWI;
 
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm);
@@ -81,7 +82,10 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialize modules
     debug_init(&spd->options);
     timer_init();
-    if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
+    if (spd->lb_policy == POLICY_LEWI_MASK
+            || spd->options.drom
+            || spd->options.statistics
+            || spd->options.preinit_pid) {
 
         // Initialize procinfo
         cpu_set_t new_process_mask;
@@ -143,21 +147,49 @@ int Finish(subprocess_descriptor_t *spd) {
     int error = DLB_SUCCESS;
     add_event(RUNTIME_EVENT, EVENT_FINALIZE);
     spd->dlb_enabled = false;
-    spd->lb_funcs.finalize(spd);
-    // Unload modules
+
+    if (spd->lb_funcs.finalize) {
+        spd->lb_funcs.finalize(spd);
+    }
     if (spd->options.mode == MODE_ASYNC) {
         shmem_async_finalize(spd->id);
     }
     if (spd->options.barrier) {
         shmem_barrier_finalize();
     }
-    if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.statistics) {
+    if (spd->lb_policy == POLICY_LEWI_MASK
+            || spd->options.drom
+            || spd->options.statistics
+            || spd->options.preinit_pid) {
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
                 spd->options.shm_key);
     }
     timer_finalize();
     add_event(RUNTIME_EVENT, EVENT_USER);
+    return error;
+}
+
+int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+
+    // Initialize options
+    options_init(&spd->options, NULL);
+
+    // Initialize subprocess descriptor
+    spd->lb_policy = POLICY_NONE;
+    pm_init(&spd->pm);
+    set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
+    spd->id = spd->options.preinit_pid;
+    memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
+
+    // Initialize modules
+    int error = DLB_SUCCESS;
+    error = error ? error : shmem_cpuinfo_ext__init(spd->options.shm_key);
+    error = error ? error : shmem_procinfo_ext__init(spd->options.shm_key);
+    error = error ? error : shmem_procinfo_ext__preinit(spd->id, mask, 0);
+    error = error ? error : shmem_cpuinfo_ext__preinit(spd->id, mask, 0);
+    error = error ? error : shmem_cpuinfo_ext__finalize();
+    error = error ? error : shmem_procinfo_ext__finalize();
     return error;
 }
 

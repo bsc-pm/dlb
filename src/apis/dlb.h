@@ -58,6 +58,15 @@ int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args);
  */
 int DLB_Finalize(void);
 
+/*! \brief Pre-Initialize process
+ *  \param[in] mask initial CPU mask to register
+ *  \param[inout] next_environ environment to modify if the process is going to fork-exec
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_PERM if DLB cannot register the mask passed by argument
+ *  \return DLB_ERR_NOMEM if DLB cannot allocate more processes
+ */
+int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ);
+
 /*! \brief Enable DLB and all its features in case it was previously disabled,
  *          otherwise it has no effect.
  *  \return DLB_SUCCESS on success
