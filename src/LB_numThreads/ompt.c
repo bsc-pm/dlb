@@ -69,9 +69,7 @@ static void omp_thread_manager_release(void) {
 
 static void omp_thread_manager_init(void) {
     if (lewi) {
-        cpu_set_t process_mask;
-        sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-        DLB_Init(0, &process_mask, NULL);
+        DLB_Init(0, NULL, NULL);
         DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
         omp_thread_manager_release();
     }

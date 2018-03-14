@@ -150,6 +150,7 @@ int Finish(subprocess_descriptor_t *spd) {
 
     if (spd->lb_funcs.finalize) {
         spd->lb_funcs.finalize(spd);
+        spd->lb_funcs.finalize = NULL;
     }
     if (spd->options.barrier) {
         shmem_barrier_finalize();
