@@ -17,96 +17,7 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-/*************************** Copied from LLVM-openmp's ompt.h *******************************/
-
-/* Callbacks */
-typedef enum ompt_callbacks_e{
-    ompt_callback_thread_begin = 1, ompt_callback_thread_end = 2, ompt_callback_parallel_begin = 3, ompt_callback_parallel_end = 4, ompt_callback_task_create = 5, ompt_callback_task_schedule = 6, ompt_callback_implicit_task = 7, ompt_callback_control_tool = 11, ompt_callback_idle = 13, ompt_callback_sync_region_wait = 14, ompt_callback_mutex_released = 15, ompt_callback_task_dependences = 16, ompt_callback_task_dependence = 17, ompt_callback_work = 18, ompt_callback_master = 19, ompt_callback_sync_region = 21, ompt_callback_lock_init = 22, ompt_callback_lock_destroy = 23, ompt_callback_mutex_acquire = 24, ompt_callback_mutex_acquired = 25, ompt_callback_nest_lock = 26, ompt_callback_flush = 27, ompt_callback_cancel = 28,
-} ompt_callbacks_t;
-typedef void (*ompt_callback_t)(void);
-typedef int (*ompt_set_callback_t) ( ompt_callbacks_t event, ompt_callback_t callback );
-
-
-/* Start Tool */
-typedef void (*ompt_interface_fn_t)(void);
-typedef ompt_interface_fn_t (*ompt_function_lookup_t)(const char*);
-
-struct ompt_fns_t;
-
-typedef int (*ompt_initialize_t)(ompt_function_lookup_t ompt_fn_lookup, struct ompt_fns_t *fns);
-typedef void (*ompt_finalize_t)(struct ompt_fns_t *fns);
-
-typedef struct ompt_fns_t {
-    ompt_initialize_t initialize;
-    ompt_finalize_t finalize;
-} ompt_fns_t;
-
-/* Parallel begin/end callbacks */
-#include <stdint.h>
-typedef uint64_t ompt_id_t;
-typedef union ompt_data_u {
-  ompt_id_t value;
-  void *ptr;
-} ompt_data_t;
-typedef ompt_data_t ompt_task_data_t;
-
-typedef struct ompt_frame_s {
-    void *exit_runtime_frame;
-    void *reenter_runtime_frame;
-} ompt_frame_t;
-
-typedef enum {
-    ompt_invoker_program = 1,
-    ompt_invoker_runtime = 2
-} ompt_invoker_t;
-
-typedef void (*ompt_callback_parallel_begin_t) (
-    ompt_data_t *parent_task_data,
-    const ompt_frame_t *parent_frame,
-    ompt_data_t *parallel_data,
-    unsigned int requested_team_size,
-    ompt_invoker_t invoker,
-    const void *codeptr_ra
-);
-
-typedef void (*ompt_callback_parallel_end_t) (
-    ompt_data_t *parallel_data,
-    ompt_task_data_t *task_data,
-    ompt_invoker_t invoker,
-    const void *codeptr_ra
-);
-
-/* Implicit task callback */
-typedef enum ompt_scope_endpoint_e {
-    ompt_scope_begin = 1,
-    ompt_scope_end = 2
-} ompt_scope_endpoint_t;
-
-typedef void (*ompt_callback_implicit_task_t) (
-    ompt_scope_endpoint_t endpoint,
-    ompt_data_t *parallel_data,
-    ompt_data_t *task_data,
-    unsigned int team_size,
-    unsigned int thread_num
-);
-
-/* Thread begin/end callbacks */
-typedef enum {
-    ompt_thread_initial = 1,
-    ompt_thread_worker = 2,
-    ompt_thread_other = 3
-} ompt_thread_type_t;
-
-typedef void (*ompt_callback_thread_begin_t) (
-    ompt_thread_type_t thread_type,
-    ompt_data_t *thread_data
-);
-
-typedef void (*ompt_callback_thread_end_t) (
-    ompt_data_t *thread_data
-);
-
-/********************************************************************************************/
+#include "LB_numThreads/ompt.h"
 
 #include "apis/dlb.h"
 #include "LB_comm/shmem_procinfo.h"
@@ -126,7 +37,10 @@ void omp_set_num_threads(int nthreads) __attribute__((weak));
 int omp_get_level(void) __attribute__((weak));
 
 
-/******************* OMP Thread Manager ********************/
+/*********************************************************************************/
+/*  OMP Thread Manager                                                           */
+/*********************************************************************************/
+
 static cpu_set_t active_mask;
 static bool lewi = false;
 
@@ -168,11 +82,15 @@ static void omp_thread_manager_finalize(void) {
         DLB_Finalize();
     }
 }
-/***********************************************************/
+
+
+/*********************************************************************************/
+/*  OMPT callbacks                                                               */
+/*********************************************************************************/
 
 static void cb_parallel_begin(
-        ompt_data_t *parent_task_data,
-        const ompt_frame_t *parent_frame,
+        ompt_data_t *encountering_task_data,
+        const ompt_frame_t *encountering_task_frame,
         ompt_data_t *parallel_data,
         unsigned int requested_team_size,
         ompt_invoker_t invoker,
@@ -191,7 +109,7 @@ static void cb_parallel_begin(
 
 static void cb_parallel_end(
         ompt_data_t *parallel_data,
-        ompt_task_data_t *task_data,
+        ompt_data_t *encountering_task_data,
         ompt_invoker_t invoker,
         const void *codeptr_ra) {
     if (omp_get_level() == 0) {
@@ -216,6 +134,7 @@ static void cb_implicit_task(
                 CPU_SET(cpuid, &thread_mask);
                 pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
                 add_event(REBIND_EVENT, cpuid);
+                verbose(VB_OMPT, "Rebinding thread %d to CPU %d", thread_num, cpuid);
             }
         }
     }
@@ -233,7 +152,26 @@ static void cb_thread_end(
     /* warning("Ending thread"); */
 }
 
-static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_fns_t *fns) {
+
+/*********************************************************************************/
+/*  OMPT start tool                                                              */
+/*********************************************************************************/
+
+static inline void set_ompt_callback(ompt_set_callback_t set_callback_fn,
+        ompt_callbacks_t which, ompt_callback_t callback) {
+    switch (set_callback_fn(which, callback)) {
+        case ompt_set_error:
+            verbose(VB_OMPT, "OMPT callback %d failed\n", which);
+            break;
+        case ompt_set_never:
+            verbose(VB_OMPT, "OMPT callback %d registered but will never be called\n", which);
+            break;
+        default:
+            verbose(VB_OMPT, "OMPT callback %d succesfully registered", which);
+    }
+}
+
+static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *tool_data) {
     /* Initialize minimal modules */
     options_t options;
     options_init(&options, NULL);
@@ -245,26 +183,54 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_fns_t *fn
 
     ompt_set_callback_t set_callback_fn = (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
     if (set_callback_fn) {
-        set_callback_fn(ompt_callback_parallel_begin, (ompt_callback_t)cb_parallel_begin);
-        set_callback_fn(ompt_callback_parallel_end,   (ompt_callback_t)cb_parallel_end);
-        set_callback_fn(ompt_callback_implicit_task,  (ompt_callback_t)cb_implicit_task);
-        set_callback_fn(ompt_callback_thread_begin,   (ompt_callback_t)cb_thread_begin);
-        set_callback_fn(ompt_callback_thread_end,     (ompt_callback_t)cb_thread_end);
+        set_ompt_callback(set_callback_fn,
+                ompt_callback_thread_begin,   (ompt_callback_t)cb_thread_begin);
+        set_ompt_callback(set_callback_fn,
+                ompt_callback_thread_end,     (ompt_callback_t)cb_thread_end);
+        set_ompt_callback(set_callback_fn,
+                ompt_callback_parallel_begin, (ompt_callback_t)cb_parallel_begin);
+        set_ompt_callback(set_callback_fn,
+                ompt_callback_parallel_end,   (ompt_callback_t)cb_parallel_end);
+        set_ompt_callback(set_callback_fn,
+                ompt_callback_implicit_task,  (ompt_callback_t)cb_implicit_task);
 
         omp_thread_manager_init();
+    } else {
+        verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
     }
-    return 0;
+
+    // return a non-zero value to activate the tool
+    return 1;
 }
 
-static void ompt_finalize(ompt_fns_t *fns) {
+static void ompt_finalize(ompt_data_t *tool_data) {
     verbose(VB_OMPT, "Finalizing OMPT module");
     omp_thread_manager_finalize();
 }
 
-static ompt_fns_t ompt_fns = { ompt_initialize, ompt_finalize };
 
 #pragma GCC visibility push(default)
-ompt_fns_t* ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
-    return &ompt_fns;
+ompt_start_tool_result_t* ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
+    static ompt_start_tool_result_t ompt_start_tool_result = {
+        .initialize = ompt_initialize,
+        .finalize   = ompt_finalize,
+        .tool_data  = {0}
+    };
+    return &ompt_start_tool_result;
 }
 #pragma GCC visibility pop
+
+/*********************************************************************************/
+
+#ifdef DEBUG_VERSION
+/* Static type checking */
+static __attribute__((unused)) void ompt_type_checking(void) {
+    { ompt_initialize_t                 __attribute__((unused)) fn = ompt_initialize; }
+    { ompt_finalize_t                   __attribute__((unused)) fn = ompt_finalize; }
+    { ompt_callback_thread_begin_t      __attribute__((unused)) fn = cb_thread_begin; }
+    { ompt_callback_thread_end_t        __attribute__((unused)) fn = cb_thread_end; }
+    { ompt_callback_parallel_begin_t    __attribute__((unused)) fn = cb_parallel_begin; }
+    { ompt_callback_parallel_end_t      __attribute__((unused)) fn = cb_parallel_end; }
+    { ompt_callback_implicit_task_t     __attribute__((unused)) fn = cb_implicit_task; }
+}
+#endif
