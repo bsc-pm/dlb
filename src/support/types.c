@@ -96,11 +96,11 @@ const char* get_verbose_opts_choices(void) {
 
 /* verbose_fmt_t */
 static const verbose_fmt_t verbose_fmt_values[] =
-    {VBF_NODE, VBF_PID, VBF_MPINODE, VBF_MPIRANK, VBF_THREAD};
+    {VBF_NODE, VBF_PID, VBF_MPINODE, VBF_MPIRANK, VBF_THREAD, VBF_TSTAMP};
 static const char* const verbose_fmt_choices[] =
-    {"node", "pid", "mpinode", "mpirank", "thread"};
+    {"node", "pid", "mpinode", "mpirank", "thread", "timestamp"};
 static const char verbose_fmt_choices_str[] =
-    "node:pid:mpinode:mpirank:thread";
+    "node:pid:mpinode:mpirank:thread:timestamp";
 enum { verbose_fmt_nelems = sizeof(verbose_fmt_values) / sizeof(verbose_fmt_values[0]) };
 
 int parse_verbose_fmt(const char *str, verbose_fmt_t *value) {

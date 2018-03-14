@@ -41,7 +41,8 @@ typedef enum VerboseFormat {
     VBF_PID     = 1 << 1,
     VBF_MPINODE = 1 << 2,
     VBF_MPIRANK = 1 << 3,
-    VBF_THREAD  = 1 << 4
+    VBF_THREAD  = 1 << 4,
+    VBF_TSTAMP  = 1 << 5
 } verbose_fmt_t;
 
 typedef enum DebugOptions {

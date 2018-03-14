@@ -40,6 +40,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <time.h>
 
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
@@ -76,11 +77,26 @@ void debug_init(const options_t *options) {
 }
 
 static void vprint(FILE *fp, const char *prefix, const char *fmt, va_list list) {
+
+    char timestamp[32];
+    if (vb_fmt & VBF_TSTAMP) {
+        time_t t = time(NULL);
+        struct tm *tm = localtime(&t);
+        strftime(timestamp, sizeof(timestamp), "[%Y-%m-%dT%T] ", tm);
+    }
+
     // Print prefix and object identifier
     if (vb_fmt & VBF_THREAD) {
-        fprintf(fp, "%s[%s:%ld]: ", prefix, fmt_str, syscall(SYS_gettid));
+        fprintf(fp, "%s%s[%s:%ld]: ",
+                vb_fmt & VBF_TSTAMP ? timestamp : "",
+                prefix,
+                fmt_str,
+                syscall(SYS_gettid));
     } else {
-        fprintf(fp, "%s[%s]: ", prefix, fmt_str);
+        fprintf(fp, "%s%s[%s]: ",
+                vb_fmt & VBF_TSTAMP ? timestamp : "",
+                prefix,
+                fmt_str);
     }
 
     // Print va_list
