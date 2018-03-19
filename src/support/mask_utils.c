@@ -46,8 +46,16 @@ typedef struct {
     cpu_set_t sys_mask;
 } mu_system_loc_t;
 
-static mu_system_loc_t sys;
+static mu_system_loc_t sys = {0};
 static bool mu_initialized = false;
+
+static int get_sys_size(void) {
+    if (sys.size) return sys.size;
+    int nproc_onln = sysconf(_SC_NPROCESSORS_ONLN);
+    if (nproc_onln > 0) return nproc_onln;
+    fatal("Cannot obtain system size. Contact us at " PACKAGE_BUGREPORT
+            " or configure DLB with HWLOC support.");
+}
 
 #if defined HWLOC_LIB
 static void parse_hwloc( void ) {
@@ -148,8 +156,7 @@ static void parse_lscpu( void ) {
 
 void mu_init( void ) {
     if ( !mu_initialized ) {
-        sys.num_parents = 0;
-        sys.parents = NULL;
+        memset(&sys, 0, sizeof(sys));
 
 #if defined HWLOC_LIB
         parse_hwloc();
@@ -169,18 +176,18 @@ void mu_finalize( void ) {
 }
 
 int mu_get_system_size( void ) {
-    if ( !mu_initialized ) mu_init();
+    if (__builtin_expect(!mu_initialized, 0)) mu_init();
     return sys.size;
 }
 
 void mu_get_system_mask(cpu_set_t *mask) {
-    if ( !mu_initialized ) mu_init();
+    if (__builtin_expect(!mu_initialized, 0)) mu_init();
     memcpy(mask, &sys.sys_mask, sizeof(cpu_set_t));
 }
 
 // Return Mask of sockets covering at least 1 CPU of cpuset
 void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
-    if (!mu_initialized) mu_init();
+    if (__builtin_expect(!mu_initialized, 0)) mu_init();
     CPU_ZERO(parent_set);
     int i;
     for (i=0; i<sys.num_parents; ++i) {
@@ -194,7 +201,7 @@ void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpus
 
 // Return Mask of sockets containing all CPUs in cpuset
 void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
-    if (!mu_initialized) mu_init();
+    if (__builtin_expect(!mu_initialized, 0)) mu_init();
     CPU_ZERO(parent_set);
     int i;
     for (i=0; i<sys.num_parents; ++i) {
@@ -224,20 +231,20 @@ void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *
 // although they do not belong to the public API
 #pragma GCC visibility push(default)
 const char* mu_to_str( const cpu_set_t *mask ) {
-    if ( !mu_initialized ) mu_init();
 
+    size_t sys_size = get_sys_size();
     static __thread char buffer[CPU_SETSIZE*4];
     char *b = buffer;
     *(b++) = '[';
     bool entry_made = false;
     int i;
-    for (i=0; i<sys.size; ++i) {
+    for (i=0; i<sys_size; ++i) {
         if (CPU_ISSET(i, mask)) {
 
             /* Find range size */
             int run = 0;
             int j;
-            for (j=i+1; j<sys.size; ++j) {
+            for (j=i+1; j<sys_size; ++j) {
                 if (CPU_ISSET(j, mask)) ++run;
                 else break;
             }
@@ -269,8 +276,8 @@ const char* mu_to_str( const cpu_set_t *mask ) {
 
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if ( !str || strlen(str) == 0 ) return;
-    if ( !mu_initialized ) mu_init();
 
+    size_t sys_size = get_sys_size();
     regex_t regex_bitmask;
     regex_t regex_range;
     CPU_ZERO( mask );
@@ -289,7 +296,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         // Parse
         int i;
         for (i=0; i<strlen(str); i++) {
-            if ( str[i] == '1' && i < sys.size ) {
+            if ( str[i] == '1' && i < sys_size ) {
                 CPU_SET( i, mask );
             }
         }
@@ -307,7 +314,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             ptr = endptr;
 
             // Single element
-            if ( (*ptr == ',' || *ptr == '\0') && start < sys.size ) {
+            if ( (*ptr == ',' || *ptr == '\0') && start < sys_size ) {
                 CPU_SET( start, mask );
                 ptr++;
                 continue;
@@ -324,7 +331,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
                 // Valid range
                 if ( end > start ) {
                     int i;
-                    for ( i=start; i<=end && i<sys.size; i++ ) {
+                    for ( i=start; i<=end && i<sys_size; i++ ) {
                         CPU_SET( i, mask );
                     }
                 }
