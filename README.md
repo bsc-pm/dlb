@@ -77,7 +77,7 @@ configure DLB using the environment variable `DLB_ARGS`.
 mpicc -o myapp myapp.c -L<DLB_PREFIX>/lib -ldlb -Wl,-rpath,<DLB_PREFIX>/lib
 
 # Launch two processes sharing resources
-export LB_ARGS="--policy=lewi"
+export DLB_ARGS="--lewi"
 mpirun -n 2 ./myapp
 ```
 
