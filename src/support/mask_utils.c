@@ -25,10 +25,15 @@
 
 #include "support/debug.h"
 
-#ifdef HWLOC_LIB
+#if defined HWLOC_LIB
 #include <hwloc.h>
 #include <hwloc/bitmap.h>
 #include <hwloc/glibc-sched.h>
+#elif defined IS_BGQ_MACHINE
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
 #endif
 
 #include <sched.h>
@@ -100,59 +105,70 @@ static void set_bgq_info( void ) {
     }
 }
 #else
-static void parse_lscpu( void ) {
-    FILE *pipe = NULL;
-    char *line = NULL;
-    char *token, *endptr;
-    size_t len = 0;
-    int cpu, socket, node, id;
-    int i;
+static void parse_mask_from_file(const char *filename, cpu_set_t *mask) {
+    if (access(filename, F_OK) == 0) {
+        size_t len = CPU_SETSIZE*7;
+        char buf[len];
+        FILE *fd = fopen(filename, "r");
 
-    pipe = popen( "lscpu -p", "r" );
-    if ( pipe == NULL ) {
-        perror( "Can't open pipe to lscpu command" );
-        exit( EXIT_FAILURE );
-    }
-
-    while ( getline( &line, &len, pipe ) != -1 ) {
-        if ( !isdigit( line[0] ) ) { continue; }
-
-        cpu = strtol( line, &endptr, 10 );     /* CPU token */
-
-        token = endptr+1;
-        strtol( token, &endptr, 10);           /* Core token, returned value ignored */
-
-        token = endptr+1;
-        socket = strtol( token, &endptr, 10);  /* Socket token */
-
-        token = endptr+1;
-        node = strtol( token, &endptr, 10 );   /* Node token */
-
-        /* Did lscpu give us a valid node? Otherwise socket id will be used */
-        id = (endptr == token) ? socket : node;
-
-        /* realloc array of cpu_set_t's ? */
-        if ( id >= sys.num_parents ) {
-
-            sys.parents = realloc( sys.parents, (id+1) * sizeof(cpu_set_t) );
-            for ( i=sys.num_parents; i<id+1; i++ ) {
-                CPU_ZERO( &(sys.parents[i]) );
-            }
-            sys.num_parents = id+1;
+        if (!fgets(buf, len, fd)) {
+            fatal("cannot read %s\n", filename);
         }
-        CPU_SET( cpu, &(sys.parents[id]) );
-    }
+        fclose(fd);
 
-    CPU_ZERO( &(sys.sys_mask) );
-    for ( i=0; i<sys.num_parents; i++ ) {
-        CPU_OR( &(sys.sys_mask), &(sys.sys_mask), &(sys.parents[i]) );
-    }
-    sys.size = CPU_COUNT( &(sys.sys_mask) );
+        len = strlen(buf);
+        if (buf[len - 1] == '\n')
+            buf[len - 1] = '\0';
 
-    free( line );
-    pclose( pipe );
+        mu_parse_mask(buf, mask);
+    }
 }
-#endif /* HWLOC_LIB */
+
+#define PATH_SYSTEM_MASK "/sys/devices/system/cpu/present"
+#define PATH_SYSTEM_NODE "/sys/devices/system/node"
+static void parse_system_files(void) {
+    /* Parse system mask */
+    parse_mask_from_file(PATH_SYSTEM_MASK, &sys.sys_mask);
+    sys.size = CPU_COUNT(&sys.sys_mask);
+
+    /* Parse node masks */
+    int nnodes = 0;
+    DIR *dir = opendir(PATH_SYSTEM_NODE);
+    if (dir) {
+        struct dirent *d;
+        while ((d = readdir(dir))) {
+            if (d && d->d_type == DT_DIR
+                    && strncmp(d->d_name, "node", 4) == 0
+                    && isdigit(d->d_name[4]) ) {
+                ++nnodes;
+                cpu_set_t *p = realloc(sys.parents, nnodes*sizeof(cpu_set_t));
+                fatal_cond(!p, "realloc failed");
+                sys.parents = p;
+
+                char filename[64];
+                snprintf(filename, 64, PATH_SYSTEM_NODE "/%.6s/cpulist", d->d_name);
+                parse_mask_from_file(filename, &sys.parents[nnodes-1]);
+            }
+        }
+        closedir(dir);
+    }
+    sys.num_parents = nnodes;
+
+    /* Fallback if some info could not be parsed */
+    if (!sys.size) {
+        sys.size = get_sys_size();
+        int i;
+        for (i=0; i<sys.size; ++i) {
+            CPU_SET(i, &sys.sys_mask);
+        }
+    }
+    if (!sys.num_parents) {
+        sys.num_parents = 1;
+        sys.parents = malloc(sizeof(cpu_set_t)*1);
+        memcpy(&sys.parents[0], &sys.sys_mask, sizeof(cpu_set_t));
+    }
+}
+#endif
 
 void mu_init( void ) {
     if ( !mu_initialized ) {
@@ -163,7 +179,7 @@ void mu_init( void ) {
 #elif defined IS_BGQ_MACHINE
         set_bgq_info();
 #else
-        parse_lscpu();
+        parse_system_files();
 #endif
 
         mu_initialized = true;

@@ -48,13 +48,6 @@ AC_DEFUN([AX_HWLOC],
         AX_VAR_POPVALUE([LIBS])
     ])
 
-    AS_IF([test "x$with_hwloc" = xno], [
-        AC_CHECK_PROG([lscpu], [lscpu], [yes])
-        AS_IF([test "x$lscpu" != xyes], [
-            AC_MSG_ERROR([neither lscpu nor hwloc were found, one of them is mandatory])
-        ])
-    ])
-
     AC_SUBST([HWLOC_CPPFLAGS])
     AC_SUBST([HWLOC_LDFLAGS])
     AC_SUBST([HWLOC_LIBDIR])
