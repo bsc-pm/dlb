@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "LB_comm/shmem_procinfo.h"
 
 #include "LB_comm/shmem.h"
@@ -262,8 +266,9 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
                     break;
                 }
 
-                // Blindly apply future mask modified inside register_mask or set_new_mask
+                // Set process initial values
                 memcpy(&process->current_process_mask, mask, sizeof(cpu_set_t));
+                memcpy(&process->future_process_mask, mask, sizeof(cpu_set_t));
                 process->dirty = false;
 
 #ifdef DLB_LOAD_AVERAGE
@@ -1037,6 +1042,14 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
                 }
             }
         }
+    }
+
+    if (__builtin_expect(
+                !error && CPU_COUNT(&cpus_left_to_steal) > 0,
+                0)) {
+        warning("Could not find candidate for stealing mask %s.  Please report to "
+                PACKAGE_BUGREPORT, mu_to_str(mask));
+        error = DLB_ERR_PERM;
     }
 
     if (!error && sync && !dry_run) {
