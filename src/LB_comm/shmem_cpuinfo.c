@@ -1227,6 +1227,7 @@ int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]) {
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
     shmem_lock(shm_handler);
     verbose(VB_SHMEM, "Updating ownership: %s", mu_to_str(process_mask));
+    bool invalidate_thread_ids = false;
     int cpuid;
     for (cpuid=0; cpuid<node_size; ++cpuid) {
         cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
@@ -1234,9 +1235,14 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
             // The CPU should be mine
 
             /* Set dirty flags always */
-            cpuinfo->thread_id = -1;
             cpuinfo->dirty = true;
             shdata->dirty = true;
+
+            // thread_ids are only invalidated if a previous CPU was released
+            // or if the CPU is being stolen
+            if (invalidate_thread_ids || cpuinfo->owner != pid) {
+                cpuinfo->thread_id = -1;
+            }
 
             if (cpuinfo->owner != pid) {
                 // Steal CPU
@@ -1262,6 +1268,7 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
                     cpuinfo->guest = NOBODY;
                 }
                 update_cpu_stats(cpuid, STATS_IDLE);
+                invalidate_thread_ids = true;
                 verbose(VB_SHMEM, "Releasing ownership of CPU %d", cpuid);
             }
             if (cpuinfo->guest == pid) {
