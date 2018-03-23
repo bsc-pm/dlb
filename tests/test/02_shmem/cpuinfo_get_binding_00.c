@@ -107,11 +107,12 @@ int main(int argc, char *argv[]) {
     CPU_SET(2, &p2_mask);
     shmem_cpuinfo__update_ownership(p2_pid, &p2_mask);
     assert( shmem_cpuinfo__is_dirty() == true );
-    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 1 );
+    /* thread 0 is not reassigned */
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 3 );
     assert( shmem_cpuinfo__is_dirty() == true );
-    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 2 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 1 );
     assert( shmem_cpuinfo__is_dirty() == true );
-    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 3 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 2 );
     assert( shmem_cpuinfo__is_dirty() == false );
 
     // Finalize
