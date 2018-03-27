@@ -43,9 +43,21 @@ int main(int argc, char *argv[]) {
 
     /* Initialize local masks */
     pid_t p1_pid = 11111;
-    cpu_set_t p1_mask = { .__bits = {0x000300ff0000ffff} }; /* [ 0-15,32-39,48,49 ] */
+    cpu_set_t p1_mask;
+    mu_parse_mask("0-15,32-39,48,49", &p1_mask);
     pid_t p2_pid = 22222;
-    cpu_set_t p2_mask = { .__bits = {0x000cff00ffff0000} }; /* [ 16-31,40-47,50,51 ] */
+    cpu_set_t p2_mask;
+    mu_parse_mask("16-31,40-47,50,51", &p2_mask);
+
+    /* check masks correctness */
+    assert( CPU_COUNT(&p1_mask) == 26 );
+    assert( CPU_COUNT(&p2_mask) == 26 );
+    cpu_set_t p1_p2_mask;
+    CPU_OR(&p1_p2_mask, &p1_mask, &p2_mask);
+    assert( CPU_COUNT(&p1_p2_mask) == 52 );
+    CPU_AND(&p1_p2_mask, &p1_mask, &p2_mask);
+    assert( CPU_COUNT(&p1_p2_mask) == 0 );
+
 
     /* Initialize shared memories */
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
