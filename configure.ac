@@ -39,11 +39,25 @@ AS_IF([test -e "$srcdir/.git"], [
     AC_MSG_CHECKING([revision of distributed release])
     run_gitversion=`cat $srcdir/VERSION`
     build_version="\"$run_gitversion\""
+    developer_version=no
     AC_MSG_RESULT([$build_version])
 ], [
     build_version="\"unknown revision\""
+    developer_version=no
 ])
 AC_DEFINE_UNQUOTED([DLB_BUILD_VERSION], [$build_version], [Build version])
+
+AC_MSG_CHECKING([whether to enable developer mode])
+AC_ARG_ENABLE([developer-mode],
+    AS_HELP_STRING([--enable-developer-mode], [enable developer compilation flags]),
+    [
+        AS_IF([test x"$enable_developer_mode" = xyes], [
+            developer_version=yes
+        ])
+     ],
+     []
+)
+AC_MSG_RESULT([$developer_version])
 
 dlb_config_args='"'$(echo "$0 $configure_orig_arguments")'"'
 AC_DEFINE_UNQUOTED([DLB_CONFIGURE_ARGS], [$dlb_config_args], [Configure line])
