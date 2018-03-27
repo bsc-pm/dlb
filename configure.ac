@@ -77,6 +77,7 @@ AS_IF([test "x$developer_version" = xyes], [
     AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
     AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
     AX_CHECK_COMPILE_FLAG([-Wno-error=shadow], [AC_CFLAGS="${AC_CFLAGS} -Wno-error=shadow"])
+    AX_CHECK_COMPILE_FLAG([-Wformat-security], [AC_CFLAGS="${AC_CFLAGS} -Wformat-security"])
 ])
 AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])

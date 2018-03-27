@@ -573,7 +573,7 @@ void options_print_variables(const options_t *options) {
                     "    export DLB_ARGS=\"--lewi=yes --instrument=no\"\n");
 
     fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
-    info0(buffer);
+    info0("%s", buffer);
 }
 
 /* API Printer extra */
@@ -633,5 +633,5 @@ void options_print_variables_extra(const options_t *options) {
     }
 
     fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
-    info0(buffer);
+    info0("%s", buffer);
 }
