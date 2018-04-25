@@ -90,20 +90,15 @@ int main( int argc, char **argv ) {
     // Update cpuinfo with the new mask
     shmem_cpuinfo__update_ownership(pid, &mask);
 
-    // cpuinfo should be dirty now
-    assert( shmem_cpuinfo__is_dirty() );
+    // Get new bindings for thread 1
+    assert( shmem_cpuinfo__thread_needs_rebinding(pid, 1) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    pid, 1) == 1 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(pid, 1) == false );
 
     // Get new bindings for thread 0
-    assert( shmem_cpuinfo__get_thread_binding(pid, 0) == 0 );
-
-    // cpuinfo should still be dirty
-    assert( shmem_cpuinfo__is_dirty() );
-
-    // Get new bindings for thread 1
-    assert( shmem_cpuinfo__get_thread_binding(pid, 1) == 1 );
-
-    // cpuinfo should not be dirty
-    assert( !shmem_cpuinfo__is_dirty() );
+    assert( shmem_cpuinfo__thread_needs_rebinding(pid, 0) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    pid, 0) == 0 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(pid, 0) == false );
 
     // Finalize sub-process
     assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );

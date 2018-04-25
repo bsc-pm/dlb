@@ -55,7 +55,7 @@ typedef struct {
     int             id;
     pid_t           owner;                  // Current owner
     pid_t           guest;                  // Current user of the CPU
-    int             thread_id;              // Last thread owning the CPU
+    int             thread_id;              // Last thread id guesting the CPU
     bool            dirty;                  // Dirty flag to check thread rebinding
     cpu_state_t     state;
     stats_state_t   stats_state;
@@ -65,7 +65,6 @@ typedef struct {
 } cpuinfo_t;
 
 typedef struct {
-    bool                dirty;
     struct              timespec initial_time;
     int64_t             timestamp_cpu_lent;
     bool                queues_enabled;
@@ -73,7 +72,7 @@ typedef struct {
     cpuinfo_t           node_info[0];
 } shdata_t;
 
-enum { SHMEM_CPUINFO_VERSION = 3 };
+enum { SHMEM_CPUINFO_VERSION = 4 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -166,7 +165,6 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
             cpuinfo->state = CPU_BUSY;
             cpuinfo->thread_id = -1;
             cpuinfo->dirty = true;
-            shdata->dirty = true;
             update_cpu_stats(cpuid, STATS_OWNED);
         }
     }
@@ -195,7 +193,6 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
         // Initialize some values if this is the 1st process attached to the shmem
         if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
             get_time(&shdata->initial_time);
-            shdata->dirty = false;
             shdata->timestamp_cpu_lent = 0;
         }
 
@@ -268,6 +265,7 @@ static void deregister_process(pid_t pid) {
             cpuinfo->owner = NOBODY;
             if (cpuinfo->guest == pid) {
                 cpuinfo->guest = NOBODY;
+                cpuinfo->thread_id = -1;
                 update_cpu_stats(cpuid, STATS_IDLE);
             }
             if (cpu_is_public_post_mortem) {
@@ -280,6 +278,7 @@ static void deregister_process(pid_t pid) {
             // Free external CPUs that I may be using
             if (cpuinfo->guest == pid) {
                 cpuinfo->guest = NOBODY;
+                cpuinfo->thread_id = -1;
                 update_cpu_stats(cpuid, STATS_IDLE);
             }
 
@@ -379,6 +378,7 @@ static void lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     // If the process is the guest, free it
     if (cpuinfo->guest == pid) {
         cpuinfo->guest = NOBODY;
+        cpuinfo->thread_id = -1;
         update_cpu_stats(cpuid, STATS_IDLE);
     }
 
@@ -481,6 +481,7 @@ static int reclaim_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
     int error;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
     cpuinfo->state = CPU_BUSY;
+    cpuinfo->thread_id = -1;
     if (cpuinfo->guest == pid) {
         *new_guest = -1;
         *victim = -1;
@@ -506,7 +507,8 @@ int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t new_guests[], pid_t victims[]) {
     {
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (shdata->node_info[cpuid].owner == pid) {
+            if (shdata->node_info[cpuid].owner == pid
+                    && shdata->node_info[cpuid].guest != pid) {
                 int local_error = reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
                 switch(local_error) {
                     case DLB_NOTED:
@@ -697,6 +699,7 @@ static int acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
             error = DLB_SUCCESS;
             update_cpu_stats(cpuid, STATS_OWNED);
         } else {
+            cpuinfo->thread_id = -1;
             *new_guest = pid;
             *victim = cpuinfo->guest;
             error = DLB_NOTED;
@@ -1059,6 +1062,7 @@ static int return_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
 
     // Return CPU
     cpuinfo->guest = NOBODY;
+    cpuinfo->thread_id = -1;
     update_cpu_stats(cpuid, STATS_IDLE);
 
     // Find a new guest
@@ -1290,7 +1294,6 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
 
             /* Set dirty flags always */
             cpuinfo->dirty = true;
-            shdata->dirty = true;
 
             // thread_ids are only invalidated if a previous CPU was released
             // or if the CPU is being stolen
@@ -1341,62 +1344,85 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
     shmem_unlock(shm_handler);
 }
 
+/* Returns whether the thread needs rebinding:
+ *  - True if:
+ *      the assigned CPU is dirty
+ *      can't find an assigned CPU
+ */
+bool shmem_cpuinfo__thread_needs_rebinding(pid_t pid, int thread_num) {
+    if (shm_handler == NULL || thread_num < 0) return false;
+
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        if (cpuinfo->guest == pid
+                && cpuinfo->thread_id == thread_num) {
+            return cpuinfo->dirty;
+        }
+    }
+    return true;
+}
+
+/* Return the assigned CPU or find a new one
+ *  - clear dirty status if necessary
+ *  - If thread matches an owned, not guested CPU, find a suitable CPU
+ *  - If thread is external, find a suitable CPU
+ */
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
     if (shm_handler == NULL || thread_num < 0) return -1;
 
     int binding = -1;
     shmem_lock(shm_handler);
     {
+        int num_cpus_guested = 0;
         int cpus_to_skip = 0;
-        bool all_cpus_clean = true;
         int cpuid;
 
-        /* Iterate first all CPUs to check if this thread is already assigned */
+        /* Iterate first all guested CPUs to check if this thread is already assigned */
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-            if (cpuinfo->owner == pid) {
+            if (cpuinfo->guest == pid
+                    || (cpuinfo->owner == pid
+                        && cpuinfo->state == CPU_BUSY)) {
                 if (cpuinfo->thread_id == thread_num) {
                     /* Obtain assigned CPU */
                     binding = cpuinfo->id;
                     cpuinfo->dirty = false;
                     break;
-                } else if (cpuinfo->thread_id != -1 && cpuinfo->thread_id < thread_num) {
+                } else if (cpuinfo->thread_id != -1
+                        && cpuinfo->thread_id < thread_num) {
                     /* Get how many threads whith lesser id are already assigned */
                     ++cpus_to_skip;
                 }
+                ++num_cpus_guested;
             }
         }
 
-        /* CPUs will be assigned by order of thread_num,
-         * but already assigned threads must be ignored */
-        cpus_to_skip = thread_num - cpus_to_skip;
+        if (binding == -1) {
+            /* Thread is not assigned yet, find a suitable CPU */
 
-        /* Iterate looking for the nth unassigned CPU if bindind is yet not found
-         * and reduce all dirty flags to see if the global flag can be cleaned */
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-            if (binding == -1 && cpuinfo->owner == pid && cpuinfo->thread_id == -1) {
-                /* CPU is available */
-                if (cpus_to_skip == 0) {
-                    binding = cpuinfo->id;
-                    cpuinfo->thread_id = thread_num;
-                    cpuinfo->dirty = false;
+            /* CPUs will be assigned by order of thread_num,
+             * but already assigned threads must be ignored */
+            cpus_to_skip = thread_num - cpus_to_skip;
+
+            /* Iterate to find the nth unassigned CPU if bindind is yet not found */
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+                if ((cpuinfo->guest == pid
+                            || (cpuinfo->owner == pid
+                                && cpuinfo->state == CPU_BUSY))
+                        && (cpuinfo->thread_id == -1
+                            || cpuinfo->thread_id >= num_cpus_guested)) {
+                    /* CPU is available */
+                    if (cpus_to_skip == 0) {
+                        binding = cpuinfo->id;
+                        cpuinfo->thread_id = thread_num;
+                        cpuinfo->dirty = false;
+                        break;
+                    }
+                    --cpus_to_skip;
                 }
-                --cpus_to_skip;
             }
-
-            /* Keep iterating to reduce all dirty flags */
-            all_cpus_clean = all_cpus_clean && !cpuinfo->dirty;
-
-            /* Stop iterating if we already found the binding and some dirty CPU */
-            if (binding != -1 && !all_cpus_clean) {
-                break;
-            }
-        }
-
-        /* Clean shmem dirty flag if all CPUs are clean */
-        if (all_cpus_clean) {
-            shdata->dirty = false;
         }
     }
     shmem_unlock(shm_handler);
@@ -1437,10 +1463,6 @@ int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpuid) {
 
 bool shmem_cpuinfo__exists(void) {
     return shm_handler != NULL;
-}
-
-bool shmem_cpuinfo__is_dirty(void) {
-    return shdata && shdata->dirty;
 }
 
 void shmem_cpuinfo__enable_request_queues(void) {

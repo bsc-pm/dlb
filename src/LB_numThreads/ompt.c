@@ -43,6 +43,7 @@ int omp_get_level(void) __attribute__((weak));
 
 static cpu_set_t active_mask;
 static bool lewi = false;
+static pid_t pid;
 
 static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
@@ -124,14 +125,14 @@ static void cb_implicit_task(
         unsigned int team_size,
         unsigned int thread_num) {
     if (endpoint == ompt_scope_begin) {
-        if (shmem_cpuinfo__is_dirty()) {
-            int cpuid = shmem_cpuinfo__get_thread_binding(getpid(), thread_num);
+        if (shmem_cpuinfo__thread_needs_rebinding(pid, thread_num)) {
+            int cpuid = shmem_cpuinfo__get_thread_binding(pid, thread_num);
             if (cpuid >= 0) {
                 cpu_set_t thread_mask;
                 CPU_ZERO(&thread_mask);
                 CPU_SET(cpuid, &thread_mask);
                 pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-                add_event(REBIND_EVENT, cpuid);
+                add_event(REBIND_EVENT, cpuid+1);
                 verbose(VB_OMPT, "Rebinding thread %d to CPU %d", thread_num, cpuid);
             }
         }

@@ -90,7 +90,7 @@ static void check_barrier_version(void) {
 }
 
 static void check_cpuinfo_version(void) {
-    enum { KNOWN_CPUINFO_VERSION = 3 };
+    enum { KNOWN_CPUINFO_VERSION = 4 };
     enum { KNOWN_QUEUE_PROC_REQS_SIZE = 4096 };
     enum { KNOWN_QUEUE_PIDS_SIZE = 8 };
     enum { KNOWN_NUM_STATS = 3 };
@@ -122,7 +122,6 @@ static void check_cpuinfo_version(void) {
         struct KnownPidsQueue queue;
     };
     struct KnownCpuinfoShdata {
-        bool bool1;
         struct timespec time1;
         int64_t int1;
         bool bool2;
