@@ -44,6 +44,7 @@ int omp_get_level(void) __attribute__((weak));
 static cpu_set_t active_mask;
 static bool lewi = false;
 static pid_t pid;
+static ompt_mode_t ompt_mode;
 
 static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
@@ -178,7 +179,9 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *t
     verbose(VB_OMPT, "Initializing OMPT module");
 
     /* Enable experimental LeWI features only if requested */
-    lewi = options.lewi && options.debug_opts & DBG_LEWI_OMPT;
+    ompt_mode = options.lewi_ompt;
+    lewi = options.lewi && ompt_mode != OMPT_MODE_DISABLED;
+    pid = options.preinit_pid ? options.preinit_pid : getpid();
 
     ompt_set_callback_t set_callback_fn = (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
     if (set_callback_fn) {

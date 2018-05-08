@@ -142,10 +142,10 @@ const char* get_verbose_fmt_choices(void) {
 
 /* debug_opts_t */
 static const debug_opts_t debug_opts_values[] =
-    {DBG_RETURNSTOLEN, DBG_LEWI_OMPT, DBG_WERROR, DBG_LPOSTMORTEM};
+    {DBG_RETURNSTOLEN, DBG_WERROR, DBG_LPOSTMORTEM};
 static const char* const debug_opts_choices[] =
-    {"return-stolen", "lewi-ompt", "werror", "lend-post-mortem"};
-static const char debug_opts_choices_str[] = "return-stolen:lewi-ompt:werror:lend-post-mortem";
+    {"return-stolen", "werror", "lend-post-mortem"};
+static const char debug_opts_choices_str[] = "return-stolen:werror:lend-post-mortem";
 enum { debug_opts_nelems = sizeof(debug_opts_values) / sizeof(debug_opts_values[0]) };
 
 int parse_debug_opts(const char *str, debug_opts_t *value) {
@@ -308,3 +308,34 @@ const char* get_mpiset_choices(void) {
     return mpiset_choices_str;
 }
 
+/* ompt_mode_t */
+static const ompt_mode_t omptmode_values[] =
+    {OMPT_MODE_DISABLED, OMPT_MODE_DUMMY, OMPT_MODE_RECLAIM, OMPT_MODE_BORROW, OMPT_MODE_MPI};
+static const char* const omptmode_choices[] = {"disabled", "dummy", "reclaim", "borrow", "mpi"};
+static const char omptmode_choices_str[] = "disabled, dummy, reclaim, borrow, mpi";
+enum { omptmode_nelems = sizeof(omptmode_values) / sizeof(omptmode_values[0]) };
+
+int parse_omptmode(const char *str, ompt_mode_t *value) {
+    int i;
+    for (i=0; i<omptmode_nelems; ++i) {
+        if (strcasecmp(str, omptmode_choices[i]) == 0) {
+            *value = omptmode_values[i];
+            return DLB_SUCCESS;
+        }
+    }
+    return DLB_ERR_NOENT;
+}
+
+const char* omptmode_tostr(ompt_mode_t value) {
+    int i;
+    for (i=0; i<omptmode_nelems; ++i) {
+        if (omptmode_values[i] == value) {
+            return omptmode_choices[i];
+        }
+    }
+    return "unknown";
+}
+
+const char* get_omptmode_choices(void) {
+    return omptmode_choices_str;
+}
