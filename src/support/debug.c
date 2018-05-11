@@ -43,8 +43,9 @@
 #include <execinfo.h>
 #endif
 
-#define VBFORMAT_LEN 32
-verbose_opts_t vb_opts;
+verbose_opts_t vb_opts = VB_CLEAR;
+
+enum { VBFORMAT_LEN = 128 };
 static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
 
