@@ -51,8 +51,7 @@ const options_t* get_global_options(void) {
 /* Status */
 
 int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
-    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true)
-            || spd.options.preinit_pid) {
+    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true) ) {
         return Initialize(&spd, getpid(), ncpus, mask, dlb_args);
     } else {
         return DLB_ERR_INIT;
@@ -61,11 +60,13 @@ int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
 
 int DLB_Finalize(void) {
     spd.dlb_initialized = false;
+    spd.dlb_preinitialized = false;
     return Finish(&spd);
 }
 
 int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ) {
-    if (__sync_bool_compare_and_swap(&spd.dlb_initialized, false, true)) {
+    if (!spd.dlb_initialized
+            && __sync_bool_compare_and_swap(&spd.dlb_preinitialized, false, true)) {
         pid_t pid = getpid();
         char arg[32];
         snprintf(arg, 32, "--preinit-pid=%d", pid);

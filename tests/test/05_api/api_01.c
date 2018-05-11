@@ -45,6 +45,9 @@ int main(int argc, char **argv) {
     sched_setaffinity(0, sizeof(cpu_set_t), &current_mask);
     assert( DLB_Init(0, &current_mask, NULL) == DLB_SUCCESS );
 
+    /* A second Init should return error */
+    assert( DLB_Init(0, &current_mask, NULL) == DLB_ERR_INIT );
+
     /* Check current mask */
     assert( DLB_DROM_Attach() == DLB_SUCCESS );
     assert( DLB_DROM_GetProcessMask(getpid(), &current_mask, 0) == DLB_SUCCESS );
