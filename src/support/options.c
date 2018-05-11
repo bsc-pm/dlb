@@ -296,7 +296,7 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
     char *end_space = NULL;
     size_t len = strlen(dlb_args) + 1;
     char *dlb_args_copy = malloc(sizeof(char)*len);
-    strncpy(dlb_args_copy, dlb_args, len);
+    strcpy(dlb_args_copy, dlb_args);
     char *token = strtok_r(dlb_args_copy, " ", &end_space);
     while (token) {
         /* Each token is a complete string representing an option */
@@ -357,7 +357,7 @@ void options_init(options_t *options, const char *dlb_args) {
     if (dlb_args) {
         size_t len = strlen(dlb_args) + 1;
         dlb_args_from_api = malloc(sizeof(char)*len);
-        strncpy(dlb_args_from_api, dlb_args, len);
+        strcpy(dlb_args_from_api, dlb_args);
     }
 
     /* Copy either DLB_ARGS or LB_ARGS into a local buffer */
@@ -372,7 +372,7 @@ void options_init(options_t *options, const char *dlb_args) {
     if (env) {
         size_t len = strlen(env) + 1;
         dlb_args_from_env = malloc(sizeof(char)*len);
-        strncpy(dlb_args_from_env, env, len);
+        strcpy(dlb_args_from_env, env);
     }
 
     int i;
