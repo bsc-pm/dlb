@@ -74,7 +74,7 @@ static void parse_hwloc( void ) {
 
     hwloc_obj_t machine = hwloc_get_obj_by_type( topology, HWLOC_OBJ_MACHINE, 0 );
     hwloc_cpuset_to_glibc_sched_affinity( topology, machine->cpuset, &(sys.sys_mask), sizeof(cpu_set_t) );
-    sys.size = hwloc_bitmap_weight( machine->cpuset );
+    sys.size = hwloc_bitmap_last( machine->cpuset ) + 1;
 
     hwloc_topology_destroy( topology );
 }
