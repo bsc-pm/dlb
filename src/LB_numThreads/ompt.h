@@ -20,6 +20,9 @@
 #ifndef OMPT_H
 #define OMPT_H
 
+void ompt_thread_manager_IntoBlockingCall(void);
+void ompt_thread_manager_OutOfBlockingCall(void);
+
 #include <stdint.h>
 
 /* OMPT related types and signatures up to OpenMP Technical Report 6 */

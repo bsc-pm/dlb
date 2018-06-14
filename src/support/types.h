@@ -79,9 +79,7 @@ typedef enum MPISet {
 
 typedef enum OMPTMode {
     OMPT_MODE_DISABLED,
-    OMPT_MODE_DUMMY,
-    OMPT_MODE_RECLAIM,
-    OMPT_MODE_BORROW,
+    OMPT_MODE_SINGLE,
     OMPT_MODE_MPI
 } ompt_mode_t;
 

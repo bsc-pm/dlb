@@ -309,10 +309,9 @@ const char* get_mpiset_choices(void) {
 }
 
 /* ompt_mode_t */
-static const ompt_mode_t omptmode_values[] =
-    {OMPT_MODE_DISABLED, OMPT_MODE_DUMMY, OMPT_MODE_RECLAIM, OMPT_MODE_BORROW, OMPT_MODE_MPI};
-static const char* const omptmode_choices[] = {"disabled", "dummy", "reclaim", "borrow", "mpi"};
-static const char omptmode_choices_str[] = "disabled, dummy, reclaim, borrow, mpi";
+static const ompt_mode_t omptmode_values[] = {OMPT_MODE_DISABLED, OMPT_MODE_SINGLE, OMPT_MODE_MPI};
+static const char* const omptmode_choices[] = {"disabled", "single", "mpi"};
+static const char omptmode_choices_str[] = "disabled, single, mpi";
 enum { omptmode_nelems = sizeof(omptmode_values) / sizeof(omptmode_values[0]) };
 
 int parse_omptmode(const char *str, ompt_mode_t *value) {

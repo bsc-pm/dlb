@@ -31,6 +31,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <unistd.h>
+#include <string.h>
 
 int omp_get_thread_num(void) __attribute__((weak));
 void omp_set_num_threads(int nthreads) __attribute__((weak));
@@ -41,7 +42,7 @@ int omp_get_level(void) __attribute__((weak));
 /*  OMP Thread Manager                                                           */
 /*********************************************************************************/
 
-static cpu_set_t active_mask;
+static cpu_set_t active_mask, process_mask;
 static bool lewi = false;
 static pid_t pid;
 static ompt_mode_t ompt_mode;
@@ -50,29 +51,81 @@ static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
 }
 
+static void cb_disable_cpu(int cpuid, void *arg) {
+    CPU_CLR(cpuid, &active_mask);
+}
+
+static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
+    memcpy(&process_mask, mask, sizeof(cpu_set_t));
+}
+
 static void omp_thread_manager_acquire(void) {
+    static int cpus_to_borrow = 1;
+
     if (lewi) {
-        DLB_Borrow();
+        DLB_Return();
+        DLB_Reclaim();
+        if (DLB_BorrowCpus(cpus_to_borrow) == DLB_SUCCESS) {
+            ++cpus_to_borrow;
+        } else {
+            cpus_to_borrow = 1;
+        }
+
         int nthreads = CPU_COUNT(&active_mask);
         omp_set_num_threads(nthreads);
         verbose(VB_OMPT, "Acquire - Setting new mask to %s", mu_to_str(&active_mask));
     }
 }
 
+static void omp_thread_manager_release_(void) {
+    omp_set_num_threads(1);
+    CPU_ZERO(&active_mask);
+    CPU_SET(sched_getcpu(), &active_mask);
+    /* add_event(REBIND_EVENT+2, CPU_COUNT(&active_mask)); */
+    verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
+    DLB_Lend();
+}
+
 static void omp_thread_manager_release(void) {
-    if (lewi) {
-        omp_set_num_threads(1);
-        CPU_ZERO(&active_mask);
-        CPU_SET(sched_getcpu(), &active_mask);
-        verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
-        DLB_Lend();
+    if (ompt_mode == OMPT_MODE_SINGLE) {
+        omp_thread_manager_release_();
+    }
+}
+
+void ompt_thread_manager_IntoBlockingCall(void) {
+    if (ompt_mode == OMPT_MODE_MPI) {
+        omp_thread_manager_release_();
+    }
+}
+
+void ompt_thread_manager_OutOfBlockingCall(void) {
+    if (ompt_mode == OMPT_MODE_MPI) {
+        DLB_Reclaim();
     }
 }
 
 static void omp_thread_manager_init(void) {
     if (lewi) {
-        DLB_Init(0, NULL, NULL);
-        DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
+        int err = DLB_Init(0, NULL, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_Init: %s", DLB_Strerror(err));
+        }
+        err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_CallbackSet enable_cpu: %s", DLB_Strerror(err));
+        }
+        err = DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_CallbackSet disable_cpu: %s", DLB_Strerror(err));
+        }
+        err = DLB_CallbackSet(dlb_callback_set_process_mask,
+                (dlb_callback_t)cb_set_process_mask, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_CallbackSet set_process_mask: %s", DLB_Strerror(err));
+        }
+        shmem_procinfo__getprocessmask(pid, &process_mask, 0);
+        memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
+        verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
         omp_thread_manager_release();
     }
 }
@@ -137,6 +190,8 @@ static void cb_implicit_task(
                 verbose(VB_OMPT, "Rebinding thread %d to CPU %d", thread_num, cpuid);
             }
         }
+    } else if (endpoint == ompt_scope_end) {
+        add_event(REBIND_EVENT+1, 0);
     }
 }
 
@@ -180,7 +235,7 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *t
 
     /* Enable experimental LeWI features only if requested */
     ompt_mode = options.lewi_ompt;
-    lewi = options.lewi && ompt_mode != OMPT_MODE_DISABLED;
+    lewi = ompt_mode != OMPT_MODE_DISABLED;
     pid = options.preinit_pid ? options.preinit_pid : getpid();
 
     ompt_set_callback_t set_callback_fn = (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
