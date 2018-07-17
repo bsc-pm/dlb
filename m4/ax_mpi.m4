@@ -39,13 +39,14 @@ AC_DEFUN([AX_MPI],
         ### MPI TESTS ###
         AC_MSG_CHECKING([whether to enable MPI test suite])
         AC_ARG_ENABLE([mpi-tests],
-            AS_HELP_STRING([--disable-mpi-tests], [disable MPI tests]),
+            AS_HELP_STRING([--enable-mpi-tests], [enable MPI tests]),
             [], dnl Implicit: enable_mpi_tests=$enableval
-            [enable_mpi_tests=check]
+            [enable_mpi_tests=no]
         )
         AC_MSG_RESULT([$enable_mpi_tests])
 
         AS_IF([test "x$enable_mpi_tests" != xno], [
+            AC_MSG_WARN([Option --enable-mpi-tests is currently not supported and has no effect.])
             AC_LANG_PUSH([C])
             AC_LANG_CONFTEST([
                 AC_LANG_SOURCE([[
