@@ -189,6 +189,12 @@ void mu_init( void ) {
 #endif
 
         mu_initialized = true;
+
+        int i;
+        verbose(VB_AFFINITY, "System mask: %s", mu_to_str(&sys.sys_mask));
+        for (i=0; i<sys.num_parents; ++i) {
+            verbose(VB_AFFINITY, "Parent mask[%d]: %s", i, mu_to_str(&sys.parents[i]));
+        }
     }
 }
 

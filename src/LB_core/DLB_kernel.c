@@ -81,6 +81,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     // Initialize modules
     debug_init(&spd->options);
+    mu_init();
     timer_init();
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom

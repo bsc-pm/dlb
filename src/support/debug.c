@@ -196,6 +196,7 @@ void verbose(verbose_opts_t flag, const char *fmt, ...) {
     else if (vb_opts & flag & VB_DROM)    { vprint(stdout, "DLB DROM", fmt, list); }
     else if (vb_opts & flag & VB_ASYNC)   { vprint(stdout, "DLB ASYNC", fmt, list); }
     else if (vb_opts & flag & VB_OMPT)    { vprint(stdout, "DLB OMPT", fmt, list); }
+    else if (vb_opts & flag & VB_AFFINITY){ vprint(stdout, "DLB AFFINITY", fmt, list); }
     va_end(list);
 }
 
