@@ -140,14 +140,20 @@ static void parse_system_files(void) {
             if (d && d->d_type == DT_DIR
                     && strncmp(d->d_name, "node", 4) == 0
                     && isdigit(d->d_name[4]) ) {
-                ++nnodes;
-                cpu_set_t *p = realloc(sys.parents, nnodes*sizeof(cpu_set_t));
-                fatal_cond(!p, "realloc failed");
-                sys.parents = p;
-
+                /* Check that the node contains a valid mask */
+                cpu_set_t mask;
+                CPU_ZERO(&mask);
                 char filename[64];
-                snprintf(filename, 64, PATH_SYSTEM_NODE "/%.6s/cpulist", d->d_name);
-                parse_mask_from_file(filename, &sys.parents[nnodes-1]);
+                snprintf(filename, 64, PATH_SYSTEM_NODE "/%.10s/cpulist", d->d_name);
+                parse_mask_from_file(filename, &mask);
+                /* Save parent's mask */
+                if (CPU_COUNT(&mask)>0) {
+                    ++nnodes;
+                    cpu_set_t *p = realloc(sys.parents, nnodes*sizeof(cpu_set_t));
+                    fatal_cond(!p, "realloc failed");
+                    sys.parents = p;
+                    memcpy(&sys.parents[nnodes-1], &mask, sizeof(cpu_set_t));
+                }
             }
         }
         closedir(dir);
