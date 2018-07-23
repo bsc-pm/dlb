@@ -26,10 +26,13 @@
 #include <sched.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <limits.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <sys/wait.h>
 
+static bool verbose = false;
 
 static void dlb_check(int error, const char *func) {
     if (error) {
@@ -58,6 +61,7 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     fputs((
                 "Options:\n"
                 "  -h, --help               print this help\n"
+                "      --verbose            enable verbose mode\n"
                 ), out);
 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
@@ -70,6 +74,11 @@ static void __attribute__((__noreturn__)) execute(char **argv) {
     int error = DLB_PreInit(&mask, NULL);
     dlb_check(error, __FUNCTION__);
 
+    if (verbose) {
+        fprintf(stdout, "Executing child %s\n", argv[0]);
+        fflush(stdout);
+    }
+
     /* Fork-exec */
     pid_t pid = fork();
     if (pid < 0) {
@@ -81,8 +90,18 @@ static void __attribute__((__noreturn__)) execute(char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    /* Finalze from current process */
-    wait(NULL);
+    /* Finalize from current process */
+    int status;
+    wait(&status);
+    if (verbose) {
+        if (WIFEXITED(status)){
+            fprintf(stdout, "Child ended normally, return code: %d\n", WEXITSTATUS(status));
+        }
+        else if (WIFSIGNALED(status)){
+            fprintf(stdout, "Child was signaled with %d\n", WTERMSIG(status));
+        }
+    }
+
     error = DLB_Finalize();
     if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
         // DLB_ERR_NOPROC must be ignored here
@@ -94,12 +113,18 @@ static void __attribute__((__noreturn__)) execute(char **argv) {
 
 int main(int argc, char *argv[]) {
 
+    /* Long options that have no corresponding short option */
+    enum {
+        VERBOSE_OPTION = CHAR_MAX + 1
+    };
+
     int opt;
     extern char *optarg;
     extern int optind;
     struct option long_options[] = {
         {"help",     no_argument,       NULL, 'h'},
         {"version",  no_argument,       NULL, 'v'},
+        {"verbose",  no_argument,       NULL, VERBOSE_OPTION},
         {0,          0,                 NULL, 0 }
     };
 
@@ -110,6 +135,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'v':
                 version();
+                break;
+            case VERBOSE_OPTION:
+                verbose = true;
                 break;
             default:
                 usage(argv[0], stderr);
