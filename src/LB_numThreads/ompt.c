@@ -238,6 +238,9 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *t
     lewi = ompt_mode != OMPT_MODE_DISABLED;
     pid = options.preinit_pid ? options.preinit_pid : getpid();
 
+    fatal_cond(lewi && !options.preinit_pid, "LeWI with OMPT support requires the"
+            " application to be pre-initialized. Please run dlb_run <application>");
+
     ompt_set_callback_t set_callback_fn = (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
     if (set_callback_fn) {
         set_ompt_callback(set_callback_fn,
