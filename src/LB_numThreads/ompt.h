@@ -98,10 +98,10 @@ typedef union ompt_data_t {
     void *ptr;
 } ompt_data_t;
 
-typedef struct ompt_frame_t {
+typedef struct omp_frame_t {
     void *exit_frame;
     void *enter_frame;
-} ompt_frame_t;
+} omp_frame_t;
 
 
 /*********************************************************************************/
@@ -125,7 +125,7 @@ typedef void (*ompt_callback_thread_end_t) (
 
 typedef void (*ompt_callback_parallel_begin_t) (
     ompt_data_t *encountering_task_data,
-    const ompt_frame_t *encountering_task_frame,
+    const omp_frame_t *encountering_task_frame,
     ompt_data_t *parallel_data,
     unsigned int requested_team_size,
     ompt_invoker_t invoker,

@@ -143,7 +143,7 @@ static void omp_thread_manager_finalize(void) {
 
 static void cb_parallel_begin(
         ompt_data_t *encountering_task_data,
-        const ompt_frame_t *encountering_task_frame,
+        const omp_frame_t *encountering_task_frame,
         ompt_data_t *parallel_data,
         unsigned int requested_team_size,
         ompt_invoker_t invoker,
