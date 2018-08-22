@@ -69,6 +69,11 @@ AC_PROG_FC
 
 # use the C compiler for the following checks
 AC_LANG([C])
+
+# icc needs -we10006 to promote unrecognized flags from warning to error
+AX_CHECK_COMPILE_FLAG([-we10006], [foobar="-we10006"])
+AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $foobar])
+
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
 AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])
@@ -83,6 +88,9 @@ AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])
 AC_CHECK_HEADERS([stdatomic.h])
 AC_CHECK_HEADERS([execinfo.h])
+
+# restore CFLAGS
+AX_VAR_POPVALUE([CFLAGS])
 
 # use the Fortran compiler for the following checks
 AC_LANG_PUSH([Fortran])
