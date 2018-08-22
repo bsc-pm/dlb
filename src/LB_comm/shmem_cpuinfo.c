@@ -160,7 +160,6 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
             if (cpuinfo->guest == NOBODY) {
                 cpuinfo->guest = pid;
             }
-            cpuinfo->id = cpuid;
             cpuinfo->owner = pid;
             cpuinfo->state = CPU_BUSY;
             cpuinfo->thread_id = -1;
@@ -194,6 +193,11 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
         if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
             get_time(&shdata->initial_time);
             shdata->timestamp_cpu_lent = 0;
+
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                shdata->node_info[cpuid].id = cpuid;
+            }
         }
 
         // Register process_mask, with stealing = false always in normal Init()

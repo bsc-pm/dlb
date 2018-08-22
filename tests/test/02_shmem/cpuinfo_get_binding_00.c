@@ -49,11 +49,41 @@ int main(int argc, char *argv[]) {
     CPU_SET(2, &p2_mask);
     CPU_SET(3, &p2_mask);
 
-    // Init
+    // Init P1
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == true );
     assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == true );
+
+    // P1 temporarily acquires CPUs 2 and 3
+    CPU_SET(2, &p1_mask);
+    CPU_SET(3, &p1_mask);
+    shmem_cpuinfo__update_ownership(p1_pid, &p1_mask);
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 0) == 0 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 1) == 1 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 2) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 2) == 2 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 3) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 3) == 3 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == false );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == false );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 2) == false );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 3) == false );
+
+    // Reduce p1 mask to its original
+    CPU_CLR(2, &p1_mask);
+    CPU_CLR(3, &p1_mask);
+    shmem_cpuinfo__update_ownership(p1_pid, &p1_mask);
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 0) == 0 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == true );
+    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 1) == 1 );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == false );
+    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == false );
+
+    // Init P2
+    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == true );
     assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == true );
 
