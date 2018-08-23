@@ -1557,6 +1557,18 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
             }
         }
 
+        if (cpuids[0]+1 == offset) {
+            /* Print legend */
+            if (color) {
+                snprintf(l, MAX_LINE_LEN-strlen(line),
+                        "\n\n    Legend: Disabled, "
+                        ANSI_COLOR_RED "Owned" ANSI_COLOR_RESET ", "
+                        ANSI_COLOR_YELLOW "Reclaimed" ANSI_COLOR_RESET ", "
+                        ANSI_COLOR_GREEN "Idle" ANSI_COLOR_RESET ", "
+                        ANSI_COLOR_BLUE "Lent" ANSI_COLOR_RESET);
+            }
+        }
+
         /* Realloc buffer if needed */
         size_t line_len = strlen(line) + 2; /* + '\n\0' */
         if (buffer_len + line_len > buffer_size) {
