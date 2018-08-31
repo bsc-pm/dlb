@@ -65,31 +65,39 @@ static int get_sys_size(void) {
 #if defined HWLOC_LIB
 static void parse_hwloc( void ) {
     hwloc_topology_t topology;
-    hwloc_topology_init( &topology );
-    hwloc_topology_load( topology );
+    hwloc_topology_init(&topology);
+    hwloc_topology_load(topology);
 
-    hwloc_obj_t obj;
-    int num_nodes = hwloc_get_nbobjs_by_type( topology, HWLOC_OBJ_NODE );
-    if ( num_nodes > 0 ) {
-        sys.num_parents = num_nodes;
-        obj = hwloc_get_obj_by_type( topology, HWLOC_OBJ_NODE, 0 );
-    } else {
-        sys.num_parents = hwloc_get_nbobjs_by_type( topology, HWLOC_OBJ_SOCKET );
-        obj = hwloc_get_obj_by_type( topology, HWLOC_OBJ_SOCKET, 0 );
+    hwloc_obj_type_t obj_type = HWLOC_OBJ_NODE;
+    int nbobjs = hwloc_get_nbobjs_by_type(topology, obj_type);
+    if (nbobjs < 1) {
+        obj_type = HWLOC_OBJ_SOCKET;
+        nbobjs = hwloc_get_nbobjs_by_type(topology, obj_type);
     }
 
-    sys.parents = malloc( sys.num_parents * sizeof(cpu_set_t) );
-
+    int nb_valid_objs = 0;
     int i = 0;
-    for ( ; obj; obj = obj->next_sibling ) {
-        hwloc_cpuset_to_glibc_sched_affinity( topology, obj->cpuset, &(sys.parents[i++]), sizeof(cpu_set_t) );
+    for (i=0; i<nbobjs; ++i) {
+        hwloc_obj_t obj = hwloc_get_obj_by_type(topology, obj_type, i);
+        if (!hwloc_bitmap_iszero(obj->cpuset)) {
+            ++nb_valid_objs;
+            void *ptr = realloc(sys.parents, nb_valid_objs*sizeof(cpu_set_t));
+            fatal_cond(!ptr, "realloc failed");
+            sys.parents = ptr;
+            hwloc_cpuset_to_glibc_sched_affinity(topology, obj->cpuset,
+                    &(sys.parents[nb_valid_objs-1]), sizeof(cpu_set_t));
+        }
     }
 
-    hwloc_obj_t machine = hwloc_get_obj_by_type( topology, HWLOC_OBJ_MACHINE, 0 );
-    hwloc_cpuset_to_glibc_sched_affinity( topology, machine->cpuset, &(sys.sys_mask), sizeof(cpu_set_t) );
-    sys.size = hwloc_bitmap_last( machine->cpuset ) + 1;
+    fatal_cond(!nb_valid_objs, "HWLOC could not find affinity masks");
+    sys.num_parents = nb_valid_objs;
 
-    hwloc_topology_destroy( topology );
+    hwloc_obj_t machine = hwloc_get_obj_by_type(topology, HWLOC_OBJ_MACHINE, 0);
+    hwloc_cpuset_to_glibc_sched_affinity(topology, machine->cpuset, &(sys.sys_mask),
+            sizeof(cpu_set_t) );
+    sys.size = hwloc_bitmap_last(machine->cpuset) + 1;
+
+    hwloc_topology_destroy(topology);
 }
 #elif defined IS_BGQ_MACHINE
 static void set_bgq_info( void ) {
