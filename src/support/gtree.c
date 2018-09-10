@@ -56,8 +56,8 @@
 #include <stdbool.h>
 
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
-#define g_return_if_fail(x)         do { if (unlikely(x)) return; } while(0)
-#define g_return_val_if_fail(x,y)   do { if (unlikely(x)) return (y); } while(0)
+#define g_return_if_fail(x)         do { if (likely(x)) {} else return; } while(0)
+#define g_return_val_if_fail(x,y)   do { if (likely(x)) {} else return (y); } while(0)
 
 /**
  * SECTION:trees-binary
