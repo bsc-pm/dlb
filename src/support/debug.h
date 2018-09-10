@@ -43,38 +43,41 @@ void dlb_clean(void);
 
 extern verbose_opts_t   vb_opts;
 
+#define likely(expr)   __builtin_expect(!!(expr), 1)
+#define unlikely(expr) __builtin_expect(!!(expr), 0)
+
 #define fatal_cond(cond, ...) \
     do { \
-        if (cond) { fatal(__VA_ARGS__); } \
+        if (unlikely(cond)) { fatal(__VA_ARGS__); } \
     } while(0)
 
 #define fatal_cond0(cond, ...) \
     do { \
-        if (cond) { fatal0(__VA_ARGS__); } \
+        if (unlikely(cond)) { fatal0(__VA_ARGS__); } \
     } while(0)
 
 #define fatal_cond_strerror(cond) \
     do { \
         int _error = cond; \
-        if (_error) fatal(#cond ":%s", strerror(_error)); \
+        if (unlikely(_error)) fatal(#cond ":%s", strerror(_error)); \
     } while(0)
 
 #define verbose(flag, ...) \
     do { \
-        if (__builtin_expect(vb_opts, 0)) { verbose(flag, __VA_ARGS__); } \
+        if (unlikely(vb_opts != VB_CLEAR)) { verbose(flag, __VA_ARGS__); } \
     } while(0)
 
 
 #ifdef DEBUG_VERSION
-#define DLB_DEBUG(f) f
+#define DLB_DEBUG(stmt) do { stmt; } while(0)
 #else
-#define DLB_DEBUG(f)
+#define DLB_DEBUG(stmt) do { (void)0; } while(0)
 #endif
 
 #ifdef DEBUG_VERSION
 #define ensure(cond, ...) \
     do { \
-        if (!(cond)) { fatal(__VA_ARGS__); } \
+        if (likely(cond)) ; else { fatal(__VA_ARGS__); } \
     } while(0)
 
 #define static_ensure(cond, ...) \
@@ -83,8 +86,8 @@ extern verbose_opts_t   vb_opts;
     } while (0)
 
 #else
-#define ensure(cond, ...)
-#define static_ensure(cond, ...)
+#define ensure(cond, ...)        do { (void)0; } while(0)
+#define static_ensure(cond, ...) do { (void)0; } while(0)
 #endif
 
 /* Colors */
