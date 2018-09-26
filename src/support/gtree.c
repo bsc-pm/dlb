@@ -147,9 +147,6 @@ static gpointer   g_tree_node_search                (GTreeNode     *node,
                                                      gconstpointer  data);
 static GTreeNode* g_tree_node_rotate_left           (GTreeNode     *node);
 static GTreeNode* g_tree_node_rotate_right          (GTreeNode     *node);
-#ifdef G_TREE_DEBUG
-static void       g_tree_node_check                 (GTreeNode     *node);
-#endif
 
 
 static GTreeNode*
@@ -412,10 +409,6 @@ g_tree_insert (GTree    *tree,
   g_return_if_fail (tree != NULL);
 
   g_tree_insert_internal (tree, key, value, false);
-
-#ifdef G_TREE_DEBUG
-  g_tree_node_check (tree->root);
-#endif
 }
 
 /**
@@ -442,10 +435,6 @@ g_tree_replace (GTree    *tree,
   g_return_if_fail (tree != NULL);
 
   g_tree_insert_internal (tree, key, value, true);
-
-#ifdef G_TREE_DEBUG
-  g_tree_node_check (tree->root);
-#endif
 }
 
 /* internal insert routine */
@@ -604,10 +593,6 @@ g_tree_remove (GTree         *tree,
 
   removed = g_tree_remove_internal (tree, key, false);
 
-#ifdef G_TREE_DEBUG
-  g_tree_node_check (tree->root);
-#endif
-
   return removed;
 }
 
@@ -633,10 +618,6 @@ g_tree_steal (GTree         *tree,
   g_return_val_if_fail (tree != NULL, false);
 
   removed = g_tree_remove_internal (tree, key, true);
-
-#ifdef G_TREE_DEBUG
-  g_tree_node_check (tree->root);
-#endif
 
   return removed;
 }
