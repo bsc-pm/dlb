@@ -125,5 +125,27 @@ int main(int argc, char **argv) {
     add_tv_to_ts(&tv0, &tv0, &result);
     assert( result.tv_sec == 3 && result.tv_nsec == 999998000 );
 
+    /* ns_to_human */
+    char buf[16] = {0};
+    ns_to_human(NULL, 42, 1);           assert( strcmp(buf, "") == 0);
+    ns_to_human(buf, 0, 1);             assert( strcmp(buf, "") == 0);
+    ns_to_human(buf, 16, 1);            assert( strcmp(buf, "1 ns") == 0 );
+    ns_to_human(buf, 16, 11);           assert( strcmp(buf, "11 ns") == 0 );
+    ns_to_human(buf, 16, 999);          assert( strcmp(buf, "999 ns") == 0 );
+    ns_to_human(buf, 16, 1000);         assert( strcmp(buf, "1 us") == 0 );
+    ns_to_human(buf, 16, 1009);         assert( strcmp(buf, "1 us") == 0 );
+    ns_to_human(buf, 16, 1099);         assert( strcmp(buf, "1.09 us") == 0 );
+    ns_to_human(buf, 16, 551099);       assert( strcmp(buf, "551.09 us") == 0 );
+    ns_to_human(buf, 16, 999999);       assert( strcmp(buf, "999.99 us") == 0 );
+    ns_to_human(buf, 16, 1000000);      assert( strcmp(buf, "1 ms") == 0 );
+    ns_to_human(buf, 16, 55200000);     assert( strcmp(buf, "55.20 ms") == 0 );
+    ns_to_human(buf, 16, 555200000);    assert( strcmp(buf, "555.20 ms") == 0 );
+    ns_to_human(buf, 16, 999999999);    assert( strcmp(buf, "999.99 ms") == 0 );
+    ns_to_human(buf, 16, 1000000000);   assert( strcmp(buf, "1 s") == 0 );
+    ns_to_human(buf, 16, 1009999999);   assert( strcmp(buf, "1 s") == 0 );
+    ns_to_human(buf, 16, 1010000000);   assert( strcmp(buf, "1.01 s") == 0 );
+    ns_to_human(buf, 16, 1010000000);   assert( strcmp(buf, "1.01 s") == 0 );
+    ns_to_human(buf, 16, INT64_MAX);    assert( strcmp(buf, "9223372036.85 s") == 0 );
+
     return 0;
 }

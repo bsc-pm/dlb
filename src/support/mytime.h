@@ -36,6 +36,7 @@ int64_t to_nsecs( const struct timespec *ts );
 int64_t timeval_diff( const struct timeval *init, const struct timeval *end );
 int64_t timespec_diff( const struct timespec *start, const struct timespec *finish );
 void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2, struct timespec *res );
+void ns_to_human( char *buf, size_t size, int64_t ns );
 
 void timer_init(void);
 void *timer_register(const char *key);

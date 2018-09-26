@@ -126,6 +126,29 @@ void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2,
     res->tv_nsec = nsec;
 }
 
+void ns_to_human( char *buf, size_t size, int64_t ns ) {
+    if (!buf || !size) return;
+
+    const char* const units[] = {"ns", "us", "ms", "s"};
+    int decimal_part = 0;
+    int64_t integer_part = ns;
+    int i = 0;
+    while (integer_part > 999 && i<3) {
+        decimal_part = integer_part % 1000;
+        integer_part = integer_part / 1000;
+        ++i;
+    }
+
+    /* Print 0 or 2 decimals */
+    decimal_part /= 10;
+    if (decimal_part > 0) {
+        snprintf(buf, size, "%"PRId64".%02d %s", integer_part, decimal_part, units[i]);
+    } else {
+        snprintf(buf, size, "%"PRId64" %s", integer_part, units[i]);
+    }
+}
+
+
 /* Timers */
 
 enum { TIMER_MAX_KEY_LEN = 128 };
