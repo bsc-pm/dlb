@@ -25,8 +25,8 @@ DEBUG_LDFLAGS="$BLDDIR/.libs/libdlb_dbg.a $HWLOC_LDFLAGS -lrt @AC_LDFLAGS@"
 cat << EOF
 compile_versions="$VERSIONS"
 
-test_CC=$CC
-test_FC=$FC
+test_CC="$CC"
+test_FC="$FC"
 test_CPPFLAGS_performance="$PERFO_CPPFLAGS"
 test_CPPFLAGS_debug="$DEBUG_CPPFLAGS"
 test_CFLAGS_performance="$PERFO_CFLAGS"

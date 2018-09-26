@@ -22,7 +22,7 @@ MPIEXEC_BIND_OPTS="@MPIEXEC_BIND_OPTS@"
 cat <<EOF
 compile_versions="$VERSIONS"
 
-test_CC=$CC
+test_CC="$CC"
 test_CFLAGS_performance="$PERFO_CFLAGS"
 test_CFLAGS_debug="$DEBUG_CFLAGS"
 test_LDFLAGS_performance="$PERFO_LDFLAGS"
