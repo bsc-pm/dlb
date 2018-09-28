@@ -30,8 +30,9 @@ enum { ASSERT_LOOP_USECS = 1000 };
         for(_ii=0; _ii<ASSERT_LOOP_MAX_ITS; ++_ii) {    \
             if (expr) break;                            \
             usleep(ASSERT_LOOP_USECS);                  \
+            __sync_synchronize();                       \
         }                                               \
         assert(expr);                                   \
-    } while(0);
+    } while(0)
 
 #endif /* ASSERT_LOOP_H */
