@@ -433,6 +433,7 @@ int DLB_PollDROM_Update_sp(dlb_handler_t handler);
  *  \param[in] cpuid CPU to be checked
  *  \return DLB_SUCCESS if the CPU is available
  *  \return DLB_NOTED if the CPU is owned but still guested by other process
+ *  \return DLB_NOUPDT if the CPU is owned but still not reclaimed
  *  \return DLB_ERR_PERM if the CPU cannot be acquired or has been disabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  */

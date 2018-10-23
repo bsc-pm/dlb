@@ -1382,6 +1382,10 @@ int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpuid) {
             }
         }
         shmem_unlock(shm_handler);
+    } else if (cpuinfo->owner == pid
+            && cpuinfo->state == CPU_LENT) {
+        /* The owner is asking for a CPU not reclaimed yet */
+        error = DLB_NOUPDT;
     }
 
     return error;
