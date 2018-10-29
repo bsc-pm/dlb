@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [2.0.2] 2018-10-29
+### Fixed
+- `DLB_ARGS` was not being correctly parsed in some cases
+- DROM API cointained a typo. New function is called `DLB_DROM_Detach`
+- Intel compiler and GCC8 compatibility
+- Several minor bugs
+
 ## [2.0.1] 2018-02-27
 ### Fixed
 - MaxParallelism is updated correctly when set and later decreased
@@ -136,6 +143,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[2.0.2]: https://github.com/bsc-pm/dlb/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.0.1
 [2.0]: https://github.com/bsc-pm/dlb/compare/v1.3...v2.0
 [1.3.2]: https://github.com/bsc-pm/dlb/compare/v1.3.1...v1.3.2
