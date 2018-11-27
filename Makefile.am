@@ -432,6 +432,7 @@ sphinx_files = \
 	doc/user_guide/source/images/drom.png \
 	doc/user_guide/source/images/hpc_app.png \
 	doc/user_guide/source/images/LeWI.png \
+	doc/user_guide/source/_static/custom.css \
 	doc/user_guide/Makefile
 
 EXTRA_DIST += $(sphinx_files)
