@@ -114,10 +114,10 @@ at pm-tools@bsc.es.
 
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
 [GitHub releases]: https://github.com/bsc-pm/dlb/releases
-[DLB User Guide]: https://pm.bsc.es/dlb-docs/user-guide/index.html
-[pub1_pdf]: https://pm.bsc.es/sites/default/files/ftp/dlb/doc/JPDC_2014.pdf
+[DLB User Guide]: https://pm.bsc.es/ftp/dlb/doc/user-guide/index.html
+[pub1_pdf]: https://pm.bsc.es/ftp/dlb/doc/JPDC_2014.pdf
 [pub1_ref]: http://www.sciencedirect.com/science/article/pii/S0743731514000926
-[pub1_bib]: https://pm.bsc.es/sites/default/files/ftp/dlb/doc/LeWI_JPDC14.bib
-[pub2_pdf]: https://pm.bsc.es/sites/default/files/ftp/dlb/doc/LeWI_ICPP09.pdf
+[pub1_bib]: https://pm.bsc.es/ftp/dlb/doc/LeWI_JPDC14.bib
+[pub2_pdf]: https://pm.bsc.es/ftp/dlb/doc/LeWI_ICPP09.pdf
 [pub2_ref]: http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=5362480
-[pub2_bib]: https://pm.bsc.es/sites/default/files/ftp/dlb/doc/LeWI_ICPP09.bib
+[pub2_bib]: https://pm.bsc.es/ftp/dlb/doc/LeWI_ICPP09.bib
