@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto+Condensed:400,700');
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono:400,700');
+
+span.option {
+  font-family: "Roboto Mono", monospace
+}
+
+body:before {
+    content: "Programming Models @ BSC";
+    background: #6fa5cc;
+    width: 100%;
+    display: block;
+    text-align: center;
+    height: auto;
+    overflow: hidden;
+    color: #000000;
+    font-size: 48px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 54px;
+    padding: 3rem 0 3rem 0;
+}
+
+@media screen and (max-width: 875px) {
+    body:before {
+        margin: -20px -30px 20px -30px;
+        width: calc(100% + 60px);
+    }
+}
+
+.document {
+    width: 1040px !important;
+}
+
+@media screen and (max-width: 875px) {
+    .document {
+        width: 100% !important;
+    }
+}

@@ -50,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'DLB'
-copyright = u'2017,  Barcelona Supercomputing Center'
+copyright = u'2015-2018, Barcelona Supercomputing Center'
 author = u'Marta Garcia and Victor Lopez'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -111,17 +111,22 @@ todo_include_todos = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "sidebarwidth" : "280"
+    "sidebarwidth" : "280",
+    "font_family": '"Roboto Condensed", sans-serif',
+    "caption_font_family": '"Roboto Condensed", sans-serif',
+    "head_font_family": '"Roboto Condensed", sans-serif',
+    "code_font_family": '"Roboto Mono", monospace',
+    "show_powered_by": False,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_path = ['..']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -142,7 +147,7 @@ html_favicon = 'images/dlb_icon.ico'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
