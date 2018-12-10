@@ -240,14 +240,18 @@ void OutOfCommunication(void) {
 void IntoBlockingCall(int is_iter, int blocking_mode) {
     const subprocess_descriptor_t *spd = get_global_spd();
     if (spd->dlb_enabled) {
+        add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
         spd->lb_funcs.into_blocking_call(spd);
+        add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
 
 void OutOfBlockingCall(int is_iter) {
     const subprocess_descriptor_t *spd = get_global_spd();
     if (spd->dlb_enabled) {
+        add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
+        add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
 
@@ -530,7 +534,7 @@ int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid) {
 int node_barrier(void) {
     add_event(RUNTIME_EVENT, EVENT_BARRIER);
     shmem_barrier();
-    add_event(RUNTIME_EVENT, 0);
+    add_event(RUNTIME_EVENT, EVENT_USER);
     return DLB_SUCCESS;
 }
 

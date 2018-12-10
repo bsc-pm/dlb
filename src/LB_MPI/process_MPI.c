@@ -29,7 +29,6 @@
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
 #include "apis/DLB_interface.h"
-#include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
 #include "support/types.h"
@@ -178,9 +177,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
         if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
                 (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
                 (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
-            add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
             IntoBlockingCall(is_iter, 0);
-            add_event(RUNTIME_EVENT, 0);
         }
     }
 }
@@ -190,9 +187,7 @@ void after_mpi(mpi_call call_type) {
         if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
                 (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
                 (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
-            add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
             OutOfBlockingCall(is_iter);
-            add_event(RUNTIME_EVENT, 0);
             is_iter=0;
         }
 

@@ -23,7 +23,6 @@
 #include "LB_comm/shmem.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
-#include "support/tracing.h"
 
 #include <semaphore.h>
 #include <stdio.h>
@@ -158,9 +157,7 @@ void shmem_barrier(void) {
         sem_post(&barrier->sem);
     } else {
         // Only if this process is not the last one, act as a blocking call
-        add_event(RUNTIME_EVENT, EVENT_LEND);
         IntoBlockingCall(0, 0);
-        add_event(RUNTIME_EVENT, 0);
     }
 
     // Wait until everyone is in here
@@ -168,9 +165,7 @@ void shmem_barrier(void) {
 
     if (!last_in) {
         // Recover resources for those processes that simulated a blocking call
-        add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
         OutOfBlockingCall(0);
-        add_event(RUNTIME_EVENT, 0);
     }
 
     bool last_out;
