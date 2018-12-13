@@ -266,14 +266,18 @@ void shmem_async_enable_cpu(pid_t pid, int cpuid) {
     verbose(VB_ASYNC, "Enqueuing petition for pid: %d, enable cpuid %d", pid, cpuid);
     helper_t *helper = get_helper(pid);
     ensure(helper, "No helper found in enable_cpu function");
-    message_t message = { .action = ACTION_ENABLE_CPU, .cpuid = cpuid };
-    enqueue_message(helper, &message);
+    if (helper) {
+        message_t message = { .action = ACTION_ENABLE_CPU, .cpuid = cpuid };
+        enqueue_message(helper, &message);
+    }
 }
 
 void shmem_async_disable_cpu(pid_t pid, int cpuid) {
     verbose(VB_ASYNC, "Enqueuing petition for pid: %d, disable cpuid %d", pid, cpuid);
     helper_t *helper = get_helper(pid);
     ensure(helper, "No helper found in disable_cpu function");
-    message_t message = { .action = ACTION_DISABLE_CPU, .cpuid = cpuid };
-    enqueue_message(helper, &message);
+    if (helper) {
+        message_t message = { .action = ACTION_DISABLE_CPU, .cpuid = cpuid };
+        enqueue_message(helper, &message);
+    }
 }

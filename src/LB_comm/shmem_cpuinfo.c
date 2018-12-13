@@ -380,8 +380,15 @@ static bool deregister_process(pid_t pid) {
             if (cpuinfo->owner != NOBODY) {
                 shmem_empty = false;
             }
+
+            // Remove any previous CPU request
+            remove_cpu_request(&cpuinfo->requests, pid);
         }
     }
+
+    // Remove any previous global request
+    remove_global_request(&shdata->global_requests, pid);
+
     return shmem_empty;
 }
 
