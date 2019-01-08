@@ -107,10 +107,7 @@ void ompt_thread_manager_OutOfBlockingCall(void) {
 
 static void omp_thread_manager_init(void) {
     if (lewi) {
-        int err = DLB_Init(0, NULL, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_Init: %s", DLB_Strerror(err));
-        }
+        int err;
         err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
         if (err != DLB_SUCCESS) {
             warning("DLB_CallbackSet enable_cpu: %s", DLB_Strerror(err));
@@ -132,9 +129,6 @@ static void omp_thread_manager_init(void) {
 }
 
 static void omp_thread_manager_finalize(void) {
-    if (lewi) {
-        DLB_Finalize();
-    }
 }
 
 
@@ -213,61 +207,78 @@ static void cb_thread_end(
 /*  OMPT start tool                                                              */
 /*********************************************************************************/
 
-static inline void set_ompt_callback(ompt_set_callback_t set_callback_fn,
+static inline int set_ompt_callback(ompt_set_callback_t set_callback_fn,
         ompt_callbacks_t which, ompt_callback_t callback) {
+    int error = 1;
     switch (set_callback_fn(which, callback)) {
         case ompt_set_error:
-            verbose(VB_OMPT, "OMPT callback %d failed\n", which);
+            verbose(VB_OMPT, "OMPT callback %d failed", which);
             break;
         case ompt_set_never:
-            verbose(VB_OMPT, "OMPT callback %d registered but will never be called\n", which);
+            verbose(VB_OMPT, "OMPT callback %d registered but will never be called", which);
             break;
         default:
-            verbose(VB_OMPT, "OMPT callback %d succesfully registered", which);
+            error = 0;
     }
+    return error;
 }
 
 static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *tool_data) {
-    /* Initialize minimal modules */
+    /* Parse options and get the required fields */
     options_t options;
     options_init(&options, NULL);
-    debug_init(&options);
-    verbose(VB_OMPT, "Initializing OMPT module");
-
-    /* Enable experimental LeWI features only if requested */
     lewi = options.lewi;
     ompt = options.ompt;
     ompt_opts = options.lewi_ompt;
     pid = options.preinit_pid ? options.preinit_pid : getpid();
 
-    fatal_cond(lewi && !options.preinit_pid, "LeWI with OMPT support requires the"
-            " application to be pre-initialized. Please run dlb_run <application>");
+    /* Enable experimental OMPT only if requested */
+    if (ompt) {
+        /* Initialize DLB only if ompt is enabled, otherwise DLB_Finalize won't be called */
+        int err = DLB_Init(0, NULL, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_Init: %s", DLB_Strerror(err));
+        }
 
-    ompt_set_callback_t set_callback_fn = (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
-    if (set_callback_fn) {
-        set_ompt_callback(set_callback_fn,
-                ompt_callback_thread_begin,   (ompt_callback_t)cb_thread_begin);
-        set_ompt_callback(set_callback_fn,
-                ompt_callback_thread_end,     (ompt_callback_t)cb_thread_end);
-        set_ompt_callback(set_callback_fn,
-                ompt_callback_parallel_begin, (ompt_callback_t)cb_parallel_begin);
-        set_ompt_callback(set_callback_fn,
-                ompt_callback_parallel_end,   (ompt_callback_t)cb_parallel_end);
-        set_ompt_callback(set_callback_fn,
-                ompt_callback_implicit_task,  (ompt_callback_t)cb_implicit_task);
+        verbose(VB_OMPT, "Initializing OMPT module");
 
-        omp_thread_manager_init();
-    } else {
-        verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
+        ompt_set_callback_t set_callback_fn =
+            (ompt_set_callback_t)ompt_fn_lookup("ompt_set_callback");
+        if (set_callback_fn) {
+            err = 0;
+            err += set_ompt_callback(set_callback_fn,
+                    ompt_callback_thread_begin,   (ompt_callback_t)cb_thread_begin);
+            err += set_ompt_callback(set_callback_fn,
+                    ompt_callback_thread_end,     (ompt_callback_t)cb_thread_end);
+            err += set_ompt_callback(set_callback_fn,
+                    ompt_callback_parallel_begin, (ompt_callback_t)cb_parallel_begin);
+            err += set_ompt_callback(set_callback_fn,
+                    ompt_callback_parallel_end,   (ompt_callback_t)cb_parallel_end);
+            err += set_ompt_callback(set_callback_fn,
+                    ompt_callback_implicit_task,  (ompt_callback_t)cb_implicit_task);
+
+            if (!err) {
+                verbose(VB_OMPT, "OMPT callbacks succesfully registered");
+            }
+
+            omp_thread_manager_init();
+        } else {
+            verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
+        }
+
+        // return a non-zero value to activate the tool
+        return 1;
     }
 
-    // return a non-zero value to activate the tool
-    return 1;
+    return 0;
 }
 
 static void ompt_finalize(ompt_data_t *tool_data) {
-    verbose(VB_OMPT, "Finalizing OMPT module");
-    omp_thread_manager_finalize();
+    if (ompt) {
+        verbose(VB_OMPT, "Finalizing OMPT module");
+        omp_thread_manager_finalize();
+        DLB_Finalize();
+    }
 }
 
 

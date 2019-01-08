@@ -48,16 +48,23 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     int error = DLB_SUCCESS;
 
-    // Initialize first instrumentation module
+    // Initialize common modules (instrumentation module ASAP)
     options_init(&spd->options, lb_args);
     init_tracing(&spd->options);
     add_event(RUNTIME_EVENT, EVENT_INIT);
+    debug_init(&spd->options);
+    mu_init();
+    timer_init();
 
     // Infer LeWI mode
     spd->lb_policy = !spd->options.lewi ? POLICY_NONE :
         spd->options.preinit_pid ? POLICY_LEWI_MASK :
         mask ? POLICY_LEWI_MASK :
         POLICY_LEWI;
+
+    fatal_cond(spd->lb_policy == POLICY_LEWI && spd->options.ompt,
+            "LeWI with OMPT support requires the application to be pre-initialized.\n"
+            "Please run: dlb_run <application>");
 
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm);
@@ -79,10 +86,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         memcpy(&spd->process_mask, &process_mask, sizeof(cpu_set_t));
     }
 
-    // Initialize modules
-    debug_init(&spd->options);
-    mu_init();
-    timer_init();
+    // Initialize shared memories
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
             || spd->options.statistics
