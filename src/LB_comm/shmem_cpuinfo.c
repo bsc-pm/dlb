@@ -129,6 +129,19 @@ static void open_shmem(const char *shmem_key) {
     pthread_mutex_unlock(&mutex);
 }
 
+static void init_shmem() {
+    // Initialize some values if this is the 1st process attached to the shmem
+    if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
+        get_time(&shdata->initial_time);
+        shdata->timestamp_cpu_lent = 0;
+
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            shdata->node_info[cpuid].id = cpuid;
+        }
+    }
+}
+
 static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
     if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
@@ -189,16 +202,8 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
 
     shmem_lock(shm_handler);
     {
-        // Initialize some values if this is the 1st process attached to the shmem
-        if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
-            get_time(&shdata->initial_time);
-            shdata->timestamp_cpu_lent = 0;
-
-            int cpuid;
-            for (cpuid=0; cpuid<node_size; ++cpuid) {
-                shdata->node_info[cpuid].id = cpuid;
-            }
-        }
+        // Initialize shared memory, if needed
+        init_shmem();
 
         // Register process_mask, with stealing = false always in normal Init()
         error = register_process(pid, process_mask, false);
@@ -230,11 +235,10 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_
     int error;
     shmem_lock(shm_handler);
     {
-        // Initialize initial time and CPU timing on shmem creation
-        if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
-            get_time(&shdata->initial_time);
-        }
+        // Initialize shared memory, if needed
+        init_shmem();
 
+        // Register process_mask, with stealing according to user arguments
         error = register_process(pid, mask, flags & DLB_STEAL_CPUS);
     }
     shmem_unlock(shm_handler);
