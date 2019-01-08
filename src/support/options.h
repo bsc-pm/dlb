@@ -33,6 +33,7 @@ typedef struct Options {
     bool               drom;
     bool               statistics;
     bool               barrier;
+    bool               ompt;
     interaction_mode_t mode;
     /* verbose */
     bool               quiet;
@@ -42,10 +43,10 @@ typedef struct Options {
     bool               instrument;
     bool               instrument_counters;
     /* lewi */
-    ompt_mode_t        lewi_ompt;
     bool               lewi_mpi;
     mpi_set_t          lewi_mpi_calls;
     priority_t         lewi_affinity;
+    ompt_opts_t        lewi_ompt;
     bool               lewi_greedy;
     bool               lewi_warmup;
     /* misc */

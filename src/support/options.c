@@ -50,7 +50,7 @@ typedef enum OptionTypes {
     OPT_MASK_T,     // cpu_set_t
     OPT_MODE_T,     // interaction_mode_t
     OPT_MPISET_T,   // mpi_set_t
-    OPT_OMPTMODE_T  // ompt_mode_t
+    OPT_OMPTOPTS_T  // ompt_opts_t
 } option_type_t;
 
 typedef struct {
@@ -110,6 +110,14 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Enable the Shared Memory Barrier. Experimental mode. Processes\n"
                           OFFSET"can perform an intra-node barrier",
         .offset         = offsetof(options_t, barrier),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--ompt",
+        .default_value  = "no",
+        .description    = OFFSET"Enable OpenMP performance tool.",
+        .offset         = offsetof(options_t, ompt),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     }, {
@@ -179,14 +187,6 @@ static const opts_dict_t options_dictionary[] = {
     // LeWI
     {
         .var_name       = "LB_NULL",
-        .arg_name       = "--lewi-ompt",
-        .default_value  = "disabled",
-        .description    = "Experimental OMPT support",
-        .offset         = offsetof(options_t, lewi_ompt),
-        .type           = OPT_OMPTMODE_T,
-        .flags          = OPT_OPTIONAL | OPT_ADVANCED
-    }, {
-        .var_name       = "LB_NULL",
         .arg_name       = "--lewi-mpi",
         .default_value  = "no",
         .description    = OFFSET"When in MPI, whether to lend the current CPU. If LeWI\n"
@@ -220,6 +220,14 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, lewi_affinity),
         .type           = OPT_PRIO_T,
         .flags          = OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-ompt",
+        .default_value  = "",
+        .description    = OFFSET"Experimental OMPT policy flags for LeWI",
+        .offset         = offsetof(options_t, lewi_ompt),
+        .type           = OPT_OMPTOPTS_T,
+        .flags          = OPT_OPTIONAL | OPT_ADVANCED
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-greedy",
@@ -298,8 +306,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_mode(str_value, (interaction_mode_t*)option);
         case(OPT_MPISET_T):
             return parse_mpiset(str_value, (mpi_set_t*)option);
-        case(OPT_OMPTMODE_T):
-            return parse_omptmode(str_value, (ompt_mode_t*)option);
+        case(OPT_OMPTOPTS_T):
+            return parse_ompt_opts(str_value, (ompt_opts_t*)option);
     }
     return DLB_ERR_NOENT;
 }
@@ -330,8 +338,8 @@ static const char * get_value(option_type_t type, void *option) {
             return mode_tostr(*(interaction_mode_t*)option);
         case OPT_MPISET_T:
             return mpiset_tostr(*(mpi_set_t*)option);
-        case OPT_OMPTMODE_T:
-            return omptmode_tostr(*(ompt_mode_t*)option);
+        case OPT_OMPTOPTS_T:
+            return ompt_opts_tostr(*(ompt_opts_t*)option);
     }
     return "unknown";
 }
@@ -620,8 +628,8 @@ void options_print_variables(const options_t *options, bool print_extended) {
             case OPT_MPISET_T:
                 b += sprintf(b, "[%s]", get_mpiset_choices());
                 break;
-            case OPT_OMPTMODE_T:
-                b += sprintf(b, "[%s]", get_omptmode_choices());
+            case OPT_OMPTOPTS_T:
+                b += sprintf(b, "[%s]", get_ompt_opts_choices());
                 break;
             default:
                 b += sprintf(b, "(unknown)");

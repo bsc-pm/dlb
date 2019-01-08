@@ -308,33 +308,40 @@ const char* get_mpiset_choices(void) {
     return mpiset_choices_str;
 }
 
-/* ompt_mode_t */
-static const ompt_mode_t omptmode_values[] = {OMPT_MODE_DISABLED, OMPT_MODE_SINGLE, OMPT_MODE_MPI};
-static const char* const omptmode_choices[] = {"disabled", "single", "mpi"};
-static const char omptmode_choices_str[] = "disabled, single, mpi";
-enum { omptmode_nelems = sizeof(omptmode_values) / sizeof(omptmode_values[0]) };
+/* ompt_opts_t */
+static const ompt_opts_t ompt_opts_values[] = {OMPT_OPTS_MPI, OMPT_OPTS_BORROW, OMPT_OPTS_LEND};
+static const char* const ompt_opts_choices[] = {"mpi", "borrow", "lend"};
+static const char ompt_opts_choices_str[] = "mpi, borrow, lend";
+enum { ompt_opts_nelems = sizeof(ompt_opts_values) / sizeof(ompt_opts_values[0]) };
 
-int parse_omptmode(const char *str, ompt_mode_t *value) {
+int parse_ompt_opts(const char *str, ompt_opts_t *value) {
+    *value = OMPT_OPTS_CLEAR;
     int i;
-    for (i=0; i<omptmode_nelems; ++i) {
-        if (strcasecmp(str, omptmode_choices[i]) == 0) {
-            *value = omptmode_values[i];
-            return DLB_SUCCESS;
+    for (i=0; i<ompt_opts_nelems; ++i) {
+        if (strstr(str, ompt_opts_choices[i]) != NULL) {
+            *value |= ompt_opts_values[i];
         }
     }
-    return DLB_ERR_NOENT;
+    return DLB_SUCCESS;
 }
 
-const char* omptmode_tostr(ompt_mode_t value) {
+const char* ompt_opts_tostr(ompt_opts_t value) {
+    static char str[sizeof(ompt_opts_choices_str)] = "";
+    char *p = str;
     int i;
-    for (i=0; i<omptmode_nelems; ++i) {
-        if (omptmode_values[i] == value) {
-            return omptmode_choices[i];
+    for (i=0; i<ompt_opts_nelems; ++i) {
+        if (value & ompt_opts_values[i]) {
+            if (p!=str) {
+                *p = ':';
+                ++p;
+                *p = '\0';
+            }
+            p += sprintf(p, "%s", ompt_opts_choices[i]);
         }
     }
-    return "unknown";
+    return str;
 }
 
-const char* get_omptmode_choices(void) {
-    return omptmode_choices_str;
+const char* get_ompt_opts_choices(void) {
+    return ompt_opts_choices_str;
 }

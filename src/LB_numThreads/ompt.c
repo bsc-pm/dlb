@@ -44,8 +44,9 @@ int omp_get_level(void) __attribute__((weak));
 
 static cpu_set_t active_mask, process_mask;
 static bool lewi = false;
+static bool ompt = false;
 static pid_t pid;
-static ompt_mode_t ompt_mode;
+static ompt_opts_t ompt_opts;
 
 static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
@@ -62,7 +63,7 @@ static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
 static void omp_thread_manager_acquire(void) {
     static int cpus_to_borrow = 1;
 
-    if (lewi) {
+    if (lewi && ompt_opts & OMPT_OPTS_BORROW) {
         DLB_Return();
         DLB_Reclaim();
         if (DLB_BorrowCpus(cpus_to_borrow) == DLB_SUCCESS) {
@@ -87,19 +88,19 @@ static void omp_thread_manager_release_(void) {
 }
 
 static void omp_thread_manager_release(void) {
-    if (ompt_mode == OMPT_MODE_SINGLE) {
+    if (lewi && ompt_opts & OMPT_OPTS_LEND) {
         omp_thread_manager_release_();
     }
 }
 
 void ompt_thread_manager_IntoBlockingCall(void) {
-    if (ompt_mode == OMPT_MODE_MPI) {
+    if (lewi && ompt_opts & OMPT_OPTS_MPI) {
         omp_thread_manager_release_();
     }
 }
 
 void ompt_thread_manager_OutOfBlockingCall(void) {
-    if (ompt_mode == OMPT_MODE_MPI) {
+    if (lewi && ompt_opts & OMPT_OPTS_MPI) {
         DLB_Reclaim();
     }
 }
@@ -234,8 +235,9 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *t
     verbose(VB_OMPT, "Initializing OMPT module");
 
     /* Enable experimental LeWI features only if requested */
-    ompt_mode = options.lewi_ompt;
-    lewi = ompt_mode != OMPT_MODE_DISABLED;
+    lewi = options.lewi;
+    ompt = options.ompt;
+    ompt_opts = options.lewi_ompt;
     pid = options.preinit_pid ? options.preinit_pid : getpid();
 
     fatal_cond(lewi && !options.preinit_pid, "LeWI with OMPT support requires the"
