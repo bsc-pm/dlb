@@ -193,10 +193,10 @@ int DLB_LendCpuMask(const_dlb_cpu_set_t mask);
 
 /*! \brief Reclaim all the CPUs that are owned by the process
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling process.
@@ -206,11 +206,11 @@ int DLB_Reclaim(void);
 /*! \brief Reclaim a specific CPU that are owned by the process
  *  \param[in] cpuid CPU id to reclaim
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling process.
@@ -220,10 +220,10 @@ int DLB_ReclaimCpu(int cpuid);
 /*! \brief Reclaim a specific amount of CPUs that are owned by the process
  *  \param[in] ncpus Number of CPUs to reclaim
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling process.
@@ -233,11 +233,11 @@ int DLB_ReclaimCpus(int ncpus);
 /*! \brief Reclaim a set of CPUs
  *  \param[in] mask CPU mask to reclaim
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling process.
@@ -252,10 +252,11 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask);
 /*! \brief Acquire a specific CPU
  *  \param[in] cpuid CPU to acquire
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if the CPU is already acquired
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  *
  *  Acquire CPUs from the system. If the CPU belongs to the process the call is
@@ -267,10 +268,10 @@ int DLB_AcquireCpu(int cpuid);
 /*! \brief Acquire a specific amount of CPUs.
  *  \param[in] ncpus Number of CPUs to acquire
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if cannot acquire any CPU
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_NOUPDT if cannot acquire any CPU
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  *
  *  Acquire CPUs from the system. If the CPU belongs to the process the call is
@@ -282,10 +283,10 @@ int DLB_AcquireCpus(int ncpus);
 /*! \brief Acquire a set of CPUs
  *  \param[in] mask CPU set to acquire
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_ERR_REQST if there are too many requests for these resources
  *
  *  Acquire CPUs from the system. If the CPU belongs to the process the call is
@@ -352,6 +353,7 @@ int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask);
 
 /*! \brief Return claimed CPUs of other processes
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if no need to return
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be returned
@@ -403,8 +405,8 @@ int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask);
  *  \param[out] ncpus optional, variable to receive the new number of CPUs
  *  \param[out] mask optional, variable to receive the new mask
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if no update id needed
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOUPDT if no update id needed
  *
  *  If DROM is enabled and the interaction mode is not asynchronous, this
  *  function can be called to poll the status of the CPU ownership.
@@ -414,8 +416,8 @@ int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask);
 /*! \brief Poll DROM module to check if the process needs to adapt to a new mask
  *          and update it if necessary using the registered callbacks
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if no update id needed
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOUPDT if no update id needed
  *
  *  Same as DLB_PollDROM(), but calling the registered callbacks to update the
  *  ownership info instead of returning the data by argument.

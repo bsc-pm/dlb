@@ -187,9 +187,9 @@ int DLB_LendCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
 /*! \brief Reclaim all the CPUs that are owned by the subprocess
  *  \param[in] handler subprocess identifier
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling subprocess.
@@ -200,10 +200,10 @@ int DLB_Reclaim_sp(dlb_handler_t handler);
  *  \param[in] handler subprocess identifier
  *  \param[in] cpuid CPU id to reclaim
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling subprocess.
@@ -214,9 +214,9 @@ int DLB_ReclaimCpu_sp(dlb_handler_t handler, int cpuid);
  *  \param[in] handler subprocess identifier
  *  \param[in] ncpus Number of CPUs to reclaim
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling subprocess.
@@ -227,10 +227,10 @@ int DLB_ReclaimCpus_sp(dlb_handler_t handler, int ncpus);
  *  \param[in] handler subprocess identifier
  *  \param[in] mask CPU mask to reclaim
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
- *  \return DLB_ERR_NOUPDT if there is no CPUs to reclaim
  *
  *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
  *  belong to the calling subprocess.
@@ -246,9 +246,10 @@ int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
  *  \param[in] handler subprocess identifier
  *  \param[in] cpuid CPU to acquire
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if the CPU is already acquired
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  *
  *  Acquire CPUs from the system. If the CPU belongs to the subprocess the call is
@@ -261,9 +262,9 @@ int DLB_AcquireCpu_sp(dlb_handler_t handler, int cpuid);
  *  \param[in] handler subprocess identifier
  *  \param[in] ncpus Number of CPUs to acquire
  *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if cannot acquire any CPU
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  *
  *  Acquire CPUs from the system. If the CPU belongs to the subprocess the call is
@@ -276,9 +277,9 @@ int DLB_AcquireCpus_sp(dlb_handler_t handler, int ncpus);
  *  \param[in] handler subprocess identifier
  *  \param[in] mask CPU set to acquire
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
- *  \return DLB_ERR_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_ERR_REQST if there are too many requests for these resources
  *
  *  Acquire CPUs from the system. If the CPU belongs to the subprocess the call is
@@ -403,8 +404,8 @@ int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
  *  \param[out] ncpus optional, variable to receive the new number of CPUs
  *  \param[out] mask optional, variable to receive the new mask
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if no update id needed
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOUPDT if no update id needed
  *
  *  If DROM is enabled and the interaction mode is not asynchronous, this
  *  function can be called to poll the status of the CPU ownership.
@@ -415,8 +416,8 @@ int DLB_PollDROM_sp(dlb_handler_t handler, int *ncpus, dlb_cpu_set_t mask);
  *          and update it if necessary using the registered callbacks
  *  \param[in] handler subprocess identifier
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if no update id needed
  *  \return DLB_ERR_DISBLD if DLB is disabled
- *  \return DLB_ERR_NOUPDT if no update id needed
  *
  *  Same as DLB_PollDROM(), but calling the registered callbacks to update the
  *  ownership info instead of returning the data by argument.
