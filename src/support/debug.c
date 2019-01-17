@@ -51,9 +51,11 @@ verbose_opts_t vb_opts = VB_CLEAR;
 enum { VBFORMAT_LEN = 128 };
 static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
+static bool quiet = false;
 static bool werror = false;
 
 void debug_init(const options_t *options) {
+    quiet = options->quiet;
     werror = options->debug_opts & DBG_WERROR;
     vb_opts = options->verbose;
     vb_fmt = options->verbose_fmt;
@@ -77,31 +79,32 @@ void debug_init(const options_t *options) {
 }
 
 static void vprint(FILE *fp, const char *prefix, const char *fmt, va_list list) {
+    if (!quiet) {
+        char timestamp[32];
+        if (vb_fmt & VBF_TSTAMP) {
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+            strftime(timestamp, sizeof(timestamp), "[%Y-%m-%dT%T] ", tm);
+        }
 
-    char timestamp[32];
-    if (vb_fmt & VBF_TSTAMP) {
-        time_t t = time(NULL);
-        struct tm *tm = localtime(&t);
-        strftime(timestamp, sizeof(timestamp), "[%Y-%m-%dT%T] ", tm);
+        // Print prefix and object identifier
+        if (vb_fmt & VBF_THREAD) {
+            fprintf(fp, "%s%s[%s:%ld]: ",
+                    vb_fmt & VBF_TSTAMP ? timestamp : "",
+                    prefix,
+                    fmt_str,
+                    syscall(SYS_gettid));
+        } else {
+            fprintf(fp, "%s%s[%s]: ",
+                    vb_fmt & VBF_TSTAMP ? timestamp : "",
+                    prefix,
+                    fmt_str);
+        }
+
+        // Print va_list
+        vfprintf(fp, fmt, list);
+        fputc('\n', fp);
     }
-
-    // Print prefix and object identifier
-    if (vb_fmt & VBF_THREAD) {
-        fprintf(fp, "%s%s[%s:%ld]: ",
-                vb_fmt & VBF_TSTAMP ? timestamp : "",
-                prefix,
-                fmt_str,
-                syscall(SYS_gettid));
-    } else {
-        fprintf(fp, "%s%s[%s]: ",
-                vb_fmt & VBF_TSTAMP ? timestamp : "",
-                prefix,
-                fmt_str);
-    }
-
-    // Print va_list
-    vfprintf(fp, fmt, list);
-    fputc('\n', fp);
 }
 
 static void __attribute__((__noreturn__)) vfatal(const char *fmt, va_list list) {

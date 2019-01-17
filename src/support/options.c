@@ -119,6 +119,14 @@ static const opts_dict_t options_dictionary[] = {
     },
     // verbose
     {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--quiet",
+        .default_value  = "no",
+        .description    = "Suppress all output",
+        .offset         = offsetof(options_t, quiet),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+    }, {
         .var_name       = "LB_VERBOSE",
         .arg_name       = "--verbose",
         .default_value  = "",
