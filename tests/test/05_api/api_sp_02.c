@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator -a --mode=async"
+    test_generator="gens/basic-generator"
 </testinfo>*/
 
 #include "assert_noshm.h"
@@ -30,6 +30,9 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 /* Simulate execution with NSUBPROCS subprocesses
  * and stress test proc requests and finalization */
@@ -59,19 +62,19 @@ static void cb_enable_cpu(int cpuid, void *arg) {
     print_vb("Sp %d enabling CPU %d\n", thid, cpuid);
 
     pthread_mutex_lock(&mutex);
-    {
-        CPU_SET(cpuid, mask);
+    CPU_SET(cpuid, mask);
 
-        /* Assume the thread arrives late, and it's not needed unless it's the last request */
-        if (petitions[thid] > 0) {
-            --petitions[thid];
+    /* Assume the thread arrives late, and it's not needed unless it's the last request */
+    if (petitions[thid] > 0) {
+        --petitions[thid];
+        pthread_mutex_unlock(&mutex);
 
-            print_vb("Sp %d lending CPU %d (petitions: %d)\n", thid, cpuid, petitions[thid]);
-            CPU_CLR(cpuid, mask);
-            DLB_LendCpu_sp(handlers[thid], cpuid);
-        }
+        print_vb("Sp %d lending CPU %d (petitions: %d)\n", thid, cpuid, petitions[thid]);
+        CPU_CLR(cpuid, mask);
+        DLB_LendCpu_sp(handlers[thid], cpuid);
+    } else {
+        pthread_mutex_unlock(&mutex);
     }
-    pthread_mutex_unlock(&mutex);
 }
 
 static void* thread_start(void *arg) {
@@ -80,7 +83,7 @@ static void* thread_start(void *arg) {
     print_vb("Executing sp %d with mask %s\n", thid, mu_to_str(mask));
 
     /* Initialization */
-    handlers[thid] = DLB_Init_sp(0, mask, "--lewi --quiet");
+    handlers[thid] = DLB_Init_sp(0, mask, "--lewi --mode=async --quiet");
     assert( handlers[thid] != NULL );
     assert( DLB_CallbackSet_sp(handlers[thid], dlb_callback_enable_cpu,
                 (dlb_callback_t)cb_enable_cpu, arg) == DLB_SUCCESS);
