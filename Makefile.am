@@ -145,6 +145,8 @@ COMMON_SRCS = \
 	src/support/mytime.h                    \
 	src/support/options.c                   \
 	src/support/options.h                   \
+	src/support/queues.c                    \
+	src/support/queues.h                    \
 	src/support/tracing.c                   \
 	src/support/tracing.h                   \
 	src/support/types.c                     \

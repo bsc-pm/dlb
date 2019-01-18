@@ -114,7 +114,7 @@ int main( int argc, char **argv ) {
         // Process 1 wants to ACQUIRE 2 CPUs
         err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
                     &last_borrow, 2, new_guests, victims);
-        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
+        assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -155,7 +155,7 @@ int main( int argc, char **argv ) {
         // Process 1 wants to ACQUIRE 2 CPUs
         err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
                     &last_borrow, 2, new_guests, victims);
-        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
+        assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }

@@ -28,6 +28,7 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+#include "support/queues.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -42,113 +43,6 @@
  */
 
 enum { NOBODY = 0 };
-
-
-/*** Global request queue: Processes make requests for N non-specific CPUs ***/
-enum { GLOBAL_QUEUE_SIZE = 100 };
-typedef struct {
-    pid_t        pid;
-    unsigned int howmany;
-} process_request_t;
-typedef struct {
-    process_request_t queue[GLOBAL_QUEUE_SIZE];
-    unsigned int      head;
-    unsigned int      tail;
-    bool              enabled;
-} global_request_t;
-
-static void remove_global_request(global_request_t *queue, pid_t pid) {
-    if (!queue->enabled) return;
-
-    unsigned int i;
-    for (i=queue->tail; i!=queue->head; i=(i+1)%GLOBAL_QUEUE_SIZE) {
-        if (queue->queue[i].pid == pid) {
-            queue->queue[i].pid = NOBODY;
-            queue->queue[i].howmany = 0;
-        }
-    }
-}
-
-static int push_global_request(global_request_t *queue, pid_t applicant, unsigned int howmany) {
-    if (!queue->enabled) return DLB_NOUPDT;
-
-    if (howmany == 0) {
-        remove_global_request(queue, applicant);
-        return DLB_SUCCESS;
-    }
-    unsigned int next_head = (queue->head + 1) % GLOBAL_QUEUE_SIZE;
-    if (__builtin_expect((next_head == queue->tail), 0)) {
-        return DLB_ERR_REQST;
-    }
-    queue->queue[queue->head].pid = applicant;
-    queue->queue[queue->head].howmany = howmany;
-    queue->head = next_head;
-    return DLB_NOTED;
-}
-
-static void pop_global_request(global_request_t *queue, pid_t *new_guest) {
-    *new_guest = NOBODY;
-    if (!queue->enabled) return;
-
-    while(queue->head != queue->tail && *new_guest == NOBODY) {
-        process_request_t *request = &queue->queue[queue->tail];
-        if (request->pid != NOBODY && request->howmany > 0) {
-            /* request is valid */
-            *new_guest = request->pid;
-            if (request->howmany-- == 0) {
-                queue->tail = (queue->tail + 1) % GLOBAL_QUEUE_SIZE;
-            }
-        } else {
-            /* request is not valid, advance tail */
-            queue->tail = (queue->tail + 1) % GLOBAL_QUEUE_SIZE;
-        }
-    }
-}
-/*****************************************************************************/
-
-/****** CPU request queue: Processes make request for this specific CPU ******/
-enum { CPU_QUEUE_SIZE = 8 };
-typedef struct {
-    pid_t        queue[CPU_QUEUE_SIZE];
-    unsigned int head;
-    unsigned int tail;
-    bool         enabled;
-} cpu_request_t;
-
-static void remove_cpu_request(cpu_request_t *queue, pid_t pid) {
-    if (!queue->enabled) return;
-
-    unsigned int i;
-    for (i=queue->tail; i!=queue->head; i=(i+1)%CPU_QUEUE_SIZE) {
-        if (queue->queue[i] == pid) {
-            queue->queue[i] = NOBODY;
-        }
-    }
-}
-
-static int push_cpu_request(cpu_request_t *queue, pid_t applicant) {
-    if (!queue->enabled) return DLB_NOUPDT;
-
-    unsigned int next_head = (queue->head + 1) % CPU_QUEUE_SIZE;
-    if (__builtin_expect((next_head == queue->tail), 0)) {
-        return DLB_ERR_REQST;
-    }
-    queue->queue[queue->head] = applicant;
-    queue->head = next_head;
-    return DLB_NOTED;
-}
-
-static void pop_cpu_request(cpu_request_t *queue, pid_t *new_guest) {
-    *new_guest = NOBODY;
-    if (!queue->enabled) return;
-
-    while(queue->head != queue->tail && *new_guest == NOBODY) {
-        *new_guest = queue->queue[queue->tail];
-        queue->tail = (queue->tail + 1) % CPU_QUEUE_SIZE;
-    }
-}
-/*****************************************************************************/
-
 
 typedef enum {
     CPU_DISABLED = 0,       // Not owned by any process nor part of the DLB mask
@@ -166,18 +60,19 @@ typedef struct {
     stats_state_t   stats_state;
     int64_t         acc_time[_NUM_STATS];   // Accumulated time for each state
     struct          timespec last_update;
-    cpu_request_t   requests;
+    queue_pids_t    requests;
 } cpuinfo_t;
 
 typedef struct {
-    bool             dirty;
-    struct           timespec initial_time;
-    int64_t          timestamp_cpu_lent;
-    global_request_t global_requests;
-    cpuinfo_t        node_info[0];
+    bool                dirty;
+    struct              timespec initial_time;
+    int64_t             timestamp_cpu_lent;
+    bool                queues_enabled;
+    queue_proc_reqs_t   proc_requests;
+    cpuinfo_t           node_info[0];
 } shdata_t;
 
-enum { SHMEM_CPUINFO_VERSION = 1 };
+enum { SHMEM_CPUINFO_VERSION = 2 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -198,14 +93,17 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
     if (cpuinfo->state == CPU_BUSY) {
         /* If CPU is claimed, ignore requests an assign owner */
         new_guest = cpuinfo->owner;
-    } else {
+    } else if (shdata->queues_enabled) {
         /* Pop first in CPU queue */
-        pop_cpu_request(&cpuinfo->requests, &new_guest);
+        queue_pids_pop(&cpuinfo->requests, &new_guest);
 
         /* If CPU did noy have requests, pop global queue */
         if (new_guest == NOBODY) {
-            pop_global_request(&shdata->global_requests, &new_guest);
+            queue_proc_reqs_pop(&shdata->proc_requests, &new_guest);
         }
+    } else {
+        /* No suitable guest */
+        new_guest = NOBODY;
     }
     return new_guest;
 }
@@ -382,12 +280,16 @@ static bool deregister_process(pid_t pid) {
             }
 
             // Remove any previous CPU request
-            remove_cpu_request(&cpuinfo->requests, pid);
+            if (shdata->queues_enabled) {
+                queue_pids_remove(&cpuinfo->requests, pid);
+            }
         }
     }
 
     // Remove any previous global request
-    remove_global_request(&shdata->global_requests, pid);
+    if (shdata->queues_enabled) {
+        queue_proc_reqs_remove(&shdata->proc_requests, pid);
+    }
 
     return shmem_empty;
 }
@@ -467,9 +369,9 @@ static void lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     if (cpuinfo->owner == pid) {
         // If the CPU is owned by the process, just change the state
         cpuinfo->state = CPU_LENT;
-    } else {
+    } else if (shdata->queues_enabled) {
         // Otherwise, remove any previous request
-        remove_cpu_request(&cpuinfo->requests, pid);
+        queue_pids_remove(&cpuinfo->requests, pid);
     }
 
     // If the process is the guest, free it
@@ -808,7 +710,11 @@ static int acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
         // CPU is busy, or lent to another process
         *new_guest = -1;
         *victim = -1;
-        error = push_cpu_request(&cpuinfo->requests, pid);
+        if (shdata->queues_enabled) {
+            error = queue_pids_push(&cpuinfo->requests, pid);
+        } else {
+            error = DLB_NOUPDT;
+        }
     } else {
         // CPU is disabled
         error = DLB_ERR_PERM;
@@ -865,7 +771,9 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
     {
         if (ncpus == 0) {
             /* AcquireCPUs(0) has a special meaning of removing any previous request */
-            remove_global_request(&shdata->global_requests, pid);
+            if (shdata->queues_enabled) {
+                queue_proc_reqs_remove(&shdata->proc_requests, pid);
+            }
             error = DLB_SUCCESS;
         } else {
 
@@ -905,9 +813,9 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
             }
 
             /* Add global petition for remaining CPUs if needed */
-            if (ncpus > 0) {
+            if (ncpus > 0 && shdata->queues_enabled) {
                 verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
-                error = push_global_request(&shdata->global_requests, pid, ncpus);
+                error = queue_proc_reqs_push(&shdata->proc_requests, pid, ncpus);
             }
 
             /* Update timestamp if borrow did not succeed */
@@ -1146,10 +1054,16 @@ static int return_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
         cpuinfo->guest = *new_guest;
     }
 
-    // Add another CPU request
-    int error = push_cpu_request(&cpuinfo->requests, pid);
+    int error;
+    if (shdata->queues_enabled) {
+        // Add another CPU request
+        error = queue_pids_push(&cpuinfo->requests, pid);
+        error = error < 0 ? error : DLB_SUCCESS;
+    } else {
+        error = DLB_SUCCESS;
+    }
 
-    return error < 0 ? error : DLB_SUCCESS;
+    return error;
 }
 
 int shmem_cpuinfo__return_all(pid_t pid, pid_t new_guests[]) {
@@ -1409,22 +1323,8 @@ bool shmem_cpuinfo__is_dirty(void) {
 void shmem_cpuinfo__enable_request_queues(void) {
     if (shm_handler == NULL) return;
 
-    /* All queues are enabled by the same process
-     * this functon can be skipped if at least one of them is already enabled */
-    if (shdata->global_requests.enabled) return;
-
-    shmem_lock(shm_handler);
-    {
-        /* Enable global request queue */
-        shdata->global_requests.enabled = true;
-
-        /* Enable all CPU request queues */
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            shdata->node_info[cpuid].requests.enabled = true;
-        }
-    }
-    shmem_unlock(shm_handler);
+    /* Enable asynchronous request queues */
+    shdata->queues_enabled = true;
 }
 
 /* External Functions
