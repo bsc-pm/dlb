@@ -47,7 +47,6 @@ typedef enum HelperAction {
 typedef struct Message {
     action_t action;
     int cpuid;
-    cpu_set_t mask;
 } message_t;
 
 typedef struct {
@@ -63,6 +62,7 @@ typedef struct {
     pthread_t pth;
     cpu_set_t mask;
     const pm_interface_t *pm;
+    bool joinable;
 } helper_t;
 
 
@@ -70,7 +70,7 @@ typedef struct {
     helper_t helpers[0];
 } shdata_t;
 
-enum { SHMEM_ASYNC_VERSION = 1 };
+enum { SHMEM_ASYNC_VERSION = 2 };
 
 static int max_helpers = 0;
 static shdata_t *shdata = NULL;
@@ -90,7 +90,17 @@ static helper_t* get_helper(pid_t pid) {
 }
 
 static void enqueue_message(helper_t *helper, const message_t *message) {
+    /* Discard message if helper does not accept new inputs */
+    if (helper->joinable) {
+        return;
+    }
+
     pthread_mutex_lock(&helper->q_lock);
+
+    /* If ACTION_JOIN, flag helper to reject further messages */
+    if (message->action == ACTION_JOIN) {
+        helper->joinable = true;
+    }
 
     /* Get next_head index and check that buffer is not full */
     unsigned int next_head = (helper->q_head + 1) % QUEUE_SIZE;
@@ -240,10 +250,9 @@ int shmem_async_finalize(pid_t pid) {
         /* Clear helper data */
         shmem_lock(shm_handler);
         {
-            helper->pm = NULL;
-            helper->pid = NOBODY;
             pthread_mutex_destroy(&helper->q_lock);
             pthread_cond_destroy(&helper->q_wait_data);
+            memset(helper, 0, sizeof(*helper));
         }
         shmem_unlock(shm_handler);
 

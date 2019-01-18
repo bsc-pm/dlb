@@ -152,9 +152,6 @@ int Finish(subprocess_descriptor_t *spd) {
     if (spd->lb_funcs.finalize) {
         spd->lb_funcs.finalize(spd);
     }
-    if (spd->options.mode == MODE_ASYNC) {
-        shmem_async_finalize(spd->id);
-    }
     if (spd->options.barrier) {
         shmem_barrier_finalize();
     }
@@ -165,6 +162,9 @@ int Finish(subprocess_descriptor_t *spd) {
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
                 spd->options.shm_key);
+    }
+    if (spd->options.mode == MODE_ASYNC) {
+        shmem_async_finalize(spd->id);
     }
     timer_finalize();
     add_event(RUNTIME_EVENT, EVENT_USER);
