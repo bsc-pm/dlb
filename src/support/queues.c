@@ -26,7 +26,7 @@
 
 enum { NOBODY = 0 };
 
-/*** global_request_t ************************************************************/
+/*** queue_proc_reqs_t ***********************************************************/
 
 void queue_proc_reqs_init(queue_proc_reqs_t *queue) {
     memset(queue, 0, sizeof(*queue));

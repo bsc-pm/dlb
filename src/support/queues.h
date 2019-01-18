@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-/*** global_request_t ************************************************************/
+/*** queue_proc_reqs_t ***********************************************************/
 enum { QUEUE_PROC_REQS_SIZE = 4096 };
 
 typedef struct {
