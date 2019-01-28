@@ -45,10 +45,10 @@ static void sp1_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp1_cb_disable_cpu(int cpuid, void *arg) {
-    CPU_CLR(cpuid, &sp1_mask);
     if (mode == MODE_ASYNC) {
         DLB_ReturnCpu_sp(handler1, cpuid);
     }
+    CPU_CLR(cpuid, &sp1_mask);
 }
 
 /* Subprocess 2 callbacks */
@@ -57,10 +57,10 @@ static void sp2_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp2_cb_disable_cpu(int cpuid, void *arg) {
-    CPU_CLR(cpuid, &sp2_mask);
     if (mode == MODE_ASYNC) {
         DLB_ReturnCpu_sp(handler2, cpuid);
     }
+    CPU_CLR(cpuid, &sp2_mask);
 }
 
 int main( int argc, char **argv ) {

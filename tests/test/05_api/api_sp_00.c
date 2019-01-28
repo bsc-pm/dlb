@@ -35,8 +35,8 @@ static void cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void cb_disable_cpu(int cpuid, void *arg) {
-    CPU_CLR(cpuid, &process_mask);
     DLB_LendCpu_sp(handler, cpuid);
+    CPU_CLR(cpuid, &process_mask);
 }
 
 int main( int argc, char **argv ) {

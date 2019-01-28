@@ -52,10 +52,10 @@ static void sp1_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp1_cb_disable_cpu(int cpuid, void *arg) {
-    CPU_CLR(cpuid, &sp1_mask);
     if (mode == MODE_ASYNC) {
         lewi_mask_ReturnCpu(&spd1, cpuid);
     }
+    CPU_CLR(cpuid, &sp1_mask);
 }
 
 /* Subprocess 2 callbacks */
@@ -64,10 +64,10 @@ static void sp2_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp2_cb_disable_cpu(int cpuid, void *arg) {
-    CPU_CLR(cpuid, &sp2_mask);
     if (mode == MODE_ASYNC) {
         lewi_mask_ReturnCpu(&spd2, cpuid);
     }
+    CPU_CLR(cpuid, &sp2_mask);
 }
 
 int main( int argc, char **argv ) {
@@ -295,12 +295,6 @@ int main( int argc, char **argv ) {
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
     assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
 
-    // Async finalize
-    if (mode == MODE_ASYNC) {
-        assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
-        assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
-    }
-
     // Subprocess 1 shmems finalize
     assert( shmem_cpuinfo__finalize(spd1.id, NULL) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd1.id, false, NULL) == DLB_SUCCESS );
@@ -308,6 +302,12 @@ int main( int argc, char **argv ) {
     // Subprocess 2 shmems finalize
     assert( shmem_cpuinfo__finalize(spd2.id, NULL) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd2.id, false, NULL) == DLB_SUCCESS );
+
+    // Async finalize
+    if (mode == MODE_ASYNC) {
+        assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
+        assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
+    }
 
     return 0;
 }
