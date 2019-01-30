@@ -53,6 +53,7 @@ void queue_proc_reqs_remove(queue_proc_reqs_t *queue, pid_t pid) {
         if (queue->queue[i].pid == pid) {
             queue->queue[i].pid = NOBODY;
             queue->queue[i].howmany = 0;
+            CPU_ZERO(&queue->queue[i].allowed);
         }
         /* Advance tail if it points to invalid elements */
         if (queue->queue[i].pid == NOBODY
@@ -62,7 +63,8 @@ void queue_proc_reqs_remove(queue_proc_reqs_t *queue, pid_t pid) {
     }
 }
 
-int queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid, unsigned int howmany) {
+int queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid,
+        unsigned int howmany, const cpu_set_t *allowed) {
     /* Remove entry if value is reseted to 0 */
     if (howmany == 0) {
         queue_proc_reqs_remove(queue, pid);
@@ -85,26 +87,39 @@ int queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid, unsigned int howma
     /* Otherwise, push new entry */
     queue->queue[queue->head].pid = pid;
     queue->queue[queue->head].howmany = howmany;
+    if (allowed) {
+        memcpy(&queue->queue[queue->head].allowed, allowed, sizeof(*allowed));
+    } else {
+        memset(&queue->queue[queue->head].allowed,0xff, sizeof(*allowed));
+    }
     queue->head = next_head;
 
     return DLB_NOTED;
 }
 
-void queue_proc_reqs_pop(queue_proc_reqs_t *queue, pid_t *pid) {
+void queue_proc_reqs_pop(queue_proc_reqs_t *queue, pid_t *pid, int cpuid) {
     *pid = NOBODY;
-    while(queue->head != queue->tail && *pid == NOBODY) {
-        process_request_t *request = &queue->queue[queue->tail];
-        if (request->pid != NOBODY) {
+    unsigned int pointer = queue->tail;
+    while(pointer != queue->head && *pid == NOBODY) {
+        process_request_t *request = &queue->queue[pointer];
+        if (request->pid != NOBODY
+                && CPU_ISSET(cpuid, &request->allowed)) {
             /* request is valid */
             *pid = request->pid;
             if (--request->howmany == 0) {
                 request->pid = NOBODY;
-                queue->tail = (queue->tail + 1) % QUEUE_PROC_REQS_SIZE;
+                CPU_ZERO(&request->allowed);
             }
-        } else {
-            /* request is not valid, advance tail */
+        }
+
+        /* Advance tail if possible */
+        if (pointer == queue->tail
+                && request->pid == NOBODY) {
             queue->tail = (queue->tail + 1) % QUEUE_PROC_REQS_SIZE;
         }
+
+        /* Advance pointer */
+        pointer = (pointer + 1) % QUEUE_PROC_REQS_SIZE;
     }
 }
 

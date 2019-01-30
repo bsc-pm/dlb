@@ -99,7 +99,7 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
 
         /* If CPU did noy have requests, pop global queue */
         if (new_guest == NOBODY) {
-            queue_proc_reqs_pop(&shdata->proc_requests, &new_guest);
+            queue_proc_reqs_pop(&shdata->proc_requests, &new_guest, cpuinfo->id);
         }
     } else {
         /* No suitable guest */
@@ -814,8 +814,19 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
 
             /* Add global petition for remaining CPUs if needed */
             if (ncpus > 0 && shdata->queues_enabled) {
+                /* Construct a mask of allowed CPUs */
+                cpu_set_t allowed;
+                CPU_ZERO(&allowed);
+                for (i=0; i<node_size; ++i) {
+                    int cpuid = cpus_priority_array[i];
+                    if (cpuid != -1) {
+                        CPU_SET(cpuid, &allowed);
+                    }
+                }
+
+                /* Enqueue request */
                 verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
-                error = queue_proc_reqs_push(&shdata->proc_requests, pid, ncpus);
+                error = queue_proc_reqs_push(&shdata->proc_requests, pid, ncpus, &allowed);
             }
 
             /* Update timestamp if borrow did not succeed */

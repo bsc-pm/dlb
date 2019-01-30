@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "support/queues.h"
+#include "support/mask_utils.h"
 #include "apis/dlb_errors.h"
 
 #include <unistd.h>
@@ -36,6 +37,10 @@ int main(int argc, char *argv[]) {
     int i;
     pid_t pid;
 
+    enum { SYS_SIZE = 16 };
+    mu_init();
+    mu_testing_set_sys_size(SYS_SIZE);
+
     /* queue_proc_reqs_t */
     {
         queue_proc_reqs_t queue;
@@ -44,34 +49,34 @@ int main(int argc, char *argv[]) {
         /* Fill queue with requests from different pids */
         for (i=0; i<QUEUE_PROC_REQS_SIZE-1; ++i) {
             assert( queue_proc_reqs_size(&queue) == i );
-            assert( queue_proc_reqs_push(&queue, i+1, 1) == DLB_NOTED );
+            assert( queue_proc_reqs_push(&queue, i+1, 1, NULL) == DLB_NOTED );
         }
         assert( queue_proc_reqs_size(&queue) == QUEUE_PROC_REQS_SIZE-1 );
-        assert( queue_proc_reqs_push(&queue, i+1, 1) == DLB_ERR_REQST );
+        assert( queue_proc_reqs_push(&queue, i+1, 1, NULL) == DLB_ERR_REQST );
 
         /* Empty queue */
         for (i=0; i<QUEUE_PROC_REQS_SIZE-1; ++i) {
             assert( queue_proc_reqs_size(&queue) == QUEUE_PROC_REQS_SIZE-1-i );
-            queue_proc_reqs_pop(&queue, &pid);
+            queue_proc_reqs_pop(&queue, &pid, 0);
         }
         assert( queue_proc_reqs_size(&queue) == 0 );
 
         /* Push multiple requests from the same pid, size should be stable */
         pid = 12345;
         for (i=0; i<QUEUE_PROC_REQS_SIZE*2; ++i) {
-            assert( queue_proc_reqs_push(&queue, pid, 5) == DLB_NOTED );
+            assert( queue_proc_reqs_push(&queue, pid, 5, NULL) == DLB_NOTED );
             assert( queue_proc_reqs_size(&queue) == 1 );
             assert( queue_proc_reqs_front(&queue)->howmany == 5*(i+1) );
         }
 
         /* Push some new elements and remove the ones in the middle */
-        assert( queue_proc_reqs_push(&queue, 111, 40) == DLB_NOTED );
+        assert( queue_proc_reqs_push(&queue, 111, 40, NULL) == DLB_NOTED );
         assert( queue_proc_reqs_size(&queue) == 2 );
-        assert( queue_proc_reqs_push(&queue, 222, 43) == DLB_NOTED );
+        assert( queue_proc_reqs_push(&queue, 222, 43, NULL) == DLB_NOTED );
         assert( queue_proc_reqs_size(&queue) == 3 );
-        assert( queue_proc_reqs_push(&queue, 111, 40) == DLB_NOTED );
+        assert( queue_proc_reqs_push(&queue, 111, 40, NULL) == DLB_NOTED );
         assert( queue_proc_reqs_size(&queue) == 4 );
-        assert( queue_proc_reqs_push(&queue, 333, 53) == DLB_NOTED );
+        assert( queue_proc_reqs_push(&queue, 333, 53, NULL) == DLB_NOTED );
         assert( queue_proc_reqs_size(&queue) == 5 );
         // remove pid 222
         assert( queue.queue[queue.head-3].pid == 222 );
@@ -88,16 +93,68 @@ int main(int argc, char *argv[]) {
 
         /* Pop some values to update tail */
         for (i=0; i<QUEUE_PROC_REQS_SIZE*10; ++i) {
-            queue_proc_reqs_pop(&queue, &pid);
+            queue_proc_reqs_pop(&queue, &pid, 0);
             assert( pid == 12345 );
         }
         assert( queue_proc_reqs_size(&queue) == 4 );
-        queue_proc_reqs_pop(&queue, &pid);
-        assert( pid ==  333 );
+        queue_proc_reqs_pop(&queue, &pid, 0);
+        assert( pid == 333 );
         assert( queue_proc_reqs_size(&queue) == 1 );
 
         /* Remove element pushing value 0 */
-        assert( queue_proc_reqs_push(&queue, 333, 0) == DLB_SUCCESS );
+        assert( queue_proc_reqs_push(&queue, 333, 0, NULL) == DLB_SUCCESS );
+        assert( queue_proc_reqs_size(&queue) == 0 );
+    }
+
+    /* queue_proc_reqs_t with allowed CPUs */
+    {
+        cpu_set_t allowed;
+        queue_proc_reqs_t queue;
+        queue_proc_reqs_init(&queue);
+
+        /* P1 requests 2 CPUs allowing only {0-3} */
+        mu_parse_mask("0-3", &allowed);
+        assert( queue_proc_reqs_push(&queue, 111, 2, &allowed) == DLB_NOTED );
+        assert( queue_proc_reqs_size(&queue) == 1 );
+
+        /* Pop CPU 4 is not successful, but CPU 3 is */
+        queue_proc_reqs_pop(&queue, &pid, 4);
+        assert( pid == 0 );
+        assert( queue_proc_reqs_size(&queue) == 1 );
+        queue_proc_reqs_pop(&queue, &pid, 3);
+        assert( pid == 111 );
+        assert( queue_proc_reqs_size(&queue) == 1 ); /* 1 request pending */
+        queue_proc_reqs_pop(&queue, &pid, 3);
+        assert( pid == 111 );
+        assert( queue_proc_reqs_size(&queue) == 0 ); /* 0 requests pending */
+
+        /* Push some requests */
+        mu_parse_mask("0-7", &allowed);
+        assert( queue_proc_reqs_push(&queue, 111, 2, &allowed) == DLB_NOTED );
+        mu_parse_mask("8-15", &allowed);
+        assert( queue_proc_reqs_push(&queue, 222, 1, &allowed) == DLB_NOTED );
+        mu_parse_mask("0-15", &allowed);
+        assert( queue_proc_reqs_push(&queue, 333, 1, &allowed) == DLB_NOTED );
+        assert( queue_proc_reqs_size(&queue) == 3 );
+
+        /* Pop requests */
+        queue_proc_reqs_pop(&queue, &pid, 10);
+        assert( pid == 222 );
+        assert( queue_proc_reqs_size(&queue) == 3 );
+        queue_proc_reqs_pop(&queue, &pid, 10);
+        assert( pid == 333 );
+        assert( queue_proc_reqs_size(&queue) == 3 );
+        queue_proc_reqs_pop(&queue, &pid, 10);
+        assert( pid == 0 );
+        assert( queue_proc_reqs_size(&queue) == 3 );
+        queue_proc_reqs_pop(&queue, &pid, 0);
+        assert( pid == 111 );
+        assert( queue_proc_reqs_size(&queue) == 3 );
+        queue_proc_reqs_pop(&queue, &pid, 0);
+        assert( pid == 111 );
+        assert( queue_proc_reqs_size(&queue) == 2 );
+        queue_proc_reqs_pop(&queue, &pid, 0);
+        assert( pid == 0 );
         assert( queue_proc_reqs_size(&queue) == 0 );
     }
 

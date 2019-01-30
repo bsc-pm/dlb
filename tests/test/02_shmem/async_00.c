@@ -63,7 +63,7 @@ static void cb2_enable_cpu(int cpuid, void *arg) {
 
     /* Simulate a DLB_Lend) -> find_new_guest -> notify_helper  */
     pid_t new_guest;
-    queue_proc_reqs_pop(queue, &new_guest);
+    queue_proc_reqs_pop(queue, &new_guest, cpuid);
     if (new_guest > 0) {
         assert( new_guest == pid2 );
         shmem_async_enable_cpu(new_guest, cpuid);
@@ -77,7 +77,7 @@ static void test_nested_callbacks(void) {
     /* Set up queue with 10 requests */
     queue_proc_reqs_t queue;
     queue_proc_reqs_init(&queue);
-    queue_proc_reqs_push(&queue, pid2, NUM_REQS);
+    queue_proc_reqs_push(&queue, pid2, NUM_REQS, NULL);
 
     pm_interface_t pm = {
         .dlb_callback_enable_cpu_ptr = cb2_enable_cpu,
@@ -89,7 +89,7 @@ static void test_nested_callbacks(void) {
 
     /* Simulate a DLB_Lend (cpu 0) -> find_new_guest (same pid) -> notify_helper  */
     pid_t new_guest;
-    queue_proc_reqs_pop(&queue, &new_guest);
+    queue_proc_reqs_pop(&queue, &new_guest, 0);
     assert( new_guest == pid2 );
     shmem_async_enable_cpu(pid2, 0);
 

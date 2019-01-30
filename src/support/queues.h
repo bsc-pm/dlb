@@ -20,6 +20,7 @@
 #ifndef QUEUES_H
 #define QUEUES_H
 
+#include <sched.h>
 #include <unistd.h>
 #include <stdbool.h>
 
@@ -29,6 +30,7 @@ enum { QUEUE_PROC_REQS_SIZE = 4096 };
 typedef struct {
     pid_t        pid;
     unsigned int howmany;
+    cpu_set_t    allowed;
 } process_request_t;
 
 typedef struct {
@@ -42,8 +44,9 @@ unsigned int queue_proc_reqs_size(queue_proc_reqs_t *queue);
 process_request_t* queue_proc_reqs_front(queue_proc_reqs_t *queue);
 process_request_t* queue_proc_reqs_back(queue_proc_reqs_t *queue);
 void queue_proc_reqs_remove(queue_proc_reqs_t *queue, pid_t pid);
-int  queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid, unsigned int howmany);
-void queue_proc_reqs_pop(queue_proc_reqs_t *queue, pid_t *pid);
+int  queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid,
+        unsigned int howmany, const cpu_set_t *allowed);
+void queue_proc_reqs_pop(queue_proc_reqs_t *queue, pid_t *pid, int cpuid);
 
 
 /*** queue_pids_t ****************************************************************/
