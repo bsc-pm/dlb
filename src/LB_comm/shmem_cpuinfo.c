@@ -1351,13 +1351,31 @@ float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state) {
     return usage;
 }
 
-static const char * get_cpu_state_str(cpu_state_t state) {
-    switch(state) {
-        case CPU_DISABLED: return " off";
-        case CPU_BUSY: return "busy";
-        case CPU_LENT: return "lent";
+struct print_buffer {
+    char *addr;
+    char *offset;
+    size_t size;
+};
+
+static void append_line_to_buffer(const char *line, struct print_buffer *buffer) {
+    /* Realloc buffer if needed */
+    size_t line_len = strlen(line) + 2; /* + '\n\0' */
+    size_t buffer_len = strlen(buffer->addr);
+    if (buffer_len + line_len > buffer->size) {
+        buffer->size *= 2;
+        void *p = realloc(buffer->addr, buffer->size*sizeof(char));
+        if (p) {
+            buffer->addr = p;
+            buffer->offset = buffer->addr + buffer_len;
+        } else {
+            fatal("realloc failed");
+        }
     }
-    return NULL;
+
+    /* Append line to buffer */
+    buffer->offset += sprintf(buffer->offset, "%s\n", line);
+    buffer_len = buffer->offset - buffer->addr;
+    ensure(strlen(buffer->addr) == buffer_len, "buffer len is not correctly computed");
 }
 
 void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
@@ -1413,38 +1431,39 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
         }
     }
 
-    /* Pre-allocate buffer */
+    /* Initialize buffer */
     enum { INITIAL_BUFFER_SIZE = 1024 };
-    size_t buffer_len = 0;
-    size_t buffer_size = INITIAL_BUFFER_SIZE;
-    char *buffer = malloc(buffer_size*sizeof(char));
-    char *b = buffer;
-    *b = '\0';
+    struct print_buffer buffer;
+    buffer.size = INITIAL_BUFFER_SIZE;
+    buffer.addr = malloc(buffer.size*sizeof(char));
+    buffer.offset = buffer.addr;
+    buffer.addr[0] = '\0';
 
-    /* Setup line buffer and cpuinfo pointers */
+    /* Set up line buffer */
     enum { MAX_LINE_LEN = 512 };
     char line[MAX_LINE_LEN];
-    int cpuids[columns];
-    cpuinfo_t *cpuinfos[columns];
-    int offset = (node_size+columns-1)/columns;
+    char *l;
 
-    for (cpuids[0]=0; cpuids[0]<offset; ++cpuids[0]) {
-        /* Init variables */
-        char *l = line;
-        *l = '\0';
-        int i;
-        for (i=1; i<columns; ++i) {
-            cpuids[i] = cpuids[i-1] + offset;
-        }
+    /* Calculate number of rows and cpus per column (same) */
+    int rows = (node_size+columns-1) / columns;
+    int cpus_per_column = rows;
+
+    int row;
+    for (row=0; row<rows; ++row) {
+        /* Init line */
+        line[0] = '\0';
+        l = line;
 
         /* Iterate columns */
-        for (i=0; i<columns; ++i) {
-            if (cpuids[i] < node_size) {
-                cpuinfos[i] = &shdata_copy->node_info[cpuids[i]];
+        int column;
+        for (column=0; column<columns; ++column) {
+            cpuid = row + column*cpus_per_column;
+            if (cpuid < node_size) {
+                cpuinfo_t *cpuinfo = &shdata_copy->node_info[cpuid];
+                pid_t owner = cpuinfo->owner;
+                pid_t guest = cpuinfo->guest;
+                cpu_state_t state = cpuinfo->state;
                 if (color) {
-                    pid_t owner = cpuinfos[i]->owner;
-                    pid_t guest = cpuinfos[i]->guest;
-                    cpu_state_t state = cpuinfos[i]->state;
                     const char *code_color =
                         state == CPU_DISABLED               ? ANSI_COLOR_RESET :
                         state == CPU_BUSY && guest == owner ? ANSI_COLOR_RED :
@@ -1453,54 +1472,43 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
                                                               ANSI_COLOR_BLUE;
                     l += snprintf(l, MAX_LINE_LEN-strlen(line),
                             " %4d %s[ %*d / %*d ]" ANSI_COLOR_RESET,
-                            cpuids[i],
+                            cpuid,
                             code_color,
-                            max_digits, cpuinfos[i]->owner,
-                            max_digits, cpuinfos[i]->guest);
+                            max_digits, owner,
+                            max_digits, guest);
                 } else {
+                    const char *state_desc =
+                        state == CPU_DISABLED               ? " off" :
+                        state == CPU_BUSY && guest == owner ? "busy" :
+                        state == CPU_BUSY                   ? "recl" :
+                        guest == NOBODY                     ? "idle" :
+                                                              "lent";
                     l += snprintf(l, MAX_LINE_LEN-strlen(line),
                             " %4d [ %*d / %*d / %s ]",
-                            cpuids[i],
-                            max_digits, cpuinfos[i]->owner,
-                            max_digits, cpuinfos[i]->guest,
-                            get_cpu_state_str(cpuinfos[i]->state));
+                            cpuid,
+                            max_digits, owner,
+                            max_digits, guest,
+                            state_desc);
                 }
             }
         }
-
-        if (cpuids[0]+1 == offset) {
-            /* Print legend */
-            if (color) {
-                snprintf(l, MAX_LINE_LEN-strlen(line),
-                        "\n\n    Legend: Disabled, "
-                        ANSI_COLOR_RED "Owned" ANSI_COLOR_RESET ", "
-                        ANSI_COLOR_YELLOW "Reclaimed" ANSI_COLOR_RESET ", "
-                        ANSI_COLOR_GREEN "Idle" ANSI_COLOR_RESET ", "
-                        ANSI_COLOR_BLUE "Lent" ANSI_COLOR_RESET);
-            }
-        }
-
-        /* Realloc buffer if needed */
-        size_t line_len = strlen(line) + 2; /* + '\n\0' */
-        if (buffer_len + line_len > buffer_size) {
-            buffer_size = buffer_size*2;
-            void *p = realloc(buffer, buffer_size*sizeof(char));
-            if (p) {
-                buffer = p;
-                b = buffer + buffer_len;
-            } else {
-                fatal("realloc failed");
-            }
-        }
-
-        /* Append line to buffer */
-        b += sprintf(b, "%s\n", line);
-        buffer_len = b - buffer;
-        ensure(strlen(buffer) == buffer_len, "buffer_len is not correctly computed");
+        append_line_to_buffer(line, &buffer);
     }
 
-    info0("=== CPU States ===\n%s", buffer);
-    free(buffer);
+    /* Print legend */
+    line[0] = '\0';
+    if (color) {
+        snprintf(line, MAX_LINE_LEN,
+                "\n\n    Legend: Disabled, "
+                ANSI_COLOR_RED "Owned" ANSI_COLOR_RESET ", "
+                ANSI_COLOR_YELLOW "Reclaimed" ANSI_COLOR_RESET ", "
+                ANSI_COLOR_GREEN "Idle" ANSI_COLOR_RESET ", "
+                ANSI_COLOR_BLUE "Lent" ANSI_COLOR_RESET);
+    }
+    append_line_to_buffer(line, &buffer);
+
+    info0("=== CPU States ===\n%s", buffer.addr);
+    free(buffer.addr);
     free(shdata_copy);
 }
 
