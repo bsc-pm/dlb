@@ -65,31 +65,55 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, NULL) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, NULL) == DLB_SUCCESS );
 
-    /* CPUs 0-3 are lent */
+    /* Enable request queues */
+    shmem_cpuinfo__enable_request_queues();
+
+    /* P2 requests 12 CPUs, CPUs 0-3 are not eligible */
+    int priority_array[SYS_SIZE];
+    int i;
+    for (i=0; i<SYS_SIZE; ++i) priority_array[i] = i+4 < SYS_SIZE ? i+4 : -1;
+    shmem_cpuinfo__acquire_cpus(p2_pid, 0, priority_array, NULL, 12, new_guests, victims);
+
+    /* CPUs 0-3 are lent (they remain idle) */
     cpu_set_t cpus_to_lend = { .__bits = {0xf} };
     assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_to_lend, new_guests) == DLB_SUCCESS );
 
     /* CPUs 8-11 are lent and guested by P2 */
     cpu_set_t cpus_for_p2 = { .__bits = {0xf00} };
     assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_for_p2, new_guests) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__borrow_cpu_mask(p2_pid, &cpus_for_p2, new_guests) == DLB_SUCCESS );
+    for (i=8; i<12; ++i) assert( new_guests[i] == p2_pid );
 
     /* CPUs 12-15 are lent, guested by P2 and reclaimed */
     cpu_set_t cpus_to_reclaim = { .__bits = {0xf000} };
     assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_to_reclaim, new_guests) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__borrow_cpu_mask(p2_pid, &cpus_to_reclaim, new_guests) == DLB_SUCCESS );
+    for (i=12; i<16; ++i) assert( new_guests[i] == p2_pid );
     assert( shmem_cpuinfo__reclaim_cpu_mask(p1_pid, &cpus_to_reclaim, new_guests, victims)
             == DLB_NOTED );
 
+    /* CPUs 16-19 are requested by P1 */
+    cpu_set_t cpus_to_request = { .__bits = {0xf0000} };
+    assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &cpus_to_request, new_guests, victims )
+            == DLB_NOTED );
+
+    /* P3 registers one CPU and requests CPU 19 also */
+    pid_t p3_pid = 33333;
+    cpu_set_t p3_mask;
+    mu_parse_mask("63", &p3_mask);
+    assert( shmem_cpuinfo__init(p3_pid, &p3_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p3_pid, &p3_mask, NULL, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__acquire_cpu(p3_pid, 19, new_guests, victims) == DLB_NOTED );
+
     /* Print */
-    shmem_cpuinfo__print_info(NULL, 4, true);
+    shmem_cpuinfo__print_info(NULL, 0, true);
     shmem_procinfo__print_info(NULL);
 
     /* Finalize shared memories */
     assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p3_pid, NULL) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p1_pid, false, NULL) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p3_pid, false, NULL) == DLB_SUCCESS );
 
     return 0;
 }

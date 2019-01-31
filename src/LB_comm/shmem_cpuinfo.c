@@ -1506,17 +1506,65 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
         append_line_to_buffer(line, &buffer);
     }
 
-    /* Print legend */
-    line[0] = '\0';
+    /* Print format */
+    snprintf(line, MAX_LINE_LEN,
+            "  Format: <cpuid> [ <owner> / <guest> %s]", color ? "" : "/ <state> ");
+    append_line_to_buffer(line, &buffer);
+
+    /* Print color legend */
     if (color) {
         snprintf(line, MAX_LINE_LEN,
-                "\n\n    Legend: Disabled, "
+                "  Status: Disabled, "
                 ANSI_COLOR_RED "Owned" ANSI_COLOR_RESET ", "
                 ANSI_COLOR_YELLOW "Reclaimed" ANSI_COLOR_RESET ", "
                 ANSI_COLOR_GREEN "Idle" ANSI_COLOR_RESET ", "
                 ANSI_COLOR_BLUE "Lent" ANSI_COLOR_RESET);
+        append_line_to_buffer(line, &buffer);
     }
-    append_line_to_buffer(line, &buffer);
+
+    /* Cpu requests */
+    bool any_cpu_request = false;
+    for (cpuid=0; cpuid<node_size && !any_cpu_request; ++cpuid) {
+        any_cpu_request = queue_pids_size(&shdata_copy->node_info[cpuid].requests) > 0;
+    }
+    if (any_cpu_request) {
+        snprintf(line, MAX_LINE_LEN, "\n  Cpu requests (<cpuid>: <spids>):");
+        append_line_to_buffer(line, &buffer);
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            queue_pids_t *requests = &shdata_copy->node_info[cpuid].requests;
+            if (queue_pids_size(requests) > 0) {
+                /* Set up line */
+                line[0] = '\0';
+                l = line;
+                l += snprintf(l, MAX_LINE_LEN-strlen(line), "  %4d: ", cpuid);
+                /* Iterate requests */
+                while (queue_pids_size(requests) > 0) {
+                    pid_t pid;
+                    queue_pids_pop(requests, &pid);
+                    l += snprintf(l, MAX_LINE_LEN-strlen(line), " %u,", pid);
+                }
+                /* Remove trailing comma and append line */
+                *(l-1) = '\0';
+                append_line_to_buffer(line, &buffer);
+            }
+        }
+    }
+
+    /* Proc requests */
+    if (queue_proc_reqs_size(&shdata_copy->proc_requests) > 0) {
+        snprintf(line, MAX_LINE_LEN,
+                "\n  Process requests (<spids>: <howmany>, <allowed_cpus>):");
+        append_line_to_buffer(line, &buffer);
+    }
+    while (queue_proc_reqs_size(&shdata_copy->proc_requests) > 0) {
+        process_request_t *request = queue_proc_reqs_front(&shdata_copy->proc_requests);
+        snprintf(line, MAX_LINE_LEN,
+                "    %*d: %d, %s",
+                max_digits, request->pid, request->howmany,
+                mu_to_str(&request->allowed));
+        queue_proc_reqs_pop(&shdata_copy->proc_requests, NULL);
+        append_line_to_buffer(line, &buffer);
+    }
 
     info0("=== CPU States ===\n%s", buffer.addr);
     free(buffer.addr);
