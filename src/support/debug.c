@@ -62,8 +62,8 @@ void debug_init(const options_t *options) {
 
     int i = 0;
     if ( vb_fmt & VBF_NODE ) {
-        char hostname[HOST_NAME_MAX];
-        gethostname( hostname, HOST_NAME_MAX );
+        char hostname[VBFORMAT_LEN/2];
+        gethostname( hostname, VBFORMAT_LEN/2);
         i += sprintf( &fmt_str[i], "%s:", hostname);
     }
     if ( vb_fmt & VBF_PID ) { i += sprintf( &fmt_str[i], "%d:", getpid()); }
