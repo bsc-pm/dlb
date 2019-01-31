@@ -40,13 +40,14 @@ typedef struct {
 } queue_proc_reqs_t;
 
 void queue_proc_reqs_init(queue_proc_reqs_t *queue);
-unsigned int queue_proc_reqs_size(queue_proc_reqs_t *queue);
+unsigned int queue_proc_reqs_size(const queue_proc_reqs_t *queue);
 process_request_t* queue_proc_reqs_front(queue_proc_reqs_t *queue);
 process_request_t* queue_proc_reqs_back(queue_proc_reqs_t *queue);
 void queue_proc_reqs_remove(queue_proc_reqs_t *queue, pid_t pid);
 int  queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid,
         unsigned int howmany, const cpu_set_t *allowed);
-void queue_proc_reqs_pop(queue_proc_reqs_t *queue, pid_t *pid, int cpuid);
+void queue_proc_reqs_pop(queue_proc_reqs_t *queue, process_request_t *request);
+void queue_proc_reqs_get(queue_proc_reqs_t *queue, pid_t *pid, int cpuid);
 
 
 /*** queue_pids_t ****************************************************************/
@@ -59,7 +60,7 @@ typedef struct {
 } queue_pids_t;
 
 void queue_pids_init(queue_pids_t *queue);
-unsigned int queue_pids_size(queue_pids_t *queue);
+unsigned int queue_pids_size(const queue_pids_t *queue);
 void queue_pids_remove(queue_pids_t *queue, pid_t pid);
 int  queue_pids_push(queue_pids_t *queue, pid_t pid);
 void queue_pids_pop(queue_pids_t *queue, pid_t *pid);

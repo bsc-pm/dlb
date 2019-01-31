@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
         /* Empty queue */
         for (i=0; i<QUEUE_PROC_REQS_SIZE-1; ++i) {
             assert( queue_proc_reqs_size(&queue) == QUEUE_PROC_REQS_SIZE-1-i );
-            queue_proc_reqs_pop(&queue, &pid, 0);
+            queue_proc_reqs_get(&queue, &pid, 0);
         }
         assert( queue_proc_reqs_size(&queue) == 0 );
 
@@ -91,13 +91,13 @@ int main(int argc, char *argv[]) {
         assert( queue.queue[queue.head-2].pid == 0 );
         assert( queue_proc_reqs_size(&queue) == 5 );
 
-        /* Pop some values to update tail */
+        /* Pop all requests from first element to update tail */
         for (i=0; i<QUEUE_PROC_REQS_SIZE*10; ++i) {
-            queue_proc_reqs_pop(&queue, &pid, 0);
+            queue_proc_reqs_get(&queue, &pid, 0);
             assert( pid == 12345 );
         }
-        assert( queue_proc_reqs_size(&queue) == 4 );
-        queue_proc_reqs_pop(&queue, &pid, 0);
+        assert( queue_proc_reqs_size(&queue) == 1 );
+        queue_proc_reqs_get(&queue, &pid, 0);
         assert( pid == 333 );
         assert( queue_proc_reqs_size(&queue) == 1 );
 
@@ -118,13 +118,13 @@ int main(int argc, char *argv[]) {
         assert( queue_proc_reqs_size(&queue) == 1 );
 
         /* Pop CPU 4 is not successful, but CPU 3 is */
-        queue_proc_reqs_pop(&queue, &pid, 4);
+        queue_proc_reqs_get(&queue, &pid, 4);
         assert( pid == 0 );
         assert( queue_proc_reqs_size(&queue) == 1 );
-        queue_proc_reqs_pop(&queue, &pid, 3);
+        queue_proc_reqs_get(&queue, &pid, 3);
         assert( pid == 111 );
         assert( queue_proc_reqs_size(&queue) == 1 ); /* 1 request pending */
-        queue_proc_reqs_pop(&queue, &pid, 3);
+        queue_proc_reqs_get(&queue, &pid, 3);
         assert( pid == 111 );
         assert( queue_proc_reqs_size(&queue) == 0 ); /* 0 requests pending */
 
@@ -138,22 +138,22 @@ int main(int argc, char *argv[]) {
         assert( queue_proc_reqs_size(&queue) == 3 );
 
         /* Pop requests */
-        queue_proc_reqs_pop(&queue, &pid, 10);
+        queue_proc_reqs_get(&queue, &pid, 10);
         assert( pid == 222 );
         assert( queue_proc_reqs_size(&queue) == 3 );
-        queue_proc_reqs_pop(&queue, &pid, 10);
+        queue_proc_reqs_get(&queue, &pid, 10);
         assert( pid == 333 );
         assert( queue_proc_reqs_size(&queue) == 3 );
-        queue_proc_reqs_pop(&queue, &pid, 10);
+        queue_proc_reqs_get(&queue, &pid, 10);
         assert( pid == 0 );
         assert( queue_proc_reqs_size(&queue) == 3 );
-        queue_proc_reqs_pop(&queue, &pid, 0);
+        queue_proc_reqs_get(&queue, &pid, 0);
         assert( pid == 111 );
         assert( queue_proc_reqs_size(&queue) == 3 );
-        queue_proc_reqs_pop(&queue, &pid, 0);
+        queue_proc_reqs_get(&queue, &pid, 0);
         assert( pid == 111 );
-        assert( queue_proc_reqs_size(&queue) == 2 );
-        queue_proc_reqs_pop(&queue, &pid, 0);
+        assert( queue_proc_reqs_size(&queue) == 0 );
+        queue_proc_reqs_get(&queue, &pid, 0);
         assert( pid == 0 );
         assert( queue_proc_reqs_size(&queue) == 0 );
     }

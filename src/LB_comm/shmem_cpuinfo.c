@@ -99,7 +99,7 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
 
         /* If CPU did noy have requests, pop global queue */
         if (new_guest == NOBODY) {
-            queue_proc_reqs_pop(&shdata->proc_requests, &new_guest, cpuinfo->id);
+            queue_proc_reqs_get(&shdata->proc_requests, &new_guest, cpuinfo->id);
         }
     } else {
         /* No suitable guest */

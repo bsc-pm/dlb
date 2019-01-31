@@ -32,7 +32,7 @@ void queue_proc_reqs_init(queue_proc_reqs_t *queue) {
     memset(queue, 0, sizeof(*queue));
 }
 
-unsigned int queue_proc_reqs_size(queue_proc_reqs_t *queue) {
+unsigned int queue_proc_reqs_size(const queue_proc_reqs_t *queue) {
     return queue->head >= queue->tail
         ? queue->head - queue->tail
         : QUEUE_PROC_REQS_SIZE - queue->tail + queue->head;
@@ -48,12 +48,13 @@ process_request_t* queue_proc_reqs_back(queue_proc_reqs_t *queue) {
 }
 
 void queue_proc_reqs_remove(queue_proc_reqs_t *queue, pid_t pid) {
+    if (unlikely(!pid)) return;
+
     unsigned int i;
     for (i=queue->tail; i!=queue->head; i=(i+1)%QUEUE_PROC_REQS_SIZE) {
         if (queue->queue[i].pid == pid) {
-            queue->queue[i].pid = NOBODY;
-            queue->queue[i].howmany = 0;
-            CPU_ZERO(&queue->queue[i].allowed);
+            /* Clear request */
+            memset(&queue->queue[i], 0, sizeof(process_request_t));
         }
         /* Advance tail if it points to invalid elements */
         if (queue->queue[i].pid == NOBODY
@@ -97,7 +98,26 @@ int queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid,
     return DLB_NOTED;
 }
 
-void queue_proc_reqs_pop(queue_proc_reqs_t *queue, pid_t *pid, int cpuid) {
+void queue_proc_reqs_pop(queue_proc_reqs_t *queue, process_request_t *request) {
+    /* If front is valid, extract request */
+    process_request_t *front = queue_proc_reqs_front(queue);
+    if (front->pid != NOBODY) {
+        if (request != NULL) {
+            /* Copy request if argument is valid */
+            memcpy(request, front, sizeof(process_request_t));
+        }
+        /* Clear request */
+        memset(front, 0, sizeof(process_request_t));
+    }
+
+    /* Advance tail as long as it points to invalid elements */
+    while(queue->head != queue->tail
+            && queue->queue[queue->tail].pid == NOBODY) {
+        queue->tail = (queue->tail + 1) % QUEUE_PROC_REQS_SIZE;
+    }
+}
+
+void queue_proc_reqs_get(queue_proc_reqs_t *queue, pid_t *pid, int cpuid) {
     *pid = NOBODY;
     unsigned int pointer = queue->tail;
     while(pointer != queue->head && *pid == NOBODY) {
@@ -121,6 +141,12 @@ void queue_proc_reqs_pop(queue_proc_reqs_t *queue, pid_t *pid, int cpuid) {
         /* Advance pointer */
         pointer = (pointer + 1) % QUEUE_PROC_REQS_SIZE;
     }
+
+    /* Advance tail as long as it points to invalid elements */
+    while(queue->head != queue->tail
+            && queue->queue[queue->tail].pid == NOBODY) {
+        queue->tail = (queue->tail + 1) % QUEUE_PROC_REQS_SIZE;
+    }
 }
 
 /*********************************************************************************/
@@ -131,7 +157,7 @@ void queue_pids_init(queue_pids_t *queue) {
     memset(queue, 0, sizeof(*queue));
 }
 
-unsigned int queue_pids_size(queue_pids_t *queue) {
+unsigned int queue_pids_size(const queue_pids_t *queue) {
     return queue->head >= queue->tail
         ? queue->head - queue->tail
         : QUEUE_PIDS_SIZE - queue->tail + queue->head;
