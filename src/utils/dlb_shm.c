@@ -105,7 +105,6 @@ void list_shdata(int list_columns, dlb_printshmem_flags_t print_flags) {
     bool userdef_shm_listed = userdef_shm_filename == NULL;
 
     const char dir[] = "/dev/shm";
-    char *filename;
     DIR *dp;
     struct dirent *entry;
     struct stat statbuf;
@@ -118,7 +117,7 @@ void list_shdata(int list_columns, dlb_printshmem_flags_t print_flags) {
     while ( (entry = readdir(dp)) != NULL ) {
         /* Obtain absolute path to filename */
         int filename_size = snprintf(NULL, 0, "%s/%s", dir, entry->d_name);
-        filename = malloc(filename_size*sizeof(char));
+        char *filename = malloc((filename_size+1)*sizeof(char));
         sprintf(filename, "%s/%s", dir, entry->d_name);
         /* Only list if filename is same UID and matches DLB_* */
         stat( filename, &statbuf );
@@ -132,6 +131,7 @@ void list_shdata(int list_columns, dlb_printshmem_flags_t print_flags) {
             created_shm_listed = created_shm_listed || strstr( created_shm_filename, entry->d_name );
             userdef_shm_listed = userdef_shm_listed || strstr( userdef_shm_filename, entry->d_name );
         }
+        free(filename);
     }
 
     if ( !created_shm_listed ) {
