@@ -289,3 +289,10 @@ void shmem_async_disable_cpu(pid_t pid, int cpuid) {
         enqueue_message(helper, &message);
     }
 }
+
+int shmem_async__version(void) {
+    return SHMEM_ASYNC_VERSION;
+}
+size_t shmem_async__size(void) {
+    return sizeof(shdata_t) + sizeof(helper_t)*mu_get_system_size();
+}

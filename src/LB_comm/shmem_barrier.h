@@ -20,8 +20,13 @@
 #ifndef SHMEM_BARRIER_H
 #define SHMEM_BARRIER_H
 
+#include <stddef.h>
+
 void shmem_barrier_init(const char *shmem_key);
 void shmem_barrier_finalize(void);
 void shmem_barrier(void);
+
+int shmem_barrier__version(void);
+size_t shmem_barrier__size(void);
 
 #endif /* SHMEM_BARRIER_H */

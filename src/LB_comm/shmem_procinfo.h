@@ -59,6 +59,8 @@ int     shmem_procinfo__getloadavg(pid_t pid, double *load);
 /* Misc */
 void shmem_procinfo__print_info(const char *shmem_key);
 bool shmem_procinfo__exists(void);
+int  shmem_procinfo__version(void);
+size_t shmem_procinfo__size(void);
 
 
 #endif /* SHMEM_PROCINFO_H */

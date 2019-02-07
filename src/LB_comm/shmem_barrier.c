@@ -182,3 +182,11 @@ void shmem_barrier(void) {
 
     advance_barrier();
 }
+
+int shmem_barrier__version(void) {
+    return SHMEM_BARRIER_VERSION;
+}
+
+size_t shmem_barrier__size(void) {
+    return sizeof(shdata_t) + sizeof(barrier_t)*mu_get_system_size();
+}

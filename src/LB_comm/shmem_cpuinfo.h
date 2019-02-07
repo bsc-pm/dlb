@@ -76,6 +76,8 @@ int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpu);
 bool shmem_cpuinfo__exists(void);
 bool shmem_cpuinfo__is_dirty(void);
 void shmem_cpuinfo__enable_request_queues(void);
+int shmem_cpuinfo__version(void);
+size_t shmem_cpuinfo__size(void);
 
 /* WIP: TALP */
 // Simplified states to keep statistics

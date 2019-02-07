@@ -951,6 +951,14 @@ bool shmem_procinfo__exists(void) {
     return shm_handler != NULL;
 }
 
+int shmem_procinfo__version(void) {
+    return SHMEM_PROCINFO_VERSION;
+}
+
+size_t shmem_procinfo__size(void) {
+    return sizeof(shdata_t) + sizeof(pinfo_t)*mu_get_system_size();
+}
+
 
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
 

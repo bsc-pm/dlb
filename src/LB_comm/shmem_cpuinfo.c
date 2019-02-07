@@ -1338,6 +1338,13 @@ void shmem_cpuinfo__enable_request_queues(void) {
     shdata->queues_enabled = true;
 }
 
+int shmem_cpuinfo__version(void) {
+    return SHMEM_CPUINFO_VERSION;
+}
+size_t shmem_cpuinfo__size(void) {
+    return sizeof(shdata_t) + sizeof(cpuinfo_t)*mu_get_system_size();
+}
+
 /* External Functions
  * These functions are intended to be called from external processes only to consult the shdata
  * That's why we should initialize and finalize the shared memory
