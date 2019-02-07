@@ -72,7 +72,7 @@ typedef struct {
     cpuinfo_t           node_info[0];
 } shdata_t;
 
-enum { SHMEM_CPUINFO_VERSION = 2 };
+enum { SHMEM_CPUINFO_VERSION = 3 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
