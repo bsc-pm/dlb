@@ -174,6 +174,7 @@ COMMON_SRCS = \
 	src/LB_core/DLB_kernel.h                \
 	src/LB_core/lb_funcs.c                  \
 	src/LB_core/lb_funcs.h                  \
+	src/LB_core/spd.c                       \
 	src/LB_core/spd.h                       \
 	src/apis/DLB_interface.c                \
 	src/apis/DLB_interface.h                \

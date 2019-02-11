@@ -17,39 +17,44 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef SPD_H
-#define SPD_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
 
-#include "LB_core/lb_funcs.h"
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+#include "LB_core/spd.h"
 
-#include <sys/types.h>
+#include <pthread.h>
 
-/* Sub-process Descriptor */
+int main(int argc, char *argv[]) {
 
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_preinitialized;
-    bool dlb_enabled;
-    cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    void *lewi_info;
-} subprocess_descriptor_t;
+    subprocess_descriptor_t spd1, spd2;
+    spd1.id = 111;
+    spd2.id = 222;
 
-extern __thread subprocess_descriptor_t *thread_spd;
+    spd_register(&spd1);
+    spd_unregister(&spd1);
+    spd_register(&spd2);
+    spd_unregister(&spd2);
 
-void spd_enter_dlb(subprocess_descriptor_t *spd);
-void spd_register(subprocess_descriptor_t *spd);
-void spd_unregister(const subprocess_descriptor_t *spd);
-void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
-pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
-const subprocess_descriptor_t** spd_get_spds(void);
+    spd_register(&spd1);
+    spd_register(&spd2);
 
-#endif /* SPD_H */
+    const subprocess_descriptor_t **spds = spd_get_spds();
+    /* spds comes from a gtree, order is undetermined */
+    assert( (spds[0]->id == spd1.id && spds[1]->id == spd2.id)
+            || (spds[0]->id == spd2.id && spds[1]->id == spd1.id) );
+    assert( spds[2] == NULL );
+    free(spds);
+
+    pthread_t pthread = pthread_self();
+    spd_set_pthread(&spd1, pthread);
+    assert( spd_get_pthread(&spd1) == pthread );
+    assert( spd_get_pthread(&spd2) == 0 );
+    spd_set_pthread(&spd2, pthread);
+    assert( spd_get_pthread(&spd2) == pthread );
+
+    spd_unregister(&spd2);
+    spd_unregister(&spd1);
+
+    return 0;
+}
