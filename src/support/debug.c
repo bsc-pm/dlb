@@ -30,6 +30,7 @@
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_core/spd.h"
 #include "apis/DLB_interface.h"
 
 #include <sys/types.h>
@@ -226,27 +227,46 @@ void print_backtrace(void) {
 #endif
 }
 
+static void clean_shmems(pid_t id, const char *shmem_key) {
+    if (shmem_cpuinfo__exists()) {
+        shmem_cpuinfo__finalize(id, shmem_key);
+    }
+    if (shmem_procinfo__exists()) {
+        shmem_procinfo__finalize(id, false, shmem_key);
+    }
+    shmem_async_finalize(id);
+}
+
 void dlb_clean(void) {
-    // Best effort, finalize current pid on all shmems
+    /* First, try to finalize shmems of registered subprocess */
+    const subprocess_descriptor_t** spds = spd_get_spds();
+    const subprocess_descriptor_t** spd = spds;
+    while (*spd) {
+        pid_t id = (*spd)->id;
+        const char *shmem_key = (*spd)->options.shm_key;
+        clean_shmems(id, shmem_key);
+        ++spd;
+    }
+    free(spds);
+
+    /* Then, try to finalize current pid */
     pid_t pid = getpid();
     const options_t *options = get_global_options();
     const char *shmem_key = options ? options->shm_key : NULL;
+    clean_shmems(pid, shmem_key);
 
-    if (shmem_cpuinfo__exists()) {
-        shmem_cpuinfo__finalize(pid, shmem_key);
-    }
-    else if (shmem_exists("cpuinfo", shmem_key)) {
+    /* Finalize shared memories that do not support subprocesses */
+    shmem_barrier_finalize();
+    finalize_comm();
+
+    /* Destroy shared memories if they still exist */
+    if (shmem_exists("cpuinfo", shmem_key)) {
         shmem_destroy("cpuinfo", shmem_key);
     }
-
-    if (shmem_procinfo__exists()) {
-        shmem_procinfo__finalize(pid, false, shmem_key);
-    }
-    else if (shmem_exists("procinfo", shmem_key)) {
+    if (shmem_exists("procinfo", shmem_key)) {
         shmem_destroy("procinfo", shmem_key);
     }
-
-    shmem_barrier_finalize();
-    shmem_async_finalize(pid);
-    finalize_comm();
+    if (shmem_exists("async", shmem_key)) {
+        shmem_destroy("async", shmem_key);
+    }
 }
