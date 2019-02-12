@@ -141,7 +141,7 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 1 };
+    enum { KNOWN_PROCINFO_VERSION = 2 };
     struct KnownProcinfo {
         pid_t pid;
         bool bool1;
@@ -160,6 +160,7 @@ static void check_procinfo_version(void) {
     };
     struct KnownProcinfoShdata {
         bool bool1;
+        bool bool2;
         struct timespec time;
         cpu_set_t mask;
         struct KnownProcinfo info[0];

@@ -25,6 +25,7 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_types.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <sys/types.h>
@@ -35,6 +36,7 @@
 // Basic checks with 1 sub-process
 
 int main( int argc, char **argv ) {
+
     int new_threads = 0;
     pid_t pid = getpid();
     cpu_set_t process_mask, new_mask;
@@ -44,11 +46,14 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__getprocessmask(pid, NULL, DLB_SYNC_QUERY) == DLB_ERR_NOSHMEM );
     assert( shmem_procinfo__polldrom(pid, NULL, NULL) == DLB_ERR_NOSHMEM );
 
-    // Init
+    // Init with too many CPUs
+    CPU_SET(mu_get_system_size(), &process_mask);
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_ERR_PERM );
+    // Init (good)
+    CPU_CLR(mu_get_system_size(), &process_mask);
     assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
-    //// A second init would silently return success
-    ////    but now, it increments subprocesses_attached and causes undefined behaviour
-    //assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
+    // A second init for the same pid should fail
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_ERR_INIT );
 
     // Check registered mask is the same as our process mask
     assert( shmem_procinfo__getprocessmask(pid, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
