@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <errno.h>
 
+#define LINE_BREAK "\n                                             "
+
 int parse_bool(const char *str, bool *value) {
     if (strcasecmp(str, "1")==0        ||
             strcasecmp(str, "yes")==0  ||
@@ -60,7 +62,7 @@ static const char* const verbose_opts_choices[] =
     {"api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom", "async", "ompt",
     "affinity"};
 static const char verbose_opts_choices_str[] =
-    "api:microlb:shmem:mpi_api:mpi_intercept:stats:drom:async:ompt:affinity";
+    "api:microlb:shmem:mpi_api:mpi_intercept:"LINE_BREAK"stats:drom:async:ompt:affinity";
 enum { verbose_opts_nelems = sizeof(verbose_opts_values) / sizeof(verbose_opts_values[0]) };
 
 int parse_verbose_opts(const char *str, verbose_opts_t *value) {
