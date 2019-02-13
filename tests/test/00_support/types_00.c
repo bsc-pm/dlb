@@ -59,9 +59,9 @@ int main(int argc, char *argv[]) {
     parse_verbose_fmt("", &fmt);                    assert(fmt==VBF_CLEAR);
     parse_verbose_fmt("null", &fmt);                assert(fmt==VBF_CLEAR);
     parse_verbose_fmt("node", &fmt);                assert(fmt&VBF_NODE);
-    parse_verbose_fmt("pid:mpinode", &fmt);         assert(fmt&VBF_PID && fmt&VBF_MPINODE);
-    parse_verbose_fmt("node:pid:mpinode:mpirank:thread", &fmt);
-    assert(fmt&VBF_NODE && fmt&VBF_PID && fmt&VBF_MPINODE && fmt&VBF_MPIRANK && fmt&VBF_THREAD);
+    parse_verbose_fmt("spid:mpinode", &fmt);        assert(fmt&VBF_SPID && fmt&VBF_MPINODE);
+    parse_verbose_fmt("node:spid:mpinode:mpirank:thread", &fmt);
+    assert(fmt&VBF_NODE && fmt&VBF_SPID && fmt&VBF_MPINODE && fmt&VBF_MPIRANK && fmt&VBF_THREAD);
 
     priority_t prio;
     err = parse_priority("", &prio);                assert(err);
