@@ -206,8 +206,10 @@ void mu_init( void ) {
     }
 }
 
+__attribute__((destructor))
 void mu_finalize( void ) {
     free(sys.parents);
+    sys.parents = NULL;
     mu_initialized = false;
 }
 
