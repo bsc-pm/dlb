@@ -28,7 +28,8 @@
 #include "LB_MPI/DPD.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
-#include "apis/DLB_interface.h"
+#include "LB_core/spd.h"
+#include "apis/dlb.h"
 #include "support/options.h"
 #include "support/debug.h"
 #include "support/types.h"
@@ -150,12 +151,10 @@ void after_init(void) {
         init_from_mpi = 1;
     }
 
-    // Obtain MPI options
-    const options_t *options = get_global_options();
     // Policies that used dpd have been temporarily disabled
     //use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
     use_dpd = 0;
-    lewi_mpi_calls = options->lewi_mpi_calls;
+    lewi_mpi_calls = thread_spd->options.lewi_mpi_calls;
 
     mpi_ready = 1;
 }

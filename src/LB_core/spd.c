@@ -19,7 +19,6 @@
 
 #include "LB_core/spd.h"
 
-#include "apis/DLB_interface.h"
 #include "support/debug.h"
 #include "support/gtree.h"
 

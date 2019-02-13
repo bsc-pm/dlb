@@ -31,7 +31,6 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_core/spd.h"
-#include "apis/DLB_interface.h"
 
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -250,9 +249,8 @@ void dlb_clean(void) {
     free(spds);
 
     /* Then, try to finalize current pid */
-    pid_t pid = getpid();
-    const options_t *options = get_global_options();
-    const char *shmem_key = options ? options->shm_key : NULL;
+    pid_t pid = thread_spd ? thread_spd->id : getpid();
+    const char *shmem_key = thread_spd ? thread_spd->options.shm_key : NULL;
     clean_shmems(pid, shmem_key);
 
     /* Finalize shared memories that do not support subprocesses */
