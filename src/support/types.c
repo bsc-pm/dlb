@@ -142,10 +142,10 @@ const char* get_verbose_fmt_choices(void) {
 
 /* debug_opts_t */
 static const debug_opts_t debug_opts_values[] =
-    {DBG_REGSIGNALS, DBG_RETURNSTOLEN, DBG_LEWI_OMPT, DBG_WERROR};
+    {DBG_RETURNSTOLEN, DBG_LEWI_OMPT, DBG_WERROR, DBG_LPOSTMORTEM};
 static const char* const debug_opts_choices[] =
-    {"register-signals", "return-stolen", "lewi-ompt", "werror"};
-static const char debug_opts_choices_str[] = "register-signals:return-stolen:lewi-ompt:werror";
+    {"return-stolen", "lewi-ompt", "werror", "lend-post-mortem"};
+static const char debug_opts_choices_str[] = "return-stolen:lewi-ompt:werror:lend-post-mortem";
 enum { debug_opts_nelems = sizeof(debug_opts_values) / sizeof(debug_opts_values[0]) };
 
 int parse_debug_opts(const char *str, debug_opts_t *value) {

@@ -23,6 +23,7 @@
 
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
+#include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
 #include "support/options.h"
@@ -162,6 +163,32 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_ERR_NOSHMEM );
+
+    /* Test lend post mortem feature */
+    {
+        // Set up spd
+        subprocess_descriptor_t spd;
+        spd.options.debug_opts = DBG_LPOSTMORTEM;
+        spd_enter_dlb(&spd);
+
+        // Initialize
+        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+
+        // P1 finalizes
+        assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
+
+        // P2 acquires P1 CPUs
+        assert( shmem_cpuinfo__acquire_cpu(p2_pid, 0, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p2_pid );
+        assert( victim == -1 );
+        assert( shmem_cpuinfo__acquire_cpu(p2_pid, 1, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p2_pid );
+        assert( victim == -1 );
+
+        // P2 finalizes
+        assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    }
 
     return 0;
 }

@@ -48,10 +48,10 @@ typedef enum VerboseFormat {
 
 typedef enum DebugOptions {
     DBG_CLEAR        = 0,
-    DBG_REGSIGNALS   = 1 << 0,
-    DBG_RETURNSTOLEN = 1 << 1,
-    DBG_LEWI_OMPT    = 1 << 2,
-    DBG_WERROR       = 1 << 3
+    DBG_RETURNSTOLEN = 1 << 0,
+    DBG_LEWI_OMPT    = 1 << 1,
+    DBG_WERROR       = 1 << 2,
+    DBG_LPOSTMORTEM  = 1 << 3
 } debug_opts_t;
 
 typedef enum PriorityType {

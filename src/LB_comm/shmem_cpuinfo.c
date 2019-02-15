@@ -20,6 +20,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 
 #include "LB_comm/shmem.h"
+#include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_types.h"
 #include "support/debug.h"
@@ -175,6 +176,11 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
 int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key) {
     int error = DLB_SUCCESS;
 
+    // Update post_mortem preference
+    if (thread_spd && thread_spd->options.debug_opts & DBG_LPOSTMORTEM) {
+        cpu_is_public_post_mortem = true;
+    }
+
     // Shared memory creation
     open_shmem(shmem_key);
 
@@ -264,6 +270,7 @@ static bool deregister_process(pid_t pid) {
             }
             if (cpu_is_public_post_mortem) {
                 cpuinfo->state = CPU_LENT;
+                shdata->timestamp_cpu_lent = get_time_in_ns();
             } else {
                 cpuinfo->state = CPU_DISABLED;
             }
