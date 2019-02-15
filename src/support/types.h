@@ -39,9 +39,9 @@ typedef enum VerboseOptions {
 typedef enum VerboseFormat {
     VBF_CLEAR   = 0,
     VBF_NODE    = 1 << 0,
-    VBF_PID     = 1 << 1,
-    VBF_MPINODE = 1 << 2,
-    VBF_MPIRANK = 1 << 3,
+    VBF_MPINODE = 1 << 1,
+    VBF_MPIRANK = 1 << 2,
+    VBF_SPID    = 1 << 3,
     VBF_THREAD  = 1 << 4,
     VBF_TSTAMP  = 1 << 5
 } verbose_fmt_t;

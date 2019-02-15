@@ -144,7 +144,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_VERBOSE_FORMAT",
         .arg_name       = "--verbose-format",
-        .default_value  = "node:pid:thread",
+        .default_value  = "node:spid",
         .description    = OFFSET"Set the verbose format for the verbose messages. Multiple\n"
                           OFFSET"components may be selected but the order is predefined as\n"
                           OFFSET"shown in the possible values.",

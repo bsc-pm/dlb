@@ -30,7 +30,6 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
-#include "apis/DLB_interface.h"
 #include "support/debug.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
@@ -224,21 +223,21 @@ int set_max_parallelism(subprocess_descriptor_t *spd, int max) {
 /* MPI specific */
 
 void IntoCommunication(void) {
-    const subprocess_descriptor_t *spd = get_global_spd();
+    const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.into_communication(spd);
     }
 }
 
 void OutOfCommunication(void) {
-    const subprocess_descriptor_t *spd = get_global_spd();
+    const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.out_of_communication(spd);
     }
 }
 
 void IntoBlockingCall(int is_iter, int blocking_mode) {
-    const subprocess_descriptor_t *spd = get_global_spd();
+    const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
         spd->lb_funcs.into_blocking_call(spd);
@@ -247,7 +246,7 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
 }
 
 void OutOfBlockingCall(int is_iter) {
-    const subprocess_descriptor_t *spd = get_global_spd();
+    const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);

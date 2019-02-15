@@ -21,9 +21,9 @@
 
 #include "apis/dlb_drom.h"
 
-#include "apis/DLB_interface.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
 #include "support/options.h"
 #include "support/debug.h"
@@ -40,9 +40,8 @@
 
 int DLB_DROM_Attach(void) {
     const char *shm_key;
-    const options_t *global_options = get_global_options();
-    if (global_options) {
-        shm_key = global_options->shm_key;
+    if (thread_spd && thread_spd->dlb_initialized) {
+        shm_key = thread_spd->options.shm_key;
     } else {
         options_t options;
         options_init(&options, NULL);

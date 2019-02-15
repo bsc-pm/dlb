@@ -30,7 +30,7 @@
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
-#include "apis/DLB_interface.h"
+#include "LB_core/spd.h"
 
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -66,7 +66,6 @@ void debug_init(const options_t *options) {
         gethostname( hostname, VBFORMAT_LEN/2);
         i += sprintf( &fmt_str[i], "%s:", hostname);
     }
-    if ( vb_fmt & VBF_PID ) { i += sprintf( &fmt_str[i], "%d:", getpid()); }
 #ifdef MPI_LIB
     if ( vb_fmt & VBF_MPINODE ) { i += sprintf( &fmt_str[i], "%d:", _node_id); }
     if ( vb_fmt & VBF_MPIRANK ) { i += sprintf( &fmt_str[i], "%d:", _mpi_rank); }
@@ -80,26 +79,42 @@ void debug_init(const options_t *options) {
 
 static void vprint(FILE *fp, const char *prefix, const char *fmt, va_list list) {
     if (!quiet) {
-        char timestamp[32];
+        // Write timestamp
+        enum { TIMESTAMP_MAX_SIZE = 32 };
+        char timestamp[TIMESTAMP_MAX_SIZE];
         if (vb_fmt & VBF_TSTAMP) {
             time_t t = time(NULL);
             struct tm *tm = localtime(&t);
-            strftime(timestamp, sizeof(timestamp), "[%Y-%m-%dT%T] ", tm);
+            strftime(timestamp, TIMESTAMP_MAX_SIZE, "[%Y-%m-%dT%T] ", tm);
+        } else {
+            timestamp[0] = '\0';
         }
 
-        // Print prefix and object identifier
-        if (vb_fmt & VBF_THREAD) {
-            fprintf(fp, "%s%s[%s:%ld]: ",
-                    vb_fmt & VBF_TSTAMP ? timestamp : "",
-                    prefix,
-                    fmt_str,
-                    syscall(SYS_gettid));
+        // Write spid
+        enum { SPID_MAX_SIZE = 16 };
+        char spid[SPID_MAX_SIZE];
+        if (vb_fmt & VBF_SPID && thread_spd) {
+            snprintf(spid, SPID_MAX_SIZE, ":%d", thread_spd->id);
         } else {
-            fprintf(fp, "%s%s[%s]: ",
-                    vb_fmt & VBF_TSTAMP ? timestamp : "",
-                    prefix,
-                    fmt_str);
+            spid[0] = '\0';
         }
+
+        // Write thread id
+        enum { THREADID_MAX_SIZE = 24 };
+        char threadid[THREADID_MAX_SIZE];
+        if (vb_fmt & VBF_THREAD) {
+            snprintf(threadid, THREADID_MAX_SIZE, ":%ld", syscall(SYS_gettid));
+        } else {
+            threadid[0] = '\0';
+        }
+
+        // Print
+        fprintf(fp, "%s%s[%s%s%s]: ",
+                timestamp,
+                prefix,
+                fmt_str,
+                spid,
+                threadid);
 
         // Print va_list
         vfprintf(fp, fmt, list);
@@ -226,27 +241,45 @@ void print_backtrace(void) {
 #endif
 }
 
-void dlb_clean(void) {
-    // Best effort, finalize current pid on all shmems
-    pid_t pid = getpid();
-    const options_t *options = get_global_options();
-    const char *shmem_key = options ? options->shm_key : NULL;
-
+static void clean_shmems(pid_t id, const char *shmem_key) {
     if (shmem_cpuinfo__exists()) {
-        shmem_cpuinfo__finalize(pid, shmem_key);
+        shmem_cpuinfo__finalize(id, shmem_key);
     }
-    else if (shmem_exists("cpuinfo", shmem_key)) {
+    if (shmem_procinfo__exists()) {
+        shmem_procinfo__finalize(id, false, shmem_key);
+    }
+    shmem_async_finalize(id);
+}
+
+void dlb_clean(void) {
+    /* First, try to finalize shmems of registered subprocess */
+    const subprocess_descriptor_t** spds = spd_get_spds();
+    const subprocess_descriptor_t** spd = spds;
+    while (*spd) {
+        pid_t id = (*spd)->id;
+        const char *shmem_key = (*spd)->options.shm_key;
+        clean_shmems(id, shmem_key);
+        ++spd;
+    }
+    free(spds);
+
+    /* Then, try to finalize current pid */
+    pid_t pid = thread_spd ? thread_spd->id : getpid();
+    const char *shmem_key = thread_spd ? thread_spd->options.shm_key : NULL;
+    clean_shmems(pid, shmem_key);
+
+    /* Finalize shared memories that do not support subprocesses */
+    shmem_barrier_finalize();
+    finalize_comm();
+
+    /* Destroy shared memories if they still exist */
+    if (shmem_exists("cpuinfo", shmem_key)) {
         shmem_destroy("cpuinfo", shmem_key);
     }
-
-    if (shmem_procinfo__exists()) {
-        shmem_procinfo__finalize(pid, false, shmem_key);
-    }
-    else if (shmem_exists("procinfo", shmem_key)) {
+    if (shmem_exists("procinfo", shmem_key)) {
         shmem_destroy("procinfo", shmem_key);
     }
-
-    shmem_barrier_finalize();
-    shmem_async_finalize(pid);
-    finalize_comm();
+    if (shmem_exists("async", shmem_key)) {
+        shmem_destroy("async", shmem_key);
+    }
 }

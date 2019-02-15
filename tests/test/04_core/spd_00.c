@@ -17,16 +17,44 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef DLB_INTERFACE_H
-#define DLB_INTERFACE_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
 
-#include "apis/dlb.h"
+#include "LB_core/spd.h"
 
-/* Forward declarations */
-struct SubProcessDescriptor;
-struct Options;
+#include <pthread.h>
 
-const struct SubProcessDescriptor* get_global_spd(void);
-const struct Options* get_global_options(void);
+int main(int argc, char *argv[]) {
 
-#endif /* DLB_INTERFACE_H */
+    subprocess_descriptor_t spd1, spd2;
+    spd1.id = 111;
+    spd2.id = 222;
+
+    spd_register(&spd1);
+    spd_unregister(&spd1);
+    spd_register(&spd2);
+    spd_unregister(&spd2);
+
+    spd_register(&spd1);
+    spd_register(&spd2);
+
+    const subprocess_descriptor_t **spds = spd_get_spds();
+    /* spds comes from a gtree, order is undetermined */
+    assert( (spds[0]->id == spd1.id && spds[1]->id == spd2.id)
+            || (spds[0]->id == spd2.id && spds[1]->id == spd1.id) );
+    assert( spds[2] == NULL );
+    free(spds);
+
+    pthread_t pthread = pthread_self();
+    spd_set_pthread(&spd1, pthread);
+    assert( spd_get_pthread(&spd1) == pthread );
+    assert( spd_get_pthread(&spd2) == 0 );
+    spd_set_pthread(&spd2, pthread);
+    assert( spd_get_pthread(&spd2) == pthread );
+
+    spd_unregister(&spd2);
+    spd_unregister(&spd1);
+
+    return 0;
+}

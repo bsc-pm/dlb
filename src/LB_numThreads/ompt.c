@@ -108,7 +108,7 @@ typedef void (*ompt_callback_thread_end_t) (
 
 /********************************************************************************************/
 
-#include "apis/DLB_interface.h"
+#include "apis/dlb.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"

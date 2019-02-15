@@ -19,8 +19,13 @@
 
 /*<testinfo>
     test_generator="gens/basic-generator"
-    test_exec_fail=yes
 </testinfo>*/
+
+/* Test that shared memories are cleaned when the process aborts.
+ * The fork is necessary to call the assert_noshm in the destructor
+ */
+
+#include "assert_noshm.h"
 
 #include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
@@ -29,13 +34,30 @@
 #include <sched.h>
 #include <unistd.h>
 #include <assert.h>
+#include <signal.h>
+#include <sys/wait.h>
 
 void __gcov_flush() __attribute__((weak));
 
 int main(int argc, char **argv) {
-    cpu_set_t process_mask;
-    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-    assert( shmem_cpuinfo__init(getpid(), &process_mask, NULL) == DLB_SUCCESS );
-    fatal("This fatal should clean shmems");
+    // Create a child process
+    pid_t pid = fork();
+    assert( pid >= 0 );
+    if (pid == 0) {
+        cpu_set_t process_mask;
+        sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+
+        // Create shared memory
+        assert( shmem_cpuinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
+
+        if (__gcov_flush) __gcov_flush();
+        fatal("This fatal should clean shmems");
+    }
+
+    // Wait child and end execution correctly in order to call destructors
+    int wstatus;
+    assert( waitpid(pid, &wstatus, 0) > 0 );
+    assert( WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGABRT );
+
     return 0;
 }
