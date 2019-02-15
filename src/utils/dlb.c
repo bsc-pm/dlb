@@ -23,6 +23,7 @@
 
 #include "apis/dlb.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -48,7 +49,6 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     fprintf(out, (
                 "usage:\n"
                 "\t%1$s --help\n"
-                "\t%1$s --help-extra\n"
                 "\t%1$s --version\n"
                 "\n"
                 ), program);
@@ -58,23 +58,20 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     fputs((
                 "Options:\n"
                 "  -h, --help               print DLB variables and current value\n"
-                "  -x, --help-extra         print DLB variables, including experimental\n"
+                "                           (twice `-hh` for extended)\n"
                 "  -v, --version            print version info\n"
                 ), out);
 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
-typedef enum print_level_e {
-    PRINT_SIMPLE,
-    PRINT_EXTRA
-} print_level_t;
-
-static void __attribute__((__noreturn__)) print_variables(print_level_t level) {
+static void __attribute__((__noreturn__)) print_variables(int print_extended) {
     int error = DLB_Init(0, NULL, NULL);
     dlb_check(error, __FUNCTION__);
-    DLB_PrintVariables(0);
-    if (level == PRINT_EXTRA) DLB_PrintVariables(1);
+    DLB_PrintVariables(print_extended);
+    if (!print_extended) {
+        fprintf(stdout, "Run dlb -hh for extended help\n");
+    }
     error = DLB_Finalize();
     dlb_check(error, __FUNCTION__);
     exit(EXIT_SUCCESS);
@@ -83,12 +80,15 @@ static void __attribute__((__noreturn__)) print_variables(print_level_t level) {
 
 int main(int argc, char *argv[]) {
 
+    bool do_print = false;
+    bool print_extended = false;
+
     int opt;
     extern char *optarg;
     extern int optind;
     struct option long_options[] = {
         {"help",        no_argument,    NULL, 'h'},
-        {"help-extra",  no_argument,    NULL, 'x'},
+        {"help-extra",  no_argument,    NULL, 'x'}, /* kept for compatibility */
         {"version",     no_argument,    NULL, 'v'},
         {0,             0,              NULL, 0 }
     };
@@ -96,10 +96,14 @@ int main(int argc, char *argv[]) {
     while ((opt = getopt_long(argc, argv, "hxv", long_options, NULL)) != -1) {
         switch (opt) {
             case 'h':
-                print_variables(PRINT_SIMPLE);
+                if (do_print) {
+                    print_extended = true;
+                }
+                do_print = true;
                 break;
             case 'x':
-                print_variables(PRINT_EXTRA);
+                do_print = true;
+                print_extended = true;
                 break;
             case 'v':
                 version();
@@ -109,7 +113,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    usage(argv[0], stderr);
+    if (do_print) {
+        print_variables(print_extended);
+    } else {
+        usage(argv[0], stderr);
+    }
 
     return EXIT_SUCCESS;
 }

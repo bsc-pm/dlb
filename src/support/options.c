@@ -34,7 +34,8 @@ typedef enum OptionFlags {
     OPT_READONLY   = 1 << 0,
     OPT_OPTIONAL   = 1 << 1,
     OPT_DEPRECATED = 1 << 2,
-    OPT_ADVANCED   = 1 << 3
+    OPT_ADVANCED   = 1 << 3,
+    OPT_HIDDEN     = 1 << 4
 } option_flags_t;
 
 typedef enum OptionTypes {
@@ -61,7 +62,8 @@ typedef struct {
     option_flags_t flags;
 } opts_dict_t;
 
-
+/* Description is displaced 4 spaces */
+#define OFFSET "    "
 static const opts_dict_t options_dictionary[] = {
     // general options
     {
@@ -76,8 +78,8 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_LEWI",
         .arg_name       = "--lewi",
         .default_value  = "no",
-        .description    = "Enable Lend When Idle. Processes using this mode can use"
-                            " LeWI API to lend and borrow resources.",
+        .description    = OFFSET"Enable Lend When Idle. Processes using this mode can use LeWI\n"
+                          OFFSET"API to lend and borrow resources.",
         .offset         = offsetof(options_t, lewi),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -85,9 +87,9 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_DROM",
         .arg_name       = "--drom",
         .default_value  = "no",
-        .description    = "Enable the Dynamic Resource Ownership Manager Module. Processes"
-                            " using this mode can receive requests from other processes"
-                            " to change its process mask.",
+        .description    = OFFSET"Enable the Dynamic Resource Ownership Manager Module. Processes\n"
+                          OFFSET"using this mode can receive requests from other processes to\n"
+                          OFFSET"change its own process mask.",
         .offset         = offsetof(options_t, drom),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -104,7 +106,8 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_BARRIER",
         .arg_name       = "--barrier",
         .default_value  = "no",
-        .description    = "Enable the Shared Memory Barrier. Experimental intra-node barrier.",
+        .description    = OFFSET"Enable the Shared Memory Barrier. Experimental mode. Processes\n"
+                          OFFSET"can perform an intra-node barrier",
         .offset         = offsetof(options_t, barrier),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
@@ -112,7 +115,10 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_MODE",
         .arg_name       = "--mode",
         .default_value  = "polling",
-        .description    = "Set interaction mode between DLB and the application or runtime.",
+        .description    = OFFSET"Set interaction mode between DLB and the application. In polling\n"
+                          OFFSET"mode, each process needs to poll DLB to acquire resources. In\n"
+                          OFFSET"async mode, DLB creates a helper thread to call back the\n"
+                          OFFSET"application when resources become available.",
         .offset         = offsetof(options_t, mode),
         .type           = OPT_MODE_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -122,7 +128,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--quiet",
         .default_value  = "no",
-        .description    = "Suppress all output",
+        .description    = OFFSET"Suppress all output from DLB, even error messages.",
         .offset         = offsetof(options_t, quiet),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
@@ -130,8 +136,8 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_VERBOSE",
         .arg_name       = "--verbose",
         .default_value  = "",
-        .description    = "Set which verbose components will be shown. Only applicable to"
-                            " debug library",
+        .description    = OFFSET"Select which verbose components will be printed. Multiple\n"
+                          OFFSET"components may be selected.",
         .offset         = offsetof(options_t, verbose),
         .type           = OPT_VB_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -139,7 +145,9 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_VERBOSE_FORMAT",
         .arg_name       = "--verbose-format",
         .default_value  = "node:pid:thread",
-        .description    = "Set verbose format for the verbose messages.",
+        .description    = OFFSET"Set the verbose format for the verbose messages. Multiple\n"
+                          OFFSET"components may be selected but the order is predefined as\n"
+                          OFFSET"shown in the possible values.",
         .offset         = offsetof(options_t, verbose_fmt),
         .type           = OPT_VBFMT_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -149,7 +157,10 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--instrument",
         .default_value  = "yes",
-        .description    = "Enable Extrae instrumentation.",
+        .description    = OFFSET"Enable Extrae instrumentation. This option requires the\n"
+                          OFFSET"instrumented DLB library and the Extrae library. If both\n"
+                          OFFSET"conditions are met, DLB will emit events such as the DLB\n"
+                          OFFSET"calls, DLB modes, etc.",
         .offset         = offsetof(options_t, instrument),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -157,7 +168,9 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--instrument-counters",
         .default_value  = "no",
-        .description    = "Enable counters on DLB events.",
+        .description    = OFFSET"Enable counters on DLB events. If this option is enabled, DLB\n"
+                          OFFSET"will emit events to Extrae with hardware counters information.\n"
+                          OFFSET"This may significantly increase the size of the tracefile.",
         .offset         = offsetof(options_t, instrument_counters),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -167,7 +180,10 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-mpi",
         .default_value  = "no",
-        .description    = "When in MPI, whether to lend the current CPU.",
+        .description    = OFFSET"When in MPI, whether to lend the current CPU. If LeWI\n"
+                          OFFSET"is enabled and DLB is intercepting MPI calls, DLB will\n"
+                          OFFSET"lend the CPU that is being occupied while waiting fot the\n"
+                          OFFSET"MPI call to finish.",
         .offset         = offsetof(options_t, lewi_mpi),
         .type           = OPT_BOOL_T,
         .flags          = OPT_OPTIONAL
@@ -175,7 +191,9 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-mpi-calls",
         .default_value  = "all",
-        .description    = "Set of MPI calls in which LeWI can lend its CPU.",
+        .description    = OFFSET"Select which type of MPI calls will make LeWI to lend their\n"
+                          OFFSET"CPUs. If set to all, LeWI will act on all blocking MPI calls,\n"
+                          OFFSET"If set to other values, only those types will trigger LeWI.",
         .offset         = offsetof(options_t, lewi_mpi_calls),
         .type           = OPT_MPISET_T,
         .flags          = OPT_OPTIONAL
@@ -183,7 +201,13 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-affinity",
         .default_value  = "nearby-first",
-        .description    = "Priorize resource sharing by HW affinity.",
+        .description    = OFFSET"Prioritize resource sharing based on hardware affinity.\n"
+                          OFFSET"Nearby-first will try to assign first resources that share the\n"
+                          OFFSET"same socket or NUMA node with the current process. Nearby-only\n"
+                          OFFSET"will only assign those near the process. Spread-ifempty will\n"
+                          OFFSET"prioritize also nearby resources, and then it will assign CPUS\n"
+                          OFFSET"in other sockets or NUMA nodes only if there is no other\n"
+                          OFFSET"that can benefit from those.",
         .offset         = offsetof(options_t, lewi_affinity),
         .type           = OPT_PRIO_T,
         .flags          = OPT_OPTIONAL
@@ -191,7 +215,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-greedy",
         .default_value  = "no",
-        .description    = "Greedy option for LeWI policy.",
+        .description    = OFFSET"Greedy option for LeWI policy.",
         .offset         = offsetof(options_t, lewi_greedy),
         .type           = OPT_BOOL_T,
         .flags          = OPT_OPTIONAL
@@ -199,7 +223,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-warmup",
         .default_value  = "no",
-        .description    = "Create as many threads as necessary during the process startup.",
+        .description    = OFFSET"Create as many threads as necessary during the process startup.",
         .offset         = offsetof(options_t, lewi_warmup),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
@@ -209,8 +233,10 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_SHM_KEY",
         .arg_name       = "--shm-key",
         .default_value  = "",
-        .description    = "Shared Memory key. It determines the namefile to which "
-                            "DLB processes can interconnect.",
+        .description    = OFFSET"Shared Memory key. By default, if key is empty, all processes\n"
+                          OFFSET"will use a shared memory based on the user ID. If different\n"
+                          OFFSET"processes start their execution with different keys, they will\n"
+                          OFFSET"use different shared memories and they will not share resources.",
         .offset         = offsetof(options_t, shm_key),
         .type           = OPT_STR_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
@@ -218,20 +244,21 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_PREINIT_PID",
         .arg_name       = "--preinit-pid",
         .default_value  = "0",
-        .description    = "Process ID that pre-initializes the DLB process",
+        .description    = OFFSET"Process ID that pre-initializes the DLB process for DROM.",
         .offset         = offsetof(options_t, preinit_pid),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_HIDDEN
     }, {
         .var_name       = "LB_DEBUG_OPTS",
         .arg_name       = "--debug-opts",
         .default_value  = "",
-        .description    = "Debug options.",
+        .description    = OFFSET"Debug options.",
         .offset         = offsetof(options_t, debug_opts),
         .type           = OPT_DBG_T,
         .flags          = OPT_OPTIONAL | OPT_ADVANCED
     }
 };
+#undef OFFSET
 
 enum { NUM_OPTIONS = sizeof(options_dictionary)/sizeof(opts_dict_t) };
 
@@ -518,8 +545,8 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
 }
 
 /* API Printer */
-void options_print_variables(const options_t *options) {
-    enum { buffer_size = 2048 };
+void options_print_variables(const options_t *options, bool print_extended) {
+    enum { buffer_size = 4096 };
     char buffer[buffer_size] = "DLB Options:\n\n"
                                 "The library configuration can be set using arguments\n"
                                 "added to the DLB_ARGS environment variable.\n"
@@ -532,8 +559,12 @@ void options_print_variables(const options_t *options) {
         /* Skip if deprecated */
         if (entry->flags & OPT_DEPRECATED) continue;
 
-        /* Skip if advanced */
-        if (entry->flags & OPT_ADVANCED) continue;
+        /* Skip if hidden */
+        if (entry->flags & OPT_HIDDEN) continue;
+
+        /* Skip if advanced (unless print_extended) */
+        if (entry->flags & OPT_ADVANCED
+                && !print_extended) continue;
 
         /* Name */
         size_t name_len = strlen(entry->arg_name) + 1;
@@ -580,6 +611,12 @@ void options_print_variables(const options_t *options) {
                 b += sprintf(b, "(unknown)");
         }
         b += sprintf(b, "\n");
+
+        /* Description if print_extended */
+        if (print_extended) {
+            b += sprintf(b, "%s\n\n", entry->description);
+        }
+
     }
 
     b += sprintf(b, "\n"
@@ -588,66 +625,5 @@ void options_print_variables(const options_t *options) {
                     "    export DLB_ARGS=\"--lewi --no-instrument\"\n"
                     "    export DLB_ARGS=\"--lewi=yes --instrument=no\"\n");
 
-    fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
-    info0("%s", buffer);
-}
-
-/* API Printer extra */
-void options_print_variables_extra(const options_t *options) {
-    enum { buffer_size = 2048 };
-    char buffer[buffer_size] = "DLB_ARGS options:\n";
-    char *b = buffer + strlen(buffer);
-    int i;
-    for (i=0; i<NUM_OPTIONS; ++i) {
-        const opts_dict_t *entry = &options_dictionary[i];
-
-        /* Skip if deprecated */
-        if (entry->flags & OPT_DEPRECATED) continue;
-
-        /* Name */
-        b += sprintf(b, "  %s = ", entry->arg_name);
-
-        /* Choices */
-        switch(entry->type) {
-            case OPT_BOOL_T:
-                b += sprintf(b, "(bool)");
-                break;
-            case OPT_INT_T:
-                b += sprintf(b, "(int)");
-                break;
-            case OPT_STR_T:
-                b += sprintf(b, "(string)");
-                break;
-            case OPT_VB_T:
-                b += sprintf(b, "{%s}", get_verbose_opts_choices());
-                break;
-            case OPT_VBFMT_T:
-                b += sprintf(b, "{%s}", get_verbose_fmt_choices());
-                break;
-            case OPT_DBG_T:
-                b += sprintf(b, "{%s}", get_debug_opts_choices());
-                break;
-            case OPT_PRIO_T:
-                b += sprintf(b, "[%s]", get_priority_choices());
-                break;
-            case OPT_POL_T:
-                b += sprintf(b, "[%s]", get_policy_choices());
-                break;
-            case OPT_MODE_T:
-                b += sprintf(b, "[%s]", get_mode_choices());
-                break;
-            case OPT_MPISET_T:
-                b += sprintf(b, "[%s]", get_mpiset_choices());
-                break;
-            default:
-                b += sprintf(b, "(unknown)");
-        }
-
-        /* Description */
-        b += sprintf(b, "\n"
-                        "  %s\n\n", entry->description);
-    }
-
-    fatal_cond(strlen(buffer) > buffer_size, "Variables buffer size needs to be increased");
     info0("%s", buffer);
 }

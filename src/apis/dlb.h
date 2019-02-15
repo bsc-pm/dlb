@@ -468,11 +468,11 @@ int DLB_SetVariable(const char *variable, const char *value);
 int DLB_GetVariable(const char *variable, char *value);
 
 /*! \brief Print DLB internal variables
- *  \param[in] print_extra If different to 0, print all options,
+ *  \param[in] print_extended If different to 0, print all options,
  *              including experimental, and its description
  *  \return DLB_SUCCESS on success
  */
-int DLB_PrintVariables(int print_extra);
+int DLB_PrintVariables(int print_extended);
 
 /*! \brief Print the data stored in the shmem
  *  \param[in] num_columns Number of columns to use when printing

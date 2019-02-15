@@ -196,13 +196,9 @@ int DLB_GetVariable_sp(dlb_handler_t handler, const char *variable, char *value)
     return options_get_variable(options, variable, value);
 }
 
-int DLB_PrintVariables_sp(dlb_handler_t handler, int print_extra) {
+int DLB_PrintVariables_sp(dlb_handler_t handler, int print_extended) {
     const options_t *options = &((subprocess_descriptor_t*)handler)->options;
-    if (!print_extra) {
-        options_print_variables(options);
-    } else {
-        options_print_variables_extra(options);
-    }
+    options_print_variables(options, print_extended);
     return DLB_SUCCESS;
 }
 

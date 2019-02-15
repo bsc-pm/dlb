@@ -257,12 +257,8 @@ int DLB_GetVariable(const char *variable, char *value) {
     return options_get_variable(&spd.options, variable, value);
 }
 
-int DLB_PrintVariables(int print_extra) {
-    if (!print_extra) {
-        options_print_variables(&spd.options);
-    } else {
-        options_print_variables_extra(&spd.options);
-    }
+int DLB_PrintVariables(int print_extended) {
+    options_print_variables(&spd.options, print_extended);
     return DLB_SUCCESS;
 }
 

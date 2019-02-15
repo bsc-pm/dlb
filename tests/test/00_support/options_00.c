@@ -115,7 +115,8 @@ int main( int argc, char **argv ) {
 
     // Print variables
     options_init(&options_1, "");
-    options_print_variables(&options_1);
+    options_print_variables(&options_1, /* extended */ false);
+    options_print_variables(&options_1, /* extended */ true);
 
     // Unknown variables are silently ignored
     //options_init(&options_1, "--polic");
