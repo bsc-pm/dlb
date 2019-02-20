@@ -27,6 +27,7 @@
 
 #include "LB_MPI/process_MPI.h"
 #include "LB_MPI/MPI_calls_coded.h"
+#include "LB_core/spd.h"
 #include "support/debug.h"
 
 #include <mpi.h>
@@ -43,6 +44,7 @@
 
 #pragma pygen start where("MPI3_only" not in info)
 void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
+    spd_enter_dlb(NULL);
     verbose(VB_MPI_API, ">> {MPI_NAME}...............");
     {BEFORE_FUNC};
 }}
@@ -57,6 +59,7 @@ void DLB_{MPI_NAME}_F_leave(void) {{
 #if MPI_VERSION >= 3
 #pragma pygen start where("MPI3_only" in info)
 void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
+    spd_enter_dlb(NULL);
     verbose(VB_MPI_API, ">> {MPI_NAME}...............");
     {BEFORE_FUNC};
 }}
