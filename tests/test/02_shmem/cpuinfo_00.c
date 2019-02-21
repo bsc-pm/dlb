@@ -180,6 +180,11 @@ int main( int argc, char **argv ) {
     // mask is not checked beyond max_cpus
     assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &mask, new_guests, victims) == DLB_NOUPDT );
 
+    // Deregister process and check that no action is needed
+    assert( shmem_cpuinfo__deregister(pid, new_guests, victims) == DLB_SUCCESS );
+    for (i=0; i<system_size; ++i) { assert( new_guests[i] == -1 ); }
+    for (i=0; i<system_size; ++i) { assert( victims[i] == -1 ); }
+
     // Finalize
     assert( shmem_cpuinfo__finalize(pid, NULL) == DLB_SUCCESS );
 

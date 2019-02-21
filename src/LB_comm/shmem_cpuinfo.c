@@ -85,6 +85,7 @@ static int subprocesses_attached = 0;
 
 static inline bool is_idle(int cpu);
 static inline bool is_borrowed(pid_t pid, int cpu);
+static inline bool is_shmem_empty(void);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
 
@@ -257,8 +258,9 @@ static void close_shmem(bool shmem_empty) {
     pthread_mutex_unlock(&mutex);
 }
 
-static bool deregister_process(pid_t pid) {
-    bool shmem_empty = true;
+/* Even though the correct deregistration should be done through shmem_cpuinfo__deregister,
+ * this function is kept to allow deregistration from outside the LeWI_mask policy */
+static void deregister_process(pid_t pid) {
     int cpuid;
     for (cpuid=0; cpuid<node_size; ++cpuid) {
         cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
@@ -281,11 +283,6 @@ static bool deregister_process(pid_t pid) {
                 update_cpu_stats(cpuid, STATS_IDLE);
             }
 
-            // Check if shmem is empty
-            if (cpuinfo->owner != NOBODY) {
-                shmem_empty = false;
-            }
-
             // Remove any previous CPU request
             if (shdata->queues_enabled) {
                 queue_pids_remove(&cpuinfo->requests, pid);
@@ -297,8 +294,6 @@ static bool deregister_process(pid_t pid) {
     if (shdata->queues_enabled) {
         queue_proc_reqs_remove(&shdata->proc_requests, pid);
     }
-
-    return shmem_empty;
 }
 
 int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key) {
@@ -314,13 +309,13 @@ int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key) {
 
     //DLB_INSTR( int idle_count = 0; )
 
-    // Boolean for now, we could make deregister_process return an integer and instrument it
     bool shmem_empty;
 
     // Lock the shmem to deregister CPUs
     shmem_lock(shm_handler);
     {
-        shmem_empty = deregister_process(pid);
+        deregister_process(pid);
+        shmem_empty = is_shmem_empty();
         //DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
     }
     shmem_unlock(shm_handler);
@@ -339,8 +334,7 @@ int shmem_cpuinfo_ext__finalize(void) {
     bool shmem_empty;
     shmem_lock(shm_handler);
     {
-        // We just call deregister_process to check if shmem is empty
-        shmem_empty = deregister_process(-1);
+        shmem_empty = is_shmem_empty();
     }
     shmem_unlock(shm_handler);
 
@@ -373,7 +367,8 @@ int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
 static void lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
-    if (cpuinfo->owner == pid) {
+    if (cpuinfo->owner == pid
+            || (cpuinfo->owner == NOBODY && cpu_is_public_post_mortem)) {
         // If the CPU is owned by the process, just change the state
         cpuinfo->state = CPU_LENT;
     } else if (shdata->queues_enabled) {
@@ -1149,17 +1144,83 @@ int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_g
 /*                                                                               */
 /*********************************************************************************/
 
+/* Called when lewi_mask_finalize.
+ * This function deregisters pid, disabling or lending CPUs as needed */
+int shmem_cpuinfo__deregister(pid_t pid, pid_t new_guests[], pid_t victims[]) {
+    int error = DLB_SUCCESS;
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+
+        // Remove any request before acquiring and lending
+        if (shdata->queues_enabled) {
+            queue_proc_reqs_remove(&shdata->proc_requests, pid);
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+                if (cpuinfo->owner != pid) {
+                    queue_pids_remove(&cpuinfo->requests, pid);
+                }
+            }
+        }
+
+        // Iterate again to properly treat each CPU
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->owner == pid) {
+                cpuinfo->owner = NOBODY;
+                if (cpu_is_public_post_mortem) {
+                    /* If the CPU is being guested, lend_cpu does not reclaim it */
+                    lend_cpu(pid, cpuid, &new_guests[cpuid]);
+                    victims[cpuid] = -1;
+                } else {
+                    /* If CPU won't be public, it must be reclaimed beforehand */
+                    reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
+                    new_guests[cpuid] = -1;
+                    if (cpuinfo->guest == pid) {
+                        cpuinfo->guest = NOBODY;
+                        update_cpu_stats(cpuid, STATS_IDLE);
+                    }
+                    cpuinfo->state = CPU_DISABLED;
+                }
+            } else {
+                // Free external CPUs that I may be using
+                if (cpuinfo->guest == pid) {
+                    lend_cpu(pid, cpuid, &new_guests[cpuid]);
+                } else {
+                    new_guests[cpuid] = -1;
+                }
+                victims[cpuid] = -1;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
+/* Called when DLB_disable.
+ * This function resets the initial status of pid: acquire owned, lend guested */
 int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]) {
     int error = DLB_SUCCESS;
     shmem_lock(shm_handler);
     {
         int cpuid;
+
+        // Remove any request before acquiring and lending
+        if (shdata->queues_enabled) {
+            queue_proc_reqs_remove(&shdata->proc_requests, pid);
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+                if (cpuinfo->owner != pid) {
+                    queue_pids_remove(&cpuinfo->requests, pid);
+                }
+            }
+        }
+
+        // Iterate again to properly reset each CPU
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
             if (cpuinfo->owner == pid) {
-                int local_error = acquire_cpu(pid, cpuid,
-                        &new_guests[cpuid], &victims[cpuid]);
-                error = (local_error < 0) ? local_error : DLB_SUCCESS;
+                reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
             } else {
                 lend_cpu(pid, cpuid, &new_guests[cpuid]);
                 victims[cpuid] = -1;
@@ -1592,6 +1653,16 @@ static inline bool is_idle(int cpu) {
 
 static inline bool is_borrowed(pid_t pid, int cpu) {
     return shdata->node_info[cpu].state == CPU_BUSY && shdata->node_info[cpu].owner == pid;
+}
+
+static inline bool is_shmem_empty(void) {
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        if (shdata->node_info[cpuid].owner != NOBODY) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static void update_cpu_stats(int cpu, stats_state_t new_state) {

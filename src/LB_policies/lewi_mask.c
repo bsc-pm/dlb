@@ -61,8 +61,30 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
-    /* Reclaim all CPUs just before de-registering process */
-    int error = lewi_mask_Reclaim(spd);
+    /* Deregister subprocess from the shared memory */
+    pid_t new_guests[node_size];
+    pid_t victims[node_size];
+    int error = shmem_cpuinfo__deregister(spd->id, new_guests, victims);
+    if (error == DLB_SUCCESS) {
+        bool async = spd->options.mode == MODE_ASYNC;
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            pid_t new_guest = new_guests[cpuid];
+            pid_t victim = victims[cpuid];
+            if (async) {
+                if (victim > 0) {
+                    shmem_async_disable_cpu(victim, cpuid);
+                }
+                if (new_guest > 0) {
+                    shmem_async_enable_cpu(new_guest, cpuid);
+                }
+            } else {
+                if (new_guest >= 0) {
+                    disable_cpu(&spd->pm, cpuid);
+                }
+            }
+        }
+    }
 
     /* De-allocate private structure */
     free(((lewi_info_t*)spd->lewi_info)->cpus_priority_array);

@@ -68,6 +68,7 @@ int main( int argc, char **argv ) {
         shmem_cpuinfo__enable_request_queues();
     }
 
+    int i;
     int err;
 
     /*** Successful ping-pong ***/
@@ -166,7 +167,7 @@ int main( int argc, char **argv ) {
 
     /* Test lend post mortem feature */
     {
-        // Set up spd
+        // Set up fake spd to set post-mortem option
         subprocess_descriptor_t spd;
         spd.options.debug_opts = DBG_LPOSTMORTEM;
         spd_enter_dlb(&spd);
@@ -174,6 +175,7 @@ int main( int argc, char **argv ) {
         // Initialize
         assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
         assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+        if (async) { shmem_cpuinfo__enable_request_queues(); }
 
         // P1 finalizes
         assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
@@ -187,6 +189,65 @@ int main( int argc, char **argv ) {
         assert( victim == -1 );
 
         // P2 finalizes
+        assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    }
+
+    /* Test early finalization with pending actions */
+    {
+        // Set up fake spd to set post-mortem option
+        subprocess_descriptor_t spd;
+        spd.options.debug_opts = DBG_LPOSTMORTEM;
+        spd_enter_dlb(&spd);
+
+        // Initialize
+        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+        if (async) { shmem_cpuinfo__enable_request_queues(); }
+
+        // P2 lends CPU 2
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 2, &new_guest) == DLB_SUCCESS );
+        assert( new_guest <= 0 );
+
+        // P1 acquires CPU 2
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 2, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p1_pid );
+        assert( victim == -1 );
+
+        // P2 reclaims CPU 2 and requests CPUs 0 and 1
+        assert( shmem_cpuinfo__reclaim_cpu(p2_pid, 2, &new_guest, &victim) == DLB_NOTED );
+        assert( new_guest == p2_pid );
+        assert( victim == p1_pid );
+        err = shmem_cpuinfo__acquire_cpu(p2_pid, 0, &new_guest, &victim);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
+        err = shmem_cpuinfo__acquire_cpu(p2_pid, 1, &new_guest, &victim);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
+
+        // P1 finalizes
+        pid_t new_guests[SYS_SIZE];
+        pid_t victims[SYS_SIZE];
+        assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
+        if (async) {
+            assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );
+        } else {
+            assert( new_guests[0] == 0 && new_guests[1] == 0 );
+        }
+        assert( new_guests[2] == p2_pid && new_guests[3] == -1 );
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
+
+        // If polling, P2 needs to ask again for CPUs 0-2
+        if (!async) {
+            assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 2) == DLB_SUCCESS );
+            assert( shmem_cpuinfo__acquire_cpu(p2_pid, 0, &new_guest, &victim) == DLB_SUCCESS );
+            assert( new_guest == p2_pid && victim == -1 );
+            assert( shmem_cpuinfo__acquire_cpu(p2_pid, 1, &new_guest, &victim) == DLB_SUCCESS );
+            assert( new_guest == p2_pid && victim == -1 );
+        }
+
+        // P2 finalizes
+        assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
         assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
     }
 

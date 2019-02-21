@@ -56,7 +56,6 @@ int main( int argc, char **argv ) {
     CPU_SET(3, &p2_mask);
     pid_t new_guests[SYS_SIZE];
     pid_t victims[SYS_SIZE];
-    int64_t last_borrow = 0;
 
     // Init
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
@@ -70,6 +69,8 @@ int main( int argc, char **argv ) {
     if (async) {
         shmem_cpuinfo__enable_request_queues();
     }
+    int64_t last_borrow_value = 0;
+    int64_t *last_borrow = async ? NULL : &last_borrow_value;
 
     // Setup dummy priority CPUs
     int cpus_priority_array[SYS_SIZE];
@@ -86,7 +87,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to BORROW up to 2 CPUs
         assert( shmem_cpuinfo__borrow_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    &last_borrow, 2, new_guests) == DLB_SUCCESS );
+                    last_borrow, 2, new_guests) == DLB_SUCCESS );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1);
         assert( new_guests[3] == p1_pid );
 
@@ -114,7 +115,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to ACQUIRE 2 CPUs
         err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    &last_borrow, 2, new_guests, victims);
+                    last_borrow, 2, new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
@@ -127,7 +128,7 @@ int main( int argc, char **argv ) {
         // If polling, process 1 needs to ask again for the last CPU
         if (!async) {
             assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                        &last_borrow, 1, new_guests, victims) == DLB_SUCCESS );
+                        last_borrow, 1, new_guests, victims) == DLB_SUCCESS );
             assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[3] == -1 );
             assert( new_guests[2] == p1_pid );
             for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -155,14 +156,14 @@ int main( int argc, char **argv ) {
 
         // Process 1 wants to ACQUIRE 2 CPUs
         err = shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    &last_borrow, 2, new_guests, victims);
+                    last_borrow, 2, new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
         assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
         // Process 1 wants to cancel previous request
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, NULL, &last_borrow, 0,
+        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, NULL, last_borrow, 0,
                     new_guests, victims) == DLB_SUCCESS );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -194,7 +195,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 acquires 1 CPU (reclaims CPU 0)
         assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    &last_borrow, 1, new_guests, victims) == DLB_NOTED );
+                    last_borrow, 1, new_guests, victims) == DLB_NOTED );
         assert( new_guests[0] == p1_pid );
         assert( new_guests[1] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
         assert( victims[0] == p2_pid );
@@ -202,7 +203,7 @@ int main( int argc, char **argv ) {
 
         // Process 1 acquires 1 CPU (acquires CPU 1 currently idle)
         assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, cpus_priority_array,
-                    &last_borrow, 1, new_guests, victims) == DLB_SUCCESS );
+                    last_borrow, 1, new_guests, victims) == DLB_SUCCESS );
         assert( new_guests[1] == p1_pid );
         assert( new_guests[0] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
         assert( victims[0] == -1 && victims[1] == -1 && victims[2] == -1 && victims[3] == -1 );
@@ -217,7 +218,7 @@ int main( int argc, char **argv ) {
         // Process 2 acquires 1 CPU, but only allowing CPUs {1-3}
         for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i+1 < SYS_SIZE ? i+1 : -1;
         err = shmem_cpuinfo__acquire_cpus(p2_pid, PRIO_ANY, cpus_priority_array,
-                &last_borrow, 1, new_guests, victims);
+                last_borrow, 1, new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -229,7 +230,7 @@ int main( int argc, char **argv ) {
         // If polling, process 2 needs to ask again
         if (!async) {
             assert( shmem_cpuinfo__acquire_cpus(p2_pid, PRIO_ANY, cpus_priority_array,
-                        &last_borrow, 1, new_guests, victims) == DLB_NOUPDT );
+                        last_borrow, 1, new_guests, victims) == DLB_NOUPDT );
             for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
             for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
         }
@@ -247,7 +248,7 @@ int main( int argc, char **argv ) {
         // If polling, process 2 needs to ask again
         if (!async) {
             assert( shmem_cpuinfo__acquire_cpus(p2_pid, PRIO_ANY, cpus_priority_array,
-                        &last_borrow, 1, new_guests, victims) == DLB_SUCCESS );
+                        last_borrow, 1, new_guests, victims) == DLB_SUCCESS );
             assert( new_guests[1] == p2_pid );
             assert( new_guests[0] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
             for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -273,7 +274,7 @@ int main( int argc, char **argv ) {
         // Reset cpu priority
         for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i;
 
-        // Set up spd
+        // Set up fake spd to set post-mortem option
         subprocess_descriptor_t spd;
         spd.options.debug_opts = DBG_LPOSTMORTEM;
         spd_enter_dlb(&spd);
@@ -281,17 +282,75 @@ int main( int argc, char **argv ) {
         // Initialize
         assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
         assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+        if (async) { shmem_cpuinfo__enable_request_queues(); }
 
         // P1 finalizes
         assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
 
         // P2 borrows P1 CPUs
         assert( shmem_cpuinfo__borrow_all(p2_pid, PRIO_ANY, cpus_priority_array,
-                    &last_borrow, new_guests) == DLB_SUCCESS );
+                    last_borrow, new_guests) == DLB_SUCCESS );
         assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );
         assert( new_guests[2] == -1 && new_guests[3] == -1 );
 
         // P2 finalizes
+        assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    }
+
+    /* Test early finalization with pending actions */
+    {
+        // Reset cpu priority
+        for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i;
+
+        // Set up fake spd to set post-mortem option
+        subprocess_descriptor_t spd;
+        spd.options.debug_opts = DBG_LPOSTMORTEM;
+        spd_enter_dlb(&spd);
+
+        // Initialize
+        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+        if (async) { shmem_cpuinfo__enable_request_queues(); }
+
+        // P2 lends CPUs 2 & 3
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, new_guests) == DLB_SUCCESS );
+        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] <= 0 ); }
+
+        // P1 borrows all
+        assert( shmem_cpuinfo__borrow_all(p1_pid, PRIO_ANY, cpus_priority_array,
+                    last_borrow, new_guests) == DLB_SUCCESS );
+        assert( new_guests[0] == -1     && new_guests[1] == -1 );
+        assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
+
+        // P2 asks for as many CPUs as SYS_SIZE
+        err = shmem_cpuinfo__acquire_cpus(p2_pid, PRIO_ANY, cpus_priority_array,
+                    last_borrow, SYS_SIZE, new_guests, victims);
+        assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
+        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+
+        // P1 finalizes
+        assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
+        if (async) {
+            for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == p2_pid ); }
+        } else {
+            for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == 0 ); }
+        }
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
+
+        // If polling, P2 needs to ask again for SYS_SIZE CPUs
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpus(p2_pid, PRIO_ANY, cpus_priority_array,
+                        last_borrow, SYS_SIZE, new_guests, victims) == DLB_SUCCESS );
+            for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == p2_pid ); }
+            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        }
+
+        // P2 finalizes
+        assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
+        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
         assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
     }
 

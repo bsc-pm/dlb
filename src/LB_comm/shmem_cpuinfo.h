@@ -69,6 +69,7 @@ int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_guest);
 int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
 
 /* Others */
+int shmem_cpuinfo__deregister(pid_t pid, pid_t new_guests[], pid_t victims[]);
 int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
