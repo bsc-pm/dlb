@@ -371,11 +371,16 @@ static void close_shmem(bool shmem_empty) {
 }
 
 int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_key) {
+    int error = DLB_SUCCESS;
+    bool shmem_empty = true;
+    bool shmem_reopened = false;
+
     if (shm_handler == NULL) {
         /* procinfo_finalize may be called to finalize existing process
          * even if the file descriptor is not opened. (DLB_PreInit + forc-exec case) */
         if (shmem_exists(shmem_name, shmem_key)) {
             open_shmem(shmem_key);
+            shmem_reopened = true;
         } else {
             return DLB_ERR_NOSHMEM;
         }
@@ -384,34 +389,34 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_ke
     // Check that pid exists
     pinfo_t *process = get_process(pid);
     if (unlikely(process == NULL)) {
-        return DLB_ERR_NOPROC;
+        error = DLB_ERR_NOPROC;
     }
-
-    bool shmem_empty = true;
 
     shmem_lock(shm_handler);
     {
-        // Unregister our process mask, or future mask if we are dirty
-        if (process->dirty) {
-            unregister_mask(process, &process->future_process_mask, return_stolen);
-        } else {
-            unregister_mask(process, &process->current_process_mask, return_stolen);
-        }
+        if (process) {
+            // Unregister our process mask, or future mask if we are dirty
+            if (process->dirty) {
+                unregister_mask(process, &process->future_process_mask, return_stolen);
+            } else {
+                unregister_mask(process, &process->current_process_mask, return_stolen);
+            }
 
-        // Clear process fields
-        process->pid = NOBODY;
-        process->dirty = false;
-        process->preregistered = false;
-        CPU_ZERO(&process->current_process_mask);
-        CPU_ZERO(&process->future_process_mask);
-        CPU_ZERO(&process->stolen_cpus);
-        process->active_cpus = 0;
-        process->cpu_usage = 0.0;
-        process->cpu_avg_usage = 0.0;
+            // Clear process fields
+            process->pid = NOBODY;
+            process->dirty = false;
+            process->preregistered = false;
+            CPU_ZERO(&process->current_process_mask);
+            CPU_ZERO(&process->future_process_mask);
+            CPU_ZERO(&process->stolen_cpus);
+            process->active_cpus = 0;
+            process->cpu_usage = 0.0;
+            process->cpu_avg_usage = 0.0;
 #ifdef DLB_LOAD_AVERAGE
-        process->load[3] = {0.0f, 0.0f, 0.0f};
-        process->last_ltime = {0};
+            process->load[3] = {0.0f, 0.0f, 0.0f};
+            process->last_ltime = {0};
 #endif
+        }
 
         // Check if shmem is empty
         int p;
@@ -424,10 +429,12 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_ke
     }
     shmem_unlock(shm_handler);
 
-    // Shared memory destruction
-    close_shmem(shmem_empty);
+    // Close shared memory only if pid was succesfully removed or if shmem was reopened
+    if (process || shmem_reopened) {
+        close_shmem(shmem_empty);
+    }
 
-    return DLB_SUCCESS;
+    return error;
 }
 
 int shmem_procinfo_ext__finalize(void) {
