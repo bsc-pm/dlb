@@ -196,7 +196,7 @@ void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete) {
     /* Only the last process unlinks shmem */
     if (last_one && shmem_delete == SHMEM_DELETE) {
         verbose(VB_SHMEM, "Removing shared memory %s", handler->shm_filename);
-        if (shm_unlink(handler->shm_filename) != 0) {
+        if (shm_unlink(handler->shm_filename) != 0 && errno != ENOENT) {
             fatal("shm_unlink error: %s", strerror(errno));
         }
     }
