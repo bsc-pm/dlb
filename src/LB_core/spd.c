@@ -37,7 +37,7 @@ typedef struct SPDInfo {
     const subprocess_descriptor_t *spd;
     pthread_t pthread;
 } spd_info_t;
-static GTree *spd_tree = NULL;;
+static GTree *spd_tree = NULL;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
