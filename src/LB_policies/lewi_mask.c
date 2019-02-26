@@ -155,10 +155,8 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter)
 /*********************************************************************************/
 
 int lewi_mask_Lend(const subprocess_descriptor_t *spd) {
-    /* Lend all the CPUs except the current one */
     cpu_set_t mask;
     mu_get_system_mask(&mask);
-    CPU_CLR(sched_getcpu(), &mask);
     return lewi_mask_LendCpuMask(spd, &mask);
 }
 
