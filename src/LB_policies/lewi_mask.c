@@ -133,6 +133,10 @@ int lewi_mask_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
     return DLB_SUCCESS;
 }
 
+int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
+    return DLB_SUCCESS;
+}
+
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
     if (spd->options.lewi_mpi) {

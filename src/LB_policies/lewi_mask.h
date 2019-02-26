@@ -27,6 +27,7 @@ int lewi_mask_Finalize(subprocess_descriptor_t *spd);
 int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd);
 int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd);
 int lewi_mask_SetMaxParallelism(const subprocess_descriptor_t *spd, int max);
+int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd);
 
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);
 int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);

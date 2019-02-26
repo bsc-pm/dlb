@@ -78,6 +78,11 @@ int DLB_SetMaxParallelism_sp(dlb_handler_t handler, int max) {
     return set_max_parallelism(handler, max);
 }
 
+int DLB_UnsetMaxParallelism_sp(dlb_handler_t handler) {
+    spd_enter_dlb(handler);
+    return unset_max_parallelism(handler);
+}
+
 
 /* Callbacks */
 

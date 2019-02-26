@@ -34,6 +34,7 @@ int Finish(subprocess_descriptor_t *spd);
 int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask);
 int set_dlb_enabled(subprocess_descriptor_t *spd, bool enabled);
 int set_max_parallelism(subprocess_descriptor_t *spd, int max);
+int unset_max_parallelism(subprocess_descriptor_t *spd);
 
 /* MPI specific */
 void IntoCommunication(void);

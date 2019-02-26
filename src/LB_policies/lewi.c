@@ -99,6 +99,11 @@ int lewi_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
     return DLB_SUCCESS;
 }
 
+int lewi_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
+    max_parallelism = 0;
+    return DLB_SUCCESS;
+}
+
 int lewi_IntoCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS; }
 
 int lewi_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUCCESS;}

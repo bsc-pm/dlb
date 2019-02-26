@@ -108,6 +108,14 @@ int DLB_SetMaxParallelism(int max) {
     return set_max_parallelism(thread_spd, max);
 }
 
+int DLB_UnsetMaxParallelism(void) {
+    spd_enter_dlb(NULL);
+    if (unlikely(!thread_spd->dlb_initialized)) {
+        return DLB_ERR_NOINIT;
+    }
+    return unset_max_parallelism(thread_spd);
+}
+
 
 /* Callbacks */
 

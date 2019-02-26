@@ -219,6 +219,16 @@ int set_max_parallelism(subprocess_descriptor_t *spd, int max) {
     return error;
 }
 
+int unset_max_parallelism(subprocess_descriptor_t *spd) {
+    int error;
+    if (!spd->dlb_enabled) {
+        error = DLB_ERR_DISBLD;
+    } else {
+        error = spd->lb_funcs.unset_max_parallelism(spd);
+    }
+    return error;
+}
+
 
 /* MPI specific */
 

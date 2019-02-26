@@ -81,15 +81,24 @@ int DLB_Disable_sp(dlb_handler_t handler);
  *  \param[in] handler subprocess identifier
  *  \param[in] max max number of CPUs
  *  \return DLB_SUCCESS on success
- *  \todo this feature is experimental and it's only implemented for non-mask LeWI policy
  *
- *  Useful to delimit sections of the code that the developer knows that only a
+ *  Used to delimit sections of the code that the developer knows that only a
  *  maximum number of CPUs can benefit the execution. If a subprocess reaches its
  *  maximum number of resources used at any time, subsequent calls to borrow
- *  CPUs will be ignored until some of them are returned.
-
+ *  CPUs will be ignored until some of them are returned. If the maximum number
+ *  of CPUs exceeds the current number of assigned CPUs at the time of this
+ *  function call, DLB will readjust as needed.
  */
 int DLB_SetMaxParallelism_sp(dlb_handler_t handler, int max);
+
+/*! \brief Unset the maximum number of resources to be used by the handler.
+ *  \param[in] handler subprocess identifier
+ *  \return DLB_SUCCESS on success
+ *
+ *  Unset the maximum number of CPUs previously assigned to this subprocess.
+ *  Subsequent calls to borrow will not be delimited by this parameter.
+ */
+int DLB_UnsetMaxParallelism_sp(dlb_handler_t handler);
 
 
 /*********************************************************************************/
