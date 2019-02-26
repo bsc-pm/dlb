@@ -113,15 +113,14 @@ int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
             if (async) {
                 if (victim > 0) {
                     shmem_async_disable_cpu(victim, cpuid);
-                } else if (new_guest == spd->id) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else if (new_guest >= 0) {
-                    shmem_async_disable_cpu(spd->id, cpuid);
+                }
+                if (new_guest > 0) {
+                    shmem_async_enable_cpu(new_guest, cpuid);
                 }
             } else {
                 if (new_guest == spd->id) {
                     enable_cpu(&spd->pm, cpuid);
-                } else if (new_guest >= 0) {
+                } else if (victim == spd->id) {
                     disable_cpu(&spd->pm, cpuid);
                 }
             }

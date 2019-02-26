@@ -266,6 +266,32 @@ int main( int argc, char **argv ) {
         // Subprocess 2 recovers CPU 3
         assert( lewi_mask_AcquireCpu(&spd2, 3) == DLB_SUCCESS );
         assert_loop( CPU_ISSET(3, &sp2_mask) );
+
+        // Subprocess 1 enables DLB and CPU 1
+        assert( lewi_mask_EnableDLB(&spd1) == DLB_SUCCESS );
+        CPU_SET(1, &sp1_mask);
+    }
+
+    /* Reset test with requested CPUs */
+    if (mode == MODE_ASYNC)
+    {
+        // Subprocess 2 lends CPU 3
+        CPU_CLR(3, &sp2_mask);
+        assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
+
+        // Subprocess 1 acquires one CPU
+        assert( lewi_mask_AcquireCpus(&spd1, 1) == DLB_SUCCESS );
+        assert_loop( CPU_ISSET(3, &sp1_mask) && CPU_COUNT(&sp1_mask) == 3 );
+
+        // Subprocess 2 requests 1 CPU
+        assert( lewi_mask_AcquireCpus(&spd2, 1) == DLB_NOTED );
+
+        // Subprocess 1 resets, CPU 3 should go to Subprocess 2
+        assert( lewi_mask_DisableDLB(&spd1) == DLB_SUCCESS );
+        assert_loop( CPU_ISSET(3, &sp2_mask) && CPU_COUNT(&sp2_mask) == 2 );
+
+        // Subprocess 1 enables DLB
+        assert( lewi_mask_EnableDLB(&spd1) == DLB_SUCCESS );
     }
 
     /* Last borrow optimization test */

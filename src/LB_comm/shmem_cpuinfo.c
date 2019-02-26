@@ -1221,8 +1221,11 @@ int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]) {
             cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
             if (cpuinfo->owner == pid) {
                 reclaim_cpu(pid, cpuid, &new_guests[cpuid], &victims[cpuid]);
-            } else {
+            } else if (cpuinfo->guest == pid) {
                 lend_cpu(pid, cpuid, &new_guests[cpuid]);
+                victims[cpuid] = pid;
+            } else {
+                new_guests[cpuid] = -1;
                 victims[cpuid] = -1;
             }
         }
