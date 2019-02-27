@@ -119,7 +119,10 @@ static void* thread_start(void *arg) {
     }
 
     /* wait until all petitions have been requested */
-    while (petitions[thid] != 0) {usleep(100);}
+    while (petitions[thid] != 0) {
+        usleep(100);
+        __sync_synchronize();
+    }
 
     print_vb("Sp %d finished\n", thid);
 
