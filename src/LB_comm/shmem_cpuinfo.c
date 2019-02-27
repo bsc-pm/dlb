@@ -1234,6 +1234,47 @@ int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]) {
     return error;
 }
 
+/* Lend as many CPUs as needed to only guest as much as 'max' CPUs */
+int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max,
+        pid_t new_guests[], pid_t victims[]) {
+    int error = DLB_SUCCESS;
+    int owned_count = 0;
+    int guested_cpus[node_size];
+    int guested_count = 0;
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            new_guests[cpuid] = -1;
+            victims[cpuid] = -1;
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->owner == pid) {
+                ++owned_count;
+                if (max < owned_count) {
+                    // Lend owned CPUs if the number of owned is greater than max
+                    lend_cpu(pid, cpuid, &new_guests[cpuid]);
+                    victims[cpuid] = pid;
+                }
+            } else if (cpuinfo->guest == pid) {
+                // Since owned_count is still unkown, just save our guested CPUs
+                guested_cpus[guested_count++] = cpuid;
+            }
+        }
+
+        // Iterate guested CPUs to lend them if needed
+        int i;
+        for (i=0; i<guested_count; ++i) {
+            if (max < owned_count + i + 1) {
+                cpuid = guested_cpus[i];
+                lend_cpu(pid, cpuid, &new_guests[cpuid]);
+                victims[cpuid] = pid;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
 /* Update CPU ownership according to the new process mask.
  * To avoid collisions, we only release the ownership if we still own it
  */

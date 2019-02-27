@@ -38,6 +38,7 @@ static int node_size = -1;
 typedef struct LeWI_mask_info {
     int64_t last_borrow;
     int *cpus_priority_array;
+    int max_parallelism;
 } lewi_info_t;
 
 
@@ -51,6 +52,7 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
     lewi_info->last_borrow = 0;
     lewi_info->cpus_priority_array = malloc(node_size*sizeof(int));
     lewi_mask_UpdateOwnershipInfo(spd, &spd->process_mask);
+    lewi_info->max_parallelism = 0;
 
     /* Enable request queues only in async mode */
     if (spd->options.mode == MODE_ASYNC) {
@@ -130,10 +132,41 @@ int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
-    return DLB_SUCCESS;
+    int error = DLB_SUCCESS;
+    if (max > 0) {
+        lewi_info_t *lewi_info = spd->lewi_info;
+        lewi_info->max_parallelism = 0;
+        pid_t new_guests[node_size];
+        pid_t victims[node_size];
+        error = shmem_cpuinfo__update_max_parallelism(spd->id, max, new_guests, victims);
+        if (error == DLB_SUCCESS) {
+            bool async = spd->options.mode == MODE_ASYNC;
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                pid_t new_guest = new_guests[cpuid];
+                pid_t victim = victims[cpuid];
+                if (async) {
+                    if (victim == spd->id) {
+                        // victim can only be this subprocess
+                        shmem_async_disable_cpu(victim, cpuid);
+                    }
+                    if (new_guest > 0) {
+                        shmem_async_enable_cpu(new_guest, cpuid);
+                    }
+                } else {
+                    if (new_guest >= 0) {
+                        disable_cpu(&spd->pm, cpuid);
+                    }
+                }
+            }
+        }
+    }
+    return error;
 }
 
 int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
+    lewi_info_t *lewi_info = spd->lewi_info;
+    lewi_info->max_parallelism = 0;
     return DLB_SUCCESS;
 }
 
@@ -400,6 +433,8 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 /*********************************************************************************/
 /*    Borrow                                                                     */
 /*********************************************************************************/
+
+// FIXME: Borrow functions are still ignoring max_parallelism
 
 int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
     pid_t new_guests[node_size];

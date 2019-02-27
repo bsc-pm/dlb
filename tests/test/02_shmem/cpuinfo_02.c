@@ -240,6 +240,108 @@ int main( int argc, char **argv ) {
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
     }
 
+    /*** MaxParallelism ***/
+    {
+        // Process 1 lends CPU 0
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 0, &new_guests[0]) == DLB_SUCCESS );
+        assert( new_guests[0] == 0 );
+
+        cpu_set_t mask;
+        mu_parse_mask("0,2-3", &mask);
+
+        // TEST 1: process 2 is guesting 0,2-3 and sets max_parellelism to 1
+        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == p2_pid );
+        for (i=1; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 1, new_guests, victims)
+                 == DLB_SUCCESS );
+        assert( new_guests[0] == 0  && victims[0] == p2_pid );
+        assert( new_guests[1] == -1 && victims[1] == -1 );
+        assert( new_guests[2] == -1 && victims[2] == -1 );
+        assert( new_guests[3] == 0  && victims[3] == p2_pid );
+
+        // TEST 2: process 2 is guesting 0,2-3 and sets max_parellelism to 2
+        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == p2_pid && new_guests[3] == p2_pid);
+        assert( new_guests[1] == -1     && new_guests[2] == -1 );
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 2, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == 0  && victims[0] == p2_pid );
+        assert( new_guests[1] == -1 && victims[1] == -1 );
+        assert( new_guests[2] == -1 && victims[2] == -1 );
+        assert( new_guests[3] == -1 && victims[3] == -1 );
+
+        // TEST 3: process 2 is guesting 0,2-3 and sets max_parellelism to 3
+        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == p2_pid );
+        for (i=1; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 3, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == -1 && victims[0] == -1 );
+        assert( new_guests[1] == -1 && victims[1] == -1 );
+        assert( new_guests[2] == -1 && victims[2] == -1 );
+        assert( new_guests[3] == -1 && victims[3] == -1 );
+
+        // Process 1 lends CPU 1
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guests[0]) == DLB_SUCCESS );
+        assert( new_guests[0] == 0 );
+
+        mu_parse_mask("0-3", &mask);
+
+        // TEST 4: process 2 is guesting 0-3 and sets max_parellelism to 1
+        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[1] == p2_pid );
+        assert( new_guests[0] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 1, new_guests, victims)
+                 == DLB_SUCCESS );
+        assert( new_guests[0] == 0  && victims[0] == p2_pid );
+        assert( new_guests[1] == 0  && victims[1] == p2_pid );
+        assert( new_guests[2] == -1 && victims[2] == -1 );
+        assert( new_guests[3] == 0  && victims[3] == p2_pid );
+
+        // TEST 5: process 2 is guesting 0-3 and sets max_parellelism to 2
+        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == p2_pid  && new_guests[1] == p2_pid && new_guests[3] == p2_pid );
+        assert( new_guests[2] == -1 );
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 2, new_guests, victims)
+                 == DLB_SUCCESS );
+        assert( new_guests[0] == 0  && victims[0] == p2_pid );
+        assert( new_guests[1] == 0  && victims[1] == p2_pid );
+        assert( new_guests[2] == -1 && victims[2] == -1 );
+        assert( new_guests[3] == -1 && victims[3] == -1 );
+
+        // TEST 6: process 2 is guesting 0-3 and sets max_parellelism to 3, P1 reclaims
+        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );
+        assert( new_guests[2] == -1     && new_guests[3] == -1     );
+        assert( shmem_cpuinfo__reclaim_all(p1_pid, new_guests, victims) == DLB_NOTED );
+        assert( new_guests[0] == p1_pid && new_guests[1] == p1_pid );
+        assert( new_guests[2] == -1     && new_guests[3] == -1 );
+        assert( victims[0] == p2_pid && victims[1] == p2_pid );
+        assert( victims[2] == -1     && victims[3] == -1 );
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 3, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == -1     && victims[0] == -1 );
+        assert( new_guests[1] == p1_pid && victims[1] == p2_pid );
+        assert( new_guests[2] == -1     && victims[2] == -1 );
+        assert( new_guests[3] == -1     && victims[3] == -1 );
+
+        // Process 2 lends CPU 0
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 0, &new_guests[0]) == DLB_SUCCESS );
+        assert( new_guests[0] == p1_pid );
+    }
+
     // Finalize
     assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );

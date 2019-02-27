@@ -54,6 +54,8 @@ int main( int argc, char **argv ) {
     CPU_SET(2, &p2_mask);
     CPU_SET(3, &p2_mask);
     pid_t new_guest, victim;
+    pid_t new_guests[SYS_SIZE];
+    pid_t victims[SYS_SIZE];
 
     // Init
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
@@ -157,6 +159,35 @@ int main( int argc, char **argv ) {
         assert( victim == -1 );
     }
 
+    /*** MaxParallelism ***/
+    {
+        // Process 1 lends CPU 0
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 0, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == 0 );
+
+        // Process 2 acquires CPU 0
+        assert( shmem_cpuinfo__acquire_cpu(p2_pid, 0, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p2_pid && victim == -1 );
+
+        // Process 2 sets max_parallelism to 1 (CPUs 0 and 3 should be removed)
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 1, new_guests, victims)
+                == DLB_SUCCESS );
+        assert( new_guests[0] == 0 && victims[0] == p2_pid );
+        assert( new_guests[1] == -1 && victims[1] == -1 );
+        assert( new_guests[2] == -1 && victims[2] == -1 );
+        assert( new_guests[3] == 0 && victims[3] == p2_pid );
+
+        // Process 2 acquires CPU 3
+        assert( shmem_cpuinfo__acquire_cpu(p2_pid, 3, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p2_pid && victim == -1 );
+
+        // Process 2 sets max_parallelism to 2 (no CPU should be removed)
+        assert( shmem_cpuinfo__update_max_parallelism(p2_pid, 2, new_guests, victims)
+                == DLB_SUCCESS );
+        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
+        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+    }
+
     /*** Errors ***/
     assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guest) == DLB_ERR_PERM );
 
@@ -223,8 +254,6 @@ int main( int argc, char **argv ) {
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
 
         // P1 finalizes
-        pid_t new_guests[SYS_SIZE];
-        pid_t victims[SYS_SIZE];
         assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
         if (async) {
             assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );

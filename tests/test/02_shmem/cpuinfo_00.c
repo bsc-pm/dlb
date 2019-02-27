@@ -168,6 +168,19 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__return_cpu_mask(pid, &process_mask, new_guests) == DLB_NOUPDT );
     for (i=0; i<system_size; ++i) { assert( new_guests[i] == -1 ); }
 
+    // MaxParallelism
+    int max;
+    for (max=1; max<system_size; ++max) {
+        // Set up 'max' CPUs
+        assert( shmem_cpuinfo__update_max_parallelism(pid, max, new_guests, victims)
+                == DLB_SUCCESS );
+        for (i=0; i<max; ++i) { assert( new_guests[i] == -1 && victims[i] == -1 ); }
+        for (i=max; i<system_size; ++i) { assert( new_guests[i] == 0  && victims[i] == pid ); }
+        // Acquire all CPUs again
+        assert( shmem_cpuinfo__acquire_cpu_mask(pid, &process_mask, new_guests, victims)
+                == DLB_SUCCESS  );
+    }
+
     // Check errors with a nonexistent CPU
     assert( shmem_cpuinfo__acquire_cpu(pid, system_size, &new_guests[0], &victims[0])
             == DLB_ERR_PERM );

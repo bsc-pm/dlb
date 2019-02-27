@@ -317,6 +317,35 @@ int main( int argc, char **argv ) {
         assert_loop( CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
     }
 
+    /* MaxParallelism */
+    {
+        // Subprocess 1 lends everything
+        CPU_ZERO(&sp1_mask);
+        assert( lewi_mask_LendCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+
+        // Subprocess 2 borrows everything
+        assert( lewi_mask_Borrow(&spd2) == DLB_SUCCESS );
+        assert_loop( CPU_COUNT(&sp2_mask) == 4
+                && CPU_ISSET(0, &sp2_mask) && CPU_ISSET(1, &sp2_mask) );
+
+        // Subprocess 1 acquire its CPUs
+        assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_NOTED );
+
+        // Subprocess 2 sets max_parallelism to 2
+        lewi_mask_SetMaxParallelism(&spd2, 2);
+
+        // Subprocess 1 needs to poll
+        if (mode == MODE_POLLING) {
+            assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+        }
+
+        // Both SPs should have their own CPUs
+        assert_loop( CPU_COUNT(&sp1_mask) == 2
+                 && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
+        assert_loop( CPU_COUNT(&sp2_mask) == 2
+                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+    }
+
     // Policy finalize
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
     assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
