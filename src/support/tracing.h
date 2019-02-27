@@ -41,6 +41,7 @@
 #define EVENT_DISABLED       2
 #define EVENT_SINGLE         3
 #define REBIND_EVENT       800060
+#define BINDINGS_EVENT     800061
 
 /*************************************/
 

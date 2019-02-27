@@ -184,8 +184,10 @@ static void cb_implicit_task(
             add_event(REBIND_EVENT, cpuid+1);
             verbose(VB_OMPT, "Rebinding thread %d to CPU %d", thread_num, cpuid);
         }
+        add_event(BINDINGS_EVENT, sched_getcpu()+1);
     } else if (endpoint == ompt_scope_end) {
-        add_event(REBIND_EVENT+1, 0);
+        add_event(REBIND_EVENT,   0);
+        add_event(BINDINGS_EVENT, 0);
     }
 }
 
