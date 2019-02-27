@@ -50,52 +50,69 @@ static ompt_opts_t ompt_opts;
 
 static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
+    omp_set_num_threads(CPU_COUNT(&active_mask));
 }
 
 static void cb_disable_cpu(int cpuid, void *arg) {
     CPU_CLR(cpuid, &active_mask);
+    omp_set_num_threads(CPU_COUNT(&active_mask));
 }
 
 static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
     memcpy(&process_mask, mask, sizeof(cpu_set_t));
+    memcpy(&active_mask, mask, sizeof(cpu_set_t));
+    omp_set_num_threads(CPU_COUNT(&active_mask));
 }
 
 static void omp_thread_manager_acquire(void) {
     static int cpus_to_borrow = 1;
 
     if (lewi && ompt_opts & OMPT_OPTS_BORROW) {
-        DLB_Return();
-        DLB_Reclaim();
-        if (DLB_BorrowCpus(cpus_to_borrow) == DLB_SUCCESS) {
+        int err_return = DLB_Return();
+        int err_reclaim = DLB_Reclaim();
+        int err_borrow = DLB_BorrowCpus(cpus_to_borrow);
+
+        if (err_return == DLB_SUCCESS
+                || err_reclaim == DLB_SUCCESS
+                || err_borrow == DLB_SUCCESS) {
+            verbose(VB_OMPT, "Acquire - Setting new mask to %s", mu_to_str(&active_mask));
+        }
+
+        if (err_borrow == DLB_SUCCESS) {
             ++cpus_to_borrow;
         } else {
             cpus_to_borrow = 1;
         }
 
-        int nthreads = CPU_COUNT(&active_mask);
-        omp_set_num_threads(nthreads);
-        verbose(VB_OMPT, "Acquire - Setting new mask to %s", mu_to_str(&active_mask));
     }
-}
-
-static void omp_thread_manager_release_(void) {
-    omp_set_num_threads(1);
-    CPU_ZERO(&active_mask);
-    CPU_SET(sched_getcpu(), &active_mask);
-    /* add_event(REBIND_EVENT+2, CPU_COUNT(&active_mask)); */
-    verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
-    DLB_Lend();
 }
 
 static void omp_thread_manager_release(void) {
     if (lewi && ompt_opts & OMPT_OPTS_LEND) {
-        omp_thread_manager_release_();
+        omp_set_num_threads(1);
+        CPU_ZERO(&active_mask);
+        CPU_SET(sched_getcpu(), &active_mask);
+        verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
+        DLB_SetMaxParallelism(1);
     }
 }
 
 void ompt_thread_manager_IntoBlockingCall(void) {
     if (lewi && ompt_opts & OMPT_OPTS_MPI) {
-        omp_thread_manager_release_();
+        int mycpu = sched_getcpu();
+
+        /* Lend every CPU except the current one */
+        cpu_set_t mask;
+        memcpy(&mask, &active_mask, sizeof(cpu_set_t));
+        CPU_CLR(mycpu, &mask);
+        DLB_LendCpuMask(&mask);
+
+        /* Set active_mask to only the current CPU */
+        CPU_ZERO(&active_mask);
+        CPU_SET(mycpu, &active_mask);
+        omp_set_num_threads(1);
+
+        verbose(VB_OMPT, "IntoBlockingCall - lending all");
     }
 }
 
