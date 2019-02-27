@@ -52,85 +52,59 @@ int main(int argc, char *argv[]) {
     // Init
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == true );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == true );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == true );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == true );
 
     // Get initial rebindings (disordered calls should not matter)
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 1) == 1 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 0) == 0 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 0) == 2 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 1) == 3 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 0) == 0 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
 
     // P2 lends CPU 3 (thread 1), CPU 2 (thread 0) does not need to rebind
     shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 0) == 2 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == -1 );
 
     // P2 recovers CPU 3
     shmem_cpuinfo__acquire_cpu(p2_pid, 3, &new_guest, &victim);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 1) == 3 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
 
     // P2 lends CPU 2 (thread 0 needs reassigning)
     shmem_cpuinfo__lend_cpu(p2_pid, 2, &new_guest);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 0) == 3 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 3 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == -1 );
 
     // P1 acquires CPU 2
     shmem_cpuinfo__acquire_cpu(p1_pid, 2, &new_guest, &victim);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 0) == 0 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 1) == 1 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 2) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 2) == 2 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 2) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 0) == 0 );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 2) == 2 );
 
     // P1 lends CPUs 1 and 2
     shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guest);
     shmem_cpuinfo__lend_cpu(p1_pid, 2, &new_guest);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 0) == 0 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 0) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 0) == 0 );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == -1 );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 2) == -1 );
 
-    // P2 does not need rebinding, but can ask for it
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 0) == 3 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
+    // P2 bind check
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 3 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == -1 );
 
-    // P2 acquires CPUs 1 and 2
+    // P2 acquires CPUs 1 and 2 (owned CPUs first)
     shmem_cpuinfo__acquire_cpu(p2_pid, 1, &new_guest, &victim);
     shmem_cpuinfo__acquire_cpu(p2_pid, 2, &new_guest, &victim);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == true );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 2) == true );
-    /* thread 0 is not reassigned */
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 0) == 3 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 1) == 1 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == false );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 2) == 2 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 2) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 1 );
 
     // P1 acquires CPU 1 forcing oversubscription
     shmem_cpuinfo__acquire_cpu(p1_pid, 1, &new_guest, &victim);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 1) == 1 );
-    /* Dirty flag is not cleared until guest leaves */
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == true );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 1 );
     shmem_cpuinfo__lend_cpu(p2_pid, 1, &new_guest);
-    assert( shmem_cpuinfo__get_thread_binding(    p1_pid, 1) == 1 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p1_pid, 1) == false );
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == -1 );
 
     // P2 acquires CPUs 1 (lent by P1), 2 (reclaimed) and 3 (borrowed)
     shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guest);
@@ -140,21 +114,14 @@ int main(int argc, char *argv[]) {
     shmem_cpuinfo__acquire_cpu(p2_pid, 2, &new_guest, &victim); /* force OS */
     shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest);
     shmem_cpuinfo__acquire_cpu(p2_pid, 3, &new_guest, &victim); /* borrow */
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 0) == 1 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 0) == false );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 1) == 2 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == true );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 2) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 2) == 3 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 2) == false );
-    /* P1 leaves and P2 can clear dirty flag */
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 1 );
+    /* P1 leaves and CPU 2 is no longer oversubscribed */
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 2 );
     shmem_cpuinfo__lend_cpu(p1_pid, 2, &new_guest);
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == true );
-    assert( shmem_cpuinfo__get_thread_binding(    p2_pid, 1) == 2 );
-    assert( shmem_cpuinfo__thread_needs_rebinding(p2_pid, 1) == false );
-
+    assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == -1 );
+    assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
 
     // Finalize
     assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );

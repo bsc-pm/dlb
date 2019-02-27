@@ -174,16 +174,15 @@ static void cb_implicit_task(
         unsigned int team_size,
         unsigned int thread_num) {
     if (endpoint == ompt_scope_begin) {
-        if (shmem_cpuinfo__thread_needs_rebinding(pid, thread_num)) {
-            int cpuid = shmem_cpuinfo__get_thread_binding(pid, thread_num);
-            if (cpuid >= 0) {
-                cpu_set_t thread_mask;
-                CPU_ZERO(&thread_mask);
-                CPU_SET(cpuid, &thread_mask);
-                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-                add_event(REBIND_EVENT, cpuid+1);
-                verbose(VB_OMPT, "Rebinding thread %d to CPU %d", thread_num, cpuid);
-            }
+        int cpuid = shmem_cpuinfo__get_thread_binding(pid, thread_num);
+        int current_cpuid = sched_getcpu();
+        if (cpuid >=0 && cpuid != current_cpuid) {
+            cpu_set_t thread_mask;
+            CPU_ZERO(&thread_mask);
+            CPU_SET(cpuid, &thread_mask);
+            pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+            add_event(REBIND_EVENT, cpuid+1);
+            verbose(VB_OMPT, "Rebinding thread %d to CPU %d", thread_num, cpuid);
         }
     } else if (endpoint == ompt_scope_end) {
         add_event(REBIND_EVENT+1, 0);

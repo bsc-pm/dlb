@@ -90,7 +90,7 @@ static void check_barrier_version(void) {
 }
 
 static void check_cpuinfo_version(void) {
-    enum { KNOWN_CPUINFO_VERSION = 4 };
+    enum { KNOWN_CPUINFO_VERSION = 5 };
     enum { KNOWN_QUEUE_PROC_REQS_SIZE = 4096 };
     enum { KNOWN_QUEUE_PIDS_SIZE = 8 };
     enum { KNOWN_NUM_STATS = 3 };
@@ -113,8 +113,6 @@ static void check_cpuinfo_version(void) {
         int int1;
         pid_t pid1;
         pid_t pid2;
-        int int2;
-        bool bool1;
         enum {ENUM1} enum1;
         enum {ENUM2} enum2;
         int64_t int3[KNOWN_NUM_STATS];
