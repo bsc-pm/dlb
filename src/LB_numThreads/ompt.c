@@ -64,7 +64,7 @@ static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
     omp_set_num_threads(CPU_COUNT(&active_mask));
 }
 
-static void omp_thread_manager_acquire(void) {
+static void omp_thread_manager__borrow(void) {
     static int cpus_to_borrow = 1;
 
     if (lewi && ompt_opts & OMPT_OPTS_BORROW) {
@@ -87,7 +87,7 @@ static void omp_thread_manager_acquire(void) {
     }
 }
 
-static void omp_thread_manager_release(void) {
+static void omp_thread_manager__lend(void) {
     if (lewi && ompt_opts & OMPT_OPTS_LEND) {
         omp_set_num_threads(1);
         CPU_ZERO(&active_mask);
@@ -97,7 +97,11 @@ static void omp_thread_manager_release(void) {
     }
 }
 
-void ompt_thread_manager_IntoBlockingCall(void) {
+/* lb_funcs.into_blocking_call has already been called and
+ * the current CPU will be lent according to the --lew-mpi option
+ * This function just lends the rest of the CPUs
+ */
+void ompt_thread_manager__IntoBlockingCall(void) {
     if (lewi && ompt_opts & OMPT_OPTS_MPI) {
         int mycpu = sched_getcpu();
 
@@ -116,13 +120,13 @@ void ompt_thread_manager_IntoBlockingCall(void) {
     }
 }
 
-void ompt_thread_manager_OutOfBlockingCall(void) {
+void ompt_thread_manager__OutOfBlockingCall(void) {
     if (lewi && ompt_opts & OMPT_OPTS_MPI) {
         DLB_Reclaim();
     }
 }
 
-static void omp_thread_manager_init(void) {
+static void omp_thread_manager__init(void) {
     if (lewi) {
         int err;
         err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
@@ -141,11 +145,11 @@ static void omp_thread_manager_init(void) {
         shmem_procinfo__getprocessmask(pid, &process_mask, 0);
         memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
         verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
-        omp_thread_manager_release();
+        omp_thread_manager__lend();
     }
 }
 
-static void omp_thread_manager_finalize(void) {
+static void omp_thread_manager__finalize(void) {
 }
 
 
@@ -161,15 +165,8 @@ static void cb_parallel_begin(
         ompt_invoker_t invoker,
         const void *codeptr_ra) {
     if (omp_get_level() == 0) {
-        omp_thread_manager_acquire();
+        omp_thread_manager__borrow();
     }
-    /* warning("[%d] Encountered Parallel Construct, requested size: %u, invoker: %s", */
-    /*         omp_get_thread_num(), */
-    /*         requested_team_size, invoker == ompt_invoker_program ? "program" : "runtime"); */
-    /* if (requested_team_size == 4) { */
-    /*     warning("Modifying team size 4 -> 3"); */
-    /*     omp_set_num_threads(3); */
-    /* } */
 }
 
 static void cb_parallel_end(
@@ -178,10 +175,8 @@ static void cb_parallel_end(
         ompt_invoker_t invoker,
         const void *codeptr_ra) {
     if (omp_get_level() == 0) {
-        omp_thread_manager_release();
+        omp_thread_manager__lend();
     }
-    /* warning("[%d] End of Parallel Construct, invoker: %s", omp_get_thread_num(), */
-    /*         invoker == ompt_invoker_program ? "program" : "runtime"); */
 }
 
 static void cb_implicit_task(
@@ -211,13 +206,10 @@ static void cb_implicit_task(
 static void cb_thread_begin(
         ompt_thread_type_t thread_type,
         ompt_data_t *thread_data) {
-    /* warning("Starting thread of type: %s", thread_type == ompt_thread_initial ? "initial" : */
-    /*         thread_type == ompt_thread_worker ? "worker" : "other" ); */
 }
 
 static void cb_thread_end(
         ompt_data_t *thread_data) {
-    /* warning("Ending thread"); */
 }
 
 
@@ -279,7 +271,7 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *t
                 verbose(VB_OMPT, "OMPT callbacks succesfully registered");
             }
 
-            omp_thread_manager_init();
+            omp_thread_manager__init();
         } else {
             verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
         }
@@ -294,7 +286,7 @@ static int ompt_initialize(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *t
 static void ompt_finalize(ompt_data_t *tool_data) {
     if (ompt) {
         verbose(VB_OMPT, "Finalizing OMPT module");
-        omp_thread_manager_finalize();
+        omp_thread_manager__finalize();
         DLB_Finalize();
     }
 }

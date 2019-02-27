@@ -20,8 +20,8 @@
 #ifndef OMPT_H
 #define OMPT_H
 
-void ompt_thread_manager_IntoBlockingCall(void);
-void ompt_thread_manager_OutOfBlockingCall(void);
+void ompt_thread_manager__IntoBlockingCall(void);
+void ompt_thread_manager__OutOfBlockingCall(void);
 
 #include <stdint.h>
 

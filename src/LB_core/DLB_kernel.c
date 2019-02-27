@@ -258,7 +258,7 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
         spd->lb_funcs.into_blocking_call(spd);
-        ompt_thread_manager_IntoBlockingCall();
+        ompt_thread_manager__IntoBlockingCall();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
@@ -268,7 +268,7 @@ void OutOfBlockingCall(int is_iter) {
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
-        ompt_thread_manager_OutOfBlockingCall();
+        ompt_thread_manager__OutOfBlockingCall();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
