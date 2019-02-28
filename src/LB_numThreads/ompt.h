@@ -25,7 +25,7 @@ void ompt_thread_manager__OutOfBlockingCall(void);
 
 #include <stdint.h>
 
-/* OMPT related types and signatures up to OpenMP Technical Report 6 */
+/* OMPT related types and signatures compliant with the OpenMP API Specification 5.0 */
 
 /*********************************************************************************/
 /*  enumerations                                                                 */
@@ -48,7 +48,7 @@ typedef enum ompt_callbacks_t {
     ompt_callback_device_unload         = 15,
     ompt_callback_sync_region_wait      = 16,
     ompt_callback_mutex_released        = 17,
-    ompt_callback_task_dependences      = 18,
+    ompt_callback_dependences           = 18,
     ompt_callback_task_dependence       = 19,
     ompt_callback_work                  = 20,
     ompt_callback_master                = 21,
@@ -61,28 +61,25 @@ typedef enum ompt_callbacks_t {
     ompt_callback_nest_lock             = 28,
     ompt_callback_flush                 = 29,
     ompt_callback_cancel                = 30,
-    ompt_callback_idle                  = 31
+    ompt_callback_reduction             = 31,
+    ompt_callback_dispatch              = 32
 } ompt_callbacks_t;
 
-typedef enum ompt_thread_type_t {
+typedef enum ompt_thread_t {
     ompt_thread_initial     = 1,
     ompt_thread_worker      = 2,
     ompt_thread_other       = 3,
     ompt_thread_unknown     = 4
-} ompt_thread_type_t;
+} ompt_thread_t;
 
 typedef enum ompt_set_result_t {
     ompt_set_error              = 0,
     ompt_set_never              = 1,
-    ompt_set_sometimes          = 2,
-    ompt_set_sometimes_paired   = 3,
-    ompt_set_always             = 4
+    ompt_set_impossible         = 2,
+    ompt_set_sometimes          = 3,
+    ompt_set_sometimes_paired   = 4,
+    ompt_set_always             = 5
 } ompt_set_result_t;
-
-typedef enum ompt_invoker_t {
-    ompt_invoker_program    = 1,
-    ompt_invoker_runtime    = 2
-} ompt_invoker_t;
 
 typedef enum ompt_scope_endpoint_t {
     ompt_scope_begin    = 1,
@@ -98,10 +95,12 @@ typedef union ompt_data_t {
     void *ptr;
 } ompt_data_t;
 
-typedef struct omp_frame_t {
-    void *exit_frame;
-    void *enter_frame;
-} omp_frame_t;
+typedef struct ompt_frame_t {
+    ompt_data_t exit_frame;
+    ompt_data_t enter_frame;
+    int exit_frame_flags;
+    int enter_frame_flags;
+} ompt_frame_t;
 
 
 /*********************************************************************************/
@@ -110,12 +109,12 @@ typedef struct omp_frame_t {
 typedef void (*ompt_callback_t)(void);
 
 typedef int (*ompt_set_callback_t)(
-    ompt_callbacks_t which,
+    ompt_callbacks_t event,
     ompt_callback_t callback
 );
 
 typedef void (*ompt_callback_thread_begin_t) (
-    ompt_thread_type_t thread_type,
+    ompt_thread_t thread_type,
     ompt_data_t *thread_data
 );
 
@@ -125,17 +124,17 @@ typedef void (*ompt_callback_thread_end_t) (
 
 typedef void (*ompt_callback_parallel_begin_t) (
     ompt_data_t *encountering_task_data,
-    const omp_frame_t *encountering_task_frame,
+    const ompt_frame_t *encountering_task_frame,
     ompt_data_t *parallel_data,
-    unsigned int requested_team_size,
-    ompt_invoker_t invoker,
+    unsigned int requested_parallelism,
+    int flags,
     const void *codeptr_ra
 );
 
 typedef void (*ompt_callback_parallel_end_t) (
     ompt_data_t *parallel_data,
     ompt_data_t *encountering_task_data,
-    ompt_invoker_t invoker,
+    int flags,
     const void *codeptr_ra
 );
 
@@ -143,8 +142,9 @@ typedef void (*ompt_callback_implicit_task_t) (
     ompt_scope_endpoint_t endpoint,
     ompt_data_t *parallel_data,
     ompt_data_t *task_data,
-    unsigned int team_size,
-    unsigned int thread_num
+    unsigned int actual_parallelism,
+    unsigned int index,
+    int flags
 );
 
 
@@ -153,9 +153,10 @@ typedef void (*ompt_callback_implicit_task_t) (
 /*********************************************************************************/
 typedef void (*ompt_interface_fn_t)(void);
 
-typedef ompt_interface_fn_t (*ompt_function_lookup_t)(const char*);
+typedef ompt_interface_fn_t (*ompt_function_lookup_t)(const char *interface_function_name);
 
-typedef int (*ompt_initialize_t)(ompt_function_lookup_t ompt_fn_lookup, ompt_data_t *tool_data);
+typedef int (*ompt_initialize_t)(ompt_function_lookup_t lookup, int initial_device_num,
+        ompt_data_t *tool_data);
 
 typedef void (*ompt_finalize_t)(ompt_data_t *tool_data);
 
