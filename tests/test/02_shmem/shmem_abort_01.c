@@ -22,7 +22,7 @@
 </testinfo>*/
 
 /* Test that shared memories are cleaned when the process aborts, even if the
- * process has initializes multiple subprocesses.
+ * process has initialized multiple subprocesses.
  * The fork is necessary to call the assert_noshm in the destructor
  */
 
