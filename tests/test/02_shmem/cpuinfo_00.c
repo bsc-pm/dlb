@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
@@ -58,7 +60,7 @@ int main( int argc, char **argv ) {
     }
 
     // Init
-    assert( shmem_cpuinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(pid, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
 
     /* Tests using mycpu */
 
@@ -199,7 +201,7 @@ int main( int argc, char **argv ) {
     for (i=0; i<system_size; ++i) { assert( victims[i] == -1 ); }
 
     // Finalize
-    assert( shmem_cpuinfo__finalize(pid, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
 
     return 0;
 }

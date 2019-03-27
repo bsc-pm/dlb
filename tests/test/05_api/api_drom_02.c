@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include <apis/dlb.h>
 #include <apis/dlb_drom.h>
 
@@ -33,6 +35,22 @@
 /* DROM test of processes preinitialized with an empty mask */
 
 int main(int argc, char **argv) {
+    /* Options */
+    char options[64] = "--shm-key=";
+    strcat(options, SHMEM_KEY);
+
+    /* Modify DLB_ARGS to include options */
+    const char *dlb_args_env = getenv("DLB_ARGS");
+    if (dlb_args_env) {
+        size_t len = strlen(dlb_args_env) + 1 + strlen(options) + 1;
+        char *new_dlb_args = malloc(sizeof(char)*len);
+        sprintf(new_dlb_args, "%s %s", dlb_args_env, options);
+        setenv("DLB_ARGS", new_dlb_args, 1);
+        free(new_dlb_args);
+    } else {
+        setenv("DLB_ARGS", options, 1);
+    }
+
     int pid = getpid();
     cpu_set_t empty_mask = {.__bits={0}};
 

@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem_async.h"
 #include "LB_numThreads/numThreads.h"
 #include "apis/dlb_errors.h"
@@ -48,7 +50,7 @@ static void test_callbacks(void) {
     pid_t pid1 = 42;
     cpu_set_t mask = { .__bits = { 0xf } };
 
-    assert( shmem_async_init(pid1, &pm, &mask, NULL) == DLB_SUCCESS );
+    assert( shmem_async_init(pid1, &pm, &mask, SHMEM_KEY) == DLB_SUCCESS );
     shmem_async_enable_cpu(pid1, 1);
     shmem_async_disable_cpu(pid1, 1);
     assert( shmem_async_finalize(pid1) == DLB_SUCCESS );
@@ -85,7 +87,7 @@ static void test_nested_callbacks(void) {
     };
 
     /* Initialize shmem and helper thread */
-    assert( shmem_async_init(pid2, &pm, &mask, NULL) == DLB_SUCCESS );
+    assert( shmem_async_init(pid2, &pm, &mask, SHMEM_KEY) == DLB_SUCCESS );
 
     /* Simulate a DLB_Lend (cpu 0) -> find_new_guest (same pid) -> notify_helper  */
     pid_t new_guest;

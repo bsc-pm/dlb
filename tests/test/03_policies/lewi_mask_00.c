@@ -22,7 +22,7 @@
 </testinfo>*/
 
 #include "assert_loop.h"
-#include "assert_noshm.h"
+#include "unique_shmem.h"
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
@@ -31,10 +31,12 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_numThreads/numThreads.h"
+#include "support/debug.h"
 
 #include <sched.h>
 #include <unistd.h>
 #include <assert.h>
+#include <string.h>
 
 static volatile int enable_times = 0;
 static volatile int disable_times = 0;
@@ -48,16 +50,24 @@ static void cb_disable_cpu(int cpuid, void *arg) {
 }
 
 int main( int argc, char **argv ) {
+    char options[64] = "--verbose=shmem --mode=async --shm-key=";
+    strcat(options, SHMEM_KEY);
+
     subprocess_descriptor_t spd;
     spd.id = getpid();
-    spd.options.mode = MODE_ASYNC;
+    options_init(&spd.options, options);
+    debug_init(&spd.options);
+
     int mycpu = sched_getcpu();
     sched_getaffinity(0, sizeof(cpu_set_t), &spd.process_mask);
 
     // Initialize shmems and callbacks
-    assert( shmem_procinfo__init(spd.id, &spd.process_mask, NULL, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(spd.id, &spd.process_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(spd.id, &spd.process_mask, NULL, spd.options.shm_key)
+            == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key)
+            == DLB_SUCCESS );
+    assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key)
+            == DLB_SUCCESS );
     assert( pm_callback_set(&spd.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)cb_enable_cpu, NULL) == DLB_SUCCESS );
     assert( pm_callback_set(&spd.pm, dlb_callback_disable_cpu,
@@ -88,8 +98,8 @@ int main( int argc, char **argv ) {
     assert_loop( enable_times > 0 );
 
     // Finalize shmems
-    assert( shmem_cpuinfo__finalize(spd.id, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd.id, false, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd.id, spd.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd.id, false, spd.options.shm_key) == DLB_SUCCESS );
     assert( shmem_async_finalize(spd.id) == DLB_SUCCESS );
 
     return 0;

@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "apis/dlb.h"
 #include "support/mask_utils.h"
 
@@ -44,7 +46,10 @@ int main( int argc, char **argv ) {
     CPU_SET(0, &process_mask);
     CPU_SET(1, &process_mask);
 
-    assert( DLB_Init(0, &process_mask, "--no-lewi") == DLB_SUCCESS );
+    char options[64] = "--no-lewi --shm-key=";
+    strcat(options, SHMEM_KEY);
+
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
     assert( DLB_CallbackSet(dlb_callback_disable_cpu,
                 (dlb_callback_t)cb_disable_cpu, NULL) == DLB_SUCCESS);
     assert( DLB_CallbackSet(dlb_callback_enable_cpu,
@@ -105,13 +110,16 @@ int main( int argc, char **argv ) {
     CPU_ZERO(&process_mask);
     CPU_SET(0, &process_mask);
     CPU_SET(1, &process_mask);
-    assert( DLB_Init(0, &process_mask, NULL) == DLB_SUCCESS );
-    assert( DLB_Init(0, &process_mask, NULL) == DLB_ERR_INIT );
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+    assert( DLB_Init(0, &process_mask, options) == DLB_ERR_INIT );
     assert( DLB_Finalize() == DLB_SUCCESS );
+
+    // Change options to enable lewi
+    snprintf(options, 64, "--lewi --shm-key%s", SHMEM_KEY);
 
     // Call DLB_PrintShmem with full node
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-    assert( DLB_Init(0, &process_mask, "--lewi") == DLB_SUCCESS );
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
     DLB_LendCpu(0);
     assert( DLB_PrintShmem(4, DLB_COLOR_AUTO) == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_SUCCESS );
@@ -121,7 +129,7 @@ int main( int argc, char **argv ) {
     CPU_ZERO(&process_mask);
     int i;
     for(i=0; i<64; ++i) CPU_SET(i, &process_mask);
-    assert( DLB_Init(0, &process_mask, "--lewi") == DLB_SUCCESS );
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
     DLB_LendCpu(0);
     assert( DLB_PrintShmem(0, DLB_COLOR_AUTO) == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_SUCCESS );

@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_types.h"
@@ -49,7 +51,7 @@ int main( int argc, char **argv ) {
     const cpu_set_t original_p2_mask = { .__bits = {0xc} }; /* [1100] */
 
     // Initialize external
-    assert( shmem_procinfo_ext__init(NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
     // Pre-Initialize sub-process 1
     pid_t p1_pid = 111;
@@ -65,19 +67,19 @@ int main( int argc, char **argv ) {
 
     // Initialize sub-process 2
     CPU_ZERO(&p2_mask);
-    assert( shmem_procinfo__init(p2_pid, NULL, &p2_mask, NULL) == DLB_NOTED );
+    assert( shmem_procinfo__init(p2_pid, NULL, &p2_mask, SHMEM_KEY) == DLB_NOTED );
     assert( CPU_EQUAL(&original_p2_mask, &p2_mask) );
 
     // Initialize sub-process 1
     CPU_ZERO(&p1_mask);
-    assert( shmem_procinfo__init(p1_pid, NULL, &p1_mask, NULL) == DLB_NOTED );
+    assert( shmem_procinfo__init(p1_pid, NULL, &p1_mask, SHMEM_KEY) == DLB_NOTED );
     cpu_set_t p1_mask_after;
     /* P1 needs to readjust its mask: [1111] - [1100] = [0011] */
     mu_substract(&p1_mask_after, &original_p1_mask, &original_p2_mask);
     assert( CPU_EQUAL(&p1_mask_after, &p1_mask) );
 
     // Finalize sub-process 1
-    assert( shmem_procinfo__finalize(p1_pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
     // Assign all CPUs to sub-process 2
     cpu_set_t new_p2_mask;
@@ -91,7 +93,7 @@ int main( int argc, char **argv ) {
     assert( CPU_EQUAL(&new_p2_mask, &p2_mask) );
 
     // Finalize sub-process 2
-    assert( shmem_procinfo__finalize(p2_pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
     // Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );

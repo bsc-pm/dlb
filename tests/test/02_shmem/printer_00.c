@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -29,9 +31,7 @@
 
 #include <sched.h>
 #include <sys/types.h>
-/* #include <unistd.h> */
-/* #include <stdio.h> */
-/* #include <assert.h> */
+#include <assert.h>
 
 int main(int argc, char *argv[]) {
     /* System size */
@@ -60,10 +60,10 @@ int main(int argc, char *argv[]) {
 
 
     /* Initialize shared memories */
-    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
     /* Enable request queues */
     shmem_cpuinfo__enable_request_queues();
@@ -99,8 +99,8 @@ int main(int argc, char *argv[]) {
     pid_t p3_pid = 33333;
     cpu_set_t p3_mask;
     mu_parse_mask("63", &p3_mask);
-    assert( shmem_cpuinfo__init(p3_pid, &p3_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p3_pid, &p3_mask, NULL, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p3_pid, &p3_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p3_pid, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_cpuinfo__acquire_cpu(p3_pid, 19, new_guests, victims) == DLB_NOTED );
 
     /* Print */
@@ -108,12 +108,12 @@ int main(int argc, char *argv[]) {
     shmem_procinfo__print_info(NULL);
 
     /* Finalize shared memories */
-    assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p3_pid, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p1_pid, false, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p2_pid, false, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p3_pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p3_pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
     return 0;
 }

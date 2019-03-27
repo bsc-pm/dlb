@@ -21,7 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-#include "assert_noshm.h"
+#include "unique_shmem.h"
 
 #include "apis/dlb.h"
 #include "apis/dlb_sp.h"
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 /* Simulate execution with NSUBPROCS subprocesses
  * and stress test proc requests and finalization */
@@ -78,12 +79,16 @@ static void cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void* thread_start(void *arg) {
+    /* Options */
+    char options[64] = "--lewi --mode=async --quiet --shm-key=";
+    strcat(options, SHMEM_KEY);
+
     int thid = *((int*)arg);
     cpu_set_t *mask = &sp_mask[thid];
     print_vb("Executing sp %d with mask %s\n", thid, mu_to_str(mask));
 
     /* Initialization */
-    handlers[thid] = DLB_Init_sp(0, mask, "--lewi --mode=async --quiet");
+    handlers[thid] = DLB_Init_sp(0, mask, options);
     assert( handlers[thid] != NULL );
     assert( DLB_CallbackSet_sp(handlers[thid], dlb_callback_enable_cpu,
                 (dlb_callback_t)cb_enable_cpu, arg) == DLB_SUCCESS);

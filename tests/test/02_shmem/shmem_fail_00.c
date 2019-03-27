@@ -22,6 +22,8 @@
     test_exec_fail=yes
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 
 /* Check unfinalized shared memory */
@@ -32,6 +34,7 @@ struct data {
 
 int main(int argc, char **argv) {
     struct data *shdata;
-    shmem_init((void**)&shdata, sizeof(struct data), "cpuinfo", NULL, SHMEM_VERSION_IGNORE);
+    shmem_init((void**)&shdata, sizeof(struct data), "cpuinfo",
+            SHMEM_KEY, SHMEM_VERSION_IGNORE);
     return 0;
 }

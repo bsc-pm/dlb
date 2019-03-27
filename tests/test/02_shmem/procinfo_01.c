@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
@@ -41,11 +43,12 @@ int main( int argc, char **argv ) {
 
     // Check permission error with two subprocesses sharing mask
     {
-        assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
+        assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         if (num_cpus > 1) {
-            assert( shmem_procinfo__init(pid+1, &process_mask, NULL, NULL) == DLB_ERR_PERM );
+            assert( shmem_procinfo__init(pid+1, &process_mask, NULL, SHMEM_KEY)
+                    == DLB_ERR_PERM );
         }
-        assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
         // Check that the shared memory has been finalized
         assert( shmem_procinfo__getprocessmask(pid, NULL, DLB_SYNC_QUERY) == DLB_ERR_NOSHMEM );
@@ -58,16 +61,18 @@ int main( int argc, char **argv ) {
         for (cpuid=0; cpuid<num_cpus; ++cpuid) {
             CPU_ZERO(&process_mask);
             CPU_SET(cpuid, &process_mask);
-            assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, NULL) == DLB_SUCCESS );
+            assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, SHMEM_KEY)
+                    == DLB_SUCCESS );
         }
 
         // Another initialization should return error
         CPU_ZERO(&process_mask);
-        assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, NULL) == DLB_ERR_NOMEM );
+        assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, SHMEM_KEY)
+                == DLB_ERR_NOMEM );
 
         // Finalize all
         for (cpuid=0; cpuid<num_cpus; ++cpuid) {
-            assert( shmem_procinfo__finalize(pid+cpuid, false, NULL) == DLB_SUCCESS );
+            assert( shmem_procinfo__finalize(pid+cpuid, false, SHMEM_KEY) == DLB_SUCCESS );
         }
 
         // Check that the shared memory has been finalized
@@ -81,18 +86,18 @@ int main( int argc, char **argv ) {
         for (i=0; i<num_cpus; ++i) {
             CPU_ZERO(&process_mask);
             CPU_SET(i, &process_mask);
-            assert( shmem_procinfo__init(i+1, &process_mask, NULL, NULL) == DLB_SUCCESS );
+            assert( shmem_procinfo__init(i+1, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         }
 
         // subprocess 1 tries to finalize as many times as number of CPUs
-        assert( shmem_procinfo__finalize(1, false, NULL) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(1, false, SHMEM_KEY) == DLB_SUCCESS );
         for (i=1; i<num_cpus; ++i) {
-            assert( shmem_procinfo__finalize(1, false, NULL) == DLB_ERR_NOPROC );
+            assert( shmem_procinfo__finalize(1, false, SHMEM_KEY) == DLB_ERR_NOPROC );
         }
 
         // rest of subprocesses should finalize correctly
         for (i=1; i<num_cpus; ++i) {
-            assert( shmem_procinfo__finalize(i+1, false, NULL) == DLB_SUCCESS );
+            assert( shmem_procinfo__finalize(i+1, false, SHMEM_KEY) == DLB_SUCCESS );
         }
 
         // Check that the shared memory has been finalized
