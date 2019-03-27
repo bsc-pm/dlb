@@ -17,9 +17,16 @@
 #  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                #
 #################################################################################
 
+LIT_OPTIONS = --xunit-xml-output=test.log.xml -sv
+LIT = PYTHONPATH=$(top_srcdir)/tests $(top_srcdir)/scripts/lit/lit.py $(LIT_OPTIONS)
 
-check-local: $(top_srcdir)/scripts/bets clean-coverage-data
-	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test/$(BETS_SUBDIR)*
+check-local: clean-coverage-data lit-check
+
+lit-check:
+	$(LIT) $(srcdir)/test/$(TEST)*
+
+bets-check:
+	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test/$(TEST)*
 
 if ENABLE_COVERAGE
 coverage-local: check-local

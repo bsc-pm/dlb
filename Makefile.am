@@ -647,7 +647,11 @@ clean-deb:
 #################################################################################
 ### tests                                                                     ###
 #################################################################################
-EXTRA_DIST += tests/test tests/gens/config.py
+EXTRA_DIST += tests/test \
+	      tests/gens/config.py \
+	      tests/lit.site.cfg \
+	      tests/litsupport/__init__.py \
+	      tests/litsupport/bets.py
 CLEANFILES += tests/test.log tests/test.log.xml
 
 coverage-local: all-am
