@@ -22,11 +22,11 @@
 </testinfo>*/
 
 /* Test that shared memories are cleaned when the process aborts, even if the
- * process has initializes multiple subprocesses.
+ * process has initialized multiple subprocesses.
  * The fork is necessary to call the assert_noshm in the destructor
  */
 
-#include "assert_noshm.h"
+#include "unique_shmem.h"
 
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -58,41 +58,37 @@ int main(int argc, char **argv) {
         /* spd1 */
         subprocess_descriptor_t spd1;
         spd1.id = 111;
-        spd1.options.shm_key[0] = '\0';
         mu_parse_mask("0", &spd1.process_mask);
         spd_register(&spd1);
-        assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, spd1.options.shm_key)
+        assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
-        assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, spd1.options.shm_key)
+        assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, SHMEM_KEY)
                 == DLB_SUCCESS );
-        assert( shmem_async_init(spd1.id, NULL, &spd1.process_mask, spd1.options.shm_key)
+        assert( shmem_async_init(spd1.id, NULL, &spd1.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
         /* spd2 */
         subprocess_descriptor_t spd2;
         spd2.id = 222;
-        spd2.options.shm_key[0] = '\0';
         mu_parse_mask("1", &spd2.process_mask);
         spd_register(&spd2);
-        assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, spd2.options.shm_key)
+        assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
         /* spd3 */
         subprocess_descriptor_t spd3;
         spd3.id = 333;
-        spd3.options.shm_key[0] = '\0';
         mu_parse_mask("2", &spd3.process_mask);
         spd_register(&spd3);
-        assert( shmem_cpuinfo__init(spd3.id, &spd3.process_mask, spd3.options.shm_key)
+        assert( shmem_cpuinfo__init(spd3.id, &spd3.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
         /* spd4 */
         subprocess_descriptor_t spd4;
         spd4.id = 444;
-        spd4.options.shm_key[0] = '\0';
         mu_parse_mask("3", &spd4.process_mask);
         spd_register(&spd4);
-        assert( shmem_cpuinfo__init(spd4.id, &spd4.process_mask, spd4.options.shm_key)
+        assert( shmem_cpuinfo__init(spd4.id, &spd4.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
         if (__gcov_flush) __gcov_flush();

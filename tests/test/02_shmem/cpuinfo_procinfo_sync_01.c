@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
@@ -33,15 +35,15 @@
 int main( int argc, char **argv ) {
     cpu_set_t mask = { .__bits = {0} };
 
-    assert( shmem_cpuinfo__init(42, &mask, NULL)            == DLB_SUCCESS );
-    assert( shmem_procinfo__init(42, &mask, NULL, NULL)     == DLB_SUCCESS );
-    assert( shmem_cpuinfo_ext__init(NULL)                   == DLB_SUCCESS );
-    assert( shmem_procinfo_ext__init(NULL)                  == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(42, &mask, SHMEM_KEY)           == DLB_SUCCESS );
+    assert( shmem_procinfo__init(42, &mask, NULL, SHMEM_KEY)    == DLB_SUCCESS );
+    assert( shmem_cpuinfo_ext__init(SHMEM_KEY)                  == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__init(SHMEM_KEY)                 == DLB_SUCCESS );
 
-    assert( shmem_cpuinfo_ext__finalize()                   == DLB_SUCCESS );
-    assert( shmem_procinfo_ext__finalize()                  == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(42, NULL)               == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(42, false, NULL)       == DLB_SUCCESS );
+    assert( shmem_cpuinfo_ext__finalize()                       == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__finalize()                      == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(42, SHMEM_KEY)              == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(42, false, SHMEM_KEY)      == DLB_SUCCESS );
 
     return 0;
 }

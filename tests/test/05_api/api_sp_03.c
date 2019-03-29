@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "assert_loop.h"
+#include "unique_shmem.h"
 
 #include "apis/dlb.h"
 #include "apis/dlb_sp.h"
@@ -44,6 +45,10 @@ int main(int argc, char *argv[]) {
     int i;
     int err;
 
+    // Options
+    char options[64] = "--lewi --shm-key=";
+    strcat(options, SHMEM_KEY);
+
     // test NSUBPROCS subprocesses, 1 CPU each, in a 16 CPU system
     enum { SYS_SIZE = 16 };
     mu_init();
@@ -55,7 +60,7 @@ int main(int argc, char *argv[]) {
         sp_ids[i] = i;
         CPU_ZERO(&sp_mask[i]);
         CPU_SET(i, &sp_mask[i]);
-        handlers[i] = DLB_Init_sp(0, &sp_mask[i], "--lewi");
+        handlers[i] = DLB_Init_sp(0, &sp_mask[i], options);
         assert( handlers[i] != NULL );
         assert( DLB_CallbackSet_sp(handlers[i], dlb_callback_enable_cpu,
                     (dlb_callback_t)cb_enable_cpu, &sp_ids[i]) == DLB_SUCCESS);

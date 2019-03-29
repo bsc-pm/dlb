@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
@@ -80,16 +82,16 @@ int main( int argc, char **argv ) {
     pid_t p1_pid = 111;
     cpu_set_t p1_mask;
     memcpy(&p1_mask, &original_p1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize sub-process 2
     pid_t p2_pid = 222;
     cpu_set_t p2_mask;
     memcpy(&p2_mask, &original_p2_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize external
-    assert( shmem_procinfo_ext__init(NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
     // Sub-process 3
     pid_t p3_pid = 333;
@@ -216,8 +218,8 @@ int main( int argc, char **argv ) {
     }
 
     // Finalize sub-processes
-    assert( shmem_procinfo__finalize(p1_pid, false, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p2_pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
     // Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );

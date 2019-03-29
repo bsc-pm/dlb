@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
@@ -81,10 +83,10 @@ int main( int argc, char **argv ) {
 
     // Initialize sub-process
     pid_t pid = getpid();
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize external
-    assert( shmem_procinfo_ext__init(NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
     // Get pidlist
     int pidlist[num_cpus];
@@ -117,7 +119,7 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 
     // Finalize sub-process
-    assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
     return 0;
 }

@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "assert_loop.h"
+#include "unique_shmem.h"
 
 #include "apis/dlb_sp.h"
 #include "support/mask_utils.h"
@@ -79,8 +80,12 @@ int main( int argc, char **argv ) {
 
     cpu_set_t sys_mask = { .__bits = {0xf} }; /* [1111] */
 
+    // Options
+    char options[64] = "--lewi --shm-key=";
+    strcat(options, SHMEM_KEY);
+
     // Subprocess 1 init
-    handler1 = DLB_Init_sp(0, &sp1_mask, "--lewi");
+    handler1 = DLB_Init_sp(0, &sp1_mask, options);
     assert( handler1 != NULL );
     assert( DLB_CallbackSet_sp(handler1, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp1_cb_enable_cpu, NULL) == DLB_SUCCESS);
@@ -88,7 +93,7 @@ int main( int argc, char **argv ) {
                 (dlb_callback_t)sp1_cb_disable_cpu, NULL) == DLB_SUCCESS);
 
     // Subprocess 2 init
-    handler2 = DLB_Init_sp(0, &sp2_mask, "--lewi");
+    handler2 = DLB_Init_sp(0, &sp2_mask, options);
     assert( handler2 != NULL );
     assert( DLB_CallbackSet_sp(handler2, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp2_cb_enable_cpu, NULL) == DLB_SUCCESS );

@@ -215,6 +215,8 @@ AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 # Check for Python
 AM_PATH_PYTHON
+AX_COMPARE_VERSION([$PYTHON_VERSION], [ge], [2.7], [lit=yes], [lit=no])
+AM_CONDITIONAL([LIT_SUPPORT], [test "x$lit" = xyes])
 
 # check for OpenMP availability
 AC_OPENMP

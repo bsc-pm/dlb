@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
@@ -48,12 +50,12 @@ int main( int argc, char **argv ) {
 
     // Init with too many CPUs
     CPU_SET(mu_get_system_size(), &process_mask);
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_ERR_PERM );
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_PERM );
     // Init (good)
     CPU_CLR(mu_get_system_size(), &process_mask);
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     // A second init for the same pid should fail
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, NULL) == DLB_ERR_INIT );
+    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_INIT );
 
     // Check registered mask is the same as our process mask
     assert( shmem_procinfo__getprocessmask(pid, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
@@ -67,9 +69,9 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__polldrom(pid+1, NULL, NULL) == DLB_ERR_NOPROC );
 
     // Finalize
-    assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
     // A second finalize should return error
-    assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_ERR_NOSHMEM );
+    assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_ERR_NOSHMEM );
 
     return 0;
 }

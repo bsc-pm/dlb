@@ -536,17 +536,49 @@ nodist_python_PYTHON = scripts/viewer/dlb_viewer.py
 nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage \
 		     scripts/run_with_dlb.sh
 
+DEBIAN_EXTRA = scripts/debian/compat \
+	       scripts/debian/source/format \
+	       scripts/debian/rules \
+	       scripts/debian/control \
+	       $(END)
+
+LIT_EXTRA = scripts/lit/PKG-INFO \
+	    scripts/lit/README.txt \
+	    scripts/lit/lit.py \
+	    scripts/lit/lit/BooleanExpression.py \
+	    scripts/lit/lit/LitConfig.py \
+	    scripts/lit/lit/LitTestCase.py \
+	    scripts/lit/lit/ProgressBar.py \
+	    scripts/lit/lit/ShCommands.py \
+	    scripts/lit/lit/ShUtil.py \
+	    scripts/lit/lit/Test.py \
+	    scripts/lit/lit/TestRunner.py \
+	    scripts/lit/lit/TestingConfig.py \
+	    scripts/lit/lit/__init__.py \
+	    scripts/lit/lit/discovery.py \
+	    scripts/lit/lit/main.py \
+	    scripts/lit/lit/run.py \
+	    scripts/lit/lit/util.py \
+	    scripts/lit/lit/builtin_commands/__init__.py \
+	    scripts/lit/lit/builtin_commands/cat.py \
+	    scripts/lit/lit/formats/__init__.py \
+	    scripts/lit/lit/formats/base.py \
+	    scripts/lit/lit/formats/googletest.py \
+	    scripts/lit/lit/formats/shtest.py \
+	    scripts/lit/lit/llvm/__init__.py \
+	    scripts/lit/lit/llvm/config.py \
+	    scripts/lit/lit/llvm/subst.py
+	    $(END)
+
 EXTRA_DIST += \
 	scripts/bets \
 	scripts/run_with_dlb.sh.in \
 	scripts/dlb.spec \
 	scripts/pygen.py \
-	scripts/debian/compat \
-	scripts/debian/source/format \
-	scripts/debian/rules \
-	scripts/debian/control \
 	scripts/viewer/dlb_cpu_usage.in \
 	scripts/viewer/dlb_viewer.py.in \
+	$(DEBIAN_EXTRA) \
+	$(LIT_EXTRA) \
 	$(END)
 
 CLEANFILES    += scripts/viewer/dlb_viewer.py
@@ -615,7 +647,11 @@ clean-deb:
 #################################################################################
 ### tests                                                                     ###
 #################################################################################
-EXTRA_DIST += tests/test tests/gens/config.py
+EXTRA_DIST += tests/test \
+	      tests/gens/config.py \
+	      tests/lit.site.cfg \
+	      tests/litsupport/__init__.py \
+	      tests/litsupport/bets.py
 CLEANFILES += tests/test.log tests/test.log.xml
 
 coverage-local: all-am

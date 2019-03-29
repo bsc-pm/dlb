@@ -22,13 +22,16 @@
 </testinfo>*/
 
 #include "assert_loop.h"
-#include "assert_noshm.h"
+#include "unique_shmem.h"
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
 #include "LB_policies/lewi.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/options.h"
+#include "support/debug.h"
+
+#include <string.h>
 
 static int nthreads;
 
@@ -37,10 +40,15 @@ static void cb_set_num_threads(int num_threads, void *arg) {
 }
 
 int main( int argc, char **argv ) {
+    char options[64] = "--verbose=shmem --shm-key=";
+    strcat(options, SHMEM_KEY);
+
     subprocess_descriptor_t spd;
-    options_init(&spd.options, NULL);
-    pm_init(&spd.pm);
     spd.id = getpid();
+    options_init(&spd.options, options);
+    debug_init(&spd.options);
+    pm_init(&spd.pm);
+
     sched_getaffinity(0, sizeof(cpu_set_t), &spd.process_mask);
     nthreads = CPU_COUNT(&spd.process_mask);
     int original_nthreads = nthreads;

@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "apis/dlb_sp.h"
 
 #include <sched.h>
@@ -44,7 +46,10 @@ int main( int argc, char **argv ) {
     CPU_SET(0, &process_mask);
     CPU_SET(1, &process_mask);
 
-    handler = DLB_Init_sp(0, &process_mask, "--no-lewi");
+    char options[64] = "--no-lewi --shm-key=";
+    strcat(options, SHMEM_KEY);
+
+    handler = DLB_Init_sp(0, &process_mask, options);
     assert( DLB_CallbackSet_sp(handler, dlb_callback_disable_cpu,
                 (dlb_callback_t)cb_disable_cpu, NULL) == DLB_SUCCESS);
     assert( DLB_CallbackSet_sp(handler, dlb_callback_enable_cpu,

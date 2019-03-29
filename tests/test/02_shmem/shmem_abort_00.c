@@ -25,10 +25,12 @@
  * The fork is necessary to call the assert_noshm in the destructor
  */
 
-#include "assert_noshm.h"
+#include "unique_shmem.h"
 
 #include "LB_comm/shmem_cpuinfo.h"
+#include "LB_core/spd.h"
 #include "support/debug.h"
+#include "support/options.h"
 #include "apis/dlb_errors.h"
 
 #include <sched.h>
@@ -47,8 +49,15 @@ int main(int argc, char **argv) {
         cpu_set_t process_mask;
         sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
 
+        // Initialize spd to include PID in the PANIC message
+        subprocess_descriptor_t spd;
+        spd_enter_dlb(&spd);
+        spd.id = getpid();
+        options_init(&spd.options, NULL);
+        debug_init(&spd.options);
+
         // Create shared memory
-        assert( shmem_cpuinfo__init(pid, &process_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(pid, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
 
         if (__gcov_flush) __gcov_flush();
         fatal("This fatal should clean shmems");

@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
@@ -44,7 +46,7 @@ static void* thread_start(void *arg) {
     pid_t pid = *(pid_t*)arg;
 
     // Initialize external
-    assert( shmem_procinfo_ext__init(NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
     // External sets new mask
     cpu_set_t new_mask = { .__bits = {0x3} }; // [01--]
@@ -66,8 +68,8 @@ int main( int argc, char **argv ) {
     cpu_set_t mask = { .__bits = {0xf} }; // [0123]
 
     // Initialize sub-process
-    assert( shmem_procinfo__init(pid, &mask, NULL, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(pid, &mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(pid, &mask, SHMEM_KEY) == DLB_SUCCESS );
 
     // Get process mask
 
@@ -104,8 +106,8 @@ int main( int argc, char **argv ) {
     assert( !shmem_cpuinfo__is_dirty() );
 
     // Finalize sub-process
-    assert( shmem_cpuinfo__finalize(pid, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(pid, false, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
     return 0;
 }

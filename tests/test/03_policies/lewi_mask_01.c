@@ -22,7 +22,7 @@
 </testinfo>*/
 
 #include "assert_loop.h"
-#include "assert_noshm.h"
+#include "unique_shmem.h"
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
@@ -76,6 +76,10 @@ int main( int argc, char **argv ) {
     mu_init();
     mu_testing_set_sys_size(SYS_SIZE);
 
+    // Options
+    char options[64] = "--verbose=shmem --shm-key=";
+    strcat(options, SHMEM_KEY);
+
     // Initialize constant masks for fast reference
     const cpu_set_t sys_mask = { .__bits = {0xf} };       /* [1111] */
     const cpu_set_t sp1_process_mask = {.__bits={0x3}};   /* [0011] */
@@ -87,11 +91,13 @@ int main( int argc, char **argv ) {
 
     // Subprocess 1 init
     spd1.id = 111;
-    options_init(&spd1.options, NULL);
+    options_init(&spd1.options, options);
     debug_init(&spd1.options);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, NULL) == DLB_SUCCESS);
-    assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, NULL) == DLB_SUCCESS);
+    assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, spd1.options.shm_key)
+            == DLB_SUCCESS);
+    assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, spd1.options.shm_key)
+            == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp1_cb_enable_cpu, NULL) == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu,
@@ -101,11 +107,13 @@ int main( int argc, char **argv ) {
 
     // Subprocess 2 init
     spd2.id = 222;
-    options_init(&spd2.options, NULL);
+    options_init(&spd2.options, options);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
     memcpy(&spd2.process_mask, &sp2_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(spd2.id, &spd2.process_mask, NULL, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(spd2.id, &spd2.process_mask, NULL, spd2.options.shm_key)
+            == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, spd2.options.shm_key)
+            == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp2_cb_enable_cpu, NULL) == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu,
@@ -117,8 +125,10 @@ int main( int argc, char **argv ) {
     assert( spd1.options.mode == spd2.options.mode );
     mode = spd1.options.mode;
     if (mode == MODE_ASYNC) {
-        assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask, NULL) == DLB_SUCCESS );
-        assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask, spd2.options.shm_key)
+                == DLB_SUCCESS );
+        assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask, spd1.options.shm_key)
+                == DLB_SUCCESS );
     }
 
     int err;
@@ -351,12 +361,12 @@ int main( int argc, char **argv ) {
     assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
 
     // Subprocess 1 shmems finalize
-    assert( shmem_cpuinfo__finalize(spd1.id, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd1.id, false, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd1.id, false, spd1.options.shm_key) == DLB_SUCCESS );
 
     // Subprocess 2 shmems finalize
-    assert( shmem_cpuinfo__finalize(spd2.id, NULL) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd2.id, false, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd2.id, spd2.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd2.id, false, spd2.options.shm_key) == DLB_SUCCESS );
 
     // Async finalize
     if (mode == MODE_ASYNC) {

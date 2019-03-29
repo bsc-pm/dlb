@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_core/spd.h"
@@ -58,9 +60,9 @@ int main( int argc, char **argv ) {
     pid_t victims[SYS_SIZE];
 
     // Init
-    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(p2_pid, &p1_mask, NULL) == DLB_ERR_PERM );
-    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p2_pid, &p1_mask, SHMEM_KEY) == DLB_ERR_PERM );
+    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize options and enable queues if needed
     options_t options;
@@ -266,8 +268,8 @@ int main( int argc, char **argv ) {
     }
 
     // Finalize
-    assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
 
     /* Test lend post mortem feature */
     {
@@ -280,12 +282,12 @@ int main( int argc, char **argv ) {
         spd_enter_dlb(&spd);
 
         // Initialize
-        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
-        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
         if (async) { shmem_cpuinfo__enable_request_queues(); }
 
         // P1 finalizes
-        assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
 
         // P2 borrows P1 CPUs
         assert( shmem_cpuinfo__borrow_all(p2_pid, PRIO_ANY, cpus_priority_array,
@@ -294,7 +296,7 @@ int main( int argc, char **argv ) {
         assert( new_guests[2] == -1 && new_guests[3] == -1 );
 
         // P2 finalizes
-        assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
     }
 
     /* Test early finalization with pending actions */
@@ -308,8 +310,8 @@ int main( int argc, char **argv ) {
         spd_enter_dlb(&spd);
 
         // Initialize
-        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
-        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
         if (async) { shmem_cpuinfo__enable_request_queues(); }
 
         // P2 lends CPUs 2 & 3
@@ -337,7 +339,7 @@ int main( int argc, char **argv ) {
             for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == 0 ); }
         }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
-        assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
 
         // If polling, P2 needs to ask again for SYS_SIZE CPUs
         if (!async) {
@@ -351,7 +353,7 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
-        assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
     }
 
     return 0;
