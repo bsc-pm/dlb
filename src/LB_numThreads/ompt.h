@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2018 Barcelona Supercomputing Center                               */
+/*  Copyright 2009-2019 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -19,9 +19,6 @@
 
 #ifndef OMPT_H
 #define OMPT_H
-
-void ompt_thread_manager__IntoBlockingCall(void);
-void ompt_thread_manager__OutOfBlockingCall(void);
 
 #include <stdint.h>
 

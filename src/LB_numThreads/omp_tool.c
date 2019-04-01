@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2018 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2019 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -19,8 +19,8 @@
 
 #include "LB_numThreads/ompt.h"
 
+#include "LB_numThreads/omp_thread_manager.h"
 #include "apis/dlb.h"
-#include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
@@ -33,125 +33,9 @@
 #include <unistd.h>
 #include <string.h>
 
-int omp_get_thread_num(void) __attribute__((weak));
-void omp_set_num_threads(int nthreads) __attribute__((weak));
 int omp_get_level(void) __attribute__((weak));
 
-
-/*********************************************************************************/
-/*  OMP Thread Manager                                                           */
-/*********************************************************************************/
-
-static cpu_set_t active_mask, process_mask;
-static bool lewi = false;
-static bool ompt = false;
 static pid_t pid;
-static ompt_opts_t ompt_opts;
-
-static void cb_enable_cpu(int cpuid, void *arg) {
-    CPU_SET(cpuid, &active_mask);
-    omp_set_num_threads(CPU_COUNT(&active_mask));
-}
-
-static void cb_disable_cpu(int cpuid, void *arg) {
-    CPU_CLR(cpuid, &active_mask);
-    omp_set_num_threads(CPU_COUNT(&active_mask));
-}
-
-static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
-    memcpy(&process_mask, mask, sizeof(cpu_set_t));
-    memcpy(&active_mask, mask, sizeof(cpu_set_t));
-    omp_set_num_threads(CPU_COUNT(&active_mask));
-}
-
-static void omp_thread_manager__borrow(void) {
-    static int cpus_to_borrow = 1;
-
-    if (lewi && ompt_opts & OMPT_OPTS_BORROW) {
-        int err_return = DLB_Return();
-        int err_reclaim = DLB_Reclaim();
-        int err_borrow = DLB_BorrowCpus(cpus_to_borrow);
-
-        if (err_return == DLB_SUCCESS
-                || err_reclaim == DLB_SUCCESS
-                || err_borrow == DLB_SUCCESS) {
-            verbose(VB_OMPT, "Acquire - Setting new mask to %s", mu_to_str(&active_mask));
-        }
-
-        if (err_borrow == DLB_SUCCESS) {
-            ++cpus_to_borrow;
-        } else {
-            cpus_to_borrow = 1;
-        }
-
-    }
-}
-
-static void omp_thread_manager__lend(void) {
-    if (lewi && ompt_opts & OMPT_OPTS_LEND) {
-        omp_set_num_threads(1);
-        CPU_ZERO(&active_mask);
-        CPU_SET(sched_getcpu(), &active_mask);
-        verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
-        DLB_SetMaxParallelism(1);
-    }
-}
-
-/* lb_funcs.into_blocking_call has already been called and
- * the current CPU will be lent according to the --lew-mpi option
- * This function just lends the rest of the CPUs
- */
-void ompt_thread_manager__IntoBlockingCall(void) {
-    if (lewi && ompt_opts & OMPT_OPTS_MPI) {
-        int mycpu = sched_getcpu();
-
-        /* Lend every CPU except the current one */
-        cpu_set_t mask;
-        memcpy(&mask, &active_mask, sizeof(cpu_set_t));
-        CPU_CLR(mycpu, &mask);
-        DLB_LendCpuMask(&mask);
-
-        /* Set active_mask to only the current CPU */
-        CPU_ZERO(&active_mask);
-        CPU_SET(mycpu, &active_mask);
-        omp_set_num_threads(1);
-
-        verbose(VB_OMPT, "IntoBlockingCall - lending all");
-    }
-}
-
-void ompt_thread_manager__OutOfBlockingCall(void) {
-    if (lewi && ompt_opts & OMPT_OPTS_MPI) {
-        DLB_Reclaim();
-    }
-}
-
-static void omp_thread_manager__init(void) {
-    if (lewi) {
-        int err;
-        err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_CallbackSet enable_cpu: %s", DLB_Strerror(err));
-        }
-        err = DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_CallbackSet disable_cpu: %s", DLB_Strerror(err));
-        }
-        err = DLB_CallbackSet(dlb_callback_set_process_mask,
-                (dlb_callback_t)cb_set_process_mask, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_CallbackSet set_process_mask: %s", DLB_Strerror(err));
-        }
-        shmem_procinfo__getprocessmask(pid, &process_mask, 0);
-        memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
-        verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
-        omp_thread_manager__lend();
-    }
-}
-
-static void omp_thread_manager__finalize(void) {
-}
-
 
 /*********************************************************************************/
 /*  OMPT callbacks                                                               */
@@ -218,6 +102,8 @@ static void cb_thread_end(
 /*  OMPT start tool                                                              */
 /*********************************************************************************/
 
+static bool ompt_initialized = false;
+
 static inline int set_ompt_callback(ompt_set_callback_t set_callback_fn,
         ompt_callbacks_t event, ompt_callback_t callback) {
     int error = 1;
@@ -239,13 +125,10 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
     /* Parse options and get the required fields */
     options_t options;
     options_init(&options, NULL);
-    lewi = options.lewi;
-    ompt = options.ompt;
-    ompt_opts = options.lewi_ompt;
     pid = options.preinit_pid ? options.preinit_pid : getpid();
 
     /* Enable experimental OMPT only if requested */
-    if (ompt) {
+    if (options.ompt) {
         /* Initialize DLB only if ompt is enabled, otherwise DLB_Finalize won't be called */
         int err = DLB_Init(0, NULL, NULL);
         if (err != DLB_SUCCESS) {
@@ -273,10 +156,12 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
                 verbose(VB_OMPT, "OMPT callbacks succesfully registered");
             }
 
-            omp_thread_manager__init();
+            omp_thread_manager__init(&options);
         } else {
             verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
         }
+
+        ompt_initialized = true;
 
         // return a non-zero value to activate the tool
         return 1;
@@ -286,7 +171,7 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
 }
 
 static void ompt_finalize(ompt_data_t *tool_data) {
-    if (ompt) {
+    if (ompt_initialized) {
         verbose(VB_OMPT, "Finalizing OMPT module");
         omp_thread_manager__finalize();
         DLB_Finalize();

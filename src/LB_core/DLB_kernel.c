@@ -25,7 +25,7 @@
 
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
-#include "LB_numThreads/ompt.h"
+#include "LB_numThreads/omp_thread_manager.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -258,7 +258,7 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
         spd->lb_funcs.into_blocking_call(spd);
-        ompt_thread_manager__IntoBlockingCall();
+        omp_thread_manager__IntoBlockingCall();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
@@ -268,7 +268,7 @@ void OutOfBlockingCall(int is_iter) {
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
-        ompt_thread_manager__OutOfBlockingCall();
+        omp_thread_manager__OutOfBlockingCall();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }

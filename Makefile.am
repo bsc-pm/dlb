@@ -153,7 +153,9 @@ COMMON_SRCS = \
 	src/support/types.h                     \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
-	src/LB_numThreads/ompt.c                \
+	src/LB_numThreads/omp_thread_manager.c  \
+	src/LB_numThreads/omp_thread_manager.h  \
+	src/LB_numThreads/omp_tool.c            \
 	src/LB_numThreads/ompt.h                \
 	src/LB_comm/comm_lend_light.c           \
 	src/LB_comm/comm_lend_light.h           \
