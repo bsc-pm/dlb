@@ -116,10 +116,13 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--ompt",
         .default_value  = "no",
-        .description    = OFFSET"Enable OpenMP performance tool.",
+        .description    = OFFSET"Enable OpenMP performance tool. If running with an OMPT capable\n"
+                          OFFSET"runtime, DLB can register itself as OpenMP Tool and perform\n"
+                          OFFSET"some tasks, like thread pinning reallocation when the process\n"
+                          OFFSET"mask changes or some LeWI features if enabled.",
         .offset         = offsetof(options_t, ompt),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
         .var_name       = "LB_MODE",
         .arg_name       = "--mode",
@@ -224,10 +227,17 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-ompt",
         .default_value  = "",
-        .description    = OFFSET"Experimental OMPT policy flags for LeWI",
+        .description    = OFFSET"OMPT policy flags for LeWI. If OMPT mode is enabled, set when\n"
+                          OFFSET"DLB can automatically invoke LeWI functions to lend or borrow\n"
+                          OFFSET"CPUs. If \"mpi\" is set, LeWI will be invoked before and after\n"
+                          OFFSET"each eligible MPI call. If \"borrow\" is set, DLB will try to\n"
+                          OFFSET"borrow CPUs before each non nested parallel construct. If the\n"
+                          OFFSET"flag \"lend\" is set, DLB will lend all non used CPUs after\n"
+                          OFFSET"each non nested parallel construct.\n"
+                          OFFSET"Multiple flags can be selected at the same time.",
         .offset         = offsetof(options_t, lewi_ompt),
         .type           = OPT_OMPTOPTS_T,
-        .flags          = OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = OPT_OPTIONAL
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-greedy",
@@ -567,7 +577,7 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
 
 /* API Printer */
 void options_print_variables(const options_t *options, bool print_extended) {
-    enum { buffer_size = 4096 };
+    enum { buffer_size = 8192 };
     char buffer[buffer_size] = "DLB Options:\n\n"
                                 "The library configuration can be set using arguments\n"
                                 "added to the DLB_ARGS environment variable.\n"
