@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2018 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2019 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
