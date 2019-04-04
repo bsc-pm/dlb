@@ -49,9 +49,8 @@ typedef enum VerboseFormat {
 typedef enum DebugOptions {
     DBG_CLEAR        = 0,
     DBG_RETURNSTOLEN = 1 << 0,
-    DBG_LEWI_OMPT    = 1 << 1,
-    DBG_WERROR       = 1 << 2,
-    DBG_LPOSTMORTEM  = 1 << 3
+    DBG_WERROR       = 1 << 1,
+    DBG_LPOSTMORTEM  = 1 << 2
 } debug_opts_t;
 
 typedef enum PriorityType {
@@ -77,6 +76,13 @@ typedef enum MPISet {
     MPISET_BARRIER,
     MPISET_COLLECTIVES
 } mpi_set_t;
+
+typedef enum OMPTOptions {
+    OMPT_OPTS_CLEAR     = 0,
+    OMPT_OPTS_MPI       = 1 << 0,
+    OMPT_OPTS_BORROW    = 1 << 1,
+    OMPT_OPTS_LEND      = 1 << 2
+} ompt_opts_t;
 
 int parse_bool(const char *str, bool *value);
 int parse_int(const char *str, int *value);
@@ -115,5 +121,10 @@ const char* get_mode_choices(void);
 int parse_mpiset(const char *str, mpi_set_t *value);
 const char* mpiset_tostr(mpi_set_t value);
 const char* get_mpiset_choices(void);
+
+/* ompt_opts_t */
+int parse_ompt_opts(const char *str, ompt_opts_t *value);
+const char* ompt_opts_tostr(ompt_opts_t value);
+const char* get_ompt_opts_choices(void);
 
 #endif /* TYPES_H */

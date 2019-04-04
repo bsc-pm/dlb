@@ -49,7 +49,8 @@ typedef enum OptionTypes {
     OPT_POL_T,      // policy_t
     OPT_MASK_T,     // cpu_set_t
     OPT_MODE_T,     // interaction_mode_t
-    OPT_MPISET_T    // mpi_set_t
+    OPT_MPISET_T,   // mpi_set_t
+    OPT_OMPTOPTS_T  // ompt_opts_t
 } option_type_t;
 
 typedef struct {
@@ -111,6 +112,17 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, barrier),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--ompt",
+        .default_value  = "no",
+        .description    = OFFSET"Enable OpenMP performance tool. If running with an OMPT capable\n"
+                          OFFSET"runtime, DLB can register itself as OpenMP Tool and perform\n"
+                          OFFSET"some tasks, like thread pinning reallocation when the process\n"
+                          OFFSET"mask changes or some LeWI features if enabled.",
+        .offset         = offsetof(options_t, ompt),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
         .var_name       = "LB_MODE",
         .arg_name       = "--mode",
@@ -213,6 +225,21 @@ static const opts_dict_t options_dictionary[] = {
         .flags          = OPT_OPTIONAL
     }, {
         .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-ompt",
+        .default_value  = "",
+        .description    = OFFSET"OMPT policy flags for LeWI. If OMPT mode is enabled, set when\n"
+                          OFFSET"DLB can automatically invoke LeWI functions to lend or borrow\n"
+                          OFFSET"CPUs. If \"mpi\" is set, LeWI will be invoked before and after\n"
+                          OFFSET"each eligible MPI call. If \"borrow\" is set, DLB will try to\n"
+                          OFFSET"borrow CPUs before each non nested parallel construct. If the\n"
+                          OFFSET"flag \"lend\" is set, DLB will lend all non used CPUs after\n"
+                          OFFSET"each non nested parallel construct.\n"
+                          OFFSET"Multiple flags can be selected at the same time.",
+        .offset         = offsetof(options_t, lewi_ompt),
+        .type           = OPT_OMPTOPTS_T,
+        .flags          = OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
         .arg_name       = "--lewi-greedy",
         .default_value  = "no",
         .description    = OFFSET"Greedy option for LeWI policy.",
@@ -289,6 +316,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_mode(str_value, (interaction_mode_t*)option);
         case(OPT_MPISET_T):
             return parse_mpiset(str_value, (mpi_set_t*)option);
+        case(OPT_OMPTOPTS_T):
+            return parse_ompt_opts(str_value, (ompt_opts_t*)option);
     }
     return DLB_ERR_NOENT;
 }
@@ -319,6 +348,8 @@ static const char * get_value(option_type_t type, void *option) {
             return mode_tostr(*(interaction_mode_t*)option);
         case OPT_MPISET_T:
             return mpiset_tostr(*(mpi_set_t*)option);
+        case OPT_OMPTOPTS_T:
+            return ompt_opts_tostr(*(ompt_opts_t*)option);
     }
     return "unknown";
 }
@@ -546,7 +577,7 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
 
 /* API Printer */
 void options_print_variables(const options_t *options, bool print_extended) {
-    enum { buffer_size = 4096 };
+    enum { buffer_size = 8192 };
     char buffer[buffer_size] = "DLB Options:\n\n"
                                 "The library configuration can be set using arguments\n"
                                 "added to the DLB_ARGS environment variable.\n"
@@ -606,6 +637,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_MPISET_T:
                 b += sprintf(b, "[%s]", get_mpiset_choices());
+                break;
+            case OPT_OMPTOPTS_T:
+                b += sprintf(b, "[%s]", get_ompt_opts_choices());
                 break;
             default:
                 b += sprintf(b, "(unknown)");

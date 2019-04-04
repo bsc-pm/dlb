@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2018 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2019 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -14,49 +14,19 @@
 /*  GNU Lesser General Public License for more details.                          */
 /*                                                                               */
 /*  You should have received a copy of the GNU Lesser General Public License     */
-/*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
+/*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-/********* EXTRAE EVENTS *************/
-#define THREADS_USED_EVENT 800000
-#define RUNTIME_EVENT      800020
-#define EVENT_USER        0
-#define EVENT_INIT        1
-#define EVENT_INTO_MPI    2
-#define EVENT_OUTOF_MPI   3
-#define EVENT_LEND        4
-#define EVENT_RECLAIM     5
-#define EVENT_ACQUIRE     6
-#define EVENT_BORROW      7
-#define EVENT_RETURN      8
-#define EVENT_RESET       9
-#define EVENT_BARRIER     10
-#define EVENT_POLLDROM    11
-#define EVENT_FINALIZE    12
+#ifndef OMP_THREAD_MANAGER_H
+#define OMP_THREAD_MANAGER_H
 
-#define IDLE_CPUS_EVENT    800030
-#define ITERATION_EVENT    800040
-#define DLB_MODE_EVENT     800050
-#define EVENT_ENABLED        1
-#define EVENT_DISABLED       2
-#define EVENT_SINGLE         3
-#define REBIND_EVENT       800060
-#define BINDINGS_EVENT     800061
-
-/*************************************/
-
-#ifdef INSTRUMENTATION_VERSION
 #include "support/options.h"
-void add_event(unsigned type, long long value);
-void init_tracing(const options_t *options);
-#else
-#define add_event(type, value)
-#define init_tracing(options)
-#endif
 
+void omp_thread_manager__init(const options_t *options);
+void omp_thread_manager__finalize(void);
+void omp_thread_manager__borrow(void);
+void omp_thread_manager__lend(void);
+void omp_thread_manager__IntoBlockingCall(void);
+void omp_thread_manager__OutOfBlockingCall(void);
 
-#ifdef INSTRUMENTATION_VERSION
-#define DLB_INSTR(f) f
-#else
-#define DLB_INSTR(f)
-#endif
+#endif /* OMP_THREAD_MANAGER_H */

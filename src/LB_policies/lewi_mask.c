@@ -90,6 +90,7 @@ int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
 
     /* De-allocate private structure */
     free(((lewi_info_t*)spd->lewi_info)->cpus_priority_array);
+    ((lewi_info_t*)spd->lewi_info)->cpus_priority_array = NULL;
     free(spd->lewi_info);
     spd->lewi_info = NULL;
 

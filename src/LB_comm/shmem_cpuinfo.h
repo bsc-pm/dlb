@@ -76,7 +76,6 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask);
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
 int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpu);
 bool shmem_cpuinfo__exists(void);
-bool shmem_cpuinfo__is_dirty(void);
 void shmem_cpuinfo__enable_request_queues(void);
 int shmem_cpuinfo__version(void);
 size_t shmem_cpuinfo__size(void);

@@ -25,6 +25,7 @@
 
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
+#include "LB_numThreads/omp_thread_manager.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -47,16 +48,23 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     int error = DLB_SUCCESS;
 
-    // Initialize first instrumentation module
+    // Initialize common modules (instrumentation module ASAP)
     options_init(&spd->options, lb_args);
     init_tracing(&spd->options);
     add_event(RUNTIME_EVENT, EVENT_INIT);
+    debug_init(&spd->options);
+    mu_init();
+    timer_init();
 
     // Infer LeWI mode
     spd->lb_policy = !spd->options.lewi ? POLICY_NONE :
         spd->options.preinit_pid ? POLICY_LEWI_MASK :
         mask ? POLICY_LEWI_MASK :
         POLICY_LEWI;
+
+    fatal_cond(spd->lb_policy == POLICY_LEWI && spd->options.ompt,
+            "LeWI with OMPT support requires the application to be pre-initialized.\n"
+            "Please run: dlb_run <application>");
 
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm);
@@ -78,10 +86,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         memcpy(&spd->process_mask, &process_mask, sizeof(cpu_set_t));
     }
 
-    // Initialize modules
-    debug_init(&spd->options);
-    mu_init();
-    timer_init();
+    // Initialize shared memories
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
             || spd->options.statistics
@@ -150,6 +155,7 @@ int Finish(subprocess_descriptor_t *spd) {
 
     if (spd->lb_funcs.finalize) {
         spd->lb_funcs.finalize(spd);
+        spd->lb_funcs.finalize = NULL;
     }
     if (spd->options.barrier) {
         shmem_barrier_finalize();
@@ -246,11 +252,13 @@ void OutOfCommunication(void) {
     }
 }
 
+
 void IntoBlockingCall(int is_iter, int blocking_mode) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
         spd->lb_funcs.into_blocking_call(spd);
+        omp_thread_manager__IntoBlockingCall();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
@@ -260,6 +268,7 @@ void OutOfBlockingCall(int is_iter) {
     if (spd->dlb_enabled) {
         add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
+        omp_thread_manager__OutOfBlockingCall();
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }

@@ -89,7 +89,12 @@ void init_tracing(const options_t *options) {
         //REBIND_EVENT
         type=REBIND_EVENT;
         n_values=0;
-        Extrae_define_event_type(&type, "DLB thread rebind", &n_values, NULL, NULL);
+        Extrae_define_event_type(&type, "DLB thread rebind in OMPT", &n_values, NULL, NULL);
+
+        //BINDINGS_EVENT
+        type=BINDINGS_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB thread binding in OMPT", &n_values, NULL, NULL);
     } else {
         extrae_set_event = dummy;
     }

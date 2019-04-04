@@ -153,7 +153,10 @@ COMMON_SRCS = \
 	src/support/types.h                     \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
-	src/LB_numThreads/ompt.c                \
+	src/LB_numThreads/omp_thread_manager.c  \
+	src/LB_numThreads/omp_thread_manager.h  \
+	src/LB_numThreads/omp_tool.c            \
+	src/LB_numThreads/ompt.h                \
 	src/LB_comm/comm_lend_light.c           \
 	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem.c                     \
@@ -346,6 +349,12 @@ dlb_taskset_SOURCES = src/utils/dlb_taskset.c
 dlb_taskset_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_taskset_LDADD = libdlb.la
+
+noinst_PROGRAMS = dlb_tester
+dlb_tester_SOURCES = src/utils/dlb_tester.c
+dlb_tester_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+dlb_tester_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS) $(OPENMP_CFLAGS)
+dlb_tester_LDADD = libdlb.la
 
 #################################################################################
 ### doc                                                                       ###
