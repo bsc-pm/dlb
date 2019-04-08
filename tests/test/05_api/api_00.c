@@ -115,7 +115,7 @@ int main( int argc, char **argv ) {
     assert( DLB_Finalize() == DLB_SUCCESS );
 
     // Change options to enable lewi
-    snprintf(options, 64, "--lewi --shm-key%s", SHMEM_KEY);
+    snprintf(options, 64, "--lewi --shm-key=%s", SHMEM_KEY);
 
     // Call DLB_PrintShmem with full node
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);

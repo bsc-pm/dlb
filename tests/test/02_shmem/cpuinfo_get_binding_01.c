@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "unique_shmem.h"
+
 #include "LB_comm/shmem_cpuinfo.h"
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
@@ -50,8 +52,8 @@ int main(int argc, char *argv[]) {
     CPU_SET(3, &p2_mask);
 
     // Init
-    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
 
     // Get initial rebindings (disordered calls should not matter)
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
@@ -124,8 +126,8 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
 
     // Finalize
-    assert( shmem_cpuinfo__finalize(p1_pid, NULL) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p2_pid, NULL) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
 
     return 0;
 }
