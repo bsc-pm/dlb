@@ -1,0 +1,22 @@
+README
+======
+
+This is a small example of DLB DROM module
+
+Compilation
+-----------
+Check the Makefile paths are correct and run `make`.
+
+Execution
+---------
+Simply run the binary 'drom_01', and use the 'dlb_taskset' command to modify
+the number of threds of the example progam. It is recommended to use two
+terminal windows to differentiate the output of each program.
+
+Example
+-------
+$ ./drom_01
+...
+# In another terminal
+$ dlb_taskset -l                # list shared memory info
+$ dlb_taskset -p <pid> -c 0,1   # Assign CPUs 0-1 to process <pid>

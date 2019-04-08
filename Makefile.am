@@ -379,6 +379,19 @@ dist_paravercfgs_DATA = $(paraver_cfgs)
 #********************************************************************************
 # Examples
 #********************************************************************************
+dromexamples_files = \
+	doc/examples/drom/drom_01.c \
+	doc/examples/drom/README \
+	$(END)
+
+dromexamples_files_nodist = \
+	doc/examples/drom/Makefile \
+	$(END)
+
+dromexamplesdir = $(docdir)/examples/DROM
+dist_dromexamples_DATA = $(dromexamples_files)
+nodist_dromexamples_DATA = $(dromexamples_files_nodist)
+
 mpiompexamples_files = \
 	doc/examples/mpi+omp/README \
 	doc/examples/mpi+omp/mpi_omp_pils.c \

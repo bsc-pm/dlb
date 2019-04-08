@@ -241,6 +241,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
     Makefile
     tests/Makefile
+    doc/examples/drom/Makefile
     doc/examples/mpi+omp/run.sh
     doc/examples/mpi+omp/Makefile
     doc/examples/mpi+ompss/run.sh
