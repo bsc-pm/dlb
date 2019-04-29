@@ -102,20 +102,47 @@ static void cb_thread_end(
 /*  OMPT start tool                                                              */
 /*********************************************************************************/
 
-static bool ompt_initialized = false;
+static bool dlb_initialized_through_ompt = false;
+static const char *omp_runtime_version;
 
 static inline int set_ompt_callback(ompt_set_callback_t set_callback_fn,
         ompt_callbacks_t event, ompt_callback_t callback) {
     int error = 1;
     switch (set_callback_fn(event, callback)) {
         case ompt_set_error:
-            verbose(VB_OMPT, "OMPT callback %d failed", event);
+            verbose(VB_OMPT, "OMPT set callback %d failed.", event);
             break;
         case ompt_set_never:
-            verbose(VB_OMPT, "OMPT callback %d registered but will never be called", event);
+            verbose(VB_OMPT, "OMPT set callback %d returned 'never'. The event was "
+                    "registered but it will never occur or the callback will never "
+                    "be invoked at runtime.", event);
+            break;
+        case ompt_set_impossible:
+            verbose(VB_OMPT, "OMPT set callback %d returned 'impossible'. The event "
+                    "may occur but the tracing of it is not possible.", event);
+            break;
+        case ompt_set_sometimes:
+            verbose(VB_OMPT, "OMPT set callback %d returned 'sometimes'. The event "
+                    "may occur and the callback will be invoked at runtime, but "
+                    "only for an implementation-defined subset of associated event "
+                    "occurrences.", event);
+            error = 0;
+            break;
+        case ompt_set_sometimes_paired:
+            verbose(VB_OMPT, "OMPT set callback %d returned 'sometimes paired'. "
+                    "The event may occur and the callback will be invoked at "
+                    "runtime, but only for an implementation-defined subset of "
+                    "associated event occurrences. If any callback is invoked "
+                    "with a begin_scope endpoint, it will be invoked also later "
+                    "with and end_scope endpoint.", event);
+            error = 0;
+            break;
+        case ompt_set_always:
+            error = 0;
             break;
         default:
-            error = 0;
+            fatal("Unsupported return code at set_ompt_callback, "
+                    "please file a bug report.");
     }
     return error;
 }
@@ -125,18 +152,43 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
     /* Parse options and get the required fields */
     options_t options;
     options_init(&options, NULL);
+    debug_init(&options);
     pid = options.preinit_pid ? options.preinit_pid : getpid();
 
-    /* Enable experimental OMPT only if requested */
+    /* Print OMPT version and variables*/
+    const char *omp_policy_str = getenv("OMP_WAIT_POLICY");
+    verbose(VB_OMPT, "Detected OpenMP runtime: %s", omp_runtime_version);
+    verbose(VB_OMPT, "Environment variables of interest:");
+    verbose(VB_OMPT, "  OMP_WAIT_POLICY: %s", omp_policy_str);
+    if (strncmp(omp_runtime_version, "Intel", 5) == 0) {
+        verbose(VB_OMPT, "  KMP_LIBRARY: %s", getenv("KMP_LIBRARY"));
+        verbose(VB_OMPT, "  KMP_BLOCKTIME: %s", getenv("KMP_BLOCKTIME"));
+    }
+    /* when GCC 10 is relased: else if "gomp", print GOMP_SPINCOUNT */
+
+    /* Emit warning if OMP_WAIT_POLICY is not "passive" */
+    if (!omp_policy_str || strcasecmp(omp_policy_str, "passive") != 0) {
+        warning("OMP_WAIT_POLICY value it not \"passive\". Even though the default "
+                "value may be \"passive\", setting it explicitly is recommended "
+                "since it modifies other runtime related environment variables");
+    }
+
+    verbose(VB_OMPT, "DLB with OMPT support is %s", options.ompt ? "ENABLED" : "DISABLED");
+
+    /* Enable OMPT only if requested */
     if (options.ompt) {
-        /* Initialize DLB only if ompt is enabled, otherwise DLB_Finalize won't be called */
+        /* Initialize DLB only if ompt is enabled, and
+         * remember if succeded to finalize it when ompt_finalize is invoked. */
         int err = DLB_Init(0, NULL, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_Init: %s", DLB_Strerror(err));
+        if (err == DLB_SUCCESS) {
+            dlb_initialized_through_ompt = true;
+        } else {
+            verbose(VB_OMPT, "DLB_Init: %s", DLB_Strerror(err));
         }
 
         verbose(VB_OMPT, "Initializing OMPT module");
 
+        /* Register OMPT callbacks */
         ompt_set_callback_t set_callback_fn =
             (ompt_set_callback_t)lookup("ompt_set_callback");
         if (set_callback_fn) {
@@ -151,27 +203,32 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
                     ompt_callback_parallel_end,   (ompt_callback_t)cb_parallel_end);
             err += set_ompt_callback(set_callback_fn,
                     ompt_callback_implicit_task,  (ompt_callback_t)cb_implicit_task);
-
-            if (!err) {
-                verbose(VB_OMPT, "OMPT callbacks succesfully registered");
-            }
-
-            omp_thread_manager__init(&options);
         } else {
+            err = 1;
             verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
         }
 
-        ompt_initialized = true;
+        /* If callbacks are successfully registered, initialize thread manager
+         * and return a non-zero value to activate the tool */
+        if (!err) {
+            verbose(VB_OMPT, "OMPT callbacks succesfully registered");
+            omp_thread_manager__init(&options);
+            return 1;
+        }
 
-        // return a non-zero value to activate the tool
-        return 1;
+        /* Otherwise, finalize DLB if init succeeded */
+        if (dlb_initialized_through_ompt) {
+            DLB_Finalize();
+        }
+
+        warning("DLB could not register itself as OpenMP tool");
     }
 
     return 0;
 }
 
 static void ompt_finalize(ompt_data_t *tool_data) {
-    if (ompt_initialized) {
+    if (dlb_initialized_through_ompt) {
         verbose(VB_OMPT, "Finalizing OMPT module");
         omp_thread_manager__finalize();
         DLB_Finalize();
@@ -181,6 +238,7 @@ static void ompt_finalize(ompt_data_t *tool_data) {
 
 #pragma GCC visibility push(default)
 ompt_start_tool_result_t* ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
+    omp_runtime_version = runtime_version;
     static ompt_start_tool_result_t ompt_start_tool_result = {
         .initialize = ompt_initialize,
         .finalize   = ompt_finalize,
