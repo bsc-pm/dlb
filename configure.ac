@@ -76,10 +76,11 @@ AC_SUBST([DEB_RELEASE])
 # Checks for programs
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
+AC_PROG_CPP
+
+##### C Compiler checks #####
 AC_PROG_CC([$CC])
 AM_PROG_CC_C_O
-AC_PROG_CPP
-AC_PROG_FC
 
 # use the C compiler for the following checks
 AC_LANG([C])
@@ -106,15 +107,23 @@ AC_CHECK_HEADERS([execinfo.h])
 # restore CFLAGS
 AX_VAR_POPVALUE([CFLAGS])
 
-# use the Fortran compiler for the following checks
-AC_LANG_PUSH([Fortran])
-AX_CHECK_COMPILE_FLAG([-pthread], [AC_FFLAGS="${AC_FFLAGS} -pthread"])
-AS_IF([test "x$developer_version" = xyes], [
-    AX_CHECK_COMPILE_FLAG([-Wall], [AC_FFLAGS="${AC_FFLAGS} -Wall"])
-    AX_CHECK_COMPILE_FLAG([-Werror], [AC_FFLAGS="${AC_FFLAGS} -Werror"])
-])
-AC_LANG_POP([Fortran])
+##### Fortran Compiler checks #####
+AC_PROG_FC
 
+# Disable Fortran tests if FC is not found
+AS_IF([test "x$FC" = x], [
+    AC_MSG_WARN([Fortran compiler was not found, disabling Fortran tests.])
+], [
+    # use the Fortran compiler for the following checks
+    AC_LANG_PUSH([Fortran])
+    AX_CHECK_COMPILE_FLAG([-pthread], [AC_FFLAGS="${AC_FFLAGS} -pthread"])
+    AS_IF([test "x$developer_version" = xyes], [
+        AX_CHECK_COMPILE_FLAG([-Wall], [AC_FFLAGS="${AC_FFLAGS} -Wall"])
+        AX_CHECK_COMPILE_FLAG([-Werror], [AC_FFLAGS="${AC_FFLAGS} -Werror"])
+    ])
+    AC_LANG_POP([Fortran])
+])
+AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
 
 
 ################################################################################
@@ -252,6 +261,7 @@ AC_CONFIG_FILES([
     doc/doxygen/Doxyfile_man
 ])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
+AC_CONFIG_FILES([tests/gens/fortran-generator], [chmod +x tests/gens/fortran-generator])
 AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 
 

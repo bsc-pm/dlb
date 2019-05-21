@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CC="@CC@"
+FC="@FC@"
 VERSIONS="@TEST_VERSIONS@"
 SRCDIR="@abs_top_srcdir@"
 BLDDIR="@abs_top_builddir@"
@@ -11,23 +11,26 @@ CPPFLAGS="-I$SRCDIR/tests/test -I$SRCDIR/src -I$SRCDIR/src/apis -I$SRCDIR/src/LB
 PERFO_CPPFLAGS="$CPPFLAGS @PERFO_CPPFLAGS@"
 DEBUG_CPPFLAGS="$CPPFLAGS @DEBUG_CPPFLAGS@"
 
-PERFO_CFLAGS="@PERFO_CFLAGS@ @AC_CFLAGS@ -include perish.h"
-DEBUG_CFLAGS="@DEBUG_CFLAGS@ @AC_CFLAGS@ -include perish.h"
+PERFO_FFLAGS="$PERFO_CPPFLAGS @PERFO_FFLAGS@ @AC_FFLAGS@"
+DEBUG_FFLAGS="$DEBUG_CPPFLAGS @DEBUG_FFLAGS@ @AC_FFLAGS@"
 
 @HAVE_HWLOC_TRUE@ HWLOC_LDFLAGS="@HWLOC_LDFLAGS@ -Wl,-rpath,@HWLOC_LIBDIR@ -Wl,-enable-new-dtags"
 PERFO_LDFLAGS="$BLDDIR/.libs/libdlb.a $HWLOC_LDFLAGS -lrt @AC_LDFLAGS@"
 DEBUG_LDFLAGS="$BLDDIR/.libs/libdlb_dbg.a $HWLOC_LDFLAGS -lrt @AC_LDFLAGS@"
 
+@HAVE_FORTRAN_FALSE@ TEST_IGNORE=yes
+
 cat << EOF
 compile_versions="$VERSIONS"
 
-test_CC="$CC"
+test_FC="$FC"
 test_CPPFLAGS_performance="$PERFO_CPPFLAGS"
 test_CPPFLAGS_debug="$DEBUG_CPPFLAGS"
-test_CFLAGS_performance="$PERFO_CFLAGS"
-test_CFLAGS_debug="$DEBUG_CFLAGS"
+test_FFLAGS_performance="$PERFO_FFLAGS"
+test_FFLAGS_debug="$DEBUG_FFLAGS"
 test_LDFLAGS_performance="$PERFO_LDFLAGS"
 test_LDFLAGS_debug="$DEBUG_LDFLAGS"
+test_ignore=$TEST_IGNORE
 
 $($SRCDIR/tests/gens/config.py "$@")
 EOF

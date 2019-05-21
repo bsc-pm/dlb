@@ -18,7 +18,7 @@
 !-------------------------------------------------------------------------------!
 
 !<testinfo>
-!   test_generator="gens/basic-generator"
+!   test_generator="gens/fortran-generator"
 !</testinfo>
 
 program test
