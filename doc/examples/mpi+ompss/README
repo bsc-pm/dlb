@@ -5,15 +5,17 @@ This is a small example of an MPI+OmpSs application running optionally with DLB.
 
 Compilation
 -----------
-Check the Makefile paths are correct and run `make`. The Makefile assumes you have
-Mercurium drivers in your PATH.
+Check that the Makefile paths are correct and run `make`. The Makefile assumes you
+have the Mercurium drivers in your PATH.
 
 Execution
 ---------
-Ideally, executing 'run.sh' script should be enough. Though, depending on your MPI
+Ideally, executing the script 'run.sh' should be enough. Although depending on your MPI
 implementation, you may need to add or modify some specific mpirun flags for either
-set the LD_PRELOAD variable or to correctly set the binding for all processes. Note
-that DLB will fail if some process share CPU ownership with another one.
+setting the LD_PRELOAD variable or to correctly bind processes to CPUs. Note
+that DLB will fail if some process share CPU ownership with another one. Modify
+accordingly the variable MPIEXEC_BIND_FLAG in order to bind each process to as
+many CPUs as desired.
 
 You can change the values of DLB and TRACE variables to modify the script behaviour.
 By default both options are set to 0, which means that the example program will run

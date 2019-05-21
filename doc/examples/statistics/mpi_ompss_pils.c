@@ -58,7 +58,7 @@ double LoadUnbalance(int loads[], int how_many) {
         sum+=loads[i];
         max=MAX(max, loads[i]);
     }
-    return sum / (how_many*max);
+    return (double)sum / (how_many*max);
 }
 
 #pragma omp task

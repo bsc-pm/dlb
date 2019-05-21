@@ -27,7 +27,7 @@
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 const int DEF_LOADS_SIZE = 2;
-const int default_loads[] = {100, 250};
+const int default_loads[] = {1000, 2500};
 
 int computation (int num, int usec) {
     float a=0.99999f;
@@ -57,7 +57,7 @@ double LoadUnbalance(int loads[], int how_many) {
         sum+=loads[i];
         max=MAX(max, loads[i]);
     }
-    return sum / (how_many*max);
+    return (double)sum / (how_many*max);
 }
 
 void iter(double * app_time, int *fib, int usec) {

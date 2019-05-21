@@ -21,7 +21,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <DLB_interface.h>
+#include <dlb.h>
+#include <dlb_stats.h>
 
 int main( int argc, char **argv )
 {
@@ -30,13 +31,17 @@ int main( int argc, char **argv )
         return EXIT_FAILURE;
     }
     int pid = atoi( argv[1] );
+    int error;
+    double usage;
 
     DLB_Stats_Init();
 
     // while process exists
     while( !kill(pid, 0) ) {
+        error = DLB_Stats_GetCpuUsage(pid, &usage);
+        if (error != DLB_SUCCESS) break;
         fprintf( stdout, "\n\033[F\033[J" );
-        fprintf( stdout, "%d, Cpu Usage: %g", pid, DLB_Stats_GetCpuUsage(pid) );
+        fprintf( stdout, "%d, Cpu Usage: %g", pid, usage );
         usleep( 500000 );
     }
 

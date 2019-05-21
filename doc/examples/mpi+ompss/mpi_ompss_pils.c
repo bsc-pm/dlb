@@ -25,10 +25,8 @@
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-
 const int DEF_LOADS_SIZE = 2;
-const int default_loads[] = {100, 250};
+const int default_loads[] = {1000, 2500};
 
 int computation (int num, int usec) {
     float a=0.99999f;
@@ -58,7 +56,7 @@ double LoadUnbalance(int loads[], int how_many) {
         sum+=loads[i];
         max=MAX(max, loads[i]);
     }
-    return sum / (how_many*max);
+    return (double)sum / (how_many*max);
 }
 
 #pragma omp task

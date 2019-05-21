@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <DLB_interface.h>
+#include <dlb_stats.h>
 
 #define ARRAY_SIZE 64
 
