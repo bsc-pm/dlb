@@ -255,6 +255,7 @@ AC_CONFIG_FILES([
     doc/examples/mpi+omp/Makefile
     doc/examples/mpi+ompss/run.sh
     doc/examples/mpi+ompss/Makefile
+    doc/examples/ompt/Makefile
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
     doc/doxygen/Doxyfile

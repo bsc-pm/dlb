@@ -1,0 +1,38 @@
+README
+======
+
+This is a simple test to check whether DLB can register as an OpenMP Tool for
+the current OpenMP runtime.
+
+
+Compilation
+-----------
+Check that the Makefile paths are correct and run `make`.
+
+Execution
+---------
+Simply run the `run.sh` script and notice whether DLB can or cannot be
+registered as an OpenMP Tool. If DLB is successfully registered, you will see
+some version information about the OpenMP runtime and other verbose messages
+from DLB.  Otherwise, the program will report that it did not succeed.
+
+Notice that the Makefile is configured to use the C compiler detected during
+the DLB installation, but you do not need to compile your applications with the
+same compiler.  At the time of writing, GCC's libgomp still does not support
+OMPT so you may need to change to Intel or Clang compilers in order to use an
+OMPT capable OpenMP runtime library.
+
+Example
+-------
+$ make CC=gcc
+$ ./run.sh
+...
+DLB has not been initialized through OpenMP.
+...
+
+-------
+$ make CC=clang
+$ ./run.sh
+...
+DLB has correctly been registered as an OpenMP Tool.
+...

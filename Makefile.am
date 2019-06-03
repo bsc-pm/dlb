@@ -379,6 +379,7 @@ dist_paravercfgs_DATA = $(paraver_cfgs)
 #********************************************************************************
 # Examples
 #********************************************************************************
+### DROM ###
 dromexamples_files = \
 	doc/examples/drom/drom_01.c \
 	doc/examples/drom/README \
@@ -392,6 +393,7 @@ dromexamplesdir = $(docdir)/examples/DROM
 dist_dromexamples_DATA = $(dromexamples_files)
 nodist_dromexamples_DATA = $(dromexamples_files_nodist)
 
+### MPI+OMP ###
 mpiompexamples_files = \
 	doc/examples/mpi+omp/README \
 	doc/examples/mpi+omp/mpi_omp_pils.c \
@@ -407,6 +409,7 @@ mpiompexamplesdir = $(docdir)/examples/MPI+OMP
 dist_mpiompexamples_DATA = $(mpiompexamples_files)
 nodist_mpiompexamples_DATA = $(mpiompexamples_files_nodist)
 
+### MPI+OmpSs ###
 mpiompssexamples_files = \
 	doc/examples/mpi+ompss/README \
 	doc/examples/mpi+ompss/Makefile \
@@ -418,6 +421,22 @@ mpiompssexamples_files = \
 mpiompssexamplesdir = $(docdir)/examples/MPI+OmpSs
 dist_mpiompssexamples_DATA = $(mpiompssexamples_files)
 
+### OMPT ###
+omptexamples_files = \
+	doc/examples/ompt/app.c \
+	doc/examples/ompt/run.sh \
+	doc/examples/ompt/README \
+	$(END)
+
+omptexamples_files_nodist = \
+	doc/examples/ompt/Makefile \
+	$(END)
+
+omptexamplesdir = $(docdir)/examples/OMPT
+dist_omptexamples_DATA = $(omptexamples_files)
+nodist_omptexamples_DATA = $(omptexamples_files_nodist)
+
+### statistics ###
 statsexamples_files = \
 	doc/examples/statistics/README \
 	doc/examples/statistics/get_cpu_usage.c \
@@ -688,6 +707,7 @@ clean-local: clean-rpm clean-deb clean-doc
 install-data-hook:
 	chmod +x $(mpiompexamplesdir)/run.sh
 	chmod +x $(mpiompssexamplesdir)/run.sh
+	chmod +x $(omptexamplesdir)/run.sh
 	chmod +x $(statsexamplesdir)/run.sh
 
 dist-hook:
