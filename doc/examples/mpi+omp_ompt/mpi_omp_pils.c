@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
             tope=MIN(steps, i+BS);
 
             int j;
-            #pragma omp parallel for private(j) reduction(+:iter_time) private(fib)
+            #pragma omp parallel for private(j) reduction(+:iter_time) shared(fib)
             for(j=i; j<tope; j++){
                 iter(&iter_time, &fib, usec);
             }
