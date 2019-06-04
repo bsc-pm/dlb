@@ -5,7 +5,7 @@ This is a small example of DLB Statistics module
 
 Compilation
 -----------
-Check the Makefile paths are correct and run `make`. The Makefile assumes you have
+Check that the Makefile paths are correct and run `make`. The Makefile assumes you have
 Mercurium drivers in your PATH.
 
 Execution

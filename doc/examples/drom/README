@@ -5,12 +5,12 @@ This is a small example of DLB DROM module
 
 Compilation
 -----------
-Check the Makefile paths are correct and run `make`.
+Check that the Makefile paths are correct and run `make`.
 
 Execution
 ---------
-Simply run the binary 'drom_01', and use the 'dlb_taskset' command to modify
-the number of threds of the example progam. It is recommended to use two
+Simply run the binary 'drom_01' and use the 'dlb_taskset' command to modify
+the number of threads of the application. It is recommended to use two
 terminal windows to differentiate the output of each program.
 
 Example

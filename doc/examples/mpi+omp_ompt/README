@@ -1,0 +1,35 @@
+README
+======
+
+This is a small example of an MPI+OMP application running with DLB and OMPT support.
+
+Compilation
+-----------
+Check that the Makefile paths are correct and run `make`. Also, check that the
+example is linked to a OMPT compatible OpenMP runtime library. If the MPI C compiler
+wrapper is gcc by default, you will probably need to switch to ICC or Clang. Check
+your MPI implementation instructions to change the native C compiler.
+
+Execution
+---------
+Ideally, executing the script 'run.sh' should be enough. Although depending on your MPI
+implementation, you may need to add or modify some specific mpirun flags for either
+setting the LD_PRELOAD variable or to correctly bind processes to CPUs. Note
+that DLB will fail if some process share CPU ownership with another one. Modify
+accordingly the variable MPIEXEC_BIND_FLAG in order to bind each process to as
+many CPUs as desired.
+
+You can change the values of DLB and TRACE variables to modify the script behaviour.
+By default both options are set to 0, which means that the example program will run
+without DLB nor tracing capabilities. Setting DLB to 1 should enable DLB to perform
+some basic balancing techniques. And setting TRACE to 1 will enable the tracing
+through the EXTRAE tracing library. The TRACE options assumes that you have EXTRAE
+correctly installed, and your environment variable EXTRAE_HOME points to that path.
+This option will generate a tracefile.prv which can be opened using the PARAVER
+application.
+
+References
+----------
+If you don't know about EXTRAE and PARAVER and want to test the tracing capabilities
+of the example program you can download the sources and pre-built binaries at:
+* https://tools.bsc.es/downloads

@@ -409,6 +409,22 @@ mpiompexamplesdir = $(docdir)/examples/MPI+OMP
 dist_mpiompexamples_DATA = $(mpiompexamples_files)
 nodist_mpiompexamples_DATA = $(mpiompexamples_files_nodist)
 
+### MPI+OMP (OMPT)  ###
+mpiompomptexamples_files = \
+	doc/examples/mpi+omp_ompt/README \
+	doc/examples/mpi+omp_ompt/mpi_omp_pils.c \
+	doc/examples/mpi+omp_ompt/extrae.xml \
+	$(END)
+
+mpiompomptexamples_files_nodist = \
+	doc/examples/mpi+omp_ompt/Makefile \
+	doc/examples/mpi+omp_ompt/run.sh \
+	$(END)
+
+mpiompomptexamplesdir = $(docdir)/examples/MPI+OMP_OMPT
+dist_mpiompomptexamples_DATA = $(mpiompomptexamples_files)
+nodist_mpiompomptexamples_DATA = $(mpiompomptexamples_files_nodist)
+
 ### MPI+OmpSs ###
 mpiompssexamples_files = \
 	doc/examples/mpi+ompss/README \
@@ -706,6 +722,7 @@ clean-local: clean-rpm clean-deb clean-doc
 
 install-data-hook:
 	chmod +x $(mpiompexamplesdir)/run.sh
+	chmod +x $(mpiompomptexamplesdir)/run.sh
 	chmod +x $(mpiompssexamplesdir)/run.sh
 	chmod +x $(omptexamplesdir)/run.sh
 	chmod +x $(statsexamplesdir)/run.sh
