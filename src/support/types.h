@@ -84,6 +84,9 @@ typedef enum OMPTOptions {
     OMPT_OPTS_LEND      = 1 << 2
 } ompt_opts_t;
 
+static inline int min_int(int a, int b) { return a < b ? a : b; }
+static inline int max_int(int a, int b) { return a > b ? a : b; }
+
 int parse_bool(const char *str, bool *value);
 int parse_int(const char *str, int *value);
 

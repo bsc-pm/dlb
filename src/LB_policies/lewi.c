@@ -27,6 +27,7 @@
 #include "support/mask_utils.h"
 #include "support/options.h"
 #include "support/debug.h"
+#include "support/types.h"
 
 #include <sched.h>
 #include <limits.h>
@@ -38,7 +39,6 @@ static int enabled = 0;
 static int single = 0;
 static int max_parallelism = 0;
 static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads);
-static int min(int a, int b) { return a < b ? a : b; }
 
 /******* Main Functions LeWI Balancing Policy ********/
 
@@ -163,7 +163,7 @@ int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     int error = DLB_NOUPDT;
     if (enabled && !single) {
         int max_resources = max_parallelism > 0 ?
-            min(maxResources, max_parallelism - myCPUS) : maxResources;
+            min_int(maxResources, max_parallelism - myCPUS) : maxResources;
         int cpus = checkIdleCpus(myCPUS, max_resources);
         if (myCPUS!=cpus) {
             verbose(VB_MICROLB, "Using %d cpus", cpus);

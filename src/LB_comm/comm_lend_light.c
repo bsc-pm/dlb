@@ -22,10 +22,9 @@
 #include "LB_comm/shmem.h"
 #include "support/tracing.h"
 #include "support/debug.h"
+#include "support/types.h"
 
 #include <stdlib.h>
-
-#define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
 int defaultCPUS;
 int greedy;
@@ -108,7 +107,7 @@ int checkIdleCpus(int myCpus, int maxResources) {
     //if more CPUS than the availables are used release some
     if ((shdata->idleCpus < 0) && (myCpus>defaultCPUS) ) {
         aux=shdata->idleCpus;
-        cpus=MIN(abs(aux), myCpus-defaultCPUS);
+        cpus=min_int(abs(aux), myCpus-defaultCPUS);
         if(__sync_bool_compare_and_swap(&(shdata->idleCpus), aux, aux+cpus)) {
             myCpus-=cpus;
         }
