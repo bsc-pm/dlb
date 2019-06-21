@@ -89,6 +89,14 @@ void omp_thread_manager__finalize(void) {
 }
 
 void omp_thread_manager__borrow(void) {
+    /* The "Exponential Weighted Moving Average" is an average computed
+     * with weighting factors that decrease exponentially on new samples.
+     * I.e,: Most recent values are more significant for the average */
+    typedef struct ExponentialWeightedMovingAverage {
+        float value;
+        unsigned int samples;
+    } ewma_t;
+    static ewma_t ewma = {1.0f, 1};
     static int cpus_to_borrow = 1;
 
     if (lewi && ompt_opts & OMPT_OPTS_BORROW) {
@@ -103,11 +111,16 @@ void omp_thread_manager__borrow(void) {
         }
 
         if (err_borrow == DLB_SUCCESS) {
-            ++cpus_to_borrow;
+            cpus_to_borrow += ewma.value;
         } else {
-            cpus_to_borrow = 1;
+            cpus_to_borrow -= ewma.value;
+            cpus_to_borrow = max_int(1, cpus_to_borrow);
         }
 
+        /* Update Exponential Weighted Moving Average */
+        ++ewma.samples;
+        float alpha = 2.0f / (ewma.samples + 1);
+        ewma.value = ewma.value + alpha * (cpus_to_borrow - ewma.value);
     }
 }
 
