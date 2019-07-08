@@ -1,6 +1,6 @@
 # Dynamic Load Balancing Library
 
-DLB is a dynamic library designed to speed up HPC hybrid applications (i.e.,
+[DLB][] is a dynamic library designed to speed up HPC hybrid applications (i.e.,
 two levels of parallelism) by improving the load balance of the outer level of
 parallelism (e.g., MPI) by dynamically redistributing the computational
 resources at the inner level of parallelism (e.g., OpenMP). at run time.
@@ -22,11 +22,13 @@ OpenMP).
 ## Installation
 
 1. Build requirements
-    * A supported platform running Linux (i386, x86-64, ARM, PowerPC or IA64)
-    * GNU C/C++ compiler versions 4.4 or higher
+    * A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC or IA64)
+    * C compiler
     * Python 2.4 or higher
-2. Download DLB code
-    1. From a git repository
+    * GNU Autotools, only needed if you want to build from the repository.
+2. Download the DLB source code:
+    1. Either from our website: [DLB Downloads][].
+    2. Or from a git repository
         * Clone DLB repository
             * From GitHub:
 
@@ -38,21 +40,22 @@ OpenMP).
                 ```bash
                 git clone https://pm.bsc.es/gitlab/dlb/dlb.git
                 ```
+        * Or download from [GitHub releases][]
         * Bootstrap autotools:
 
             ```bash
             cd dlb
             ./bootstrap
             ```
-    2. From a distributed tarball
-        * Download a tarball from [DLB Downloads][] or [GitHub releases][]
 3. Run `configure`. Optionally, check the configure flags by running
     `./configure -h` to see detailed information about some features.
+    MPI support must be enabled with ``--with-mpi`` and, optionally,
+    an argument telling where MPI can be located.
 
     ```bash
     ./configure --prefix=<DLB_PREFIX> [<configure-flags>]
     ```
-4. Build ans install
+4. Build and install
 
     ```bash
     make
@@ -69,28 +72,51 @@ please refer to [INSTALL](INSTALL)
 
 ## Basic usage
 
-Simply link or preload a binary with the DLB shared library `libdlb.so` and
-configure DLB using the environment variable `DLB_ARGS`.
+Choose bewteen linking or preloading the binary with the DLB shared library
+`libdlb.so` and configure DLB using the environment variable `DLB_ARGS`.
 
-```bash
-# Link application
-mpicc -o myapp myapp.c -L<DLB_PREFIX>/lib -ldlb -Wl,-rpath,<DLB_PREFIX>/lib
+1. **Example 1:** Share CPUs between MPI processes
 
-# Launch two processes sharing resources
-export DLB_ARGS="--lewi"
-mpirun -n 2 ./myapp
-```
+    ```bash
+    # Link application with DLB
+    mpicc -o myapp myapp.c -L<DLB_PREFIX>/lib -ldlb -Wl,-rpath,<DLB_PREFIX>/lib
 
-```bash
-# Launch an application preloading DLB
-export OMP_NUM_THREADS=4
-export LD_PRELOAD=<DLB_PREFIX>/lib/libdlb.so
-taskset -c 0-3 ./myapp &
+    # Launch MPI as usual, each process will dynamically adjust the number of threads
+    export DLB_ARGS="--lewi"
+    mpirun -n <np> ./myapp
+    ```
 
-# Reduce CPU binding to [1,3] and threads to 2
-myapp_pid=$!
-dlb_taskset -p $myapp_pid -c 1,3
-```
+2. **Example 2:** Share CPUs between MPI processes with advanced affinity
+control through OMPT.
+
+    ```bash
+    # Link application with an OMPT capable OpenMP runtime
+    OMPI_CC=clang mpicc -o myapp myapp.c -fopenmp
+
+    # Launch application:
+    #   * Set environment variables
+    #   * DLB library is preloaded
+    #   * Run application with binary dlb_run
+    export DLB_ARGS="--lewi --ompt"
+    export OMP_WAIT_POLICY="passive"
+    preload="<DLB_PREFIX>/lib/libdlb.so"
+    mpirun -n <np> <DLB_PREFIX>/bin/dlb_run env LD_PRELOAD="$preload" ./myapp
+    ```
+
+3. **Example 3:** Manually reduce assigned CPUs to an OpenMP process.
+
+    ```bash
+    # Launch an application preloading DLB
+    export OMP_NUM_THREADS=4
+    export DLB_ARGS="--drom"
+    export LD_PRELOAD=<DLB_PREFIX>/lib/libdlb.so
+    taskset -c 0-3 ./myapp &
+
+    # Reduce CPU binding to [1,3] and threads to 2
+    myapp_pid=$!
+    dlb_taskset -p $myapp_pid -c 1,3
+    ```
+
 
 #### User Guide
 Please refer to our [DLB User Guide][] for a more complete documentation.
@@ -112,6 +138,7 @@ at International Conference in Parallel Processing 2009, ICPP09.
 For questions, suggestions and bug reports, you can contact us via e-mail
 at pm-tools@bsc.es.
 
+[DLB]: https://pm.bsc.es/dlb
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
 [GitHub releases]: https://github.com/bsc-pm/dlb/releases
 [DLB User Guide]: https://pm.bsc.es/ftp/dlb/doc/user-guide/index.html
