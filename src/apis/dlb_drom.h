@@ -91,7 +91,7 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *  \return DLB_ERR_PDIRTY if target pid already has a pending operation
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
- *  \return error code
+ *  \return DLB_ERR_PERM if the provided mask could not be stolen
  *
  *  Accepted flags for this function:\n
  *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
