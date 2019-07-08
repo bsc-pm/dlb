@@ -48,8 +48,9 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     int error = DLB_SUCCESS;
 
-    // Initialize common modules (instrumentation module ASAP)
+    // Initialize common modules (spd->id and instrumentation module ASAP)
     options_init(&spd->options, lb_args);
+    spd->id = spd->options.preinit_pid ? spd->options.preinit_pid : id;
     init_tracing(&spd->options);
     add_event(RUNTIME_EVENT, EVENT_INIT);
     debug_init(&spd->options);
@@ -69,7 +70,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
-    spd->id = spd->options.preinit_pid ? spd->options.preinit_pid : id;
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
