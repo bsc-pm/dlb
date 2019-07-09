@@ -7,6 +7,7 @@ MPIEXEC=@MPIEXEC@
 # variables to be modified by the user
 TRACE=0
 DLB=0
+LEWI_MPI=0
 NUMTHREADS=2
 MPIEXEC_BIND_FLAG=""
 
@@ -24,6 +25,14 @@ if [[ $DLB == 1 ]] ; then
     export DLB_ARGS+=" --lewi --ompt --lewi-ompt=mpi:borrow"
     export OMP_WAIT_POLICY=passive
     export KMP_BLOCKTIME=0
+
+    # Advanced: use --lewi-mpi
+    if [[ $LEWI_MPI == 1 ]] ; then
+        if [[ $TRACE == 1 ]] ; then
+            TRACENAME="pils_dlb_lewi_mpi.prv"
+        fi
+        export DLB_ARGS+=" --lewi-mpi"
+    fi
 else
     if [[ $TRACE == 1 ]] ; then
         TRACENAME="pils.prv"

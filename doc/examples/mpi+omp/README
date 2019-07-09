@@ -1,7 +1,14 @@
 README
 ======
 
-This is a small example of an MPI+OMP application running optionally with DLB.
+This is a small example of an MPI+OMP application that can run with
+with DLB and the LeWI module.
+
+The application has been modified to invoke a `DLB_Borrow` just before
+the parallel construct to try to borrow as many CPUs as possible before
+creating the OpenMP parallel region. Functions `DLB_Init` and `DLB_Finalize`
+can be omitted because DLB can intercept the MPI calls and initialize
+and finalize at the same time as MPI.
 
 Compilation
 -----------
@@ -9,12 +16,15 @@ Check that the Makefile paths are correct and run `make`.
 
 Execution
 ---------
-Ideally, executing the script 'run.sh' should be enough. Although depending on your MPI
-implementation, you may need to add or modify some specific mpirun flags for either
-setting the LD_PRELOAD variable or to correctly bind processes to CPUs. This
-example runs DLB without mask support, so make sure that each MPI is running without
-CPU binding. Modify the variable MPIEXEC_NOBIND_FLAG if needed. Some common flags are
-'--bind-to none' for OpenMPI or '-binding none' for Intel MPI.
+* Edit the script 'run.sh'
+    * Check that the variables detected at configure time are correct
+    * Review the variables to be modified by the user and change them as you like
+    * Make sure that either the variable MPIEXEC_NOBIND_FLAG is set or that
+      the mpiexec command **does not** bind processes by default. This example must run
+      with all the MPI processes sharing the same mask subset. See Annex for more info.
+
+* Run the script 'run.sh
+* Review the results
 
 You can change the values of DLB and TRACE variables to modify the script behaviour.
 By default both options are set to 0, which means that the example program will run
@@ -25,8 +35,34 @@ correctly installed, and your environment variable EXTRAE_HOME points to that pa
 This option will generate a tracefile.prv which can be opened using the PARAVER
 application.
 
+If you find that the executions with DLB perform better than the original, you can
+try to even get more performance by setting the variable LEWI_MPI to 1. This variable
+will enable the option '--lewi-mpi'. Whith this option, the most loaded process will
+have another thread for using when the other process is inside an MPI blocking call.
+
+
 References
 ----------
 If you don't know about EXTRAE and PARAVER and want to test the tracing capabilities
 of the example program you can download the sources and pre-built binaries at:
 * https://tools.bsc.es/downloads
+
+
+Annex: check MPI binding support
+--------------------------------
+DLB cannot manage the thread affinity on new threads created in OpenMP. For this
+reason, this example must be run with all processes sharing the same affinity mask.
+Otherwise, the new threads would run on the same CPUs that other threads of the same
+process and would probably cause a performance drop.
+
+If your are not sure how to run MPI without process binding try the following commands:
+
+$ mpirun -n 2 dlb --affinity                    # check default behaviour
+$ mpirun -n 2 --bind-to none dlb --affinity     # OpenMPI specific flag
+$ mpirun -n 2 -binding none dlb --affinity      # Intel MPI scpecific flag
+
+And figure which flag gives you an output where both processes have the same process
+affinity. Then, put that flag in the MPIEXEC_NOBIND_FLAG variable.
+
+If none of these flags work for you, check the documentation of the MPI implementation
+that you are using.

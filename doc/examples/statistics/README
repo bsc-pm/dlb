@@ -1,12 +1,14 @@
 README
 ======
 
+NOTE: The module 'statistics' is currently deprecated and not supported.
+
 This is a small example of DLB Statistics module
 
 Compilation
 -----------
-Check that the Makefile paths are correct and run `make`. The Makefile assumes you have
-Mercurium drivers in your PATH.
+Check that the Makefile paths are correct and run `make`. The Makefile assumes you
+have the Mercurium binaries directory in your PATH.
 
 Execution
 ---------

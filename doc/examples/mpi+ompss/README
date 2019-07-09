@@ -1,21 +1,29 @@
 README
 ======
 
-This is a small example of an MPI+OmpSs application running optionally with DLB.
+This is a small example of an MPI+OmpSs application that can run with
+with DLB and the LeWI module.
+
+The application has not been modified. Nanos++, the OmpSs runtime, has
+native support with DLB and will invoke all DLB functions when needed.
 
 Compilation
 -----------
 Check that the Makefile paths are correct and run `make`. The Makefile assumes you
-have the Mercurium drivers in your PATH.
+have the Mercurium binaries directory in your PATH.
 
 Execution
 ---------
-Ideally, executing the script 'run.sh' should be enough. Although depending on your MPI
-implementation, you may need to add or modify some specific mpirun flags for either
-setting the LD_PRELOAD variable or to correctly bind processes to CPUs. Note
-that DLB will fail if some process share CPU ownership with another one. Modify
-accordingly the variable MPIEXEC_BIND_FLAG in order to bind each process to as
-many CPUs as desired.
+* Edit the script 'run.sh'
+    * Check that the variables detected at configure time are correct
+    * Review the variables to be modified by the user and change them as you like
+    * Make sure that either the variable MPIEXEC_BIND_FLAG is set or that
+      the mpiexec command binds processes by default. This example must run
+      with all the MPI processes pinned to a non-overlapping subset of CPUs.
+      See Annex for more info.
+
+* Run the script 'run.sh
+* Review the results
 
 You can change the values of DLB and TRACE variables to modify the script behaviour.
 By default both options are set to 0, which means that the example program will run
@@ -26,8 +34,32 @@ correctly installed, and your environment variable EXTRAE_HOME points to that pa
 This option will generate a tracefile.prv which can be opened using the PARAVER
 application.
 
+If you find that the executions with DLB perform better than the original, you can
+try to even get more performance by setting the variable LEWI_MPI to 1. This variable
+will enable the option '--lewi-mpi'. Whith this option, the most loaded process will
+have another thread for using when the other process is inside an MPI blocking call.
+
+
 References
 ----------
 If you don't know about EXTRAE and PARAVER and want to test the tracing capabilities
 of the example program you can download the sources and pre-built binaries at:
 * https://tools.bsc.es/downloads
+
+
+Annex: check MPI binding support
+--------------------------------
+DLB will manage exactly which CPUs must be used for each process running with OmpSs.
+For this reason, in this example all processes must start the executionwith a disjoint
+set of CPUs.
+
+If your are not sure how to run MPI with binding enabled try the following commands:
+
+$ mpirun -n 2 dlb --affinity                    # check default behaviour
+$ mpirun -n 2 --bind-to core dlb --affinity     # OpenMPI specific flag
+
+And figure which flag gives you an output where both processes do not share any
+CPU. hen, put that flag in the MPIEXEC_BIND_FLAG variable.
+
+If none of the above works for you, check the documentation of the MPI implementation
+that you are using.

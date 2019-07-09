@@ -1,7 +1,7 @@
 README
 ======
 
-This is a small example of DLB DROM module
+This is a small example of the DLB DROM module.
 
 Compilation
 -----------
@@ -13,10 +13,28 @@ Simply run the binary 'drom_01' and use the 'dlb_taskset' command to modify
 the number of threads of the application. It is recommended to use two
 terminal windows to differentiate the output of each program.
 
-Example
--------
+You can also play with two or more processes at the same time, but remember
+that the new process need some available CPUs. Remove some CPUs from the
+other processes or run with 'dlb_taskset' to let DLB manage the CPU stealing.
+
+Example (one process)
+---------------------
 $ ./drom_01
 ...
 # In another terminal
 $ dlb_taskset -l                # list shared memory info
 $ dlb_taskset -p <pid> -c 0,1   # Assign CPUs 0-1 to process <pid>
+
+Example (many processes)
+------------------------
+$ ./drom_01                     # Inital mask: 0-7
+...
+# Manually remove CPUs 4-7 and start another process
+$ dlb_taskset -r 4-7
+$ taskset -c 4-7 ./drom_01
+...
+# Start another process using dlb_taskset and let DLB manage the CPU stealing
+$ dlb_taskset -c 3,7 ./drom_01
+...
+# List shared memory
+$ dlb_taskset -l

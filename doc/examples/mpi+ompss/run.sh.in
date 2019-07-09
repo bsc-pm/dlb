@@ -7,26 +7,38 @@ MPIEXEC_EXPORT_FLAG=@MPIEXEC_EXPORT_FLAG@
 # variables to be modified by the user
 TRACE=0
 DLB=0
+LEWI_MPI=0
 MPIEXEC_BIND_FLAG=""
 
 APP="./mpi_ompss_pils"
 ARGS="/dev/null 0.1 50 500"
 
-if [[ $TRACE == 1 ]] ; then
-    PRELOAD="$EXTRAE_HOME/lib/libnanosmpitrace.so"
-    export EXTRAE_CONFIG_FILE="extrae.xml"
-    export NX_ARGS+=" --instrumentation=extrae"
-    if [[ $DLB == 1 ]] ; then
-        TRACENAME="pils_dlb.prv"
-    else
-        TRACENAME="pils.prv"
-    fi
-fi
-
 if [[ $DLB == 1 ]] ; then
-    export NX_ARGS+=" --enable-block --enable-dlb"
+    if [[ $TRACE == 1 ]] ; then
+        TRACENAME="pils_dlb.prv"
+        PRELOAD="$EXTRAE_HOME/lib/libnanosmpitrace.so:$DLB_HOME/lib/libdlb_mpi_instr.so"
+        export EXTRAE_CONFIG_FILE="extrae.xml"
+        export NX_ARGS+=" --instrumentation=extrae"
+    else
+        PRELOAD="$DLB_HOME/lib/libdlb_mpi.so"
+    fi
+    export NX_ARGS+=" --enable-block --enable-dlb --force-tie-master"
     export DLB_ARGS+=" --lewi"
+
+    # Advanced: use --lewi-mpi
+    if [[ $LEWI_MPI == 1 ]] ; then
+        if [[ $TRACE == 1 ]] ; then
+            TRACENAME="pils_dlb_lewi_mpi.prv"
+        fi
+        export DLB_ARGS+=" --lewi-mpi"
+    fi
 else
+    if [[ $TRACE == 1 ]] ; then
+        TRACENAME="pils.prv"
+        PRELOAD="$EXTRAE_HOME/lib/libnanosmpitrace.so"
+        export EXTRAE_CONFIG_FILE="extrae.xml"
+        export NX_ARGS+=" --instrumentation=extrae"
+    fi
     export DLB_ARGS+=" --no-lewi"
 fi
 
