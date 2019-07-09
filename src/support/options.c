@@ -35,7 +35,8 @@ typedef enum OptionFlags {
     OPT_OPTIONAL   = 1 << 1,
     OPT_DEPRECATED = 1 << 2,
     OPT_ADVANCED   = 1 << 3,
-    OPT_HIDDEN     = 1 << 4
+    OPT_HIDDEN     = 1 << 4,
+    OPT_UNUSED     = 1 << 5
 } option_flags_t;
 
 typedef enum OptionTypes {
@@ -74,7 +75,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = "",
         .offset         = 0,
         .type           = OPT_POL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED | OPT_UNUSED
     }, {
         .var_name       = "LB_LEWI",
         .arg_name       = "--lewi",
@@ -482,9 +483,13 @@ void options_init(options_t *options, const char *dlb_args) {
             }
         }
 
-        /* Warn if option is deprecated and has rhs, then skip iteration */
+        /* Warn if option is deprecated and has rhs */
         if (entry->flags & OPT_DEPRECATED && rhs) {
             warning("Option %s is deprecated, please see the documentation", entry->arg_name);
+        }
+
+        /* Skip iteration if option is not used anymore */
+        if (entry->flags & OPT_UNUSED) {
             continue;
         }
 

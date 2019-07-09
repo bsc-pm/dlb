@@ -84,6 +84,16 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--lewi=no");
     assert(options_1.lewi == false);
 
+    // Deprecated variables must be still assigned
+    options_init(&options_1, "--statistics");
+    assert(options_1.statistics == true);
+    // But deprecated and unused variables must not fail, nor change any value
+    memset(&options_1, 0, sizeof(options_t));
+    memset(&options_2, 0, sizeof(options_t));
+    options_init(&options_1, "--policy=lewi");
+    options_init(&options_2, NULL);
+    assert(memcmp(&options_1, &options_2, sizeof(options_t)) == 0);
+
     // Check setter and getter
     char value[MAX_OPTION_LENGTH];
     options_init(&options_1, "--no-lewi-mpi --lewi-mpi-calls=barrier --shm-key=key");
