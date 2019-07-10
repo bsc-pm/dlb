@@ -59,5 +59,6 @@ void options_init(options_t *options, const char *dlb_args);
 int options_set_variable(options_t *options, const char *var_name, const char *value);
 int options_get_variable(const options_t *options, const char *var_name, char *value);
 void options_print_variables(const options_t *options, bool print_extended);
+void options_print_lewi_flags(const options_t *options);
 
 #endif /* OPTIONS_H */

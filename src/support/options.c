@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <ctype.h>
+#include <stdint.h>
 
 typedef enum OptionFlags {
     OPT_CLEAR      = 0,
@@ -73,7 +74,7 @@ static const opts_dict_t options_dictionary[] = {
         .arg_name       = "--policy",
         .default_value  = "no",
         .description    = "",
-        .offset         = 0,
+        .offset         = SIZE_MAX,
         .type           = OPT_POL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED | OPT_UNUSED
     }, {
@@ -291,6 +292,18 @@ static const opts_dict_t options_dictionary[] = {
 enum { NUM_OPTIONS = sizeof(options_dictionary)/sizeof(opts_dict_t) };
 
 
+static const opts_dict_t* get_entry_by_name(const char *name) {
+    int i;
+    for (i=0; i<NUM_OPTIONS; ++i) {
+        const opts_dict_t *entry = &options_dictionary[i];
+        if (strcasecmp(entry->var_name, name) == 0
+                || strcasecmp(entry->arg_name, name) == 0) {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
 static int set_value(option_type_t type, void *option, const char *str_value) {
     switch(type) {
         case(OPT_BOOL_T):
@@ -323,7 +336,7 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
     return DLB_ERR_NOENT;
 }
 
-static const char * get_value(option_type_t type, void *option) {
+static const char * get_value(option_type_t type, const void *option) {
     static char int_value[8];
     switch(type) {
         case OPT_BOOL_T:
@@ -541,21 +554,16 @@ void options_init(options_t *options, const char *dlb_args) {
 
 /* API Setter */
 int options_set_variable(options_t *options, const char *var_name, const char *value) {
-    int error = DLB_ERR_NOENT;
-
-    // find the dictionary entry
-    int i;
-    for (i=0; i<NUM_OPTIONS; ++i) {
-        const opts_dict_t *entry = &options_dictionary[i];
-        if (strcasecmp(entry->var_name, var_name) == 0
-                || strcasecmp(entry->arg_name, var_name) == 0) {
-            if (entry->flags & OPT_READONLY) {
-                error = DLB_ERR_PERM;
-            } else {
-                error = set_value(entry->type, (char*)options+entry->offset, value);
-            }
-            break;
+    int error;
+    const opts_dict_t *entry = get_entry_by_name(var_name);
+    if (entry) {
+        if (entry->flags & OPT_READONLY) {
+            error = DLB_ERR_PERM;
+        } else {
+            error = set_value(entry->type, (char*)options+entry->offset, value);
         }
+    } else {
+        error = DLB_ERR_NOENT;
     }
 
     return error;
@@ -563,18 +571,13 @@ int options_set_variable(options_t *options, const char *var_name, const char *v
 
 /* API Getter */
 int options_get_variable(const options_t *options, const char *var_name, char *value) {
-    int error = DLB_ERR_NOENT;
-
-    // find the dictionary entry
-    int i;
-    for (i=0; i<NUM_OPTIONS; ++i) {
-        const opts_dict_t *entry = &options_dictionary[i];
-        if (strcasecmp(entry->var_name, var_name) == 0
-                || strcasecmp(entry->arg_name, var_name) == 0) {
-            sprintf(value, "%s", get_value(entry->type, (char*)options+entry->offset));
-            error = DLB_SUCCESS;
-            break;
-        }
+    int error;
+    const opts_dict_t *entry = get_entry_by_name(var_name);
+    if (entry) {
+        sprintf(value, "%s", get_value(entry->type, (char*)options+entry->offset));
+        error = DLB_SUCCESS;
+    } else {
+        error = DLB_ERR_NOENT;
     }
 
     return error;
@@ -665,4 +668,47 @@ void options_print_variables(const options_t *options, bool print_extended) {
                     "    export DLB_ARGS=\"--lewi=yes --instrument=no\"\n");
 
     info0("%s", buffer);
+}
+
+void options_print_lewi_flags(const options_t *options) {
+    const opts_dict_t *entry;
+
+    // --lewi-mpi
+    bool default_lewi_mpi;
+    entry = get_entry_by_name("--lewi-mpi");
+    parse_bool(entry->default_value, &default_lewi_mpi);
+
+    // --lewi-mpi-calls
+    mpi_set_t default_lewi_mpi_calls;
+    entry = get_entry_by_name("--lewi-mpi-calls");
+    parse_mpiset(entry->default_value, &default_lewi_mpi_calls);
+
+    // --lewi-affinity
+    priority_t default_lewi_affinity;
+    entry = get_entry_by_name("--lewi-affinity");
+    parse_priority(entry->default_value, &default_lewi_affinity);
+
+    // --lewi-ompt
+    ompt_opts_t default_lewi_ompt;
+    entry = get_entry_by_name("--lewi-ompt");
+    parse_ompt_opts(entry->default_value, &default_lewi_ompt);
+
+    if (options->lewi_mpi != default_lewi_mpi
+            || options->lewi_mpi_calls != default_lewi_mpi_calls
+            || options->lewi_affinity != default_lewi_affinity
+            || options->lewi_ompt != default_lewi_ompt) {
+        info0("LeWI options:");
+        if (options->lewi_mpi != default_lewi_mpi) {
+            info0("  --lewi-mpi");
+        }
+        if (options->lewi_mpi_calls != default_lewi_mpi_calls) {
+            info0("  --lewi-mpi-calls=%s", mpiset_tostr(options->lewi_mpi_calls));
+        }
+        if (options->lewi_affinity != default_lewi_affinity) {
+            info0("  --lewi-affinity=%s", priority_tostr(options->lewi_affinity));
+        }
+        if (options->lewi_ompt != default_lewi_ompt) {
+            info0("  --lewi-omp=%s", ompt_opts_tostr(options->lewi_ompt));
+        }
+    }
 }

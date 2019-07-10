@@ -131,6 +131,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     info0("%s %s", PACKAGE, VERSION);
     if (spd->lb_policy != POLICY_NONE) {
         info0("Balancing policy: %s", policy_tostr(spd->lb_policy));
+        options_print_lewi_flags(&spd->options);
     }
     verbose(VB_API, "Enabled verbose mode for DLB API");
     verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
