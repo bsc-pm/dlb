@@ -22,7 +22,7 @@ Execution
       with all the MPI processes pinned to a non-overlapping subset of CPUs.
       See Annex for more info.
 
-* Run the script 'run.sh
+* Run the script 'run.sh'
 * Review the results
 
 You can change the values of DLB and TRACE variables to modify the script behaviour.
@@ -57,9 +57,13 @@ If your are not sure how to run MPI with binding enabled try the following comma
 
 $ mpirun -n 2 dlb --affinity                    # check default behaviour
 $ mpirun -n 2 --bind-to core dlb --affinity     # OpenMPI specific flag
+$ mpirun -n 2 -genv I_MPI_PIN 1 \
+            -genv I_MPI_PIN_CELL core \
+            -genv I_MPI_PIN_DOMAIN auto \
+            dlb --affinity                      # Intel MPI pinning variables
 
 And figure which flag gives you an output where both processes do not share any
-CPU. hen, put that flag in the MPIEXEC_BIND_FLAG variable.
+CPU. Then, put that flag in the MPIEXEC_BIND_FLAG variable.
 
 If none of the above works for you, check the documentation of the MPI implementation
 that you are using.

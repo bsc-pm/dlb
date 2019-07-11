@@ -23,7 +23,7 @@ Execution
       the mpiexec command **does not** bind processes by default. This example must run
       with all the MPI processes sharing the same mask subset. See Annex for more info.
 
-* Run the script 'run.sh
+* Run the script 'run.sh'
 * Review the results
 
 You can change the values of DLB and TRACE variables to modify the script behaviour.

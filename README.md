@@ -72,7 +72,7 @@ please refer to [INSTALL](INSTALL)
 
 ## Basic usage
 
-Choose bewteen linking or preloading the binary with the DLB shared library
+Choose between linking or preloading the binary with the DLB shared library
 `libdlb.so` and configure DLB using the environment variable `DLB_ARGS`.
 
 1. **Example 1:** Share CPUs between MPI processes

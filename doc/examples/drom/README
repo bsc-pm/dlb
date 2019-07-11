@@ -22,19 +22,37 @@ Example (one process)
 $ ./drom_01
 ...
 # In another terminal
-$ dlb_taskset -l                # list shared memory info
-$ dlb_taskset -p <pid> -c 0,1   # Assign CPUs 0-1 to process <pid>
+$ dlb_taskset --list                    # list shared memory info
+$ dlb_taskset --pid <pid> --set 0,1     # Assign CPUs 0-1 to process <pid>
 
 Example (many processes)
 ------------------------
-$ ./drom_01                     # Inital mask: 0-7
+$ ./drom_01                             # Inital mask: 0-7
 ...
 # Manually remove CPUs 4-7 and start another process
-$ dlb_taskset -r 4-7
-$ taskset -c 4-7 ./drom_01
+$ dlb_taskset --remove 4-7
+$ taskset --cpu-list 4-7 ./drom_01
 ...
 # Start another process using dlb_taskset and let DLB manage the CPU stealing
-$ dlb_taskset -c 3,7 ./drom_01
+$ dlb_taskset --set 3,7 ./drom_01
 ...
 # List shared memory
-$ dlb_taskset -l
+$ dlb_taskset --list
+
+
+Annex: dlb_taskset command
+--------------------------
+The `dlb_taskset` command may serve several purposes regarding the management
+of DLB processes that run with DROM enabled. It can list the running DLB
+processes, or remove CPUs from any process that owns it, or change the CPU mask
+of a given running process or a new one.
+
+When `dlb_taskset` is used to run a new process, it tries to steal CPUs from
+the provided mask from other DLB processes, like shown in the example above
+with the command `dlb_taskset --set 3,7 ./drom_01`. In this example, the CPUs 3
+and 7 are stolen from the other two running processes.
+
+Note that these CPUs are not returned in case the third process is killed. To
+do so, run the example again and borrow CPUs 3 and 7 instead of stealing them:
+`dlb_taskset --borrow  --set 3,7 ./drom_01`.
+
