@@ -1,75 +1,134 @@
+
+.. highlight:: bash
+
 *******************
 How to run with DLB
 *******************
 
 DLB library is originally designed to be run on applications using a Shared Memory Programming Model
-(OpenMP or OmpSs), although it is not a hard requirement, it is very advisable in order to exploit
+(OpenMP or OmpSs). Although not a hard requirement, since DLB could work with a POSIX threads
+application, it is very advisable to use either OpenMP or OmpSs in order to exploit
 the thread management of the underlying Programming Model runtime.
 
-Examples by Programming Model
-=============================
+Generally, in order to run DLB with your application, you need to follow these steps:
 
-.. highlight:: bash
+1. Link or preload your application with any flavour of the DLB shared
+   libraries: ``libdlb.so`` for simplicity but you can choose other flavours
+   like MPI, debug or instrumentation. [#nanos_dlb]_
 
-OmpSs
------
-If you are running an OmpSs application you just need to set two variables. First, append
-``--enable-dlb --enable-block`` to the Nanos++ ``NX_ARGS`` environment variable. The *block*
-option enables Nanos++ to block idle threads, and the option *dlb* enables the communication
-between the runtime and DLB. Second, set the DLB variable ``DLB_ARGS="--lewi"``,
-which enables the LeWI mode policy for DLB.
+2. Configure the environment variable ``DLB_ARGS`` with the desired DLB options.
+   Typically, you will want to set at least ``--lewi``, ``--drom``, or both.
+   Execute ``dlb --help`` for a list of options
 
-You don't need to do any extra steps if your application doesn't use the DLB API, as all the
-communication with DLB is handled by the Nanos++ runtime. Otherwise, just add the flag
-``--dlb`` to the Mercurium compiler to automatically add the required compile and link flags::
+3. Run you application as you would normally do.
 
-    $ smpfc --ompss [--dlb] foo.c -o foo
-    $ export NX_ARGS+=" --enable-dlb --enable-block"
-    $ export DLB_ARGS="--lewi"
-    $ ./foo
 
+LeWI Examples by Programming Model
+==================================
+For simplicity, all the LeWI examples are MPI applications. [#mpi_wrapper]_
 
 MPI + OmpSs
 -----------
-In the same way, you can run MPI + OmpSs applications with DLB::
+OmpSs applications have the advantage they do not need to be explicitly linked
+with DLB, since Nanos++, the OmpSs runtime, has native DLB support that can be
+enabled at configure time.
 
-    $ OMPI_CC="smpfc --ompss [--dlb]" mpicc foo.c -o foo
-    $ export NX_ARGS+=" --enable-dlb --enable-block"
+First, compile your application setting Mercurium as the native compiler for
+the MPI wrapper and, optionally, use the flag ``--dlb`` to automatically add
+the DLB compile and link flags in case you use the DLB API.
+
+Then, enable DLB support in Nanos++ by setting the environment variable
+``NX_ARGS="--enable-dlb --enable-block"``, and enable also LeWI in DLB with
+``DLB_ARGS="--lewi"``::
+
+
+    $ OMPI_CC="smpcc --ompss [--dlb]" mpicc foo.c -o foo
+    $ export NX_ARGS="--enable-dlb --enable-block"
     $ export DLB_ARGS="--lewi"
     $ mpirun -n 2 ./foo
 
-However, MPI applications with only one running thread may become blocked due to the main
-thread entering a synchronization MPI blocking point. DLB library can intercept MPI calls
-to overload the CPU in these cases::
+You may also enable MPI support for DLB after considering
+:ref:`non-busy-mpi-calls`.  Just preload the MPI flavour of the DLB library and
+enable the option ``--lewi-mpi``::
 
-    $ export DLB_ARGS+=" --lewi-mpi"
-    $ mpirun -n 2 -x LD_PRELOAD=<<DLB_PREFIX>>/lib/libdlb_mpi.so ./foo
+    $ export DLB_ARGS="--lewi --lewi-mpi"
+    $ mpirun -n 2 -x LD_PRELOAD="$DLB_HOME/lib/libdlb_mpi.so" ./foo
 
-OpenMP
-------
-OpenMP is not as malleable as OmpSs but DLB can still be used to manage the number of threads
-each time before entering a parallel section. DLB LeWI mode needs to be enabled as before,
-adding ``--lewi`` to the ``DLB_ARGS``. Also, unless you are using Nanos++ as an
-OpenMP runtime, you will need to manually call the API functions in your code, thus you will
-need to pass the compile and linker flags to your compiler::
-
-    $ gcc -fopenmp foo.c -o foo -I<<DLB_PREFIX>>/include \
-            -L<<DLB_PREFIX>>/lib -ldlb -Wl,-rpath,<<DLB_PREFIX>>/lib
-    $ export DLB_ARGS="--lewi"
-    $ ./foo
-
-.. note::
-    OMPT support is in progress, if your OpenMP runtime supports it DLB can automatically
-    intercept parallel constructs and modify the number of threads at that time.
 
 MPI + OpenMP
 ------------
-In the case of MPI + OpenMP applications, you can let all the DLB management to the MPI
-interception. Thus, allowing you to run DLB applications without modifying your binary.
-Simply, preload an MPI version of the library and DLB will balance the resource of each
-process during the MPI blocking calls::
+OpenMP is not as malleable as OmpSs since it is still limited by the fork-join
+model but DLB can still change the number of threads between parallel regions.
+DLB LeWI mode needs to be enabled as before using the environment variable
+``DLB_ARGS`` with the value ``--lewi``, and optionally ``--lewi-mpi``.
 
-    $ mpicc -fopenmp foo.c -o foo
+Running with MPI support here is highly recommended because DLB can lend all
+CPUs during a blocking call. Then, we suggest placing calls to ``DLB_Borrow()``
+before parallel regions with a high computational load, or at least those near
+MPI blocking calls. Take into account that DLB cannot manage the CPU pinning of
+each thread and so each MPI rank should run without exclusive CPU binding::
+
+    $ mpicc -fopenmp foo.c -o foo -I"$DLB_HOME/include" \
+            -L"$DLB_HOME/lib" -ldlb_mpi -Wl,-rpath,"$DLB_HOME/lib"
     $ export DLB_ARGS="--lewi"
-    $ mpirun -n 2 -x LD_PRELOAD=<<DLB_PREFIX>>/lib/libdlb_mpi.so ./foo
+    $ mpirun -n 2 --bind-to none ./foo
+
+
+MPI + OpenMP (with OMPT support)
+--------------------------------
+OpenMP 5.0 implements a new interface for Tools (OMPT) that allows external
+libraries, in this case DLB, to track the runtime state and to register
+callbacks for defined OpenMP events. If your OpenMP runtime supports it
+[#ompt_support]_, DLB can automatically intercept parallel constructs and
+modify the number of threads at that time, without modifying the application
+source code.
+
+Note than DLB with OMPT support can manage the CPU pinning of each thread so
+each rank must run with an exclusive set of CPUs::
+
+
+    $ OMPI_CC=clang mpicc -fopenmp foo.c -o foo
+    $ export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:lend"
+    $ mpirun -n 2 --bind-to core dlb_run ./foo
+
+Since this example does not need to be linked with DLB, you will need to
+preload a DLB MPI library if you want MPI support::
+
+    $ export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:mpi"
+    $ mpirun -n 2 --bind-to core dlb_run env LD_PRELOAD="$DLB_HOME/lib/libdlb_mpi.so" ./foo
+
+DLB can be fine tuned with the option ``--lewi-ompt``, see section :ref:`ompt`
+for more details.
+
+
+DROM example
+============
+The DLB DROM module allows to modify the CPUs assigned to an existing process,
+and not only the process affinity, also the thread affinity and the number of
+active threads to correspond the new assigned mask.
+
+DLB offers an API for third parties to attach to DLB and manage the
+computational resources of other DLB running processes. DLB also offers the
+``dlb_taskset`` binary, which is basically a wrapper for this API, to manually
+configure the assigned CPUs of existing processes. It can also be used to
+launch new processes. Run ``dlb_taskset --help`` for further info::
+
+    # Binaries app_1, app_2 and app_3 are assumed to be linked with DLB
+    $ export DLB_ARGS="--drom"
+    $ ./app_1 &                         # app_1 mask: [0-7]
+    $ dlb_taskset --remove 4-7          # app_1 mask: [0-3]
+    $ taskset -c 4-7 ./app_2 &          # app_1 mask: [0-3], app_2 mask: [4-7]
+    $ dlb_taskset -c 3,7 ./app_3 &      # app_1 mask: [0-2], app_2 mask: [4-6], app_3 mask: [3,7]
+    $ dlb_taskset --list
+
+**Footnotes**
+
+.. [#nanos_dlb] This step is not needed in OmpSs applications if the Nanos++
+    runtime has been configured with DLB support
+
+.. [#mpi_wrapper] These examples are assuming OpenMPI and thus specific variables and
+    flags are used, like the variable ``OMPI_CC`` or the flag ``--bind-to``.
+    For other MPI implementations, please refer to their documentation manuals.
+
+.. [#ompt_support] At the time of writing only Intel OpenMP and LLVM OpenMP runtimes.
 

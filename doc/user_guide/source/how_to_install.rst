@@ -5,9 +5,9 @@ How to install DLB
 Build requirements
 ==================
 
-* A supported platform running Linux (i386, x86-64, ARM, PowerPC or IA64).
-* GNU C/C++ compiler versions 4.4 or newer.
-* Python 2.4 or newer.
+* A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC or IA64)
+* C compiler
+* Python 2.4 or higher
 
 
 Installation steps
@@ -21,7 +21,7 @@ Installation steps
 
 #. Configure it, with optionally some of the :ref:`DLB configure flags<dlb-configure-flags>`::
 
-   $ ./configure --prefix=<<DLB_PREFIX>>
+   $ ./configure --prefix=<DLB_PREFIX>
 
 #. Build and install::
 
@@ -30,7 +30,7 @@ Installation steps
 
 .. note::
     If you plan to compile `Nanos++`_ and `Mercurium`_ later, consider adding
-    ``--with-dlb=<<DLB_PREFIX>>`` to their configure options.
+    ``--with-dlb=<DLB_PREFIX>`` to their configure options.
 
 .. _Nanos++: https://pm.bsc.es/nanox
 .. _Mercurium: https://pm.bsc.es/mcxx
@@ -40,10 +40,11 @@ Installation steps
 DLB configure flags
 ===================
 
-By default, the *autotools scripts* will build four versions of the library, the combination of
-the performance and debug versions with the instrumentation option. The basic library
-(performance, no-instrumentation) cannot be disabled but the other three can be freely disabled
-using the following flags.
+By default, the *autotools scripts* will configure four versions of the library
+to be built, the combination of the performance and debug versions with the
+instrumentation option. The basic library (performance, no-instrumentation)
+cannot be disabled but the other three can be freely disabled using the
+following flags.
 
 --disable-debug
     Disable Debug library.

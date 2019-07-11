@@ -1,42 +1,83 @@
 **********************
 Technical Requirements
 **********************
+This is a list of technical requirements that the DLB user should be aware of.
+Not all all of them are strictly necessary and will depend on the application
+or the programming model used, but it is important to know all these factors
+for a successful DLB execution.
 
 ==================
 Programming models
 ==================
+DLB was original designed to mitigate load imbalance issues in HPC applications
+that used two programming models simultaneously: MPI for the outer level of
+parallelism, and any thread-based programming model for the inner level, such
+as OpenMP or OmpSs.
 
-The currently supported programming models or runtimes by DLB are the following:
+But, technically, none of them are strictly necessary. One application could
+have its own thread management and it could work with DLB as long as the
+application used DLB for the resource sharing. And, MPI is not necessary either
+since you can run two different non-MPI applications with DLB and share CPUs
+between them.
 
-* MPI + OpenMP
-* MPI + OmpSs
-* MPI + SMPSs (not maintained)
-* Nanos++ (Multiple Applications)
+Although, the scenario presented above requires a considerable amount of effort
+and we strongly recommend to use applications MPI + OpenMP/OmpSs.
 
-===============================
-Shared Memory between processes
-===============================
-DLB can balance processes running on the same node and sharing memory. DLB is based on shared memory and needs shared memory between all the processes sharing resources.
+===================
+POSIX Shared Memory
+===================
+DLB is able to fix load balance issues only among processes on the same node.
+This is basically because the library only adapts the number of CPUs assigned
+to each process and does not perform any data balance, through MPI for
+instance.
+
+Since the communication needed in DLB is only at node level, the library uses
+POSIX shared memory objects that should be available at any GNU/Linux system.
 
 .. _mpi-interception:
 
 ======================================
 Preload mechanism for MPI applications
 ======================================
-When using MPI applications we need the preload mechanism (in general available in any Linux system). This is only necessary when using the MPI interception, it is not necessary when calling DLB with the public API from the application or a runtime.
+DLB implements the MPI interface to capture each MPI call made by the
+application, and then calls the original MPI function by using the PMPI
+profiling interface.
+
+To enable MPI support for DLB, the application must be either linked or
+preloaded with one of the DLB MPI libraries, e.g., ``libdlb_mpi*.so``.  Using
+the preload mechanism has the advantage that the application binary is the
+same as the original, and it only requires setting an environment variable
+before the execution.
+
+Use the environment variable ``LD_PRELOAD`` to specify the MPI DLB library.
+
+.. _non-busy-mpi-calls:
+
+==============================
+Non-busy-waiting for MPI calls
+==============================
+Usually, MPI implementations have at least two ways of waiting for a blocking
+MPI call: *busy-waiting* and *non-busy-waiting*; or even a hybrid parameterized
+mode.  In *busy-waiting* mode, the thread that calls the MPI function
+repeatedly checks if the MPI call is finished, while in *non-busy-waiting* mode
+the thread may use other techniques to block its execution and not overuse the
+current CPU.
+
+Since the default behaviour of the blocking mode cannot be predicted for a
+particular MPI implementation, DLB does not lend the CPU that encounters the
+blocking MPI call to other processes, at least by default.
+
+If the MPI library of your application performs a *non-busy-waiting* by default,
+or you know how to enable it, DLB has a flag ``--lewi-mpi`` to also lend
+the CPU of the MPI call.
 
 ==========================
 Parallel regions in OpenMP
 ==========================
+OpenMP parallelism is based on a fork-join model, where threads are created, or
+at least assigned to a team, only when the running thread encounters a parallel
+construct.
 
-In OpenMP applications we need parallelism to open and close (parallel region) to be able to change the number of threads. This is because the OpenMP programming model only allows to change the number of threads outside a parallel region.
-
-We also need to add a call to the DLB API to update the resources used before each parallel. This limitation is not present when using the Nanos++ runtime.
-
-==============================
-Non-busy waiting for MPI calls
-==============================
-When using MPI applications we need the MPI blocking calls not to be busy waiting. However, DLB offers a mode where one CPU is reserved to wait for the MPI blocking call and is not lent to other processes.
-
-If the MPI library does not offer a Non-busy waiting mode, or we do not want ot use it of any other reason, We can tell DLB to use a non blocking mode with the option ``--lend-mode=1CPU``.
-
+This model limits DLB because it can only assign CPUs to a process just before
+a parallel construct. For this reason, an application with very few parallel
+constructs may take minimal advantage from DLB.

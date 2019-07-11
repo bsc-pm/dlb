@@ -1,3 +1,6 @@
+
+.. highlight:: bash
+
 *******************************
 FAQ: Frequently Asked Questions
 *******************************
@@ -10,11 +13,16 @@ FAQ: Frequently Asked Questions
 Does my application need to meet any requirements to run with DLB?
 ==================================================================
 
-Can the number of threads of your application be modified at any time? It is not rare to
-manually allocate some private storage for each thread in OpenMP applications and then each
-thread in a parallel access this private storage though the thread id. This kind of methodology
-can break the execution if the number of threads is modified and the local storage is not
-adjusted, or at least considered.
+The only limitation from the application standpoint is that it must allow
+changing the number of threads at any time.
+
+Some common pattern in OpenMP applications is to allocate private thread
+storage for intermediate results between different parallel constructs. This
+technique may break the execution if different parallel regions are executed
+with different number of threads.
+
+If this limitation cannot be solved, you can use the DLB API to only change the
+number of threads on code regions that are safe to do so.
 
 Mercurium may have DLB support with the ``--dlb`` flag. What does it do? Should I use it?
 =========================================================================================
@@ -64,7 +72,7 @@ from the serial parts of the application.
 For instance, in a cluster of 4 CPUs per node you may submit a hybrid job of *n* MPI processes and
 4 OpenMP threads per process. That means that each node would only contain one process, so there
 will never be resource sharing within the node. Now, if you submit another distribution with
-either 2 or 1 threads per process, each node will contain 2 or 4 DLB process that will share
+either 2 or 1 threads per process, each node will contain 2 or 4 DLB processes that will share
 resources when needed.
 
 I'm running a hybrid application, 1 thread per process, and DLB still does nothing
@@ -99,6 +107,32 @@ the memory bandwidth.
 Could it be that your application does not suffer from load imbalance? Try our performance tools
 to check it out. (http://tools.bsc.es)
 
+How do I share CPUs between unrelated applications?
+===================================================
+Even if the applications are not related and started at different time, they can share CPUs
+as if they were an MPI application with multiple processes.
+
+Do note, however, that as soon as one of them finishes, all CPUs that belonged
+to it will be removed from the DLB shared memory and they won't be accessible
+anymore by other processes. This can be avoided by setting
+``DLB_ARGS+=" --debug-opts=lend-post-mortem``.
+
+How do I prevent sharing CPUs between applications?
+===================================================
+On the other hand, you may also be interested in avoiding DLB resource sharing
+for some applications. For instance, running applications *A* and *B* and
+sharing CPUs only between them, and at the same time running applications *C* and *D*
+and sharing CPUs also only between them. This can be done by setting different shared
+memories for each subset of applications with the option ``--shm-key``::
+
+    $ export DLB_ARGS="--lewi --shm-key=AB"
+    $ ./A &
+    $ ./B &
+    $ export DLB_ARGS="--lewi --shm-key=CD"
+    $ ./C &
+    $ ./D &
+
+
 .. tracing
 
 Can I see DLB in action in a Paraver trace?
@@ -111,11 +145,10 @@ matches your programming model.
 Can I see DLB events in a Paraver trace?
 ========================================
 
-Yes, DLB can emit tracing events for debugging or advanced purposes. These are disabled by default,
-in order to enable them, apart from tracing as you would normally do, you need to follow
-also these steps:
+Yes, DLB can emit tracing events for debugging or advanced purposes, just use the appropriate
+DLB library. Apart from tracing as you would normally do, you need to either link your application
+or preload with one of the libray flavours for instrumentation. These are ``libdlb_instr.so``,
+``libdlb_mpi_instr.so`` or ``libdlb_mpif_instr.so``.
 
-* Link or preload the instrumented version of DLB library. That may be ``libdlb_instr.so`` or
-  ``libdlb_mpi_instr.so`` depending on whether you want to intercept MPI calls.
-* Enable the option in ``DLB_ARGS+=" --instrument"``.
-
+You can find predefined Paraver configurations in the installation directory
+``$DLB_PREFIX/hare/paraver_cfgs/DLB/``.

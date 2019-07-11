@@ -2,7 +2,7 @@
 Public API
 **********
 
-The DLB API can be divided into:
+DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided into:
 
 .. glossary::
 
@@ -76,6 +76,11 @@ These functions make the basic API to be used independently from which DLB mode 
               int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t \*callback, void \*\*arg)
 
     Setter and Getter for DLB callbacks. See section :ref:`callbacks`.
+
+.. function:: int DLB_PollDROM(int \*ncpus, dlb_cpu_set_t mask)
+              int DLB_PollDROM_Update(void)
+
+    Poll DROM module to check if the process needs to adapt to a new mask or number of CPUs.
 
 .. function:: int DLB_SetVariable(const char \*variable, const char \*value)
               int DLB_GetVariable(const char \*variable, char \*value)
@@ -160,13 +165,13 @@ The next set of functions can be used when the user has enabled the Dynamic Reso
 Manager (DROM) Module (see :ref:`drom`). With this interface the user can set or retrieve the
 process mask of each DLB process.
 
-.. function:: int DLB_DROM_Init(void)
+.. function:: int DLB_DROM_Attach(void)
 
-    Initialize DROM Module
+    Attach process to DLB as third party
 
-.. function:: int DLB_DROM_Finalize(void)
+.. function:: int DLB_DROM_Detach(void)
 
-    Finalize DROM Module
+    Detach process from DLB
 
 .. function:: int DLB_DROM_GetNumCpus(int \*ncpus)
 
@@ -176,20 +181,10 @@ process mask of each DLB process.
 
     Get the PID's attached to this module
 
-.. function:: int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask)
+.. function:: int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
 
     Get the process mask of the given PID
 
-.. function:: int DLB_DROM_SetProcessMask(int pid, const dlb_cpu_set_t mask)
+.. function:: int DLB_DROM_SetProcessMask(int pid, const dlb_cpu_set_t mask, dlb_drom_flags_t flags)
 
     Set the process mask of the given PID
-
-.. function:: int DLB_DROM_GetProcessMask_sync(int pid, dlb_cpu_set_t mask)
-
-    Get the process mask of the given PID. If the target process has a pending request of a new
-    mask, the caller process waits until the target process attends the petition.
-
-.. function:: int DLB_DROM_SetProcessMask_sync(int pid, const dlb_cpu_set_t mask)
-
-    Set the process mask of the given PID and wait until the target process attends the
-    petition.
