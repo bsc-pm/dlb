@@ -138,7 +138,7 @@ events.
 
 By having OMPT support, the DLB library can now passively detect the parallel
 regions of the application and automatically redistribute the CPUs among the
-other processes. The main advantages when using DLB with OpebMP and OMPT
+other processes. The main advantages when using DLB with OpenMP and OMPT
 support are:
 
 * **The application does not need to be modified with the DLB API:** DLB will
@@ -163,7 +163,7 @@ value, we have observed that a non null value may affect other implementation
 specific variables of the OpenMP runtime, such as ``KMP_BLOCKTIME``. [#f2]_
 
 Once OMPT is enabled on DLB, the user can also enable other DLB modules such as
-DROP or LeWI with their respective flags. Furthermore, LeWI in OMPT can be
+DROM or LeWI with their respective flags. Furthermore, LeWI in OMPT can be
 fine-tuned with the option ``--lewi-ompt`` with any combination of the values
 ``[mpi, borrow, lend]`` separated by ``:``. If *mpi* is set, LeWI will be
 invoked before and after each eligible MPI call. If *borrow* is set, DLB will

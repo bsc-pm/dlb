@@ -87,7 +87,7 @@ where the process is only wasting CPU cycles waiting for other processes to sync
 you configure DLB to intercept MPI calls, this CPU can be used instead for helping other
 processes in the same node.
 
-To use this future you need to preload the DLB MPI library and to set this environment variable::
+To use this feature you need to preload the DLB MPI library and to set this environment variable::
 
     export DLB_ARGS+=" --lewi-mpi"
 
