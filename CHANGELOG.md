@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [Unreleased]
+
 ## [2.1] 2019-07-15
 ### Added
 - OMPT full support
@@ -165,6 +167,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[Unreleased]: https://github.com/bsc-pm/dlb/compare/v2.1...HEAD
 [2.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.1
 [2.0.2]: https://github.com/bsc-pm/dlb/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.0.1
