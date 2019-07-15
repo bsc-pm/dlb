@@ -4,8 +4,33 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- OMPT full support
+- Add function to API: `DLB_UnsetMaxParallelism`
+- New binary `dlb_run` to preinit masks, needed for OMPT applications
+- Improved `dlb_shm --list` output
+- New verbose option `affinity` to print hardware information
+- Add option `--quiet` to silent all info and warning messages
+- New test mechanism based on LIT
+
 ### Changed
+- `DLB_Lend` does no longer keeps the current CPU
 - PreInit service now handles the timeout if the synchronous flag is provided
+- DROM now accepts registering and setting empty masks
+- Verbose options now affect all library versions
+
+### Fixed
+- Added some mechanisms to clean shared memories when the program aborts
+- Fixed several race conditions with the asynchronous messages
+- Fixed an issue where `--lewi-affinity` was being ignored
+- Adapt Fortran headers to be fixed-form compatible
+
+## [2.0.2] 2018-10-29
+### Fixed
+- `DLB_ARGS` was not being correctly parsed in some cases
+- DROM API cointained a typo. New function is called `DLB_DROM_Detach`
+- Intel compiler and GCC8 compatibility
+- Several minor bugs
 
 ## [2.0.1] 2018-02-27
 ### Fixed
@@ -141,6 +166,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Binary `dlb`
 
 [Unreleased]: https://github.com/bsc-pm/dlb/compare/v2.0...HEAD
+[2.0.2]: https://github.com/bsc-pm/dlb/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.0.1
 [2.0]: https://github.com/bsc-pm/dlb/compare/v1.3...v2.0
 [1.3.2]: https://github.com/bsc-pm/dlb/compare/v1.3.1...v1.3.2
