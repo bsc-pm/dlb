@@ -244,6 +244,19 @@ AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 AC_CHECK_PROG([doxygen], [doxygen], [yes])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
 
+# check for Pandoc
+AC_CHECK_PROG([pandoc], [pandoc], [yes])
+AM_CONDITIONAL([HAVE_PANDOC], [test "x$pandoc" = xyes])
+
+# Check if Sphinx will include man pages
+AM_CONDITIONAL([SPHINX_HAS_MANPAGES], [test "x$pandoc" = xyes && test "x$doxygen" = xyes])
+AM_COND_IF([SPHINX_HAS_MANPAGES], [
+    SPHINX_HAS_MANPAGES=""
+], [
+    SPHINX_HAS_MANPAGES=".. "
+])
+AC_SUBST([SPHINX_HAS_MANPAGES])
+
 AC_CONFIG_HEADERS([config.h])
 
 # files to generate via autotools (.am or .in source files)
@@ -262,11 +275,34 @@ AC_CONFIG_FILES([
     doc/examples/statistics/Makefile
     doc/doxygen/Doxyfile
     doc/doxygen/Doxyfile_man
+    doc/user_guide/source/index.rst
 ])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
 AC_CONFIG_FILES([tests/gens/fortran-generator], [chmod +x tests/gens/fortran-generator])
 AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 
+# Some user guide files are generated, link the rest if necessary to the build dir
+AC_CONFIG_LINKS([
+    doc/user_guide/source/conf.py:doc/user_guide/source/conf.py
+    doc/user_guide/source/advance_usage.rst:doc/user_guide/source/advance_usage.rst
+    doc/user_guide/source/api.rst:doc/user_guide/source/api.rst
+    doc/user_guide/source/contents.rst:doc/user_guide/source/contents.rst
+    doc/user_guide/source/faq.rst:doc/user_guide/source/faq.rst
+    doc/user_guide/source/how_to_install.rst:doc/user_guide/source/how_to_install.rst
+    doc/user_guide/source/how_to_run.rst:doc/user_guide/source/how_to_run.rst
+    doc/user_guide/source/intro.rst:doc/user_guide/source/intro.rst
+    doc/user_guide/source/man_pages_appendix.rst:doc/user_guide/source/man_pages_appendix.rst
+    doc/user_guide/source/technical_requirements.rst:doc/user_guide/source/technical_requirements.rst
+    doc/user_guide/source/images/dlb_logo.png:doc/user_guide/source/images/dlb_logo.png
+    doc/user_guide/source/images/dlb_logo_white.png:doc/user_guide/source/images/dlb_logo_white.png
+    doc/user_guide/source/images/dlb_states.png:doc/user_guide/source/images/dlb_states.png
+    doc/user_guide/source/images/dlb_icon.png:doc/user_guide/source/images/dlb_icon.png
+    doc/user_guide/source/images/dlb_icon.ico:doc/user_guide/source/images/dlb_icon.ico
+    doc/user_guide/source/images/drom.png:doc/user_guide/source/images/drom.png
+    doc/user_guide/source/images/hpc_app.png:doc/user_guide/source/images/hpc_app.png
+    doc/user_guide/source/images/LeWI.png:doc/user_guide/source/images/LeWI.png
+    doc/user_guide/source/_static/custom.css:doc/user_guide/source/_static/custom.css
+])
 
 
 ################################################################################

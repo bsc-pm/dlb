@@ -39,6 +39,10 @@ GEN_verbose_0 = @echo "  GEN     " $@;
 DOXYMAN_verbose = $(DOXYMAN_verbose_@AM_V@)
 DOXYMAN_verbose_ = $(DOXYMAN_verbose_@AM_DEFAULT_V@)
 DOXYMAN_verbose_0 = @echo "  DOXYGEN  man pages";
+
+PANDOC_verbose = $(PANDOC_verbose_@AM_V@)
+PANDOC_verbose_ = $(PANDOC_verbose_@AM_DEFAULT_V@)
+PANDOC_verbose_0 = @echo "  PANDOC  " $@;
 endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
@@ -496,14 +500,50 @@ sphinx_files = \
 
 EXTRA_DIST += $(sphinx_files)
 
+# Generated reST files from man pages
+sphinx_manpages_files = \
+	doc/user_guide/source/dlb.h.rst \
+	doc/user_guide/source/dlb_drom.h.rst \
+	doc/user_guide/source/dlb_errors.h.rst \
+	doc/user_guide/source/dlb_sp.h.rst \
+	doc/user_guide/source/dlb_types.h.rst \
+	$(END)
+
+CLEANFILES += $(sphinx_manpages_files)
+
 if HAVE_SPHINX
 SPHINXBUILD = sphinx-build
-SPHINX_SRC_DIR = $(srcdir)/doc/user_guide/source/
+SPHINX_SRC_DIR = doc/user_guide/source/
+
+if SPHINX_HAS_MANPAGES
+SPHINX_FLAGS = -t man_pages
+PANDOC = pandoc
+PANDOC_FLAGS = --from=man --to=rst --base-header-level=3
+
+doc/user_guide/source/dlb.h.rst: $(manpagesbuilddir)/dlb.h.3
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb.h' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_drom.h.rst: $(manpagesbuilddir)/dlb_drom.h.3
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_drom.h' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_errors.h.rst: $(manpagesbuilddir)/dlb_errors.h.3
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_error.h' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_sp.h.rst: $(manpagesbuilddir)/dlb_sp.h.3
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_sp.h' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_types.h.rst: $(manpagesbuilddir)/dlb_types.h.3
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_types.h' $(PANDOC_FLAGS) -o $@ $<
+
+else
+$(sphinx_manpages_files) : % :
+	@touch $@
+endif
 
 doc: html pdf
 
-html-local:
-	$(SPHINXBUILD) -b html $(SPHINX_SRC_DIR) doc/user_guide/html
+html-local: $(sphinx_manpages_files)
+	$(SPHINXBUILD) -b html $(SPHINX_FLAGS) $(SPHINX_SRC_DIR) doc/user_guide/html
 	@echo
 	@echo "Build finished. The HTML pages are in doc/user_guide/html"
 
@@ -511,8 +551,8 @@ install-html-local: html-local
 	$(mkdir_p) $(docdir)
 	cp -R doc/user_guide/html $(docdir)
 
-pdf-local:
-	$(SPHINXBUILD) -b latex $(SPHINX_SRC_DIR) doc/user_guide/pdf
+pdf-local: $(sphinx_manpages_files)
+	$(SPHINXBUILD) -b latex $(SPHINX_FLAGS) $(SPHINX_SRC_DIR) doc/user_guide/pdf
 	@echo "Running LaTeX files through pdflatex..."
 	$(MAKE) -C doc/user_guide/pdf all-pdf
 	@echo "pdflatex finished; the PDF files are in doc/user_guide/pdf"

@@ -253,7 +253,9 @@ latex_logo = 'images/dlb_logo.png'
 #latex_show_urls = False
 
 # Documents to append as an appendix to all manuals.
-#latex_appendices = []
+latex_appendices = []
+if 'man_pages' in tags:
+    latex_appendices += ['man_pages_appendix']
 
 # If false, no module index is generated.
 #latex_domain_indices = True
