@@ -4,30 +4,28 @@ Public API
 
 DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided into:
 
-.. glossary::
+**Basic set**
+    The basic set contains the general purpose functions that are common to other
+    modules. The different functions are explained in detail in section :ref:`basic-api`.
 
-    Basic set
-        The basic set contains the general purpose functions that are common to other
-        modules. The different functions are explained in detail in section :ref:`basic-api`.
+**LeWI: Lend When Idle**
+    The LeWI API is oriented to be used by runtimes to manage the CPU sharing between
+    other processes but can also be used on applications to use the ``LeWI``
+    algorithm. These functions are explained in detail in section
+    :ref:`lewi-api`.
 
-    LeWI: Lend When Idle
-        The LeWI API is oriented to be used by runtimes to manage the CPU sharing between
-        other processes but can also be used on applications to use the ``LeWI``
-        algorithm. These functions are explained in detail in section
-        :ref:`lewi-api`.
+**DROM: Dynamic Resource Ownership Manager**
+    The DROM API manages the CPU ownership of each DLB running process. For a more
+    detailed description see :ref:`drom`. These functions are described in section
+    :ref:`drom-api`.
 
-    DROM: Dynamic Resource Ownership Manager
-        The DROM API manages the CPU ownership of each DLB running process. For a more
-        detailed description see :ref:`drom`. These functions are described in section
-        :ref:`drom-api`.
+**MPI API**
+    This is a specific API for MPI. We offer an MPI interface that will be called by
+    Extrae if we are tracing the application or internally in the MPI intercept API.
+    All the calls of this API are of the form shown below, and thus not documented.
 
-    MPI API
-        This is a specific API for MPI. We offer an MPI interface that will be called by
-        Extrae if we are tracing the application or internally in the MPI intercept API.
-        All the calls of this API are of the form shown below, and thus not documented.
-
-        - DLB_<mpi_call_name>_enter(...)
-        - DLB_<mpi_call_name>_leave(...)
+    - DLB_<mpi_call_name>_enter(...)
+    - DLB_<mpi_call_name>_leave(...)
 
 
 ..     TALP: Tracking Application Low-level Performance

@@ -528,9 +528,10 @@ CLEANFILES += $(sphinx_manpages_files)
 if HAVE_SPHINX
 SPHINXBUILD = sphinx-build
 SPHINX_SRC_DIR = doc/user_guide/source/
+SPHINX_FLAGS = -D version=$(VERSION) -D release=$(VERSION)
 
 if SPHINX_HAS_MANPAGES
-SPHINX_FLAGS = -t man_pages
+SPHINX_FLAGS += -t man_pages
 PANDOC = pandoc
 PANDOC_FLAGS = --from=man --to=rst --base-header-level=3
 
