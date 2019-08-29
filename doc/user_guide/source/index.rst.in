@@ -1,0 +1,36 @@
+.. DLB documentation master file, created by
+   sphinx-quickstart on Wed Jun 10 12:33:33 2015.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to DLB's documentation!
+===============================
+
+.. toctree::
+    :maxdepth: 2
+
+    intro
+    technical_requirements
+    how_to_install
+    how_to_run
+    api
+    advance_usage
+    faq
+    contents
+
+
+@SPHINX_HAS_MANPAGES@.. only:: html
+@SPHINX_HAS_MANPAGES@
+@SPHINX_HAS_MANPAGES@    .. toctree::
+@SPHINX_HAS_MANPAGES@        :caption: Man pages
+@SPHINX_HAS_MANPAGES@        :maxdepth: 1
+@SPHINX_HAS_MANPAGES@
+@SPHINX_HAS_MANPAGES@        dlb
+@SPHINX_HAS_MANPAGES@        dlb_run
+@SPHINX_HAS_MANPAGES@        dlb_shm
+@SPHINX_HAS_MANPAGES@        dlb_taskset
+@SPHINX_HAS_MANPAGES@        dlb.h
+@SPHINX_HAS_MANPAGES@        dlb_drom.h
+@SPHINX_HAS_MANPAGES@        dlb_errors.h
+@SPHINX_HAS_MANPAGES@        dlb_sp.h
+@SPHINX_HAS_MANPAGES@        dlb_types.h

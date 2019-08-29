@@ -17,6 +17,29 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+/*! \page dlb_shm Manage DLB shared memory.
+ *  \section synopsis SYNOPSIS
+ *      <B>dlb_shm</B> {--list | --delete | --help}
+ *  \section description DESCRIPTION
+ *      Utility command to list or delete the DLB shared memory.
+ *
+ *      <DL>
+ *          <DT>-l, --list</DT>
+ *          <DD>Print the DLB shared memory data.</DD>
+ *
+ *          <DT>-d, --delete</DT>
+ *          <DD>Delete the DLB shared memory.</DD>
+ *
+ *          <DT>-h, --help</DT>
+ *          <DD>Print usage.</DD>
+ *      </DL>
+ *  \section author AUTHOR
+ *      Barcelona Supercomputing Center (pm-tools@bsc.es)
+ *  \section seealso SEE ALSO
+ *      \ref dlb "dlb"(1), \ref dlb_run "dlb_run"(1),
+ *      \ref dlb_taskset "dlb_taskset"(1)
+ */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif

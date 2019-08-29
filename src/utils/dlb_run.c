@@ -17,6 +17,30 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+/*! \page dlb_run Execute application with DLB pre-initialized.
+ *  \section synopsis SYNOPSIS
+ *      <B>dlb_run</B> [--verbose] <B>\<application\></B>
+ *  \section description DESCRIPTION
+ *      Execute <U>application</U> in a pre-initialized DLB environment.
+ *
+ *      This is optional on most occasions, since DLB can be initialized at any
+ *      time during the execution, but it is mandatory if using OMPT support.
+ *      In that case, DLB needs to register the application and obtain the
+ *      process CPU affinity mask before the OpenMP runtime creates all the
+ *      threads and changes the CPU affinity mask of each one.
+ *  \section options OPTIONS
+ *      <DL>
+ *          <DT>--verbose</DT>
+ *          <DD>Enable verbose mode. Print the command to be executed and
+ *          its return code upon finalization.</DD>
+ *      </DL>
+ *  \section author AUTHOR
+ *      Barcelona Supercomputing Center (pm-tools@bsc.es)
+ *  \section seealso SEE ALSO
+ *      \ref dlb "dlb"(1), \ref dlb_shm "dlb_shm"(1),
+ *      \ref dlb_taskset "dlb_taskset"(1)
+ */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
