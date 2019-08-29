@@ -36,9 +36,13 @@ GEN_verbose = $(GEN_verbose_@AM_V@)
 GEN_verbose_ = $(GEN_verbose_@AM_DEFAULT_V@)
 GEN_verbose_0 = @echo "  GEN     " $@;
 
-DOXYMAN_verbose = $(DOXYMAN_verbose_@AM_V@)
-DOXYMAN_verbose_ = $(DOXYMAN_verbose_@AM_DEFAULT_V@)
-DOXYMAN_verbose_0 = @echo "  DOXYGEN  man pages";
+DOXYMAN1_verbose = $(DOXYMAN1_verbose_@AM_V@)
+DOXYMAN1_verbose_ = $(DOXYMAN1_verbose_@AM_DEFAULT_V@)
+DOXYMAN1_verbose_0 = @echo "  DOXYGEN  man1 pages";
+
+DOXYMAN3_verbose = $(DOXYMAN3_verbose_@AM_V@)
+DOXYMAN3_verbose_ = $(DOXYMAN3_verbose_@AM_DEFAULT_V@)
+DOXYMAN3_verbose_0 = @echo "  DOXYGEN  man3 pages";
 
 PANDOC_verbose = $(PANDOC_verbose_@AM_V@)
 PANDOC_verbose_ = $(PANDOC_verbose_@AM_DEFAULT_V@)
@@ -332,6 +336,12 @@ endif #MPI_LIB
 #********************************************************************************
 # Support binaries
 #********************************************************************************
+bin_sources = \
+	src/utils/dlb.c \
+	src/utils/dlb_run.c \
+	src/utils/dlb_shm.c \
+	src/utils/dlb_taskset.c
+
 bin_PROGRAMS = dlb dlb_run dlb_shm dlb_taskset
 
 dlb_SOURCES = src/utils/dlb.c
@@ -502,6 +512,10 @@ EXTRA_DIST += $(sphinx_files)
 
 # Generated reST files from man pages
 sphinx_manpages_files = \
+	doc/user_guide/source/dlb.rst \
+	doc/user_guide/source/dlb_run.rst \
+	doc/user_guide/source/dlb_shm.rst \
+	doc/user_guide/source/dlb_taskset.rst \
 	doc/user_guide/source/dlb.h.rst \
 	doc/user_guide/source/dlb_drom.h.rst \
 	doc/user_guide/source/dlb_errors.h.rst \
@@ -520,19 +534,31 @@ SPHINX_FLAGS = -t man_pages
 PANDOC = pandoc
 PANDOC_FLAGS = --from=man --to=rst --base-header-level=3
 
-doc/user_guide/source/dlb.h.rst: $(manpagesbuilddir)/dlb.h.3
+doc/user_guide/source/dlb.rst: $(man1_builddir)/dlb.1
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_run.rst: $(man1_builddir)/dlb_run.1
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_run' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_shm.rst: $(man1_builddir)/dlb_shm.1
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_shm' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_taskset.rst: $(man1_builddir)/dlb_taskset.1
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_taskset' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb.h.rst: $(man3_builddir)/dlb.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb.h' $(PANDOC_FLAGS) -o $@ $<
 
-doc/user_guide/source/dlb_drom.h.rst: $(manpagesbuilddir)/dlb_drom.h.3
+doc/user_guide/source/dlb_drom.h.rst: $(man3_builddir)/dlb_drom.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_drom.h' $(PANDOC_FLAGS) -o $@ $<
 
-doc/user_guide/source/dlb_errors.h.rst: $(manpagesbuilddir)/dlb_errors.h.3
+doc/user_guide/source/dlb_errors.h.rst: $(man3_builddir)/dlb_errors.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_error.h' $(PANDOC_FLAGS) -o $@ $<
 
-doc/user_guide/source/dlb_sp.h.rst: $(manpagesbuilddir)/dlb_sp.h.3
+doc/user_guide/source/dlb_sp.h.rst: $(man3_builddir)/dlb_sp.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_sp.h' $(PANDOC_FLAGS) -o $@ $<
 
-doc/user_guide/source/dlb_types.h.rst: $(manpagesbuilddir)/dlb_types.h.3
+doc/user_guide/source/dlb_types.h.rst: $(man3_builddir)/dlb_types.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_types.h' $(PANDOC_FLAGS) -o $@ $<
 
 else
@@ -589,30 +615,45 @@ endif
 # Man pages
 #********************************************************************************
 if HAVE_DOXYGEN
-DOXYFILE_MAN = $(builddir)/doc/doxygen/Doxyfile_man
-manpagesbuilddir = $(builddir)/doc/doxygen/man/man3
+DOXYFILE_MAN1 = $(builddir)/doc/doxygen/Doxyfile_man1
+DOXYFILE_MAN3 = $(builddir)/doc/doxygen/Doxyfile_man3
+man1_builddir = $(builddir)/doc/doxygen/man/man1
+man3_builddir = $(builddir)/doc/doxygen/man/man3
 
 dist_man_MANS = \
-	$(manpagesbuilddir)/dlb.h.3 \
-	$(manpagesbuilddir)/dlb_drom.h.3 \
-	$(manpagesbuilddir)/dlb_sp.h.3 \
-	$(manpagesbuilddir)/dlb_stats.h.3 \
-	$(manpagesbuilddir)/dlb_types.h.3 \
-	$(manpagesbuilddir)/dlb_errors.h.3 \
+	$(man1_builddir)/dlb.1 \
+	$(man1_builddir)/dlb_run.1 \
+	$(man1_builddir)/dlb_shm.1 \
+	$(man1_builddir)/dlb_taskset.1 \
+	$(man3_builddir)/dlb.h.3 \
+	$(man3_builddir)/dlb_drom.h.3 \
+	$(man3_builddir)/dlb_sp.h.3 \
+	$(man3_builddir)/dlb_stats.h.3 \
+	$(man3_builddir)/dlb_types.h.3 \
+	$(man3_builddir)/dlb_errors.h.3 \
 	$(END)
 
-$(manpagesbuilddir)/doxy.stamp: $(installheaders)
-	$(DOXYMAN_verbose)$(DOXYGEN) $(DOXYFILE_MAN)
-	@touch $(manpagesbuilddir)/doxy.stamp
+$(man1_builddir)/doxy.stamp: $(bin_sources)
+	$(DOXYMAN1_verbose)$(DOXYGEN) $(DOXYFILE_MAN1)
+	@touch $(man1_builddir)/doxy.stamp
 
-$(manpagesbuilddir)/dlb.h.3: $(manpagesbuilddir)/doxy.stamp
-$(manpagesbuilddir)/dlb_drom.h.3: $(manpagesbuilddir)/doxy.stamp
-$(manpagesbuilddir)/dlb_sp.h.3: $(manpagesbuilddir)/doxy.stamp
-$(manpagesbuilddir)/dlb_stats.h.3: $(manpagesbuilddir)/doxy.stamp
-$(manpagesbuilddir)/dlb_types.h.3: $(manpagesbuilddir)/doxy.stamp
-$(manpagesbuilddir)/dlb_errors.h.3: $(manpagesbuilddir)/doxy.stamp
+$(man3_builddir)/doxy.stamp: $(installheaders)
+	$(DOXYMAN3_verbose)$(DOXYGEN) $(DOXYFILE_MAN3)
+	@touch $(man3_builddir)/doxy.stamp
 
-CLEANFILES += $(manpagesbuilddir)/doxy.stamp
+$(man1_builddir)/dlb.1: $(man1_builddir)/doxy.stamp
+$(man1_builddir)/dlb_run.1: $(man1_builddir)/doxy.stamp
+$(man1_builddir)/dlb_shm.1: $(man1_builddir)/doxy.stamp
+$(man1_builddir)/dlb_taskset.1: $(man1_builddir)/doxy.stamp
+$(man3_builddir)/dlb.h.3: $(man3_builddir)/doxy.stamp
+$(man3_builddir)/dlb_drom.h.3: $(man3_builddir)/doxy.stamp
+$(man3_builddir)/dlb_sp.h.3: $(man3_builddir)/doxy.stamp
+$(man3_builddir)/dlb_stats.h.3: $(man3_builddir)/doxy.stamp
+$(man3_builddir)/dlb_types.h.3: $(man3_builddir)/doxy.stamp
+$(man3_builddir)/dlb_errors.h.3: $(man3_builddir)/doxy.stamp
+
+CLEANFILES += $(man1_builddir)/doxy.stamp
+CLEANFILES += $(man3_builddir)/doxy.stamp
 endif
 
 #********************************************************************************

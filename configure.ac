@@ -274,7 +274,8 @@ AC_CONFIG_FILES([
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
     doc/doxygen/Doxyfile
-    doc/doxygen/Doxyfile_man
+    doc/doxygen/Doxyfile_man1
+    doc/doxygen/Doxyfile_man3
     doc/user_guide/source/index.rst
 ])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])

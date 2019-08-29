@@ -17,6 +17,87 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+/*! \page dlb_taskset Manage CPU affinity of DLB applications.
+ *  \section synopsis SYNOPSIS
+ *      <B>dlb_taskset</B> --list[=<U>num_columns</U>] [--pid <U>pid</U>]
+ *    \n<B>dlb_taskset</B> --set <U>cpu_list</U> --pid <U>pid</U>
+ *    \n<B>dlb_taskset</B> --set <U>cpu_list</U> [--borrow] <U>application</U>
+ *    \n<B>dlb_taskset</B> --remove <U>cpu_list</U> [--pid <U>pid</U>]
+ *    \n<B>dlb_taskset</B> --getpid <U>id</U>
+ *  \section description DESCRIPTION
+ *      The command <B>dlb_taskset</B> can manage the CPU affinity of any DLB
+ *      running process or new applications. The command can list the existing
+ *      processes or modify the current CPU affinity.
+ *
+ *      Note that the utility does not only changes the CPU pinning of each
+ *      thread but also forces the process to communicate with the underlying
+ *      programming model runtime to modify the number of running threads.
+ *
+ *      Possible operations:
+ *      <DL>
+ *          <DT>-l, --list[=<U>num_columns</U>]</DT>
+ *          <DD>List the CPU affinity of all DLB processes as well as other
+ *          information about its mask status. The operation accepts an
+ *          optional parameter <U>num_columns</U> to specify the maximum number
+ *          of columns to be shown in the output, by default this number
+ *          depends on the screen width. If <B>--pid</B> <U>pid</U> is
+ *          provided, show only the current affinity mask of that process.</DD>
+ *
+ *          <DT>-s, --set, -c, --cpus <U>cpu_list</U></DT>
+ *          <DD>Set a new CPU affinity mask as specified in <U>cpu_list</U> for
+ *          an existing DLB process or a new one. This operation needs either a
+ *          --pid <U>pid</U> or an <U>application</U>. If some CPU in the list
+ *          is previously owned by other DLB process, remove first. See
+ *          \ref format "CPU_LIST FORMAT".</DD>
+ *
+ *          <DT>-r, --remove <U>cpu_list</U></DT>
+ *          <DD>Remove all CPUs specified in <U>cpu_list</U> from any DLB
+ *          process that currently owns that CPU. If a --pid <U>pid</U> is
+ *          provided, only act on that process. See \ref format "CPU_LIST FORMAT".
+ *          </DD>
+ *
+ *          <DT>-g, --getpid <U>id</U></DT>
+ *          <DD>Obtain the system Process ID of a given DLB internal <U>id</U>.
+ *          Note that it is not possible to obtain the DLB internal ID of a
+ *          process so the usage of this option is discouraged, although it is
+ *          kept for internal usage.</DD>
+ *      </DL>
+ *  \section options OPTIONS
+ *      <DL>
+ *          <DT>-p, --pid <U>pid</U></DT>
+ *          <DD>Act only on the given <U>pid</U>.</DD>
+ *
+ *          <DT>-b, --borrow</DT>
+ *          <DD>Only valid when <B>dlb_taskset</B> launches a new application.
+ *          This flag tells DLB to borrow CPUs instead of stealing them. This
+ *          means that if any CPU was removed from any other process due to
+ *          this action and assigned to the new process, that CPU will be
+ *          returned, if possible, to the original owner when the application
+ *          ends.
+ *          \n<B>Note:</B> By default, if this option is not selected, CPUs
+ *          stolen and assigned to new applications will never be returned to
+ *          their original owners.</DD>
+ *
+ *          <DT>--color[=<U>WHEN</U>]</DT>
+ *          <DD>Colorize the output; <U>WHEN</U> can be 'yes'/'always' (default
+ *          if parameter is omitted), 'auto' (default if option is omitted),
+ *          or  'no'/'never'.</DD>
+ *
+ *          <DT>-h, --help</DT>
+ *          <DD>Display this help.</DD>
+ *      </DL>
+ *  \section format CPU_LIST FORMAT
+ *      The <U>cpu_list</U> argument can be either a human readable list or
+ *      range of decimal values,  e.g.: '0,5-7', or a binary mask where the
+ *      first CPU is the most significant bit, e.g.: '10000111b'. In both
+ *      cases, the argument means CPUs with logical id #0, #5, #6, #7.
+ *
+ *  \section author AUTHOR
+ *      Barcelona Supercomputing Center (pm-tools@bsc.es)
+ *  \section seealso SEE ALSO
+ *      \ref dlb "dlb"(1), \ref dlb_run "dlb_run"(1), \ref dlb_shm "dlb_shm"(1)
+ */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -84,7 +165,7 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
                 "\n"
                 "<cpu_list> argument accepts the following formats:\n"
                 "    Decimal numbers, comma-separated list and ranges allowed, e.g.: 0,5-7\n"
-                "    Binary mask, being the first CPU the most significative bit, e.g.: 10000111b\n"
+                "    Binary mask, being the first CPU the most significant bit, e.g.: 10000111b\n"
                 ), out);
 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);

@@ -17,6 +17,31 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+/*! \page dlb DLB utility command.
+ *  \section synopsis SYNOPSIS
+ *      <B>dlb</B> {--affinity | --help [--help] | --version}
+ *  \section description DESCRIPTION
+ *      Utility command to display all DLB options, print DLB version, or check
+ *      process affinity.
+ *
+ *      <DL>
+ *          <DT>-a, --affinity</DT>
+ *          <DD>Print process affinity.</DD>
+ *
+ *          <DT>-h, --help</DT>
+ *          <DD>Print DLB variables and current value. Use the option twice
+ *          (e.g., -hh) for extended info.</DD>
+ *
+ *          <DT>-v, --version</DT>
+ *          <DD>Print version info.</DD>
+ *      </DL>
+ *  \section author AUTHOR
+ *      Barcelona Supercomputing Center (pm-tools@bsc.es)
+ *  \section seealso SEE ALSO
+ *      \ref dlb_run "dlb_run"(1), \ref dlb_shm "dlb_shm"(1),
+ *      \ref dlb_taskset "dllb_taskset"(1)
+ */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif

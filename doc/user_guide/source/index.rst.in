@@ -25,6 +25,10 @@ Welcome to DLB's documentation!
 @SPHINX_HAS_MANPAGES@        :caption: Man pages
 @SPHINX_HAS_MANPAGES@        :maxdepth: 1
 @SPHINX_HAS_MANPAGES@
+@SPHINX_HAS_MANPAGES@        dlb
+@SPHINX_HAS_MANPAGES@        dlb_run
+@SPHINX_HAS_MANPAGES@        dlb_shm
+@SPHINX_HAS_MANPAGES@        dlb_taskset
 @SPHINX_HAS_MANPAGES@        dlb.h
 @SPHINX_HAS_MANPAGES@        dlb_drom.h
 @SPHINX_HAS_MANPAGES@        dlb_errors.h
