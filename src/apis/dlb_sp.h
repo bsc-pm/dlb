@@ -287,6 +287,7 @@ int DLB_AcquireCpus_sp(dlb_handler_t handler, int ncpus);
  *  \param[in] mask CPU set to acquire
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if cannot acquire any CPU
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
  *  \return DLB_ERR_REQST if there are too many requests for these resources

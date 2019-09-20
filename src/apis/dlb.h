@@ -294,6 +294,7 @@ int DLB_AcquireCpus(int ncpus);
  *  \param[in] mask CPU set to acquire
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if cannot acquire any CPU
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
