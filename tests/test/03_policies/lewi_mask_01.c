@@ -356,22 +356,45 @@ int main( int argc, char **argv ) {
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
     }
 
-    // Policy finalize
+    // Finalize subprocess 1
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
-    assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
-
-    // Subprocess 1 shmems finalize
     assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd1.id, false, spd1.options.shm_key) == DLB_SUCCESS );
+    if (mode == MODE_ASYNC) {
+        assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
+    }
 
-    // Subprocess 2 shmems finalize
+    /* Tests with unregistered CPUs */
+    {
+        // Subprocess 2 lends CPU 3
+        CPU_CLR(3, &sp2_mask);
+        assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
+
+        // Subprocess 2 acquires everything
+        assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask ) == DLB_ERR_PERM );
+
+        // Subprocess 2 should have its own CPUs
+        assert_loop( CPU_COUNT(&sp2_mask) == 2
+                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+
+        // Subprocess 2 lends CPU 3
+        CPU_CLR(3, &sp2_mask);
+        assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
+
+        // Subprocess 2 reclaims everything
+        assert( lewi_mask_ReclaimCpuMask(&spd2, &sys_mask ) == DLB_ERR_PERM );
+
+        // Subprocess 2 should have its own CPUs
+        assert_loop( CPU_COUNT(&sp2_mask) == 2
+                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+    }
+
+    // Finalize subprocess 2
+    assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(spd2.id, spd2.options.shm_key) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd2.id, false, spd2.options.shm_key) == DLB_SUCCESS );
-
-    // Async finalize
     if (mode == MODE_ASYNC) {
         assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
-        assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
     }
 
     return 0;
