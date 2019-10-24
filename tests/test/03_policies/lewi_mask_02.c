@@ -155,7 +155,7 @@ int main( int argc, char **argv ) {
         // Subprocess 1 reclaims CPU 1 and finalizes immediately
         finalize_subprocess(&spd1);
 
-        /* Subprocess 2 cannot acquire CPU 1 anymore */
+        // Subprocess 2 gets CPU 1 removed and cannot acquire it anymore
         assert_loop( !CPU_ISSET(1, &sp2_mask) );
         assert( lewi_mask_AcquireCpu(&spd2, 1) == DLB_ERR_PERM );
 
