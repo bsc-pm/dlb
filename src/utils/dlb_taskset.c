@@ -165,7 +165,8 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
                 "\n"
                 "<cpu_list> argument accepts the following formats:\n"
                 "    Decimal numbers, comma-separated list and ranges allowed, e.g.: 0,5-7\n"
-                "    Binary mask, being the first CPU the most significant bit, e.g.: 10000111b\n"
+                "    Binary mask, being the first CPU the less significant bit, e.g.: 0b11100001\n"
+                "    Hexadecimal mask, being the first CPU the less significant bit, e.g.: 0xE1\n"
                 ), out);
 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);

@@ -312,25 +312,47 @@ const char* mu_to_str( const cpu_set_t *mask ) {
     return buffer;
 }
 
+static void parse_64_bits_mask(cpu_set_t *mask, int offset, const char *str, int base) {
+    size_t sys_size = get_sys_size();
+    unsigned long long int number = strtoull(str, NULL, base);
+    int i = offset;
+    while (number > 0 && i < sys_size) {
+        if (number & 1) {
+            CPU_SET(i, mask);
+        }
+        ++i;
+        number = number >> 1;
+    }
+}
+
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if ( !str || strlen(str) == 0 ) return;
 
     size_t sys_size = get_sys_size();
     regex_t regex_bitmask;
+    regex_t regex_hexmask;
     regex_t regex_range;
+    regex_t old_regex_bitmask;
     CPU_ZERO( mask );
 
-    /* Compile regular expression */
-    if ( regcomp(&regex_bitmask, "^[0-1][0-1]+[bB]$", REG_EXTENDED|REG_NOSUB) ) {
+    /* Compile regular expressions */
+    if ( regcomp(&regex_bitmask, "^0[bB][0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
         fatal0( "Could not compile regex");
     }
-
+    if ( regcomp(&regex_hexmask, "^0[xX][0-9,a-f,A-F]+$", REG_EXTENDED|REG_NOSUB) ) {
+        fatal0( "Could not compile regex");
+    }
     if ( regcomp(&regex_range, "^[0-9,-]+$", REG_EXTENDED|REG_NOSUB) ) {
         fatal0( "Could not compile regex");
     }
 
-    /* Regular expression matches bitmask, e.g.: 11110011b */
-    if ( !regexec(&regex_bitmask, str, 0, NULL, 0) ) {
+    /***** Deprecated *****/
+    if ( regcomp(&old_regex_bitmask, "^[0-1][0-1]+[bB]$", REG_EXTENDED|REG_NOSUB) ) {
+        fatal0( "Could not compile regex");
+    }
+    /* Regular expression matches OLD bitmask, e.g.: 11110011b */
+    if ( !regexec(&old_regex_bitmask, str, 0, NULL, 0) ) {
+        warning("The binary form xxxxb is deprecated, please use 0bxxxx.");
         // Parse
         int i;
         for (i=0; i<strlen(str); i++) {
@@ -339,7 +361,55 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             }
         }
     }
-    /* Regular expression matches range, e.g.: 0-3,6-7 */
+    /**********************/
+
+    /* Regular expression matches bitmask, e.g.: 0b11100001 */
+    else if ( !regexec(&regex_bitmask, str, 0, NULL, 0) ) {
+        /* Ignore '0b' */
+        str += 2;
+        if (strlen(str) <= 64) {
+            parse_64_bits_mask(mask, 0, str, 2);
+        } else {
+            /* parse in chunks of 64 bits */
+            char *str_copy = strdup(str);
+            char *start_ptr;
+            char *end_ptr = str_copy + strlen(str_copy);
+            int offset = 0;
+            do {
+                start_ptr = strlen(str_copy) < 64 ? str_copy : end_ptr - 64;
+                parse_64_bits_mask(mask, offset, start_ptr, 2);
+                offset += 64;
+                end_ptr = start_ptr;
+                *end_ptr = '\0';
+            } while (strlen(str_copy) > 0);
+            free(str_copy);
+        }
+    }
+
+    /* Regular expression matches hexmask, e.g.: 0xE1 */
+    else if ( !regexec(&regex_hexmask, str, 0, NULL, 0) ) {
+        /* Ignore '0x' */
+        str += 2;
+        if (strlen(str) <= 16) {
+            parse_64_bits_mask(mask, 0, str, 16);
+        } else {
+            /* parse in chunks of 64 bits (16 hex digits) */
+            char *str_copy = strdup(str);
+            char *start_ptr;
+            char *end_ptr = str_copy + strlen(str_copy);
+            int offset = 0;
+            do {
+                start_ptr = strlen(str_copy) < 16 ? str_copy : end_ptr - 16;
+                parse_64_bits_mask(mask, offset, start_ptr, 16);
+                offset += 64;
+                end_ptr = start_ptr;
+                *end_ptr = '\0';
+            } while (strlen(str_copy) > 0);
+            free(str_copy);
+        }
+    }
+
+    /* Regular expression matches range, e.g.: 0,5-7 */
     else if ( !regexec(&regex_range, str, 0, NULL, 0) ) {
         // Parse
         const char *ptr = str;
@@ -383,7 +453,9 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     else { }
 
     regfree(&regex_bitmask);
+    regfree(&regex_hexmask);
     regfree(&regex_range);
+    regfree(&old_regex_bitmask);
 
     if ( CPU_COUNT(mask) == 0 ) {
         warning( "Parsed mask \"%s\" does not seem to be a valid mask\n", str );

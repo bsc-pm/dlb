@@ -29,8 +29,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define MAX_SIZE 16
+#define MAX_SIZE 512
 
+/* Test that the string 'str' is parsed to a cpu_set_t containing the bits in 'bits' */
 static void parse_and_check(const char *str, const int *bits) {
     int i;
     size_t nelems = 0;
@@ -48,26 +49,82 @@ static void parse_and_check(const char *str, const int *bits) {
     // check size
     error = error ? error : CPU_COUNT(&mask) != nelems;
 
-    printf("String %s parsed as %s\n", str, mu_to_str(&mask));
+    fprintf(stderr, "String %s parsed as %s\n", str, mu_to_str(&mask));
     assert( !error );
+}
+
+/* Test that the string 'str' is parsed to a cpu_set_t of such 'size' and contains 'cpuid' */
+static void parse_and_check2(const char *str, int size, int cpuid) {
+    cpu_set_t mask;
+    mu_parse_mask(str, &mask);
+    fprintf(stderr, "String %s parsed as %s\n", str, mu_to_str(&mask));
+    assert( CPU_COUNT(&mask) == size );
+    assert( CPU_ISSET(cpuid, &mask) );
 }
 
 int main( int argc, char **argv ) {
     mu_init();
     mu_testing_set_sys_size(MAX_SIZE);
 
+    // Decimal
     parse_and_check("0", (const int[MAX_SIZE]){1, 0, 0});
     parse_and_check("1", (const int[MAX_SIZE]){0, 1, 0});
     parse_and_check("0,2", (const int[MAX_SIZE]){1, 0, 1});
+    parse_and_check("10", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    // Ranges
+    parse_and_check("1,3-5,6,8", (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
+    parse_and_check("9-12", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
+    // Long numbers
+    parse_and_check2("63", 1, 63);
+    parse_and_check2("64", 1, 64);
+    parse_and_check2("500-511", 12, 511);
 
-    // Beware the range/bitmask ambiguity
+    // Binary
+    parse_and_check("0b1", (const int[MAX_SIZE]){1, 0, 0});
+    parse_and_check("0b10", (const int[MAX_SIZE]){0, 1, 0});
+    parse_and_check("0B101", (const int[MAX_SIZE]){1, 0, 1});
+    parse_and_check("0b10000000000", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    parse_and_check("0b00000000000000000000000000000000000000000000000000000000000101111010",
+            (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
+    parse_and_check("0b1111000000000",
+            (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
+    parse_and_check2("0b1000000000000000000000000000000000000000000000000000000000000000", 1, 63);
+    parse_and_check2("0b10000000000000000000000000000000000000000000000000000000000000000", 1, 64);
+    parse_and_check2("0b"
+            "1111111111110000000000000000000000000000000000000000000000000000" /* 64 bits */
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000", 12, 511);
+
+    // Hexadecimal
+    parse_and_check("0x1", (const int[MAX_SIZE]){1, 0, 0});
+    parse_and_check("0x2", (const int[MAX_SIZE]){0, 1, 0});
+    parse_and_check("0X5", (const int[MAX_SIZE]){1, 0, 1});
+    parse_and_check("0x400", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    parse_and_check("0x17A", (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
+    parse_and_check("0x00000000000000000000000000000000000000000000000000000000001E00",
+            (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
+    parse_and_check2("0x8000000000000000", 1, 63);
+    parse_and_check2("0x10000000000000000", 1, 64);
+    parse_and_check2("0x"
+            "FFF0000000000000"  /* 64 bits */
+            "0000000000000000"
+            "0000000000000000"
+            "0000000000000000"
+            "0000000000000000"
+            "0000000000000000"
+            "0000000000000000"
+            "0000000000000000", 12, 511);
+
+    // Old binary
     parse_and_check("101b", (const int[MAX_SIZE]){1, 0, 1});
     parse_and_check("10b", (const int[MAX_SIZE]){1});
     parse_and_check("00000000001b", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
-    parse_and_check("10", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
 
-    parse_and_check("1,3-5,6,8", (const int[MAX_SIZE]){0, 1, 0, 1, 1, 1, 1, 0, 1});
-    parse_and_check("9-12", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1});
 
     mu_finalize();
     return EXIT_SUCCESS;
