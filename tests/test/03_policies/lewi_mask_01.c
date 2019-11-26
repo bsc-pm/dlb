@@ -175,7 +175,7 @@ int main( int argc, char **argv ) {
         // Subprocess 1 reclaims
         assert( lewi_mask_ReclaimCpu(&spd1, 1) == DLB_NOTED );
 
-        // Subprocesses 1 & 2 needs to poll
+        // Subprocesses 1 & 2 need to poll
         if (mode == MODE_POLLING) {
             assert( lewi_mask_CheckCpuAvailability(&spd1, 1) == DLB_NOTED );
             assert( lewi_mask_ReturnCpu(&spd2, 1) == DLB_SUCCESS );
@@ -183,6 +183,25 @@ int main( int argc, char **argv ) {
         }
         assert_loop( CPU_ISSET(1, &sp1_mask) );
         assert( !CPU_ISSET(1, &sp2_mask) );
+
+        // Test that SP2 receives CPU 1 again if SP1 lends it again
+        if (mode == MODE_ASYNC) {
+            // Subprocess 1 lends everything
+            CPU_ZERO(&sp1_mask);
+            assert( lewi_mask_LendCpuMask(&spd1, &sys_mask) == DLB_SUCCESS );
+
+            // CPU 1 was still requested by Subprocess 2
+            assert_loop( CPU_ISSET(1, &sp2_mask) );
+
+            // Subprocess 2 lends CPU 1
+            CPU_CLR(1, &sp2_mask);
+            assert( lewi_mask_LendCpu(&spd2, 1) == DLB_SUCCESS );
+
+            // Subprocess aquires its mask
+            assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+            assert_loop( CPU_ISSET(0, &sp1_mask) );
+            assert_loop( CPU_ISSET(1, &sp1_mask) );
+        }
     }
 
     /* CpuMask tests */
@@ -191,19 +210,14 @@ int main( int argc, char **argv ) {
         CPU_ZERO(&sp1_mask);
         assert( lewi_mask_LendCpuMask(&spd1, &sys_mask) == DLB_SUCCESS );
 
-        if (mode == MODE_ASYNC) {
-            // CPU 1 was still requested
-            assert_loop( CPU_ISSET(1, &sp2_mask) );
-        }
-
         // Subprocess 2 acquires everything
         assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask) == DLB_SUCCESS );
 
-        // Subprocess 1 reclaims everything
-        assert( lewi_mask_ReclaimCpuMask(&spd1, &sys_mask) == DLB_ERR_PERM );
-
         // Subprocess 1 reclaims its CPUs
         assert( lewi_mask_ReclaimCpuMask(&spd1, &sp1_process_mask) == DLB_NOTED );
+
+        // Subprocess 1 reclaims everything
+        assert( lewi_mask_ReclaimCpuMask(&spd1, &sys_mask) == DLB_ERR_PERM );
 
         // Subprocess 2 lends external CPUs
         CPU_CLR(0, &sp2_mask);
