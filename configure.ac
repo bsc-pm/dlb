@@ -243,6 +243,16 @@ AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 # check for Doxygen
 AC_CHECK_PROG([doxygen], [doxygen], [yes])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
+AM_COND_IF([HAVE_DOXYGEN], [
+    # Doxygen < '1.8.16' had some bugs with underline HTML tags:
+    AC_MSG_CHECKING([doxygen version])
+    doxygen_version="`doxygen --version`"
+    AC_MSG_RESULT([$doxygen_version])
+    AX_COMPARE_VERSION([$doxygen_version], [ge], [1.8.16],
+                       [DOXYGEN_ALIASES="underline{1}=\"<U>\\1</U>\""],
+                       [DOXYGEN_ALIASES="underline{1}=\"\\1\""])
+])
+AC_SUBST([DOXYGEN_ALIASES])
 
 # check for Pandoc
 AC_CHECK_PROG([pandoc], [pandoc], [yes])

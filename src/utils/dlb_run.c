@@ -21,7 +21,7 @@
  *  \section synopsis SYNOPSIS
  *      <B>dlb_run</B> [--verbose] <B>\<application\></B>
  *  \section description DESCRIPTION
- *      Execute <U>application</U> in a pre-initialized DLB environment.
+ *      Execute \underline{application} in a pre-initialized DLB environment.
  *
  *      This is optional on most occasions, since DLB can be initialized at any
  *      time during the execution, but it is mandatory if using OMPT support.
