@@ -88,9 +88,9 @@
  *      </DL>
  *  \section format CPU_LIST FORMAT
  *      The \underline{cpu_list} argument can be either a human readable list or
- *      range of decimal values,  e.g.: '0,5-7', or a binary mask where the
- *      first CPU is the most significant bit, e.g.: '10000111b'. In both
- *      cases, the argument means CPUs with logical id #0, #5, #6, #7.
+ *      range of decimal values,  e.g.: '0,5-7', or a hexadecimal or binary mask
+ *      where the first CPU is the least significant bit, e.g.: '0xE1' or '0b11100001'.
+ *      In all the examples above the argument means CPUs with logical id #0, #5, #6, #7.
  *
  *  \section author AUTHOR
  *      Barcelona Supercomputing Center (pm-tools@bsc.es)
@@ -165,8 +165,8 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
                 "\n"
                 "<cpu_list> argument accepts the following formats:\n"
                 "    Decimal numbers, comma-separated list and ranges allowed, e.g.: 0,5-7\n"
-                "    Binary mask, being the first CPU the less significant bit, e.g.: 0b11100001\n"
-                "    Hexadecimal mask, being the first CPU the less significant bit, e.g.: 0xE1\n"
+                "    Binary mask, being the first CPU the least significant bit, e.g.: 0b11100001\n"
+                "    Hexadecimal mask, being the first CPU the least significant bit, e.g.: 0xE1\n"
                 ), out);
 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
