@@ -35,8 +35,7 @@ bets-check:
 if ENABLE_COVERAGE
 coverage-local: check-local
 	$(mkdir_p) coverage
-	gcovr --root $(abs_top_srcdir)/src --object-directory $(abs_top_builddir)/src \
-	    --html --html-details -o $(abs_top_builddir)/tests/coverage/index.html
+	gcovr -r $(abs_top_builddir) --html --html-details -o coverage/index.html
 
 clean-coverage-data:
 	find $(abs_top_builddir) -name '*.gcda' -delete
