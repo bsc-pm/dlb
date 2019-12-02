@@ -814,14 +814,27 @@ EXTRA_DIST += tests/test \
 	      tests/litsupport/bets.py
 CLEANFILES += tests/test.log tests/test.log.xml
 
-coverage-local: all-am
+if ENABLE_COVERAGE
+COVERAGE_DIR = tests/coverage
+coverage: check-recursive
+	$(mkdir_p) $(COVERAGE_DIR)
+	gcovr . --root $(top_srcdir) --html --html-details -o $(COVERAGE_DIR)/index.html
+
+clean-coverage:
+	find $(abs_top_builddir) -name '*.gcno' -or -name '*.gcda' -delete
+	rm -rf $(COVERAGE_DIR)
+else
+coverage:
+	@echo "coverage is not configured."
+clean-coverage:
+endif
 
 
 #################################################################################
 ### Hooks                                                                     ###
 #################################################################################
 
-clean-local: clean-rpm clean-deb clean-doc
+clean-local: clean-rpm clean-deb clean-doc clean-coverage
 
 install-data-hook:
 	chmod +x $(mpiompexamplesdir)/run.sh

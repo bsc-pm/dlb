@@ -5,7 +5,6 @@ AC_CONFIG_SRCDIR([src/LB_core/DLB_kernel.c])
 configure_orig_arguments="$@"
 
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
-AM_EXTRA_RECURSIVE_TARGETS([coverage])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Enable silent rules if available

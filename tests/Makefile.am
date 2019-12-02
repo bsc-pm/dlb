@@ -21,9 +21,9 @@ LIT_OPTIONS = --xunit-xml-output=test.log.xml -sv
 LIT = PYTHONPATH=$(top_srcdir)/tests $(top_srcdir)/scripts/lit/lit.py $(LIT_OPTIONS)
 
 if LIT_SUPPORT
-check-local: clean-coverage-data lit-check
+check-local: lit-check
 else
-check-local: clean-coverage-data bets-check
+check-local: bets-check
 endif
 
 lit-check:
@@ -31,21 +31,3 @@ lit-check:
 
 bets-check:
 	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test/$(TEST)*
-
-if ENABLE_COVERAGE
-coverage-local: check-local
-	$(mkdir_p) coverage
-	gcovr -r $(abs_top_builddir) --html --html-details -o coverage/index.html
-
-clean-coverage-data:
-	find $(abs_top_builddir) -name '*.gcda' -delete
-
-clean-local: clean-coverage-data
-	find $(abs_top_builddir) -name '*.gcno' -delete
-	rm -rf coverage/
-else
-coverage-local:
-	@echo "coverage is not configured."
-clean-coverage-data:
-clean-local:
-endif
