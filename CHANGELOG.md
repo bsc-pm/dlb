@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- New TALP module: Tracking Application Low-level Performance
+- Man pages for DLB commands
+
+### Changed
+- Dropped support for binary mask old format `1000b` in favor of `0b0001`
+
+### Fixed
+- Some callbacks not being invoked when the action involved some successful
+  actions and some others not allowed
+- Minor documentation fixes
 
 ## [2.1] 2019-07-15
 ### Added
