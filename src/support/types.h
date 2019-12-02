@@ -60,6 +60,15 @@ typedef enum PriorityType {
     PRIO_SPREAD_IFEMPTY
 } priority_t;
 
+typedef enum TalpSummaryType {
+    SUMMARY_APP         = 1 << 1,
+    SUMMARY_NODE        = 1 << 2,
+    SUMMARY_PROCESS     = 1 << 3,
+    SUMMARY_ITERATION   = 1 << 4,
+    SUMMARY_OMP         = 1 << 5,
+    SUMMARY_REGIONS     = 1 << 6
+} talp_summary_t;
+
 typedef enum PolicyType {
     POLICY_NONE,
     POLICY_LEWI,
@@ -114,6 +123,11 @@ const char* get_priority_choices(void);
 int parse_policy(const char *str, policy_t *value);
 const char* policy_tostr(policy_t policy);
 const char* get_policy_choices(void);
+
+/* talp_summary_t */
+int parse_talp_summary(const char *str, talp_summary_t *value);
+const char* talp_summary_tostr(talp_summary_t summary);
+const char* get_talp_summary_choices(void);
 
 /* interaction_mode_t */
 int parse_mode(const char *str, interaction_mode_t *value);

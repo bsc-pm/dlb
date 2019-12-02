@@ -18,6 +18,7 @@
 /*********************************************************************************/
 
 #include "LB_numThreads/numThreads.h"
+#include "LB_core/DLB_talp.h"
 
 #include "apis/dlb_errors.h"
 #include "support/tracing.h"
@@ -182,6 +183,7 @@ int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int enable_cpu(const pm_interface_t *pm, int cpuid) {
+    talp_cpu_enable(cpuid);
     if (pm->dlb_callback_enable_cpu_ptr == NULL) {
         cpu_set_t cpu_set;
         CPU_ZERO(&cpu_set);
@@ -193,6 +195,7 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
 }
 
 int disable_cpu(const pm_interface_t *pm, int cpuid) {
+    talp_cpu_disable(cpuid);
     if (pm->dlb_callback_disable_cpu_ptr == NULL) {
         cpu_set_t cpu_set;
         sched_getaffinity(0, sizeof(cpu_set_t), &cpu_set);

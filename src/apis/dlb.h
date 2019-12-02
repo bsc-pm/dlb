@@ -498,6 +498,39 @@ int DLB_PrintShmem(int num_columns, dlb_printshmem_flags_t print_flags);
  */
 const char* DLB_Strerror(int errnum);
 
+/*! \brief API call to  adjust the resources of an application
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_AutoSizerStart(void);
+
+/*! \brief API call to  adjust the resources of an application
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_AutoSizerEnd(void);
+
+/*! \brief Register a new Monitoring Region
+ *  \param[in] name Name to identify the new region
+ *  \return monitor handle to be used on subsequent calls
+ */
+dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
+
+/*! \brief Start (or unpause) monitoring region
+ *  \param[in] handle Monitoring handle that identifies the region
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_MonitoringRegionStart(dlb_monitor_t handle);
+
+/*! \brief Stop (or pause) monitoring region
+ *  \param[in] handle Monitoring handle that identifies the region
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_MonitoringRegionStop(dlb_monitor_t handle);
+
+/*! \brief Print a Report by stdout of the monitoring region
+ *  \param[in] handle Monitoring handle that identifies the region
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_MonitoringRegionReport(dlb_monitor_t handle);
 
 #ifdef __cplusplus
 }

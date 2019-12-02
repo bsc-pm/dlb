@@ -345,5 +345,12 @@ const char* DLB_Strerror(int errnum) {
     return error_get_str(errnum);
 }
 
-
+int DLB_AutoSizer_start(){
+    spd_enter_dlb(NULL);
+    return auto_resize_start();
+}
+int DLB_AutoSizer_end(){
+    spd_enter_dlb(NULL);
+    return auto_resize_end();
+}
 #pragma GCC visibility pop

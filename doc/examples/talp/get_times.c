@@ -17,33 +17,38 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef MYTIME_H
-#define MYTIME_H
+#include <signal.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <dlb.h>
+#include <dlb_talp.h>
 
-#include <time.h>       // for timespec: sec + nsec
-#include <sys/time.h>   // for timeval: sec + usec
-#include <inttypes.h>
+int main( int argc, char **argv )
+{
+    if ( argc!=2 ) {
+        fprintf( stderr, "Usage: %s <pid>\n", argv[0] );
+        return EXIT_FAILURE;
+    }
+    int pid = atoi( argv[1] );
+    int error;
+    double mpi_time,cpu_time;
 
-void get_time( struct timespec *t );
-void get_time_coarse( struct timespec *t );
-int64_t get_time_in_ns(void);
-int diff_time( struct timespec init, struct timespec end, struct timespec* diff );
-void add_time( struct timespec t1, struct timespec t2, struct timespec* sum );
-void mult_time( struct timespec t1, int factor, struct timespec* prod );
-void diff_time_mult(struct timespec* time, int mult_factor,  struct timespec * result);
+    DLB_TALP_Attach();
 
-void reset( struct timespec *t1 );
-double to_secs( struct timespec t1 );
-int64_t to_nsecs( const struct timespec *ts );
-int64_t timeval_diff( const struct timeval *init, const struct timeval *end );
-int64_t timespec_diff( const struct timespec *start, const struct timespec *finish );
-void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2, struct timespec *res );
-void ns_to_human( char *buf, size_t size, int64_t ns );
+    while( !kill(pid, 0) ) {
+        error = DLB_TALP_MPITimeGet(pid, &mpi_time);
+        if (error != DLB_SUCCESS) break;
+        error = DLB_TALP_CPUTimeGet(pid, &cpu_time);
+        if (error != DLB_SUCCESS) break;
 
-void timer_init(void);
-void *timer_register(const char *key);
-void timer_start(void *handler);
-void timer_stop(void *handler);
-void timer_finalize(void);
+        fprintf( stdout, "\n\033[F\033[J" );
+        fprintf( stdout, "%d, mpi time: %g", pid, mpi_time );
+        fprintf( stdout, "; cpu time: %g",  cpu_time );
+        usleep( 500000 );
+    }
 
-#endif /* MYTIME_H */
+    DLB_TALP_Detach();
+
+    return EXIT_SUCCESS;
+}

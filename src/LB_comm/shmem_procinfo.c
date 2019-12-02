@@ -30,6 +30,7 @@
 #include "support/types.h"
 #include "support/mytime.h"
 #include "support/mask_utils.h"
+#include "LB_core/DLB_talp.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -45,6 +46,18 @@ enum { SYNC_POLL_TIMEOUT = 1000000000 };    /* 10^9 ns = 1s */
 //static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
 //static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
 //static const double LOG2E = 1.44269504088896340736;
+typedef struct {
+    struct timespec mpi_time;
+    struct timespec compute_time;
+    double percent;
+    int niter;
+} iter_t;
+typedef struct {
+    iter_t iterations[1000];
+    int iter_num;
+    double load_balance;
+    monitor_info_t aux;
+} auto_sizer_t;
 
 typedef struct {
     pid_t pid;
@@ -57,6 +70,9 @@ typedef struct {
     // Cpu Usage fields:
     double cpu_usage;
     double cpu_avg_usage;
+    auto_sizer_t auto_sizer;
+    double mpi_time;
+    double comp_time;
 #ifdef DLB_LOAD_AVERAGE
     // Load average fields:
     float load[3];              // 1min, 5min, 15mins
@@ -68,10 +84,11 @@ typedef struct {
     bool initialized;
     struct timespec initial_time;
     cpu_set_t free_mask;        // Contains the CPUs in the system not owned
+    cpu_set_t resize_mask;        // Contains the CPUs in the system not owned
     pinfo_t process_info[0];
 } shdata_t;
 
-enum { SHMEM_PROCINFO_VERSION = 2 };
+enum { SHMEM_PROCINFO_VERSION = 3 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -194,6 +211,8 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
                 process->preregistered = false;
                 memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
                 memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
+                process->cpu_usage = 0.0;
+                process->cpu_avg_usage = 0.0;
 
 #ifdef DLB_LOAD_AVERAGE
                 process->load[0] = 0.0f;
@@ -881,6 +900,94 @@ int shmem_procinfo__getloadavg(pid_t pid, double *load) {
 }
 
 
+int  shmem_procinfo__getmpitime(pid_t pid, double *mpi_time){
+
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            *mpi_time = process->mpi_time;
+            return DLB_SUCCESS;
+        }
+        else
+            return -1;
+}
+
+int  shmem_procinfo__getcomptime(pid_t pid, double *comp_time){
+
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            *comp_time = process->comp_time;
+            return DLB_SUCCESS;
+        }
+        else
+            return -1;
+}
+
+
+
+int shmem_procinfo__setcpuavgusage(pid_t pid, double new_avg_usage) {
+
+    if (shm_handler == NULL) return -1.0;
+
+    shmem_lock(shm_handler);
+    {
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            process->cpu_avg_usage = new_avg_usage;
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return DLB_SUCCESS;
+}
+
+int shmem_procinfo__setcpuusage(pid_t pid,int index, double new_avg_usage) {
+    if (shm_handler == NULL) return -1.0;
+
+    shmem_lock(shm_handler);
+    {
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            process->cpu_avg_usage = new_avg_usage;
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return DLB_SUCCESS;
+}
+
+int shmem_procinfo__setcomptime(pid_t pid, double new_comp_time) {
+
+    if (shm_handler == NULL) return -1.0;
+
+    shmem_lock(shm_handler);
+    {
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            process->comp_time = new_comp_time;
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return DLB_SUCCESS;
+}
+
+int shmem_procinfo__setmpitime(pid_t pid, double new_mpi_time) {
+
+    if (shm_handler == NULL) return -1.0;
+
+    shmem_lock(shm_handler);
+    {
+        pinfo_t *process = get_process(pid);
+        if (process) {
+            process->mpi_time = new_mpi_time;
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return DLB_SUCCESS;
+}
+
+
 /*********************************************************************************/
 /* Misc                                                                          */
 /*********************************************************************************/
@@ -1194,4 +1301,76 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync) {
     error = error ? error : unregister_mask(process, &cpus_to_free, /* return_stolen */ false);
 
     return error;
+}
+
+int auto_resize_start(){
+    if ( !thread_spd->talp_enabled ) return 0 ;
+    pinfo_t *process = get_process(thread_spd->id);
+    auto_sizer_t * au = &process->auto_sizer;
+
+    if( au->iter_num == 0)return DLB_SUCCESS;
+    shmem_lock(shm_handler);
+    {
+        monitoring_region_start(&process->auto_sizer.aux);
+    }
+    shmem_unlock(shm_handler);
+
+    int last_iter = au->iter_num - 1;
+    int i;
+    double temp = process->auto_sizer.iterations[last_iter].percent;
+
+    if( temp < 0.4){
+        cpu_set_t mask;
+        mask = process->current_process_mask;
+        if (CPU_COUNT(&mask) == 1) return DLB_SUCCESS;
+        for(i = max_processes - 1; i > 0; i--){
+            if(CPU_ISSET(i,&mask)){
+                CPU_SET(i,&shdata->resize_mask);
+                CPU_CLR(i,&mask);
+                set_new_mask(process, &mask, false );
+                talp_cpu_disable(i);
+                break;
+            }
+        }
+    }
+    else if( temp > 0.9){
+        cpu_set_t mask;
+        mask = process->current_process_mask;
+        if(CPU_COUNT(&shdata->resize_mask) == 0) return DLB_SUCCESS;
+        for(i = 0; i < max_cpus; ++i){
+            if(CPU_ISSET(i,&shdata->resize_mask)){
+                shmem_lock(shm_handler);
+                if(!CPU_ISSET(i,&shdata->resize_mask)){
+                    shmem_unlock(shm_handler);
+                    continue;
+                }
+                CPU_SET(i,&mask);
+                CPU_CLR(i, &shdata->resize_mask);
+                shmem_unlock(shm_handler);
+                set_new_mask(process,&mask, false );
+                talp_cpu_enable(i);
+                break;
+            }
+        }
+    }
+    return DLB_SUCCESS;
+}
+
+int auto_resize_end(){
+    if ( !thread_spd->talp_enabled ) return 0 ;
+    shmem_lock(shm_handler);
+    {
+        pinfo_t *process = get_process(thread_spd->id);
+        monitor_info_t * monitor = &process->auto_sizer.aux;
+        monitoring_region_stop(monitor);
+        iter_t* it = &process->auto_sizer.iterations[process->auto_sizer.iter_num];
+        it->mpi_time = monitor->mpi_time;
+        it->compute_time = monitor->compute_time;
+        it->percent = to_secs(it->compute_time) / ( to_secs(it->compute_time) + to_secs(it->mpi_time));
+        ++process->auto_sizer.iter_num;
+    }
+    shmem_unlock(shm_handler);
+
+    return DLB_SUCCESS;
+
 }

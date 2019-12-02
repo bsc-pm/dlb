@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2019 Barcelona Supercomputing Center                          */
+/*  Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -14,46 +14,49 @@
 /*  GNU Lesser General Public License for more details.                          */
 /*                                                                               */
 /*  You should have received a copy of the GNU Lesser General Public License     */
-/*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
+/*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
-#ifndef SPD_H
-#define SPD_H
+#ifndef DLB_API_TALP_H
+#define DLB_API_TALP_H
 
-#include "LB_core/lb_funcs.h"
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+/*********************************************************************************/
+/*    TALP                                                                       */
+/*********************************************************************************/
 
-#include <sys/types.h>
+/*! \brief Attach current process to DLB system as TALP
+ * \return DLB_SUCCESS on success
+ * */
+int DLB_TALP_Attach(void);
 
-/* Sub-process Descriptor */
+/*! \brief Detach current process from DLB system
+ * \return DLB_SUCCESS on success
+ * */
+int DLB_TALP_Detach(void);
 
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_preinitialized;
-    bool dlb_enabled;
-    cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    void *lewi_info;
-    bool talp_enabled;
-    bool talp_initialized;
-    void *talp_info;
-} subprocess_descriptor_t;
+/*! \brief Get the number of CPUs
+ * \return DLB_SUCCESS on success
+ * */
+int DLB_TALP_GetNumCPUs(int *ncpus);
 
-extern __thread subprocess_descriptor_t *thread_spd;
+/*! \brief Get MPI Time of the current process
+ * \return DLB_SUCCESS on success
+ * */
+int DLB_TALP_MPITimeGet(int process, double* mpi_time);
 
-void spd_enter_dlb(subprocess_descriptor_t *spd);
-void spd_register(subprocess_descriptor_t *spd);
-void spd_unregister(const subprocess_descriptor_t *spd);
-void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
-pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
-const subprocess_descriptor_t** spd_get_spds(void);
+/*! \brief Get Compute Time of the current process
+ * \return DLB_SUCCESS on success
+ * */
+int DLB_TALP_CPUTimeGet(int process, double* compute_time);
 
-#endif /* SPD_H */
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* DLB_API_TALP_H */

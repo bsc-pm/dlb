@@ -17,33 +17,55 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef MYTIME_H
-#define MYTIME_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
 
-#include <time.h>       // for timespec: sec + nsec
-#include <sys/time.h>   // for timeval: sec + usec
-#include <inttypes.h>
+#include "unique_shmem.h"
 
-void get_time( struct timespec *t );
-void get_time_coarse( struct timespec *t );
-int64_t get_time_in_ns(void);
-int diff_time( struct timespec init, struct timespec end, struct timespec* diff );
-void add_time( struct timespec t1, struct timespec t2, struct timespec* sum );
-void mult_time( struct timespec t1, int factor, struct timespec* prod );
-void diff_time_mult(struct timespec* time, int mult_factor,  struct timespec * result);
+#include <LB_core/spd.h>
+#include <LB_core/DLB_talp.h>
+#include <apis/dlb.h>
+#include "LB_core/spd.h"
+#include "unique_shmem.h"
 
-void reset( struct timespec *t1 );
-double to_secs( struct timespec t1 );
-int64_t to_nsecs( const struct timespec *ts );
-int64_t timeval_diff( const struct timeval *init, const struct timeval *end );
-int64_t timespec_diff( const struct timespec *start, const struct timespec *finish );
-void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2, struct timespec *res );
-void ns_to_human( char *buf, size_t size, int64_t ns );
+#include <apis/dlb.h>
 
-void timer_init(void);
-void *timer_register(const char *key);
-void timer_start(void *handler);
-void timer_stop(void *handler);
-void timer_finalize(void);
+#include <sched.h>
+#include <unistd.h>
+#include <string.h>
+#include <assert.h>
 
-#endif /* MYTIME_H */
+/* Basic DROM init / pre / post / finalize within 1 process */
+
+
+int main(int argc, char **argv) {
+    cpu_set_t process_mask;
+    CPU_ZERO(&process_mask);
+    CPU_SET(0, &process_mask);
+    CPU_SET(1, &process_mask);
+
+    char options[64] = " --talp --shm-key=";
+    strcat(options, SHMEM_KEY);
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+
+    char value[16];
+    assert( DLB_GetVariable("--talp", value) == DLB_SUCCESS );
+
+    char* name = "Test Region";
+
+    dlb_monitor_t* test1 = DLB_MonitoringRegionRegister(name);
+
+    monitor_info_t* check1 = (monitor_info_t*) test1;
+    double tmp_mpi,tmp_comp;
+
+    tmp_mpi = to_secs(check1->mpi_time);
+    tmp_comp = to_secs(check1->compute_time);
+
+    assert(tmp_comp == 0);
+    assert(tmp_mpi == 0);
+
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    return 0;
+}

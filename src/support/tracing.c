@@ -62,6 +62,19 @@ void init_tracing(const options_t *options) {
         n_values=0;
         Extrae_define_event_type(&type, "DLB Used threads", &n_values, NULL, NULL);
 
+        //LOOP_STATE
+        type=LOOP_STATE;
+        n_values=6;
+         char * value_loop[6] = { "NO_LOOP", "IN_LOOP", "NEW_ITERATION","NEW_LOOP","END_NEW_LOOP","END_LOOP"};
+        Extrae_define_event_type(&type, "Dynais State", &n_values, values, value_loop);
+
+         //MONITOR_REGION
+        type=MONITOR_REGION;
+        n_values=2;
+         char * value_regions[2] = { "Disabled", "Enabled"};
+        Extrae_define_event_type(&type, "MonitorRegions mode", &n_values, values, value_regions);
+
+
         //RUNTIME_EVENT
         type=RUNTIME_EVENT;
         n_values=13;

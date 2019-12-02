@@ -17,33 +17,50 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef MYTIME_H
-#define MYTIME_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
 
-#include <time.h>       // for timespec: sec + nsec
-#include <sys/time.h>   // for timeval: sec + usec
-#include <inttypes.h>
+#include "LB_core/DLB_talp.h"
+#include "LB_core/spd.h"
+#include "unique_shmem.h"
 
-void get_time( struct timespec *t );
-void get_time_coarse( struct timespec *t );
-int64_t get_time_in_ns(void);
-int diff_time( struct timespec init, struct timespec end, struct timespec* diff );
-void add_time( struct timespec t1, struct timespec t2, struct timespec* sum );
-void mult_time( struct timespec t1, int factor, struct timespec* prod );
-void diff_time_mult(struct timespec* time, int mult_factor,  struct timespec * result);
+#include <apis/dlb.h>
+#include <apis/dlb_drom.h>
 
-void reset( struct timespec *t1 );
-double to_secs( struct timespec t1 );
-int64_t to_nsecs( const struct timespec *ts );
-int64_t timeval_diff( const struct timeval *init, const struct timeval *end );
-int64_t timespec_diff( const struct timespec *start, const struct timespec *finish );
-void add_tv_to_ts( const struct timeval *t1, const struct timeval *t2, struct timespec *res );
-void ns_to_human( char *buf, size_t size, int64_t ns );
+#include <sched.h>
+#include <unistd.h>
+#include <string.h>
+#include <assert.h>
 
-void timer_init(void);
-void *timer_register(const char *key);
-void timer_start(void *handler);
-void timer_stop(void *handler);
-void timer_finalize(void);
 
-#endif /* MYTIME_H */
+#include <pthread.h>
+#include <assert.h>
+
+int main(int argc, char *argv[]) {
+
+    int cpu = sched_getcpu();
+    cpu_set_t process_mask;
+    CPU_ZERO(&process_mask);
+    CPU_SET(cpu, &process_mask);
+
+    char options[64] = "--talp --shm-key=";
+    strcat(options, SHMEM_KEY);
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+
+    double tmp1,tmp2;
+
+    tmp1 = talp_get_mpi_time();
+    tmp2 = talp_get_compute_time();
+    assert( tmp1 == 0 && tmp2 == 0);
+
+    const subprocess_descriptor_t* spd = thread_spd;
+    talp_info_t* talp_info = (talp_info_t*) spd->talp_info;
+    assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
+    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 0);
+    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
+
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    return 0;
+}

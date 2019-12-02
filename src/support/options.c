@@ -52,7 +52,8 @@ typedef enum OptionTypes {
     OPT_MASK_T,     // cpu_set_t
     OPT_MODE_T,     // interaction_mode_t
     OPT_MPISET_T,   // mpi_set_t
-    OPT_OMPTOPTS_T  // ompt_opts_t
+    OPT_OMPTOPTS_T, // ompt_opts_t
+    OPT_TLPSUM_T
 } option_type_t;
 
 typedef struct {
@@ -97,15 +98,25 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
-        /* to be replaced with --talp */
-        .var_name       = "LB_STATISTICS",
-        .arg_name       = "--statistics",
+        .var_name       = "LB_TALP",
+        .arg_name       = "--talp",
         .default_value  = "no",
-        .description    = "",
-        .offset         = offsetof(options_t, statistics),
+        .description    = OFFSET"Enable the TALP (Tracking Application Low-level Performance)\n"
+                          OFFSET"module. Processes that enable this mode can obtain performance\n"
+                          OFFSET"metrics at run time.",
+        .offset         = offsetof(options_t, talp),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED
+        .flags          = OPT_OPTIONAL
     }, {
+        .var_name       = "LB_TALP_SUMM",
+        .arg_name       = "--talp-summary",
+        .default_value  = "",
+        .description    = OFFSET"Select which verbose components will be printed. Multiple\n"
+                          OFFSET"components may be selected.",
+        .offset         = offsetof(options_t, talp_summary),
+        .type           = OPT_TLPSUM_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },{
         .var_name       = "LB_BARRIER",
         .arg_name       = "--barrier",
         .default_value  = "no",
@@ -332,6 +343,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_mpiset(str_value, (mpi_set_t*)option);
         case(OPT_OMPTOPTS_T):
             return parse_ompt_opts(str_value, (ompt_opts_t*)option);
+        case OPT_TLPSUM_T:
+            return parse_talp_summary(str_value, (talp_summary_t*)option);
     }
     return DLB_ERR_NOENT;
 }
@@ -364,6 +377,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return mpiset_tostr(*(mpi_set_t*)option);
         case OPT_OMPTOPTS_T:
             return ompt_opts_tostr(*(ompt_opts_t*)option);
+        case OPT_TLPSUM_T:
+            return talp_summary_tostr(*(talp_summary_t*)option);
     }
     return "unknown";
 }
@@ -648,6 +663,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_OMPTOPTS_T:
                 b += sprintf(b, "[%s]", get_ompt_opts_choices());
+                break;
+            case OPT_TLPSUM_T:
+                b += sprintf(b, "[%s]", get_talp_summary_choices());
                 break;
             default:
                 b += sprintf(b, "(unknown)");

@@ -81,6 +81,9 @@ int shmem_cpuinfo__version(void);
 size_t shmem_cpuinfo__size(void);
 
 /* WIP: TALP */
+
+void shmem_cpuinfo__print_cpu_times(void);
+
 // Simplified states to keep statistics
 typedef enum {
     STATS_IDLE = 0,

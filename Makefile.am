@@ -72,6 +72,8 @@ installheaders =                     \
 	src/apis/dlb_errors.h        \
 	src/apis/dlbf.h              \
 	src/apis/dlbf-errors.h       \
+	src/apis/dlb_talp.h          \
+	src/apis/dlbf_talp.h         \
 	$(END)
 
 dist_include_HEADERS = $(installheaders)
@@ -183,6 +185,8 @@ COMMON_SRCS = \
 	src/LB_policies/lewi_mask.h             \
 	src/LB_core/DLB_kernel.c                \
 	src/LB_core/DLB_kernel.h                \
+	src/LB_core/DLB_talp.c                  \
+	src/LB_core/DLB_talp.h                  \
 	src/LB_core/lb_funcs.c                  \
 	src/LB_core/lb_funcs.h                  \
 	src/LB_core/spd.c                       \
@@ -192,6 +196,7 @@ COMMON_SRCS = \
 	src/apis/DLB_interface_drom.c           \
 	src/apis/DLB_interface_sp.c             \
 	src/apis/DLB_interface_stats.c          \
+	src/apis/DLB_interface_talp.c                     \
 	$(END)
 
 lib_LTLIBRARIES += libdlb.la
@@ -482,6 +487,22 @@ statsexamples_files_nodist = \
 statsexamplesdir = $(docdir)/examples/statistics
 dist_statsexamples_DATA = $(statsexamples_files)
 nodist_statsexamples_DATA = $(statsexamples_files_nodist)
+
+### talp ###
+talpexamples_files = \
+	doc/examples/talp/README \
+	doc/examples/talp/talp_01.c \
+	doc/examples/talp/get_times.c \
+	doc/examples/talp/run.sh \
+	$(END)
+
+talpexamples_files_nodist = \
+	doc/examples/talp/Makefile \
+	$(END)
+
+talpexamplesdir = $(docdir)/examples/talp
+dist_talpexamples_DATA = $(talpexamples_files)
+nodist_talpexamples_DATA = $(talpexamples_files_nodist)
 
 #********************************************************************************
 # User Guide
@@ -808,6 +829,7 @@ install-data-hook:
 	chmod +x $(mpiompssexamplesdir)/run.sh
 	chmod +x $(omptexamplesdir)/run.sh
 	chmod +x $(statsexamplesdir)/run.sh
+	chmod +x $(talpexamplesdir)/run.sh
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \
