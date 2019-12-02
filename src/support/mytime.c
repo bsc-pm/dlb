@@ -89,6 +89,13 @@ void mult_time( struct timespec t1, int factor, struct timespec* prod ) {
     }
 }
 
+void diff_time_mult(struct timespec* time, int mult_factor,  struct timespec * result){
+    *result = *time;
+    clock_gettime(CLOCK_REALTIME, time);
+    diff_time(*result,*time , result);
+    mult_time(*result,mult_factor,result);
+}
+
 void reset( struct timespec *t1 ) {
     t1->tv_nsec = 0;
     t1->tv_sec = 0;

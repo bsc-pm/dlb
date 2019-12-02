@@ -22,6 +22,7 @@
 #endif
 
 #include "LB_core/DLB_kernel.h"
+#include "LB_core/DLB_talp.h"
 
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
@@ -31,6 +32,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
+#include "apis/dlb_talp.h"
 #include "support/debug.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
@@ -62,6 +64,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         spd->options.preinit_pid ? POLICY_LEWI_MASK :
         mask ? POLICY_LEWI_MASK :
         POLICY_LEWI;
+    spd->talp_info=0;
 
     fatal_cond(spd->lb_policy == POLICY_LEWI && spd->options.ompt,
             "LeWI with OMPT support requires the application to be pre-initialized.\n"
@@ -73,7 +76,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
-    } else if (spd->lb_policy == POLICY_LEWI) {
+    } else if (spd->lb_policy == POLICY_LEWI || spd->options.talp) {
         // If LeWI, we don't want the process mask, just a mask of size 'ncpus'
         if (ncpus <= 0) ncpus = pm_get_num_threads();
         CPU_ZERO(&spd->process_mask);
@@ -89,9 +92,10 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialize shared memories
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
-            || spd->options.statistics
+            || spd->options.talp
             || spd->options.preinit_pid) {
 
+        talp_init(spd);
         // Initialize procinfo
         cpu_set_t new_process_mask;
         error = shmem_procinfo__init(spd->id, &spd->process_mask,
@@ -123,6 +127,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     error = spd->lb_funcs.init(spd);
     if (error != DLB_SUCCESS) return error;
 
+    spd->talp_enabled = spd->options.talp;
     spd->dlb_enabled = true;
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, EVENT_USER);
@@ -163,6 +168,7 @@ int Finish(subprocess_descriptor_t *spd) {
     add_event(RUNTIME_EVENT, EVENT_FINALIZE);
     spd->dlb_enabled = false;
 
+    spd->talp_enabled = false;
     if (spd->lb_funcs.finalize) {
         spd->lb_funcs.finalize(spd);
         spd->lb_funcs.finalize = NULL;
@@ -172,8 +178,9 @@ int Finish(subprocess_descriptor_t *spd) {
     }
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
-            || spd->options.statistics
+            || spd->options.talp
             || spd->options.preinit_pid) {
+        talp_finish(spd);
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
                 spd->options.shm_key);
@@ -252,6 +259,9 @@ void IntoCommunication(void) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.into_communication(spd);
+        if(spd->options.talp){
+            talp_in_mpi();
+       }
     }
 }
 
@@ -259,6 +269,9 @@ void OutOfCommunication(void) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.out_of_communication(spd);
+        if(spd->options.talp){
+            talp_out_mpi();
+        }
     }
 }
 
@@ -269,6 +282,9 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
         add_event(RUNTIME_EVENT, EVENT_INTO_MPI);
         spd->lb_funcs.into_blocking_call(spd);
         omp_thread_manager__IntoBlockingCall();
+        if(spd->options.talp){
+            talp_in_blocking_call();
+        }
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
@@ -279,6 +295,9 @@ void OutOfBlockingCall(int is_iter) {
         add_event(RUNTIME_EVENT, EVENT_OUTOF_MPI);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
         omp_thread_manager__OutOfBlockingCall();
+        if(spd->options.talp){
+            talp_out_blocking_call();
+        }
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
 }
@@ -305,6 +324,9 @@ int lend_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     } else {
         add_event(RUNTIME_EVENT, EVENT_LEND);
         error = spd->lb_funcs.lend_cpu(spd, cpuid);
+        if (error == DLB_SUCCESS && spd->options.talp) {
+            talp_cpu_disable(cpuid);
+        }
         add_event(RUNTIME_EVENT, EVENT_USER);
     }
     return error;
@@ -396,6 +418,8 @@ int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         add_event(RUNTIME_EVENT, EVENT_ACQUIRE);
         error = spd->lb_funcs.acquire_cpu(spd, cpuid);
         add_event(RUNTIME_EVENT, EVENT_USER);
+        if (error == DLB_SUCCESS && spd->options.talp)
+            talp_cpu_enable(cpuid);
     }
     return error;
 }

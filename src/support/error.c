@@ -39,7 +39,8 @@ static const char* error_msg[] = {
     /* DLB_ERR_NOCOMP */    "The operation is not compatible with the configured DLB options",
     /* DLB_ERR_REQST */     "DLB cannot take more requests for a specific resource",
     /* DLB_ERR_NOMEM */     "DLB cannot allocate more processes into the shared memory",
-    /* DLB_ERR_NOPOL */     "The operation is not defined in the current policy"
+    /* DLB_ERR_NOPOL */     "The operation is not defined in the current policy",
+    /* DLB_ERR_NOTALP */    "TALP is not initialized"
 };
 
 const char* error_get_str(int errnum) {

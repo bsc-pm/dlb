@@ -31,7 +31,6 @@ typedef struct Options {
     /* general options */
     bool               lewi;
     bool               drom;
-    bool               statistics;
     bool               barrier;
     bool               ompt;
     interaction_mode_t mode;
@@ -53,6 +52,9 @@ typedef struct Options {
     char               shm_key[MAX_OPTION_LENGTH];
     pid_t              preinit_pid;
     debug_opts_t       debug_opts;
+    /* statistics */
+    bool               talp;
+    talp_summary_t     talp_summary;
 } options_t;
 
 void options_init(options_t *options, const char *dlb_args);

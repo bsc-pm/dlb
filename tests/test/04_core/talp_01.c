@@ -17,43 +17,63 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef SPD_H
-#define SPD_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
 
-#include "LB_core/lb_funcs.h"
+#include "LB_core/DLB_talp.h"
+#include "LB_core/spd.h"
+#include "unique_shmem.h"
 
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+#include <apis/dlb.h>
+#include <apis/dlb_drom.h>
 
-#include <sys/types.h>
+#include <sched.h>
+#include <unistd.h>
+#include <string.h>
+#include <assert.h>
 
-/* Sub-process Descriptor */
 
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_preinitialized;
-    bool dlb_enabled;
+#include <pthread.h>
+#include <assert.h>
+
+int main(int argc, char *argv[]) {
+
+    int cpu = sched_getcpu();
     cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    void *lewi_info;
-    bool talp_enabled;
-    bool talp_initialized;
-    void *talp_info;
-} subprocess_descriptor_t;
+    CPU_ZERO(&process_mask);
+    CPU_SET(cpu, &process_mask);
+    sched_setaffinity(getpid(),sizeof(process_mask),&process_mask);
 
-extern __thread subprocess_descriptor_t *thread_spd;
+    char options[64] = "--talp --lewi --shm-key=";
+    strcat(options, SHMEM_KEY);
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
 
-void spd_enter_dlb(subprocess_descriptor_t *spd);
-void spd_register(subprocess_descriptor_t *spd);
-void spd_unregister(const subprocess_descriptor_t *spd);
-void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
-pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
-const subprocess_descriptor_t** spd_get_spds(void);
+    double tmp1,tmp2;
 
-#endif /* SPD_H */
+    tmp1 = talp_get_mpi_time();
+    tmp2 = talp_get_compute_time();
+    assert( tmp1 == 0 && tmp2 == 0);
+
+    const subprocess_descriptor_t* spd = thread_spd;
+    talp_info_t* talp_info = (talp_info_t*) spd->talp_info;
+    assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
+    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 0);
+    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
+
+    talp_in_mpi();
+
+    assert(CPU_COUNT(&talp_info->active_working_mask) == 0);
+    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 1);
+    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 1);
+
+    talp_out_mpi();
+
+    assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
+    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 0);
+    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
+
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    return 0;
+}

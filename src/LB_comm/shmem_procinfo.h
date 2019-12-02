@@ -56,11 +56,22 @@ int     shmem_procinfo__getactivecpus(pid_t pid);
 void    shmem_procinfo__getactivecpus_list(pid_t *cpuslist, int *nelems, int max_len);
 int     shmem_procinfo__getloadavg(pid_t pid, double *load);
 
+int  shmem_procinfo__getmpitime(pid_t pid, double *mpi_time);
+int  shmem_procinfo__getcomptime(pid_t pid, double *comp_time);
+
+int  shmem_procinfo__setcpuusage(pid_t pid, int index, double new_usage);
+int  shmem_procinfo__setcpuavgusage(pid_t pid, double new_avg_usage);
+
+int  shmem_procinfo__setmpitime(pid_t pid, double new_mpi_time);
+int  shmem_procinfo__setcomptime(pid_t pid, double new_comp_time);
+
 /* Misc */
 void shmem_procinfo__print_info(const char *shmem_key);
 bool shmem_procinfo__exists(void);
 int  shmem_procinfo__version(void);
 size_t shmem_procinfo__size(void);
 
+int auto_resize_start(void);
+int auto_resize_end(void);
 
 #endif /* SHMEM_PROCINFO_H */

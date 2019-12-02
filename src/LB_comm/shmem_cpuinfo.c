@@ -133,9 +133,12 @@ static void init_shmem() {
         get_time(&shdata->initial_time);
         shdata->timestamp_cpu_lent = 0;
 
+        struct timespec now;
+        get_time(&now);
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             shdata->node_info[cpuid].id = cpuid;
+            shdata->node_info[cpuid].last_update = now;
         }
     }
 }
@@ -1396,6 +1399,28 @@ void shmem_cpuinfo__enable_request_queues(void) {
     shdata->queues_enabled = true;
 }
 
+void shmem_cpuinfo__print_cpu_times(void){
+
+    if (shm_handler == NULL) return;
+
+    shmem_lock(shm_handler);
+    {
+        int cpuid;
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if( shdata->node_info[cpuid].acc_time[0] == 0 && shdata->node_info[cpuid].acc_time[1] == 0 && shdata->node_info[cpuid].acc_time[2]==0)continue;
+            double double_idle =     (double) (shdata->node_info[cpuid].acc_time[0]) *1.0e-9;
+            double double_owned =    (double) (shdata->node_info[cpuid].acc_time[1]) *1.0e-9;
+            double double_guested  = (double) (shdata->node_info[cpuid].acc_time[2]) *1.0e-9;
+            double sum = double_idle + double_owned + double_guested;
+            info("      STATS_IDLE     : %lf%%\n", (double_idle / sum) * 100);
+            info("      STATS_OWNED    : %lf%%\n", (double_owned / sum )* 100 );
+            info("      STATS_GUESTED     : %lf%%\n\n", (double_guested / sum)* 100 );
+        }
+
+    }
+    shmem_unlock(shm_handler);
+
+}
 int shmem_cpuinfo__version(void) {
     return SHMEM_CPUINFO_VERSION;
 }

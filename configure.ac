@@ -103,6 +103,8 @@ AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])
 AC_CHECK_HEADERS([stdatomic.h])
 AC_CHECK_HEADERS([execinfo.h])
+AC_CHECK_HEADERS([immintrin.h])
+AC_CHECK_HEADERS([emmintrin.h])
 
 # restore CFLAGS
 AX_VAR_POPVALUE([CFLAGS])
@@ -283,6 +285,8 @@ AC_CONFIG_FILES([
     doc/examples/ompt/Makefile
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
+    doc/examples/talp/run.sh
+    doc/examples/talp/Makefile
     doc/doxygen/Doxyfile
     doc/doxygen/Doxyfile_man1
     doc/doxygen/Doxyfile_man3

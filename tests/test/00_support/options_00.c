@@ -63,6 +63,8 @@ int main( int argc, char **argv ) {
     assert(options_1.lewi == true);
     assert(options_1.drom == true);
     assert(options_1.lewi_affinity == PRIO_NEARBY_ONLY);
+    options_init(&options_1, "--talp");
+    assert(options_1.talp == true);
 
     // Check option overwrite
     options_init(&options_1, "--drom=1 --drom=0");
@@ -85,8 +87,6 @@ int main( int argc, char **argv ) {
     assert(options_1.lewi == false);
 
     // Deprecated variables must be still assigned
-    options_init(&options_1, "--statistics");
-    assert(options_1.statistics == true);
     // But deprecated and unused variables must not fail, nor change any value
     memset(&options_1, 0, sizeof(options_t));
     memset(&options_2, 0, sizeof(options_t));

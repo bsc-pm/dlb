@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <mpi.h>
+#include <dlb_talp.h>
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -145,11 +146,16 @@ int main(int argc, char* argv[]) {
         int i;
         for (i=0; i<steps; i+=BS) {
             tope=MIN(steps, i+BS);
-
+            dlb_monitor_t zone = DLB_MonitoringRegionRegister("Zone");
             int j;
+            DLB_MonitoringRegionStart(zone);
             for(j=i; j<tope; j++){
                 iter(&iter_time, &fib, usec);
             }
+            DLB_MonitoringRegionStop(zone);
+            DLB_MonitoringRegionReport(zone);
+
+            
         }
         #pragma omp taskwait
 

@@ -29,11 +29,16 @@
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
+#include "apis/dlb_stats.h"
+#include "apis/dlb_talp.h"
 #include "apis/dlb.h"
+#include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
 #include "support/types.h"
-
+#include "LB_comm/shmem_procinfo.h"
+#include "support/mytime.h"
+#include "LB_core/DLB_talp.h"
 #include <mpi.h>
 #include <unistd.h>
 #include <limits.h>
@@ -50,12 +55,10 @@ static int use_dpd = 0;
 static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static int is_iter = 0;
-static int periodo = 0;
 static mpi_set_t lewi_mpi_calls = MPISET_ALL;
 static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
 
 void before_init(void) {
-    DPDWindowSize(300);
 }
 
 void after_init(void) {
@@ -143,7 +146,7 @@ void after_init(void) {
     //Commented code is just for Alya
 //    if (_mpi_rank==0) {
 //        MPI_Comm_split( MPI_COMM_WORLD, -1, 0, &mpi_comm_node );
-//    }else{    
+//    }else{
         MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
 //    }
 
@@ -153,6 +156,7 @@ void after_init(void) {
 
     // Policies that used dpd have been temporarily disabled
     //use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
+    talp_mpi_init();
     use_dpd = 0;
     lewi_mpi_calls = thread_spd->options.lewi_mpi_calls;
 
@@ -165,12 +169,12 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
         IntoCommunication();
 
         if(use_dpd) {
-            long value = (long)((((buf>>5)^dest)<<5)|call_type);
-
-            valor_dpd=DPD(value,&periodo);
+            unsigned long value = (unsigned long)((((buf>>5)^dest)<<5)|call_type);
+            unsigned ear_size, ear_level;
+             valor_dpd=dynais(value,&ear_size,&ear_level);
             //Only update if already treated previous iteration
-            if(is_iter==0)  { is_iter=valor_dpd; }
-
+            if( valor_dpd==-1) add_event(LOOP_STATE,5);
+            else add_event(LOOP_STATE,valor_dpd);
         }
 
         if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
@@ -187,7 +191,6 @@ void after_mpi(mpi_call call_type) {
                 (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
                 (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
             OutOfBlockingCall(is_iter);
-            is_iter=0;
         }
 
         OutOfCommunication();
@@ -198,6 +201,8 @@ void after_mpi(mpi_call call_type) {
 
 void before_finalize(void) {
     mpi_ready=0;
+    talp_mpi_finalize();
+    talp_mpi_report();
     if (init_from_mpi == 1) {
         DLB_Finalize();
         init_from_mpi = 0;

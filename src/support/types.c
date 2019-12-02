@@ -181,6 +181,47 @@ const char* get_debug_opts_choices(void) {
 }
 
 
+/* talp_summary_t */
+static const talp_summary_t talp_summary_values[] =
+    {SUMMARY_APP, SUMMARY_NODE, SUMMARY_PROCESS, SUMMARY_ITERATION, SUMMARY_OMP, SUMMARY_REGIONS};
+static const char* const talp_summary_choices[] =
+    {"app", "node", "process", "iteration", "omp","regions"};
+static const char talp_summary_choices_str[] =
+    "app:node:process:iteration:omp:regions";
+enum { talp_summary_nelems = sizeof(talp_summary_values) / sizeof(talp_summary_values[0]) };
+
+int parse_talp_summary(const char *str, talp_summary_t *value) {
+    int i;
+    for (i=0; i<talp_summary_nelems; ++i) {
+        if (strstr(str, talp_summary_choices[i]) != NULL) {
+            *value |= talp_summary_values[i];
+        }
+    }
+    return DLB_SUCCESS;
+}
+
+const char* talp_summary_tostr(talp_summary_t value) {
+    static char str[sizeof(talp_summary_choices_str)] = "";
+    char *p = str;
+    int i;
+    for (i=0; i<talp_summary_nelems; ++i) {
+        if (value & talp_summary_values[i]) {
+            if (p!=str) {
+                *p = ':';
+                ++p;
+                *p = '\0';
+            }
+            p += sprintf(p, "%s", talp_summary_choices[i]);
+        }
+    }
+    return str;
+}
+
+const char* get_talp_summary_choices(void) {
+    return talp_summary_choices_str;
+}
+
+
 /* priority_t */
 static const priority_t priority_values[] =
     {PRIO_ANY, PRIO_NEARBY_FIRST, PRIO_NEARBY_ONLY, PRIO_SPREAD_IFEMPTY};
