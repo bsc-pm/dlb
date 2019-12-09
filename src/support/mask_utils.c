@@ -25,12 +25,13 @@
 
 #include "support/debug.h"
 
-#if defined HWLOC_LIB
+#if defined IS_BGQ_MACHINE
+#else
+#  if defined HWLOC_LIB
 #include <hwloc.h>
 #include <hwloc/bitmap.h>
 #include <hwloc/glibc-sched.h>
-#elif defined IS_BGQ_MACHINE
-#else
+#  endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -62,8 +63,29 @@ static int get_sys_size(void) {
             " or configure DLB with HWLOC support.");
 }
 
-#if defined HWLOC_LIB
-static void parse_hwloc( void ) {
+#if defined IS_BGQ_MACHINE
+static void set_bgq_info( void ) {
+    sys.size = 64;
+    sys.num_parents = 1;
+    sys.parents = malloc( sizeof(cpu_set_t) );
+    CPU_ZERO( &(sys.parents[0]) );
+    CPU_ZERO( &sys.sys_mask );
+    int i;
+    for ( i=0; i<64; i++ ) {
+        CPU_SET( i, &(sys.parents[0]) );
+        CPU_SET( i, &sys.sys_mask );
+    }
+}
+#else
+#  if defined HWLOC_LIB
+static int parse_hwloc( void ) {
+    /* Check runtime library compatibility */
+    unsigned int hwloc_version = hwloc_get_api_version();
+    if (hwloc_version >> 16 != HWLOC_API_VERSION >> 16) {
+        warning("Detected incompatible HWLOC runtime library");
+        return -1;
+    }
+
     hwloc_topology_t topology;
     hwloc_topology_init(&topology);
     hwloc_topology_load(topology);
@@ -98,21 +120,13 @@ static void parse_hwloc( void ) {
     sys.size = hwloc_bitmap_last(machine->cpuset) + 1;
 
     hwloc_topology_destroy(topology);
+
+    return 0;
 }
-#elif defined IS_BGQ_MACHINE
-static void set_bgq_info( void ) {
-    sys.size = 64;
-    sys.num_parents = 1;
-    sys.parents = malloc( sizeof(cpu_set_t) );
-    CPU_ZERO( &(sys.parents[0]) );
-    CPU_ZERO( &sys.sys_mask );
-    int i;
-    for ( i=0; i<64; i++ ) {
-        CPU_SET( i, &(sys.parents[0]) );
-        CPU_SET( i, &sys.sys_mask );
-    }
-}
-#else
+#  else
+static int parse_hwloc( void ) { return -1; }
+#  endif
+
 static void parse_mask_from_file(const char *filename, cpu_set_t *mask) {
     if (access(filename, F_OK) == 0) {
         size_t len = CPU_SETSIZE*7;
@@ -188,12 +202,14 @@ void mu_init( void ) {
     if ( !mu_initialized ) {
         memset(&sys, 0, sizeof(sys));
 
-#if defined HWLOC_LIB
-        parse_hwloc();
-#elif defined IS_BGQ_MACHINE
+#if defined IS_BGQ_MACHINE
         set_bgq_info();
 #else
-        parse_system_files();
+        /* Try to parse HW info from HWLOC first */
+        if (parse_hwloc() != 0) {
+            /* Fallback to system files if needed */
+            parse_system_files();
+        }
 #endif
 
         mu_initialized = true;
