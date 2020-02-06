@@ -490,11 +490,10 @@ void options_init(options_t *options, const char *dlb_args) {
             parse_dlb_args(dlb_args_from_env, entry->arg_name, arg_value_from_env);
             if (strlen(arg_value_from_env) > 0) {
                 if (rhs) {
-                    warning("Ignoring option %s = %s due to DLB_Init precedence",
+                    warning("Overwriting option %s = %s",
                             entry->arg_name, arg_value_from_env);
-                } else {
-                    rhs = arg_value_from_env;
                 }
+                rhs = arg_value_from_env;
             }
         }
 

@@ -48,7 +48,7 @@ int main( int argc, char **argv ) {
     // Check dlb_args precedence
     setenv("DLB_ARGS", "--no-lewi", 1);
     options_init(&options_1, "--lewi");
-    assert(options_1.lewi == true);
+    assert(options_1.lewi == false);
 
     // Check that different options are parsed using both methods
     setenv("DLB_ARGS", "--drom", 1);
