@@ -75,6 +75,7 @@ void shmem_barrier_init(const char *shmem_key) {
             sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
             shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
 
+    int error = 0;
     shmem_lock(init_handler);
     {
         // Initialize both barriers, only first process to arrive
@@ -83,10 +84,9 @@ void shmem_barrier_init(const char *shmem_key) {
             barrier_t *barrier = get_barrier();
             if (!barrier->initialized) {
                 /* Create Unnamed Semaphore(0): Barrier */
-                int error = sem_init(&barrier->sem, /*shared*/ 1, /*value*/ 0 );
+                error = sem_init(&barrier->sem, /*shared*/ 1, /*value*/ 0 );
                 if (error) {
-                    perror( "DLB_PANIC: Process unable to create/attach to semaphore (barrier)" );
-                    exit( EXIT_FAILURE );
+                    break;
                 }
 
                 barrier->count = 0;
@@ -94,11 +94,14 @@ void shmem_barrier_init(const char *shmem_key) {
                 barrier->initialized = true;
             }
             barrier->participants++;
-            warning("barrier participants: %d", barrier->participants);
             advance_barrier();
         }
     }
     shmem_unlock(init_handler);
+
+    fatal_cond(error, "Process unable to create/attach to semaphore (barrier)");
+    verbose(VB_BARRIER, "Barrier Module initialized. Participants: %d",
+            get_barrier()->participants);
 
     // Global variable is only assigned after the initialization
     shm_handler = init_handler;
@@ -106,6 +109,8 @@ void shmem_barrier_init(const char *shmem_key) {
 
 void shmem_barrier_finalize(void) {
     if (shm_handler == NULL) return;
+
+    verbose(VB_BARRIER, "Finalizing Barrier Module");
 
     shmem_lock(shm_handler);
     {
@@ -152,6 +157,8 @@ void shmem_barrier(void) {
     }
     shmem_unlock(shm_handler);
 
+    verbose(VB_BARRIER, "Entering barrier%s", last_in ? " (last)" : "");
+
     if (last_in) {
         // Last process entering the barrier must signal someone
         sem_post(&barrier->sem);
@@ -174,6 +181,8 @@ void shmem_barrier(void) {
         last_out = --barrier->count  == 0;
     }
     shmem_unlock(shm_handler);
+
+    verbose(VB_BARRIER, "Leaving barrier%s", last_out ? " (last)" : "");
 
     if (!last_out) {
         // Everyone except the last process out must signal the next one
