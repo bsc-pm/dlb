@@ -284,3 +284,43 @@ void dlb_clean(void) {
         shmem_destroy("async", shmem_key);
     }
 }
+
+
+/* Print Buffers */
+
+enum { INITIAL_BUFFER_SIZE = 1024 };
+
+void printbuffer_init(print_buffer_t *buffer) {
+    buffer->size = INITIAL_BUFFER_SIZE;
+    buffer->addr = malloc(INITIAL_BUFFER_SIZE*sizeof(char));
+    buffer->offset = buffer->addr;
+    buffer->addr[0] = '\0';
+}
+
+void printbuffer_destroy(print_buffer_t *buffer) {
+    free(buffer->addr);
+    buffer->addr = NULL;
+    buffer->offset = NULL;
+    buffer->size = 0;
+}
+
+void printbuffer_append(print_buffer_t *buffer, const char *line) {
+    /* Realloc buffer if needed */
+    size_t line_len = strlen(line) + 2; /* + '\n\0' */
+    size_t buffer_len = strlen(buffer->addr);
+    if (buffer_len + line_len > buffer->size) {
+        buffer->size *= 2;
+        void *p = realloc(buffer->addr, buffer->size*sizeof(char));
+        if (p) {
+            buffer->addr = p;
+            buffer->offset = buffer->addr + buffer_len;
+        } else {
+            fatal("realloc failed");
+        }
+    }
+
+    /* Append line to buffer */
+    buffer->offset += sprintf(buffer->offset, "%s\n", line);
+    buffer_len = buffer->offset - buffer->addr;
+    ensure(strlen(buffer->addr) == buffer_len, "buffer len is not correctly computed");
+}

@@ -1452,33 +1452,6 @@ float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state) {
     return usage;
 }
 
-struct print_buffer {
-    char *addr;
-    char *offset;
-    size_t size;
-};
-
-static void append_line_to_buffer(const char *line, struct print_buffer *buffer) {
-    /* Realloc buffer if needed */
-    size_t line_len = strlen(line) + 2; /* + '\n\0' */
-    size_t buffer_len = strlen(buffer->addr);
-    if (buffer_len + line_len > buffer->size) {
-        buffer->size *= 2;
-        void *p = realloc(buffer->addr, buffer->size*sizeof(char));
-        if (p) {
-            buffer->addr = p;
-            buffer->offset = buffer->addr + buffer_len;
-        } else {
-            fatal("realloc failed");
-        }
-    }
-
-    /* Append line to buffer */
-    buffer->offset += sprintf(buffer->offset, "%s\n", line);
-    buffer_len = buffer->offset - buffer->addr;
-    ensure(strlen(buffer->addr) == buffer_len, "buffer len is not correctly computed");
-}
-
 void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
         dlb_printshmem_flags_t print_flags) {
 
@@ -1510,6 +1483,9 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
     }
     int max_digits = snprintf(NULL, 0, "%d", max_pid);
 
+    /* Do not print shared memory if nobody is registered */
+    if (max_pid == 0) return;
+
     /* Set up color */
     bool is_tty = isatty(STDOUT_FILENO);
     bool color = print_flags & DLB_COLOR_ALWAYS
@@ -1533,12 +1509,8 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
     }
 
     /* Initialize buffer */
-    enum { INITIAL_BUFFER_SIZE = 1024 };
-    struct print_buffer buffer;
-    buffer.size = INITIAL_BUFFER_SIZE;
-    buffer.addr = malloc(buffer.size*sizeof(char));
-    buffer.offset = buffer.addr;
-    buffer.addr[0] = '\0';
+    print_buffer_t buffer;
+    printbuffer_init(&buffer);
 
     /* Set up line buffer */
     enum { MAX_LINE_LEN = 512 };
@@ -1593,13 +1565,13 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
                 }
             }
         }
-        append_line_to_buffer(line, &buffer);
+        printbuffer_append(&buffer, line);
     }
 
     /* Print format */
     snprintf(line, MAX_LINE_LEN,
             "  Format: <cpuid> [ <owner> / <guest> %s]", color ? "" : "/ <state> ");
-    append_line_to_buffer(line, &buffer);
+    printbuffer_append(&buffer, line);
 
     /* Print color legend */
     if (color) {
@@ -1609,7 +1581,7 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
                 ANSI_COLOR_YELLOW "Reclaimed" ANSI_COLOR_RESET ", "
                 ANSI_COLOR_GREEN "Idle" ANSI_COLOR_RESET ", "
                 ANSI_COLOR_BLUE "Lent" ANSI_COLOR_RESET);
-        append_line_to_buffer(line, &buffer);
+        printbuffer_append(&buffer, line);
     }
 
     /* Cpu requests */
@@ -1619,7 +1591,7 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
     }
     if (any_cpu_request) {
         snprintf(line, MAX_LINE_LEN, "\n  Cpu requests (<cpuid>: <spids>):");
-        append_line_to_buffer(line, &buffer);
+        printbuffer_append(&buffer, line);
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             queue_pids_t *requests = &shdata_copy->node_info[cpuid].requests;
             if (queue_pids_size(requests) > 0) {
@@ -1635,7 +1607,7 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
                 }
                 /* Remove trailing comma and append line */
                 *(l-1) = '\0';
-                append_line_to_buffer(line, &buffer);
+                printbuffer_append(&buffer, line);
             }
         }
     }
@@ -1644,7 +1616,7 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
     if (queue_proc_reqs_size(&shdata_copy->proc_requests) > 0) {
         snprintf(line, MAX_LINE_LEN,
                 "\n  Process requests (<spids>: <howmany>, <allowed_cpus>):");
-        append_line_to_buffer(line, &buffer);
+        printbuffer_append(&buffer, line);
     }
     while (queue_proc_reqs_size(&shdata_copy->proc_requests) > 0) {
         process_request_t *request = queue_proc_reqs_front(&shdata_copy->proc_requests);
@@ -1653,11 +1625,11 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
                 max_digits, request->pid, request->howmany,
                 mu_to_str(&request->allowed));
         queue_proc_reqs_pop(&shdata_copy->proc_requests, NULL);
-        append_line_to_buffer(line, &buffer);
+        printbuffer_append(&buffer, line);
     }
 
     info0("=== CPU States ===\n%s", buffer.addr);
-    free(buffer.addr);
+    printbuffer_destroy(&buffer);
     free(shdata_copy);
 }
 

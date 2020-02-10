@@ -30,6 +30,12 @@
 #include "LB_MPI/process_MPI.h"
 #endif
 
+typedef struct print_buffer {
+    char *addr;
+    char *offset;
+    size_t size;
+} print_buffer_t;
+
 void debug_init(const options_t *options);
 void fatal(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2),__noreturn__));
 void fatal0(const char *fmt, ...)   __attribute__ ((format (printf, 1, 2),__noreturn__));
@@ -40,6 +46,9 @@ void info0(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
 void verbose(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
 void print_backtrace(void);
 void dlb_clean(void);
+void printbuffer_init(print_buffer_t *buffer);
+void printbuffer_destroy(print_buffer_t *buffer);
+void printbuffer_append(print_buffer_t *buffer, const char *line);
 
 extern verbose_opts_t   vb_opts;
 
