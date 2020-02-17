@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
         printf("DLB failed with the following error: %s\n", DLB_Strerror(err));
     }
     printf("Finalizing TALP example.\n");
+    MPI_Finalize();
     DLB_Finalize();
 
     return 0;
