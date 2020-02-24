@@ -100,12 +100,55 @@ void create_shdata( void ) {
 #endif
 }
 
+static bool shmem_first_occurrence(const char *shm_key) {
+    static char **listed_shmems = NULL;
+    static size_t listed_shmems_nelems = 0;
+
+    bool found = false;
+    int i;
+    for (i=0; i<listed_shmems_nelems; ++i) {
+        if (strcmp(listed_shmems[i], shm_key) == 0) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        ++listed_shmems_nelems;
+        void *p = realloc(listed_shmems, sizeof(char*)*listed_shmems_nelems);
+        if (p) {
+            listed_shmems = p;
+        } else {
+            perror( "DLB ERROR: realloc failed" );
+            exit( EXIT_FAILURE );
+        }
+        size_t len = strlen(shm_key) + 1;
+        listed_shmems[listed_shmems_nelems-1] = malloc(sizeof(char)*len);
+        strcpy(listed_shmems[listed_shmems_nelems-1], shm_key);
+    }
+
+    return !found;
+}
+
 void list_shdata_item(const char* shm_suffix, int list_columns,
         dlb_printshmem_flags_t print_flags) {
-    char *p;
-    if ( (p = strstr(shm_suffix, "cpuinfo")) ) {
-        /* Get pointer to shm_key */
-        p = p + 8;  // remove "cpuinfo_"
+
+    // Look for any of the known DLB shared memory names
+    const char* const dlb_shmems[] = { "cpuinfo_", "procinfo_", "barrier_" };
+    enum { dlb_shmems_nelems = sizeof(dlb_shmems) / sizeof(dlb_shmems[0]) };
+    char *p = NULL;
+    int i;
+    for (i=0; i<dlb_shmems_nelems; ++i) {
+        p = strstr(shm_suffix, dlb_shmems[i]);
+        if (p) {
+            p += strlen(dlb_shmems[i]);
+            break;
+        }
+    }
+
+    if (p && shmem_first_occurrence(p)) {
+        // 'p' points to a valid shared memory key and has not been shown yet
+
         fprintf( stdout, "Found DLB shmem with id: %s\n", p );
         /* Modify DLB_ARGS */
         const char *dlb_args_env = getenv("DLB_ARGS");
@@ -117,8 +160,6 @@ void list_shdata_item(const char* shm_suffix, int list_columns,
         free(dlb_args);
         /* Print */
         DLB_PrintShmem(list_columns, print_flags);
-    } else if ( (p = strstr(shm_suffix, "procinfo")) ) {
-        // We currently print both shmems with the same API. Skipping.
     }
 }
 

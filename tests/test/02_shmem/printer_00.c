@@ -26,6 +26,7 @@
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_barrier.h"
 #include "support/mask_utils.h"
 #include "apis/dlb_errors.h"
 
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    shmem_barrier_init(SHMEM_KEY);
 
     /* Enable request queues */
     shmem_cpuinfo__enable_request_queues();
@@ -106,6 +108,7 @@ int main(int argc, char *argv[]) {
     /* Print */
     shmem_cpuinfo__print_info(NULL, 0, true);
     shmem_procinfo__print_info(NULL);
+    shmem_barrier__print_info(NULL);
 
     /* Finalize shared memories */
     assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
@@ -114,6 +117,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    shmem_barrier_finalize();
 
     return 0;
 }

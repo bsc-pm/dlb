@@ -72,17 +72,18 @@ static void check_async_version(void) {
 }
 
 static void check_barrier_version(void) {
-    enum { KNOWN_BARRIER_VERSION = 1 };
+    enum { KNOWN_BARRIER_VERSION = 2 };
     struct KnownBarrierShdata {
         bool bool1;
-        int int1;
-        int int2;
+        unsigned int int1;
+        unsigned int int2;
+        unsigned int int3;
         sem_t sem;
     };
 
     int version = shmem_barrier__version();
     size_t size = shmem_barrier__size();
-    size_t known_size = sizeof(struct KnownBarrierShdata) * mu_get_system_size();
+    size_t known_size = sizeof(struct KnownBarrierShdata) * mu_get_system_size() * 2;
     fprintf(stderr, "shmem_barrier version %d, size: %lu, known_size: %lu\n",
             version, size, known_size);
     assert( version == KNOWN_BARRIER_VERSION );
