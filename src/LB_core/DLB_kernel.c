@@ -599,6 +599,7 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
 
     shmem_cpuinfo__print_info(spd->options.shm_key, num_columns, print_flags);
     shmem_procinfo__print_info(spd->options.shm_key);
+    shmem_barrier__print_info(spd->options.shm_key);
 
     return DLB_SUCCESS;
 }

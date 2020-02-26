@@ -21,17 +21,20 @@
 
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 
 #include <semaphore.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 typedef struct {
     bool initialized;
-    int count;
-    int participants;
+    unsigned int count;
+    unsigned int participants;
+    unsigned int ntimes;
     sem_t sem;
 } barrier_t;
 
@@ -39,7 +42,7 @@ typedef struct {
     barrier_t barriers[0];
 } shdata_t;
 
-enum { SHMEM_BARRIER_VERSION = 1 };
+enum { SHMEM_BARRIER_VERSION = 2 };
 
 static int global_barrier_ids[2] = {0, 1};
 static int local_barrier_id = 0;
@@ -75,6 +78,7 @@ void shmem_barrier_init(const char *shmem_key) {
             sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
             shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
 
+    int error = 0;
     shmem_lock(init_handler);
     {
         // Initialize both barriers, only first process to arrive
@@ -83,10 +87,9 @@ void shmem_barrier_init(const char *shmem_key) {
             barrier_t *barrier = get_barrier();
             if (!barrier->initialized) {
                 /* Create Unnamed Semaphore(0): Barrier */
-                int error = sem_init(&barrier->sem, /*shared*/ 1, /*value*/ 0 );
+                error = sem_init(&barrier->sem, /*shared*/ 1, /*value*/ 0 );
                 if (error) {
-                    perror( "DLB_PANIC: Process unable to create/attach to semaphore (barrier)" );
-                    exit( EXIT_FAILURE );
+                    break;
                 }
 
                 barrier->count = 0;
@@ -94,18 +97,29 @@ void shmem_barrier_init(const char *shmem_key) {
                 barrier->initialized = true;
             }
             barrier->participants++;
-            warning("barrier participants: %d", barrier->participants);
             advance_barrier();
         }
     }
     shmem_unlock(init_handler);
 
+    fatal_cond(error, "Process unable to create/attach to semaphore (barrier)");
+    verbose(VB_BARRIER, "Barrier Module initialized. Participants: %d",
+            get_barrier()->participants);
+
     // Global variable is only assigned after the initialization
     shm_handler = init_handler;
 }
 
+void shmem_barrier_ext__init(const char *shmem_key) {
+    max_barriers = mu_get_system_size()*2;
+    shm_handler = shmem_init((void**)&shdata, shmem_barrier__size(),
+            shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
+}
+
 void shmem_barrier_finalize(void) {
     if (shm_handler == NULL) return;
+
+    verbose(VB_BARRIER, "Finalizing Barrier Module");
 
     shmem_lock(shm_handler);
     {
@@ -135,6 +149,20 @@ void shmem_barrier_finalize(void) {
     shm_handler = NULL;
 }
 
+int shmem_barrier_ext__finalize(void) {
+    // Protect double finalization
+    if (shm_handler == NULL) {
+        return DLB_ERR_NOSHMEM;
+    }
+
+    // Shared memory destruction
+    shmem_finalize(shm_handler, SHMEM_DELETE);
+    shm_handler = NULL;
+    shdata = NULL;
+
+    return DLB_SUCCESS;
+}
+
 void shmem_barrier(void) {
     if (shm_handler == NULL) return;
 
@@ -151,6 +179,8 @@ void shmem_barrier(void) {
         last_in = ++barrier->count == barrier->participants;
     }
     shmem_unlock(shm_handler);
+
+    verbose(VB_BARRIER, "Entering barrier%s", last_in ? " (last)" : "");
 
     if (last_in) {
         // Last process entering the barrier must signal someone
@@ -175,12 +205,76 @@ void shmem_barrier(void) {
     }
     shmem_unlock(shm_handler);
 
+    verbose(VB_BARRIER, "Leaving barrier%s", last_out ? " (last)" : "");
+
     if (!last_out) {
         // Everyone except the last process out must signal the next one
         sem_post(&barrier->sem);
     }
 
+#ifdef DEBUG_VERSION
+    if (last_out) {
+        __sync_add_and_fetch(&barrier->ntimes, 1);
+    }
+#endif
+
     advance_barrier();
+}
+
+void shmem_barrier__print_info(const char *shmem_key) {
+
+    /* If the shmem is not opened, obtain a temporary fd */
+    bool temporary_shmem = shm_handler == NULL;
+    if (temporary_shmem) {
+        shmem_barrier_ext__init(shmem_key);
+    }
+
+    /* Make a full copy of the shared memory */
+    shdata_t *shdata_copy = malloc(shmem_barrier__size());
+    shmem_lock(shm_handler);
+    {
+        memcpy(shdata_copy, shdata, shmem_barrier__size());
+    }
+    shmem_unlock(shm_handler);
+
+    /* Close shmem if needed */
+    if (temporary_shmem) {
+        shmem_barrier_ext__finalize();
+    }
+
+    /* Initialize buffer */
+    print_buffer_t buffer;
+    printbuffer_init(&buffer);
+
+    /* Set up line buffer */
+    enum { MAX_LINE_LEN = 128 };
+    char line[MAX_LINE_LEN];
+
+    int barrier_id;
+    for (barrier_id = 0; barrier_id < max_barriers; ++barrier_id) {
+        barrier_t *barrier = &shdata_copy->barriers[barrier_id];
+        if (barrier->initialized) {
+
+            /* Get Semaphore value */
+            int sem_value;
+            sem_getvalue(&barrier->sem, &sem_value);
+
+            /* Append line to buffer */
+            snprintf(line, MAX_LINE_LEN,
+                    "  | %12d | %12d | %12d | %12d | %12d |",
+                    barrier_id, barrier->participants, barrier->count,
+                    sem_value, barrier->ntimes);
+            printbuffer_append(&buffer, line);
+        }
+    }
+
+    if (buffer.addr[0] != '\0' ) {
+        info0("=== Barriers ===\n"
+              "  |  Barrier ID  | Participants | Num. blocked |  Sem. Value  | Times compl. |\n"
+              "%s", buffer.addr);
+    }
+    printbuffer_destroy(&buffer);
+    free(shdata_copy);
 }
 
 int shmem_barrier__version(void) {
@@ -188,5 +282,5 @@ int shmem_barrier__version(void) {
 }
 
 size_t shmem_barrier__size(void) {
-    return sizeof(shdata_t) + sizeof(barrier_t)*mu_get_system_size();
+    return sizeof(shdata_t) + sizeof(barrier_t)*mu_get_system_size()*2;
 }

@@ -1013,15 +1013,39 @@ void shmem_procinfo__print_info(const char *shmem_key) {
         shmem_procinfo_ext__finalize();
     }
 
-    /* Pre-allocate buffer */
-    enum { INITIAL_BUFFER_SIZE = 1024 };
-    size_t buffer_len = 0;
-    size_t buffer_size = INITIAL_BUFFER_SIZE;
-    char *buffer = malloc(buffer_size*sizeof(char));
-    char *b = buffer;
-    *b = '\0';
-
+    /* Find the max number of characters per column */
+    pid_t max_pid = 111;    /* 3 digits for 'PID' */
+    int max_current = 4;    /* 'Mask' */
+    int max_future = 6;     /* 'Future' */
+    int max_stolen = 6;     /* 'Stolen' */
     int p;
+    for (p = 0; p < max_processes; ++p) {
+        pinfo_t *process = &shdata_copy->process_info[p];
+        if (process->pid != NOBODY) {
+            size_t len;
+            /* pid */
+            max_pid = process->pid > max_pid ? process->pid : max_pid;
+            /* current_mask */
+            len = strlen(mu_to_str(&process->current_process_mask));
+            max_current = len > max_current ? len : max_current;
+            /* future_mask */
+            len = strlen(mu_to_str(&process->future_process_mask));
+            max_future = len > max_future ? len : max_future;
+            /* stolen_mask */
+            len = strlen(mu_to_str(&process->stolen_cpus));
+            max_stolen = len > max_stolen ? len : max_stolen;
+        }
+    }
+    int max_pid_digits = snprintf(NULL, 0, "%d", max_pid);
+
+    /* Initialize buffer */
+    print_buffer_t buffer;
+    printbuffer_init(&buffer);
+
+    /* Set up line buffer */
+    enum { MAX_LINE_LEN = 512 };
+    char line[MAX_LINE_LEN];
+
     for (p = 0; p < max_processes; p++) {
         pinfo_t *process = &shdata_copy->process_info[p];
         if (process->pid != NOBODY) {
@@ -1042,32 +1066,15 @@ void shmem_procinfo__print_info(const char *shmem_key) {
             char *stolen = malloc((strlen(mask_str)+1)*sizeof(char));
             strcpy(stolen, mask_str);
 
-            /* Construct output per process */
-            const char *fmt =
-                "  Process ID: %d\n"
-                "  Current Mask: %s\n"
-                "  Future Mask:  %s\n"
-                "  Stolen Mask:  %s\n"
-                "  Process Dirty: %d\n\n";
-
-            /* Realloc buffer if needed */
-            size_t proc_len = 1 + snprintf(NULL, 0, fmt,
-                    process->pid, current, future, stolen, process->dirty);
-            if (buffer_len + proc_len > buffer_size) {
-                buffer_size = buffer_size*2;
-                void *nb = realloc(buffer, buffer_size*sizeof(char));
-                if (nb) {
-                    buffer = nb;
-                    b = buffer + buffer_len;
-                } else {
-                    fatal("realloc failed");
-                }
-            }
-
-            /* Append to buffer */
-            b += sprintf(b, fmt,
-                    process->pid, current, future, stolen, process->dirty);
-            buffer_len = b - buffer;
+            /* Append line to buffer */
+            snprintf(line, MAX_LINE_LEN,
+                    "  | %*d | %*s | %*s | %*s | %6d |",
+                    max_pid_digits, process->pid,
+                    max_current, current,
+                    max_future, future,
+                    max_stolen, stolen,
+                    process->dirty);
+            printbuffer_append(&buffer, line);
 
             free(current);
             free(future);
@@ -1075,7 +1082,21 @@ void shmem_procinfo__print_info(const char *shmem_key) {
         }
     }
 
-    info0("=== Processes Masks ===\n%s", buffer);
+    if (buffer.addr[0] != '\0' ) {
+        /* Construct header */
+        snprintf(line, MAX_LINE_LEN,
+                "  | %*s | %*s | %*s | %*s | Dirty? |",
+                max_pid_digits, "PID",
+                max_current, "Mask",
+                max_future, "Future",
+                max_stolen, "Stolen");
+
+        /* Print header + buffer */
+        info0("=== Processes Masks ===\n"
+              "%s\n"
+              "%s", line, buffer.addr);
+    }
+    printbuffer_destroy(&buffer);
     free(shdata_copy);
 }
 
