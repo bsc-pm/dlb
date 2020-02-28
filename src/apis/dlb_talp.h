@@ -20,6 +20,26 @@
 #ifndef DLB_API_TALP_H
 #define DLB_API_TALP_H
 
+#include <time.h>
+#include <stdint.h>
+
+// TALP structure
+typedef struct dlb_monitor_t {
+    const char  *name;
+    int         samples;
+    int64_t     start_time;
+    int64_t     end_time;
+    int64_t     elapsed_time_;
+    int64_t     accumulated_MPI_time;
+    int64_t     accumulated_computation_time;
+    // Old members
+    struct timespec tmp_mpi_time;
+    struct timespec tmp_compute_time;
+    struct timespec mpi_time;
+    struct timespec compute_time;
+    struct timespec elapsed_time;
+} dlb_monitor_t;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -53,6 +73,35 @@ int DLB_TALP_MPITimeGet(int process, double* mpi_time);
  * \return DLB_SUCCESS on success
  * */
 int DLB_TALP_CPUTimeGet(int process, double* compute_time);
+
+
+/*********************************************************************************/
+/*    TALP Monitoring Regions                                                    */
+/*********************************************************************************/
+
+/*! \brief Register a new Monitoring Region
+ *  \param[in] name Name to identify the new region
+ *  \return monitor handle to be used on subsequent calls
+ */
+dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
+
+/*! \brief Start (or unpause) monitoring region
+ *  \param[in] handle Monitoring handle that identifies the region
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
+
+/*! \brief Stop (or pause) monitoring region
+ *  \param[in] handle Monitoring handle that identifies the region
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
+
+/*! \brief Print a Report by stdout of the monitoring region
+ *  \param[in] handle Monitoring handle that identifies the region
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_MonitoringRegionReport(dlb_monitor_t *handle);
 
 #ifdef __cplusplus
 }

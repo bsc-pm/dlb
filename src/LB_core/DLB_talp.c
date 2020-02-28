@@ -17,21 +17,21 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#include "LB_core/DLB_talp.h"
+
+#include "apis/dlb_talp.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
-#include "apis/dlb_errors.h"
-#include "apis/dlb.h"
+#include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_cpuinfo.h"
 
 #include <sched.h>
 #include <string.h>
-
-#include <unistd.h>
-#include "LB_core/DLB_talp.h"
-#include "LB_comm/shmem_procinfo.h"
-#include "LB_comm/shmem_cpuinfo.h"
+#include <stdlib.h>
 
 #ifdef MPI_LIB
 #include <mpi.h>
@@ -39,8 +39,8 @@
 
 enum { MONITOR_MAX_KEY_LEN = 128 };
 
-static monitor_info_t *regions = NULL;
-static size_t nregions;
+static dlb_monitor_t *regions = NULL;
+static size_t nregions = 0;
 
 static inline void sort_pids(pid_t * pidlist, int start, int end){
     int i = start;
@@ -93,7 +93,7 @@ void talp_finish( subprocess_descriptor_t *spd ){
 void talp_cpu_disable_mpi(int cpuid){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if( CPU_ISSET(cpuid,&talp_info->in_mpi_mask)){
         talp_update_monitor(monitoringRegion);
@@ -104,7 +104,7 @@ void talp_cpu_disable_mpi(int cpuid){
 void talp_cpu_disable_working(int cpuid){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if( CPU_ISSET(cpuid,&talp_info->active_working_mask)){
         talp_update_monitor(monitoringRegion);
@@ -121,7 +121,7 @@ void talp_cpu_disable(int cpuid){
 void talp_cpu_enable_mpi(int cpuid){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if(CPU_ISSET(cpuid,&talp_info->in_mpi_mask)){
         talp_update_monitor(monitoringRegion);
@@ -134,7 +134,7 @@ void talp_cpu_enable_mpi(int cpuid){
 void talp_cpu_enable_working(int cpuid){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if(!CPU_ISSET(cpuid,&talp_info->active_working_mask) ){
         talp_update_monitor(monitoringRegion);
@@ -148,17 +148,17 @@ void talp_cpu_enable(int cpuid){
     talp_cpu_enable_working(cpuid);
 }
 
-void talp_update_monitor(monitor_t* region){
+void talp_update_monitor(dlb_monitor_t *region){
     const subprocess_descriptor_t *spd = thread_spd;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     talp_update_monitor_mpi(region);
     talp_update_monitor_comp(region);
 }
 
-void talp_update_monitor_comp(monitor_t* region){
+void talp_update_monitor_comp(dlb_monitor_t *region){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     int pid = spd->id;
     struct timespec aux;
@@ -181,7 +181,7 @@ void talp_update_monitor_comp(monitor_t* region){
     shmem_procinfo__setcomptime(pid,to_secs(monitoringRegion->compute_time) );
 }
 
-void talp_update_monitor_mpi(monitor_t* region){
+void talp_update_monitor_mpi(dlb_monitor_t *region){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
     int pid = spd->id;
@@ -206,26 +206,10 @@ void talp_update_monitor_mpi(monitor_t* region){
     shmem_procinfo__setmpitime(pid,to_secs(talp_info->monitoringRegion.mpi_time) );
 }
 
-void talp_monitor_lock(monitor_t* region){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
-    if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
-    pthread_spin_lock(&monitoringRegion->talp_lock);
-}
-
-void talp_monitor_unlock(monitor_t* region){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
-    if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
-    pthread_spin_unlock(&monitoringRegion->talp_lock);
-}
-
 void talp_in_blocking_call(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 )return;
     talp_update_monitor(monitoringRegion);
 }
@@ -233,7 +217,7 @@ void talp_in_blocking_call(void){
 void talp_out_blocking_call(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
 
     talp_update_monitor(monitoringRegion);
@@ -244,7 +228,7 @@ void talp_in_mpi(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     talp_update_monitor(monitoringRegion);
     if( thread_spd->options.lewi){
         CPU_SET(cpunum,&talp_info->in_mpi_mask);
@@ -262,7 +246,7 @@ void talp_out_mpi(void){
     int cpunum = sched_getcpu();
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t* region =  &((talp_info_t*) (thread_spd->talp_info))->monitoringRegion;
+    dlb_monitor_t *region =  &((talp_info_t*) (thread_spd->talp_info))->monitoringRegion;
     talp_update_monitor(region);
     if( spd->options.lewi){
         CPU_CLR(cpunum,&talp_info->in_mpi_mask);
@@ -283,10 +267,10 @@ talp_info_t * get_talp_global_info(void){
     return  talp_info;
 }
 
-monitor_t* get_talp_monitoringRegion(void){
+dlb_monitor_t* get_talp_monitoringRegion(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return NULL;
     return monitoringRegion;
 }
@@ -295,7 +279,7 @@ monitor_t* get_talp_monitoringRegion(void){
 void talp_mpi_init(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if(spd == NULL || !(spd->talp_enabled))return;
     clock_gettime(CLOCK_REALTIME,&talp_info->init_app);
     reset(&monitoringRegion->mpi_time);
@@ -308,7 +292,7 @@ void talp_mpi_init(void){
 void talp_mpi_finalize(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     int  rank;
     if( ! ( thread_spd->options.talp_summary & SUMMARY_NODE))return;
     int pid = getpid();
@@ -403,7 +387,7 @@ void talp_mpi_finalize(void){
 void talp_mpi_report(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     struct timespec time_aux;
     if(!(spd->talp_enabled))return;
     if( !( thread_spd->options.talp_summary & SUMMARY_PROCESS)) return;
@@ -426,12 +410,11 @@ void monitoring_regions_finalize(void) {
     /* Timers Report */
     int i;
     for (i=0; i<nregions && thread_spd->options.talp_summary & SUMMARY_REGIONS; ++i) {
-        monitor_info_t *region = &regions[i];
-        DLB_MonitoringRegionReport(region);
+        DLB_MonitoringRegionReport(&regions[i]);
     }
     /* De-allocate regions */
     free(regions);
-    regions= NULL;
+    regions = NULL;
     nregions = 0;
 }
 
@@ -444,38 +427,36 @@ dlb_monitor_t* monitoring_region_register(const char* name){
     }
     /* Reallocate new position in timers array */
     ++nregions;
-    void *p = realloc(regions, sizeof(monitor_info_t)*nregions);
+    void *p = realloc(regions, sizeof(dlb_monitor_t)*nregions);
     if (p) regions = p;
     else fatal("realloc failed");
 
-    monitor_info_t * monitor = (monitor_info_t*) p;
+    dlb_monitor_t *monitor = &regions[nregions-1];
 
     monitor->name = strdup(name);
     reset(&monitor->compute_time);
     reset(&monitor->mpi_time);
 
-    return (dlb_monitor_t) monitor;
+    return monitor;
 }
 
-int monitoring_region_start(monitor_info_t * p ){
-    const subprocess_descriptor_t *spd = thread_spd;
-    if(!(spd->talp_enabled))return DLB_ERR_NOTALP;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+int monitoring_region_start(dlb_monitor_t *monitor){
+    talp_info_t *talp_info = thread_spd->talp_info;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
 
     add_event(MONITOR_REGION,1);
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
 
-    p->elapsed_time = now;
+    monitor->elapsed_time = now;
     talp_update_monitor(monitoringRegion);
 
-    p->mpi_time = monitoringRegion->mpi_time;
-    p->compute_time = monitoringRegion->compute_time;
+    monitor->mpi_time = monitoringRegion->mpi_time;
+    monitor->compute_time = monitoringRegion->compute_time;
 
 #if DEBUG
-    double mpi_time_t=     to_secs( p->mpi_time);
-    double compute_time_t= to_secs( p->compute_time);
+    double mpi_time_t=     to_secs( monitor->mpi_time);
+    double compute_time_t= to_secs( monitor->compute_time);
     info("########################################");
     info("START MPI time:     %e seconds", mpi_time_t);
     info("START Compute time: %e seconds", compute_time_t);
@@ -483,52 +464,44 @@ int monitoring_region_start(monitor_info_t * p ){
     return DLB_SUCCESS;
 }
 
-int monitoring_region_stop(monitor_info_t* p){
-    const subprocess_descriptor_t *spd = thread_spd;
-    if(!(spd->talp_enabled))return DLB_ERR_NOTALP;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+int monitoring_region_stop(dlb_monitor_t *monitor){
+    talp_info_t *talp_info = thread_spd->talp_info;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     add_event(MONITOR_REGION,0);
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
     talp_update_monitor(monitoringRegion);
     monitoringRegion->tmp_compute_time = now;
-    diff_time(p->elapsed_time,now, &p->elapsed_time);
+    diff_time(monitor->elapsed_time,now, &monitor->elapsed_time);
 #if DEBUG
-    double mpi_time_t=     to_secs(p->mpi_time);
-    double compute_time_t= to_secs(p->compute_time);
+    double mpi_time_t=     to_secs(monitor->mpi_time);
+    double compute_time_t= to_secs(monitor->compute_time);
     double mpi_time_t2=     to_secs(monitoringRegion->mpi_time);
     double compute_time_t2= to_secs(monitoringRegion->compute_time);
 #endif
-    diff_time(p->mpi_time,monitoringRegion->mpi_time, &p->mpi_time);
-    diff_time(p->compute_time,monitoringRegion->compute_time, &p->compute_time);
+    diff_time(monitor->mpi_time,monitoringRegion->mpi_time, &monitor->mpi_time);
+    diff_time(monitor->compute_time,monitoringRegion->compute_time, &monitor->compute_time);
 #if DEBUG
     info("END MPI time:     %e seconds", mpi_time_t);
     info("END MPI2 time:     %e seconds", mpi_time_t2);
-    info("END MPI Final:     %e seconds", to_secs(p->mpi_time));
+    info("END MPI Final:     %e seconds", to_secs(monitor->mpi_time));
     info("END Compute time: %e seconds", compute_time_t);
     info("END Compute2 time: %e seconds", compute_time_t2);
-    info("END Compute2 Final: %e seconds", to_secs(p->compute_time));
+    info("END Compute2 Final: %e seconds", to_secs(monitor->compute_time));
 #endif
     return DLB_SUCCESS;
 }
 
 double talp_get_mpi_time(void){
-    const subprocess_descriptor_t *spd = thread_spd;
-    if(spd == NULL || !(spd->talp_enabled))return DLB_ERR_NOTALP;
-
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    talp_info_t *talp_info = thread_spd->talp_info;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
 
     return monitoringRegion == NULL ? 0 : to_secs(monitoringRegion->mpi_time);
 }
 
 double talp_get_compute_time(void){
-    const subprocess_descriptor_t *spd = thread_spd;
-    if(spd == NULL || !(spd->talp_enabled))return DLB_ERR_NOTALP;
-
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    monitor_t * monitoringRegion = &talp_info->monitoringRegion;
+    talp_info_t *talp_info = thread_spd->talp_info;
+    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
 
     return monitoringRegion == NULL ? 0 : to_secs(monitoringRegion->compute_time);
 }

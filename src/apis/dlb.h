@@ -508,30 +508,6 @@ int DLB_AutoSizerStart(void);
  */
 int DLB_AutoSizerEnd(void);
 
-/*! \brief Register a new Monitoring Region
- *  \param[in] name Name to identify the new region
- *  \return monitor handle to be used on subsequent calls
- */
-dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
-
-/*! \brief Start (or unpause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
- *  \return DLB_SUCCESS on success
- */
-int DLB_MonitoringRegionStart(dlb_monitor_t handle);
-
-/*! \brief Stop (or pause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
- *  \return DLB_SUCCESS on success
- */
-int DLB_MonitoringRegionStop(dlb_monitor_t handle);
-
-/*! \brief Print a Report by stdout of the monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
- *  \return DLB_SUCCESS on success
- */
-int DLB_MonitoringRegionReport(dlb_monitor_t handle);
-
 #ifdef __cplusplus
 }
 #endif

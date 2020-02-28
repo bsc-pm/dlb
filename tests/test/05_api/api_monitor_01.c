@@ -23,13 +23,9 @@
 
 #include "unique_shmem.h"
 
-#include <LB_core/spd.h>
 #include <LB_core/DLB_talp.h>
 #include <apis/dlb.h>
-#include "LB_core/spd.h"
-#include "unique_shmem.h"
-
-#include <apis/dlb.h>
+#include <support/mytime.h>
 
 #include <sched.h>
 #include <unistd.h>
@@ -55,23 +51,22 @@ int main(int argc, char **argv) {
     int err = 0;
     char* name = "Test Region";
 
-    dlb_monitor_t* test1 = DLB_MonitoringRegionRegister(name);
+    dlb_monitor_t *monitor = DLB_MonitoringRegionRegister(name);
 
-    monitor_info_t* check1 = (monitor_info_t*) test1;
     double tmp_mpi,tmp_comp;
     double tmp2_mpi,tmp2_comp;
 
-    tmp_mpi = to_secs(check1->mpi_time);
-    tmp_comp = to_secs(check1->compute_time);
+    tmp_mpi = to_secs(monitor->mpi_time);
+    tmp_comp = to_secs(monitor->compute_time);
 
-    err = DLB_MonitoringRegionStart(test1);
+    err = DLB_MonitoringRegionStart(monitor);
     assert(err == 0);
-    sleep(1);
-    err = DLB_MonitoringRegionStop(test1);
+    usleep(1000);
+    err = DLB_MonitoringRegionStop(monitor);
     assert(err == 0);
 
-    tmp2_mpi = to_secs(check1->mpi_time);
-    tmp2_comp = to_secs(check1->compute_time);
+    tmp2_mpi = to_secs(monitor->mpi_time);
+    tmp2_comp = to_secs(monitor->compute_time);
 
     assert(tmp_comp != tmp2_comp);
     assert(tmp_mpi == tmp2_mpi);

@@ -20,13 +20,11 @@
 #ifndef DLB_CORE_TALP_H
 #define DLB_CORE_TALP_H
 
-#include "support/mytime.h"
-#include "support/types.h"
+#include "apis/dlb_talp.h"
 #include "LB_core/spd.h"
 
 #include <sched.h>
-#include <stdbool.h>
-#include <pthread.h>
+#include <time.h>
 
 struct talp_loop_struct {
     int iterNum;
@@ -39,18 +37,8 @@ struct talp_loop_struct {
     int depth;
 };
 
-typedef struct monitor_s {
-    struct timespec tmp_mpi_time;
-    struct timespec tmp_compute_time;
-
-    struct timespec mpi_time;
-    struct timespec compute_time;
-
-    pthread_spinlock_t talp_lock;
-} monitor_t;
-
 typedef struct talp_info_s{
-    monitor_t  monitoringRegion;
+    dlb_monitor_t  monitoringRegion;
     cpu_set_t active_working_mask;  // Active CPUs
     cpu_set_t old_working_mask;
     cpu_set_t in_mpi_mask;          // CPUS in MPI
@@ -60,16 +48,6 @@ typedef struct talp_info_s{
     struct timespec end_app;
 
 } talp_info_t;
-
-typedef struct monitor_info_s {
-    char* name;
-    struct timespec  mpi_time;     // Elapsed
-    struct timespec  compute_time; // Elapsed * numCPU
-
-    struct timespec elapsed_time;  // Elapsed time
-    struct timespec idle_time;
-    struct timespec lend_time;
-} monitor_info_t;
 
 /*  Initializes the module structures */
 void talp_init( subprocess_descriptor_t* spd);
@@ -96,17 +74,17 @@ void talp_in_blocking_call(void);
 void talp_out_blocking_call(void);
 
 /*  Function that updates the metrics. */
-void talp_update_monitor(monitor_t* region);
+void talp_update_monitor(dlb_monitor_t* region);
 
 /*  Function that updates the metrics specifically for MPI time. */
-void talp_update_monitor_mpi(monitor_t* region);
+void talp_update_monitor_mpi(dlb_monitor_t* region);
 
 /*  Function that updates the metrics specifically for Compute time. */
-void talp_update_monitor_comp(monitor_t* region);
+void talp_update_monitor_comp(dlb_monitor_t* region);
 
 talp_info_t * get_talp_global_info(void);
 
-monitor_t* get_talp_monitoringRegion(void);
+dlb_monitor_t* get_talp_monitoringRegion(void);
 
 double talp_get_mpi_time(void);
 
@@ -124,7 +102,7 @@ void talp_mpi_report(void);
 #endif
 
 void monitoring_regions_finalize(void);
-int monitoring_region_start(monitor_info_t* p);
-int monitoring_region_stop(monitor_info_t* p);
+int monitoring_region_start(dlb_monitor_t *monitor);
+int monitoring_region_stop(dlb_monitor_t *monitor);
 dlb_monitor_t* monitoring_region_register(const char* name);
 #endif
