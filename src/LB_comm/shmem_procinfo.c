@@ -1333,7 +1333,7 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync) {
 }
 
 int auto_resize_start(){
-    if ( !thread_spd->talp_enabled ) return 0 ;
+    if ( !thread_spd->talp_info ) return 0 ;
     pinfo_t *process = get_process(thread_spd->id);
     auto_sizer_t * au = &process->auto_sizer;
 
@@ -1387,7 +1387,7 @@ int auto_resize_start(){
 }
 
 int auto_resize_end(){
-    if ( !thread_spd->talp_enabled ) return 0 ;
+    if ( !thread_spd->talp_info ) return 0 ;
     shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(thread_spd->id);

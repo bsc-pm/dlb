@@ -22,8 +22,8 @@
 #endif
 
 #include "LB_core/DLB_kernel.h"
-#include "LB_core/DLB_talp.h"
 
+#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_numThreads/omp_thread_manager.h"
@@ -64,7 +64,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         spd->options.preinit_pid ? POLICY_LEWI_MASK :
         mask ? POLICY_LEWI_MASK :
         POLICY_LEWI;
-    spd->talp_info=0;
 
     fatal_cond(spd->lb_policy == POLICY_LEWI && spd->options.ompt,
             "LeWI with OMPT support requires the application to be pre-initialized.\n"
@@ -92,10 +91,8 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialize shared memories
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
-            || spd->options.talp
             || spd->options.preinit_pid) {
 
-        talp_init(spd);
         // Initialize procinfo
         cpu_set_t new_process_mask;
         error = shmem_procinfo__init(spd->id, &spd->process_mask,
@@ -127,7 +124,13 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     error = spd->lb_funcs.init(spd);
     if (error != DLB_SUCCESS) return error;
 
-    spd->talp_enabled = spd->options.talp;
+    // Initialize TALP
+    if  (spd->options.talp) {
+        talp_init(spd);
+    } else {
+        spd->talp_info = NULL;
+    }
+
     spd->dlb_enabled = true;
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, EVENT_USER);
@@ -168,7 +171,9 @@ int Finish(subprocess_descriptor_t *spd) {
     add_event(RUNTIME_EVENT, EVENT_FINALIZE);
     spd->dlb_enabled = false;
 
-    spd->talp_enabled = false;
+    if (spd->options.talp) {
+        talp_finalize(spd);
+    }
     if (spd->lb_funcs.finalize) {
         spd->lb_funcs.finalize(spd);
         spd->lb_funcs.finalize = NULL;
@@ -178,9 +183,7 @@ int Finish(subprocess_descriptor_t *spd) {
     }
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
-            || spd->options.talp
             || spd->options.preinit_pid) {
-        talp_finish(spd);
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
                 spd->options.shm_key);

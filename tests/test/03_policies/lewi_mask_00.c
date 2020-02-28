@@ -55,7 +55,6 @@ int main( int argc, char **argv ) {
 
     subprocess_descriptor_t spd;
     spd.id = getpid();
-    spd.talp_enabled = 0;
     options_init(&spd.options, options);
     debug_init(&spd.options);
 

@@ -57,29 +57,27 @@ static inline void sort_pids(pid_t * pidlist, int start, int end){
     }
 }
 
-void talp_init( subprocess_descriptor_t *spd ){
-    if( spd == NULL || spd->options.talp == 0 || spd->talp_initialized)return;
-#ifdef DEBUG
-    info("TALP INIT");
-    const char* cpuset = mu_to_str(&spd->process_mask);
-    info("###      CpuSet:  %s",cpuset);
-#endif
-    spd->talp_info = malloc(sizeof(talp_info_t));
-    talp_info_t * talp_info = (talp_info_t*) (spd->talp_info);
-    talp_info->active_working_mask = spd->process_mask;
-    CPU_ZERO(&talp_info->in_mpi_mask);
-    CPU_ZERO(&talp_info->active_mpi_mask);
-    reset(&talp_info->monitoringRegion.mpi_time);
-    reset(&talp_info->monitoringRegion.compute_time);
-    spd->talp_initialized = 1;
+
+/*********************************************************************************/
+/*    Init / Finalize                                                            */
+/*********************************************************************************/
+
+void talp_init(subprocess_descriptor_t *spd) {
+    ensure(!spd->talp_info, "TALP already initialized");
+    verbose(VB_TALP, "Initializing TALP module");
+
+    talp_info_t *talp_info = malloc(sizeof(talp_info_t));
+    *talp_info = (talp_info_t) {};
+    memcpy(&talp_info->active_working_mask, &spd->process_mask, sizeof(cpu_set_t));
+    spd->talp_info = talp_info;
 }
 
-void talp_finish( subprocess_descriptor_t *spd ){
-    if( spd == NULL || spd->options.talp == 0 || spd->talp_initialized)return;
-    spd->talp_initialized = 0;
+void talp_finalize(subprocess_descriptor_t *spd) {
+    ensure(spd->talp_info, "TALP is not initialized");
+    verbose(VB_TALP, "Finalizing TALP module");
+
 #ifdef MPI_LIB
-    if (_process_id == 0  && spd->options.lewi && spd->options.talp == 0)
-    {
+    if (_process_id == 0  && spd->options.lewi) {
 #endif
         shmem_cpuinfo__print_cpu_times();
 #ifdef MPI_LIB
@@ -87,6 +85,7 @@ void talp_finish( subprocess_descriptor_t *spd ){
     talp_mpi_finalize();
     monitoring_regions_finalize();
     free(spd->talp_info);
+    spd->talp_info = NULL;
 #endif
 }
 
@@ -277,16 +276,16 @@ dlb_monitor_t* get_talp_monitoringRegion(void){
 
 #ifdef MPI_LIB
 void talp_mpi_init(void){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-    if(spd == NULL || !(spd->talp_enabled))return;
-    clock_gettime(CLOCK_REALTIME,&talp_info->init_app);
-    reset(&monitoringRegion->mpi_time);
-    reset(&monitoringRegion->compute_time);
-    clock_gettime(CLOCK_REALTIME,&monitoringRegion->tmp_mpi_time);
-    clock_gettime(CLOCK_REALTIME,&monitoringRegion->tmp_compute_time);
-    clock_gettime(CLOCK_REALTIME,&talp_info->init_app);
+    talp_info_t *talp_info = thread_spd->talp_info;
+    if (talp_info) {
+        dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
+        clock_gettime(CLOCK_REALTIME,&talp_info->init_app);
+        reset(&monitoringRegion->mpi_time);
+        reset(&monitoringRegion->compute_time);
+        clock_gettime(CLOCK_REALTIME,&monitoringRegion->tmp_mpi_time);
+        clock_gettime(CLOCK_REALTIME,&monitoringRegion->tmp_compute_time);
+        clock_gettime(CLOCK_REALTIME,&talp_info->init_app);
+    }
 }
 
 void talp_mpi_finalize(void){
@@ -385,24 +384,22 @@ void talp_mpi_finalize(void){
 }
 
 void talp_mpi_report(void){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-    struct timespec time_aux;
-    if(!(spd->talp_enabled))return;
-    if( !( thread_spd->options.talp_summary & SUMMARY_PROCESS)) return;
+    talp_info_t *talp_info = thread_spd->talp_info;
+    if (talp_info &&
+            thread_spd->options.talp_summary & SUMMARY_PROCESS) {
+        dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
+        struct timespec time_aux = monitoringRegion->tmp_compute_time;
+        clock_gettime(CLOCK_REALTIME, &monitoringRegion->tmp_compute_time);
 
-    time_aux = monitoringRegion->tmp_compute_time;
-    clock_gettime(CLOCK_REALTIME, &monitoringRegion->tmp_compute_time);
-
-    diff_time(time_aux,monitoringRegion->tmp_compute_time , &time_aux);
-    add_time(monitoringRegion->compute_time,time_aux,&monitoringRegion->compute_time);
-    double mpi_time_t=     to_secs( monitoringRegion->mpi_time);
-    double compute_time_t= to_secs( monitoringRegion->compute_time);
-    info("Monitoring Regions Process Summary");
-    info("### Name:        %s", "Zone");
-    info("### MPI time:     %e seconds", mpi_time_t);
-    info("### Compute time: %e seconds", compute_time_t);
+        diff_time(time_aux,monitoringRegion->tmp_compute_time , &time_aux);
+        add_time(monitoringRegion->compute_time,time_aux,&monitoringRegion->compute_time);
+        double mpi_time_t=     to_secs( monitoringRegion->mpi_time);
+        double compute_time_t= to_secs( monitoringRegion->compute_time);
+        info("Monitoring Regions Process Summary");
+        info("### Name:        %s", "Zone");
+        info("### MPI time:     %e seconds", mpi_time_t);
+        info("### Compute time: %e seconds", compute_time_t);
+    }
 }
 #endif
 

@@ -45,13 +45,11 @@ int DLB_TALP_Attach(void) {
     }
     shmem_cpuinfo_ext__init(shm_key);
     shmem_procinfo_ext__init(shm_key);
-   // talp_init(thread_spd);
     return DLB_SUCCESS;
 }
 
 int DLB_TALP_Detach(void) {
     int error = shmem_cpuinfo_ext__finalize();
-    talp_finish(thread_spd);
     error = error ? error : shmem_procinfo_ext__finalize();
     return error;
 }
@@ -73,21 +71,21 @@ int DLB_TALP_CPUTimeGet(int process, double* compute_time){
 
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     spd_enter_dlb(NULL);
-    if (unlikely(!thread_spd->talp_enabled)) {
+    if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
     return monitoring_region_register(name);
 }
 
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
-    if (unlikely(!thread_spd->talp_enabled)) {
+    if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
     return monitoring_region_start(handle);
 }
 
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
-    if (unlikely(!thread_spd->talp_enabled)) {
+    if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
     return monitoring_region_stop(handle);

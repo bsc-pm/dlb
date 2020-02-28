@@ -50,10 +50,10 @@ typedef struct talp_info_s{
 } talp_info_t;
 
 /*  Initializes the module structures */
-void talp_init( subprocess_descriptor_t* spd);
+void talp_init(subprocess_descriptor_t *spd);
 
-/*  Finishes the execution of the module and shows the final report if needed */
-void talp_finish( subprocess_descriptor_t *spd);
+/*  Finalizes the execution of the module and shows the final report if needed */
+void talp_finalize(subprocess_descriptor_t *spd);
 
 /*  Enables the cpuid for the current process */
 void talp_cpu_enable(int cpuid);

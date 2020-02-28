@@ -42,8 +42,6 @@ typedef struct SubProcessDescriptor {
     policy_t lb_policy;
     balance_policy_t lb_funcs;
     void *lewi_info;
-    bool talp_enabled;
-    bool talp_initialized;
     void *talp_info;
 } subprocess_descriptor_t;
 
