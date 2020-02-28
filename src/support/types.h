@@ -34,7 +34,8 @@ typedef enum VerboseOptions {
     VB_ASYNC    = 1 << 7,
     VB_OMPT     = 1 << 8,
     VB_AFFINITY = 1 << 9,
-    VB_BARRIER  = 1 << 10
+    VB_BARRIER  = 1 << 10,
+    VB_TALP     = 1 << 11
 } verbose_opts_t;
 
 typedef enum VerboseFormat {
