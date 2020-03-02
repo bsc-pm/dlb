@@ -42,6 +42,15 @@
 #include <mpi.h>
 #endif
 
+
+typedef struct talp_info_t {
+    dlb_monitor_t   mpi_monitor;            /* monitor MPI_Init -> MPI_Finalize */
+    cpu_set_t       workers_mask;           /* CPUs doing computation */
+    cpu_set_t       mpi_mask;               /* CPUs doing MPI */
+} talp_info_t;
+
+
+/* Private data per monitor */
 typedef struct monitor_data_t {
     bool    started;
     int64_t sample_start_time;
@@ -77,7 +86,7 @@ void talp_init(subprocess_descriptor_t *spd) {
 
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
     *talp_info = (talp_info_t) {};
-    memcpy(&talp_info->active_working_mask, &spd->process_mask, sizeof(cpu_set_t));
+    memcpy(&talp_info->workers_mask, &spd->process_mask, sizeof(cpu_set_t));
     spd->talp_info = talp_info;
 }
 
@@ -85,42 +94,61 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
     verbose(VB_TALP, "Finalizing TALP module");
 
-#ifdef MPI_LIB
-    if (_process_id == 0  && spd->options.lewi) {
-#endif
-        shmem_cpuinfo__print_cpu_times();
-#ifdef MPI_LIB
-    }
-    talp_mpi_finalize();
-#endif
     monitoring_regions_finalize();
     free(spd->talp_info);
     spd->talp_info = NULL;
 }
 
+/* Start MPI monitoring region */
+void talp_mpi_init(void) {
+    talp_info_t *talp_info = thread_spd->talp_info;
+    if (talp_info) {
+        talp_info->mpi_monitor._data = malloc(sizeof(monitor_data_t));
+        monitoring_region_reset(&talp_info->mpi_monitor);
+        talp_info->mpi_monitor.num_resets = 0;
+        talp_info->mpi_monitor.name = "MPI Execution";
+        monitoring_region_start(&talp_info->mpi_monitor);
+    }
+}
+
+/* Stop MPI monitoring region */
+void talp_mpi_finalize(void) {
+    talp_info_t *talp_info = thread_spd->talp_info;
+    if (talp_info) {
+        monitoring_region_stop(&talp_info->mpi_monitor);
+        free(talp_info->mpi_monitor._data);
+    }
+}
 
 /*********************************************************************************/
 /*    Update monitor times based on CPU masks                                    */
 /*********************************************************************************/
 
-static void talp_update_monitor(dlb_monitor_t *monitor, int64_t sample_duration) {
+static void talp_update_monitor(dlb_monitor_t *monitor) {
     talp_info_t *talp_info = thread_spd->talp_info;
+    monitor_data_t *monitor_data = monitor->_data;
+
+    /* Compute sample duration */
+    int64_t sample_duration = get_time_in_ns() - monitor_data->sample_start_time;
 
     /* Update MPI time */
-    int64_t mpi_time = sample_duration * CPU_COUNT(&talp_info->active_mpi_mask);
+    int64_t mpi_time = sample_duration * CPU_COUNT(&talp_info->mpi_mask);
     monitor->accumulated_MPI_time += mpi_time;
 
     /* Update computation time */
-    int64_t computation_time = sample_duration * CPU_COUNT(&talp_info->active_working_mask);
+    int64_t computation_time = sample_duration * CPU_COUNT(&talp_info->workers_mask);
     monitor->accumulated_computation_time += computation_time;
 
     /* Update shared memory only when updating the main monitor */
-    if (monitor == &talp_info->monitoringRegion) {
+    if (monitor == &talp_info->mpi_monitor) {
         shmem_procinfo__setmpitime(thread_spd->id,
                 nsecs_to_secs(monitor->accumulated_MPI_time));
         shmem_procinfo__setcomptime(thread_spd->id,
                 nsecs_to_secs(monitor->accumulated_computation_time));
     }
+
+    /* Start new sample */
+    monitor_data->sample_start_time = get_time_in_ns();
 }
 
 
@@ -133,9 +161,9 @@ void talp_cpu_enable(int cpuid) {
 
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
-        if (!CPU_ISSET(cpuid, &talp_info->active_working_mask)) {
+        if (!CPU_ISSET(cpuid, &talp_info->workers_mask)) {
             monitoring_regions_update_all();
-            CPU_CLR(cpuid, &talp_info->active_working_mask);
+            CPU_CLR(cpuid, &talp_info->workers_mask);
         }
     }
 }
@@ -145,9 +173,9 @@ void talp_cpu_disable(int cpuid) {
 
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
-        if (CPU_ISSET(cpuid, &talp_info->active_working_mask)) {
+        if (CPU_ISSET(cpuid, &talp_info->workers_mask)) {
             monitoring_regions_update_all();
-            CPU_CLR(cpuid, &talp_info->active_working_mask);
+            CPU_CLR(cpuid, &talp_info->workers_mask);
         }
     }
 }
@@ -163,13 +191,12 @@ void talp_in_mpi(void) {
         if (thread_spd->options.lewi) {
             /* Current CPU goes from worker to MPI mask */
             int cpuid = sched_getcpu();
-            CPU_SET(cpuid, &talp_info->active_mpi_mask);
-            CPU_CLR(cpuid, &talp_info->active_working_mask);
+            CPU_SET(cpuid, &talp_info->mpi_mask);
+            CPU_CLR(cpuid, &talp_info->workers_mask);
         } else {
             /* All CPUs go to MPI mask */
-            memcpy(&talp_info->active_mpi_mask, &talp_info->active_working_mask,
-                    sizeof(cpu_set_t));
-            CPU_ZERO(&talp_info->active_working_mask);
+            memcpy(&talp_info->mpi_mask, &talp_info->workers_mask, sizeof(cpu_set_t));
+            CPU_ZERO(&talp_info->workers_mask);
         }
     }
 }
@@ -185,13 +212,12 @@ void talp_out_mpi(void){
         if (thread_spd->options.lewi) {
             /* Current CPU goes from MPI to worker */
             int cpuid = sched_getcpu();
-            CPU_CLR(cpuid, &talp_info->active_mpi_mask);
-            CPU_SET(cpuid, &talp_info->active_working_mask);
+            CPU_CLR(cpuid, &talp_info->mpi_mask);
+            CPU_SET(cpuid, &talp_info->workers_mask);
         } else {
             /* All CPUs go to workers mask */
-            memcpy(&talp_info->active_working_mask, &talp_info->active_mpi_mask,
-                    sizeof(cpu_set_t));
-            CPU_ZERO(&talp_info->active_mpi_mask);
+            memcpy(&talp_info->workers_mask, &talp_info->mpi_mask, sizeof(cpu_set_t));
+            CPU_ZERO(&talp_info->mpi_mask);
         }
     }
 }
@@ -204,46 +230,18 @@ void talp_out_blocking_call(void) {
     // TODO: DLB_Barrier use case
 }
 
-talp_info_t * get_talp_global_info(void){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return NULL;
-    return  talp_info;
-}
-
-dlb_monitor_t* get_talp_monitoringRegion(void){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-    if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return NULL;
-    return monitoringRegion;
-}
-
 #ifdef MPI_LIB
-void talp_mpi_init(void){
-    talp_info_t *talp_info = thread_spd->talp_info;
-    if (talp_info) {
-        dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-        clock_gettime(CLOCK_REALTIME,&talp_info->init_app);
-        reset(&monitoringRegion->mpi_time);
-        reset(&monitoringRegion->compute_time);
-        clock_gettime(CLOCK_REALTIME,&monitoringRegion->tmp_mpi_time);
-        clock_gettime(CLOCK_REALTIME,&monitoringRegion->tmp_compute_time);
-        clock_gettime(CLOCK_REALTIME,&talp_info->init_app);
-    }
-}
-
-void talp_mpi_finalize(void){
+void old_talp_mpi_finalize(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
+    dlb_monitor_t *monitoringRegion = &talp_info->mpi_monitor;
     int  rank;
     if( ! ( thread_spd->options.talp_summary & SUMMARY_NODE))return;
     int pid = getpid();
 
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-    clock_gettime(CLOCK_REALTIME,&talp_info->end_app);
-    diff_time(talp_info->init_app, talp_info->end_app, &talp_info->end_app);
+    /* clock_gettime(CLOCK_REALTIME,&talp_info->end_app); */
+    /* diff_time(talp_info->init_app, talp_info->end_app, &talp_info->end_app); */
     int stats_per_node = 1;
     shmem_procinfo__setmpitime(pid,to_secs(monitoringRegion->mpi_time) );
     shmem_procinfo__setcomptime(pid,to_secs(monitoringRegion->compute_time) );
@@ -317,11 +315,11 @@ void talp_mpi_finalize(void){
 #ifndef SCIENTIFIC
         info("%s;%.2f;%.2f\n", "Node Avg", res_comp/nelem, res_mpi/nelem);
         info("%s;%.2f;%.2f\n", "Node Max", max_comp, max_mpi);
-        info("%s;%.2f\n", "AppTime", to_secs(talp_info->end_app));
+        /* info("%s;%.2f\n", "AppTime", to_secs(talp_info->end_app)); */
 #else
         info("%s;%e;%e \n", "Node Avg", res_comp/nelem, res_mpi/nelem);
         info("%s;%e;%e \n", "Node Max", max_comp, max_mpi);
-        info("%s;%e\n", "AppTime", to_secs(talp_info->end_app));
+        /* info("%s;%e\n", "AppTime", to_secs(talp_info->end_app)); */
 #endif
 #endif
     }
@@ -332,7 +330,7 @@ void talp_mpi_report(void){
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info &&
             thread_spd->options.talp_summary & SUMMARY_PROCESS) {
-        dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
+        dlb_monitor_t *monitoringRegion = &talp_info->mpi_monitor;
         struct timespec time_aux = monitoringRegion->tmp_compute_time;
         clock_gettime(CLOCK_REALTIME, &monitoringRegion->tmp_compute_time);
 
@@ -446,15 +444,12 @@ int monitoring_region_start(dlb_monitor_t *monitor) {
 int monitoring_region_stop(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
 
+    /* Update last sample */
+    talp_update_monitor(monitor);
+
     /* Stop timer */
     monitor->end_time = get_time_in_ns();
-
-    /* Update times */
     monitor->elapsed_time_ += monitor->end_time - monitor->start_time;
-    int64_t sample_duration = monitor->end_time - monitor_data->sample_start_time;
-    talp_update_monitor(monitor, sample_duration);
-
-    /* Mark it as stopped */
     ++(monitor->num_measurements);
     monitor_data->started = false;
     monitor_data->sample_start_time = 0;
@@ -477,31 +472,21 @@ int monitoring_region_report(dlb_monitor_t *monitor) {
 }
 
 static void monitoring_regions_update_all(void) {
-    int64_t now = get_time_in_ns();
+
+    /* Update MPI monitor */
+    talp_info_t *talp_info = thread_spd->talp_info;
+    monitor_data_t *mpi_monitor_data = talp_info->mpi_monitor._data;
+    if (mpi_monitor_data->started) {
+        talp_update_monitor(&talp_info->mpi_monitor);
+    }
+
+    /* Update custom regions */
     int i;
     for (i=0; i<nregions; ++i) {
         dlb_monitor_t *monitor = regions[i];
-        /* for each enabled monitor */
-        if (monitor->start_time > monitor->end_time) {
-            monitor_data_t *monitor_data = monitor->_data;
-            /* compute sample duration and update times */
-            int64_t sample_duration = now - monitor_data->sample_start_time;
-            talp_update_monitor(monitor, sample_duration);
-            monitor_data->sample_start_time = now;
+        monitor_data_t *monitor_data = monitor->_data;
+        if (monitor_data->started) {
+            talp_update_monitor(monitor);
         }
     }
-}
-
-double talp_get_mpi_time(void){
-    talp_info_t *talp_info = thread_spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-
-    return monitoringRegion == NULL ? 0 : to_secs(monitoringRegion->mpi_time);
-}
-
-double talp_get_compute_time(void){
-    talp_info_t *talp_info = thread_spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-
-    return monitoringRegion == NULL ? 0 : to_secs(monitoringRegion->compute_time);
 }

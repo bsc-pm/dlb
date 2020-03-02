@@ -21,21 +21,25 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-#include "LB_core/DLB_talp.h"
-#include "LB_core/spd.h"
 #include "unique_shmem.h"
 
-#include <apis/dlb.h>
-#include <apis/dlb_drom.h>
+#include "LB_core/DLB_talp.h"
+#include "LB_core/DLB_kernel.h"
+#include "LB_core/spd.h"
+#include <apis/dlb_talp.h>
+#include <apis/dlb_errors.h>
 
 #include <sched.h>
-#include <unistd.h>
-#include <string.h>
+#include <stdint.h>
 #include <assert.h>
 
 
-#include <pthread.h>
-#include <assert.h>
+typedef struct talp_info_t {
+    dlb_monitor_t   mpi_monitor;
+    cpu_set_t       workers_mask;
+    cpu_set_t       mpi_mask;
+} talp_info_t;
+
 
 int main(int argc, char *argv[]) {
 
@@ -47,30 +51,33 @@ int main(int argc, char *argv[]) {
 
     char options[64] = "--talp --lewi --shm-key=";
     strcat(options, SHMEM_KEY);
-    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+    spd_enter_dlb(NULL);
+    assert( Initialize(thread_spd, 111, 0, &process_mask, options) == DLB_SUCCESS );
 
-    double tmp1,tmp2;
+    talp_info_t *talp_info = thread_spd->talp_info;
 
-    tmp1 = talp_get_mpi_time();
-    tmp2 = talp_get_compute_time();
-    assert( tmp1 == 0 && tmp2 == 0);
+    int64_t mpi_time = talp_info->mpi_monitor.accumulated_MPI_time;
+    int64_t computation_time = talp_info->mpi_monitor.accumulated_computation_time;
+    assert( mpi_time == 0 && computation_time == 0);
 
-    const subprocess_descriptor_t* spd = thread_spd;
-    talp_info_t* talp_info = (talp_info_t*) spd->talp_info;
-    assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
-    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
+    assert(CPU_COUNT(&talp_info->workers_mask) == 1);
+    assert(CPU_COUNT(&talp_info->mpi_mask) == 0);
+
+    talp_mpi_init();
 
     talp_in_mpi();
 
-    assert(CPU_COUNT(&talp_info->active_working_mask) == 0);
-    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 1);
+    assert(CPU_COUNT(&talp_info->workers_mask) == 0);
+    assert(CPU_COUNT(&talp_info->mpi_mask) == 1);
 
     talp_out_mpi();
 
-    assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
-    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
+    assert(CPU_COUNT(&talp_info->workers_mask) == 1);
+    assert(CPU_COUNT(&talp_info->mpi_mask) == 0);
 
-    assert( DLB_Finalize() == DLB_SUCCESS );
+    talp_mpi_finalize();
+
+    assert( Finish(thread_spd) == DLB_SUCCESS );
 
     return 0;
 }
