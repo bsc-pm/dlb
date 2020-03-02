@@ -21,7 +21,7 @@ if [[ $DLB == 1 ]] ; then
         export EXTRAE_CONFIG_FILE="extrae.xml"
         export NX_ARGS+=" --instrumentation=extrae"
     else
-        PRELOAD="$DLB_HOME/lib/libdlb_mpi.so:$DLB_HOME/lib/libdlb.so"
+        PRELOAD="$DLB_HOME/lib/libdlb_mpi.so"
     fi
     export NX_ARGS+=" --enable-block --enable-dlb --force-tie-master"
     export DLB_ARGS+=" --lewi"
