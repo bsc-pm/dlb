@@ -42,6 +42,11 @@
 #include <mpi.h>
 #endif
 
+typedef struct monitor_data_t {
+    bool    started;
+    int64_t sample_start_time;
+} monitor_data_t;
+
 
 static void monitoring_regions_finalize(void);
 
@@ -446,6 +451,7 @@ dlb_monitor_t* monitoring_region_register(const char* name){
 
     // Assign new values after the mutex is unlocked
     monitor->name = strdup(name);
+    monitor->_data = malloc(sizeof(monitor_data_t));
     monitoring_region_reset(monitor);
     monitor->num_resets = 0;
 
@@ -465,6 +471,7 @@ static void monitoring_regions_finalize(void) {
         for (i=0; i<nregions; ++i) {
             dlb_monitor_t *monitor = regions[i];
             free((char*)monitor->name);
+            free(monitor->_data);
             free(monitor);
             monitor = NULL;
         }
@@ -483,6 +490,7 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
     monitor->elapsed_time_ = 0;
     monitor->accumulated_MPI_time = 0;
     monitor->accumulated_computation_time = 0;
+    memset(monitor->_data, 0, sizeof(monitor_data_t));
     return DLB_SUCCESS;
 }
 

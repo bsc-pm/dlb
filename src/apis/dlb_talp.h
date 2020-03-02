@@ -33,6 +33,7 @@ typedef struct dlb_monitor_t {
     int64_t     elapsed_time_;
     int64_t     accumulated_MPI_time;
     int64_t     accumulated_computation_time;
+    void        *_data;
     // Old members
     struct timespec tmp_mpi_time;
     struct timespec tmp_compute_time;
