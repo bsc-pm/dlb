@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <http://www.gnu.org/licenses/>.                 */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "LB_core/DLB_talp.h"
 
 #include "apis/dlb_talp.h"
@@ -32,15 +36,14 @@
 #include <sched.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #ifdef MPI_LIB
 #include <mpi.h>
 #endif
 
-enum { MONITOR_MAX_KEY_LEN = 128 };
 
-static dlb_monitor_t *regions = NULL;
-static size_t nregions = 0;
+static void monitoring_regions_finalize(void);
 
 static inline void sort_pids(pid_t * pidlist, int start, int end){
     int i = start;
@@ -83,10 +86,10 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 #ifdef MPI_LIB
     }
     talp_mpi_finalize();
+#endif
     monitoring_regions_finalize();
     free(spd->talp_info);
     spd->talp_info = NULL;
-#endif
 }
 
 void talp_cpu_disable_mpi(int cpuid){
@@ -403,38 +406,84 @@ void talp_mpi_report(void){
 }
 #endif
 
-void monitoring_regions_finalize(void) {
-    /* Timers Report */
-    int i;
-    for (i=0; i<nregions && thread_spd->options.talp_summary & SUMMARY_REGIONS; ++i) {
-        DLB_MonitoringRegionReport(&regions[i]);
-    }
-    /* De-allocate regions */
-    free(regions);
-    regions = NULL;
-    nregions = 0;
-}
+
+/*********************************************************************************/
+/*    TALP Monitoring Regions                                                    */
+/*********************************************************************************/
+
+enum { MONITOR_MAX_KEY_LEN = 128 };
+
+static dlb_monitor_t **regions = NULL;
+static size_t nregions = 0;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 dlb_monitor_t* monitoring_region_register(const char* name){
-    int i;
-    for (i=0; i<nregions; ++i) {
-        if ((strcmp(regions[i].name, name) == 0)) {
-            return (dlb_monitor_t*) &regions[i];
+    dlb_monitor_t *monitor = NULL;
+    pthread_mutex_lock(&mutex);
+    {
+        /* Found monitor if already registered */
+        int i;
+        for (i=0; i<nregions; ++i) {
+            if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
+                monitor = regions[i];
+            }
+        }
+
+        /* Otherwise, create new monitoring region */
+        if (monitor == NULL) {
+            ++nregions;
+            void *p = realloc(regions, sizeof(dlb_monitor_t*)*nregions);
+            if (p) {
+                regions = p;
+                regions[nregions-1] = malloc(sizeof(dlb_monitor_t));
+                monitor = regions[nregions-1];
+            }
         }
     }
-    /* Reallocate new position in timers array */
-    ++nregions;
-    void *p = realloc(regions, sizeof(dlb_monitor_t)*nregions);
-    if (p) regions = p;
-    else fatal("realloc failed");
+    pthread_mutex_unlock(&mutex);
+    fatal_cond(!monitor, "Could not register a new monitoring region."
+            " Please report at "PACKAGE_BUGREPORT);
 
-    dlb_monitor_t *monitor = &regions[nregions-1];
-
+    // Assign new values after the mutex is unlocked
     monitor->name = strdup(name);
-    reset(&monitor->compute_time);
-    reset(&monitor->mpi_time);
+    monitoring_region_reset(monitor);
+    monitor->num_resets = 0;
 
     return monitor;
+}
+
+static void monitoring_regions_finalize(void) {
+    /* Individual Report */
+    int i;
+    for (i=0; i<nregions && thread_spd->options.talp_summary & SUMMARY_REGIONS; ++i) {
+        monitoring_region_report(regions[i]);
+    }
+
+    /* De-allocate regions */
+    pthread_mutex_lock(&mutex);
+    {
+        for (i=0; i<nregions; ++i) {
+            dlb_monitor_t *monitor = regions[i];
+            free((char*)monitor->name);
+            free(monitor);
+            monitor = NULL;
+        }
+        free(regions);
+        regions = NULL;
+        nregions = 0;
+    }
+    pthread_mutex_unlock(&mutex);
+}
+
+int monitoring_region_reset(dlb_monitor_t *monitor) {
+    ++(monitor->num_resets);
+    monitor->num_measurements = 0;
+    monitor->start_time = 0;
+    monitor->end_time = 0;
+    monitor->elapsed_time_ = 0;
+    monitor->accumulated_MPI_time = 0;
+    monitor->accumulated_computation_time = 0;
+    return DLB_SUCCESS;
 }
 
 int monitoring_region_start(dlb_monitor_t *monitor){
@@ -486,6 +535,19 @@ int monitoring_region_stop(dlb_monitor_t *monitor){
     info("END Compute2 time: %e seconds", compute_time_t2);
     info("END Compute2 Final: %e seconds", to_secs(monitor->compute_time));
 #endif
+    return DLB_SUCCESS;
+}
+
+int monitoring_region_report(dlb_monitor_t *monitor) {
+    info("########### Monitoring Regions Summary ##########");
+    info("### Name:                      %s", monitor->name);
+    info("### Elapsed time :             %lld.%.9ld seconds",
+            (long long) monitor->elapsed_time.tv_sec, monitor->elapsed_time.tv_nsec);
+    info("### MPI time :                 %lld.%.9ld seconds",
+            (long long) monitor->mpi_time.tv_sec, monitor->mpi_time.tv_nsec);
+    info("### Compute accumulated time : %lld.%.9ld seconds",
+            (long long) monitor->compute_time.tv_sec, monitor->compute_time.tv_nsec);
+    info("###      CpuSet:  %s", mu_to_str(&thread_spd->process_mask));
     return DLB_SUCCESS;
 }
 

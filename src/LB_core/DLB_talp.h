@@ -101,8 +101,9 @@ void talp_mpi_finalize(void);
 void talp_mpi_report(void);
 #endif
 
-void monitoring_regions_finalize(void);
+dlb_monitor_t* monitoring_region_register(const char* name);
+int monitoring_region_reset(dlb_monitor_t *monitor);
 int monitoring_region_start(dlb_monitor_t *monitor);
 int monitoring_region_stop(dlb_monitor_t *monitor);
-dlb_monitor_t* monitoring_region_register(const char* name);
+int monitoring_region_report(dlb_monitor_t *monitor);
 #endif

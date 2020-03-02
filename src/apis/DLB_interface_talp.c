@@ -32,8 +32,6 @@
 
 #pragma GCC visibility push(default)
 
-#define SCIENTIFIC_NOTATION 0
-
 int DLB_TALP_Attach(void) {
     const char *shm_key;
     if (thread_spd && thread_spd->dlb_initialized) {
@@ -77,6 +75,13 @@ dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     return monitoring_region_register(name);
 }
 
+int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return monitoring_region_reset(handle);
+}
+
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
@@ -93,21 +98,8 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
 
 int DLB_MonitoringRegionReport(dlb_monitor_t *handle){
     spd_enter_dlb(NULL);
-    info("########### Monitoring Regions Summary ##########");
-    info("### Name:                      %s", handle->name);
-#if SCIENTIFIC_NOTATION
-    double mpi_time_t=     to_secs( handle->mpi_time);
-    double compute_time_t= to_secs( handle->compute_time);
-    info("### MPI time:     %e seconds", mpi_time_t);
-    info("### Compute time: %e seconds", compute_time_t);
-#else
-    info("### Elapsed time :             %lld.%.9ld seconds",
-            (long long) handle->elapsed_time.tv_sec, handle->elapsed_time.tv_nsec);
-    info("### MPI time :                 %lld.%.9ld seconds",
-            (long long) handle->mpi_time.tv_sec, handle->mpi_time.tv_nsec);
-    info("### Compute accumulated time : %lld.%.9ld seconds",
-            (long long) handle->compute_time.tv_sec, handle->compute_time.tv_nsec);
-#endif
-    info("###      CpuSet:  %s", mu_to_str(&thread_spd->process_mask));
-    return DLB_SUCCESS;
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return monitoring_region_report(handle);
 }

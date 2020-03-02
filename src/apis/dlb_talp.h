@@ -26,7 +26,8 @@
 // TALP structure
 typedef struct dlb_monitor_t {
     const char  *name;
-    int         samples;
+    int         num_measurements;
+    int         num_resets;
     int64_t     start_time;
     int64_t     end_time;
     int64_t     elapsed_time_;
@@ -84,6 +85,12 @@ int DLB_TALP_CPUTimeGet(int process, double* compute_time);
  *  \return monitor handle to be used on subsequent calls
  */
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
+
+/*! \brief Reset monitoring region
+ *  \param[in] handle Monitoring handle that identifies the region
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
 /*! \brief Start (or unpause) monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
