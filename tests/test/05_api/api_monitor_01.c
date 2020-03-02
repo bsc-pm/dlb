@@ -56,8 +56,8 @@ int main(int argc, char **argv) {
     double tmp_mpi,tmp_comp;
     double tmp2_mpi,tmp2_comp;
 
-    tmp_mpi = to_secs(monitor->mpi_time);
-    tmp_comp = to_secs(monitor->compute_time);
+    tmp_mpi = nsecs_to_secs(monitor->accumulated_MPI_time);
+    tmp_comp = nsecs_to_secs(monitor->accumulated_computation_time);
 
     err = DLB_MonitoringRegionStart(monitor);
     assert(err == 0);
@@ -65,8 +65,8 @@ int main(int argc, char **argv) {
     err = DLB_MonitoringRegionStop(monitor);
     assert(err == 0);
 
-    tmp2_mpi = to_secs(monitor->mpi_time);
-    tmp2_comp = to_secs(monitor->compute_time);
+    tmp2_mpi = nsecs_to_secs(monitor->accumulated_MPI_time);
+    tmp2_comp = nsecs_to_secs(monitor->accumulated_computation_time);
 
     assert(tmp_comp != tmp2_comp);
     assert(tmp_mpi == tmp2_mpi);

@@ -97,13 +97,39 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     spd->talp_info = NULL;
 }
 
+
+/*********************************************************************************/
+/*    Update monitor times based on CPU masks                                    */
+/*********************************************************************************/
+
+static void talp_update_monitor(dlb_monitor_t *monitor, int64_t sample_duration) {
+    talp_info_t *talp_info = thread_spd->talp_info;
+
+    /* Update MPI time */
+    int64_t mpi_time = sample_duration * CPU_COUNT(&talp_info->active_mpi_mask);
+    monitor->accumulated_MPI_time += mpi_time;
+
+    /* Update computation time */
+    int64_t computation_time = sample_duration * CPU_COUNT(&talp_info->active_working_mask);
+    monitor->accumulated_computation_time += computation_time;
+
+    /* Update shared memory only when updating the main monitor */
+    if (monitor == &talp_info->monitoringRegion) {
+        shmem_procinfo__setmpitime(thread_spd->id,
+                nsecs_to_secs(monitor->accumulated_MPI_time));
+        shmem_procinfo__setcomptime(thread_spd->id,
+                nsecs_to_secs(monitor->accumulated_computation_time));
+    }
+}
+
+
 void talp_cpu_disable_mpi(int cpuid){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
     dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if( CPU_ISSET(cpuid,&talp_info->in_mpi_mask)){
-        talp_update_monitor(monitoringRegion);
+        talp_update_monitor(monitoringRegion, 0);
         if( spd->options.lewi_mpi) CPU_CLR(cpuid,&talp_info->active_working_mask);
     }
 }
@@ -114,7 +140,7 @@ void talp_cpu_disable_working(int cpuid){
     dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if( CPU_ISSET(cpuid,&talp_info->active_working_mask)){
-        talp_update_monitor(monitoringRegion);
+        talp_update_monitor(monitoringRegion, 0);
         CPU_CLR(cpuid,&talp_info->active_working_mask);
     }
 }
@@ -131,7 +157,7 @@ void talp_cpu_enable_mpi(int cpuid){
     dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if(CPU_ISSET(cpuid,&talp_info->in_mpi_mask)){
-        talp_update_monitor(monitoringRegion);
+        talp_update_monitor(monitoringRegion, 0);
         if(spd->options.lewi_mpi){
              CPU_SET(cpuid,&talp_info->active_mpi_mask);
         }
@@ -144,7 +170,7 @@ void talp_cpu_enable_working(int cpuid){
     dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     if(!CPU_ISSET(cpuid,&talp_info->active_working_mask) ){
-        talp_update_monitor(monitoringRegion);
+        talp_update_monitor(monitoringRegion, 0);
         CPU_SET(cpuid,&talp_info->active_working_mask);
     }
 }
@@ -155,70 +181,12 @@ void talp_cpu_enable(int cpuid){
     talp_cpu_enable_working(cpuid);
 }
 
-void talp_update_monitor(dlb_monitor_t *region){
-    const subprocess_descriptor_t *spd = thread_spd;
-    if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
-    talp_update_monitor_mpi(region);
-    talp_update_monitor_comp(region);
-}
-
-void talp_update_monitor_comp(dlb_monitor_t *region){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-    if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
-    int pid = spd->id;
-    struct timespec aux;
-    aux = region->tmp_compute_time;
-    if ( clock_gettime(CLOCK_REALTIME, &region->tmp_compute_time) < 0){
-       info("DLB ERROR: clock_gettime failed\n");
-    }
-    diff_time(aux,region->tmp_compute_time,&aux);
-#if DEBUG
-    info("ELAPSED_TIME: %f",to_secs(aux));
-#endif
-    mult_time(aux,CPU_COUNT(&talp_info->active_working_mask),&aux);
-#if DEBUG
-    info("MPI CPUS: %i",CPU_COUNT(&talp_info->active_mpi_mask));
-    info("WORKING CPUS: %i",CPU_COUNT(&talp_info->active_working_mask));
-    info("COMP ADDED TIME: %f", to_secs(aux));
-    info("COMP TIME: %f", to_secs(region->compute_time));
-#endif
-    add_time(region->compute_time, aux, &region->compute_time);
-    shmem_procinfo__setcomptime(pid,to_secs(monitoringRegion->compute_time) );
-}
-
-void talp_update_monitor_mpi(dlb_monitor_t *region){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    int pid = spd->id;
-    struct timespec aux2;
-    aux2 = region->tmp_mpi_time;
-    if ( clock_gettime(CLOCK_REALTIME, &region->tmp_mpi_time) < 0){
-       info("DLB ERROR: clock_gettime failed\n");
-    }
-
-    diff_time(aux2,region->tmp_mpi_time,&aux2);
-#if DEBUG
-    info("ELAPSED_TIME: %f",to_secs(aux2));
-#endif
-     mult_time(aux2,CPU_COUNT(&talp_info->active_mpi_mask),&aux2);
-#if DEBUG
-    info("MPI CPUS: %i",CPU_COUNT(&talp_info->active_mpi_mask));
-    info("WORKING CPUS: %i",CPU_COUNT(&talp_info->active_working_mask));
-    info("MPI ADDED TIME: %f", to_secs(aux2));
-    info("MPI TIME: %f", to_secs(region->mpi_time));
-#endif
-    add_time(region->mpi_time, aux2, &region->mpi_time);
-    shmem_procinfo__setmpitime(pid,to_secs(talp_info->monitoringRegion.mpi_time) );
-}
-
 void talp_in_blocking_call(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
     dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 )return;
-    talp_update_monitor(monitoringRegion);
+    talp_update_monitor(monitoringRegion, 0);
 }
 
 void talp_out_blocking_call(void){
@@ -227,7 +195,7 @@ void talp_out_blocking_call(void){
     dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
 
-    talp_update_monitor(monitoringRegion);
+    talp_update_monitor(monitoringRegion, 0);
 }
 
 void talp_in_mpi(void){
@@ -236,7 +204,7 @@ void talp_in_mpi(void){
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
     if( spd == NULL || spd->talp_info == NULL || spd->options.talp == 0 ) return;
     dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-    talp_update_monitor(monitoringRegion);
+    talp_update_monitor(monitoringRegion, 0);
     if( thread_spd->options.lewi){
         CPU_SET(cpunum,&talp_info->in_mpi_mask);
         CPU_SET(cpunum,&talp_info->active_mpi_mask);
@@ -254,7 +222,7 @@ void talp_out_mpi(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
     dlb_monitor_t *region =  &((talp_info_t*) (thread_spd->talp_info))->monitoringRegion;
-    talp_update_monitor(region);
+    talp_update_monitor(region, 0);
     if( spd->options.lewi){
         CPU_CLR(cpunum,&talp_info->in_mpi_mask);
         CPU_CLR(cpunum,&talp_info->active_mpi_mask);
@@ -494,67 +462,47 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
     return DLB_SUCCESS;
 }
 
-int monitoring_region_start(dlb_monitor_t *monitor){
-    talp_info_t *talp_info = thread_spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
-
+int monitoring_region_start(dlb_monitor_t *monitor) {
     add_event(MONITOR_REGION,1);
-    struct timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
 
-    monitor->elapsed_time = now;
-    talp_update_monitor(monitoringRegion);
+    monitor_data_t *monitor_data = monitor->_data;
+    monitor->start_time = get_time_in_ns();
+    monitor->end_time = 0;
+    monitor_data->started = true;
+    monitor_data->sample_start_time = monitor->start_time;
 
-    monitor->mpi_time = monitoringRegion->mpi_time;
-    monitor->compute_time = monitoringRegion->compute_time;
-
-#if DEBUG
-    double mpi_time_t=     to_secs( monitor->mpi_time);
-    double compute_time_t= to_secs( monitor->compute_time);
-    info("########################################");
-    info("START MPI time:     %e seconds", mpi_time_t);
-    info("START Compute time: %e seconds", compute_time_t);
-#endif
     return DLB_SUCCESS;
 }
 
-int monitoring_region_stop(dlb_monitor_t *monitor){
-    talp_info_t *talp_info = thread_spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->monitoringRegion;
+int monitoring_region_stop(dlb_monitor_t *monitor) {
+    monitor_data_t *monitor_data = monitor->_data;
+
+    /* Stop timer */
+    monitor->end_time = get_time_in_ns();
+
+    /* Update times */
+    monitor->elapsed_time_ += monitor->end_time - monitor->start_time;
+    int64_t sample_duration = monitor->end_time - monitor_data->sample_start_time;
+    talp_update_monitor(monitor, sample_duration);
+
+    /* Mark it as stopped */
+    ++(monitor->num_measurements);
+    monitor_data->started = false;
+    monitor_data->sample_start_time = 0;
+
     add_event(MONITOR_REGION,0);
-    struct timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
-    talp_update_monitor(monitoringRegion);
-    monitoringRegion->tmp_compute_time = now;
-    diff_time(monitor->elapsed_time,now, &monitor->elapsed_time);
-#if DEBUG
-    double mpi_time_t=     to_secs(monitor->mpi_time);
-    double compute_time_t= to_secs(monitor->compute_time);
-    double mpi_time_t2=     to_secs(monitoringRegion->mpi_time);
-    double compute_time_t2= to_secs(monitoringRegion->compute_time);
-#endif
-    diff_time(monitor->mpi_time,monitoringRegion->mpi_time, &monitor->mpi_time);
-    diff_time(monitor->compute_time,monitoringRegion->compute_time, &monitor->compute_time);
-#if DEBUG
-    info("END MPI time:     %e seconds", mpi_time_t);
-    info("END MPI2 time:     %e seconds", mpi_time_t2);
-    info("END MPI Final:     %e seconds", to_secs(monitor->mpi_time));
-    info("END Compute time: %e seconds", compute_time_t);
-    info("END Compute2 time: %e seconds", compute_time_t2);
-    info("END Compute2 Final: %e seconds", to_secs(monitor->compute_time));
-#endif
     return DLB_SUCCESS;
 }
 
 int monitoring_region_report(dlb_monitor_t *monitor) {
     info("########### Monitoring Regions Summary ##########");
     info("### Name:                      %s", monitor->name);
-    info("### Elapsed time :             %lld.%.9ld seconds",
-            (long long) monitor->elapsed_time.tv_sec, monitor->elapsed_time.tv_nsec);
-    info("### MPI time :                 %lld.%.9ld seconds",
-            (long long) monitor->mpi_time.tv_sec, monitor->mpi_time.tv_nsec);
-    info("### Compute accumulated time : %lld.%.9ld seconds",
-            (long long) monitor->compute_time.tv_sec, monitor->compute_time.tv_nsec);
+    info("### Elapsed time :             %.9g seconds",
+            nsecs_to_secs(monitor->elapsed_time_));
+    info("### MPI time :                 %.9g seconds",
+            nsecs_to_secs(monitor->accumulated_MPI_time));
+    info("### Compute accumulated time : %.9g seconds",
+            nsecs_to_secs(monitor->accumulated_computation_time));
     info("###      CpuSet:  %s", mu_to_str(&thread_spd->process_mask));
     return DLB_SUCCESS;
 }

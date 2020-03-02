@@ -54,8 +54,8 @@ int main(int argc, char **argv) {
 
     double tmp_mpi,tmp_comp;
 
-    tmp_mpi = to_secs(monitor->mpi_time);
-    tmp_comp = to_secs(monitor->compute_time);
+    tmp_mpi = nsecs_to_secs(monitor->accumulated_MPI_time);
+    tmp_comp = nsecs_to_secs(monitor->accumulated_computation_time);
 
     assert(tmp_comp == 0);
     assert(tmp_mpi == 0);

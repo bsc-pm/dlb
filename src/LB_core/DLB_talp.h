@@ -73,9 +73,6 @@ void talp_in_blocking_call(void);
 /*  Update the metrics when going out MPI blocking call */
 void talp_out_blocking_call(void);
 
-/*  Function that updates the metrics. */
-void talp_update_monitor(dlb_monitor_t* region);
-
 /*  Function that updates the metrics specifically for MPI time. */
 void talp_update_monitor_mpi(dlb_monitor_t* region);
 

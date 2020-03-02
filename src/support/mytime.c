@@ -109,6 +109,10 @@ int64_t to_nsecs( const struct timespec *ts ) {
     return ts->tv_nsec + (int64_t)ts->tv_sec * NS_PER_SECOND;
 }
 
+double nsecs_to_secs( int64_t nsecs ) {
+    return (double)nsecs / NS_PER_SECOND;
+}
+
 // Return timeval diff in us
 int64_t timeval_diff( const struct timeval *init, const struct timeval *end ) {
     return (int64_t)(end->tv_sec - init->tv_sec) * US_PER_SECOND +
