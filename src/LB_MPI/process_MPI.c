@@ -29,15 +29,11 @@
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
-#include "apis/dlb_stats.h"
-#include "apis/dlb_talp.h"
 #include "apis/dlb.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
 #include "support/types.h"
-#include "LB_comm/shmem_procinfo.h"
-#include "support/mytime.h"
 #include "LB_core/DLB_talp.h"
 #include <mpi.h>
 #include <unistd.h>

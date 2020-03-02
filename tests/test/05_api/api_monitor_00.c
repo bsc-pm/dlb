@@ -25,6 +25,7 @@
 
 #include <LB_core/DLB_talp.h>
 #include <apis/dlb.h>
+#include <apis/dlb_talp.h>
 #include <support/mytime.h>
 
 #include <sched.h>

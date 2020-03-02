@@ -31,6 +31,7 @@
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 #include "LB_core/DLB_talp.h"
+#include "LB_core/spd.h"
 
 #include <sched.h>
 #include <unistd.h>

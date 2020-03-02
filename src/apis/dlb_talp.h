@@ -23,23 +23,17 @@
 #include <time.h>
 #include <stdint.h>
 
-// TALP structure
+/* TALP structure */
 typedef struct dlb_monitor_t {
     const char  *name;
     int         num_measurements;
     int         num_resets;
     int64_t     start_time;
     int64_t     end_time;
-    int64_t     elapsed_time_;
+    int64_t     elapsed_time;
     int64_t     accumulated_MPI_time;
     int64_t     accumulated_computation_time;
     void        *_data;
-    // Old members
-    struct timespec tmp_mpi_time;
-    struct timespec tmp_compute_time;
-    struct timespec mpi_time;
-    struct timespec compute_time;
-    struct timespec elapsed_time;
 } dlb_monitor_t;
 
 #ifdef __cplusplus

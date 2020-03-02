@@ -23,6 +23,7 @@
 
 #include "LB_core/DLB_talp.h"
 
+#include "LB_core/spd.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/debug.h"
@@ -332,21 +333,15 @@ void talp_mpi_report(void){
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info &&
             thread_spd->options.talp_summary & SUMMARY_PROCESS) {
-        dlb_monitor_t *monitoringRegion = &talp_info->mpi_monitor;
-        struct timespec time_aux = monitoringRegion->tmp_compute_time;
-        clock_gettime(CLOCK_REALTIME, &monitoringRegion->tmp_compute_time);
-
-        diff_time(time_aux,monitoringRegion->tmp_compute_time , &time_aux);
-        add_time(monitoringRegion->compute_time,time_aux,&monitoringRegion->compute_time);
-        double mpi_time_t=     to_secs( monitoringRegion->mpi_time);
-        double compute_time_t= to_secs( monitoringRegion->compute_time);
+        dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
         info("Monitoring Regions Process Summary");
-        info("### Name:        %s", "Zone");
-        info("### MPI time:     %e seconds", mpi_time_t);
-        info("### Compute time: %e seconds", compute_time_t);
+        info("### Name:        %s", mpi_monitor->name);
+        info("### MPI time:     %e seconds",
+                nsecs_to_secs(mpi_monitor->accumulated_MPI_time));
+        info("### Compute time: %e seconds",
+                nsecs_to_secs(mpi_monitor->accumulated_computation_time));
     }
 }
-#endif
 
 
 /*********************************************************************************/
@@ -424,7 +419,7 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
     monitor->num_measurements = 0;
     monitor->start_time = 0;
     monitor->end_time = 0;
-    monitor->elapsed_time_ = 0;
+    monitor->elapsed_time = 0;
     monitor->accumulated_MPI_time = 0;
     monitor->accumulated_computation_time = 0;
     memset(monitor->_data, 0, sizeof(monitor_data_t));
@@ -451,7 +446,7 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
 
     /* Stop timer */
     monitor->end_time = get_time_in_ns();
-    monitor->elapsed_time_ += monitor->end_time - monitor->start_time;
+    monitor->elapsed_time += monitor->end_time - monitor->start_time;
     ++(monitor->num_measurements);
     monitor_data->started = false;
     monitor_data->sample_start_time = 0;
@@ -464,7 +459,7 @@ int monitoring_region_report(dlb_monitor_t *monitor) {
     info("########### Monitoring Regions Summary ##########");
     info("### Name:                      %s", monitor->name);
     info("### Elapsed time :             %.9g seconds",
-            nsecs_to_secs(monitor->elapsed_time_));
+            nsecs_to_secs(monitor->elapsed_time));
     info("### MPI time :                 %.9g seconds",
             nsecs_to_secs(monitor->accumulated_MPI_time));
     info("### Compute accumulated time : %.9g seconds",

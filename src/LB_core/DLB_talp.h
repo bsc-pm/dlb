@@ -20,23 +20,8 @@
 #ifndef DLB_CORE_TALP_H
 #define DLB_CORE_TALP_H
 
-#include "apis/dlb_talp.h"
-#include "LB_core/spd.h"
-
-#include <sched.h>
-#include <time.h>
-
-struct talp_loop_struct {
-    int iterNum;
-    struct timespec initTime;       // Iteration Time
-    struct timespec initMPI;        // MPI
-    struct timespec partialTime;    // Spent time
-    struct timespec partialMPITime; // MPI time
-    struct timespec Time;
-    struct timespec MPI;
-    int depth;
-};
-
+typedef struct SubProcessDescriptor subprocess_descriptor_t;
+typedef struct dlb_monitor_t dlb_monitor_t;
 
 /*  Initializes the module structures */
 void talp_init(subprocess_descriptor_t *spd);
@@ -44,7 +29,10 @@ void talp_init(subprocess_descriptor_t *spd);
 /*  Finalizes the execution of the module and shows the final report if needed */
 void talp_finalize(subprocess_descriptor_t *spd);
 
+/* Start MPI monitoring region */
 void talp_mpi_init(void);
+
+/* Stop MPI monitoring region */
 void talp_mpi_finalize(void);
 
 /*  Enables the cpuid for the current process */
@@ -65,19 +53,6 @@ void talp_in_blocking_call(void);
 /*  Update the metrics when going out MPI blocking call */
 void talp_out_blocking_call(void);
 
-/*  Function that updates the metrics specifically for MPI time. */
-void talp_update_monitor_mpi(dlb_monitor_t* region);
-
-/*  Function that updates the metrics specifically for Compute time. */
-void talp_update_monitor_comp(dlb_monitor_t* region);
-
-dlb_monitor_t* get_talp_monitoringRegion(void);
-
-double talp_get_mpi_time(void);
-
-double talp_get_compute_time(void);
-
-
 #ifdef MPI_LIB
 /* Function to print the stats of the process */
 void talp_mpi_report(void);
@@ -88,4 +63,5 @@ int monitoring_region_reset(dlb_monitor_t *monitor);
 int monitoring_region_start(dlb_monitor_t *monitor);
 int monitoring_region_stop(dlb_monitor_t *monitor);
 int monitoring_region_report(dlb_monitor_t *monitor);
+
 #endif
