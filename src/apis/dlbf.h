@@ -255,34 +255,6 @@
             integer(kind=c_int), value, intent(in) :: errnum
         end function dlb_strerror
 
-        function dlb_monitoringregionregister(region_name)              &
-     &  result (handle) bind(c, name='DLB_MonitoringRegionRegister')
-            use iso_c_binding
-            type(c_ptr) :: handle
-            character(kind=c_char), intent(in) :: region_name(*)
-        end function dlb_monitoringregionregister
-
-        function dlb_monitoringregionstart(handle)                      &
-     &         result (ierr) bind(c, name='dlb_monitoringregionstart')
-            use iso_c_binding
-            integer(kind=c_int) :: ierr
-            type(c_ptr) , value, intent(in) :: handle
-        end function dlb_monitoringregionstart
-
-        function dlb_monitoringregionstop(handle)                       &
-     &         result (ierr) bind(c, name='dlb_monitoringregionstop')
-            use iso_c_binding
-            integer(kind=c_int) :: ierr
-            type(c_ptr) , value, intent(in) :: handle
-        end function dlb_monitoringregionstop
-
-        function dlb_monitoringregionreport(handle)                     &
-     &         result (ierr) bind(c, name='DLB_MonitoringRegionReport')
-            use iso_c_binding
-            integer(kind=c_int) :: ierr
-            type(c_ptr) , value,  intent(in) :: handle
-        end function dlb_monitoringregionreport
-
         function dlb_autosizer_start() result(ierr)                     &
      &          bind(c, name='DLB_AutoSizer_start')
             use iso_c_binding
