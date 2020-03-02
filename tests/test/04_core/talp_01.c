@@ -58,19 +58,16 @@ int main(int argc, char *argv[]) {
     const subprocess_descriptor_t* spd = thread_spd;
     talp_info_t* talp_info = (talp_info_t*) spd->talp_info;
     assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
-    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 0);
     assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
 
     talp_in_mpi();
 
     assert(CPU_COUNT(&talp_info->active_working_mask) == 0);
-    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 1);
     assert(CPU_COUNT(&talp_info->active_mpi_mask) == 1);
 
     talp_out_mpi();
 
     assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
-    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 0);
     assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
 
     assert( DLB_Finalize() == DLB_SUCCESS );
