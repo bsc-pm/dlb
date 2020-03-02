@@ -230,16 +230,16 @@ void talp_out_blocking_call(void) {
     // TODO: DLB_Barrier use case
 }
 
+// FIXME
+#if 0
 #ifdef MPI_LIB
-void old_talp_mpi_finalize(void){
+void summary_per_node(void){
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
     dlb_monitor_t *monitoringRegion = &talp_info->mpi_monitor;
-    int  rank;
     if( ! ( thread_spd->options.talp_summary & SUMMARY_NODE))return;
     int pid = getpid();
 
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
     /* clock_gettime(CLOCK_REALTIME,&talp_info->end_app); */
     /* diff_time(talp_info->init_app, talp_info->end_app, &talp_info->end_app); */
     int stats_per_node = 1;
@@ -325,6 +325,8 @@ void old_talp_mpi_finalize(void){
     }
     MPI_Barrier(MPI_COMM_WORLD);
 }
+#endif
+#endif
 
 void talp_mpi_report(void){
     talp_info_t *talp_info = thread_spd->talp_info;
