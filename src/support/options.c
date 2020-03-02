@@ -107,15 +107,6 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, talp),
         .type           = OPT_BOOL_T,
         .flags          = OPT_OPTIONAL
-    }, {
-        .var_name       = "LB_TALP_SUMM",
-        .arg_name       = "--talp-summary",
-        .default_value  = "",
-        .description    = OFFSET"Select which verbose components will be printed. Multiple\n"
-                          OFFSET"components may be selected.",
-        .offset         = offsetof(options_t, talp_summary),
-        .type           = OPT_TLPSUM_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
     },{
         .var_name       = "LB_BARRIER",
         .arg_name       = "--barrier",
@@ -266,6 +257,17 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Create as many threads as necessary during the process startup.",
         .offset         = offsetof(options_t, lewi_warmup),
         .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
+    // talp
+    {
+        .var_name       = "LB_TALP_SUMM",
+        .arg_name       = "--talp-summary",
+        .default_value  = "",
+        .description    = OFFSET"Select which verbose components will be printed. Multiple\n"
+                          OFFSET"components may be selected.",
+        .offset         = offsetof(options_t, talp_summary),
+        .type           = OPT_TLPSUM_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     },
     // misc
