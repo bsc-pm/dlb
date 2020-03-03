@@ -20,14 +20,14 @@
 #ifndef DLB_CORE_TALP_H
 #define DLB_CORE_TALP_H
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct dlb_monitor_t dlb_monitor_t;
+struct SubProcessDescriptor;
+struct dlb_monitor_t;
 
 /*  Initializes the module structures */
-void talp_init(subprocess_descriptor_t *spd);
+void talp_init(struct SubProcessDescriptor *spd);
 
 /*  Finalizes the execution of the module and shows the final report if needed */
-void talp_finalize(subprocess_descriptor_t *spd);
+void talp_finalize(struct SubProcessDescriptor *spd);
 
 /* Start MPI monitoring region */
 void talp_mpi_init(void);
@@ -58,10 +58,10 @@ void talp_out_blocking_call(void);
 void talp_mpi_report(void);
 #endif
 
-dlb_monitor_t* monitoring_region_register(const char* name);
-int monitoring_region_reset(dlb_monitor_t *monitor);
-int monitoring_region_start(dlb_monitor_t *monitor);
-int monitoring_region_stop(dlb_monitor_t *monitor);
-int monitoring_region_report(dlb_monitor_t *monitor);
+struct dlb_monitor_t* monitoring_region_register(const char* name);
+int monitoring_region_reset(struct dlb_monitor_t *monitor);
+int monitoring_region_start(struct dlb_monitor_t *monitor);
+int monitoring_region_stop(struct dlb_monitor_t *monitor);
+int monitoring_region_report(struct dlb_monitor_t *monitor);
 
 #endif
