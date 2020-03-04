@@ -23,18 +23,17 @@
 
 #include "unique_shmem.h"
 
-#include <LB_core/DLB_talp.h>
-#include <apis/dlb.h>
-#include <apis/dlb_talp.h>
-#include <support/mytime.h>
+#include "LB_core/DLB_talp.h"
+#include "apis/dlb.h"
+#include "apis/dlb_talp.h"
+#include "support/mytime.h"
 
 #include <sched.h>
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
 
-/* Basic DROM init / pre / post / finalize within 1 process */
-
+/* Test Monitoring Regions API */
 
 int main(int argc, char **argv) {
     cpu_set_t process_mask;
@@ -42,24 +41,33 @@ int main(int argc, char **argv) {
     CPU_SET(0, &process_mask);
     CPU_SET(1, &process_mask);
 
-    char options[64] = " --talp --shm-key=";
+    /* Test DLB_ERR_NOTALP */
+    char notalp_opts[64] = "--shm-key=";
+    strcat(notalp_opts, SHMEM_KEY);
+    assert( DLB_Init(0, &process_mask, notalp_opts) == DLB_SUCCESS );
+    dlb_monitor_t *monitor1 = DLB_MonitoringRegionRegister("Test monitor");
+    assert( monitor1 == NULL );
+    assert( DLB_MonitoringRegionStart(monitor1) == DLB_ERR_NOTALP );
+    assert( DLB_MonitoringRegionStop(monitor1) == DLB_ERR_NOTALP );
+    assert( DLB_MonitoringRegionReset(monitor1) == DLB_ERR_NOTALP );
+    assert( DLB_MonitoringRegionReport(monitor1) == DLB_ERR_NOTALP );
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    /* Test with --talp enabled */
+    char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
     assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
 
     char value[16];
     assert( DLB_GetVariable("--talp", value) == DLB_SUCCESS );
 
-    char* name = "Test Region";
+    dlb_monitor_t *monitor2 = DLB_MonitoringRegionRegister("Test monitor");
+    assert( monitor2 != NULL );
 
-    dlb_monitor_t *monitor = DLB_MonitoringRegionRegister(name);
-
-    double tmp_mpi,tmp_comp;
-
-    tmp_mpi = nsecs_to_secs(monitor->accumulated_MPI_time);
-    tmp_comp = nsecs_to_secs(monitor->accumulated_computation_time);
-
-    assert(tmp_comp == 0);
-    assert(tmp_mpi == 0);
+    assert( DLB_MonitoringRegionStart(monitor2) == DLB_SUCCESS );
+    assert( DLB_MonitoringRegionStop(monitor2) == DLB_SUCCESS );
+    assert( DLB_MonitoringRegionReset(monitor2) == DLB_SUCCESS );
+    assert( DLB_MonitoringRegionReport(monitor2) == DLB_SUCCESS );
 
     assert( DLB_Finalize() == DLB_SUCCESS );
 
