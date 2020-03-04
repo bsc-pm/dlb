@@ -22,7 +22,7 @@
         integer(kind=c_int)     :: num_measurements
         integer(kind=c_int)     :: num_resets
         integer(kind=c_int64_t) :: start_time
-        integer(kind=c_int64_t) :: end_time
+        integer(kind=c_int64_t) :: stop_time
         integer(kind=c_int64_t) :: elapsed_time
         integer(kind=c_int64_t) :: accumulated_MPI_time
         integer(kind=c_int64_t) :: accumulated_computation_time

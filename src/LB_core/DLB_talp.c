@@ -418,7 +418,7 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
     ++(monitor->num_resets);
     monitor->num_measurements = 0;
     monitor->start_time = 0;
-    monitor->end_time = 0;
+    monitor->stop_time = 0;
     monitor->elapsed_time = 0;
     monitor->accumulated_MPI_time = 0;
     monitor->accumulated_computation_time = 0;
@@ -431,7 +431,7 @@ int monitoring_region_start(dlb_monitor_t *monitor) {
 
     monitor_data_t *monitor_data = monitor->_data;
     monitor->start_time = get_time_in_ns();
-    monitor->end_time = 0;
+    monitor->stop_time = 0;
     monitor_data->started = true;
     monitor_data->sample_start_time = monitor->start_time;
 
@@ -445,8 +445,8 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
     talp_update_monitor(monitor);
 
     /* Stop timer */
-    monitor->end_time = get_time_in_ns();
-    monitor->elapsed_time += monitor->end_time - monitor->start_time;
+    monitor->stop_time = get_time_in_ns();
+    monitor->elapsed_time += monitor->stop_time - monitor->start_time;
     ++(monitor->num_measurements);
     monitor_data->started = false;
     monitor_data->sample_start_time = 0;

@@ -29,7 +29,7 @@ typedef struct dlb_monitor_t {
     int         num_measurements;
     int         num_resets;
     int64_t     start_time;
-    int64_t     end_time;
+    int64_t     stop_time;
     int64_t     elapsed_time;
     int64_t     accumulated_MPI_time;
     int64_t     accumulated_computation_time;
