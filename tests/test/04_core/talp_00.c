@@ -133,6 +133,16 @@ int main(int argc, char *argv[]) {
     assert( monitor1->elapsed_time > monitor2->elapsed_time );
     assert( monitor2->elapsed_time > monitor3->elapsed_time );
 
+    /* Test monitor register with reapeated or NULL names */
+    dlb_monitor_t *monitor4 = monitoring_region_register("Test nested 3");
+    assert( monitor4 == monitor3 );
+    dlb_monitor_t *monitor5 = monitoring_region_register(NULL);
+    assert( monitor5 != NULL );
+    dlb_monitor_t *monitor6 = monitoring_region_register(NULL);
+    assert( monitor6 != NULL );
+    assert( monitor6 != monitor5 );
+    assert( strcmp(monitor5->name, monitor6->name) == 0 );
+
     talp_finalize(thread_spd);
 
     return 0;

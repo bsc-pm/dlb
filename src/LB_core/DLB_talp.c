@@ -353,16 +353,19 @@ enum { MONITOR_MAX_KEY_LEN = 128 };
 static dlb_monitor_t **regions = NULL;
 static size_t nregions = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static const char* anonymous_monitor_name = "Anonymous Region";
 
 dlb_monitor_t* monitoring_region_register(const char* name){
     dlb_monitor_t *monitor = NULL;
     pthread_mutex_lock(&mutex);
     {
         /* Found monitor if already registered */
-        int i;
-        for (i=0; i<nregions; ++i) {
-            if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
-                monitor = regions[i];
+        if (name != NULL) {
+            int i;
+            for (i=0; i<nregions; ++i) {
+                if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
+                    monitor = regions[i];
+                }
             }
         }
 
@@ -382,7 +385,11 @@ dlb_monitor_t* monitoring_region_register(const char* name){
             " Please report at "PACKAGE_BUGREPORT);
 
     // Assign new values after the mutex is unlocked
-    monitor->name = strdup(name);
+    if (name != NULL) {
+        monitor->name = strdup(name);
+    } else {
+        monitor->name = anonymous_monitor_name;
+    }
     monitor->_data = malloc(sizeof(monitor_data_t));
     monitoring_region_reset(monitor);
     monitor->num_resets = 0;
@@ -402,7 +409,10 @@ static void monitoring_regions_finalize(void) {
     {
         for (i=0; i<nregions; ++i) {
             dlb_monitor_t *monitor = regions[i];
-            free((char*)monitor->name);
+            if (monitor->name != anonymous_monitor_name) {
+                free((char*)monitor->name);
+                monitor->name = NULL;
+            }
             free(monitor->_data);
             free(monitor);
             monitor = NULL;
