@@ -166,17 +166,17 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
     }
     /* when GCC 10 is relased: else if "gomp", print GOMP_SPINCOUNT */
 
-    /* Emit warning if OMP_WAIT_POLICY is not "passive" */
-    if (!omp_policy_str || strcasecmp(omp_policy_str, "passive") != 0) {
-        warning("OMP_WAIT_POLICY value it not \"passive\". Even though the default "
-                "value may be \"passive\", setting it explicitly is recommended "
-                "since it modifies other runtime related environment variables");
-    }
-
     verbose(VB_OMPT, "DLB with OMPT support is %s", options.ompt ? "ENABLED" : "DISABLED");
 
     /* Enable OMPT only if requested */
     if (options.ompt) {
+        /* Emit warning if OMP_WAIT_POLICY is not "passive" */
+        if (!omp_policy_str || strcasecmp(omp_policy_str, "passive") != 0) {
+            warning("OMP_WAIT_POLICY value it not \"passive\". Even though the default "
+                    "value may be \"passive\", setting it explicitly is recommended "
+                    "since it modifies other runtime related environment variables");
+        }
+
         /* Initialize DLB only if ompt is enabled, and
          * remember if succeded to finalize it when ompt_finalize is invoked. */
         int err = DLB_Init(0, NULL, NULL);
