@@ -130,9 +130,9 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_MPI_time != 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
 
-    thread_spd->options.talp_summary |= SUMMARY_REGIONS;
+    thread_spd->options.talp_summary |= SUMMARY_NODE;
     thread_spd->options.talp_summary |= SUMMARY_PROCESS;
-    talp_mpi_report();
+    thread_spd->options.talp_summary |= SUMMARY_REGIONS;
     talp_finalize(thread_spd);
 
     return 0;

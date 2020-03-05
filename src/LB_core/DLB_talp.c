@@ -33,15 +33,14 @@
 #include "support/mask_utils.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
+#ifdef MPI_LIB
+#include "LB_MPI/process_MPI.h"
+#endif
 
 #include <sched.h>
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
-
-#ifdef MPI_LIB
-#include <mpi.h>
-#endif
 
 
 typedef struct talp_info_t {
@@ -58,8 +57,10 @@ typedef struct monitor_data_t {
 } monitor_data_t;
 
 
+static void talp_node_summary(void);
 static void monitoring_regions_finalize(void);
 static void monitoring_regions_update_all(void);
+static void monitoring_regions_report_all(void);
 
 static inline void sort_pids(pid_t * pidlist, int start, int end){
     int i = start;
@@ -94,6 +95,15 @@ void talp_init(subprocess_descriptor_t *spd) {
 void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
     verbose(VB_TALP, "Finalizing TALP module");
+
+    /* Optional summaries */
+    if (thread_spd->options.talp_summary & SUMMARY_NODE) {
+        talp_node_summary();
+    }
+    if (thread_spd->options.talp_summary & SUMMARY_PROCESS
+        || thread_spd->options.talp_summary & SUMMARY_REGIONS) {
+        monitoring_regions_report_all();
+    }
 
     monitoring_regions_finalize();
     free(spd->talp_info);
@@ -231,80 +241,41 @@ void talp_out_blocking_call(void) {
     // TODO: DLB_Barrier use case
 }
 
-// FIXME
-#if 0
-#ifdef MPI_LIB
-void summary_per_node(void){
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t * talp_info = (talp_info_t*) spd->talp_info;
-    dlb_monitor_t *monitoringRegion = &talp_info->mpi_monitor;
-    if( ! ( thread_spd->options.talp_summary & SUMMARY_NODE))return;
-    int pid = getpid();
-
-    /* clock_gettime(CLOCK_REALTIME,&talp_info->end_app); */
-    /* diff_time(talp_info->init_app, talp_info->end_app, &talp_info->end_app); */
-    int stats_per_node = 1;
-    shmem_procinfo__setmpitime(pid,to_secs(monitoringRegion->mpi_time) );
-    shmem_procinfo__setcomptime(pid,to_secs(monitoringRegion->compute_time) );
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if ( _process_id == 0){
+static void talp_node_summary(void) {
+    /* If MPI, print only one rank per node, otherwise, everyone */
+#if MPI_LIB
+    bool do_print = _process_id == 0;
+    int node_id = _node_id;
+#else
+    bool do_print = true;
+    int node_id = 0;
+#endif
+    if (do_print) {
         double res_mpi = 0;
         double res_comp = 0;
         double max_mpi = 0;
         double max_comp = 0;
 
-        pid_t *pidlist = malloc(100 * sizeof(pid_t));
-        int nelem;
-#ifndef COMPACT_MODE
+        int max_procs = mu_get_system_size();
+        pid_t *pidlist = malloc(max_procs * sizeof(pid_t));
+        int nelems;
+        shmem_procinfo__getpidlist(pidlist, &nelems, max_procs);
+        sort_pids(pidlist, 0, nelems);
+
         info(" |----------------------------------------------------------|");
-        info(" |                  Extended Report Node %i                 |",_node_id);
+        info(" |                  Extended Report Node %d                 |", node_id);
         info(" |----------------------------------------------------------|");
         info(" |  Process   |     Compute Time     |        MPI Time      |" );
         info(" |------------|----------------------|----------------------|");
-        shmem_procinfo__getpidlist(pidlist, &nelem,-1);
-        sort_pids(pidlist, 0, nelem);
-            int i;
-            double tmp_mpi, tmp_comp;
-            for( i = 0; i <nelem; ++i){
-                if( stats_per_node && pidlist[i] != 0 ){
-                    shmem_procinfo__getmpitime(pidlist[i], &tmp_mpi);
-                    shmem_procinfo__getcomptime(pidlist[i], &tmp_comp);
-                    info(" | %-10i | %18e s | %18e s |", i, tmp_comp, tmp_mpi);
-                    info(" |------------|----------------------|----------------------|");
-
-                    if( max_mpi < tmp_mpi) max_mpi = tmp_mpi;
-                    if( max_comp < tmp_comp) max_comp = tmp_comp;
-
-                    res_mpi +=  tmp_mpi;
-                    res_comp += tmp_comp;
-            }
-        }
-        info(" |------------|----------------------|----------------------|");
-        info(" | %-10s | %18e s | %18e s |", "Node Avg", res_comp/nelem, res_mpi/nelem);
-        info(" |------------|----------------------|----------------------|");
-        info(" | %-10s | %18e s | %18e s |", "Node Max", max_comp, max_mpi);
-        info(" |------------|----------------------|----------------------|");
-#else
-        info(" |----------------------------------------------------------|");
-        info(" |                  Extended Report Node %i                 |",_node_id);
-        info(" |----------------------------------------------------------|");
-        info(" |  Process   |     Compute Time     |        MPI Time      |" );
-        info(" |----------------------------------------------------------|");
-        sort_pids(pidlist, 0, nelem);
-        shmem_procinfo__getpidlist(pidlist, &nelem,-1);
         int i;
         double tmp_mpi, tmp_comp;
-        for( i = 0; i <nelem; ++i){
-            if( stats_per_node && pidlist[i] != 0 ){
+        for (i = 0; i <nelems; ++i) {
+            if (pidlist[i] != 0) {
                 shmem_procinfo__getmpitime(pidlist[i], &tmp_mpi);
                 shmem_procinfo__getcomptime(pidlist[i], &tmp_comp);
-#ifndef SCIENTIFIC
-                info("%i;%.2f;%.2f\n", i, tmp_comp, tmp_mpi);
-#else
-                info("%i;%e;%e\n", i, tmp_comp, tmp_mpi);
-#endif
+                info(" | %-10d | %18e s | %18e s |", i, tmp_comp, tmp_mpi);
+                info(" |------------|----------------------|----------------------|");
+
                 if( max_mpi < tmp_mpi) max_mpi = tmp_mpi;
                 if( max_comp < tmp_comp) max_comp = tmp_comp;
 
@@ -312,34 +283,11 @@ void summary_per_node(void){
                 res_comp += tmp_comp;
             }
         }
-        free(pidlist);
-#ifndef SCIENTIFIC
-        info("%s;%.2f;%.2f\n", "Node Avg", res_comp/nelem, res_mpi/nelem);
-        info("%s;%.2f;%.2f\n", "Node Max", max_comp, max_mpi);
-        /* info("%s;%.2f\n", "AppTime", to_secs(talp_info->end_app)); */
-#else
-        info("%s;%e;%e \n", "Node Avg", res_comp/nelem, res_mpi/nelem);
-        info("%s;%e;%e \n", "Node Max", max_comp, max_mpi);
-        /* info("%s;%e\n", "AppTime", to_secs(talp_info->end_app)); */
-#endif
-#endif
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-#endif
-#endif
-
-void talp_mpi_report(void){
-    talp_info_t *talp_info = thread_spd->talp_info;
-    if (talp_info &&
-            thread_spd->options.talp_summary & SUMMARY_PROCESS) {
-        dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
-        info("Monitoring Regions Process Summary");
-        info("### Name:        %s", mpi_monitor->name);
-        info("### MPI time:     %e seconds",
-                nsecs_to_secs(mpi_monitor->accumulated_MPI_time));
-        info("### Compute time: %e seconds",
-                nsecs_to_secs(mpi_monitor->accumulated_computation_time));
+        info(" |------------|----------------------|----------------------|");
+        info(" | %-10s | %18e s | %18e s |", "Node Avg", res_comp/nelems, res_mpi/nelems);
+        info(" |------------|----------------------|----------------------|");
+        info(" | %-10s | %18e s | %18e s |", "Node Max", max_comp, max_mpi);
+        info(" |------------|----------------------|----------------------|");
     }
 }
 
@@ -398,15 +346,10 @@ dlb_monitor_t* monitoring_region_register(const char* name){
 }
 
 static void monitoring_regions_finalize(void) {
-    /* Individual Report */
-    int i;
-    for (i=0; i<nregions && thread_spd->options.talp_summary & SUMMARY_REGIONS; ++i) {
-        monitoring_region_report(regions[i]);
-    }
-
     /* De-allocate regions */
     pthread_mutex_lock(&mutex);
     {
+        int i;
         for (i=0; i<nregions; ++i) {
             dlb_monitor_t *monitor = regions[i];
             if (monitor->name != anonymous_monitor_name) {
@@ -466,13 +409,13 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
 }
 
 int monitoring_region_report(dlb_monitor_t *monitor) {
-    info("########### Monitoring Regions Summary ##########");
-    info("### Name:                      %s", monitor->name);
-    info("### Elapsed time :             %.9g seconds",
+    info("########### Monitoring Region Summary ###########");
+    info("### Name:                     %s", monitor->name);
+    info("### Elapsed time :            %.9g seconds",
             nsecs_to_secs(monitor->elapsed_time));
-    info("### MPI time :                 %.9g seconds",
+    info("### MPI time :                %.9g seconds",
             nsecs_to_secs(monitor->accumulated_MPI_time));
-    info("### Compute accumulated time : %.9g seconds",
+    info("### Computation time :        %.9g seconds",
             nsecs_to_secs(monitor->accumulated_computation_time));
     info("###      CpuSet:  %s", mu_to_str(&thread_spd->process_mask));
     return DLB_SUCCESS;
@@ -494,6 +437,22 @@ static void monitoring_regions_update_all(void) {
         monitor_data_t *monitor_data = monitor->_data;
         if (monitor_data->started) {
             talp_update_monitor(monitor);
+        }
+    }
+}
+
+static void monitoring_regions_report_all(void) {
+    /* Report MPI monitor */
+    if (thread_spd->options.talp_summary & SUMMARY_PROCESS) {
+        talp_info_t *talp_info = thread_spd->talp_info;
+        monitoring_region_report(&talp_info->mpi_monitor);
+    }
+
+    /* Report custom regions */
+    if (thread_spd->options.talp_summary & SUMMARY_REGIONS) {
+        int i;
+        for (i=0; i<nregions; ++i) {
+            monitoring_region_report(regions[i]);
         }
     }
 }

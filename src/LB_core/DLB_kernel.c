@@ -91,6 +91,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialize shared memories
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
+            || spd->options.talp
             || spd->options.preinit_pid) {
 
         // Initialize procinfo
@@ -183,6 +184,7 @@ int Finish(subprocess_descriptor_t *spd) {
     }
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
+            || spd->options.talp
             || spd->options.preinit_pid) {
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,

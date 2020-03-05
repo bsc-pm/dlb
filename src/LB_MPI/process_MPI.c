@@ -196,16 +196,16 @@ void after_mpi(mpi_call call_type) {
 }
 
 void before_finalize(void) {
-    mpi_ready=0;
+    mpi_ready = 0;
     talp_mpi_finalize();
-    talp_mpi_report();
-    if (init_from_mpi == 1) {
-        DLB_Finalize();
-        init_from_mpi = 0;
-    }
 }
 
-void after_finalize(void) {}
+void after_finalize(void) {
+    if (init_from_mpi == 1) {
+        init_from_mpi = 0;
+        DLB_Finalize();
+    }
+}
 
 int is_mpi_ready(void) {
     return mpi_ready;

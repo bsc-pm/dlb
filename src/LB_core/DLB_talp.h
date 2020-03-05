@@ -53,11 +53,6 @@ void talp_in_blocking_call(void);
 /*  Update the metrics when going out MPI blocking call */
 void talp_out_blocking_call(void);
 
-#ifdef MPI_LIB
-/* Function to print the stats of the process */
-void talp_mpi_report(void);
-#endif
-
 struct dlb_monitor_t* monitoring_region_register(const char* name);
 int monitoring_region_reset(struct dlb_monitor_t *monitor);
 int monitoring_region_start(struct dlb_monitor_t *monitor);
