@@ -29,24 +29,42 @@ program test
     integer, parameter :: N = 100
     integer :: i, err
     type(dlb_monitor_t), pointer :: dlb_monitor
-    type(c_ptr) :: dlb_handle
+    type(c_ptr) :: dlb_handle_1, dlb_handle_2, dlb_handle_3
     character(10), pointer :: monitor_name
 
     err = dlb_init(0, C_NULL_PTR, c_char_"--talp"//C_NULL_CHAR)
     if (err /= DLB_SUCCESS) call abort
 
-    dlb_handle = DLB_MonitoringRegionRegister(c_char_"region 1"//C_NULL_CHAR)
+    dlb_handle_1 = DLB_MonitoringRegionRegister(c_char_"region 1"//C_NULL_CHAR)
+    if (.not. c_associated(dlb_handle_1)) call abort
+    dlb_handle_2 = DLB_MonitoringRegionRegister(c_char_"region 2"//C_NULL_CHAR)
+    if (.not. c_associated(dlb_handle_2)) call abort
+    dlb_handle_3 = DLB_MonitoringRegionRegister(C_NULL_CHAR)
+    if (.not. c_associated(dlb_handle_3)) call abort
 
     do i=1, N
         ! monitorized region
-        err = DLB_MonitoringRegionStart(dlb_handle)
+        err = DLB_MonitoringRegionStart(dlb_handle_1)
         if (err /= DLB_SUCCESS) call abort
-        ! ...
-        err = DLB_MonitoringRegionStop(dlb_handle)
+
+        ! nested monitoring region
+        err = DLB_MonitoringRegionStart(dlb_handle_2)
+        if (err /= DLB_SUCCESS) call abort
+        err = DLB_MonitoringRegionStop(dlb_handle_2)
+        if (err /= DLB_SUCCESS) call abort
+
+        ! nested anonymous monitoring region
+        err = DLB_MonitoringRegionStart(dlb_handle_3)
+        if (err /= DLB_SUCCESS) call abort
+        err = DLB_MonitoringRegionStop(dlb_handle_3)
+        if (err /= DLB_SUCCESS) call abort
+
+        ! end monitoring region
+        err = DLB_MonitoringRegionStop(dlb_handle_1)
         if (err /= DLB_SUCCESS) call abort
     enddo
 
-    call c_f_pointer(dlb_handle, dlb_monitor)
+    call c_f_pointer(dlb_handle_1, dlb_monitor)
     call c_f_pointer(dlb_monitor%name_, monitor_name)
 
     print *, monitor_name
@@ -56,7 +74,11 @@ program test
 
     if (dlb_monitor%num_measurements /= N) call abort
 
-    err = dlb_monitoringregionreport(dlb_handle)
+    err = dlb_monitoringregionreport(dlb_handle_1)
+    if (err /= DLB_SUCCESS) call abort
+    err = dlb_monitoringregionreport(dlb_handle_2)
+    if (err /= DLB_SUCCESS) call abort
+    err = dlb_monitoringregionreport(dlb_handle_3)
     if (err /= DLB_SUCCESS) call abort
 
     err = dlb_finalize()
