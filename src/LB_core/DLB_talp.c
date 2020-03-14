@@ -308,7 +308,7 @@ dlb_monitor_t* monitoring_region_register(const char* name){
     pthread_mutex_lock(&mutex);
     {
         /* Found monitor if already registered */
-        if (name != NULL) {
+        if (name != NULL && *name != '\0') {
             int i;
             for (i=0; i<nregions; ++i) {
                 if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
@@ -333,7 +333,7 @@ dlb_monitor_t* monitoring_region_register(const char* name){
             " Please report at "PACKAGE_BUGREPORT);
 
     // Assign new values after the mutex is unlocked
-    if (name != NULL) {
+    if (name != NULL && *name != '\0') {
         monitor->name = strdup(name);
     } else {
         monitor->name = anonymous_monitor_name;
