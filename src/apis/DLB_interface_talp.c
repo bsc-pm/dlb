@@ -19,31 +19,18 @@
 
 /* Tracking Application Low-Level Performance */
 
-#include "apis/dlb.h"
-#include "LB_core/DLB_kernel.h"
-#include "LB_core/DLB_talp.h"
+#include "apis/dlb_talp.h"
 
-#include "LB_core/spd.h"
-#include "LB_numThreads/numThreads.h"
-#include "LB_comm/shmem_async.h"
-#include "LB_comm/shmem_barrier.h"
-#include "LB_comm/shmem_cpuinfo.h"
-#include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
 #include "LB_core/DLB_talp.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_procinfo.h"
 #include "support/debug.h"
-#include "support/tracing.h"
-#include "support/options.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 
-#include <string.h>
-#include <stdlib.h>
-
 #pragma GCC visibility push(default)
-
-#define SCIENTIFIC_NOTATION 0
 
 int DLB_TALP_Attach(void) {
     const char *shm_key;
@@ -56,13 +43,11 @@ int DLB_TALP_Attach(void) {
     }
     shmem_cpuinfo_ext__init(shm_key);
     shmem_procinfo_ext__init(shm_key);
-   // talp_init(thread_spd);
     return DLB_SUCCESS;
 }
 
 int DLB_TALP_Detach(void) {
     int error = shmem_cpuinfo_ext__finalize();
-    talp_finish(thread_spd);
     error = error ? error : shmem_procinfo_ext__finalize();
     return error;
 }
@@ -83,45 +68,38 @@ int DLB_TALP_CPUTimeGet(int process, double* compute_time){
 }
 
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
+    spd_enter_dlb(NULL);
+    if (unlikely(!thread_spd->talp_info)) {
+        return NULL;
+    }
     return monitoring_region_register(name);
 }
 
-int DLB_MonitoringRegionStart(dlb_monitor_t handle){
-    monitor_info_t * p = (monitor_info_t *) handle;
-
-    return monitoring_region_start(p);
+int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return monitoring_region_reset(handle);
 }
 
-int DLB_MonitoringRegionStop(dlb_monitor_t handle){
-
-    monitor_info_t * p = (monitor_info_t *) handle;
-
-    return monitoring_region_stop(p);
+int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return monitoring_region_start(handle);
 }
 
-int DLB_MonitoringRegionReport(dlb_monitor_t handle){
-    const subprocess_descriptor_t *spd = thread_spd;
-    monitor_info_t * p = (monitor_info_t *) handle;
-    const char* cpuset = mu_to_str(&spd->process_mask);
-    info("########### Monitoring Regions Summary ##########");
-    info("### Name:                      %s", p->name);
-#if SCIENTIFIC_NOTATION
-    double mpi_time_t=     to_secs( p->mpi_time);
-    double compute_time_t= to_secs( p->compute_time);
-    info("### MPI time:     %e seconds", mpi_time_t);
-    info("### Compute time: %e seconds", compute_time_t);
-#else
-    info("### Elapsed time :             %lld.%.9ld seconds", (long long) p->elapsed_time.tv_sec, p->elapsed_time.tv_nsec);
-    info("### MPI time :                 %lld.%.9ld seconds", (long long) p->mpi_time.tv_sec, p->mpi_time.tv_nsec);
-    info("### Compute accumulated time : %lld.%.9ld seconds", (long long) p->compute_time.tv_sec, p->compute_time.tv_nsec);
-#endif
-    info("###      CpuSet:  %s",cpuset);
-    return DLB_SUCCESS;
+int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return monitoring_region_stop(handle);
 }
 
-int DLB_MonitoringRegionGet(dlb_monitor_t handle, monitor_info_t *info){
+int DLB_MonitoringRegionReport(dlb_monitor_t *handle){
     spd_enter_dlb(NULL);
-    return DLB_SUCCESS;
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return monitoring_region_report(handle);
 }
-
-

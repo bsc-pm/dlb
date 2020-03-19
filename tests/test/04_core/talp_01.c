@@ -18,62 +18,122 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator"
+    test_generator="gens/basic-generator -a --no-lewi|--lewi"
 </testinfo>*/
 
-#include "LB_core/DLB_talp.h"
-#include "LB_core/spd.h"
 #include "unique_shmem.h"
 
-#include <apis/dlb.h>
-#include <apis/dlb_drom.h>
+#include "LB_core/DLB_talp.h"
+#include "LB_core/DLB_kernel.h"
+#include "LB_core/spd.h"
+#include "apis/dlb_talp.h"
+#include "apis/dlb_errors.h"
+#include "support/mytime.h"
 
 #include <sched.h>
-#include <unistd.h>
-#include <string.h>
+#include <stdint.h>
 #include <assert.h>
 
+/* Test MPI Monitoring Regions with/without LeWI */
 
-#include <pthread.h>
-#include <assert.h>
+enum { USLEEP_TIME = 100000 };
+
+typedef struct talp_info_t {
+    dlb_monitor_t   mpi_monitor;
+    cpu_set_t       workers_mask;
+    cpu_set_t       mpi_mask;
+} talp_info_t;
+
+typedef struct monitor_data_t {
+    bool    started;
+    int64_t sample_start_time;
+} monitor_data_t;
+
 
 int main(int argc, char *argv[]) {
 
-    int cpu = sched_getcpu();
+    /* Process Mask size can be 1..N */
     cpu_set_t process_mask;
-    CPU_ZERO(&process_mask);
-    CPU_SET(cpu, &process_mask);
-    sched_setaffinity(getpid(),sizeof(process_mask),&process_mask);
+    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+    unsigned int process_mask_size = CPU_COUNT(&process_mask);
 
-    char options[64] = "--talp --lewi --shm-key=";
+    char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
-    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+    spd_enter_dlb(NULL);
+    options_init(&thread_spd->options, options);
+    thread_spd->id = 111;
+    memcpy(&thread_spd->process_mask, &process_mask, sizeof(cpu_set_t));
+    talp_init(thread_spd);
 
-    double tmp1,tmp2;
+    bool lewi = thread_spd->options.lewi;
+    talp_info_t *talp_info = thread_spd->talp_info;
+    dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
 
-    tmp1 = talp_get_mpi_time();
-    tmp2 = talp_get_compute_time();
-    assert( tmp1 == 0 && tmp2 == 0);
+    /* Start MPI monitoring region */
+    talp_mpi_init();
+    assert( mpi_monitor->num_measurements == 0 );
+    assert( mpi_monitor->num_resets == 0 );
+    assert( mpi_monitor->start_time != 0 );
+    assert( mpi_monitor->stop_time == 0 );
+    assert( mpi_monitor->elapsed_time == 0 );
+    assert( mpi_monitor->accumulated_MPI_time == 0 );
+    assert( mpi_monitor->accumulated_computation_time == 0 );
+    assert( CPU_COUNT(&talp_info->workers_mask) == CPU_COUNT(&process_mask) );
+    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
 
-    const subprocess_descriptor_t* spd = thread_spd;
-    talp_info_t* talp_info = (talp_info_t*) spd->talp_info;
-    assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
-    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 0);
-    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
-
+    /* Entering MPI */
     talp_in_mpi();
+    assert( mpi_monitor->accumulated_MPI_time == 0 );
+    assert( mpi_monitor->accumulated_computation_time != 0 );
+    if (lewi) {
+        assert( CPU_COUNT(&talp_info->workers_mask) == process_mask_size - 1 );
+        assert( CPU_COUNT(&talp_info->mpi_mask) == 1 );
+    } else {
+        assert( CPU_COUNT(&talp_info->workers_mask) == 0 );
+        assert( CPU_COUNT(&talp_info->mpi_mask) == process_mask_size );
+    }
 
-    assert(CPU_COUNT(&talp_info->active_working_mask) == 0);
-    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 1);
-    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 1);
-
+    /* Leaving MPI */
     talp_out_mpi();
+    assert( mpi_monitor->accumulated_MPI_time != 0 );
+    assert( mpi_monitor->accumulated_computation_time != 0 );
+    assert( CPU_COUNT(&talp_info->workers_mask) == process_mask_size );
+    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
 
-    assert(CPU_COUNT(&talp_info->active_working_mask) == 1);
-    assert(CPU_COUNT(&talp_info->in_mpi_mask) == 0);
-    assert(CPU_COUNT(&talp_info->active_mpi_mask) == 0);
+    int cpuid = sched_getcpu();
+    assert( CPU_ISSET(cpuid, &process_mask) );
 
-    assert( DLB_Finalize() == DLB_SUCCESS );
+    /* Disable CPU */
+    talp_cpu_disable(cpuid);
+    int64_t time_computation_before = mpi_monitor->accumulated_computation_time;
+    usleep(USLEEP_TIME);
+
+    /* Enable CPU */
+    talp_cpu_enable(cpuid);
+    int64_t time_computation = mpi_monitor->accumulated_computation_time - time_computation_before;
+    assert( time_computation >= USLEEP_TIME * (process_mask_size-1) );
+
+    /* Create a custom monitoring region */
+    dlb_monitor_t *monitor = monitoring_region_register("Test");
+    monitoring_region_start(monitor);
+    talp_in_mpi();
+    talp_out_mpi();
+    monitoring_region_stop(monitor);
+
+    /* Finalize MPI */
+    talp_mpi_finalize();
+    assert( mpi_monitor->num_measurements == 1 );
+    assert( mpi_monitor->num_resets == 0 );
+    assert( mpi_monitor->start_time != 0 );
+    assert( mpi_monitor->stop_time != 0 );
+    assert( mpi_monitor->elapsed_time == mpi_monitor->stop_time - mpi_monitor->start_time );
+    assert( mpi_monitor->accumulated_MPI_time != 0 );
+    assert( mpi_monitor->accumulated_computation_time != 0 );
+
+    thread_spd->options.talp_summary |= SUMMARY_NODE;
+    thread_spd->options.talp_summary |= SUMMARY_PROCESS;
+    thread_spd->options.talp_summary |= SUMMARY_REGIONS;
+    talp_finalize(thread_spd);
 
     return 0;
 }

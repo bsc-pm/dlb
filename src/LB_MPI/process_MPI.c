@@ -29,15 +29,11 @@
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
-#include "apis/dlb_stats.h"
-#include "apis/dlb_talp.h"
 #include "apis/dlb.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
 #include "support/types.h"
-#include "LB_comm/shmem_procinfo.h"
-#include "support/mytime.h"
 #include "LB_core/DLB_talp.h"
 #include <mpi.h>
 #include <unistd.h>
@@ -200,16 +196,16 @@ void after_mpi(mpi_call call_type) {
 }
 
 void before_finalize(void) {
-    mpi_ready=0;
+    mpi_ready = 0;
     talp_mpi_finalize();
-    talp_mpi_report();
-    if (init_from_mpi == 1) {
-        DLB_Finalize();
-        init_from_mpi = 0;
-    }
 }
 
-void after_finalize(void) {}
+void after_finalize(void) {
+    if (init_from_mpi == 1) {
+        init_from_mpi = 0;
+        DLB_Finalize();
+    }
+}
 
 int is_mpi_ready(void) {
     return mpi_ready;

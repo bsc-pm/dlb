@@ -31,6 +31,7 @@
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 #include "LB_core/DLB_talp.h"
+#include "LB_core/spd.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -46,6 +47,14 @@ enum { SYNC_POLL_TIMEOUT = 1000000000 };    /* 10^9 ns = 1s */
 //static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
 //static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
 //static const double LOG2E = 1.44269504088896340736;
+typedef struct monitor_info_t {
+    char *placeholder1;
+    struct timespec  mpi_time;
+    struct timespec  compute_time;
+    struct timespec placeholder2;
+    struct timespec placeholder3;
+    struct timespec placeholder4;
+} monitor_info_t;
 typedef struct {
     struct timespec mpi_time;
     struct timespec compute_time;
@@ -1325,14 +1334,15 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync) {
 }
 
 int auto_resize_start(){
-    if ( !thread_spd->talp_enabled ) return 0 ;
+    if ( !thread_spd->talp_info ) return 0 ;
     pinfo_t *process = get_process(thread_spd->id);
     auto_sizer_t * au = &process->auto_sizer;
 
     if( au->iter_num == 0)return DLB_SUCCESS;
     shmem_lock(shm_handler);
     {
-        monitoring_region_start(&process->auto_sizer.aux);
+        // FIXME: fix type
+        /* monitoring_region_start(&process->auto_sizer.aux); */
     }
     shmem_unlock(shm_handler);
 
@@ -1378,12 +1388,13 @@ int auto_resize_start(){
 }
 
 int auto_resize_end(){
-    if ( !thread_spd->talp_enabled ) return 0 ;
+    if ( !thread_spd->talp_info ) return 0 ;
     shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(thread_spd->id);
         monitor_info_t * monitor = &process->auto_sizer.aux;
-        monitoring_region_stop(monitor);
+        // FIXME: fix type
+        /* monitoring_region_stop(monitor); */
         iter_t* it = &process->auto_sizer.iterations[process->auto_sizer.iter_num];
         it->mpi_time = monitor->mpi_time;
         it->compute_time = monitor->compute_time;

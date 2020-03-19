@@ -22,8 +22,8 @@
 #endif
 
 #include "LB_core/DLB_kernel.h"
-#include "LB_core/DLB_talp.h"
 
+#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_numThreads/omp_thread_manager.h"
@@ -64,7 +64,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         spd->options.preinit_pid ? POLICY_LEWI_MASK :
         mask ? POLICY_LEWI_MASK :
         POLICY_LEWI;
-    spd->talp_info=0;
 
     fatal_cond(spd->lb_policy == POLICY_LEWI && spd->options.ompt,
             "LeWI with OMPT support requires the application to be pre-initialized.\n"
@@ -76,13 +75,13 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
-    } else if (spd->lb_policy == POLICY_LEWI || spd->options.talp) {
+    } else if (spd->lb_policy == POLICY_LEWI) {
         // If LeWI, we don't want the process mask, just a mask of size 'ncpus'
         if (ncpus <= 0) ncpus = pm_get_num_threads();
         CPU_ZERO(&spd->process_mask);
         int i;
         for (i=0; i<ncpus; ++i) CPU_SET(i, &spd->process_mask);
-    } else if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom) {
+    } else if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.talp) {
         // These modes require mask support, best effort querying the system
         cpu_set_t process_mask;
         sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
@@ -95,7 +94,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
             || spd->options.talp
             || spd->options.preinit_pid) {
 
-        talp_init(spd);
         // Initialize procinfo
         cpu_set_t new_process_mask;
         error = shmem_procinfo__init(spd->id, &spd->process_mask,
@@ -127,7 +125,13 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     error = spd->lb_funcs.init(spd);
     if (error != DLB_SUCCESS) return error;
 
-    spd->talp_enabled = spd->options.talp;
+    // Initialize TALP
+    if  (spd->options.talp) {
+        talp_init(spd);
+    } else {
+        spd->talp_info = NULL;
+    }
+
     spd->dlb_enabled = true;
     add_event(DLB_MODE_EVENT, EVENT_ENABLED);
     add_event(RUNTIME_EVENT, EVENT_USER);
@@ -168,7 +172,9 @@ int Finish(subprocess_descriptor_t *spd) {
     add_event(RUNTIME_EVENT, EVENT_FINALIZE);
     spd->dlb_enabled = false;
 
-    spd->talp_enabled = false;
+    if (spd->options.talp) {
+        talp_finalize(spd);
+    }
     if (spd->lb_funcs.finalize) {
         spd->lb_funcs.finalize(spd);
         spd->lb_funcs.finalize = NULL;
@@ -180,7 +186,6 @@ int Finish(subprocess_descriptor_t *spd) {
             || spd->options.drom
             || spd->options.talp
             || spd->options.preinit_pid) {
-        talp_finish(spd);
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
                 spd->options.shm_key);

@@ -31,7 +31,7 @@
 #include <assert.h>
 
 static int run = 1;
-#define TIME 5000000
+#define TIME 500000
 
 static void sighandler(int signum)
 {
@@ -49,40 +49,43 @@ int main(int argc, char *argv[])
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
-    int err = DLB_Init(0, NULL, NULL);
-
     MPI_Init(&argc,&argv);
 
     int me, how_many;
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     MPI_Comm_size(MPI_COMM_WORLD, &how_many);
 
-    DLB_SetMaxParallelism(1);
+    pid_t pid = getpid();
+    printf("Starting TALP example.\n"
+            "Press 'Ctrl-C' to gracefully stop the execution and clean DLB shared memories.\n"
+        "PID: %d\n", pid);
 
-    if (err == DLB_SUCCESS) {
-        double mpi_time,cpu_time;
+    double mpi_time, cpu_time;
+    int num_iterations = 0;
 
-        printf("Starting TALP example.\n"
-               "Press 'Ctrl-C' to gracefully stop the execution and clean DLB shared memories.\n"
-           "PID: %d\n", getpid());
+    while(run) {
+        if (me == 0) usleep(TIME);
+        else usleep(TIME/4);
 
-        while(run) {
-            if (me == 0) usleep(TIME);
-            else usleep(TIME/4);
+        MPI_Barrier(MPI_COMM_WORLD);
 
-            MPI_Barrier(MPI_COMM_WORLD);
+        DLB_TALP_MPITimeGet(pid, &mpi_time);
+        DLB_TALP_CPUTimeGet(pid, &cpu_time);
 
-            DLB_TALP_MPITimeGet(getpid(),&mpi_time);
-            DLB_TALP_CPUTimeGet(getpid(),&cpu_time);
-            printf("%d:MPI TIME: %f ",getpid(),mpi_time);
-            printf("%d:CPU TIME: %f\n",getpid(),cpu_time);
+        ++num_iterations;
+        if (num_iterations%10 == 0) {
+            printf("%d:MPI TIME: %f ", pid, mpi_time);
+            printf("%d:CPU TIME: %f\n", pid, cpu_time);
         }
-    } else {
-        printf("DLB failed with the following error: %s\n", DLB_Strerror(err));
     }
+
     printf("Finalizing TALP example.\n");
-    MPI_Finalize();
+
+    /* Explicitly finalize DLB before MPI because some implementations
+     * may not return from MPI if the process is signaled */
     DLB_Finalize();
+
+    MPI_Finalize();
 
     return 0;
 }
