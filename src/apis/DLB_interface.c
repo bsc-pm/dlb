@@ -320,6 +320,16 @@ int DLB_Barrier(void) {
     return node_barrier();
 }
 
+int DLB_BarrierAttach(void) {
+    spd_enter_dlb(NULL);
+    return node_barrier_attach();
+}
+
+int DLB_BarrierDetach(void) {
+    spd_enter_dlb(NULL);
+    return node_barrier_detach();
+}
+
 int DLB_SetVariable(const char *variable, const char *value) {
     spd_enter_dlb(NULL);
     return options_set_variable(&thread_spd->options, variable, value);

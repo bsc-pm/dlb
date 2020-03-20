@@ -579,10 +579,53 @@ int poll_drom_update(const subprocess_descriptor_t *spd) {
 /* Barrier */
 
 int node_barrier(void) {
-    add_event(RUNTIME_EVENT, EVENT_BARRIER);
-    shmem_barrier__barrier();
-    add_event(RUNTIME_EVENT, EVENT_USER);
-    return DLB_SUCCESS;
+    int error;
+    const subprocess_descriptor_t *spd = thread_spd;
+    if (spd->dlb_enabled) {
+        if (spd->options.barrier) {
+            add_event(RUNTIME_EVENT, EVENT_BARRIER);
+            shmem_barrier__barrier();
+            add_event(RUNTIME_EVENT, EVENT_USER);
+            error = DLB_SUCCESS;
+        } else {
+            error = DLB_ERR_NOCOMP;
+        }
+    } else {
+        error = DLB_ERR_DISBLD;
+    }
+    return error;
+}
+
+int node_barrier_attach(void) {
+    int error;
+    const subprocess_descriptor_t *spd = thread_spd;
+    if (spd->dlb_enabled) {
+        if (spd->options.barrier) {
+            shmem_barrier__init(spd->options.shm_key);
+            error = DLB_SUCCESS;
+        } else {
+            error = DLB_ERR_NOCOMP;
+        }
+    } else {
+        error = DLB_ERR_DISBLD;
+    }
+    return error;
+}
+
+int node_barrier_detach(void) {
+    int error;
+    const subprocess_descriptor_t *spd = thread_spd;
+    if (spd->dlb_enabled) {
+        if (spd->options.barrier) {
+            shmem_barrier__finalize();
+            error = DLB_SUCCESS;
+        } else {
+            error = DLB_ERR_NOCOMP;
+        }
+    } else {
+        error = DLB_ERR_DISBLD;
+    }
+    return error;
 }
 
 

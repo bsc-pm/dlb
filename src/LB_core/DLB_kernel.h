@@ -76,6 +76,8 @@ int poll_drom_update(const subprocess_descriptor_t *spd);
 
 /* Barrier */
 int node_barrier(void);
+int node_barrier_attach(void);
+int node_barrier_detach(void);
 
 /* Misc */
 int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid);

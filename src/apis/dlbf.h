@@ -219,6 +219,18 @@
             integer(kind=c_int) :: ierr
         end function dlb_barrier
 
+        function dlb_barrierattach() result (ierr)                            &
+     &          bind(c, name='DLB_BarrierAttach')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+        end function dlb_barrierattach
+
+        function dlb_barrierdetach() result (ierr)                            &
+     &          bind(c, name='DLB_BarrierDetach')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+        end function dlb_barrierdetach
+
         function dlb_setvariable(variable, val) result (ierr)           &
      &          bind(c, name='DLB_SetVariable')
             use iso_c_binding

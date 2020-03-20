@@ -60,12 +60,7 @@ static void advance_barrier() {
 }
 
 void shmem_barrier__init(const char *shmem_key) {
-    // Protect double initialization
-    if (shm_handler != NULL) {
-        warning("Shared Memory is being initialized more than once");
-        print_backtrace();
-        return;
-    }
+    if (shm_handler != NULL) return;
 
     // more error checks to be done if the option is implemented
     global_barrier_ids[0] = getenv("LB_BARRIER_ID") ? atoi(getenv("LB_BARRIER_ID")) : 0;

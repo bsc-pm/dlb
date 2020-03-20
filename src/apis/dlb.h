@@ -455,6 +455,24 @@ int DLB_CheckCpuAvailability(int cpuid);
  */
 int DLB_Barrier(void);
 
+/*! \brief Attach process to the DLB_Barrier team
+ *  \return DLB_SUCCESS on success
+ *
+ *  If the process had previusly called DLB_BarrierDetach, this function allows
+ *  a process to become part again of the DLB_Barrier team. Otherwise it has no
+ *  effect.
+ */
+int DLB_BarrierAttach(void);
+
+/*! \brief Barrier between processes in the node
+ *  \return DLB_SUCCESS on success
+ *
+ *  Remove process from the DLB_Barrier team. The process will no longer be able
+ *  to call DLB_Barrier. Other processes in the team will not synchronize with this
+ *  process on their respective calls to DLB_Barrier.
+ */
+int DLB_BarrierDetach(void);
+
 /*! \brief Change the value of a DLB internal variable
  *  \param[in] variable Internal variable to set
  *  \param[in] value New value
