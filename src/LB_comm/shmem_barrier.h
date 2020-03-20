@@ -22,9 +22,9 @@
 
 #include <stddef.h>
 
-void shmem_barrier_init(const char *shmem_key);
-void shmem_barrier_finalize(void);
-void shmem_barrier(void);
+void shmem_barrier__init(const char *shmem_key);
+void shmem_barrier__finalize(void);
+void shmem_barrier__barrier(void);
 
 void shmem_barrier__print_info(const char *shmem_key);
 int shmem_barrier__version(void);

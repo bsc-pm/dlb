@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    shmem_barrier_init(SHMEM_KEY);
+    shmem_barrier__init(SHMEM_KEY);
 
     /* Enable request queues */
     shmem_cpuinfo__enable_request_queues();
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-    shmem_barrier_finalize();
+    shmem_barrier__finalize();
 
     return 0;
 }

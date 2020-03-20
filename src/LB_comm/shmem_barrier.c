@@ -59,7 +59,7 @@ static void advance_barrier() {
     local_barrier_id = (local_barrier_id+1)%2;
 }
 
-void shmem_barrier_init(const char *shmem_key) {
+void shmem_barrier__init(const char *shmem_key) {
     // Protect double initialization
     if (shm_handler != NULL) {
         warning("Shared Memory is being initialized more than once");
@@ -116,7 +116,7 @@ void shmem_barrier_ext__init(const char *shmem_key) {
             shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
 }
 
-void shmem_barrier_finalize(void) {
+void shmem_barrier__finalize(void) {
     if (shm_handler == NULL) return;
 
     verbose(VB_BARRIER, "Finalizing Barrier Module");
@@ -163,7 +163,7 @@ int shmem_barrier_ext__finalize(void) {
     return DLB_SUCCESS;
 }
 
-void shmem_barrier(void) {
+void shmem_barrier__barrier(void) {
     if (shm_handler == NULL) return;
 
     barrier_t *barrier = get_barrier();
