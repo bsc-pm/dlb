@@ -272,6 +272,10 @@ void shmem_barrier__print_info(const char *shmem_key) {
     free(shdata_copy);
 }
 
+bool shmem_barrier__exists(void) {
+    return shm_handler != NULL;
+}
+
 int shmem_barrier__version(void) {
     return SHMEM_BARRIER_VERSION;
 }

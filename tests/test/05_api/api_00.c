@@ -92,9 +92,13 @@ int main( int argc, char **argv ) {
     assert( DLB_Return() == DLB_ERR_NOPOL );
     assert( DLB_ReturnCpu(0) == DLB_ERR_NOPOL );
 
+    // Barrier
+    assert( DLB_Barrier() == DLB_ERR_NOCOMP );
+    assert( DLB_BarrierAttach() == DLB_ERR_NOCOMP );
+    assert( DLB_BarrierDetach() == DLB_ERR_NOCOMP );
+
     // Misc
     assert( DLB_CheckCpuAvailability(0) == DLB_ERR_NOPOL );
-    assert( DLB_Barrier() == DLB_SUCCESS );
     assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_DISBLD );
     assert( DLB_SetVariable("--drom", "1") == DLB_ERR_PERM );
     assert( DLB_SetVariable("--debug-opts", "foo") == DLB_SUCCESS );
