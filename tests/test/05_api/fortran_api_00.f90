@@ -62,6 +62,11 @@ program test
     if (dlb_return() /= DLB_ERR_NOPOL ) call abort
     if (dlb_returncpu(0) /= DLB_ERR_NOPOL ) call abort
 
+    ! Barrier
+    if (dlb_barrier() /= DLB_ERR_NOCOMP ) call abort
+    if (dlb_barrierattach() /= DLB_ERR_NOCOMP ) call abort
+    if (dlb_barrierdetach() /= DLB_ERR_NOCOMP ) call abort
+
     err = dlb_finalize()
     if (err /= DLB_SUCCESS) call abort
 end program test
