@@ -380,32 +380,47 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
 }
 
 int monitoring_region_start(dlb_monitor_t *monitor) {
-    add_event(MONITOR_REGION,1);
-
+    int error;
     monitor_data_t *monitor_data = monitor->_data;
-    monitor->start_time = get_time_in_ns();
-    monitor->stop_time = 0;
-    monitor_data->started = true;
-    monitor_data->sample_start_time = monitor->start_time;
 
-    return DLB_SUCCESS;
+    if (!monitor_data->started) {
+        add_event(MONITOR_REGION,1);
+
+        monitor->start_time = get_time_in_ns();
+        monitor->stop_time = 0;
+        monitor_data->started = true;
+        monitor_data->sample_start_time = monitor->start_time;
+
+        error = DLB_SUCCESS;
+    } else {
+        error = DLB_NOUPDT;
+    }
+
+    return error;
 }
 
 int monitoring_region_stop(dlb_monitor_t *monitor) {
+    int error;
     monitor_data_t *monitor_data = monitor->_data;
 
-    /* Update last sample */
-    talp_update_monitor(monitor);
+    if (monitor_data->started) {
+        /* Update last sample */
+        talp_update_monitor(monitor);
 
-    /* Stop timer */
-    monitor->stop_time = get_time_in_ns();
-    monitor->elapsed_time += monitor->stop_time - monitor->start_time;
-    ++(monitor->num_measurements);
-    monitor_data->started = false;
-    monitor_data->sample_start_time = 0;
+        /* Stop timer */
+        monitor->stop_time = get_time_in_ns();
+        monitor->elapsed_time += monitor->stop_time - monitor->start_time;
+        ++(monitor->num_measurements);
+        monitor_data->started = false;
+        monitor_data->sample_start_time = 0;
 
-    add_event(MONITOR_REGION,0);
-    return DLB_SUCCESS;
+        add_event(MONITOR_REGION,0);
+        error = DLB_SUCCESS;
+    } else {
+        error = DLB_NOUPDT;
+    }
+
+    return error;
 }
 
 int monitoring_region_report(dlb_monitor_t *monitor) {

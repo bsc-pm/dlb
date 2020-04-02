@@ -108,6 +108,13 @@ int main(int argc, char *argv[]) {
     assert( last_elapsed_measurement > 0 );
     assert( last_elapsed_measurement * NUM_MEASUREMENTS/10 < monitor->elapsed_time );
 
+    /* Test invalid start/stop call order */
+    assert( monitoring_region_stop(monitor) == DLB_NOUPDT );
+    assert( monitoring_region_start(monitor) == DLB_SUCCESS );
+    assert( monitoring_region_start(monitor) == DLB_NOUPDT );
+    assert( monitoring_region_stop(monitor) == DLB_SUCCESS );
+    assert( monitoring_region_stop(monitor) == DLB_NOUPDT );
+
     /* Test nested regions */
     dlb_monitor_t *monitor1 = monitoring_region_register("Test nested 1");
     dlb_monitor_t *monitor2 = monitoring_region_register("Test nested 2");
@@ -133,7 +140,7 @@ int main(int argc, char *argv[]) {
     assert( monitor1->elapsed_time > monitor2->elapsed_time );
     assert( monitor2->elapsed_time > monitor3->elapsed_time );
 
-    /* Test monitor register with reapeated or NULL names */
+    /* Test monitor register with repeated or NULL names */
     dlb_monitor_t *monitor4 = monitoring_region_register("Test nested 3");
     assert( monitor4 == monitor3 );
     dlb_monitor_t *monitor5 = monitoring_region_register(NULL);

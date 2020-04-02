@@ -65,7 +65,9 @@ int main(int argc, char **argv) {
     assert( monitor2 != NULL );
 
     assert( DLB_MonitoringRegionStart(monitor2) == DLB_SUCCESS );
+    assert( DLB_MonitoringRegionStart(monitor2) == DLB_NOUPDT );
     assert( DLB_MonitoringRegionStop(monitor2) == DLB_SUCCESS );
+    assert( DLB_MonitoringRegionStop(monitor2) == DLB_NOUPDT );
     assert( DLB_MonitoringRegionReset(monitor2) == DLB_SUCCESS );
     assert( DLB_MonitoringRegionReport(monitor2) == DLB_SUCCESS );
 
