@@ -748,10 +748,10 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
      *  - Some owned CPU is not guested by pid
      *  - Timestamp of last unsuccessful borrow is older than last CPU lent
      */
-    if (ncpus != 0 && last_borrow != NULL) {
+    if (last_borrow != NULL) {
         bool try_acquire = false;
         // Iterate owned CPUs only
-        for (i=0; ncpus>0 && i<node_size; ++i) {
+        for (i=0; i<node_size; ++i) {
             int cpuid = cpus_priority_array[i];
             cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
             if (cpuinfo->owner != pid) break;
@@ -773,70 +773,61 @@ int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priori
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
     {
-        if (ncpus == 0) {
-            /* AcquireCPUs(0) has a special meaning of removing any previous request */
-            if (shdata->queues_enabled) {
-                queue_proc_reqs_remove(&shdata->proc_requests, pid);
+        /* Note: cpus_priority_array always have owned CPUs first so we split the
+         * algorithm in two loops with different body for owned and non-owned CPUs
+         */
+
+        /* Acquire owned CPUs following the priority of cpus_priority_array */
+        for (i=0; ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            /* Break if cpu array does not contain more valid CPU ids */
+            if (cpuid == -1) break;
+            /* Go to next loop if cpu array does not contain owned CPUs */
+            if (shdata->node_info[cpuid].owner != pid) break;
+            /* Skip CPU if state is BUSY (it's either guested or already reclaimed) */
+            if (shdata->node_info[cpuid].state == CPU_BUSY) continue;
+
+            int local_error = acquire_cpu(pid, cpuid,
+                    &new_guests[cpuid], &victims[cpuid]);
+            if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
+                --ncpus;
+                if (error != DLB_NOTED) error = local_error;
             }
-            error = DLB_SUCCESS;
-        } else {
+        }
 
-            /* Note: cpus_priority_array always have owned CPUs first so we split the
-             * algorithm in two loops with different body for owned and non-owned CPUs
-             */
+        /* Borrow non-owned CPUs following the priority of cpus_priority_array */
+        for (;ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            /* Break if cpu array does not contain more valid CPU ids */
+            if (cpuid == -1) break;
 
-            /* Acquire owned CPUs following the priority of cpus_priority_array */
-            for (i=0; ncpus>0 && i<node_size; ++i) {
+            int local_error = borrow_cpu(pid, cpuid, &new_guests[cpuid]);
+            if (local_error == DLB_SUCCESS) {
+                --ncpus;
+                if (error != DLB_NOTED) error = local_error;
+            }
+        }
+
+        /* Add global petition for remaining CPUs if needed */
+        if (ncpus > 0 && shdata->queues_enabled) {
+            /* Construct a mask of allowed CPUs */
+            cpu_set_t allowed;
+            CPU_ZERO(&allowed);
+            for (i=0; i<node_size; ++i) {
                 int cpuid = cpus_priority_array[i];
-                /* Break if cpu array does not contain more valid CPU ids */
-                if (cpuid == -1) break;
-                /* Go to next loop if cpu array does not contain owned CPUs */
-                if (shdata->node_info[cpuid].owner != pid) break;
-                /* Skip CPU if state is BUSY (it's either guested or already reclaimed) */
-                if (shdata->node_info[cpuid].state == CPU_BUSY) continue;
-
-                int local_error = acquire_cpu(pid, cpuid,
-                        &new_guests[cpuid], &victims[cpuid]);
-                if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
-                    --ncpus;
-                    if (error != DLB_NOTED) error = local_error;
+                if (cpuid != -1) {
+                    CPU_SET(cpuid, &allowed);
                 }
             }
 
-            /* Borrow non-owned CPUs following the priority of cpus_priority_array */
-            for (;ncpus>0 && i<node_size; ++i) {
-                int cpuid = cpus_priority_array[i];
-                /* Break if cpu array does not contain more valid CPU ids */
-                if (cpuid == -1) break;
+            /* Enqueue request */
+            verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
+            error = queue_proc_reqs_push(&shdata->proc_requests, pid, ncpus, &allowed);
+        }
 
-                int local_error = borrow_cpu(pid, cpuid, &new_guests[cpuid]);
-                if (local_error == DLB_SUCCESS) {
-                    --ncpus;
-                    if (error != DLB_NOTED) error = local_error;
-                }
-            }
-
-            /* Add global petition for remaining CPUs if needed */
-            if (ncpus > 0 && shdata->queues_enabled) {
-                /* Construct a mask of allowed CPUs */
-                cpu_set_t allowed;
-                CPU_ZERO(&allowed);
-                for (i=0; i<node_size; ++i) {
-                    int cpuid = cpus_priority_array[i];
-                    if (cpuid != -1) {
-                        CPU_SET(cpuid, &allowed);
-                    }
-                }
-
-                /* Enqueue request */
-                verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
-                error = queue_proc_reqs_push(&shdata->proc_requests, pid, ncpus, &allowed);
-            }
-
-            /* Update timestamp if borrow did not succeed */
-            if (last_borrow != NULL && error != DLB_SUCCESS && error != DLB_NOTED) {
-                *last_borrow = get_time_in_ns();
-            }
+        /* Update timestamp if borrow did not succeed */
+        if (last_borrow != NULL && error != DLB_SUCCESS && error != DLB_NOTED) {
+            *last_borrow = get_time_in_ns();
         }
     }
     shmem_unlock(shm_handler);
@@ -1397,6 +1388,18 @@ void shmem_cpuinfo__enable_request_queues(void) {
 
     /* Enable asynchronous request queues */
     shdata->queues_enabled = true;
+}
+
+void shmem_cpuinfo__remove_requests(pid_t pid) {
+    if (shm_handler == NULL) return;
+    shmem_lock(shm_handler);
+    {
+        /* Remove any previous request for the specific pid */
+        if (shdata->queues_enabled) {
+            queue_proc_reqs_remove(&shdata->proc_requests, pid);
+        }
+    }
+    shmem_unlock(shm_handler);
 }
 
 void shmem_cpuinfo__print_cpu_times(void){

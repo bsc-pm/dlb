@@ -165,10 +165,7 @@ int main( int argc, char **argv ) {
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
         // Process 1 wants to cancel previous request
-        assert( shmem_cpuinfo__acquire_cpus(p1_pid, PRIO_ANY, NULL, last_borrow, 0,
-                    new_guests, victims) == DLB_SUCCESS );
-        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        shmem_cpuinfo__remove_requests(p1_pid);
 
         // Process 1 releases CPU 3
         assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guests[0]) == DLB_SUCCESS );

@@ -425,30 +425,39 @@ int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    pid_t new_guests[node_size];
-    pid_t victims[node_size];
-    bool async = spd->options.mode == MODE_ASYNC;
-    int64_t *last_borrow = async ? NULL : &((lewi_info_t*)spd->lewi_info)->last_borrow;
-    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
-    int error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.lewi_affinity,
-            cpus_priority_array, last_borrow, ncpus, new_guests, victims);
-    if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            pid_t victim = victims[cpuid];
-            if (async) {
-                if (victim > 0) {
-                    /* If the CPU is guested, just disable visitor */
-                    shmem_async_disable_cpu(victim, cpuid);
-                } else if (new_guest == spd->id) {
-                    /* Only enable if the CPU is free */
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            } else {
-                if (new_guest == spd->id) {
-                    /* Oversubscribe even if the CPU is guested */
-                    enable_cpu(&spd->pm, cpuid);
+    int error = DLB_NOUPDT;
+
+    if (ncpus == 0) {
+        /* AcquireCPUs(0) has a special meaning of removing any previous request */
+        shmem_cpuinfo__remove_requests(spd->id);
+        error = DLB_SUCCESS;
+    } else if (ncpus > 0) {
+        /* Acquire from shared memory */
+        pid_t new_guests[node_size];
+        pid_t victims[node_size];
+        lewi_info_t *lewi_info = spd->lewi_info;
+        bool async = spd->options.mode == MODE_ASYNC;
+        int64_t *last_borrow = async ? NULL : &lewi_info->last_borrow;
+        error = shmem_cpuinfo__acquire_cpus(spd->id, spd->options.lewi_affinity,
+                lewi_info->cpus_priority_array, last_borrow, ncpus, new_guests, victims);
+        if (error == DLB_SUCCESS || error == DLB_NOTED) {
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                pid_t new_guest = new_guests[cpuid];
+                pid_t victim = victims[cpuid];
+                if (async) {
+                    if (victim > 0) {
+                        /* If the CPU is guested, just disable visitor */
+                        shmem_async_disable_cpu(victim, cpuid);
+                    } else if (new_guest == spd->id) {
+                        /* Only enable if the CPU is free */
+                        shmem_async_enable_cpu(new_guest, cpuid);
+                    }
+                } else {
+                    if (new_guest == spd->id) {
+                        /* Oversubscribe even if the CPU is guested */
+                        enable_cpu(&spd->pm, cpuid);
+                    }
                 }
             }
         }
