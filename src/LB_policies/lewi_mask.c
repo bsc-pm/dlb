@@ -204,11 +204,23 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter)
         CPU_CLR(cpuid,  &lewi_info->in_mpi_cpus);
 
         if (CPU_ISSET(cpuid, &spd->process_mask)) {
-            /* Acquire CPU only if it is owned */
-            error = lewi_mask_AcquireCpu(spd, cpuid);
+            /* Acquire only if the CPU is owned, but do not call any enable CPU callback */
+            pid_t new_guest;
+            pid_t victim;
+            error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &new_guest, &victim);
+            if (error == DLB_NOTED) {
+                if (spd->options.mode == MODE_ASYNC) {
+                    if (victim > 0) {
+                        /* If the CPU is guested, just disable visitor */
+                        shmem_async_disable_cpu(victim, cpuid);
+                    }
+                }
+            }
         }
         else {
-            error = lewi_mask_BorrowCpu(spd, cpuid);
+            /* Otherwise, Borrow CPU, but also ignoring the enable callbacks */
+            pid_t new_guest;
+            error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &new_guest);
             if (error != DLB_SUCCESS) {
                 /* Annotate the CPU as pending to bypass the shared memory for the next query */
                 CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
