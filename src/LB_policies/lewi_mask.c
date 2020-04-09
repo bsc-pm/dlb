@@ -39,7 +39,8 @@ typedef struct LeWI_mask_info {
     int64_t last_borrow;
     int *cpus_priority_array;
     int max_parallelism;
-    cpu_set_t pending_reclaimed_cpus;
+    cpu_set_t pending_reclaimed_cpus;       /* CPUs that become reclaimed after an MPI */
+    cpu_set_t in_mpi_cpus;                  /* CPUs inside an MPI call */
 } lewi_info_t;
 
 
@@ -55,6 +56,7 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
     lewi_mask_UpdateOwnershipInfo(spd, &spd->process_mask);
     lewi_info->max_parallelism = 0;
     CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
+    CPU_ZERO(&lewi_info->in_mpi_cpus);
 
     /* Enable request queues only in async mode */
     if (spd->options.mode == MODE_ASYNC) {
@@ -176,7 +178,16 @@ int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
     if (spd->options.lewi_mpi) {
-        error = lewi_mask_LendCpu(spd, sched_getcpu());
+        int cpuid = sched_getcpu();
+        lewi_info_t *lewi_info = spd->lewi_info;
+
+        /* Annotate current CPU to in_MPI cpuset */
+        fatal_cond(CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
+                "CPU %d already into blocking call", cpuid);
+        CPU_SET(cpuid,  &lewi_info->in_mpi_cpus);
+
+        /* Lend the current CPU */
+        error = lewi_mask_LendCpu(spd, cpuid);
     }
     return error;
 }
@@ -185,6 +196,12 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter)
     int error = DLB_NOUPDT;
     if (spd->options.lewi_mpi) {
         int cpuid = sched_getcpu();
+        lewi_info_t *lewi_info = spd->lewi_info;
+
+        /* Clear current CPU from in_MPI cpuset */
+        fatal_cond(!CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
+                "CPU %d is not into blocking call", cpuid);
+        CPU_CLR(cpuid,  &lewi_info->in_mpi_cpus);
 
         if (CPU_ISSET(cpuid, &spd->process_mask)) {
             /* Acquire CPU only if it is owned */
@@ -194,7 +211,6 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter)
             error = lewi_mask_BorrowCpu(spd, cpuid);
             if (error != DLB_SUCCESS) {
                 /* Annotate the CPU as pending to bypass the shared memory for the next query */
-                lewi_info_t *lewi_info = spd->lewi_info;
                 CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
 
                 /* Disable CPU if async mode */
