@@ -185,17 +185,22 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter)
     int error = DLB_NOUPDT;
     if (spd->options.lewi_mpi) {
         int cpuid = sched_getcpu();
-        error = lewi_mask_AcquireCpu(spd, sched_getcpu());
 
-        /* If the CPU cannot be succesfully reclaimed */
-        if (error == DLB_NOUPDT && !CPU_ISSET(cpuid, &spd->process_mask)) {
-            /* Annotate the CPU as pending to bypass the shared memory for the next query */
-            lewi_info_t *lewi_info = spd->lewi_info;
-            CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
+        if (CPU_ISSET(cpuid, &spd->process_mask)) {
+            /* Acquire CPU only if it is owned */
+            error = lewi_mask_AcquireCpu(spd, cpuid);
+        }
+        else {
+            error = lewi_mask_BorrowCpu(spd, cpuid);
+            if (error != DLB_SUCCESS) {
+                /* Annotate the CPU as pending to bypass the shared memory for the next query */
+                lewi_info_t *lewi_info = spd->lewi_info;
+                CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
 
-            /* Invoke disable callback, only if polling */
-            if (spd->options.mode == MODE_POLLING) {
-                disable_cpu(&spd->pm, cpuid);
+                /* Disable CPU if async mode */
+                if (spd->options.mode == MODE_ASYNC) {
+                    shmem_async_disable_cpu(spd->id, cpuid);
+                }
             }
         }
     }
