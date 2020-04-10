@@ -370,6 +370,151 @@ int main( int argc, char **argv ) {
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
     }
 
+    /* Into / Out of Blocking Calls */
+    {
+        // Option --lewi-mpi not yet enabled
+        assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_NOUPDT );
+        assert( lewi_mask_OutOfBlockingCall(&spd1, 0) == DLB_NOUPDT );
+
+        // These functions get the CPU id from sched_getcpu()
+        // Force binding to CPU 0 or skip test
+        const cpu_set_t mask = { .__bits = {0x1} };       /* [0001] */
+        sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+        if (sched_getcpu() == 0) {
+
+            // Enable --lewi-mpi
+            spd1.options.lewi_mpi = true;
+            spd2.options.lewi_mpi = true;
+
+            /* No conflict */
+            {
+                // Subprocess 1 enters a blocking call
+                assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_SUCCESS );
+
+                // Subprocess 2 may borrow CPU 0
+                assert( lewi_mask_BorrowCpu(&spd2, 0) == DLB_SUCCESS );
+                assert_loop( CPU_COUNT(&sp2_mask) == 3 && CPU_ISSET(0, &sp2_mask) );
+
+                // Subprocess 2 lends CPU 0
+                CPU_CLR(0, &sp2_mask);
+                assert( lewi_mask_LendCpu(&spd2, 0) == DLB_SUCCESS );
+
+                // Subprocess 1 leaves the blocking call
+                assert( lewi_mask_OutOfBlockingCall(&spd1, 0) == DLB_SUCCESS );
+            }
+
+            /* Subprocess 1 reclaims */
+            {
+                // Subprocess 1 enters a blocking call
+                assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_SUCCESS );
+
+                // Subprocess 2 may borrow CPU 0
+                assert( lewi_mask_BorrowCpu(&spd2, 0) == DLB_SUCCESS );
+                assert_loop( CPU_COUNT(&sp2_mask) == 3 && CPU_ISSET(0, &sp2_mask) );
+
+                // Subprocess 1 leaves the blocking call, CPU 0 is reclaimed
+                assert( lewi_mask_OutOfBlockingCall(&spd1, 0) == DLB_NOTED );
+
+                // Subprocesses 2 needs to poll
+                if (mode == MODE_POLLING) {
+                    assert( lewi_mask_CheckCpuAvailability(&spd1, 0) == DLB_NOTED );
+                    assert( lewi_mask_ReturnCpu(&spd2, 0) == DLB_SUCCESS );
+                    assert( lewi_mask_CheckCpuAvailability(&spd1, 0) == DLB_SUCCESS );
+                }
+
+                // Both SPs should have their own CPUs
+                assert_loop( CPU_COUNT(&sp1_mask) == 2
+                        && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
+                assert_loop( CPU_COUNT(&sp2_mask) == 2
+                        && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+
+                // Subprocesses 2 removes the request over CPU 0
+                if (mode == MODE_ASYNC) {
+                    assert( lewi_mask_LendCpu(&spd2, 0) == DLB_SUCCESS );
+                }
+            }
+
+            /* MPI with a non-owned CPU, no conflict */
+            {
+                // Subprocess 1 lends CPU 0
+                CPU_CLR(0, &sp1_mask);
+                assert( lewi_mask_LendCpu(&spd1, 0) == DLB_SUCCESS );
+
+                // Subprocess 2 borrows CPU 0
+                assert( lewi_mask_BorrowCpu(&spd2, 0) == DLB_SUCCESS );
+                assert_loop( CPU_COUNT(&sp2_mask) == 3 && CPU_ISSET(0, &sp2_mask) );
+
+                // Subprocess 2 enters a blocking call (with CPU 0)
+                assert( lewi_mask_IntoBlockingCall(&spd2) == DLB_SUCCESS );
+
+                // Subprocess 1 may borrow CPU 0
+                assert( lewi_mask_BorrowCpu(&spd1, 0) == DLB_SUCCESS );
+                assert_loop( CPU_COUNT(&sp1_mask) == 2 && CPU_ISSET(0, &sp1_mask) );
+
+                // Subprocess 1 lends CPU 0
+                CPU_CLR(0, &sp1_mask);
+                assert( lewi_mask_LendCpu(&spd1, 0) == DLB_SUCCESS );
+
+                // Subprocess 2 leaves the blocking call
+                assert( lewi_mask_OutOfBlockingCall(&spd2, 0) == DLB_SUCCESS );
+
+                // Subprocess 2 lends CPU 0
+                CPU_CLR(0, &sp2_mask);
+                assert( lewi_mask_LendCpu(&spd2, 0) == DLB_SUCCESS );
+
+                // Subprocess 1 acquires CPU 0
+                assert( lewi_mask_AcquireCpu(&spd1, 0) == DLB_SUCCESS );
+
+                // Both SPs should have their own CPUs
+                assert_loop( CPU_COUNT(&sp1_mask) == 2
+                        && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
+                assert_loop( CPU_COUNT(&sp2_mask) == 2
+                        && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+            }
+
+            /* MPI with a non-owned CPU, Subprocess 1 reclaims */
+            {
+                // Subprocess 1 lends CPU 0
+                CPU_CLR(0, &sp1_mask);
+                assert( lewi_mask_LendCpu(&spd1, 0) == DLB_SUCCESS );
+
+                // Subprocess 2 borrows CPU 0
+                assert( lewi_mask_BorrowCpu(&spd2, 0) == DLB_SUCCESS );
+                assert_loop( CPU_COUNT(&sp2_mask) == 3 && CPU_ISSET(0, &sp2_mask) );
+
+                // Subprocess 2 enters a blocking call (with CPU 0)
+                assert( lewi_mask_IntoBlockingCall(&spd2) == DLB_SUCCESS );
+
+                // Subprocess 1 acquires CPU 0
+                assert( lewi_mask_AcquireCpu(&spd1, 0) == DLB_SUCCESS );
+                assert_loop( CPU_COUNT(&sp1_mask) == 2 && CPU_ISSET(0, &sp1_mask) );
+
+                // Subprocess 2 leaves the blocking call
+                assert( lewi_mask_OutOfBlockingCall(&spd2, 0) == DLB_NOUPDT );
+
+                // Subprocesses 2 needs to poll
+                if (mode == MODE_POLLING) {
+                    assert_loop( CPU_COUNT(&sp2_mask) == 3 && CPU_ISSET(0, &sp2_mask) );
+                    assert( lewi_mask_ReturnCpu(&spd2, 0) == DLB_SUCCESS );
+                    assert_loop( CPU_COUNT(&sp2_mask) == 2 && !CPU_ISSET(0, &sp2_mask) );
+                }
+
+                // Both SPs should have their own CPUs
+                assert_loop( CPU_COUNT(&sp1_mask) == 2
+                        && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
+                assert_loop( CPU_COUNT(&sp2_mask) == 2
+                        && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+
+                // Subprocesses 2 removes the request over CPU 0
+                if (mode == MODE_ASYNC) {
+                    assert( lewi_mask_LendCpu(&spd2, 0) == DLB_SUCCESS );
+                }
+            }
+        } else {
+            printf("Skipping Into / Out of Blocking Calls tests\n");
+        }
+    }
+
     // Finalize subprocess 1
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key) == DLB_SUCCESS );

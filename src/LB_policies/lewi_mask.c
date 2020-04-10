@@ -39,6 +39,8 @@ typedef struct LeWI_mask_info {
     int64_t last_borrow;
     int *cpus_priority_array;
     int max_parallelism;
+    cpu_set_t pending_reclaimed_cpus;       /* CPUs that become reclaimed after an MPI */
+    cpu_set_t in_mpi_cpus;                  /* CPUs inside an MPI call */
 } lewi_info_t;
 
 
@@ -53,6 +55,8 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
     lewi_info->cpus_priority_array = malloc(node_size*sizeof(int));
     lewi_mask_UpdateOwnershipInfo(spd, &spd->process_mask);
     lewi_info->max_parallelism = 0;
+    CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
+    CPU_ZERO(&lewi_info->in_mpi_cpus);
 
     /* Enable request queues only in async mode */
     if (spd->options.mode == MODE_ASYNC) {
@@ -174,7 +178,16 @@ int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
     if (spd->options.lewi_mpi) {
-        error = lewi_mask_LendCpu(spd, sched_getcpu());
+        int cpuid = sched_getcpu();
+        lewi_info_t *lewi_info = spd->lewi_info;
+
+        /* Annotate current CPU to in_MPI cpuset */
+        fatal_cond(CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
+                "CPU %d already into blocking call", cpuid);
+        CPU_SET(cpuid,  &lewi_info->in_mpi_cpus);
+
+        /* Lend the current CPU */
+        error = lewi_mask_LendCpu(spd, cpuid);
     }
     return error;
 }
@@ -182,7 +195,42 @@ int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     int error = DLB_NOUPDT;
     if (spd->options.lewi_mpi) {
-        error = lewi_mask_AcquireCpu(spd, sched_getcpu());
+        int cpuid = sched_getcpu();
+        lewi_info_t *lewi_info = spd->lewi_info;
+
+        /* Clear current CPU from in_MPI cpuset */
+        fatal_cond(!CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
+                "CPU %d is not into blocking call", cpuid);
+        CPU_CLR(cpuid,  &lewi_info->in_mpi_cpus);
+
+        if (CPU_ISSET(cpuid, &spd->process_mask)) {
+            /* Acquire only if the CPU is owned, but do not call any enable CPU callback */
+            pid_t new_guest;
+            pid_t victim;
+            error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &new_guest, &victim);
+            if (error == DLB_NOTED) {
+                if (spd->options.mode == MODE_ASYNC) {
+                    if (victim > 0) {
+                        /* If the CPU is guested, just disable visitor */
+                        shmem_async_disable_cpu(victim, cpuid);
+                    }
+                }
+            }
+        }
+        else {
+            /* Otherwise, Borrow CPU, but also ignoring the enable callbacks */
+            pid_t new_guest;
+            error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &new_guest);
+            if (error != DLB_SUCCESS) {
+                /* Annotate the CPU as pending to bypass the shared memory for the next query */
+                CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
+
+                /* Disable CPU if async mode */
+                if (spd->options.mode == MODE_ASYNC) {
+                    shmem_async_disable_cpu(spd->id, cpuid);
+                }
+            }
+        }
     }
     return error;
 }
@@ -205,6 +253,10 @@ int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
         if (spd->options.mode == MODE_ASYNC && new_guest > 0) {
             shmem_async_enable_cpu(new_guest, cpuid);
         }
+
+        /* Clear possible pending reclaimed cpus */
+        lewi_info_t *lewi_info = spd->lewi_info;
+        CPU_CLR(cpuid, &lewi_info->pending_reclaimed_cpus);
     }
     return error;
 }
@@ -222,6 +274,11 @@ int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *m
                 }
             }
         }
+
+        /* Clear possible pending reclaimed cpus */
+        lewi_info_t *lewi_info = spd->lewi_info;
+        mu_substract(&lewi_info->pending_reclaimed_cpus,
+                &lewi_info->pending_reclaimed_cpus, mask);
     }
     return error;
 }
@@ -524,15 +581,26 @@ int lewi_mask_Return(const subprocess_descriptor_t *spd) {
 
     pid_t new_guests[node_size];
     int error = shmem_cpuinfo__return_all(spd->id, new_guests);
-    if (error == DLB_SUCCESS || error == DLB_ERR_REQST) {
-        int cpuid;
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        pid_t new_guest = new_guests[cpuid];
+        if (new_guest >= 0 && new_guest != spd->id) {
+            disable_cpu(&spd->pm, cpuid);
+        }
+    }
+
+    /* Check possible pending reclaimed cpus */
+    lewi_info_t *lewi_info = spd->lewi_info;
+    if (CPU_COUNT(&lewi_info->pending_reclaimed_cpus) > 0) {
         for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            if (new_guest >= 0 && new_guest != spd->id) {
+            if (CPU_ISSET(cpuid, &lewi_info->pending_reclaimed_cpus)) {
                 disable_cpu(&spd->pm, cpuid);
             }
         }
+        CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
+        error = DLB_SUCCESS;
     }
+
     return error;
 }
 
@@ -549,6 +617,14 @@ int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
                 disable_cpu(&spd->pm, cpuid);
             }
         }
+    } else if (error == DLB_ERR_PERM) {
+        /* Check possible pending reclaimed cpus */
+        lewi_info_t *lewi_info = spd->lewi_info;
+        if (CPU_ISSET(cpuid, &lewi_info->pending_reclaimed_cpus)) {
+            CPU_CLR(cpuid, &lewi_info->pending_reclaimed_cpus);
+            disable_cpu(&spd->pm, cpuid);
+            error = DLB_SUCCESS;
+        }
     }
     return error;
 }
@@ -556,22 +632,36 @@ int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
 int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     pid_t new_guests[node_size];
     int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, new_guests);
-    if (error == DLB_SUCCESS || error == DLB_ERR_REQST) {
-        bool async = spd->options.mode == MODE_ASYNC;
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            if (async) {
-                if (new_guest > 0) {
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            } else {
-                if (new_guest >= 0 && new_guest != spd->id) {
-                    disable_cpu(&spd->pm, cpuid);
-                }
+    bool async = spd->options.mode == MODE_ASYNC;
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        pid_t new_guest = new_guests[cpuid];
+        if (async) {
+            if (new_guest > 0) {
+                shmem_async_enable_cpu(new_guest, cpuid);
+            }
+        } else {
+            if (new_guest >= 0 && new_guest != spd->id) {
+                disable_cpu(&spd->pm, cpuid);
             }
         }
     }
+
+    /* Check possible pending reclaimed cpus */
+    lewi_info_t *lewi_info = spd->lewi_info;
+    if (CPU_COUNT(&lewi_info->pending_reclaimed_cpus) > 0) {
+        cpu_set_t cpus_to_return;
+        CPU_AND(&cpus_to_return, &lewi_info->pending_reclaimed_cpus, mask);
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, &cpus_to_return)) {
+                disable_cpu(&spd->pm, cpuid);
+            }
+        }
+        mu_substract(&lewi_info->pending_reclaimed_cpus,
+                &lewi_info->pending_reclaimed_cpus, &cpus_to_return);
+        error = DLB_SUCCESS;
+    }
+
     return error;
 }
 
