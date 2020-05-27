@@ -73,6 +73,13 @@ void instrument_event(unsigned type, long long value, instrument_action_t action
                     break;
             }
             break;
+        case IDLE_CPUS_EVENT:
+        case GIVE_CPUS_EVENT:
+        case WANT_CPUS_EVENT:
+            if (instrument & INST_CPUS) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
         case REBIND_EVENT:
         case BINDINGS_EVENT:
             if (instrument & INST_OMPT) {
@@ -146,6 +153,16 @@ void init_tracing(const options_t *options) {
         type=IDLE_CPUS_EVENT;
         n_values=0;
         Extrae_define_event_type(&type, "DLB Idle cpus", &n_values, NULL, NULL);
+
+        //GIVE_CPUS_EVENT
+        type=GIVE_CPUS_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB Give Number of CPUs", &n_values, NULL, NULL);
+
+        //WANT_CPUS_EVENT
+        type=WANT_CPUS_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB Want Number of CPUs", &n_values, NULL, NULL);
 
         //ITERATION_EVENT
         type=ITERATION_EVENT;

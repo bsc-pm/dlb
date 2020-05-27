@@ -143,11 +143,11 @@ const char* get_verbose_fmt_choices(void) {
 
 /* instrument_events_t */
 static const instrument_events_t instrument_events_values[] =
-    {INST_NONE, INST_ALL, INST_MPI, INST_LEWI, INST_DROM, INST_TALP, INST_BARR, INST_OMPT};
+    {INST_NONE, INST_ALL, INST_MPI, INST_LEWI, INST_DROM, INST_TALP, INST_BARR, INST_OMPT, INST_CPUS};
 static const char* const instrument_events_choices[] =
-    {"none", "all", "mpi", "lewi", "drom", "talp", "barrier", "ompt"};
+    {"none", "all", "mpi", "lewi", "drom", "talp", "barrier", "ompt", "cpus"};
 static const char instrument_events_choices_str[] =
-    "none:all:mpi:lewi:drom:talp:barrier:ompt";
+    "none:all:mpi:lewi:drom:talp:barrier:ompt:cpus";
 enum { instrument_events_nelems = sizeof(instrument_events_values) / sizeof(instrument_events_values[0]) };
 
 int parse_instrument_events(const char *str, instrument_events_t *value) {

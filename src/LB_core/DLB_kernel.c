@@ -317,7 +317,9 @@ int lend(const subprocess_descriptor_t *spd) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
+        instrument_event(GIVE_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
         error = spd->lb_funcs.lend(spd);
+        instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
     return error;
@@ -329,10 +331,12 @@ int lend_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
+        instrument_event(GIVE_CPUS_EVENT, 1, EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpu(spd, cpuid);
         if (error == DLB_SUCCESS && spd->options.talp) {
             talp_cpu_disable(cpuid);
         }
+        instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
     return error;
@@ -344,7 +348,9 @@ int lend_cpus(const subprocess_descriptor_t *spd, int ncpus) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
+        instrument_event(GIVE_CPUS_EVENT, ncpus, EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpus(spd, ncpus);
+        instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
     return error;
@@ -356,7 +362,9 @@ int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
+        instrument_event(GIVE_CPUS_EVENT, CPU_COUNT(mask), EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpu_mask(spd, mask);
+        instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
     return error;
@@ -371,7 +379,9 @@ int reclaim(const subprocess_descriptor_t *spd) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
         error = spd->lb_funcs.reclaim(spd);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_END);
     }
     return error;
@@ -383,7 +393,9 @@ int reclaim_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, 1, EVENT_BEGIN);
         error = spd->lb_funcs.reclaim_cpu(spd, cpuid);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_END);
     }
     return error;
@@ -395,7 +407,9 @@ int reclaim_cpus(const subprocess_descriptor_t *spd, int ncpus) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, ncpus, EVENT_BEGIN);
         error = spd->lb_funcs.reclaim_cpus(spd, ncpus);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_END);
     }
     return error;
@@ -407,7 +421,9 @@ int reclaim_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) 
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, CPU_COUNT(mask), EVENT_BEGIN);
         error = spd->lb_funcs.reclaim_cpu_mask(spd, mask);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_END);
     }
     return error;
@@ -422,7 +438,9 @@ int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, 1, EVENT_BEGIN);
         error = spd->lb_funcs.acquire_cpu(spd, cpuid);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_END);
         if (error == DLB_SUCCESS && spd->options.talp)
             talp_cpu_enable(cpuid);
@@ -436,7 +454,9 @@ int acquire_cpus(const subprocess_descriptor_t *spd, int ncpus) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, ncpus, EVENT_BEGIN);
         error = spd->lb_funcs.acquire_cpus(spd, ncpus);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_END);
     }
     return error;
@@ -448,7 +468,9 @@ int acquire_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) 
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, CPU_COUNT(mask), EVENT_BEGIN);
         error = spd->lb_funcs.acquire_cpu_mask(spd, mask);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_END);
     }
     return error;
@@ -463,7 +485,9 @@ int borrow(const subprocess_descriptor_t *spd) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
         error = spd->lb_funcs.borrow(spd);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_END);
     }
     return error;
@@ -475,7 +499,9 @@ int borrow_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, 1, EVENT_BEGIN);
         error = spd->lb_funcs.borrow_cpu(spd, cpuid);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_END);
     }
     return error;
@@ -487,7 +513,9 @@ int borrow_cpus(const subprocess_descriptor_t *spd, int ncpus) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, ncpus, EVENT_BEGIN);
         error = spd->lb_funcs.borrow_cpus(spd, ncpus);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_END);
     }
     return error;
@@ -499,7 +527,9 @@ int borrow_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
+        instrument_event(WANT_CPUS_EVENT, CPU_COUNT(mask), EVENT_BEGIN);
         error = spd->lb_funcs.borrow_cpu_mask(spd, mask);
+        instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_END);
     }
     return error;
