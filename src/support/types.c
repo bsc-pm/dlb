@@ -141,6 +141,60 @@ const char* get_verbose_fmt_choices(void) {
 }
 
 
+/* instrument_events_t */
+static const instrument_events_t instrument_events_values[] =
+    {INST_NONE, INST_ALL, INST_MPI, INST_LEWI, INST_DROM, INST_TALP, INST_BARR, INST_OMPT, INST_CPUS};
+static const char* const instrument_events_choices[] =
+    {"none", "all", "mpi", "lewi", "drom", "talp", "barrier", "ompt", "cpus"};
+static const char instrument_events_choices_str[] =
+    "none:all:mpi:lewi:drom:talp:barrier:ompt:cpus";
+enum { instrument_events_nelems = sizeof(instrument_events_values) / sizeof(instrument_events_values[0]) };
+
+int parse_instrument_events(const char *str, instrument_events_t *value) {
+    *value = INST_NONE;
+    int i;
+    for (i=0; i<instrument_events_nelems; ++i) {
+        if (strstr(str, instrument_events_choices[i]) != NULL) {
+            if (instrument_events_values[i] == INST_NONE) {
+                *value = INST_NONE;
+                break;
+            }
+            *value |= instrument_events_values[i];
+        }
+    }
+    return DLB_SUCCESS;
+}
+
+const char* instrument_events_tostr(instrument_events_t value) {
+    // particular cases
+    if (value == INST_NONE) {
+        return "none";
+    }
+    if (value == INST_ALL) {
+        return "all";
+    }
+
+    static char str[sizeof(instrument_events_choices_str)] = "";
+    char *p = str;
+    int i;
+    for (i=2; i<instrument_events_nelems; ++i) {
+        if (value & instrument_events_values[i]) {
+            if (p!=str) {
+                *p = ':';
+                ++p;
+                *p = '\0';
+            }
+            p += sprintf(p, "%s", instrument_events_choices[i]);
+        }
+    }
+    return str;
+}
+
+const char* get_instrument_events_choices(void) {
+    return instrument_events_choices_str;
+}
+
+
 /* debug_opts_t */
 static const debug_opts_t debug_opts_values[] =
     {DBG_RETURNSTOLEN, DBG_WERROR, DBG_LPOSTMORTEM};

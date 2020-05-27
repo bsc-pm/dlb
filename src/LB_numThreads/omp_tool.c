@@ -78,13 +78,13 @@ static void cb_implicit_task(
             CPU_ZERO(&thread_mask);
             CPU_SET(cpuid, &thread_mask);
             pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-            add_event(REBIND_EVENT, cpuid+1);
+            instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
             verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
         }
-        add_event(BINDINGS_EVENT, sched_getcpu()+1);
+        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     } else if (endpoint == ompt_scope_end) {
-        add_event(REBIND_EVENT,   0);
-        add_event(BINDINGS_EVENT, 0);
+        instrument_event(REBIND_EVENT,   0, EVENT_END);
+        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
     }
 }
 

@@ -48,6 +48,18 @@ typedef enum VerboseFormat {
     VBF_TSTAMP  = 1 << 5
 } verbose_fmt_t;
 
+typedef enum InstrumentEvents {
+    INST_NONE   = 0,
+    INST_ALL    = 0xFFFF,
+    INST_MPI    = 1 << 0,
+    INST_LEWI   = 1 << 1,
+    INST_DROM   = 1 << 2,
+    INST_TALP   = 1 << 3,
+    INST_BARR   = 1 << 4,
+    INST_OMPT   = 1 << 5,
+    INST_CPUS   = 1 << 6
+} instrument_events_t;
+
 typedef enum DebugOptions {
     DBG_CLEAR        = 0,
     DBG_RETURNSTOLEN = 1 << 0,
@@ -110,6 +122,11 @@ const char* get_verbose_opts_choices(void);
 int parse_verbose_fmt(const char *str, verbose_fmt_t *value);
 const char* verbose_fmt_tostr(verbose_fmt_t value);
 const char* get_verbose_fmt_choices(void);
+
+/* instrument_events_t */
+int parse_instrument_events(const char *str, instrument_events_t *value);
+const char* instrument_events_tostr(instrument_events_t value);
+const char* get_instrument_events_choices(void);
 
 /* debug_opts_t */
 int parse_debug_opts(const char *str, debug_opts_t *value);

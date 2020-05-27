@@ -46,6 +46,7 @@ typedef enum OptionTypes {
     OPT_STR_T,
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
+    OPT_INST_T,     // instrument_events_t
     OPT_DBG_T,      // debug_opts_t
     OPT_PRIO_T,     // priority_t
     OPT_POL_T,      // policy_t
@@ -172,13 +173,13 @@ static const opts_dict_t options_dictionary[] = {
     {
         .var_name       = "LB_NULL",
         .arg_name       = "--instrument",
-        .default_value  = "yes",
+        .default_value  = "all",
         .description    = OFFSET"Enable Extrae instrumentation. This option requires the\n"
                           OFFSET"instrumented DLB library and the Extrae library. If both\n"
                           OFFSET"conditions are met, DLB will emit events such as the DLB\n"
                           OFFSET"calls, DLB modes, etc.",
         .offset         = offsetof(options_t, instrument),
-        .type           = OPT_BOOL_T,
+        .type           = OPT_INST_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
         .var_name       = "LB_NULL",
@@ -190,6 +191,16 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, instrument_counters),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--instrument-extrae-nthreads",
+        .default_value  = "0",
+        .description    = OFFSET"Invoke Extrae_change_num_threads with the provided parameter\n"
+                          OFFSET"at the start of the execution to pre-allocate a buffer per\n"
+                          OFFSET"thread.",
+        .offset         = offsetof(options_t, instrument_extrae_nthreads),
+        .type           = OPT_INT_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     },
     // LeWI
     {
@@ -330,6 +341,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_verbose_opts(str_value, (verbose_opts_t*)option);
         case(OPT_VBFMT_T):
             return parse_verbose_fmt(str_value, (verbose_fmt_t*)option);
+        case(OPT_INST_T):
+            return parse_instrument_events(str_value, (instrument_events_t*)option);
         case(OPT_DBG_T):
             return parse_debug_opts(str_value, (debug_opts_t*)option);
         case(OPT_PRIO_T):
@@ -365,6 +378,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return verbose_opts_tostr(*(verbose_opts_t*)option);
         case OPT_VBFMT_T:
             return verbose_fmt_tostr(*(verbose_fmt_t*)option);
+        case OPT_INST_T:
+            return instrument_events_tostr(*(instrument_events_t*)option);
         case OPT_DBG_T:
             return debug_opts_tostr(*(debug_opts_t*)option);
         case OPT_PRIO_T:
@@ -646,6 +661,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_VBFMT_T:
                 b += sprintf(b, "{%s}", get_verbose_fmt_choices());
+                break;
+            case OPT_INST_T:
+                b += sprintf(b, "{%s}", get_instrument_events_choices());
                 break;
             case OPT_DBG_T:
                 b += sprintf(b, "{%s}", get_debug_opts_choices());

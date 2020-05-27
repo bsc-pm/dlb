@@ -21,19 +21,85 @@
 
 #include "support/tracing.h"
 #include "support/options.h"
-#include <stdio.h>
+#include "support/debug.h"
 
 // Extrae API calls
 void Extrae_event(unsigned type, long long value) __attribute__((weak));
 void Extrae_eventandcounters(unsigned type, long long value) __attribute__((weak));
 void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalues,
                                long long *values, char **values_description) __attribute__((weak));
+void Extrae_change_num_threads (unsigned n) __attribute__((weak));
 
 static bool tracing_initialized = false;
+static instrument_events_t instrument = INST_NONE;
 
 static void dummy (unsigned type, long long value) {}
 
 static void (*extrae_set_event) (unsigned type, long long value) = dummy;
+
+void instrument_event(unsigned type, long long value, instrument_action_t action) {
+    switch(type) {
+        case RUNTIME_EVENT:
+            switch(value) {
+                case EVENT_INIT:
+                case EVENT_FINALIZE:
+                    if (instrument != INST_NONE) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_INTO_MPI:
+                case EVENT_OUTOF_MPI:
+                    if (instrument & INST_MPI) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_LEND:
+                case EVENT_RECLAIM:
+                case EVENT_ACQUIRE:
+                case EVENT_BORROW:
+                case EVENT_RETURN:
+                    if (instrument & INST_LEWI) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_BARRIER:
+                    if (instrument & INST_BARR) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_POLLDROM:
+                    if (instrument == INST_ALL) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+            }
+            break;
+        case IDLE_CPUS_EVENT:
+        case GIVE_CPUS_EVENT:
+        case WANT_CPUS_EVENT:
+            if (instrument & INST_CPUS) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        case REBIND_EVENT:
+        case BINDINGS_EVENT:
+            if (instrument & INST_OMPT) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        case MONITOR_REGION:
+            if (instrument & INST_TALP) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        default:
+            if (instrument != INST_NONE) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+    }
+}
+
 
 void add_event( unsigned type, long long value ) {
     extrae_set_event( type, value );
@@ -42,8 +108,9 @@ void add_event( unsigned type, long long value ) {
 void init_tracing(const options_t *options) {
     if (tracing_initialized) return;
     tracing_initialized = true;
+    instrument = options->instrument;
 
-    if (options->instrument && Extrae_event &&
+    if (instrument && Extrae_event &&
             Extrae_eventandcounters && Extrae_define_event_type ) {
 
         // Set up function
@@ -88,6 +155,16 @@ void init_tracing(const options_t *options) {
         n_values=0;
         Extrae_define_event_type(&type, "DLB Idle cpus", &n_values, NULL, NULL);
 
+        //GIVE_CPUS_EVENT
+        type=GIVE_CPUS_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB Give Number of CPUs", &n_values, NULL, NULL);
+
+        //WANT_CPUS_EVENT
+        type=WANT_CPUS_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB Want Number of CPUs", &n_values, NULL, NULL);
+
         //ITERATION_EVENT
         type=ITERATION_EVENT;
         n_values=0;
@@ -111,5 +188,15 @@ void init_tracing(const options_t *options) {
     } else {
         extrae_set_event = dummy;
     }
+
+    if (options->instrument_extrae_nthreads > 0 && Extrae_change_num_threads) {
+        info0("Increasing the Extrae buffer to %d threads\n", options->instrument_extrae_nthreads);
+        Extrae_change_num_threads(options->instrument_extrae_nthreads);
+    }
 }
+
+void tracing_print_flags(void) {
+    info0("Tracing options: %s", instrument_events_tostr(instrument));
+}
+
 #endif

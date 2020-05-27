@@ -29,32 +29,33 @@ enum { MAX_DESCRIPTION = 1024 };
 
 typedef struct Options {
     /* general options */
-    bool               lewi;
-    bool               drom;
-    bool               barrier;
-    bool               ompt;
-    interaction_mode_t mode;
+    bool                lewi;
+    bool                drom;
+    bool                barrier;
+    bool                ompt;
+    interaction_mode_t  mode;
     /* verbose */
-    bool               quiet;
-    verbose_opts_t     verbose;
-    verbose_fmt_t      verbose_fmt;
+    bool                quiet;
+    verbose_opts_t      verbose;
+    verbose_fmt_t       verbose_fmt;
     /* instrument */
-    bool               instrument;
-    bool               instrument_counters;
+    instrument_events_t instrument;
+    bool                instrument_counters;
+    int                 instrument_extrae_nthreads;
     /* lewi */
-    bool               lewi_mpi;
-    mpi_set_t          lewi_mpi_calls;
-    priority_t         lewi_affinity;
-    ompt_opts_t        lewi_ompt;
-    bool               lewi_greedy;
-    bool               lewi_warmup;
+    bool                lewi_mpi;
+    mpi_set_t           lewi_mpi_calls;
+    priority_t          lewi_affinity;
+    ompt_opts_t         lewi_ompt;
+    bool                lewi_greedy;
+    bool                lewi_warmup;
     /* misc */
-    char               shm_key[MAX_OPTION_LENGTH];
-    pid_t              preinit_pid;
-    debug_opts_t       debug_opts;
+    char                shm_key[MAX_OPTION_LENGTH];
+    pid_t               preinit_pid;
+    debug_opts_t        debug_opts;
     /* statistics */
-    bool               talp;
-    talp_summary_t     talp_summary;
+    bool                talp;
+    talp_summary_t      talp_summary;
 } options_t;
 
 void options_init(options_t *options, const char *dlb_args);
