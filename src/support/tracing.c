@@ -21,7 +21,7 @@
 
 #include "support/tracing.h"
 #include "support/options.h"
-#include <stdio.h>
+#include "support/debug.h"
 
 // Extrae API calls
 void Extrae_event(unsigned type, long long value) __attribute__((weak));
@@ -171,4 +171,9 @@ void init_tracing(const options_t *options) {
         extrae_set_event = dummy;
     }
 }
+
+void tracing_print_flags(void) {
+    info0("Tracing options: %s", instrument_events_tostr(instrument));
+}
+
 #endif
