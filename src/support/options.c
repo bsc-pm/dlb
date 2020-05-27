@@ -191,6 +191,16 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, instrument_counters),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--instrument-extrae-nthreads",
+        .default_value  = "0",
+        .description    = OFFSET"Invoke Extrae_change_num_threads with the provided parameter\n"
+                          OFFSET"at the start of the execution to pre-allocate a buffer per\n"
+                          OFFSET"thread.",
+        .offset         = offsetof(options_t, instrument_extrae_nthreads),
+        .type           = OPT_INT_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     },
     // LeWI
     {

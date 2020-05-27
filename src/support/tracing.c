@@ -28,6 +28,7 @@ void Extrae_event(unsigned type, long long value) __attribute__((weak));
 void Extrae_eventandcounters(unsigned type, long long value) __attribute__((weak));
 void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalues,
                                long long *values, char **values_description) __attribute__((weak));
+void Extrae_change_num_threads (unsigned n) __attribute__((weak));
 
 static bool tracing_initialized = false;
 static instrument_events_t instrument = INST_NONE;
@@ -186,6 +187,11 @@ void init_tracing(const options_t *options) {
         Extrae_define_event_type(&type, "DLB thread binding in OMPT", &n_values, NULL, NULL);
     } else {
         extrae_set_event = dummy;
+    }
+
+    if (options->instrument_extrae_nthreads > 0 && Extrae_change_num_threads) {
+        info0("Increasing the Extrae buffer to %d threads\n", options->instrument_extrae_nthreads);
+        Extrae_change_num_threads(options->instrument_extrae_nthreads);
     }
 }
 

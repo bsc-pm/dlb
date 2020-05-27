@@ -41,6 +41,7 @@ typedef struct Options {
     /* instrument */
     instrument_events_t instrument;
     bool                instrument_counters;
+    int                 instrument_extrae_nthreads;
     /* lewi */
     bool                lewi_mpi;
     mpi_set_t           lewi_mpi_calls;
