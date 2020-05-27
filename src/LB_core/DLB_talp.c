@@ -384,7 +384,7 @@ int monitoring_region_start(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
 
     if (!monitor_data->started) {
-        add_event(MONITOR_REGION,1);
+        instrument_event(MONITOR_REGION, 1, EVENT_BEGIN);
 
         monitor->start_time = get_time_in_ns();
         monitor->stop_time = 0;
@@ -414,7 +414,7 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
         monitor_data->started = false;
         monitor_data->sample_start_time = 0;
 
-        add_event(MONITOR_REGION,0);
+        instrument_event(MONITOR_REGION, 0, EVENT_END);
         error = DLB_SUCCESS;
     } else {
         error = DLB_NOUPDT;
