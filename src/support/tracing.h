@@ -20,10 +20,6 @@
 /********* EXTRAE EVENTS *************/
 #define THREADS_USED_EVENT 800000
 #define RUNTIME_EVENT      800020
-
-#define LOOP_STATE 800080
-#define MONITOR_REGION 800100
-
 #define EVENT_USER        0
 #define EVENT_INIT        1
 #define EVENT_INTO_MPI    2
@@ -47,13 +43,23 @@
 #define REBIND_EVENT       800060
 #define BINDINGS_EVENT     800061
 
+#define LOOP_STATE         800080
+#define MONITOR_REGION     800100
+
+typedef enum InstrumentAction {
+    EVENT_BEGIN,
+    EVENT_END
+} instrument_action_t;
+
 /*************************************/
 
 #ifdef INSTRUMENTATION_VERSION
 #include "support/options.h"
+void instrument_event(unsigned type, long long value, instrument_action_t action);
 void add_event(unsigned type, long long value);
 void init_tracing(const options_t *options);
 #else
+#define instrument_event(type, value, action)
 #define add_event(type, value)
 #define init_tracing(options)
 #endif

@@ -30,10 +30,68 @@ void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalu
                                long long *values, char **values_description) __attribute__((weak));
 
 static bool tracing_initialized = false;
+static instrument_events_t instrument = INST_NONE;
 
 static void dummy (unsigned type, long long value) {}
 
 static void (*extrae_set_event) (unsigned type, long long value) = dummy;
+
+void instrument_event(unsigned type, long long value, instrument_action_t action) {
+    switch(type) {
+        case RUNTIME_EVENT:
+            switch(value) {
+                case EVENT_INIT:
+                case EVENT_FINALIZE:
+                    if (instrument != INST_NONE) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_INTO_MPI:
+                case EVENT_OUTOF_MPI:
+                    if (instrument & INST_MPI) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_LEND:
+                case EVENT_RECLAIM:
+                case EVENT_ACQUIRE:
+                case EVENT_BORROW:
+                case EVENT_RETURN:
+                    if (instrument & INST_LEWI) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_BARRIER:
+                    if (instrument & INST_BARR) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+                case EVENT_POLLDROM:
+                    if (instrument == INST_ALL) {
+                        extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+                    }
+                    break;
+            }
+            break;
+        case REBIND_EVENT:
+        case BINDINGS_EVENT:
+            if (instrument & INST_OMPT) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        case MONITOR_REGION:
+            if (instrument & INST_TALP) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        default:
+            if (instrument != INST_NONE) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+    }
+}
+
 
 void add_event( unsigned type, long long value ) {
     extrae_set_event( type, value );
@@ -42,8 +100,9 @@ void add_event( unsigned type, long long value ) {
 void init_tracing(const options_t *options) {
     if (tracing_initialized) return;
     tracing_initialized = true;
+    instrument = options->instrument;
 
-    if (options->instrument && Extrae_event &&
+    if (instrument && Extrae_event &&
             Extrae_eventandcounters && Extrae_define_event_type ) {
 
         // Set up function
