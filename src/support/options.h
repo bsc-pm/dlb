@@ -49,6 +49,7 @@ typedef struct Options {
     ompt_opts_t         lewi_ompt;
     bool                lewi_greedy;
     bool                lewi_warmup;
+    int                 lewi_max_parallelism;
     /* misc */
     char                shm_key[MAX_OPTION_LENGTH];
     pid_t               preinit_pid;

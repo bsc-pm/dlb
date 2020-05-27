@@ -269,6 +269,14 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, lewi_warmup),
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-max-parallelism",
+        .default_value  = "0",
+        .description    = OFFSET"Set the maximum level of parallelism for the LeWI algorithm.",
+        .offset         = offsetof(options_t, lewi_max_parallelism),
+        .type           = OPT_INT_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
     },
     // talp
     {

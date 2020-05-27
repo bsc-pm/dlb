@@ -54,7 +54,7 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
     lewi_info->last_borrow = 0;
     lewi_info->cpus_priority_array = malloc(node_size*sizeof(int));
     lewi_mask_UpdateOwnershipInfo(spd, &spd->process_mask);
-    lewi_info->max_parallelism = 0;
+    lewi_info->max_parallelism = spd->options.lewi_max_parallelism;
     CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
     CPU_ZERO(&lewi_info->in_mpi_cpus);
 
