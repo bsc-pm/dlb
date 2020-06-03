@@ -390,6 +390,9 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_runtime.cfg \
 	doc/paraver_cfgs/DLB_num_threads.cfg \
 	doc/paraver_cfgs/DLB_rebind_threads.cfg \
+	doc/paraver_cfgs/DLB_loop.cfg \
+	doc/paraver_cfgs/DLB_regions.cfg \
+	doc/paraver_cfgs/DLB_Give_Want_number_of_cpus.cfg \
 	$(END)
 
 paravercfgsdir = $(datadir)/paraver_cfgs/DLB
