@@ -145,6 +145,14 @@
             type(c_ptr), value, intent(in) :: mask
         end function dlb_acquirecpumask
 
+        function dlb_acquirecpusinmask(ncpus, mask) result (ierr)       &
+     &          bind(c, name='DLB_AcquireCpusInMask')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+            integer(kind=c_int), value, intent(in) :: ncpus
+            type(c_ptr), value, intent(in) :: mask
+        end function dlb_acquirecpusinmask
+
         function dlb_borrow() result (ierr)                             &
      &          bind(c, name='DLB_Borrow')
             use iso_c_binding
@@ -171,6 +179,14 @@
             integer(kind=c_int) :: ierr
             type(c_ptr), value, intent(in) :: mask
         end function dlb_borrowcpumask
+
+        function dlb_borrowcpusinmask(ncpus, mask) result (ierr)        &
+     &          bind(c, name='DLB_BorrowCpusInMask')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+            integer(kind=c_int), value, intent(in) :: ncpus
+            type(c_ptr), value, intent(in) :: mask
+        end function dlb_borrowcpusinmask
 
         function dlb_return() result (ierr)                             &
      &          bind(c, name='DLB_Return')

@@ -226,6 +226,14 @@ int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
     return acquire_cpu_mask(thread_spd, mask);
 }
 
+int DLB_AcquireCpusInMask(int ncpus, const_dlb_cpu_set_t mask) {
+    spd_enter_dlb(NULL);
+    if (unlikely(!thread_spd->dlb_initialized)) {
+        return DLB_ERR_NOINIT;
+    }
+    return acquire_cpus_in_mask(thread_spd, ncpus, mask);
+}
+
 
 /* Borrow */
 
@@ -259,6 +267,14 @@ int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask) {
         return DLB_ERR_NOINIT;
     }
     return borrow_cpu_mask(thread_spd, mask);
+}
+
+int DLB_BorrowCpusInMask(int ncpus, const_dlb_cpu_set_t mask) {
+    spd_enter_dlb(NULL);
+    if (unlikely(!thread_spd->dlb_initialized)) {
+        return DLB_ERR_NOINIT;
+    }
+    return borrow_cpus_in_mask(thread_spd, ncpus, mask);
 }
 
 

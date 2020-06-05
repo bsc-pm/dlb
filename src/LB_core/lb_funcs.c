@@ -28,6 +28,7 @@ static int dummy(struct SubProcessDescriptor *spd) { return DLB_SUCCESS; }
 typedef int (*lb_func_kind1)(const struct SubProcessDescriptor*);
 typedef int (*lb_func_kind2)(const struct SubProcessDescriptor*, int);
 typedef int (*lb_func_kind3)(const struct SubProcessDescriptor*, const cpu_set_t*);
+typedef int (*lb_func_kind4)(const struct SubProcessDescriptor*, int, const cpu_set_t*);
 
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
     // Initialize all fields to a valid, but disabled, function
@@ -53,10 +54,12 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .acquire_cpu            = (lb_func_kind2)disabled,
         .acquire_cpus           = (lb_func_kind2)disabled,
         .acquire_cpu_mask       = (lb_func_kind3)disabled,
+        .acquire_cpus_in_mask   = (lb_func_kind4)disabled,
         .borrow                 = (lb_func_kind1)disabled,
         .borrow_cpu             = (lb_func_kind2)disabled,
         .borrow_cpus            = (lb_func_kind2)disabled,
         .borrow_cpu_mask        = (lb_func_kind3)disabled,
+        .borrow_cpus_in_mask    = (lb_func_kind4)disabled,
         .return_all             = (lb_func_kind1)disabled,
         .return_cpu             = (lb_func_kind2)disabled,
         .return_cpu_mask        = (lb_func_kind3)disabled,
@@ -103,10 +106,12 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->acquire_cpu            = lewi_mask_AcquireCpu;
             lb_funcs->acquire_cpus           = lewi_mask_AcquireCpus;
             lb_funcs->acquire_cpu_mask       = lewi_mask_AcquireCpuMask;
+            lb_funcs->acquire_cpus_in_mask   = lewi_mask_AcquireCpusInMask;
             lb_funcs->borrow                 = lewi_mask_Borrow;
             lb_funcs->borrow_cpu             = lewi_mask_BorrowCpu;
             lb_funcs->borrow_cpus            = lewi_mask_BorrowCpus;
             lb_funcs->borrow_cpu_mask        = lewi_mask_BorrowCpuMask;
+            lb_funcs->borrow_cpus_in_mask    = lewi_mask_BorrowCpusInMask;
             lb_funcs->return_all             = lewi_mask_Return;
             lb_funcs->return_cpu             = lewi_mask_ReturnCpu;
             lb_funcs->return_cpu_mask        = lewi_mask_ReturnCpuMask;

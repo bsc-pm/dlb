@@ -58,12 +58,14 @@ int reclaim_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid);
 int acquire_cpus(const subprocess_descriptor_t *spd, int ncpus);
 int acquire_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+int acquire_cpus_in_mask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask);
 
 /* Borrow */
 int borrow(const subprocess_descriptor_t *spd);
 int borrow_cpu(const subprocess_descriptor_t *spd, int cpuid);
 int borrow_cpus(const subprocess_descriptor_t *spd, int ncpus);
 int borrow_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
+int borrow_cpus_in_mask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask);
 
 /* Return */
 int return_all(const subprocess_descriptor_t *spd);
