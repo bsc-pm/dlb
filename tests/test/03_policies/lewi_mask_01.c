@@ -358,11 +358,6 @@ int main( int argc, char **argv ) {
         // Subprocess 2 sets max_parallelism to 2
         lewi_mask_SetMaxParallelism(&spd2, 2);
 
-        // Subprocess 1 needs to poll
-        if (mode == MODE_POLLING) {
-            assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
-        }
-
         // Both SPs should have their own CPUs
         assert_loop( CPU_COUNT(&sp1_mask) == 2
                  && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
@@ -529,8 +524,11 @@ int main( int argc, char **argv ) {
         CPU_CLR(3, &sp2_mask);
         assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
 
-        // Subprocess 2 acquires everything
-        assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask ) == DLB_ERR_PERM );
+        // Subprocess 2 acquires everything (Mask operations does not return DLB_ERR_PERM anymore)
+        assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask ) == DLB_SUCCESS );
+
+        // Subprocess 2 acquires CPU 0 (CPU operations must return DLB_ERR_PERM)
+        assert( lewi_mask_AcquireCpu(&spd2, 0 ) == DLB_ERR_PERM );
 
         // Subprocess 2 should have its own CPUs
         assert_loop( CPU_COUNT(&sp2_mask) == 2

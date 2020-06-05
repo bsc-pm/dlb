@@ -855,6 +855,140 @@ int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_
     return error;
 }
 
+int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
+        int cpus_priority_array[node_size], priority_t priority, int max_parallelism,
+        int64_t *last_borrow, pid_t new_guests[node_size], pid_t victims[node_size]) {
+
+    int i;
+
+    /* Return immediately if requested_ncpus is present and not greater than zero */
+    if (requested_ncpus && *requested_ncpus <= 0) {
+        return DLB_NOUPDT;
+    }
+
+    /* Return immediately if there is nothing left to acquire */
+    /* 1) If the timestamp of the last unsuccessful borrow is newer than the last CPU lent */
+    if (last_borrow && *last_borrow > shdata->timestamp_cpu_lent) {
+        /* 2) Unless there's an owned CPUs not guested, in that case we will acquire anyway */
+        bool all_owned_cpus_are_guested = true;
+        for (i=0; i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            /* Iterate until the first invalid cpuid */
+            if (cpuid == -1) break;
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            /* Iterate until the first not owned CPU */
+            if (cpuinfo->owner != pid) break;
+            if (cpuinfo->guest != pid) {
+                /* This CPU is owned and not guested, no need to iterate anymore */
+                all_owned_cpus_are_guested = false;
+                break;
+            }
+        }
+        if (all_owned_cpus_are_guested) {
+            return DLB_NOUPDT;
+        }
+    }
+
+    /* Return immediately if the process has reached the max_parallelism */
+    if (max_parallelism != 0) {
+        for (i=0; i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            if (cpuid == -1) break;
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->guest == pid) {
+                --max_parallelism;
+            }
+        }
+        if (max_parallelism <= 0) {
+            return DLB_NOUPDT;
+        }
+    }
+
+    /* Compute the max number of CPUs to acquire */
+    int ncpus = requested_ncpus ? *requested_ncpus : node_size;
+    if (max_parallelism > 0) {
+        ncpus = min_int(ncpus, max_parallelism);
+    }
+
+    /* Functions that iterate cpus_priority_array may not check every CPU,
+     * output arrays need to be properly initialized
+     */
+    for (i=0; i<node_size; ++i) {
+        new_guests[i] = -1;
+        victims[i] = -1;
+    }
+
+    int error = DLB_NOUPDT;
+    shmem_lock(shm_handler);
+    {
+        /* Note: cpus_priority_array always have owned CPUs first so we split the
+        *  algorithm in two loops with different body for owned and non-owned CPUs
+        */
+
+        /* Acquire owned CPUs following the priority of cpus_priority_array */
+        for (i=0; ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            /* Break if cpu array does not contain more valid CPU ids */
+            if (cpuid == -1) break;
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            /* Go to next loop if cpu array does not contain owned CPUs */
+            if (cpuinfo->owner != pid) break;
+            /* Skip CPU if already guested */
+            if (cpuinfo->guest == pid) continue;
+
+            int local_error = acquire_cpu(pid, cpuid,
+                    &new_guests[cpuid], &victims[cpuid]);
+            if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
+                /* Update error code if needed */
+                if (error != DLB_NOTED) error = local_error;
+                /* Update ncpus */
+                --ncpus;
+            }
+        }
+
+        /* Borrow non-owned CPUs following the priority of cpus_priority_array */
+        for (; ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            /* Break if cpu array does not contain more valid CPU ids */
+            if (cpuid == -1) break;
+
+            int local_error = borrow_cpu(pid, cpuid, &new_guests[cpuid]);
+            if (local_error == DLB_SUCCESS) {
+                /* Update error code if needed */
+                if (error != DLB_NOTED) error = local_error;
+                /* Update ncpus */
+                --ncpus;
+            }
+        }
+
+        /* Add global petition for remaining CPUs if needed */
+        if (shdata->queues_enabled
+                && requested_ncpus
+                && ncpus > 0) {
+            /* Construct a mask of allowed CPUs */
+            cpu_set_t allowed;
+            CPU_ZERO(&allowed);
+            for (i=0; i<node_size; ++i) {
+                int cpuid = cpus_priority_array[i];
+                if (cpuid != -1) {
+                    CPU_SET(cpuid, &allowed);
+                }
+            }
+
+            /* Enqueue request */
+            verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
+            error = queue_proc_reqs_push(&shdata->proc_requests, pid, ncpus, &allowed);
+        }
+
+        /* Update timestamp if borrow did not succeed */
+        if (last_borrow != NULL && error != DLB_SUCCESS && error != DLB_NOTED) {
+            *last_borrow = get_time_in_ns();
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
 
 /*********************************************************************************/
 /*  Borrow CPU                                                                   */
