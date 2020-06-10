@@ -1173,6 +1173,99 @@ int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_g
     return error;
 }
 
+int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
+        int cpus_priority_array[node_size], priority_t priority, int max_parallelism,
+        int64_t *last_borrow, pid_t new_guests[node_size]) {
+
+    int i;
+
+    /* Return immediately if requested_ncpus is present and not greater than zero */
+    if (requested_ncpus && *requested_ncpus <= 0) {
+        return DLB_NOUPDT;
+    }
+
+    /* Return immediately if the timestamp of the last unsuccessful borrow is newer than the last CPU lent */
+    if (last_borrow && *last_borrow > shdata->timestamp_cpu_lent) {
+        return DLB_NOUPDT;
+    }
+
+    /* Return immediately if the process has reached the max_parallelism */
+    if (max_parallelism != 0) {
+        for (i=0; i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            if (cpuid == -1) break;
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            if (cpuinfo->guest == pid) {
+                --max_parallelism;
+            }
+        }
+        if (max_parallelism <= 0) {
+            return DLB_NOUPDT;
+        }
+    }
+
+    /* Compute the max number of CPUs to borrow */
+    int ncpus = requested_ncpus ? *requested_ncpus : node_size;
+    if (max_parallelism > 0) {
+        ncpus = min_int(ncpus, max_parallelism);
+    }
+
+    /* Functions that iterate cpus_priority_array may not check every CPU,
+     * the output array needs to be properly initialized
+     */
+    for (i=0; i<node_size; ++i) {
+        new_guests[i] = -1;
+    }
+
+    int error = DLB_NOUPDT;
+    shmem_lock(shm_handler);
+    {
+        /* Borrow CPUs following the priority of cpus_priority_array */
+        for (i=0; ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            /* Break if cpu array does not contain more valid CPU ids */
+            if (cpuid == -1) break;
+
+            if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
+                --ncpus;
+                error = DLB_SUCCESS;
+            }
+        }
+
+        /* Only in case --priority=spread-ifempty, the CPU candidates cannot
+         * be precomputed since they depend on the current state of each CPU
+         */
+        if (priority == PRIO_SPREAD_IFEMPTY && ncpus > 0) {
+            // Check also empty sockets
+            cpu_set_t free_mask;
+            CPU_ZERO(&free_mask);
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                if (shdata->node_info[cpuid].state == CPU_LENT
+                        && shdata->node_info[cpuid].guest == NOBODY) {
+                    CPU_SET(cpuid, &free_mask);
+                }
+            }
+            cpu_set_t free_sockets;
+            mu_get_parents_inside_cpuset(&free_sockets, &free_mask);
+            for (cpuid=0; ncpus>0 && cpuid<node_size; ++cpuid) {
+                if (CPU_ISSET(cpuid, &free_sockets)) {
+                    if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
+                        error = DLB_SUCCESS;
+                    }
+                }
+            }
+        }
+
+        /* Update timestamp if borrow did not succeed */
+        if (last_borrow != NULL && error != DLB_SUCCESS) {
+            *last_borrow = get_time_in_ns();
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
 
 /*********************************************************************************/
 /*  Return CPU                                                                   */

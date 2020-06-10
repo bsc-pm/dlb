@@ -497,28 +497,10 @@ int lewi_mask_AcquireCpusInMask(const subprocess_descriptor_t *spd, int ncpus, c
 /*    Borrow                                                                     */
 /*********************************************************************************/
 
-// FIXME: Borrow functions are still ignoring max_parallelism
-
 int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
-    pid_t new_guests[node_size];
-    bool async = spd->options.mode == MODE_ASYNC;
-    int64_t *last_borrow = async ? NULL : &((lewi_info_t*)spd->lewi_info)->last_borrow;
-    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
-    int error = shmem_cpuinfo__borrow_all(spd->id, spd->options.lewi_affinity,
-            cpus_priority_array, last_borrow, new_guests);
-    if (error == DLB_SUCCESS) {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (new_guests[cpuid] == spd->id) {
-                if (async) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else {
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
-    }
-    return error;
+    cpu_set_t system_mask;
+    mu_get_system_mask(&system_mask);
+    return lewi_mask_BorrowCpusInMask(spd, 0, &system_mask);
 }
 
 int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
@@ -537,32 +519,41 @@ int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    pid_t new_guests[node_size];
-    bool async = spd->options.mode == MODE_ASYNC;
-    int64_t *last_borrow = async ? NULL : &((lewi_info_t*)spd->lewi_info)->last_borrow;
-    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
-    int error = shmem_cpuinfo__borrow_cpus(spd->id, spd->options.lewi_affinity,
-            cpus_priority_array, last_borrow, ncpus, new_guests);
-    if (error == DLB_SUCCESS) {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (new_guests[cpuid] == spd->id) {
-                if (async) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else {
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
-    }
-    return error;
+    return lewi_mask_BorrowCpusInMask(spd, ncpus, NULL);
 }
 
 int lewi_mask_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
+    return lewi_mask_BorrowCpusInMask(spd, 0, mask);
+}
+
+int lewi_mask_BorrowCpusInMask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask) {
     pid_t new_guests[node_size];
-    int error = shmem_cpuinfo__borrow_cpu_mask(spd->id, mask, new_guests);
+    lewi_info_t *lewi_info = spd->lewi_info;
+    bool async = spd->options.mode == MODE_ASYNC;
+    int64_t *last_borrow = async ? NULL : &lewi_info->last_borrow;
+
+    /* Construct a CPU array based on cpus_priority_array and mask (if present) */
+    int *cpus_priority_array = lewi_info->cpus_priority_array;
+    int cpu_subset[node_size];
+    int i, j;
+    for (i=0, j=0; i<node_size; ++i) {
+        int cpuid = cpus_priority_array[i];
+        if (cpuid != -1
+                && (mask == NULL || CPU_ISSET(cpuid, mask))) {
+            cpu_subset[j++] = cpuid;
+        }
+    }
+    for (; j<node_size; ++j) {
+        cpu_subset[j] = -1;
+    }
+
+    /* Provide a number of requestes CPUs only if needed */
+    int *requested_ncpus = ncpus > 0 ? &ncpus : NULL;
+
+    int error = shmem_cpuinfo__borrow_ncpus_from_cpu_subset(spd->id, requested_ncpus, cpu_subset,
+            spd->options.lewi_affinity, lewi_info->max_parallelism, last_borrow, new_guests);
+
     if (error == DLB_SUCCESS) {
-        bool async = spd->options.mode == MODE_ASYNC;
         int cpuid;
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (new_guests[cpuid] == spd->id) {
@@ -574,6 +565,7 @@ int lewi_mask_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t 
             }
         }
     }
+
     return error;
 }
 

@@ -65,6 +65,9 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest);
 int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
         int64_t *last_borrow, int ncpus, pid_t new_guests[]);
 int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
+int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
+        pid_t pid, int *requested_ncpus, int cpus_priority_array[], priority_t priority,
+        int max_parallelism, int64_t *last_borrow, pid_t new_guests[]);
 
 /* Return */
 int shmem_cpuinfo__return_all(pid_t pid, pid_t new_guests[]);
