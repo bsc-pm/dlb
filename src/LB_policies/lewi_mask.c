@@ -44,6 +44,26 @@ typedef struct LeWI_mask_info {
 } lewi_info_t;
 
 
+/* Combine cpus_priority_array and mask into cpu_array */
+static inline void fill_cpu_array(int *cpu_array, int *cpus_priority_array, const cpu_set_t *mask) {
+    int i, j;
+    for (i=0, j=0; i<node_size; ++i) {
+        int cpuid = cpus_priority_array[i];
+        if (cpuid != -1
+                && (mask == NULL || CPU_ISSET(cpuid, mask))) {
+            cpu_array[j++] = cpuid;
+        }
+    }
+    for (; j<node_size; ++j) {
+        cpu_array[j] = -1;
+    }
+}
+
+
+/*********************************************************************************/
+/*    Init / Finalize                                                            */
+/*********************************************************************************/
+
 int lewi_mask_Init(subprocess_descriptor_t *spd) {
     /* Value is always updated to allow testing different node sizes */
     node_size = mu_get_system_size();
@@ -93,13 +113,19 @@ int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
     }
 
     /* De-allocate private structure */
-    free(((lewi_info_t*)spd->lewi_info)->cpus_priority_array);
-    ((lewi_info_t*)spd->lewi_info)->cpus_priority_array = NULL;
-    free(spd->lewi_info);
-    spd->lewi_info = NULL;
+    lewi_info_t *lewi_info = spd->lewi_info;
+    free(lewi_info->cpus_priority_array);
+    lewi_info->cpus_priority_array = NULL;
+    free(lewi_info);
+    lewi_info = NULL;
 
     return (error >= 0) ? DLB_SUCCESS : error;
 }
+
+
+/*********************************************************************************/
+/*    LewI Modes (enable/disable, max_parallelism, ...)                          */
+/*********************************************************************************/
 
 int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd) {
     /* Reset value of last_borrow */
@@ -174,6 +200,11 @@ int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
     lewi_info->max_parallelism = 0;
     return DLB_SUCCESS;
 }
+
+
+/*********************************************************************************/
+/*    MPI                                                                        */
+/*********************************************************************************/
 
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
@@ -450,17 +481,7 @@ int lewi_mask_AcquireCpusInMask(const subprocess_descriptor_t *spd, int ncpus, c
     /* Construct a CPU array based on cpus_priority_array and mask (if present) */
     int *cpus_priority_array = lewi_info->cpus_priority_array;
     int cpu_subset[node_size];
-    int i, j;
-    for (i=0, j=0; i<node_size; ++i) {
-        int cpuid = cpus_priority_array[i];
-        if (cpuid != -1
-                && (mask == NULL || CPU_ISSET(cpuid, mask))) {
-            cpu_subset[j++] = cpuid;
-        }
-    }
-    for (; j<node_size; ++j) {
-        cpu_subset[j] = -1;
-    }
+    fill_cpu_array(cpu_subset, cpus_priority_array, mask);
 
     /* Provide a number of requestes CPUs only if needed */
     int *requested_ncpus = ncpus > 0 ? &ncpus : NULL;
@@ -535,17 +556,7 @@ int lewi_mask_BorrowCpusInMask(const subprocess_descriptor_t *spd, int ncpus, co
     /* Construct a CPU array based on cpus_priority_array and mask (if present) */
     int *cpus_priority_array = lewi_info->cpus_priority_array;
     int cpu_subset[node_size];
-    int i, j;
-    for (i=0, j=0; i<node_size; ++i) {
-        int cpuid = cpus_priority_array[i];
-        if (cpuid != -1
-                && (mask == NULL || CPU_ISSET(cpuid, mask))) {
-            cpu_subset[j++] = cpuid;
-        }
-    }
-    for (; j<node_size; ++j) {
-        cpu_subset[j] = -1;
-    }
+    fill_cpu_array(cpu_subset, cpus_priority_array, mask);
 
     /* Provide a number of requestes CPUs only if needed */
     int *requested_ncpus = ncpus > 0 ? &ncpus : NULL;
@@ -718,7 +729,8 @@ int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
     }
 
     /* Merge [<[prio1][prio2][prio3][-1]>] */
-    int *cpus_priority_array = ((lewi_info_t*)spd->lewi_info)->cpus_priority_array;
+    lewi_info_t *lewi_info = spd->lewi_info;
+    int *cpus_priority_array = lewi_info->cpus_priority_array;
     memmove(&cpus_priority_array[0], prio1, sizeof(int)*i1);
     memmove(&cpus_priority_array[i1], prio2, sizeof(int)*i2);
     memmove(&cpus_priority_array[i1+i2], prio3, sizeof(int)*i3);

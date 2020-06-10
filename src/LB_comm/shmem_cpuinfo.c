@@ -107,6 +107,13 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
     return new_guest;
 }
 
+static void initialize_output_array(pid_t *array) {
+    int i;
+    for (i=0; i<node_size; ++i) {
+        array[i] = -1;
+    }
+}
+
 /*********************************************************************************/
 /*  Init / Register                                                              */
 /*********************************************************************************/
@@ -913,10 +920,8 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus
     /* Functions that iterate cpus_priority_array may not check every CPU,
      * output arrays need to be properly initialized
      */
-    for (i=0; i<node_size; ++i) {
-        new_guests[i] = -1;
-        victims[i] = -1;
-    }
+    initialize_output_array(new_guests);
+    initialize_output_array(victims);
 
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
@@ -1234,9 +1239,7 @@ int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
     /* Functions that iterate cpus_priority_array may not check every CPU,
      * the output array needs to be properly initialized
      */
-    for (i=0; i<node_size; ++i) {
-        new_guests[i] = -1;
-    }
+    initialize_output_array(new_guests);
 
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
