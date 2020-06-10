@@ -60,6 +60,16 @@ int main( int argc, char **argv ) {
     pid_t victims[SYS_SIZE];
     int i;
 
+    // Construct some CPU priority arrays
+    int cpus_0_1[SYS_SIZE] = { 0, 1, -1};
+    int cpus_2_3[SYS_SIZE] = { 2, 3, -1};
+    int cpus_2_3_0[SYS_SIZE] = {2, 3, 0, -1};
+    int cpus_2_3_0_1[SYS_SIZE] = {2, 3, 0, 1};
+    if (SYS_SIZE > 4) cpus_2_3_0_1[4] = -1;
+
+    int64_t last_borrow = 0;
+    int requested_ncpus;
+
     // Init
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(p2_pid, &p1_mask, SHMEM_KEY) == DLB_ERR_PERM );
@@ -78,7 +88,10 @@ int main( int argc, char **argv ) {
     /*** Successful ping-pong ***/
     {
         // Process 1 wants CPUs 2 & 3
-        err = shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims);
+        requested_ncpus = 2;
+        err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
+                cpus_2_3, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -91,8 +104,9 @@ int main( int argc, char **argv ) {
 
         // If polling, process 1 needs to ask again for CPUs 2 & 3
         if (!async) {
-            assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
-                    == DLB_SUCCESS );
+            assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, NULL /* requested_ncpus */,
+                cpus_2_3, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                new_guests, victims) == DLB_SUCCESS );
             assert( new_guests[0] == -1     && new_guests[1] == -1 );
             assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
             for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -123,8 +137,9 @@ int main( int argc, char **argv ) {
 
         // If polling, process 1 needs to ask again for CPUs 2 & 3
         if (!async) {
-            assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
-                    == DLB_SUCCESS );
+            assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, NULL /* requested_ncpus */,
+                cpus_2_3, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                new_guests, victims) == DLB_SUCCESS );
             assert( new_guests[0] == -1     && new_guests[1] == -1 );
             assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
             for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -162,8 +177,9 @@ int main( int argc, char **argv ) {
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] <= 0 ); }
 
         // Process 1 wants CPUs 2 & 3
-        assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
-                == DLB_SUCCESS );
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, NULL /* requested_ncpus */,
+                    cpus_2_3, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                    new_guests, victims) == DLB_SUCCESS );
         assert( new_guests[0] == -1     && new_guests[1] == -1 );
         assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -188,8 +204,9 @@ int main( int argc, char **argv ) {
 
         // If polling, process 1 needs to ask again for CPUs 2 & 3
         if (!async) {
-            assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
-                    == DLB_SUCCESS );
+            assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, NULL /* requested_ncpus */,
+                        cpus_2_3, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                        new_guests, victims) == DLB_SUCCESS );
             assert( new_guests[0] == -1     && new_guests[1] == -1 );
             assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
             for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
@@ -221,14 +238,16 @@ int main( int argc, char **argv ) {
     /*** Late reply ***/
     {
         // Process 1 wants CPUs 2 & 3
-        err = shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims);
+        requested_ncpus = 2;
+        err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
+                cpus_2_3, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
         // Process 1 no longer wants CPUs 2 & 3
-        assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &p2_mask, new_guests) == DLB_SUCCESS );
-        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] <= 0 ); }
+        shmem_cpuinfo__remove_requests(p1_pid);
 
         // Process 2 releases CPUs 2 & 3
         assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, new_guests) == DLB_SUCCESS );
@@ -248,11 +267,9 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__lend_cpu(p1_pid, 0, &new_guests[0]) == DLB_SUCCESS );
         assert( new_guests[0] == 0 );
 
-        cpu_set_t mask;
-        mu_parse_mask("0,2-3", &mask);
-
         // TEST 1: process 2 is guesting 0,2-3 and sets max_parellelism to 1
-        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                    cpus_2_3_0, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[0] == p2_pid );
         for (i=1; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
@@ -265,7 +282,8 @@ int main( int argc, char **argv ) {
         assert( new_guests[3] == 0  && victims[3] == p2_pid );
 
         // TEST 2: process 2 is guesting 0,2-3 and sets max_parellelism to 2
-        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                    cpus_2_3_0, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[0] == p2_pid && new_guests[3] == p2_pid);
         assert( new_guests[1] == -1     && new_guests[2] == -1 );
@@ -278,7 +296,8 @@ int main( int argc, char **argv ) {
         assert( new_guests[3] == -1 && victims[3] == -1 );
 
         // TEST 3: process 2 is guesting 0,2-3 and sets max_parellelism to 3
-        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                    cpus_2_3_0, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[0] == p2_pid );
         for (i=1; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
@@ -294,10 +313,9 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guests[0]) == DLB_SUCCESS );
         assert( new_guests[0] == 0 );
 
-        mu_parse_mask("0-3", &mask);
-
         // TEST 4: process 2 is guesting 0-3 and sets max_parellelism to 1
-        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                    cpus_2_3_0_1, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[1] == p2_pid );
         assert( new_guests[0] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
@@ -310,7 +328,8 @@ int main( int argc, char **argv ) {
         assert( new_guests[3] == 0  && victims[3] == p2_pid );
 
         // TEST 5: process 2 is guesting 0-3 and sets max_parellelism to 2
-        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                    cpus_2_3_0_1, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[0] == p2_pid  && new_guests[1] == p2_pid && new_guests[3] == p2_pid );
         assert( new_guests[2] == -1 );
@@ -323,7 +342,8 @@ int main( int argc, char **argv ) {
         assert( new_guests[3] == -1 && victims[3] == -1 );
 
         // TEST 6: process 2 is guesting 0-3 and sets max_parellelism to 3, P1 reclaims
-        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                    cpus_2_3_0_1, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );
         assert( new_guests[2] == -1     && new_guests[3] == -1     );
@@ -364,7 +384,8 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
 
         // P2 borrows P1 CPUs
-        assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &p1_mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                    cpus_2_3_0_1, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );
         assert( new_guests[2] == -1 && new_guests[3] == -1 );
@@ -391,20 +412,23 @@ int main( int argc, char **argv ) {
         for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] <= 0 ); }
 
         // P1 acquires CPU 2 & 3
-        assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &p2_mask, new_guests, victims)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, NULL /* requested_ncpus */,
+                    cpus_2_3, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                 == DLB_SUCCESS );
         assert( new_guests[0] == -1     && new_guests[1] == -1 );
         assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
         for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
 
-        // P2 reclaims and requests everything
+        // P2 reclaims its CPU and requests the rest
         assert( shmem_cpuinfo__reclaim_cpu_mask(p2_pid, &p2_mask, new_guests, victims)
                 == DLB_NOTED );
         assert( new_guests[0] == -1     && new_guests[1] == -1 );
         assert( new_guests[2] == p2_pid && new_guests[3] == p2_pid );
         assert( victims[0] == -1     && victims[1] == -1 );
         assert( victims[2] == p1_pid && victims[3] == p1_pid );
-        err = shmem_cpuinfo__acquire_cpu_mask(p2_pid, &p1_mask, new_guests, victims);
+        requested_ncpus = 2;
+        err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
+                cpus_0_1, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
 
         // P1 finalizes
@@ -422,7 +446,8 @@ int main( int argc, char **argv ) {
         if (!async) {
             assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 2) == DLB_SUCCESS );
             assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 3) == DLB_SUCCESS );
-            assert( shmem_cpuinfo__acquire_cpu_mask(p2_pid, &p1_mask, new_guests, victims)
+            assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
+                        cpus_2_3_0_1, PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests, victims)
                     == DLB_SUCCESS );
             assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );
             assert( new_guests[2] == -1     && new_guests[3] == -1 );
