@@ -922,8 +922,29 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus
     shmem_lock(shm_handler);
     {
         /* Note: cpus_priority_array always have owned CPUs first so we split the
-        *  algorithm in two loops with different body for owned and non-owned CPUs
+        *  algorithm in loops with different body for owned and non-owned CPUs
         */
+
+        /* Acquire first owned CPUs that are IDLE */
+        for (i=0; ncpus>0 && i<node_size; ++i) {
+            int cpuid = cpus_priority_array[i];
+            /* Break if cpu array does not contain more valid CPU ids */
+            if (cpuid == -1) break;
+            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+            /* Go to next loop if cpu array does not contain owned CPUs */
+            if (cpuinfo->owner != pid) break;
+            /* Skip CPU if not IDLE */
+            if (cpuinfo->guest != NOBODY) continue;
+
+            int local_error = acquire_cpu(pid, cpuid,
+                    &new_guests[cpuid], &victims[cpuid]);
+            if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
+                /* Update error code if needed */
+                if (error != DLB_NOTED) error = local_error;
+                /* Update ncpus */
+                --ncpus;
+            }
+        }
 
         /* Acquire owned CPUs following the priority of cpus_priority_array */
         for (i=0; ncpus>0 && i<node_size; ++i) {
