@@ -358,16 +358,71 @@ int main( int argc, char **argv ) {
         // Subprocess 2 sets max_parallelism to 2
         lewi_mask_SetMaxParallelism(&spd2, 2);
 
-        // Subprocess 1 needs to poll
-        if (mode == MODE_POLLING) {
-            assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
-        }
-
         // Both SPs should have their own CPUs
         assert_loop( CPU_COUNT(&sp1_mask) == 2
                  && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
         assert_loop( CPU_COUNT(&sp2_mask) == 2
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+    }
+
+    /* Test CpusInMask */
+    {
+        // Construct a mask of only 1 CPU from subprocess 1, and all from subprocess 2
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+        CPU_SET(0, &mask);
+        CPU_OR(&mask, &mask, &sp2_mask);
+
+        // Subprocess 1 lends everything
+        CPU_ZERO(&sp1_mask);
+        assert( lewi_mask_LendCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+
+        // Subprocess 2 lends 1 CPU
+        CPU_CLR(2, &sp2_mask);
+        assert( lewi_mask_LendCpu(&spd2, 2) == DLB_SUCCESS );
+
+        // Subprocess 2 tries to acquire 1 CPU from the auxiliar mask [0,2,3] (it should prioritize [2,3])
+        assert( lewi_mask_AcquireCpusInMask(&spd2, 1, &mask) == DLB_SUCCESS );
+        assert_loop( CPU_COUNT(&sp2_mask) == 2
+                && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask));
+
+        // Subprocess 2 lends 1 CPU, again
+        CPU_CLR(2, &sp2_mask);
+        assert( lewi_mask_LendCpu(&spd2, 2) == DLB_SUCCESS );
+
+        // Subprocess 2 tries to acquire 4 CPUs from the auxiliar mask [0,2,3]
+        err = lewi_mask_AcquireCpusInMask(&spd2, 4, &mask);
+        assert( mode == MODE_ASYNC ? err == DLB_NOTED : err == DLB_SUCCESS );
+        assert_loop( CPU_COUNT(&sp2_mask) == 3
+                && CPU_ISSET(0, &sp2_mask) && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask));
+
+        // Subprocess 2 removes any previous requests
+        if (mode == MODE_ASYNC) {
+            assert( lewi_mask_AcquireCpus(&spd2, 0) == DLB_SUCCESS );
+        }
+
+        // Subprocess 2 lends everything (0 first, and 2-3 later)
+        CPU_ZERO(&sp2_mask);
+        assert( lewi_mask_LendCpu(&spd2, 0) == DLB_SUCCESS );
+        assert( lewi_mask_LendCpuMask(&spd2, &sp2_process_mask) == DLB_SUCCESS );
+
+        // Subprocess 2 borrows 1 CPU (twice) from the auxiliar mask [0,2,3] (it should prioritize [2,3])
+        assert( lewi_mask_BorrowCpusInMask(&spd2, 1, &mask) == DLB_SUCCESS );
+        assert_loop( CPU_COUNT(&sp2_mask) == 1 && CPU_ISSET(2, &sp2_mask));
+        assert( lewi_mask_BorrowCpusInMask(&spd2, 1, &mask) == DLB_SUCCESS );
+        assert_loop( CPU_COUNT(&sp2_mask) == 2
+                && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask));
+
+        // Subprocess 1 acquire its CPUs
+        assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+        assert_loop( CPU_COUNT(&sp1_mask) == 2
+                && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask));
+
+        // Both SPs should have their own CPUs
+        assert_loop( CPU_COUNT(&sp1_mask) == 2
+                && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
+        assert_loop( CPU_COUNT(&sp2_mask) == 2
+                && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
     }
 
     /* Into / Out of Blocking Calls */
@@ -529,8 +584,11 @@ int main( int argc, char **argv ) {
         CPU_CLR(3, &sp2_mask);
         assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
 
-        // Subprocess 2 acquires everything
-        assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask ) == DLB_ERR_PERM );
+        // Subprocess 2 acquires everything (Mask operations does not return DLB_ERR_PERM anymore)
+        assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask ) == DLB_SUCCESS );
+
+        // Subprocess 2 acquires CPU 0 (CPU operations must return DLB_ERR_PERM)
+        assert( lewi_mask_AcquireCpu(&spd2, 0 ) == DLB_ERR_PERM );
 
         // Subprocess 2 should have its own CPUs
         assert_loop( CPU_COUNT(&sp2_mask) == 2

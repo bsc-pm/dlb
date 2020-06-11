@@ -47,6 +47,7 @@ int main( int argc, char **argv ) {
     pid_t victims[system_size];
     int cpus_priority_array[system_size];
     int64_t last_borrow = 0;
+    int requested_ncpus = 0;
     int i, j;
 
     // Setup dummy priority CPUs
@@ -101,9 +102,9 @@ int main( int argc, char **argv ) {
     assert( victims[0] == 0 );
 
     // Borrow CPUs
-    assert( shmem_cpuinfo__borrow_cpus(pid, PRIO_ANY, cpus_priority_array, &last_borrow,
-                1, new_guests)
-            == DLB_SUCCESS );
+    requested_ncpus = 1;
+    assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid, &requested_ncpus, cpus_priority_array,
+                PRIO_ANY, 0 /* max_parallelism */, &last_borrow, new_guests) == DLB_SUCCESS );
     for (i=0; i<system_size; ++i) {
         assert( i==mycpu ? new_guests[i] == pid : new_guests[i] == -1 );
     }
@@ -143,7 +144,9 @@ int main( int argc, char **argv ) {
     }
 
     // Acquire mask
-    assert( shmem_cpuinfo__acquire_cpu_mask(pid, &process_mask, new_guests, victims) >= 0 );
+    assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid, NULL /* requested_ncpus */,
+                cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                new_guests, victims) >= 0 );
     for (i=0; i<system_size; ++i) {
         assert( CPU_ISSET(i, &process_mask) ? new_guests[i] == pid : new_guests[i] == -1 );
         assert( victims[i] == -1 );
@@ -156,8 +159,9 @@ int main( int argc, char **argv ) {
     }
 
     // Borrow all
-    assert( shmem_cpuinfo__borrow_all(pid, PRIO_ANY, cpus_priority_array, &last_borrow,
-                new_guests) >= 0 );
+    assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid, NULL /* requested_ncpus */,
+                cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                new_guests) == DLB_SUCCESS );
     for (i=0; i<system_size; ++i) {
         assert( CPU_ISSET(i, &process_mask) ? new_guests[i] == pid : new_guests[i] == -1 );
     }
@@ -179,8 +183,9 @@ int main( int argc, char **argv ) {
         for (i=0; i<max; ++i) { assert( new_guests[i] == -1 && victims[i] == -1 ); }
         for (i=max; i<system_size; ++i) { assert( new_guests[i] == 0  && victims[i] == pid ); }
         // Acquire all CPUs again
-        assert( shmem_cpuinfo__acquire_cpu_mask(pid, &process_mask, new_guests, victims)
-                == DLB_SUCCESS  );
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid, NULL /* requested_ncpus */,
+                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */, &last_borrow,
+                    new_guests, victims) == DLB_SUCCESS );
     }
 
     // Check errors with a nonexistent CPU
@@ -190,8 +195,6 @@ int main( int argc, char **argv ) {
             == DLB_ERR_PERM );
     CPU_ZERO(&mask);
     CPU_SET(system_size, &mask);
-    // mask is not checked beyond max_cpus
-    assert( shmem_cpuinfo__acquire_cpu_mask(pid, &mask, new_guests, victims) == DLB_SUCCESS );
     // mask is not checked beyond max_cpus
     assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &mask, new_guests, victims) == DLB_NOUPDT );
 

@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
     mu_testing_set_sys_size(SYS_SIZE);
     pid_t new_guests[SYS_SIZE];
     pid_t victims[SYS_SIZE];
+    int i, j;
 
     /* Initialize local masks */
     pid_t p1_pid = 11111;
@@ -59,6 +60,11 @@ int main(int argc, char *argv[]) {
     CPU_AND(&p1_p2_mask, &p1_mask, &p2_mask);
     assert( CPU_COUNT(&p1_p2_mask) == 0 );
 
+    /* Other shmem parameters */
+    int cpus_priority_array[SYS_SIZE];
+    int64_t last_borrow_value = 0;
+    int64_t *last_borrow = &last_borrow_value;
+    int requested_ncpus;
 
     /* Initialize shared memories */
     assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
@@ -70,11 +76,12 @@ int main(int argc, char *argv[]) {
     /* Enable request queues */
     shmem_cpuinfo__enable_request_queues();
 
-    /* P2 requests 12 CPUs, CPUs 0-3 are not eligible */
-    int priority_array[SYS_SIZE];
-    int i;
-    for (i=0; i<SYS_SIZE; ++i) priority_array[i] = i+4 < SYS_SIZE ? i+4 : -1;
-    shmem_cpuinfo__acquire_cpus(p2_pid, 0, priority_array, NULL, 12, new_guests, victims);
+    /* P2 requests 12 CPUs in the subset [4-15] */
+    requested_ncpus = 12;
+    for (i=0, j=4; i<requested_ncpus; ++i) cpus_priority_array[i] = j++;
+    cpus_priority_array[i] = -1;
+    assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus, cpus_priority_array,
+            PRIO_ANY, 0 /* max_parallelism */, last_borrow, new_guests, victims) == DLB_NOTED );
 
     /* CPUs 0-3 are lent (they remain idle) */
     cpu_set_t cpus_to_lend = { .__bits = {0xf} };
@@ -92,10 +99,12 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__reclaim_cpu_mask(p1_pid, &cpus_to_reclaim, new_guests, victims)
             == DLB_NOTED );
 
-    /* CPUs 16-19 are requested by P1 */
-    cpu_set_t cpus_to_request = { .__bits = {0xf0000} };
-    assert( shmem_cpuinfo__acquire_cpu_mask(p1_pid, &cpus_to_request, new_guests, victims )
-            == DLB_NOTED );
+    /* P1 requests 4 CPUs in the subset [16-19] */
+    requested_ncpus = 4;
+    for (i=0, j=16; i<requested_ncpus; ++i) cpus_priority_array[i] = j++;
+    cpus_priority_array[i] = -1;
+    assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus, cpus_priority_array,
+            PRIO_ANY, 0 /* max_parallelism */, last_borrow, new_guests, victims) == DLB_NOTED );
 
     /* P3 registers one CPU and requests CPU 19 also */
     pid_t p3_pid = 33333;

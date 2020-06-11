@@ -306,6 +306,23 @@ int DLB_AcquireCpus(int ncpus);
  */
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask);
 
+/*! \brief Acquire some CPUs from a subset of CPUs
+ *  \param[in] ncpus Number of CPUs to acquire
+ *  \param[in] mask CPU set to acquire from
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if the petition cannot be immediately fulfilled
+ *  \return DLB_NOUPDT if cannot acquire any CPU
+ *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_PERM if the resources cannot be acquired
+ *  \return DLB_ERR_REQST if there are too many requests for these resources
+ *
+ *  Acquire CPUs from the system. If the CPU belongs to the process the call is
+ *  equivalent to a *reclaim* action. Otherwise the process attempts to acquire
+ *  a specific CPU in case it is available or enqueue a request if it's not.
+ */
+int DLB_AcquireCpusInMask(int ncpus, const_dlb_cpu_set_t mask);
+
 
 /*********************************************************************************/
 /*    Borrow                                                                     */
@@ -357,6 +374,19 @@ int DLB_BorrowCpus(int ncpus);
  *  if the CPU is not available.
  */
 int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask);
+
+/*! \brief Borrow some CPUs from a subset of CPUs
+ *  \param[in] ncpus Number of CPUs to borrow
+ *  \param[in] mask CPU set to borrow from
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if cannot borrow any resources
+ *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_DISBLD if DLB is disabled
+ *
+ *  Borrow CPUs from the system only if they are idle. No other action is done
+ *  if the CPU is not available.
+ */
+int DLB_BorrowCpusInMask(int ncpus, const_dlb_cpu_set_t mask);
 
 /*********************************************************************************/
 /*    Return                                                                     */

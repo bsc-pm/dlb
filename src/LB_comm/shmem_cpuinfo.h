@@ -50,18 +50,15 @@ int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_
 
 /* Acquire */
 int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim);
-int shmem_cpuinfo__acquire_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int64_t *last_borrow, int ncpus, pid_t new_guests[], pid_t victims[]);
-int shmem_cpuinfo__acquire_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
-        pid_t victims[]);
+int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
+        pid_t pid, int *requested_ncpus, int cpus_priority_array[], priority_t priority,
+        int max_parallelism, int64_t *last_borrow, pid_t new_guests[], pid_t victims[]);
 
 /* Borrow */
-int shmem_cpuinfo__borrow_all(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int64_t *last_borrow, pid_t new_guests[]);
 int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest);
-int shmem_cpuinfo__borrow_cpus(pid_t pid, priority_t priority, int *cpus_priority_array,
-        int64_t *last_borrow, int ncpus, pid_t new_guests[]);
-int shmem_cpuinfo__borrow_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
+int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
+        pid_t pid, int *requested_ncpus, int cpus_priority_array[], priority_t priority,
+        int max_parallelism, int64_t *last_borrow, pid_t new_guests[]);
 
 /* Return */
 int shmem_cpuinfo__return_all(pid_t pid, pid_t new_guests[]);
@@ -77,6 +74,7 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
 int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpu);
 bool shmem_cpuinfo__exists(void);
 void shmem_cpuinfo__enable_request_queues(void);
+void shmem_cpuinfo__remove_requests(pid_t pid);
 int shmem_cpuinfo__version(void);
 size_t shmem_cpuinfo__size(void);
 

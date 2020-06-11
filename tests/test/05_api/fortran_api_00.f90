@@ -50,17 +50,21 @@ program test
 
     ! Acquire
     if (dlb_acquirecpu(0) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_acquirecpus(1) /= DLB_ERR_NOPOL ) call abort
     if (dlb_acquirecpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_acquirecpusinmask(1, process_mask) /= DLB_ERR_NOPOL ) call abort
 
     ! Borrow
     if (dlb_borrow() /= DLB_ERR_NOPOL ) call abort
     if (dlb_borrowcpu(1) /= DLB_ERR_NOPOL ) call abort
     if (dlb_borrowcpus(1) /= DLB_ERR_NOPOL ) call abort
     if (dlb_borrowcpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_borrowcpusinmask(1, process_mask) /= DLB_ERR_NOPOL ) call abort
 
     ! Return
     if (dlb_return() /= DLB_ERR_NOPOL ) call abort
     if (dlb_returncpu(0) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_returncpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
 
     ! Barrier
     if (dlb_barrier() /= DLB_ERR_NOCOMP ) call abort

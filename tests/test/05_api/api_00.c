@@ -80,17 +80,21 @@ int main( int argc, char **argv ) {
 
     // Acquire
     assert( DLB_AcquireCpu(0) == DLB_ERR_NOPOL );
+    assert( DLB_AcquireCpus(1) == DLB_ERR_NOPOL );
     assert( DLB_AcquireCpuMask(&process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_AcquireCpusInMask(1, &process_mask) == DLB_ERR_NOPOL );
 
     // Borrow
     assert( DLB_Borrow() == DLB_ERR_NOPOL );
     assert( DLB_BorrowCpu(1) == DLB_ERR_NOPOL );
     assert( DLB_BorrowCpus(1) == DLB_ERR_NOPOL );
     assert( DLB_BorrowCpuMask(&process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_BorrowCpusInMask(1, &process_mask) == DLB_ERR_NOPOL );
 
     // Return
     assert( DLB_Return() == DLB_ERR_NOPOL );
     assert( DLB_ReturnCpu(0) == DLB_ERR_NOPOL );
+    assert( DLB_ReturnCpuMask(&process_mask) == DLB_ERR_NOPOL );
 
     // Barrier
     assert( DLB_Barrier() == DLB_ERR_NOCOMP );

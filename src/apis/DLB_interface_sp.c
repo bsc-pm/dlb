@@ -164,6 +164,11 @@ int DLB_AcquireCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
     return acquire_cpu_mask(handler, mask);
 }
 
+int DLB_AcquireCpusInMask_sp(dlb_handler_t handler, int ncpus, const_dlb_cpu_set_t mask) {
+    spd_enter_dlb(handler);
+    return acquire_cpus_in_mask(handler, ncpus, mask);
+}
+
 
 /* Borrow */
 
@@ -185,6 +190,11 @@ int DLB_BorrowCpus_sp(dlb_handler_t handler, int ncpus) {
 int DLB_BorrowCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return borrow_cpu_mask(handler, mask);
+}
+
+int DLB_BorrowCpusInMask_sp(dlb_handler_t handler, int ncpus, const_dlb_cpu_set_t mask) {
+    spd_enter_dlb(handler);
+    return borrow_cpus_in_mask(handler, ncpus, mask);
 }
 
 
