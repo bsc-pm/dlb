@@ -159,53 +159,41 @@ int shmem_barrier_ext__finalize(void) {
 }
 
 void shmem_barrier__barrier(void) {
-    if (shm_handler == NULL) return;
+    if (unlikely(shm_handler == NULL)) return;
 
     barrier_t *barrier = get_barrier();
 
-    if (!barrier->initialized) {
+    if (unlikely(!barrier->initialized)) {
         warning("Trying to use a non initialized barrier");
         return;
     }
 
-    bool last_in;
-    shmem_lock(shm_handler);
-    {
-        last_in = ++barrier->count == barrier->participants;
-    }
-    shmem_unlock(shm_handler);
+    unsigned int participant_number = __sync_add_and_fetch(&barrier->count, 1);
+    bool last_in = participant_number == barrier->participants;
 
     verbose(VB_BARRIER, "Entering barrier%s", last_in ? " (last)" : "");
 
     if (last_in) {
-        // Last process entering the barrier must signal someone
-        sem_post(&barrier->sem);
+        // Last process entering the barrier must signal the rest
+        int i;
+        for (i=1; i<barrier->participants; ++i) {
+            sem_post(&barrier->sem);
+        }
     } else {
         // Only if this process is not the last one, act as a blocking call
         IntoBlockingCall(0, 0);
-    }
 
-    // Wait until everyone is in here
-    sem_wait(&barrier->sem);
+        // Wait until the last in signals
+        sem_wait(&barrier->sem);
 
-    if (!last_in) {
         // Recover resources for those processes that simulated a blocking call
         OutOfBlockingCall(0);
     }
 
-    bool last_out;
-    shmem_lock(shm_handler);
-    {
-        last_out = --barrier->count  == 0;
-    }
-    shmem_unlock(shm_handler);
+    unsigned participants_left = __sync_sub_and_fetch(&barrier->count, 1);
+    bool last_out = participants_left == 0;
 
     verbose(VB_BARRIER, "Leaving barrier%s", last_out ? " (last)" : "");
-
-    if (!last_out) {
-        // Everyone except the last process out must signal the next one
-        sem_post(&barrier->sem);
-    }
 
 #ifdef DEBUG_VERSION
     if (last_out) {
