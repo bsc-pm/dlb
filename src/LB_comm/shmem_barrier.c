@@ -74,7 +74,7 @@ void shmem_barrier__init(const char *shmem_key) {
             shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
 
     int error = 0;
-    shmem_lock(init_handler);
+    shmem_lock_maintenance(init_handler);
     {
         // Initialize both barriers, only first process to arrive
         int i;
@@ -95,7 +95,7 @@ void shmem_barrier__init(const char *shmem_key) {
             advance_barrier();
         }
     }
-    shmem_unlock(init_handler);
+    shmem_unlock_maintenance(init_handler);
 
     fatal_cond(error, "Process unable to create/attach to semaphore (barrier)");
     verbose(VB_BARRIER, "Barrier Module initialized. Participants: %d",
@@ -116,14 +116,12 @@ void shmem_barrier__finalize(void) {
 
     verbose(VB_BARRIER, "Finalizing Barrier Module");
 
-    shmem_lock(shm_handler);
+    shmem_lock_maintenance(shm_handler);
     {
         int i;
         for (i=0; i<2; ++i) {
             barrier_t *barrier = get_barrier();
             if (barrier->initialized) {
-                // TODO check if sempahore is not being used
-
                 // Decrement participants
                 --barrier->participants;
 
@@ -138,7 +136,7 @@ void shmem_barrier__finalize(void) {
             advance_barrier();
         }
     }
-    shmem_unlock(shm_handler);
+    shmem_unlock_maintenance(shm_handler);
 
     shmem_finalize(shm_handler, SHMEM_DELETE);
     shm_handler = NULL;
@@ -158,6 +156,7 @@ int shmem_barrier_ext__finalize(void) {
     return DLB_SUCCESS;
 }
 
+
 void shmem_barrier__barrier(void) {
     if (unlikely(shm_handler == NULL)) return;
 
@@ -167,6 +166,9 @@ void shmem_barrier__barrier(void) {
         warning("Trying to use a non initialized barrier");
         return;
     }
+
+    /* Wait until the shared memory state can be set to BUSY */
+    shmem_wait_until_busy(shm_handler);
 
     unsigned int participant_number = __sync_add_and_fetch(&barrier->count, 1);
     bool last_in = participant_number == barrier->participants;
@@ -195,11 +197,11 @@ void shmem_barrier__barrier(void) {
 
     verbose(VB_BARRIER, "Leaving barrier%s", last_out ? " (last)" : "");
 
-#ifdef DEBUG_VERSION
     if (last_out) {
         __sync_add_and_fetch(&barrier->ntimes, 1);
+        /* The last process may unset the BUSY state */
+        shmem_unset_busy(shm_handler);
     }
-#endif
 
     advance_barrier();
 }

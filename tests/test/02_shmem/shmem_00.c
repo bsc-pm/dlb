@@ -25,13 +25,14 @@
 
 #include "LB_comm/shmem.h"
 #include "support/mask_utils.h"
+#include "support/mytime.h"
 
 #include <assert.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/wait.h>
 
-/* Fill node with processes, everyone attaches to the shared memory, then everyone dettaches */
+/* Fill node with processes, childs will join the shared memory and will test the lock mechanism */
 
 void __gcov_flush() __attribute__((weak));
 
@@ -63,14 +64,85 @@ int main(int argc, char **argv) {
         pid_t pid = fork();
         assert( pid >= 0 );
         if (pid == 0) {
-            // Each child will attach to the shared memory, sync with barrier and finalize
+            // Each child will attach to the shared memory
             handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
                     SHMEM_VERSION_IGNORE);
-            int error = pthread_barrier_wait(&shdata->barrier);
-            assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+            pthread_barrier_wait(&shdata->barrier);                             // Barrier 1
+
+            // Everyone performs a locked decrement
+            shmem_lock(handler);
+            shdata->foo--;
+            shmem_unlock(handler);
+            pthread_barrier_wait(&shdata->barrier);                             // Barrier 2
+            assert(shdata->foo == 1);
+            pthread_barrier_wait(&shdata->barrier);                             // Barrier 3
+
+            // Everyone performs a locked increment (using lock maintenance)
+            shmem_lock_maintenance(handler);
+            shdata->foo++;
+            shmem_unlock_maintenance(handler);
+            pthread_barrier_wait(&shdata->barrier);                             // Barrier 4
+            assert(shdata->foo == ncpus);
+            pthread_barrier_wait(&shdata->barrier);                             // Barrier 5
+
+            // Test that shmem cannot be put in BUSY while in MAINTENANCE
+            if (child == 1) {
+                // PRE-B6: Child 1 sets the maintenance mode
+                shmem_lock_maintenance(handler);
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 6
+                // PRE-B7: Child 1 sets some value
+                shdata->foo = 42;
+                // PRE-B7: Child 1 unsets the maintenance mode
+                shmem_unlock_maintenance(handler);
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 7
+            } else if (child == 2) {
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 6
+                // PRE-B7: Child 2 will read the value in BUSY mode
+                shmem_acquire_busy(handler);
+                assert(shdata->foo == 42);
+                shmem_release_busy(handler);
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 7
+            } else {
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 6
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 7
+            }
+
+            // Test that shmem cannot be put in MAINTENANCE while in BUSY
+            if (child == 1) {
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 8
+                // PRE-B9: Child 1 wants to acquire in maintenance mode
+                shmem_lock_maintenance(handler);
+                // PRE-B9: Child 1 will read the value in maintenance mode
+                assert(shdata->foo == 42*42);
+                shmem_unlock_maintenance(handler);
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 9
+            } else if (child == 2) {
+                // PRE-B8: Child 2 enters in busy mode
+                shmem_acquire_busy(handler);
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 8
+                // PRE-B9: Child 2 sets some value in busy mode
+                shdata->foo = 42*42;
+                // PRE-B9: Child 2 leaves busy mode
+                shmem_release_busy(handler);
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 9
+            } else {
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 8
+                pthread_barrier_wait(&shdata->barrier);                         // Barrier 9
+            }
+
+            // Test that BUSY mode does not cause synchronization
+            shmem_acquire_busy(handler);
+            // Everybody synchronizes inside
+            pthread_barrier_wait(&shdata->barrier);                             // Barrier 10
+            if (child == 1) {
+                // Only one child deactivates busy mode
+                shmem_release_busy(handler);
+            }
+            pthread_barrier_wait(&shdata->barrier);                             // Barrier 11
+
             shmem_finalize(handler, SHMEM_DELETE);
 
-            // We need to call _exit so that childs don't call assert_shmem destructors,
+            // We need to call _exit so that children don't call assert_shmem destructors,
             // but that prevents gcov reports, so we'll call it if defined
             if (__gcov_flush) __gcov_flush();
             _exit(EXIT_SUCCESS);
@@ -78,9 +150,13 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Master process syncs with barrier and finalizes everything
-    int error = pthread_barrier_wait(&shdata->barrier);
-    assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+    // Master process must do as many barriers as children do
+    int i;
+    for (i=0; i<11; ++i) {
+        pthread_barrier_wait(&shdata->barrier);
+    }
+
+    // Finalize everything
     assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
     shmem_finalize(handler, SHMEM_DELETE);
 

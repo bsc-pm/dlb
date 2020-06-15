@@ -24,16 +24,27 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#define SHM_NAME_LENGTH 32
+// Shared Memory State. Used for state-based spinlocks.
+typedef enum ShmemState {
+    SHMEM_READY,
+    SHMEM_BUSY,
+    SHMEM_MAINTENANCE
+} shmem_state_t;
 
 // Shared Memory Sync. Must be a struct because it will be allocated inside the shmem
 typedef struct {
+    unsigned int        shsync_version; // Shared Memory Sync version, set by the first process
+    unsigned int        shmem_version;  // Shared Memory version, set by the first process
     int                 initializing;   // Only the first process sets 0 -> 1
     int                 initialized;    // Only the first process sets 0 -> 1
-    unsigned int        shmem_version;  // Shared Memory version, set by the first process
+    shmem_state_t       state;          // Shared memory state
     pthread_spinlock_t  shmem_lock;     // Spin-lock to grant exclusive access to the shmem
     pid_t               pidlist[0];     // Array of attached PIDs
 } shmem_sync_t;
+
+enum { SHMEM_SYNC_VERSION = 2 };
+
+enum { SHM_NAME_LENGTH = 32 };
 
 typedef struct {
     size_t          shm_size;
@@ -54,6 +65,10 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
 void shmem_finalize(shmem_handler_t *handler, shmem_option_t shmem_delete);
 void shmem_lock(shmem_handler_t *handler);
 void shmem_unlock(shmem_handler_t *handler);
+void shmem_lock_maintenance( shmem_handler_t* handler );
+void shmem_unlock_maintenance( shmem_handler_t* handler );
+void shmem_acquire_busy( shmem_handler_t* handler );
+void shmem_release_busy( shmem_handler_t* handler );
 char *get_shm_filename(shmem_handler_t *handler);
 bool shmem_exists(const char *shmem_module, const char *shmem_key);
 void shmem_destroy(const char *shmem_module, const char *shmem_key);
