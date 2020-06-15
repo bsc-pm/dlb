@@ -62,9 +62,11 @@ static barrier_t* get_barrier() {
 void shmem_barrier__init(const char *shmem_key) {
     if (shm_handler != NULL) return;
 
-    // more error checks to be done if the option is implemented
-    barrier_id = getenv("LB_BARRIER_ID") ? atoi(getenv("LB_BARRIER_ID")) : 0;
-//    int qty = getenv("LB_BARRIER_QTY") ? atoi(getenv("LB_BARRIER_QTY")) : 0;
+    if (thread_spd && thread_spd->options.barrier_id > 0) {
+        barrier_id = thread_spd->options.barrier_id;
+    } else {
+        barrier_id = 0;
+    }
 
     max_barriers = mu_get_system_size();
 
