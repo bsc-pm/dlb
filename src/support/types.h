@@ -57,7 +57,8 @@ typedef enum InstrumentEvents {
     INST_TALP   = 1 << 3,
     INST_BARR   = 1 << 4,
     INST_OMPT   = 1 << 5,
-    INST_CPUS   = 1 << 6
+    INST_CPUS   = 1 << 6,
+    INST_CBCK   = 1 << 7
 } instrument_events_t;
 
 typedef enum DebugOptions {

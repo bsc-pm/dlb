@@ -393,6 +393,7 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_loop.cfg \
 	doc/paraver_cfgs/DLB_regions.cfg \
 	doc/paraver_cfgs/DLB_Give_Want_number_of_cpus.cfg \
+	doc/paraver_cfgs/DLB_callbacks.cfg \
 	$(END)
 
 paravercfgsdir = $(datadir)/paraver_cfgs/DLB

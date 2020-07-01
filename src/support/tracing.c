@@ -87,6 +87,11 @@ void instrument_event(unsigned type, long long value, instrument_action_t action
                 extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
             }
             break;
+        case CALLBACK_EVENT:
+            if (instrument & INST_CBCK) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
         case MONITOR_REGION:
             if (instrument & INST_TALP) {
                 extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
@@ -185,6 +190,11 @@ void init_tracing(const options_t *options) {
         type=BINDINGS_EVENT;
         n_values=0;
         Extrae_define_event_type(&type, "DLB thread binding in OMPT", &n_values, NULL, NULL);
+
+        //CALLBACK_EVENT
+        type=CALLBACK_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB callback", &n_values, NULL, NULL);
     } else {
         extrae_set_event = dummy;
     }

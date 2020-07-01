@@ -146,7 +146,9 @@ int update_threads(const pm_interface_t *pm, int threads) {
 
     add_event(THREADS_USED_EVENT, threads);
 
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_set_num_threads_ptr(threads, pm->dlb_callback_set_num_threads_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }
 
@@ -154,7 +156,9 @@ int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_set_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_set_active_mask_ptr(cpu_set, pm->dlb_callback_set_active_mask_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }
 
@@ -162,7 +166,9 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_set_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_set_process_mask_ptr(cpu_set, pm->dlb_callback_set_process_mask_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }
 
@@ -170,7 +176,9 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_add_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_add_active_mask_ptr(cpu_set, pm->dlb_callback_add_active_mask_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }
 
@@ -178,7 +186,9 @@ int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_add_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_add_process_mask_ptr(cpu_set, pm->dlb_callback_add_process_mask_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }
 
@@ -190,7 +200,9 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
         CPU_SET(cpuid, &cpu_set);
         return add_mask(pm, &cpu_set);
     }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }
 
@@ -202,6 +214,8 @@ int disable_cpu(const pm_interface_t *pm, int cpuid) {
         CPU_CLR(cpuid, &cpu_set);
         return set_mask(pm, &cpu_set);
     }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }

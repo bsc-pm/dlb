@@ -44,6 +44,7 @@
 #define EVENT_SINGLE         3
 #define REBIND_EVENT       800060
 #define BINDINGS_EVENT     800061
+#define CALLBACK_EVENT     800070
 
 #define LOOP_STATE         800080
 #define MONITOR_REGION     800100
