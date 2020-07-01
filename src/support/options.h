@@ -57,6 +57,8 @@ typedef struct Options {
     /* statistics */
     bool                talp;
     talp_summary_t      talp_summary;
+    /* barrier */
+    int                 barrier_id;
 } options_t;
 
 void options_init(options_t *options, const char *dlb_args);

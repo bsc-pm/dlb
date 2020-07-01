@@ -289,6 +289,17 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_TLPSUM_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     },
+    // barrier
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--barrier-id",
+        .default_value  = "0",
+        .description    = OFFSET"Barrier ID. Use different barrier id numbers for different\n"
+                          OFFSET"processes to avoid unwanted synchronization.",
+        .offset         = offsetof(options_t, barrier_id),
+        .type           = OPT_INT_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+    },
     // misc
     {
         .var_name       = "LB_SHM_KEY",

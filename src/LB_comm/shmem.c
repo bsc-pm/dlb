@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "LB_comm/shmem.h"
 
 #include "support/debug.h"
@@ -165,6 +169,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         }
     }
     shmem_consistency_add_pid(handler->shsync->pidlist, pid);
+    shmem_consistency_check_version(handler->shsync->shsync_version, SHMEM_SYNC_VERSION);
     shmem_consistency_check_version(handler->shsync->shmem_version, shmem_version);
     pthread_spin_unlock(&handler->shsync->shmem_lock);
 
@@ -210,6 +215,61 @@ void shmem_lock( shmem_handler_t* handler ) {
 
 void shmem_unlock( shmem_handler_t* handler ) {
     pthread_spin_unlock(&handler->shsync->shmem_lock);
+}
+
+enum { SHMEM_TRYAQUIRE_USECS = 100 };
+
+/* Busy wait until the shmem can be locked with the state MAINTENANCE */
+void shmem_lock_maintenance( shmem_handler_t* handler ) {
+    volatile shmem_state_t *state = &handler->shsync->state;
+    while(1) {
+        pthread_spin_lock(&handler->shsync->shmem_lock);
+        switch(*state) {
+            case SHMEM_READY:
+                /* Lock successfully acquired: READY -> MAINTENANCE */
+                *state = SHMEM_MAINTENANCE;
+                return;
+            case SHMEM_BUSY:
+                /* Shmem cannot be put in maintenance while BUSY */
+                pthread_spin_unlock(&handler->shsync->shmem_lock);
+                usleep(SHMEM_TRYAQUIRE_USECS);
+                break;
+            case SHMEM_MAINTENANCE:
+                /* This should not happen */
+                pthread_spin_unlock(&handler->shsync->shmem_lock);
+                fatal("Shared memory lock inconsistency. Please report to " PACKAGE_BUGREPORT);
+                break;
+        }
+    }
+}
+
+/* Unlock a previoulsy shmem in the MAINTENANCE state */
+void shmem_unlock_maintenance( shmem_handler_t* handler ) {
+    /* Unlock MAINTENANCE -> READY */
+    int error = handler->shsync->state != SHMEM_MAINTENANCE;
+    handler->shsync->state = SHMEM_READY;
+    pthread_spin_unlock(&handler->shsync->shmem_lock);
+
+    /* This should not happen */
+    fatal_cond(error, "Shared memory lock inconsistency. Please report to " PACKAGE_BUGREPORT);
+}
+
+/* Busy wait until the shmem can be set READY -> BUSY */
+void shmem_acquire_busy( shmem_handler_t* handler ) {
+    volatile shmem_state_t *state = &handler->shsync->state;
+    while ( unlikely(
+                *state != SHMEM_BUSY
+                && !__sync_bool_compare_and_swap(state, SHMEM_READY, SHMEM_BUSY)
+                )) {
+        usleep(SHMEM_TRYAQUIRE_USECS);
+    }
+}
+
+/* Set shmm state BUSY -> READY */
+void shmem_release_busy( shmem_handler_t* handler ) {
+    fatal_cond(
+            !__sync_bool_compare_and_swap(&handler->shsync->state, SHMEM_BUSY, SHMEM_READY),
+            "Shared memory lock inconsistency. Please report to " PACKAGE_BUGREPORT);
 }
 
 char *get_shm_filename( shmem_handler_t* handler ) {

@@ -21,6 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "LB_comm/shmem.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -38,6 +39,27 @@
 
 // Check versions of all shmems
 
+
+static void check_shmem_sync_version(void) {
+    enum { KNOWN_SHMEM_SYNC_VERSION = 2 };
+    struct KnownShmemSync {
+        unsigned int        uint1;
+        unsigned int        uint2;
+        int                 int1;
+        int                 int2;
+        enum {ENUM1}        enum1;
+        pthread_spinlock_t  spinlock;
+        pid_t               pidlist[0];
+    };
+
+    int version = SHMEM_SYNC_VERSION;
+    size_t size = sizeof(shmem_sync_t) * mu_get_system_size();
+    size_t known_size = sizeof(struct KnownShmemSync) * mu_get_system_size();
+    fprintf(stderr, "shmem_sync version %d, size: %lu, known_size: %lu\n",
+            version, size, known_size);
+    assert( version == KNOWN_SHMEM_SYNC_VERSION );
+    assert( size == known_size );
+}
 
 static void check_async_version(void) {
     enum { KNOWN_ASYNC_VERSION = 2 };
@@ -72,18 +94,18 @@ static void check_async_version(void) {
 }
 
 static void check_barrier_version(void) {
-    enum { KNOWN_BARRIER_VERSION = 2 };
+    enum { KNOWN_BARRIER_VERSION = 3 };
     struct KnownBarrierShdata {
         bool bool1;
         unsigned int int1;
         unsigned int int2;
         unsigned int int3;
-        sem_t sem;
+        pthread_barrier_t barrier;
     };
 
     int version = shmem_barrier__version();
     size_t size = shmem_barrier__size();
-    size_t known_size = sizeof(struct KnownBarrierShdata) * mu_get_system_size() * 2;
+    size_t known_size = sizeof(struct KnownBarrierShdata) * mu_get_system_size();
     fprintf(stderr, "shmem_barrier version %d, size: %lu, known_size: %lu\n",
             version, size, known_size);
     assert( version == KNOWN_BARRIER_VERSION );
@@ -203,6 +225,7 @@ static void check_procinfo_version(void) {
 }
 
 int main(int argc, char **argv) {
+    check_shmem_sync_version();
     check_async_version();
     check_barrier_version();
     check_cpuinfo_version();
