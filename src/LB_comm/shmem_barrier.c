@@ -24,6 +24,7 @@
 #include "LB_comm/shmem_barrier.h"
 
 #include "LB_core/DLB_kernel.h"
+#include "LB_core/DLB_talp.h"
 #include "LB_comm/shmem.h"
 #include "apis/dlb_errors.h"
 #include "support/debug.h"
@@ -200,6 +201,7 @@ void shmem_barrier__barrier(void) {
         __sync_add_and_fetch(&barrier->ntimes, 1);
     } else {
         // Only if this process is not the last one, act as a blocking call
+        talp_in_mpi();
         IntoBlockingCall(0, 0);
 
         // Barrier
@@ -207,6 +209,7 @@ void shmem_barrier__barrier(void) {
 
         // Recover resources for those processes that simulated a blocking call
         OutOfBlockingCall(0);
+        talp_out_mpi();
     }
 
     unsigned int participants_left = __sync_sub_and_fetch(&barrier->count, 1);

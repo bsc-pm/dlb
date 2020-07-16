@@ -174,7 +174,7 @@ void talp_cpu_enable(int cpuid) {
     if (talp_info) {
         if (!CPU_ISSET(cpuid, &talp_info->workers_mask)) {
             monitoring_regions_update_all();
-            CPU_CLR(cpuid, &talp_info->workers_mask);
+            CPU_SET(cpuid, &talp_info->workers_mask);
         }
     }
 }
@@ -231,14 +231,6 @@ void talp_out_mpi(void){
             CPU_ZERO(&talp_info->mpi_mask);
         }
     }
-}
-
-void talp_in_blocking_call(void) {
-    // TODO: DLB_Barrier use case
-}
-
-void talp_out_blocking_call(void) {
-    // TODO: DLB_Barrier use case
 }
 
 static void talp_node_summary(void) {
@@ -441,7 +433,8 @@ static void monitoring_regions_update_all(void) {
     /* Update MPI monitor */
     talp_info_t *talp_info = thread_spd->talp_info;
     monitor_data_t *mpi_monitor_data = talp_info->mpi_monitor._data;
-    if (mpi_monitor_data->started) {
+    if (mpi_monitor_data != NULL
+            && mpi_monitor_data->started) {
         talp_update_monitor(&talp_info->mpi_monitor);
     }
 

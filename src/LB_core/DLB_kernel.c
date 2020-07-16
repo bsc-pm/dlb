@@ -288,9 +288,6 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
         instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_BEGIN);
         spd->lb_funcs.into_blocking_call(spd);
         omp_thread_manager__IntoBlockingCall();
-        if(spd->options.talp){
-            talp_in_blocking_call();
-        }
         instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_END);
     }
 }
@@ -301,9 +298,6 @@ void OutOfBlockingCall(int is_iter) {
         instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_BEGIN);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
         omp_thread_manager__OutOfBlockingCall();
-        if(spd->options.talp){
-            talp_out_blocking_call();
-        }
         instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_END);
     }
 }
