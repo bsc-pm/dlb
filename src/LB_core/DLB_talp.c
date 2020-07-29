@@ -142,6 +142,11 @@ static void talp_update_monitor(dlb_monitor_t *monitor) {
     /* Compute sample duration */
     int64_t sample_duration = get_time_in_ns() - monitor_data->sample_start_time;
 
+    /* Update elapsed computation time */
+    if (CPU_COUNT(&talp_info->workers_mask) > 0) {
+        monitor->elapsed_computation_time += sample_duration;
+    }
+
     /* Update MPI time */
     int64_t mpi_time = sample_duration * CPU_COUNT(&talp_info->mpi_mask);
     monitor->accumulated_MPI_time += mpi_time;
@@ -365,6 +370,7 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
     monitor->start_time = 0;
     monitor->stop_time = 0;
     monitor->elapsed_time = 0;
+    monitor->elapsed_computation_time = 0;
     monitor->accumulated_MPI_time = 0;
     monitor->accumulated_computation_time = 0;
     memset(monitor->_data, 0, sizeof(monitor_data_t));
@@ -417,12 +423,14 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
 
 int monitoring_region_report(dlb_monitor_t *monitor) {
     info("########### Monitoring Region Summary ###########");
-    info("### Name:                     %s", monitor->name);
-    info("### Elapsed time :            %.9g seconds",
+    info("### Name:                       %s", monitor->name);
+    info("### Elapsed time :              %.9g seconds",
             nsecs_to_secs(monitor->elapsed_time));
-    info("### MPI time :                %.9g seconds",
+    info("### Elapsed computation time :  %.9g seconds",
+            nsecs_to_secs(monitor->elapsed_computation_time));
+    info("### MPI time :                  %.9g seconds",
             nsecs_to_secs(monitor->accumulated_MPI_time));
-    info("### Computation time :        %.9g seconds",
+    info("### Computation time :          %.9g seconds",
             nsecs_to_secs(monitor->accumulated_computation_time));
     info("###      CpuSet:  %s", mu_to_str(&thread_spd->process_mask));
     return DLB_SUCCESS;
