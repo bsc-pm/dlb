@@ -108,17 +108,11 @@ static void vprint(FILE *fp, const char *prefix, const char *fmt, va_list list) 
             threadid[0] = '\0';
         }
 
-        // Print
-        fprintf(fp, "%s%s[%s%s%s]: ",
-                timestamp,
-                prefix,
-                fmt_str,
-                spid,
-                threadid);
-
-        // Print va_list
-        vfprintf(fp, fmt, list);
-        fputc('\n', fp);
+        // Allocate message in an intermediate buffer and print in one function
+        char *msg;
+        vasprintf(&msg, fmt, list);
+        fprintf(fp, "%s%s[%s%s%s]: %s\n", timestamp, prefix, fmt_str, spid, threadid, msg);
+        free(msg);
     }
 }
 
