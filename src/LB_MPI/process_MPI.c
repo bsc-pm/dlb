@@ -148,6 +148,9 @@ void after_init(void) {
 
     if (DLB_Init(0, NULL, NULL) == DLB_SUCCESS) {
         init_from_mpi = 1;
+    } else {
+        // Re-initialize debug again to possibly update the verbose format string
+        debug_init(&thread_spd->options);
     }
 
     // Policies that used dpd have been temporarily disabled
