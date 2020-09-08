@@ -142,9 +142,8 @@ void init_tracing(const options_t *options) {
 
          //MONITOR_REGION
         type=MONITOR_REGION;
-        n_values=2;
-         char * value_regions[2] = { "Disabled", "Enabled"};
-        Extrae_define_event_type(&type, "MonitorRegions mode", &n_values, values, value_regions);
+        n_values=0;
+        Extrae_define_event_type(&type, "Monitor Regions", &n_values, NULL, NULL);
 
 
         //RUNTIME_EVENT

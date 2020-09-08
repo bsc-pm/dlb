@@ -52,12 +52,14 @@ typedef struct talp_info_t {
 
 /* Private data per monitor */
 typedef struct monitor_data_t {
+    int     id;
     bool    started;
     int64_t sample_start_time;
 } monitor_data_t;
 
 
 static void talp_node_summary(void);
+static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name);
 static void monitoring_regions_finalize(void);
 static void monitoring_regions_update_all(void);
 static void monitoring_regions_report_all(void);
@@ -75,6 +77,19 @@ static inline void sort_pids(pid_t * pidlist, int start, int end){
             }
         }
     }
+}
+
+/* Reserved regions ids */
+enum { MPI_MONITORING_REGION_ID = 1 };
+
+/* Dynamic region ids */
+static int get_new_monitor_id(void) {
+    static int id = MPI_MONITORING_REGION_ID;
+#ifdef HAVE_STDATOMIC_H
+    return __atomic_add_fetch(&id, 1, __ATOMIC_RELAXED);
+#else
+    return __sync_add_and_fetch(&id, 1);
+#endif
 }
 
 
@@ -114,10 +129,9 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 void talp_mpi_init(void) {
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
-        talp_info->mpi_monitor._data = malloc(sizeof(monitor_data_t));
-        monitoring_region_reset(&talp_info->mpi_monitor);
-        talp_info->mpi_monitor.num_resets = 0;
-        talp_info->mpi_monitor.name = "MPI Execution";
+        /* Initialize MPI monitor */
+        monitoring_region_initialize(&talp_info->mpi_monitor, MPI_MONITORING_REGION_ID, "MPI Execution");
+        /* Start region */
         monitoring_region_start(&talp_info->mpi_monitor);
     }
 }
@@ -329,17 +343,32 @@ dlb_monitor_t* monitoring_region_register(const char* name){
     fatal_cond(!monitor, "Could not register a new monitoring region."
             " Please report at "PACKAGE_BUGREPORT);
 
-    // Assign new values after the mutex is unlocked
+    // Initialize after the mutex is unlocked
+    const char *monitor_name;
     if (name != NULL && *name != '\0') {
-        monitor->name = strdup(name);
+        monitor_name = strdup(name);
     } else {
-        monitor->name = anonymous_monitor_name;
+        monitor_name = anonymous_monitor_name;
     }
-    monitor->_data = malloc(sizeof(monitor_data_t));
-    monitoring_region_reset(monitor);
-    monitor->num_resets = 0;
+    monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
 
     return monitor;
+}
+
+static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name) {
+    /* Initialize opaque data */
+    monitor->_data = malloc(sizeof(monitor_data_t));
+    monitor_data_t *monitor_data = monitor->_data;
+
+    /* Assign name */
+    monitor->name = name;
+
+    /* Assign id */
+    monitor_data->id = id;
+
+    /* Initialize public data */
+    monitoring_region_reset(monitor);
+    monitor->num_resets = 0;
 }
 
 static void monitoring_regions_finalize(void) {
@@ -373,7 +402,11 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
     monitor->elapsed_computation_time = 0;
     monitor->accumulated_MPI_time = 0;
     monitor->accumulated_computation_time = 0;
-    memset(monitor->_data, 0, sizeof(monitor_data_t));
+
+    monitor_data_t *monitor_data = monitor->_data;
+    monitor_data->started = false;
+    monitor_data->sample_start_time = 0;
+
     return DLB_SUCCESS;
 }
 
@@ -382,7 +415,7 @@ int monitoring_region_start(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
 
     if (!monitor_data->started) {
-        instrument_event(MONITOR_REGION, 1, EVENT_BEGIN);
+        instrument_event(MONITOR_REGION, monitor_data->id, EVENT_BEGIN);
 
         monitor->start_time = get_time_in_ns();
         monitor->stop_time = 0;
@@ -412,7 +445,7 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
         monitor_data->started = false;
         monitor_data->sample_start_time = 0;
 
-        instrument_event(MONITOR_REGION, 0, EVENT_END);
+        instrument_event(MONITOR_REGION, monitor_data->id, EVENT_END);
         error = DLB_SUCCESS;
     } else {
         error = DLB_NOUPDT;
