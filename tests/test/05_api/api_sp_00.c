@@ -97,7 +97,7 @@ int main( int argc, char **argv ) {
     assert( DLB_ReturnCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
 
     // Misc
-    assert( DLB_PollDROM_sp(handler, NULL, NULL) == DLB_ERR_DISBLD );
+    assert( DLB_PollDROM_sp(handler, NULL, NULL) == DLB_ERR_NOCOMP );
     assert( DLB_SetVariable_sp(handler, "--drom", "1") == DLB_ERR_PERM );
     assert( DLB_SetVariable_sp(handler, "--debug-opts", "foo") == DLB_SUCCESS );
     char value[32];

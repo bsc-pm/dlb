@@ -265,9 +265,9 @@ void IntoCommunication(void) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.into_communication(spd);
-        if(spd->options.talp){
-            talp_in_mpi();
-       }
+    }
+    if(spd->options.talp) {
+        talp_in_mpi();
     }
 }
 
@@ -275,9 +275,9 @@ void OutOfCommunication(void) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.out_of_communication(spd);
-        if(spd->options.talp){
-            talp_out_mpi();
-        }
+    }
+    if(spd->options.talp) {
+        talp_out_mpi();
     }
 }
 
@@ -600,8 +600,8 @@ int return_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 
 int poll_drom(const subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mask) {
     int error;
-    if (!spd->dlb_enabled || !spd->options.drom) {
-        error = DLB_ERR_DISBLD;
+    if (!spd->options.drom) {
+        error = DLB_ERR_NOCOMP;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_POLLDROM, EVENT_BEGIN);
         // Use a local mask if new_mask was not provided
@@ -633,17 +633,13 @@ int poll_drom_update(const subprocess_descriptor_t *spd) {
 int node_barrier(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->dlb_enabled) {
-        if (spd->options.barrier) {
-            instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_BEGIN);
-            shmem_barrier__barrier();
-            instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_END);
-            error = DLB_SUCCESS;
-        } else {
-            error = DLB_ERR_NOCOMP;
-        }
+    if (spd->options.barrier) {
+        instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_BEGIN);
+        shmem_barrier__barrier();
+        instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_END);
+        error = DLB_SUCCESS;
     } else {
-        error = DLB_ERR_DISBLD;
+        error = DLB_ERR_NOCOMP;
     }
     return error;
 }
@@ -651,15 +647,11 @@ int node_barrier(void) {
 int node_barrier_attach(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->dlb_enabled) {
-        if (spd->options.barrier) {
-            shmem_barrier__init(spd->options.shm_key);
-            error = DLB_SUCCESS;
-        } else {
-            error = DLB_ERR_NOCOMP;
-        }
+    if (spd->options.barrier) {
+        shmem_barrier__init(spd->options.shm_key);
+        error = DLB_SUCCESS;
     } else {
-        error = DLB_ERR_DISBLD;
+        error = DLB_ERR_NOCOMP;
     }
     return error;
 }
@@ -667,15 +659,11 @@ int node_barrier_attach(void) {
 int node_barrier_detach(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->dlb_enabled) {
-        if (spd->options.barrier) {
-            shmem_barrier__finalize();
-            error = DLB_SUCCESS;
-        } else {
-            error = DLB_ERR_NOCOMP;
-        }
+    if (spd->options.barrier) {
+        shmem_barrier__finalize();
+        error = DLB_SUCCESS;
     } else {
-        error = DLB_ERR_DISBLD;
+        error = DLB_ERR_NOCOMP;
     }
     return error;
 }
