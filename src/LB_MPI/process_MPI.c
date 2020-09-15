@@ -165,6 +165,8 @@ void after_init(void) {
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
     int valor_dpd;
     if(mpi_ready) {
+        instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_BEGIN);
+
         IntoCommunication();
 
         if(use_dpd) {
@@ -181,11 +183,15 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
                 (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
             IntoBlockingCall(is_iter, 0);
         }
+
+        instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_END);
     }
 }
 
 void after_mpi(mpi_call call_type) {
     if (mpi_ready) {
+        instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_BEGIN);
+
         if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
                 (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
                 (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
@@ -193,6 +199,8 @@ void after_mpi(mpi_call call_type) {
         }
 
         OutOfCommunication();
+
+        instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_END);
     }
     // Poll DROM and update mask if necessary
     DLB_PollDROM_Update();

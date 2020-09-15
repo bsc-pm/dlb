@@ -285,20 +285,16 @@ void OutOfCommunication(void) {
 void IntoBlockingCall(int is_iter, int blocking_mode) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
-        instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_BEGIN);
         spd->lb_funcs.into_blocking_call(spd);
         omp_thread_manager__IntoBlockingCall();
-        instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_END);
     }
 }
 
 void OutOfBlockingCall(int is_iter) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
-        instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_BEGIN);
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
         omp_thread_manager__OutOfBlockingCall();
-        instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_END);
     }
 }
 
