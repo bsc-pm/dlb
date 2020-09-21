@@ -534,13 +534,15 @@ int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen) {
 int shmem_procinfo_ext__recover_stolen_cpus(int pid) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
-    int error = DLB_SUCCESS;
+    int error;
     shmem_lock(shm_handler);
     {
         pinfo_t *process = get_process(pid);
         if (process == NULL) {
             verbose(VB_DROM, "Cannot find process %d", pid);
             error = DLB_ERR_NOPROC;
+        } else if (CPU_COUNT(&process->stolen_cpus) == 0) {
+            error = DLB_NOUPDT;
         } else {
             // Recover all stolen CPUs only if the CPU is set in the free_mask
             cpu_set_t recovered_cpus;
