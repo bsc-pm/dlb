@@ -26,6 +26,7 @@
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <sys/types.h>
@@ -102,6 +103,95 @@ int main( int argc, char **argv ) {
 
         // Check that the shared memory has been finalized
         assert( shmem_procinfo__getprocessmask(pid, NULL, DLB_SYNC_QUERY) == DLB_ERR_NOSHMEM );
+    }
+
+    // Change CPU ownership
+    {
+        if (num_cpus >= 4) {
+            dlb_drom_flags_t flags = 0;
+            cpu_set_t p1_mask, p2_mask, mask;
+            mu_parse_mask("0-1", &p1_mask);
+            mu_parse_mask("2-3", &p2_mask);
+
+            assert( shmem_procinfo__init(111, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_procinfo__init(222, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+
+            // remove CPU 1 from subprocess 1
+            mu_parse_mask("0", &mask);
+            assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+            assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
+            assert( CPU_COUNT(&mask) == 1 && CPU_ISSET(0, &mask) );
+
+            // removing CPU 0 from subprocess 1 is also allowed
+            CPU_ZERO(&mask);
+            assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+            assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
+            assert( CPU_COUNT(&mask) == 0 );
+
+            // test CPU stealing without return_stolen
+            {
+                // set mask 0-2 to subprocess 1
+                mu_parse_mask("0-2", &mask);
+                assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+                // check that subprocess 2 has now only CPU 3
+                assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 1 && CPU_ISSET(3, &mask) );
+                // check that subprocess 1 has CPUs 0-2
+                assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 3
+                        && CPU_ISSET(0, &mask) && CPU_ISSET(1, &mask) && CPU_ISSET(2, &mask) );
+
+                // set original mask to subprocess 1 (WITHOUT return_stolen)
+                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags) == DLB_SUCCESS );
+                // check that subprocess 2 has not been updated
+                assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_NOUPDT );
+                // check that subprocess 1 has CPUs 0-1
+                assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 2
+                        && CPU_ISSET(0, &mask) && CPU_ISSET(1, &mask) );
+
+                // manually recover CPUs for subprocess 2
+                assert( shmem_procinfo_ext__recover_stolen_cpus(222) == DLB_SUCCESS );
+                assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 2
+                        && CPU_ISSET(2, &mask) && CPU_ISSET(3, &mask) );
+
+                // check that there are not stolen CPUs
+                assert( shmem_procinfo_ext__recover_stolen_cpus(222) == DLB_NOUPDT );
+            }
+
+            // test CPU stealing with return_stolen
+            {
+                // set mask 0-2 to subprocess 1 (again)
+                mu_parse_mask("0-2", &mask);
+                assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+                // check that subprocess 2 has now only CPU 3
+                assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 1 && CPU_ISSET(3, &mask) );
+                // check that subprocess 1 has CPUs 0-2
+                assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 3
+                        && CPU_ISSET(0, &mask) && CPU_ISSET(1, &mask) && CPU_ISSET(2, &mask) );
+
+                // set original mask to subprocess 1 (WITH return_stolen)
+                flags |= DLB_RETURN_STOLEN;
+                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags) == DLB_SUCCESS );
+                // check that subprocess 2 has CPUs 2-3
+                assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 2
+                        && CPU_ISSET(2, &mask) && CPU_ISSET(3, &mask) );
+                // check that subprocess 1 has CPUs 0-1
+                assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
+                assert( CPU_COUNT(&mask) == 2
+                        && CPU_ISSET(0, &mask) && CPU_ISSET(1, &mask) );
+
+                // check that there are not stolen CPUs
+                assert( shmem_procinfo_ext__recover_stolen_cpus(222) == DLB_NOUPDT );
+            }
+
+            assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_procinfo__finalize(222, false, SHMEM_KEY) == DLB_SUCCESS );
+        }
     }
 
 
