@@ -1271,20 +1271,23 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
         if (CPU_ISSET(cpuid, process_mask)) {
             // The CPU should be mine
             if (cpuinfo->owner != pid) {
-                // Steal CPU
+                // Not owned: Steal CPU
                 cpuinfo->owner = pid;
+                if (cpuinfo->guest == NOBODY) {
+                    cpuinfo->guest = pid;
+                }
+                cpuinfo->state = CPU_BUSY;
+                update_cpu_stats(cpuid, STATS_OWNED);
+
                 verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpuid);
+            } else {
+                // The CPU was already owned, no update needed
             }
-            if (cpuinfo->guest == NOBODY) {
-                cpuinfo->guest = pid;
-            }
-            cpuinfo->state = CPU_BUSY;
-            update_cpu_stats(cpuid, STATS_OWNED);
 
         } else {
             // The CPU is now not mine
             if (cpuinfo->owner == pid) {
-                // Release CPU ownership
+                // Previusly owned: Release CPU ownership
                 cpuinfo->owner = NOBODY;
                 cpuinfo->state = CPU_DISABLED;
                 if (cpuinfo->guest == pid ) {
@@ -1292,16 +1295,8 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
                 }
                 update_cpu_stats(cpuid, STATS_IDLE);
                 verbose(VB_SHMEM, "Releasing ownership of CPU %d", cpuid);
-            }
-            if (cpuinfo->guest == pid) {
-                // If I'm just the guest, return it as if claimed
-                if (cpuinfo->owner == NOBODY) {
-                    cpuinfo->guest = NOBODY;
-                    update_cpu_stats(cpuid, STATS_IDLE);
-                } else {
-                    cpuinfo->guest = cpuinfo->owner;
-                    update_cpu_stats(cpuid, STATS_OWNED);
-                }
+            } else {
+                // The CPU was not mine, no update needed
             }
         }
     }
