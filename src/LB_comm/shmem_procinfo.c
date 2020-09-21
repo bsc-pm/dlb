@@ -157,6 +157,7 @@ static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
     if (mu_is_subset(mask, &shdata->free_mask)) {
         mu_substract(&shdata->free_mask, &shdata->free_mask, mask);
         CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
+        mu_substract(&new_owner->stolen_cpus, &new_owner->stolen_cpus, mask);
         new_owner->dirty = true;
     } else {
         cpu_set_t wrong_cpus;
@@ -1265,6 +1266,13 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
         } while (!done && error == DLB_SUCCESS);
 
         shmem_lock(shm_handler);
+    }
+
+    if (!error && !dry_run) {
+        /* Assign stolen CPUs to the new owner */
+        CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
+        mu_substract(&new_owner->stolen_cpus, &new_owner->stolen_cpus, mask);
+        new_owner->dirty = true;
     }
 
     if (error && !dry_run) {
