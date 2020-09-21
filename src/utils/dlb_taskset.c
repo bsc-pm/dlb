@@ -172,9 +172,10 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
-static void set_affinity(pid_t pid, const cpu_set_t *new_mask) {
+static void set_affinity(pid_t pid, const cpu_set_t *new_mask, bool borrow) {
     DLB_DROM_Attach();
-    int error = DLB_DROM_SetProcessMask(pid, new_mask, 0);
+    dlb_drom_flags_t flags = borrow ? DLB_RETURN_STOLEN : 0;
+    int error = DLB_DROM_SetProcessMask(pid, new_mask, flags);
     dlb_check(error, pid, __FUNCTION__);
     DLB_DROM_Detach();
 
@@ -389,7 +390,7 @@ int main(int argc, char *argv[]) {
 
     // Actions
     if (do_set && pid) {
-        set_affinity(pid, &cpu_list);
+        set_affinity(pid, &cpu_list, borrow);
     }
     else if (do_execute) {
         argv += optind;

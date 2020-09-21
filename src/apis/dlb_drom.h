@@ -161,6 +161,7 @@ int DLB_DROM_PostFinalize(int pid, dlb_drom_flags_t flags);
 /*! \brief Recover previously stolen CPUs if they are idle
  *  \param[in] pid Process ID
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if the given process has not stolen CPUs
  *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *
