@@ -23,16 +23,27 @@
 #include <time.h>
 #include <stdint.h>
 
-/* TALP structure */
+/*! TALP public structure */
 typedef struct dlb_monitor_t {
+    /*! Name of the monitor */
     const char  *name;
+    /*! Number of times that the region has been started and stopped */
     int         num_measurements;
+    /*! Number of times that the region has been reset */
     int         num_resets;
+    /*! Absolute time (in nanoseconds) of the last time the region was started */
     int64_t     start_time;
+    /*! Absolute time (in nanoseconds) of the last time the region was stopped */
     int64_t     stop_time;
+    /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
     int64_t     elapsed_time;
+    /*! Time (in nanoseconds) of the accumulated elapsed time in computation inside the region */
+    int64_t     elapsed_computation_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time in MPI inside the region */
     int64_t     accumulated_MPI_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time in computation inside the region */
     int64_t     accumulated_computation_time;
+    /*! Internal data */
     void        *_data;
 } dlb_monitor_t;
 

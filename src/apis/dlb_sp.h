@@ -446,7 +446,7 @@ int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask);
  *  \param[out] mask optional, variable to receive the new mask
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if no update id needed
- *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_NOCOMP if DROM is not enabled (option --drom)
  *
  *  If DROM is enabled and the interaction mode is not asynchronous, this
  *  function can be called to poll the status of the CPU ownership.
@@ -458,7 +458,7 @@ int DLB_PollDROM_sp(dlb_handler_t handler, int *ncpus, dlb_cpu_set_t mask);
  *  \param[in] handler subprocess identifier
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if no update id needed
- *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_NOCOMP if DROM is not enabled (option --drom)
  *
  *  Same as DLB_PollDROM(), but calling the registered callbacks to update the
  *  ownership info instead of returning the data by argument.

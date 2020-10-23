@@ -44,11 +44,6 @@ typedef struct talp_info_t {
     cpu_set_t       mpi_mask;
 } talp_info_t;
 
-typedef struct monitor_data_t {
-    bool    started;
-    int64_t sample_start_time;
-} monitor_data_t;
-
 
 int main(int argc, char *argv[]) {
 

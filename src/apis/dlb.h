@@ -447,7 +447,7 @@ int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask);
  *  \param[out] mask optional, variable to receive the new mask
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if no update id needed
- *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_NOCOMP if DROM is not enabled (option --drom)
  *
  *  If DROM is enabled and the interaction mode is not asynchronous, this
  *  function can be called to poll the status of the CPU ownership.
@@ -458,7 +458,7 @@ int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask);
  *          and update it if necessary using the registered callbacks
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if no update id needed
- *  \return DLB_ERR_DISBLD if DLB is disabled
+ *  \return DLB_ERR_NOCOMP if DROM is not enabled (option --drom)
  *
  *  Same as DLB_PollDROM(), but calling the registered callbacks to update the
  *  ownership info instead of returning the data by argument.
@@ -482,11 +482,13 @@ int DLB_CheckCpuAvailability(int cpuid);
 
 /*! \brief Barrier between processes in the node
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
  */
 int DLB_Barrier(void);
 
 /*! \brief Attach process to the DLB_Barrier team
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
  *
  *  If the process had previusly called DLB_BarrierDetach, this function allows
  *  a process to become part again of the DLB_Barrier team. Otherwise it has no
@@ -496,6 +498,7 @@ int DLB_BarrierAttach(void);
 
 /*! \brief Barrier between processes in the node
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
  *
  *  Remove process from the DLB_Barrier team. The process will no longer be able
  *  to call DLB_Barrier. Other processes in the team will not synchronize with this

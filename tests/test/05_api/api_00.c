@@ -103,7 +103,7 @@ int main( int argc, char **argv ) {
 
     // Misc
     assert( DLB_CheckCpuAvailability(0) == DLB_ERR_NOPOL );
-    assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_DISBLD );
+    assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_NOCOMP );
     assert( DLB_SetVariable("--drom", "1") == DLB_ERR_PERM );
     assert( DLB_SetVariable("--debug-opts", "foo") == DLB_SUCCESS );
     char value[32];
