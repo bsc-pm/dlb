@@ -62,8 +62,7 @@ int  shmem_procinfo__getcomptime(pid_t pid, double *comp_time);
 int  shmem_procinfo__setcpuusage(pid_t pid, int index, double new_usage);
 int  shmem_procinfo__setcpuavgusage(pid_t pid, double new_avg_usage);
 
-int  shmem_procinfo__setmpitime(pid_t pid, double new_mpi_time);
-int  shmem_procinfo__setcomptime(pid_t pid, double new_comp_time);
+void  shmem_procinfo__settimers(pid_t pid, double mpi_time, double comp_time);
 
 /* Misc */
 void shmem_procinfo__print_info(const char *shmem_key);

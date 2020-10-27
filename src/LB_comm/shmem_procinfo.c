@@ -980,36 +980,17 @@ int shmem_procinfo__setcpuusage(pid_t pid,int index, double new_avg_usage) {
     return DLB_SUCCESS;
 }
 
-int shmem_procinfo__setcomptime(pid_t pid, double new_comp_time) {
-
-    if (shm_handler == NULL) return -1.0;
-
-    shmem_lock(shm_handler);
-    {
+void shmem_procinfo__settimers(pid_t pid, double mpi_time, double comp_time) {
+    if (likely(shm_handler != NULL)) {
         pinfo_t *process = get_process(pid);
-        if (process) {
-            process->comp_time = new_comp_time;
-        }
+#ifdef HAVE_STDATOMIC_H
+        __atomic_store(&process->mpi_time, &mpi_time, __ATOMIC_RELAXED);
+        __atomic_store(&process->comp_time, &comp_time, __ATOMIC_RELAXED);
+#else
+        process->mpi_time = mpi_time;
+        process->comp_time = comp_time;
+#endif
     }
-    shmem_unlock(shm_handler);
-
-    return DLB_SUCCESS;
-}
-
-int shmem_procinfo__setmpitime(pid_t pid, double new_mpi_time) {
-
-    if (shm_handler == NULL) return -1.0;
-
-    shmem_lock(shm_handler);
-    {
-        pinfo_t *process = get_process(pid);
-        if (process) {
-            process->mpi_time = new_mpi_time;
-        }
-    }
-    shmem_unlock(shm_handler);
-
-    return DLB_SUCCESS;
 }
 
 
