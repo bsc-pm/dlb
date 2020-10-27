@@ -28,6 +28,7 @@
 extern int _mpi_rank;         /* MPI rank */
 extern int _mpi_size;         /* MPI size */
 extern int _node_id;          /* Node ID */
+extern int _num_nodes;        /* Number of nodes */
 extern int _process_id;       /* Process ID per node */
 extern int _mpis_per_node;    /* Numer of MPI processes per node */
 

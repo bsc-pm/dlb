@@ -45,6 +45,7 @@ int _mpi_rank = -1;
 int _mpi_size = -1;
 int _mpis_per_node = -1;
 int _node_id = -1;
+int _num_nodes = -1;
 int _process_id = -1;
 
 static int use_dpd = 0;
@@ -126,6 +127,7 @@ void after_init(void) {
                 procsPerNode[j]++;
             }
         }
+        _num_nodes  = nodes;
     }
 
     int data[2];
