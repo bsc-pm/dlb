@@ -108,12 +108,20 @@ static int max_processes;
 static const char *shmem_name = "procinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
+static pinfo_t *my_pinfo = NULL;
 
 static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen);
 static void close_shmem(bool shmem_empty);
 
 static pinfo_t* get_process(pid_t pid) {
     if (shdata) {
+        /* Check first if pid is this process */
+        if (my_pinfo != NULL
+                && my_pinfo->pid == pid) {
+            return my_pinfo;
+        }
+
+        /* Iterate otherwise */
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == pid) {
@@ -229,6 +237,8 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
                 process->load[1] = 0.0f;
                 process->load[2] = 0.0f;
 #endif
+                // Save pointer for faster access
+                my_pinfo = process;
             }
         }
     }
@@ -446,6 +456,7 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_ke
             process->load[3] = {0.0f, 0.0f, 0.0f};
             process->last_ltime = {0};
 #endif
+            my_pinfo = NULL;
         }
 
         // Check if shmem is empty
