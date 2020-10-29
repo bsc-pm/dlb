@@ -108,12 +108,20 @@ static int max_processes;
 static const char *shmem_name = "procinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
+static pinfo_t *my_pinfo = NULL;
 
 static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen);
 static void close_shmem(bool shmem_empty);
 
 static pinfo_t* get_process(pid_t pid) {
     if (shdata) {
+        /* Check first if pid is this process */
+        if (my_pinfo != NULL
+                && my_pinfo->pid == pid) {
+            return my_pinfo;
+        }
+
+        /* Iterate otherwise */
         int p;
         for (p = 0; p < max_processes; p++) {
             if (shdata->process_info[p].pid == pid) {
@@ -229,6 +237,8 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
                 process->load[1] = 0.0f;
                 process->load[2] = 0.0f;
 #endif
+                // Save pointer for faster access
+                my_pinfo = process;
             }
         }
     }
@@ -446,6 +456,7 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_ke
             process->load[3] = {0.0f, 0.0f, 0.0f};
             process->last_ltime = {0};
 #endif
+            my_pinfo = NULL;
         }
 
         // Check if shmem is empty
@@ -969,36 +980,17 @@ int shmem_procinfo__setcpuusage(pid_t pid,int index, double new_avg_usage) {
     return DLB_SUCCESS;
 }
 
-int shmem_procinfo__setcomptime(pid_t pid, double new_comp_time) {
-
-    if (shm_handler == NULL) return -1.0;
-
-    shmem_lock(shm_handler);
-    {
+void shmem_procinfo__settimers(pid_t pid, double mpi_time, double comp_time) {
+    if (likely(shm_handler != NULL)) {
         pinfo_t *process = get_process(pid);
-        if (process) {
-            process->comp_time = new_comp_time;
-        }
+#ifdef HAVE_STDATOMIC_H
+        __atomic_store(&process->mpi_time, &mpi_time, __ATOMIC_RELAXED);
+        __atomic_store(&process->comp_time, &comp_time, __ATOMIC_RELAXED);
+#else
+        process->mpi_time = mpi_time;
+        process->comp_time = comp_time;
+#endif
     }
-    shmem_unlock(shm_handler);
-
-    return DLB_SUCCESS;
-}
-
-int shmem_procinfo__setmpitime(pid_t pid, double new_mpi_time) {
-
-    if (shm_handler == NULL) return -1.0;
-
-    shmem_lock(shm_handler);
-    {
-        pinfo_t *process = get_process(pid);
-        if (process) {
-            process->mpi_time = new_mpi_time;
-        }
-    }
-    shmem_unlock(shm_handler);
-
-    return DLB_SUCCESS;
 }
 
 
