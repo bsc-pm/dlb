@@ -366,6 +366,8 @@ int main( int argc, char **argv ) {
     }
 
     /* Test CpusInMask */
+    /* FIXME: this test has a race condition in mode=async */
+    if (mode != MODE_ASYNC)
     {
         // Construct a mask of only 1 CPU from subprocess 1, and all from subprocess 2
         cpu_set_t mask;
