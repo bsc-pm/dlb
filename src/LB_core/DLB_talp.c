@@ -516,24 +516,31 @@ static void monitoring_region_gather_app_data(dlb_monitor_t *monitor) {
     int64_t app_sum_useful;
     int64_t node_sum_useful;
 
+    MPI_Datatype mpi_int64;
+#if MPI_VERSION >= 3
+    mpi_int64 = MPI_INT64_T;
+#else
+    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64);
+#endif
+
     /* Obtain the maximum elapsed time */
     MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
-            1, MPI_INT64_T, MPI_MAX, 0, MPI_COMM_WORLD);
+            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
 
     /* Obtain the maximum elapsed useful time */
     MPI_Reduce(&monitor->elapsed_computation_time, &elapsed_useful,
-            1, MPI_INT64_T, MPI_MAX, 0, MPI_COMM_WORLD);
+            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
 
     /* Obtain the sum of all computation time */
     MPI_Reduce(&monitor->accumulated_computation_time, &app_sum_useful,
-            1, MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+            1, mpi_int64, MPI_SUM, 0, MPI_COMM_WORLD);
 
     /* Obtain the sum of computation time of the most loaded node */
     int64_t local_node_useful = 0;
     MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
-            1, MPI_INT64_T, MPI_SUM, 0, getNodeComm());
+            1, mpi_int64, MPI_SUM, 0, getNodeComm());
     MPI_Reduce(&local_node_useful, &node_sum_useful,
-            1, MPI_INT64_T, MPI_MAX, 0, MPI_COMM_WORLD);
+            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
 
     /* Allocate gathered data only in process rank 0 */
     if (_mpi_rank == 0) {
