@@ -43,26 +43,36 @@
 #include <pthread.h>
 
 
+/* Talp info per spd */
 typedef struct talp_info_t {
     dlb_monitor_t   mpi_monitor;            /* monitor MPI_Init -> MPI_Finalize */
     cpu_set_t       workers_mask;           /* CPUs doing computation */
     cpu_set_t       mpi_mask;               /* CPUs doing MPI */
 } talp_info_t;
 
+/* Application summary */
+typedef struct monitor_app_summary_t {
+    int64_t elapsed_time;           /* Elapsed Time */
+    int64_t elapsed_useful;         /* Elapsed Useful Computation Time */
+    int64_t app_sum_useful;         /* Sum of total Useful Computation Time of all processes */
+    int64_t node_sum_useful;        /* Sum of total Useful Computation in the most loaded node */
+} monitor_app_summary_t;
 
 /* Private data per monitor */
 typedef struct monitor_data_t {
     int     id;
     bool    started;
     int64_t sample_start_time;
+    monitor_app_summary_t *app_summary;
 } monitor_data_t;
 
 
 static void talp_node_summary(void);
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name);
-static void monitoring_regions_finalize(void);
+static void monitoring_regions_finalize_all(void);
 static void monitoring_regions_update_all(void);
 static void monitoring_regions_report_all(void);
+static void monitoring_regions_gather_app_data_all(void);
 
 static inline void sort_pids(pid_t * pidlist, int start, int end){
     int i = start;
@@ -101,10 +111,15 @@ void talp_init(subprocess_descriptor_t *spd) {
     ensure(!spd->talp_info, "TALP already initialized");
     verbose(VB_TALP, "Initializing TALP module");
 
+    /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
     *talp_info = (talp_info_t) {};
     memcpy(&talp_info->workers_mask, &spd->process_mask, sizeof(cpu_set_t));
     spd->talp_info = talp_info;
+
+    /* Initialize MPI monitor */
+    monitoring_region_initialize(&talp_info->mpi_monitor,
+            MPI_MONITORING_REGION_ID, "MPI Execution");
 }
 
 void talp_finalize(subprocess_descriptor_t *spd) {
@@ -116,11 +131,12 @@ void talp_finalize(subprocess_descriptor_t *spd) {
         talp_node_summary();
     }
     if (thread_spd->options.talp_summary & SUMMARY_PROCESS
-        || thread_spd->options.talp_summary & SUMMARY_REGIONS) {
+        || thread_spd->options.talp_summary & SUMMARY_REGIONS
+        || thread_spd->options.talp_summary & SUMMARY_APP) {
         monitoring_regions_report_all();
     }
 
-    monitoring_regions_finalize();
+    monitoring_regions_finalize_all();
     free(spd->talp_info);
     spd->talp_info = NULL;
 }
@@ -129,19 +145,22 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 void talp_mpi_init(void) {
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
-        /* Initialize MPI monitor */
-        monitoring_region_initialize(&talp_info->mpi_monitor, MPI_MONITORING_REGION_ID, "MPI Execution");
-        /* Start region */
+        /* Start MPI region */
         monitoring_region_start(&talp_info->mpi_monitor);
     }
 }
 
-/* Stop MPI monitoring region */
+/* Stop MPI monitoring region and gather APP data if needed  */
 void talp_mpi_finalize(void) {
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
+        /* Stop MPI region */
         monitoring_region_stop(&talp_info->mpi_monitor);
-        free(talp_info->mpi_monitor._data);
+
+        /* Gather data among MPIs if app summary is enabled  */
+        if (thread_spd->options.talp_summary & SUMMARY_APP) {
+            monitoring_regions_gather_app_data_all();
+        }
     }
 }
 
@@ -345,7 +364,7 @@ dlb_monitor_t* monitoring_region_register(const char* name){
     // Initialize after the mutex is unlocked
     const char *monitor_name;
     if (name != NULL && *name != '\0') {
-        monitor_name = strdup(name);
+        monitor_name = name;
     } else {
         monitor_name = anonymous_monitor_name;
     }
@@ -359,37 +378,31 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
     monitor->_data = malloc(sizeof(monitor_data_t));
     monitor_data_t *monitor_data = monitor->_data;
 
-    /* Assign name */
-    monitor->name = name;
+    /* Allocate and assign name */
+    monitor->name = strdup(name);
 
-    /* Assign id */
+    /* Assign private data */
     monitor_data->id = id;
+    monitor_data->app_summary = NULL;
 
     /* Initialize public data */
     monitoring_region_reset(monitor);
     monitor->num_resets = 0;
 }
 
-static void monitoring_regions_finalize(void) {
-    /* De-allocate regions */
-    pthread_mutex_lock(&mutex);
-    {
-        int i;
-        for (i=0; i<nregions; ++i) {
-            dlb_monitor_t *monitor = regions[i];
-            if (monitor->name != anonymous_monitor_name) {
-                free((char*)monitor->name);
-                monitor->name = NULL;
-            }
-            free(monitor->_data);
-            free(monitor);
-            monitor = NULL;
-        }
-        free(regions);
-        regions = NULL;
-        nregions = 0;
+static void monitoring_region_finalize(dlb_monitor_t *monitor) {
+    /* Free private data */
+    monitor_data_t *monitor_data = monitor->_data;
+    if (monitor_data->app_summary != NULL) {
+        free(monitor_data->app_summary);
+        monitor_data->app_summary = NULL;
     }
-    pthread_mutex_unlock(&mutex);
+    free(monitor_data);
+    monitor_data = NULL;
+
+    /* Free name */
+    free((char*)monitor->name);
+    monitor->name = NULL;
 }
 
 int monitoring_region_reset(dlb_monitor_t *monitor) {
@@ -468,6 +481,100 @@ int monitoring_region_report(dlb_monitor_t *monitor) {
     return DLB_SUCCESS;
 }
 
+static void monitoring_region_report_app(dlb_monitor_t *monitor) {
+#ifdef MPI_LIB
+    monitor_data_t *monitor_data = monitor->_data;
+    monitor_app_summary_t *app_summary = monitor_data->app_summary;
+    if (app_summary != NULL) {
+        int P = shmem_cpuinfo_ext__getnumcpus();
+        int N = _num_nodes;
+        int64_t elapsed_time = app_summary->elapsed_time;
+        int64_t elapsed_useful = app_summary->elapsed_useful;
+        int64_t app_sum_useful = app_summary->app_sum_useful;
+        int64_t node_sum_useful = app_summary->node_sum_useful;
+        float parallel_efficiency = (float)app_sum_useful / (elapsed_time * P);
+        float communication_efficiency = (float)elapsed_useful / elapsed_time;
+        float lb = (float)app_sum_useful / (elapsed_useful * P);
+        float lb_in = (float)(node_sum_useful * N) / (elapsed_useful * P);
+        float lb_out = (float)app_sum_useful / (node_sum_useful * N);
+        info("######### Monitoring Region App Summary #########");
+        info("### Name:                       %s", monitor->name);
+        info("### Parallel efficiency :       %1.2f", parallel_efficiency);
+        info("###   - Communication eff. :    %1.2f", communication_efficiency);
+        info("###   - Load Balance :          %1.2f", lb);
+        info("###       - LB_in :             %1.2f", lb_in);
+        info("###       - LB_out:             %1.2f", lb_out);
+    }
+#endif
+}
+
+/* Gather data among all regions and save it in the region private data only on rank 0 */
+static void monitoring_region_gather_app_data(dlb_monitor_t *monitor) {
+#ifdef MPI_LIB
+    int64_t elapsed_time;
+    int64_t elapsed_useful;
+    int64_t app_sum_useful;
+    int64_t node_sum_useful;
+
+    MPI_Datatype mpi_int64;
+#if MPI_VERSION >= 3
+    mpi_int64 = MPI_INT64_T;
+#else
+    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64);
+#endif
+
+    /* Obtain the maximum elapsed time */
+    MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
+            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    /* Obtain the maximum elapsed useful time */
+    MPI_Reduce(&monitor->elapsed_computation_time, &elapsed_useful,
+            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    /* Obtain the sum of all computation time */
+    MPI_Reduce(&monitor->accumulated_computation_time, &app_sum_useful,
+            1, mpi_int64, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    /* Obtain the sum of computation time of the most loaded node */
+    int64_t local_node_useful = 0;
+    MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
+            1, mpi_int64, MPI_SUM, 0, getNodeComm());
+    MPI_Reduce(&local_node_useful, &node_sum_useful,
+            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    /* Allocate gathered data only in process rank 0 */
+    if (_mpi_rank == 0) {
+        monitor_data_t *monitor_data = monitor->_data;
+        monitor_data->app_summary = malloc(sizeof(monitor_app_summary_t));
+        monitor_data->app_summary->elapsed_time = elapsed_time;
+        monitor_data->app_summary->elapsed_useful = elapsed_useful;
+        monitor_data->app_summary->app_sum_useful = app_sum_useful;
+        monitor_data->app_summary->node_sum_useful = node_sum_useful;
+    }
+#endif
+}
+
+static void monitoring_regions_finalize_all(void) {
+    /* Finalize MPI monitor */
+    talp_info_t *talp_info = thread_spd->talp_info;
+    monitoring_region_finalize(&talp_info->mpi_monitor);
+
+    /* De-allocate regions */
+    pthread_mutex_lock(&mutex);
+    {
+        int i;
+        for (i=0; i<nregions; ++i) {
+            monitoring_region_finalize(regions[i]);
+            free(regions[i]);
+            regions[i] = NULL;
+        }
+        free(regions);
+        regions = NULL;
+        nregions = 0;
+    }
+    pthread_mutex_unlock(&mutex);
+}
+
 static void monitoring_regions_update_all(void) {
 
     /* Update MPI monitor */
@@ -502,5 +609,27 @@ static void monitoring_regions_report_all(void) {
         for (i=0; i<nregions; ++i) {
             monitoring_region_report(regions[i]);
         }
+    }
+
+    /* Report APP summary */
+    if (thread_spd->options.talp_summary & SUMMARY_APP) {
+        talp_info_t *talp_info = thread_spd->talp_info;
+        monitoring_region_report_app(&talp_info->mpi_monitor);
+        int i;
+        for (i=0; i<nregions; ++i) {
+            monitoring_region_report_app(regions[i]);
+        }
+    }
+}
+
+static void monitoring_regions_gather_app_data_all(void) {
+    /* Gather data from MPI monitor */
+    talp_info_t *talp_info = thread_spd->talp_info;
+    monitoring_region_gather_app_data(&talp_info->mpi_monitor);
+
+    /* Gather data from custom regions */
+    int i;
+    for (i=0; i<nregions; ++i) {
+        monitoring_region_gather_app_data(regions[i]);
     }
 }
