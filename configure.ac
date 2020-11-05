@@ -88,6 +88,10 @@ AC_LANG([C])
 AX_CHECK_COMPILE_FLAG([-we10006], [foobar="-we10006"])
 AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $foobar])
 
+# fccpx needs this env. variable to promote unrecognized flags from warning to error
+AX_VAR_PUSHVALUE([FCOMP_UNRECOGNIZED_OPTION], [error])
+export FCOMP_UNRECOGNIZED_OPTION
+
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
 AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])
@@ -104,6 +108,10 @@ AC_CHECK_HEADERS([stdatomic.h])
 AC_CHECK_HEADERS([execinfo.h])
 AC_CHECK_HEADERS([immintrin.h])
 AC_CHECK_HEADERS([emmintrin.h])
+
+# restore fccpx environment variable
+AX_VAR_POPVALUE([FCOMP_UNRECOGNIZED_OPTION])
+export FCOMP_UNRECOGNIZED_OPTION
 
 # restore CFLAGS
 AX_VAR_POPVALUE([CFLAGS])
@@ -232,6 +240,7 @@ AM_CONDITIONAL([LIT_SUPPORT], [test "x$lit" = xyes])
 AC_OPENMP
 
 # check for MPI
+AC_ARG_VAR([MPICC], [MPI C compiler wrapper])
 AX_MPI
 
 # check for HWLOC

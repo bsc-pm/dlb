@@ -23,7 +23,7 @@ AC_DEFUN([AX_MPI],
                 [test -d "$with_mpi/lib$bits"], [user_mpi_libdir="-L$with_mpi/lib$bits"])
         ])
 
-        AC_PATH_PROG([MPICC], [mpicc], [], [$user_mpi_bin$PATH_SEPARATOR$PATH])
+        AC_PATH_PROGS([MPICC], [mpicc $MPICC], [], [$user_mpi_bin$PATH_SEPARATOR$PATH])
         AC_PATH_PROGS([MPIEXEC], [mpiexec mpirun], [], [$user_mpi_bin$PATH_SEPARATOR$PATH])
 
         ### MPI INCLUDES ###
