@@ -80,8 +80,8 @@ static const char *shmem_name = "cpuinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
 
-static inline bool is_idle(int cpu);
-static inline bool is_borrowed(pid_t pid, int cpu);
+static inline bool is_idle(int cpu) __attribute__((unused));
+static inline bool is_borrowed(pid_t pid, int cpu) __attribute__((unused));
 static inline bool is_shmem_empty(void);
 static void update_cpu_stats(int cpu, stats_state_t new_state);
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data);
