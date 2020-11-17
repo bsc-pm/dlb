@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <mpi.h>
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
@@ -28,24 +29,29 @@
 const int DEF_LOADS_SIZE = 2;
 const int default_loads[] = {1000, 2500};
 
+int64_t usecs (void) {
+    struct timeval t;
+    gettimeofday(&t,NULL);
+    return t.tv_sec*1000000+t.tv_usec;
+}
+
 int computation (int num, int usec) {
     float a=0.99999f;
     float p=num;
     int i, x;
-    x=145*usec;
+    x=145;
 
-    for(i=0; i<x; i++){
-        p+=a*i;
-        p=p/i;
-    }
+    int64_t t_start = usecs();
+    int64_t t_now;
+    do {
+        for (i=0; i<x; i++) {
+            p+=a*i;
+            p=p/i;
+        }
+        t_now = usecs();
+    } while (t_now - t_start < usec);
 
     return (int)p;
-}
-
-long usecs (void) {
-    struct timeval t;
-    gettimeofday(&t,NULL);
-    return t.tv_sec*1000000+t.tv_usec;
 }
 
 double LoadUnbalance(int loads[], int how_many) {
@@ -61,7 +67,7 @@ double LoadUnbalance(int loads[], int how_many) {
 
 #pragma omp task
 void iter(double * app_time, int *fib, int usec) {
-    long t_start,t_end;
+    int64_t t_start, t_end;
 
     t_start=usecs();
     *fib=computation(35, usec);
@@ -79,7 +85,7 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    long t_start,t_end;
+    int64_t t_start, t_end;
     t_start=usecs();
 
     MPI_Init(&argc,&argv);
