@@ -497,8 +497,11 @@ static void monitoring_region_report_app(dlb_monitor_t *monitor) {
         float lb = (float)app_sum_useful / (elapsed_useful * P);
         float lb_in = (float)(node_sum_useful * N) / (elapsed_useful * P);
         float lb_out = (float)app_sum_useful / (node_sum_useful * N);
+        char elapsed_time_str[16];
+        ns_to_human(elapsed_time_str, 16, elapsed_time);
         info("######### Monitoring Region App Summary #########");
         info("### Name:                       %s", monitor->name);
+        info("### Elapsed Time :              %s", elapsed_time_str);
         info("### Parallel efficiency :       %1.2f", parallel_efficiency);
         info("###   - Communication eff. :    %1.2f", communication_efficiency);
         info("###   - Load Balance :          %1.2f", lb);
