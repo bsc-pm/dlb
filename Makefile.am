@@ -83,7 +83,11 @@ nodist_include_HEADERS = src/LB_MPI/MPI_interface.h \
 #********************************************************************************
 # Built Sources
 #********************************************************************************
-MPI_GENERATOR = $(top_srcdir)/scripts/pygen.py
+if PYTHON3
+MPI_GENERATOR = $(PYTHON) $(top_srcdir)/scripts/pygen.py3
+else
+MPI_GENERATOR = $(PYTHON) $(top_srcdir)/scripts/pygen.py
+endif
 MPICALLS_DB = $(top_srcdir)/src/LB_MPI/mpicalls.json
 EXTRA_DIST    += src/LB_MPI/mpicalls.json
 
@@ -739,6 +743,7 @@ EXTRA_DIST += \
 	scripts/run_with_dlb.sh.in \
 	scripts/dlb.spec \
 	scripts/pygen.py \
+	scripts/pygen.py3 \
 	scripts/viewer/dlb_cpu_usage.in \
 	scripts/viewer/dlb_viewer.py.in \
 	$(DEBIAN_EXTRA) \
