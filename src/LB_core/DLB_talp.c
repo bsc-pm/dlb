@@ -486,7 +486,7 @@ static void monitoring_region_report_app(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
     monitor_app_summary_t *app_summary = monitor_data->app_summary;
     if (app_summary != NULL) {
-        int P = shmem_cpuinfo_ext__getnumcpus();
+        int P = _mpi_size;
         int N = _num_nodes;
         int64_t elapsed_time = app_summary->elapsed_time;
         int64_t elapsed_useful = app_summary->elapsed_useful;
