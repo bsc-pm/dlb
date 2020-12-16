@@ -22,6 +22,10 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/debug.h"
+#include "support/gtree.h"
+
+#include <string.h>
+#include <inttypes.h>
 
 // Extrae API calls
 void Extrae_event(unsigned type, long long value) __attribute__((weak));
@@ -36,6 +40,96 @@ static instrument_events_t instrument = INST_NONE;
 static void dummy (unsigned type, long long value) {}
 
 static void (*extrae_set_event) (unsigned type, long long value) = dummy;
+
+/* Event name dictionary */
+static char* get_event_name(unsigned int type) {
+    switch(type) {
+        case MONITOR_REGION: return "Monitor Regions";
+    }
+    return NULL;
+}
+
+
+/* GTree containing each dynamic Event description. <key> is event_type, <value> is event_info_t */
+typedef struct EventInfo {
+    char *name;
+    int nvalues;
+    long long *values;
+    char **values_description;
+} event_info_t;
+static GTree *event_tree = NULL;
+
+static gint key_compare_func(gconstpointer a, gconstpointer b) {
+    return (uintptr_t)a - (uintptr_t)b;
+}
+
+/* Define Extrae custom type based on a dynamic event */
+static gint extrae_add_definitions(gpointer key, gpointer value, gpointer data) {
+    unsigned int type = (uintptr_t)key;
+    event_info_t *event = value;
+
+    Extrae_define_event_type(&type, event->name,
+            &event->nvalues, event->values, event->values_description);
+
+    /* return false to not stop traversing */
+    return false;
+}
+
+/* De-allocate event info */
+static void destroy_node(gpointer value) {
+    event_info_t *event = value;
+    int i;
+    for (i=0; i<event->nvalues; ++i) {
+        free(event->values_description[i]);
+        event->values_description[i] = NULL;
+    }
+    free(event->values_description);
+    event->values_description = NULL;
+    free(event->values);
+    event->values = NULL;
+    event->nvalues = 0;
+    free(event);
+}
+
+void instrument_register_event(unsigned int type, long long value, const char *value_description) {
+
+    /* Allocate GTree if needed */
+    if (event_tree == NULL) {
+        event_tree = g_tree_new_full(
+                (GCompareDataFunc)key_compare_func,
+                NULL, NULL, destroy_node);
+    }
+
+    /* Get event */
+    gpointer key = (void*)(uintptr_t)type;
+    event_info_t *event = g_tree_lookup(event_tree, key);
+
+    /* If event does not exist, allocate new node */
+    if (event == NULL ) {
+        event = malloc(sizeof(event_info_t));
+        event->name = get_event_name(type);
+        event->nvalues = 0;
+        event->values = NULL;
+        event->values_description = NULL;
+        g_tree_insert(event_tree, key, event);
+    }
+
+    /* Increment number of values */
+    ++event->nvalues;
+
+    /* Add value */
+    void *p = realloc(event->values, sizeof(long long) * event->nvalues);
+    fatal_cond(!p, "realloc failed");
+    event->values = p;
+    event->values[event->nvalues-1] = value;
+
+    /* Add value description */
+    p = realloc(event->values_description, sizeof(char*) * event->nvalues);
+    fatal_cond(!p, "realloc failed");
+    event->values_description = p;
+    event->values_description[event->nvalues-1] = strdup(value_description);
+}
+
 
 void instrument_event(unsigned type, long long value, instrument_action_t action) {
     switch(type) {
@@ -143,7 +237,7 @@ void init_tracing(const options_t *options) {
          //MONITOR_REGION
         type=MONITOR_REGION;
         n_values=0;
-        Extrae_define_event_type(&type, "Monitor Regions", &n_values, NULL, NULL);
+        Extrae_define_event_type(&type, get_event_name(type), &n_values, NULL, NULL);
 
 
         //RUNTIME_EVENT
@@ -201,6 +295,14 @@ void init_tracing(const options_t *options) {
     if (options->instrument_extrae_nthreads > 0 && Extrae_change_num_threads) {
         info0("Increasing the Extrae buffer to %d threads\n", options->instrument_extrae_nthreads);
         Extrae_change_num_threads(options->instrument_extrae_nthreads);
+    }
+}
+
+void instrument_finalize(void) {
+    if (tracing_initialized) {
+        tracing_initialized = false;
+        g_tree_foreach(event_tree, extrae_add_definitions, NULL);
+        g_tree_destroy(event_tree);
     }
 }
 

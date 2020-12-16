@@ -404,6 +404,9 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
     /* Initialize public data */
     monitoring_region_reset(monitor);
     monitor->num_resets = 0;
+
+    /* Register name in the instrumentation tool */
+    instrument_register_event(MONITOR_REGION, monitor_data->id, name);
 }
 
 static void monitoring_region_finalize(dlb_monitor_t *monitor) {

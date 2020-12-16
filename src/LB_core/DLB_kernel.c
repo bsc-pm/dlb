@@ -196,6 +196,7 @@ int Finish(subprocess_descriptor_t *spd) {
     }
     timer_finalize();
     instrument_event(RUNTIME_EVENT, EVENT_FINALIZE, EVENT_END);
+    instrument_finalize();
     return error;
 }
 
