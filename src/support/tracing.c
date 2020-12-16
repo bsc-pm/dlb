@@ -306,7 +306,7 @@ void instrument_finalize(void) {
     }
 }
 
-void tracing_print_flags(void) {
+void instrument_print_flags(void) {
     info0("Tracing options: %s", instrument_events_tostr(instrument));
 }
 

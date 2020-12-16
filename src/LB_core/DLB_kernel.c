@@ -138,7 +138,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         info0("Balancing policy: %s", policy_tostr(spd->lb_policy));
         options_print_lewi_flags(&spd->options);
     }
-    tracing_print_flags();
+    instrument_print_flags();
     verbose(VB_API, "Enabled verbose mode for DLB API");
     verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
     verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");

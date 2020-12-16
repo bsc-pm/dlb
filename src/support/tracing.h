@@ -63,14 +63,14 @@ void instrument_event(unsigned type, long long value, instrument_action_t action
 void add_event(unsigned type, long long value);
 void init_tracing(const options_t *options);
 void instrument_finalize(void);
-void tracing_print_flags(void);
+void instrument_print_flags(void);
 #else
 #define instrument_register_event(type, value, value_description)
 #define instrument_event(type, value, action)
 #define add_event(type, value)
 #define init_tracing(options)
 #define instrument_finalize()
-#define tracing_print_flags()
+#define instrument_print_flags()
 #endif
 
 
