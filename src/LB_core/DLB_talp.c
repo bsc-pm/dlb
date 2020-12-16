@@ -122,6 +122,12 @@ void talp_init(subprocess_descriptor_t *spd) {
             MPI_MONITORING_REGION_ID, "MPI Execution");
 }
 
+static void talp_destroy(void) {
+    monitoring_regions_finalize_all();
+    free(thread_spd->talp_info);
+    thread_spd->talp_info = NULL;
+}
+
 void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
     verbose(VB_TALP, "Finalizing TALP module");
@@ -136,9 +142,14 @@ void talp_finalize(subprocess_descriptor_t *spd) {
         monitoring_regions_report_all();
     }
 
-    monitoring_regions_finalize_all();
-    free(spd->talp_info);
-    spd->talp_info = NULL;
+    if (spd == thread_spd) {
+        /* Keep the timers allocated until the program finalizes */
+        atexit(talp_destroy);
+    } else {
+        monitoring_regions_finalize_all();
+        free(thread_spd->talp_info);
+        thread_spd->talp_info = NULL;
+    }
 }
 
 /* Start MPI monitoring region */
