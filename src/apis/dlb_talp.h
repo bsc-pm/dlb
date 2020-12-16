@@ -86,6 +86,11 @@ int DLB_TALP_CPUTimeGet(int process, double* compute_time);
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
+/*! \brief Get the pointer of the implicit MPI Monitorig Region
+ *  \return monitor handle to be used on queries
+ */
+const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void);
+
 /*! \brief Register a new Monitoring Region
  *  \param[in] name Name to identify the new region
  *  \return monitor handle to be used on subsequent calls
@@ -114,7 +119,7 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
  */
-int DLB_MonitoringRegionReport(dlb_monitor_t *handle);
+int DLB_MonitoringRegionReport(const dlb_monitor_t *handle);
 
 #ifdef __cplusplus
 }

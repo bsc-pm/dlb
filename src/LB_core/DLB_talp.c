@@ -332,6 +332,11 @@ static size_t nregions = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static const char* anonymous_monitor_name = "Anonymous Region";
 
+const struct dlb_monitor_t* monitoring_region_get_MPI_region(void) {
+    talp_info_t *talp_info = thread_spd->talp_info;
+    return talp_info ? &talp_info->mpi_monitor : NULL;
+}
+
 dlb_monitor_t* monitoring_region_register(const char* name){
     dlb_monitor_t *monitor = NULL;
     pthread_mutex_lock(&mutex);
@@ -466,7 +471,7 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
     return error;
 }
 
-int monitoring_region_report(dlb_monitor_t *monitor) {
+int monitoring_region_report(const dlb_monitor_t *monitor) {
     info("########### Monitoring Region Summary ###########");
     info("### Name:                       %s", monitor->name);
     info("### Elapsed time :              %.9g seconds",
