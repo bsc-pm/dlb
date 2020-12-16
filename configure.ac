@@ -268,6 +268,13 @@ AC_SUBST([DOXYGEN_ALIASES])
 
 # check for Pandoc
 AC_CHECK_PROG([pandoc], [pandoc], [yes])
+AS_IF([test "x$pandoc" = xyes], [
+    AC_MSG_CHECKING([whether pandoc supports the required formats])
+    AS_IF([! pandoc --from=man --to=rst /dev/null > /dev/null 2>&1], [
+           pandoc=no
+    ])
+    AC_MSG_RESULT([$pandoc])
+])
 AM_CONDITIONAL([HAVE_PANDOC], [test "x$pandoc" = xyes])
 
 # Check if Sphinx will include man pages
