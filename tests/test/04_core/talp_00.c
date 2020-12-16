@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_computation_time == 0 );
     assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+    assert( monitoring_region_get_MPI_region() == mpi_monitor );
 
     /* Start and Stop MPI monitor */
     talp_mpi_init();

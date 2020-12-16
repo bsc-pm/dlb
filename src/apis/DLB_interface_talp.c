@@ -67,6 +67,11 @@ int DLB_TALP_CPUTimeGet(int process, double* compute_time){
     return DLB_SUCCESS;
 }
 
+const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void) {
+    spd_enter_dlb(NULL);
+    return monitoring_region_get_MPI_region();
+}
+
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     spd_enter_dlb(NULL);
     if (unlikely(!thread_spd->talp_info)) {
@@ -96,7 +101,7 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
     return monitoring_region_stop(handle);
 }
 
-int DLB_MonitoringRegionReport(dlb_monitor_t *handle){
+int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
     spd_enter_dlb(NULL);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;

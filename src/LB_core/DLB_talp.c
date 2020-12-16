@@ -122,6 +122,12 @@ void talp_init(subprocess_descriptor_t *spd) {
             MPI_MONITORING_REGION_ID, "MPI Execution");
 }
 
+static void talp_destroy(void) {
+    monitoring_regions_finalize_all();
+    free(thread_spd->talp_info);
+    thread_spd->talp_info = NULL;
+}
+
 void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
     verbose(VB_TALP, "Finalizing TALP module");
@@ -136,9 +142,14 @@ void talp_finalize(subprocess_descriptor_t *spd) {
         monitoring_regions_report_all();
     }
 
-    monitoring_regions_finalize_all();
-    free(spd->talp_info);
-    spd->talp_info = NULL;
+    if (spd == thread_spd) {
+        /* Keep the timers allocated until the program finalizes */
+        atexit(talp_destroy);
+    } else {
+        monitoring_regions_finalize_all();
+        free(thread_spd->talp_info);
+        thread_spd->talp_info = NULL;
+    }
 }
 
 /* Start MPI monitoring region */
@@ -332,6 +343,11 @@ static size_t nregions = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static const char* anonymous_monitor_name = "Anonymous Region";
 
+const struct dlb_monitor_t* monitoring_region_get_MPI_region(void) {
+    talp_info_t *talp_info = thread_spd->talp_info;
+    return talp_info ? &talp_info->mpi_monitor : NULL;
+}
+
 dlb_monitor_t* monitoring_region_register(const char* name){
     dlb_monitor_t *monitor = NULL;
     pthread_mutex_lock(&mutex);
@@ -466,7 +482,7 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
     return error;
 }
 
-int monitoring_region_report(dlb_monitor_t *monitor) {
+int monitoring_region_report(const dlb_monitor_t *monitor) {
     info("########### Monitoring Region Summary ###########");
     info("### Name:                       %s", monitor->name);
     info("### Elapsed time :              %.9g seconds",

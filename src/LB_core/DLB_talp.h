@@ -47,10 +47,13 @@ void talp_in_mpi(void);
 /*  Update the metrics when going out MPI */
 void talp_out_mpi(void);
 
+/* Obtain the implicit MPI region */
+const struct dlb_monitor_t* monitoring_region_get_MPI_region(void);
+
 struct dlb_monitor_t* monitoring_region_register(const char* name);
 int monitoring_region_reset(struct dlb_monitor_t *monitor);
 int monitoring_region_start(struct dlb_monitor_t *monitor);
 int monitoring_region_stop(struct dlb_monitor_t *monitor);
-int monitoring_region_report(struct dlb_monitor_t *monitor);
+int monitoring_region_report(const struct dlb_monitor_t *monitor);
 
 #endif
