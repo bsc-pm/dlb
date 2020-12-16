@@ -17,7 +17,7 @@
 #  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                #
 #################################################################################
 
-LIT_OPTIONS = --xunit-xml-output=test.log.xml -sv
+LIT_OPTIONS = --xunit-xml-output=test.log.xml -sv $(LIT_FLAGS)
 LIT = PYTHONPATH=$(top_srcdir)/tests $(top_srcdir)/scripts/lit/lit.py $(LIT_OPTIONS)
 
 if LIT_SUPPORT
