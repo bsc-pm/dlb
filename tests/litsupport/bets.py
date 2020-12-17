@@ -26,7 +26,7 @@ class BetsTest(lit.formats.FileBasedTest):
 
     def execute(self, test, litConfig):
         sourcePath = test.getSourcePath()
-        tempFile = tempfile.NamedTemporaryFile(mode="w+t")
+        tempFile = tempfile.NamedTemporaryFile(mode="wb+")
         cmd = [test.config.bets, "-nocolor", "-o", tempFile.name, sourcePath]
 
         result_log = ""
@@ -35,7 +35,8 @@ class BetsTest(lit.formats.FileBasedTest):
                 cmd, env=test.config.environment,
                 timeout=litConfig.maxIndividualTestTime)
             tempFile.seek(0)
-            for line in tempFile:
+            for bline in tempFile:
+                line = bline.decode(errors="replace")
                 result_log += "[BETS LOG] {}".format(line)
         except lit.util.ExecuteCommandTimeoutException:
             return (lit.Test.TIMEOUT,
