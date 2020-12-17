@@ -20,6 +20,8 @@
 #ifndef DLB_CORE_TALP_H
 #define DLB_CORE_TALP_H
 
+#include <sched.h>
+
 struct SubProcessDescriptor;
 struct dlb_monitor_t;
 
@@ -35,11 +37,16 @@ void talp_mpi_init(void);
 /* Stop MPI monitoring region */
 void talp_mpi_finalize(void);
 
-/*  Enables the cpuid for the current process */
+/*  Enables the cpuid/cpu_mask for the current process */
 void talp_cpu_enable(int cpuid);
+void talp_cpuset_enable(const cpu_set_t *cpu_mask);
 
-/*  Disables the cpuid for the current process */
+/*  Disables the cpuid/cpu_mask for the current process */
 void talp_cpu_disable(int cpuid);
+void talp_cpuset_disable(const cpu_set_t *cpu_mask);
+
+/* Set new cpu_mask */
+void talp_cpuset_set(const cpu_set_t *cpu_mask);
 
 /*  Update the metrics when entering MPI */
 void talp_in_mpi(void);

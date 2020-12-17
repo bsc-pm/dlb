@@ -153,6 +153,7 @@ int update_threads(const pm_interface_t *pm, int threads) {
 }
 
 int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    talp_cpuset_set(cpu_set);
     if (pm->dlb_callback_set_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -163,6 +164,7 @@ int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    talp_cpuset_set(cpu_set);
     if (pm->dlb_callback_set_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -173,6 +175,7 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    talp_cpuset_enable(cpu_set);
     if (pm->dlb_callback_add_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -183,6 +186,7 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    talp_cpuset_enable(cpu_set);
     if (pm->dlb_callback_add_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }

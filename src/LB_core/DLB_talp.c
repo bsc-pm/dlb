@@ -227,6 +227,18 @@ void talp_cpu_enable(int cpuid) {
     }
 }
 
+void talp_cpuset_enable(const cpu_set_t *cpu_mask) {
+    if (unlikely(thread_spd == NULL)) return;
+
+    talp_info_t *talp_info = thread_spd->talp_info;
+    if (talp_info) {
+        if (!mu_is_subset(cpu_mask, &talp_info->workers_mask)) {
+            monitoring_regions_update_all();
+            CPU_OR(&talp_info->workers_mask, &talp_info->workers_mask, cpu_mask);
+        }
+    }
+}
+
 void talp_cpu_disable(int cpuid) {
     if (unlikely(thread_spd == NULL)) return;
 
@@ -235,6 +247,30 @@ void talp_cpu_disable(int cpuid) {
         if (CPU_ISSET(cpuid, &talp_info->workers_mask)) {
             monitoring_regions_update_all();
             CPU_CLR(cpuid, &talp_info->workers_mask);
+        }
+    }
+}
+
+void talp_cpuset_disable(const cpu_set_t *cpu_mask) {
+    if (unlikely(thread_spd == NULL)) return;
+
+    talp_info_t *talp_info = thread_spd->talp_info;
+    if (talp_info) {
+        if (mu_intersects(cpu_mask, &talp_info->workers_mask)) {
+            monitoring_regions_update_all();
+            mu_substract(&talp_info->workers_mask, &talp_info->workers_mask, cpu_mask);
+        }
+    }
+}
+
+void talp_cpuset_set(const cpu_set_t *cpu_mask) {
+    if (unlikely(thread_spd == NULL)) return;
+
+    talp_info_t *talp_info = thread_spd->talp_info;
+    if (talp_info) {
+        if (!CPU_EQUAL(cpu_mask, &talp_info->workers_mask)) {
+            monitoring_regions_update_all();
+            memcpy(&talp_info->workers_mask, cpu_mask, sizeof(cpu_set_t));
         }
     }
 }
