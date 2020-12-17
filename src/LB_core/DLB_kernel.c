@@ -310,6 +310,9 @@ int lend(const subprocess_descriptor_t *spd) {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
         instrument_event(GIVE_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
         error = spd->lb_funcs.lend(spd);
+        if (error == DLB_SUCCESS && spd->options.talp) {
+            talp_cpuset_disable(&spd->process_mask);
+        }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
@@ -355,6 +358,9 @@ int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
         instrument_event(GIVE_CPUS_EVENT, CPU_COUNT(mask), EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpu_mask(spd, mask);
+        if (error == DLB_SUCCESS && spd->options.talp) {
+            talp_cpuset_disable(mask);
+        }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
@@ -433,8 +439,6 @@ int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         error = spd->lb_funcs.acquire_cpu(spd, cpuid);
         instrument_event(WANT_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_END);
-        if (error == DLB_SUCCESS && spd->options.talp)
-            talp_cpu_enable(cpuid);
     }
     return error;
 }
