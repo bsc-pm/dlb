@@ -30,6 +30,7 @@ void mu_get_system_mask(cpu_set_t *mask);
 void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset);
 void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset);
 bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset);
+bool mu_intersects(const cpu_set_t *mask1, const cpu_set_t *mask2);
 void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend);
 
 const char* mu_to_str(const cpu_set_t *cpu_set);

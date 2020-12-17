@@ -25,16 +25,10 @@
 
 #include <sched.h>
 #include <stdio.h>
+#include <assert.h>
 
 #define MAX_SIZE 16
 
-static void fill_mask(cpu_set_t *mask, const int *bits) {
-    CPU_ZERO(mask);
-    int i;
-    for (i=0; i<MAX_SIZE; ++i) {
-        if (bits[i]) CPU_SET(i, mask);
-    }
-}
 
 static int check_mask(const cpu_set_t *mask, const int *bits) {
     int i;
@@ -46,30 +40,38 @@ static int check_mask(const cpu_set_t *mask, const int *bits) {
 }
 
 int main( int argc, char **argv ) {
-    int error = 0;
-
-    mu_init();
 
     cpu_set_t mask0, mask1, mask2, mask3;
-    fill_mask(&mask0, (const int[MAX_SIZE]){0, 0, 0, 0});
-    fill_mask(&mask1, (const int[MAX_SIZE]){1, 1, 1, 1});
-    fill_mask(&mask2, (const int[MAX_SIZE]){1, 1, 0, 0});
+    CPU_ZERO(&mask0);
+    mu_parse_mask("0,1", &mask1);
+    mu_parse_mask("0-3", &mask2);
+    mu_init();
 
-    if (!mu_is_subset(&mask0, &mask0)) error++;
-    if (!mu_is_subset(&mask0, &mask1)) error++;
-    if (!mu_is_subset(&mask0, &mask2)) error++;
-    if (!mu_is_subset(&mask2, &mask1)) error++;
-    if (mu_is_subset(&mask1, &mask2)) error++;
+    assert(  mu_is_subset(&mask0, &mask0) );
+    assert(  mu_is_subset(&mask1, &mask1) );
+    assert(  mu_is_subset(&mask2, &mask2) );
+    assert(  mu_is_subset(&mask0, &mask1) );
+    assert(  mu_is_subset(&mask0, &mask2) );
+    assert(  mu_is_subset(&mask1, &mask2) );
+    assert( !mu_is_subset(&mask2, &mask1) );
+
+    assert( !mu_intersects(&mask0, &mask0) );
+    assert(  mu_intersects(&mask1, &mask1) );
+    assert(  mu_intersects(&mask2, &mask2) );
+    assert( !mu_intersects(&mask0, &mask1) );
+    assert( !mu_intersects(&mask0, &mask2) );
+    assert(  mu_intersects(&mask1, &mask2) );
+    assert(  mu_intersects(&mask2, &mask1) );
 
     mu_substract(&mask3, &mask1, &mask0);
-    error += check_mask(&mask3, (const int[MAX_SIZE]){1, 1, 1, 1});
+    assert( check_mask(&mask3, (const int[MAX_SIZE]){1, 1, 0, 0}) == 0 );
     mu_substract(&mask3, &mask1, &mask2);
-    error += check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 1, 1});
+    assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0}) == 0 );
     mu_substract(&mask3, &mask2, &mask1);
-    error += check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0});
+    assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 1, 1}) == 0 );
     mu_substract(&mask3, &mask1, &mask1);
-    error += check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0});
+    assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0}) == 0 );
 
     mu_finalize();
-    return error;
+    return 0;
 }

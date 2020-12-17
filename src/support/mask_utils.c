@@ -273,6 +273,13 @@ bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset) {
     return CPU_EQUAL(&intxn, subset);
 }
 
+/* Return true if any bit is present in both sets */
+bool mu_intersects(const cpu_set_t *mask1, const cpu_set_t *mask2) {
+    cpu_set_t intxn;
+    CPU_AND(&intxn, mask1, mask2);
+    return CPU_COUNT(&intxn) > 0;
+}
+
 /* Return the minuend after substracting the bits in substrahend */
 void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend) {
     cpu_set_t xor;
