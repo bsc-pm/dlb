@@ -30,7 +30,7 @@ program test
     integer :: i, err
     type(dlb_monitor_t), pointer :: dlb_monitor
     type(c_ptr) :: dlb_handle_1, dlb_handle_2, dlb_handle_3
-    character(10), pointer :: monitor_name
+    character(9), pointer :: monitor_name
 
     err = dlb_init(0, C_NULL_PTR, c_char_"--talp"//C_NULL_CHAR)
     if (err /= DLB_SUCCESS) call abort

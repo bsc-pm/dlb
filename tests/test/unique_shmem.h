@@ -26,7 +26,7 @@
 #include <signal.h>
 #include <assert.h>
 
-enum { SHMEM_KEY_MAX_LEN = 16 };
+enum { SHMEM_KEY_MAX_LEN = 32 };
 static char unique_shmem_key[SHMEM_KEY_MAX_LEN];
 #define SHMEM_KEY unique_shmem_key
 
@@ -63,7 +63,7 @@ static void sighandler(int signum)
 
 __attribute__((constructor))
 static void initialize_unique_shmem_key(void) {
-    sprintf(unique_shmem_key, "testsuite_%.5d", getpid());
+    sprintf(unique_shmem_key, "testsuite_%d", getpid());
 }
 
 
