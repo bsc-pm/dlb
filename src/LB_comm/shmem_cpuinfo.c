@@ -1473,7 +1473,10 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
     int max_digits = snprintf(NULL, 0, "%d", max_pid);
 
     /* Do not print shared memory if nobody is registered */
-    if (max_pid == 0) return;
+    if (max_pid == 0) {
+        free(shdata_copy);
+        return;
+    }
 
     /* Set up color */
     bool is_tty = isatty(STDOUT_FILENO);
