@@ -375,7 +375,7 @@ static void talp_node_summary(void) {
 enum { MONITOR_MAX_KEY_LEN = 128 };
 
 static dlb_monitor_t **regions = NULL;
-static size_t nregions = 0;
+static int nregions = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static const char* anonymous_monitor_name = "Anonymous Region";
 

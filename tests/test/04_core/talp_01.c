@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     /* Process Mask size can be 1..N */
     cpu_set_t process_mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-    unsigned int process_mask_size = CPU_COUNT(&process_mask);
+    int process_mask_size = CPU_COUNT(&process_mask);
 
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);

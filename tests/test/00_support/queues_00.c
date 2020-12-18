@@ -34,7 +34,7 @@
  */
 
 int main(int argc, char *argv[]) {
-    int i;
+    unsigned int i;
     pid_t pid;
 
     enum { SYS_SIZE = 16 };

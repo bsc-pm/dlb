@@ -293,7 +293,7 @@ void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *
 #pragma GCC visibility push(default)
 const char* mu_to_str( const cpu_set_t *mask ) {
 
-    size_t sys_size = get_sys_size();
+    int sys_size = get_sys_size();
     static __thread char buffer[CPU_SETSIZE*4];
     char *b = buffer;
     *(b++) = '[';
@@ -336,7 +336,7 @@ const char* mu_to_str( const cpu_set_t *mask ) {
 }
 
 static void parse_64_bits_mask(cpu_set_t *mask, int offset, const char *str, int base) {
-    size_t sys_size = get_sys_size();
+    int sys_size = get_sys_size();
     unsigned long long int number = strtoull(str, NULL, base);
     int i = offset;
     while (number > 0 && i < sys_size) {
@@ -351,7 +351,7 @@ static void parse_64_bits_mask(cpu_set_t *mask, int offset, const char *str, int
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if ( !str || strlen(str) == 0 ) return;
 
-    size_t sys_size = get_sys_size();
+    int sys_size = get_sys_size();
     regex_t regex_bitmask;
     regex_t regex_hexmask;
     regex_t regex_range;
@@ -378,7 +378,8 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         warning("The binary form xxxxb is deprecated, please use 0bxxxx.");
         // Parse
         int i;
-        for (i=0; i<strlen(str); i++) {
+        int str_len = strnlen(str, CPU_SETSIZE);
+        for (i=0; i<str_len; i++) {
             if ( str[i] == '1' && i < sys_size ) {
                 CPU_SET( i, mask );
             }
@@ -441,7 +442,8 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             // Discard junk at the left
             if ( !isdigit(*ptr) ) { ptr++; continue; }
 
-            unsigned int start = strtoul( ptr, &endptr, 10 );
+            unsigned long int start_ = strtoul( ptr, &endptr, 10 );
+            int start = start_ < CPU_SETSIZE ? start_ : CPU_SETSIZE;
             ptr = endptr;
 
             // Single element
@@ -456,7 +458,8 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
                 ptr++;
                 if ( !isdigit(*ptr) ) { ptr++; continue; }
 
-                unsigned int end = strtoul( ptr, &endptr, 10 );
+                unsigned long int end_ = strtoul( ptr, &endptr, 10 );
+                int end = end_ < CPU_SETSIZE ? end_ : CPU_SETSIZE;
                 ptr = endptr;
 
                 // Valid range

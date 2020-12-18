@@ -34,7 +34,7 @@
 /* Test that the string 'str' is parsed to a cpu_set_t containing the bits in 'bits' */
 static void parse_and_check(const char *str, const int *bits) {
     int i;
-    size_t nelems = 0;
+    int nelems = 0;
     bool error = false;
     cpu_set_t mask;
 
