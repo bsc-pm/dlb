@@ -129,16 +129,16 @@ static int parse_hwloc( void ) { return -1; }
 
 static void parse_mask_from_file(const char *filename, cpu_set_t *mask) {
     if (access(filename, F_OK) == 0) {
-        size_t len = CPU_SETSIZE*7;
-        char buf[len];
+        enum { BUF_LEN = CPU_SETSIZE*7 };
+        char buf[BUF_LEN];
         FILE *fd = fopen(filename, "r");
 
-        if (!fgets(buf, len, fd)) {
+        if (!fgets(buf, BUF_LEN, fd)) {
             fatal("cannot read %s\n", filename);
         }
         fclose(fd);
 
-        len = strlen(buf);
+        size_t len = strlen(buf);
         if (buf[len - 1] == '\n')
             buf[len - 1] = '\0';
 

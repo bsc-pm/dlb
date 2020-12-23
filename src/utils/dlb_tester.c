@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     sched_getaffinity(0, sizeof(mask), &mask);
     DLB_Init(0, &mask, "--drom");
     int system_size = sysconf(_SC_NPROCESSORS_ONLN);
-    int bindings[system_size];
+    int *bindings = malloc(sizeof(int)*system_size);
 
     while (keep_running) {
         /* Parallel region of aprox query_interval_ms long */
@@ -164,6 +164,7 @@ int main(int argc, char *argv[]) {
     }
     fputc('\n', stdout);
 
+    free(bindings);
     DLB_Finalize();
     return 0;
 }

@@ -30,6 +30,7 @@
 #include "support/options.h"
 #include "support/mask_utils.h"
 #include "support/queues.h"
+#include "support/small_array.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -748,8 +749,8 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *vi
 static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
 
 int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
-        int cpus_priority_array[node_size], priority_t priority, int max_parallelism,
-        int64_t *last_borrow, pid_t new_guests[node_size], pid_t victims[node_size]) {
+        int cpus_priority_array[], priority_t priority, int max_parallelism,
+        int64_t *last_borrow, pid_t new_guests[], pid_t victims[]) {
 
     int i;
 
@@ -940,8 +941,8 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
 }
 
 int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
-        int cpus_priority_array[node_size], priority_t priority, int max_parallelism,
-        int64_t *last_borrow, pid_t new_guests[node_size]) {
+        int cpus_priority_array[], priority_t priority, int max_parallelism,
+        int64_t *last_borrow, pid_t new_guests[]) {
 
     int i;
 
@@ -1223,8 +1224,8 @@ int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max,
         pid_t new_guests[], pid_t victims[]) {
     int error = DLB_SUCCESS;
     int owned_count = 0;
-    int guested_cpus[node_size];
     int guested_count = 0;
+    SMALL_ARRAY(int, guested_cpus, node_size);
     shmem_lock(shm_handler);
     {
         int cpuid;
@@ -1307,8 +1308,8 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
     if (unlikely(shm_handler == NULL || thread_num < 0)) return -1;
 
+    SMALL_ARRAY(int, guested_cpus, node_size);
     int owned_count = 0;
-    int guested_cpus[node_size];
     int guested_count = 0;
 
     int cpuid;

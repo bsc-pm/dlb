@@ -63,7 +63,7 @@ void after_init(void) {
     MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
 
     char hostname[HOST_NAME_MAX] = {'\0'};
-    char recvData[_mpi_size][HOST_NAME_MAX];
+    char (*recvData)[HOST_NAME_MAX] = malloc(_mpi_size * sizeof(char[HOST_NAME_MAX]));
 
     if (gethostname(hostname, HOST_NAME_MAX)<0) {
         perror("gethostname");
@@ -88,13 +88,13 @@ void after_init(void) {
         }
     }
 
-    int procsIds[_mpi_size][2];
+    int (*procsIds)[2] = malloc(_mpi_size * sizeof(int[2]));
     if (_mpi_rank==0) {
         int j, maxSetNode;
         // Ceiling division (total_size/node_size)
         int nodes=(_mpi_size + _mpis_per_node - 1) /_mpis_per_node;
-        int procsPerNode[nodes];
-        char nodesIds[nodes][HOST_NAME_MAX];
+        int *procsPerNode = malloc(nodes * sizeof(int));
+        char (*nodesIds)[HOST_NAME_MAX] = malloc(nodes * sizeof(char[HOST_NAME_MAX]));
 
         maxSetNode=0;
         for (i=0; i<nodes; i++) {
@@ -128,7 +128,12 @@ void after_init(void) {
             }
         }
         _num_nodes  = nodes;
+        free(nodesIds);
+        free(procsPerNode);
     }
+
+    free(recvData);
+    free(procsIds);
 
     int data[2];
     PMPI_Scatter(procsIds, 2, MPI_INT, data, 2, MPI_INT, 0, MPI_COMM_WORLD);
