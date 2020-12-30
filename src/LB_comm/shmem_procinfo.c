@@ -925,30 +925,6 @@ int shmem_procinfo__getloadavg(pid_t pid, double *load) {
 }
 
 
-int  shmem_procinfo__getmpitime(pid_t pid, double *mpi_time){
-
-        pinfo_t *process = get_process(pid);
-        if (process) {
-            *mpi_time = process->mpi_time;
-            return DLB_SUCCESS;
-        }
-        else
-            return -1;
-}
-
-int  shmem_procinfo__getcomptime(pid_t pid, double *comp_time){
-
-        pinfo_t *process = get_process(pid);
-        if (process) {
-            *comp_time = process->comp_time;
-            return DLB_SUCCESS;
-        }
-        else
-            return -1;
-}
-
-
-
 int shmem_procinfo__setcpuavgusage(pid_t pid, double new_avg_usage) {
 
     if (shm_handler == NULL) return -1.0;
@@ -980,7 +956,25 @@ int shmem_procinfo__setcpuusage(pid_t pid,int index, double new_avg_usage) {
     return DLB_SUCCESS;
 }
 
-void shmem_procinfo__settimers(pid_t pid, double mpi_time, double comp_time) {
+int shmem_procinfo__gettimes(pid_t pid, double *mpi_time, double *useful_time) {
+    int error = DLB_SUCCESS;
+    pinfo_t *process = NULL;
+    if (likely(shm_handler != NULL)) {
+        process = get_process(pid);
+        if (process) {
+            *mpi_time = process->mpi_time;
+            *useful_time = process->comp_time;
+        } else {
+            error = DLB_ERR_NOPROC;
+        }
+    } else {
+        error = DLB_ERR_NOSHMEM;
+    }
+
+    return error;
+}
+
+void shmem_procinfo__settimes(pid_t pid, double mpi_time, double comp_time) {
     if (likely(shm_handler != NULL)) {
         pinfo_t *process = get_process(pid);
 #ifdef HAVE_STDATOMIC_H

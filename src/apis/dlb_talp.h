@@ -56,30 +56,47 @@ extern "C"
 /*    TALP                                                                       */
 /*********************************************************************************/
 
-/*! \brief Attach current process to DLB system as TALP
- * \return DLB_SUCCESS on success
- * */
+/*! \brief Attach current process to DLB system as TALP administrator
+ *  \return DLB_SUCCESS on success
+ *
+ *  Once the process is attached to DLB as TALP administrator, it may perform the
+ *  below actions described in this file. This way, the process is able to obtain
+ *  some TALP values such as time spent in computation or MPI for each of the DLB
+ *  running processes.
+ */
 int DLB_TALP_Attach(void);
 
 /*! \brief Detach current process from DLB system
- * \return DLB_SUCCESS on success
- * */
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory to dettach from
+ *
+ *  If previously attached, a process must call this function to correctly close
+ *  file descriptors and clean data.
+ */
 int DLB_TALP_Detach(void);
 
-/*! \brief Get the number of CPUs
- * \return DLB_SUCCESS on success
- * */
-int DLB_TALP_GetNumCPUs(int *ncpus);
+/*! \brief Get the number of CPUs in the node
+ *  \param[out] ncpus the number of CPUs
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_TALP_GetNumCpus(int *ncpus);
 
-/*! \brief Get MPI Time of the current process
- * \return DLB_SUCCESS on success
- * */
-int DLB_TALP_MPITimeGet(int process, double* mpi_time);
+/*! \brief Get the list of running processes registered in the DLB system
+ *  \param[out] pidlist The output list
+ *  \param[out] nelems Number of elements in the list
+ *  \param[in] max_len Max capacity of the list
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ */
+int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len);
 
-/*! \brief Get Compute Time of the current process
- * \return DLB_SUCCESS on success
- * */
-int DLB_TALP_CPUTimeGet(int process, double* compute_time);
+/*! \brief Get the CPU time spent on MPI and useful computation for the given process
+ *  \param[in] pid target Process ID
+ *  \param[out] mpi_time CPU time spent on MPI in seconds
+ *  \param[out] useful_time CPU time spend on useful computation in seconds
+ *  \return DLB_SUCCESS on success
+ */
+int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
 
 
 /*********************************************************************************/

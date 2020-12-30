@@ -206,7 +206,7 @@ static void talp_update_monitor(dlb_monitor_t *monitor) {
 
     /* Update shared memory only when updating the main monitor */
     if (monitor == &talp_info->mpi_monitor) {
-        shmem_procinfo__settimers(thread_spd->id,
+        shmem_procinfo__settimes(thread_spd->id,
                 nsecs_to_secs(monitor->accumulated_MPI_time),
                 nsecs_to_secs(monitor->accumulated_computation_time));
     }
@@ -360,8 +360,7 @@ static void talp_node_summary(void) {
         double tmp_mpi, tmp_comp;
         for (i = 0; i <nelems; ++i) {
             if (pidlist[i] != 0) {
-                shmem_procinfo__getmpitime(pidlist[i], &tmp_mpi);
-                shmem_procinfo__getcomptime(pidlist[i], &tmp_comp);
+                shmem_procinfo__gettimes(pidlist[i], &tmp_mpi, &tmp_comp);
                 info(" | %-10d | %18e s | %18e s |", i, tmp_comp, tmp_mpi);
                 info(" |------------|----------------------|----------------------|");
 

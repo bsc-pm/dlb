@@ -16,19 +16,14 @@
 /*  You should have received a copy of the GNU Lesser General Public License     */
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
-#define _GNU_SOURCE
+
 #include <unistd.h>
 #include <signal.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <dlb.h>
 #include <dlb_talp.h>
-#include <sys/time.h>
-#include <stdlib.h>
 #include <mpi.h>
-#include <sched.h>
-#include <unistd.h>
-#include <string.h>
-#include <assert.h>
 
 static int run = 1;
 #define TIME 500000
@@ -60,7 +55,7 @@ int main(int argc, char *argv[])
             "Press 'Ctrl-C' to gracefully stop the execution and clean DLB shared memories.\n"
         "PID: %d\n", pid);
 
-    double mpi_time, cpu_time;
+    double mpi_time, useful_time;
     int num_iterations = 0;
 
     while(run) {
@@ -69,13 +64,12 @@ int main(int argc, char *argv[])
 
         MPI_Barrier(MPI_COMM_WORLD);
 
-        DLB_TALP_MPITimeGet(pid, &mpi_time);
-        DLB_TALP_CPUTimeGet(pid, &cpu_time);
+        DLB_TALP_GetTimes(pid, &mpi_time, &useful_time);
 
         ++num_iterations;
         if (num_iterations%10 == 0) {
             printf("%d:MPI TIME: %f ", pid, mpi_time);
-            printf("%d:CPU TIME: %f\n", pid, cpu_time);
+            printf("%d:Useful time: %f\n", pid, useful_time);
         }
     }
 

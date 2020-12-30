@@ -32,6 +32,10 @@
 
 #pragma GCC visibility push(default)
 
+/*********************************************************************************/
+/*    TALP                                                                       */
+/*********************************************************************************/
+
 int DLB_TALP_Attach(void) {
     const char *shm_key;
     if (thread_spd && thread_spd->dlb_initialized) {
@@ -57,15 +61,18 @@ int DLB_TALP_GetNumCPUs(int *ncpus) {
     return DLB_SUCCESS;
 }
 
-int DLB_TALP_MPITimeGet(int process, double* mpi_time){
-    shmem_procinfo__getmpitime((pid_t)process, mpi_time);
-    return DLB_SUCCESS;
+int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
+    return shmem_procinfo__getpidlist(pidlist, nelems, max_len);
 }
 
-int DLB_TALP_CPUTimeGet(int process, double* compute_time){
-    shmem_procinfo__getcomptime((pid_t) process, compute_time);
-    return DLB_SUCCESS;
+int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
+    return shmem_procinfo__gettimes(pid, mpi_time, useful_time);
 }
+
+
+/*********************************************************************************/
+/*    TALP Monitoring Regions                                                    */
+/*********************************************************************************/
 
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void) {
     spd_enter_dlb(NULL);
