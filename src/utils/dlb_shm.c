@@ -102,7 +102,7 @@ void create_shdata( void ) {
 
 static bool shmem_first_occurrence(const char *shm_key) {
     static char **listed_shmems = NULL;
-    static size_t listed_shmems_nelems = 0;
+    static int listed_shmems_nelems = 0;
 
     bool found = false;
     int i;

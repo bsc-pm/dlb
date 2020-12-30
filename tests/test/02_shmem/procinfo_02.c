@@ -33,6 +33,7 @@
 #include <sched.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -89,7 +90,7 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
     // Get pidlist
-    int pidlist[num_cpus];
+    int *pidlist = malloc(sizeof(int) * num_cpus);
     int nelems = 0;
     shmem_procinfo__getpidlist(pidlist, &nelems, num_cpus);
     assert( nelems == 1 );
@@ -120,6 +121,8 @@ int main( int argc, char **argv ) {
 
     // Finalize sub-process
     assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
+
+    free(pidlist);
 
     return 0;
 }

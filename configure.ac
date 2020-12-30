@@ -17,7 +17,7 @@ AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 
 
 ################################################################################
-# Obtain versioning infomation
+# Obtain versioning information
 ################################################################################
 AC_ARG_VAR([GIT], [distributed version control system])
 AC_PATH_PROG([GIT], [git], [])
@@ -101,6 +101,9 @@ AS_IF([test "x$developer_version" = xyes], [
     AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
     AX_CHECK_COMPILE_FLAG([-Wno-error=shadow], [AC_CFLAGS="${AC_CFLAGS} -Wno-error=shadow"])
     AX_CHECK_COMPILE_FLAG([-Wformat-security], [AC_CFLAGS="${AC_CFLAGS} -Wformat-security"])
+    AX_CHECK_COMPILE_FLAG([-Wsign-compare], [AC_CFLAGS="${AC_CFLAGS} -Wsign-compare"])
+    AX_CHECK_COMPILE_FLAG([-Wimplicit-fallthrough], [AC_CFLAGS="${AC_CFLAGS} -Wimplicit-fallthrough"])
+    AX_CHECK_COMPILE_FLAG([-Wvla], [AC_CFLAGS="${AC_CFLAGS} -Wvla"])
 ])
 AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])
@@ -338,15 +341,19 @@ AC_CONFIG_LINKS([
 
 
 ################################################################################
-# BlueGene/Q specific options
+# Host specific options
 ################################################################################
 
-case $host in
-   powerpc64-bgq-linux*)
-      AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
-      AC_LDFLAGS="${AC_LDFLAGS} -dynamic"
-      ;;
-esac
+AS_CASE([$host],
+    [powerpc64-bgq-linux*], [
+        AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
+        AC_LDFLAGS="${AC_LDFLAGS} -dynamic"
+        ncpus=64
+    ], [
+        ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
+    ]
+)
+AC_DEFINE_UNQUOTED([NCPUS_AT_CONFIGURE_TIME], [$ncpus], [Number of CPUs detected at cofigure time])
 ################################################################################
 
 AC_SUBST([AC_CFLAGS])

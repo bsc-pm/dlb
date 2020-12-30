@@ -161,6 +161,7 @@ COMMON_SRCS = \
 	src/support/options.h                   \
 	src/support/queues.c                    \
 	src/support/queues.h                    \
+	src/support/small_array.h               \
 	src/support/tracing.c                   \
 	src/support/tracing.h                   \
 	src/support/types.c                     \

@@ -107,7 +107,7 @@ int dynais_init(unsigned int window, unsigned int levels)
 	unsigned long *p_smpls;
 	unsigned int *p_zeros, *p_sizes, *p_indes;
 	int mem_res1, mem_res2, mem_res3, mem_res4;
-	int i, k;
+	unsigned int i, k;
 	///
 	//p_sizes 	
 	//

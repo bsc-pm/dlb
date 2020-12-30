@@ -362,6 +362,7 @@ int main(int argc, char *argv[]) {
             case 'g':
                 do_getpid = true;
                 process_pseudo_id = strtoul(optarg, NULL, 10);
+                break;
             case 'p':
                 pid = strtoul(optarg, NULL, 10);
                 break;

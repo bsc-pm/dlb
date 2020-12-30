@@ -25,6 +25,7 @@
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
 #include "support/debug.h"
+#include "support/small_array.h"
 
 #include <sched.h>
 #include <stdlib.h>
@@ -45,7 +46,7 @@ typedef struct LeWI_mask_info {
 
 
 /* Combine cpus_priority_array and mask into cpu_array */
-static inline void fill_cpu_array(int *cpu_array, int *cpus_priority_array, const cpu_set_t *mask) {
+static inline void fill_cpu_array(int cpu_array[], int cpus_priority_array[], const cpu_set_t *mask) {
     int i, j;
     for (i=0, j=0; i<node_size; ++i) {
         int cpuid = cpus_priority_array[i];
@@ -88,8 +89,8 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
 
 int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
     /* Deregister subprocess from the shared memory */
-    pid_t new_guests[node_size];
-    pid_t victims[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
+    SMALL_ARRAY(pid_t, victims, node_size);
     int error = shmem_cpuinfo__deregister(spd->id, new_guests, victims);
     if (error == DLB_SUCCESS) {
         bool async = spd->options.mode == MODE_ASYNC;
@@ -134,8 +135,8 @@ int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
-    pid_t new_guests[node_size];
-    pid_t victims[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
+    SMALL_ARRAY(pid_t, victims, node_size);
     int error = shmem_cpuinfo__reset(spd->id, new_guests, victims);
     if (error == DLB_SUCCESS) {
         bool async = spd->options.mode == MODE_ASYNC;
@@ -167,8 +168,8 @@ int lewi_mask_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
     if (max > 0) {
         lewi_info_t *lewi_info = spd->lewi_info;
         lewi_info->max_parallelism = 0;
-        pid_t new_guests[node_size];
-        pid_t victims[node_size];
+        SMALL_ARRAY(pid_t, new_guests, node_size);
+        SMALL_ARRAY(pid_t, victims, node_size);
         error = shmem_cpuinfo__update_max_parallelism(spd->id, max, new_guests, victims);
         if (error == DLB_SUCCESS) {
             bool async = spd->options.mode == MODE_ASYNC;
@@ -293,7 +294,7 @@ int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    pid_t new_guests[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
     int error = shmem_cpuinfo__lend_cpu_mask(spd->id, mask, new_guests);
     if (error == DLB_SUCCESS) {
         if (spd->options.mode == MODE_ASYNC) {
@@ -320,8 +321,8 @@ int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *m
 /*********************************************************************************/
 
 int lewi_mask_Reclaim(const subprocess_descriptor_t *spd) {
-    pid_t new_guests[node_size];
-    pid_t victims[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
+    SMALL_ARRAY(pid_t, victims, node_size);
     int error = shmem_cpuinfo__reclaim_all(spd->id, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         bool async = spd->options.mode == MODE_ASYNC;
@@ -372,8 +373,8 @@ int lewi_mask_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    pid_t new_guests[node_size];
-    pid_t victims[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
+    SMALL_ARRAY(pid_t, victims, node_size);
     int error = shmem_cpuinfo__reclaim_cpus(spd->id, ncpus, new_guests, victims);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
         bool async = spd->options.mode == MODE_ASYNC;
@@ -401,8 +402,8 @@ int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
 }
 
 int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    pid_t new_guests[node_size];
-    pid_t victims[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
+    SMALL_ARRAY(pid_t, victims, node_size);
     int error = shmem_cpuinfo__reclaim_cpu_mask(spd->id, mask, new_guests, victims);
     bool async = spd->options.mode == MODE_ASYNC;
     int cpuid;
@@ -472,15 +473,15 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 }
 
 int lewi_mask_AcquireCpusInMask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask) {
-    pid_t new_guests[node_size];
-    pid_t victims[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
+    SMALL_ARRAY(pid_t, victims, node_size);
     lewi_info_t *lewi_info = spd->lewi_info;
     bool async = spd->options.mode == MODE_ASYNC;
     int64_t *last_borrow = async ? NULL : &lewi_info->last_borrow;
 
     /* Construct a CPU array based on cpus_priority_array and mask (if present) */
     int *cpus_priority_array = lewi_info->cpus_priority_array;
-    int cpu_subset[node_size];
+    SMALL_ARRAY(int, cpu_subset, node_size);
     fill_cpu_array(cpu_subset, cpus_priority_array, mask);
 
     /* Provide a number of requestes CPUs only if needed */
@@ -548,14 +549,14 @@ int lewi_mask_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t 
 }
 
 int lewi_mask_BorrowCpusInMask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask) {
-    pid_t new_guests[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
     lewi_info_t *lewi_info = spd->lewi_info;
     bool async = spd->options.mode == MODE_ASYNC;
     int64_t *last_borrow = async ? NULL : &lewi_info->last_borrow;
 
     /* Construct a CPU array based on cpus_priority_array and mask (if present) */
     int *cpus_priority_array = lewi_info->cpus_priority_array;
-    int cpu_subset[node_size];
+    SMALL_ARRAY(int, cpu_subset, node_size);
     fill_cpu_array(cpu_subset, cpus_priority_array, mask);
 
     /* Provide a number of requestes CPUs only if needed */
@@ -591,7 +592,7 @@ int lewi_mask_Return(const subprocess_descriptor_t *spd) {
         return DLB_ERR_NOCOMP;
     }
 
-    pid_t new_guests[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
     int error = shmem_cpuinfo__return_all(spd->id, new_guests);
     int cpuid;
     for (cpuid=0; cpuid<node_size; ++cpuid) {
@@ -642,7 +643,7 @@ int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    pid_t new_guests[node_size];
+    SMALL_ARRAY(pid_t, new_guests, node_size);
     int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, new_guests);
     bool async = spd->options.mode == MODE_ASYNC;
     int cpuid;

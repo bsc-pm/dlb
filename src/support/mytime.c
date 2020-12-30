@@ -174,8 +174,8 @@ typedef struct TimerData {
     struct timespec stop;
 } timer_data_t;
 
-static timer_data_t *timers = NULL;;
-static size_t ntimers = 0;
+static timer_data_t *timers = NULL;
+static int ntimers = 0;
 
 void timer_init(void) {
 }

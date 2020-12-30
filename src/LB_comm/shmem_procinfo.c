@@ -453,7 +453,7 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_ke
             process->cpu_usage = 0.0;
             process->cpu_avg_usage = 0.0;
 #ifdef DLB_LOAD_AVERAGE
-            process->load[3] = {0.0f, 0.0f, 0.0f};
+            process->load = {0.0f, 0.0f, 0.0f};
             process->last_ltime = {0};
 #endif
             my_pinfo = NULL;
@@ -533,7 +533,7 @@ int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen) {
             process->cpu_usage = 0.0;
             process->cpu_avg_usage = 0.0;
 #ifdef DLB_LOAD_AVERAGE
-            process->load[3] = {0.0f, 0.0f, 0.0f};
+            process->load = {0.0f, 0.0f, 0.0f};
             process->last_ltime = {0};
 #endif
         }
@@ -1028,7 +1028,7 @@ void shmem_procinfo__print_info(const char *shmem_key) {
     for (p = 0; p < max_processes; ++p) {
         pinfo_t *process = &shdata_copy->process_info[p];
         if (process->pid != NOBODY) {
-            size_t len;
+            int len;
             /* pid */
             max_pid = process->pid > max_pid ? process->pid : max_pid;
             /* current_mask */

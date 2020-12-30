@@ -31,6 +31,7 @@
 #include <sched.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
@@ -43,9 +44,9 @@ int main( int argc, char **argv ) {
     int mycpu = sched_getcpu();
     printf("mycpu: %d\n", mycpu);
     int system_size = mu_get_system_size();
-    pid_t new_guests[system_size];
-    pid_t victims[system_size];
-    int cpus_priority_array[system_size];
+    pid_t *new_guests = malloc(sizeof(pid_t) * system_size);
+    pid_t *victims = malloc(sizeof(pid_t) * system_size);
+    int *cpus_priority_array = malloc(sizeof(int) * system_size);
     int64_t last_borrow = 0;
     int requested_ncpus = 0;
     int i, j;
@@ -205,6 +206,10 @@ int main( int argc, char **argv ) {
 
     // Finalize
     assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+
+    free(new_guests);
+    free(victims);
+    free(cpus_priority_array);
 
     return 0;
 }
