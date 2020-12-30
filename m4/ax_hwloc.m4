@@ -5,7 +5,7 @@ AC_DEFUN([AX_HWLOC],
 [
     AC_MSG_CHECKING([for HWLOC])
     AC_ARG_WITH([hwloc],
-        AC_HELP_STRING([--with-hwloc@<:@=DIR@:>@], [add HWLOC support]),
+        AS_HELP_STRING([--with-hwloc@<:@=DIR@:>@], [add HWLOC support]),
         [], dnl Implicit: with_hwloc=$enableval
         [with_hwloc=check]
     )

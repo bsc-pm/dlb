@@ -5,7 +5,7 @@ AC_DEFUN([AX_MPI],
 [
     AC_MSG_CHECKING([for MPI])
     AC_ARG_WITH([mpi],
-        AC_HELP_STRING([--with-mpi@<:@=DIR@:>@], [build also libraries with MPI support]),
+        AS_HELP_STRING([--with-mpi@<:@=DIR@:>@], [build also libraries with MPI support]),
         [], dnl Implicit: with_mpi=$withvalue
         [with_mpi=no]
     )
