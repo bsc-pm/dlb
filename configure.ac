@@ -307,6 +307,8 @@ AC_CONFIG_FILES([
     doc/examples/statistics/Makefile
     doc/examples/talp/run.sh
     doc/examples/talp/Makefile
+    doc/examples/monitoring_regions/run.sh
+    doc/examples/monitoring_regions/Makefile
     doc/doxygen/Doxyfile
     doc/doxygen/Doxyfile_man1
     doc/doxygen/Doxyfile_man3

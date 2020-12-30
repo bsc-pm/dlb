@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# variables detected at configure time
+DLB_HOME=@prefix@
+MPIEXEC=@MPIEXEC@
+
+# variables to be modified by the user
+USER_DEFINED_REGIONS=0
+
+APP="./mpi_pils"
+ARGS="/dev/null 1 100 10"
+
+if [[ $USER_DEFINED_REGIONS == 1 ]] ; then
+    APP=${APP}_custom_region
+fi
+
+export DLB_ARGS+=" --talp --talp-summary=app"
+PRELOAD="$DLB_HOME/lib/libdlb_mpi.so"
+
+$MPIEXEC -n 2 env LD_PRELOAD="$PRELOAD" $APP $ARGS

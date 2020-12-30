@@ -502,16 +502,31 @@ talpexamples_files = \
 	doc/examples/talp/README \
 	doc/examples/talp/talp_01.c \
 	doc/examples/talp/get_times.c \
-	doc/examples/talp/run.sh \
 	$(END)
 
 talpexamples_files_nodist = \
+	doc/examples/talp/run.sh \
 	doc/examples/talp/Makefile \
 	$(END)
 
 talpexamplesdir = $(docdir)/examples/talp
 dist_talpexamples_DATA = $(talpexamples_files)
 nodist_talpexamples_DATA = $(talpexamples_files_nodist)
+
+### Monitoring Regions ###
+regionsexamples_files = \
+	doc/examples/monitoring_regions/README \
+	doc/examples/monitoring_regions/mpi_pils.c \
+	$(END)
+
+regionsexamples_files_nodist = \
+	doc/examples/monitoring_regions/run.sh \
+	doc/examples/monitoring_regions/Makefile \
+	$(END)
+
+regionsexamplesdir = $(docdir)/examples/monitoring_regions
+dist_regionsexamples_DATA = $(regionsexamples_files)
+nodist_regionsexamples_DATA = $(regionsexamples_files_nodist)
 
 #********************************************************************************
 # User Guide
@@ -853,6 +868,7 @@ install-data-hook:
 	chmod +x $(omptexamplesdir)/run.sh
 	chmod +x $(statsexamplesdir)/run.sh
 	chmod +x $(talpexamplesdir)/run.sh
+	chmod +x $(regionsexamplesdir)/run.sh
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \
