@@ -120,6 +120,8 @@ void talp_init(subprocess_descriptor_t *spd) {
     /* Initialize MPI monitor */
     monitoring_region_initialize(&talp_info->mpi_monitor,
             MPI_MONITORING_REGION_ID, "MPI Execution");
+
+    verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&talp_info->workers_mask));
 }
 
 static void talp_destroy(void) {
@@ -196,6 +198,9 @@ static void talp_update_monitor(dlb_monitor_t *monitor) {
     monitor->accumulated_MPI_time += mpi_time;
 
     /* Update computation time */
+    verbose(VB_TALP, "Updating computation time of region %s with mask: %s (%d)",
+            monitor->name, mu_to_str(&talp_info->workers_mask),
+            CPU_COUNT(&talp_info->workers_mask));
     int64_t computation_time = sample_duration * CPU_COUNT(&talp_info->workers_mask);
     monitor->accumulated_computation_time += computation_time;
 
@@ -223,6 +228,8 @@ void talp_cpu_enable(int cpuid) {
         if (!CPU_ISSET(cpuid, &talp_info->workers_mask)) {
             monitoring_regions_update_all();
             CPU_SET(cpuid, &talp_info->workers_mask);
+            verbose(VB_TALP, "Enabling CPU %d. New workers mask: %s",
+                    cpuid, mu_to_str(&talp_info->workers_mask));
         }
     }
 }
@@ -247,6 +254,8 @@ void talp_cpu_disable(int cpuid) {
         if (CPU_ISSET(cpuid, &talp_info->workers_mask)) {
             monitoring_regions_update_all();
             CPU_CLR(cpuid, &talp_info->workers_mask);
+            verbose(VB_TALP, "Disabling CPU %d. New workers mask: %s",
+                    cpuid, mu_to_str(&talp_info->workers_mask));
         }
     }
 }
@@ -288,6 +297,8 @@ void talp_in_mpi(void) {
             int cpuid = sched_getcpu();
             CPU_SET(cpuid, &talp_info->mpi_mask);
             CPU_CLR(cpuid, &talp_info->workers_mask);
+            verbose(VB_TALP, "Inside MPI. New workers mask: %s",
+                    mu_to_str(&talp_info->workers_mask));
         } else {
             /* All CPUs go to MPI mask */
             memcpy(&talp_info->mpi_mask, &talp_info->workers_mask, sizeof(cpu_set_t));
@@ -309,6 +320,8 @@ void talp_out_mpi(void){
             int cpuid = sched_getcpu();
             CPU_CLR(cpuid, &talp_info->mpi_mask);
             CPU_SET(cpuid, &talp_info->workers_mask);
+            verbose(VB_TALP, "Outside MPI. New workers mask: %s",
+                    mu_to_str(&talp_info->workers_mask));
         } else {
             /* All CPUs go to workers mask */
             memcpy(&talp_info->workers_mask, &talp_info->mpi_mask, sizeof(cpu_set_t));
@@ -482,6 +495,7 @@ int monitoring_region_start(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
 
     if (!monitor_data->started) {
+        verbose(VB_TALP, "Starting region %s", monitor->name);
         instrument_event(MONITOR_REGION, monitor_data->id, EVENT_BEGIN);
 
         monitor->start_time = get_time_in_ns();
@@ -502,6 +516,7 @@ int monitoring_region_stop(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
 
     if (monitor_data->started) {
+        verbose(VB_TALP, "Stopping region %s", monitor->name);
         /* Update last sample */
         talp_update_monitor(monitor);
 
