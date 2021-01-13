@@ -115,7 +115,7 @@ int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
  */
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 
-/*! \brief Print a Report by stdout of the monitoring region
+/*! \brief Print a report to stderr of the monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
  */

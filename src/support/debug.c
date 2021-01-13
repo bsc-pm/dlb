@@ -172,7 +172,7 @@ void warning0(const char *fmt, ...) {
 }
 
 static void vinfo(const char *fmt, va_list list) {
-    vprint(stdout, "DLB", fmt, list);
+    vprint(stderr, "DLB", fmt, list);
 }
 
 void info(const char *fmt, ...) {
@@ -199,18 +199,18 @@ void info0(const char *fmt, ...) {
 void verbose(verbose_opts_t flag, const char *fmt, ...) {
     va_list list;
     va_start(list, fmt);
-    if      (vb_opts & flag & VB_API)     { vprint(stdout, "DLB API", fmt, list); }
-    else if (vb_opts & flag & VB_MICROLB) { vprint(stdout, "DLB MICROLB", fmt, list); }
-    else if (vb_opts & flag & VB_SHMEM)   { vprint(stdout, "DLB SHMEM", fmt, list); }
-    else if (vb_opts & flag & VB_MPI_API) { vprint(stdout, "DLB MPI API", fmt, list); }
-    else if (vb_opts & flag & VB_MPI_INT) { vprint(stdout, "DLB MPI INT", fmt, list); }
-    else if (vb_opts & flag & VB_STATS)   { vprint(stdout, "DLB STATS", fmt, list); }
-    else if (vb_opts & flag & VB_DROM)    { vprint(stdout, "DLB DROM", fmt, list); }
-    else if (vb_opts & flag & VB_ASYNC)   { vprint(stdout, "DLB ASYNC", fmt, list); }
-    else if (vb_opts & flag & VB_OMPT)    { vprint(stdout, "DLB OMPT", fmt, list); }
-    else if (vb_opts & flag & VB_AFFINITY){ vprint(stdout, "DLB AFFINITY", fmt, list); }
-    else if (vb_opts & flag & VB_BARRIER) { vprint(stdout, "DLB BARRIER", fmt, list); }
-    else if (vb_opts & flag & VB_TALP)    { vprint(stdout, "DLB TALP", fmt, list); }
+    if      (vb_opts & flag & VB_API)     { vprint(stderr, "DLB API", fmt, list); }
+    else if (vb_opts & flag & VB_MICROLB) { vprint(stderr, "DLB MICROLB", fmt, list); }
+    else if (vb_opts & flag & VB_SHMEM)   { vprint(stderr, "DLB SHMEM", fmt, list); }
+    else if (vb_opts & flag & VB_MPI_API) { vprint(stderr, "DLB MPI API", fmt, list); }
+    else if (vb_opts & flag & VB_MPI_INT) { vprint(stderr, "DLB MPI INT", fmt, list); }
+    else if (vb_opts & flag & VB_STATS)   { vprint(stderr, "DLB STATS", fmt, list); }
+    else if (vb_opts & flag & VB_DROM)    { vprint(stderr, "DLB DROM", fmt, list); }
+    else if (vb_opts & flag & VB_ASYNC)   { vprint(stderr, "DLB ASYNC", fmt, list); }
+    else if (vb_opts & flag & VB_OMPT)    { vprint(stderr, "DLB OMPT", fmt, list); }
+    else if (vb_opts & flag & VB_AFFINITY){ vprint(stderr, "DLB AFFINITY", fmt, list); }
+    else if (vb_opts & flag & VB_BARRIER) { vprint(stderr, "DLB BARRIER", fmt, list); }
+    else if (vb_opts & flag & VB_TALP)    { vprint(stderr, "DLB TALP", fmt, list); }
     va_end(list);
 }
 
