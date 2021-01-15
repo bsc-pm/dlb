@@ -1,5 +1,5 @@
 
-AC_INIT([DLB],[3.0],[pm-tools@bsc.es])
+AC_INIT([DLB],[3.1a],[pm-tools@bsc.es])
 AC_CONFIG_SRCDIR([src/LB_core/DLB_kernel.c])
 
 configure_orig_arguments="$@"

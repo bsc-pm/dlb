@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [Unreleased]
+
 ## [3.0] 2021-01-15
 ### Added
 - New TALP module: Tracking Application Low-level Performance
@@ -186,6 +188,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.0...HEAD
 [3.0]: https://github.com/bsc-pm/dlb/compare/v2.1...v3.0
 [2.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.1
 [2.0.2]: https://github.com/bsc-pm/dlb/compare/v2.0.1...v2.0.2
