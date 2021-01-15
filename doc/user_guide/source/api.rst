@@ -19,6 +19,11 @@ DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided
     detailed description see :ref:`drom`. These functions are described in section
     :ref:`drom-api`.
 
+**TALP: Tracking Application Life Performance**
+    The TALP API is used to obtain measured metrics from other processes as well as
+    to define custom monitoring regions, see :ref:`talp`. These functions are
+    described in section :ref:`talp-api`.
+
 **MPI API**
     This is a specific API for MPI. We offer an MPI interface that will be called by
     Extrae if we are tracing the application or internally in the MPI intercept API.
@@ -186,3 +191,63 @@ process mask of each DLB process.
 .. function:: int DLB_DROM_SetProcessMask(int pid, const dlb_cpu_set_t mask, dlb_drom_flags_t flags)
 
     Set the process mask of the given PID
+
+
+.. _talp-api:
+
+==============
+TALP Interface
+==============
+
+The TALP interface is divided in two sets of services. The first set provides the functionality
+to obtain TALP data from an external process. This process needs first to attach to DLB
+and later it can obtain some data from the other DLB running processes.
+
+.. function:: int DLB_TALP_Attach(void)
+
+    Attach process to DLB as third party
+
+.. function:: int DLB_TALP_Detach(void)
+
+    Detach process from DLB
+
+.. function:: int DLB_TALP_GetNumCpus(int \*ncpus)
+
+    Get the total number of available CPUs in the node
+
+.. function:: void DLB_TALP_GetPidList(int \*pidlist, int \*nelems, int max_len)
+
+    Get the PID's attached to this module
+
+.. function:: int DLB_TALP_GetTimes(int pid, double \*mpi_time, double \*useful_time)
+
+    Get the CPU time on MPI and useful computation for the given process
+
+
+The second set of services are designed to be called from witihn the DLB running proceses.
+With these funcions, the process can obtain live metrics from TALP, as well as to define
+new custom Monitoring Regions to delimit a specific part of the code.
+
+.. function:: const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
+
+     Get the pointer of the implicit MPI Monitorig Region
+
+.. function:: dlb_monitor_t* DLB_MonitoringRegionRegister(const char \*name)
+
+    Register a new Monitoring Region
+
+.. function:: int DLB_MonitoringRegionReset(dlb_monitor_t \*handle)
+
+    Reset monitoring region
+
+.. function:: int DLB_MonitoringRegionStart(dlb_monitor_t \*handle)
+
+    Start (or unpause) monitoring region
+
+.. function:: int DLB_MonitoringRegionStop(dlb_monitor_t \*handle)
+
+    Stop (or pause) monitoring region
+
+.. function:: int DLB_MonitoringRegionReport(const dlb_monitor_t \*handle)
+
+    Print a Report by stdout of the monitoring region

@@ -307,6 +307,8 @@ AC_CONFIG_FILES([
     doc/examples/statistics/Makefile
     doc/examples/talp/run.sh
     doc/examples/talp/Makefile
+    doc/examples/monitoring_regions/run.sh
+    doc/examples/monitoring_regions/Makefile
     doc/doxygen/Doxyfile
     doc/doxygen/Doxyfile_man1
     doc/doxygen/Doxyfile_man3
@@ -336,6 +338,7 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/images/drom.png:doc/user_guide/source/images/drom.png
     doc/user_guide/source/images/hpc_app.png:doc/user_guide/source/images/hpc_app.png
     doc/user_guide/source/images/LeWI.png:doc/user_guide/source/images/LeWI.png
+    doc/user_guide/source/images/talp.png:doc/user_guide/source/images/talp.png
     doc/user_guide/source/_static/custom.css:doc/user_guide/source/_static/custom.css
 ])
 

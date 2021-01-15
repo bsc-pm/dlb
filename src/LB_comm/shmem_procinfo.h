@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2019 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -56,13 +56,11 @@ int     shmem_procinfo__getactivecpus(pid_t pid);
 void    shmem_procinfo__getactivecpus_list(pid_t *cpuslist, int *nelems, int max_len);
 int     shmem_procinfo__getloadavg(pid_t pid, double *load);
 
-int  shmem_procinfo__getmpitime(pid_t pid, double *mpi_time);
-int  shmem_procinfo__getcomptime(pid_t pid, double *comp_time);
-
 int  shmem_procinfo__setcpuusage(pid_t pid, int index, double new_usage);
 int  shmem_procinfo__setcpuavgusage(pid_t pid, double new_avg_usage);
 
-void  shmem_procinfo__settimers(pid_t pid, double mpi_time, double comp_time);
+int  shmem_procinfo__gettimes(pid_t pid, double *mpi_time, double *useful_time);
+void shmem_procinfo__settimes(pid_t pid, double mpi_time, double useful_time);
 
 /* Misc */
 void shmem_procinfo__print_info(const char *shmem_key);

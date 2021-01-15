@@ -1,5 +1,5 @@
 #################################################################################
-#  Copyright 2009-2019 Barcelona Supercomputing Center                          #
+#  Copyright 2009-2021 Barcelona Supercomputing Center                          #
 #                                                                               #
 #  This file is part of the DLB library.                                        #
 #                                                                               #
@@ -502,16 +502,31 @@ talpexamples_files = \
 	doc/examples/talp/README \
 	doc/examples/talp/talp_01.c \
 	doc/examples/talp/get_times.c \
-	doc/examples/talp/run.sh \
 	$(END)
 
 talpexamples_files_nodist = \
+	doc/examples/talp/run.sh \
 	doc/examples/talp/Makefile \
 	$(END)
 
 talpexamplesdir = $(docdir)/examples/talp
 dist_talpexamples_DATA = $(talpexamples_files)
 nodist_talpexamples_DATA = $(talpexamples_files_nodist)
+
+### Monitoring Regions ###
+regionsexamples_files = \
+	doc/examples/monitoring_regions/README \
+	doc/examples/monitoring_regions/mpi_pils.c \
+	$(END)
+
+regionsexamples_files_nodist = \
+	doc/examples/monitoring_regions/run.sh \
+	doc/examples/monitoring_regions/Makefile \
+	$(END)
+
+regionsexamplesdir = $(docdir)/examples/monitoring_regions
+dist_regionsexamples_DATA = $(regionsexamples_files)
+nodist_regionsexamples_DATA = $(regionsexamples_files_nodist)
 
 #********************************************************************************
 # User Guide
@@ -535,6 +550,7 @@ sphinx_files = \
 	doc/user_guide/source/images/drom.png \
 	doc/user_guide/source/images/hpc_app.png \
 	doc/user_guide/source/images/LeWI.png \
+	doc/user_guide/source/images/talp.png \
 	doc/user_guide/source/_static/custom.css \
 	doc/user_guide/Makefile
 
@@ -550,6 +566,7 @@ sphinx_manpages_files = \
 	doc/user_guide/source/dlb_drom.h.rst \
 	doc/user_guide/source/dlb_errors.h.rst \
 	doc/user_guide/source/dlb_sp.h.rst \
+	doc/user_guide/source/dlb_talp.h.rst \
 	doc/user_guide/source/dlb_types.h.rst \
 	$(END)
 
@@ -588,6 +605,9 @@ doc/user_guide/source/dlb_errors.h.rst: $(man3_builddir)/dlb_errors.h.3
 
 doc/user_guide/source/dlb_sp.h.rst: $(man3_builddir)/dlb_sp.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_sp.h' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_talp.h.rst: $(man3_builddir)/dlb_talp.h.3
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_talp.h' $(PANDOC_FLAGS) -o $@ $<
 
 doc/user_guide/source/dlb_types.h.rst: $(man3_builddir)/dlb_types.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_types.h' $(PANDOC_FLAGS) -o $@ $<
@@ -658,6 +678,7 @@ dist_man_MANS = \
 	$(man1_builddir)/dlb_taskset.1 \
 	$(man3_builddir)/dlb.h.3 \
 	$(man3_builddir)/dlb_drom.h.3 \
+	$(man3_builddir)/dlb_talp.h.3 \
 	$(man3_builddir)/dlb_sp.h.3 \
 	$(man3_builddir)/dlb_stats.h.3 \
 	$(man3_builddir)/dlb_types.h.3 \
@@ -678,6 +699,7 @@ $(man1_builddir)/dlb_shm.1: $(man1_builddir)/doxy.stamp
 $(man1_builddir)/dlb_taskset.1: $(man1_builddir)/doxy.stamp
 $(man3_builddir)/dlb.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_drom.h.3: $(man3_builddir)/doxy.stamp
+$(man3_builddir)/dlb_talp.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_sp.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_stats.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_types.h.3: $(man3_builddir)/doxy.stamp
@@ -853,6 +875,7 @@ install-data-hook:
 	chmod +x $(omptexamplesdir)/run.sh
 	chmod +x $(statsexamplesdir)/run.sh
 	chmod +x $(talpexamplesdir)/run.sh
+	chmod +x $(regionsexamplesdir)/run.sh
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \

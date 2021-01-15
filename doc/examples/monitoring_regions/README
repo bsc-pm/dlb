@@ -1,0 +1,25 @@
+README
+======
+
+This is a small example of TALP gathering data from an MPI application. The
+application does not need to be linked with DLB, although it is necessary if
+using user-defined Monitoring Regions. For this reason, this application is
+compiled in two different ways, one without DLB, and another one using the
+TALP API and linked with DLB.
+
+Compilation
+-----------
+Check that the Makefile paths are correct and run `make`.
+
+Execution
+---------
+* Edit the script 'run.sh'
+    * Check that the variables detected at configure time are correct
+    * Review the variables to be modified by the user and change them as you like
+
+* Run the script 'run.sh'
+* Review the results
+
+By default, the script runs the original version of the application, the one
+that does not define custom regions. You can change the values of
+USER_DEFINED_REGIONS to 1 to use the other application and see the added value.

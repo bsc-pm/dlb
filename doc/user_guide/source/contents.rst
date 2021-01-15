@@ -22,8 +22,11 @@ Structure after installation
             │           ├── MPI+OMP_OMPT
             │           ├── MPI+OmpSs
             │           ├── OMPT
-            │           └── statistics
+            │           ├── monitoring_regions
+            │           ├── statistics
+            │           └── talp
             ├── man
+            │   ├── man1
             │   └── man3
             └── paraver_cfgs
                 └── DLB
@@ -46,8 +49,11 @@ Structure after installation
             |           |-- MPI+OMP_OMPT
             |           |-- MPI+OmpSs
             |           |-- OMPT
-            |           `-- statistics
+            |           |-- monitoring_regions
+            |           |-- statistics
+            |           `-- talp
             |-- man
+            |   |-- man1
             |   `-- man3
             `-- paraver_cfgs
                 `-- DLB
@@ -122,6 +128,16 @@ to produce load balance issues between processes. The script ``run.sh`` is
 prepared to be modified by the user in order to try different executions and
 compare them. These options include enabling DLB, enabling some specific DLB
 option, enabling tracing, etc.
+
+Monitoring Regions
+------------------
+This example shows the usage of the TALP Monitorin Regions, how can they be placed
+in a region of the code and obtain some metrics from it.
+
+TALP
+----
+This example shows how a process can attach to DLB and obtain the CPU time on MPI and
+the CPU time on useful computation.
 
 Statistics
 ----------

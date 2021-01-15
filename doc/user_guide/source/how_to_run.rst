@@ -121,6 +121,25 @@ launch new processes. Run ``dlb_taskset --help`` for further info::
     $ dlb_taskset -c 3,7 ./app_3 &      # app_1 mask: [0-2], app_2 mask: [4-6], app_3 mask: [3,7]
     $ dlb_taskset --list
 
+
+TALP example
+============
+The TALP module can be used to obtain a summary of some performance metrics
+at the end of an execution. For more information about the metrics, visit
+the POP metrics website https://pop-coe.eu/node/69::
+
+    $ export DLB_ARGS="--talp --talp-summary=app"
+    $ mpirun <options> env LD_PRELOAD="$DLB_HOME/lib/libdlb_mpi.so" ./foo
+    DLB[<hostname>:<pid>]: ######### Monitoring Region App Summary #########
+    DLB[<hostname>:<pid>]: ### Name:                       MPI Execution
+    DLB[<hostname>:<pid>]: ### Elapsed Time :              12.87 s
+    DLB[<hostname>:<pid>]: ### Parallel efficiency :       0.70
+    DLB[<hostname>:<pid>]: ###   - Communication eff. :    0.91
+    DLB[<hostname>:<pid>]: ###   - Load Balance :          0.77
+    DLB[<hostname>:<pid>]: ###       - LB_in :             0.79
+    DLB[<hostname>:<pid>]: ###       - LB_out:             0.98
+
+
 **Footnotes**
 
 .. [#nanos_dlb] This step is not needed in OmpSs applications if the Nanos++

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2019 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -32,19 +32,17 @@ int main( int argc, char **argv )
     }
     int pid = atoi( argv[1] );
     int error;
-    double mpi_time,cpu_time;
+    double mpi_time, useful_time;
 
     DLB_TALP_Attach();
 
     while( !kill(pid, 0) ) {
-        error = DLB_TALP_MPITimeGet(pid, &mpi_time);
-        if (error != DLB_SUCCESS) break;
-        error = DLB_TALP_CPUTimeGet(pid, &cpu_time);
+        error = DLB_TALP_GetTimes(pid, &mpi_time, &useful_time);
         if (error != DLB_SUCCESS) break;
 
         fprintf( stdout, "\n\033[F\033[J" );
         fprintf( stdout, "%d, mpi time: %g", pid, mpi_time );
-        fprintf( stdout, "; cpu time: %g",  cpu_time );
+        fprintf( stdout, "; useful time: %g",  useful_time );
         usleep( 500000 );
     }
 
