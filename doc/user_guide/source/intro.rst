@@ -42,3 +42,19 @@ the computational resources assigned to a process at run time.
   :width: 300pt
   :align: center
   :alt: DROM
+
+
+.. _talp:
+
+============================================
+Tracking Application Life Performance (TALP)
+============================================
+
+TALP is another module included in DLB that allows to measure the parallel efficiency
+of an execution by intercepting the MPI calls. The data obtained by TALP is available
+at run time during the execution, or as a report at the end.
+
+.. image:: images/talp.png
+  :width: 300pt
+  :align: center
+  :alt: TALP

@@ -565,6 +565,7 @@ sphinx_manpages_files = \
 	doc/user_guide/source/dlb_drom.h.rst \
 	doc/user_guide/source/dlb_errors.h.rst \
 	doc/user_guide/source/dlb_sp.h.rst \
+	doc/user_guide/source/dlb_talp.h.rst \
 	doc/user_guide/source/dlb_types.h.rst \
 	$(END)
 
@@ -603,6 +604,9 @@ doc/user_guide/source/dlb_errors.h.rst: $(man3_builddir)/dlb_errors.h.3
 
 doc/user_guide/source/dlb_sp.h.rst: $(man3_builddir)/dlb_sp.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_sp.h' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_talp.h.rst: $(man3_builddir)/dlb_talp.h.3
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_talp.h' $(PANDOC_FLAGS) -o $@ $<
 
 doc/user_guide/source/dlb_types.h.rst: $(man3_builddir)/dlb_types.h.3
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_types.h' $(PANDOC_FLAGS) -o $@ $<
@@ -673,6 +677,7 @@ dist_man_MANS = \
 	$(man1_builddir)/dlb_taskset.1 \
 	$(man3_builddir)/dlb.h.3 \
 	$(man3_builddir)/dlb_drom.h.3 \
+	$(man3_builddir)/dlb_talp.h.3 \
 	$(man3_builddir)/dlb_sp.h.3 \
 	$(man3_builddir)/dlb_stats.h.3 \
 	$(man3_builddir)/dlb_types.h.3 \
@@ -693,6 +698,7 @@ $(man1_builddir)/dlb_shm.1: $(man1_builddir)/doxy.stamp
 $(man1_builddir)/dlb_taskset.1: $(man1_builddir)/doxy.stamp
 $(man3_builddir)/dlb.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_drom.h.3: $(man3_builddir)/doxy.stamp
+$(man3_builddir)/dlb_talp.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_sp.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_stats.h.3: $(man3_builddir)/doxy.stamp
 $(man3_builddir)/dlb_types.h.3: $(man3_builddir)/doxy.stamp

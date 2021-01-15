@@ -33,4 +33,5 @@ Welcome to DLB's documentation!
 @SPHINX_HAS_MANPAGES@        dlb_drom.h
 @SPHINX_HAS_MANPAGES@        dlb_errors.h
 @SPHINX_HAS_MANPAGES@        dlb_sp.h
+@SPHINX_HAS_MANPAGES@        dlb_talp.h
 @SPHINX_HAS_MANPAGES@        dlb_types.h
