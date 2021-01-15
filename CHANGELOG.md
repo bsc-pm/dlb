@@ -6,14 +6,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## [Unreleased]
 ### Added
 - New TALP module: Tracking Application Low-level Performance
+- TALP Monitoring Regions for user-defined regions
+- Allow processes to attach to / detach from the Barrier module
+- Improve the verbose messages for some modules
+- Allow partial instrumentation of some events
 - Man pages for DLB commands
 
 ### Changed
+- DLB library now always prints to stderr, DLB binaries may still use stdout
 - Dropped support for binary mask old format `1000b` in favor of `0b0001`
+- `DLB_ARGS` variable now takes precedence over `DLB_Init` argument
 
 ### Fixed
 - Some callbacks not being invoked when the action involved some successful
   actions and some others not allowed
+- Several DROM inconsistencies
+- Several minor fixes
 - Minor documentation fixes
 
 ## [2.1] 2019-07-15
@@ -41,7 +49,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## [2.0.2] 2018-10-29
 ### Fixed
 - `DLB_ARGS` was not being correctly parsed in some cases
-- DROM API cointained a typo. New function is called `DLB_DROM_Detach`
+- DROM API contained a typo. New function is called `DLB_DROM_Detach`
 - Intel compiler and GCC8 compatibility
 - Several minor bugs
 
@@ -142,7 +150,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Experimental implementation of `DLB_DROM` interface
 - Signal handler feature to clean up DLB on termination
 - In-code Doxygen documentation
-- User guide using Sphynx generator
+- User guide using Sphinx generator
 - Distributable examples
 
 ### Changed
@@ -156,7 +164,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 - Compatibility with gcc 4.4 and 4.5
 - Compatibility with MPI-3 standard
-- Fotran interfaces now use the correct types
+- Fortran interfaces now use the correct types
 - Several minor bugs
 
 ## 1.0 - 2013-12-11
