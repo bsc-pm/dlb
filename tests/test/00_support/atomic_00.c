@@ -30,7 +30,7 @@
 int main(int argc, char *argv[]) {
     /* int err; */
 
-    int num = 0;
+    atomic_int num = 0;
 
     assert( DLB_ATOMIC_ADD(&num, 1) == 0 );             // num = 1
     assert( DLB_ATOMIC_ADD_RLX(&num, 1) == 1 );         // num = 2
@@ -45,6 +45,9 @@ int main(int argc, char *argv[]) {
     DLB_ATOMIC_ST(&num, 5);         assert( num == 5);
     DLB_ATOMIC_ST_RLX(&num, 6);     assert( num == 6);
 
+    int val;
+    val = DLB_ATOMIC_LD(&num);      assert( num == val);
+    val = DLB_ATOMIC_LD_RLX(&num);  assert( num == val);
 
     return 0;
 }

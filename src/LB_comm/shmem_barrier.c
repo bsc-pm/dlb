@@ -38,9 +38,9 @@
 
 typedef struct {
     bool initialized;
-    unsigned int count;
     unsigned int participants;
-    unsigned int ntimes;
+    atomic_uint ntimes;
+    atomic_uint count;
     pthread_barrier_t barrier;
 } barrier_t;
 
@@ -48,7 +48,7 @@ typedef struct {
     barrier_t barriers[0];
 } shdata_t;
 
-enum { SHMEM_BARRIER_VERSION = 3 };
+enum { SHMEM_BARRIER_VERSION = 4 };
 
 
 static int barrier_id = 0;

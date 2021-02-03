@@ -35,10 +35,16 @@
 #define DLB_ATOMIC_SUB_RLX(ptr, val)        atomic_fetch_sub_explicit(ptr, val, memory_order_relaxed)
 #define DLB_ATOMIC_SUB_FETCH(ptr, val)      atomic_fetch_sub(ptr, val) - val
 #define DLB_ATOMIC_SUB_FETCH_RLX(ptr, val)  atomic_fetch_sub_explicit(ptr, val, memory_order_relaxed) - val
+#define DLB_ATOMIC_LD(ptr)                  atomic_load(ptr)
+#define DLB_ATOMIC_LD_RLX(ptr)              atomic_load_explicit(ptr, memory_order_relaxed)
 #define DLB_ATOMIC_ST(ptr, val)             atomic_store(ptr, val)
 #define DLB_ATOMIC_ST_RLX(ptr, val)         atomic_store_explicit(ptr, val, memory_order_relaxed)
 
 #else /* not HAVE_STDATOMIC_H */
+
+#define atomic_int              int
+#define atomic_uint             unsigned int
+#define atomic_int_least64_t    int64_t
 
 #define DLB_ATOMIC_ADD(ptr, val)            __sync_fetch_and_add(ptr, val)
 #define DLB_ATOMIC_ADD_RLX(ptr, val)        __sync_fetch_and_add(ptr, val)
@@ -48,6 +54,8 @@
 #define DLB_ATOMIC_SUB_RLX(ptr, val)        __sync_fetch_and_sub(ptr, val)
 #define DLB_ATOMIC_SUB_FETCH(ptr, val)      __sync_sub_and_fetch(ptr, val)
 #define DLB_ATOMIC_SUB_FETCH_RLX(ptr, val)  __sync_sub_and_fetch(ptr, val)
+#define DLB_ATOMIC_LD(ptr)                  (*ptr)
+#define DLB_ATOMIC_LD_RLX(ptr)              (*ptr)
 #define DLB_ATOMIC_ST(ptr, val)             __sync_synchronize(); (*ptr) = (val); __sync_synchronize();
 #define DLB_ATOMIC_ST_RLX(ptr, val)         (*ptr) = (val)
 

@@ -66,7 +66,14 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
 }
 
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
-    return shmem_procinfo__gettimes(pid, mpi_time, useful_time);
+    int64_t mpi_time_ns;
+    int64_t useful_time_ns;
+    int error = shmem_procinfo__gettimes(pid, &mpi_time_ns, &useful_time_ns);
+    if (error == DLB_SUCCESS) {
+        *mpi_time = nsecs_to_secs(mpi_time_ns);
+        *useful_time = nsecs_to_secs(useful_time_ns);
+    }
+    return error;
 }
 
 

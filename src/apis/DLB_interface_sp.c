@@ -29,7 +29,7 @@
 static int get_atomic_spid(void) {
     // pidmax is usually 32k, spid is concatenated in order to keep the pid in the first 5 digits
     enum { SPID_INCREMENT = 100000 };
-    static int spid_seed = 0;
+    static atomic_int spid_seed = 0;
     return DLB_ATOMIC_ADD_FETCH_RLX(&spid_seed, SPID_INCREMENT) + getpid();
 }
 

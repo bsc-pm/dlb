@@ -59,8 +59,8 @@ int     shmem_procinfo__getloadavg(pid_t pid, double *load);
 int  shmem_procinfo__setcpuusage(pid_t pid, int index, double new_usage);
 int  shmem_procinfo__setcpuavgusage(pid_t pid, double new_avg_usage);
 
-int  shmem_procinfo__gettimes(pid_t pid, double *mpi_time, double *useful_time);
-void shmem_procinfo__settimes(pid_t pid, double mpi_time, double useful_time);
+int  shmem_procinfo__gettimes(pid_t pid, int64_t *mpi_time, int64_t *useful_time);
+void shmem_procinfo__settimes(pid_t pid, int64_t mpi_time, int64_t useful_time);
 
 /* Misc */
 void shmem_procinfo__print_info(const char *shmem_key);

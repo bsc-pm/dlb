@@ -27,6 +27,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "support/mask_utils.h"
+#include "support/atomic.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -94,12 +95,12 @@ static void check_async_version(void) {
 }
 
 static void check_barrier_version(void) {
-    enum { KNOWN_BARRIER_VERSION = 3 };
+    enum { KNOWN_BARRIER_VERSION = 4 };
     struct KnownBarrierShdata {
         bool bool1;
         unsigned int int1;
-        unsigned int int2;
-        unsigned int int3;
+        atomic_uint  int2;
+        atomic_uint  int3;
         pthread_barrier_t barrier;
     };
 
@@ -161,7 +162,7 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 3 };
+    enum { KNOWN_PROCINFO_VERSION = 4 };
 
     struct KnownResizerData3 {
         char* name;
@@ -197,8 +198,8 @@ static void check_procinfo_version(void) {
         double double1;
         double double2;
         struct KnownResizerData data1;
-        double double3;
-        double double4;
+        atomic_int_least64_t int2;
+        atomic_int_least64_t int3;
 #ifdef DLB_LOAD_AVERAGE
         // Load average fields:
         float float1[3];

@@ -81,8 +81,8 @@ typedef struct {
     double cpu_usage;
     double cpu_avg_usage;
     auto_sizer_t auto_sizer;
-    double mpi_time;
-    double comp_time;
+    atomic_int_least64_t mpi_time;
+    atomic_int_least64_t useful_time;
 #ifdef DLB_LOAD_AVERAGE
     // Load average fields:
     float load[3];              // 1min, 5min, 15mins
@@ -98,7 +98,7 @@ typedef struct {
     pinfo_t process_info[0];
 } shdata_t;
 
-enum { SHMEM_PROCINFO_VERSION = 3 };
+enum { SHMEM_PROCINFO_VERSION = 4 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -957,14 +957,14 @@ int shmem_procinfo__setcpuusage(pid_t pid,int index, double new_avg_usage) {
     return DLB_SUCCESS;
 }
 
-int shmem_procinfo__gettimes(pid_t pid, double *mpi_time, double *useful_time) {
+int shmem_procinfo__gettimes(pid_t pid, int64_t *mpi_time, int64_t *useful_time) {
     int error = DLB_SUCCESS;
     pinfo_t *process = NULL;
     if (likely(shm_handler != NULL)) {
         process = get_process(pid);
         if (process) {
-            *mpi_time = process->mpi_time;
-            *useful_time = process->comp_time;
+            *mpi_time    = DLB_ATOMIC_LD_RLX(&process->mpi_time);
+            *useful_time = DLB_ATOMIC_LD_RLX(&process->useful_time);
         } else {
             error = DLB_ERR_NOPROC;
         }
@@ -975,11 +975,11 @@ int shmem_procinfo__gettimes(pid_t pid, double *mpi_time, double *useful_time) {
     return error;
 }
 
-void shmem_procinfo__settimes(pid_t pid, double mpi_time, double comp_time) {
+void shmem_procinfo__settimes(pid_t pid, int64_t mpi_time, int64_t useful_time) {
     if (likely(shm_handler != NULL)) {
         pinfo_t *process = get_process(pid);
         DLB_ATOMIC_ST_RLX(&process->mpi_time, mpi_time);
-        DLB_ATOMIC_ST_RLX(&process->comp_time, comp_time);
+        DLB_ATOMIC_ST_RLX(&process->useful_time, useful_time);
     }
 }
 

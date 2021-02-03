@@ -95,7 +95,7 @@ enum { MPI_MONITORING_REGION_ID = 1 };
 
 /* Dynamic region ids */
 static int get_new_monitor_id(void) {
-    static int id = MPI_MONITORING_REGION_ID;
+    static atomic_int id = MPI_MONITORING_REGION_ID;
     return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
 }
 
@@ -204,8 +204,8 @@ static void talp_update_monitor(dlb_monitor_t *monitor) {
     /* Update shared memory only when updating the main monitor */
     if (monitor == &talp_info->mpi_monitor) {
         shmem_procinfo__settimes(thread_spd->id,
-                nsecs_to_secs(monitor->accumulated_MPI_time),
-                nsecs_to_secs(monitor->accumulated_computation_time));
+                monitor->accumulated_MPI_time,
+                monitor->accumulated_computation_time);
     }
 
     /* Start new sample */
@@ -337,10 +337,10 @@ static void talp_node_summary(void) {
     int node_id = 0;
 #endif
     if (do_print) {
-        double res_mpi = 0;
-        double res_comp = 0;
-        double max_mpi = 0;
-        double max_comp = 0;
+        int64_t total_mpi_time = 0;
+        int64_t total_useful_time = 0;
+        int64_t max_mpi_time = 0;
+        int64_t max_useful_time = 0;
 
         int max_procs = mu_get_system_size();
         pid_t *pidlist = malloc(max_procs * sizeof(pid_t));
@@ -354,24 +354,30 @@ static void talp_node_summary(void) {
         info(" |  Process   |     Compute Time     |        MPI Time      |" );
         info(" |------------|----------------------|----------------------|");
         int i;
-        double tmp_mpi, tmp_comp;
         for (i = 0; i <nelems; ++i) {
             if (pidlist[i] != 0) {
-                shmem_procinfo__gettimes(pidlist[i], &tmp_mpi, &tmp_comp);
-                info(" | %-10d | %18e s | %18e s |", i, tmp_comp, tmp_mpi);
+                int64_t mpi_time;
+                int64_t useful_time;
+                shmem_procinfo__gettimes(pidlist[i], &mpi_time, &useful_time);
+                info(" | %-10d | %18e s | %18e s |", i,
+                        nsecs_to_secs(useful_time), nsecs_to_secs(mpi_time));
                 info(" |------------|----------------------|----------------------|");
 
-                if( max_mpi < tmp_mpi) max_mpi = tmp_mpi;
-                if( max_comp < tmp_comp) max_comp = tmp_comp;
+                if( max_mpi_time < mpi_time) max_mpi_time = mpi_time;
+                if( max_useful_time < useful_time) max_useful_time = useful_time;
 
-                res_mpi +=  tmp_mpi;
-                res_comp += tmp_comp;
+                total_mpi_time +=  mpi_time;
+                total_useful_time += useful_time;
             }
         }
         info(" |------------|----------------------|----------------------|");
-        info(" | %-10s | %18e s | %18e s |", "Node Avg", res_comp/nelems, res_mpi/nelems);
+        info(" | %-10s | %18e s | %18e s |", "Node Avg",
+                nelems > 0 ? nsecs_to_secs(total_useful_time/nelems) : 0.0,
+                nelems > 0 ? nsecs_to_secs(total_mpi_time/nelems) : 0.0);
         info(" |------------|----------------------|----------------------|");
-        info(" | %-10s | %18e s | %18e s |", "Node Max", max_comp, max_mpi);
+        info(" | %-10s | %18e s | %18e s |", "Node Max",
+                nsecs_to_secs(max_useful_time),
+                nsecs_to_secs(max_mpi_time));
         info(" |------------|----------------------|----------------------|");
     }
 }
