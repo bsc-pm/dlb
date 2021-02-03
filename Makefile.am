@@ -145,6 +145,7 @@ src/LB_MPI/MPI_interceptF.c: $(top_srcdir)/src/LB_MPI/MPI_interceptF.c.in $(MPIC
 #********************************************************************************
 COMMON_SRCS = \
 	$(installheaders)                       \
+	src/support/atomic.h                    \
 	src/support/debug.c                     \
 	src/support/debug.h                     \
 	src/support/env.c                       \

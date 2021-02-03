@@ -26,6 +26,7 @@
 #include "LB_core/spd.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
+#include "support/atomic.h"
 #include "support/debug.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
@@ -95,11 +96,7 @@ enum { MPI_MONITORING_REGION_ID = 1 };
 /* Dynamic region ids */
 static int get_new_monitor_id(void) {
     static int id = MPI_MONITORING_REGION_ID;
-#ifdef HAVE_STDATOMIC_H
-    return __atomic_add_fetch(&id, 1, __ATOMIC_RELAXED);
-#else
-    return __sync_add_and_fetch(&id, 1);
-#endif
+    return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
 }
 
 

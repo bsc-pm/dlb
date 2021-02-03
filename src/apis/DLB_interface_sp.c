@@ -21,19 +21,16 @@
 
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
+#include "support/atomic.h"
 
 #include <stdlib.h>
 #include <unistd.h>
 
-static int spid_seed = 0;
 static int get_atomic_spid(void) {
     // pidmax is usually 32k, spid is concatenated in order to keep the pid in the first 5 digits
-    const int increment = 100000;
-#ifdef HAVE_STDATOMIC_H
-    return __atomic_add_fetch(&spid_seed, increment, __ATOMIC_RELAXED) + getpid();
-#else
-    return __sync_add_and_fetch(&spid_seed, increment) + getpid();
-#endif
+    enum { SPID_INCREMENT = 100000 };
+    static int spid_seed = 0;
+    return DLB_ATOMIC_ADD_FETCH_RLX(&spid_seed, SPID_INCREMENT) + getpid();
 }
 
 

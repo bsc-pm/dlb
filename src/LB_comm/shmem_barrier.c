@@ -27,6 +27,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_comm/shmem.h"
 #include "apis/dlb_errors.h"
+#include "support/atomic.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 
@@ -188,7 +189,7 @@ void shmem_barrier__barrier(void) {
     /* Wait until the shared memory state can be set to BUSY */
     shmem_acquire_busy(shm_handler);
 
-    unsigned int participant_number = __sync_add_and_fetch(&barrier->count, 1);
+    unsigned int participant_number = DLB_ATOMIC_ADD_FETCH(&barrier->count, 1);
     bool last_in = participant_number == barrier->participants;
 
     verbose(VB_BARRIER, "Entering barrier%s", last_in ? " (last)" : "");
@@ -198,7 +199,7 @@ void shmem_barrier__barrier(void) {
         pthread_barrier_wait(&barrier->barrier);
 
         // Increase ntimes counter
-        __sync_add_and_fetch(&barrier->ntimes, 1);
+        DLB_ATOMIC_ADD_RLX(&barrier->ntimes, 1);
     } else {
         // Only if this process is not the last one, act as a blocking call
         talp_in_mpi();
@@ -212,7 +213,7 @@ void shmem_barrier__barrier(void) {
         talp_out_mpi();
     }
 
-    unsigned int participants_left = __sync_sub_and_fetch(&barrier->count, 1);
+    unsigned int participants_left = DLB_ATOMIC_SUB_FETCH(&barrier->count, 1);
     bool last_out = participants_left == 0;
 
     verbose(VB_BARRIER, "Leaving barrier%s", last_out ? " (last)" : "");

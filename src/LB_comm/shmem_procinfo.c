@@ -26,6 +26,7 @@
 #include "LB_comm/shmem.h"
 #include "LB_numThreads/numThreads.h"
 #include "apis/dlb_errors.h"
+#include "support/atomic.h"
 #include "support/debug.h"
 #include "support/types.h"
 #include "support/mytime.h"
@@ -977,13 +978,8 @@ int shmem_procinfo__gettimes(pid_t pid, double *mpi_time, double *useful_time) {
 void shmem_procinfo__settimes(pid_t pid, double mpi_time, double comp_time) {
     if (likely(shm_handler != NULL)) {
         pinfo_t *process = get_process(pid);
-#ifdef HAVE_STDATOMIC_H
-        __atomic_store(&process->mpi_time, &mpi_time, __ATOMIC_RELAXED);
-        __atomic_store(&process->comp_time, &comp_time, __ATOMIC_RELAXED);
-#else
-        process->mpi_time = mpi_time;
-        process->comp_time = comp_time;
-#endif
+        DLB_ATOMIC_ST_RLX(&process->mpi_time, mpi_time);
+        DLB_ATOMIC_ST_RLX(&process->comp_time, comp_time);
     }
 }
 
