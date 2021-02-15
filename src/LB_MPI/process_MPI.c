@@ -133,10 +133,10 @@ void after_init(void) {
     }
 
     free(recvData);
-    free(procsIds);
 
     int data[2];
     PMPI_Scatter(procsIds, 2, MPI_INT, data, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    free(procsIds);
     _process_id = data[0];
     _node_id    = data[1];
 
