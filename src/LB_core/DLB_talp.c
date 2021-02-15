@@ -48,6 +48,7 @@ typedef struct talp_info_t {
     dlb_monitor_t   mpi_monitor;            /* monitor MPI_Init -> MPI_Finalize */
     cpu_set_t       workers_mask;           /* CPUs doing computation */
     cpu_set_t       mpi_mask;               /* CPUs doing MPI */
+    int             ncpus;                  /* Number of process CPUs */
 } talp_info_t;
 
 /* Application summary */
@@ -56,6 +57,7 @@ typedef struct monitor_app_summary_t {
     int64_t elapsed_useful;         /* Elapsed Useful Computation Time */
     int64_t app_sum_useful;         /* Sum of total Useful Computation Time of all processes */
     int64_t node_sum_useful;        /* Sum of total Useful Computation in the most loaded node */
+    int total_cpus;                 /* Sum of total CPUs used (initially registered) by each process */
 } monitor_app_summary_t;
 
 /* Private data per monitor */
@@ -115,6 +117,7 @@ void talp_init(subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
     *talp_info = (talp_info_t) {};
     memcpy(&talp_info->workers_mask, &spd->process_mask, sizeof(cpu_set_t));
+    talp_info->ncpus = CPU_COUNT(&spd->process_mask);
     spd->talp_info = talp_info;
 
     /* Initialize MPI monitor */
@@ -555,7 +558,7 @@ static void monitoring_region_report_app(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
     monitor_app_summary_t *app_summary = monitor_data->app_summary;
     if (app_summary != NULL) {
-        int P = _mpi_size;
+        int P = app_summary->total_cpus;
         int N = _num_nodes;
         int64_t elapsed_time = app_summary->elapsed_time;
         int64_t elapsed_useful = app_summary->elapsed_useful;
@@ -587,6 +590,7 @@ static void monitoring_region_gather_app_data(dlb_monitor_t *monitor) {
     int64_t elapsed_useful;
     int64_t app_sum_useful;
     int64_t node_sum_useful;
+    int total_cpus;
 
     MPI_Datatype mpi_int64;
 #if MPI_VERSION >= 3
@@ -614,6 +618,11 @@ static void monitoring_region_gather_app_data(dlb_monitor_t *monitor) {
     MPI_Reduce(&local_node_useful, &node_sum_useful,
             1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
 
+    /* Obtain the total number of CPUs used in all processes */
+    talp_info_t *talp_info = thread_spd->talp_info;
+    MPI_Reduce(&talp_info->ncpus, &total_cpus,
+            1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD);
+
     /* Allocate gathered data only in process rank 0 */
     if (_mpi_rank == 0) {
         monitor_data_t *monitor_data = monitor->_data;
@@ -622,6 +631,7 @@ static void monitoring_region_gather_app_data(dlb_monitor_t *monitor) {
         monitor_data->app_summary->elapsed_useful = elapsed_useful;
         monitor_data->app_summary->app_sum_useful = app_sum_useful;
         monitor_data->app_summary->node_sum_useful = node_sum_useful;
+        monitor_data->app_summary->total_cpus = total_cpus;
     }
 #endif
 }
