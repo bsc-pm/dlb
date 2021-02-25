@@ -97,6 +97,7 @@ typedef enum InteractionMode {
 } interaction_mode_t;
 
 typedef enum MPISet {
+    MPISET_NONE,
     MPISET_ALL,
     MPISET_BARRIER,
     MPISET_COLLECTIVES

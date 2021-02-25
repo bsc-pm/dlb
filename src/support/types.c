@@ -381,9 +381,9 @@ const char* get_mode_choices(void) {
 }
 
 /* mpi_set_t */
-static const mpi_set_t mpiset_values[] = {MPISET_ALL, MPISET_BARRIER, MPISET_COLLECTIVES};
-static const char* const mpiset_choices[] = {"all", "barrier", "collectives"};
-static const char mpiset_choices_str[] = "all, barrier, collectives";
+static const mpi_set_t mpiset_values[] = {MPISET_NONE, MPISET_ALL, MPISET_BARRIER, MPISET_COLLECTIVES};
+static const char* const mpiset_choices[] = {"none", "all", "barrier", "collectives"};
+static const char mpiset_choices_str[] = "none, all, barrier, collectives";
 enum { mpiset_nelems = sizeof(mpiset_values) / sizeof(mpiset_values[0]) };
 
 int parse_mpiset(const char *str, mpi_set_t *value) {
