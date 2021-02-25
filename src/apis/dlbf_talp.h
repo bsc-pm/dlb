@@ -24,6 +24,7 @@
         integer(kind=c_int64_t) :: start_time
         integer(kind=c_int64_t) :: stop_time
         integer(kind=c_int64_t) :: elapsed_time
+        integer(kind=c_int64_t) :: elapsed_computation_time
         integer(kind=c_int64_t) :: accumulated_MPI_time
         integer(kind=c_int64_t) :: accumulated_computation_time
         type(c_ptr)             :: data_
