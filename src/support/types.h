@@ -76,7 +76,8 @@ typedef enum PriorityType {
 } priority_t;
 
 typedef enum TalpSummaryType {
-    SUMMARY_APP         = 1 << 1,
+    SUMMARY_NONE        = 0,
+    SUMMARY_POP_METRICS = 1 << 1,
     SUMMARY_NODE        = 1 << 2,
     SUMMARY_PROCESS     = 1 << 3,
     SUMMARY_ITERATION   = 1 << 4,

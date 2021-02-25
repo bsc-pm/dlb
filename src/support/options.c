@@ -282,7 +282,7 @@ static const opts_dict_t options_dictionary[] = {
     {
         .var_name       = "LB_TALP_SUMM",
         .arg_name       = "--talp-summary",
-        .default_value  = "",
+        .default_value  = "pop-metrics",
         .description    = OFFSET"Select which verbose components will be printed. Multiple\n"
                           OFFSET"components may be selected.",
         .offset         = offsetof(options_t, talp_summary),
