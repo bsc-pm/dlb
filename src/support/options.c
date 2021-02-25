@@ -111,12 +111,12 @@ static const opts_dict_t options_dictionary[] = {
     },{
         .var_name       = "LB_BARRIER",
         .arg_name       = "--barrier",
-        .default_value  = "no",
-        .description    = OFFSET"Enable the Shared Memory Barrier. Experimental mode. Processes\n"
-                          OFFSET"can perform an intra-node barrier",
+        .default_value  = "yes",
+        .description    = OFFSET"Enable the Shared Memory Barrier. Processes can perform\n"
+                          OFFSET"intra-node barriers.",
         .offset         = offsetof(options_t, barrier),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--ompt",
