@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.0.1] 2021-02-26
+### Fixed
+- Fix bugs in some TALP metrics computation
+- Fix TALP Fortran interface
+
 ## [3.0] 2021-01-15
 ### Added
 - New TALP module: Tracking Application Low-level Performance
@@ -186,6 +191,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[3.0.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.0.1
 [3.0]: https://github.com/bsc-pm/dlb/compare/v2.1...v3.0
 [2.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.1
 [2.0.2]: https://github.com/bsc-pm/dlb/compare/v2.0.1...v2.0.2
