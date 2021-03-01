@@ -41,7 +41,7 @@ int main( int argc, char **argv ) {
     options_init(&options_2, NULL);             // options_2 initialized with env. vars
     assert(options_1.lewi == options_2.lewi);
     assert(options_1.drom == options_2.drom);
-    assert(options_1.lewi_mpi == options_2.lewi_mpi);
+    assert(options_1.lewi_keep_cpu_on_blocking_call == options_2.lewi_keep_cpu_on_blocking_call);
     assert(options_1.verbose == options_2.verbose);
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
@@ -96,7 +96,7 @@ int main( int argc, char **argv ) {
 
     // Check setter and getter
     char value[MAX_OPTION_LENGTH];
-    options_init(&options_1, "--no-lewi-mpi --lewi-mpi-calls=barrier --shm-key=key");
+    options_init(&options_1, "--lewi-mpi-calls=barrier --shm-key=key");
     assert(options_1.lewi_mpi_calls == MPISET_BARRIER);
     options_get_variable(&options_1, "--lewi-mpi-calls", value);
     assert(strcasecmp(value, "barrier") == 0);
@@ -109,11 +109,11 @@ int main( int argc, char **argv ) {
     int error_readonly_var = options_set_variable(&options_1, "--shm-key", "new_key");
     assert(error_readonly_var == DLB_ERR_PERM);
     assert(strcasecmp(value, "key") == 0);
-    options_get_variable(&options_1,"--lewi-mpi", value);
+    options_get_variable(&options_1,"--lewi-keep-one-cpu", value);
     assert(strcasecmp(value, "no") == 0);
-    options_set_variable(&options_1,"--lewi-mpi", "1");
-    assert(options_1.lewi_mpi == true);
-    options_get_variable(&options_1,"--lewi-mpi", value);
+    options_set_variable(&options_1,"--lewi-keep-one-cpu", "1");
+    assert(options_1.lewi_keep_cpu_on_blocking_call == true);
+    options_get_variable(&options_1,"--lewi-keep-one-cpu", value);
     assert(strcasecmp(value, "yes") == 0);
     int error_unexisting_var = options_set_variable(&options_1, "FAKEVAR", "fakevalue");
     assert(error_unexisting_var);
@@ -122,6 +122,11 @@ int main( int argc, char **argv ) {
     assert(error_unexisting_var == DLB_ERR_NOENT);
     assert(strcasecmp(value, "") == 0);
 
+    // Test deprecated variable negated with an existing one
+    options_init(&options_1, "--lewi-mpi");
+    assert(options_1.lewi_keep_cpu_on_blocking_call == false);
+    options_init(&options_1, "--lewi-mpi=no");
+    assert(options_1.lewi_keep_cpu_on_blocking_call == true);
 
     // Print variables
     options_init(&options_1, "");
@@ -144,11 +149,11 @@ int main( int argc, char **argv ) {
     options_init(&options_2, "");
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
-    // bug: "--lewi --lewi-mpi" is well parsed but "--lewi-mpi --lewi" is not.
-    options_init(&options_1, "--lewi --lewi-mpi");
-    assert(options_1.lewi && options_1.lewi_mpi);
-    options_init(&options_1, "--lewi-mpi --lewi");
-    assert(options_1.lewi && options_1.lewi_mpi);
+    // bug: "--lewi --lewi-greedy" is well parsed but "--lewi-greedy --lewi" is not.
+    options_init(&options_1, "--lewi --lewi-greedy");
+    assert(options_1.lewi && options_1.lewi_greedy);
+    options_init(&options_1, "--lewi-greedy --lewi");
+    assert(options_1.lewi && options_1.lewi_greedy);
 
     // bug: "--option=arg" is well parsed but "=arg" remains in the argument
     //      (werror will cause "Unrecognized options" warning to fail)

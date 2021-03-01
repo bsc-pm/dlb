@@ -431,7 +431,8 @@ int main( int argc, char **argv ) {
     /* FIXME: this test has a race condition in mode=async */
     if (mode != MODE_ASYNC)
     {
-        // Option --lewi-mpi not yet enabled
+        // Enable --lewi-keep-one-cpu
+        spd1.options.lewi_keep_cpu_on_blocking_call = true;
         assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_NOUPDT );
         assert( lewi_mask_OutOfBlockingCall(&spd1, 0) == DLB_NOUPDT );
 
@@ -441,9 +442,9 @@ int main( int argc, char **argv ) {
         sched_setaffinity(0, sizeof(cpu_set_t), &mask);
         if (sched_getcpu() == 0) {
 
-            // Enable --lewi-mpi
-            spd1.options.lewi_mpi = true;
-            spd2.options.lewi_mpi = true;
+            // Disable --lewi-keep-one-cpu
+            spd1.options.lewi_keep_cpu_on_blocking_call = false;
+            spd2.options.lewi_keep_cpu_on_blocking_call = false;
 
             /* No conflict */
             {

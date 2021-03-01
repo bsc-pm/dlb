@@ -209,7 +209,7 @@ int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
 
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
-    if (spd->options.lewi_mpi) {
+    if (!spd->options.lewi_keep_cpu_on_blocking_call) {
         int cpuid = sched_getcpu();
         lewi_info_t *lewi_info = spd->lewi_info;
 
@@ -226,7 +226,7 @@ int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
 int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
     int error = DLB_NOUPDT;
-    if (spd->options.lewi_mpi) {
+    if (!spd->options.lewi_keep_cpu_on_blocking_call) {
         int cpuid = sched_getcpu();
         lewi_info_t *lewi_info = spd->lewi_info;
 

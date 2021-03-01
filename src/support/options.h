@@ -43,7 +43,7 @@ typedef struct Options {
     bool                instrument_counters;
     int                 instrument_extrae_nthreads;
     /* lewi */
-    bool                lewi_mpi;
+    bool                lewi_keep_cpu_on_blocking_call;
     mpi_set_t           lewi_mpi_calls;
     priority_t          lewi_affinity;
     ompt_opts_t         lewi_ompt;

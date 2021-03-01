@@ -114,6 +114,7 @@ static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }
 
 int parse_bool(const char *str, bool *value);
+int parse_negated_bool(const char *str, bool *value);
 int parse_int(const char *str, int *value);
 
 /* verbose_opts_t */

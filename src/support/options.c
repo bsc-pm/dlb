@@ -42,6 +42,7 @@ typedef enum OptionFlags {
 
 typedef enum OptionTypes {
     OPT_BOOL_T,
+    OPT_NEG_BOOL_T,
     OPT_INT_T,
     OPT_STR_T,
     OPT_VB_T,       // verbose_opts_t
@@ -205,15 +206,29 @@ static const opts_dict_t options_dictionary[] = {
     // LeWI
     {
         .var_name       = "LB_NULL",
-        .arg_name       = "--lewi-mpi",
+        .arg_name       = "--lewi-keep-one-cpu",
         .default_value  = "no",
-        .description    = OFFSET"When in MPI, whether to lend the current CPU. If LeWI\n"
-                          OFFSET"is enabled and DLB is intercepting MPI calls, DLB will\n"
-                          OFFSET"lend the CPU that is being occupied while waiting fot the\n"
-                          OFFSET"MPI call to finish.",
-        .offset         = offsetof(options_t, lewi_mpi),
+        .description    = OFFSET"Whether the CPU of the thread that encounters a blocking call\n"
+                          OFFSET"(MPI blocking call or DLB_Barrier) is also lent in the LeWI policy.\n"
+                          OFFSET"This flag replaces the option --lewi-mpi, although negated.",
+        .offset         = offsetof(options_t, lewi_keep_cpu_on_blocking_call),
         .type           = OPT_BOOL_T,
         .flags          = OPT_OPTIONAL
+    }, {
+        /* This is a deprecated option that overlaps with --lewi-keep-one-cpu.
+         * It must be defined afterwards so that the default value of the
+         * previous option does not overwrite this one */
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-mpi",
+        .default_value  = "no",
+        .description    = OFFSET"This option is now deprecated, but its previous behavior is now\n"
+                          OFFSET"enabled by default.\n"
+                          OFFSET"If you want to lend a CPU when in a blocking call, you may safely\n"
+                          OFFSET"remove this option.\n"
+                          OFFSET"If you want to keep this CPU, use --lewi-keep-one-cpu instead.",
+        .offset         = offsetof(options_t, lewi_keep_cpu_on_blocking_call),
+        .type           = OPT_NEG_BOOL_T,
+        .flags          = OPT_OPTIONAL | OPT_DEPRECATED
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-mpi-calls",
@@ -351,6 +366,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
     switch(type) {
         case(OPT_BOOL_T):
             return parse_bool(str_value, (bool*)option);
+        case(OPT_NEG_BOOL_T):
+            return parse_negated_bool(str_value, (bool*)option);
         case(OPT_INT_T):
             return parse_int(str_value, (int*)option);
         case(OPT_STR_T):
@@ -388,6 +405,8 @@ static const char * get_value(option_type_t type, const void *option) {
     switch(type) {
         case OPT_BOOL_T:
             return *(bool*)option ? "yes" : "no";
+        case OPT_NEG_BOOL_T:
+            return *(bool*)option ? "no" : "yes";
         case OPT_INT_T:
             sprintf(int_value, "%d", *(int*)option);
             return int_value;
@@ -548,7 +567,7 @@ void options_init(options_t *options, const char *dlb_args) {
 
         /* Warn if option is deprecated and has rhs */
         if (entry->flags & OPT_DEPRECATED && rhs) {
-            warning("Option %s is deprecated, please see the documentation", entry->arg_name);
+            warning("Option %s is deprecated:\n%s", entry->arg_name, entry->description);
         }
 
         /* Skip iteration if option is not used anymore */
@@ -556,7 +575,7 @@ void options_init(options_t *options, const char *dlb_args) {
             continue;
         }
 
-        /* Assing option = rhs, and nullify rhs if error */
+        /* Assign option = rhs, and nullify rhs if error */
         if (rhs) {
             int error = set_value(entry->type, (char*)options+entry->offset, rhs);
             if (error) {
@@ -567,7 +586,7 @@ void options_init(options_t *options, const char *dlb_args) {
         }
 
         /* Set default value if needed */
-        if (!rhs) {
+        if (!rhs && !(entry->flags & OPT_DEPRECATED)) {
             fatal_cond(!(entry->flags & OPT_OPTIONAL),
                     "Variable %s must be defined", entry->arg_name);
             int error = set_value(entry->type, (char*)options+entry->offset, entry->default_value);
@@ -575,7 +594,7 @@ void options_init(options_t *options, const char *dlb_args) {
         }
     }
 
-    /* Safety cheks and free local buffers */
+    /* Safety checks and free local buffers */
     if (dlb_args_from_api) {
         char *str = dlb_args_from_api;
         while(isspace((unsigned char)*str)) str++;
@@ -633,7 +652,7 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
     return error;
 }
 
-/* API Printer */
+/* API Printer. Also, dlb -h/-hh output */
 void options_print_variables(const options_t *options, bool print_extended) {
     enum { buffer_size = 8192 };
     char buffer[buffer_size] = "DLB Options:\n\n"
@@ -657,7 +676,11 @@ void options_print_variables(const options_t *options, bool print_extended) {
 
         /* Name */
         size_t name_len = strlen(entry->arg_name) + 1;
-        b += sprintf(b, "%s:%s", entry->arg_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+        if (name_len < 24) {
+            b += sprintf(b, "%s:%s", entry->arg_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+        } else {
+            b += sprintf(b, "%s:\n\t\t\t", entry->arg_name);
+        }
 
         /* Value */
         const char *value = get_value(entry->type, (char*)options+entry->offset);
@@ -667,6 +690,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
         /* Choices */
         switch(entry->type) {
             case OPT_BOOL_T:
+                b += sprintf(b, "(bool)");
+                break;
+            case OPT_NEG_BOOL_T:
                 b += sprintf(b, "(bool)");
                 break;
             case OPT_INT_T:
@@ -726,13 +752,14 @@ void options_print_variables(const options_t *options, bool print_extended) {
     info0("%s", buffer);
 }
 
+/* Print which LeWI flags are enabled during DLB_Init */
 void options_print_lewi_flags(const options_t *options) {
     const opts_dict_t *entry;
 
     // --lewi-mpi
-    bool default_lewi_mpi;
-    entry = get_entry_by_name("--lewi-mpi");
-    parse_bool(entry->default_value, &default_lewi_mpi);
+    bool default_lewi_keep_one_cpu;
+    entry = get_entry_by_name("--lewi-keep-one-cpu");
+    parse_bool(entry->default_value, &default_lewi_keep_one_cpu);
 
     // --lewi-mpi-calls
     mpi_set_t default_lewi_mpi_calls;
@@ -749,13 +776,13 @@ void options_print_lewi_flags(const options_t *options) {
     entry = get_entry_by_name("--lewi-ompt");
     parse_ompt_opts(entry->default_value, &default_lewi_ompt);
 
-    if (options->lewi_mpi != default_lewi_mpi
+    if (options->lewi_keep_cpu_on_blocking_call != default_lewi_keep_one_cpu
             || options->lewi_mpi_calls != default_lewi_mpi_calls
             || options->lewi_affinity != default_lewi_affinity
             || options->lewi_ompt != default_lewi_ompt) {
         info0("LeWI options:");
-        if (options->lewi_mpi != default_lewi_mpi) {
-            info0("  --lewi-mpi");
+        if (options->lewi_keep_cpu_on_blocking_call != default_lewi_keep_one_cpu) {
+            info0("  --lewi-keep-one-cpu");
         }
         if (options->lewi_mpi_calls != default_lewi_mpi_calls) {
             info0("  --lewi-mpi-calls=%s", mpiset_tostr(options->lewi_mpi_calls));

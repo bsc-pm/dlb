@@ -40,6 +40,15 @@ int main(int argc, char *argv[]) {
     err = parse_bool("no", &b_value);               assert(!err && !b_value);
     err = parse_bool("false", &b_value);            assert(!err && !b_value);
 
+    err = parse_negated_bool("", &b_value);         assert(err);
+    err = parse_negated_bool("null", &b_value);     assert(err);
+    err = parse_negated_bool("1", &b_value);        assert(!err && !b_value);
+    err = parse_negated_bool("yes", &b_value);      assert(!err && !b_value);
+    err = parse_negated_bool("true", &b_value);     assert(!err && !b_value);
+    err = parse_negated_bool("0", &b_value);        assert(!err && b_value);
+    err = parse_negated_bool("no", &b_value);       assert(!err && b_value);
+    err = parse_negated_bool("false", &b_value);    assert(!err && b_value);
+
     int i_value;
     err = parse_int("", &i_value);                  assert(err);
     err = parse_int("zzzzz", &i_value);             assert(err);

@@ -111,7 +111,7 @@ int lewi_OutOfCommunication(const subprocess_descriptor_t *spd) { return DLB_SUC
 int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 
     if (enabled) {
-        if ( !spd->options.lewi_mpi ) {
+        if ( spd->options.lewi_keep_cpu_on_blocking_call ) {
             /* 1CPU */
             verbose(VB_MICROLB, "LENDING %d cpus", myCPUS-1);
             releaseCpus(myCPUS-1);

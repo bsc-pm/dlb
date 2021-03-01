@@ -43,6 +43,21 @@ int parse_bool(const char *str, bool *value) {
     return DLB_SUCCESS;
 }
 
+int parse_negated_bool(const char *str, bool *value) {
+    if (strcasecmp(str, "1")==0        ||
+            strcasecmp(str, "yes")==0  ||
+            strcasecmp(str, "true")==0) {
+        *value = false;
+    } else if (strcasecmp(str, "0")==0 ||
+            strcasecmp(str, "no")==0   ||
+            strcasecmp(str, "false")==0) {
+        *value = true;
+    } else {
+        return DLB_ERR_NOENT;
+    }
+    return DLB_SUCCESS;
+}
+
 int parse_int(const char *str, int *value) {
     char *endptr;
     int val = strtol(str, &endptr, 0);
