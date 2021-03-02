@@ -725,8 +725,7 @@ python_PYTHON = scripts/viewer/dlb_wrapper.py \
 
 nodist_python_PYTHON = scripts/viewer/dlb_viewer.py
 
-nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage \
-		     scripts/run_with_dlb.sh
+nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage
 
 DEBIAN_EXTRA = scripts/debian/compat \
 	       scripts/debian/source/format \
@@ -764,7 +763,6 @@ LIT_EXTRA = scripts/lit/PKG-INFO \
 
 EXTRA_DIST += \
 	scripts/bets \
-	scripts/run_with_dlb.sh.in \
 	scripts/dlb.spec \
 	scripts/pygen.py \
 	scripts/pygen.py3 \
@@ -785,17 +783,6 @@ scripts/viewer/dlb_cpu_usage: $(top_srcdir)/scripts/viewer/dlb_cpu_usage.in
 	$(GEN_verbose)$(MKDIR_P) scripts/viewer; \
 	rm -f $@; \
 	sed -e's,@PYTHONDIR\@,"$(pythondir)",g' $^ > $@
-
-CLEANFILES    += scripts/run_with_dlb.sh
-scripts/run_with_dlb.sh: $(top_srcdir)/scripts/run_with_dlb.sh.in
-	$(GEN_verbose)$(MKDIR_P) scripts/; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX_LIB\@,"$(libdir)",g' \
-		-e's,@NCPUS\@,$(NCPUS),g' \
-	$^ > $@.tmp; \
-	mv $@.tmp $@; \
-	chmod 755 $@
 
 rpm: dist-gzip
 	@echo "Generating RPM structure"
