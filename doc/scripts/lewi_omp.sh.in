@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# Description:
+#   Execute an OpenMP application with the dynamic load policy LeWI (Lend When
+#   Idle).  The OpenMP runtime must support OMPT, set the flag --verbose=ompt
+#   to check whether DLB can register as a OMPT tool.
+#
+# Usage:
+#   ./lewi_omp.sh <application> <args>
+
+#################################################################################
+### DLB options                                                               ###
+#################################################################################
+
+# Enable LeWI
+export DLB_ARGS="$DLB_ARGS --lewi"
+
+# Keep one CPU during a blocking call
+#export DLB_ARGS="$DLB_ARGS --lewi-keep-one-cpu"
+
+# Select which MPI calls to use for LewI
+# Possible values: [none, all, barrier, collectives], default: all
+#export DLB_ARGS="$DLB_ARGS --lewi-mpi-calls=all"
+
+# Select affinity policy to prioritize CPUs to acquire or borrow during LeWI
+# Possible values: [any, nearby-first, nearby-only, spread-ifempty],
+# default: nearby-first
+#export DLB_ARGS="$DLB_ARGS --lewi-affinity=nearby-first"
+
+# Enable OMPT support
+export DLB_ARGS="$DLB_ARGS --ompt"
+
+# Enable verbose messages for OMPT.
+# Useful to check if the OpenMP runtime supports OMPT. If DLB does not print
+# a line with the detected OpenMP runtime, then OMPT is not supported.
+#export DLB_ARGS="$DLB_ARGS --verbose=ompt"
+
+# OMPT policy flags for LeWI. Select when DLB will invoke LewI functions.
+# Possible values: {mpi, borrow, lend}, default: none
+export DLB_ARGS="$DLB_ARGS --lewi-ompt=mpi:borrow:lend"
+
+
+#################################################################################
+### OpenMP runtime options                                                    ###
+#################################################################################
+
+# Set the OpenMP threads waiting policy to 'passive', they will consume a minimal
+# number of cycles while waiting.
+export OMP_WAIT_POLICY=passive
+
+
+## LLVM / Intel variables of interest (although OMP_WAIT_POLICY=passive is enough)
+
+# Make the worker threads to yield to other threads while waiting for more
+# parallel work.
+# export KMP_LIBRARY=throughput
+
+# Set the time, in milliseconds, that a thread should wait before sleeping.
+# export KMP_BLOCKTIME=0
+
+
+#################################################################################
+### Run                                                                       ###
+#################################################################################
+
+if [[ -z $DLB_HOME ]] ; then
+    export DLB_HOME="@prefix@"
+fi
+
+# If the application is not linked with DLB, select which DLB version to preload.
+# Choose between the non-MPI version, or the MPI versions for C/C++ or Fortran
+preload="$DLB_HOME/lib/libdlb.so"
+#preload="$DLB_HOME/lib/libdlb_mpi.so"
+#preload="$DLB_HOME/lib/libdlb_mpif.so"
+
+$DLB_HOME/bin/dlb_run env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"

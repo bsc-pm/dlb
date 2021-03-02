@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# Description:
+#   Execute and trace an OmpSs application with the dynamic load policy LeWI
+#   (Lend When Idle).
+#
+# Usage:
+#   ./lewi_ompss_trace.sh <application> <args>
+
+#################################################################################
+### DLB options                                                               ###
+#################################################################################
+
+# Enable LeWI
+export DLB_ARGS="$DLB_ARGS --lewi"
+
+# Keep one CPU during a blocking call
+#export DLB_ARGS="$DLB_ARGS --lewi-keep-one-cpu"
+
+# Select which MPI calls to use for LewI
+# Possible values: [none, all, barrier, collectives], default: all
+#export DLB_ARGS="$DLB_ARGS --lewi-mpi-calls=all"
+
+# Select affinity policy to prioritize CPUs to acquire or borrow during LeWI
+# Possible values: [any, nearby-first, nearby-only, spread-ifempty],
+# default: nearby-first
+#export DLB_ARGS="$DLB_ARGS --lewi-affinity=nearby-first"
+
+# Select events to be instrumented
+# Possible values: {none:all:mpi:lewi:drom:talp:barrier:ompt:cpus:callbacks},
+# default: all
+#export DLB_ARGS="$DLB_ARGS --instrument=all"
+
+# Set whether to emit hardware counters on any DLB instrumentation event
+# default: no
+#export DLB_ARGS="$DLB_ARGS --instrument-counters"
+
+
+#################################################################################
+### Nanos++ options                                                           ###
+#################################################################################
+
+# Enable DLB and thread block on idle
+export NX_ARGS="$NX_ARGS --enable-dlb --enable-block"
+
+# Force user code to run on the primary thread. It can alleviate MPI issues.
+#export NX_ARGS="$NX_ARGS --force-tie-master"
+
+# Enable Extrae instrumentation
+export NX_ARGS="$NX_ARGS --instrumentation=extrae"
+
+
+#################################################################################
+### Run                                                                       ###
+#################################################################################
+
+if [[ -z $DLB_HOME ]] ; then
+    export DLB_HOME="@prefix@"
+fi
+
+# If the application is not linked with DLB, select which DLB version to preload.
+# Choose between the non-MPI version, or the MPI versions for C/C++ or Fortran
+#preload="$DLB_HOME/lib/libdlb_instr.so"
+preload="$DLB_HOME/lib/libdlb_mpi_instr.so"
+#preload="$DLB_HOME/lib/libdlb_mpif_instr.so"
+
+if [[ -z $EXTRAE_HOME ]] ; then
+    echo "This DLB script needs \$EXTRAE_HOME defined"
+    exit 1
+fi
+
+# Choose between the MPI versions for C/C++ or Fortran
+preload=":$EXTRAE_HOME/lib/libnanosmpitrace.so"
+#preload=":$EXTRAE_HOME/lib/libnanosmpitracef.so"
+
+env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"

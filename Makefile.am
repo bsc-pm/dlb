@@ -530,6 +530,24 @@ dist_regionsexamples_DATA = $(regionsexamples_files)
 nodist_regionsexamples_DATA = $(regionsexamples_files_nodist)
 
 #********************************************************************************
+# User scripts
+#********************************************************************************
+userscripts_files = \
+	doc/scripts/lewi_ompss.sh \
+	$(END)
+
+userscripts_files_nodist = \
+	doc/scripts/lewi_omp.sh \
+	doc/scripts/lewi_omp_trace.sh \
+	doc/scripts/lewi_ompss_trace.sh \
+	doc/scripts/talp.sh \
+	$(END)
+
+userscriptsdir = $(docdir)/scripts
+dist_userscripts_DATA = $(userscripts_files)
+nodist_userscripts_DATA = $(userscripts_files_nodist)
+
+#********************************************************************************
 # User Guide
 #********************************************************************************
 sphinx_files = \
@@ -864,6 +882,11 @@ install-data-hook:
 	chmod +x $(statsexamplesdir)/run.sh
 	chmod +x $(talpexamplesdir)/run.sh
 	chmod +x $(regionsexamplesdir)/run.sh
+	chmod +x $(userscriptsdir)/lewi_omp.sh
+	chmod +x $(userscriptsdir)/lewi_omp_trace.sh
+	chmod +x $(userscriptsdir)/lewi_ompss.sh
+	chmod +x $(userscriptsdir)/lewi_ompss_trace.sh
+	chmod +x $(userscriptsdir)/talp.sh
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \

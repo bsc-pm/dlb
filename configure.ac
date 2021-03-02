@@ -309,6 +309,10 @@ AC_CONFIG_FILES([
     doc/examples/talp/Makefile
     doc/examples/monitoring_regions/run.sh
     doc/examples/monitoring_regions/Makefile
+    doc/scripts/lewi_omp.sh
+    doc/scripts/lewi_omp_trace.sh
+    doc/scripts/lewi_ompss_trace.sh
+    doc/scripts/talp.sh
     doc/doxygen/Doxyfile
     doc/doxygen/Doxyfile_man1
     doc/doxygen/Doxyfile_man3

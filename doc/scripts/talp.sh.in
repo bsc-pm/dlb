@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Description:
+#   Execute an application with TALP enabled.
+#   Note that DLB needs to be initialized in some way, either by linking
+#   the application, or preloading a DLB library.
+#   With TALP, tipically an MPI based library will be needed to intercept
+#   MPI calls.
+#
+# Usage:
+#   ./talp.sh <application> <args>
+
+#################################################################################
+### DLB options                                                               ###
+#################################################################################
+
+# Enable TALP
+export DLB_ARGS="$DLB_ARGS --talp"
+
+# Select which TALP summary to show
+# [app:node:process:iteration:omp:regions], default: pop-metrics
+#export DLB_ARGS="$DLB_ARGS --talp-summary=pop-metrics:process:regions"
+
+#################################################################################
+### Run                                                                       ###
+#################################################################################
+
+if [[ -z $DLB_HOME ]] ; then
+    export DLB_HOME="@prefix@"
+fi
+
+# If the application is not linked with DLB, select which DLB version to preload.
+# Choose between the non-MPI version, or the MPI versions for C/C++ or Fortran
+#preload="$DLB_HOME/lib/libdlb.so"
+#preload="$DLB_HOME/lib/libdlb_mpi.so"
+#preload="$DLB_HOME/lib/libdlb_mpif.so"
+
+env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"
