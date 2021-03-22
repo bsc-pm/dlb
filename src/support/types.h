@@ -76,7 +76,8 @@ typedef enum PriorityType {
 } priority_t;
 
 typedef enum TalpSummaryType {
-    SUMMARY_APP         = 1 << 1,
+    SUMMARY_NONE        = 0,
+    SUMMARY_POP_METRICS = 1 << 1,
     SUMMARY_NODE        = 1 << 2,
     SUMMARY_PROCESS     = 1 << 3,
     SUMMARY_ITERATION   = 1 << 4,
@@ -96,6 +97,7 @@ typedef enum InteractionMode {
 } interaction_mode_t;
 
 typedef enum MPISet {
+    MPISET_NONE,
     MPISET_ALL,
     MPISET_BARRIER,
     MPISET_COLLECTIVES
@@ -112,6 +114,7 @@ static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }
 
 int parse_bool(const char *str, bool *value);
+int parse_negated_bool(const char *str, bool *value);
 int parse_int(const char *str, int *value);
 
 /* verbose_opts_t */

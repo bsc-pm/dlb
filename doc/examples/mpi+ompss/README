@@ -34,10 +34,13 @@ correctly installed, and your environment variable EXTRAE_HOME points to that pa
 This option will generate a tracefile.prv which can be opened using the PARAVER
 application.
 
-If you find that the executions with DLB perform better than the original, you can
-try to even get more performance by setting the variable LEWI_MPI to 1. This variable
-will enable the option '--lewi-mpi'. Whith this option, the most loaded process will
-have another thread for using when the other process is inside an MPI blocking call.
+By default, DLB will track all the process CPUs that are not being used to
+execute useful code (user code, tasks, etc.) and will use them instead to
+balance the workload of other processes. Blocking MPI calls are not considered
+useful computation, so those CPUs waiting for MPI messages will also be used by
+DLB. To keep those CPUs for the current process set the script variable
+LEWI_KEEP_ONE_CPU to 1. This variable will enable the option
+`--lewi-keep-one-cpu`.
 
 
 References

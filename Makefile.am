@@ -530,6 +530,24 @@ dist_regionsexamples_DATA = $(regionsexamples_files)
 nodist_regionsexamples_DATA = $(regionsexamples_files_nodist)
 
 #********************************************************************************
+# User scripts
+#********************************************************************************
+userscripts_files = \
+	doc/scripts/lewi_ompss.sh \
+	$(END)
+
+userscripts_files_nodist = \
+	doc/scripts/lewi_omp.sh \
+	doc/scripts/lewi_omp_trace.sh \
+	doc/scripts/lewi_ompss_trace.sh \
+	doc/scripts/talp.sh \
+	$(END)
+
+userscriptsdir = $(docdir)/scripts
+dist_userscripts_DATA = $(userscripts_files)
+nodist_userscripts_DATA = $(userscripts_files_nodist)
+
+#********************************************************************************
 # User Guide
 #********************************************************************************
 sphinx_files = \
@@ -725,8 +743,7 @@ python_PYTHON = scripts/viewer/dlb_wrapper.py \
 
 nodist_python_PYTHON = scripts/viewer/dlb_viewer.py
 
-nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage \
-		     scripts/run_with_dlb.sh
+nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage
 
 DEBIAN_EXTRA = scripts/debian/compat \
 	       scripts/debian/source/format \
@@ -764,7 +781,6 @@ LIT_EXTRA = scripts/lit/PKG-INFO \
 
 EXTRA_DIST += \
 	scripts/bets \
-	scripts/run_with_dlb.sh.in \
 	scripts/dlb.spec \
 	scripts/pygen.py \
 	scripts/pygen.py3 \
@@ -785,17 +801,6 @@ scripts/viewer/dlb_cpu_usage: $(top_srcdir)/scripts/viewer/dlb_cpu_usage.in
 	$(GEN_verbose)$(MKDIR_P) scripts/viewer; \
 	rm -f $@; \
 	sed -e's,@PYTHONDIR\@,"$(pythondir)",g' $^ > $@
-
-CLEANFILES    += scripts/run_with_dlb.sh
-scripts/run_with_dlb.sh: $(top_srcdir)/scripts/run_with_dlb.sh.in
-	$(GEN_verbose)$(MKDIR_P) scripts/; \
-	rm -f $@; \
-	sed \
-		-e's,@PREFIX_LIB\@,"$(libdir)",g' \
-		-e's,@NCPUS\@,$(NCPUS),g' \
-	$^ > $@.tmp; \
-	mv $@.tmp $@; \
-	chmod 755 $@
 
 rpm: dist-gzip
 	@echo "Generating RPM structure"
@@ -877,6 +882,11 @@ install-data-hook:
 	chmod +x $(statsexamplesdir)/run.sh
 	chmod +x $(talpexamplesdir)/run.sh
 	chmod +x $(regionsexamplesdir)/run.sh
+	chmod +x $(userscriptsdir)/lewi_omp.sh
+	chmod +x $(userscriptsdir)/lewi_omp_trace.sh
+	chmod +x $(userscriptsdir)/lewi_ompss.sh
+	chmod +x $(userscriptsdir)/lewi_ompss_trace.sh
+	chmod +x $(userscriptsdir)/talp.sh
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \

@@ -75,22 +75,6 @@ will never be resource sharing within the node. Now, if you submit another distr
 either 2 or 1 threads per process, each node will contain 2 or 4 DLB processes that will share
 resources when needed.
 
-I'm running a hybrid application, 1 thread per process, and DLB still does nothing
-==================================================================================
-
-By default DLB can reduce the number of threads of a process up to a minimum of 1. If the
-application is not MPI that's enough because we assume that at least there is always serial
-code to do.
-
-But, in MPI applications, we may reach a point where the serial code is only an ``MPI_Barrier``
-where the process is only wasting CPU cycles waiting for other processes to synchronize. If
-you configure DLB to intercept MPI calls, this CPU can be used instead for helping other
-processes in the same node.
-
-To use this feature you need to preload the DLB MPI library and to set this environment variable::
-
-    export DLB_ARGS+=" --lewi-mpi"
-
 I'm running a well allocated hybrid MPI + OpenMP but DLB still doesn't do anything.
 ===================================================================================
 

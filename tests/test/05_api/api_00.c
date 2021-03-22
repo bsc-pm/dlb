@@ -46,7 +46,7 @@ int main( int argc, char **argv ) {
     CPU_SET(0, &process_mask);
     CPU_SET(1, &process_mask);
 
-    char options[64] = "--no-lewi --shm-key=";
+    char options[64] = "--no-lewi --barrier=no --shm-key=";
     strcat(options, SHMEM_KEY);
 
     assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );

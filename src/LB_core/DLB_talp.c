@@ -140,7 +140,7 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     }
     if (thread_spd->options.talp_summary & SUMMARY_PROCESS
         || thread_spd->options.talp_summary & SUMMARY_REGIONS
-        || thread_spd->options.talp_summary & SUMMARY_APP) {
+        || thread_spd->options.talp_summary & SUMMARY_POP_METRICS) {
         monitoring_regions_report_all();
     }
 
@@ -171,7 +171,7 @@ void talp_mpi_finalize(void) {
         monitoring_region_stop(&talp_info->mpi_monitor);
 
         /* Gather data among MPIs if app summary is enabled  */
-        if (thread_spd->options.talp_summary & SUMMARY_APP) {
+        if (thread_spd->options.talp_summary & SUMMARY_POP_METRICS) {
             monitoring_regions_gather_app_data_all();
         }
     }
@@ -556,7 +556,7 @@ int monitoring_region_report(const dlb_monitor_t *monitor) {
     return DLB_SUCCESS;
 }
 
-static void monitoring_region_report_app(dlb_monitor_t *monitor) {
+static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
 #ifdef MPI_LIB
     monitor_data_t *monitor_data = monitor->_data;
     monitor_app_summary_t *app_summary = monitor_data->app_summary;
@@ -583,6 +583,9 @@ static void monitoring_region_report_app(dlb_monitor_t *monitor) {
         info("###       - LB_in :             %1.2f", lb_in);
         info("###       - LB_out:             %1.2f", lb_out);
     }
+#else
+    warning("Option --talp-summary=pop-metrics is set but DLB is not intercepting MPI calls.");
+    warning("Use a DLB library with MPI support or set --talp-summary=none to hide this warning.");
 #endif
 }
 
@@ -696,13 +699,13 @@ static void monitoring_regions_report_all(void) {
         }
     }
 
-    /* Report APP summary */
-    if (thread_spd->options.talp_summary & SUMMARY_APP) {
+    /* Report POP Metrics summary */
+    if (thread_spd->options.talp_summary & SUMMARY_POP_METRICS) {
         talp_info_t *talp_info = thread_spd->talp_info;
-        monitoring_region_report_app(&talp_info->mpi_monitor);
+        monitoring_region_report_pop_metrics(&talp_info->mpi_monitor);
         int i;
         for (i=0; i<nregions; ++i) {
-            monitoring_region_report_app(regions[i]);
+            monitoring_region_report_pop_metrics(regions[i]);
         }
     }
 }

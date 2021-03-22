@@ -48,11 +48,14 @@ Then, enable DLB support in Nanos++ by setting the environment variable
     $ mpirun -n 2 ./foo
 
 You may also enable MPI support for DLB after considering
-:ref:`non-busy-mpi-calls`.  Just preload the MPI flavour of the DLB library and
-enable the option ``--lewi-mpi``::
+:ref:`non-busy-mpi-calls`. To do so, either link or preload the MPI flavour of
+the DLB library.  If you find that the MPI blocking calls are busy waiting,
+consider using the option ``--lewi-keep-one-cpu`` to keep the CPU that is doing
+the blocking call for the current process::
 
-    $ export DLB_ARGS="--lewi --lewi-mpi"
+    $ export DLB_ARGS="--lewi"
     $ mpirun -n 2 -x LD_PRELOAD="$DLB_HOME/lib/libdlb_mpi.so" ./foo
+
 
 
 MPI + OpenMP
@@ -60,7 +63,7 @@ MPI + OpenMP
 OpenMP is not as malleable as OmpSs since it is still limited by the fork-join
 model but DLB can still change the number of threads between parallel regions.
 DLB LeWI mode needs to be enabled as before using the environment variable
-``DLB_ARGS`` with the value ``--lewi``, and optionally ``--lewi-mpi``.
+``DLB_ARGS`` with the value ``--lewi``, and optionally ``--lewi-keep-one-cpu``.
 
 Running with MPI support here is highly recommended because DLB can lend all
 CPUs during a blocking call. Then, we suggest placing calls to ``DLB_Borrow()``
@@ -128,7 +131,7 @@ The TALP module can be used to obtain a summary of some performance metrics
 at the end of an execution. For more information about the metrics, visit
 the POP metrics website https://pop-coe.eu/node/69::
 
-    $ export DLB_ARGS="--talp --talp-summary=app"
+    $ export DLB_ARGS="--talp --talp-summary=pop-metrics"
     $ mpirun <options> env LD_PRELOAD="$DLB_HOME/lib/libdlb_mpi.so" ./foo
     DLB[<hostname>:<pid>]: ######### Monitoring Region App Summary #########
     DLB[<hostname>:<pid>]: ### Name:                       MPI Execution

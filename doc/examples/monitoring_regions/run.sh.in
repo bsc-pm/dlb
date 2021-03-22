@@ -14,7 +14,7 @@ if [[ $USER_DEFINED_REGIONS == 1 ]] ; then
     APP=${APP}_custom_region
 fi
 
-export DLB_ARGS+=" --talp --talp-summary=app"
+export DLB_ARGS+=" --talp --talp-summary=pop-metrics"
 PRELOAD="$DLB_HOME/lib/libdlb_mpi.so"
 
 $MPIEXEC -n 2 env LD_PRELOAD="$PRELOAD" $APP $ARGS
