@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- New `--lewi-mpi-calls` value: `none`
+
+### Changed
+- Enable `--barrier` by default
+- Rename `--lewi-mpi` to its opposite: `--lewi-keep-one-cpu`, and
+  change the default behavior
+- Rename `--talp-summary=app` to `--talp-summary=pop-metrics` and
+  make it the default value
 
 ## [3.0] 2021-01-15
 ### Added

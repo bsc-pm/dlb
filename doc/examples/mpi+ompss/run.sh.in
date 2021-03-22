@@ -7,7 +7,7 @@ MPIEXEC_EXPORT_FLAG=@MPIEXEC_EXPORT_FLAG@
 # variables to be modified by the user
 TRACE=0
 DLB=0
-LEWI_MPI=0
+LEWI_KEEP_ONE_CPU=0
 MPIEXEC_BIND_FLAG=""
 
 APP="./mpi_ompss_pils"
@@ -25,12 +25,12 @@ if [[ $DLB == 1 ]] ; then
     export NX_ARGS+=" --enable-block --enable-dlb --force-tie-master"
     export DLB_ARGS+=" --lewi"
 
-    # Advanced: use --lewi-mpi
-    if [[ $LEWI_MPI == 1 ]] ; then
+    # Advanced: use --lewi-keep-one-cpu
+    if [[ $LEWI_KEEP_ONE_CPU == 1 ]] ; then
         if [[ $TRACE == 1 ]] ; then
-            TRACENAME="pils_dlb_lewi_mpi.prv"
+            TRACENAME="pils_dlb_lewi_keep_one_cpu.prv"
         fi
-        export DLB_ARGS+=" --lewi-mpi"
+        export DLB_ARGS+=" --lewi-keep-one-cpu"
     fi
 else
     if [[ $TRACE == 1 ]] ; then

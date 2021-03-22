@@ -63,13 +63,10 @@ repeatedly checks if the MPI call is finished, while in *non-busy-waiting* mode
 the thread may use other techniques to block its execution and not overuse the
 current CPU.
 
-Since the default behaviour of the blocking mode cannot be predicted for a
-particular MPI implementation, DLB does not lend the CPU that encounters the
-blocking MPI call to other processes, at least by default.
-
-If the MPI library of your application performs a *non-busy-waiting* by default,
-or you know how to enable it, DLB has a flag ``--lewi-mpi`` to also lend
-the CPU of the MPI call.
+DLB lends all CPUs by default. That means that even if a thread is inside
+MPI in *busy-waiting* mode, that CPU can be assigned to other process. If you
+want to keep the CPU when an MPI blocking function is invoked, use the option
+``--lewi-keep-one-cpu``.
 
 ==========================
 Parallel regions in OpenMP
