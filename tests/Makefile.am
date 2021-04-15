@@ -18,7 +18,7 @@
 #################################################################################
 
 LIT_OPTIONS = --xunit-xml-output=test.log.xml -sv $(LIT_FLAGS)
-LIT = PYTHONPATH=$(top_srcdir)/tests $(top_srcdir)/scripts/lit/lit.py $(LIT_OPTIONS)
+LIT = PYTHONPATH=$(top_srcdir)/tests $(PYTHON) $(top_srcdir)/scripts/lit/lit.py $(LIT_OPTIONS)
 
 if LIT_SUPPORT
 check-local: lit-check
