@@ -50,7 +50,6 @@ int main(int argc, char *argv[]) {
     /* Process Mask size can be 1..N */
     cpu_set_t process_mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-    int process_mask_size = CPU_COUNT(&process_mask);
 
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
@@ -73,7 +72,7 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->elapsed_time == 0 );
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == CPU_COUNT(&process_mask) );
+    assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
 
     /* Entering MPI */
@@ -81,18 +80,18 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
     if (lewi) {
-        assert( CPU_COUNT(&talp_info->workers_mask) == process_mask_size - 1 );
+        assert( CPU_COUNT(&talp_info->workers_mask) == 0 );
         assert( CPU_COUNT(&talp_info->mpi_mask) == 1 );
     } else {
         assert( CPU_COUNT(&talp_info->workers_mask) == 0 );
-        assert( CPU_COUNT(&talp_info->mpi_mask) == process_mask_size );
+        assert( CPU_COUNT(&talp_info->mpi_mask) == 1 );
     }
 
     /* Leaving MPI */
     talp_out_mpi();
     assert( mpi_monitor->accumulated_MPI_time != 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == process_mask_size );
+    assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
 
     int cpuid = sched_getcpu();
@@ -106,7 +105,7 @@ int main(int argc, char *argv[]) {
     /* Enable CPU */
     talp_cpu_enable(cpuid);
     int64_t time_computation = mpi_monitor->accumulated_computation_time - time_computation_before;
-    assert( time_computation >= USLEEP_TIME * (process_mask_size-1) );
+    assert( time_computation == 0 );
 
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test");
