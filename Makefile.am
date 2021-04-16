@@ -510,7 +510,7 @@ talpexamples_files_nodist = \
 	doc/examples/talp/Makefile \
 	$(END)
 
-talpexamplesdir = $(docdir)/examples/talp
+talpexamplesdir = $(docdir)/examples/TALP
 dist_talpexamples_DATA = $(talpexamples_files)
 nodist_talpexamples_DATA = $(talpexamples_files_nodist)
 

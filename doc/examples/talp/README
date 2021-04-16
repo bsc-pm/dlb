@@ -1,11 +1,11 @@
 README
 ======
 
-This is a small example of an aplication that runs MPI with DLB and the TALP module.
+This is a small example of an application that runs MPI with DLB and the TALP
+module.
 
-The aplication has been modified to invoke the api calls of TALP to obtain the cpu
-and the MPI time. There are two processes that will be linked with DLB and will
-activate the TALP module.
+This application simulates a small imbalanced MPI workload. The TALP API is
+used to obtain the Useful and MPI time every few iterations and print them.
 
 Compilation
 -----------
@@ -16,31 +16,20 @@ Execution
 * Edit the script 'run.sh'
     * Check that the variables detected at configure time are correct
     * Review the variables to be modified by the user and change them as you like
-    * Make sure that either the variable MPIEXEC_NOBIND_FLAG is set or that
-      the mpiexec command **does not** bind processes by default. This example must run
-      with all the MPI processes sharing the same mask subset. See Annex for more info.
 
 * Run the script 'run.sh'
-* The main program, 'talp_01', will launch 2 processes of MPI and they will print the stadistics
-  of its execution
-* The two processes have sleep calls follwed by MPI_Barrier calls, this sleep time
-  will act as a computacional time. One of them will stay in the sleep call twice
-  than the other one in the sleep so the one that has less sleep time will stay
-  more time in MPI. This example will emulate the compute and MPI times of an
-  aplication to see what times is TALP reporting.
-* The other program can be used to get all the metrics that the TALP module is
-  getting. Just knowing the PID the process the program will attach to DLB
-  shared memory and print all the values in the screen.
+* The main program, `talp_01`, will launch 2 MPI processes, each one will print
+  the statistics of its execution.
+* The application simulates a load imbalance. The rank will always be the last one
+  to arrive at the MPI Barriers.
+* The other program, `get_times`, can be invoked while the main program is running
+  to obtain the Useful and MPI times of the application. This application needs
+  a PID as argument.
 
 You can change the values of DLB and TRACE variables to modify the script behaviour.
-By default both options are set to 0, which means that the example program will run
-without DLB nor tracing capabilities. Setting DLB to 1 should enable DLB to run with
-application. The setting TALP should enable the stadistics module to run with DLB.
-And setting TRACE to 1 will enable the tracing through the EXTRAE tracing library.
-The TRACE options assumes that you have EXTRAE correctly installed, and your
-environment variable EXTRAE_HOME points to that path.
-This option will generate a tracefile.prv which can be opened using the PARAVER
-application.
+The TRACE option assumes that the EXTRAE_HOME environment variable points to a
+Extrae installation. This option will generate a tracefile.prv which can be opened
+using the PARAVER application.
 
 
 References
@@ -48,23 +37,3 @@ References
 If you don't know about EXTRAE and PARAVER and want to test the tracing capabilities
 of the example program you can download the sources and pre-built binaries at:
 * https://tools.bsc.es/downloads
-
-
-Annex: check MPI binding support
---------------------------------
-DLB cannot manage the thread affinity on new threads created in OpenMP. For this
-reason, this example must be run with all processes sharing the same affinity mask.
-Otherwise, the new threads would run on the same CPUs that other threads of the same
-process and would probably cause a performance drop.
-
-If your are not sure how to run MPI without process binding try the following commands:
-
-$ mpirun -n 2 dlb --affinity                    # check default behaviour
-$ mpirun -n 2 --bind-to none dlb --affinity     # OpenMPI specific flag
-$ mpirun -n 2 -binding none dlb --affinity      # Intel MPI scpecific flag
-
-And figure which flag gives you an output where both processes have the same process
-affinity. Then, put that flag in the MPIEXEC_NOBIND_FLAG variable.
-
-If none of these flags work for you, check the documentation of the MPI implementation
-that you are using.

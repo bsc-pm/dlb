@@ -18,66 +18,67 @@
 /*********************************************************************************/
 
 #include <unistd.h>
-#include <signal.h>
-#include <stddef.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <stdio.h>
 #include <dlb.h>
 #include <dlb_talp.h>
 #include <mpi.h>
 
-static int run = 1;
 #define TIME 500000
-
-static void sighandler(int signum)
-{
-    if (signum == SIGINT || signum == SIGTERM) {
-        run = 0;
-    }
-}
 
 int main(int argc, char *argv[])
 {
-    struct sigaction sa;
-    sa.sa_handler = &sighandler;
-    sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);
-    sigaction(SIGINT, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
-
     MPI_Init(&argc,&argv);
 
-    int me, how_many;
-    MPI_Comm_rank(MPI_COMM_WORLD, &me);
-    MPI_Comm_size(MPI_COMM_WORLD, &how_many);
+    int mpi_rank, mpi_size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
     pid_t pid = getpid();
-    printf("Starting TALP example.\n"
-            "Press 'Ctrl-C' to gracefully stop the execution and clean DLB shared memories.\n"
-        "PID: %d\n", pid);
 
-    double mpi_time, useful_time;
-    int num_iterations = 0;
-
-    while(run) {
-        if (me == 0) usleep(TIME);
-        else usleep(TIME/4);
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        DLB_TALP_GetTimes(pid, &mpi_time, &useful_time);
-
-        ++num_iterations;
-        if (num_iterations%10 == 0) {
-            printf("%d:MPI TIME: %f ", pid, mpi_time);
-            printf("%d:Useful time: %f\n", pid, useful_time);
+    int num_iterations = 20;
+    if (argc > 1) {
+        int num = strtol(argv[1], NULL, 10);
+        if (errno != 0 && num > 0) {
+            num_iterations = num;
         }
     }
 
-    printf("Finalizing TALP example.\n");
+    if (mpi_rank == 0) {
+        printf("Starting TALP example.\n"
+                "This program simulates an imbalanced MPI program:\n"
+                " - MPI and Useful times are printed every 10 iterations.\n"
+                " - Each iteration takes about 0.5s.\n"
+                " - The program accepts an optional parameter to set the number\n"
+                "   of iterations, default: 20\n"
+                "Number of iterations: %d\n",
+                num_iterations);
+    }
 
-    /* Explicitly finalize DLB before MPI because some implementations
-     * may not return from MPI if the process is signaled */
-    DLB_Finalize();
+    int i;
+    for (i=0; i< num_iterations; ++i) {
+        if (mpi_rank == 0) {
+            // Rank 0 causes imbalance
+            usleep(TIME);
+        }
+        else {
+            usleep(TIME/4);
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if ((i+1)%10 == 0) {
+            double mpi_time, useful_time;
+            DLB_TALP_GetTimes(pid, &mpi_time, &useful_time);
+            printf("Rank: %d, PID: %d, MPI time: %f, Useful time: %f\n",
+                    pid, mpi_rank, mpi_time, useful_time);
+        }
+    }
+
+    if (mpi_rank == 0) {
+        printf("Finalizing TALP example.\n");
+    }
 
     MPI_Finalize();
 
