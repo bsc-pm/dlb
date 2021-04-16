@@ -116,8 +116,18 @@ void talp_init(subprocess_descriptor_t *spd) {
     /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
     *talp_info = (talp_info_t) {};
-    memcpy(&talp_info->workers_mask, &spd->process_mask, sizeof(cpu_set_t));
-    talp_info->ncpus = CPU_COUNT(&spd->process_mask);
+    if (pm_get_num_threads() == 0) {
+        /* Probably pure MPI, use only current CPU */
+        CPU_ZERO(&talp_info->workers_mask);
+        CPU_SET(sched_getcpu(), &talp_info->workers_mask);
+    } else {
+        /* OpenMP + OmpSs detected, use process mask as workers mask */
+        memcpy(&talp_info->workers_mask, &spd->process_mask, sizeof(cpu_set_t));
+    }
+    talp_info->ncpus = CPU_COUNT(&talp_info->workers_mask);
+    fatal_cond(talp_info->ncpus <= 0,
+            "TALP was unable to detect number of CPUS. Please, report bug at "
+            PACKAGE_BUGREPORT);
     spd->talp_info = talp_info;
 
     /* Initialize MPI monitor */

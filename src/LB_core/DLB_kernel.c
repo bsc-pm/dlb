@@ -75,17 +75,15 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
+    } else if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.talp) {
+        // These modes require mask support, best effort querying the system
+        sched_getaffinity(0, sizeof(cpu_set_t), &spd->process_mask);
     } else if (spd->lb_policy == POLICY_LEWI) {
         // If LeWI, we don't want the process mask, just a mask of size 'ncpus'
         if (ncpus <= 0) ncpus = pm_get_num_threads();
         CPU_ZERO(&spd->process_mask);
         int i;
         for (i=0; i<ncpus; ++i) CPU_SET(i, &spd->process_mask);
-    } else if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.talp) {
-        // These modes require mask support, best effort querying the system
-        cpu_set_t process_mask;
-        sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-        memcpy(&spd->process_mask, &process_mask, sizeof(cpu_set_t));
     }
 
     // Initialize shared memories
