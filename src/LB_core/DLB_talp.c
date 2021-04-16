@@ -97,21 +97,6 @@ static void monitoring_regions_update_all(void);
 static void monitoring_regions_report_all(void);
 static void monitoring_regions_gather_app_data_all(void);
 
-static inline void sort_pids(pid_t * pidlist, int start, int end){
-    int i = start;
-    int  nelem = end;
-    int j;
-    for (i = 0; i < nelem; i++){
-        for (j = 0; j < nelem; j++){
-            if (pidlist[j] > pidlist[i]){
-                int tmp = pidlist[i];
-                pidlist[i] = pidlist[j];
-                pidlist[j] = tmp;
-            }
-        }
-    }
-}
-
 /* Reserved regions ids */
 enum { MPI_MONITORING_REGION_ID = 1 };
 
@@ -365,6 +350,12 @@ void talp_out_mpi(void){
     }
 }
 
+#if MPI_LIB
+static int cmp_pids(const void *pid1, const void *pid2) {
+    return *(pid_t*)pid1 - *(pid_t*)pid2;
+}
+#endif
+
 static void talp_node_summary_gather_data(void) {
 #if MPI_LIB
     /* Perform a barrier so that all processes in the node have arrived at the
@@ -377,7 +368,7 @@ static void talp_node_summary_gather_data(void) {
         pid_t *pidlist = malloc(max_procs * sizeof(pid_t));
         int nelems;
         shmem_procinfo__getpidlist(pidlist, &nelems, max_procs);
-        sort_pids(pidlist, 0, nelems);
+        qsort(pidlist, nelems, sizeof(pid_t), cmp_pids);
 
         /* Allocate node summary structure */
         monitor_node_summary_t *node_summary = malloc(sizeof(monitor_node_summary_t));
