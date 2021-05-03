@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.0.2] 2021-05-03
+### Fixed
+- Minor TALP issues
+
 ## [3.0.1] 2021-02-26
 ### Fixed
 - Fix bugs in some TALP metrics computation
@@ -191,6 +195,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[3.0.2]: https://github.com/bsc-pm/dlb/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.0.1
 [3.0]: https://github.com/bsc-pm/dlb/compare/v2.1...v3.0
 [2.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.1
