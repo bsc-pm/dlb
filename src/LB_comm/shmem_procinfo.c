@@ -114,6 +114,31 @@ static pinfo_t *my_pinfo = NULL;
 static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen);
 static void close_shmem(bool shmem_empty);
 
+static pid_t get_parent_pid(pid_t pid) {
+    pid_t parent_pid = 0;
+    enum { BUF_LEN = 128 };
+    char buf[BUF_LEN];
+    enum { PID_FILE_MAX_LEN = 32 };
+    char pid_status_filename[PID_FILE_MAX_LEN];
+    snprintf(pid_status_filename, PID_FILE_MAX_LEN, "/proc/%d/status", pid);
+    FILE *fd = fopen(pid_status_filename, "r");
+    if (fd != NULL) {
+        while(fgets(buf, BUF_LEN, fd) != NULL) {
+            char *substring = strstr(buf, "PPid:");
+            if (substring != NULL) {
+                substring += strlen("PPid:");
+                long ppid = strtol(substring, NULL, 10);
+                if (ppid > 0) {
+                    parent_pid = ppid;
+                    break;
+                }
+            }
+        }
+        fclose(fd);
+    }
+    return parent_pid;
+}
+
 static pinfo_t* get_process(pid_t pid) {
     if (shdata) {
         /* Check first if pid is this process */
@@ -128,6 +153,12 @@ static pinfo_t* get_process(pid_t pid) {
             if (shdata->process_info[p].pid == pid) {
                 return &shdata->process_info[p];
             }
+        }
+
+        /* Try parent PID */
+        pid_t parent_pid = get_parent_pid(pid);
+        if (parent_pid > 0) {
+            return get_process(parent_pid);
         }
     }
     return NULL;
