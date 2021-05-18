@@ -39,6 +39,7 @@ void omp_set_num_threads(int nthreads) __attribute__((weak));
 
 static cpu_set_t active_mask, process_mask;
 static bool lewi = false;
+static bool drom = false;
 static pid_t pid;
 static ompt_opts_t ompt_opts;
 
@@ -61,9 +62,10 @@ static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
 
 void omp_thread_manager__init(const options_t *options) {
     lewi = options->lewi;
+    drom = options->drom;
     ompt_opts = options->lewi_ompt;
     pid = options->preinit_pid ? options->preinit_pid : getpid();
-    if (lewi) {
+    if (lewi || drom) {
         int err;
         err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
         if (err != DLB_SUCCESS) {
@@ -98,6 +100,10 @@ void omp_thread_manager__borrow(void) {
     } ewma_t;
     static ewma_t ewma = {1.0f, 1};
     static int cpus_to_borrow = 1;
+
+    if (drom) {
+        DLB_PollDROM_Update();
+    }
 
     if (lewi && ompt_opts & OMPT_OPTS_BORROW) {
         int err_return = DLB_Return();
