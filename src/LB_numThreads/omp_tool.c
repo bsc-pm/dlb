@@ -33,7 +33,10 @@
 #include <unistd.h>
 #include <string.h>
 
-int omp_get_level(void) __attribute__((weak));
+enum {
+    PARALLEL_UNSET = 0,
+    PARALLEL_LEVEL0
+};
 
 static pid_t pid;
 
@@ -48,7 +51,17 @@ static void cb_parallel_begin(
         unsigned int requested_parallelism,
         int flags,
         const void *codeptr_ra) {
-    if (omp_get_level() == 0) {
+    /*"The exit frame associated with the initial task that is not nested
+     * inside any OpenMP construct is NULL."
+     */
+    if (encountering_task_frame->exit_frame.ptr == NULL
+            && flags & ompt_parallel_team) {
+        /* This is a non-nested parallel construct encountered by the initial task.
+         * Set parallel_data to an appropriate value so that worker threads know
+         * when they start their explicit task for this parallel region.
+         */
+        parallel_data->value = PARALLEL_LEVEL0;
+
         omp_thread_manager__borrow();
     }
 }
@@ -58,8 +71,9 @@ static void cb_parallel_end(
         ompt_data_t *encountering_task_data,
         int flags,
         const void *codeptr_ra) {
-    if (omp_get_level() == 0) {
+    if (parallel_data->value == PARALLEL_LEVEL0) {
         omp_thread_manager__lend();
+        parallel_data->value = PARALLEL_UNSET;
     }
 }
 
@@ -171,7 +185,8 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
     /* Enable OMPT only if requested */
     if (options.ompt) {
         /* Emit warning if OMP_WAIT_POLICY is not "passive" */
-        if (!omp_policy_str || strcasecmp(omp_policy_str, "passive") != 0) {
+        if (options.lewi &&
+                (!omp_policy_str || strcasecmp(omp_policy_str, "passive") != 0)) {
             warning("OMP_WAIT_POLICY value it not \"passive\". Even though the default "
                     "value may be \"passive\", setting it explicitly is recommended "
                     "since it modifies other runtime related environment variables");

@@ -83,6 +83,13 @@ typedef enum ompt_scope_endpoint_t {
     ompt_scope_end      = 2
 } ompt_scope_endpoint_t;
 
+typedef enum ompt_parallel_flag_t {
+    ompt_parallel_invoker_program   = 0x00000001,
+    ompt_parallel_invoker_runtime   = 0x00000002,
+    ompt_parallel_league            = 0x40000000,
+    ompt_parallel_team              = 0x80000000
+} ompt_parallel_flag_t;
+
 
 /*********************************************************************************/
 /*  data types                                                                   */
