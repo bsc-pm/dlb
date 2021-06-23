@@ -197,7 +197,7 @@ void *timer_register(const char *key) {
 
     /* Initialize timer */
     timer_data_t *timer = &timers[ntimers-1];
-    strncpy(&timer->key[0], key, TIMER_MAX_KEY_LEN);
+    snprintf(&timer->key[0], TIMER_MAX_KEY_LEN, "%s", key);
     timer->acc = 0;
     timer->asq = 0;
     timer->max = 0;

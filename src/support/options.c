@@ -371,7 +371,7 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
         case(OPT_INT_T):
             return parse_int(str_value, (int*)option);
         case(OPT_STR_T):
-            strncpy(option, str_value, MAX_OPTION_LENGTH);
+            snprintf(option, MAX_OPTION_LENGTH, "%s", str_value);
             return DLB_SUCCESS;
         case(OPT_VB_T):
             return parse_verbose_opts(str_value, (verbose_opts_t*)option);
@@ -465,7 +465,7 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
                 /* Obtain value */
                 char *value = strtok_r(NULL, "=", &end_equal);
                 fatal_cond(!value, "Bad format parsing DLB_ARGS: --argument=value");
-                strncpy(arg_value, value, MAX_OPTION_LENGTH);
+                snprintf(arg_value, MAX_OPTION_LENGTH, "%s", value);
                 remove_token = true;
             }
         } else {
