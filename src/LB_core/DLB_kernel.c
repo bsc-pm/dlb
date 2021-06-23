@@ -26,7 +26,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
-#include "LB_numThreads/omp_thread_manager.h"
+#include "LB_numThreads/omptool.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -290,7 +290,7 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.into_blocking_call(spd);
-        omp_thread_manager__IntoBlockingCall();
+        omptool__into_blocking_call();
     }
 }
 
@@ -298,7 +298,7 @@ void OutOfBlockingCall(int is_iter) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
         spd->lb_funcs.out_of_blocking_call(spd, is_iter);
-        omp_thread_manager__OutOfBlockingCall();
+        omptool__outof_blocking_call();
     }
 }
 
@@ -312,7 +312,7 @@ int lend(const subprocess_descriptor_t *spd) {
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
         instrument_event(GIVE_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
-        omp_thread_manager__lend_from_api();
+        omptool__lend_from_api();
         error = spd->lb_funcs.lend(spd);
         if (error == DLB_SUCCESS && spd->options.talp) {
             talp_cpuset_disable(spd, &spd->process_mask);

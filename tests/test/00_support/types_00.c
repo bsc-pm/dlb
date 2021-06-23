@@ -153,13 +153,13 @@ int main(int argc, char *argv[]) {
     assert(  equivalent_mpiset("all", "all") );
     assert( !equivalent_mpiset("all", "collectives") );
 
-    ompt_opts_t ompt;
-    err = parse_ompt_opts("", &ompt);               assert(!err && ompt==OMPT_OPTS_CLEAR);
-    err = parse_ompt_opts("lend", &ompt);           assert(!err && ompt==OMPT_OPTS_LEND);
-    err = parse_ompt_opts("mpi:borrow", &ompt);     assert(!err &&
-                                                        ompt==(OMPT_OPTS_MPI|OMPT_OPTS_BORROW));
-    assert(  equivalent_ompt_opts("lend:borrow", "borrow:borrow:lend") );
-    assert( !equivalent_ompt_opts("lend", "mpi") );
+    omptool_opts_t ompt;
+    err = parse_omptool_opts("", &ompt);            assert(!err && ompt==OMPTOOL_OPTS_CLEAR);
+    err = parse_omptool_opts("lend", &ompt);        assert(!err && ompt==OMPTOOL_OPTS_LEND);
+    err = parse_omptool_opts("mpi:borrow", &ompt);  assert(!err &&
+                                                        ompt==(OMPTOOL_OPTS_MPI|OMPTOOL_OPTS_BORROW));
+    assert(  equivalent_omptool_opts("lend:borrow", "borrow:borrow:lend") );
+    assert( !equivalent_omptool_opts("lend", "mpi") );
 
     return 0;
 }

@@ -19,99 +19,73 @@
 
 #include "LB_numThreads/ompt.h"
 
-#include "LB_numThreads/omp_thread_manager.h"
+#include "LB_numThreads/omptm_omp5.h"
+#include "LB_core/spd.h"
 #include "apis/dlb.h"
-#include "LB_comm/shmem_cpuinfo.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
-#include "support/tracing.h"
 #include "apis/dlb_errors.h"
 
 #include <inttypes.h>
-#include <pthread.h>
-#include <sched.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
-enum {
-    PARALLEL_UNSET,
-    PARALLEL_LEVEl_1,
-};
+typedef struct {
+    /* Init & Finalize function */
+    void (*init)(pid_t, const options_t*);
+    void (*finalize)(void);
+    /* MPI calls */
+    void (*into_mpi)(void);
+    void (*outof_mpi)(void);
+    /* Intercept Lend */
+    void (*lend_from_api)(void);
+    /* OMPT callbacks */
+    ompt_callback_thread_begin_t    thread_begin;
+    ompt_callback_thread_end_t      thread_end;
+    ompt_callback_parallel_begin_t  parallel_begin;
+    ompt_callback_parallel_end_t    parallel_end;
+    ompt_callback_task_create_t     task_create;
+    ompt_callback_task_schedule_t   task_schedule;
+    ompt_callback_implicit_task_t   implicit_task;
+    ompt_callback_work_t            work;
+    ompt_callback_sync_region_t     sync_region;
+} openmp_thread_manager_funcs_t;
+static openmp_thread_manager_funcs_t omptm_funcs = {0};
 
-static pid_t pid;
+static void setup_omp_fn_ptrs(void) {
+        omptm_funcs.init            = omptm_omp5__init;
+        omptm_funcs.finalize        = omptm_omp5__finalize;
+        omptm_funcs.into_mpi        = omptm_omp5__IntoBlockingCall;
+        omptm_funcs.outof_mpi       = omptm_omp5__OutOfBlockingCall;
+        omptm_funcs.lend_from_api   = omptm_omp5__lend_from_api;
+        omptm_funcs.thread_begin    = NULL;
+        omptm_funcs.thread_end      = NULL;
+        omptm_funcs.parallel_begin  = omptm_omp5__parallel_begin;
+        omptm_funcs.parallel_end    = omptm_omp5__parallel_end;
+        omptm_funcs.task_create     = NULL;
+        omptm_funcs.task_schedule   = NULL;
+        omptm_funcs.implicit_task   = omptm_omp5__implicit_task;
+        omptm_funcs.work            = NULL;
+        omptm_funcs.sync_region     = NULL;
+}
 
-/*********************************************************************************/
-/*  OMPT callbacks                                                               */
-/*********************************************************************************/
-
-static void cb_parallel_begin(
-        ompt_data_t *encountering_task_data,
-        const ompt_frame_t *encountering_task_frame,
-        ompt_data_t *parallel_data,
-        unsigned int requested_parallelism,
-        int flags,
-        const void *codeptr_ra) {
-    /*"The exit frame associated with the initial task that is not nested
-     * inside any OpenMP construct is NULL."
-     */
-    if (encountering_task_frame->exit_frame.ptr == NULL
-            && flags & ompt_parallel_team) {
-        /* This is a non-nested parallel construct encountered by the initial task.
-         * Set parallel_data to an appropriate value so that worker threads know
-         * when they start their explicit task for this parallel region.
-         */
-        parallel_data->value = PARALLEL_LEVEl_1;
-
-        omp_thread_manager__borrow();
+void omptool__into_blocking_call(void) {
+    if (omptm_funcs.into_mpi) {
+        omptm_funcs.into_mpi();
     }
 }
 
-static void cb_parallel_end(
-        ompt_data_t *parallel_data,
-        ompt_data_t *encountering_task_data,
-        int flags,
-        const void *codeptr_ra) {
-    if (parallel_data->value == PARALLEL_LEVEl_1) {
-        omp_thread_manager__lend();
-        parallel_data->value = PARALLEL_UNSET;
+void omptool__outof_blocking_call(void) {
+    if (omptm_funcs.outof_mpi) {
+        omptm_funcs.outof_mpi();
     }
 }
 
-static void cb_implicit_task(
-        ompt_scope_endpoint_t endpoint,
-        ompt_data_t *parallel_data,
-        ompt_data_t *task_data,
-        unsigned int actual_parallelism,
-        unsigned int index,
-        int flags) {
-    if (endpoint == ompt_scope_begin) {
-        if (parallel_data &&
-                parallel_data->value == PARALLEL_LEVEl_1) {
-            int cpuid = shmem_cpuinfo__get_thread_binding(pid, index);
-            int current_cpuid = sched_getcpu();
-            if (cpuid >=0 && cpuid != current_cpuid) {
-                cpu_set_t thread_mask;
-                CPU_ZERO(&thread_mask);
-                CPU_SET(cpuid, &thread_mask);
-                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-                instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
-                verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
-            }
-            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
-        }
-    } else if (endpoint == ompt_scope_end) {
-        instrument_event(REBIND_EVENT,   0, EVENT_END);
-        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+void omptool__lend_from_api(void) {
+    if (omptm_funcs.lend_from_api) {
+        omptm_funcs.lend_from_api();
     }
-}
-
-static void cb_thread_begin(
-        ompt_thread_t thread_type,
-        ompt_data_t *thread_data) {
-}
-
-static void cb_thread_end(
-        ompt_data_t *thread_data) {
 }
 
 
@@ -120,10 +94,10 @@ static void cb_thread_end(
 /*********************************************************************************/
 
 static bool dlb_initialized_through_ompt = false;
-static const char *omp_runtime_version;
+static const char *openmp_runtime_version;
+static ompt_set_callback_t set_callback_fn = NULL;
 
-static inline int set_ompt_callback(ompt_set_callback_t set_callback_fn,
-        ompt_callbacks_t event, ompt_callback_t callback) {
+static inline int set_ompt_callback(ompt_callbacks_t event, ompt_callback_t callback) {
     int error = 1;
     switch (set_callback_fn(event, callback)) {
         case ompt_set_error:
@@ -164,24 +138,24 @@ static inline int set_ompt_callback(ompt_set_callback_t set_callback_fn,
     return error;
 }
 
-static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
+static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_num,
         ompt_data_t *tool_data) {
     /* Parse options and get the required fields */
     options_t options;
     options_init(&options, NULL);
     debug_init(&options);
-    pid = getpid();
 
     /* Print OMPT version and variables*/
     const char *omp_policy_str = getenv("OMP_WAIT_POLICY");
-    verbose(VB_OMPT, "Detected OpenMP runtime: %s", omp_runtime_version);
+    verbose(VB_OMPT, "Detected OpenMP runtime: %s", openmp_runtime_version);
     verbose(VB_OMPT, "Environment variables of interest:");
     verbose(VB_OMPT, "  OMP_WAIT_POLICY: %s", omp_policy_str);
-    if (strncmp(omp_runtime_version, "Intel", 5) == 0) {
+    if (strncmp(openmp_runtime_version, "Intel", 5) == 0 ||
+            strncmp(openmp_runtime_version, "LLVM", 4) == 0) {
         verbose(VB_OMPT, "  KMP_LIBRARY: %s", getenv("KMP_LIBRARY"));
         verbose(VB_OMPT, "  KMP_BLOCKTIME: %s", getenv("KMP_BLOCKTIME"));
     }
-    /* when GCC 10 is relased: else if "gomp", print GOMP_SPINCOUNT */
+    /* when GCC 11 is released: else if "gomp", print GOMP_SPINCOUNT */
 
     verbose(VB_OMPT, "DLB with OMPT support is %s", options.ompt ? "ENABLED" : "DISABLED");
 
@@ -195,6 +169,8 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
                     "since it modifies other runtime related environment variables");
         }
 
+        setup_omp_fn_ptrs();
+
         /* Initialize DLB only if ompt is enabled, and
          * remember if succeded to finalize it when ompt_finalize is invoked. */
         int err = DLB_Init(0, NULL, NULL);
@@ -207,20 +183,49 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
         verbose(VB_OMPT, "Initializing OMPT module");
 
         /* Register OMPT callbacks */
-        ompt_set_callback_t set_callback_fn =
-            (ompt_set_callback_t)lookup("ompt_set_callback");
+        set_callback_fn = (ompt_set_callback_t)lookup("ompt_set_callback");
         if (set_callback_fn) {
             err = 0;
-            err += set_ompt_callback(set_callback_fn,
-                    ompt_callback_thread_begin,   (ompt_callback_t)cb_thread_begin);
-            err += set_ompt_callback(set_callback_fn,
-                    ompt_callback_thread_end,     (ompt_callback_t)cb_thread_end);
-            err += set_ompt_callback(set_callback_fn,
-                    ompt_callback_parallel_begin, (ompt_callback_t)cb_parallel_begin);
-            err += set_ompt_callback(set_callback_fn,
-                    ompt_callback_parallel_end,   (ompt_callback_t)cb_parallel_end);
-            err += set_ompt_callback(set_callback_fn,
-                    ompt_callback_implicit_task,  (ompt_callback_t)cb_implicit_task);
+            if (omptm_funcs.thread_begin) {
+                err += set_ompt_callback(
+                        ompt_callback_thread_begin,
+                        (ompt_callback_t)omptm_funcs.thread_begin);
+            }
+            if (omptm_funcs.thread_end) {
+                err += set_ompt_callback(
+                        ompt_callback_thread_end,
+                        (ompt_callback_t)omptm_funcs.thread_end);
+            }
+            if (omptm_funcs.parallel_begin) {
+                err += set_ompt_callback(
+                        ompt_callback_parallel_begin,
+                        (ompt_callback_t)omptm_funcs.parallel_begin);
+            }
+            if (omptm_funcs.parallel_end) {
+                err += set_ompt_callback(
+                        ompt_callback_parallel_end,
+                        (ompt_callback_t)omptm_funcs.parallel_end);
+            }
+            if (omptm_funcs.task_create) {
+                err += set_ompt_callback(
+                        ompt_callback_task_create,
+                        (ompt_callback_t)omptm_funcs.task_create);
+            }
+            if (omptm_funcs.task_schedule) {
+                err += set_ompt_callback(
+                        ompt_callback_task_schedule,
+                        (ompt_callback_t)omptm_funcs.task_schedule);
+            }
+            if (omptm_funcs.implicit_task) {
+                err += set_ompt_callback(
+                        ompt_callback_implicit_task,
+                        (ompt_callback_t)omptm_funcs.implicit_task);
+            }
+            if (omptm_funcs.work) {
+                err += set_ompt_callback(
+                        ompt_callback_work,
+                        (ompt_callback_t)omptm_funcs.work);
+            }
         } else {
             err = 1;
             verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
@@ -230,7 +235,7 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
          * and return a non-zero value to activate the tool */
         if (!err) {
             verbose(VB_OMPT, "OMPT callbacks succesfully registered");
-            omp_thread_manager__init(&options);
+            omptm_funcs.init(thread_spd->id, &options);
             return 1;
         }
 
@@ -245,38 +250,58 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
     return 0;
 }
 
-static void ompt_finalize(ompt_data_t *tool_data) {
+static void omptool_finalize(ompt_data_t *tool_data) {
+    verbose(VB_OMPT, "Finalizing OMPT module");
+
+    /* Finalize DLB if needed */
     if (dlb_initialized_through_ompt) {
-        verbose(VB_OMPT, "Finalizing OMPT module");
-        omp_thread_manager__finalize();
         DLB_Finalize();
     }
+
+    /* Disable OMPT callbacks */
+    if (set_callback_fn) {
+        if (omptm_funcs.thread_begin) {
+            set_callback_fn(ompt_callback_thread_begin, NULL);
+        }
+        if (omptm_funcs.thread_end) {
+            set_callback_fn(ompt_callback_thread_end, NULL);
+        }
+        if (omptm_funcs.parallel_begin) {
+            set_callback_fn(ompt_callback_parallel_begin, NULL);
+        }
+        if (omptm_funcs.parallel_end) {
+            set_callback_fn(ompt_callback_parallel_end, NULL);
+        }
+        if (omptm_funcs.task_create) {
+            set_callback_fn(ompt_callback_task_create, NULL);
+        }
+        if (omptm_funcs.task_schedule) {
+            set_callback_fn(ompt_callback_task_schedule, NULL);
+        }
+        if (omptm_funcs.implicit_task) {
+            set_callback_fn(ompt_callback_implicit_task, NULL);
+        }
+        if (omptm_funcs.work) {
+            set_callback_fn(ompt_callback_work, NULL);
+        }
+    }
+
+    /* Finalize thread manager */
+    if (omptm_funcs.finalize) {
+        omptm_funcs.finalize();
+    }
+
 }
 
 
 #pragma GCC visibility push(default)
 ompt_start_tool_result_t* ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
-    omp_runtime_version = runtime_version;
-    static ompt_start_tool_result_t ompt_start_tool_result = {
-        .initialize = ompt_initialize,
-        .finalize   = ompt_finalize,
+    openmp_runtime_version = runtime_version;
+    static ompt_start_tool_result_t tool = {
+        .initialize = omptool_initialize,
+        .finalize   = omptool_finalize,
         .tool_data  = {0}
     };
-    return &ompt_start_tool_result;
+    return &tool;
 }
 #pragma GCC visibility pop
-
-/*********************************************************************************/
-
-#ifdef DEBUG_VERSION
-/* Static type checking */
-static __attribute__((unused)) void ompt_type_checking(void) {
-    { ompt_initialize_t                 __attribute__((unused)) fn = ompt_initialize; }
-    { ompt_finalize_t                   __attribute__((unused)) fn = ompt_finalize; }
-    { ompt_callback_thread_begin_t      __attribute__((unused)) fn = cb_thread_begin; }
-    { ompt_callback_thread_end_t        __attribute__((unused)) fn = cb_thread_end; }
-    { ompt_callback_parallel_begin_t    __attribute__((unused)) fn = cb_parallel_begin; }
-    { ompt_callback_parallel_end_t      __attribute__((unused)) fn = cb_parallel_end; }
-    { ompt_callback_implicit_task_t     __attribute__((unused)) fn = cb_implicit_task; }
-}
-#endif

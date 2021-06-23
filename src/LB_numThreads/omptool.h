@@ -17,17 +17,11 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef OMP_THREAD_MANAGER_H
-#define OMP_THREAD_MANAGER_H
+#ifndef OMPTOOL_H
+#define OMPTOOL_H
 
-#include "support/options.h"
+void omptool__into_blocking_call(void);
+void omptool__outof_blocking_call(void);
+void omptool__lend_from_api(void);
 
-void omp_thread_manager__init(const options_t *options);
-void omp_thread_manager__finalize(void);
-void omp_thread_manager__borrow(void);
-void omp_thread_manager__lend(void);
-void omp_thread_manager__lend_from_api(void);
-void omp_thread_manager__IntoBlockingCall(void);
-void omp_thread_manager__OutOfBlockingCall(void);
-
-#endif /* OMP_THREAD_MANAGER_H */
+#endif /* OMPTOOL_H */

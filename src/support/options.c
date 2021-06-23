@@ -54,7 +54,7 @@ typedef enum OptionTypes {
     OPT_MASK_T,     // cpu_set_t
     OPT_MODE_T,     // interaction_mode_t
     OPT_MPISET_T,   // mpi_set_t
-    OPT_OMPTOPTS_T, // ompt_opts_t
+    OPT_OMPTOPTS_T, // omptool_opts_t
     OPT_TLPSUM_T
 } option_type_t;
 
@@ -413,7 +413,7 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
         case(OPT_MPISET_T):
             return parse_mpiset(str_value, (mpi_set_t*)option);
         case(OPT_OMPTOPTS_T):
-            return parse_ompt_opts(str_value, (ompt_opts_t*)option);
+            return parse_omptool_opts(str_value, (omptool_opts_t*)option);
         case OPT_TLPSUM_T:
             return parse_talp_summary(str_value, (talp_summary_t*)option);
     }
@@ -451,7 +451,7 @@ static const char * get_value(option_type_t type, const void *option) {
         case OPT_MPISET_T:
             return mpiset_tostr(*(mpi_set_t*)option);
         case OPT_OMPTOPTS_T:
-            return ompt_opts_tostr(*(ompt_opts_t*)option);
+            return omptool_opts_tostr(*(omptool_opts_t*)option);
         case OPT_TLPSUM_T:
             return talp_summary_tostr(*(talp_summary_t*)option);
     }
@@ -487,7 +487,7 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
         case(OPT_MPISET_T):
             return equivalent_mpiset(value1, value2);
         case(OPT_OMPTOPTS_T):
-            return equivalent_ompt_opts(value1, value2);
+            return equivalent_omptool_opts(value1, value2);
         case OPT_TLPSUM_T:
             return equivalent_talp_summary(value1, value2);
     }
@@ -782,7 +782,7 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 b += sprintf(b, "[%s]", get_mpiset_choices());
                 break;
             case OPT_OMPTOPTS_T:
-                b += sprintf(b, "{%s}", get_ompt_opts_choices());
+                b += sprintf(b, "[%s]", get_omptool_opts_choices());
                 break;
             case OPT_TLPSUM_T:
                 b += sprintf(b, "{%s}", get_talp_summary_choices());
@@ -828,9 +828,9 @@ void options_print_lewi_flags(const options_t *options) {
     parse_priority(entry->default_value, &default_lewi_affinity);
 
     // --lewi-ompt
-    ompt_opts_t default_lewi_ompt;
+    omptool_opts_t default_lewi_ompt;
     entry = get_entry_by_name("--lewi-ompt");
-    parse_ompt_opts(entry->default_value, &default_lewi_ompt);
+    parse_omptool_opts(entry->default_value, &default_lewi_ompt);
 
     if (options->lewi_keep_cpu_on_blocking_call != default_lewi_keep_one_cpu
             || options->lewi_mpi_calls != default_lewi_mpi_calls
@@ -847,7 +847,7 @@ void options_print_lewi_flags(const options_t *options) {
             info0("  --lewi-affinity=%s", priority_tostr(options->lewi_affinity));
         }
         if (options->lewi_ompt != default_lewi_ompt) {
-            info0("  --lewi-ompt=%s", ompt_opts_tostr(options->lewi_ompt));
+            info0("  --lewi-ompt=%s", omptool_opts_tostr(options->lewi_ompt));
         }
     }
 }

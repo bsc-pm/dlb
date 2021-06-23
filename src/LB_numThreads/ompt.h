@@ -83,12 +83,68 @@ typedef enum ompt_scope_endpoint_t {
     ompt_scope_end      = 2
 } ompt_scope_endpoint_t;
 
+typedef enum ompt_task_status_t {
+    ompt_task_complete      = 1,
+    ompt_task_yield         = 2,
+    ompt_task_cancel        = 3,
+    ompt_task_detach        = 4,
+    ompt_task_early_fulfill = 5,
+    ompt_task_late_fulfill  = 6,
+    ompt_task_switch        = 7,
+    ompt_taskwait_complete  = 8
+} ompt_task_status_t;
+
+typedef enum ompt_work_t {
+    ompt_work_loop              = 1,
+    ompt_work_sections          = 2,
+    ompt_work_single_executor   = 3,
+    ompt_work_single_other      = 4,
+    ompt_work_workshare         = 5,
+    ompt_work_distribute        = 6,
+    ompt_work_taskloop          = 7,
+    ompt_work_scope             = 8
+} ompt_work_t;
+
+typedef enum ompt_task_flag_t {
+    ompt_task_initial       = 0x00000001,
+    ompt_task_implicit      = 0x00000002,
+    ompt_task_explicit      = 0x00000004,
+    ompt_task_target        = 0x00000008,
+    ompt_task_taskwait      = 0x00000010,
+    ompt_task_undeferred    = 0x08000000,
+    ompt_task_untied        = 0x10000000,
+    ompt_task_final         = 0x20000000,
+    ompt_task_mergeable     = 0x40000000,
+    ompt_task_merged        = 0x80000000
+} ompt_task_flag_t;
+
 typedef enum ompt_parallel_flag_t {
     ompt_parallel_invoker_program   = 0x00000001,
     ompt_parallel_invoker_runtime   = 0x00000002,
     ompt_parallel_league            = 0x40000000,
     ompt_parallel_team              = 0x80000000
 } ompt_parallel_flag_t;
+
+typedef enum ompt_frame_flag_t {
+    ompt_frame_runtime      = 0x00,
+    ompt_frame_application  = 0x01,
+    ompt_frame_cfa          = 0x10,
+    ompt_frame_framepointer = 0x20,
+    ompt_frame_stackaddress = 0x30
+} ompt_frame_flag_t;
+
+typedef enum ompt_sync_region_t {
+    ompt_sync_region_barrier                    = 1, /* deprecated */
+    ompt_sync_region_barrier_implicit           = 2, /* deprecated */
+    ompt_sync_region_barrier_explicit           = 3,
+    ompt_sync_region_barrier_implementation     = 4,
+    ompt_sync_region_taskwait                   = 5,
+    ompt_sync_region_taskgroup                  = 6,
+    ompt_sync_region_reduction                  = 7,
+    ompt_sync_region_barrier_implicit_workshare = 8,
+    ompt_sync_region_barrier_implicit_parallel  = 9,
+    ompt_sync_region_barrier_teams              = 10
+} ompt_sync_region_t;
 
 
 /*********************************************************************************/
@@ -142,6 +198,21 @@ typedef void (*ompt_callback_parallel_end_t) (
     const void *codeptr_ra
 );
 
+typedef void (*ompt_callback_task_create_t) (
+    ompt_data_t *encountering_task_data,
+    const ompt_frame_t *encountering_task_frame,
+    ompt_data_t *new_task_data,
+    int flags,
+    int has_dependences,
+    const void *codeptr_ra
+);
+
+typedef void (*ompt_callback_task_schedule_t) (
+    ompt_data_t *prior_task_data,
+    ompt_task_status_t prior_task_status,
+    ompt_data_t *next_task_data
+);
+
 typedef void (*ompt_callback_implicit_task_t) (
     ompt_scope_endpoint_t endpoint,
     ompt_data_t *parallel_data,
@@ -149,6 +220,23 @@ typedef void (*ompt_callback_implicit_task_t) (
     unsigned int actual_parallelism,
     unsigned int index,
     int flags
+);
+
+typedef void (*ompt_callback_work_t) (
+    ompt_work_t wstype,
+    ompt_scope_endpoint_t endpoint,
+    ompt_data_t *parallel_data,
+    ompt_data_t *task_data,
+    uint64_t count,
+    const void *codeptr_ra
+);
+
+typedef void (*ompt_callback_sync_region_t) (
+    ompt_sync_region_t kind,
+    ompt_scope_endpoint_t endpoint,
+    ompt_data_t *parallel_data,
+    ompt_data_t *task_data,
+    const void *codeptr_ra
 );
 
 

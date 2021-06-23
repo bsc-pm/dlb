@@ -1289,7 +1289,7 @@ int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max,
                     victims[cpuid] = pid;
                 }
             } else if (cpuinfo->guest == pid) {
-                // Since owned_count is still unkown, just save our guested CPUs
+                // Since owned_count is still unknown, just save our guested CPUs
                 guested_cpus[guested_count++] = cpuid;
             }
         }

@@ -564,47 +564,48 @@ bool equivalent_mpiset(const char *str1, const char *str2) {
     return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
 }
 
-/* ompt_opts_t */
-static const ompt_opts_t ompt_opts_values[] = {OMPT_OPTS_MPI, OMPT_OPTS_BORROW, OMPT_OPTS_LEND};
-static const char* const ompt_opts_choices[] = {"mpi", "borrow", "lend"};
-static const char ompt_opts_choices_str[] = "mpi, borrow, lend";
-enum { ompt_opts_nelems = sizeof(ompt_opts_values) / sizeof(ompt_opts_values[0]) };
+/* omptool_opts_t */
+static const omptool_opts_t omptool_opts_values[] =
+    {OMPTOOL_OPTS_MPI, OMPTOOL_OPTS_BORROW, OMPTOOL_OPTS_LEND};
+static const char* const omptool_opts_choices[] = {"mpi", "borrow", "lend"};
+static const char omptool_opts_choices_str[] = "mpi, borrow, lend";
+enum { omptool_opts_nelems = sizeof(omptool_opts_values) / sizeof(omptool_opts_values[0]) };
 
-int parse_ompt_opts(const char *str, ompt_opts_t *value) {
-    *value = OMPT_OPTS_CLEAR;
+int parse_omptool_opts(const char *str, omptool_opts_t *value) {
+    *value = OMPTOOL_OPTS_CLEAR;
     int i;
-    for (i=0; i<ompt_opts_nelems; ++i) {
-        if (strstr(str, ompt_opts_choices[i]) != NULL) {
-            *value |= ompt_opts_values[i];
+    for (i=0; i<omptool_opts_nelems; ++i) {
+        if (strstr(str, omptool_opts_choices[i]) != NULL) {
+            *value |= omptool_opts_values[i];
         }
     }
     return DLB_SUCCESS;
 }
 
-const char* ompt_opts_tostr(ompt_opts_t value) {
-    static char str[sizeof(ompt_opts_choices_str)] = "";
+const char* omptool_opts_tostr(omptool_opts_t value) {
+    static char str[sizeof(omptool_opts_choices_str)] = "";
     char *p = str;
     int i;
-    for (i=0; i<ompt_opts_nelems; ++i) {
-        if (value & ompt_opts_values[i]) {
+    for (i=0; i<omptool_opts_nelems; ++i) {
+        if (value & omptool_opts_values[i]) {
             if (p!=str) {
                 *p = ':';
                 ++p;
                 *p = '\0';
             }
-            p += sprintf(p, "%s", ompt_opts_choices[i]);
+            p += sprintf(p, "%s", omptool_opts_choices[i]);
         }
     }
     return str;
 }
 
-const char* get_ompt_opts_choices(void) {
-    return ompt_opts_choices_str;
+const char* get_omptool_opts_choices(void) {
+    return omptool_opts_choices_str;
 }
 
-bool equivalent_ompt_opts(const char *str1, const char *str2) {
-    ompt_opts_t value1, value2;
-    parse_ompt_opts(str1, &value1);
-    parse_ompt_opts(str2, &value2);
+bool equivalent_omptool_opts(const char *str1, const char *str2) {
+    omptool_opts_t value1, value2;
+    parse_omptool_opts(str1, &value1);
+    parse_omptool_opts(str2, &value2);
     return value1 == value2;
 }

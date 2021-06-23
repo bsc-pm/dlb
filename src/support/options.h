@@ -47,7 +47,7 @@ typedef struct Options {
     bool                lewi_respect_mask;
     mpi_set_t           lewi_mpi_calls;
     priority_t          lewi_affinity;
-    ompt_opts_t         lewi_ompt;
+    omptool_opts_t      lewi_ompt;
     bool                lewi_greedy;
     bool                lewi_warmup;
     int                 lewi_max_parallelism;
