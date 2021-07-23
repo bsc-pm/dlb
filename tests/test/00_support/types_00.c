@@ -161,5 +161,12 @@ int main(int argc, char *argv[]) {
     assert(  equivalent_omptool_opts("lend:borrow", "borrow:borrow:lend") );
     assert( !equivalent_omptool_opts("lend", "mpi") );
 
+    omptm_version_t omptm;
+    err = parse_omptm_version("", &omptm);          assert(err);
+    err = parse_omptm_version("omp5", &omptm);      assert(!err && omptm==OMPTM_OMP5);
+
+    assert(  equivalent_omptm_version_opts("omp5", "omp5") );
+    assert( !equivalent_omptm_version_opts("omp5", "free-agents") );
+
     return 0;
 }

@@ -55,7 +55,8 @@ typedef enum OptionTypes {
     OPT_MODE_T,     // interaction_mode_t
     OPT_MPISET_T,   // mpi_set_t
     OPT_OMPTOPTS_T, // omptool_opts_t
-    OPT_TLPSUM_T
+    OPT_TLPSUM_T,   // talp_summary_t
+    OPT_OMPTM_T     // omptm_version_t
 } option_type_t;
 
 typedef struct {
@@ -356,6 +357,14 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_INT_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_HIDDEN
     }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--ompt-thread-manager",
+        .default_value  = "omp5",
+        .description    = OFFSET"OMPT Thread Manager version.",
+        .offset         = offsetof(options_t, omptm_version),
+        .type           = OPT_OMPTM_T,
+        .flags          = OPT_OPTIONAL | OPT_ADVANCED
+    }, {
         .var_name       = "LB_DEBUG_OPTS",
         .arg_name       = "--debug-opts",
         .default_value  = "",
@@ -416,6 +425,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_omptool_opts(str_value, (omptool_opts_t*)option);
         case OPT_TLPSUM_T:
             return parse_talp_summary(str_value, (talp_summary_t*)option);
+        case OPT_OMPTM_T:
+            return parse_omptm_version(str_value, (omptm_version_t*)option);
     }
     return DLB_ERR_NOENT;
 }
@@ -454,6 +465,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return omptool_opts_tostr(*(omptool_opts_t*)option);
         case OPT_TLPSUM_T:
             return talp_summary_tostr(*(talp_summary_t*)option);
+        case OPT_OMPTM_T:
+            return omptm_version_tostr(*(omptm_version_t*)option);
     }
     return "unknown";
 }
@@ -490,6 +503,8 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
             return equivalent_omptool_opts(value1, value2);
         case OPT_TLPSUM_T:
             return equivalent_talp_summary(value1, value2);
+        case(OPT_OMPTM_T):
+            return equivalent_omptm_version_opts(value1, value2);
     }
     return false;
 }
@@ -786,6 +801,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_TLPSUM_T:
                 b += sprintf(b, "{%s}", get_talp_summary_choices());
+                break;
+            case OPT_OMPTM_T:
+                b += sprintf(b, "[%s]", get_omptm_version_choices());
                 break;
             default:
                 b += sprintf(b, "(unknown)");

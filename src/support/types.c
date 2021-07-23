@@ -609,3 +609,43 @@ bool equivalent_omptool_opts(const char *str1, const char *str2) {
     parse_omptool_opts(str2, &value2);
     return value1 == value2;
 }
+
+/* omptm_version_t */
+static const omptm_version_t omptm_version_values[] = {OMPTM_OMP5, OMPTM_FREE_AGENTS};
+static const char* const omptm_version_choices[] = {"omp5", "free-agents"};
+static const char omptm_version_choices_str[] = "omp5, free-agents";
+enum { omptm_version_nelems = sizeof(omptm_version_values) / sizeof(omptm_version_values[0]) };
+
+int parse_omptm_version(const char *str, omptm_version_t *value) {
+    int i;
+    for (i=0; i<omptm_version_nelems; ++i) {
+        if (strcasecmp(str, omptm_version_choices[i]) == 0) {
+            *value = omptm_version_values[i];
+            return DLB_SUCCESS;
+        }
+    }
+    return DLB_ERR_NOENT;
+}
+
+const char* omptm_version_tostr(omptm_version_t value) {
+    int i;
+    for (i=0; i<omptm_version_nelems; ++i) {
+        if (omptm_version_values[i] == value) {
+            return omptm_version_choices[i];
+        }
+    }
+    return "unknown";
+}
+
+const char* get_omptm_version_choices(void) {
+    return omptm_version_choices_str;
+}
+
+bool equivalent_omptm_version_opts(const char *str1, const char *str2) {
+    omptm_version_t value1 = OMPTM_OMP5;
+    omptm_version_t value2 = OMPTM_FREE_AGENTS;
+    int err1 = parse_omptm_version(str1, &value1);
+    int err2 = parse_omptm_version(str2, &value2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
+}
+

@@ -113,6 +113,11 @@ typedef enum OMPTOptions {
     OMPTOOL_OPTS_LEND      = 1 << 2
 } omptool_opts_t;
 
+typedef enum OMPTMVersion {
+    OMPTM_OMP5,
+    OMPTM_FREE_AGENTS
+} omptm_version_t;
+
 static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }
 
@@ -184,5 +189,11 @@ int parse_omptool_opts(const char *str, omptool_opts_t *value);
 const char* omptool_opts_tostr(omptool_opts_t value);
 const char* get_omptool_opts_choices(void);
 bool equivalent_omptool_opts(const char *str1, const char *str2);
+
+/* omptm_version_t */
+int parse_omptm_version(const char *str, omptm_version_t *value);
+const char* omptm_version_tostr(omptm_version_t value);
+const char* get_omptm_version_choices(void);
+bool equivalent_omptm_version_opts(const char *str1, const char *str2);
 
 #endif /* TYPES_H */
