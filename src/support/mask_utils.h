@@ -35,6 +35,8 @@ void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *
 
 const char* mu_to_str(const cpu_set_t *cpu_set);
 void mu_parse_mask(const char *str, cpu_set_t *mask);
+int mu_cmp_cpuids_by_ownership(const void *cpuid1, const void *cpuid2, void *mask);
+int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topology);
 
 void mu_testing_set_sys_size(int size);
 

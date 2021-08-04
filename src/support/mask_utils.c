@@ -487,6 +487,139 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         warning( "Parsed mask \"%s\" does not seem to be a valid mask\n", str );
     }
 }
+
+/* Compare CPUs so that:
+ *  - owned CPUs first, in ascending order
+ *  - non-owned later, starting from the first owned, then ascending
+ *  e.g.: system: [0-7], owned: [3-5]
+ *      cpu_list = {4,5,6,7,0,1,2,3}
+ */
+int mu_cmp_cpuids_by_ownership(const void *cpuid1, const void *cpuid2, void *mask) {
+    /* Expand arguments */
+    int _cpuid1 = *(int*)cpuid1;
+    int _cpuid2 = *(int*)cpuid2;
+    cpu_set_t *process_mask = mask;
+
+    /* Find first CPU */
+    int first_cpu = 0;
+    int sys_size = get_sys_size();
+    int i;
+    for (i=0; i<sys_size; ++i) {
+        if (CPU_ISSET(i, process_mask)) {
+            first_cpu = i;
+            break;
+        }
+    }
+
+    if (CPU_ISSET(_cpuid1, process_mask)) {
+        if (CPU_ISSET(_cpuid2, process_mask)) {
+            /* both CPUs are owned: ascending order */
+            return _cpuid1 - _cpuid2;
+        } else {
+            /* cpuid2 is NOT owned and cpuid1 IS */
+            return -1;
+        }
+    } else {
+        if (CPU_ISSET(_cpuid2, process_mask)) {
+            /* cpuid2 IS owned and cpuid1 is NOT */
+            return 1;
+        } else {
+            /* none is owned */
+            if ((_cpuid1 > first_cpu
+                        && _cpuid2 > first_cpu)
+                    || (_cpuid1 < first_cpu
+                        && _cpuid2 < first_cpu)) {
+                /* ascending order */
+                return _cpuid1 - _cpuid2;
+            } else {
+                if (_cpuid1 > first_cpu) {
+                    /* cpuid2 is not greater than first */
+                    return -1;
+                } else {
+                    /* cpuid1 is not greater than first */
+                    return 1;
+                }
+            }
+        }
+    }
+}
+
+/* Compare CPUs so that:
+ *  - CPUs are sorted according to the topology:
+ *      * topology: array of cpu_set_t, each position represents a level
+ *                  in the topology, the last position is an empty cpu set.
+ *      (PRE: each topology level is a superset of the previous level mask)
+ *  - Sorted by topology level in ascending order
+ *  - non-owned later, starting from the first owned, then ascending
+ *  e.g.: topology: {{6-7}, {4-7}, {0-7}, {}}
+ *      sorted_cpu_list = {6,7,4,5,0,1,2,3}
+ */
+int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topology) {
+    /* Expand arguments */
+    int _cpuid1 = *(int*)cpuid1;
+    int _cpuid2 = *(int*)cpuid2;
+    cpu_set_t *_topology = topology;
+
+    /* Find topology level of each CPU */
+    int cpu1_level = 0;
+    int cpu2_level = 0;
+    cpu_set_t *mask = _topology;
+    while(CPU_COUNT(mask) > 0) {
+        if (!CPU_ISSET(_cpuid1, mask)) {
+            ++cpu1_level;
+        }
+        if (!CPU_ISSET(_cpuid2, mask)) {
+            ++cpu2_level;
+        }
+        ++mask;
+    }
+
+    /* If levels differ, sort levels in ascending order */
+    if (cpu1_level != cpu2_level) {
+        return cpu1_level - cpu2_level;
+    }
+
+    /* If both are level 0, sort in ascending order */
+    if (cpu1_level == 0) {
+        return _cpuid1 - _cpuid2;
+    }
+
+    /* If both are level 1, sort from the first CPU in level 0 */
+    /* e.g.: level0: [2,3], level1: [0,7] -> [4,5,6,7,0,1] */
+    if (cpu1_level == 1) {
+        cpu_set_t *level0_mask = _topology;
+        int first_cpu = 0;
+        int sys_size = get_sys_size();
+        int i;
+        for (i=0; i<sys_size; ++i) {
+            if (CPU_ISSET(i, level0_mask)) {
+                first_cpu = i;
+                break;
+            }
+        }
+        if ((_cpuid1 > first_cpu
+                    && _cpuid2 > first_cpu)
+                || (_cpuid1 < first_cpu
+                    && _cpuid2 < first_cpu)) {
+            /* ascending order */
+            return _cpuid1 - _cpuid2;
+        } else {
+            if (_cpuid1 > first_cpu) {
+                /* cpuid2 is not greater than first */
+                return -1;
+            } else {
+                /* cpuid1 is not greater than first */
+                return 1;
+            }
+        }
+    }
+
+    /* TODO: compute numa distance */
+    /* Levels 2+, sort in ascending order */
+    return _cpuid1 - _cpuid2;
+}
+
+
 #pragma GCC visibility pop
 
 void mu_testing_set_sys_size(int size) {

@@ -729,6 +729,18 @@ int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
         }
     }
 
+    /* Sort prio2 and prio3 lists according to the topology */
+    if (i2 > 0 || i3 > 0) {
+        cpu_set_t topology[3];
+        memcpy(&topology[0], process_mask, sizeof(cpu_set_t));
+        memcpy(&topology[1], &affinity_mask, sizeof(cpu_set_t));
+        CPU_ZERO(&topology[2]);
+        qsort_r(prio2, i2, sizeof(int),
+                mu_cmp_cpuids_by_topology, &topology);
+        qsort_r(prio3, i3, sizeof(int),
+                mu_cmp_cpuids_by_topology, &topology);
+    }
+
     /* Merge [<[prio1][prio2][prio3][-1]>] */
     lewi_info_t *lewi_info = spd->lewi_info;
     int *cpus_priority_array = lewi_info->cpus_priority_array;
