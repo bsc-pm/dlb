@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # variables detected at configure time
+DLB_HOME=@prefix@
 MPIEXEC=@MPIEXEC@
 MPIEXEC_EXPORT_FLAG=@MPIEXEC_EXPORT_FLAG@
 
