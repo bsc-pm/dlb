@@ -75,6 +75,7 @@ AC_SUBST([DEB_RELEASE])
 # Checks for programs
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
+AM_CONDITIONAL([HAVE_STATIC_LIBS], [test "x$enable_static" = xyes])
 AC_PROG_CPP
 
 ##### C Compiler checks #####
@@ -211,6 +212,9 @@ AS_IF([test "x$enable_coverage" = xyes], [
     AC_CHECK_PROG([gcovr], [gcovr], [yes])
     AS_IF([test "x$gcovr" != xyes], [
         AC_MSG_ERROR([Coverage profiling requires gcovr tool])
+    ])
+    AS_IF([test "x$enable_static" != xyes], [
+        AC_MSG_ERROR([--enable-coverage and --disable-static are incompatible options])
     ])
 ])
 AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$enable_coverage" = xyes])

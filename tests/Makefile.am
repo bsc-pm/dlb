@@ -20,10 +20,18 @@
 LIT_OPTIONS = --xunit-xml-output=test.log.xml -sv $(LIT_FLAGS)
 LIT = PYTHONPATH=$(top_srcdir)/tests $(PYTHON) $(top_srcdir)/scripts/lit/lit.py $(LIT_OPTIONS)
 
+if HAVE_STATIC_LIBS
 if LIT_SUPPORT
 check-local: lit-check
 else
 check-local: bets-check
+endif
+else
+check-local:
+	@echo
+	@echo "DLB needs static libraries to run make check."
+	@echo "Reconfigure with '---enable-static'."
+	@echo
 endif
 
 lit-check:
