@@ -26,10 +26,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef MPI_LIB
-#include "LB_MPI/process_MPI.h"
-#endif
-
 typedef struct print_buffer {
     char *addr;
     char *offset;

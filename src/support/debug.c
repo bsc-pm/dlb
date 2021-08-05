@@ -32,6 +32,10 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_core/spd.h"
 
+#ifdef MPI_LIB
+#include "LB_MPI/process_MPI.h"
+#endif
+
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <stdlib.h>
