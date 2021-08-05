@@ -64,7 +64,7 @@ int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ) {
         snprintf(flag, 32, "--preinit-pid=%d", getpid());
         dlb_setenv("DLB_ARGS", flag, next_environ, ENV_APPEND);
 
-        return PreInitialize(thread_spd, mask);
+        return PreInitialize(thread_spd, mask, NULL);
     } else {
         return DLB_ERR_INIT;
     }

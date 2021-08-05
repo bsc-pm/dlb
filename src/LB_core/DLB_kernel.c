@@ -192,10 +192,12 @@ int Finish(subprocess_descriptor_t *spd) {
     return error;
 }
 
-int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-
+int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask,
+        const char *lb_args) {
     // Initialize options
-    options_init(&spd->options, NULL);
+    options_init(&spd->options, lb_args);
+    if (spd->options.preinit_pid == 0) return DLB_ERR_INIT;
+
     debug_init(&spd->options);
 
     // Initialize subprocess descriptor
