@@ -6,8 +6,9 @@ SRCDIR="@abs_top_srcdir@"
 BLDDIR="@abs_top_builddir@"
 
 @HAVE_HWLOC_TRUE@ HWLOC_CPPFLAGS="@HWLOC_CPPFLAGS@"
-CPPFLAGS="-I$SRCDIR/tests/test -I$SRCDIR/src -I$SRCDIR/src/apis -I$SRCDIR/src/LB_core \
-            -I$BLDDIR/src $HWLOC_CPPFLAGS"
+CPPFLAGS="-DHAVE_CONFIG_H -I$BLDDIR \
+            -I$SRCDIR/tests/test -I$SRCDIR/src -I$SRCDIR/src/apis \
+            -I$SRCDIR/src/LB_core -I$BLDDIR/src $HWLOC_CPPFLAGS"
 PERFO_CPPFLAGS="$CPPFLAGS @PERFO_CPPFLAGS@"
 DEBUG_CPPFLAGS="$CPPFLAGS @DEBUG_CPPFLAGS@"
 
