@@ -208,6 +208,8 @@ SRCS = \
 	src/LB_numThreads/numThreads.h          \
 	src/LB_numThreads/omptm_omp5.c          \
 	src/LB_numThreads/omptm_omp5.h          \
+	src/LB_numThreads/omptm_free_agents.c   \
+	src/LB_numThreads/omptm_free_agents.h   \
 	src/LB_comm/comm_lend_light.c           \
 	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem_cpuinfo.c             \

@@ -72,6 +72,8 @@ int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]);
 int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max, pid_t new_guests[], pid_t victims[]);
 void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask, pid_t new_guests[]);
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
+int shmem_cpuinfo__get_nth_non_owned_cpu(pid_t pid, int nth_cpu);
+int shmem_cpuinfo__get_number_of_non_owned_cpus(pid_t pid);
 int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpu);
 bool shmem_cpuinfo__exists(void);
 void shmem_cpuinfo__enable_request_queues(void);

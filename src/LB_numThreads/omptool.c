@@ -20,6 +20,7 @@
 #include "LB_numThreads/ompt.h"
 
 #include "LB_numThreads/omptm_omp5.h"
+#include "LB_numThreads/omptm_free_agents.h"
 #include "LB_core/spd.h"
 #include "apis/dlb.h"
 #include "support/debug.h"
@@ -70,6 +71,20 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version) {
         omptm_funcs.work            = NULL;
         omptm_funcs.sync_region     = NULL;
     } else if (omptm_version == OMPTM_FREE_AGENTS) {
+        verbose(VB_OMPT, "Enabling experimental support with free agent threads");
+        omptm_funcs.init            = omptm_free_agents__init;
+        omptm_funcs.finalize        = omptm_free_agents__finalize;
+        omptm_funcs.into_mpi        = omptm_free_agents__IntoBlockingCall;
+        omptm_funcs.outof_mpi       = omptm_free_agents__OutOfBlockingCall;
+        omptm_funcs.thread_begin    = omptm_free_agents__thread_begin;
+        omptm_funcs.thread_end      = NULL;
+        omptm_funcs.parallel_begin  = omptm_free_agents__parallel_begin;
+        omptm_funcs.parallel_end    = omptm_free_agents__parallel_end;
+        omptm_funcs.task_create     = omptm_free_agents__task_create;
+        omptm_funcs.task_schedule   = omptm_free_agents__task_schedule;
+        omptm_funcs.implicit_task   = omptm_free_agents__implicit_task;
+        omptm_funcs.work            = NULL;
+        omptm_funcs.sync_region     = NULL;
     }
 }
 
