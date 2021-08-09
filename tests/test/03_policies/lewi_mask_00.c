@@ -62,9 +62,9 @@ int main( int argc, char **argv ) {
     sched_getaffinity(0, sizeof(cpu_set_t), &spd.process_mask);
 
     // Initialize shmems and callbacks
-    assert( shmem_procinfo__init(spd.id, &spd.process_mask, NULL, spd.options.shm_key)
+    assert( shmem_procinfo__init(spd.id, 0, &spd.process_mask, NULL, spd.options.shm_key)
             == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(spd.id, &spd.process_mask, spd.options.shm_key)
+    assert( shmem_cpuinfo__init(spd.id, 0, &spd.process_mask, spd.options.shm_key)
             == DLB_SUCCESS );
     assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key)
             == DLB_SUCCESS );

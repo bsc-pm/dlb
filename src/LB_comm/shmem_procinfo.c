@@ -209,8 +209,8 @@ static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
     return error;
 }
 
-int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *new_process_mask,
-        const char *shmem_key) {
+int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
+        cpu_set_t *new_process_mask, const char *shmem_key) {
     int error = DLB_SUCCESS;
 
     // Shared memory creation
@@ -226,52 +226,64 @@ int shmem_procinfo__init(pid_t pid, const cpu_set_t *process_mask, cpu_set_t *ne
             shdata->initialized = true;
         }
 
-        // Find whether the process is preregistered or get a free spot otherwise
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid == pid) {
-                process = &shdata->process_info[p];
-                if (process->preregistered) {
-                    // If the process is preregistered, we must only return the
-                    // new_process_mask to cpuinfo to avoid conflicts,
-                    // we cannot resolve the dirty flag yet
-                    memcpy(new_process_mask,
-                            process->dirty ? &process->future_process_mask
-                                           : &process->current_process_mask,
-                            sizeof(cpu_set_t));
-                    process->preregistered = false;
-                    error = DLB_NOTED;
-                } else {
-                    // Otherwise, this pid is already correctly registered
+        // If it's a new process, find a spot and initialize structure
+        if (!preinit_pid) {
+            int p;
+            for (p = 0; p < max_processes; p++) {
+                if (shdata->process_info[p].pid == NOBODY) {
+                    process = &shdata->process_info[p];
+                } else if (shdata->process_info[p].pid == pid) {
+                    /* This process is already registered */
                     error = DLB_ERR_INIT;
+                    break;
                 }
-                break;
-            } else if (!process && shdata->process_info[p].pid == NOBODY) {
-                // We obtain the first free spot, but we cannot break
-                process = &shdata->process_info[p];
+            }
+            if (process && !error) {
+                *process = (const pinfo_t) {.pid = pid};
+                error = register_mask(process, process_mask);
+                if (error == DLB_SUCCESS) {
+                    memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
+                    memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
+                    process->dirty = false; /* register_mask sets dirty flag, undo */
+                } else {
+                    // Revert process registration if mask registration failed
+                    process->pid = NOBODY;
+                }
+            }
+        }
+        // Otherwise, find the preregistered process and inherit the spot
+        else {
+            int p;
+            for (p = 0; p < max_processes; p++) {
+                if (shdata->process_info[p].pid == preinit_pid) {
+                    process = &shdata->process_info[p];
+                    if (process->preregistered) {
+                        error = DLB_NOTED;
+                    } else {
+                        // The process matches the preinit_pid but it's
+                        // not flagged as preregistered
+                        error = DLB_ERR_INIT;
+                    }
+                    break;
+                }
+            }
+            if (process && error == DLB_NOTED) {
+                // If the process is preregistered, we must only return the
+                // new_process_mask to cpuinfo to avoid conflicts,
+                // we cannot resolve the dirty flag yet
+                memcpy(new_process_mask,
+                        process->dirty ? &process->future_process_mask
+                        : &process->current_process_mask,
+                        sizeof(cpu_set_t));
+
+                process->pid = pid;
+                process->preregistered = false;
             }
         }
 
-        // Register if needed
-        if (process && error == DLB_SUCCESS) {
-            error = register_mask(process, process_mask);
-            if (error == DLB_SUCCESS) {
-                process->pid = pid;
-                process->dirty = false;
-                process->preregistered = false;
-                memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
-                memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
-                process->cpu_usage = 0.0;
-                process->cpu_avg_usage = 0.0;
-
-#ifdef DLB_LOAD_AVERAGE
-                process->load[0] = 0.0f;
-                process->load[1] = 0.0f;
-                process->load[2] = 0.0f;
-#endif
-                // Save pointer for faster access
-                my_pinfo = process;
-            }
+        if (process) {
+            // Save pointer for faster access
+            my_pinfo = process;
         }
     }
     shmem_unlock(shm_handler);
@@ -335,11 +347,9 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
                 break;
             } else if (shdata->process_info[p].pid == NOBODY) {
                 process = &shdata->process_info[p];
-                process->pid = pid;
-                process->dirty = false;
-                process->preregistered = true;
-                CPU_ZERO(&process->current_process_mask);
-                CPU_ZERO(&process->future_process_mask);
+                *process = (const pinfo_t){
+                    .pid = pid,
+                    .preregistered = true};
 
                 // Register process mask into the system
                 if (!steal) {
@@ -360,11 +370,6 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
                 memcpy(&process->future_process_mask, mask, sizeof(cpu_set_t));
                 process->dirty = false;
 
-#ifdef DLB_LOAD_AVERAGE
-                process->load[0] = 0.0f;
-                process->load[1] = 0.0f;
-                process->load[2] = 0.0f;
-#endif
                 break;
             }
         }
@@ -475,19 +480,9 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_ke
             }
 
             // Clear process fields
-            process->pid = NOBODY;
-            process->dirty = false;
-            process->preregistered = false;
-            CPU_ZERO(&process->current_process_mask);
-            CPU_ZERO(&process->future_process_mask);
-            CPU_ZERO(&process->stolen_cpus);
-            process->active_cpus = 0;
-            process->cpu_usage = 0.0;
-            process->cpu_avg_usage = 0.0;
-#ifdef DLB_LOAD_AVERAGE
-            process->load = {0.0f, 0.0f, 0.0f};
-            process->last_ltime = {0};
-#endif
+            *process = (const pinfo_t){0};
+
+            // Clear local pointer
             my_pinfo = NULL;
         }
 
@@ -555,19 +550,7 @@ int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen) {
             }
 
             // Clear process fields
-            process->pid = NOBODY;
-            process->dirty = false;
-            process->preregistered = false;
-            CPU_ZERO(&process->current_process_mask);
-            CPU_ZERO(&process->future_process_mask);
-            CPU_ZERO(&process->stolen_cpus);
-            process->active_cpus = 0;
-            process->cpu_usage = 0.0;
-            process->cpu_avg_usage = 0.0;
-#ifdef DLB_LOAD_AVERAGE
-            process->load = {0.0f, 0.0f, 0.0f};
-            process->last_ltime = {0};
-#endif
+            *process = (const pinfo_t){0};
         }
     }
     shmem_unlock(shm_handler);

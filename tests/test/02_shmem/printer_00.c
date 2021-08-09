@@ -67,10 +67,10 @@ int main(int argc, char *argv[]) {
     int requested_ncpus;
 
     /* Initialize shared memories */
-    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     shmem_barrier__init(SHMEM_KEY);
 
     /* Enable request queues */
@@ -110,8 +110,8 @@ int main(int argc, char *argv[]) {
     pid_t p3_pid = 33333;
     cpu_set_t p3_mask;
     mu_parse_mask("63", &p3_mask);
-    assert( shmem_cpuinfo__init(p3_pid, &p3_mask, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p3_pid, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p3_pid, 0, &p3_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_cpuinfo__acquire_cpu(p3_pid, 19, new_guests, victims) == DLB_NOTED );
 
     /* Print */

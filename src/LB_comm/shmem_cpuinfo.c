@@ -151,7 +151,7 @@ static void init_shmem() {
     }
 }
 
-static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
+static int register_process(pid_t pid, pid_t preinit_pid, const cpu_set_t *mask, bool steal) {
     if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
     verbose(VB_SHMEM, "Registering process %d with mask %s", pid, mu_to_str(mask));
@@ -162,7 +162,7 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             if (CPU_ISSET(cpuid, mask)) {
                 pid_t owner = shdata->node_info[cpuid].owner;
-                if (owner != NOBODY && owner != pid) {
+                if (owner != NOBODY && owner != pid && owner != preinit_pid) {
                     verbose(VB_SHMEM,
                             "Error registering CPU %d, already owned by %d",
                             cpuid, owner);
@@ -172,10 +172,11 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
         }
     }
 
-    // Register mask
+    // Register mask and all CPUs owned by preinit_pid
     for (cpuid=0; cpuid<node_size; ++cpuid) {
-        if (CPU_ISSET(cpuid, mask)) {
-            cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        if (CPU_ISSET(cpuid, mask)
+                || (preinit_pid && cpuinfo->owner == preinit_pid)) {
             if (steal && cpuinfo->owner != NOBODY && cpuinfo->owner != pid) {
                 verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpuid);
             }
@@ -191,7 +192,8 @@ static int register_process(pid_t pid, const cpu_set_t *mask, bool steal) {
     return DLB_SUCCESS;
 }
 
-int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *shmem_key) {
+int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
+        const char *shmem_key) {
     int error = DLB_SUCCESS;
 
     // Update post_mortem preference
@@ -213,7 +215,7 @@ int shmem_cpuinfo__init(pid_t pid, const cpu_set_t *process_mask, const char *sh
         init_shmem();
 
         // Register process_mask, with stealing = false always in normal Init()
-        error = register_process(pid, process_mask, false);
+        error = register_process(pid, preinit_pid, process_mask, /* steal */ false);
     }
     shmem_unlock(shm_handler);
 
@@ -246,7 +248,7 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_
         init_shmem();
 
         // Register process_mask, with stealing according to user arguments
-        error = register_process(pid, mask, flags & DLB_STEAL_CPUS);
+        error = register_process(pid, /* preinit_pid */ 0, mask, flags & DLB_STEAL_CPUS);
     }
     shmem_unlock(shm_handler);
 

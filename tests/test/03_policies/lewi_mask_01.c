@@ -94,9 +94,9 @@ int main( int argc, char **argv ) {
     options_init(&spd1.options, options);
     debug_init(&spd1.options);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, spd1.options.shm_key)
+    assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, spd1.options.shm_key)
             == DLB_SUCCESS);
-    assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, spd1.options.shm_key)
+    assert( shmem_cpuinfo__init(spd1.id, 0, &spd1.process_mask, spd1.options.shm_key)
             == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp1_cb_enable_cpu, NULL) == DLB_SUCCESS);
@@ -110,9 +110,9 @@ int main( int argc, char **argv ) {
     options_init(&spd2.options, options);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
     memcpy(&spd2.process_mask, &sp2_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(spd2.id, &spd2.process_mask, NULL, spd2.options.shm_key)
+    assert( shmem_procinfo__init(spd2.id, 0, &spd2.process_mask, NULL, spd2.options.shm_key)
             == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, spd2.options.shm_key)
+    assert( shmem_cpuinfo__init(spd2.id, 0, &spd2.process_mask, spd2.options.shm_key)
             == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp2_cb_enable_cpu, NULL) == DLB_SUCCESS );

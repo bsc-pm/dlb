@@ -84,7 +84,7 @@ int main( int argc, char **argv ) {
 
     // Initialize sub-process
     pid_t pid = getpid();
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize external
     assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );

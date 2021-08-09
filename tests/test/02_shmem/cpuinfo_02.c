@@ -71,9 +71,9 @@ int main( int argc, char **argv ) {
     int requested_ncpus;
 
     // Init
-    assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(p2_pid, &p1_mask, SHMEM_KEY) == DLB_ERR_PERM );
-    assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p2_pid, 0, &p1_mask, SHMEM_KEY) == DLB_ERR_PERM );
+    assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize options and enable queues if needed
     options_t options;
@@ -439,8 +439,8 @@ int main( int argc, char **argv ) {
         spd_enter_dlb(&spd);
 
         // Initialize
-        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
         if (async) { shmem_cpuinfo__enable_request_queues(); }
 
         // P1 finalizes
@@ -466,8 +466,8 @@ int main( int argc, char **argv ) {
         spd_enter_dlb(&spd);
 
         // Initialize
-        assert( shmem_cpuinfo__init(p1_pid, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_cpuinfo__init(p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
         if (async) { shmem_cpuinfo__enable_request_queues(); }
 
         // P2 lends CPUs 2 & 3

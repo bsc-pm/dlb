@@ -44,9 +44,9 @@ int main( int argc, char **argv ) {
 
     // Check permission error with two subprocesses sharing mask
     {
-        assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         if (num_cpus > 1) {
-            assert( shmem_procinfo__init(pid+1, &process_mask, NULL, SHMEM_KEY)
+            assert( shmem_procinfo__init(pid+1, 0, &process_mask, NULL, SHMEM_KEY)
                     == DLB_ERR_PERM );
         }
         assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
@@ -62,13 +62,13 @@ int main( int argc, char **argv ) {
         for (cpuid=0; cpuid<num_cpus; ++cpuid) {
             CPU_ZERO(&process_mask);
             CPU_SET(cpuid, &process_mask);
-            assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, SHMEM_KEY)
+            assert( shmem_procinfo__init(pid+cpuid, 0, &process_mask, NULL, SHMEM_KEY)
                     == DLB_SUCCESS );
         }
 
         // Another initialization should return error
         CPU_ZERO(&process_mask);
-        assert( shmem_procinfo__init(pid+cpuid, &process_mask, NULL, SHMEM_KEY)
+        assert( shmem_procinfo__init(pid+cpuid, 0, &process_mask, NULL, SHMEM_KEY)
                 == DLB_ERR_NOMEM );
 
         // Finalize all
@@ -87,7 +87,7 @@ int main( int argc, char **argv ) {
         for (i=0; i<num_cpus; ++i) {
             CPU_ZERO(&process_mask);
             CPU_SET(i, &process_mask);
-            assert( shmem_procinfo__init(i+1, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_procinfo__init(i+1, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         }
 
         // subprocess 1 tries to finalize as many times as number of CPUs
@@ -113,8 +113,8 @@ int main( int argc, char **argv ) {
             mu_parse_mask("0-1", &p1_mask);
             mu_parse_mask("2-3", &p2_mask);
 
-            assert( shmem_procinfo__init(111, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-            assert( shmem_procinfo__init(222, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_procinfo__init(111, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_procinfo__init(222, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
             // remove CPU 1 from subprocess 1
             mu_parse_mask("0", &mask);

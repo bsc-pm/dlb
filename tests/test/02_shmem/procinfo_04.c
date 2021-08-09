@@ -54,25 +54,27 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
     // Pre-Initialize sub-process 1
-    pid_t p1_pid = 111;
+    pid_t p1_preinit_pid = 11;
     cpu_set_t p1_mask;
     memcpy(&p1_mask, &original_p1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__preinit(p1_preinit_pid, &p1_mask, 0) == DLB_SUCCESS );
 
     // Pre-Initialize sub-process 2
-    pid_t p2_pid = 222;
+    pid_t p2_preinit_pid = 22;
     cpu_set_t p2_mask;
     memcpy(&p2_mask, &original_p2_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo_ext__preinit(p2_pid, &p2_mask, DLB_STEAL_CPUS) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__preinit(p2_preinit_pid, &p2_mask, DLB_STEAL_CPUS) == DLB_SUCCESS );
 
     // Initialize sub-process 2
+    pid_t p2_pid = 222;
     CPU_ZERO(&p2_mask);
-    assert( shmem_procinfo__init(p2_pid, NULL, &p2_mask, SHMEM_KEY) == DLB_NOTED );
+    assert( shmem_procinfo__init(p2_pid, p2_preinit_pid, NULL, &p2_mask, SHMEM_KEY) == DLB_NOTED );
     assert( CPU_EQUAL(&original_p2_mask, &p2_mask) );
 
     // Initialize sub-process 1
+    pid_t p1_pid = 111;
     CPU_ZERO(&p1_mask);
-    assert( shmem_procinfo__init(p1_pid, NULL, &p1_mask, SHMEM_KEY) == DLB_NOTED );
+    assert( shmem_procinfo__init(p1_pid, p1_preinit_pid, NULL, &p1_mask, SHMEM_KEY) == DLB_NOTED );
     cpu_set_t p1_mask_after;
     /* P1 needs to readjust its mask: [1111] - [1100] = [0011] */
     mu_substract(&p1_mask_after, &original_p1_mask, &original_p2_mask);

@@ -62,7 +62,7 @@ int main( int argc, char **argv ) {
     }
 
     // Init
-    assert( shmem_cpuinfo__init(pid, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
 
     /* Tests using mycpu */
 
