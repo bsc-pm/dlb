@@ -92,6 +92,8 @@ void dlb_setenv(const char *name, const char *value, char ***next_environ,
             if (condition == ENV_UPDATE_IF_EXISTS) return;
             if (condition == ENV_APPEND) condition = ENV_OVERWRITE_NEVER;
         }
+        size_t len;
+        char *new_value;
         switch(condition) {
             case ENV_OVERWRITE_NEVER:
                 setenv(name, value, 0);
@@ -103,8 +105,8 @@ void dlb_setenv(const char *name, const char *value, char ***next_environ,
                 break;
             case ENV_APPEND:
                 /* We can assume current_value is not NULL */
-                size_t len = strlen(current_value) + 1 + strlen(value) + 1;
-                char *new_value = malloc(sizeof(char)*len);
+                len = strlen(current_value) + 1 + strlen(value) + 1;
+                new_value = malloc(sizeof(char)*len);
                 sprintf(new_value, "%s %s", current_value, value);
                 setenv(name, new_value, 1);
                 free(new_value);
