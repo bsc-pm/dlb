@@ -1506,7 +1506,7 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
         if (is_tty) {
             struct winsize w;
             ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-            width = w.ws_col;
+            width = w.ws_col ? w.ws_col : 80;
         } else {
             width = 80;
         }
