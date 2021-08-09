@@ -52,7 +52,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     // Initialize common modules (spd->id and instrumentation module ASAP)
     options_init(&spd->options, lb_args);
-    spd->id = spd->options.preinit_pid ? spd->options.preinit_pid : id;
+    spd->id = id;
     init_tracing(&spd->options);
     instrument_event(RUNTIME_EVENT, EVENT_INIT, EVENT_BEGIN);
     debug_init(&spd->options);
@@ -94,8 +94,8 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
         // Initialize procinfo
         cpu_set_t new_process_mask;
-        error = shmem_procinfo__init(spd->id, &spd->process_mask,
-                &new_process_mask, spd->options.shm_key);
+        error = shmem_procinfo__init(spd->id, spd->options.preinit_pid,
+                &spd->process_mask, &new_process_mask, spd->options.shm_key);
 
         // If the process has been pre-initialized (error=DLB_NOTED),
         // the mask provided by shmem_procinfo__init must overwrite the process mask
@@ -108,7 +108,8 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         if (error != DLB_SUCCESS) return error;
 
         // Initialize cpuinfo
-        error = shmem_cpuinfo__init(spd->id, &spd->process_mask, spd->options.shm_key);
+        error = shmem_cpuinfo__init(spd->id, spd->options.preinit_pid,
+                &spd->process_mask, spd->options.shm_key);
         if (error != DLB_SUCCESS) return error;
     }
     if (spd->options.barrier) {
@@ -216,8 +217,11 @@ int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     error = error ? error : shmem_procinfo_ext__init(spd->options.shm_key);
     error = error ? error : shmem_procinfo_ext__preinit(spd->id, mask, 0);
     error = error ? error : shmem_cpuinfo_ext__preinit(spd->id, mask, 0);
-    error = error ? error : shmem_cpuinfo_ext__finalize();
-    error = error ? error : shmem_procinfo_ext__finalize();
+    // Close shmems even if there was an error
+    int cpuinfo_finalize_err = shmem_cpuinfo_ext__finalize();
+    error = error ? error : cpuinfo_finalize_err;
+    int procinfo_finalize_err = shmem_procinfo_ext__finalize();
+    error = error ? error : procinfo_finalize_err;
     return error;
 }
 

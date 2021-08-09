@@ -35,8 +35,8 @@
 int main( int argc, char **argv ) {
     cpu_set_t mask = { .__bits = {0} };
 
-    assert( shmem_cpuinfo__init(42, &mask, SHMEM_KEY)           == DLB_SUCCESS );
-    assert( shmem_procinfo__init(42, &mask, NULL, SHMEM_KEY)    == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(42, 0, &mask, SHMEM_KEY)        == DLB_SUCCESS );
+    assert( shmem_procinfo__init(42, 0, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_cpuinfo_ext__init(SHMEM_KEY)                  == DLB_SUCCESS );
     assert( shmem_procinfo_ext__init(SHMEM_KEY)                 == DLB_SUCCESS );
 

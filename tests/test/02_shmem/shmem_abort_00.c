@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
         debug_init(&spd.options);
 
         // Create shared memory
-        assert( shmem_cpuinfo__init(pid, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
 
         if (__gcov_flush) __gcov_flush();
         fatal("This fatal should clean shmems");

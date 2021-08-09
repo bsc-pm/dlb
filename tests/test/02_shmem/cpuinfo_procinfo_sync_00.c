@@ -68,8 +68,8 @@ int main( int argc, char **argv ) {
     cpu_set_t mask = { .__bits = {0xf} }; // [0123]
 
     // Initialize sub-process
-    assert( shmem_procinfo__init(pid, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(pid, &mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, 0, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(pid, 0, &mask, SHMEM_KEY) == DLB_SUCCESS );
 
     // Get process mask
 
@@ -79,9 +79,12 @@ int main( int argc, char **argv ) {
         pthread_create(&thread, NULL, thread_start, (void*)&pid);
 
         // Poll until thread sets a new mask
-        while (shmem_procinfo__polldrom(pid, NULL, &mask) != DLB_SUCCESS) {
+        int error;
+        do {
             usleep(1000);
-        }
+            error = shmem_procinfo__polldrom(pid, NULL, &mask);
+            assert( error >= 0 );
+        } while (error != DLB_SUCCESS);
 
         // Once we've obtained the new mask, the thread can die
         pthread_join(thread, NULL);

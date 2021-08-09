@@ -61,6 +61,13 @@ static barrier_t* get_barrier() {
     return &shdata->barriers[barrier_id];
 }
 
+static void cleanup_shmem(void *shdata_ptr, int pid) {
+    shdata_t *shared_data = shdata_ptr;
+    barrier_t *barrier = &shared_data->barriers[barrier_id];
+    /* We don't have the shm_handler to lock in maintenance mode, just decrease */
+    --barrier->participants;
+}
+
 void shmem_barrier__init(const char *shmem_key) {
     if (shm_handler != NULL) return;
 
@@ -74,7 +81,7 @@ void shmem_barrier__init(const char *shmem_key) {
 
     shmem_handler_t *init_handler = shmem_init((void**)&shdata,
             sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
-            shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
+            shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
 
     shmem_lock_maintenance(init_handler);
     {
@@ -118,7 +125,7 @@ void shmem_barrier__init(const char *shmem_key) {
 void shmem_barrier_ext__init(const char *shmem_key) {
     max_barriers = mu_get_system_size();
     shm_handler = shmem_init((void**)&shdata, shmem_barrier__size(),
-            shmem_name, shmem_key, SHMEM_BARRIER_VERSION);
+            shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
 }
 
 void shmem_barrier__finalize(void) {

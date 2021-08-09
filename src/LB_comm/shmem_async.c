@@ -173,6 +173,16 @@ static void* thread_start(void *arg) {
     return NULL;
 }
 
+static void cleanup_shmem(void *shdata_ptr, int pid) {
+    shdata_t *shared_data = shdata_ptr;
+    int h;
+    for (h = 0; h < max_helpers; ++h) {
+        if (shared_data->helpers[h].pid == pid) {
+            shared_data->helpers[h] = (const helper_t){{{0}}};
+        }
+    }
+}
+
 int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *process_mask,
         const char *shmem_key) {
     verbose(VB_ASYNC, "Creating helper thread");
@@ -184,7 +194,7 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *proce
             max_helpers = mu_get_system_size();
             shm_handler = shmem_init((void**)&shdata,
                     sizeof(shdata_t) + sizeof(helper_t)*max_helpers,
-                    shmem_name, shmem_key, SHMEM_ASYNC_VERSION);
+                    shmem_name, shmem_key, SHMEM_ASYNC_VERSION, cleanup_shmem);
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

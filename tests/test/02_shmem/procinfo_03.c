@@ -82,13 +82,13 @@ int main( int argc, char **argv ) {
     pid_t p1_pid = 111;
     cpu_set_t p1_mask;
     memcpy(&p1_mask, &original_p1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(p1_pid, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize sub-process 2
     pid_t p2_pid = 222;
     cpu_set_t p2_mask;
     memcpy(&p2_mask, &original_p2_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(p2_pid, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
 
     // Initialize external
     assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );

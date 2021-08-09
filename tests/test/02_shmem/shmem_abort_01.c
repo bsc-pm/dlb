@@ -60,9 +60,9 @@ int main(int argc, char **argv) {
         spd1.id = 111;
         mu_parse_mask("0", &spd1.process_mask);
         spd_register(&spd1);
-        assert( shmem_cpuinfo__init(spd1.id, &spd1.process_mask, SHMEM_KEY)
+        assert( shmem_cpuinfo__init(spd1.id, 0, &spd1.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
-        assert( shmem_procinfo__init(spd1.id, &spd1.process_mask, NULL, SHMEM_KEY)
+        assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, SHMEM_KEY)
                 == DLB_SUCCESS );
         assert( shmem_async_init(spd1.id, NULL, &spd1.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
         spd2.id = 222;
         mu_parse_mask("1", &spd2.process_mask);
         spd_register(&spd2);
-        assert( shmem_cpuinfo__init(spd2.id, &spd2.process_mask, SHMEM_KEY)
+        assert( shmem_cpuinfo__init(spd2.id, 0, &spd2.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
         /* spd3 */
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
         spd3.id = 333;
         mu_parse_mask("2", &spd3.process_mask);
         spd_register(&spd3);
-        assert( shmem_cpuinfo__init(spd3.id, &spd3.process_mask, SHMEM_KEY)
+        assert( shmem_cpuinfo__init(spd3.id, 0, &spd3.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
         /* spd4 */
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
         spd4.id = 444;
         mu_parse_mask("3", &spd4.process_mask);
         spd_register(&spd4);
-        assert( shmem_cpuinfo__init(spd4.id, &spd4.process_mask, SHMEM_KEY)
+        assert( shmem_cpuinfo__init(spd4.id, 0, &spd4.process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
         if (__gcov_flush) __gcov_flush();

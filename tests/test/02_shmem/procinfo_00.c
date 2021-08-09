@@ -50,12 +50,12 @@ int main( int argc, char **argv ) {
 
     // Init with too many CPUs
     CPU_SET(mu_get_system_size(), &process_mask);
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_PERM );
+    assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_PERM );
     // Init (good)
     CPU_CLR(mu_get_system_size(), &process_mask);
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     // A second init for the same pid should fail
-    assert( shmem_procinfo__init(pid, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_INIT );
+    assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_INIT );
 
     // Check registered mask is the same as our process mask
     assert( shmem_procinfo__getprocessmask(pid, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
@@ -67,6 +67,10 @@ int main( int argc, char **argv ) {
     // Check unknown pid
     assert( shmem_procinfo__getprocessmask(pid+1, NULL, DLB_SYNC_QUERY) == DLB_ERR_NOPROC );
     assert( shmem_procinfo__polldrom(pid+1, NULL, NULL) == DLB_ERR_NOPROC );
+
+    // Check shmem cannot be inherited by another pid, since it's not flagged as preregistered
+    pid_t new_pid = pid+1;
+    assert( shmem_procinfo__init(new_pid, pid, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_INIT );
 
     // Finalize
     assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
