@@ -64,7 +64,7 @@ void omp_thread_manager__init(const options_t *options) {
     lewi = options->lewi;
     drom = options->drom;
     ompt_opts = options->lewi_ompt;
-    pid = options->preinit_pid ? options->preinit_pid : getpid();
+    pid = getpid();
     if (lewi || drom) {
         int err;
         err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);

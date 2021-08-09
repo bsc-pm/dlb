@@ -207,6 +207,31 @@ int main( int argc, char **argv ) {
     // Finalize
     assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
 
+    /* Test inherit CPUs from preinit pid */
+    {
+        pid_t preinit_pid = pid+1;
+        assert( shmem_cpuinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo_ext__preinit(preinit_pid, &process_mask, 0) == DLB_SUCCESS );
+        assert( shmem_cpuinfo_ext__finalize() == DLB_SUCCESS );
+
+        assert( shmem_cpuinfo__init(pid, preinit_pid, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+
+        // Lend mask
+        assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, new_guests) == DLB_SUCCESS );
+        for (i=0; i<system_size; ++i) {
+            assert( CPU_ISSET(i, &process_mask) ? new_guests[i] == 0 : new_guests[i] == -1 );
+        }
+
+        // Reclaim mask
+        assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &process_mask, new_guests, victims) >= 0 );
+        for (i=0; i<system_size; ++i) {
+            assert( CPU_ISSET(i, &process_mask) ? new_guests[i] == pid : new_guests[i] == -1 );
+            assert( victims[i] == -1 );
+        }
+
+        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
     free(new_guests);
     free(victims);
     free(cpus_priority_array);

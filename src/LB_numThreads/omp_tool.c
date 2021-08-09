@@ -167,7 +167,7 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
     options_t options;
     options_init(&options, NULL);
     debug_init(&options);
-    pid = options.preinit_pid ? options.preinit_pid : getpid();
+    pid = getpid();
 
     /* Print OMPT version and variables*/
     const char *omp_policy_str = getenv("OMP_WAIT_POLICY");

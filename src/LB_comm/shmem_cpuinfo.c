@@ -194,7 +194,7 @@ static int register_process(pid_t pid, pid_t preinit_pid, const cpu_set_t *mask,
             if (steal && cpuinfo->owner != NOBODY && cpuinfo->owner != pid) {
                 verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpuid);
             }
-            if (cpuinfo->guest == NOBODY) {
+            if (cpuinfo->guest == NOBODY || cpuinfo->guest == preinit_pid) {
                 cpuinfo->guest = pid;
             }
             cpuinfo->owner = pid;
