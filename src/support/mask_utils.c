@@ -487,6 +487,8 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         warning( "Parsed mask \"%s\" does not seem to be a valid mask\n", str );
     }
 }
+#pragma GCC visibility pop
+
 
 /* Compare CPUs so that:
  *  - owned CPUs first, in ascending order
@@ -618,9 +620,6 @@ int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topo
     /* Levels 2+, sort in ascending order */
     return _cpuid1 - _cpuid2;
 }
-
-
-#pragma GCC visibility pop
 
 void mu_testing_set_sys_size(int size) {
     // For testing purposes only
