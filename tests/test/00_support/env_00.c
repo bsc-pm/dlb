@@ -34,32 +34,56 @@ int main(int argc, char **argv) {
     env[0] = NULL;
 
     // Set initial value
-    add_to_environ("VAR1", "value1", &env, ENV_OVERWRITE_NEVER);
+    dlb_setenv("VAR1", "value1", &env, ENV_OVERWRITE_NEVER);
     assert( strcmp(env[0], "VAR1=value1") == 0 );
     assert( env[1] == NULL );
     // Do not Overwrite
-    add_to_environ("VAR1", "value2", &env, ENV_OVERWRITE_NEVER);
+    dlb_setenv("VAR1", "value2", &env, ENV_OVERWRITE_NEVER);
     assert( strcmp(env[0], "VAR1=value1") == 0 );
     assert( env[1] == NULL );
     // Overwrite
-    add_to_environ("VAR1", "value2", &env, ENV_OVERWRITE_ALWAYS);
+    dlb_setenv("VAR1", "value2", &env, ENV_OVERWRITE_ALWAYS);
     assert( strcmp(env[0], "VAR1=value2") == 0 );
     assert( env[1] == NULL );
     // Modify only if exists (it does)
-    add_to_environ("VAR1", "value3", &env, ENV_UPDATE_IF_EXISTS);
+    dlb_setenv("VAR1", "value3", &env, ENV_UPDATE_IF_EXISTS);
     assert( strcmp(env[0], "VAR1=value3") == 0 );
     assert( env[1] == NULL );
     // Modify only if exists (it doesn't)
-    add_to_environ("VAR2", "xxx", &env, ENV_UPDATE_IF_EXISTS);
+    dlb_setenv("VAR2", "xxx", &env, ENV_UPDATE_IF_EXISTS);
     assert( strcmp(env[0], "VAR1=value3") == 0 );
     assert( env[1] == NULL );
     // Append
-    add_to_environ("VAR1", "value4", &env, ENV_APPEND);
+    dlb_setenv("VAR1", "value4", &env, ENV_APPEND);
     assert( strcmp(env[0], "VAR1=value3 value4") == 0 );
     assert( env[1] == NULL );
 
     free(env[0]);
     free(env);
+
+    /* Current environment */
+
+    const char *var_name = "DLB_TESTING_VAR";
+
+    // Set initial value
+    dlb_setenv(var_name, "value1", NULL, ENV_OVERWRITE_NEVER);
+    assert( strcmp(getenv(var_name), "value1") == 0 );
+    // Do not Overwrite
+    dlb_setenv(var_name, "value2", NULL, ENV_OVERWRITE_NEVER);
+    assert( strcmp(getenv(var_name), "value1") == 0 );
+    // Overwrite
+    dlb_setenv(var_name, "value2", NULL, ENV_OVERWRITE_ALWAYS);
+    assert( strcmp(getenv(var_name), "value2") == 0 );
+    // Modify only if exists (it does)
+    dlb_setenv(var_name, "value3", NULL, ENV_UPDATE_IF_EXISTS);
+    assert( strcmp(getenv(var_name), "value3") == 0 );
+    // Append
+    dlb_setenv(var_name, "value4", NULL, ENV_APPEND);
+    assert( strcmp(getenv(var_name), "value3 value4") == 0 );
+    // Modify only if exists (it doesn't)
+    unsetenv(var_name);
+    dlb_setenv(var_name, "xxx", NULL, ENV_UPDATE_IF_EXISTS);
+    assert( getenv(var_name) == NULL );
 
     return 0;
 }

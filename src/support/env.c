@@ -19,6 +19,8 @@
 
 #include "support/env.h"
 
+#include "support/debug.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +28,7 @@
 /* Implementation based on glibc's setenv:
  *  https://sourceware.org/git/?p=glibc.git;a=blob;f=stdlib/setenv.c
  */
-void add_to_environ(const char *name, const char *value, char ***next_environ,
+static void add_to_environ(const char *name, const char *value, char ***next_environ,
         env_add_condition_t condition) {
     const size_t namelen = strlen (name);
     size_t size = 0;
@@ -73,4 +75,43 @@ void add_to_environ(const char *name, const char *value, char ***next_environ,
     char *np = malloc(varlen);
     snprintf(np, varlen, "%s=%s", name, value);
     *ep = np;
+}
+
+/* Modify environment:
+ *  - name: environment variable name
+ *  - value: environment variable value
+ *  - next_environ: environ pointer, or NULL to modify current environment
+ *  - condition: overwrite/append conditions
+ */
+void dlb_setenv(const char *name, const char *value, char ***next_environ,
+        env_add_condition_t condition) {
+    if (next_environ == NULL) {
+        /* Modify current environment */
+        const char *current_value = getenv(name);
+        if (!current_value) {
+            if (condition == ENV_UPDATE_IF_EXISTS) return;
+            if (condition == ENV_APPEND) condition = ENV_OVERWRITE_NEVER;
+        }
+        switch(condition) {
+            case ENV_OVERWRITE_NEVER:
+                setenv(name, value, 0);
+                break;
+            case ENV_UPDATE_IF_EXISTS:
+                DLB_FALLTHROUGH;
+            case ENV_OVERWRITE_ALWAYS:
+                setenv(name, value, 1);
+                break;
+            case ENV_APPEND:
+                /* We can assume current_value is not NULL */
+                size_t len = strlen(current_value) + 1 + strlen(value) + 1;
+                char *new_value = malloc(sizeof(char)*len);
+                sprintf(new_value, "%s %s", current_value, value);
+                setenv(name, new_value, 1);
+                free(new_value);
+                break;
+        }
+    } else {
+        /* Modify next_environ */
+        add_to_environ(name, value, next_environ, condition);
+    }
 }

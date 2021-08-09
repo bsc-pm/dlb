@@ -27,7 +27,7 @@ typedef enum env_add_condition_e {
     ENV_APPEND                  /* variable is updated appending value */
 } env_add_condition_t;
 
-void add_to_environ(const char *name, const char *value, char ***next_environ,
+void dlb_setenv(const char *name, const char *value, char ***next_environ,
         env_add_condition_t condition);
 
 #endif /* ENV_H */

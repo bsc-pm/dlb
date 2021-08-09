@@ -83,40 +83,14 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
     int __attribute__((unused)) n = snprintf(drom_args, 64, "--drom=1 --preinit-pid=%d %s",
             pid, flags & DLB_RETURN_STOLEN ? "--debug-opts=return-stolen" : "");
     ensure(n<64, "snprintf overflow");
+    dlb_setenv("DLB_ARGS", drom_args, next_environ, ENV_APPEND);
 
-    /* Set up OMP_NUM_THREADS new value */
+    /* Set up OMP_NUM_THREADS new value, only if mask is valid and variable is already set */
     int new_num_threads = mask ? CPU_COUNT(mask) : 0;
     char omp_value[8];
     snprintf(omp_value, 8, "%d", new_num_threads);
-
-    if (next_environ == NULL) {
-        /* Append DROM args to DLB_ARGS */
-        const char *dlb_args_env = getenv("DLB_ARGS");
-        if (dlb_args_env) {
-            size_t len = strlen(dlb_args_env) + 1 + strlen(drom_args) + 1;
-            char *new_dlb_args = malloc(sizeof(char)*len);
-            sprintf(new_dlb_args, "%s %s", dlb_args_env, drom_args);
-            setenv("DLB_ARGS", new_dlb_args, 1);
-            free(new_dlb_args);
-        } else {
-            setenv("DLB_ARGS", drom_args, 1);
-        }
-
-        /* Modify OMP_NUM_THREADS only if mask is valid and variable already set */
-        if (new_num_threads > 0 ) {
-            const char *str = getenv("OMP_NUM_THREADS");
-            if (str && strtol(str, NULL, 0) != new_num_threads) {
-                warning("Re-setting OMP_NUM_THREADS to %d due to the new mask: %s",
-                        new_num_threads, mu_to_str(mask));
-                setenv("OMP_NUM_THREADS", omp_value, 1);
-            }
-        }
-    } else {
-        // warning: next_environ must be a malloc'ed pointer
-        add_to_environ("DLB_ARGS", drom_args, next_environ, ENV_APPEND);
-        if (new_num_threads > 0) {
-            add_to_environ("OMP_NUM_THREADS", omp_value, next_environ, ENV_UPDATE_IF_EXISTS);
-        }
+    if (new_num_threads > 0) {
+        dlb_setenv("OMP_NUM_THREADS", omp_value, next_environ, ENV_UPDATE_IF_EXISTS);
     }
 
     int error = shmem_procinfo_ext__preinit(pid, mask, flags);

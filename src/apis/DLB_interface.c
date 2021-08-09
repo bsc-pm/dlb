@@ -57,26 +57,12 @@ int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ) {
     spd_enter_dlb(NULL);
     if (!thread_spd->dlb_initialized
             && __sync_bool_compare_and_swap(&thread_spd->dlb_preinitialized, false, true)) {
-        pid_t pid = getpid();
-        char arg[32];
-        snprintf(arg, 32, "--preinit-pid=%d", pid);
 
-        if (next_environ == NULL) {
-            /* Modify current environment */
-            const char *dlb_args_env = getenv("DLB_ARGS");
-            if (dlb_args_env) {
-                size_t len = strlen(dlb_args_env) + 1 + strlen(arg) + 1;
-                char *new_dlb_args = malloc(sizeof(char)*len);
-                sprintf(new_dlb_args, "%s %s", dlb_args_env, arg);
-                setenv("DLB_ARGS", new_dlb_args, 1);
-                free(new_dlb_args);
-            } else {
-                setenv("DLB_ARGS", arg, 1);
-            }
-        } else {
-            /* Modify next_environ */
-            add_to_environ("DLB_ARGS", arg, next_environ, ENV_APPEND);
-        }
+        /* DLB_PreInit must modify the environment so that a process child
+         * knows what CPUs must inherit */
+        char flag[32];
+        snprintf(flag, 32, "--preinit-pid=%d", getpid());
+        dlb_setenv("DLB_ARGS", flag, next_environ, ENV_APPEND);
 
         return PreInitialize(thread_spd, mask);
     } else {
