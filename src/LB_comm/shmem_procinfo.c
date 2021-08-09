@@ -168,6 +168,25 @@ static pinfo_t* get_process(pid_t pid) {
 /*  Init / Register                                                              */
 /*********************************************************************************/
 
+/* This function may be called from shmem_init to cleanup pid */
+static void cleanup_shmem(void *shdata_ptr, int pid) {
+    shdata_t *shared_data = shdata_ptr;
+    int p;
+    for (p = 0; p < max_processes; p++) {
+        if (shdata->process_info[p].pid == pid) {
+            pinfo_t *process = &shared_data->process_info[p];
+            if (process->dirty) {
+                CPU_OR(&shared_data->free_mask, &shared_data->free_mask,
+                        &process->future_process_mask);
+            } else {
+                CPU_OR(&shared_data->free_mask, &shared_data->free_mask,
+                        &process->current_process_mask);
+            }
+            *process = (const pinfo_t){0};
+        }
+    }
+}
+
 static void open_shmem(const char *shmem_key) {
     pthread_mutex_lock(&mutex);
     {
@@ -178,7 +197,7 @@ static void open_shmem(const char *shmem_key) {
 
             shm_handler = shmem_init((void**)&shdata,
                     sizeof(shdata_t) + sizeof(pinfo_t)*max_processes,
-                    shmem_name, shmem_key, SHMEM_PROCINFO_VERSION);
+                    shmem_name, shmem_key, SHMEM_PROCINFO_VERSION, cleanup_shmem);
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

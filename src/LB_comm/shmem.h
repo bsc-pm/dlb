@@ -61,7 +61,7 @@ typedef enum ShmemOption {
 enum { SHMEM_VERSION_IGNORE = 0 };
 
 shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
-        const char *shmem_key, unsigned int shmem_version);
+        const char *shmem_key, unsigned int shmem_version, void (*cleanup_fn)(void*,int));
 void shmem_finalize(shmem_handler_t *handler, shmem_option_t shmem_delete);
 void shmem_lock(shmem_handler_t *handler);
 void shmem_unlock(shmem_handler_t *handler);

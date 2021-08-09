@@ -37,13 +37,18 @@ struct shdata {
 struct shdata *shdata;
 static shmem_handler_t *shm_handler = NULL;;
 
+static void cleanup_shmem(void *shdata_ptr, int pid) {
+    struct shdata *shared_data = shdata_ptr;
+    __sync_fetch_and_sub(&shared_data->attached_nprocs, 1);
+}
+
 void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key) {
     verbose(VB_SHMEM, "LoadCommonConfig");
     defaultCPUS=defCPUS;
     greedy=is_greedy;
 
     shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key,
-            SHMEM_VERSION_IGNORE);
+            SHMEM_VERSION_IGNORE, cleanup_shmem);
 
     if (__sync_fetch_and_add(&shdata->attached_nprocs, 1) == 0) {
         // Initialize shared memory if this is the 1st process attached

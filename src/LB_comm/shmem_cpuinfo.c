@@ -119,6 +119,20 @@ static void initialize_output_array(pid_t *array) {
 /*  Init / Register                                                              */
 /*********************************************************************************/
 
+static void cleanup_shmem(void *shdata_ptr, int pid) {
+    shdata_t *shared_data = shdata_ptr;
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        cpuinfo_t *cpuinfo = &shared_data->node_info[cpuid];
+        if (cpuinfo->owner == pid) {
+            *cpuinfo = (const cpuinfo_t){0};
+        } else if (cpuinfo->guest == pid) {
+            cpuinfo->guest = NOBODY;
+            update_cpu_stats(cpuid, STATS_IDLE);
+        }
+    }
+}
+
 static void open_shmem(const char *shmem_key) {
     pthread_mutex_lock(&mutex);
     {
@@ -126,7 +140,7 @@ static void open_shmem(const char *shmem_key) {
             node_size = mu_get_system_size();
             shm_handler = shmem_init((void**)&shdata,
                     sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size,
-                    shmem_name, shmem_key, SHMEM_CPUINFO_VERSION);
+                    shmem_name, shmem_key, SHMEM_CPUINFO_VERSION, cleanup_shmem);
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

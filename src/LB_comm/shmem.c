@@ -51,7 +51,8 @@
 
 #define SHMEM_TIMEOUT_SECONDS 1
 
-static bool shmem_consistency_add_pid(pid_t *pidlist, pid_t pid) {
+static bool shmem_consistency_check_pids(pid_t *pidlist, pid_t pid,
+        void (*cleanup_fn)(void*,int), void *shdata) {
     bool registered = false;
     int i;
     for(i=0; i<mu_get_system_size(); ++i) {
@@ -62,8 +63,18 @@ static bool shmem_consistency_add_pid(pid_t *pidlist, pid_t pid) {
             }
         } else {
             if (kill(pidlist[i], 0) == -1) {
-                warning("Process %d attached to shmem not found, "
-                        "you may want to run \"dlb_shm -d\"", pidlist[i]);
+                /* Process pidlist[i] is registered and does not exist */
+                if (cleanup_fn) {
+                    warning("Process %d is registered in DLB but does not exist, probably"
+                            " due to a bad termination of such process.\n"
+                            "DLB is cleaning up the shared memory. If it fails,"
+                            " please run 'dlb_shm --delete' and try again.", pidlist[i]);
+                    cleanup_fn(shdata, pidlist[i]);
+                    pidlist[i] = 0;
+                } else {
+                    warning("Process %d attached to shmem not found, "
+                            "you may want to run \"dlb_shm -d\"", pidlist[i]);
+                }
             }
         }
     }
@@ -86,13 +97,16 @@ static bool shmem_consistency_remove_pid(pid_t *pidlist, pid_t pid) {
 void shmem_consistency_check_version(unsigned int creator_version, unsigned int process_version) {
     if (creator_version != SHMEM_VERSION_IGNORE) {
         fatal_cond(creator_version != process_version,
-                "Attaching to a different version of shared memory");
+                "The existing DLB shared memory version differs from the expected one.\n"
+                "This may have been caused by a DLB version upgrade in between runs.\n"
+                "Please, run 'dlb_shm --delete' and try again.\n"
+                "Contact us at " PACKAGE_BUGREPORT " if the issue persists.");
     }
 }
 
 
 shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
-        const char *shmem_key, unsigned int shmem_version) {
+        const char *shmem_key, unsigned int shmem_version, void (*cleanup_fn)(void*,int)) {
     int error;
     pid_t pid = getpid();
     verbose(VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", pid, shmem_module);
@@ -164,13 +178,16 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         get_time_coarse(&now);
         if (timespec_diff(&start, &now) > SHMEM_TIMEOUT_SECONDS * 1e9) {
             // timeout
-            fatal("Could not acquire lock for the new attached shared memory. "
-                    "You may want to clean it with \"dlb_shm -d\"");
+            fatal("DLB cannot obtain the lock for the shared memory.\n"
+                    "This may have been caused by a previous process crashing"
+                    " while acquiring the DLB shared memory lock.\n"
+                    "Please, run 'dlb_shm --delete' and try again.\n"
+                    "Contact us at " PACKAGE_BUGREPORT " if the issue persists.");
         }
     }
-    shmem_consistency_add_pid(handler->shsync->pidlist, pid);
     shmem_consistency_check_version(handler->shsync->shsync_version, SHMEM_SYNC_VERSION);
     shmem_consistency_check_version(handler->shsync->shmem_version, shmem_version);
+    shmem_consistency_check_pids(handler->shsync->pidlist, pid, cleanup_fn, *shdata);
     pthread_spin_unlock(&handler->shsync->shmem_lock);
 
     return handler;
@@ -216,6 +233,19 @@ void shmem_lock( shmem_handler_t* handler ) {
 void shmem_unlock( shmem_handler_t* handler ) {
     pthread_spin_unlock(&handler->shsync->shmem_lock);
 }
+
+/* Shared memory states    (BUSY(0-n)  <-  READY(0-n)  ->  MAINTENANCE(1)):
+ *  - READY: the shared memory can be locked or moved to another state.
+ *  - BUSY: the shared memory is being used, each process still needs to
+ *          use atomic operations or locks to access the data.
+ *          This state prevents going to maintenance mode.
+ *  - MAINTENANCE: only one process can set the state to maintenance,
+ *                 processes trying to set BUSY state will have to wait
+ *
+ *  This system is useful if all processes want to begin a group operation
+ *  (like a barrier) entering the BUSY state, and we want to prevent a new
+ *  process to join the group until the shared memory goes back to READY.
+ */
 
 enum { SHMEM_TRYAQUIRE_USECS = 100 };
 

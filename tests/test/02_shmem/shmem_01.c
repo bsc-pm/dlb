@@ -46,17 +46,18 @@ int main(int argc, char **argv) {
 
     // Create a shmem
     handler1 = shmem_init((void**)&shdata1, sizeof(struct data), "cpuinfo", SHMEM_KEY,
-            SHMEM_VERSION);
+            SHMEM_VERSION, NULL);
     shdata1->foo = 1;
 
     // Try to create another shmem with the same name, it maps another region but same content
     handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo", SHMEM_KEY,
-            SHMEM_VERSION);
+            SHMEM_VERSION, NULL);
     assert( &shdata1 != &shdata2 );
     assert( shdata1->foo == shdata2->foo );
 
     // Create a shmem with custom key
-    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo","42", SHMEM_VERSION);
+    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo","42",
+            SHMEM_VERSION, NULL);
     shdata2->foo = 2;
     assert( &shdata1 != &shdata2 );
     assert( shdata1->foo != shdata2->foo );
