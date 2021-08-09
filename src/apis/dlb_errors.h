@@ -59,6 +59,7 @@ enum DLBErrorCodes {
     DLB_ERR_NOMEM           = -14,
     /*! The operation is not defined in the current polic */
     DLB_ERR_NOPOL           = -15,
+    /*! TALP is not initialized */
     DLB_ERR_NOTALP          = -16,
     _DLB_ERROR_LOWER_BOUND  = -17
 };
