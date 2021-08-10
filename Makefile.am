@@ -667,7 +667,7 @@ SPHINX_FLAGS = -D version=$(VERSION) -D release=$(VERSION)
 if SPHINX_HAS_MANPAGES
 SPHINX_FLAGS += -t man_pages
 PANDOC = pandoc
-PANDOC_FLAGS = --from=man --to=rst --base-header-level=3
+PANDOC_FLAGS = --from=man --to=rst --shift-heading-level-by=3
 
 doc/user_guide/source/dlb.rst: $(man1_builddir)/dlb.1
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb' $(PANDOC_FLAGS) -o $@ $<
