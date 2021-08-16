@@ -57,6 +57,7 @@ static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
 static bool quiet = false;
 static bool werror = false;
+static pthread_mutex_t dlb_clean_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void debug_init(const options_t *options) {
     quiet = options->quiet;
@@ -252,36 +253,40 @@ static void clean_shmems(pid_t id, const char *shmem_key) {
 }
 
 void dlb_clean(void) {
-    /* First, try to finalize shmems of registered subprocess */
-    const subprocess_descriptor_t** spds = spd_get_spds();
-    const subprocess_descriptor_t** spd = spds;
-    while (*spd) {
-        pid_t id = (*spd)->id;
-        const char *shmem_key = (*spd)->options.shm_key;
-        clean_shmems(id, shmem_key);
-        ++spd;
-    }
-    free(spds);
+    pthread_mutex_lock(&dlb_clean_mutex);
+    {
+        /* First, try to finalize shmems of registered subprocess */
+        const subprocess_descriptor_t** spds = spd_get_spds();
+        const subprocess_descriptor_t** spd = spds;
+        while (*spd) {
+            pid_t id = (*spd)->id;
+            const char *shmem_key = (*spd)->options.shm_key;
+            clean_shmems(id, shmem_key);
+            ++spd;
+        }
+        free(spds);
 
-    /* Then, try to finalize current pid */
-    pid_t pid = thread_spd ? thread_spd->id : getpid();
-    const char *shmem_key = thread_spd ? thread_spd->options.shm_key : NULL;
-    clean_shmems(pid, shmem_key);
+        /* Then, try to finalize current pid */
+        pid_t pid = thread_spd ? thread_spd->id : getpid();
+        const char *shmem_key = thread_spd ? thread_spd->options.shm_key : NULL;
+        clean_shmems(pid, shmem_key);
 
-    /* Finalize shared memories that do not support subprocesses */
-    shmem_barrier__finalize();
-    finalize_comm();
+        /* Finalize shared memories that do not support subprocesses */
+        shmem_barrier__finalize();
+        finalize_comm();
 
-    /* Destroy shared memories if they still exist */
-    if (shmem_exists("cpuinfo", shmem_key)) {
-        shmem_destroy("cpuinfo", shmem_key);
+        /* Destroy shared memories if they still exist */
+        if (shmem_exists("cpuinfo", shmem_key)) {
+            shmem_destroy("cpuinfo", shmem_key);
+        }
+        if (shmem_exists("procinfo", shmem_key)) {
+            shmem_destroy("procinfo", shmem_key);
+        }
+        if (shmem_exists("async", shmem_key)) {
+            shmem_destroy("async", shmem_key);
+        }
     }
-    if (shmem_exists("procinfo", shmem_key)) {
-        shmem_destroy("procinfo", shmem_key);
-    }
-    if (shmem_exists("async", shmem_key)) {
-        shmem_destroy("async", shmem_key);
-    }
+    pthread_mutex_unlock(&dlb_clean_mutex);
 }
 
 
