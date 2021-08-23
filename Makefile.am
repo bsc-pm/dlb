@@ -173,7 +173,8 @@ COMMON_SRCS = \
 	src/LB_core/spd.h                       \
 	src/LB_numThreads/omptool.c             \
 	src/LB_numThreads/omptool.h             \
-	src/LB_numThreads/ompt.h                \
+	src/LB_numThreads/omp-tools.h           \
+	src/LB_numThreads/ompt-multiplex.h      \
 	src/apis/DLB_interface.c                \
 	src/apis/DLB_interfaceF.c               \
 	src/apis/DLB_interface_drom.c           \
@@ -926,7 +927,10 @@ if ENABLE_COVERAGE
 COVERAGE_DIR = tests/coverage
 coverage: check-recursive
 	$(mkdir_p) $(COVERAGE_DIR)
-	gcovr . --root $(top_srcdir) --html --html-details -o $(COVERAGE_DIR)/index.html
+	gcovr . --root $(top_srcdir) \
+		--exclude '.*/gtree.c'  \
+		--exclude '.*/ompt-multiplex.h' \
+		--html --html-details -o $(COVERAGE_DIR)/index.html
 
 clean-coverage:
 	find $(abs_top_builddir) -name '*.gcno' -or -name '*.gcda' -delete

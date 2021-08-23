@@ -23,7 +23,7 @@
 
 #include "unique_shmem.h"
 
-#include "LB_numThreads/ompt.h"
+#include "LB_numThreads/omp-tools.h"
 #include "LB_numThreads/omptm_free_agents.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"

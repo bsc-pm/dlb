@@ -20,7 +20,7 @@
 #ifndef OMPTM_FREE_AGENTS_H
 #define OMPTM_FREE_AGENTS_H
 
-#include "LB_numThreads/ompt.h"
+#include "LB_numThreads/omp-tools.h"
 #include "support/options.h"
 
 void omptm_free_agents__init(pid_t process_id, const options_t *options);

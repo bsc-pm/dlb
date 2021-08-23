@@ -20,7 +20,7 @@
 #ifndef OMPTM_OMP5_H
 #define OMPTM_OMP5_H
 
-#include "LB_numThreads/ompt.h"
+#include "LB_numThreads/omp-tools.h"
 #include "support/options.h"
 
 void omptm_omp5__init(pid_t process_id, const options_t *options);

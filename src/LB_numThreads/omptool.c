@@ -17,8 +17,12 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "LB_numThreads/ompt.h"
+#define CLIENT_TOOL_LIBRARIES_VAR "DLB_TOOL_LIBRARIES"
+#include "LB_numThreads/ompt-multiplex.h"
 
+#include "LB_numThreads/omptool.h"
+
+#include "LB_numThreads/omp-tools.h"
 #include "LB_numThreads/omptm_omp5.h"
 #include "LB_numThreads/omptm_free_agents.h"
 #include "LB_core/spd.h"

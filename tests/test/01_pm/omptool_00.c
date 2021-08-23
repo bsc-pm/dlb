@@ -21,7 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-#include "LB_numThreads/ompt.h"
+#include "LB_numThreads/omp-tools.h"
 #include "LB_numThreads/omptool.h"
 #include "apis/dlb_errors.h"
 
