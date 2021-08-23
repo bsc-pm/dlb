@@ -1,3 +1,22 @@
+/*********************************************************************************/
+/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*                                                                               */
+/*  This file is part of the DLB library.                                        */
+/*                                                                               */
+/*  DLB is free software: you can redistribute it and/or modify                  */
+/*  it under the terms of the GNU Lesser General Public License as published by  */
+/*  the Free Software Foundation, either version 3 of the License, or            */
+/*  (at your option) any later version.                                          */
+/*                                                                               */
+/*  DLB is distributed in the hope that it will be useful,                       */
+/*  but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*  GNU Lesser General Public License for more details.                          */
+/*                                                                               */
+/*  You should have received a copy of the GNU Lesser General Public License     */
+/*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
+/*********************************************************************************/
+
 //===--- ompt-multiplex.h - header-only multiplexing of OMPT tools -- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -16,17 +35,19 @@
 #ifndef OMPT_MULTIPLEX_H
 #define OMPT_MULTIPLEX_H
 
+#include "LB_numThreads/omp-tools.h"
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 #include <dlfcn.h>
 #include <execinfo.h>
 #include <inttypes.h>
-#include <omp-tools.h>
-#include <omp.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
+
 
 static ompt_set_callback_t ompt_multiplex_set_callback;
 static ompt_get_task_info_t ompt_multiplex_get_task_info;
@@ -1031,6 +1052,7 @@ ompt_start_tool_result_t *
 ompt_multiplex_own_start_tool(unsigned int omp_version,
                               const char *runtime_version);
 
+#pragma GCC visibility push(default)
 ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
                                           const char *runtime_version) {
   // try loading client tool
@@ -1047,9 +1069,9 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
       exit(-1);
     }
 
-    int progress = 0;
+    size_t progress = 0;
     while (progress < strlen(tool_libs)) {
-      int tmp_progress = progress;
+      size_t tmp_progress = progress;
       while (tmp_progress < strlen(tool_libs) &&
              tool_libs_buffer[tmp_progress] != ':')
         tmp_progress++;
@@ -1083,6 +1105,7 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
       &ompt_multiplex_initialize, &ompt_multiplex_finalize, {0}};
   return &ompt_start_tool_result;
 }
+#pragma GCC visibility pop
 #ifdef __cplusplus
 }
 #endif
