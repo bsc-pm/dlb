@@ -88,7 +88,7 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version) {
         omptm_funcs.task_schedule   = omptm_free_agents__task_schedule;
         omptm_funcs.implicit_task   = omptm_free_agents__implicit_task;
         omptm_funcs.work            = NULL;
-        omptm_funcs.sync_region     = NULL;
+        omptm_funcs.sync_region     = omptm_free_agents__sync_region;
     }
 }
 
@@ -249,6 +249,11 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
                         ompt_callback_work,
                         (ompt_callback_t)omptm_funcs.work);
             }
+            if (omptm_funcs.sync_region) {
+                err += set_ompt_callback(
+                        ompt_callback_sync_region,
+                        (ompt_callback_t)omptm_funcs.sync_region);
+            }
         } else {
             err = 1;
             verbose(VB_OMPT, "Could not look up function \"ompt_set_callback\"");
@@ -306,6 +311,9 @@ static void omptool_finalize(ompt_data_t *tool_data) {
         }
         if (omptm_funcs.work) {
             set_callback_fn(ompt_callback_work, NULL);
+        }
+        if (omptm_funcs.sync_region) {
+            set_callback_fn(ompt_callback_sync_region, NULL);
         }
     }
 

@@ -67,4 +67,11 @@ void omptm_free_agents__implicit_task(
         unsigned int index,
         int flags);
 
+void omptm_free_agents__sync_region(
+        ompt_sync_region_t kind,
+        ompt_scope_endpoint_t endpoint,
+        ompt_data_t *parallel_data,
+        ompt_data_t *task_data,
+        const void *codeptr_ra);
+
 #endif /* OMPTM_FREE_AGENTS_H */

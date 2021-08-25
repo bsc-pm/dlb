@@ -677,6 +677,7 @@ void omptm_free_agents__task_schedule(
         if (DLB_ATOMIC_SUB(&pending_tasks, 1) > 1) {
             acquire_one_free_agent();
         }
+        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     } else if (prior_task_status == ompt_task_complete) {
         if (__free_agent_id >= 0) {
             int cpuid = get_free_agent_cpuid_by_id(__free_agent_id);
@@ -705,6 +706,7 @@ void omptm_free_agents__task_schedule(
                 }
             }
         }
+        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
     }
 }
 
@@ -743,10 +745,28 @@ void omptm_free_agents__implicit_task(
             }
             set_bit((atomic_int*)&cpu_data[cpuid].state, CPU_STATE_IN_PARALLEL);
             verbose(VB_OMPT, "CPU %d starting an implicit task", cpuid);
+
+            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
         }
     }
 
     /* Implicit tasks are not guarenteed to end exactly at the end of
      * the parallel region, so DLB cannot do anything based on that.
      */
+}
+
+void omptm_free_agents__sync_region(
+        ompt_sync_region_t kind,
+        ompt_scope_endpoint_t endpoint,
+        ompt_data_t *parallel_data,
+        ompt_data_t *task_data,
+        const void *codeptr_ra) {
+    if ((kind == ompt_sync_region_barrier_implicit_parallel
+                || kind == ompt_sync_region_barrier_implicit)
+            && endpoint == ompt_scope_begin
+            && parallel_data->value == PARALLEL_LEVEL_1) {
+        /* A thread participating in the level 1 parallel region
+         * has reached the implicit barrier */
+        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+    }
 }
