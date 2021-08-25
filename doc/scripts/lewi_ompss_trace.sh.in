@@ -70,7 +70,7 @@ if [[ -z $EXTRAE_HOME ]] ; then
 fi
 
 # Choose between the MPI versions for C/C++ or Fortran
-preload=":$EXTRAE_HOME/lib/libnanosmpitrace.so"
-#preload=":$EXTRAE_HOME/lib/libnanosmpitracef.so"
+preload+=":$EXTRAE_HOME/lib/libnanosmpitrace.so"
+#preload+=":$EXTRAE_HOME/lib/libnanosmpitracef.so"
 
 env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"

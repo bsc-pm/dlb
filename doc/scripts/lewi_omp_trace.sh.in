@@ -88,7 +88,7 @@ if [[ -z $EXTRAE_HOME ]] ; then
 fi
 
 # Choose between the MPI versions for C/C++ or Fortran
-preload=":$EXTRAE_HOME/lib/libompitrace.so"
-#preload=":$EXTRAE_HOME/lib/libompitracef.so"
+preload+=":$EXTRAE_HOME/lib/libompitrace.so"
+#preload+=":$EXTRAE_HOME/lib/libompitracef.so"
 
 $DLB_HOME/bin/dlb_run env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"
