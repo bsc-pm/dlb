@@ -280,13 +280,11 @@ static void getpidof(int process_pseudo_id) {
 }
 
 static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t print_flags) {
-    int error;
-    cpu_set_t mask;
-
     DLB_DROM_Attach();
     if (pid) {
         // Show CPU affinity of given PID
-        error = DLB_DROM_GetProcessMask(pid, &mask, 0);
+        cpu_set_t mask;
+        int error = DLB_DROM_GetProcessMask(pid, &mask, 0);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask));
     } else {

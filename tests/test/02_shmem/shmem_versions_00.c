@@ -56,7 +56,7 @@ static void check_shmem_sync_version(void) {
     int version = SHMEM_SYNC_VERSION;
     size_t size = sizeof(shmem_sync_t) * mu_get_system_size();
     size_t known_size = sizeof(struct KnownShmemSync) * mu_get_system_size();
-    fprintf(stderr, "shmem_sync version %d, size: %lu, known_size: %lu\n",
+    fprintf(stderr, "shmem_sync version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_SHMEM_SYNC_VERSION );
     assert( size == known_size );
@@ -88,7 +88,7 @@ static void check_async_version(void) {
     int version = shmem_async__version();
     size_t size = shmem_async__size();
     size_t known_size = sizeof(struct KnownAsyncShdata) * mu_get_system_size();
-    fprintf(stderr, "shmem_async version %d, size: %lu, known_size: %lu\n",
+    fprintf(stderr, "shmem_async version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_ASYNC_VERSION );
     assert( size == known_size );
@@ -107,7 +107,7 @@ static void check_barrier_version(void) {
     int version = shmem_barrier__version();
     size_t size = shmem_barrier__size();
     size_t known_size = sizeof(struct KnownBarrierShdata) * mu_get_system_size();
-    fprintf(stderr, "shmem_barrier version %d, size: %lu, known_size: %lu\n",
+    fprintf(stderr, "shmem_barrier version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_BARRIER_VERSION );
     assert( size == known_size );
@@ -155,7 +155,7 @@ static void check_cpuinfo_version(void) {
     size_t size = shmem_cpuinfo__size();
     size_t known_size = sizeof(struct KnownCpuinfoShdata)
         + sizeof(struct KnownCpuinfo)*mu_get_system_size();
-    fprintf(stderr, "shmem_cpuinfo version %d, size: %lu, known_size: %lu\n",
+    fprintf(stderr, "shmem_cpuinfo version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_CPUINFO_VERSION );
     assert( size == known_size );
@@ -219,7 +219,7 @@ static void check_procinfo_version(void) {
     size_t size = shmem_procinfo__size();
     size_t known_size = sizeof(struct KnownProcinfoShdata)
         + sizeof(struct KnownProcinfo)*mu_get_system_size();
-    fprintf(stderr, "shmem_procinfo version %d, size: %lu, known_size: %lu\n",
+    fprintf(stderr, "shmem_procinfo version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_PROCINFO_VERSION );
     assert( size == known_size );

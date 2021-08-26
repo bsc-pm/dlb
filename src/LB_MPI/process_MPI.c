@@ -90,7 +90,7 @@ void after_init(void) {
 
     int (*procsIds)[2] = malloc(_mpi_size * sizeof(int[2]));
     if (_mpi_rank==0) {
-        int j, maxSetNode;
+        int maxSetNode;
         // Ceiling division (total_size/node_size)
         int nodes=(_mpi_size + _mpis_per_node - 1) /_mpis_per_node;
         int *procsPerNode = malloc(nodes * sizeof(int));
@@ -109,8 +109,8 @@ void after_init(void) {
         maxSetNode++;
 
         for(i=1; i<_mpi_size; i++) {
-            j=0;
-            while((strcmp(recvData[i],nodesIds[j]))&&(j<nodes)) {
+            int j = 0;
+            while(j<nodes && strcmp(recvData[i],nodesIds[j])) {
                 j++;
             }
 
@@ -170,7 +170,6 @@ void after_init(void) {
 }
 
 void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
-    int valor_dpd;
     if(mpi_ready) {
         instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_BEGIN);
 
@@ -179,7 +178,7 @@ void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
         if(use_dpd) {
             unsigned long value = (unsigned long)((((buf>>5)^dest)<<5)|call_type);
             unsigned ear_size, ear_level;
-             valor_dpd=dynais(value,&ear_size,&ear_level);
+            int valor_dpd=dynais(value,&ear_size,&ear_level);
             //Only update if already treated previous iteration
             if( valor_dpd==-1) add_event(LOOP_STATE,5);
             else add_event(LOOP_STATE,valor_dpd);

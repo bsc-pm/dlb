@@ -1029,7 +1029,7 @@ int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
             }
             cpu_set_t free_sockets;
             mu_get_parents_inside_cpuset(&free_sockets, &free_mask);
-            for (cpuid=0; ncpus>0 && cpuid<node_size; ++cpuid) {
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
                 if (CPU_ISSET(cpuid, &free_sockets)) {
                     if (borrow_cpu(pid, cpuid, &new_guests[cpuid]) == DLB_SUCCESS) {
                         error = DLB_SUCCESS;

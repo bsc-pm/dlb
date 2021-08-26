@@ -284,7 +284,7 @@ void shmem_barrier__print_info(const char *shmem_key) {
 
             /* Append line to buffer */
             snprintf(line, MAX_LINE_LEN,
-                    "  | %12d | %12d | %12d | %12d |",
+                    "  | %12d | %12u | %12u | %12u |",
                     bid, barrier->participants, barrier->count, barrier->ntimes);
             printbuffer_append(&buffer, line);
         }
