@@ -945,18 +945,18 @@ endif
 clean-local: clean-rpm clean-deb clean-doc clean-coverage
 
 install-data-hook:
-	chmod +x $(mpiompexamplesdir)/run.sh
-	chmod +x $(mpiompomptexamplesdir)/run.sh
-	chmod +x $(mpiompssexamplesdir)/run.sh
-	chmod +x $(omptexamplesdir)/run.sh
-	chmod +x $(statsexamplesdir)/run.sh
-	chmod +x $(talpexamplesdir)/run.sh
-	chmod +x $(regionsexamplesdir)/run.sh
-	chmod +x $(userscriptsdir)/lewi_omp.sh
-	chmod +x $(userscriptsdir)/lewi_omp_trace.sh
-	chmod +x $(userscriptsdir)/lewi_ompss.sh
-	chmod +x $(userscriptsdir)/lewi_ompss_trace.sh
-	chmod +x $(userscriptsdir)/talp.sh
+	chmod +x $(DESTDIR)$(mpiompexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(mpiompomptexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(mpiompssexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(omptexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(statsexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(talpexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(regionsexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(userscriptsdir)/lewi_omp.sh
+	chmod +x $(DESTDIR)$(userscriptsdir)/lewi_omp_trace.sh
+	chmod +x $(DESTDIR)$(userscriptsdir)/lewi_ompss.sh
+	chmod +x $(DESTDIR)$(userscriptsdir)/lewi_ompss_trace.sh
+	chmod +x $(DESTDIR)$(userscriptsdir)/talp.sh
 
 dist-hook:
 	if [ -x "$(GIT)" ]; \
