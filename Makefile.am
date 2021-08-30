@@ -806,12 +806,14 @@ clean-doc:
 #################################################################################
 ### scripts                                                                   ###
 #################################################################################
+if ENABLE_VIEWER_SCRIPTS
 python_PYTHON = scripts/viewer/dlb_wrapper.py \
 		scripts/viewer/progressmeter.py
 
 nodist_python_PYTHON = scripts/viewer/dlb_viewer.py
 
 nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage
+endif
 
 DEBIAN_EXTRA = scripts/debian/compat \
 	       scripts/debian/source/format \

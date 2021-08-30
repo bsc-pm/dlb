@@ -219,6 +219,16 @@ AS_IF([test "x$enable_coverage" = xyes], [
 ])
 AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$enable_coverage" = xyes])
 
+### Python viewer scripts ###
+AC_MSG_CHECKING([whether to install DLB python viewer scripts (deprecated)])
+AC_ARG_ENABLE([viewer-scripts],
+    AS_HELP_STRING([--enable-viewer-scripts], [enable deprecated viewer scripts]),
+    [], dnl Implicit: enable_viewer_scripts=$enableval
+    [enable_viewer_scripts=no]
+)
+AC_MSG_RESULT([$enable_viewer_scripts])
+AM_CONDITIONAL([ENABLE_VIEWER_SCRIPTS], [test "x$enable_viewer_scripts" = xyes])
+
 
 AC_SUBST([PERFO_CFLAGS])
 AC_SUBST([PERFO_FFLAGS])
