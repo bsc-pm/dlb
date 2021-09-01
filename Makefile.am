@@ -849,7 +849,6 @@ EXTRA_DIST += \
 	scripts/bets \
 	scripts/dlb.spec \
 	scripts/pygen.py \
-	scripts/pygen.py3 \
 	scripts/viewer/dlb_cpu_usage.in \
 	scripts/viewer/dlb_viewer.py.in \
 	$(DEBIAN_EXTRA) \
