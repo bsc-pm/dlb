@@ -84,11 +84,7 @@ nodist_include_HEADERS = src/LB_MPI/MPI_interface.h \
 #********************************************************************************
 # Built Sources
 #********************************************************************************
-if PYTHON3
-MPI_GENERATOR = $(PYTHON) $(top_srcdir)/scripts/pygen.py3
-else
 MPI_GENERATOR = $(PYTHON) $(top_srcdir)/scripts/pygen.py
-endif
 MPICALLS_DB = $(top_srcdir)/src/LB_MPI/mpicalls.json
 EXTRA_DIST    += src/LB_MPI/mpicalls.json
 

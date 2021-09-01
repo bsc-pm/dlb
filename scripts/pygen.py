@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import sys
 import getopt
@@ -94,7 +94,7 @@ def enrich(mpi_calls):
                 try:
                     c_args.append(last_word.search(arg).group(1))
                 except AttributeError:
-                    print 'Error parsing function ' + func['name']
+                    print('Error parsing function ' + func['name'])
                     raise
         func['c_args'] = ', '.join(c_args)
         # Fortran: Parse arg list: "MPI_Fint *comm, MPI_Fint *ierror" -> "comm, ierror"
@@ -104,7 +104,7 @@ def enrich(mpi_calls):
                 try:
                     f_args.append(last_word.search(arg).group(1))
                 except AttributeError:
-                    print 'Error parsing function ' + func['name']
+                    print('Error parsing function ' + func['name'])
                     raise
         func['f_args'] = ', '.join(f_args)
 
@@ -136,11 +136,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv[1:],'hi:o:j:',['ifile=','ofile=','json='])
     except getopt.GetoptError:
-        print argv[0], ' -i <inputfile> -o <outputfile> -j <jsonfile>'
+        print(argv[0] + ' -i <inputfile> -o <outputfile> -j <jsonfile>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print argv[0], ' -i <inputfile> -o <outputfile> -j <jsonfile>'
+            print(argv[0] + ' -i <inputfile> -o <outputfile> -j <jsonfile>')
             sys.exit()
         elif opt in ('-i', '--ifile'):
             inputfile = arg
@@ -150,7 +150,7 @@ def main(argv):
             jsonfile = arg
 
     if inputfile == '' or outputfile == '' or jsonfile == '':
-        print argv[0], ' -i <inputfile> -o <outputfile> -j <jsonfile>'
+        print(argv[0] + ' -i <inputfile> -o <outputfile> -j <jsonfile>')
         sys.exit()
 
     # Read JSON file
