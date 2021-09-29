@@ -26,6 +26,7 @@
 #include "apis/dlb_errors.h"
 
 #include <unistd.h>
+#include <string.h>
 #include <assert.h>
 
 /* Notes:

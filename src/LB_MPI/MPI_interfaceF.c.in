@@ -23,7 +23,7 @@
 
 #ifdef MPI_LIB
 
-#include "LB_MPI/MPI_interface.h"
+#include "LB_MPI/MPI_interfaceF.h"
 
 #include "LB_MPI/process_MPI.h"
 #include "LB_MPI/MPI_calls_coded.h"

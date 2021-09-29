@@ -28,6 +28,7 @@
 #include "support/mask_utils.h"
 
 #include <sched.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>

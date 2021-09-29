@@ -28,6 +28,7 @@
 #include "apis/dlb_sp.h"
 #include "support/mask_utils.h"
 
+#include <string.h>
 #include <assert.h>
 
 enum {NSUBPROCS = 4};

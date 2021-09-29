@@ -23,6 +23,7 @@
 
 #include "LB_core/spd.h"
 
+#include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
 

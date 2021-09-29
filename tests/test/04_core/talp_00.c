@@ -30,6 +30,7 @@
 #include "support/options.h"
 
 #include <sched.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <assert.h>

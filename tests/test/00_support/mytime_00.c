@@ -23,6 +23,7 @@
 
 #include "support/mytime.h"
 
+#include <string.h>
 #include <unistd.h>
 #include <assert.h>
 

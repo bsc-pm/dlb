@@ -29,6 +29,7 @@
 #include "support/mask_utils.h"
 
 #include <sched.h>
+#include <string.h>
 #include <assert.h>
 
 // PreInit tests of two applications overlapping resources

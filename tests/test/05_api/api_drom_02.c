@@ -27,6 +27,7 @@
 #include <apis/dlb_drom.h>
 
 #include <sched.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
