@@ -1,0 +1,5 @@
+option('mpi', type : 'feature', value : 'disabled',
+  description : 'Build additional libraries with MPI support')
+option('hwloc', type : 'feature', value : 'auto',
+  description : 'Build libraries with HWLOC support')
+
