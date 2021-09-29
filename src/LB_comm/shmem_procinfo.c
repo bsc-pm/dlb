@@ -170,11 +170,12 @@ static pinfo_t* get_process(pid_t pid) {
 
 /* This function may be called from shmem_init to cleanup pid */
 static void cleanup_shmem(void *shdata_ptr, int pid) {
+    bool shmem_empty = true;
     shdata_t *shared_data = shdata_ptr;
     int p;
     for (p = 0; p < max_processes; p++) {
-        if (shdata->process_info[p].pid == pid) {
-            pinfo_t *process = &shared_data->process_info[p];
+        pinfo_t *process = &shared_data->process_info[p];
+        if (process->pid == pid) {
             if (process->dirty) {
                 CPU_OR(&shared_data->free_mask, &shared_data->free_mask,
                         &process->future_process_mask);
@@ -183,7 +184,14 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
                         &process->current_process_mask);
             }
             *process = (const pinfo_t){0};
+        } else if (process->pid > 0) {
+            shmem_empty = false;
         }
+    }
+
+    /* If there are no registered processes, make sure shmem is reset */
+    if (shmem_empty) {
+        memset(shared_data, 0, shmem_procinfo__size());
     }
 }
 
