@@ -195,8 +195,7 @@ static void open_shmem(const char *shmem_key) {
             max_cpus = mu_get_system_size();
             max_processes = max_cpus;
 
-            shm_handler = shmem_init((void**)&shdata,
-                    sizeof(shdata_t) + sizeof(pinfo_t)*max_processes,
+            shm_handler = shmem_init((void**)&shdata, shmem_procinfo__size(),
                     shmem_name, shmem_key, SHMEM_PROCINFO_VERSION, cleanup_shmem);
             subprocesses_attached = 1;
         } else {
@@ -1030,10 +1029,10 @@ void shmem_procinfo__print_info(const char *shmem_key) {
     }
 
     /* Make a full copy of the shared memory */
-    shdata_t *shdata_copy = malloc(sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
+    shdata_t *shdata_copy = malloc(shmem_procinfo__size());
     shmem_lock(shm_handler);
     {
-        memcpy(shdata_copy, shdata, sizeof(shdata_t) + sizeof(pinfo_t)*max_processes);
+        memcpy(shdata_copy, shdata, shmem_procinfo__size());
     }
     shmem_unlock(shm_handler);
 
