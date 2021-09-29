@@ -258,13 +258,19 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
             for (p = 0; p < max_processes; p++) {
                 if (shdata->process_info[p].pid == NOBODY) {
                     process = &shdata->process_info[p];
+                    break;
                 } else if (shdata->process_info[p].pid == pid) {
                     /* This process is already registered */
                     error = DLB_ERR_INIT;
                     break;
                 }
             }
-            if (process && !error) {
+
+            if (p == max_processes) {
+                error = DLB_ERR_NOMEM;
+            }
+
+            if (process) {
                 *process = (const pinfo_t) {.pid = pid};
                 error = register_mask(process, process_mask);
                 if (error == DLB_SUCCESS) {
@@ -314,10 +320,9 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
     }
     shmem_unlock(shm_handler);
 
-    if (process == NULL) {
+    if (error == DLB_ERR_NOMEM) {
         verbose(VB_SHMEM,
             "Not enough space in the shared memory to register process %d", pid);
-        error = DLB_ERR_NOMEM;
     }
 
     if (error < DLB_SUCCESS) {
