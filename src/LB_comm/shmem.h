@@ -53,16 +53,11 @@ typedef struct {
     shmem_sync_t    *shsync;
 } shmem_handler_t;
 
-typedef enum ShmemOption {
-    SHMEM_NODELETE,
-    SHMEM_DELETE
-} shmem_option_t;
-
 enum { SHMEM_VERSION_IGNORE = 0 };
 
 shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
         const char *shmem_key, unsigned int shmem_version, void (*cleanup_fn)(void*,int));
-void shmem_finalize(shmem_handler_t *handler, shmem_option_t shmem_delete);
+void shmem_finalize(shmem_handler_t *handler, bool (*is_empty_fn)(void));
 void shmem_lock(shmem_handler_t *handler);
 void shmem_unlock(shmem_handler_t *handler);
 void shmem_lock_maintenance( shmem_handler_t* handler );

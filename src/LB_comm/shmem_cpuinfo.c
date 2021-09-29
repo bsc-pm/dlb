@@ -274,11 +274,11 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_
 /*  Finalize / Deregister                                                        */
 /*********************************************************************************/
 
-static void close_shmem(bool shmem_empty) {
+static void close_shmem(void) {
     pthread_mutex_lock(&mutex);
     {
         if (--subprocesses_attached == 0) {
-            shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
+            shmem_finalize(shm_handler, is_shmem_empty);
             shm_handler = NULL;
             shdata = NULL;
         }
@@ -337,19 +337,16 @@ int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key) {
 
     //DLB_INSTR( int idle_count = 0; )
 
-    bool shmem_empty;
-
     // Lock the shmem to deregister CPUs
     shmem_lock(shm_handler);
     {
         deregister_process(pid);
-        shmem_empty = is_shmem_empty();
         //DLB_INSTR( if (is_idle(cpuid)) idle_count++; )
     }
     shmem_unlock(shm_handler);
 
     // Shared memory destruction
-    close_shmem(shmem_empty);
+    close_shmem();
 
     //add_event(IDLE_CPUS_EVENT, idle_count);
 
@@ -359,14 +356,8 @@ int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key) {
 int shmem_cpuinfo_ext__finalize(void) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
-    bool shmem_empty;
-    shmem_lock(shm_handler);
-    {
-        shmem_empty = is_shmem_empty();
-    }
-    shmem_unlock(shm_handler);
-
-    close_shmem(shmem_empty);
+    // Shared memory destruction
+    close_shmem();
 
     return DLB_SUCCESS;
 }

@@ -42,8 +42,8 @@ int main(int argc, char **argv) {
     /* This should not be reached, but it's here to ensure that the test fails
      * due to the shmem_init abort, and not due to the unfinished shmem destructor
      */
-    shmem_finalize(handler1, SHMEM_DELETE);
-    shmem_finalize(handler2, SHMEM_DELETE);
+    shmem_finalize(handler1, NULL);
+    shmem_finalize(handler2, NULL);
 
     return 0;
 }

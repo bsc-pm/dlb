@@ -164,7 +164,7 @@ void shmem_barrier__finalize(void) {
     }
     shmem_unlock_maintenance(shm_handler);
 
-    shmem_finalize(shm_handler, SHMEM_DELETE);
+    shmem_finalize(shm_handler, NULL /* do not check if empty */);
     shm_handler = NULL;
 }
 
@@ -175,7 +175,7 @@ int shmem_barrier_ext__finalize(void) {
     }
 
     // Shared memory destruction
-    shmem_finalize(shm_handler, SHMEM_DELETE);
+    shmem_finalize(shm_handler, NULL /* do not check if empty */);
     shm_handler = NULL;
     shdata = NULL;
 

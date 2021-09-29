@@ -42,6 +42,10 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
     __sync_fetch_and_sub(&shared_data->attached_nprocs, 1);
 }
 
+static bool is_shmem_empty(void) {
+    return shdata && shdata->attached_nprocs == 0;
+}
+
 void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key) {
     verbose(VB_SHMEM, "LoadCommonConfig");
     defaultCPUS=defCPUS;
@@ -64,8 +68,8 @@ void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key) {
 
 void finalize_comm() {
     if (shm_handler) {
-        bool shmem_empty = __sync_fetch_and_sub(&shdata->attached_nprocs, 1) == 1;
-        shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
+        __sync_fetch_and_sub(&shdata->attached_nprocs, 1);
+        shmem_finalize(shm_handler, is_shmem_empty);
     }
 }
 

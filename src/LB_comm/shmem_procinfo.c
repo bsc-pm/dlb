@@ -112,7 +112,7 @@ static int subprocesses_attached = 0;
 static pinfo_t *my_pinfo = NULL;
 
 static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen);
-static void close_shmem(bool shmem_empty);
+static void close_shmem(void);
 
 static pid_t get_parent_pid(pid_t pid) {
     pid_t parent_pid = 0;
@@ -193,6 +193,16 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
     if (shmem_empty) {
         memset(shared_data, 0, shmem_procinfo__size());
     }
+}
+
+static bool is_shmem_empty(void) {
+    int p;
+    for (p = 0; p < max_processes; p++) {
+        if (shdata->process_info[p].pid != NOBODY) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static void open_shmem(const char *shmem_key) {
@@ -328,15 +338,7 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
     if (error < DLB_SUCCESS) {
         // The shared memory contents are untouched, but the counter needs to
         // be decreased, and the shared memory deleted if needed
-        bool shmem_empty = true;
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid != NOBODY) {
-                shmem_empty = false;
-                break;
-            }
-        }
-        close_shmem(shmem_empty);
+        close_shmem();
     }
 
     return error;
@@ -466,11 +468,11 @@ static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_st
     return DLB_SUCCESS;
 }
 
-static void close_shmem(bool shmem_empty) {
+static void close_shmem(void) {
     pthread_mutex_lock(&mutex);
     {
         if (--subprocesses_attached == 0) {
-            shmem_finalize(shm_handler, shmem_empty ? SHMEM_DELETE : SHMEM_NODELETE);
+            shmem_finalize(shm_handler, is_shmem_empty);
             shm_handler = NULL;
             shdata = NULL;
         }
@@ -480,7 +482,6 @@ static void close_shmem(bool shmem_empty) {
 
 int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_key) {
     int error = DLB_SUCCESS;
-    bool shmem_empty = true;
     bool shmem_reopened = false;
 
     if (shm_handler == NULL) {
@@ -516,21 +517,12 @@ int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_ke
             // Clear local pointer
             my_pinfo = NULL;
         }
-
-        // Check if shmem is empty
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid != NOBODY) {
-                shmem_empty = false;
-                break;
-            }
-        }
     }
     shmem_unlock(shm_handler);
 
     // Close shared memory only if pid was succesfully removed or if shmem was reopened
     if (process || shmem_reopened) {
-        close_shmem(shmem_empty);
+        close_shmem();
     }
 
     return error;
@@ -542,22 +534,8 @@ int shmem_procinfo_ext__finalize(void) {
         return DLB_ERR_NOSHMEM;
     }
 
-    // Check if shmem is empty
-    bool shmem_empty = true;
-    shmem_lock(shm_handler);
-    {
-        int p;
-        for (p = 0; p < max_processes; p++) {
-            if (shdata->process_info[p].pid != NOBODY) {
-                shmem_empty = false;
-                break;
-            }
-        }
-    }
-    shmem_unlock(shm_handler);
-
     // Shared memory destruction
-    close_shmem(shmem_empty);
+    close_shmem();
 
     return DLB_SUCCESS;
 }

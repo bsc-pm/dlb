@@ -62,8 +62,8 @@ int main(int argc, char **argv) {
     assert( &shdata1 != &shdata2 );
     assert( shdata1->foo != shdata2->foo );
 
-    shmem_finalize(handler1, SHMEM_DELETE);
-    shmem_finalize(handler2, SHMEM_DELETE);
+    shmem_finalize(handler1, NULL);
+    shmem_finalize(handler2, NULL);
 
     return 0;
 }

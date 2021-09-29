@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 
                 // Finalize both shared memories
                 shmem_barrier__finalize();
-                shmem_finalize(handler, SHMEM_DELETE);
+                shmem_finalize(handler, NULL);
 
                 // We need to call _exit so that childs don't call assert_shmem destructors,
                 // but that prevents gcov reports, so we'll call it if defined
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
 
         // Master process finalizes everything
         assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
-        shmem_finalize(handler, SHMEM_DELETE);
+        shmem_finalize(handler, NULL);
     }
 
     /* Test barrier with N processes where 1 of them detaches from the barrier */
@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
 
                 // Finalize both shared memories
                 shmem_barrier__finalize();
-                shmem_finalize(handler, SHMEM_DELETE);
+                shmem_finalize(handler, NULL);
 
                 // We need to call _exit so that childs don't call assert_shmem destructors,
                 // but that prevents gcov reports, so we'll call it if defined
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
 
         // Master process finalizes everything
         assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
-        shmem_finalize(handler, SHMEM_DELETE);
+        shmem_finalize(handler, NULL);
     }
 
     return EXIT_SUCCESS;

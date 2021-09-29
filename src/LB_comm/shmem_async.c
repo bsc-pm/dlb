@@ -270,7 +270,7 @@ int shmem_async_finalize(pid_t pid) {
         pthread_mutex_lock(&mutex);
         {
             if (--subprocesses_attached == 0) {
-                shmem_finalize(shm_handler, SHMEM_DELETE);
+                shmem_finalize(shm_handler, NULL /* do not check if empty */);
                 shm_handler = NULL;
                 shdata = NULL;
             }

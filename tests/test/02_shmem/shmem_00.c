@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
             }
             pthread_barrier_wait(&shdata->barrier);                             // Barrier 11
 
-            shmem_finalize(handler, SHMEM_DELETE);
+            shmem_finalize(handler, NULL);
 
             // We need to call _exit so that children don't call assert_shmem destructors,
             // but that prevents gcov reports, so we'll call it if defined
@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 
     // Finalize everything
     assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
-    shmem_finalize(handler, SHMEM_DELETE);
+    shmem_finalize(handler, NULL);
 
     // Wait for all child processes
     int wstatus;

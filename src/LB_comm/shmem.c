@@ -193,7 +193,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
     return handler;
 }
 
-void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete) {
+void shmem_finalize(shmem_handler_t* handler, bool (*is_empty_fn)(void)) {
 #ifdef IS_BGQ_MACHINE
     // BG/Q have some problems deallocating shmem
     // It will be cleaned after the job completion anyway
@@ -201,11 +201,13 @@ void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete) {
 #endif
 
     shmem_lock(handler);
-    bool last_one = shmem_consistency_remove_pid(handler->shsync->pidlist, getpid());
+    bool is_empty = is_empty_fn ? is_empty_fn() : true;
+    bool is_last_one = shmem_consistency_remove_pid(handler->shsync->pidlist, getpid());
+    bool delete_shmem = is_empty && is_last_one;
     shmem_unlock(handler);
 
     /* Only the last process destroys the pthread_mutex */
-    if (last_one && shmem_delete == SHMEM_DELETE) {
+    if (delete_shmem) {
         int error = pthread_spin_destroy(&handler->shsync->shmem_lock);
         fatal_cond(error, "pthread_mutex_destroy error: %s", strerror(error));
     }
@@ -216,7 +218,7 @@ void shmem_finalize(shmem_handler_t* handler, shmem_option_t shmem_delete) {
     }
 
     /* Only the last process unlinks shmem */
-    if (last_one && shmem_delete == SHMEM_DELETE) {
+    if (delete_shmem) {
         verbose(VB_SHMEM, "Removing shared memory %s", handler->shm_filename);
         if (shm_unlink(handler->shm_filename) != 0 && errno != ENOENT) {
             fatal("shm_unlink error: %s", strerror(errno));
