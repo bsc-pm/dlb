@@ -60,7 +60,7 @@ typedef struct {
     cpu_state_t     state;
     stats_state_t   stats_state;
     int64_t         acc_time[_NUM_STATS];   // Accumulated time for each state
-    struct          timespec last_update;
+    struct timespec last_update;
     queue_pids_t    requests;
 } cpuinfo_t;
 
@@ -81,6 +81,7 @@ static bool cpu_is_public_post_mortem = false;
 static const char *shmem_name = "cpuinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
+static bool cpu_stats_enabled = false;
 
 static inline bool is_idle(int cpu) __attribute__((unused));
 static inline bool is_borrowed(pid_t pid, int cpu) __attribute__((unused));
@@ -218,6 +219,11 @@ int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_m
     // Update post_mortem preference
     if (thread_spd && thread_spd->options.debug_opts & DBG_LPOSTMORTEM) {
         cpu_is_public_post_mortem = true;
+    }
+
+    // Check whether cpu stats are measured
+    if (thread_spd && thread_spd->options.talp) {
+        cpu_stats_enabled = true;
     }
 
     // Shared memory creation
@@ -1673,21 +1679,23 @@ static inline bool is_shmem_empty(void) {
 }
 
 static void update_cpu_stats(int cpu, stats_state_t new_state) {
-    // skip update if old_state == new_state
-    if (shdata->node_info[cpu].stats_state == new_state) return;
+    if (cpu_stats_enabled) {
+        // skip update if old_state == new_state
+        if (shdata->node_info[cpu].stats_state == new_state) return;
 
-    struct timespec now;
-    int64_t elapsed;
+        struct timespec now;
+        int64_t elapsed;
 
-    // Compute elapsed since last update
-    get_time(&now);
-    elapsed = timespec_diff(&shdata->node_info[cpu].last_update, &now);
+        // Compute elapsed since last update
+        get_time(&now);
+        elapsed = timespec_diff(&shdata->node_info[cpu].last_update, &now);
 
-    // Update fields
-    stats_state_t old_state = shdata->node_info[cpu].stats_state;
-    shdata->node_info[cpu].acc_time[old_state] += elapsed;
-    shdata->node_info[cpu].stats_state = new_state;
-    shdata->node_info[cpu].last_update = now;
+        // Update fields
+        stats_state_t old_state = shdata->node_info[cpu].stats_state;
+        shdata->node_info[cpu].acc_time[old_state] += elapsed;
+        shdata->node_info[cpu].stats_state = new_state;
+        shdata->node_info[cpu].last_update = now;
+    }
 }
 
 static float getcpustate(int cpu, stats_state_t state, shdata_t *shared_data) {
