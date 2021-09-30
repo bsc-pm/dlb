@@ -70,7 +70,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
             "Please run: dlb_run <application>");
 
     // Initialize the rest of the subprocess descriptor
-    pm_init(&spd->pm);
+    pm_init(&spd->pm, spd->options.talp);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
     if (mask) {
         // Preferred case, mask is provided by the user
@@ -206,7 +206,7 @@ int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 
     // Initialize subprocess descriptor
     spd->lb_policy = POLICY_NONE;
-    pm_init(&spd->pm);
+    pm_init(&spd->pm, false /* talp */);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
     spd->id = spd->options.preinit_pid;
     memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));

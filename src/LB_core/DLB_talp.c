@@ -241,7 +241,7 @@ static void talp_update_monitor(dlb_monitor_t *monitor) {
 /*********************************************************************************/
 
 void talp_cpu_enable(int cpuid) {
-    if (unlikely(thread_spd == NULL)) return;
+    ensure(thread_spd, "%s thread_spd is NULL", __func__);
 
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
@@ -255,7 +255,7 @@ void talp_cpu_enable(int cpuid) {
 }
 
 void talp_cpuset_enable(const cpu_set_t *cpu_mask) {
-    if (unlikely(thread_spd == NULL)) return;
+    ensure(thread_spd, "%s thread_spd is NULL", __func__);
 
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
@@ -267,7 +267,7 @@ void talp_cpuset_enable(const cpu_set_t *cpu_mask) {
 }
 
 void talp_cpu_disable(int cpuid) {
-    if (unlikely(thread_spd == NULL)) return;
+    ensure(thread_spd, "%s thread_spd is NULL", __func__);
 
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
@@ -281,7 +281,7 @@ void talp_cpu_disable(int cpuid) {
 }
 
 void talp_cpuset_disable(const cpu_set_t *cpu_mask) {
-    if (unlikely(thread_spd == NULL)) return;
+    ensure(thread_spd, "%s thread_spd is NULL", __func__);
 
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
@@ -293,7 +293,7 @@ void talp_cpuset_disable(const cpu_set_t *cpu_mask) {
 }
 
 void talp_cpuset_set(const cpu_set_t *cpu_mask) {
-    if (unlikely(thread_spd == NULL)) return;
+    ensure(thread_spd, "%s thread_spd is NULL", __func__);
 
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {

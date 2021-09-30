@@ -41,9 +41,9 @@ static void packed_omp_set_num_threads(int nthreads, void *arg) {
 }
 
 
-void pm_init(pm_interface_t *pm) {
+void pm_init(pm_interface_t *pm, bool enable_talp) {
 
-    *pm = (pm_interface_t) {};
+    *pm = (pm_interface_t) {.talp_enabled = enable_talp};
 
     /* OpenMP */
     if (OMP_SYMBOLS_DEFINED) {
@@ -153,7 +153,9 @@ int update_threads(const pm_interface_t *pm, int threads) {
 }
 
 int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    talp_cpuset_set(cpu_set);
+    if (pm->talp_enabled) {
+        talp_cpuset_set(cpu_set);
+    }
     if (pm->dlb_callback_set_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -164,7 +166,9 @@ int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    talp_cpuset_set(cpu_set);
+    if (pm->talp_enabled) {
+        talp_cpuset_set(cpu_set);
+    }
     if (pm->dlb_callback_set_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -175,7 +179,9 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    talp_cpuset_enable(cpu_set);
+    if (pm->talp_enabled) {
+        talp_cpuset_enable(cpu_set);
+    }
     if (pm->dlb_callback_add_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -186,7 +192,9 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    talp_cpuset_enable(cpu_set);
+    if (pm->talp_enabled) {
+        talp_cpuset_enable(cpu_set);
+    }
     if (pm->dlb_callback_add_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -197,13 +205,21 @@ int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int enable_cpu(const pm_interface_t *pm, int cpuid) {
-    if (pm->dlb_callback_enable_cpu_ptr == NULL) {
+    /* fallback case */
+    if (pm->dlb_callback_enable_cpu_ptr == NULL
+            && pm->dlb_callback_add_active_mask_ptr) {
         cpu_set_t cpu_set;
         CPU_ZERO(&cpu_set);
         CPU_SET(cpuid, &cpu_set);
         return add_mask(pm, &cpu_set);
     }
-    talp_cpu_enable(cpuid);
+
+    if (pm->talp_enabled) {
+        talp_cpu_enable(cpuid);
+    }
+    if (pm->dlb_callback_enable_cpu_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
     instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
@@ -211,13 +227,21 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
 }
 
 int disable_cpu(const pm_interface_t *pm, int cpuid) {
-    if (pm->dlb_callback_disable_cpu_ptr == NULL) {
+    /* fallback case */
+    if (pm->dlb_callback_disable_cpu_ptr == NULL
+            && pm->dlb_callback_set_active_mask_ptr) {
         cpu_set_t cpu_set;
         sched_getaffinity(0, sizeof(cpu_set_t), &cpu_set);
         CPU_CLR(cpuid, &cpu_set);
         return set_mask(pm, &cpu_set);
     }
-    talp_cpu_disable(cpuid);
+
+    if (pm->talp_enabled) {
+        talp_cpu_disable(cpuid);
+    }
+    if (pm->dlb_callback_disable_cpu_ptr == NULL) {
+        return DLB_ERR_NOCBK;
+    }
     instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
