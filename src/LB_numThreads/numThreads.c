@@ -197,13 +197,13 @@ int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int enable_cpu(const pm_interface_t *pm, int cpuid) {
-    talp_cpu_enable(cpuid);
     if (pm->dlb_callback_enable_cpu_ptr == NULL) {
         cpu_set_t cpu_set;
         CPU_ZERO(&cpu_set);
         CPU_SET(cpuid, &cpu_set);
         return add_mask(pm, &cpu_set);
     }
+    talp_cpu_enable(cpuid);
     instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
@@ -211,13 +211,13 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
 }
 
 int disable_cpu(const pm_interface_t *pm, int cpuid) {
-    talp_cpu_disable(cpuid);
     if (pm->dlb_callback_disable_cpu_ptr == NULL) {
         cpu_set_t cpu_set;
         sched_getaffinity(0, sizeof(cpu_set_t), &cpu_set);
         CPU_CLR(cpuid, &cpu_set);
         return set_mask(pm, &cpu_set);
     }
+    talp_cpu_disable(cpuid);
     instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
