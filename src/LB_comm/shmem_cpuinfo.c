@@ -31,6 +31,7 @@
 #include "support/mask_utils.h"
 #include "support/queues.h"
 #include "support/small_array.h"
+#include "support/atomic.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -64,11 +65,11 @@ typedef struct {
 } cpuinfo_t;
 
 typedef struct {
-    struct              timespec initial_time;
-    int64_t             timestamp_cpu_lent;
-    bool                queues_enabled;
-    queue_proc_reqs_t   proc_requests;
-    cpuinfo_t           node_info[0];
+    struct timespec         initial_time;
+    atomic_int_least64_t    timestamp_cpu_lent;
+    bool                    queues_enabled;
+    queue_proc_reqs_t       proc_requests;
+    cpuinfo_t               node_info[0];
 } shdata_t;
 
 enum { SHMEM_CPUINFO_VERSION = 5 };
@@ -113,6 +114,10 @@ static void initialize_output_array(pid_t *array) {
     for (i=0; i<node_size; ++i) {
         array[i] = -1;
     }
+}
+
+static void update_shmem_timestamp(void) {
+    DLB_ATOMIC_ST_REL(&shdata->timestamp_cpu_lent, get_time_in_ns());
 }
 
 /*********************************************************************************/
@@ -300,7 +305,6 @@ static void deregister_process(pid_t pid) {
             }
             if (cpu_is_public_post_mortem) {
                 cpuinfo->state = CPU_LENT;
-                shdata->timestamp_cpu_lent = get_time_in_ns();
             } else {
                 cpuinfo->state = CPU_DISABLED;
             }
@@ -345,6 +349,8 @@ int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key) {
     }
     shmem_unlock(shm_handler);
 
+    update_shmem_timestamp();
+
     // Shared memory destruction
     close_shmem();
 
@@ -371,6 +377,9 @@ int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
         deregister_process(pid);
     }
     shmem_unlock(shm_handler);
+
+    update_shmem_timestamp();
+
     return error;
 }
 
@@ -409,8 +418,6 @@ static void lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     } else {
         *new_guest = -1;
     }
-
-    shdata->timestamp_cpu_lent = get_time_in_ns();
 }
 
 int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
@@ -436,6 +443,8 @@ int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
         //}
     }
     shmem_unlock(shm_handler);
+
+    update_shmem_timestamp();
 
     //DLB_DEBUG( int size = CPU_COUNT(&freed_cpus); )
     //DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
@@ -475,6 +484,8 @@ int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_gue
         }
     }
     shmem_unlock(shm_handler);
+
+    update_shmem_timestamp();
 
     //DLB_DEBUG( int size = CPU_COUNT(&freed_cpus); )
     //DLB_DEBUG( int post_size = CPU_COUNT(&idle_cpus); )
@@ -768,7 +779,7 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus
 
     /* Return immediately if there is nothing left to acquire */
     /* 1) If the timestamp of the last unsuccessful borrow is newer than the last CPU lent */
-    if (last_borrow && *last_borrow > shdata->timestamp_cpu_lent) {
+    if (last_borrow && *last_borrow > DLB_ATOMIC_LD_ACQ(&shdata->timestamp_cpu_lent)) {
         /* 2) Unless there's an owned CPUs not guested, in that case we will acquire anyway */
         bool all_owned_cpus_are_guested = true;
         for (i=0; i<node_size; ++i) {
@@ -959,7 +970,7 @@ int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
     }
 
     /* Return immediately if the timestamp of the last unsuccessful borrow is newer than the last CPU lent */
-    if (last_borrow && *last_borrow > shdata->timestamp_cpu_lent) {
+    if (last_borrow && *last_borrow > DLB_ATOMIC_LD_ACQ(&shdata->timestamp_cpu_lent)) {
         return DLB_NOUPDT;
     }
 
@@ -1186,6 +1197,9 @@ int shmem_cpuinfo__deregister(pid_t pid, pid_t new_guests[], pid_t victims[]) {
         }
     }
     shmem_unlock(shm_handler);
+
+    update_shmem_timestamp();
+
     return error;
 }
 
@@ -1223,6 +1237,9 @@ int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]) {
         }
     }
     shmem_unlock(shm_handler);
+
+    update_shmem_timestamp();
+
     return error;
 }
 
@@ -1264,6 +1281,9 @@ int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max,
         }
     }
     shmem_unlock(shm_handler);
+
+    update_shmem_timestamp();
+
     return error;
 }
 
