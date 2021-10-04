@@ -28,7 +28,6 @@
 
 #include <assert.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <sys/wait.h>
 
 /* Create two shmems with different key */
@@ -36,7 +35,6 @@
 enum { SHMEM_VERSION = 42 };
 
 struct data {
-    /* pthread_barrier_t barrier; */
     int foo;
 };
 
@@ -52,7 +50,8 @@ int main(int argc, char **argv) {
     // Try to create another shmem with the same name, it maps another region but same content
     handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo", SHMEM_KEY,
             SHMEM_VERSION, NULL);
-    assert( &shdata1 != &shdata2 );
+    assert( handler2 != NULL && handler1 != handler2 );
+    assert( shdata2  != NULL &&  shdata1 != shdata2 );
     assert( shdata1->foo == shdata2->foo );
 
     // Create a shmem with custom key

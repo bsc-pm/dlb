@@ -48,7 +48,8 @@ static void add_to_environ(const char *name, const char *value, char ***next_env
         /* Allocate new variable */
         // realloc (num_existing_vars + 1(new_var) + 1(NULL))
         char **new_environ = realloc(*next_environ, (size + 2)*sizeof(char*));
-        if (new_environ) *next_environ = new_environ;
+        fatal_cond(!new_environ, "realloc failed");
+        *next_environ = new_environ;
         // set last position of next_environ
         new_environ[size+1] = NULL;
         // pointer where new variable will be
@@ -65,7 +66,8 @@ static void add_to_environ(const char *name, const char *value, char ***next_env
             const size_t origlen = strlen(*ep);
             const size_t newlen = origlen + 1 + strlen(value) +1;
             char *new_np = realloc(*ep, newlen);
-            if (new_np) *ep = new_np;
+            fatal_cond(!new_np, "realloc failed");
+            *ep = new_np;
             sprintf(new_np+origlen, " %s", value);
             return;
         }

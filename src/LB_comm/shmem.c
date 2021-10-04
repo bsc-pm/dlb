@@ -107,7 +107,6 @@ void shmem_consistency_check_version(unsigned int creator_version, unsigned int 
 
 shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
         const char *shmem_key, unsigned int shmem_version, void (*cleanup_fn)(void*,int)) {
-    int error;
     pid_t pid = getpid();
     verbose(VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", pid, shmem_module);
 
@@ -155,7 +154,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         verbose(VB_SHMEM, "Initializing Shared Memory (%s)", shmem_module);
 
         /* Init pthread spinlock */
-        error = pthread_spin_init(&handler->shsync->shmem_lock, PTHREAD_PROCESS_SHARED);
+        int error = pthread_spin_init(&handler->shsync->shmem_lock, PTHREAD_PROCESS_SHARED);
         fatal_cond(error, "pthread_spin_init error: %s", strerror(error));
 
         /* Set Shared Memory version */

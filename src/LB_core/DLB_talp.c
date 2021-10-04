@@ -523,21 +523,15 @@ dlb_monitor_t* monitoring_region_register(const char* name){
 }
 
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name) {
-    /* Initialize opaque data */
-    monitor->_data = malloc(sizeof(monitor_data_t));
-    monitor_data_t *monitor_data = monitor->_data;
+    /* Initialize private monitor data */
+    monitor_data_t *monitor_data = malloc(sizeof(monitor_data_t));
+    *monitor_data = (const monitor_data_t) {.id = id};
 
-    /* Allocate and assign name */
-    monitor->name = strdup(name);
-
-    /* Assign private data */
-    monitor_data->id = id;
-    monitor_data->app_summary = NULL;
-    monitor_data->node_summary = NULL;
-
-    /* Initialize public data */
-    monitoring_region_reset(monitor);
-    monitor->num_resets = 0;
+    /* Initialize monitor */
+    *monitor = (const dlb_monitor_t) {
+            .name = strdup(name),
+            ._data = monitor_data,
+    };
 
     /* Register name in the instrumentation tool */
     instrument_register_event(MONITOR_REGION, monitor_data->id, name);

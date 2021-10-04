@@ -32,9 +32,12 @@
 
 #include <assert.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <stdbool.h>
 
 /* Test message queue */
 
+static pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Simple test: register two callbaks and check that each one is called */
 static int num_cb_called = 0;
@@ -65,7 +68,9 @@ static void cb2_enable_cpu(int cpuid, void *arg) {
 
     /* Simulate a DLB_Lend) -> find_new_guest -> notify_helper  */
     pid_t new_guest;
+    pthread_mutex_lock(&queue_mutex);
     queue_proc_reqs_get(queue, &new_guest, cpuid);
+    pthread_mutex_unlock(&queue_mutex);
     if (new_guest > 0) {
         assert( new_guest == pid2 );
         shmem_async_enable_cpu(new_guest, cpuid);
@@ -91,12 +96,20 @@ static void test_nested_callbacks(void) {
 
     /* Simulate a DLB_Lend (cpu 0) -> find_new_guest (same pid) -> notify_helper  */
     pid_t new_guest;
+    pthread_mutex_lock(&queue_mutex);
     queue_proc_reqs_get(&queue, &new_guest, 0);
+    pthread_mutex_unlock(&queue_mutex);
     assert( new_guest == pid2 );
     shmem_async_enable_cpu(pid2, 0);
 
     /* Wait for the queue to be empty */
-    while (queue_proc_reqs_size(&queue) != 0) { usleep(100); }
+    while (true) {
+        pthread_mutex_lock(&queue_mutex);
+        bool done = queue_proc_reqs_size(&queue) == 0;
+        pthread_mutex_unlock(&queue_mutex);
+        if (done) break;
+        else usleep(1000);
+    }
 
     /* Finalize shmem and helper */
     assert( shmem_async_finalize(pid2) == DLB_SUCCESS );

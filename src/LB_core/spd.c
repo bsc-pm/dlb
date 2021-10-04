@@ -125,7 +125,7 @@ const subprocess_descriptor_t** spd_get_spds(void) {
     const subprocess_descriptor_t **spds;
     pthread_mutex_lock(&mutex);
     {
-        spds = malloc(sizeof(subprocess_descriptor_t**) * (g_tree_nnodes(spd_tree)+1));
+        spds = malloc(sizeof(subprocess_descriptor_t *) * (g_tree_nnodes(spd_tree)+1));
         const subprocess_descriptor_t **p = spds;
         g_tree_foreach(spd_tree, tree_to_list, &p);
         *p = NULL;
