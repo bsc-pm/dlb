@@ -153,7 +153,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_VERBOSE",
         .arg_name       = "--verbose",
-        .default_value  = "",
+        .default_value  = "no",
         .description    = OFFSET"Select which verbose components will be printed. Multiple\n"
                           OFFSET"components may be selected.",
         .offset         = offsetof(options_t, verbose),

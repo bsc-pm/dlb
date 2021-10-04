@@ -24,6 +24,7 @@
 
 typedef enum VerboseOptions {
     VB_CLEAR    = 0,
+    VB_ALL      = 0xFFFF,
     VB_API      = 1 << 0,
     VB_MICROLB  = 1 << 1,
     VB_SHMEM    = 1 << 2,

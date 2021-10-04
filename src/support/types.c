@@ -71,17 +71,23 @@ int parse_int(const char *str, int *value) {
 
 /* verbose_opts_t */
 static const verbose_opts_t verbose_opts_values[] =
-    {VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS, VB_DROM, VB_ASYNC, VB_OMPT,
-    VB_AFFINITY, VB_BARRIER, VB_TALP};
+    {VB_CLEAR, VB_ALL, VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS,
+        VB_DROM, VB_ASYNC, VB_OMPT, VB_AFFINITY, VB_BARRIER, VB_TALP};
 static const char* const verbose_opts_choices[] =
-    {"api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom", "async", "ompt",
-    "affinity", "barrier", "talp"};
+    {"no", "all", "api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom",
+        "async", "ompt", "affinity", "barrier", "talp"};
 static const char verbose_opts_choices_str[] =
-    "api:microlb:shmem:mpi_api:mpi_intercept:stats:"LINE_BREAK
-    "drom:async:ompt:affinity:barrier:talp";
+    "no:all:api:microlb:shmem:mpi_api:mpi_intercept:"LINE_BREAK
+    "stats:drom:async:ompt:affinity:barrier:talp";
 enum { verbose_opts_nelems = sizeof(verbose_opts_values) / sizeof(verbose_opts_values[0]) };
 
 int parse_verbose_opts(const char *str, verbose_opts_t *value) {
+    /* particular case: '--verbose/--verbose=yes' enables all verbose options */
+    if (strcmp(str, "yes") == 0) {
+        *value = VB_ALL;
+        return DLB_SUCCESS;
+    }
+
     *value = VB_CLEAR;
     int i;
     for (i=0; i<verbose_opts_nelems; ++i) {
@@ -93,6 +99,14 @@ int parse_verbose_opts(const char *str, verbose_opts_t *value) {
 }
 
 const char* verbose_opts_tostr(verbose_opts_t value) {
+    /* particular cases */
+    if (value == VB_CLEAR) {
+        return "no";
+    }
+    if (value == VB_ALL) {
+        return "all";
+    }
+
     static char str[sizeof(verbose_opts_choices_str)] = "";
     char *p = str;
     int i;

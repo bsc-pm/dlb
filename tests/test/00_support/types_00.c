@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
     verbose_opts_t vb;
     parse_verbose_opts("", &vb);                    assert(vb==VB_CLEAR);
     parse_verbose_opts("null", &vb);                assert(vb==VB_CLEAR);
+    parse_verbose_opts("yes", &vb);                 assert(vb==VB_ALL);
     parse_verbose_opts("api", &vb);                 assert(vb&VB_API);
     parse_verbose_opts("api:shmem", &vb);           assert(vb&VB_API && vb&VB_SHMEM);
     parse_verbose_opts("api:microlb:shmem:mpi_api:mpi_intercept:stats:drom:async", &vb);
