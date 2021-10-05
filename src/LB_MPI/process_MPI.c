@@ -56,6 +56,18 @@ static mpi_set_t lewi_mpi_calls = MPISET_ALL;
 static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
 
 void before_init(void) {
+#if MPI_VERSION >= 3 && defined(MPI_LIBRARY_VERSION)
+    /* If MPI-3, compare the library version with the MPI detected at configure time */
+    char version[MPI_MAX_LIBRARY_VERSION_STRING];
+    int resultlen;
+    MPI_Get_library_version(version, &resultlen);
+    if (strcmp(version, MPI_LIBRARY_VERSION) != 0) {
+        warning("MPI library versions differ:\n"
+                " Configured with: %s\n"
+                " Executed with  : %s",
+                version, MPI_LIBRARY_VERSION);
+    }
+#endif
 }
 
 void after_init(void) {

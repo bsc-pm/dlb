@@ -7,20 +7,6 @@ project('DLB', 'c', 'fortran',
 
 cc = meson.get_compiler('c')
 
-### config.h
-
-conf_data = configuration_data()
-conf_data.set_quoted('VERSION', meson.project_version())
-conf_data.set_quoted('PACKAGE', meson.project_name())
-conf_data.set_quoted('PACKAGE_BUGREPORT', 'pm-tools@bsc.es')
-conf_data.set_quoted('DLB_BUILD_VERSION', 'meson')
-conf_data.set_quoted('DLB_CONFIGURE_ARGS', 'not supported')
-conf_data.set('HAVE_EMMINTRIN_H', cc.has_header('emmintrin.h'))
-conf_data.set('HAVE_EXECINFO_H', cc.has_header('execinfo.h'))
-conf_data.set('HAVE_IMMINTRIN_H', cc.has_header('immintrin.h'))
-conf_data.set('HAVE_STDATOMIC_H', cc.has_header('stdatomic.h'))
-config_h = configure_file( output : 'config.h', configuration : conf_data)
-
 
 ### Dependencies
 
@@ -271,6 +257,24 @@ if mpi_dep.found()
     gnu_symbol_visibility : 'hidden',
     install : true,
   )
+
+  check_mpi_library_version = '''
+    #include <mpi.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    int main(int argc, char *argv[])
+    {
+        char version[MPI_MAX_LIBRARY_VERSION_STRING];
+        int resultlen;
+        MPI_Get_library_version(version, &resultlen);
+        printf("%s", version);
+        return EXIT_SUCCESS;
+    }
+    '''
+  runresult = cc.run(check_mpi_library_version,
+    dependencies : mpi_dep,
+  )
+  mpi_library_version = runresult.stdout()
 endif
 
 
@@ -358,6 +362,24 @@ endforeach
 #################################################################################
 
 subdir('tests')
+
+
+#################################################################################
+### config.h                                                                  ###
+#################################################################################
+
+conf_data = configuration_data()
+conf_data.set_quoted('VERSION', meson.project_version())
+conf_data.set_quoted('PACKAGE', meson.project_name())
+conf_data.set_quoted('PACKAGE_BUGREPORT', 'pm-tools@bsc.es')
+conf_data.set_quoted('DLB_BUILD_VERSION', 'meson')
+conf_data.set_quoted('DLB_CONFIGURE_ARGS', 'not supported')
+conf_data.set('HAVE_EMMINTRIN_H', cc.has_header('emmintrin.h'))
+conf_data.set('HAVE_EXECINFO_H', cc.has_header('execinfo.h'))
+conf_data.set('HAVE_IMMINTRIN_H', cc.has_header('immintrin.h'))
+conf_data.set('HAVE_STDATOMIC_H', cc.has_header('stdatomic.h'))
+conf_data.set_quoted('MPI_LIBRARY_VERSION', mpi_library_version)
+config_h = configure_file( output : 'config.h', configuration : conf_data)
 
 
 #################################################################################
