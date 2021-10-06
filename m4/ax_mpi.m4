@@ -136,11 +136,14 @@ AC_DEFUN([AX_MPI],
                 #include <mpi.h>
                 #include <stdio.h>
                 #include <stdlib.h>
+                #include <string.h>
                 int main(int argc, char *argv[])
                 {
                     char version[MPI_MAX_LIBRARY_VERSION_STRING];
                     int resultlen;
                     MPI_Get_library_version(version, &resultlen);
+                    char *newline = strchr(version, '\n');
+                    if (newline) *newline = '\0';
                     printf("%s", version);
                     return EXIT_SUCCESS;
                 }
@@ -151,7 +154,7 @@ AC_DEFUN([AX_MPI],
         AC_MSG_CHECKING([for MPI library version])
         mpi_library_version=""
         AS_IF([$MPICC conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
-            mpi_library_version="\"$(./conftest)\""
+            mpi_library_version="$(./conftest)"
         ])
         rm -f conftest
         AC_MSG_RESULT([$mpi_library_version])
@@ -163,7 +166,7 @@ AC_DEFUN([AX_MPI],
     AC_SUBST([MPIEXEC_EXPORT_FLAG])
     AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != xno])
     AM_CONDITIONAL([MPI_TESTS], [test "x$enable_mpi_tests" != xno])
-    AC_DEFINE_UNQUOTED([MPI_LIBRARY_VERSION], [$mpi_library_version], [MPI Library version])
+    AC_DEFINE_UNQUOTED([MPI_LIBRARY_VERSION], ["$mpi_library_version"], [MPI Library version])
 ])
 
 # AX_CHECK_MPI_CPPFLAGS([MPICC], [FLAGS], [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])

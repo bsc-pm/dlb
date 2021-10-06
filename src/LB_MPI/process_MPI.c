@@ -61,11 +61,14 @@ void before_init(void) {
     char version[MPI_MAX_LIBRARY_VERSION_STRING];
     int resultlen;
     MPI_Get_library_version(version, &resultlen);
+    char *newline = strchr(version, '\n');
+    if (newline) *newline = '\0'; /* MPI_LIBRARY_VERSION only contains the first line */
     if (strcmp(version, MPI_LIBRARY_VERSION) != 0) {
+        if (newline) *newline = '\n'; /* put back the newline if printing */
         warning("MPI library versions differ:\n"
-                " Configured with: %s\n"
-                " Executed with  : %s",
-                version, MPI_LIBRARY_VERSION);
+                "  Configured with: %s\n"
+                "  Executed with  : %s",
+                MPI_LIBRARY_VERSION, version);
     }
 #endif
 }

@@ -267,6 +267,8 @@ if mpi_dep.found()
         char version[MPI_MAX_LIBRARY_VERSION_STRING];
         int resultlen;
         MPI_Get_library_version(version, &resultlen);
+        char *newline = strchr(version, '\n');
+        if (newline) *newline = '\0';
         printf("%s", version);
         return EXIT_SUCCESS;
     }
@@ -275,6 +277,8 @@ if mpi_dep.found()
     dependencies : mpi_dep,
   )
   mpi_library_version = runresult.stdout()
+else
+  mpi_library_version = ''
 endif
 
 
