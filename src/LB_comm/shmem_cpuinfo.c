@@ -250,6 +250,10 @@ int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_m
 
     //add_event(IDLE_CPUS_EVENT, idle_count);
 
+    if (error == DLB_ERR_PERM) {
+        warn_error(DLB_ERR_PERM);
+    }
+
     if (error != DLB_SUCCESS) {
         verbose(VB_SHMEM,
                 "Error during shmem_cpuinfo initialization, finalizing shared memory");
@@ -276,6 +280,10 @@ int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_
         error = register_process(pid, /* preinit_pid */ 0, mask, flags & DLB_STEAL_CPUS);
     }
     shmem_unlock(shm_handler);
+
+    if (error == DLB_ERR_PERM) {
+        warn_error(DLB_ERR_PERM);
+    }
 
     return error;
 }

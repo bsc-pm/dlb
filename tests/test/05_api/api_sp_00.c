@@ -24,10 +24,12 @@
 #include "unique_shmem.h"
 
 #include "apis/dlb_sp.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <assert.h>
 
 static dlb_handler_t handler;
@@ -105,6 +107,29 @@ int main( int argc, char **argv ) {
     assert( DLB_GetVariable_sp(handler, "--drom", value) == DLB_SUCCESS );
     assert( DLB_PrintVariables_sp(handler, 0) == DLB_SUCCESS );
 
+    assert( DLB_Finalize_sp(handler) == DLB_SUCCESS );
+
+    // Test DLB_Init with empty masks (to not get DLB_ERR_PERM) until shmem is full
+    strcat(options, " --drom");     /* enable DROM to force shmem_cpuinfo__init */
+    int i;
+    int shmem_capacity = mu_get_system_size();
+    dlb_handler_t *handlers = malloc(sizeof(dlb_handler_t) * shmem_capacity);
+    cpu_set_t empty_mask;
+    CPU_ZERO(&empty_mask);
+    for (i=0; i<shmem_capacity; ++i) {
+        handlers[i] = DLB_Init_sp(0, &empty_mask, options);
+        assert( handlers[i] != NULL );
+    }
+    assert( DLB_Init_sp(0, &empty_mask, options) == NULL );
+    for (i=0; i<shmem_capacity; ++i) {
+        assert( DLB_Finalize_sp(handlers[i]) == DLB_SUCCESS );
+    }
+    free(handlers);
+
+    // Test DLB_ERR_PERM
+    handler = DLB_Init_sp(0, &process_mask, options);
+    assert( handler != NULL );
+    assert( DLB_Init_sp(0, &process_mask, options) == NULL );
     assert( DLB_Finalize_sp(handler) == DLB_SUCCESS );
 
     return 0;

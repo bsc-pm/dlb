@@ -185,6 +185,7 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
 
 int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *process_mask,
         const char *shmem_key) {
+    int error = DLB_ERR_UNKNOWN;
     verbose(VB_ASYNC, "Creating helper thread");
 
     // Shared memory creation
@@ -236,13 +237,20 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *proce
                 helper->pid = pid;
                 memcpy(&helper->mask, process_mask, sizeof(cpu_set_t));
                 pthread_create(&helper->pth, NULL, thread_start, (void*)helper);
+
+                error = DLB_SUCCESS;
                 break;
             }
         }
     }
     shmem_unlock(shm_handler);
 
-    return helper ? DLB_SUCCESS : DLB_ERR_NOMEM;
+    if (helper == NULL) {
+        error = DLB_ERR_NOMEM;
+        warn_error(DLB_ERR_NOMEM);
+    }
+
+    return error;
 }
 
 int shmem_async_finalize(pid_t pid) {

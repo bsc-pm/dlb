@@ -23,7 +23,9 @@
 
 #include "support/debug.h"
 
+#include "apis/dlb_errors.h"
 #include "support/options.h"
+#include "support/mask_utils.h"
 #include "LB_comm/comm_lend_light.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_async.h"
@@ -287,6 +289,33 @@ void dlb_clean(void) {
         }
     }
     pthread_mutex_unlock(&dlb_clean_mutex);
+}
+
+/* Trigger warning on some errors, tipically common or complex errors during init */
+void warn_error(int error) {
+    switch(error) {
+        case DLB_ERR_NOMEM:
+            warning("DLB could not be initialized due to insufficient space in the"
+                    " shared memory. If you need to register a high amount of processes"
+                    " or believe that this is a bug, please contact us at " PACKAGE_BUGREPORT);
+            break;
+        case DLB_ERR_PERM:
+            if (thread_spd != NULL) {
+                warning("The process with CPU affinity mask %s failed to initialize DLB."
+                        " Please, check that each process initializing DLB has a"
+                        " non-overlapping set of CPUs.", mu_to_str(&thread_spd->process_mask));
+            } else {
+                warning("This process has failed to initialize DLB."
+                        " Please, check that each process initializing DLB has a"
+                        " non-overlapping set of CPUs.");
+            }
+            if (shmem_procinfo__exists() && thread_spd != NULL) {
+                warning("This is the list of current registered processes and their"
+                        " affinity mask:");
+                shmem_procinfo__print_info(thread_spd->options.shm_key);
+            }
+            break;
+    }
 }
 
 

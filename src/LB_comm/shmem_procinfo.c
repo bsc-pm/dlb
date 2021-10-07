@@ -330,9 +330,8 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
     }
     shmem_unlock(shm_handler);
 
-    if (error == DLB_ERR_NOMEM) {
-        verbose(VB_SHMEM,
-            "Not enough space in the shared memory to register process %d", pid);
+    if (error == DLB_ERR_NOMEM || error == DLB_ERR_PERM) {
+        warn_error(error);
     }
 
     if (error < DLB_SUCCESS) {
@@ -412,12 +411,10 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
     if (error == DLB_ERR_INIT) {
         verbose(VB_SHMEM, "Process %d already registered", pid);
     } else if (error == DLB_ERR_PERM) {
-        verbose(VB_SHMEM,
-                "Error trying to register CPU mask: %s", mu_to_str(mask));
+        warn_error(DLB_ERR_PERM);
     } else if (process == NULL) {
-        verbose(VB_SHMEM,
-            "Not enough space in the shared memory to register process %d", pid);
         error = DLB_ERR_NOMEM;
+        warn_error(DLB_ERR_NOMEM);
     }
 
     return error;
