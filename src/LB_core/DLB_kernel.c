@@ -613,8 +613,13 @@ int poll_drom(const subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_
 
         error = shmem_procinfo__polldrom(spd->id, new_cpus, mask);
         if (error == DLB_SUCCESS) {
-            shmem_cpuinfo__update_ownership(spd->id, mask);
-            spd->lb_funcs.update_ownership_info(spd, mask);
+            if (spd->options.lewi) {
+                /* If LeWI, resolve reclaimed CPUs */
+                spd->lb_funcs.update_ownership(spd, mask);
+            } else {
+                /* Otherwise, udate owner and guest data */
+                shmem_cpuinfo__update_ownership(spd->id, mask, NULL);
+            }
         }
         instrument_event(RUNTIME_EVENT, EVENT_POLLDROM, EVENT_END);
     }

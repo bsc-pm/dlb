@@ -91,7 +91,7 @@ int main( int argc, char **argv ) {
     }
 
     // Update cpuinfo with the new mask
-    shmem_cpuinfo__update_ownership(pid, &mask);
+    shmem_cpuinfo__update_ownership(pid, &mask, NULL);
 
     // Get new bindings
     assert( shmem_cpuinfo__get_thread_binding(pid, 1) == 1 );

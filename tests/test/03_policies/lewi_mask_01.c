@@ -103,7 +103,6 @@ int main( int argc, char **argv ) {
     assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu,
                 (dlb_callback_t)sp1_cb_disable_cpu, NULL) == DLB_SUCCESS);
     assert( lewi_mask_Init(&spd1) == DLB_SUCCESS );
-    assert( lewi_mask_UpdateOwnershipInfo(&spd1, &spd1.process_mask) == DLB_SUCCESS );
 
     // Subprocess 2 init
     spd2.id = 222;
@@ -119,7 +118,6 @@ int main( int argc, char **argv ) {
     assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu,
                 (dlb_callback_t)sp2_cb_disable_cpu, NULL) == DLB_SUCCESS );
     assert( lewi_mask_Init(&spd2) == DLB_SUCCESS );
-    assert( lewi_mask_UpdateOwnershipInfo(&spd2, &spd2.process_mask) == DLB_SUCCESS );
 
     // Get interaction mode
     assert( spd1.options.mode == spd2.options.mode );

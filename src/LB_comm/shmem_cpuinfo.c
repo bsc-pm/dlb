@@ -1304,9 +1304,17 @@ int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max,
 /* Update CPU ownership according to the new process mask.
  * To avoid collisions, we only release the ownership if we still own it
  */
-void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
-    shmem_lock(shm_handler);
+void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask,
+        pid_t new_guests[]) {
+
+    if (new_guests) {
+        initialize_output_array(new_guests);
+    }
+
     verbose(VB_SHMEM, "Updating ownership: %s", mu_to_str(process_mask));
+
+    shmem_lock(shm_handler);
+
     int cpuid;
     for (cpuid=0; cpuid<node_size; ++cpuid) {
         cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
@@ -1319,15 +1327,17 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
                     cpuinfo->guest = pid;
                 }
                 cpuinfo->state = CPU_BUSY;
+                if (new_guests) {
+                    new_guests[cpuid] = pid;
+                }
                 update_cpu_stats(cpuid, STATS_OWNED);
-
                 verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpuid);
             } else {
                 // The CPU was already owned, no update needed
             }
 
         } else {
-            // The CPU is now not mine
+            // The CPU should not be mine
             if (cpuinfo->owner == pid) {
                 // Previusly owned: Release CPU ownership
                 cpuinfo->owner = NOBODY;
@@ -1335,10 +1345,20 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask) {
                 if (cpuinfo->guest == pid ) {
                     cpuinfo->guest = NOBODY;
                 }
+                if (new_guests) {
+                    new_guests[cpuid] = 0;
+                }
                 update_cpu_stats(cpuid, STATS_IDLE);
                 verbose(VB_SHMEM, "Releasing ownership of CPU %d", cpuid);
             } else {
-                // The CPU was not mine, no update needed
+                if (cpuinfo->guest == pid
+                        && cpuinfo->state == CPU_BUSY) {
+                    // The CPU has been either stolen or reclaimed,
+                    // return it anyway
+                    pid_t local_new_guest;  /* storage if argument was not provided */
+                    pid_t *new_guest_ptr = new_guests ? &new_guests[cpuid] : &local_new_guest;
+                    return_cpu(pid, cpuid, new_guest_ptr);
+                }
             }
         }
     }

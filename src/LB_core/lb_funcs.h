@@ -66,8 +66,7 @@ typedef struct BalancePolicy {
     int (*return_cpu_mask)(const struct SubProcessDescriptor *spd, const cpu_set_t *mask);
     /* Misc */
     int (*check_cpu_availability)(const struct SubProcessDescriptor *spd, int cpuid);
-    int (*update_ownership_info)(const struct SubProcessDescriptor *spd,
-            const cpu_set_t *process_mask);
+    int (*update_ownership)(const struct SubProcessDescriptor *spd, const cpu_set_t *process_mask);
 } balance_policy_t;
 
 void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy);

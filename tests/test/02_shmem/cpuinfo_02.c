@@ -370,30 +370,38 @@ int main( int argc, char **argv ) {
 
         // Remove CPU 3 ownership from Process 2
         mu_parse_mask("2", &mask);
-        shmem_cpuinfo__update_ownership(p2_pid, &mask);
+        shmem_cpuinfo__update_ownership(p2_pid, &mask, new_guests);
+        assert( new_guests[3] == 0 );
+        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( shmem_cpuinfo__check_cpu_availability(p1_pid, 3) == DLB_ERR_PERM );
         assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 3) == DLB_ERR_PERM );
         // Recover
         mu_parse_mask("2-3", &mask);
-        shmem_cpuinfo__update_ownership(p2_pid, &mask);
+        shmem_cpuinfo__update_ownership(p2_pid, &mask, new_guests);
+        assert( new_guests[3] == p2_pid );
+        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( shmem_cpuinfo__check_cpu_availability(p1_pid, 3) == DLB_ERR_PERM );
         assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 3) == DLB_SUCCESS );
 
         // Remove CPU 3 ownership from Process 2 while in LENT state
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] <= 0 );
-        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guests[0], &victims[0])
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guests[3]) == DLB_SUCCESS );
+        assert( new_guests[3] <= 0 );
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guests[3], &victims[3])
                 == DLB_SUCCESS );
-        assert( new_guests[0] == p1_pid );
-        assert( victims[0] == -1 );
+        assert( new_guests[3] == p1_pid );
+        assert( victims[3] == -1 );
         mu_parse_mask("2", &mask);
-        shmem_cpuinfo__update_ownership(p2_pid, &mask);
-        assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] <= 0 );
+        shmem_cpuinfo__update_ownership(p2_pid, &mask, new_guests);
+        assert( new_guests[3] == 0 );
+        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
+        assert( shmem_cpuinfo__return_cpu(p1_pid, 3, &new_guests[3]) == DLB_SUCCESS );
+        assert( new_guests[3] <= 0 );
         assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 3) == DLB_ERR_PERM );
         // Recover
         mu_parse_mask("2-3", &mask);
-        shmem_cpuinfo__update_ownership(p2_pid, &mask);
+        shmem_cpuinfo__update_ownership(p2_pid, &mask, new_guests);
+        assert( new_guests[3] == p2_pid );
+        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( shmem_cpuinfo__check_cpu_availability(p1_pid, 3) == DLB_ERR_PERM );
         assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 3) == DLB_SUCCESS );
 
@@ -405,19 +413,25 @@ int main( int argc, char **argv ) {
         assert( new_guests[0] == p2_pid );
         assert( victims[0] == -1 );
         mu_parse_mask("0-1,3", &mask);
-        shmem_cpuinfo__update_ownership(p1_pid, &mask);
-        assert( shmem_cpuinfo__return_cpu(p2_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == p1_pid );
+        shmem_cpuinfo__update_ownership(p1_pid, &mask, new_guests);
+        assert( new_guests[3] == p1_pid );
+        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
+        assert( shmem_cpuinfo__return_cpu(p2_pid, 3, &new_guests[3]) == DLB_SUCCESS );
+        assert( new_guests[3] == p1_pid );
         // CPU 0 is still guested by Process2
         assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 0) == DLB_SUCCESS );
         // CPU 3 is available to Process1
         assert( shmem_cpuinfo__check_cpu_availability(p1_pid, 3) == DLB_SUCCESS );
         // Recover
         mu_parse_mask("0-1", &mask);
-        shmem_cpuinfo__update_ownership(p1_pid, &mask);
+        shmem_cpuinfo__update_ownership(p1_pid, &mask, new_guests);
+        assert( new_guests[3] == 0 );
+        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( shmem_cpuinfo__check_cpu_availability(p1_pid, 3) == DLB_ERR_PERM );
         mu_parse_mask("2-3", &mask);
-        shmem_cpuinfo__update_ownership(p2_pid, &mask);
+        shmem_cpuinfo__update_ownership(p2_pid, &mask, new_guests);
+        assert( new_guests[3] == p2_pid );
+        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
         assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 3) == DLB_SUCCESS );
         assert( shmem_cpuinfo__lend_cpu(p2_pid, 0, &new_guests[0]) == DLB_SUCCESS );
         assert( new_guests[0] <= 0 );

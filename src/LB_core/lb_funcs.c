@@ -64,7 +64,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .return_cpu             = (lb_func_kind2)disabled,
         .return_cpu_mask        = (lb_func_kind3)disabled,
         .check_cpu_availability = (lb_func_kind2)disabled,
-        .update_ownership_info  = (lb_func_kind3)disabled,
+        .update_ownership       = (lb_func_kind3)disabled,
     };
 
     // Set according to policy
@@ -116,7 +116,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->return_cpu             = lewi_mask_ReturnCpu;
             lb_funcs->return_cpu_mask        = lewi_mask_ReturnCpuMask;
             lb_funcs->check_cpu_availability = lewi_mask_CheckCpuAvailability;
-            lb_funcs->update_ownership_info  = lewi_mask_UpdateOwnershipInfo;
+            lb_funcs->update_ownership       = lewi_mask_UpdateOwnership;
             break;
     }
 }

@@ -61,6 +61,78 @@ static inline void fill_cpu_array(int cpu_array[], int cpus_priority_array[], co
 }
 
 
+/* Construct a priority list of CPUs merging 4 lists:
+ *  prio1: always owned CPUs
+ *  prio2: nearby CPUs depending on the affinity option
+ *  prio3: other CPUs in some affinity options
+ *  rest:  fill '-1' to indicate non eligible CPUs
+ */
+static int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
+        const cpu_set_t *process_mask) {
+    int *prio1 = malloc(node_size*sizeof(int));
+    int *prio2 = malloc(node_size*sizeof(int));
+    int *prio3 = malloc(node_size*sizeof(int));
+    int i, i1 = 0, i2 = 0, i3 = 0;
+
+    priority_t priority = spd->options.lewi_affinity;
+    cpu_set_t affinity_mask;
+    mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        if (CPU_ISSET(cpuid, process_mask)) {
+            prio1[i1++] = cpuid;
+        } else {
+            switch (priority) {
+                case PRIO_ANY:
+                    prio2[i2++] = cpuid;
+                    break;
+                case PRIO_NEARBY_FIRST:
+                    if (CPU_ISSET(cpuid, &affinity_mask)) {
+                        prio2[i2++] = cpuid;
+                    } else {
+                        prio3[i3++] = cpuid;
+                    }
+                    break;
+                case PRIO_NEARBY_ONLY:
+                    if (CPU_ISSET(cpuid, &affinity_mask)) {
+                        prio2[i2++] = cpuid;
+                    }
+                    break;
+                case PRIO_SPREAD_IFEMPTY:
+                    // This case cannot be pre-computed
+                    break;
+            }
+        }
+    }
+
+    /* Sort prio2 and prio3 lists according to the topology */
+    if (i2 > 0 || i3 > 0) {
+        cpu_set_t topology[3];
+        memcpy(&topology[0], process_mask, sizeof(cpu_set_t));
+        memcpy(&topology[1], &affinity_mask, sizeof(cpu_set_t));
+        CPU_ZERO(&topology[2]);
+        qsort_r(prio2, i2, sizeof(int),
+                mu_cmp_cpuids_by_topology, &topology);
+        qsort_r(prio3, i3, sizeof(int),
+                mu_cmp_cpuids_by_topology, &topology);
+    }
+
+    /* Merge [<[prio1][prio2][prio3][-1]>] */
+    lewi_info_t *lewi_info = spd->lewi_info;
+    int *cpus_priority_array = lewi_info->cpus_priority_array;
+    memmove(&cpus_priority_array[0], prio1, sizeof(int)*i1);
+    memmove(&cpus_priority_array[i1], prio2, sizeof(int)*i2);
+    memmove(&cpus_priority_array[i1+i2], prio3, sizeof(int)*i3);
+    for (i=i1+i2+i3; i<node_size; ++i) cpus_priority_array[i] = -1;
+
+    free(prio1);
+    free(prio2);
+    free(prio3);
+
+    return 0;
+}
+
+
 /*********************************************************************************/
 /*    Init / Finalize                                                            */
 /*********************************************************************************/
@@ -685,73 +757,33 @@ int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid
     return shmem_cpuinfo__check_cpu_availability(spd->id, cpuid);
 }
 
-/* Construct a priority list of CPUs merging 4 lists:
- *  prio1: always owned CPUs
- *  prio2: nearby CPUs depending on the affinity option
- *  prio3: other CPUs in some affinity options
- *  rest:  fill '-1' to indicate non eligible CPUs
- */
-int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
+int lewi_mask_UpdateOwnership(const subprocess_descriptor_t *spd,
         const cpu_set_t *process_mask) {
-    int *prio1 = malloc(node_size*sizeof(int));
-    int *prio2 = malloc(node_size*sizeof(int));
-    int *prio3 = malloc(node_size*sizeof(int));
-    int i, i1 = 0, i2 = 0, i3 = 0;
+    /* Udate priority array */
+    lewi_mask_UpdateOwnershipInfo(spd, process_mask);
 
-    priority_t priority = spd->options.lewi_affinity;
-    cpu_set_t affinity_mask;
-    mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
+    /* Update cpuinfo data and return reclaimed CPUs */
+    SMALL_ARRAY(pid_t, new_guests, node_size);
+    shmem_cpuinfo__update_ownership(spd->id, process_mask, new_guests);
+
     int cpuid;
     for (cpuid=0; cpuid<node_size; ++cpuid) {
-        if (CPU_ISSET(cpuid, process_mask)) {
-            prio1[i1++] = cpuid;
-        } else {
-            switch (priority) {
-                case PRIO_ANY:
-                    prio2[i2++] = cpuid;
-                    break;
-                case PRIO_NEARBY_FIRST:
-                    if (CPU_ISSET(cpuid, &affinity_mask)) {
-                        prio2[i2++] = cpuid;
-                    } else {
-                        prio3[i3++] = cpuid;
-                    }
-                    break;
-                case PRIO_NEARBY_ONLY:
-                    if (CPU_ISSET(cpuid, &affinity_mask)) {
-                        prio2[i2++] = cpuid;
-                    }
-                    break;
-                case PRIO_SPREAD_IFEMPTY:
-                    // This case cannot be pre-computed
-                    break;
-            }
+        pid_t new_guest = new_guests[cpuid];
+        if (new_guest >= 0 && new_guest != spd->id) {
+            disable_cpu(&spd->pm, cpuid);
         }
     }
 
-    /* Sort prio2 and prio3 lists according to the topology */
-    if (i2 > 0 || i3 > 0) {
-        cpu_set_t topology[3];
-        memcpy(&topology[0], process_mask, sizeof(cpu_set_t));
-        memcpy(&topology[1], &affinity_mask, sizeof(cpu_set_t));
-        CPU_ZERO(&topology[2]);
-        qsort_r(prio2, i2, sizeof(int),
-                mu_cmp_cpuids_by_topology, &topology);
-        qsort_r(prio3, i3, sizeof(int),
-                mu_cmp_cpuids_by_topology, &topology);
+    /* Check possible pending reclaimed cpus */
+    lewi_info_t *lewi_info = spd->lewi_info;
+    if (CPU_COUNT(&lewi_info->pending_reclaimed_cpus) > 0) {
+        for (cpuid=0; cpuid<node_size; ++cpuid) {
+            if (CPU_ISSET(cpuid, &lewi_info->pending_reclaimed_cpus)) {
+                disable_cpu(&spd->pm, cpuid);
+            }
+        }
+        CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
     }
 
-    /* Merge [<[prio1][prio2][prio3][-1]>] */
-    lewi_info_t *lewi_info = spd->lewi_info;
-    int *cpus_priority_array = lewi_info->cpus_priority_array;
-    memmove(&cpus_priority_array[0], prio1, sizeof(int)*i1);
-    memmove(&cpus_priority_array[i1], prio2, sizeof(int)*i2);
-    memmove(&cpus_priority_array[i1+i2], prio3, sizeof(int)*i3);
-    for (i=i1+i2+i3; i<node_size; ++i) cpus_priority_array[i] = -1;
-
-    free(prio1);
-    free(prio2);
-    free(prio3);
-
-    return 0;
+    return DLB_SUCCESS;
 }
