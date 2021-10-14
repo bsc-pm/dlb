@@ -1100,20 +1100,9 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
     }
     free(tool_libs_buffer);
   }
-
   // load own tool
   ompt_multiplex_own_fns =
       ompt_multiplex_own_start_tool(omp_version, runtime_version);
-
-  // try next symbol if client tool is already loaded
-  if (!client_start_tool) {
-    if ((client_start_tool =
-            (ompt_start_tool_result_t * (*)(unsigned int, const char *))
-              dlsym(RTLD_NEXT, "ompt_start_tool"))) {
-      ompt_multiplex_client_fns =
-          (*client_start_tool)(omp_version, runtime_version);
-    }
-  }
 
   // return multiplexed versions
   static ompt_start_tool_result_t ompt_start_tool_result = {

@@ -324,32 +324,15 @@ static void omptool_finalize(ompt_data_t *tool_data) {
 
 }
 
-static ompt_start_tool_result_t* ompt_multiplex_own_start_tool(
-        unsigned int omp_version, const char *runtime_version) {
-    /* The dlsym in ompt-multiplex.h may call this function twice
-     * due to dlsym finding the same symbol.
-     * Ensure that the 'tool' struct is only returned once */
-    static bool ompt_tool_started = false;
-    if (__sync_bool_compare_and_swap(&ompt_tool_started, false, true)) {
-        openmp_runtime_version = runtime_version;
-        static ompt_start_tool_result_t tool = {
-            .initialize = omptool_initialize,
-            .finalize   = omptool_finalize,
-            .tool_data  = {0}
-        };
-        return &tool;
-    }
 
-    return NULL;
-}
-
-#ifndef OMPT_MULTIPLEX_H
-/* Only if ompt-multiplex.h has not been included,
- * declare a public ompt_start_tool symbol */
 #pragma GCC visibility push(default)
-ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
-                                          const char *runtime_version) {
-    return ompt_multiplex_own_start_tool(omp_version, runtime_version);
+ompt_start_tool_result_t* ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
+    openmp_runtime_version = runtime_version;
+    static ompt_start_tool_result_t tool = {
+        .initialize = omptool_initialize,
+        .finalize   = omptool_finalize,
+        .tool_data  = {0}
+    };
+    return &tool;
 }
 #pragma GCC visibility pop
-#endif
