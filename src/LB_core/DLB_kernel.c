@@ -149,15 +149,8 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     verbose(VB_OMPT, "Enabled verbose mode for OMPT experimental features");
 
     // Print number of cpus or mask
-    switch (spd->lb_policy) {
-        case POLICY_LEWI_MASK:
-            info("CPU process mask: %s", mu_to_str(&spd->process_mask));
-            break;
-        case POLICY_LEWI:
-            info("Number of CPUs: %d", CPU_COUNT(&spd->process_mask));
-            break;
-        default:
-            break;
+    if (CPU_COUNT(&spd->process_mask) > 0) {
+        info("Process CPU affinity mask: %s", mu_to_str(&spd->process_mask));
     }
 
     spd->dlb_enabled = true;
