@@ -55,13 +55,28 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <sys/wait.h>
+#include <signal.h>
+#include <string.h>
+#include <stdarg.h>
 
 static bool verbose = false;
 
+static void dlb_run_info_(FILE *out, const char *fmt, va_list list) {
+    fprintf(out, "[dlb_run]: ");
+    vfprintf(out, fmt, list);
+}
+
+static void dlb_run_info(FILE *out, const char *fmt, ...) {
+    va_list list;
+    va_start(list, fmt);
+    dlb_run_info_(out, fmt, list);
+    va_end(list);
+}
+
 static void dlb_check(int error, const char *func) {
     if (error) {
-        fprintf(stderr, "Operation %s did not succeed\n", func);
-        fprintf(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
+        dlb_run_info(stderr, "Operation %s did not succeed\n", func);
+        dlb_run_info(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
         exit(EXIT_FAILURE);
     }
 }
@@ -91,6 +106,57 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
+/* Wait for child process to finalize, print status if needed, and finalize DLB */
+static void wait_child(void) {
+    int status;
+    wait(&status);
+    if (WIFEXITED(status) && verbose){
+        dlb_run_info(stdout, "Child ended normally, return code: %d\n", WEXITSTATUS(status));
+    }
+    else if (WIFSIGNALED(status)){
+        int signal = WTERMSIG(status);
+        dlb_run_info(stdout, "Child was terminated with signal %d (%s)\n",
+                signal, strsignal(signal));
+    }
+
+    int error = DLB_Finalize();
+    if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
+        // DLB_ERR_NOPROC must be ignored here
+        dlb_check(error, __FUNCTION__);
+    }
+}
+
+/* This signal handler is called after X seconds while trying to correctly
+ * finalize after a signal. In case of timeout, forcefully finalize */
+static void hard_sighandler(int signum) {
+    dlb_run_info(stderr,
+            "Could not finalize child or DLB after a finalization signal\n");
+    dlb_run_info(stderr,
+            "If needed, please, execute dlb_shm -d to manually clean the DLB shared memories\n");
+    exit(EXIT_FAILURE);
+}
+
+/* This signal handler is called if dlb_run is signaled with some common
+ * termination signals */
+static void soft_sighandler(int signum) {
+    enum { ALARM_SECONDS = 5 };
+    if (verbose) {
+        dlb_run_info(stdout, "Catched signal %d, trying to finalize"
+                " within %d seconds.\n", signum, ALARM_SECONDS);
+    }
+
+    /* Set up alarm signal to forcefully finalize if child or DLB_Finalize
+     * cannot finalize in their own */
+    struct sigaction sa = { .sa_handler = &hard_sighandler };
+    sigaction(SIGALRM, &sa, NULL);
+    alarm(ALARM_SECONDS);
+
+    /* (try to) wait for child process */
+    wait_child();
+
+    exit(EXIT_FAILURE);
+}
+
 static void __attribute__((__noreturn__)) execute(char **argv) {
     /* PreInit from current process */
     cpu_set_t mask;
@@ -99,38 +165,35 @@ static void __attribute__((__noreturn__)) execute(char **argv) {
     dlb_check(error, __FUNCTION__);
 
     if (verbose) {
-        fprintf(stdout, "Executing child %s\n", argv[0]);
+        dlb_run_info(stdout, "Parent process (pid: %d) executing child %s\n", getpid(), argv[0]);
         fflush(stdout);
     }
+
+    /* Set up signal handler to properly finalize DLB */
+    struct sigaction sa = { .sa_handler = &soft_sighandler };
+    sigfillset(&sa.sa_mask);
+    sigdelset(&sa.sa_mask, SIGALRM);
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 
     /* Fork-exec */
     pid_t pid = fork();
     if (pid < 0) {
-        fprintf(stderr, "Failed to execute %s\n", argv[0]);
+        dlb_run_info(stderr, "Failed to execute %s\n", argv[0]);
         exit(EXIT_FAILURE);
     } else if (pid == 0) {
+        if (verbose) {
+            dlb_run_info(stdout, "Child process (pid: %d) executing...\n", getpid());
+        }
         execvp(argv[0], argv);
-        fprintf(stderr, "Failed to execute %s\n", argv[0]);
+        dlb_run_info(stderr, "Failed to execute %s\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    /* Finalize from current process */
-    int status;
-    wait(&status);
-    if (verbose) {
-        if (WIFEXITED(status)){
-            fprintf(stdout, "Child ended normally, return code: %d\n", WEXITSTATUS(status));
-        }
-        else if (WIFSIGNALED(status)){
-            fprintf(stdout, "Child was signaled with %d\n", WTERMSIG(status));
-        }
-    }
+    wait_child();
 
-    error = DLB_Finalize();
-    if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
-        // DLB_ERR_NOPROC must be ignored here
-        dlb_check(error, __FUNCTION__);
-    }
     exit(EXIT_SUCCESS);
 }
 
