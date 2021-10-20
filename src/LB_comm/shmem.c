@@ -65,14 +65,15 @@ static bool shmem_consistency_check_pids(pid_t *pidlist, pid_t pid,
             if (kill(pidlist[i], 0) == -1) {
                 /* Process pidlist[i] is registered and does not exist */
                 if (cleanup_fn) {
-                    warning("Process %d is registered in DLB but does not exist, probably"
+                    verbose(VB_SHMEM,
+                            "Process %d is registered in DLB but does not exist, probably"
                             " due to a bad termination of such process.\n"
                             "DLB is cleaning up the shared memory. If it fails,"
                             " please run 'dlb_shm --delete' and try again.", pidlist[i]);
                     cleanup_fn(shdata, pidlist[i]);
                     pidlist[i] = 0;
                 } else {
-                    warning("Process %d attached to shmem not found, "
+                    verbose(VB_SHMEM, "Process %d attached to shmem not found, "
                             "you may want to run \"dlb_shm -d\"", pidlist[i]);
                 }
             }
