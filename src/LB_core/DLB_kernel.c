@@ -196,6 +196,7 @@ int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 
     // Initialize options
     options_init(&spd->options, NULL);
+    debug_init(&spd->options);
 
     // Initialize subprocess descriptor
     spd->lb_policy = POLICY_NONE;
