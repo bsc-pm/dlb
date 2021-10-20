@@ -274,7 +274,7 @@ void dlb_clean(void) {
         clean_shmems(pid, shmem_key);
 
         /* Finalize shared memories that do not support subprocesses */
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(shmem_key);
         finalize_comm();
 
         /* Destroy shared memories if they still exist */

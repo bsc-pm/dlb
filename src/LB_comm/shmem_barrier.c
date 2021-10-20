@@ -128,8 +128,16 @@ void shmem_barrier_ext__init(const char *shmem_key) {
             shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
 }
 
-void shmem_barrier__finalize(void) {
-    if (shm_handler == NULL) return;
+void shmem_barrier__finalize(const char *shmem_key) {
+    if (shm_handler == NULL) {
+        /* barrier_finalize may be called to finalize existing process
+         * even if the file descriptor is not opened. (DLB_PreInit + forc-exec case) */
+        if (shmem_exists(shmem_name, shmem_key)) {
+            shmem_barrier_ext__init(shmem_key);
+        } else {
+            return;
+        }
+    }
 
     verbose(VB_BARRIER, "Finalizing Barrier Module");
 

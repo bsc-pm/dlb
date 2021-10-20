@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
         assert( shmem_cpuinfo__finalize(child_pid, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_procinfo__finalize(child_pid, false, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_async_finalize(child_pid) == DLB_SUCCESS );
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(SHMEM_KEY);
         finalize_comm();
 
         exit(EXIT_SUCCESS);

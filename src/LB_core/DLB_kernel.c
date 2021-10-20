@@ -173,7 +173,7 @@ int Finish(subprocess_descriptor_t *spd) {
         spd->lb_funcs.finalize = NULL;
     }
     if (spd->options.barrier) {
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(spd->options.shm_key);
     }
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
@@ -661,7 +661,7 @@ int node_barrier_detach(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->options.barrier) {
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(spd->options.shm_key);
         error = DLB_SUCCESS;
     } else {
         error = DLB_ERR_NOCOMP;

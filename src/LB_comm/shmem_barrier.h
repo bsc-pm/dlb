@@ -24,7 +24,7 @@
 #include <stdbool.h>
 
 void shmem_barrier__init(const char *shmem_key);
-void shmem_barrier__finalize(void);
+void shmem_barrier__finalize(const char *shmem_key);
 void shmem_barrier__barrier(void);
 
 void shmem_barrier__print_info(const char *shmem_key);

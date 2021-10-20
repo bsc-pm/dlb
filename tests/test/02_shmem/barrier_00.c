@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
         shmem_barrier__init(SHMEM_KEY);
         shmem_barrier__barrier();
         shmem_barrier__print_info(SHMEM_KEY);
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(SHMEM_KEY);
     }
 
     /* Test that multiple initialize or finalize does not cause errors (needed for attach/detach) */
@@ -74,15 +74,15 @@ int main(int argc, char **argv) {
         shmem_barrier__init(SHMEM_KEY);
         shmem_barrier__init(SHMEM_KEY);
         assert( shmem_barrier__exists() );
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(SHMEM_KEY);
         assert( !shmem_barrier__exists() );
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(SHMEM_KEY);
         shmem_barrier__init(SHMEM_KEY);
         assert( shmem_barrier__exists() );
-        shmem_barrier__finalize();
-        shmem_barrier__finalize();
-        shmem_barrier__finalize();
-        shmem_barrier__finalize();
+        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY);
         assert( !shmem_barrier__exists() );
     }
 
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
                 }
 
                 // Finalize both shared memories
-                shmem_barrier__finalize();
+                shmem_barrier__finalize(SHMEM_KEY);
                 shmem_finalize(handler, NULL);
 
                 // We need to call _exit so that childs don't call assert_shmem destructors,
@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
 
                 // Child 1 does DLB_BarrierDetach
                 if (child == 1) {
-                    shmem_barrier__finalize();
+                    shmem_barrier__finalize(SHMEM_KEY);
                 }
 
                 // Attach to the "test" shared memory and synchronize
@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
                 }
 
                 // Finalize both shared memories
-                shmem_barrier__finalize();
+                shmem_barrier__finalize(SHMEM_KEY);
                 shmem_finalize(handler, NULL);
 
                 // We need to call _exit so that childs don't call assert_shmem destructors,

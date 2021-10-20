@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-    shmem_barrier__finalize();
+    shmem_barrier__finalize(SHMEM_KEY);
 
     return 0;
 }
