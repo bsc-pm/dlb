@@ -67,5 +67,7 @@ void shmem_release_busy( shmem_handler_t* handler );
 char *get_shm_filename(shmem_handler_t *handler);
 bool shmem_exists(const char *shmem_module, const char *shmem_key);
 void shmem_destroy(const char *shmem_module, const char *shmem_key);
+int shmem_shsync__version(void);
+size_t shmem_shsync__size(void);
 
 #endif /* SHMEM_H */

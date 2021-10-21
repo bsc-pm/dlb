@@ -53,9 +53,10 @@ static void check_shmem_sync_version(void) {
         pid_t               pidlist[0];
     };
 
-    int version = SHMEM_SYNC_VERSION;
-    size_t size = sizeof(shmem_sync_t) * mu_get_system_size();
-    size_t known_size = sizeof(struct KnownShmemSync) * mu_get_system_size();
+    int version = shmem_shsync__version();
+    size_t size = shmem_shsync__size();
+    size_t known_size = sizeof(struct KnownShmemSync) + sizeof(pid_t) * mu_get_system_size();
+    known_size = (known_size + 7) & ~7; // round up to 8 bytes
     fprintf(stderr, "shmem_sync version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_SHMEM_SYNC_VERSION );

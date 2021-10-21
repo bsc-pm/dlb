@@ -118,8 +118,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
      *   shmem = shsync + shdata
      *   shsync and shdata are both variable in size
      */
-    size_t shsync_size = sizeof(shmem_sync_t) + sizeof(pid_t) * mu_get_system_size();
-    shsync_size = (shsync_size + 7) & ~7; // round up to 8 bytes
+    size_t shsync_size = shmem_shsync__size();
     handler->shm_size = shsync_size + shdata_size;
 
     /* Get /dev/shm/ file names to create */
@@ -160,6 +159,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
 
         /* Set Shared Memory version */
         handler->shsync->shmem_version = shmem_version;
+        handler->shsync->shsync_version = SHMEM_SYNC_VERSION;
 
         handler->shsync->initialized = 1;
     } else {
@@ -326,4 +326,14 @@ void shmem_destroy(const char *shmem_module, const char *shmem_key) {
         snprintf(shm_filename, SHM_NAME_LENGTH*2, "/dev/shm/DLB_%s_%d", shmem_module, getuid());
     }
     shm_unlink(shm_filename);
+}
+
+int shmem_shsync__version(void) {
+    return SHMEM_SYNC_VERSION;
+}
+
+size_t shmem_shsync__size(void) {
+    size_t shsync_size = sizeof(shmem_sync_t) + sizeof(pid_t) * mu_get_system_size();
+    shsync_size = (shsync_size + 7) & ~7; // round up to 8 bytes
+    return shsync_size;
 }
