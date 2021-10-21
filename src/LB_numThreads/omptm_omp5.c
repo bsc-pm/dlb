@@ -248,17 +248,20 @@ void omptm_omp5__implicit_task(
         unsigned int index,
         int flags) {
     if (endpoint == ompt_scope_begin) {
-        int cpuid = shmem_cpuinfo__get_thread_binding(pid, index);
-        int current_cpuid = sched_getcpu();
-        if (cpuid >=0 && cpuid != current_cpuid) {
-            cpu_set_t thread_mask;
-            CPU_ZERO(&thread_mask);
-            CPU_SET(cpuid, &thread_mask);
-            pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-            instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
-            verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
+        if (parallel_data &&
+                parallel_data->value == PARALLEL_LEVEL_1) {
+            int cpuid = shmem_cpuinfo__get_thread_binding(pid, index);
+            int current_cpuid = sched_getcpu();
+            if (cpuid >=0 && cpuid != current_cpuid) {
+                cpu_set_t thread_mask;
+                CPU_ZERO(&thread_mask);
+                CPU_SET(cpuid, &thread_mask);
+                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+                instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
+                verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
+            }
+            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
         }
-        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     } else if (endpoint == ompt_scope_end) {
         instrument_event(REBIND_EVENT,   0, EVENT_END);
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);

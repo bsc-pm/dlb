@@ -718,7 +718,8 @@ void omptm_free_agents__implicit_task(
         unsigned int index,
         int flags) {
     if (endpoint == ompt_scope_begin) {
-        if (parallel_data->value == PARALLEL_LEVEL_1) {
+        if (parallel_data &&
+                parallel_data->value == PARALLEL_LEVEL_1) {
             /* Implicit task for the non-nested parallel region */
 
             /* Obtain CPU id */
