@@ -650,8 +650,7 @@ int node_barrier_attach(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->options.barrier) {
-        shmem_barrier__init(spd->options.shm_key);
-        error = DLB_SUCCESS;
+        error = shmem_barrier__attach();
     } else {
         error = DLB_ERR_NOCOMP;
     }
@@ -662,8 +661,7 @@ int node_barrier_detach(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->options.barrier) {
-        shmem_barrier__finalize(spd->options.shm_key);
-        error = DLB_SUCCESS;
+        error = shmem_barrier__detach();
     } else {
         error = DLB_ERR_NOCOMP;
     }

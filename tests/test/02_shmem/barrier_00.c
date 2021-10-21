@@ -29,6 +29,7 @@
 #include "support/mask_utils.h"
 #include "support/options.h"
 #include "support/debug.h"
+#include "apis/dlb_errors.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -59,10 +60,14 @@ int main(int argc, char **argv) {
         shmem_barrier__init(SHMEM_KEY);
         shmem_barrier__barrier();
         shmem_barrier__print_info(SHMEM_KEY);
+        assert( shmem_barrier__attach() == DLB_NOUPDT );
+        assert( shmem_barrier__detach() == DLB_SUCCESS );
+        assert( shmem_barrier__detach() == DLB_NOUPDT );
+        assert( shmem_barrier__attach() == DLB_SUCCESS );
         shmem_barrier__finalize(SHMEM_KEY);
     }
 
-    /* Test that multiple initialize or finalize does not cause errors (needed for attach/detach) */
+    /* Test that multiple initialize or finalize does not cause errors */
     {
         options_t options;
         options_init(&options, NULL);
@@ -196,7 +201,7 @@ int main(int argc, char **argv) {
 
                 // Child 1 does DLB_BarrierDetach
                 if (child == 1) {
-                    shmem_barrier__finalize(SHMEM_KEY);
+                    assert( shmem_barrier__detach() == DLB_SUCCESS );
                 }
 
                 // Attach to the "test" shared memory and synchronize

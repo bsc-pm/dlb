@@ -25,6 +25,8 @@
 
 void shmem_barrier__init(const char *shmem_key);
 void shmem_barrier__finalize(const char *shmem_key);
+int  shmem_barrier__attach(void);
+int  shmem_barrier__detach(void);
 void shmem_barrier__barrier(void);
 
 void shmem_barrier__print_info(const char *shmem_key);

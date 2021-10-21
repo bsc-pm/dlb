@@ -66,16 +66,16 @@ int main(int argc, char **argv) {
     {
         printf("Testing multiple attach/detach\n");
         assert( DLB_Init(0, 0, options)             == DLB_SUCCESS );
+        assert( DLB_BarrierAttach()                 == DLB_NOUPDT );
+        assert( shmem_barrier__exists() );
+        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
+        assert( shmem_barrier__exists() );
+        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
         assert( DLB_BarrierAttach()                 == DLB_SUCCESS );
         assert( shmem_barrier__exists() );
         assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
-        assert( !shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
-        assert( DLB_BarrierAttach()                 == DLB_SUCCESS );
-        assert( shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
+        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
+        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
         assert( DLB_Finalize()                      == DLB_SUCCESS );
         assert( !shmem_barrier__exists() );
     }

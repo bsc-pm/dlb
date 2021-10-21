@@ -488,6 +488,7 @@ int DLB_Barrier(void);
 
 /*! \brief Attach process to the DLB_Barrier team
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if process was already attached
  *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
  *
  *  If the process had previusly called DLB_BarrierDetach, this function allows
@@ -498,6 +499,7 @@ int DLB_BarrierAttach(void);
 
 /*! \brief Barrier between processes in the node
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if process was already detached
  *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
  *
  *  Remove process from the DLB_Barrier team. The process will no longer be able

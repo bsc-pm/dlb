@@ -51,6 +51,7 @@ typedef struct {
 enum { SHMEM_BARRIER_VERSION = 4 };
 
 
+static bool attached = false;
 static int barrier_id = 0;
 static int max_barriers;
 static shmem_handler_t *shm_handler = NULL;
@@ -79,16 +80,65 @@ void shmem_barrier__init(const char *shmem_key) {
 
     max_barriers = mu_get_system_size();
 
-    shmem_handler_t *init_handler = shmem_init((void**)&shdata,
+    shm_handler = shmem_init((void**)&shdata,
             sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
             shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
 
-    shmem_lock_maintenance(init_handler);
+    shmem_barrier__attach();
+
+    verbose(VB_BARRIER, "Barrier Module initialized. Participants: %d",
+            get_barrier()->participants);
+}
+
+void shmem_barrier_ext__init(const char *shmem_key) {
+    max_barriers = mu_get_system_size();
+    shm_handler = shmem_init((void**)&shdata, shmem_barrier__size(),
+            shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
+}
+
+void shmem_barrier__finalize(const char *shmem_key) {
+    if (shm_handler == NULL) {
+        /* barrier_finalize may be called to finalize existing process
+         * even if the file descriptor is not opened. (DLB_PreInit + forc-exec case) */
+        if (shmem_exists(shmem_name, shmem_key)) {
+            shmem_barrier_ext__init(shmem_key);
+        } else {
+            return;
+        }
+    }
+
+    verbose(VB_BARRIER, "Finalizing Barrier Module");
+
+    shmem_barrier__detach();
+
+    shmem_finalize(shm_handler, NULL /* do not check if empty */);
+    shm_handler = NULL;
+}
+
+int shmem_barrier_ext__finalize(void) {
+    // Protect double finalization
+    if (shm_handler == NULL) {
+        return DLB_ERR_NOSHMEM;
+    }
+
+    // Shared memory destruction
+    shmem_finalize(shm_handler, NULL /* do not check if empty */);
+    shm_handler = NULL;
+    shdata = NULL;
+
+    return DLB_SUCCESS;
+}
+
+int shmem_barrier__attach(void) {
+    if (shm_handler == NULL) return DLB_ERR_UNKNOWN;
+    if (attached) return DLB_NOUPDT;
+
+    shmem_lock_maintenance(shm_handler);
     {
         barrier_t *barrier = get_barrier();
 
         if (barrier->count != 0) {
-            shmem_unlock_maintenance(init_handler);
+            shmem_unlock_maintenance(shm_handler);
             fatal("Barrier Shared memory inconsistency. Initializing Shared Memory "
                     "while Barrier is un use (count = %d).\n"
                     "Please, report at " PACKAGE_BUGREPORT, barrier->count);
@@ -113,33 +163,16 @@ void shmem_barrier__init(const char *shmem_key) {
         barrier->count = 0;
         barrier->initialized = true;
     }
-    shmem_unlock_maintenance(init_handler);
+    shmem_unlock_maintenance(shm_handler);
 
-    verbose(VB_BARRIER, "Barrier Module initialized. Participants: %d",
-            get_barrier()->participants);
+    attached = true;
 
-    // Global variable is only assigned after the initialization
-    shm_handler = init_handler;
+    return DLB_SUCCESS;
 }
 
-void shmem_barrier_ext__init(const char *shmem_key) {
-    max_barriers = mu_get_system_size();
-    shm_handler = shmem_init((void**)&shdata, shmem_barrier__size(),
-            shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
-}
-
-void shmem_barrier__finalize(const char *shmem_key) {
-    if (shm_handler == NULL) {
-        /* barrier_finalize may be called to finalize existing process
-         * even if the file descriptor is not opened. (DLB_PreInit + forc-exec case) */
-        if (shmem_exists(shmem_name, shmem_key)) {
-            shmem_barrier_ext__init(shmem_key);
-        } else {
-            return;
-        }
-    }
-
-    verbose(VB_BARRIER, "Finalizing Barrier Module");
+int shmem_barrier__detach(void) {
+    if (shm_handler == NULL) return DLB_ERR_UNKNOWN;
+    if (!attached) return DLB_NOUPDT;
 
     shmem_lock_maintenance(shm_handler);
     {
@@ -172,20 +205,7 @@ void shmem_barrier__finalize(const char *shmem_key) {
     }
     shmem_unlock_maintenance(shm_handler);
 
-    shmem_finalize(shm_handler, NULL /* do not check if empty */);
-    shm_handler = NULL;
-}
-
-int shmem_barrier_ext__finalize(void) {
-    // Protect double finalization
-    if (shm_handler == NULL) {
-        return DLB_ERR_NOSHMEM;
-    }
-
-    // Shared memory destruction
-    shmem_finalize(shm_handler, NULL /* do not check if empty */);
-    shm_handler = NULL;
-    shdata = NULL;
+    attached = false;
 
     return DLB_SUCCESS;
 }
