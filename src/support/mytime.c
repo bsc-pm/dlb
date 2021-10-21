@@ -41,6 +41,12 @@ void get_time_coarse( struct timespec *t ) {
 #endif
 }
 
+void get_time_real(struct timespec *t) {
+    /* Avoid using CLOCK_REALTIME except for pthread_mutex_timedlock,
+     * which does not work with MONOTONIC */
+    clock_gettime(CLOCK_REALTIME, t);
+}
+
 int64_t get_time_in_ns(void) {
     struct timespec t;
     get_time(&t);

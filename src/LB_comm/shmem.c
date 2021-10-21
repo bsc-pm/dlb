@@ -40,7 +40,7 @@
 #include <pthread.h>
 
 #ifndef _POSIX_THREAD_PROCESS_SHARED
-#error This system does not support process shared spinlocks
+#error This system does not support process shared mutexes
 #endif
 
 #include "LB_comm/shmem.h"
@@ -153,9 +153,20 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         /* Shared Memory creator */
         verbose(VB_SHMEM, "Initializing Shared Memory (%s)", shmem_module);
 
-        /* Init pthread spinlock */
-        int error = pthread_spin_init(&handler->shsync->shmem_lock, PTHREAD_PROCESS_SHARED);
-        fatal_cond(error, "pthread_spin_init error: %s", strerror(error));
+        /* Init pthread mutex */
+        pthread_mutexattr_t attr;
+        if (pthread_mutexattr_init(&attr) != 0) {
+            fatal("pthread_mutexattr_init error: %s", strerror(errno));
+        }
+        if (pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) != 0) {
+            fatal("pthread_mutexattr_setpshared error: %s", strerror(errno));
+        }
+        if (pthread_mutex_init(&handler->shsync->shmem_mutex, &attr) != 0) {
+            fatal("pthread_mutex_init error: %s", strerror(errno));
+        }
+        if (pthread_mutexattr_destroy(&attr) != 0) {
+            fatal("pthread_mutexattr_destroy error: %s", strerror(errno));
+        }
 
         /* Set Shared Memory version */
         handler->shsync->shmem_version = shmem_version;
@@ -170,25 +181,23 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
 
     /* Check consistency */
     verbose(VB_SHMEM, "Checking shared memory consistency (%s)", shmem_module);
-    struct timespec start;
-    get_time_coarse(&start);
-    // sort of spinlock_timedlock
-    while (pthread_spin_trylock(&handler->shsync->shmem_lock) != 0) {
-        struct timespec now;
-        get_time_coarse(&now);
-        if (timespec_diff(&start, &now) > SHMEM_TIMEOUT_SECONDS * 1e9) {
-            // timeout
-            fatal("DLB cannot obtain the lock for the shared memory.\n"
-                    "This may have been caused by a previous process crashing"
-                    " while acquiring the DLB shared memory lock.\n"
-                    "Please, run 'dlb_shm --delete' and try again.\n"
-                    "Contact us at " PACKAGE_BUGREPORT " if the issue persists.");
-        }
+    struct timespec timeout;
+    get_time_real(&timeout);
+    timeout.tv_sec += SHMEM_TIMEOUT_SECONDS;
+    int error = pthread_mutex_timedlock(&handler->shsync->shmem_mutex, &timeout);
+    if (error == ETIMEDOUT) {
+        fatal("DLB cannot obtain the lock for the shared memory.\n"
+                "This may have been caused by a previous process crashing"
+                " while acquiring the DLB shared memory lock.\n"
+                "Please, run 'dlb_shm --delete' and try again.\n"
+                "Contact us at " PACKAGE_BUGREPORT " if the issue persists.");
+    } else if (error != 0) {
+        fatal("pthread_mutex_timedlock error: %s", strerror(error));
     }
     shmem_consistency_check_version(handler->shsync->shsync_version, SHMEM_SYNC_VERSION);
     shmem_consistency_check_version(handler->shsync->shmem_version, shmem_version);
     shmem_consistency_check_pids(handler->shsync->pidlist, pid, cleanup_fn, *shdata);
-    pthread_spin_unlock(&handler->shsync->shmem_lock);
+    pthread_mutex_unlock(&handler->shsync->shmem_mutex);
 
     return handler;
 }
@@ -208,7 +217,7 @@ void shmem_finalize(shmem_handler_t* handler, bool (*is_empty_fn)(void)) {
 
     /* Only the last process destroys the pthread_mutex */
     if (delete_shmem) {
-        int error = pthread_spin_destroy(&handler->shsync->shmem_lock);
+        int error = pthread_mutex_destroy(&handler->shsync->shmem_mutex);
         fatal_cond(error, "pthread_mutex_destroy error: %s", strerror(error));
     }
 
@@ -229,11 +238,11 @@ void shmem_finalize(shmem_handler_t* handler, bool (*is_empty_fn)(void)) {
 }
 
 void shmem_lock( shmem_handler_t* handler ) {
-    pthread_spin_lock(&handler->shsync->shmem_lock);
+    pthread_mutex_lock(&handler->shsync->shmem_mutex);
 }
 
 void shmem_unlock( shmem_handler_t* handler ) {
-    pthread_spin_unlock(&handler->shsync->shmem_lock);
+    pthread_mutex_unlock(&handler->shsync->shmem_mutex);
 }
 
 /* Shared memory states    (BUSY(0-n)  <-  READY(0-n)  ->  MAINTENANCE(1)):
@@ -255,7 +264,7 @@ enum { SHMEM_TRYAQUIRE_USECS = 100 };
 void shmem_lock_maintenance( shmem_handler_t* handler ) {
     volatile shmem_state_t *state = &handler->shsync->state;
     while(1) {
-        pthread_spin_lock(&handler->shsync->shmem_lock);
+        pthread_mutex_lock(&handler->shsync->shmem_mutex);
         switch(*state) {
             case SHMEM_READY:
                 /* Lock successfully acquired: READY -> MAINTENANCE */
@@ -263,12 +272,12 @@ void shmem_lock_maintenance( shmem_handler_t* handler ) {
                 return;
             case SHMEM_BUSY:
                 /* Shmem cannot be put in maintenance while BUSY */
-                pthread_spin_unlock(&handler->shsync->shmem_lock);
+                pthread_mutex_unlock(&handler->shsync->shmem_mutex);
                 usleep(SHMEM_TRYAQUIRE_USECS);
                 break;
             case SHMEM_MAINTENANCE:
                 /* This should not happen */
-                pthread_spin_unlock(&handler->shsync->shmem_lock);
+                pthread_mutex_unlock(&handler->shsync->shmem_mutex);
                 fatal("Shared memory lock inconsistency. Please report to " PACKAGE_BUGREPORT);
                 break;
         }
@@ -280,7 +289,7 @@ void shmem_unlock_maintenance( shmem_handler_t* handler ) {
     /* Unlock MAINTENANCE -> READY */
     int error = handler->shsync->state != SHMEM_MAINTENANCE;
     handler->shsync->state = SHMEM_READY;
-    pthread_spin_unlock(&handler->shsync->shmem_lock);
+    pthread_mutex_unlock(&handler->shsync->shmem_mutex);
 
     /* This should not happen */
     fatal_cond(error, "Shared memory lock inconsistency. Please report to " PACKAGE_BUGREPORT);

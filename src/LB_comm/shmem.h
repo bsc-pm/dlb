@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-// Shared Memory State. Used for state-based spinlocks.
+// Shared Memory State. Used for state-based locks.
 typedef enum ShmemState {
     SHMEM_READY,
     SHMEM_BUSY,
@@ -38,11 +38,11 @@ typedef struct {
     int                 initializing;   // Only the first process sets 0 -> 1
     int                 initialized;    // Only the first process sets 0 -> 1
     shmem_state_t       state;          // Shared memory state
-    pthread_spinlock_t  shmem_lock;     // Spin-lock to grant exclusive access to the shmem
+    pthread_mutex_t     shmem_mutex;    // Mutex to grant exclusive access to the shmem
     pid_t               pidlist[0];     // Array of attached PIDs
 } shmem_sync_t;
 
-enum { SHMEM_SYNC_VERSION = 2 };
+enum { SHMEM_SYNC_VERSION = 3 };
 
 enum { SHM_NAME_LENGTH = 32 };
 

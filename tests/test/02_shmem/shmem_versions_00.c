@@ -42,14 +42,14 @@
 
 
 static void check_shmem_sync_version(void) {
-    enum { KNOWN_SHMEM_SYNC_VERSION = 2 };
+    enum { KNOWN_SHMEM_SYNC_VERSION = 3 };
     struct KnownShmemSync {
         unsigned int        uint1;
         unsigned int        uint2;
         int                 int1;
         int                 int2;
         enum {ENUM1}        enum1;
-        pthread_spinlock_t  spinlock;
+        pthread_mutex_t     mutex;
         pid_t               pidlist[0];
     };
 
