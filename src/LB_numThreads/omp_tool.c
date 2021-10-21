@@ -34,8 +34,8 @@
 #include <string.h>
 
 enum {
-    PARALLEL_UNSET = 0,
-    PARALLEL_LEVEL0
+    PARALLEL_UNSET,
+    PARALLEL_LEVEl_1,
 };
 
 static pid_t pid;
@@ -60,7 +60,7 @@ static void cb_parallel_begin(
          * Set parallel_data to an appropriate value so that worker threads know
          * when they start their explicit task for this parallel region.
          */
-        parallel_data->value = PARALLEL_LEVEL0;
+        parallel_data->value = PARALLEL_LEVEl_1;
 
         omp_thread_manager__borrow();
     }
@@ -71,7 +71,7 @@ static void cb_parallel_end(
         ompt_data_t *encountering_task_data,
         int flags,
         const void *codeptr_ra) {
-    if (parallel_data->value == PARALLEL_LEVEL0) {
+    if (parallel_data->value == PARALLEL_LEVEl_1) {
         omp_thread_manager__lend();
         parallel_data->value = PARALLEL_UNSET;
     }
@@ -85,17 +85,20 @@ static void cb_implicit_task(
         unsigned int index,
         int flags) {
     if (endpoint == ompt_scope_begin) {
-        int cpuid = shmem_cpuinfo__get_thread_binding(pid, index);
-        int current_cpuid = sched_getcpu();
-        if (cpuid >=0 && cpuid != current_cpuid) {
-            cpu_set_t thread_mask;
-            CPU_ZERO(&thread_mask);
-            CPU_SET(cpuid, &thread_mask);
-            pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-            instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
-            verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
+        if (parallel_data &&
+                parallel_data->value == PARALLEL_LEVEl_1) {
+            int cpuid = shmem_cpuinfo__get_thread_binding(pid, index);
+            int current_cpuid = sched_getcpu();
+            if (cpuid >=0 && cpuid != current_cpuid) {
+                cpu_set_t thread_mask;
+                CPU_ZERO(&thread_mask);
+                CPU_SET(cpuid, &thread_mask);
+                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+                instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
+                verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
+            }
+            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
         }
-        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     } else if (endpoint == ompt_scope_end) {
         instrument_event(REBIND_EVENT,   0, EVENT_END);
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);
