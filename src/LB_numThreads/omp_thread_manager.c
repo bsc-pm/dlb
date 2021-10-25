@@ -29,8 +29,10 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <dlfcn.h>
 
 void omp_set_num_threads(int nthreads) __attribute__((weak));
+static void (*set_num_threads_fn)(int) = NULL;
 
 
 /*********************************************************************************/
@@ -45,22 +47,38 @@ static ompt_opts_t ompt_opts;
 
 static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
-    omp_set_num_threads(CPU_COUNT(&active_mask));
+    set_num_threads_fn(CPU_COUNT(&active_mask));
 }
 
 static void cb_disable_cpu(int cpuid, void *arg) {
     CPU_CLR(cpuid, &active_mask);
-    omp_set_num_threads(CPU_COUNT(&active_mask));
+    set_num_threads_fn(CPU_COUNT(&active_mask));
 }
 
 static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
     memcpy(&process_mask, mask, sizeof(cpu_set_t));
     memcpy(&active_mask, mask, sizeof(cpu_set_t));
-    omp_set_num_threads(CPU_COUNT(&active_mask));
+    set_num_threads_fn(CPU_COUNT(&active_mask));
 }
 
 
 void omp_thread_manager__init(const options_t *options) {
+    if (omp_set_num_threads) {
+        set_num_threads_fn = omp_set_num_threads;
+    } else {
+        void *handle = dlopen("libomp.so", RTLD_LAZY | RTLD_GLOBAL);
+        if (handle == NULL) {
+            handle = dlopen("libiomp5.so", RTLD_LAZY | RTLD_GLOBAL);
+        }
+        if (handle == NULL) {
+            handle = dlopen("libgomp.so", RTLD_LAZY | RTLD_GLOBAL);
+        }
+        if (handle != NULL)  {
+            set_num_threads_fn = dlsym(handle, "omp_set_num_threads");
+        }
+        fatal_cond(set_num_threads_fn == NULL, "omp_set_num_threads cannot be found");
+    }
+
     lewi = options->lewi;
     drom = options->drom;
     ompt_opts = options->lewi_ompt;
@@ -132,7 +150,7 @@ void omp_thread_manager__borrow(void) {
 
 void omp_thread_manager__lend(void) {
     if (lewi && ompt_opts & OMPT_OPTS_LEND) {
-        omp_set_num_threads(1);
+        set_num_threads_fn(1);
         CPU_ZERO(&active_mask);
         CPU_SET(sched_getcpu(), &active_mask);
         verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
@@ -157,7 +175,7 @@ void omp_thread_manager__IntoBlockingCall(void) {
         /* Set active_mask to only the current CPU */
         CPU_ZERO(&active_mask);
         CPU_SET(mycpu, &active_mask);
-        omp_set_num_threads(1);
+        set_num_threads_fn(1);
 
         verbose(VB_OMPT, "IntoBlockingCall - lending all");
     }
