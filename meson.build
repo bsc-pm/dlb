@@ -204,13 +204,21 @@ if mpi_dep.found()
   mpi_gen_sources = gen.process(
     'src/LB_MPI/MPI_interface.c.in',
     'src/LB_MPI/MPI_interface.h.in',
-    'src/LB_MPI/MPI_intercept.c.in',
     preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
   )
 
   mpif_gen_sources = gen.process(
     'src/LB_MPI/MPI_interfaceF.c.in',
     'src/LB_MPI/MPI_interfaceF.h.in',
+    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
+  )
+
+  mpi_gen_intercept_sources = gen.process(
+    'src/LB_MPI/MPI_intercept.c.in',
+    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
+  )
+
+  mpif_gen_intercept_sources = gen.process(
     'src/LB_MPI/MPI_interceptF.c.in',
     preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
   )
@@ -219,7 +227,7 @@ if mpi_dep.found()
   mpif_sources = [sources, mpi_common_sources, mpi_common_gen, mpif_gen_sources]
 
   libdlb_mpi = library(
-    'dlb_mpi', mpi_sources,
+    'dlb_mpi', [mpi_sources, mpi_gen_intercept_sources],
     include_directories : common_includes,
     c_args : mpi_cpp_flags,
     objects : dlb_common_objects,
@@ -239,7 +247,7 @@ if mpi_dep.found()
   )
 
   libdlb_mpif = library(
-    'dlb_mpif', mpif_sources,
+    'dlb_mpif', [mpif_sources, mpif_gen_intercept_sources],
     include_directories : common_includes,
     c_args : mpi_cpp_flags,
     objects : dlb_common_objects,
