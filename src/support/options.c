@@ -791,7 +791,7 @@ void options_print_lewi_flags(const options_t *options) {
             info0("  --lewi-affinity=%s", priority_tostr(options->lewi_affinity));
         }
         if (options->lewi_ompt != default_lewi_ompt) {
-            info0("  --lewi-omp=%s", ompt_opts_tostr(options->lewi_ompt));
+            info0("  --lewi-ompt=%s", ompt_opts_tostr(options->lewi_ompt));
         }
     }
 }
