@@ -67,10 +67,11 @@ int DLB_DROM_GetNumCpus(int *ncpus);
 int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
 
 /*! \brief Get the process mask of the given PID
- *  \param[in] pid Process ID to query its process mask
+ *  \param[in] pid Process ID to query its process mask, or 0 if current process
  *  \param[out] mask Current process mask of the target process
  *  \param[in] flags DROM options
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOTED if a new mask is given for the current process (replaces PollDROM)
  *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out

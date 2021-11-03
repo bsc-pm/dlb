@@ -43,7 +43,7 @@ static void test(const cpu_set_t *mask, char ***env) {
     assert( DLB_DROM_Detach()                                   == DLB_SUCCESS );
 
     /* Test that the spd has the proper shmem key
-     * to check that DLB_ARGS has not benn overwritten
+     * to check that DLB_ARGS has not been overwritten
      */
     const subprocess_descriptor_t** spds = spd_get_spds();
     const subprocess_descriptor_t** spd = spds;
