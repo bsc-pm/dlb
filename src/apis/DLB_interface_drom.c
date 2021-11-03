@@ -24,6 +24,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_core/spd.h"
+#include "LB_core/DLB_kernel.h"
 #include "apis/dlb_errors.h"
 #include "support/options.h"
 #include "support/debug.h"
@@ -73,7 +74,8 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
 }
 
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
-    return shmem_procinfo__setprocessmask(pid, mask, flags);
+    spd_enter_dlb(NULL);
+    return drom_setprocessmask(pid, mask, flags);
 }
 
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,

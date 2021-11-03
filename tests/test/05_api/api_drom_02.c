@@ -23,9 +23,10 @@
 
 #include "unique_shmem.h"
 
-#include <apis/dlb.h>
-#include <apis/dlb_drom.h>
-#include <support/env.h>
+#include "apis/dlb.h"
+#include "apis/dlb_drom.h"
+#include "support/env.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <stdlib.h>
@@ -35,6 +36,11 @@
 
 
 /* DROM tests of a single process */
+
+void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
+    cpu_set_t *current_mask = arg;
+    memcpy(current_mask, mask, sizeof(cpu_set_t));
+}
 
 int main(int argc, char **argv) {
     /* Options */
@@ -111,6 +117,35 @@ int main(int argc, char **argv) {
         assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &new_mask) );
         assert( CPU_COUNT(&new_mask) + 1 == CPU_COUNT(&process_mask) );
+
+        assert( DLB_Finalize() == DLB_SUCCESS );
+    }
+
+    /* Test setprocessmask with SYNC_NOW */
+    {
+        cpu_set_t current_mask, new_mask1, new_mask2;
+        enum { SYS_SIZE = 4 };
+        mu_testing_set_sys_size(SYS_SIZE);
+        mu_parse_mask("0-3", &process_mask);
+        memcpy(&current_mask, &process_mask, sizeof(cpu_set_t));
+
+        assert( DLB_Init(0, &process_mask, "--drom") == DLB_SUCCESS );
+        assert( DLB_CallbackSet(dlb_callback_set_process_mask,
+                    (dlb_callback_t)cb_set_process_mask, &current_mask) == DLB_SUCCESS );
+
+        /* Set mask and update with poll drom */
+        mu_parse_mask("0-2", &new_mask1);
+        assert( DLB_DROM_SetProcessMask(0, &new_mask1, 0) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&process_mask, &current_mask) );
+        DLB_PollDROM_Update();
+        assert( !CPU_EQUAL(&process_mask, &current_mask) );
+        assert( CPU_EQUAL(&new_mask1, &current_mask) );
+
+        /* Set mask and update with SYNC_NOW flag */
+        mu_parse_mask("0-3", &new_mask2);
+        assert( DLB_DROM_SetProcessMask(0, &new_mask2, DLB_SYNC_NOW) == DLB_SUCCESS );
+        assert( !CPU_EQUAL(&new_mask1, &current_mask) );
+        assert( CPU_EQUAL(&new_mask2, &current_mask) );
 
         assert( DLB_Finalize() == DLB_SUCCESS );
     }

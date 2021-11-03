@@ -29,7 +29,8 @@ typedef const void* const_dlb_cpu_set_t;
 typedef enum dlb_drom_flags_e {
     DLB_STEAL_CPUS      = 1 << 0,
     DLB_RETURN_STOLEN   = 1 << 1,
-    DLB_SYNC_QUERY      = 1 << 2
+    DLB_SYNC_QUERY      = 1 << 2,
+    DLB_SYNC_NOW        = 1 << 3,
 } dlb_drom_flags_t;
 
 // PrintShmem flags

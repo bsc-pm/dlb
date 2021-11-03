@@ -709,6 +709,13 @@ static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_f
         } else {
             error = set_new_mask(process, mask, false /* sync */, return_stolen);
         }
+
+        /* If flag is SYNC_NOW, update current mask now */
+        if (error == DLB_SUCCESS && flags & DLB_SYNC_NOW) {
+            memcpy(&process->current_process_mask, &process->future_process_mask,
+                    sizeof(cpu_set_t));
+            process->dirty = false;
+        }
     }
     shmem_unlock(shm_handler);
 

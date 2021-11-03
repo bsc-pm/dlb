@@ -84,7 +84,7 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
 /*! \brief Set the process mask of the given PID
- *  \param[in] pid Target Process ID to apply a new process mask
+ *  \param[in] pid Target Process ID to apply a new process mask, or 0 if current process
  *  \param[in] mask Process mask to set
  *  \param[in] flags DROM options
  *  \return DLB_SUCCESS on success
@@ -97,7 +97,13 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
  *  Accepted flags for this function:\n
  *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
  *                      operations, the caller process gets blocked until the target
- *                      process resolves them, or the query times out.
+ *                      process resolves them, or the query times out.\n
+ *      DLB_SYNC_NOW:   Force mask synchronization if target is the current process.
+ *                      If pid is 0 or current process id, and setting the new mask
+ *                      succeeds, this operation automatically forces the synchronization
+ *                      with the set_process_mask callback. It has the equivalent
+ *                      behaviour as invoking DLB_PollDROM_Update() after a
+ *                      successful operation.
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 

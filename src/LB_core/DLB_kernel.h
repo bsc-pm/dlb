@@ -75,6 +75,7 @@ int return_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 /* DROM Responsive */
 int poll_drom(const subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mask);
 int poll_drom_update(const subprocess_descriptor_t *spd);
+int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
 /* Barrier */
 int node_barrier(void);
