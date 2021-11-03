@@ -72,7 +72,6 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
  *  \param[in] flags DROM options
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOTED if a new mask is given for the current process (replaces PollDROM)
- *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
  *
@@ -88,7 +87,6 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
  *  \param[in] mask Process mask to set
  *  \param[in] flags DROM options
  *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *  \return DLB_ERR_PDIRTY if target pid already has a pending operation
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
