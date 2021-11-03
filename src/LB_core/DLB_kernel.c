@@ -629,6 +629,17 @@ int poll_drom_update(const subprocess_descriptor_t *spd) {
     return error;
 }
 
+int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
+    int error = shmem_procinfo__setprocessmask(pid, mask, flags);
+    if (error == DLB_SUCCESS
+            && thread_spd->dlb_initialized
+            && (pid == 0 || pid == thread_spd->id)
+            && flags & DLB_SYNC_NOW) {
+        set_process_mask(&thread_spd->pm, mask);
+    }
+    return error;
+}
+
 
 /* Barrier */
 

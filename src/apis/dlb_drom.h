@@ -67,11 +67,11 @@ int DLB_DROM_GetNumCpus(int *ncpus);
 int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
 
 /*! \brief Get the process mask of the given PID
- *  \param[in] pid Process ID to query its process mask
+ *  \param[in] pid Process ID to query its process mask, or 0 if current process
  *  \param[out] mask Current process mask of the target process
  *  \param[in] flags DROM options
  *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_NOTED if a new mask is given for the current process (replaces PollDROM)
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
  *
@@ -83,11 +83,10 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
 /*! \brief Set the process mask of the given PID
- *  \param[in] pid Target Process ID to apply a new process mask
+ *  \param[in] pid Target Process ID to apply a new process mask, or 0 if current process
  *  \param[in] mask Process mask to set
  *  \param[in] flags DROM options
  *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *  \return DLB_ERR_PDIRTY if target pid already has a pending operation
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
@@ -96,7 +95,13 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
  *  Accepted flags for this function:\n
  *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
  *                      operations, the caller process gets blocked until the target
- *                      process resolves them, or the query times out.
+ *                      process resolves them, or the query times out.\n
+ *      DLB_SYNC_NOW:   Force mask synchronization if target is the current process.
+ *                      If pid is 0 or current process id, and setting the new mask
+ *                      succeeds, this operation automatically forces the synchronization
+ *                      with the set_process_mask callback. It has the equivalent
+ *                      behaviour as invoking DLB_PollDROM_Update() after a
+ *                      successful operation.
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 

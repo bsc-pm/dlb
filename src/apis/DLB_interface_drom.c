@@ -24,6 +24,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_core/spd.h"
+#include "LB_core/DLB_kernel.h"
 #include "apis/dlb_errors.h"
 #include "support/options.h"
 #include "support/debug.h"
@@ -69,11 +70,24 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len) {
 }
 
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
-    return shmem_procinfo__getprocessmask(pid, mask, flags);
+    int error = shmem_procinfo__getprocessmask(pid, mask, flags);
+    if (error == DLB_ERR_NOSHMEM) {
+        DLB_DROM_Attach();
+        error = shmem_procinfo__getprocessmask(pid, mask, flags);
+        DLB_DROM_Detach();
+    }
+    return error;
 }
 
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
-    return shmem_procinfo__setprocessmask(pid, mask, flags);
+    spd_enter_dlb(NULL);
+    int error = drom_setprocessmask(pid, mask, flags);
+    if (error == DLB_ERR_NOSHMEM) {
+        DLB_DROM_Attach();
+        error = drom_setprocessmask(pid, mask, flags);
+        DLB_DROM_Detach();
+    }
+    return error;
 }
 
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,

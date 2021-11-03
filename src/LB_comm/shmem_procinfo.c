@@ -594,12 +594,49 @@ int shmem_procinfo_ext__recover_stolen_cpus(int pid) {
 /* Get / Set Process mask                                                        */
 /*********************************************************************************/
 
+/* PRE: shm_handler and my_pinfo are not NULL */
+static int shmem_procinfo__getprocessmask_self(cpu_set_t *mask) {
+    int error;
+    pinfo_t *process = my_pinfo;
+    shmem_lock(shm_handler);
+    {
+        /* If current process is dirty, update mask and return the new one */
+        if (process->dirty) {
+            memcpy(mask, &process->future_process_mask, sizeof(cpu_set_t));
+            memcpy(&process->current_process_mask, &process->future_process_mask,
+                    sizeof(cpu_set_t));
+            process->dirty = false;
+            error = DLB_NOTED;
+        } else {
+            memcpy(mask, &process->current_process_mask, sizeof(cpu_set_t));
+            error = DLB_SUCCESS;
+        }
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
 int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, dlb_drom_flags_t flags) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+
+    /* Specific case, if pid is 0 the target is the current process */
+    if (pid == 0) {
+        if (my_pinfo != NULL) {
+            return shmem_procinfo__getprocessmask_self(mask);
+        } else {
+            return DLB_ERR_NOPROC;
+        }
+    }
+
+    /* Specific case, if pid is current process */
+    if (my_pinfo != NULL && my_pinfo->pid == pid) {
+        return shmem_procinfo__getprocessmask_self(mask);
+    }
 
     int error = DLB_SUCCESS;
     bool done = false;
     pinfo_t *process;
+
     shmem_lock(shm_handler);
     {
         // Find process
@@ -659,8 +696,54 @@ int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, dlb_drom_flags_t 
     return error;
 }
 
+/* PRE: shm_handler and my_pinfo are not NULL */
+static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_flags_t flags) {
+    int error;
+    bool return_stolen = flags & DLB_RETURN_STOLEN;
+    pinfo_t *process = my_pinfo;
+    shmem_lock(shm_handler);
+    {
+        if (process->dirty) {
+            /* Do not allow another operation if process is already dirty */
+            error = DLB_ERR_PDIRTY;
+        } else {
+            error = set_new_mask(process, mask, false /* sync */, return_stolen);
+        }
+
+        /* If flag is SYNC_NOW, update current mask now */
+        if (error == DLB_SUCCESS && flags & DLB_SYNC_NOW) {
+            memcpy(&process->current_process_mask, &process->future_process_mask,
+                    sizeof(cpu_set_t));
+            process->dirty = false;
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    if (error == DLB_ERR_PDIRTY) {
+        verbose(VB_DROM, "Setting mask: current process is already dirty");
+    } else if (error == DLB_ERR_PERM) {
+        verbose(VB_DROM, "Setting mask: cannot steal mask %s", mu_to_str(mask));
+    }
+
+    return error;
+}
+
 int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+
+    /* Specific case, if pid is 0 the target is the current process */
+    if (pid == 0) {
+        if (my_pinfo != NULL) {
+            return shmem_procinfo__setprocessmask_self(mask, flags);
+        } else {
+            return DLB_ERR_NOPROC;
+        }
+    }
+
+    /* Specific case, if pid is current process */
+    if (my_pinfo != NULL && my_pinfo->pid == pid) {
+        return shmem_procinfo__setprocessmask_self(mask, flags);
+    }
 
     bool sync = flags & DLB_SYNC_QUERY;
     bool return_stolen = flags & DLB_RETURN_STOLEN;
@@ -1221,9 +1304,7 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
         }
     }
 
-    if (__builtin_expect(
-                !error && CPU_COUNT(&cpus_left_to_steal) > 0,
-                0)) {
+    if (unlikely(!error && CPU_COUNT(&cpus_left_to_steal) > 0)) {
         warning("Could not find candidate for stealing mask %s.  Please report to "
                 PACKAGE_BUGREPORT, mu_to_str(mask));
         error = DLB_ERR_PERM;
