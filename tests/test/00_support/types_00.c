@@ -74,18 +74,18 @@ int main(int argc, char *argv[]) {
     parse_verbose_fmt("node:spid:mpinode:mpirank:thread", &fmt);
     assert(fmt&VBF_NODE && fmt&VBF_SPID && fmt&VBF_MPINODE && fmt&VBF_MPIRANK && fmt&VBF_THREAD);
 
-    instrument_events_t inst;
-    parse_instrument_events("", &inst);             assert(inst==INST_NONE);
-    parse_instrument_events("null", &inst);         assert(inst==INST_NONE);
-    parse_instrument_events("none", &inst);         assert(inst==INST_NONE);
-    parse_instrument_events("all:none", &inst);     assert(inst==INST_NONE);
-    parse_instrument_events("all:lewi", &inst);     assert(inst==INST_ALL);
-    parse_instrument_events("null:mpi:lewi:drom:talp:barrier:ompt:cpus", &inst);
+    instrument_items_t inst;
+    parse_instrument_items("", &inst);              assert(inst==INST_NONE);
+    parse_instrument_items("null", &inst);          assert(inst==INST_NONE);
+    parse_instrument_items("none", &inst);          assert(inst==INST_NONE);
+    parse_instrument_items("all:none", &inst);      assert(inst==INST_NONE);
+    parse_instrument_items("all:lewi", &inst);      assert(inst==INST_ALL);
+    parse_instrument_items("null:mpi:lewi:drom:talp:barrier:ompt:cpus", &inst);
     assert(inst == (INST_MPI | INST_LEWI | INST_DROM | INST_TALP | INST_BARR | INST_OMPT | INST_CPUS));
 
-    assert(strcmp(instrument_events_tostr(INST_NONE), "none") == 0);
-    assert(strcmp(instrument_events_tostr(INST_ALL), "all") == 0);
-    assert(strcmp(instrument_events_tostr(INST_LEWI|INST_DROM), "lewi:drom") == 0);
+    assert(strcmp(instrument_items_tostr(INST_NONE), "none") == 0);
+    assert(strcmp(instrument_items_tostr(INST_ALL), "all") == 0);
+    assert(strcmp(instrument_items_tostr(INST_LEWI|INST_DROM), "lewi:drom") == 0);
 
     priority_t prio;
     err = parse_priority("", &prio);                assert(err);

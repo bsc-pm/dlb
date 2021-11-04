@@ -35,7 +35,7 @@ void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalu
 void Extrae_change_num_threads (unsigned n) __attribute__((weak));
 
 static bool tracing_initialized = false;
-static instrument_events_t instrument = INST_NONE;
+static instrument_items_t instrument = INST_NONE;
 
 static void dummy (unsigned type, long long value) {}
 
@@ -131,10 +131,10 @@ void instrument_register_event(unsigned int type, long long value, const char *v
 }
 
 
-void instrument_event(unsigned type, long long value, instrument_action_t action) {
+void instrument_event(instrument_event_t type, long long value, instrument_action_t action) {
     switch(type) {
         case RUNTIME_EVENT:
-            switch(value) {
+            switch((instrument_runtime_value_t)value) {
                 case EVENT_INIT:
                 case EVENT_FINALIZE:
                     if (instrument != INST_NONE) {
@@ -193,7 +193,10 @@ void instrument_event(unsigned type, long long value, instrument_action_t action
                 extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
             }
             break;
-        default:
+        case THREADS_USED_EVENT:
+        case ITERATION_EVENT:
+        case DLB_MODE_EVENT:
+        case LOOP_STATE:
             if (instrument != INST_NONE) {
                 extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
             }
@@ -314,7 +317,7 @@ void instrument_finalize(void) {
 }
 
 void instrument_print_flags(void) {
-    info0("Tracing options: %s", instrument_events_tostr(instrument));
+    info0("Tracing options: %s", instrument_items_tostr(instrument));
 }
 
 #endif

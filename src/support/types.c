@@ -170,31 +170,31 @@ const char* get_verbose_fmt_choices(void) {
 }
 
 
-/* instrument_events_t */
-static const instrument_events_t instrument_events_values[] =
+/* instrument_items_t */
+static const instrument_items_t instrument_items_values[] =
     {INST_NONE, INST_ALL, INST_MPI, INST_LEWI, INST_DROM, INST_TALP, INST_BARR, INST_OMPT, INST_CPUS, INST_CBCK};
-static const char* const instrument_events_choices[] =
+static const char* const instrument_items_choices[] =
     {"none", "all", "mpi", "lewi", "drom", "talp", "barrier", "ompt", "cpus", "callbacks"};
-static const char instrument_events_choices_str[] =
+static const char instrument_items_choices_str[] =
     "none:all:mpi:lewi:drom:talp:barrier:ompt:cpus:callbacks";
-enum { instrument_events_nelems = sizeof(instrument_events_values) / sizeof(instrument_events_values[0]) };
+enum { instrument_items_nelems = sizeof(instrument_items_values) / sizeof(instrument_items_values[0]) };
 
-int parse_instrument_events(const char *str, instrument_events_t *value) {
+int parse_instrument_items(const char *str, instrument_items_t *value) {
     *value = INST_NONE;
     int i;
-    for (i=0; i<instrument_events_nelems; ++i) {
-        if (strstr(str, instrument_events_choices[i]) != NULL) {
-            if (instrument_events_values[i] == INST_NONE) {
+    for (i=0; i<instrument_items_nelems; ++i) {
+        if (strstr(str, instrument_items_choices[i]) != NULL) {
+            if (instrument_items_values[i] == INST_NONE) {
                 *value = INST_NONE;
                 break;
             }
-            *value |= instrument_events_values[i];
+            *value |= instrument_items_values[i];
         }
     }
     return DLB_SUCCESS;
 }
 
-const char* instrument_events_tostr(instrument_events_t value) {
+const char* instrument_items_tostr(instrument_items_t value) {
     // particular cases
     if (value == INST_NONE) {
         return "none";
@@ -203,24 +203,24 @@ const char* instrument_events_tostr(instrument_events_t value) {
         return "all";
     }
 
-    static char str[sizeof(instrument_events_choices_str)] = "";
+    static char str[sizeof(instrument_items_choices_str)] = "";
     char *p = str;
     int i;
-    for (i=2; i<instrument_events_nelems; ++i) {
-        if (value & instrument_events_values[i]) {
+    for (i=2; i<instrument_items_nelems; ++i) {
+        if (value & instrument_items_values[i]) {
             if (p!=str) {
                 *p = ':';
                 ++p;
                 *p = '\0';
             }
-            p += sprintf(p, "%s", instrument_events_choices[i]);
+            p += sprintf(p, "%s", instrument_items_choices[i]);
         }
     }
     return str;
 }
 
-const char* get_instrument_events_choices(void) {
-    return instrument_events_choices_str;
+const char* get_instrument_items_choices(void) {
+    return instrument_items_choices_str;
 }
 
 

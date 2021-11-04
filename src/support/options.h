@@ -39,7 +39,7 @@ typedef struct Options {
     verbose_opts_t      verbose;
     verbose_fmt_t       verbose_fmt;
     /* instrument */
-    instrument_events_t instrument;
+    instrument_items_t  instrument;
     bool                instrument_counters;
     int                 instrument_extrae_nthreads;
     /* lewi */

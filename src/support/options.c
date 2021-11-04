@@ -47,7 +47,7 @@ typedef enum OptionTypes {
     OPT_STR_T,
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
-    OPT_INST_T,     // instrument_events_t
+    OPT_INST_T,     // instrument_items_t
     OPT_DBG_T,      // debug_opts_t
     OPT_PRIO_T,     // priority_t
     OPT_POL_T,      // policy_t
@@ -378,7 +378,7 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
         case(OPT_VBFMT_T):
             return parse_verbose_fmt(str_value, (verbose_fmt_t*)option);
         case(OPT_INST_T):
-            return parse_instrument_events(str_value, (instrument_events_t*)option);
+            return parse_instrument_items(str_value, (instrument_items_t*)option);
         case(OPT_DBG_T):
             return parse_debug_opts(str_value, (debug_opts_t*)option);
         case(OPT_PRIO_T):
@@ -417,7 +417,7 @@ static const char * get_value(option_type_t type, const void *option) {
         case OPT_VBFMT_T:
             return verbose_fmt_tostr(*(verbose_fmt_t*)option);
         case OPT_INST_T:
-            return instrument_events_tostr(*(instrument_events_t*)option);
+            return instrument_items_tostr(*(instrument_items_t*)option);
         case OPT_DBG_T:
             return debug_opts_tostr(*(debug_opts_t*)option);
         case OPT_PRIO_T:
@@ -708,7 +708,7 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 b += sprintf(b, "{%s}", get_verbose_fmt_choices());
                 break;
             case OPT_INST_T:
-                b += sprintf(b, "{%s}", get_instrument_events_choices());
+                b += sprintf(b, "{%s}", get_instrument_items_choices());
                 break;
             case OPT_DBG_T:
                 b += sprintf(b, "{%s}", get_debug_opts_choices());

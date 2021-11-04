@@ -18,38 +18,44 @@
 /*********************************************************************************/
 
 /********* EXTRAE EVENTS *************/
-#define THREADS_USED_EVENT 800000
-#define RUNTIME_EVENT      800020
-#define EVENT_USER        0
-#define EVENT_INIT        1
-#define EVENT_INTO_MPI    2
-#define EVENT_OUTOF_MPI   3
-#define EVENT_LEND        4
-#define EVENT_RECLAIM     5
-#define EVENT_ACQUIRE     6
-#define EVENT_BORROW      7
-#define EVENT_RETURN      8
-#define EVENT_RESET       9
-#define EVENT_BARRIER     10
-#define EVENT_POLLDROM    11
-#define EVENT_FINALIZE    12
-#define EVENT_MAX_PARALLELISM  13
+typedef enum InstrumentEvent {
+    THREADS_USED_EVENT  = 800000,
+    RUNTIME_EVENT       = 800020,
+    IDLE_CPUS_EVENT     = 800030,
+    GIVE_CPUS_EVENT     = 800031,
+    WANT_CPUS_EVENT     = 800032,
+    MAX_PAR_EVENT       = 800033,
+    ITERATION_EVENT     = 800040,
+    DLB_MODE_EVENT      = 800050,
+    REBIND_EVENT        = 800060,
+    BINDINGS_EVENT      = 800061,
+    CALLBACK_EVENT      = 800070,
+    LOOP_STATE          = 800080,
+    MONITOR_REGION      = 800100,
+} instrument_event_t;
 
-#define IDLE_CPUS_EVENT    800030
-#define GIVE_CPUS_EVENT    800031
-#define WANT_CPUS_EVENT    800032
-#define MAX_PAR_EVENT      800033
-#define ITERATION_EVENT    800040
-#define DLB_MODE_EVENT     800050
-#define EVENT_ENABLED        1
-#define EVENT_DISABLED       2
-#define EVENT_SINGLE         3
-#define REBIND_EVENT       800060
-#define BINDINGS_EVENT     800061
-#define CALLBACK_EVENT     800070
+typedef enum InstrumentRuntimeValue {
+    /* EVENT_USER              = 0,  (deprecated) */
+    EVENT_INIT              = 1,
+    EVENT_INTO_MPI          = 2,
+    EVENT_OUTOF_MPI         = 3,
+    EVENT_LEND              = 4,
+    EVENT_RECLAIM           = 5,
+    EVENT_ACQUIRE           = 6,
+    EVENT_BORROW            = 7,
+    EVENT_RETURN            = 8,
+    /* EVENT_RESET             = 9,  (deprecated) */
+    EVENT_BARRIER           = 10,
+    EVENT_POLLDROM          = 11,
+    EVENT_FINALIZE          = 12,
+    EVENT_MAX_PARALLELISM   = 13,
+} instrument_runtime_value_t;
 
-#define LOOP_STATE         800080
-#define MONITOR_REGION     800100
+typedef enum InstrumentModeValue {
+    EVENT_ENABLED       = 1,
+    EVENT_DISABLED      = 2,
+    EVENT_SINGLE        = 3,
+} instrument_mode_value_t;
 
 typedef enum InstrumentAction {
     EVENT_BEGIN,
@@ -61,7 +67,7 @@ typedef enum InstrumentAction {
 #ifdef INSTRUMENTATION_VERSION
 #include "support/options.h"
 void instrument_register_event(unsigned type, long long value, const char *value_description);
-void instrument_event(unsigned type, long long value, instrument_action_t action);
+void instrument_event(instrument_event_t type, long long value, instrument_action_t action);
 void add_event(unsigned type, long long value);
 void init_tracing(const options_t *options);
 void instrument_finalize(void);
