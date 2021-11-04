@@ -19,7 +19,7 @@ DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided
     detailed description see :ref:`drom`. These functions are described in section
     :ref:`drom-api`.
 
-**TALP: Tracking Application Life Performance**
+**TALP: Tracking Application Live Performance**
     The TALP API is used to obtain measured metrics from other processes as well as
     to define custom monitoring regions, see :ref:`talp`. These functions are
     described in section :ref:`talp-api`.
@@ -33,7 +33,7 @@ DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided
     - DLB_<mpi_call_name>_leave(...)
 
 
-..     TALP: Tracking Application Low-level Performance
+..     TALP: Tracking Application Live Performance
 ..        To be done
 
 

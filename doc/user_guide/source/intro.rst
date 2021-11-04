@@ -47,7 +47,7 @@ the computational resources assigned to a process at run time.
 .. _talp:
 
 ============================================
-Tracking Application Life Performance (TALP)
+Tracking Application Live Performance (TALP)
 ============================================
 
 TALP is another module included in DLB that allows to measure the parallel efficiency

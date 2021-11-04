@@ -103,7 +103,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_TALP",
         .arg_name       = "--talp",
         .default_value  = "no",
-        .description    = OFFSET"Enable the TALP (Tracking Application Low-level Performance)\n"
+        .description    = OFFSET"Enable the TALP (Tracking Application Live Performance)\n"
                           OFFSET"module. Processes that enable this mode can obtain performance\n"
                           OFFSET"metrics at run time.",
         .offset         = offsetof(options_t, talp),

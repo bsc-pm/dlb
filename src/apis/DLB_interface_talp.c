@@ -17,7 +17,7 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-/* Tracking Application Low-Level Performance */
+/* Tracking Application Live Performance */
 
 #include "apis/dlb_talp.h"
 
