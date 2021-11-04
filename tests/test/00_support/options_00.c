@@ -149,6 +149,16 @@ int main( int argc, char **argv ) {
     options_init(&options_2, "");
     assert(options_1.verbose_fmt == options_2.verbose_fmt);
 
+    // Test particular options for --verbose and --instrument
+    options_init(&options_1, "--instrument");
+    assert(options_1.instrument == INST_ALL);
+    options_init(&options_1, "--instrument=yes");
+    assert(options_1.instrument == INST_ALL);
+    options_init(&options_1, "--verbose");
+    assert(options_1.verbose == VB_ALL);
+    options_init(&options_1, "--verbose=yes");
+    assert(options_1.verbose == VB_ALL);
+
     // bug: "--lewi --lewi-greedy" is well parsed but "--lewi-greedy --lewi" is not.
     options_init(&options_1, "--lewi --lewi-greedy");
     assert(options_1.lewi && options_1.lewi_greedy);
