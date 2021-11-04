@@ -746,8 +746,8 @@ void options_print_variables(const options_t *options, bool print_extended) {
     b += sprintf(b, "\n"
                     "Boolean options accept both standalone flags and 'yes'/'no' parameters.\n"
                     "These are equivalent flags:\n"
-                    "    export DLB_ARGS=\"--lewi --no-instrument\"\n"
-                    "    export DLB_ARGS=\"--lewi=yes --instrument=no\"\n");
+                    "    export DLB_ARGS=\"--lewi --no-drom\"\n"
+                    "    export DLB_ARGS=\"--lewi=yes --drom=no\"\n");
 
     info0("%s", buffer);
 }
