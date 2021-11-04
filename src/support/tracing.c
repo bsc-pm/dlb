@@ -162,6 +162,7 @@ void instrument_event(unsigned type, long long value, instrument_action_t action
                     }
                     break;
                 case EVENT_POLLDROM:
+                case EVENT_MAX_PARALLELISM:
                     if (instrument == INST_ALL) {
                         extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
                     }
@@ -171,6 +172,7 @@ void instrument_event(unsigned type, long long value, instrument_action_t action
         case IDLE_CPUS_EVENT:
         case GIVE_CPUS_EVENT:
         case WANT_CPUS_EVENT:
+        case MAX_PAR_EVENT:
             if (instrument & INST_CPUS) {
                 extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
             }
@@ -221,7 +223,7 @@ void init_tracing(const options_t *options) {
 
         unsigned type;
         int n_values;
-        long long values[13]= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+        long long values[]= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
 
         //THREADS_USED_EVENT
         type=THREADS_USED_EVENT;
@@ -242,10 +244,10 @@ void init_tracing(const options_t *options) {
 
         //RUNTIME_EVENT
         type=RUNTIME_EVENT;
-        n_values=13;
-        char* value_desc[13]= {"User code", "Init", "Into MPI call", "Out of MPI call", "Lend",
+        char* value_desc[]= {"User code", "Init", "Into MPI call", "Out of MPI call", "Lend",
             "Reclaim", "Acquire", "Borrow", "Return", "Reset DLB", "Barrier", "PollDROM",
-            "Finalize"};
+            "Finalize", "Set Max Parallelism"};
+        n_values = sizeof(value_desc) / sizeof(value_desc[0]);
         Extrae_define_event_type(&type, "DLB Runtime call", &n_values, values, value_desc);
 
         //IDLE_CPUS_EVENT
@@ -262,6 +264,11 @@ void init_tracing(const options_t *options) {
         type=WANT_CPUS_EVENT;
         n_values=0;
         Extrae_define_event_type(&type, "DLB Want Number of CPUs", &n_values, NULL, NULL);
+
+        //MAX_PAR_EVENT
+        type=MAX_PAR_EVENT;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB Max parallelism", &n_values, NULL, NULL);
 
         //ITERATION_EVENT
         type=ITERATION_EVENT;

@@ -240,7 +240,11 @@ int set_max_parallelism(subprocess_descriptor_t *spd, int max) {
     if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
+        instrument_event(RUNTIME_EVENT, EVENT_MAX_PARALLELISM, EVENT_BEGIN);
+        instrument_event(MAX_PAR_EVENT, 0, EVENT_END);
+        instrument_event(MAX_PAR_EVENT, max, EVENT_BEGIN);
         error = spd->lb_funcs.set_max_parallelism(spd, max);
+        instrument_event(RUNTIME_EVENT, EVENT_MAX_PARALLELISM, EVENT_END);
     }
     return error;
 }
@@ -250,7 +254,10 @@ int unset_max_parallelism(subprocess_descriptor_t *spd) {
     if (!spd->dlb_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
+        instrument_event(RUNTIME_EVENT, EVENT_MAX_PARALLELISM, EVENT_BEGIN);
+        instrument_event(MAX_PAR_EVENT, 0, EVENT_END);
         error = spd->lb_funcs.unset_max_parallelism(spd);
+        instrument_event(RUNTIME_EVENT, EVENT_MAX_PARALLELISM, EVENT_END);
     }
     return error;
 }
