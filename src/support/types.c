@@ -180,6 +180,12 @@ static const char instrument_items_choices_str[] =
 enum { instrument_items_nelems = sizeof(instrument_items_values) / sizeof(instrument_items_values[0]) };
 
 int parse_instrument_items(const char *str, instrument_items_t *value) {
+    /* particular case: '--instrument/--instrument=yes' enables all instrument items */
+    if (strcmp(str, "yes") == 0) {
+        *value = INST_ALL;
+        return DLB_SUCCESS;
+    }
+
     *value = INST_NONE;
     int i;
     for (i=0; i<instrument_items_nelems; ++i) {

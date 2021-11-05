@@ -16,15 +16,16 @@ Structure after installation
         └── share
             ├── doc
             │   └── dlb
-            │       └── examples
-            │           ├── DROM
-            │           ├── MPI+OMP
-            │           ├── MPI+OMP_OMPT
-            │           ├── MPI+OmpSs
-            │           ├── OMPT
-            │           ├── monitoring_regions
-            │           ├── statistics
-            │           └── talp
+            │       ├── examples
+            │       │   ├── DROM
+            │       │   ├── MPI+OMP
+            │       │   ├── MPI+OMP_OMPT
+            │       │   ├── MPI+OmpSs
+            │       │   ├── OMPT
+            │       │   ├── TALP
+            │       │   ├── monitoring_regions
+            │       │   └── statistics
+            │       └── scripts
             ├── man
             │   ├── man1
             │   └── man3
@@ -43,15 +44,16 @@ Structure after installation
         `-- share
             |-- doc
             |   `-- dlb
-            |       `-- examples
-            |           |-- DROM
-            |           |-- MPI+OMP
-            |           |-- MPI+OMP_OMPT
-            |           |-- MPI+OmpSs
-            |           |-- OMPT
-            |           |-- monitoring_regions
-            |           |-- statistics
-            |           `-- talp
+            |       |-- examples
+            |       |   |-- DROM
+            |       |   |-- MPI+OMP
+            |       |   |-- MPI+OMP_OMPT
+            |       |   |-- MPI+OmpSs
+            |       |   |-- OMPT
+            |       |   |-- TALP
+            |       |   |-- monitoring_regions
+            |       |   `-- statistics
+            |       `-- scripts
             |-- man
             |   |-- man1
             |   `-- man3
@@ -150,3 +152,32 @@ micro-load balancing, but with the Statistics module enabled. Check the ``run.sh
 The objective is to let the process run in background while you run one of the other two
 binaries provided. These two binaries ``get_pid_list`` and ``get_cpu_usage`` perform basic
 queries to the first PILS program and obtain some statistics about CPU usage.
+
+.. _scripts:
+
+Scripts
+=======
+
+These scripts are provided for users to simplify the process of enabling some DLB
+module for their applications. These scripts should be copied to a write-access location,
+modify them if needed and execute them before the application. Typically, these scripts
+are correctly configured and should work out of the box, but it is recommended to double
+check the *Run* section at the bottom of the files and check whether the appropriate
+DLB library is configured. Refer to :ref:`how_to_scripts` for a usage example.
+
+**lewi_omp.sh**
+    This script enables the LeWI module on OpenMP applications. It also enables OMPT
+    support as long as the OpenMP runtime supports it.
+
+**lewi_omp_trace.sh**
+    Same as the previous one, but with Extrae support.
+
+**lewi_ompss.sh**
+    This script enables the LeWI module on OmpSs applications.
+
+**lewi_ompss_trace.sh**
+    Same as the previous one, but with Extrae support.
+
+**talp.sh**
+    This script enables the TALP module. A performance analysis summary will be
+    reported at the end of the execution.

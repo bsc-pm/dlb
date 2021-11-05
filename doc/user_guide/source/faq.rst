@@ -24,13 +24,6 @@ with different number of threads.
 If this limitation cannot be solved, you can use the DLB API to only change the
 number of threads on code regions that are safe to do so.
 
-Mercurium may have DLB support with the ``--dlb`` flag. What does it do? Should I use it?
-=========================================================================================
-
-If Mercurium was configured with DLB support, it will accept the ``--dlb`` option flag to
-automatically include the DLB headers and link with the corresponding library. If your application
-does not use any DLB API function you don't need to use this flag.
-
 Which should I use, LeWI or DROM for my application?
 ====================================================
 
@@ -136,3 +129,12 @@ or preload with one of the libray flavours for instrumentation. These are ``libd
 
 You can find predefined Paraver configurations in the installation directory
 ``$DLB_PREFIX/hare/paraver_cfgs/DLB/``.
+
+What DLB library do I need to use if I want to trace the application but not DLB?
+=================================================================================
+
+Short answer: the same as if you were tracing DLB but with ``DLB_ARGS+=" --instrument=none"``.
+If your application has MPI, DLB still has to be aware of MPI and yet it needs to avoid the MPI
+symbols interception. This is what the libraries ``libdlb_mpi_instr.so`` and
+``libdlb_mpif_instr.so`` do, only Extrae will intercept MPI and will forward that information
+to DLB.

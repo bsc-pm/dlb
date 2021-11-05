@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   change the default behavior
 - Rename `--talp-summary=app` to `--talp-summary=pop-metrics` and
   make it the default value
+- Rename TALP to Tracking Application Live Performance
 
 ## [3.0] 2021-01-15
 ### Added

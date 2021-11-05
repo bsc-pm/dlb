@@ -103,7 +103,7 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_TALP",
         .arg_name       = "--talp",
         .default_value  = "no",
-        .description    = OFFSET"Enable the TALP (Tracking Application Low-level Performance)\n"
+        .description    = OFFSET"Enable the TALP (Tracking Application Live Performance)\n"
                           OFFSET"module. Processes that enable this mode can obtain performance\n"
                           OFFSET"metrics at run time.",
         .offset         = offsetof(options_t, talp),
@@ -746,8 +746,8 @@ void options_print_variables(const options_t *options, bool print_extended) {
     b += sprintf(b, "\n"
                     "Boolean options accept both standalone flags and 'yes'/'no' parameters.\n"
                     "These are equivalent flags:\n"
-                    "    export DLB_ARGS=\"--lewi --no-instrument\"\n"
-                    "    export DLB_ARGS=\"--lewi=yes --instrument=no\"\n");
+                    "    export DLB_ARGS=\"--lewi --no-drom\"\n"
+                    "    export DLB_ARGS=\"--lewi=yes --drom=no\"\n");
 
     info0("%s", buffer);
 }

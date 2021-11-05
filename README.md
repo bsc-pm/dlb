@@ -18,8 +18,8 @@ DROM (Dynamic Resource Ownership Manager) is the algorithm used to manage the
 CPU affinity of a process running a shared memory programming model (e.g.,
 OpenMP).
 
-#### Tracking Application Life Performance
-TALP (Tracking Application Life Performance) is the module used to gather
+#### Tracking Application Live Performance
+TALP (Tracking Application Live Performance) is the module used to gather
 performance data from the application. The data can be obtained during
 the execution or as a report at the end.
 
