@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## [Unreleased]
 ### Added
 - New `--lewi-mpi-calls` value: `none`
+- New MPI runtime version check during initialization
+- Experimental meson build files
+- Add better support for getting/setting process mask from own process
 
 ### Changed
 - Enable `--barrier` by default
@@ -14,6 +17,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Rename `--talp-summary=app` to `--talp-summary=pop-metrics` and
   make it the default value
 - Rename TALP to Tracking Application Live Performance
+- CPU priority now follows a better topology order
+- Properly clean up shared memory during initialization
+
+## Fixed
+- Fixed several TALP issues
+- Improves support for OMPT
+- Proper shared memory clean up if running under `dlb_run`
+
+## Deprecated
+- Python viewer scripts are no longer installed
 
 ## [3.0] 2021-01-15
 ### Added
@@ -199,6 +212,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Binary `dlb`
 
 [Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.0...HEAD
+[3.0.2]: https://github.com/bsc-pm/dlb/compare/v3.0.1...v3.0.2
+[3.0.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.0.1
 [3.0]: https://github.com/bsc-pm/dlb/compare/v2.1...v3.0
 [2.1]: https://github.com/bsc-pm/dlb/compare/v2.0...v2.1
 [2.0.2]: https://github.com/bsc-pm/dlb/compare/v2.0.1...v2.0.2
