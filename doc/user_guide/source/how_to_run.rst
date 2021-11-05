@@ -23,6 +23,26 @@ Generally, in order to run DLB with your application, you need to follow these s
 3. Run you application as you would normally do.
 
 
+.. _how_to_scripts:
+
+Using a DLB script provided in the installation
+===============================================
+The DLB installation provides some scripts to run applications easily with DLB support.
+There are different scripts to enable LeWI with a specific programming model, either
+OpenMP or OmpSs, or to enable TALP and obtain performance metrics of the application
+at the end of its execution.
+
+These scripts contain common DLB options for that case and a description of other
+options that may be of interest. To use these scripts, the recommended method is to
+copy the script you want to use, review it or modify it if needed, and then run the
+script just before the application::
+
+    $ cp $DLB_PREFIX/share/doc/dlb/scripts/talp.sh .
+    # edit talp.sh to uncomment the appropriate MPI C or Fortran library
+    $ mpirun ./talp.sh ./foo
+
+Refer to :ref:`scripts` for more information.
+
 LeWI Examples by Programming Model
 ==================================
 For simplicity, all the LeWI examples are MPI applications. [#mpi_wrapper]_
