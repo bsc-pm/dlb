@@ -86,8 +86,11 @@ AM_PROG_CC_C_O
 AC_LANG([C])
 
 # icc needs -we10006 to promote unrecognized flags from warning to error
-AX_CHECK_COMPILE_FLAG([-we10006], [foobar="-we10006"])
-AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $foobar])
+AX_CHECK_COMPILE_FLAG([-we10006], [intel_we_flag="-we10006"])
+AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $intel_we_flag])
+# icc >= 19 needs -we10148 instead
+AX_CHECK_COMPILE_FLAG([-we10148], [intel_we_flag="-we10148"])
+AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $intel_we_flag])
 
 # fccpx needs this env. variable to promote unrecognized flags from warning to error
 AX_VAR_PUSHVALUE([FCOMP_UNRECOGNIZED_OPTION], [error])
