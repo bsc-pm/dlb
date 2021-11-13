@@ -35,6 +35,8 @@ check-local:
 endif
 
 lit-check:
+	@echo "  Tip: Use LIT_FLAGS to limit the number of threads:"
+	@echo "       make check LIT_FLAGS=\"-j N\""
 	$(LIT) $(srcdir)/test/$(TEST)*
 
 bets-check:
