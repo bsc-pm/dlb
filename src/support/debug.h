@@ -106,7 +106,7 @@ extern verbose_opts_t   vb_opts;
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-#if (defined(__GNUC__) && __GNUC__ >= 7) || (defined(__clang__) && __clang_major__ >= 11)
+#if !defined(__INTEL_COMPILER) && ((defined(__GNUC__) && __GNUC__ >= 7) || (defined(__clang__) && __clang_major__ >= 11))
 #define DLB_FALLTHROUGH __attribute__((__fallthrough__))
 #else
 #define DLB_FALLTHROUGH ((void)0)
