@@ -639,27 +639,33 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
     monitor_app_summary_t *app_summary = monitor_data->app_summary;
     if (app_summary != NULL) {
-        int P = app_summary->total_cpus;
-        int N = _num_nodes;
-        int64_t elapsed_time = app_summary->elapsed_time;
-        int64_t elapsed_useful = app_summary->elapsed_useful;
-        int64_t app_sum_useful = app_summary->app_sum_useful;
-        int64_t node_sum_useful = app_summary->node_sum_useful;
-        float parallel_efficiency = (float)app_sum_useful / (elapsed_time * P);
-        float communication_efficiency = (float)elapsed_useful / elapsed_time;
-        float lb = (float)app_sum_useful / (elapsed_useful * P);
-        float lb_in = (float)(node_sum_useful * N) / (elapsed_useful * P);
-        float lb_out = (float)app_sum_useful / (node_sum_useful * N);
-        char elapsed_time_str[16];
-        ns_to_human(elapsed_time_str, 16, elapsed_time);
-        info("######### Monitoring Region App Summary #########");
-        info("### Name:                       %s", monitor->name);
-        info("### Elapsed Time :              %s", elapsed_time_str);
-        info("### Parallel efficiency :       %1.2f", parallel_efficiency);
-        info("###   - Communication eff. :    %1.2f", communication_efficiency);
-        info("###   - Load Balance :          %1.2f", lb);
-        info("###       - LB_in :             %1.2f", lb_in);
-        info("###       - LB_out:             %1.2f", lb_out);
+        if (app_summary->elapsed_time > 0) {
+            int P = app_summary->total_cpus;
+            int N = _num_nodes;
+            int64_t elapsed_time = app_summary->elapsed_time;
+            int64_t elapsed_useful = app_summary->elapsed_useful;
+            int64_t app_sum_useful = app_summary->app_sum_useful;
+            int64_t node_sum_useful = app_summary->node_sum_useful;
+            float parallel_efficiency = (float)app_sum_useful / (elapsed_time * P);
+            float communication_efficiency = (float)elapsed_useful / elapsed_time;
+            float lb = (float)app_sum_useful / (elapsed_useful * P);
+            float lb_in = (float)(node_sum_useful * N) / (elapsed_useful * P);
+            float lb_out = (float)app_sum_useful / (node_sum_useful * N);
+            char elapsed_time_str[16];
+            ns_to_human(elapsed_time_str, 16, elapsed_time);
+            info("######### Monitoring Region App Summary #########");
+            info("### Name:                       %s", monitor->name);
+            info("### Elapsed Time :              %s", elapsed_time_str);
+            info("### Parallel efficiency :       %1.2f", parallel_efficiency);
+            info("###   - Communication eff. :    %1.2f", communication_efficiency);
+            info("###   - Load Balance :          %1.2f", lb);
+            info("###       - LB_in :             %1.2f", lb_in);
+            info("###       - LB_out:             %1.2f", lb_out);
+        } else {
+            info("######### Monitoring Region App Summary #########");
+            info("### Name:                       %s", monitor->name);
+            info("###                  No data                  ###");
+        }
     }
 #else
     warning("Option --talp-summary=pop-metrics is set but DLB is not intercepting MPI calls.");
