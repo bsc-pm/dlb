@@ -58,13 +58,12 @@ int main(int argc, char *argv[]) {
 
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
-    spd_enter_dlb(NULL);
-    options_init(&thread_spd->options, options);
-    thread_spd->id = 111;
-    memcpy(&thread_spd->process_mask, &process_mask, sizeof(cpu_set_t));
-    talp_init(thread_spd);
+    subprocess_descriptor_t spd = {.id = 111};
+    options_init(&spd.options, options);
+    memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
+    talp_init(&spd);
 
-    talp_info_t *talp_info = thread_spd->talp_info;
+    talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
 
     /* TALP initial values */
@@ -72,18 +71,18 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_computation_time == 0 );
     assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
-    assert( monitoring_region_get_MPI_region() == mpi_monitor );
+    assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
 
     /* Start and Stop MPI monitor */
-    talp_mpi_init();
+    talp_mpi_init(&spd);
     usleep(USLEEP_TIME);
-    talp_mpi_finalize();
+    talp_mpi_finalize(&spd);
 
     /* Start and Stop custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test monitor");
     assert( monitor != NULL );
     monitoring_region_start(monitor);
-    monitoring_region_stop(monitor);
+    monitoring_region_stop(&spd, monitor);
 
     /* Test MPI monitor values are correct and greater than custom monitor */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
@@ -103,7 +102,7 @@ int main(int argc, char *argv[]) {
     /* Test number of measurements */
     for (i=0; i<NUM_MEASUREMENTS; ++i) {
         monitoring_region_start(monitor);
-        monitoring_region_stop(monitor);
+        monitoring_region_stop(&spd, monitor);
     }
     assert( monitor->num_measurements == NUM_MEASUREMENTS );
     int64_t last_elapsed_measurement = monitor->stop_time - monitor->start_time;
@@ -111,11 +110,11 @@ int main(int argc, char *argv[]) {
     assert( last_elapsed_measurement * NUM_MEASUREMENTS/10 < monitor->elapsed_time );
 
     /* Test invalid start/stop call order */
-    assert( monitoring_region_stop(monitor) == DLB_NOUPDT );
+    assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
     assert( monitoring_region_start(monitor) == DLB_SUCCESS );
     assert( monitoring_region_start(monitor) == DLB_NOUPDT );
-    assert( monitoring_region_stop(monitor) == DLB_SUCCESS );
-    assert( monitoring_region_stop(monitor) == DLB_NOUPDT );
+    assert( monitoring_region_stop(&spd, monitor) == DLB_SUCCESS );
+    assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
 
     /* Test nested regions */
     dlb_monitor_t *monitor1 = monitoring_region_register("Test nested 1");
@@ -129,13 +128,13 @@ int main(int argc, char *argv[]) {
         for (j=0; j<NUM_MEASUREMENTS; ++j) {
             monitoring_region_start(monitor3);
             usleep(USLEEP_TIME);
-            monitoring_region_stop(monitor3);
+            monitoring_region_stop(&spd, monitor3);
         }
         usleep(USLEEP_TIME);
-        monitoring_region_stop(monitor2);
+        monitoring_region_stop(&spd, monitor2);
     }
     usleep(USLEEP_TIME);
-    monitoring_region_stop(monitor1);
+    monitoring_region_stop(&spd, monitor1);
     assert( monitor1->num_measurements == 1 );
     assert( monitor2->num_measurements == NUM_MEASUREMENTS );
     assert( monitor3->num_measurements == NUM_MEASUREMENTS * NUM_MEASUREMENTS );
@@ -152,7 +151,7 @@ int main(int argc, char *argv[]) {
     assert( monitor6 != monitor5 );
     assert( strcmp(monitor5->name, monitor6->name) == 0 );
 
-    talp_finalize(thread_spd);
+    talp_finalize(&spd);
 
     return 0;
 }

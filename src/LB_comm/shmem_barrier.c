@@ -237,7 +237,7 @@ void shmem_barrier__barrier(void) {
         DLB_ATOMIC_ADD_RLX(&barrier->ntimes, 1);
     } else {
         // Only if this process is not the last one, act as a blocking call
-        talp_in_mpi();
+        talp_in_mpi(thread_spd);
         IntoBlockingCall(0, 0);
 
         // Barrier
@@ -245,7 +245,7 @@ void shmem_barrier__barrier(void) {
 
         // Recover resources for those processes that simulated a blocking call
         OutOfBlockingCall(0);
-        talp_out_mpi();
+        talp_out_mpi(thread_spd);
     }
 
     unsigned int participants_left = DLB_ATOMIC_SUB_FETCH(&barrier->count, 1);

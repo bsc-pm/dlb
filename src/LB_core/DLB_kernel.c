@@ -271,7 +271,7 @@ void IntoCommunication(void) {
         spd->lb_funcs.into_communication(spd);
     }
     if(spd->options.talp) {
-        talp_in_mpi();
+        talp_in_mpi(spd);
     }
 }
 
@@ -281,7 +281,7 @@ void OutOfCommunication(void) {
         spd->lb_funcs.out_of_communication(spd);
     }
     if(spd->options.talp) {
-        talp_out_mpi();
+        talp_out_mpi(spd);
     }
 }
 
@@ -314,7 +314,7 @@ int lend(const subprocess_descriptor_t *spd) {
         instrument_event(GIVE_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
         error = spd->lb_funcs.lend(spd);
         if (error == DLB_SUCCESS && spd->options.talp) {
-            talp_cpuset_disable(&spd->process_mask);
+            talp_cpuset_disable(spd, &spd->process_mask);
         }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
@@ -331,7 +331,7 @@ int lend_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         instrument_event(GIVE_CPUS_EVENT, 1, EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpu(spd, cpuid);
         if (error == DLB_SUCCESS && spd->options.talp) {
-            talp_cpu_disable(cpuid);
+            talp_cpu_disable(spd, cpuid);
         }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
@@ -362,7 +362,7 @@ int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
         instrument_event(GIVE_CPUS_EVENT, CPU_COUNT(mask), EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpu_mask(spd, mask);
         if (error == DLB_SUCCESS && spd->options.talp) {
-            talp_cpuset_disable(mask);
+            talp_cpuset_disable(spd, mask);
         }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
