@@ -702,7 +702,8 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
 
     /* Obtain the total number of CPUs used in all processes */
     talp_info_t *talp_info = spd->talp_info;
-    MPI_Reduce(&talp_info->ncpus, &total_cpus,
+    int ncpus = monitor->num_measurements > 0 ? talp_info->ncpus : 0;
+    MPI_Reduce(&ncpus, &total_cpus,
             1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD);
 
     /* Allocate gathered data only in process rank 0 */
