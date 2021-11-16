@@ -54,18 +54,17 @@ int main(int argc, char *argv[]) {
 
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
-    spd_enter_dlb(NULL);
-    options_init(&thread_spd->options, options);
-    thread_spd->id = 111;
-    memcpy(&thread_spd->process_mask, &process_mask, sizeof(cpu_set_t));
-    talp_init(thread_spd);
+    subprocess_descriptor_t spd = {.id = 111};
+    options_init(&spd.options, options);
+    memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
+    talp_init(&spd);
 
-    bool lewi = thread_spd->options.lewi;
-    talp_info_t *talp_info = thread_spd->talp_info;
+    bool lewi = spd.options.lewi;
+    talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
 
     /* Start MPI monitoring region */
-    talp_mpi_init();
+    talp_mpi_init(&spd);
     assert( mpi_monitor->num_measurements == 0 );
     assert( mpi_monitor->num_resets == 0 );
     assert( mpi_monitor->start_time != 0 );
@@ -77,7 +76,7 @@ int main(int argc, char *argv[]) {
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
 
     /* Entering MPI */
-    talp_in_mpi();
+    talp_in_mpi(&spd);
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
     if (lewi) {
@@ -89,7 +88,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Leaving MPI */
-    talp_out_mpi();
+    talp_out_mpi(&spd);
     assert( mpi_monitor->accumulated_MPI_time != 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
     assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
@@ -99,24 +98,24 @@ int main(int argc, char *argv[]) {
     assert( CPU_ISSET(cpuid, &process_mask) );
 
     /* Disable CPU */
-    talp_cpu_disable(cpuid);
+    talp_cpu_disable(&spd, cpuid);
     int64_t time_computation_before = mpi_monitor->accumulated_computation_time;
     usleep(USLEEP_TIME);
 
     /* Enable CPU */
-    talp_cpu_enable(cpuid);
+    talp_cpu_enable(&spd, cpuid);
     int64_t time_computation = mpi_monitor->accumulated_computation_time - time_computation_before;
     assert( time_computation == 0 );
 
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test");
-    monitoring_region_start(monitor);
-    talp_in_mpi();
-    talp_out_mpi();
-    monitoring_region_stop(monitor);
+    monitoring_region_start(&spd, monitor);
+    talp_in_mpi(&spd);
+    talp_out_mpi(&spd);
+    monitoring_region_stop(&spd, monitor);
 
     /* Finalize MPI */
-    talp_mpi_finalize();
+    talp_mpi_finalize(&spd);
     assert( mpi_monitor->num_measurements == 1 );
     assert( mpi_monitor->num_resets == 0 );
     assert( mpi_monitor->start_time != 0 );
@@ -125,10 +124,10 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_MPI_time != 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
 
-    thread_spd->options.talp_summary |= SUMMARY_NODE;
-    thread_spd->options.talp_summary |= SUMMARY_PROCESS;
-    thread_spd->options.talp_summary |= SUMMARY_REGIONS;
-    talp_finalize(thread_spd);
+    spd.options.talp_summary |= SUMMARY_NODE;
+    spd.options.talp_summary |= SUMMARY_PROCESS;
+    spd.options.talp_summary |= SUMMARY_REGIONS;
+    talp_finalize(&spd);
 
     return 0;
 }

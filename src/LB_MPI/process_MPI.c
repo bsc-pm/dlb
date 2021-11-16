@@ -177,7 +177,7 @@ void after_init(void) {
 
     // Policies that used dpd have been temporarily disabled
     //use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
-    talp_mpi_init();
+    talp_mpi_init(thread_spd);
     use_dpd = 0;
     lewi_mpi_calls = thread_spd->options.lewi_mpi_calls;
 
@@ -229,7 +229,7 @@ void after_mpi(mpi_call call_type) {
 
 void before_finalize(void) {
     mpi_ready = 0;
-    talp_mpi_finalize();
+    talp_mpi_finalize(thread_spd);
 }
 
 void after_finalize(void) {

@@ -18,8 +18,9 @@
 /*********************************************************************************/
 
 #include "LB_numThreads/numThreads.h"
-#include "LB_core/DLB_talp.h"
 
+#include "LB_core/DLB_talp.h"
+#include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
 #include "support/tracing.h"
 #include "support/debug.h"
@@ -154,7 +155,7 @@ int update_threads(const pm_interface_t *pm, int threads) {
 
 int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->talp_enabled) {
-        talp_cpuset_set(cpu_set);
+        talp_cpuset_set(thread_spd, cpu_set);
     }
     if (pm->dlb_callback_set_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
@@ -167,7 +168,7 @@ int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 
 int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->talp_enabled) {
-        talp_cpuset_set(cpu_set);
+        talp_cpuset_set(thread_spd, cpu_set);
     }
     if (pm->dlb_callback_set_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
@@ -180,7 +181,7 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 
 int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->talp_enabled) {
-        talp_cpuset_enable(cpu_set);
+        talp_cpuset_enable(thread_spd, cpu_set);
     }
     if (pm->dlb_callback_add_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
@@ -193,7 +194,7 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 
 int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->talp_enabled) {
-        talp_cpuset_enable(cpu_set);
+        talp_cpuset_enable(thread_spd, cpu_set);
     }
     if (pm->dlb_callback_add_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
@@ -215,7 +216,7 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
     }
 
     if (pm->talp_enabled) {
-        talp_cpu_enable(cpuid);
+        talp_cpu_enable(thread_spd, cpuid);
     }
     if (pm->dlb_callback_enable_cpu_ptr == NULL) {
         return DLB_ERR_NOCBK;
@@ -237,7 +238,7 @@ int disable_cpu(const pm_interface_t *pm, int cpuid) {
     }
 
     if (pm->talp_enabled) {
-        talp_cpu_disable(cpuid);
+        talp_cpu_disable(thread_spd, cpuid);
     }
     if (pm->dlb_callback_disable_cpu_ptr == NULL) {
         return DLB_ERR_NOCBK;

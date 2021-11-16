@@ -1454,7 +1454,7 @@ int auto_resize_start(){
                 CPU_SET(i,&shdata->resize_mask);
                 CPU_CLR(i,&mask);
                 set_new_mask(process, &mask, false, false);
-                talp_cpu_disable(i);
+                talp_cpu_disable(thread_spd, i);
                 break;
             }
         }
@@ -1474,7 +1474,7 @@ int auto_resize_start(){
                 CPU_CLR(i, &shdata->resize_mask);
                 shmem_unlock(shm_handler);
                 set_new_mask(process,&mask, false, false);
-                talp_cpu_enable(i);
+                talp_cpu_enable(thread_spd, i);
                 break;
             }
         }

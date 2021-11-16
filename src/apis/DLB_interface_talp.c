@@ -83,7 +83,7 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
 
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void) {
     spd_enter_dlb(NULL);
-    return monitoring_region_get_MPI_region();
+    return monitoring_region_get_MPI_region(thread_spd);
 }
 
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
@@ -95,6 +95,7 @@ dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
 }
 
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
+    spd_enter_dlb(NULL);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
@@ -102,17 +103,19 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
 }
 
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
+    spd_enter_dlb(NULL);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_start(handle);
+    return monitoring_region_start(thread_spd, handle);
 }
 
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
+    spd_enter_dlb(NULL);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_stop(handle);
+    return monitoring_region_stop(thread_spd, handle);
 }
 
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
@@ -120,5 +123,5 @@ int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_report(handle);
+    return monitoring_region_report(thread_spd, handle);
 }
