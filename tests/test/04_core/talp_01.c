@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test");
-    monitoring_region_start(monitor);
+    monitoring_region_start(&spd, monitor);
     talp_in_mpi(&spd);
     talp_out_mpi(&spd);
     monitoring_region_stop(&spd, monitor);

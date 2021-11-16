@@ -60,7 +60,8 @@ const struct dlb_monitor_t* monitoring_region_get_MPI_region(
 
 struct dlb_monitor_t* monitoring_region_register(const char* name);
 int monitoring_region_reset(struct dlb_monitor_t *monitor);
-int monitoring_region_start(struct dlb_monitor_t *monitor);
+int monitoring_region_start(const struct SubProcessDescriptor *spd,
+        struct dlb_monitor_t *monitor);
 int monitoring_region_stop(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor);
 int monitoring_region_report(const struct SubProcessDescriptor *spd,

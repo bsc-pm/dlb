@@ -107,7 +107,7 @@ int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_start(handle);
+    return monitoring_region_start(thread_spd, handle);
 }
 
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle){

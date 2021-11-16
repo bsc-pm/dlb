@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     /* Start and Stop custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test monitor");
     assert( monitor != NULL );
-    monitoring_region_start(monitor);
+    monitoring_region_start(&spd, monitor);
     monitoring_region_stop(&spd, monitor);
 
     /* Test MPI monitor values are correct and greater than custom monitor */
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
 
     /* Test number of measurements */
     for (i=0; i<NUM_MEASUREMENTS; ++i) {
-        monitoring_region_start(monitor);
+        monitoring_region_start(&spd, monitor);
         monitoring_region_stop(&spd, monitor);
     }
     assert( monitor->num_measurements == NUM_MEASUREMENTS );
@@ -111,8 +111,8 @@ int main(int argc, char *argv[]) {
 
     /* Test invalid start/stop call order */
     assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
-    assert( monitoring_region_start(monitor) == DLB_SUCCESS );
-    assert( monitoring_region_start(monitor) == DLB_NOUPDT );
+    assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
+    assert( monitoring_region_start(&spd, monitor) == DLB_NOUPDT );
     assert( monitoring_region_stop(&spd, monitor) == DLB_SUCCESS );
     assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
 
@@ -120,13 +120,13 @@ int main(int argc, char *argv[]) {
     dlb_monitor_t *monitor1 = monitoring_region_register("Test nested 1");
     dlb_monitor_t *monitor2 = monitoring_region_register("Test nested 2");
     dlb_monitor_t *monitor3 = monitoring_region_register("Test nested 3");
-    monitoring_region_start(monitor1);
+    monitoring_region_start(&spd, monitor1);
     usleep(USLEEP_TIME);
     for (i=0; i<NUM_MEASUREMENTS; ++i) {
-        monitoring_region_start(monitor2);
+        monitoring_region_start(&spd, monitor2);
         usleep(USLEEP_TIME);
         for (j=0; j<NUM_MEASUREMENTS; ++j) {
-            monitoring_region_start(monitor3);
+            monitoring_region_start(&spd, monitor3);
             usleep(USLEEP_TIME);
             monitoring_region_stop(&spd, monitor3);
         }

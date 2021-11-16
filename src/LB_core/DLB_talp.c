@@ -51,6 +51,7 @@ typedef struct talp_info_t {
     cpu_set_t       workers_mask;           /* CPUs doing computation */
     cpu_set_t       mpi_mask;               /* CPUs doing MPI */
     int             ncpus;                  /* Number of process CPUs */
+    int64_t         sample_start_time;
 } talp_info_t;
 
 /* Application summary */
@@ -83,7 +84,6 @@ typedef struct monitor_node_summary_t {
 typedef struct monitor_data_t {
     int     id;
     bool    started;
-    int64_t sample_start_time;
     monitor_app_summary_t *app_summary;
     monitor_node_summary_t *node_summary;
 } monitor_data_t;
@@ -174,7 +174,7 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         /* Start MPI region */
-        monitoring_region_start(&talp_info->mpi_monitor);
+        monitoring_region_start(spd, &talp_info->mpi_monitor);
     }
 }
 
@@ -195,44 +195,6 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
             monitoring_regions_gather_app_data_all(spd);
         }
     }
-}
-
-/*********************************************************************************/
-/*    Update monitor times based on CPU masks                                    */
-/*********************************************************************************/
-
-static void talp_update_monitor(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    talp_info_t *talp_info = spd->talp_info;
-    monitor_data_t *monitor_data = monitor->_data;
-
-    /* Compute sample duration */
-    int64_t sample_duration = get_time_in_ns() - monitor_data->sample_start_time;
-
-    /* Update elapsed computation time */
-    if (CPU_COUNT(&talp_info->workers_mask) > 0) {
-        monitor->elapsed_computation_time += sample_duration;
-    }
-
-    /* Update MPI time */
-    int64_t mpi_time = sample_duration * CPU_COUNT(&talp_info->mpi_mask);
-    monitor->accumulated_MPI_time += mpi_time;
-
-    /* Update computation time */
-    verbose(VB_TALP, "Updating computation time of region %s with mask: %s (%d)",
-            monitor->name, mu_to_str(&talp_info->workers_mask),
-            CPU_COUNT(&talp_info->workers_mask));
-    int64_t computation_time = sample_duration * CPU_COUNT(&talp_info->workers_mask);
-    monitor->accumulated_computation_time += computation_time;
-
-    /* Update shared memory only when updating the main monitor */
-    if (monitor == &talp_info->mpi_monitor) {
-        shmem_procinfo__settimes(spd->id,
-                monitor->accumulated_MPI_time,
-                monitor->accumulated_computation_time);
-    }
-
-    /* Start new sample */
-    monitor_data->sample_start_time = get_time_in_ns();
 }
 
 
@@ -559,23 +521,24 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
 
     monitor_data_t *monitor_data = monitor->_data;
     monitor_data->started = false;
-    monitor_data->sample_start_time = 0;
 
     return DLB_SUCCESS;
 }
 
-int monitoring_region_start(dlb_monitor_t *monitor) {
+int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
     int error;
     monitor_data_t *monitor_data = monitor->_data;
 
     if (!monitor_data->started) {
+        /* Update all monitors */
+        monitoring_regions_update_all(spd);
+
         verbose(VB_TALP, "Starting region %s", monitor->name);
         instrument_event(MONITOR_REGION, monitor_data->id, EVENT_BEGIN);
 
         monitor->start_time = get_time_in_ns();
         monitor->stop_time = 0;
         monitor_data->started = true;
-        monitor_data->sample_start_time = monitor->start_time;
 
         error = DLB_SUCCESS;
     } else {
@@ -590,17 +553,16 @@ int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *mo
     monitor_data_t *monitor_data = monitor->_data;
 
     if (monitor_data->started) {
-        verbose(VB_TALP, "Stopping region %s", monitor->name);
-        /* Update last sample */
-        talp_update_monitor(spd, monitor);
+        /* Update all monitors */
+        monitoring_regions_update_all(spd);
 
         /* Stop timer */
         monitor->stop_time = get_time_in_ns();
         monitor->elapsed_time += monitor->stop_time - monitor->start_time;
         ++(monitor->num_measurements);
         monitor_data->started = false;
-        monitor_data->sample_start_time = 0;
 
+        verbose(VB_TALP, "Stopping region %s", monitor->name);
         instrument_event(MONITOR_REGION, monitor_data->id, EVENT_END);
         error = DLB_SUCCESS;
     } else {
@@ -742,12 +704,35 @@ static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd) 
 
 static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
 
-    /* Update MPI monitor */
     talp_info_t *talp_info = spd->talp_info;
-    monitor_data_t *mpi_monitor_data = talp_info->mpi_monitor._data;
+
+    /* Sample ends here, compute duration and begin new sample */
+    int64_t now = get_time_in_ns();
+    int64_t sample_duration = now - talp_info->sample_start_time;
+    talp_info->sample_start_time = now;
+
+    /* Compute elapsed computation time */
+    int64_t elapsed_computation_time =
+        CPU_COUNT(&talp_info->workers_mask) > 0 ? sample_duration : 0;
+
+    /* Compute MPI time */
+    int64_t mpi_time = sample_duration * CPU_COUNT(&talp_info->mpi_mask);
+
+    /* Compute computation time */
+    int64_t computation_time = sample_duration * CPU_COUNT(&talp_info->workers_mask);
+
+    /* Update MPI monitor */
+    dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
+    monitor_data_t *mpi_monitor_data = mpi_monitor->_data;
     if (mpi_monitor_data != NULL
             && mpi_monitor_data->started) {
-        talp_update_monitor(spd, &talp_info->mpi_monitor);
+        mpi_monitor->elapsed_computation_time += elapsed_computation_time;
+        mpi_monitor->accumulated_MPI_time += mpi_time;
+        mpi_monitor->accumulated_computation_time += computation_time;
+        /* Update shared memory. FIXME: update only based on flag */
+        shmem_procinfo__settimes(spd->id,
+                mpi_monitor->accumulated_MPI_time,
+                mpi_monitor->accumulated_computation_time);
     }
 
     /* Update custom regions */
@@ -756,7 +741,9 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
         dlb_monitor_t *monitor = regions[i];
         monitor_data_t *monitor_data = monitor->_data;
         if (monitor_data->started) {
-            talp_update_monitor(spd, monitor);
+            monitor->elapsed_computation_time += elapsed_computation_time;
+            monitor->accumulated_MPI_time += mpi_time;
+            monitor->accumulated_computation_time += computation_time;
         }
     }
 }
