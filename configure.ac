@@ -48,7 +48,7 @@ AC_DEFINE_UNQUOTED([DLB_BUILD_VERSION], [$build_version], [Build version])
 
 AC_MSG_CHECKING([whether to enable developer mode])
 AC_ARG_ENABLE([developer-mode],
-    AS_HELP_STRING([--enable-developer-mode], [enable developer compilation flags]),
+    AS_HELP_STRING([--enable-developer-mode], [use stricter error compilation flags]),
     [
         AS_IF([test x"$enable_developer_mode" = xyes], [
             developer_version=yes
