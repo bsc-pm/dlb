@@ -158,6 +158,17 @@ void omp_thread_manager__lend(void) {
     }
 }
 
+// FIXME name function when merging with free_agents branch
+void omp_thread_manager__lend_from_api(void) {
+    if (lewi) {
+        set_num_threads_fn(1);
+        CPU_ZERO(&active_mask);
+        CPU_SET(sched_getcpu(), &active_mask);
+        verbose(VB_OMPT, "Release - Setting new mask to %s", mu_to_str(&active_mask));
+        //DLB_SetMaxParallelism(1);
+    }
+}
+
 /* lb_funcs.into_blocking_call has already been called and
  * the current CPU will be lent according to the --lew-mpi option
  * This function just lends the rest of the CPUs

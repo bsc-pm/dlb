@@ -312,6 +312,7 @@ int lend(const subprocess_descriptor_t *spd) {
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
         instrument_event(GIVE_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
+        omp_thread_manager__lend_from_api();
         error = spd->lb_funcs.lend(spd);
         if (error == DLB_SUCCESS && spd->options.talp) {
             talp_cpuset_disable(spd, &spd->process_mask);

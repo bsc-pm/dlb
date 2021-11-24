@@ -26,6 +26,7 @@ void omp_thread_manager__init(const options_t *options);
 void omp_thread_manager__finalize(void);
 void omp_thread_manager__borrow(void);
 void omp_thread_manager__lend(void);
+void omp_thread_manager__lend_from_api(void);
 void omp_thread_manager__IntoBlockingCall(void);
 void omp_thread_manager__OutOfBlockingCall(void);
 
