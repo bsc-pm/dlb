@@ -155,7 +155,8 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     }
     if (spd->options.talp_summary & SUMMARY_PROCESS
         || spd->options.talp_summary & SUMMARY_REGIONS
-        || spd->options.talp_summary & SUMMARY_POP_METRICS) {
+        || spd->options.talp_summary & SUMMARY_POP_METRICS
+        || spd->options.talp_summary & SUMMARY_POP_RAW) {
         monitoring_regions_report_all(spd);
     }
 
@@ -191,7 +192,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         }
 
         /* Gather data among MPIs if app summary is enabled  */
-        if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
+        if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW)) {
             monitoring_regions_gather_app_data_all(spd);
         }
     }
@@ -606,7 +607,7 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
             float lb_out = (float)app_sum_useful / (node_sum_useful * N);
             char elapsed_time_str[16];
             ns_to_human(elapsed_time_str, 16, elapsed_time);
-            info("######### Monitoring Region App Summary #########");
+            info("######### Monitoring Region POP Metrics #########");
             info("### Name:                       %s", monitor->name);
             info("### Elapsed Time :              %s", elapsed_time_str);
             info("### Parallel efficiency :       %1.2f", parallel_efficiency);
@@ -615,7 +616,7 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
             info("###       - LB_in :             %1.2f", lb_in);
             info("###       - LB_out:             %1.2f", lb_out);
         } else {
-            info("######### Monitoring Region App Summary #########");
+            info("######### Monitoring Region POP Metrics #########");
             info("### Name:                       %s", monitor->name);
             info("###                  No data                  ###");
         }
@@ -623,6 +624,34 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
 #else
     warning("Option --talp-summary=pop-metrics is set but DLB is not intercepting MPI calls.");
     warning("Use a DLB library with MPI support or set --talp-summary=none to hide this warning.");
+#endif
+}
+
+static void monitoring_region_report_pop_raw(dlb_monitor_t *monitor) {
+#ifdef MPI_LIB
+    monitor_data_t *monitor_data = monitor->_data;
+    monitor_app_summary_t *app_summary = monitor_data->app_summary;
+    if (app_summary != NULL) {
+        if (app_summary->elapsed_time > 0) {
+            int P = app_summary->total_cpus;
+            int N = _num_nodes;
+            int64_t elapsed_time = app_summary->elapsed_time;
+            int64_t elapsed_useful = app_summary->elapsed_useful;
+            int64_t app_sum_useful = app_summary->app_sum_useful;
+            int64_t node_sum_useful = app_summary->node_sum_useful;
+            info("######### Monitoring Region POP Raw Data #########");
+            info("### Name:                       %s", monitor->name);
+            info("### Number of CPUs:             %d", P);
+            info("### Number of nodes:            %d", N);
+            info("### Elapsed Time:               %"PRId64" ns", elapsed_time);
+            info("### Elapsed Useful:             %"PRId64" ns", elapsed_useful);
+            info("### Useful CPU Time (Total):    %"PRId64" ns", app_sum_useful);
+            info("### Useful CPU Time (Node):     %"PRId64" ns", node_sum_useful);
+        }
+    }
+#else
+    warning("Option --talp-summary=pop-raw is set but DLB is not intercepting MPI calls.");
+    warning("Use a DLB library with MPI support.");
 #endif
 }
 
@@ -770,6 +799,16 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
         int i;
         for (i=0; i<nregions; ++i) {
             monitoring_region_report_pop_metrics(regions[i]);
+        }
+    }
+
+    /* Report POP Metrics Raw Data */
+    if (spd->options.talp_summary & SUMMARY_POP_RAW) {
+        talp_info_t *talp_info = spd->talp_info;
+        monitoring_region_report_pop_raw(&talp_info->mpi_monitor);
+        int i;
+        for (i=0; i<nregions; ++i) {
+            monitoring_region_report_pop_raw(regions[i]);
         }
     }
 }
