@@ -445,19 +445,19 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
             for (i=0; i<nregions; ++i) {
                 if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
                     monitor = regions[i];
+                    pthread_mutex_unlock(&mutex);
+                    return monitor;
                 }
             }
         }
 
         /* Otherwise, create new monitoring region */
-        if (monitor == NULL) {
-            ++nregions;
-            void *p = realloc(regions, sizeof(dlb_monitor_t*)*nregions);
-            if (p) {
-                regions = p;
-                regions[nregions-1] = malloc(sizeof(dlb_monitor_t));
-                monitor = regions[nregions-1];
-            }
+        ++nregions;
+        void *p = realloc(regions, sizeof(dlb_monitor_t*)*nregions);
+        if (p) {
+            regions = p;
+            regions[nregions-1] = malloc(sizeof(dlb_monitor_t));
+            monitor = regions[nregions-1];
         }
     }
     pthread_mutex_unlock(&mutex);
@@ -655,10 +655,10 @@ static void monitoring_region_report_pop_raw(dlb_monitor_t *monitor) {
 #endif
 }
 
+#ifdef MPI_LIB
 /* Gather data among all regions and save it in the region private data only on rank 0 */
 static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor) {
-#ifdef MPI_LIB
     int64_t elapsed_time;
     int64_t elapsed_useful;
     int64_t app_sum_useful;
@@ -707,8 +707,8 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
         monitor_data->app_summary->node_sum_useful = node_sum_useful;
         monitor_data->app_summary->total_cpus = total_cpus;
     }
-#endif
 }
+#endif
 
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd) {
     /* Finalize MPI monitor */
@@ -813,14 +813,77 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
     }
 }
 
+#if MPI_LIB
+static int cmp_regions(const void *region1, const void *region2) {
+    const dlb_monitor_t* monitor1 = *((const dlb_monitor_t**)region1);
+    const dlb_monitor_t* monitor2 = *((const dlb_monitor_t**)region2);
+    return strcmp(monitor1->name, monitor2->name);
+}
+#endif
+
 static void monitoring_regions_gather_app_data_all(const subprocess_descriptor_t *spd) {
-    /* Gather data from MPI monitor */
+#ifdef MPI_LIB
+    /*** 1: Gather data from MPI monitor ***/
     talp_info_t *talp_info = spd->talp_info;
     monitoring_region_gather_app_data(spd, &talp_info->mpi_monitor);
 
-    /* Gather data from custom regions */
+    /*** 2: Gather data from custom regions: ***/
+
+    /* Gather recvcounts for each process */
+    int chars_to_send = nregions * MONITOR_MAX_KEY_LEN;
+    int *recvcounts = malloc(_mpi_size * sizeof(int));
+    MPI_Allgather(&chars_to_send, 1, MPI_INTEGER,
+            recvcounts, 1, MPI_INTEGER, MPI_COMM_WORLD);
+
+    /* Compute total characters to gather via MPI */
     int i;
+    int total_chars = 0;
+    for (i=0; i<_mpi_size; ++i) {
+        total_chars += recvcounts[i];
+    }
+
+    if (total_chars > 0) {
+        /* Prepare sendbuffer */
+        char *sendbuffer = malloc(nregions * MONITOR_MAX_KEY_LEN * sizeof(char));
+        for (i=0; i<nregions; ++i) {
+            strcpy(&sendbuffer[i*MONITOR_MAX_KEY_LEN], regions[i]->name);
+        }
+
+        /* Prepare recvbuffer */
+        char *recvbuffer = malloc(total_chars * sizeof(char));
+
+        /* Compute displacements */
+        int *displs = malloc(_mpi_size * sizeof(int));
+        int next_disp = 0;
+        for (i=0; i<_mpi_size; ++i) {
+            displs[i] = next_disp;
+            next_disp += recvcounts[i];
+        }
+
+        /* Gather all regions */
+        MPI_Allgatherv(sendbuffer, nregions * MONITOR_MAX_KEY_LEN, MPI_CHAR,
+                recvbuffer, recvcounts, displs, MPI_CHAR, MPI_COMM_WORLD);
+
+        /* Register all regions. Existing ones will be skipped. */
+        for (i=0; i<total_chars; i+=MONITOR_MAX_KEY_LEN) {
+            monitoring_region_register(&recvbuffer[i]);
+        }
+
+        free(sendbuffer);
+        free(recvbuffer);
+        free(displs);
+    }
+
+    free(recvcounts);
+
+    /* Each monitoring region will be reduced by alphabetical order */
+    pthread_mutex_lock(&mutex);
+    qsort(regions, nregions, sizeof(dlb_monitor_t*), cmp_regions);
+    pthread_mutex_unlock(&mutex);
+
+    /* Finally, reduce data */
     for (i=0; i<nregions; ++i) {
         monitoring_region_gather_app_data(spd, regions[i]);
     }
+#endif
 }
