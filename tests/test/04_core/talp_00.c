@@ -152,6 +152,13 @@ int main(int argc, char *argv[]) {
     assert( strcmp(monitor5->name, "Anonymous Region 1") == 0 );
     assert( strcmp(monitor6->name, "Anonymous Region 2") == 0 );
 
+    /* Test monitor name length */
+    const char *long_name = "This is a very long name. It is so long that it is more than MONITOR_MAX_KEY_LEN which, at the time of writing, should be 128 characters.";
+    dlb_monitor_t *monitor7 = monitoring_region_register(long_name);
+    dlb_monitor_t *monitor8 = monitoring_region_register(long_name);
+    assert( monitor7 == monitor8 );
+    monitoring_region_report(&spd, monitor7);
+
     talp_finalize(&spd);
 
     return 0;

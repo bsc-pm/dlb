@@ -449,7 +449,7 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
         if (!anonymous_region) {
             int i;
             for (i=0; i<nregions; ++i) {
-                if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
+                if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN-1) == 0) {
                     monitor = regions[i];
                     pthread_mutex_unlock(&mutex);
                     return monitor;
@@ -489,7 +489,7 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
 
     /* Initialize monitor */
     *monitor = (const dlb_monitor_t) {
-            .name = strdup(name),
+            .name = strndup(name, MONITOR_MAX_KEY_LEN-1), /* strndup does not include '\0' in n */
             ._data = monitor_data,
     };
 
