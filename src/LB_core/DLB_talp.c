@@ -106,6 +106,12 @@ static int get_new_monitor_id(void) {
     return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
 }
 
+/* Unique anonymous regions */
+static int get_anonymous_id(void) {
+    static atomic_int id = 0;
+    return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
+}
+
 
 /*********************************************************************************/
 /*    Init / Finalize                                                            */
@@ -427,7 +433,6 @@ enum { MONITOR_MAX_KEY_LEN = 128 };
 static dlb_monitor_t **regions = NULL;
 static int nregions = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static const char* anonymous_monitor_name = "Anonymous Region";
 
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const subprocess_descriptor_t *spd) {
@@ -437,10 +442,11 @@ const struct dlb_monitor_t* monitoring_region_get_MPI_region(
 
 dlb_monitor_t* monitoring_region_register(const char* name) {
     dlb_monitor_t *monitor = NULL;
+    bool anonymous_region = (name == NULL || *name == '\0');
     pthread_mutex_lock(&mutex);
     {
         /* Found monitor if already registered */
-        if (name != NULL && *name != '\0') {
+        if (!anonymous_region) {
             int i;
             for (i=0; i<nregions; ++i) {
                 if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
@@ -465,13 +471,13 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
             " Please report at "PACKAGE_BUGREPORT);
 
     // Initialize after the mutex is unlocked
-    const char *monitor_name;
-    if (name != NULL && *name != '\0') {
-        monitor_name = name;
+    if (anonymous_region) {
+        char monitor_name[32];
+        snprintf(monitor_name, 32, "Anonymous Region %d", get_anonymous_id());
+        monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
     } else {
-        monitor_name = anonymous_monitor_name;
+        monitoring_region_initialize(monitor, get_new_monitor_id(), name);
     }
-    monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
 
     return monitor;
 }

@@ -149,7 +149,8 @@ int main(int argc, char *argv[]) {
     dlb_monitor_t *monitor6 = monitoring_region_register(NULL);
     assert( monitor6 != NULL );
     assert( monitor6 != monitor5 );
-    assert( strcmp(monitor5->name, monitor6->name) == 0 );
+    assert( strcmp(monitor5->name, "Anonymous Region 1") == 0 );
+    assert( strcmp(monitor6->name, "Anonymous Region 2") == 0 );
 
     talp_finalize(&spd);
 
