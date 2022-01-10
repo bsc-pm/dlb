@@ -57,6 +57,7 @@ typedef struct Options {
     /* statistics */
     bool                talp;
     talp_summary_t      talp_summary;
+    bool                talp_external_profiler;
     /* barrier */
     int                 barrier_id;
 } options_t;

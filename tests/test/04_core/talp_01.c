@@ -26,6 +26,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
+#include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/mytime.h"
@@ -57,6 +58,8 @@ int main(int argc, char *argv[]) {
     subprocess_descriptor_t spd = {.id = 111};
     options_init(&spd.options, options);
     memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
+    assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
+            NULL, spd.options.shm_key) == DLB_SUCCESS );
     talp_init(&spd);
 
     bool lewi = spd.options.lewi;
@@ -94,6 +97,13 @@ int main(int argc, char *argv[]) {
     assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
 
+    /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
+    int64_t mpi_time = -1;
+    int64_t useful_time = -1;
+    assert( shmem_procinfo__gettimes(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( mpi_time == 0 );
+    assert( useful_time == 0 );
+
     int cpuid = sched_getcpu();
     assert( CPU_ISSET(cpuid, &process_mask) );
 
@@ -124,10 +134,19 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_MPI_time != 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
 
+    /* Checking that the shmem has now been updated */
+    mpi_time = -1;
+    useful_time = -1;
+    assert( shmem_procinfo__gettimes(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( mpi_time == mpi_monitor->accumulated_MPI_time  );
+    assert( useful_time == mpi_monitor->accumulated_computation_time );
+
     spd.options.talp_summary |= SUMMARY_NODE;
     spd.options.talp_summary |= SUMMARY_PROCESS;
     spd.options.talp_summary |= SUMMARY_REGIONS;
     talp_finalize(&spd);
+    assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
+            == DLB_SUCCESS );
 
     return 0;
 }

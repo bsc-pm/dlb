@@ -304,6 +304,18 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_TLPSUM_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     },
+    {
+        /* In the future, consider using an interval update timer instead of a boolean */
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-external-profiler",
+        .default_value  = "no",
+        .description    = OFFSET"Enable live metrics update to the shared memory. This flag\n"
+                          OFFSET"is only needed if there is an external program monitoring\n"
+                          OFFSET"the application.",
+        .offset         = offsetof(options_t, talp_external_profiler),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
     // barrier
     {
         .var_name       = "LB_NULL",

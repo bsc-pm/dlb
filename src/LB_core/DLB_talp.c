@@ -52,6 +52,7 @@ typedef struct talp_info_t {
     cpu_set_t       mpi_mask;               /* CPUs doing MPI */
     int             ncpus;                  /* Number of process CPUs */
     int64_t         sample_start_time;
+    bool            external_profiler;
 } talp_info_t;
 
 /* Application summary */
@@ -123,7 +124,9 @@ void talp_init(subprocess_descriptor_t *spd) {
 
     /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
-    *talp_info = (talp_info_t) {};
+    *talp_info = (talp_info_t) {
+        .external_profiler = spd->options.talp_external_profiler,
+    };
     if (pm_get_num_threads() == 0) {
         /* Probably pure MPI, use only current CPU */
         CPU_ZERO(&talp_info->workers_mask);
@@ -191,6 +194,11 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     if (talp_info) {
         /* Stop MPI region */
         monitoring_region_stop(spd, &talp_info->mpi_monitor);
+
+        /* Update shared memory values */
+        shmem_procinfo__settimes(spd->id,
+                talp_info->mpi_monitor.accumulated_MPI_time,
+                talp_info->mpi_monitor.accumulated_computation_time);
 
         /* Gather data among processes in the node if node summary is enabled */
         if (spd->options.talp_summary & SUMMARY_NODE) {
@@ -764,10 +772,12 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
         mpi_monitor->elapsed_computation_time += elapsed_computation_time;
         mpi_monitor->accumulated_MPI_time += mpi_time;
         mpi_monitor->accumulated_computation_time += computation_time;
-        /* Update shared memory. FIXME: update only based on flag */
-        shmem_procinfo__settimes(spd->id,
-                mpi_monitor->accumulated_MPI_time,
-                mpi_monitor->accumulated_computation_time);
+        /* Update shared memory only if requested */
+        if (talp_info->external_profiler) {
+            shmem_procinfo__settimes(spd->id,
+                    mpi_monitor->accumulated_MPI_time,
+                    mpi_monitor->accumulated_computation_time);
+        }
     }
 
     /* Update custom regions */
