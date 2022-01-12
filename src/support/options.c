@@ -726,10 +726,10 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 b += sprintf(b, "[%s]", get_mpiset_choices());
                 break;
             case OPT_OMPTOPTS_T:
-                b += sprintf(b, "[%s]", get_ompt_opts_choices());
+                b += sprintf(b, "{%s}", get_ompt_opts_choices());
                 break;
             case OPT_TLPSUM_T:
-                b += sprintf(b, "[%s]", get_talp_summary_choices());
+                b += sprintf(b, "{%s}", get_talp_summary_choices());
                 break;
             default:
                 b += sprintf(b, "(unknown)");
