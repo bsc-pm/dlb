@@ -218,6 +218,7 @@ void verbose(verbose_opts_t flag, const char *fmt, ...) {
     else if (vb_opts & flag & VB_AFFINITY){ vprint(stderr, "DLB AFFINITY", fmt, list); }
     else if (vb_opts & flag & VB_BARRIER) { vprint(stderr, "DLB BARRIER", fmt, list); }
     else if (vb_opts & flag & VB_TALP)    { vprint(stderr, "DLB TALP", fmt, list); }
+    else if (vb_opts & flag & VB_INSTR)   { vprint(stderr, "DLB INSTRUMENT", fmt, list); }
     va_end(list);
 }
 

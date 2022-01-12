@@ -51,11 +51,11 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     int error = DLB_SUCCESS;
 
     // Initialize common modules (spd->id and instrumentation module ASAP)
-    options_init(&spd->options, lb_args);
     spd->id = id;
+    options_init(&spd->options, lb_args);
+    debug_init(&spd->options);
     init_tracing(&spd->options);
     instrument_event(RUNTIME_EVENT, EVENT_INIT, EVENT_BEGIN);
-    debug_init(&spd->options);
     mu_init();
     timer_init();
 

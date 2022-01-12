@@ -298,7 +298,16 @@ void init_tracing(const options_t *options) {
         type=CALLBACK_EVENT;
         n_values=0;
         Extrae_define_event_type(&type, "DLB callback", &n_values, NULL, NULL);
+
+        verbose(VB_INSTR, "Instrumentation successfully initialized");
     } else {
+        if (instrument == INST_NONE) {
+            verbose(VB_INSTR, "Instrumentation is explicitly disabled.");
+        } else {
+            verbose(VB_INSTR, "DLB cannot find the Extrae library. Instrumentation is disabled.");
+            instrument = INST_NONE;
+        }
+        tracing_initialized = false;
         extrae_set_event = dummy;
     }
 
@@ -310,10 +319,11 @@ void init_tracing(const options_t *options) {
 
 void instrument_finalize(void) {
     if (tracing_initialized) {
+        verbose(VB_INSTR, "Finalizing instrumentation");
         tracing_initialized = false;
         g_tree_foreach(event_tree, extrae_add_definitions, NULL);
-        g_tree_destroy(event_tree);
     }
+    g_tree_destroy(event_tree);
 }
 
 void instrument_print_flags(void) {

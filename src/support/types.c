@@ -72,13 +72,13 @@ int parse_int(const char *str, int *value) {
 /* verbose_opts_t */
 static const verbose_opts_t verbose_opts_values[] =
     {VB_CLEAR, VB_ALL, VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS,
-        VB_DROM, VB_ASYNC, VB_OMPT, VB_AFFINITY, VB_BARRIER, VB_TALP};
+        VB_DROM, VB_ASYNC, VB_OMPT, VB_AFFINITY, VB_BARRIER, VB_TALP, VB_INSTR};
 static const char* const verbose_opts_choices[] =
     {"no", "all", "api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom",
-        "async", "ompt", "affinity", "barrier", "talp"};
+        "async", "ompt", "affinity", "barrier", "talp", "instrument"};
 static const char verbose_opts_choices_str[] =
-    "no:all:api:microlb:shmem:mpi_api:mpi_intercept:"LINE_BREAK
-    "stats:drom:async:ompt:affinity:barrier:talp";
+    "no:all:api:microlb:shmem:mpi_api:mpi_intercept:stats:"LINE_BREAK
+    "drom:async:ompt:affinity:barrier:talp:instrument";
 enum { verbose_opts_nelems = sizeof(verbose_opts_values) / sizeof(verbose_opts_values[0]) };
 
 int parse_verbose_opts(const char *str, verbose_opts_t *value) {
