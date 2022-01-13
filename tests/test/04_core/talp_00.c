@@ -41,6 +41,12 @@ enum { USLEEP_TIME = 1000 };
 
 typedef struct talp_info_t {
     dlb_monitor_t   mpi_monitor;
+    int64_t         sample_start_time;
+    bool            external_profiler;
+    bool            use_counters;
+    int             num_workers;
+    int             num_mpi;
+    int             ncpus;
     cpu_set_t       workers_mask;
     cpu_set_t       mpi_mask;
 } talp_info_t;
@@ -69,8 +75,8 @@ int main(int argc, char *argv[]) {
     /* TALP initial values */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
-    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+    assert( talp_info->num_workers == 1 );
+    assert( talp_info->num_mpi == 0 );
     assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
 
     /* Start and Stop MPI monitor */
