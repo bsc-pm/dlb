@@ -48,10 +48,14 @@
 /* Talp info per spd */
 typedef struct talp_info_t {
     dlb_monitor_t   mpi_monitor;            /* monitor MPI_Init -> MPI_Finalize */
+    int64_t         sample_start_time;      /* global start time to update all regions */
+    bool            external_profiler;      /* whether to update shmem on every sample */
+    bool            use_counters;           /* whether to use just counters or cpu masks */
+    int             num_workers;            /* counter for CPUs doing computation */
+    int             num_mpi;                /* counter for CPUs doing mpi */
+    int             ncpus;                  /* Number of process CPUs */
     cpu_set_t       workers_mask;           /* CPUs doing computation */
     cpu_set_t       mpi_mask;               /* CPUs doing MPI */
-    int             ncpus;                  /* Number of process CPUs */
-    int64_t         sample_start_time;
 } talp_info_t;
 
 /* Application summary */
@@ -106,6 +110,12 @@ static int get_new_monitor_id(void) {
     return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
 }
 
+/* Unique anonymous regions */
+static int get_anonymous_id(void) {
+    static atomic_int id = 0;
+    return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
+}
+
 
 /*********************************************************************************/
 /*    Init / Finalize                                                            */
@@ -117,16 +127,20 @@ void talp_init(subprocess_descriptor_t *spd) {
 
     /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
-    *talp_info = (talp_info_t) {};
+    *talp_info = (talp_info_t) {
+        .external_profiler = spd->options.talp_external_profiler,
+    };
     if (pm_get_num_threads() == 0) {
-        /* Probably pure MPI, use only current CPU */
-        CPU_ZERO(&talp_info->workers_mask);
-        CPU_SET(sched_getcpu(), &talp_info->workers_mask);
+        /* Probably pure MPI, use only 1 CPU */
+        talp_info->use_counters = true;
+        talp_info->num_workers = 1;
+        talp_info->ncpus = 1;
     } else {
-        /* OpenMP + OmpSs detected, use process mask as workers mask */
+        /* OpenMP/OmpSs detected, use process mask as workers mask */
+        talp_info->use_counters = false;
         memcpy(&talp_info->workers_mask, &spd->process_mask, sizeof(cpu_set_t));
+        talp_info->ncpus = CPU_COUNT(&talp_info->workers_mask);
     }
-    talp_info->ncpus = CPU_COUNT(&talp_info->workers_mask);
     fatal_cond(talp_info->ncpus <= 0,
             "TALP was unable to detect number of CPUS. Please, report bug at "
             PACKAGE_BUGREPORT);
@@ -136,7 +150,7 @@ void talp_init(subprocess_descriptor_t *spd) {
     monitoring_region_initialize(&talp_info->mpi_monitor,
             MPI_MONITORING_REGION_ID, "MPI Execution");
 
-    verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&talp_info->workers_mask));
+    verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
 }
 
 static void talp_destroy(void) {
@@ -155,7 +169,8 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     }
     if (spd->options.talp_summary & SUMMARY_PROCESS
         || spd->options.talp_summary & SUMMARY_REGIONS
-        || spd->options.talp_summary & SUMMARY_POP_METRICS) {
+        || spd->options.talp_summary & SUMMARY_POP_METRICS
+        || spd->options.talp_summary & SUMMARY_POP_RAW) {
         monitoring_regions_report_all(spd);
     }
 
@@ -185,13 +200,18 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         /* Stop MPI region */
         monitoring_region_stop(spd, &talp_info->mpi_monitor);
 
+        /* Update shared memory values */
+        shmem_procinfo__settimes(spd->id,
+                talp_info->mpi_monitor.accumulated_MPI_time,
+                talp_info->mpi_monitor.accumulated_computation_time);
+
         /* Gather data among processes in the node if node summary is enabled */
         if (spd->options.talp_summary & SUMMARY_NODE) {
             talp_node_summary_gather_data(spd);
         }
 
         /* Gather data among MPIs if app summary is enabled  */
-        if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
+        if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW)) {
             monitoring_regions_gather_app_data_all(spd);
         }
     }
@@ -201,6 +221,11 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
 /*********************************************************************************/
 /*    TALP state change functions (update masks, compute sample times)           */
 /*********************************************************************************/
+
+/* The following CPU/cpuset functions should only be called with malleable
+ * executions where CPU masks have been initialized. On pure MPI executions
+ * they should never be called so it's safe to not ask for the use_counters
+ * boolean. */
 
 void talp_cpu_enable(const subprocess_descriptor_t *spd, int cpuid) {
     talp_info_t *talp_info = spd->talp_info;
@@ -263,8 +288,11 @@ void talp_in_mpi(const subprocess_descriptor_t *spd) {
         /* Update all monitors */
         monitoring_regions_update_all(spd);
 
-        /* Update masks */
-        if (spd->options.lewi) {
+        /* Update counters/masks */
+        if (talp_info->use_counters) {
+            talp_info->num_workers = 0;
+            talp_info->num_mpi = 1;
+        } else if (spd->options.lewi) {
             /* Current CPU goes from worker to MPI mask */
             int cpuid = sched_getcpu();
             CPU_SET(cpuid, &talp_info->mpi_mask);
@@ -286,8 +314,11 @@ void talp_out_mpi(const subprocess_descriptor_t *spd){
         /* Update all monitors */
         monitoring_regions_update_all(spd);
 
-        /* Update masks */
-        if (spd->options.lewi) {
+        /* Update counters/masks */
+        if (talp_info->use_counters) {
+            talp_info->num_workers = 1;
+            talp_info->num_mpi = 0;
+        } else if (spd->options.lewi) {
             /* Current CPU goes from MPI to worker */
             int cpuid = sched_getcpu();
             CPU_CLR(cpuid, &talp_info->mpi_mask);
@@ -426,7 +457,6 @@ enum { MONITOR_MAX_KEY_LEN = 128 };
 static dlb_monitor_t **regions = NULL;
 static int nregions = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static const char* anonymous_monitor_name = "Anonymous Region";
 
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const subprocess_descriptor_t *spd) {
@@ -436,27 +466,28 @@ const struct dlb_monitor_t* monitoring_region_get_MPI_region(
 
 dlb_monitor_t* monitoring_region_register(const char* name) {
     dlb_monitor_t *monitor = NULL;
+    bool anonymous_region = (name == NULL || *name == '\0');
     pthread_mutex_lock(&mutex);
     {
         /* Found monitor if already registered */
-        if (name != NULL && *name != '\0') {
+        if (!anonymous_region) {
             int i;
             for (i=0; i<nregions; ++i) {
-                if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN) == 0) {
+                if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN-1) == 0) {
                     monitor = regions[i];
+                    pthread_mutex_unlock(&mutex);
+                    return monitor;
                 }
             }
         }
 
         /* Otherwise, create new monitoring region */
-        if (monitor == NULL) {
-            ++nregions;
-            void *p = realloc(regions, sizeof(dlb_monitor_t*)*nregions);
-            if (p) {
-                regions = p;
-                regions[nregions-1] = malloc(sizeof(dlb_monitor_t));
-                monitor = regions[nregions-1];
-            }
+        ++nregions;
+        void *p = realloc(regions, sizeof(dlb_monitor_t*)*nregions);
+        if (p) {
+            regions = p;
+            regions[nregions-1] = malloc(sizeof(dlb_monitor_t));
+            monitor = regions[nregions-1];
         }
     }
     pthread_mutex_unlock(&mutex);
@@ -464,13 +495,13 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
             " Please report at "PACKAGE_BUGREPORT);
 
     // Initialize after the mutex is unlocked
-    const char *monitor_name;
-    if (name != NULL && *name != '\0') {
-        monitor_name = name;
+    if (anonymous_region) {
+        char monitor_name[32];
+        snprintf(monitor_name, 32, "Anonymous Region %d", get_anonymous_id());
+        monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
     } else {
-        monitor_name = anonymous_monitor_name;
+        monitoring_region_initialize(monitor, get_new_monitor_id(), name);
     }
-    monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
 
     return monitor;
 }
@@ -482,7 +513,7 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
 
     /* Initialize monitor */
     *monitor = (const dlb_monitor_t) {
-            .name = strdup(name),
+            .name = strndup(name, MONITOR_MAX_KEY_LEN-1), /* strndup does not include '\0' in n */
             ._data = monitor_data,
     };
 
@@ -606,7 +637,7 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
             float lb_out = (float)app_sum_useful / (node_sum_useful * N);
             char elapsed_time_str[16];
             ns_to_human(elapsed_time_str, 16, elapsed_time);
-            info("######### Monitoring Region App Summary #########");
+            info("######### Monitoring Region POP Metrics #########");
             info("### Name:                       %s", monitor->name);
             info("### Elapsed Time :              %s", elapsed_time_str);
             info("### Parallel efficiency :       %1.2f", parallel_efficiency);
@@ -615,7 +646,7 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
             info("###       - LB_in :             %1.2f", lb_in);
             info("###       - LB_out:             %1.2f", lb_out);
         } else {
-            info("######### Monitoring Region App Summary #########");
+            info("######### Monitoring Region POP Metrics #########");
             info("### Name:                       %s", monitor->name);
             info("###                  No data                  ###");
         }
@@ -626,10 +657,38 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
 #endif
 }
 
+static void monitoring_region_report_pop_raw(dlb_monitor_t *monitor) {
+#ifdef MPI_LIB
+    monitor_data_t *monitor_data = monitor->_data;
+    monitor_app_summary_t *app_summary = monitor_data->app_summary;
+    if (app_summary != NULL) {
+        if (app_summary->elapsed_time > 0) {
+            int P = app_summary->total_cpus;
+            int N = _num_nodes;
+            int64_t elapsed_time = app_summary->elapsed_time;
+            int64_t elapsed_useful = app_summary->elapsed_useful;
+            int64_t app_sum_useful = app_summary->app_sum_useful;
+            int64_t node_sum_useful = app_summary->node_sum_useful;
+            info("######### Monitoring Region POP Raw Data #########");
+            info("### Name:                       %s", monitor->name);
+            info("### Number of CPUs:             %d", P);
+            info("### Number of nodes:            %d", N);
+            info("### Elapsed Time:               %"PRId64" ns", elapsed_time);
+            info("### Elapsed Useful:             %"PRId64" ns", elapsed_useful);
+            info("### Useful CPU Time (Total):    %"PRId64" ns", app_sum_useful);
+            info("### Useful CPU Time (Node):     %"PRId64" ns", node_sum_useful);
+        }
+    }
+#else
+    warning("Option --talp-summary=pop-raw is set but DLB is not intercepting MPI calls.");
+    warning("Use a DLB library with MPI support.");
+#endif
+}
+
+#ifdef MPI_LIB
 /* Gather data among all regions and save it in the region private data only on rank 0 */
 static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor) {
-#ifdef MPI_LIB
     int64_t elapsed_time;
     int64_t elapsed_useful;
     int64_t app_sum_useful;
@@ -678,8 +737,8 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
         monitor_data->app_summary->node_sum_useful = node_sum_useful;
         monitor_data->app_summary->total_cpus = total_cpus;
     }
-#endif
 }
+#endif
 
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd) {
     /* Finalize MPI monitor */
@@ -705,6 +764,7 @@ static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd) 
 static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
 
     talp_info_t *talp_info = spd->talp_info;
+    bool use_counters = talp_info->use_counters;
 
     /* Sample ends here, compute duration and begin new sample */
     int64_t now = get_time_in_ns();
@@ -713,13 +773,17 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
 
     /* Compute elapsed computation time */
     int64_t elapsed_computation_time =
-        CPU_COUNT(&talp_info->workers_mask) > 0 ? sample_duration : 0;
+        (use_counters && talp_info->num_workers > 0)
+        || (!use_counters && CPU_COUNT(&talp_info->workers_mask)) > 0
+                ? sample_duration : 0;
 
     /* Compute MPI time */
-    int64_t mpi_time = sample_duration * CPU_COUNT(&talp_info->mpi_mask);
+    int64_t mpi_time = sample_duration *
+        (use_counters ? talp_info->num_mpi : CPU_COUNT(&talp_info->mpi_mask));
 
     /* Compute computation time */
-    int64_t computation_time = sample_duration * CPU_COUNT(&talp_info->workers_mask);
+    int64_t computation_time = sample_duration *
+        (use_counters ? talp_info->num_workers : CPU_COUNT(&talp_info->workers_mask));
 
     /* Update MPI monitor */
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
@@ -729,10 +793,12 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
         mpi_monitor->elapsed_computation_time += elapsed_computation_time;
         mpi_monitor->accumulated_MPI_time += mpi_time;
         mpi_monitor->accumulated_computation_time += computation_time;
-        /* Update shared memory. FIXME: update only based on flag */
-        shmem_procinfo__settimes(spd->id,
-                mpi_monitor->accumulated_MPI_time,
-                mpi_monitor->accumulated_computation_time);
+        /* Update shared memory only if requested */
+        if (talp_info->external_profiler) {
+            shmem_procinfo__settimes(spd->id,
+                    mpi_monitor->accumulated_MPI_time,
+                    mpi_monitor->accumulated_computation_time);
+        }
     }
 
     /* Update custom regions */
@@ -772,16 +838,89 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
             monitoring_region_report_pop_metrics(regions[i]);
         }
     }
+
+    /* Report POP Metrics Raw Data */
+    if (spd->options.talp_summary & SUMMARY_POP_RAW) {
+        talp_info_t *talp_info = spd->talp_info;
+        monitoring_region_report_pop_raw(&talp_info->mpi_monitor);
+        int i;
+        for (i=0; i<nregions; ++i) {
+            monitoring_region_report_pop_raw(regions[i]);
+        }
+    }
 }
 
+#if MPI_LIB
+static int cmp_regions(const void *region1, const void *region2) {
+    const dlb_monitor_t* monitor1 = *((const dlb_monitor_t**)region1);
+    const dlb_monitor_t* monitor2 = *((const dlb_monitor_t**)region2);
+    return strcmp(monitor1->name, monitor2->name);
+}
+#endif
+
 static void monitoring_regions_gather_app_data_all(const subprocess_descriptor_t *spd) {
-    /* Gather data from MPI monitor */
+#ifdef MPI_LIB
+    /*** 1: Gather data from MPI monitor ***/
     talp_info_t *talp_info = spd->talp_info;
     monitoring_region_gather_app_data(spd, &talp_info->mpi_monitor);
 
-    /* Gather data from custom regions */
+    /*** 2: Gather data from custom regions: ***/
+
+    /* Gather recvcounts for each process */
+    int chars_to_send = nregions * MONITOR_MAX_KEY_LEN;
+    int *recvcounts = malloc(_mpi_size * sizeof(int));
+    MPI_Allgather(&chars_to_send, 1, MPI_INTEGER,
+            recvcounts, 1, MPI_INTEGER, MPI_COMM_WORLD);
+
+    /* Compute total characters to gather via MPI */
     int i;
+    int total_chars = 0;
+    for (i=0; i<_mpi_size; ++i) {
+        total_chars += recvcounts[i];
+    }
+
+    if (total_chars > 0) {
+        /* Prepare sendbuffer */
+        char *sendbuffer = malloc(nregions * MONITOR_MAX_KEY_LEN * sizeof(char));
+        for (i=0; i<nregions; ++i) {
+            strcpy(&sendbuffer[i*MONITOR_MAX_KEY_LEN], regions[i]->name);
+        }
+
+        /* Prepare recvbuffer */
+        char *recvbuffer = malloc(total_chars * sizeof(char));
+
+        /* Compute displacements */
+        int *displs = malloc(_mpi_size * sizeof(int));
+        int next_disp = 0;
+        for (i=0; i<_mpi_size; ++i) {
+            displs[i] = next_disp;
+            next_disp += recvcounts[i];
+        }
+
+        /* Gather all regions */
+        MPI_Allgatherv(sendbuffer, nregions * MONITOR_MAX_KEY_LEN, MPI_CHAR,
+                recvbuffer, recvcounts, displs, MPI_CHAR, MPI_COMM_WORLD);
+
+        /* Register all regions. Existing ones will be skipped. */
+        for (i=0; i<total_chars; i+=MONITOR_MAX_KEY_LEN) {
+            monitoring_region_register(&recvbuffer[i]);
+        }
+
+        free(sendbuffer);
+        free(recvbuffer);
+        free(displs);
+    }
+
+    free(recvcounts);
+
+    /* Each monitoring region will be reduced by alphabetical order */
+    pthread_mutex_lock(&mutex);
+    qsort(regions, nregions, sizeof(dlb_monitor_t*), cmp_regions);
+    pthread_mutex_unlock(&mutex);
+
+    /* Finally, reduce data */
     for (i=0; i<nregions; ++i) {
         monitoring_region_gather_app_data(spd, regions[i]);
     }
+#endif
 }

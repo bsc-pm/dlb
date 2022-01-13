@@ -26,6 +26,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
+#include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/mytime.h"
@@ -41,6 +42,12 @@ enum { USLEEP_TIME = 100000 };
 
 typedef struct talp_info_t {
     dlb_monitor_t   mpi_monitor;
+    int64_t         sample_start_time;
+    bool            external_profiler;
+    bool            use_counters;
+    int             num_workers;
+    int             num_mpi;
+    int             ncpus;
     cpu_set_t       workers_mask;
     cpu_set_t       mpi_mask;
 } talp_info_t;
@@ -51,17 +58,25 @@ int main(int argc, char *argv[]) {
     /* Process Mask size can be 1..N */
     cpu_set_t process_mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+    int ncpus = CPU_COUNT(&process_mask);
 
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
     subprocess_descriptor_t spd = {.id = 111};
     options_init(&spd.options, options);
     memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
+    assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
+            NULL, spd.options.shm_key) == DLB_SUCCESS );
     talp_init(&spd);
 
     bool lewi = spd.options.lewi;
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
+
+    /* Simulate threaded execution, fix talp_init */
+    talp_info->use_counters = false;
+    memcpy(&talp_info->workers_mask, &spd.process_mask, sizeof(cpu_set_t));
+    talp_info->ncpus = CPU_COUNT(&talp_info->workers_mask);
 
     /* Start MPI monitoring region */
     talp_mpi_init(&spd);
@@ -72,40 +87,53 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->elapsed_time == 0 );
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
+    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus );
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+    assert( talp_info->ncpus == ncpus );
 
     /* Entering MPI */
     talp_in_mpi(&spd);
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
     if (lewi) {
-        assert( CPU_COUNT(&talp_info->workers_mask) == 0 );
+        assert( CPU_COUNT(&talp_info->workers_mask) == ncpus-1 );
         assert( CPU_COUNT(&talp_info->mpi_mask) == 1 );
     } else {
         assert( CPU_COUNT(&talp_info->workers_mask) == 0 );
-        assert( CPU_COUNT(&talp_info->mpi_mask) == 1 );
+        assert( CPU_COUNT(&talp_info->mpi_mask) == ncpus );
     }
 
     /* Leaving MPI */
     talp_out_mpi(&spd);
     assert( mpi_monitor->accumulated_MPI_time != 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
+    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus );
     assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+
+    /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
+    int64_t mpi_time = -1;
+    int64_t useful_time = -1;
+    assert( shmem_procinfo__gettimes(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( mpi_time == 0 );
+    assert( useful_time == 0 );
 
     int cpuid = sched_getcpu();
     assert( CPU_ISSET(cpuid, &process_mask) );
 
     /* Disable CPU */
     talp_cpu_disable(&spd, cpuid);
+    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus-1 );
     int64_t time_computation_before = mpi_monitor->accumulated_computation_time;
     usleep(USLEEP_TIME);
 
     /* Enable CPU */
     talp_cpu_enable(&spd, cpuid);
     int64_t time_computation = mpi_monitor->accumulated_computation_time - time_computation_before;
-    assert( time_computation == 0 );
+    if (ncpus == 1) {
+        assert( time_computation == 0 );
+    } else {
+        assert( time_computation > 0 );
+    }
 
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test");
@@ -124,10 +152,19 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_MPI_time != 0 );
     assert( mpi_monitor->accumulated_computation_time != 0 );
 
+    /* Checking that the shmem has now been updated */
+    mpi_time = -1;
+    useful_time = -1;
+    assert( shmem_procinfo__gettimes(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( mpi_time == mpi_monitor->accumulated_MPI_time  );
+    assert( useful_time == mpi_monitor->accumulated_computation_time );
+
     spd.options.talp_summary |= SUMMARY_NODE;
     spd.options.talp_summary |= SUMMARY_PROCESS;
     spd.options.talp_summary |= SUMMARY_REGIONS;
     talp_finalize(&spd);
+    assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
+            == DLB_SUCCESS );
 
     return 0;
 }

@@ -41,6 +41,12 @@ enum { USLEEP_TIME = 1000 };
 
 typedef struct talp_info_t {
     dlb_monitor_t   mpi_monitor;
+    int64_t         sample_start_time;
+    bool            external_profiler;
+    bool            use_counters;
+    int             num_workers;
+    int             num_mpi;
+    int             ncpus;
     cpu_set_t       workers_mask;
     cpu_set_t       mpi_mask;
 } talp_info_t;
@@ -69,8 +75,8 @@ int main(int argc, char *argv[]) {
     /* TALP initial values */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == 1 );
-    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+    assert( talp_info->num_workers == 1 );
+    assert( talp_info->num_mpi == 0 );
     assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
 
     /* Start and Stop MPI monitor */
@@ -149,7 +155,15 @@ int main(int argc, char *argv[]) {
     dlb_monitor_t *monitor6 = monitoring_region_register(NULL);
     assert( monitor6 != NULL );
     assert( monitor6 != monitor5 );
-    assert( strcmp(monitor5->name, monitor6->name) == 0 );
+    assert( strcmp(monitor5->name, "Anonymous Region 1") == 0 );
+    assert( strcmp(monitor6->name, "Anonymous Region 2") == 0 );
+
+    /* Test monitor name length */
+    const char *long_name = "This is a very long name. It is so long that it is more than MONITOR_MAX_KEY_LEN which, at the time of writing, should be 128 characters.";
+    dlb_monitor_t *monitor7 = monitoring_region_register(long_name);
+    dlb_monitor_t *monitor8 = monitoring_region_register(long_name);
+    assert( monitor7 == monitor8 );
+    monitoring_region_report(&spd, monitor7);
 
     talp_finalize(&spd);
 
