@@ -232,6 +232,14 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
     }
 
+    /* Test registering with empty mask */
+    {
+        CPU_ZERO(&process_mask);
+        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+        shmem_cpuinfo__print_info(SHMEM_KEY, 0, true);
+        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
     free(new_guests);
     free(victims);
     free(cpus_priority_array);

@@ -77,5 +77,11 @@ int main( int argc, char **argv ) {
     // A second finalize should return error
     assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_ERR_NOSHMEM );
 
+    // Test init with an empty mask
+    CPU_ZERO(&process_mask);
+    assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    shmem_procinfo__print_info(SHMEM_KEY);
+    assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
+
     return 0;
 }
