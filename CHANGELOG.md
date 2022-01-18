@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Changed
+- DROM can now steal all CPUs from one process
 
 ## [3.1] 2021-11-05
 ### Added

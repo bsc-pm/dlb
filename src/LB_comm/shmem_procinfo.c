@@ -1282,8 +1282,7 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
             CPU_AND(&target_cpus, &victim->current_process_mask, mask);
             if (CPU_COUNT(&target_cpus) > 0) {
                 // victim contains target CPUs
-                if (!victim->dirty &&
-                        CPU_COUNT(&victim->current_process_mask) - CPU_COUNT(&target_cpus) > 0) {
+                if (!victim->dirty) {
                     // Steal target_cpus from victim
                     if (!dry_run) {
                         victim->dirty = true;

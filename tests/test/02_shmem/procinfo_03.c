@@ -112,17 +112,40 @@ int main( int argc, char **argv ) {
         assert( CPU_EQUAL(&p2_mask, &original_p2_mask) );
     }
 
-    // stealing with ERROR
+    // stealing all CPUs (this is no longer ERROR)
     {
-        /* CPU 0 could be stolen, but 2 & 3 not since p2_mask cannot be left empty  */
-        cpu_set_t p3_ilegal_mask = { .__bits = {0xd} }; /* [1101] */
+        cpu_set_t p3_new_mask = { .__bits = {0xf} }; /* [1111] */
 
-        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_ilegal_mask, DLB_STEAL_CPUS)
-                == DLB_ERR_PERM );
-        assert( shmem_procinfo__polldrom(p1_pid, NULL, NULL) == DLB_NOUPDT );
+        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_new_mask, DLB_STEAL_CPUS)
+                == DLB_SUCCESS );
+        assert( shmem_procinfo__polldrom(p1_pid, NULL, &p1_mask) == DLB_SUCCESS );
+        assert( CPU_COUNT(&p1_mask) == 0 );
+        assert( shmem_procinfo__polldrom(p2_pid, NULL, &p2_mask) == DLB_SUCCESS );
+        assert( CPU_COUNT(&p2_mask) == 0 );
+
+        // roll back
+        assert( shmem_procinfo_ext__postfinalize(p3_pid, /* return_stolen */ true) == DLB_SUCCESS );
+        assert( shmem_procinfo__polldrom(p1_pid, NULL, &p1_mask) == DLB_SUCCESS );
         assert( CPU_EQUAL(&p1_mask, &original_p1_mask) );
-        assert( shmem_procinfo__polldrom(p2_pid, NULL, NULL) == DLB_NOUPDT );
+        assert( shmem_procinfo__polldrom(p2_pid, NULL, &p2_mask) == DLB_SUCCESS );
         assert( CPU_EQUAL(&p2_mask, &original_p2_mask) );
+    }
+
+    // stealing with dirty process (ERROR)
+    {
+        cpu_set_t p3_new_mask;
+        mu_parse_mask("0", &p3_new_mask);
+        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_new_mask, DLB_STEAL_CPUS)
+                == DLB_SUCCESS );
+        mu_parse_mask("0-1", &p3_new_mask);
+        /* error because p1 is still dirty */
+        assert( shmem_procinfo__setprocessmask(p3_pid, &p3_new_mask, DLB_STEAL_CPUS)
+                == DLB_ERR_PERM );
+
+        // roll back
+        assert( shmem_procinfo_ext__postfinalize(p3_pid, /* return_stolen */ true) == DLB_SUCCESS );
+        assert( shmem_procinfo__polldrom(p1_pid, NULL, &p1_mask) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&p1_mask, &original_p1_mask) );
     }
 
     // synchronous
@@ -166,7 +189,7 @@ int main( int argc, char **argv ) {
         assert( CPU_EQUAL(&p2_mask, &original_p2_mask) );
     }
 
-    // synchronous while p1 and p2 are polling (ERROR)
+    // synchronous while p1 and p2 are polling. All CPUs, no longer ERROR
     {
         pthread_barrier_init(&barrier, NULL, 3);
 
@@ -178,42 +201,30 @@ int main( int argc, char **argv ) {
         pthread_t thread2;
         pthread_create(&thread2, NULL, poll_drom, &td2);
 
-        /* CPU 0 could be stolen, but 2 & 3 not since p2_mask cannot be left empty  */
-        cpu_set_t p3_ilegal_mask = { .__bits = {0xd} }; /* [1101] */
+        cpu_set_t p3_new_mask = { .__bits = {0xf} }; /* [1111] */
 
         pthread_barrier_wait(&barrier);
 
         // preinitialize and check masks
-        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_ilegal_mask,
-                    DLB_STEAL_CPUS | DLB_SYNC_QUERY) == DLB_ERR_PERM );
-
-        // P2 mask surely didn't get updated, thread 2 should still be polling
-        assert( pthread_tryjoin_np(thread2, NULL) != 0 );
-        td2.terminate = true;
-        pthread_join(thread2, NULL);
-
-        // P1 mask is either not updated (rollback was fast enough and cleared dirty flag)
-        // or it was updated and we need to update again
-        td1.terminate = true;
-        pthread_join(thread1, NULL);
+        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_new_mask,
+                    DLB_STEAL_CPUS | DLB_SYNC_QUERY) == DLB_SUCCESS );
+        assert( CPU_COUNT(&p1_mask) == 0 );
+        assert( CPU_COUNT(&p2_mask) == 0 );
         cpu_set_t mask;
-        int err = shmem_procinfo__polldrom(p1_pid, NULL, &mask);
-        if (err == DLB_NOUPDT) {
-            /* p1 did not succesfully poll, nothing to revert */
-        } else if (err == DLB_SUCCESS) {
-            /* p1 did poll and mask need to be updated again */
-            memcpy(&p1_mask, &mask, sizeof(cpu_set_t));
-        } else {
-            /* unkown */
+        assert( shmem_procinfo__getprocessmask(p3_pid, &mask, 0) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&mask, &p3_new_mask) );
+
+        if (pthread_tryjoin_np(thread1, NULL) != 0
+                || pthread_tryjoin_np(thread2, NULL) != 0) {
             return EXIT_FAILURE;
         }
-
         pthread_barrier_destroy(&barrier);
 
-        // check p1 and p2 masks are correct
-        assert( shmem_procinfo__polldrom(p1_pid, NULL, NULL) == DLB_NOUPDT );
+        // postfinalize and recover
+        assert( shmem_procinfo_ext__postfinalize(p3_pid, /* return-stolen */ true) == DLB_SUCCESS );
+        assert( shmem_procinfo__polldrom(p1_pid, NULL, &p1_mask) == DLB_SUCCESS );
         assert( CPU_EQUAL(&p1_mask, &original_p1_mask) );
-        assert( shmem_procinfo__polldrom(p2_pid, NULL, NULL) == DLB_NOUPDT );
+        assert( shmem_procinfo__polldrom(p2_pid, NULL, &p2_mask) == DLB_SUCCESS );
         assert( CPU_EQUAL(&p2_mask, &original_p2_mask) );
     }
 
