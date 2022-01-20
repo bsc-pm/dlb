@@ -48,20 +48,54 @@ int main( int argc, char **argv ) {
     mu_init();
 
     assert(  mu_is_subset(&mask0, &mask0) );
-    assert(  mu_is_subset(&mask1, &mask1) );
-    assert(  mu_is_subset(&mask2, &mask2) );
     assert(  mu_is_subset(&mask0, &mask1) );
     assert(  mu_is_subset(&mask0, &mask2) );
+    assert( !mu_is_subset(&mask1, &mask0) );
+    assert(  mu_is_subset(&mask1, &mask1) );
     assert(  mu_is_subset(&mask1, &mask2) );
+    assert( !mu_is_subset(&mask2, &mask0) );
     assert( !mu_is_subset(&mask2, &mask1) );
+    assert(  mu_is_subset(&mask2, &mask2) );
+
+    assert(  mu_is_superset(&mask0, &mask0) );
+    assert( !mu_is_superset(&mask0, &mask1) );
+    assert( !mu_is_superset(&mask0, &mask2) );
+    assert(  mu_is_superset(&mask1, &mask0) );
+    assert(  mu_is_superset(&mask1, &mask1) );
+    assert( !mu_is_superset(&mask1, &mask2) );
+    assert(  mu_is_superset(&mask2, &mask0) );
+    assert(  mu_is_superset(&mask2, &mask1) );
+    assert(  mu_is_superset(&mask2, &mask2) );
+
+    assert( !mu_is_proper_subset(&mask0, &mask0) );
+    assert(  mu_is_proper_subset(&mask0, &mask1) );
+    assert(  mu_is_proper_subset(&mask0, &mask2) );
+    assert( !mu_is_proper_subset(&mask1, &mask0) );
+    assert( !mu_is_proper_subset(&mask1, &mask1) );
+    assert(  mu_is_proper_subset(&mask1, &mask2) );
+    assert( !mu_is_proper_subset(&mask2, &mask0) );
+    assert( !mu_is_proper_subset(&mask2, &mask1) );
+    assert( !mu_is_proper_subset(&mask2, &mask2) );
+
+    assert( !mu_is_proper_superset(&mask0, &mask0) );
+    assert( !mu_is_proper_superset(&mask0, &mask1) );
+    assert( !mu_is_proper_superset(&mask0, &mask2) );
+    assert(  mu_is_proper_superset(&mask1, &mask0) );
+    assert( !mu_is_proper_superset(&mask1, &mask1) );
+    assert( !mu_is_proper_superset(&mask1, &mask2) );
+    assert(  mu_is_proper_superset(&mask2, &mask0) );
+    assert(  mu_is_proper_superset(&mask2, &mask1) );
+    assert( !mu_is_proper_superset(&mask2, &mask2) );
 
     assert( !mu_intersects(&mask0, &mask0) );
-    assert(  mu_intersects(&mask1, &mask1) );
-    assert(  mu_intersects(&mask2, &mask2) );
     assert( !mu_intersects(&mask0, &mask1) );
     assert( !mu_intersects(&mask0, &mask2) );
+    assert( !mu_intersects(&mask1, &mask0) );
+    assert(  mu_intersects(&mask1, &mask1) );
     assert(  mu_intersects(&mask1, &mask2) );
+    assert( !mu_intersects(&mask2, &mask0) );
     assert(  mu_intersects(&mask2, &mask1) );
+    assert(  mu_intersects(&mask2, &mask2) );
 
     mu_substract(&mask3, &mask1, &mask0);
     assert( check_mask(&mask3, (const int[MAX_SIZE]){1, 1, 0, 0}) == 0 );

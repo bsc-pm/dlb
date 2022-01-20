@@ -273,6 +273,28 @@ bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset) {
     return CPU_EQUAL(&intxn, subset);
 }
 
+/* Returns true is all bits in superset are set in subset */
+bool mu_is_superset(const cpu_set_t *superset, const cpu_set_t *subset) {
+    // The condition is true if the intersection is identical to subset
+    cpu_set_t intxn;
+    CPU_AND(&intxn, superset, subset);
+    return CPU_EQUAL(&intxn, subset);
+}
+
+/* Returns true is all bits in subset are set in superset and they're not equal */
+bool mu_is_proper_subset(const cpu_set_t *subset, const cpu_set_t *superset) {
+    cpu_set_t intxn;
+    CPU_AND(&intxn, subset, superset);
+    return CPU_EQUAL(&intxn, subset) && !CPU_EQUAL(subset, superset);
+}
+
+/* Returns true is all bits in superset are set in subset and they're not equal */
+bool mu_is_proper_superset(const cpu_set_t *superset, const cpu_set_t *subset) {
+    cpu_set_t intxn;
+    CPU_AND(&intxn, superset, subset);
+    return CPU_EQUAL(&intxn, subset) && !CPU_EQUAL(superset, subset);
+}
+
 /* Return true if any bit is present in both sets */
 bool mu_intersects(const cpu_set_t *mask1, const cpu_set_t *mask2) {
     cpu_set_t intxn;
