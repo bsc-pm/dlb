@@ -232,6 +232,112 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
+    // Partial CPU inheritance: [0-3] -> [1-3],[0] -> [2-3],[0],[1]
+    {
+        cpu_set_t mask;
+        cpu_set_t expected_mask;
+
+        // parent process (p1) pre-initializes full mask
+        mu_parse_mask("0-3", &p1_mask);
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+
+        // p2 inherits CPU 0
+        mu_parse_mask("0", &p2_mask);
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( CPU_EQUAL(&p2_mask, &mask) );
+
+        // p1 still owns CPUs [1-3]
+        mu_parse_mask("1-3", &expected_mask);
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&mask, &expected_mask) );
+
+        // p3 inherits CPU 1
+        mu_parse_mask("1", &p3_mask);
+        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( CPU_EQUAL(&p3_mask, &mask) );
+
+        // p1 still owns CPUs [2-3]
+        mu_parse_mask("2-3", &expected_mask);
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&mask, &expected_mask) );
+
+        // CPUs [2-3] are still not inherited, clean up is necessary
+        assert( shmem_procinfo_ext__postfinalize(p1_pid, false) == DLB_SUCCESS );
+
+        // finalize
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
+    // Inheritance + expansion: [0-2] -> [0-3]
+    {
+        cpu_set_t mask;
+
+        // parent process (p1) pre-initializes [0-2]
+        mu_parse_mask("0-2", &p1_mask);
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+
+        // p2 wants to register [0-3]
+        mu_parse_mask("0-3", &p2_mask);
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( CPU_EQUAL(&p2_mask, &mask) );
+
+        // p1 is not registered anymore
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
+
+        // finalize
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
+    // Inheritance + expansion: [0-2],[3] -> [0-3] (ERROR)
+    {
+        cpu_set_t mask;
+
+        // parent process (p1) pre-initializes [0-2]
+        mu_parse_mask("0-2", &p1_mask);
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+
+        // p3 registers CPU [3]
+        mu_parse_mask("3", &p3_mask);
+        assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+
+        // p2 wants to register [0-3], ERROR
+        mu_parse_mask("0-3", &p2_mask);
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_ERR_PERM );
+
+        // CPUs [0-2] have not been successfully inherited, clean up
+        assert( shmem_procinfo_ext__postfinalize(p1_pid, false) == DLB_SUCCESS );
+
+        // finalize
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
+    // Partial inheritance + expansion: [0,2] -> [2],[0-1] -> [0-1],[2-3]
+    {
+        cpu_set_t mask;
+
+        // parent process (p1) pre-initializes [0,2]
+        mu_parse_mask("0,2", &p1_mask);
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+
+        // p2 wants to register [0-1]
+        mu_parse_mask("0-1", &p2_mask);
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( CPU_EQUAL(&p2_mask, &mask) );
+
+        // p3 wants to register [2-3]
+        mu_parse_mask("2-3", &p3_mask);
+        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( CPU_EQUAL(&p3_mask, &mask) );
+
+        // p1 is not registered anymore
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
+
+        // finalize
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
     // Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 

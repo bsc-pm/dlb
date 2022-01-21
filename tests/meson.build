@@ -56,6 +56,7 @@ tests = {
     'lewi_mask_02'        : {},
   },
   '04_core' : {
+    'drom_00'             : {},
     'spd_00'              : {},
     'talp_00'             : {},
     'talp_01'             : {},

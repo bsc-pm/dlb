@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
         assert( DLB_DROM_PreInit(pid, &empty_mask, DLB_STEAL_CPUS, NULL) == DLB_SUCCESS );
 
         /* DLB_Init */
-        assert( DLB_Init(0, &process_mask, NULL) == DLB_SUCCESS );
+        assert( DLB_Init(0, &empty_mask, NULL) == DLB_SUCCESS );
 
         /* --drom is automatically set */
         char value[16];
@@ -229,11 +229,18 @@ int main(int argc, char **argv) {
             }
 
             /* Finalize shmem */
+            shmem_lock(handler);
+            {
+                if (shdata->initialized) {
+                    assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
+                    shdata->initialized = 0;
+                }
+            }
+            shmem_unlock(handler);
             shmem_finalize(handler, NULL);
 
             /* Child finalizes DLB and exits */
             if (pid == 0) {
-                mu_parse_mask("0-3", &process_mask);
                 assert( DLB_Finalize() == DLB_SUCCESS );
                 if (__gcov_flush) __gcov_flush();
                 _exit(EXIT_SUCCESS);
@@ -251,6 +258,129 @@ int main(int argc, char **argv) {
                 exit(EXIT_FAILURE);
             }
         }
+    }
+
+    /* Test child processes inheriting parent preinit */
+    {
+        cpu_set_t mask;
+        enum { SYS_SIZE = 4 };
+        mu_testing_set_sys_size(SYS_SIZE);
+
+        /* Parent process preinitializes */
+        mu_parse_mask("0-3", &mask);
+        assert( DLB_DROM_Attach() == DLB_SUCCESS );
+        assert( DLB_DROM_PreInit(pid, &mask, 0, NULL) == DLB_SUCCESS );
+
+        /* Fork processes */
+        pid_t child_pid[SYS_SIZE];
+        int i;
+        for(i=0; i<SYS_SIZE; ++i) {
+            child_pid[i] = fork();
+            if (child_pid[i] == 0) {
+                /* Child initializes test shmem */
+                int error;
+                struct data *shdata;
+                shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
+                        "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+                shmem_lock(handler);
+                {
+                    if (!shdata->initialized) {
+                        pthread_barrierattr_t attr;
+                        assert( pthread_barrierattr_init(&attr) == 0 );
+                        assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
+                        assert( pthread_barrier_init(&shdata->barrier, &attr, SYS_SIZE+1) == 0 );
+                        assert( pthread_barrierattr_destroy(&attr) == 0 );
+                        shdata->initialized = 1;
+                    }
+                }
+                shmem_unlock(handler);
+
+                /* Initialize DLB */
+                CPU_ZERO(&process_mask);
+                CPU_SET(i, &process_mask);
+                /* assert( DLB_Init(0, &process_mask, "--drom") == DLB_NOTED ); */
+                int err = DLB_Init(0, &process_mask, "--drom");
+                fprintf(stderr, "DLB_Init err: %d\n", err);
+
+                /* Synchronize: all childs are initialized */
+                error = pthread_barrier_wait(&shdata->barrier);
+                assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+                /* Parent process checks everything is correct */
+
+                /* Synchronize: all childs will finalize */
+                error = pthread_barrier_wait(&shdata->barrier);
+                assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+                /* Finalize shmem */
+                shmem_finalize(handler, NULL);
+
+                /* Finalizes DLB and exit */
+                assert( DLB_Finalize() == DLB_SUCCESS );
+                if (__gcov_flush) __gcov_flush();
+                _exit(EXIT_SUCCESS);
+            }
+        }
+
+        /* Parent process initializes test shmem */
+        int error;
+        struct data *shdata;
+        shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
+                "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+        shmem_lock(handler);
+        {
+            if (!shdata->initialized) {
+                pthread_barrierattr_t attr;
+                assert( pthread_barrierattr_init(&attr) == 0 );
+                assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
+                assert( pthread_barrier_init(&shdata->barrier, &attr, SYS_SIZE+1) == 0 );
+                assert( pthread_barrierattr_destroy(&attr) == 0 );
+                shdata->initialized = 1;
+            }
+        }
+        shmem_unlock(handler);
+
+        /* Synchronize: all childs are initialized */
+        error = pthread_barrier_wait(&shdata->barrier);
+        assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+        /* Parent process checks everything is correct */
+        for(i=0; i<SYS_SIZE; ++i) {
+            cpu_set_t child_mask, expected_child_mask;
+            CPU_ZERO(&expected_child_mask);
+            CPU_SET(i, &expected_child_mask);
+            assert( DLB_DROM_GetProcessMask(child_pid[i], &child_mask, 0) == DLB_SUCCESS );
+            assert( CPU_EQUAL(&child_mask, &expected_child_mask) );
+        }
+
+        /* Synchronize: all childs will finalize */
+        error = pthread_barrier_wait(&shdata->barrier);
+        assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+        /* Finalize shmem */
+        shmem_lock(handler);
+        {
+            if (shdata->initialized) {
+                assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
+                shdata->initialized = 0;
+            }
+        }
+        shmem_unlock(handler);
+        shmem_finalize(handler, NULL);
+
+        /* Wait for all child processes */
+        int wstatus;
+        while(wait(&wstatus) > 0) {
+            if (!WIFEXITED(wstatus))
+                exit(EXIT_FAILURE);
+            int rc = WEXITSTATUS(wstatus);
+            if (rc != 0) {
+                printf("Child return status: %d\n", rc);
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        assert( DLB_DROM_Detach() == DLB_SUCCESS );
     }
 
     return 0;

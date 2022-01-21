@@ -262,25 +262,48 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
             shdata->initialized = true;
         }
 
-        // If it's a new process, find a spot and initialize structure
-        if (!preinit_pid) {
-            int p;
-            for (p = 0; p < max_processes; p++) {
-                if (shdata->process_info[p].pid == NOBODY) {
-                    process = &shdata->process_info[p];
-                    break;
-                } else if (shdata->process_info[p].pid == pid) {
-                    /* This process is already registered */
+        // Iterate the processes array to find the two potential pointers:
+        pinfo_t *empty_spot = NULL;
+        pinfo_t *preinit_process = NULL;
+        int p;
+        for (p = 0; p < max_processes; p++) {
+            if (empty_spot == NULL
+                    && shdata->process_info[p].pid == NOBODY) {
+                /* First empty spot */
+                empty_spot = &shdata->process_info[p];
+            }
+            else if (preinit_pid != 0
+                    && preinit_process == NULL
+                    && shdata->process_info[p].pid == preinit_pid) {
+                /* This is the preregistered process */
+                preinit_process = &shdata->process_info[p];
+                if (preinit_process->preregistered) {
+                    error = DLB_NOTED;
+                } else {
+                    // The process matches the preinit_pid but it's
+                    // not flagged as preregistered
                     error = DLB_ERR_INIT;
-                    break;
                 }
             }
+            else if (shdata->process_info[p].pid == pid) {
+                /* This process is already registered */
+                error = DLB_ERR_INIT;
+            }
+            if (error == DLB_ERR_INIT
+                    || (empty_spot
+                        && ((preinit_pid && preinit_process) || !preinit_pid))) {
+                /* Error or everything needed is found */
+                break;
+            }
+        }
 
-            if (p == max_processes) {
+        // If it's a new process, initialize structure
+        if (!preinit_pid && !error) {
+            if (empty_spot == NULL) {
                 error = DLB_ERR_NOMEM;
             }
-
-            if (process) {
+            else {
+                process = empty_spot;
                 *process = (const pinfo_t) {.pid = pid};
                 error = register_mask(process, process_mask);
                 if (error == DLB_SUCCESS) {
@@ -293,35 +316,109 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
                 }
             }
         }
-        // Otherwise, find the preregistered process and inherit the spot
-        else {
-            int p;
-            for (p = 0; p < max_processes; p++) {
-                if (shdata->process_info[p].pid == preinit_pid) {
-                    process = &shdata->process_info[p];
-                    if (process->preregistered) {
-                        error = DLB_NOTED;
+
+        // Pre-registered process, check if the spot is inherited or initialize a new one
+        else if(preinit_process && error == DLB_NOTED) {
+            cpu_set_t *preinit_mask = preinit_process->dirty
+                ? &preinit_process->future_process_mask
+                : &preinit_process->current_process_mask;
+
+            // A: Simple inheritance, mask is not provided, or masks are equal
+            if (process_mask == NULL || CPU_EQUAL(process_mask, preinit_mask)) {
+                process = preinit_process;
+                process->pid = pid;
+                process->preregistered = false;
+            }
+
+            // B: Inheritance + expansion
+            else if (mu_is_proper_superset(process_mask, preinit_mask)) {
+                if (preinit_process->dirty) {
+                    // This case does not allow a dirty process
+                    error = DLB_ERR_PDIRTY;
+                } else {
+                    // Register the new CPUs in a placeholder process
+                    pinfo_t new_process;
+                    cpu_set_t new_cpus;
+                    mu_substract(&new_cpus, process_mask, preinit_mask);
+                    int register_error = register_mask(&new_process, &new_cpus);
+                    if (register_error == DLB_SUCCESS) {
+                        // Inherit and merge CPUs
+                        process = preinit_process;
+                        process->pid = pid;
+                        process->preregistered = false;
+                        memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
+                        memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
                     } else {
-                        // The process matches the preinit_pid but it's
-                        // not flagged as preregistered
-                        error = DLB_ERR_INIT;
+                        error = DLB_ERR_PERM;
                     }
-                    break;
                 }
             }
-            if (process && error == DLB_NOTED) {
-                // If the process is preregistered, we must only return the
-                // new_process_mask to cpuinfo to avoid conflicts,
+
+            // C: New spot, subset
+            else if (mu_is_proper_subset(process_mask, preinit_mask)) {
+                if (preinit_process->dirty) {
+                    // This case does not allow a dirty process
+                    error = DLB_ERR_PDIRTY;
+                } else if (empty_spot == NULL) {
+                    error = DLB_ERR_NOMEM;
+                } else {
+                    /* Initialize new spot with inherited CPUs */
+                    cpu_set_t inherited_cpus;
+                    CPU_AND(&inherited_cpus, preinit_mask, process_mask);
+                    process = empty_spot;
+                    *process = (const pinfo_t) {.pid = pid};
+                    memcpy(&process->current_process_mask, &inherited_cpus, sizeof(cpu_set_t));
+                    memcpy(&process->future_process_mask, &inherited_cpus, sizeof(cpu_set_t));
+                    /* Remove inherited CPUs from preregistered process */
+                    mu_substract(&preinit_process->current_process_mask,
+                            &preinit_process->current_process_mask, &inherited_cpus);
+                    mu_substract(&preinit_process->future_process_mask,
+                            &preinit_process->future_process_mask, &inherited_cpus);
+                }
+            }
+
+            // D: New spot + expansion
+            else {
+                if (preinit_process->dirty) {
+                    // This case does not allow a dirty process
+                    error = DLB_ERR_PDIRTY;
+                } else if (empty_spot == NULL) {
+                    error = DLB_ERR_NOMEM;
+                } else {
+                    // Register the new CPUs in a placeholder process
+                    pinfo_t new_process;
+                    cpu_set_t new_cpus;
+                    mu_substract(&new_cpus, process_mask, preinit_mask);
+                    int register_error = register_mask(&new_process, &new_cpus);
+                    if (register_error == DLB_SUCCESS) {
+                        /* Initialize new spot with the mask provided */
+                        process = empty_spot;
+                        process->pid = pid;
+                        process->preregistered = false;
+                        memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
+                        memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
+                        /* Remove inherited CPUs from preregistered process */
+                        mu_substract(&preinit_process->current_process_mask,
+                                &preinit_process->current_process_mask, process_mask);
+                        mu_substract(&preinit_process->future_process_mask,
+                                &preinit_process->future_process_mask, process_mask);
+                    } else {
+                        error = DLB_ERR_PERM;
+                    }
+                }
+            }
+
+            if (error == DLB_NOTED) {
+                // If the process has correctly inherit all/some of the CPUs,
+                // update the output mask with the appropriate CPU mask
                 // we cannot resolve the dirty flag yet
                 memcpy(new_process_mask,
                         process->dirty ? &process->future_process_mask
                         : &process->current_process_mask,
                         sizeof(cpu_set_t));
-
-                process->pid = pid;
-                process->preregistered = false;
             }
         }
+
 
         if (process) {
             // Save pointer for faster access
@@ -336,7 +433,7 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
 
     if (error < DLB_SUCCESS) {
         // The shared memory contents are untouched, but the counter needs to
-        // be decreased, and the shared memory deleted if needed
+        // be decremented, and the shared memory deleted if needed
         close_shmem();
     }
 
