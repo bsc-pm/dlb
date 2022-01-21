@@ -192,11 +192,10 @@ static int register_process(pid_t pid, pid_t preinit_pid, const cpu_set_t *mask,
         }
     }
 
-    // Register mask and all CPUs owned by preinit_pid
+    // Register mask
     for (cpuid=0; cpuid<node_size; ++cpuid) {
         cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
-        if (CPU_ISSET(cpuid, mask)
-                || (preinit_pid && cpuinfo->owner == preinit_pid)) {
+        if (CPU_ISSET(cpuid, mask)) {
             if (steal && cpuinfo->owner != NOBODY && cpuinfo->owner != pid) {
                 verbose(VB_SHMEM, "Acquiring ownership of CPU %d", cpuid);
             }

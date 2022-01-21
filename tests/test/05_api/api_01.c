@@ -69,11 +69,14 @@ int main(int argc, char **argv) {
 
     /* Check current mask */
     assert( DLB_DROM_Attach() == DLB_SUCCESS );
-    assert( DLB_DROM_GetProcessMask(getpid(), &current_mask, 0) == DLB_SUCCESS );
+    assert( DLB_DROM_GetProcessMask(getpid(), &process_mask, 0) == DLB_SUCCESS );
     assert( DLB_DROM_Detach() == DLB_SUCCESS );
     assert( CPU_EQUAL(&process_mask, &current_mask) );
 
     /* Finalize */
+    assert( DLB_Finalize() == DLB_SUCCESS );
+
+    /* A second invocation may be needed to clean up CPUs not being inherited */
     assert( DLB_Finalize() == DLB_SUCCESS );
 
     return 0;
