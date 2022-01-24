@@ -512,6 +512,14 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
 #pragma GCC visibility pop
 
 
+bool equivalent_masks(const char *str1, const char *str2) {
+    cpu_set_t mask1, mask2;
+    mu_parse_mask(str1, &mask1);
+    mu_parse_mask(str2, &mask2);
+    return CPU_EQUAL(&mask1, &mask2);
+}
+
+
 /* Compare CPUs so that:
  *  - owned CPUs first, in ascending order
  *  - non-owned later, starting from the first owned, then ascending

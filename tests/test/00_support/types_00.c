@@ -40,6 +40,8 @@ int main(int argc, char *argv[]) {
     err = parse_bool("0", &b_value);                assert(!err && !b_value);
     err = parse_bool("no", &b_value);               assert(!err && !b_value);
     err = parse_bool("false", &b_value);            assert(!err && !b_value);
+    assert(  equivalent_bool("false", "0") );
+    assert( !equivalent_bool("false", "1") );
 
     err = parse_negated_bool("", &b_value);         assert(err);
     err = parse_negated_bool("null", &b_value);     assert(err);
@@ -49,12 +51,16 @@ int main(int argc, char *argv[]) {
     err = parse_negated_bool("0", &b_value);        assert(!err && b_value);
     err = parse_negated_bool("no", &b_value);       assert(!err && b_value);
     err = parse_negated_bool("false", &b_value);    assert(!err && b_value);
+    assert(  equivalent_negated_bool("false", "0") );
+    assert( !equivalent_negated_bool("false", "1") );
 
     int i_value;
     err = parse_int("", &i_value);                  assert(err);
     err = parse_int("zzzzz", &i_value);             assert(err);
     err = parse_int("42", &i_value);                assert(!err && i_value==42);
     err = parse_int("42zzzzz", &i_value);           assert(!err && i_value==42);
+    assert(  equivalent_int("0", "0") );
+    assert( !equivalent_int("0", "1") );
 
     verbose_opts_t vb;
     parse_verbose_opts("", &vb);                    assert(vb==VB_CLEAR);
@@ -65,6 +71,8 @@ int main(int argc, char *argv[]) {
     parse_verbose_opts("api:microlb:shmem:mpi_api:mpi_intercept:stats:drom:async", &vb);
     assert(vb&VB_API && vb&VB_MICROLB && vb&VB_SHMEM && vb&VB_MPI_API
             && vb&VB_MPI_INT && vb&VB_STATS && vb&VB_DROM && vb&VB_ASYNC);
+    assert(  equivalent_verbose_opts("api:shmem", "shmem:api") );
+    assert( !equivalent_verbose_opts("api:shmem", "shmem") );
 
     verbose_fmt_t fmt;
     parse_verbose_fmt("", &fmt);                    assert(fmt==VBF_CLEAR);
@@ -73,6 +81,8 @@ int main(int argc, char *argv[]) {
     parse_verbose_fmt("spid:mpinode", &fmt);        assert(fmt&VBF_SPID && fmt&VBF_MPINODE);
     parse_verbose_fmt("node:spid:mpinode:mpirank:thread", &fmt);
     assert(fmt&VBF_NODE && fmt&VBF_SPID && fmt&VBF_MPINODE && fmt&VBF_MPIRANK && fmt&VBF_THREAD);
+    assert(  equivalent_verbose_fmt("node:thread", "thread:node") );
+    assert( !equivalent_verbose_fmt("node:thread", "thread") );
 
     instrument_items_t inst;
     parse_instrument_items("", &inst);              assert(inst==INST_NONE);
@@ -86,6 +96,8 @@ int main(int argc, char *argv[]) {
     assert(strcmp(instrument_items_tostr(INST_NONE), "none") == 0);
     assert(strcmp(instrument_items_tostr(INST_ALL), "all") == 0);
     assert(strcmp(instrument_items_tostr(INST_LEWI|INST_DROM), "lewi:drom") == 0);
+    assert(  equivalent_instrument_items("all", "thread:node:all") );
+    assert( !equivalent_instrument_items("talp", "barrier") );
 
     priority_t prio;
     err = parse_priority("", &prio);                assert(err);
@@ -94,6 +106,8 @@ int main(int argc, char *argv[]) {
     err = parse_priority("nearby-first", &prio);    assert(!err && prio==PRIO_NEARBY_FIRST);
     err = parse_priority("nearby-only", &prio);     assert(!err && prio==PRIO_NEARBY_ONLY);
     err = parse_priority("spread-ifempty", &prio);  assert(!err && prio==PRIO_SPREAD_IFEMPTY);
+    assert(  equivalent_priority("nearby-first", "nearby-first") );
+    assert( !equivalent_priority("nearby-first", "any") );
 
     policy_t pol;
     err = parse_policy("", &pol);                   assert(err);
@@ -106,12 +120,37 @@ int main(int argc, char *argv[]) {
     printf("Policy: %s\n", policy_tostr(pol));
     err = parse_policy("lewi_mask", &pol);          assert(!err && pol==POLICY_LEWI_MASK);
     printf("Policy: %s\n", policy_tostr(pol));
+    assert(  equivalent_policy("lewi", "lewi") );
+    assert( !equivalent_policy("lewi", "lewi_mask") );
+
+    talp_summary_t summary;
+    err = parse_talp_summary("", &summary);         assert(!err && summary==SUMMARY_NONE);
+    err = parse_talp_summary("node", &summary);     assert(!err && summary==SUMMARY_NODE);
+    assert(  equivalent_talp_summary("omp:pop-raw", "pop-raw:omp") );
+    assert( !equivalent_talp_summary("pop-metrics", "pop-raw") );
 
     interaction_mode_t mode;
     err = parse_mode("", &mode);                    assert(err);
     err = parse_mode("null", &mode);                assert(err);
     err = parse_mode("polling", &mode);             assert(!err && mode==MODE_POLLING);
     err = parse_mode("async", &mode);               assert(!err && mode==MODE_ASYNC);
+    assert(  equivalent_mode("polling", "polling") );
+    assert( !equivalent_mode("polling", "async") );
+
+    mpi_set_t set;
+    err = parse_mpiset("", &set);                   assert(err);
+    err = parse_mpiset("all", &set);                assert(!err && set==MPISET_ALL);
+    err = parse_mpiset("barrier", &set);            assert(!err && set==MPISET_BARRIER);
+    assert(  equivalent_mpiset("all", "all") );
+    assert( !equivalent_mpiset("all", "collectives") );
+
+    ompt_opts_t ompt;
+    err = parse_ompt_opts("", &ompt);               assert(!err && ompt==OMPT_OPTS_CLEAR);
+    err = parse_ompt_opts("lend", &ompt);           assert(!err && ompt==OMPT_OPTS_LEND);
+    err = parse_ompt_opts("mpi:borrow", &ompt);     assert(!err &&
+                                                        ompt==(OMPT_OPTS_MPI|OMPT_OPTS_BORROW));
+    assert(  equivalent_ompt_opts("lend:borrow", "borrow:borrow:lend") );
+    assert( !equivalent_ompt_opts("lend", "mpi") );
 
     return 0;
 }
