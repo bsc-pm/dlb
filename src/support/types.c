@@ -43,6 +43,14 @@ int parse_bool(const char *str, bool *value) {
     return DLB_SUCCESS;
 }
 
+bool equivalent_bool(const char *str1, const char *str2) {
+    bool b1 = false;
+    bool b2 = true;
+    int err1 = parse_bool(str1, &b1);
+    int err2 = parse_bool(str2, &b2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && b1 == b2;
+}
+
 int parse_negated_bool(const char *str, bool *value) {
     if (strcasecmp(str, "1")==0        ||
             strcasecmp(str, "yes")==0  ||
@@ -58,6 +66,14 @@ int parse_negated_bool(const char *str, bool *value) {
     return DLB_SUCCESS;
 }
 
+bool equivalent_negated_bool(const char *str1, const char *str2) {
+    bool b1 = false;
+    bool b2 = true;
+    int err1 = parse_negated_bool(str1, &b1);
+    int err2 = parse_negated_bool(str2, &b2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && b1 == b2;
+}
+
 int parse_int(const char *str, int *value) {
     char *endptr;
     int val = strtol(str, &endptr, 0);
@@ -66,6 +82,14 @@ int parse_int(const char *str, int *value) {
     }
     *value = val;
     return DLB_SUCCESS;
+}
+
+bool equivalent_int(const char *str1, const char *str2) {
+    int i1 = 0;
+    int i2 = 1;
+    int err1 = parse_int(str1, &i1);
+    int err2 = parse_int(str2, &i2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && i1 == i2;
 }
 
 
@@ -127,6 +151,13 @@ const char* get_verbose_opts_choices(void) {
     return verbose_opts_choices_str;
 }
 
+bool equivalent_verbose_opts(const char *str1, const char *str2) {
+    verbose_opts_t value1, value2;
+    parse_verbose_opts(str1, &value1);
+    parse_verbose_opts(str2, &value2);
+    return value1 == value2;
+}
+
 
 /* verbose_fmt_t */
 static const verbose_fmt_t verbose_fmt_values[] =
@@ -167,6 +198,13 @@ const char* verbose_fmt_tostr(verbose_fmt_t value) {
 
 const char* get_verbose_fmt_choices(void) {
     return verbose_fmt_choices_str;
+}
+
+bool equivalent_verbose_fmt(const char *str1, const char *str2) {
+    verbose_fmt_t value1, value2;
+    parse_verbose_fmt(str1, &value1);
+    parse_verbose_fmt(str2, &value2);
+    return value1 == value2;
 }
 
 
@@ -229,6 +267,13 @@ const char* get_instrument_items_choices(void) {
     return instrument_items_choices_str;
 }
 
+bool equivalent_instrument_items(const char *str1, const char *str2) {
+    instrument_items_t value1, value2;
+    parse_instrument_items(str1, &value1);
+    parse_instrument_items(str2, &value2);
+    return value1 == value2;
+}
+
 
 /* debug_opts_t */
 static const debug_opts_t debug_opts_values[] =
@@ -270,6 +315,13 @@ const char* get_debug_opts_choices(void) {
     return debug_opts_choices_str;
 }
 
+bool equivalent_debug_opts(const char *str1, const char *str2) {
+    debug_opts_t value1, value2;
+    parse_debug_opts(str1, &value1);
+    parse_debug_opts(str2, &value2);
+    return value1 == value2;
+}
+
 
 /* talp_summary_t */
 static const talp_summary_t talp_summary_values[] =
@@ -282,6 +334,7 @@ static const char talp_summary_choices_str[] =
 enum { talp_summary_nelems = sizeof(talp_summary_values) / sizeof(talp_summary_values[0]) };
 
 int parse_talp_summary(const char *str, talp_summary_t *value) {
+    *value = SUMMARY_NONE;
     int i;
     for (i=0; i<talp_summary_nelems; ++i) {
         if (strstr(str, talp_summary_choices[i]) != NULL) {
@@ -316,6 +369,13 @@ const char* talp_summary_tostr(talp_summary_t value) {
 
 const char* get_talp_summary_choices(void) {
     return talp_summary_choices_str;
+}
+
+bool equivalent_talp_summary(const char *str1, const char *str2) {
+    talp_summary_t value1, value2;
+    parse_talp_summary(str1, &value1);
+    parse_talp_summary(str2, &value2);
+    return value1 == value2;
 }
 
 
@@ -353,6 +413,14 @@ const char* get_priority_choices(void) {
     return priority_choices_str;
 }
 
+bool equivalent_priority(const char *str1, const char *str2) {
+    priority_t value1 = PRIO_ANY;
+    priority_t value2 = PRIO_NEARBY_FIRST;
+    int err1 = parse_priority(str1, &value1);
+    int err2 = parse_priority(str2, &value2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
+}
+
 /* policy_t */
 static const policy_t policy_values[] = {POLICY_NONE, POLICY_LEWI, POLICY_LEWI_MASK};
 static const char* const policy_choices[] = {"no", "LeWI", "LeWI_mask"};
@@ -382,6 +450,14 @@ const char* policy_tostr(policy_t value) {
 
 const char* get_policy_choices(void) {
     return policy_choices_str;
+}
+
+bool equivalent_policy(const char *str1, const char *str2) {
+    policy_t value1 = POLICY_NONE;
+    policy_t value2 = POLICY_LEWI;
+    int err1 = parse_policy(str1, &value1);
+    int err2 = parse_policy(str2, &value2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
 }
 
 /* interaction_mode_t */
@@ -415,6 +491,14 @@ const char* get_mode_choices(void) {
     return mode_choices_str;
 }
 
+bool equivalent_mode(const char *str1, const char *str2) {
+    interaction_mode_t value1 = MODE_POLLING;
+    interaction_mode_t value2 = MODE_ASYNC;
+    int err1 = parse_mode(str1, &value1);
+    int err2 = parse_mode(str2, &value2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
+}
+
 /* mpi_set_t */
 static const mpi_set_t mpiset_values[] = {MPISET_NONE, MPISET_ALL, MPISET_BARRIER, MPISET_COLLECTIVES};
 static const char* const mpiset_choices[] = {"none", "all", "barrier", "collectives"};
@@ -444,6 +528,14 @@ const char* mpiset_tostr(mpi_set_t value) {
 
 const char* get_mpiset_choices(void) {
     return mpiset_choices_str;
+}
+
+bool equivalent_mpiset(const char *str1, const char *str2) {
+    mpi_set_t value1 = MPISET_NONE;
+    mpi_set_t value2 = MPISET_ALL;
+    int err1 = parse_mpiset(str1, &value1);
+    int err2 = parse_mpiset(str2, &value2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
 }
 
 /* ompt_opts_t */
@@ -482,4 +574,11 @@ const char* ompt_opts_tostr(ompt_opts_t value) {
 
 const char* get_ompt_opts_choices(void) {
     return ompt_opts_choices_str;
+}
+
+bool equivalent_ompt_opts(const char *str1, const char *str2) {
+    ompt_opts_t value1, value2;
+    parse_ompt_opts(str1, &value1);
+    parse_ompt_opts(str2, &value2);
+    return value1 == value2;
 }

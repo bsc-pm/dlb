@@ -450,6 +450,42 @@ static const char * get_value(option_type_t type, const void *option) {
     return "unknown";
 }
 
+static bool values_are_equivalent(option_type_t type, const char *value1, const char *value2) {
+    switch(type) {
+        case(OPT_BOOL_T):
+            return equivalent_bool(value1, value2);
+        case(OPT_NEG_BOOL_T):
+            return equivalent_negated_bool(value1, value2);
+        case(OPT_INT_T):
+            return equivalent_int(value1, value2);
+        case(OPT_STR_T):
+            return strcmp(value1, value2) == 0;
+        case(OPT_VB_T):
+            return equivalent_verbose_opts(value1, value2);
+        case(OPT_VBFMT_T):
+            return equivalent_verbose_fmt(value1, value2);
+        case(OPT_INST_T):
+            return equivalent_instrument_items(value1, value2);
+        case(OPT_DBG_T):
+            return equivalent_debug_opts(value1, value2);
+        case(OPT_PRIO_T):
+            return equivalent_priority(value1, value2);
+        case(OPT_POL_T):
+            return equivalent_policy(value1, value2);
+        case(OPT_MASK_T):
+            return equivalent_masks(value1, value2);
+        case(OPT_MODE_T):
+            return equivalent_mode(value1, value2);
+        case(OPT_MPISET_T):
+            return equivalent_mpiset(value1, value2);
+        case(OPT_OMPTOPTS_T):
+            return equivalent_ompt_opts(value1, value2);
+        case OPT_TLPSUM_T:
+            return equivalent_talp_summary(value1, value2);
+    }
+    return false;
+}
+
 /* Parse DLB_ARGS and remove argument if found */
 static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value) {
     *arg_value = 0;
@@ -556,7 +592,7 @@ void options_init(options_t *options, const char *dlb_args) {
         if (dlb_args_from_env) {
             parse_dlb_args(dlb_args_from_env, entry->arg_name, arg_value_from_env);
             if (strlen(arg_value_from_env) > 0) {
-                if (rhs) {
+                if (rhs && !values_are_equivalent(entry->type, rhs, arg_value_from_env)) {
                     warning("Overwriting option %s = %s",
                             entry->arg_name, arg_value_from_env);
                 }

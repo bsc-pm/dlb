@@ -116,58 +116,73 @@ typedef enum OMPTOptions {
 static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }
 
-int parse_bool(const char *str, bool *value);
-int parse_negated_bool(const char *str, bool *value);
-int parse_int(const char *str, int *value);
+int  parse_bool(const char *str, bool *value);
+bool equivalent_bool(const char *str1, const char *str2);
+
+int  parse_negated_bool(const char *str, bool *value);
+bool equivalent_negated_bool(const char *str1, const char *str2);
+
+int  parse_int(const char *str, int *value);
+bool equivalent_int(const char *str1, const char *str2);
 
 /* verbose_opts_t */
 int parse_verbose_opts(const char *str, verbose_opts_t *value);
 const char* verbose_opts_tostr(verbose_opts_t value);
 const char* get_verbose_opts_choices(void);
+bool equivalent_verbose_opts(const char *str1, const char *str2);
 
 /* verbose_fmt_t */
 int parse_verbose_fmt(const char *str, verbose_fmt_t *value);
 const char* verbose_fmt_tostr(verbose_fmt_t value);
 const char* get_verbose_fmt_choices(void);
+bool equivalent_verbose_fmt(const char *str1, const char *str2);
 
 /* instrument_item_t */
 int parse_instrument_items(const char *str, instrument_items_t *value);
 const char* instrument_items_tostr(instrument_items_t value);
 const char* get_instrument_items_choices(void);
+bool equivalent_instrument_items(const char *str1, const char *str2);
 
 /* debug_opts_t */
 int parse_debug_opts(const char *str, debug_opts_t *value);
 const char* debug_opts_tostr(debug_opts_t value);
 const char* get_debug_opts_choices(void);
+bool equivalent_debug_opts(const char *str1, const char *str2);
 
 /* priority_t */
 int parse_priority(const char *str, priority_t *value);
 const char* priority_tostr(priority_t value);
 const char* get_priority_choices(void);
+bool equivalent_priority(const char *str1, const char *str2);
 
 /* policy_t */
 int parse_policy(const char *str, policy_t *value);
 const char* policy_tostr(policy_t policy);
 const char* get_policy_choices(void);
+bool equivalent_policy(const char *str1, const char *str2);
 
 /* talp_summary_t */
 int parse_talp_summary(const char *str, talp_summary_t *value);
 const char* talp_summary_tostr(talp_summary_t summary);
 const char* get_talp_summary_choices(void);
+bool equivalent_talp_summary(const char *str1, const char *str2);
 
 /* interaction_mode_t */
 int parse_mode(const char *str, interaction_mode_t *value);
 const char* mode_tostr(interaction_mode_t value);
 const char* get_mode_choices(void);
+bool equivalent_mode(const char *str1, const char *str2);
 
 /* mpi_set_t */
 int parse_mpiset(const char *str, mpi_set_t *value);
 const char* mpiset_tostr(mpi_set_t value);
 const char* get_mpiset_choices(void);
+bool equivalent_mpiset(const char *str1, const char *str2);
 
 /* ompt_opts_t */
 int parse_ompt_opts(const char *str, ompt_opts_t *value);
 const char* ompt_opts_tostr(ompt_opts_t value);
 const char* get_ompt_opts_choices(void);
+bool equivalent_ompt_opts(const char *str1, const char *str2);
 
 #endif /* TYPES_H */
