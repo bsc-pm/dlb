@@ -215,6 +215,14 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_BOOL_T,
         .flags          = OPT_OPTIONAL
     }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-respect-mask",
+        .default_value  = "yes",
+        .description    = OFFSET"...\n",
+        .offset         = offsetof(options_t, lewi_respect_mask),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_OPTIONAL
+    }, {
         /* This is a deprecated option that overlaps with --lewi-keep-one-cpu.
          * It must be defined afterwards so that the default value of the
          * previous option does not overwrite this one */
