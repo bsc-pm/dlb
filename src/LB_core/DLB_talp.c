@@ -734,7 +734,7 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
     talp_info_t *talp_info = spd->talp_info;
     int ncpus = monitor->num_measurements > 0 ? talp_info->ncpus : 0;
     MPI_Reduce(&ncpus, &total_cpus,
-            1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD);
+            1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
     /* Obtain the total number of nodes used in this region */
     int local_node_used = 0;
@@ -889,8 +889,8 @@ static void monitoring_regions_gather_app_data_all(const subprocess_descriptor_t
     /* Gather recvcounts for each process */
     int chars_to_send = nregions * MONITOR_MAX_KEY_LEN;
     int *recvcounts = malloc(_mpi_size * sizeof(int));
-    MPI_Allgather(&chars_to_send, 1, MPI_INTEGER,
-            recvcounts, 1, MPI_INTEGER, MPI_COMM_WORLD);
+    MPI_Allgather(&chars_to_send, 1, MPI_INT,
+            recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
 
     /* Compute total characters to gather via MPI */
     int i;
