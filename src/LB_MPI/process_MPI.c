@@ -53,7 +53,9 @@ static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static int is_iter = 0;
 static mpi_set_t lewi_mpi_calls = MPISET_ALL;
-static MPI_Comm mpi_comm_node; /* MPI Communicator specific to the node */
+
+static MPI_Comm mpi_comm_node;          /* MPI Communicator specific to the node */
+static MPI_Comm mpi_comm_internode;     /* MPI Communicator with 1 representative per node */
 
 void before_init(void) {
 #if MPI_VERSION >= 3 && defined(MPI_LIBRARY_VERSION)
@@ -73,10 +75,24 @@ void before_init(void) {
 #endif
 }
 
-void after_init(void) {
+/* Compute global, local ids and create the node communicator */
+static void get_mpi_info(void) {
+
     MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
     MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
 
+#if MPI_VERSION >= 3
+    /* Node communicator, obtain also local id and number of MPIs in this node */
+    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0 /* key */,
+            MPI_INFO_NULL, &mpi_comm_node);
+    MPI_Comm_rank(mpi_comm_node, &_process_id);
+    MPI_Comm_size(mpi_comm_node, &_mpis_per_node);
+
+    /* Communicator with 1 representative per node, obtain node id and total number */
+    MPI_Comm_split(MPI_COMM_WORLD, _process_id, 0 /* key */, &mpi_comm_internode);
+    MPI_Comm_rank(mpi_comm_internode, &_node_id);
+    MPI_Comm_size(mpi_comm_internode, &_num_nodes);
+#else
     char hostname[HOST_NAME_MAX] = {'\0'};
     char (*recvData)[HOST_NAME_MAX] = malloc(_mpi_size * sizeof(char[HOST_NAME_MAX]));
 
@@ -160,13 +176,14 @@ void after_init(void) {
      * _process_id = _mpi_rank % _mpis_per_node;
      ********************************************/
 
-    // Color = node, key is 0 because we don't mind the internal rank
-    //Commented code is just for Alya
-//    if (_mpi_rank==0) {
-//        MPI_Comm_split( MPI_COMM_WORLD, -1, 0, &mpi_comm_node );
-//    }else{
-        MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
-//    }
+    MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
+    MPI_Comm_split( MPI_COMM_WORLD, _process_id, 0, &mpi_comm_internode);
+#endif
+}
+
+void after_init(void) {
+    /* Fill MPI global variables */
+    get_mpi_info();
 
     if (DLB_Init(0, NULL, NULL) == DLB_SUCCESS) {
         init_from_mpi = 1;
@@ -245,6 +262,10 @@ int is_mpi_ready(void) {
 
 MPI_Comm getNodeComm(void) {
     return mpi_comm_node;
+}
+
+MPI_Comm getInterNodeComm(void) {
+    return mpi_comm_internode;
 }
 
 #endif /* MPI_LIB */

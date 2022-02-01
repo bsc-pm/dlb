@@ -40,5 +40,6 @@ void before_finalize(void);
 void after_finalize(void);
 int is_mpi_ready(void);
 MPI_Comm getNodeComm(void);
+MPI_Comm getInterNodeComm(void);
 
 #endif //PROCESS_MPI_H
