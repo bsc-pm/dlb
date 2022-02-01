@@ -496,8 +496,8 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
 
     // Initialize after the mutex is unlocked
     if (anonymous_region) {
-        char monitor_name[32];
-        snprintf(monitor_name, 32, "Anonymous Region %d", get_anonymous_id());
+        char monitor_name[MONITOR_MAX_KEY_LEN];
+        snprintf(monitor_name, MONITOR_MAX_KEY_LEN, "Anonymous Region %d", get_anonymous_id());
         monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
     } else {
         monitoring_region_initialize(monitor, get_new_monitor_id(), name);
@@ -511,9 +511,13 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
     monitor_data_t *monitor_data = malloc(sizeof(monitor_data_t));
     *monitor_data = (const monitor_data_t) {.id = id};
 
+    /* Allocate monitor name */
+    char *allocated_name = malloc(MONITOR_MAX_KEY_LEN*sizeof(char));
+    snprintf(allocated_name, MONITOR_MAX_KEY_LEN, "%s", name);
+
     /* Initialize monitor */
     *monitor = (const dlb_monitor_t) {
-            .name = strndup(name, MONITOR_MAX_KEY_LEN-1), /* strndup does not include '\0' in n */
+            .name = allocated_name,
             ._data = monitor_data,
     };
 
