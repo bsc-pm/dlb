@@ -93,6 +93,8 @@ static void destroy_node(gpointer value) {
 
 void instrument_register_event(unsigned int type, long long value, const char *value_description) {
 
+    enum { EVENT_NAME_MAX_LEN = 128 };
+
     /* Allocate GTree if needed */
     if (event_tree == NULL) {
         event_tree = g_tree_new_full(
@@ -127,7 +129,10 @@ void instrument_register_event(unsigned int type, long long value, const char *v
     p = realloc(event->values_description, sizeof(char*) * event->nvalues);
     fatal_cond(!p, "realloc failed");
     event->values_description = p;
-    event->values_description[event->nvalues-1] = strdup(value_description);
+    size_t desc_len = strnlen(value_description, EVENT_NAME_MAX_LEN);
+    char *desc = malloc(sizeof(char)*desc_len);
+    snprintf(desc, EVENT_NAME_MAX_LEN, "%s", value_description);
+    event->values_description[event->nvalues-1] = desc;
 }
 
 

@@ -371,7 +371,10 @@ static void parse_64_bits_mask(cpu_set_t *mask, int offset, const char *str, int
 }
 
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
-    if ( !str || strlen(str) == 0 ) return;
+    if (!str) return;
+
+    int str_len = strnlen(str, CPU_SETSIZE+1);
+    if ( str_len == 0 || str_len > CPU_SETSIZE) return;
 
     int sys_size = get_sys_size();
     regex_t regex_bitmask;
@@ -400,7 +403,6 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         warning("The binary form xxxxb is deprecated, please use 0bxxxx.");
         // Parse
         int i;
-        int str_len = strnlen(str, CPU_SETSIZE);
         for (i=0; i<str_len; i++) {
             if ( str[i] == '1' && i < sys_size ) {
                 CPU_SET( i, mask );

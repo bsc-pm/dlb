@@ -125,6 +125,15 @@ int main( int argc, char **argv ) {
     parse_and_check("10b", (const int[MAX_SIZE]){1});
     parse_and_check("00000000001b", (const int[MAX_SIZE]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
 
+    // Test string size limit
+    enum { OVERSIZED_STR_LEN = CPU_SETSIZE * 2 };
+    char str[OVERSIZED_STR_LEN];
+    int i;
+    for (i=0; i<OVERSIZED_STR_LEN; ++i) str[i] = '1';
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    mu_parse_mask(str, &mask);
+    assert( CPU_COUNT(&mask) == 0 );
 
     mu_finalize();
     return EXIT_SUCCESS;
