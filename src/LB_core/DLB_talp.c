@@ -64,7 +64,9 @@ typedef struct monitor_app_summary_t {
     int64_t elapsed_useful;         /* Elapsed Useful Computation Time */
     int64_t app_sum_useful;         /* Sum of total Useful Computation Time of all processes */
     int64_t node_sum_useful;        /* Sum of total Useful Computation in the most loaded node */
-    int total_cpus;                 /* Sum of total CPUs used (initially registered) by each process */
+    int total_cpus;                 /* Sum of total CPUs used (initially registered) by each
+                                       process */
+    int total_nodes;                /* Sum of total nodes used for this region */
 } monitor_app_summary_t;
 
 /* Per process info for the node summary */
@@ -629,7 +631,7 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
     if (app_summary != NULL) {
         if (app_summary->elapsed_time > 0) {
             int P = app_summary->total_cpus;
-            int N = _num_nodes;
+            int N = app_summary->total_nodes;
             int64_t elapsed_time = app_summary->elapsed_time;
             int64_t elapsed_useful = app_summary->elapsed_useful;
             int64_t app_sum_useful = app_summary->app_sum_useful;
@@ -668,7 +670,7 @@ static void monitoring_region_report_pop_raw(dlb_monitor_t *monitor) {
     if (app_summary != NULL) {
         if (app_summary->elapsed_time > 0) {
             int P = app_summary->total_cpus;
-            int N = _num_nodes;
+            int N = app_summary->total_nodes;
             int64_t elapsed_time = app_summary->elapsed_time;
             int64_t elapsed_useful = app_summary->elapsed_useful;
             int64_t app_sum_useful = app_summary->app_sum_useful;
@@ -698,6 +700,7 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
     int64_t app_sum_useful;
     int64_t node_sum_useful;
     int total_cpus;
+    int total_nodes;
 
     MPI_Datatype mpi_int64;
 #if MPI_VERSION >= 3
@@ -722,14 +725,26 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
     int64_t local_node_useful = 0;
     MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
             1, mpi_int64, MPI_SUM, 0, getNodeComm());
-    MPI_Reduce(&local_node_useful, &node_sum_useful,
-            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (_process_id == 0) {
+        MPI_Reduce(&local_node_useful, &node_sum_useful,
+                1, mpi_int64, MPI_MAX, 0, getInterNodeComm());
+    }
 
     /* Obtain the total number of CPUs used in all processes */
     talp_info_t *talp_info = spd->talp_info;
     int ncpus = monitor->num_measurements > 0 ? talp_info->ncpus : 0;
     MPI_Reduce(&ncpus, &total_cpus,
-            1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD);
+            1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    /* Obtain the total number of nodes used in this region */
+    int local_node_used = 0;
+    int i_used_this_node = monitor->num_measurements > 0 ? 1 : 0;
+    MPI_Reduce(&i_used_this_node, &local_node_used,
+            1, MPI_INT, MPI_MAX, 0, getNodeComm());
+    if (_process_id == 0) {
+        MPI_Reduce(&local_node_used, &total_nodes,
+                1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
+    }
 
     /* Allocate gathered data only in process rank 0 */
     if (_mpi_rank == 0) {
@@ -740,6 +755,7 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
         monitor_data->app_summary->app_sum_useful = app_sum_useful;
         monitor_data->app_summary->node_sum_useful = node_sum_useful;
         monitor_data->app_summary->total_cpus = total_cpus;
+        monitor_data->app_summary->total_nodes = total_nodes;
     }
 }
 #endif
@@ -873,8 +889,8 @@ static void monitoring_regions_gather_app_data_all(const subprocess_descriptor_t
     /* Gather recvcounts for each process */
     int chars_to_send = nregions * MONITOR_MAX_KEY_LEN;
     int *recvcounts = malloc(_mpi_size * sizeof(int));
-    MPI_Allgather(&chars_to_send, 1, MPI_INTEGER,
-            recvcounts, 1, MPI_INTEGER, MPI_COMM_WORLD);
+    MPI_Allgather(&chars_to_send, 1, MPI_INT,
+            recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
 
     /* Compute total characters to gather via MPI */
     int i;
