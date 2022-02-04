@@ -611,9 +611,9 @@ bool equivalent_omptool_opts(const char *str1, const char *str2) {
 }
 
 /* omptm_version_t */
-static const omptm_version_t omptm_version_values[] = {OMPTM_OMP5, OMPTM_FREE_AGENTS};
-static const char* const omptm_version_choices[] = {"omp5", "free-agents"};
-static const char omptm_version_choices_str[] = "omp5, free-agents";
+static const omptm_version_t omptm_version_values[] = {OMPTM_OMP5, OMPTM_FREE_AGENTS, OMPTM_ROLE_SHIFT};
+static const char* const omptm_version_choices[] = {"omp5", "free-agents", "role-shift"};
+static const char omptm_version_choices_str[] = "omp5, free-agents, role-shift";
 enum { omptm_version_nelems = sizeof(omptm_version_values) / sizeof(omptm_version_values[0]) };
 
 int parse_omptm_version(const char *str, omptm_version_t *value) {

@@ -90,6 +90,9 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version) {
         omptm_funcs.work            = NULL;
         omptm_funcs.sync_region     = omptm_free_agents__sync_region;
     }
+    else if (omptm_version == OMPTM_ROLE_SHIFT) {
+
+    }
 }
 
 void omptool__into_blocking_call(void) {

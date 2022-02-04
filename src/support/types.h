@@ -115,7 +115,8 @@ typedef enum OMPTOptions {
 
 typedef enum OMPTMVersion {
     OMPTM_OMP5,
-    OMPTM_FREE_AGENTS
+    OMPTM_FREE_AGENTS,
+    OMPTM_ROLE_SHIFT
 } omptm_version_t;
 
 static inline int min_int(int a, int b) { return a < b ? a : b; }
