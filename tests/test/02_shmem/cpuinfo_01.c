@@ -225,6 +225,61 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
     }
 
+    /* Test respect-mask=no feature */
+    {
+        // Set up fake spd to set respect-mask option
+        subprocess_descriptor_t spd;
+        spd.options.lewi_respect_mask = false;
+        spd_enter_dlb(&spd);
+
+        // Initialize
+        cpu_set_t reduced_p1_mask;
+        mu_parse_mask("0", &reduced_p1_mask);
+        assert( shmem_cpuinfo__init(p1_pid, 0, &reduced_p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+        cpu_set_t reduced_p2_mask;
+        mu_parse_mask("2", &reduced_p2_mask);
+        assert( shmem_cpuinfo__init(p2_pid, 0, &reduced_p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+        if (async) { shmem_cpuinfo__enable_request_queues(); }
+
+        // P1 borrows CPU 3
+        assert( shmem_cpuinfo__borrow_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == p1_pid );
+
+        // P1 lends CPU 3
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == 0 );
+
+        // P1 aquires CPU 3
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 3, &new_guest, &victim) == DLB_SUCCESS );
+        assert( new_guest == p1_pid && victim == -1 );
+
+        // P2 wants to aquire full mask, acquires [1], [2-3] are pending
+        int requested_cpus = 3;
+        int cpus_priority_array[] = {2,3,0,1};
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_cpus,
+                    cpus_priority_array, PRIO_NEARBY_FIRST, /* max_parallelism */ 0,
+                    /* last_borrow */ NULL, new_guests, victims)
+                == async ? DLB_NOTED : DLB_SUCCESS );
+        assert( new_guests[1] == p2_pid && victims[1] == -1 );
+        assert( new_guests[3] == -1 && victims[3] == -1 );
+
+        // P1 lends CPU 3
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guest) == DLB_SUCCESS );
+        assert( new_guest == (async ? p2_pid : 0) );
+
+        // If polling, process 2 needs to ask again for CPU 3
+        if (!async) {
+            assert( shmem_cpuinfo__acquire_cpu(p2_pid, 3, &new_guest, &victim) == DLB_SUCCESS );
+            assert( new_guest == p2_pid );
+            assert( victim == -1 );
+        }
+
+        // Finalize
+        assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
+
     /* Test early finalization with pending actions */
     {
         // Set up fake spd to set post-mortem option

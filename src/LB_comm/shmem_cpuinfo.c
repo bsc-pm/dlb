@@ -78,6 +78,7 @@ static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static int node_size;
 static bool cpu_is_public_post_mortem = false;
+static bool respect_mask = true;
 static const char *shmem_name = "cpuinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
@@ -217,6 +218,12 @@ int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_m
 
     // Update post_mortem preference
     if (thread_spd && thread_spd->options.debug_opts & DBG_LPOSTMORTEM) {
+        cpu_is_public_post_mortem = true;
+    }
+
+    // Respect mask
+    if (thread_spd && !thread_spd->options.lewi_respect_mask) {
+        respect_mask = false;
         cpu_is_public_post_mortem = true;
     }
 
@@ -740,14 +747,16 @@ static int acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
             *victim = cpuinfo->guest;
             error = DLB_NOTED;
         }
-    } else if (cpuinfo->state == CPU_LENT && cpuinfo->guest == NOBODY) {
+    } else if (cpuinfo->guest == NOBODY
+                && (cpuinfo->state == CPU_LENT
+                    || (!respect_mask && cpuinfo->state == CPU_DISABLED))) {
         // CPU is available
         cpuinfo->guest = pid;
         *new_guest = pid;
         *victim = -1;
         error = DLB_SUCCESS;
         update_cpu_stats(cpuid, STATS_GUESTED);
-    } else if (cpuinfo->state != CPU_DISABLED) {
+    } else if (cpuinfo->state != CPU_DISABLED || !respect_mask) {
         // CPU is busy, or lent to another process
         *new_guest = -1;
         *victim = -1;
@@ -777,7 +786,7 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *vi
 }
 
 /* exceptional case: acquire_cpus may need borrow_cpu  */
-static int borrow_cpu(pid_t pid, int cpuid, pid_t *victim);
+static int borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest);
 
 int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid_t pid, int *requested_ncpus,
         int cpus_priority_array[], priority_t priority, int max_parallelism,
@@ -948,7 +957,9 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
         *new_guest = pid;
         error = DLB_SUCCESS;
         update_cpu_stats(cpuid, STATS_OWNED);
-    } else if (cpuinfo->state == CPU_LENT && cpuinfo->guest == NOBODY) {
+    } else if (cpuinfo->guest == NOBODY
+                && (cpuinfo->state == CPU_LENT
+                    || (!respect_mask && cpuinfo->state == CPU_DISABLED))) {
         // CPU is available
         cpuinfo->guest = pid;
         *new_guest = pid;
@@ -961,11 +972,11 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     return error;
 }
 
-int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *victim) {
+int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
     int error;
     shmem_lock(shm_handler);
     {
-        error = borrow_cpu(pid, cpuid, victim);
+        error = borrow_cpu(pid, cpuid, new_guest);
     }
     shmem_unlock(shm_handler);
     return error;
