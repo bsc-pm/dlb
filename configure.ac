@@ -260,7 +260,6 @@ AM_CONDITIONAL([LIT_SUPPORT], [test "x$lit" = xyes])
 
 # check for OpenMP availability
 AC_OPENMP
-# AM_CONDITIONAL([HAVE_OPENMP], [test "x$ac_cv_prog_c_openmp" != xunsupported])
 AM_CONDITIONAL([HAVE_OPENMP], [test -n "$OPENMP_CFLAGS" || test "x$ac_cv_prog_c_openmp" = "xnone needed"])
 
 # check for MPI
