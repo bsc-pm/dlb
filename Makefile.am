@@ -439,11 +439,13 @@ dlb_taskset_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_taskset_LDADD = libdlb.la
 
+if HAVE_OPENMP
 noinst_PROGRAMS = dlb_tester
 dlb_tester_SOURCES = src/utils/dlb_tester.c
 dlb_tester_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_tester_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS) $(OPENMP_CFLAGS)
 dlb_tester_LDADD = libdlb.la
+endif
 
 #################################################################################
 ### doc                                                                       ###
