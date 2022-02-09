@@ -178,7 +178,8 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
     
     CPU_ZERO(&primary_thread_mask);
     int encountered_cpus = 0;
-    for(int i = 0; i < system_size; i++){
+    int i;
+    for(i = 0; i < system_size; i++){
     	if(CPU_ISSET(i, &process_mask)){
     		if(++encountered_cpus == 1){
     			//First encountered CPU belongs to the primary thread
@@ -301,7 +302,8 @@ void omptm_role_shift__thread_role_shift(
 	else if(prior_role == OMP_ROLE_NONE){
 		if(next_role == OMP_ROLE_COMMUNICATOR) return; //Don't supported now
 		cpu_set_t thread_mask;
-		for(int i = 0; i < system_size; i++){
+		int i;
+		for(i = 0; i < system_size; i++){
 			if(cpu_data[i].ownership && cpu_data[i].free_cpu){
 				cpu_data[i].free_cpu = false;
 				cpu_data[i].fa = true;
@@ -389,7 +391,8 @@ void omptm_role_shift__task_schedule(
 					/* We have disabled the running CPU of the FA but the runtime didn't
 					 * turn off the thread, must rebind it */
 					cpu_data[cpuid].fa = false;
-					for(int i = 0; i < system_size; i++){
+					int i;
+					for(i = 0; i < system_size; i++){
 						if(cpu_data[i].ownership && cpu_data[i].free_cpu){
 							cpu_data[i].free_cpu = false;
 							cpu_data[i].fa = true;
