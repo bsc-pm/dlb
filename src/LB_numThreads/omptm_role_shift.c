@@ -436,19 +436,3 @@ void omptm_role_shift__task_schedule(
     }
 }
 
-void omptm_role_shift__implicit_task(
-        ompt_scope_endpoint_t endpoint,
-        ompt_data_t *parallel_data,
-        ompt_data_t *task_data,
-        unsigned int actual_parallelism,
-        unsigned int index,
-        int flags) {
-}
-
-void omptm_role_shift__sync_region(
-        ompt_sync_region_t kind,
-        ompt_scope_endpoint_t endpoint,
-        ompt_data_t *parallel_data,
-        ompt_data_t *task_data,
-        const void *codeptr_ra) {
-}

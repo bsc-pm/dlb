@@ -97,7 +97,8 @@ static ompt_get_parallel_info_t ompt_multiplex_get_parallel_info;
   macro(callback_flush, ompt_callback_flush_t, 29);                            \
   macro(callback_cancel, ompt_callback_cancel_t, 30);                          \
   macro(callback_reduction, ompt_callback_sync_region_t, 31);                  \
-  macro(callback_dispatch, ompt_callback_dispatch_t, 32);
+  macro(callback_dispatch, ompt_callback_dispatch_t, 32);                      \
+  macro(callback_thread_role_shift, ompt_callback_thread_role_shift_t, 38);                   
 
 typedef struct ompt_multiplex_callbacks_s {
 #define ompt_event_macro(event, callback, eventid) callback ompt_##event
@@ -454,6 +455,19 @@ static void ompt_multiplex_callback_master(ompt_scope_endpoint_t endpoint,
     ompt_multiplex_client_callbacks.ompt_callback_master(
         endpoint, ompt_multiplex_get_client_parallel_data(parallel_data),
         ompt_multiplex_get_client_task_data(task_data), codeptr_ra);
+  }
+}
+
+static void ompt_multiplex_callback_thread_role_shift(ompt_data_t *thread_data,
+                                                      ompt_role_t prior_role,
+                                                      ompt_role_t next_role) {
+  if (ompt_multiplex_own_callbacks.ompt_callback_thread_role_shift) {
+    ompt_multiplex_own_callbacks.ompt_callback_thread_role_shift(
+        ompt_multiplex_get_own_thread_data(thread_data), prior_role, next_role);
+  }
+  if (ompt_multiplex_client_callbacks.ompt_callback_thread_role_shift) {
+    ompt_multiplex_client_callbacks.ompt_callback_thread_role_shift(
+        ompt_multiplex_get_client_thread_data(thread_data), prior_role, next_role);
   }
 }
 

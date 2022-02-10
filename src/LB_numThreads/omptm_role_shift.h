@@ -23,16 +23,14 @@
 #include "LB_numThreads/omp-tools.h"
 #include "support/options.h"
 
-typedef enum ompt_role{
-	OMP_ROLE_NONE = 0,
-	OMP_ROLE_FREE_AGENT = 1 << 0,
-	OMP_ROLE_COMMUNICATOR = 1 << 1
-} ompt_role_t;
-
 void omptm_role_shift__init(pid_t process_id, const options_t *options);
 void omptm_role_shift__finalize(void);
 void omptm_role_shift__IntoBlockingCall(void);
 void omptm_role_shift__OutOfBlockingCall(void);
+
+void omptm_role_shift__thread_begin(
+                ompt_thread_t thread_type,
+                ompt_data_t *thread_data);
 
 void omptm_role_shift__thread_role_shift(
 				ompt_data_t *thread_data,

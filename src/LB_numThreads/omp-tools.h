@@ -187,7 +187,8 @@
     macro (ompt_callback_target_data_op_emi,ompt_callback_target_data_op_emi_t,34) /* target data op                  */ \
     macro (ompt_callback_target_submit_emi, ompt_callback_target_submit_emi_t, 35) /* target submit                   */ \
     macro (ompt_callback_target_map_emi,    ompt_callback_target_map_emi_t,    36) /* target map                      */ \
-    macro (ompt_callback_error,             ompt_callback_error_t,             37) /* error                           */
+    macro (ompt_callback_error,             ompt_callback_error_t,             37) /* error                           */ \
+    macro (ompt_callback_thread_role_shift, ompt_callback_thread_role_shift_t, 38) /* thread_shifting_role            */
 
 /*****************************************************************************
  * implementation specific types
@@ -241,7 +242,8 @@ typedef enum ompt_callbacks_t {
   ompt_callback_target_data_op_emi       = 34,
   ompt_callback_target_submit_emi        = 35,
   ompt_callback_target_map_emi           = 36,
-  ompt_callback_error                    = 37
+  ompt_callback_error                    = 37,
+  ompt_callback_thread_role_shift        = 38
 } ompt_callbacks_t;
 
 typedef enum ompt_record_t {
@@ -249,6 +251,12 @@ typedef enum ompt_record_t {
   ompt_record_native             = 2,
   ompt_record_invalid            = 3
 } ompt_record_t;
+
+typedef enum ompt_role_t {
+    OMP_ROLE_NONE = 0,
+    OMP_ROLE_FREE_AGENT = 1 << 0,
+    OMP_ROLE_COMMUNICATOR = 1 << 1
+} ompt_role_t;
 
 typedef enum ompt_record_native_t {
   ompt_record_native_info  = 1,
@@ -728,6 +736,12 @@ typedef struct ompt_record_thread_begin_t {
 
 typedef void (*ompt_callback_thread_end_t) (
   ompt_data_t *thread_data
+);
+
+typedef void (*ompt_callback_thread_role_shift_t) (
+  ompt_data_t *thread_data,
+  ompt_role_t prior_role,
+  ompt_role_t next_role
 );
 
 typedef void (*ompt_callback_parallel_begin_t) (

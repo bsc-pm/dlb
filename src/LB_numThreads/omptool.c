@@ -25,6 +25,7 @@
 #include "LB_numThreads/omp-tools.h"
 #include "LB_numThreads/omptm_omp5.h"
 #include "LB_numThreads/omptm_free_agents.h"
+#include "LB_numThreads/omptm_role_shift.h"
 #include "LB_core/spd.h"
 #include "apis/dlb.h"
 #include "support/debug.h"
@@ -46,52 +47,69 @@ typedef struct {
     /* Intercept Lend */
     void (*lend_from_api)(void);
     /* OMPT callbacks */
-    ompt_callback_thread_begin_t    thread_begin;
-    ompt_callback_thread_end_t      thread_end;
-    ompt_callback_parallel_begin_t  parallel_begin;
-    ompt_callback_parallel_end_t    parallel_end;
-    ompt_callback_task_create_t     task_create;
-    ompt_callback_task_schedule_t   task_schedule;
-    ompt_callback_implicit_task_t   implicit_task;
-    ompt_callback_work_t            work;
-    ompt_callback_sync_region_t     sync_region;
+    ompt_callback_thread_begin_t      thread_begin;
+    ompt_callback_thread_end_t        thread_end;
+    ompt_callback_thread_role_shift_t thread_role_shift;
+    ompt_callback_parallel_begin_t    parallel_begin;
+    ompt_callback_parallel_end_t      parallel_end;
+    ompt_callback_task_create_t       task_create;
+    ompt_callback_task_schedule_t     task_schedule;
+    ompt_callback_implicit_task_t     implicit_task;
+    ompt_callback_work_t              work;
+    ompt_callback_sync_region_t       sync_region;
 } openmp_thread_manager_funcs_t;
 static openmp_thread_manager_funcs_t omptm_funcs = {0};
 
 static void setup_omp_fn_ptrs(omptm_version_t omptm_version) {
     if (omptm_version == OMPTM_OMP5) {
-        omptm_funcs.init            = omptm_omp5__init;
-        omptm_funcs.finalize        = omptm_omp5__finalize;
-        omptm_funcs.into_mpi        = omptm_omp5__IntoBlockingCall;
-        omptm_funcs.outof_mpi       = omptm_omp5__OutOfBlockingCall;
-        omptm_funcs.lend_from_api   = omptm_omp5__lend_from_api;
-        omptm_funcs.thread_begin    = NULL;
-        omptm_funcs.thread_end      = NULL;
-        omptm_funcs.parallel_begin  = omptm_omp5__parallel_begin;
-        omptm_funcs.parallel_end    = omptm_omp5__parallel_end;
-        omptm_funcs.task_create     = NULL;
-        omptm_funcs.task_schedule   = NULL;
-        omptm_funcs.implicit_task   = omptm_omp5__implicit_task;
-        omptm_funcs.work            = NULL;
-        omptm_funcs.sync_region     = NULL;
+        omptm_funcs.init              = omptm_omp5__init;
+        omptm_funcs.finalize          = omptm_omp5__finalize;
+        omptm_funcs.into_mpi          = omptm_omp5__IntoBlockingCall;
+        omptm_funcs.outof_mpi         = omptm_omp5__OutOfBlockingCall;
+        omptm_funcs.lend_from_api     = omptm_omp5__lend_from_api;
+        omptm_funcs.thread_begin      = NULL;
+        omptm_funcs.thread_end        = NULL;
+        omptm_funcs.thread_role_shift = NULL;
+        omptm_funcs.parallel_begin    = omptm_omp5__parallel_begin;
+        omptm_funcs.parallel_end      = omptm_omp5__parallel_end;
+        omptm_funcs.task_create       = NULL;
+        omptm_funcs.task_schedule     = NULL;
+        omptm_funcs.implicit_task     = omptm_omp5__implicit_task;
+        omptm_funcs.work              = NULL;
+        omptm_funcs.sync_region       = NULL;
     } else if (omptm_version == OMPTM_FREE_AGENTS) {
         verbose(VB_OMPT, "Enabling experimental support with free agent threads");
-        omptm_funcs.init            = omptm_free_agents__init;
-        omptm_funcs.finalize        = omptm_free_agents__finalize;
-        omptm_funcs.into_mpi        = omptm_free_agents__IntoBlockingCall;
-        omptm_funcs.outof_mpi       = omptm_free_agents__OutOfBlockingCall;
-        omptm_funcs.thread_begin    = omptm_free_agents__thread_begin;
-        omptm_funcs.thread_end      = NULL;
-        omptm_funcs.parallel_begin  = omptm_free_agents__parallel_begin;
-        omptm_funcs.parallel_end    = omptm_free_agents__parallel_end;
-        omptm_funcs.task_create     = omptm_free_agents__task_create;
-        omptm_funcs.task_schedule   = omptm_free_agents__task_schedule;
-        omptm_funcs.implicit_task   = omptm_free_agents__implicit_task;
-        omptm_funcs.work            = NULL;
-        omptm_funcs.sync_region     = omptm_free_agents__sync_region;
+        omptm_funcs.init              = omptm_free_agents__init;
+        omptm_funcs.finalize          = omptm_free_agents__finalize;
+        omptm_funcs.into_mpi          = omptm_free_agents__IntoBlockingCall;
+        omptm_funcs.outof_mpi         = omptm_free_agents__OutOfBlockingCall;
+        omptm_funcs.thread_begin      = omptm_free_agents__thread_begin;
+        omptm_funcs.thread_end        = NULL;
+        omptm_funcs.thread_role_shift = NULL;
+        omptm_funcs.parallel_begin    = omptm_free_agents__parallel_begin;
+        omptm_funcs.parallel_end      = omptm_free_agents__parallel_end;
+        omptm_funcs.task_create       = omptm_free_agents__task_create;
+        omptm_funcs.task_schedule     = omptm_free_agents__task_schedule;
+        omptm_funcs.implicit_task     = omptm_free_agents__implicit_task;
+        omptm_funcs.work              = NULL;
+        omptm_funcs.sync_region       = omptm_free_agents__sync_region;
     }
     else if (omptm_version == OMPTM_ROLE_SHIFT) {
-
+        verbose(VB_OMPT, "Enabling experimental support with role shift threads");
+        omptm_funcs.init              = omptm_role_shift__init;
+        omptm_funcs.finalize          = omptm_role_shift__finalize;
+        omptm_funcs.into_mpi          = omptm_role_shift__IntoBlockingCall;
+        omptm_funcs.outof_mpi         = omptm_role_shift__OutOfBlockingCall;
+        omptm_funcs.thread_begin      = omptm_role_shift__thread_begin;
+        omptm_funcs.thread_end        = NULL;
+        omptm_funcs.thread_role_shift = omptm_role_shift__thread_role_shift;
+        omptm_funcs.parallel_begin    = omptm_role_shift__parallel_begin;
+        omptm_funcs.parallel_end      = omptm_role_shift__parallel_end;
+        omptm_funcs.task_create       = omptm_role_shift__task_create;
+        omptm_funcs.task_schedule     = omptm_role_shift__task_schedule;
+        omptm_funcs.implicit_task     = NULL;
+        omptm_funcs.work              = NULL;
+        omptm_funcs.sync_region       = NULL;
     }
 }
 
@@ -222,6 +240,11 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
                         ompt_callback_thread_end,
                         (ompt_callback_t)omptm_funcs.thread_end);
             }
+            if (omptm_funcs.thread_role_shift) {
+                err += set_ompt_callback(
+                        ompt_callback_thread_role_shift,
+                        (ompt_callback_t)omptm_funcs.thread_role_shift);
+            }
             if (omptm_funcs.parallel_begin) {
                 err += set_ompt_callback(
                         ompt_callback_parallel_begin,
@@ -296,6 +319,9 @@ static void omptool_finalize(ompt_data_t *tool_data) {
         }
         if (omptm_funcs.thread_end) {
             set_callback_fn(ompt_callback_thread_end, NULL);
+        }
+        if (omptm_funcs.thread_role_shift) {
+            set_callback_fn(ompt_callback_thread_role_shift, NULL);
         }
         if (omptm_funcs.parallel_begin) {
             set_callback_fn(ompt_callback_parallel_begin, NULL);
