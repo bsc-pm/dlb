@@ -83,6 +83,7 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version) {
         omptm_funcs.finalize          = omptm_free_agents__finalize;
         omptm_funcs.into_mpi          = omptm_free_agents__IntoBlockingCall;
         omptm_funcs.outof_mpi         = omptm_free_agents__OutOfBlockingCall;
+        omptm_funcs.lend_from_api     = NULL;
         omptm_funcs.thread_begin      = omptm_free_agents__thread_begin;
         omptm_funcs.thread_end        = NULL;
         omptm_funcs.thread_role_shift = NULL;
@@ -100,6 +101,7 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version) {
         omptm_funcs.finalize          = omptm_role_shift__finalize;
         omptm_funcs.into_mpi          = omptm_role_shift__IntoBlockingCall;
         omptm_funcs.outof_mpi         = omptm_role_shift__OutOfBlockingCall;
+        omptm_funcs.lend_from_api     = NULL;
         omptm_funcs.thread_begin      = omptm_role_shift__thread_begin;
         omptm_funcs.thread_end        = NULL;
         omptm_funcs.thread_role_shift = omptm_role_shift__thread_role_shift;
