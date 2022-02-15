@@ -66,21 +66,29 @@ int main(int argc, char *argv[]) {
     parse_verbose_opts("", &vb);                    assert(vb==VB_CLEAR);
     parse_verbose_opts("null", &vb);                assert(vb==VB_CLEAR);
     parse_verbose_opts("yes", &vb);                 assert(vb==VB_ALL);
-    parse_verbose_opts("api", &vb);                 assert(vb&VB_API);
-    parse_verbose_opts("api:shmem", &vb);           assert(vb&VB_API && vb&VB_SHMEM);
+    parse_verbose_opts("api", &vb);                 assert(vb==VB_API);
+    parse_verbose_opts("mpi_api", &vb);             assert(vb==VB_MPI_API);
+    parse_verbose_opts("api:shmem", &vb);           assert(vb==(VB_API|VB_SHMEM));
     parse_verbose_opts("api:microlb:shmem:mpi_api:mpi_intercept:stats:drom:async", &vb);
-    assert(vb&VB_API && vb&VB_MICROLB && vb&VB_SHMEM && vb&VB_MPI_API
-            && vb&VB_MPI_INT && vb&VB_STATS && vb&VB_DROM && vb&VB_ASYNC);
+    assert(vb == (VB_API | VB_MICROLB | VB_SHMEM | VB_MPI_API | VB_MPI_INT
+                | VB_STATS | VB_DROM | VB_ASYNC));
+    assert( strcmp(verbose_opts_tostr(VB_CLEAR), "no") == 0 );
+    assert( strcmp(verbose_opts_tostr(VB_ALL), "all") == 0 );
+    assert( strcmp(verbose_opts_tostr(VB_API|VB_SHMEM), "api:shmem") == 0 );
     assert(  equivalent_verbose_opts("api:shmem", "shmem:api") );
     assert( !equivalent_verbose_opts("api:shmem", "shmem") );
 
     verbose_fmt_t fmt;
     parse_verbose_fmt("", &fmt);                    assert(fmt==VBF_CLEAR);
     parse_verbose_fmt("null", &fmt);                assert(fmt==VBF_CLEAR);
-    parse_verbose_fmt("node", &fmt);                assert(fmt&VBF_NODE);
-    parse_verbose_fmt("spid:mpinode", &fmt);        assert(fmt&VBF_SPID && fmt&VBF_MPINODE);
+    parse_verbose_fmt("node", &fmt);                assert(fmt==VBF_NODE);
+    parse_verbose_fmt("spid:mpinode", &fmt);        assert(fmt==(VBF_SPID|VBF_MPINODE));
     parse_verbose_fmt("node:spid:mpinode:mpirank:thread", &fmt);
-    assert(fmt&VBF_NODE && fmt&VBF_SPID && fmt&VBF_MPINODE && fmt&VBF_MPIRANK && fmt&VBF_THREAD);
+    assert(fmt == (VBF_NODE | VBF_SPID | VBF_MPINODE | VBF_MPIRANK | VBF_THREAD));
+    assert( strcmp(verbose_fmt_tostr(VBF_CLEAR), "") == 0 );
+    assert( strcmp(verbose_fmt_tostr(VBF_NODE), "node") == 0 );
+    assert( strcmp(verbose_fmt_tostr(VBF_MPINODE), "mpinode") == 0 );
+    assert( strcmp(verbose_fmt_tostr(VBF_NODE|VBF_MPINODE), "node:mpinode") == 0 );
     assert(  equivalent_verbose_fmt("node:thread", "thread:node") );
     assert( !equivalent_verbose_fmt("node:thread", "thread") );
 
@@ -91,7 +99,8 @@ int main(int argc, char *argv[]) {
     parse_instrument_items("all:none", &inst);      assert(inst==INST_NONE);
     parse_instrument_items("all:lewi", &inst);      assert(inst==INST_ALL);
     parse_instrument_items("null:mpi:lewi:drom:talp:barrier:ompt:cpus", &inst);
-    assert(inst == (INST_MPI | INST_LEWI | INST_DROM | INST_TALP | INST_BARR | INST_OMPT | INST_CPUS));
+    assert(inst == (INST_MPI | INST_LEWI | INST_DROM | INST_TALP | INST_BARR
+                | INST_OMPT | INST_CPUS));
 
     assert(strcmp(instrument_items_tostr(INST_NONE), "none") == 0);
     assert(strcmp(instrument_items_tostr(INST_ALL), "all") == 0);

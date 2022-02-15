@@ -113,12 +113,25 @@ int parse_verbose_opts(const char *str, verbose_opts_t *value) {
     }
 
     *value = VB_CLEAR;
-    int i;
-    for (i=0; i<verbose_opts_nelems; ++i) {
-        if (strstr(str, verbose_opts_choices[i]) != NULL) {
-            *value |= verbose_opts_values[i];
+
+    /* verbose opts contain substrings as options so we need to disambiguate */
+    char *end_token = NULL;
+    size_t len = strlen(str) + 1;
+    char *str_copy = malloc(sizeof(char)*len);
+    strcpy(str_copy, str);
+    char *token = strtok_r(str_copy, ":", &end_token);
+    while (token) {
+        int i;
+        for (i=0; i<verbose_opts_nelems; ++i) {
+            if (strcmp(token, verbose_opts_choices[i]) == 0) {
+                *value |= verbose_opts_values[i];
+                break;
+            }
         }
+        token = strtok_r(NULL, ":", &end_token);
     }
+    free(str_copy);
+
     return DLB_SUCCESS;
 }
 
@@ -134,7 +147,7 @@ const char* verbose_opts_tostr(verbose_opts_t value) {
     static char str[sizeof(verbose_opts_choices_str)] = "";
     char *p = str;
     int i;
-    for (i=0; i<verbose_opts_nelems; ++i) {
+    for (i=2; i<verbose_opts_nelems; ++i) {
         if (value & verbose_opts_values[i]) {
             if (p!=str) {
                 *p = ':';
@@ -170,12 +183,25 @@ enum { verbose_fmt_nelems = sizeof(verbose_fmt_values) / sizeof(verbose_fmt_valu
 
 int parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     *value = VBF_CLEAR;
-    int i;
-    for (i=0; i<verbose_fmt_nelems; ++i) {
-        if (strstr(str, verbose_fmt_choices[i]) != NULL) {
-            *value |= verbose_fmt_values[i];
+
+    /* verbose_fmt contain substrings as options so we need to disambiguate */
+    char *end_token = NULL;
+    size_t len = strlen(str) + 1;
+    char *str_copy = malloc(sizeof(char)*len);
+    strcpy(str_copy, str);
+    char *token = strtok_r(str_copy, ":", &end_token);
+    while (token) {
+        int i;
+        for (i=0; i<verbose_fmt_nelems; ++i) {
+            if (strcmp(token, verbose_fmt_choices[i]) == 0) {
+                *value |= verbose_fmt_values[i];
+                break;
+            }
         }
+        token = strtok_r(NULL, ":", &end_token);
     }
+    free(str_copy);
+
     return DLB_SUCCESS;
 }
 
