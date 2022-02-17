@@ -40,6 +40,9 @@ int __kmp_get_thread_roles(int tid, ompt_role_t *r) __attribute((weak));
 void __kmp_set_thread_roles1(int how_many, ompt_role_t r) __attribute((weak));
 void __kmp_set_thread_roles2(int tid, ompt_role_t r) __attribute((weak));
 int __kmp_get_thread_id(void) __attribute((weak));
+
+void Extrae_change_num_threads (unsigned) __attribute__((weak));
+void Extrae_set_threadid_function (unsigned (*)(void)) __attribute__((weak));
 //int __kmp_get_free_agent_id(void) __attribute__((weak));
 //int __kmp_get_num_free_agent_threads(void) __attribute__((weak));
 //void __kmp_set_free_agent_thread_active_status(
@@ -61,6 +64,7 @@ static omptool_opts_t omptool_opts;
 static int primary_thread_cpu;
 static int system_size;
 static int default_num_threads;
+static int num_free_agents = 0;
 
 /* Masks */
 static cpu_set_t active_mask;
@@ -71,8 +75,9 @@ static cpu_set_t primary_thread_mask;
 /* Atomic variables */
 static atomic_bool DLB_ALIGN_CACHE in_parallel = false;
 static atomic_uint DLB_ALIGN_CACHE pending_tasks = 0;
-static atomic_int  DLB_ALIGN_CACHE num_free_agents = 0;
-static atomic_int  DLB_ALIGN_CACHE parallel_team_size = 0;
+static atomic_int  DLB_ALIGN_CACHE fa_before_parallel = 0;
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Thread local */
 __thread int __binding = -1;
@@ -105,6 +110,11 @@ typedef struct DLB_ALIGN_CACHE CPU_Data {
 
 static cpu_data_t *cpu_data = NULL;
 
+static unsigned int get_thread_id(void){
+    unsigned int a = (unsigned int)__kmp_get_thread_id();
+    //printf("Executing get thread id for thread %d \n", a);
+    return a;
+}
 
 /*********************************************************************************/
 /*  DLB callbacks                                                                */
@@ -125,8 +135,12 @@ static void cb_enable_cpu(int cpuid, void *arg) {
 static void cb_disable_cpu(int cpuid, void *arg) {
   //TODO: Lock here??
 	if(cpu_data[cpuid].fa){
-		DLB_ATOMIC_SUB(&num_free_agents, 1);
+		pthread_mutex_lock(&mutex);
+		//DLB_ATOMIC_SUB(&num_free_agents, 1);
+		printf("Primary cpu %d decreasing the number of free agents from %d to %d \n", primary_thread_cpu, num_free_agents, num_free_agents-1);
+		--num_free_agents;
 		__kmp_set_thread_roles1(num_free_agents, OMP_ROLE_FREE_AGENT);
+		pthread_mutex_unlock(&mutex);
 	}
 	if(cpu_data[cpuid].ownership == BORROWED)
 	    cpu_data[cpuid].ownership = UNKNOWN;
@@ -149,9 +163,13 @@ static void acquire_one_free_agent(void) {
 	if(lewi){
 		if(DLB_AcquireCpus(1) == DLB_SUCCESS){
 			//TODO: Need a lock here??
-			int fa = DLB_ATOMIC_LD_RLX(&num_free_agents);
-			__kmp_set_thread_roles1(++fa, OMP_ROLE_FREE_AGENT);
-			DLB_ATOMIC_ST(&num_free_agents, fa);
+			pthread_mutex_lock(&mutex);
+			//int fa = DLB_ATOMIC_LD_RLX(&num_free_agents);
+			printf("Primary cpu %d increasing the number of free agents from %d to %d \n", primary_thread_cpu, num_free_agents, num_free_agents+1);
+			++num_free_agents;
+			__kmp_set_thread_roles1(num_free_agents, OMP_ROLE_FREE_AGENT);
+			//DLB_ATOMIC_ST(&num_free_agents, fa);
+			pthread_mutex_unlock(&mutex);
 		}
 	}
 }
@@ -212,6 +230,12 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
 		cpu_data[i].fa = false;
 	}
 	memcpy(&active_mask, &primary_thread_mask, sizeof(cpu_set_t));
+
+	//Extrae functions configuration
+	if(Extrae_change_num_threads){
+	    Extrae_change_num_threads(20);
+	    Extrae_set_threadid_function(&get_thread_id);
+	}
     
     if (lewi) {
         int err;
@@ -388,8 +412,12 @@ void omptm_role_shift__parallel_begin(
          */
         parallel_data->value = PARALLEL_LEVEL_1;
         DLB_ATOMIC_ST(&in_parallel, true);
-        DLB_ATOMIC_ST(&parallel_team_size, requested_parallelism);
-        DLB_ATOMIC_ADD(&num_free_agents, requested_parallelism);
+        //DLB_ATOMIC_ADD(&num_free_agents, requested_parallelism);
+        pthread_mutex_lock(&mutex);
+        DLB_ATOMIC_ST(&fa_before_parallel, num_free_agents);
+		//printf("Primary cpu %d increasing the number of free agents from %d to %d \n", primary_thread_cpu, num_free_agents, num_free_agents+requested_parallelism);
+        num_free_agents += requested_parallelism;
+        pthread_mutex_unlock(&mutex);
     }
 }
 
@@ -400,9 +428,13 @@ void omptm_role_shift__parallel_end(
         const void *codeptr_ra) {
     if (parallel_data->value == PARALLEL_LEVEL_1) {
         parallel_data->value = PARALLEL_UNSET;
-        DLB_ATOMIC_SUB(&num_free_agents, DLB_ATOMIC_LD(&parallel_team_size));
+        pthread_mutex_lock(&mutex);
+		//printf("Primary cpu %d decreasing the number of free agents from %d to %d \n", primary_thread_cpu, num_free_agents, num_free_agents-parallel_team_size);
+        num_free_agents = fa_before_parallel;
+        pthread_mutex_unlock(&mutex);
+        //DLB_ATOMIC_SUB(&num_free_agents, DLB_ATOMIC_LD(&parallel_team_size));
         //TODO:Maybe the next store isn't needed
-        DLB_ATOMIC_ST(&parallel_team_size, 0);
+        //DLB_ATOMIC_ST(&parallel_team_size, 0);
         DLB_ATOMIC_ST(&in_parallel, false);
 				//TODO: Lend aqui???
         //omptm_role_shift__lend();
