@@ -215,11 +215,9 @@ void shmem_finalize(shmem_handler_t* handler, bool (*is_empty_fn)(void)) {
     bool delete_shmem = is_empty && is_last_one;
     shmem_unlock(handler);
 
-    /* Only the last process destroys the pthread_mutex */
-    if (delete_shmem) {
-        int error = pthread_mutex_destroy(&handler->shsync->shmem_mutex);
-        fatal_cond(error, "pthread_mutex_destroy error: %s", strerror(error));
-    }
+    /* Here we should destroy the pthread mutex but another process may open
+     * the shared memory in this precise moment causing an invalid access to
+     * the mutex. */
 
     /* All processes must unmap shmem */
     if (munmap(handler->shm_addr, handler->shm_size) != 0) {

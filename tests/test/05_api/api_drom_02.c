@@ -57,6 +57,8 @@ int main(int argc, char **argv) {
     char options[64] = "--shm-key=";
     strcat(options, SHMEM_KEY);
 
+    mu_init();
+
     /* Modify DLB_ARGS to include options */
     dlb_setenv("DLB_ARGS", options, NULL, ENV_APPEND);
 
@@ -302,13 +304,13 @@ int main(int argc, char **argv) {
                 int err = DLB_Init(0, &process_mask, "--drom");
                 fprintf(stderr, "DLB_Init err: %d\n", err);
 
-                /* Synchronize: all childs are initialized */
+                /* Synchronize: all children are initialized */
                 error = pthread_barrier_wait(&shdata->barrier);
                 assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
                 /* Parent process checks everything is correct */
 
-                /* Synchronize: all childs will finalize */
+                /* Synchronize: all children will finalize */
                 error = pthread_barrier_wait(&shdata->barrier);
                 assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
@@ -340,7 +342,7 @@ int main(int argc, char **argv) {
         }
         shmem_unlock(handler);
 
-        /* Synchronize: all childs are initialized */
+        /* Synchronize: all children are initialized */
         error = pthread_barrier_wait(&shdata->barrier);
         assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
@@ -353,7 +355,7 @@ int main(int argc, char **argv) {
             assert( CPU_EQUAL(&child_mask, &expected_child_mask) );
         }
 
-        /* Synchronize: all childs will finalize */
+        /* Synchronize: all children will finalize */
         error = pthread_barrier_wait(&shdata->barrier);
         assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
