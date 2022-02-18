@@ -202,6 +202,7 @@ static void cb_enable_cpu(int cpuid, void *arg) {
         
         pthread_cond_signal(&block_data[pos].cond);
         pthread_mutex_unlock(&block_data[pos].mutex);
+        instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
 
     }
     else{//ask for a new FA
@@ -383,6 +384,8 @@ void omptm_role_shift__IntoBlockingCall(void) {
             }
         }
         DLB_LendCpuMask(&cpus_to_lend);
+        warning("Primary thread %d, lending cpus: %s", primary_thread_cpu, mu_to_str(&cpus_to_lend));
+        DLB_PrintShmem(0,0);
 
         verbose(VB_OMPT, "IntoBlockingCall - lending all");
     }
@@ -443,6 +446,7 @@ void omptm_role_shift__thread_begin(
             CPU_SET(cpuid, &thread_mask);
             pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
             verbose(VB_OMPT, "Binding a free agent to CPU %d", cpuid);
+            instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
         }
         else{ //Not likely, but we didn't find a CPU for a new FA. Blocking it in the cond variable
             pthread_mutex_lock(&block_data[id].mutex);
@@ -607,12 +611,16 @@ void omptm_role_shift__task_schedule(
                     DLB_LendCpu(cpuid);
                 }
                 cb_disable_cpu(cpuid, NULL);
+                instrument_event(BINDINGS_EVENT, 0, EVENT_END);
                 pthread_mutex_lock(&block_data[global_id].mutex);
                 DLB_ATOMIC_ADD(&blocked_threads, 1);
                 block_data[global_id].is_sleeping = true;
-                pthread_cond_wait(&block_data[global_id].cond, &block_data[global_id].mutex);
+                do{
+                    pthread_cond_wait(&block_data[global_id].cond, &block_data[global_id].mutex);
+                } while(block_data[global_id].is_sleeping);
                 DLB_ATOMIC_SUB(&blocked_threads, 1);
                 pthread_mutex_unlock(&block_data[global_id].mutex);
+                instrument_event(BINDINGS_EVENT, block_data[global_id].curr_cpu + 1, EVENT_BEGIN);
             }
         }
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);

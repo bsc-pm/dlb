@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 #define CLIENT_TOOL_LIBRARIES_VAR "DLB_TOOL_LIBRARIES"
-//#include "LB_numThreads/ompt-multiplex.h"
+#include "LB_numThreads/ompt-multiplex.h"
 
 #include "LB_numThreads/omptool.h"
 
