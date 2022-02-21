@@ -78,12 +78,9 @@ static atomic_int  DLB_ALIGN_CACHE current_parallel_size = 0;
 static atomic_uint DLB_ALIGN_CACHE pending_tasks = 0;
 
 static pthread_mutex_t mutex_num_fa = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t mutex_assign_bd = PTHREAD_MUTEX_INITIALIZER;
-//static pthread_mutex_t mutex_sleep = PTHREAD_MUTEX_INITIALIZER;
-//static pthread_cond_t cond_sleep = PTHREAD_COND_INITIALIZER;
 
 /* Thread local */
-__thread int global_id = -1;
+__thread int global_tid = -1; //References to the thread id of the kmp runtime
 
 /*********************************************************************************/
 /*  CPU Data structures and helper atomic flags functions                        */
@@ -107,22 +104,14 @@ typedef enum OpenMP_Roles {
 
 typedef struct DLB_ALIGN_CACHE CPU_Data {
     cpu_status_t ownership;
-    atomic_bool free_cpu; //True: Unused, False: in use
-    bool        fa; //Indicates if a free agent is running in this cpu
+    atomic_bool  free_cpu; //True: Unused, False: in use
+    bool          fa; 
 } cpu_data_t;
 
-typedef struct DLB_ALIGN_CACHE Block_info {
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    pthread_t pt;
-    int curr_cpu; //-2 workers (runtime decides), -1 not assigned, else binded by DLB
-    bool is_sleeping;
-} block_info_t;
 
 static atomic_int registered_threads = 1; //Counting the primary from the beginning
-static atomic_int blocked_threads = 0; //Number of threads that executed the pthread_cond_wait call
-static block_info_t *block_data = NULL;
 static cpu_data_t *cpu_data = NULL;
+static int *cpu_by_id = NULL;
 
 static unsigned int get_thread_id(void){
     unsigned int a = (unsigned int)__kmp_get_thread_id();
@@ -130,32 +119,10 @@ static unsigned int get_thread_id(void){
     return a;
 }
 
-/*********************************************************************************/
-/*  Other static functions                                                       */
-/*********************************************************************************/
-
-static int get_first_available_from_block(){
+static int get_id_from_cpu(int cpuid){
     int i;
     for(i = 0; i < registered_threads; i++){
-        if(block_data[i].curr_cpu == -1)
-            break;
-    }
-    return i;
-}
-
-static int get_first_sleeping_from_block(){
-    int i;
-    for(i = 0; i < registered_threads; i++){
-        if(block_data[i].is_sleeping)
-            return i;
-    }
-    return -1;
-}
-
-static int get_block_data_from_cpuid(int cpuid){
-    int i;
-    for(i = 0; i < registered_threads; i++){
-        if(block_data[i].curr_cpu == cpuid)
+        if(cpu_by_id[i] == cpuid)
             return i;
     }
     return -1;
@@ -166,7 +133,7 @@ static int get_block_data_from_cpuid(int cpuid){
 /*********************************************************************************/
 
 static void cb_enable_cpu(int cpuid, void *arg) {
-    int pos = get_block_data_from_cpuid(cpuid);
+    int pos = get_id_from_cpu(cpuid);
     if(cpu_data[cpuid].ownership == LENT){ 
         //We are reclaiming a previousley LENT cpu
         cpu_data[cpuid].ownership = OWN;
@@ -175,38 +142,24 @@ static void cb_enable_cpu(int cpuid, void *arg) {
         cpu_data[cpuid].ownership = BORROWED;
         //cpu_data[cpuid].free_cpu = true;
     }
+    
+    
     if(pos != -1){ //A thread was running here previously
-        if(!block_data[pos].is_sleeping){
+        if(!cpu_data[cpuid].fa){ //CPU from a worker, better not to touch it
             cpu_data[cpuid].free_cpu = false;
         }
-        else{
-            pthread_mutex_lock(&block_data[pos].mutex);
-            block_data[pos].is_sleeping = false;
-            cpu_data[cpuid].free_cpu = false;
-            pthread_cond_signal(&block_data[pos].cond);
-            pthread_mutex_unlock(&block_data[pos].mutex);
+        else{//We had a FA here. Call the api to wake it up and mark the CPU as free here
+            cpu_data[cpuid].free_cpu = true;
+            cpu_data[cpuid].fa = false;
+            pthread_mutex_lock(&mutex_num_fa);
+            ++num_free_agents;
+            __kmp_set_thread_roles2(pos, OMP_ROLE_FREE_AGENT);
+            pthread_mutex_unlock(&mutex_num_fa);
         }
-    }
-    else if(blocked_threads){//Wake up an rebind one of the existing threads
-        pos = get_first_sleeping_from_block();
-        fatal_cond(pos < 0, "Obtained a id from block_data inferior than 0");
-        pthread_mutex_lock(&block_data[pos].mutex);
-        
-        block_data[pos].is_sleeping = false;
-        block_data[pos].curr_cpu = cpuid;
-        cpu_data[cpuid].free_cpu = false;
-        cpu_set_t thread_mask;
-        CPU_ZERO(&thread_mask);
-        CPU_SET(cpuid, &thread_mask);
-        pthread_setaffinity_np(block_data[pos].pt, sizeof(cpu_set_t), &thread_mask);
-        
-        pthread_cond_signal(&block_data[pos].cond);
-        pthread_mutex_unlock(&block_data[pos].mutex);
-        instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
-
     }
     else{//ask for a new FA
         cpu_data[cpuid].free_cpu = true;
+        cpu_data[cpuid].fa = false;
         pthread_mutex_lock(&mutex_num_fa);
         if(DLB_ATOMIC_LD_RLX(&in_parallel)){
             if(num_free_agents < DLB_ATOMIC_LD_RLX(&current_parallel_size)){
@@ -220,12 +173,13 @@ static void cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void cb_disable_cpu(int cpuid, void *arg) {
-  //TODO: Lock here??
 	if(cpu_data[cpuid].fa){
 	    cpu_data[cpuid].fa = false;
 	}
 	if(cpu_data[cpuid].ownership == BORROWED)
 	    cpu_data[cpuid].ownership = UNKNOWN;
+	else if(cpu_data[cpuid].ownership == OWN)
+	    cpu_data[cpuid].ownership = LENT;
 	//cpu_data[cpuid].free_cpu = false;
 }
 
@@ -279,25 +233,29 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
     											? atoi(env_omp_num_threads)
                           : CPU_COUNT(&process_mask);
     cpu_data = malloc(sizeof(cpu_data_t)*system_size);
-    block_data = malloc(sizeof(block_info_t)*system_size);
-    global_id = 0; //Master thread
+    cpu_by_id = malloc(sizeof(int)*system_size);
     
     CPU_ZERO(&primary_thread_mask);
     int num_workers = default_num_threads - num_free_agents;
     int encountered_cpus = 0;
     int i;
+    for(i = 0; i < system_size; i++){
+        cpu_by_id[i] = -1;
+    }
     //Building of the cpu_data structure. It holds info of the different CPUs from the node of the process
     for(i = 0; i < system_size; i++){
     	if(CPU_ISSET(i, &process_mask)){
     		if(++encountered_cpus == 1){
     			//First encountered CPU belongs to the primary thread
-					cpu_data[i].free_cpu = false;
-					primary_thread_cpu = i;
-					CPU_SET(i, &primary_thread_mask);
+				cpu_data[i].free_cpu = false;
+				primary_thread_cpu = i;
+				CPU_SET(i, &primary_thread_mask);
+				cpu_by_id[encountered_cpus - 1] = i;
 			}
 			else if(encountered_cpus < num_workers){
 				//Assume the next CPUs after the primary thread are for the workers and are not free.
 				cpu_data[i].free_cpu = false;
+				cpu_by_id[encountered_cpus - 1] = i;
 			}
 			else{
 				//Don't assume a CPU will be used until starting some thread in it.
@@ -307,19 +265,11 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
 		}
 		else{
 			cpu_data[i].ownership = UNKNOWN;
-			cpu_data[i].free_cpu = false;
+			cpu_data[i].free_cpu = true;
 		}
 		cpu_data[i].fa = false;
 	}
 	memcpy(&active_mask, &primary_thread_mask, sizeof(cpu_set_t));
-
-	//Building of the starting info for the threads of this process
-	//block_data[0].curr_cpu = primary_thread_cpu; //We won't touch the primary thread, thus not setting the other variables
-	for(i = 0; i < system_size; i++){
-	    block_data[i].curr_cpu = -1; //Not used right now
-	    block_data[i].is_sleeping = false;
-	}
-	    
 
 	//Extrae functions configuration
 	if(Extrae_change_num_threads){
@@ -415,17 +365,9 @@ void omptm_role_shift__thread_begin(
 				ompt_data_t *thread_data){
 	/* Set up thread local spd */
 	spd_enter_dlb(NULL);
-	DLB_ATOMIC_ADD(&registered_threads, 1);
-	pthread_mutex_lock(&mutex_assign_bd);
-	int id = get_first_available_from_block();
-    printf("Primary cpu %d starting a thread with id %d \n", primary_thread_cpu, id );
-	global_id = id;
-	block_data[id].curr_cpu = -2; //Temporarily marked as worker
-	pthread_mutex_unlock(&mutex_assign_bd);
+	global_tid = __kmp_get_thread_id();
 	
-	block_data[id].pt = pthread_self();
-	pthread_mutex_init(&(block_data[id].mutex), NULL);
-	pthread_cond_init(&(block_data[id].cond), NULL);
+	DLB_ATOMIC_ADD(&registered_threads, 1);
 	
 	if(thread_type == ompt_thread_other){ //other => free agent
         cpu_set_t thread_mask;
@@ -441,20 +383,15 @@ void omptm_role_shift__thread_begin(
             }
         }
         if(cpuid < system_size){//We found an available CPU
-            block_data[id].curr_cpu = cpuid;
+            cpu_by_id[global_tid] = cpuid;
             CPU_ZERO(&thread_mask);
             CPU_SET(cpuid, &thread_mask);
             pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
             verbose(VB_OMPT, "Binding a free agent to CPU %d", cpuid);
             instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
         }
-        else{ //Not likely, but we didn't find a CPU for a new FA. Blocking it in the cond variable
-            pthread_mutex_lock(&block_data[id].mutex);
-            DLB_ATOMIC_ADD(&blocked_threads, 1);
-            block_data[id].is_sleeping = true;
-            pthread_cond_wait(&block_data[id].cond, &block_data[id].mutex);
-            DLB_ATOMIC_SUB(&blocked_threads, 1);
-            pthread_mutex_unlock(&block_data[id].mutex);
+        else{ //Not likely, but we didn't find a CPU for a new FA
+            cpu_by_id[global_tid] = -2; //We'll try to reschedule in a task schedule point
         }
 	}
 	//TODO: Bind the free agents to available CPUs but not the workers?? What to do 
@@ -469,42 +406,40 @@ void omptm_role_shift__thread_role_shift(
 				ompt_data_t *thread_data,
 				ompt_role_t prior_role,
 				ompt_role_t next_role){
-	//int cpuid = thread_data->value;
-	/*if(prior_role == OMP_ROLE_FREE_AGENT){
+	if(prior_role == OMP_ROLE_FREE_AGENT){
 		if(next_role == OMP_ROLE_COMMUNICATOR) return; //Don't supported now
-		fatal_cond(__binding < 0, "free agent cpuid < 0");
-		//fatal_cond(!cpu_data[__binding].fa, "unregistered free agent shifting to worker");
-		
-		cpu_data[__binding].fa = false;
-		//thread_data->value = -1;
-		
-		//TODO: Do the runtime call the thread role shift callback before the task schedule or viceversa??
-		if(cpu_data[__binding].ownership != OWN ||
-		   cpu_data[__binding].ownership != BORROWED){//We don't longer have this CPU
-		}
+		verbose(VB_OMPT, "Free agent %d changing the role to NONE", global_tid);
 	}
 	else if(prior_role == OMP_ROLE_NONE){
 		if(next_role == OMP_ROLE_COMMUNICATOR) return; //Don't supported now
 		cpu_set_t thread_mask;
 		int cpuid;
-		for(cpuid = 0; cpuid < system_size; cpuid++){
-			if((cpu_data[cpuid].ownership == OWN || cpu_data[cpuid].ownership == BORROWED) &&
-			    cpu_data[cpuid].free_cpu){
-				
-				cpu_data[cpuid].free_cpu = false;
-				cpu_data[cpuid].fa = true;
-				//cpuid = i;
-				break;
+		if(cpu_by_id[global_tid] >= 0){
+		    //The thread had a CPU previously. Let's stick to that CPU
+		    cpuid = cpu_by_id[global_tid];
+		}
+		else{ //If not, search for a suitable one
+    		for(cpuid = 0; cpuid < system_size; cpuid++){
+	    		if((cpu_data[cpuid].ownership == OWN || cpu_data[cpuid].ownership == BORROWED) &&
+    		    	    cpu_data[cpuid].free_cpu){
+			        break;	
+			    }
 			}
 		}
-		CPU_ZERO(&thread_mask);
-		CPU_SET(cpuid, &thread_mask);
-		pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-		thread_data->value = cpuid;
-		__binding = cpuid;
-		instrument_event(BINDINGS_EVENT, cpuid+1, EVENT_BEGIN);
-		verbose(VB_OMPT, "Binding a free agent to CPU %d", cpuid);
-	}*/
+		if(cpuid < system_size){
+		    cpu_data[cpuid].free_cpu = false;
+		    cpu_data[cpuid].fa = true;
+		    cpu_by_id[global_tid] = cpuid;
+		    CPU_ZERO(&thread_mask);
+	    	CPU_SET(cpuid, &thread_mask);
+    		pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+    		instrument_event(BINDINGS_EVENT, cpuid+1, EVENT_BEGIN);
+		    verbose(VB_OMPT, "Binding a free agent to CPU %d", cpuid);
+		}
+		else{//We didn't found a suitable CPU for that thread. Mark to reschedule as soon as possible
+		    cpu_by_id[global_tid] = -2;
+		}
+	}
 }
 
 
@@ -583,20 +518,39 @@ void omptm_role_shift__task_schedule(
             DLB_AcquireCpus(1);
             //acquire_one_thread();
         }
+        if(cpu_by_id[global_tid] == -2){ 
+            //We couldn't find a free for this thread previously. Try to rebind it now
+            int i;
+            for(i = 0; i < system_size; i++){
+                if((cpu_data[i].ownership == OWN || cpu_data[i].ownership == BORROWED) &&
+                        cpu_data[i].free_cpu){
+                    cpu_data[i].free_cpu = false;
+                    cpu_data[i].fa = true;
+                    break;
+                }
+            }
+            if(i < system_size){
+                cpu_by_id[global_tid] = i;
+                cpu_set_t thread_mask;
+                CPU_ZERO(&thread_mask);
+                CPU_SET(i, &thread_mask);
+                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+                verbose(VB_OMPT, "Binding a free agent to CPU %d", i);
+                instrument_event(REBIND_EVENT, i+1, EVENT_BEGIN);
+            }
+        }
         instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     } else if (prior_task_status == ompt_task_complete) {
-        int cpuid = block_data[global_id].curr_cpu;
+        int cpuid = cpu_by_id[global_tid];
         if (cpuid >= 0 && cpu_data[cpuid].fa) {
             /* Return CPU if reclaimed */
             if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
                 if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
                     cb_disable_cpu(cpuid, NULL);
-                    pthread_mutex_lock(&block_data[global_id].mutex);
-                    DLB_ATOMIC_ADD(&blocked_threads, 1);
-                    block_data[global_id].is_sleeping = true;
-                    pthread_cond_wait(&block_data[global_id].cond, &block_data[global_id].mutex);
-                    DLB_ATOMIC_SUB(&blocked_threads, 1);
-                    pthread_mutex_unlock(&block_data[global_id].mutex);
+                    pthread_mutex_lock(&mutex_num_fa);
+                    --num_free_agents;
+                    __kmp_set_thread_roles2(global_tid, OMP_ROLE_NONE);
+                    pthread_mutex_unlock(&mutex_num_fa);
                 }
             }
 
@@ -610,17 +564,10 @@ void omptm_role_shift__task_schedule(
                 if (!CPU_ISSET(cpuid, &process_mask)) {
                     DLB_LendCpu(cpuid);
                 }
-                cb_disable_cpu(cpuid, NULL);
-                instrument_event(BINDINGS_EVENT, 0, EVENT_END);
-                pthread_mutex_lock(&block_data[global_id].mutex);
-                DLB_ATOMIC_ADD(&blocked_threads, 1);
-                block_data[global_id].is_sleeping = true;
-                do{
-                    pthread_cond_wait(&block_data[global_id].cond, &block_data[global_id].mutex);
-                } while(block_data[global_id].is_sleeping);
-                DLB_ATOMIC_SUB(&blocked_threads, 1);
-                pthread_mutex_unlock(&block_data[global_id].mutex);
-                instrument_event(BINDINGS_EVENT, block_data[global_id].curr_cpu + 1, EVENT_BEGIN);
+                pthread_mutex_lock(&mutex_num_fa);
+                --num_free_agents;
+                __kmp_set_thread_roles2(global_tid,OMP_ROLE_NONE);
+                pthread_mutex_unlock(&mutex_num_fa);
             }
         }
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);
