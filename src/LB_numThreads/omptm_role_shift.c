@@ -109,7 +109,7 @@ typedef struct DLB_ALIGN_CACHE CPU_Data {
 } cpu_data_t;
 
 
-static atomic_int registered_threads = 1; //Counting the primary from the beginning
+static atomic_int registered_threads = 0; 
 static cpu_data_t *cpu_data = NULL;
 static int *cpu_by_id = NULL;
 
@@ -133,6 +133,8 @@ static int get_id_from_cpu(int cpuid){
 /*********************************************************************************/
 
 static void cb_enable_cpu(int cpuid, void *arg) {
+    warning("Primary thread %d, enabling cpu: %d", primary_thread_cpu, cpuid);
+    
     int pos = get_id_from_cpu(cpuid);
     if(cpu_data[cpuid].ownership == LENT){ 
         //We are reclaiming a previousley LENT cpu
@@ -145,6 +147,7 @@ static void cb_enable_cpu(int cpuid, void *arg) {
     
     
     if(pos != -1){ //A thread was running here previously
+        warning("Primary thread %d, CPU ID: %d, Is FA? %d", primary_thread_cpu, cpuid, cpu_data[cpuid].fa);
         if(!cpu_data[cpuid].fa){ //CPU from a worker, better not to touch it
             cpu_data[cpuid].free_cpu = false;
         }
@@ -174,7 +177,11 @@ static void cb_enable_cpu(int cpuid, void *arg) {
 
 static void cb_disable_cpu(int cpuid, void *arg) {
 	if(cpu_data[cpuid].fa){
-	    cpu_data[cpuid].fa = false;
+	    //cpu_data[cpuid].fa = false;
+        pthread_mutex_lock(&mutex_num_fa);
+        --num_free_agents;
+        __kmp_set_thread_roles2(global_tid, OMP_ROLE_NONE);
+        pthread_mutex_unlock(&mutex_num_fa);
 	}
 	if(cpu_data[cpuid].ownership == BORROWED)
 	    cpu_data[cpuid].ownership = UNKNOWN;
@@ -252,7 +259,7 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
 				CPU_SET(i, &primary_thread_mask);
 				cpu_by_id[encountered_cpus - 1] = i;
 			}
-			else if(encountered_cpus < num_workers){
+			else if(encountered_cpus <= num_workers){
 				//Assume the next CPUs after the primary thread are for the workers and are not free.
 				cpu_data[i].free_cpu = false;
 				cpu_by_id[encountered_cpus - 1] = i;
@@ -335,7 +342,7 @@ void omptm_role_shift__IntoBlockingCall(void) {
         }
         DLB_LendCpuMask(&cpus_to_lend);
         warning("Primary thread %d, lending cpus: %s", primary_thread_cpu, mu_to_str(&cpus_to_lend));
-        DLB_PrintShmem(0,0);
+        //DLB_PrintShmem(0,0);
 
         verbose(VB_OMPT, "IntoBlockingCall - lending all");
     }
@@ -350,7 +357,10 @@ void omptm_role_shift__OutOfBlockingCall(void) {
              * an indication that the CPUs may be needed. */
         }
         else if (omptool_opts & OMPTOOL_OPTS_MPI) {
+            DLB_PrintShmem(0,0);
+            cb_enable_cpu(cpu_by_id[global_tid], NULL);
             DLB_Reclaim();
+            warning("Primary thread %d, reclaiming all cpus", primary_thread_cpu);
         }
     }
 }
@@ -412,6 +422,7 @@ void omptm_role_shift__thread_role_shift(
 	}
 	else if(prior_role == OMP_ROLE_NONE){
 		if(next_role == OMP_ROLE_COMMUNICATOR) return; //Don't supported now
+        warning("Primary thread %d, thread %d shifting to FA", primary_thread_cpu, global_tid);
 		cpu_set_t thread_mask;
 		int cpuid;
 		if(cpu_by_id[global_tid] >= 0){
@@ -545,12 +556,14 @@ void omptm_role_shift__task_schedule(
         if (cpuid >= 0 && cpu_data[cpuid].fa) {
             /* Return CPU if reclaimed */
             if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
+                warning("Primary thread %d, disabling and returning cpu: %d", primary_thread_cpu, cpuid);
                 if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
                     cb_disable_cpu(cpuid, NULL);
-                    pthread_mutex_lock(&mutex_num_fa);
-                    --num_free_agents;
-                    __kmp_set_thread_roles2(global_tid, OMP_ROLE_NONE);
-                    pthread_mutex_unlock(&mutex_num_fa);
+                    //warning("Primary thread %d, disabling and returning cpu: %d", primary_thread_cpu, cpuid);
+                    //pthread_mutex_lock(&mutex_num_fa);
+                    //--num_free_agents;
+                    //__kmp_set_thread_roles2(global_tid, OMP_ROLE_NONE);
+                    //pthread_mutex_unlock(&mutex_num_fa);
                 }
             }
 
@@ -558,16 +571,17 @@ void omptm_role_shift__task_schedule(
             else if (DLB_ATOMIC_LD(&pending_tasks) == 0 && 
                      ((cpu_data[cpuid].ownership ==  BORROWED) || omptool_opts & OMPTOOL_OPTS_LEND)) {
                 cb_disable_cpu(cpuid, NULL);
+                warning("Primary thread %d, disabling and lending cpu: %d", primary_thread_cpu, cpuid);
 
                 /* TODO: only lend free agents not part of the process mask */
                 /*       or, depending on the ompt dlb policy */
                 if (!CPU_ISSET(cpuid, &process_mask)) {
                     DLB_LendCpu(cpuid);
                 }
-                pthread_mutex_lock(&mutex_num_fa);
-                --num_free_agents;
-                __kmp_set_thread_roles2(global_tid,OMP_ROLE_NONE);
-                pthread_mutex_unlock(&mutex_num_fa);
+                //pthread_mutex_lock(&mutex_num_fa);
+                //--num_free_agents;
+                //__kmp_set_thread_roles2(global_tid,OMP_ROLE_NONE);
+                //pthread_mutex_unlock(&mutex_num_fa);
             }
         }
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);
