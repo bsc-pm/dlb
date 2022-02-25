@@ -338,6 +338,36 @@ int main( int argc, char **argv ) {
         assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     }
 
+    // Inheritance beyond the initial mask: [0] -> [0] -> [0], [1]
+    {
+        cpu_set_t mask;
+
+        // parent process (p1) pre-initializes [0]
+        mu_parse_mask("0", &p1_mask);
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+
+        // p2 wants to register [0]
+        mu_parse_mask("0", &p2_mask);
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( CPU_EQUAL(&p2_mask, &mask) );
+
+        // p3 wants to register [1]  (with p1_pid as preinit!)
+        mu_parse_mask("1", &p3_mask);
+        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY) == DLB_SUCCESS );
+        /* mask is only updated if DLB_NOTED */
+
+        // check that only p2 and p3 are registered
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
+        assert( shmem_procinfo__getprocessmask(p2_pid, &mask, 0) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&p2_mask, &mask) );
+        assert( shmem_procinfo__getprocessmask(p3_pid, &mask, 0) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&p3_mask, &mask) );
+
+        // finalize
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
     // Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 

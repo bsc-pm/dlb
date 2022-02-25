@@ -298,7 +298,7 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
         }
 
         // If it's a new process, initialize structure
-        if (!preinit_pid && !error) {
+        if ((preinit_pid == 0 || preinit_process == NULL) && !error) {
             if (empty_spot == NULL) {
                 error = DLB_ERR_NOMEM;
             }
@@ -418,7 +418,11 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
                         sizeof(cpu_set_t));
             }
         }
-
+        else if (error != DLB_ERR_INIT) {
+            fatal("Unhandled case in %s: preinit_pid: %d, preinit_process: %p, error: %d.\n"
+                    "Please, report bug at %s",
+                    __FUNCTION__, preinit_pid, preinit_process, error, PACKAGE_BUGREPORT);
+        }
 
         if (process) {
             // Save pointer for faster access
