@@ -105,8 +105,8 @@ typedef enum OpenMP_Roles {
 
 typedef struct DLB_ALIGN_CACHE CPU_Data {
     cpu_status_t ownership;
-    atomic_bool  free_cpu; //True: Unused, False: in use
-    bool          fa; 
+//    bool         assigned; 
+    bool         fa; 
 } cpu_data_t;
 
 
@@ -183,7 +183,6 @@ static void cb_enable_cpu(int cpuid, void *arg) {
         }
     }
     else if(pos == -1){//ask for a new FA
-        cpu_data[cpuid].free_cpu = true;
         cpu_data[cpuid].fa = false;
         pthread_mutex_lock(&mutex_num_fa);
         if(num_free_agents == registered_threads){
@@ -199,6 +198,7 @@ static void cb_enable_cpu(int cpuid, void *arg) {
             //printf("Primary thread %d, incresing the number of free agents to %d with API1\n", primary_thread_cpu, num_free_agents);
             __kmp_set_thread_roles1(num_free_agents, OMP_ROLE_FREE_AGENT);
             cpu_by_id[registered_threads] = cpuid;
+            //cpu_data[cpuid].assigned = true;
             DLB_ATOMIC_ADD(&registered_threads, 1);            
         }
         else{
@@ -213,6 +213,7 @@ static void cb_enable_cpu(int cpuid, void *arg) {
                 //printf("Primary thread %d, increasing the number of free agents to %d with API2.1. Activating thread %d\n", primary_thread_cpu, num_free_agents, system_size);
                 __kmp_set_thread_roles2(system_size, OMP_ROLE_FREE_AGENT);
                 cpu_by_id[registered_threads] = cpuid;
+                //cpu_data[cpuid].assigned = true;
                 DLB_ATOMIC_ADD(&registered_threads, 1);
             }
         }
@@ -287,25 +288,25 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
     	if(CPU_ISSET(i, &process_mask)){
     		if(++encountered_cpus == 1){
     			//First encountered CPU belongs to the primary thread
-				cpu_data[i].free_cpu = false;
+				//cpu_data[i].assigned = true;
 				primary_thread_cpu = i;
 				CPU_SET(i, &primary_thread_mask);
 				cpu_by_id[encountered_cpus - 1] = i;
 			}
 			else if(encountered_cpus <= num_workers){
 				//Assume the next CPUs after the primary thread are for the workers and are not free.
-				cpu_data[i].free_cpu = false;
+				//cpu_data[i].assigned = true;
 				cpu_by_id[encountered_cpus - 1] = i;
 			}
 			else{
 				//Don't assume a CPU will be used until starting some thread in it.
-			    cpu_data[i].free_cpu = true;
+			    //cpu_data[i].assigned = false;
 			}
 			cpu_data[i].ownership = OWN;
 		}
 		else{
 			cpu_data[i].ownership = UNKNOWN;
-			cpu_data[i].free_cpu = true;
+			//cpu_data[i].assigned = false;
 		}
 		cpu_data[i].fa = false;
 	}
@@ -438,6 +439,14 @@ void omptm_role_shift__thread_begin(
                 cb_disable_cpu(cpuid, NULL);
             }
         }
+        else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
+            cb_disable_cpu(cpuid, NULL);
+            /* TODO: only lend free agents not part of the process mask */
+            /*       or, depending on the ompt dlb policy */
+            if (!CPU_ISSET(cpuid, &process_mask)) {
+                DLB_LendCpu(cpuid);
+            }
+        }
         /*}
         else{ //Not likely, but we didn't find a CPU for a new FA
             pthread_mutex_lock(&mutex_num_fa);
@@ -467,6 +476,27 @@ void omptm_role_shift__thread_role_shift(
 	}
 	else if(prior_role == OMP_ROLE_NONE){
 		if(next_role == OMP_ROLE_COMMUNICATOR) return; //Don't supported now
+        int cpuid = cpu_by_id[global_tid];
+        /*if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
+            //warning("Thread %d, disabling and returning cpu: %d", global_tid, cpuid);
+            if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
+                cb_disable_cpu(cpuid, NULL);
+            }
+        }*/
+        if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
+            //warning("Thread %d, disabling and returning cpu: %d", global_tid, cpuid);
+            if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
+                cb_disable_cpu(cpuid, NULL);
+            }
+        }
+        else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
+            cb_disable_cpu(cpuid, NULL);
+            /* TODO: only lend free agents not part of the process mask */
+            /*       or, depending on the ompt dlb policy */
+            if (!CPU_ISSET(cpuid, &process_mask)) {
+                DLB_LendCpu(cpuid);
+            }
+        }
         //warning("Primary thread %d, thread %d shifting to FA", primary_thread_cpu, global_tid);
         //warning("Thread %d shifting to FREE AGENT", global_tid);
 		/*cpu_set_t thread_mask;
