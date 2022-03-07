@@ -145,14 +145,14 @@ static int get_id_from_cpu(int cpuid){
     return -1;
 }*/
 
-static int search_unscheduled_fa(){
+/*static int search_unscheduled_fa(){
     int i;
     for(i = 0; i < registered_threads; i++){
         int cpuid = cpu_by_id[i];
         if(cpuid == -2) return i;
     }
     return -1;
-}
+}*/
 
 /*********************************************************************************/
 /*  DLB callbacks                                                                */
@@ -202,20 +202,20 @@ static void cb_enable_cpu(int cpuid, void *arg) {
             DLB_ATOMIC_ADD(&registered_threads, 1);            
         }
         else{
-            int id = search_unscheduled_fa();
+            /*int id = search_unscheduled_fa();
             ++num_free_agents;
             if(id >= 0){
                 //printf("Primary thread %d, increasing the number of free agents to %d with API2.1. Activating thread %d\n", primary_thread_cpu, num_free_agents, id);
                 __kmp_set_thread_roles2(id, OMP_ROLE_FREE_AGENT);
             }
-            else{
+            else{*/
                 //Asking for a invalid tid with API2 will create a new thread. The runtime keeps the tids consecutive and we capture it in the thread begin callback
                 //printf("Primary thread %d, increasing the number of free agents to %d with API2.1. Activating thread %d\n", primary_thread_cpu, num_free_agents, system_size);
                 __kmp_set_thread_roles2(system_size, OMP_ROLE_FREE_AGENT);
                 cpu_by_id[registered_threads] = cpuid;
                 //cpu_data[cpuid].assigned = true;
                 DLB_ATOMIC_ADD(&registered_threads, 1);
-            }
+            //}
         }
         pthread_mutex_unlock(&mutex_num_fa);
     }
