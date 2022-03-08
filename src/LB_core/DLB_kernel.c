@@ -641,8 +641,15 @@ int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flag
     int error = shmem_procinfo__setprocessmask(pid, mask, flags);
     if (error == DLB_SUCCESS
             && thread_spd->dlb_initialized
-            && (pid == 0 || pid == thread_spd->id)
-            && flags & DLB_SYNC_NOW) {
+            && (pid == 0 || pid == thread_spd->id)) {
+        /* Mask has been successfully set by own process, do like a poll_drom_update */
+        if (thread_spd->options.lewi) {
+            /* If LeWI, resolve reclaimed CPUs */
+            thread_spd->lb_funcs.update_ownership(thread_spd, mask);
+        } else {
+            /* Otherwise, udate owner and guest data */
+            shmem_cpuinfo__update_ownership(thread_spd->id, mask, NULL);
+        }
         set_process_mask(&thread_spd->pm, mask);
     }
     return error;

@@ -92,7 +92,8 @@ int main(int argc, char **argv) {
 
         /* Simulate set process mask from an external process */
         assert( DLB_DROM_SetProcessMask(pid, &process_mask, 0) == DLB_SUCCESS );
-        assert( DLB_PollDROM(NULL, &mask) == DLB_SUCCESS );
+        assert( DLB_PollDROM(NULL, &mask) == DLB_NOUPDT );  /* own process, already applied */
+        assert( DLB_DROM_GetProcessMask(pid, &mask, 0) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &process_mask) );
 
         assert( DLB_Finalize() == DLB_SUCCESS );
@@ -121,9 +122,8 @@ int main(int argc, char **argv) {
             }
         }
         assert( DLB_DROM_SetProcessMask(0, &mask, 0) == DLB_SUCCESS );
-        assert( DLB_DROM_SetProcessMask(0, &mask, 0) == DLB_ERR_PDIRTY );
         cpu_set_t new_mask;
-        assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_NOTED );
+        assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &new_mask) );
         assert( CPU_COUNT(&new_mask) + 1 == CPU_COUNT(&process_mask) );
         assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_SUCCESS );
@@ -141,25 +141,115 @@ int main(int argc, char **argv) {
         mu_parse_mask("0-3", &process_mask);
         memcpy(&current_mask, &process_mask, sizeof(cpu_set_t));
 
-        assert( DLB_Init(0, &process_mask, "--drom") == DLB_SUCCESS );
-        assert( DLB_CallbackSet(dlb_callback_set_process_mask,
-                    (dlb_callback_t)cb_set_process_mask, &current_mask) == DLB_SUCCESS );
+        /* Fork process */
+        pid = fork();
+        if (pid >= 0) {
+            /* Both parent and child execute concurrently */
+            int error;
+            struct data *shdata;
+            shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
+                    "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+            shmem_lock(handler);
+            {
+                if (!shdata->initialized) {
+                    pthread_barrierattr_t attr;
+                    assert( pthread_barrierattr_init(&attr) == 0 );
+                    assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
+                    assert( pthread_barrier_init(&shdata->barrier, &attr, 2) == 0 );
+                    assert( pthread_barrierattr_destroy(&attr) == 0 );
+                    shdata->initialized = 1;
+                }
+            }
+            shmem_unlock(handler);
 
-        /* Set mask and update with poll drom */
-        mu_parse_mask("0-2", &new_mask1);
-        assert( DLB_DROM_SetProcessMask(0, &new_mask1, 0) == DLB_SUCCESS );
-        assert( CPU_EQUAL(&process_mask, &current_mask) );
-        DLB_PollDROM_Update();
-        assert( !CPU_EQUAL(&process_mask, &current_mask) );
-        assert( CPU_EQUAL(&new_mask1, &current_mask) );
+            /* Child initializes DLB */
+            if (pid == 0) {
+                assert( DLB_Init(0, &process_mask, "--drom") == DLB_SUCCESS );
+                assert( DLB_CallbackSet(dlb_callback_set_process_mask,
+                            (dlb_callback_t)cb_set_process_mask, &current_mask) == DLB_SUCCESS );
+            }
 
-        /* Set mask and update with SYNC_NOW flag */
-        mu_parse_mask("0-3", &new_mask2);
-        assert( DLB_DROM_SetProcessMask(0, &new_mask2, DLB_SYNC_NOW) == DLB_SUCCESS );
-        assert( !CPU_EQUAL(&new_mask1, &current_mask) );
-        assert( CPU_EQUAL(&new_mask2, &current_mask) );
+            /* Both processes synchronize */
+            error = pthread_barrier_wait(&shdata->barrier);
+            assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
-        assert( DLB_Finalize() == DLB_SUCCESS );
+            mu_parse_mask("0-2", &new_mask1);
+
+            /* Parent process sets mask */
+            if (pid > 0) {
+                /* Set mask and update with poll drom */
+                assert( DLB_DROM_SetProcessMask(pid, &new_mask1, 0) == DLB_SUCCESS );
+
+                /* A second update is not yet allowed */
+                assert( DLB_DROM_SetProcessMask(pid, &new_mask1, 0) == DLB_ERR_PDIRTY );
+            }
+
+            /* Both processes synchronize */
+            error = pthread_barrier_wait(&shdata->barrier);
+            assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+            /* Child process polls */
+            if (pid == 0) {
+                assert( CPU_EQUAL(&process_mask, &current_mask) );
+                assert( DLB_PollDROM_Update() == DLB_SUCCESS );
+                assert( !CPU_EQUAL(&process_mask, &current_mask) );
+                assert( CPU_EQUAL(&new_mask1, &current_mask) );
+            }
+
+            /* Both processes synchronize */
+            error = pthread_barrier_wait(&shdata->barrier);
+            assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+            mu_parse_mask("0-3", &new_mask2);
+
+            /* Parent process sets mask with SYNC_NOW flag */
+            if (pid > 0) {
+                assert( DLB_DROM_SetProcessMask(pid, &new_mask2, DLB_SYNC_NOW) == DLB_SUCCESS );
+            }
+
+            /* Child process loops until new mask is set */
+            if (pid == 0) {
+                int err;
+                while ((err = DLB_PollDROM_Update()) == DLB_NOUPDT) { usleep(1000); }
+                assert( err == DLB_SUCCESS );
+                assert( !CPU_EQUAL(&new_mask1, &current_mask) );
+                assert( CPU_EQUAL(&new_mask2, &current_mask) );
+            }
+
+            /* Both processes synchronize */
+            error = pthread_barrier_wait(&shdata->barrier);
+            assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+            /* Finalize shmem */
+            shmem_lock(handler);
+            {
+                if (shdata->initialized) {
+                    assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
+                    shdata->initialized = 0;
+                }
+            }
+            shmem_unlock(handler);
+            shmem_finalize(handler, NULL);
+
+            /* Child finalizes DLB and exits */
+            if (pid == 0) {
+                assert( DLB_Finalize() == DLB_SUCCESS );
+                if (__gcov_flush) __gcov_flush();
+                _exit(EXIT_SUCCESS);
+            }
+        }
+
+        /* Wait for child process */
+        int wstatus;
+        while(wait(&wstatus) > 0) {
+            if (!WIFEXITED(wstatus))
+                exit(EXIT_FAILURE);
+            int rc = WEXITSTATUS(wstatus);
+            if (rc != 0) {
+                printf("Child return status: %d\n", rc);
+                exit(EXIT_FAILURE);
+            }
+        }
     }
 
     /* Test mask getter and setter without init */
