@@ -78,7 +78,7 @@ static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static int node_size;
 static bool cpu_is_public_post_mortem = false;
-static bool respect_mask = true;
+static bool respect_cpuset = true;
 static const char *shmem_name = "cpuinfo";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
@@ -221,9 +221,9 @@ int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_m
         cpu_is_public_post_mortem = true;
     }
 
-    // Respect mask
-    if (thread_spd && !thread_spd->options.lewi_respect_mask) {
-        respect_mask = false;
+    // Respect cpuset
+    if (thread_spd && !thread_spd->options.lewi_respect_cpuset) {
+        respect_cpuset = false;
         cpu_is_public_post_mortem = true;
     }
 
@@ -749,14 +749,14 @@ static int acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim) {
         }
     } else if (cpuinfo->guest == NOBODY
                 && (cpuinfo->state == CPU_LENT
-                    || (!respect_mask && cpuinfo->state == CPU_DISABLED))) {
+                    || (!respect_cpuset && cpuinfo->state == CPU_DISABLED))) {
         // CPU is available
         cpuinfo->guest = pid;
         *new_guest = pid;
         *victim = -1;
         error = DLB_SUCCESS;
         update_cpu_stats(cpuid, STATS_GUESTED);
-    } else if (cpuinfo->state != CPU_DISABLED || !respect_mask) {
+    } else if (cpuinfo->state != CPU_DISABLED || !respect_cpuset) {
         // CPU is busy, or lent to another process
         *new_guest = -1;
         *victim = -1;
@@ -959,7 +959,7 @@ static int borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest) {
         update_cpu_stats(cpuid, STATS_OWNED);
     } else if (cpuinfo->guest == NOBODY
                 && (cpuinfo->state == CPU_LENT
-                    || (!respect_mask && cpuinfo->state == CPU_DISABLED))) {
+                    || (!respect_cpuset && cpuinfo->state == CPU_DISABLED))) {
         // CPU is available
         cpuinfo->guest = pid;
         *new_guest = pid;
@@ -1585,6 +1585,11 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
     int rows = (node_size+columns-1) / columns;
     int cpus_per_column = rows;
 
+    /* Update flag here in case this is an external process */
+    if (thread_spd && !thread_spd->options.lewi_respect_cpuset) {
+        respect_cpuset = false;
+    }
+
     int row;
     for (row=0; row<rows; ++row) {
         /* Init line */
@@ -1602,11 +1607,11 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
                 cpu_state_t state = cpuinfo->state;
                 if (color) {
                     const char *code_color =
-                        state == CPU_DISABLED               ? ANSI_COLOR_RESET :
-                        state == CPU_BUSY && guest == owner ? ANSI_COLOR_RED :
-                        state == CPU_BUSY                   ? ANSI_COLOR_YELLOW :
-                        guest == NOBODY                     ? ANSI_COLOR_GREEN :
-                                                              ANSI_COLOR_BLUE;
+                        state == CPU_DISABLED && respect_cpuset ? ANSI_COLOR_RESET :
+                        state == CPU_BUSY && guest == owner     ? ANSI_COLOR_RED :
+                        state == CPU_BUSY                       ? ANSI_COLOR_YELLOW :
+                        guest == NOBODY                         ? ANSI_COLOR_GREEN :
+                                                                  ANSI_COLOR_BLUE;
                     l += snprintf(l, MAX_LINE_LEN-strlen(line),
                             " %4d %s[ %*d / %*d ]" ANSI_COLOR_RESET,
                             cpuid,
