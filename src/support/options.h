@@ -44,7 +44,7 @@ typedef struct Options {
     int                 instrument_extrae_nthreads;
     /* lewi */
     bool                lewi_keep_cpu_on_blocking_call;
-    bool                lewi_respect_mask;
+    bool                lewi_respect_cpuset;
     mpi_set_t           lewi_mpi_calls;
     priority_t          lewi_affinity;
     ompt_opts_t         lewi_ompt;

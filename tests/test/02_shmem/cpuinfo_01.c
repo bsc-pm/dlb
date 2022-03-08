@@ -225,11 +225,11 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
     }
 
-    /* Test respect-mask=no feature */
+    /* Test respect-cpuset=no feature */
     {
-        // Set up fake spd to set respect-mask option
+        // Set up fake spd to set respect-cpuset option
         subprocess_descriptor_t spd;
-        spd.options.lewi_respect_mask = false;
+        spd.options.lewi_respect_cpuset = false;
         spd_enter_dlb(&spd);
 
         // Initialize

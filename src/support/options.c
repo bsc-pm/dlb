@@ -216,12 +216,22 @@ static const opts_dict_t options_dictionary[] = {
         .flags          = OPT_OPTIONAL
     }, {
         .var_name       = "LB_NULL",
-        .arg_name       = "--lewi-respect-mask",
+        .arg_name       = "--lewi-respect-cpuset",
         .default_value  = "yes",
-        .description    = OFFSET"...\n",
-        .offset         = offsetof(options_t, lewi_respect_mask),
+        .description    = OFFSET"Whether to respect the set of CPUs registered in DLB to\n"
+                          OFFSET"use with LeWI. If disabled, all unknown CPUs are available\n"
+                          OFFSET"for any process to borrow.",
+        .offset         = offsetof(options_t, lewi_respect_cpuset),
         .type           = OPT_BOOL_T,
         .flags          = OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-respect-mask",
+        .default_value  = "yes",
+        .description    = OFFSET"Deprecated in favor of --lewi-respect-cpuset.\n",
+        .offset         = offsetof(options_t, lewi_respect_cpuset),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_OPTIONAL | OPT_DEPRECATED
     }, {
         /* This is a deprecated option that overlaps with --lewi-keep-one-cpu.
          * It must be defined afterwards so that the default value of the

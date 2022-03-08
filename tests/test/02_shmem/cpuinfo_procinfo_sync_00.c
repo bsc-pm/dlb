@@ -35,28 +35,18 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/wait.h>
 #include <pthread.h>
 #include <assert.h>
 
+void __gcov_flush() __attribute__((weak));
+
 // Test synchronization between procinfo and cpuinfo when the ownership changes
 
-/* static cpu_set_t process_mask; */
-
-static void* thread_start(void *arg) {
-    pid_t pid = *(pid_t*)arg;
-
-    // Initialize external
-    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
-
-    // External sets new mask
-    cpu_set_t new_mask = { .__bits = {0x3} }; // [01--]
-    assert( shmem_procinfo__setprocessmask(pid, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
-
-    //Finalize external
-    assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
-
-    return NULL;
-}
+struct data {
+    pthread_barrier_t barrier;
+    int initialized;
+};
 
 int main( int argc, char **argv ) {
     // This test needs at least room for 4 CPUs
@@ -65,41 +55,106 @@ int main( int argc, char **argv ) {
     mu_testing_set_sys_size(SYS_SIZE);
 
     pid_t pid = 42;
-    cpu_set_t mask = { .__bits = {0xf} }; // [0123]
+    cpu_set_t mask;
+    mu_parse_mask("0-3", &mask);
 
-    // Initialize sub-process
-    assert( shmem_procinfo__init(pid, 0, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(pid, 0, &mask, SHMEM_KEY) == DLB_SUCCESS );
-
-    // Get process mask
-
-    // Create a new thread to simulate an external process and set a new mask
-    {
-        pthread_t thread;
-        pthread_create(&thread, NULL, thread_start, (void*)&pid);
-
-        // Poll until thread sets a new mask
+    /* Fork process */
+    pid_t new_pid = fork();
+    if (new_pid >= 0) {
+        /* Both parent and child execute concurrently */
         int error;
-        do {
-            usleep(1000);
-            error = shmem_procinfo__polldrom(pid, NULL, &mask);
-            assert( error >= 0 );
-        } while (error != DLB_SUCCESS);
+        struct data *shdata;
+        shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
+                "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+        shmem_lock(handler);
+        {
+            if (!shdata->initialized) {
+                pthread_barrierattr_t attr;
+                assert( pthread_barrierattr_init(&attr) == 0 );
+                assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
+                assert( pthread_barrier_init(&shdata->barrier, &attr, 2) == 0 );
+                assert( pthread_barrierattr_destroy(&attr) == 0 );
+                shdata->initialized = 1;
+            }
+        }
+        shmem_unlock(handler);
 
-        // Once we've obtained the new mask, the thread can die
-        pthread_join(thread, NULL);
+        /* Parent initilizes sub-process */
+        if (new_pid > 0) {
+            assert( shmem_procinfo__init(pid, 0, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_cpuinfo__init(pid, 0, &mask, SHMEM_KEY) == DLB_SUCCESS );
+        }
+
+        /* Child initilizes external */
+        if (new_pid == 0) {
+            assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+        }
+
+        /* Both processes synchronize */
+        error = pthread_barrier_wait(&shdata->barrier);
+        assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+        /* Child sets new mask */
+        if (new_pid == 0) {
+            cpu_set_t new_mask;
+            mu_parse_mask("0,1", &new_mask);
+            assert( shmem_procinfo__setprocessmask(pid, &new_mask, DLB_SYNC_QUERY)
+                    == DLB_SUCCESS );
+        }
+
+        /* Parent process loops until new mask is set */
+        if (new_pid > 0) {
+            int err;
+            while ((err = shmem_procinfo__polldrom(pid, NULL, &mask)) == DLB_NOUPDT)
+                usleep(1000);
+            assert( err == DLB_SUCCESS );
+        }
+
+        /* Both processes synchronize */
+        error = pthread_barrier_wait(&shdata->barrier);
+        assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+        /* Finalize shmem */
+        shmem_lock(handler);
+        {
+            if (shdata->initialized) {
+                assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
+                shdata->initialized = 0;
+            }
+        }
+        shmem_unlock(handler);
+        shmem_finalize(handler, NULL);
+
+        /* Child finalizes and exits */
+        if (new_pid == 0) {
+            assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
+            if (__gcov_flush) __gcov_flush();
+            _exit(EXIT_SUCCESS);
+        }
     }
 
-    // Update cpuinfo with the new mask
+    /* Wait for child process */
+    int wstatus;
+    while(wait(&wstatus) > 0) {
+        if (!WIFEXITED(wstatus))
+            exit(EXIT_FAILURE);
+        int rc = WEXITSTATUS(wstatus);
+        if (rc != 0) {
+            printf("Child return status: %d\n", rc);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    /* Update cpuinfo with the new mask */
     shmem_cpuinfo__update_ownership(pid, &mask, NULL);
 
-    // Get new bindings
+    /* Get new bindings */
     assert( shmem_cpuinfo__get_thread_binding(pid, 1) == 1 );
     assert( shmem_cpuinfo__get_thread_binding(pid, 0) == 0 );
     assert( shmem_cpuinfo__get_thread_binding(pid, 2) == -1 );
     assert( shmem_cpuinfo__get_thread_binding(pid, 3) == -1 );
 
-    // Finalize sub-process
+    /* Finalize sub-process */
     assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
 

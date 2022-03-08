@@ -36,7 +36,6 @@ tests = {
     'printer_00'          : {},
     'procinfo_00'         : {},
     'procinfo_01'         : {},
-    'procinfo_02'         : {},
     'procinfo_03'         : {},
     'procinfo_04'         : {},
     'shmem_00'            : {},
