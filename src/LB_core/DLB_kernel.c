@@ -65,10 +65,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         mask ? POLICY_LEWI_MASK :
         POLICY_LEWI;
 
-    fatal_cond(spd->lb_policy == POLICY_LEWI && spd->options.ompt,
-            "LeWI with OMPT support requires the application to be pre-initialized.\n"
-            "Please run: dlb_run <application>");
-
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm, spd->options.talp);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);

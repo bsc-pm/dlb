@@ -217,13 +217,26 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
 
         setup_omp_fn_ptrs(options.omptm_version);
 
-        /* Initialize DLB only if ompt is enabled, and
-         * remember if succeded to finalize it when ompt_finalize is invoked. */
-        int err = DLB_Init(0, NULL, NULL);
-        if (err == DLB_SUCCESS) {
-            dlb_initialized_through_ompt = true;
+        int err = 0;
+        if (options.preinit_pid == 0) {
+            /* Force init */
+            cpu_set_t process_mask;
+            sched_getaffinity(0, sizeof(process_mask), &process_mask);
+            err = DLB_Init(0, &process_mask, NULL);
+            if (err == DLB_SUCCESS) {
+                dlb_initialized_through_ompt = true;
+            } else {
+                warning("DLB_Init failed: %s", DLB_Strerror(err));
+            }
         } else {
-            verbose(VB_OMPT, "DLB_Init: %s", DLB_Strerror(err));
+            /* Initialize DLB only if ompt is enabled, and
+            * remember if succeded to finalize it when ompt_finalize is invoked. */
+            err = DLB_Init(0, NULL, NULL);
+            if (err == DLB_SUCCESS) {
+                dlb_initialized_through_ompt = true;
+            } else {
+                verbose(VB_OMPT, "DLB_Init: %s", DLB_Strerror(err));
+            }
         }
 
         verbose(VB_OMPT, "Initializing OMPT module");
