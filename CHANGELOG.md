@@ -4,8 +4,21 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- Flag `--verbose` to enable all verbose modes
+- Flag `talp-summary=pop-raw` to print raw POP metrics
+- Flag `--lewi-respect-cpuset` to allow LeWI to use CPUs not yet registered
+
 ### Changed
 - DROM can now steal all CPUs from one process
+- DROM can now inherit a subset of CPUs from other process
+- `DLB_DROM_SetProcessMask` to oneself does not longer require a `DLB_pollDROM`
+- `DLB_Lend` in OpenMP applications now invokes the OpenMP runtime to change
+  the number of threads
+
+### Fixed
+- Fixed TALP regions enabled or registered only on some processes
+- Fixed minor option parsing
 
 ## [3.1] 2021-11-05
 ### Added
@@ -24,12 +37,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - CPU priority now follows a better topology order
 - Properly clean up shared memory during initialization
 
-## Fixed
+### Fixed
 - Fixed several TALP issues
 - Improves support for OMPT
 - Proper shared memory clean up if running under `dlb_run`
 
-## Deprecated
+### Deprecated
 - Python viewer scripts are no longer installed
 
 ## [3.0] 2021-01-15
