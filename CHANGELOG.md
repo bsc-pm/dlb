@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## [3.2] 2022-03-16
 ### Added
 - Flag `--verbose` to enable all verbose modes
-- Flag `talp-summary=pop-raw` to print raw POP metrics
+- Flag `--talp-summary=pop-raw` to print raw POP metrics
 - Flag `--lewi-respect-cpuset` to allow LeWI to use CPUs not yet registered
 
 ### Changed
