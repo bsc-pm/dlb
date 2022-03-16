@@ -3,7 +3,6 @@
 # variables detected at configure time
 DLB_HOME=@prefix@
 MPIEXEC=@MPIEXEC@
-MPIEXEC_EXPORT_FLAG=@MPIEXEC_EXPORT_FLAG@
 
 # variables to be modified by the user
 TRACE=0
@@ -43,7 +42,7 @@ else
     export DLB_ARGS+=" --no-lewi"
 fi
 
-$MPIEXEC -np 2 $MPIEXEC_BIND_FLAG $MPIEXEC_EXPORT_FLAG LD_PRELOAD=$PRELOAD $APP $ARGS
+$MPIEXEC -np 2 $MPIEXEC_BIND_FLAG env LD_PRELOAD="$PRELOAD" $APP $ARGS
 
 if [[ $TRACE == 1 ]] ; then
     $EXTRAE_HOME/bin/mpi2prv -f TRACE.mpits -no-keep-mpits -o "$TRACENAME"

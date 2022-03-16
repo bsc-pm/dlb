@@ -43,7 +43,7 @@ else
 fi
 
 export OMP_NUM_THREADS=$NUMTHREADS
-$MPIEXEC -np 2 $MPIEXEC_BIND_FLAG $DLB_HOME/bin/dlb_run env LD_PRELOAD=$PRELOAD $APP $ARGS
+$MPIEXEC -np 2 $MPIEXEC_BIND_FLAG $DLB_HOME/bin/dlb_run env LD_PRELOAD="$PRELOAD" $APP $ARGS
 
 if [[ $TRACE == 1 ]] ; then
     $EXTRAE_HOME/bin/mpi2prv -f TRACE.mpits -no-keep-mpits -o "$TRACENAME"

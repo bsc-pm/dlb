@@ -118,17 +118,6 @@ AC_DEFUN([AX_MPI],
         ])
         AC_LANG_POP([C])
 
-        AC_MSG_CHECKING([for mpiexec export flag])
-        MPIEXEC_EXPORT_FLAG="none found"
-        AS_IF([$MPICC conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
-            AS_IF([$MPIEXEC -np 1 -x CONFTEST_VARIABLE=CONFTEST ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
-                        [MPIEXEC_EXPORT_FLAG="-x"],
-                [$MPIEXEC -np 1 -genv CONFTEST_VARIABLE=CONFTEST ./conftest 2>&AS_MESSAGE_LOG_FD 1>&2],
-                        [MPIEXEC_EXPORT_FLAG="-genv"])
-        ])
-        rm -f conftest
-        AC_MSG_RESULT([$MPIEXEC_EXPORT_FLAG])
-
         ### MPI LIBRARY VERSION ###
         AC_LANG_PUSH([C])
         AC_LANG_CONFTEST([
@@ -163,7 +152,6 @@ AC_DEFUN([AX_MPI],
     AC_SUBST([MPICC])
     AC_SUBST([MPIEXEC])
     AC_SUBST([MPIEXEC_BIND_OPTS])
-    AC_SUBST([MPIEXEC_EXPORT_FLAG])
     AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != xno])
     AM_CONDITIONAL([MPI_TESTS], [test "x$enable_mpi_tests" != xno])
     AC_DEFINE_UNQUOTED([MPI_LIBRARY_VERSION], ["$mpi_library_version"], [MPI Library version])
