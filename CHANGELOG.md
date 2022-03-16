@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased]
+## [3.2] 2022-03-16
 ### Added
 - Flag `--verbose` to enable all verbose modes
 - Flag `talp-summary=pop-raw` to print raw POP metrics
@@ -228,7 +228,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.1...HEAD
+[3.2]: https://github.com/bsc-pm/dlb/compare/v3.1...v3.2
 [3.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.1
 [3.0.2]: https://github.com/bsc-pm/dlb/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.0.1
