@@ -1,0 +1,21 @@
+# vim: set syntax=python:
+easyblock = 'ConfigureMake'
+
+name = 'DLB'
+version = '3.2'
+
+description = """
+DLB is a dynamic library designed to speed up HPC hybrid applications (i.e.,
+two levels of parallelism) by improving the load balance of the outer level of
+parallelism (e.g., MPI) by dynamically redistributing the computational
+resources at the inner level of parallelism (e.g., OpenMP). at run time.
+"""
+homepage = 'https://pm.bsc.es/dlb/'
+docurls = ['https://pm.bsc.es/ftp/dlb/doc/user-guide/']
+
+sources = [SOURCELOWER_TAR_GZ]
+source_urls = ['https://pm.bsc.es/ftp/dlb/releases']
+
+checksums = ['dd85c067c4a10aa3e0684131889ba83dc5268b176b34136309d669d21e782fec']
+
+moduleclass = 'lib'
