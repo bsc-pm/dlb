@@ -119,6 +119,7 @@ static void cb_enable_cpu(int cpuid, void *arg) {
     if(cpu_data[cpuid].ownership == LENT){ 
         //We are reclaiming a previousley LENT cpu
         cpu_data[cpuid].ownership = OWN;
+        return;
     }
     else if(cpu_data[cpuid].ownership == UNKNOWN){
         cpu_data[cpuid].ownership = BORROWED;
