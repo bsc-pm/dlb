@@ -332,7 +332,8 @@ void omptm_role_shift__thread_begin(
 	if(thread_type == ompt_thread_other){ //other => free agent
         cpu_set_t thread_mask;
         int cpuid = cpu_by_id[global_tid];
-        
+        if(cpuid == -1) //One of the initial threads initialize as a free agent. Don't bind them.
+            return;
         //Bind the thread to the pre-assigned CPU and return the CPU after that if necessary
         cpu_data[cpuid].fa = true;
         cpu_by_id[global_tid] = cpuid;
@@ -368,6 +369,8 @@ void omptm_role_shift__thread_role_shift(
 	else if(prior_role == OMP_ROLE_NONE){
 		if(next_role == OMP_ROLE_COMMUNICATOR) return; //Don't supported now
         int cpuid = cpu_by_id[global_tid];
+        if(cpuid == -1) //One of the initial threads. Don't need to check for own CPUs.
+            return;
         if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
             if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
                 cb_disable_cpu(cpuid, NULL);
