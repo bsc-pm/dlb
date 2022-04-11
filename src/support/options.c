@@ -394,35 +394,35 @@ static const opts_dict_t* get_entry_by_name(const char *name) {
 
 static int set_value(option_type_t type, void *option, const char *str_value) {
     switch(type) {
-        case(OPT_BOOL_T):
+        case OPT_BOOL_T:
             return parse_bool(str_value, (bool*)option);
-        case(OPT_NEG_BOOL_T):
+        case OPT_NEG_BOOL_T:
             return parse_negated_bool(str_value, (bool*)option);
-        case(OPT_INT_T):
+        case OPT_INT_T:
             return parse_int(str_value, (int*)option);
-        case(OPT_STR_T):
+        case OPT_STR_T:
             snprintf(option, MAX_OPTION_LENGTH, "%s", str_value);
             return DLB_SUCCESS;
-        case(OPT_VB_T):
+        case OPT_VB_T:
             return parse_verbose_opts(str_value, (verbose_opts_t*)option);
-        case(OPT_VBFMT_T):
+        case OPT_VBFMT_T:
             return parse_verbose_fmt(str_value, (verbose_fmt_t*)option);
-        case(OPT_INST_T):
+        case OPT_INST_T:
             return parse_instrument_items(str_value, (instrument_items_t*)option);
-        case(OPT_DBG_T):
+        case OPT_DBG_T:
             return parse_debug_opts(str_value, (debug_opts_t*)option);
-        case(OPT_PRIO_T):
+        case OPT_PRIO_T:
             return parse_priority(str_value, (priority_t*)option);
-        case(OPT_POL_T):
+        case OPT_POL_T:
             return parse_policy(str_value, (policy_t*)option);
-        case(OPT_MASK_T):
+        case OPT_MASK_T:
             mu_parse_mask(str_value, (cpu_set_t*)option);
             return DLB_SUCCESS;
-        case(OPT_MODE_T):
+        case OPT_MODE_T:
             return parse_mode(str_value, (interaction_mode_t*)option);
-        case(OPT_MPISET_T):
+        case OPT_MPISET_T:
             return parse_mpiset(str_value, (mpi_set_t*)option);
-        case(OPT_OMPTOPTS_T):
+        case OPT_OMPTOPTS_T:
             return parse_ompt_opts(str_value, (ompt_opts_t*)option);
         case OPT_TLPSUM_T:
             return parse_talp_summary(str_value, (talp_summary_t*)option);
@@ -470,33 +470,33 @@ static const char * get_value(option_type_t type, const void *option) {
 
 static bool values_are_equivalent(option_type_t type, const char *value1, const char *value2) {
     switch(type) {
-        case(OPT_BOOL_T):
+        case OPT_BOOL_T:
             return equivalent_bool(value1, value2);
-        case(OPT_NEG_BOOL_T):
+        case OPT_NEG_BOOL_T:
             return equivalent_negated_bool(value1, value2);
-        case(OPT_INT_T):
+        case OPT_INT_T:
             return equivalent_int(value1, value2);
-        case(OPT_STR_T):
+        case OPT_STR_T:
             return strcmp(value1, value2) == 0;
-        case(OPT_VB_T):
+        case OPT_VB_T:
             return equivalent_verbose_opts(value1, value2);
-        case(OPT_VBFMT_T):
+        case OPT_VBFMT_T:
             return equivalent_verbose_fmt(value1, value2);
-        case(OPT_INST_T):
+        case OPT_INST_T:
             return equivalent_instrument_items(value1, value2);
-        case(OPT_DBG_T):
+        case OPT_DBG_T:
             return equivalent_debug_opts(value1, value2);
-        case(OPT_PRIO_T):
+        case OPT_PRIO_T:
             return equivalent_priority(value1, value2);
-        case(OPT_POL_T):
+        case OPT_POL_T:
             return equivalent_policy(value1, value2);
-        case(OPT_MASK_T):
+        case OPT_MASK_T:
             return equivalent_masks(value1, value2);
-        case(OPT_MODE_T):
+        case OPT_MODE_T:
             return equivalent_mode(value1, value2);
-        case(OPT_MPISET_T):
+        case OPT_MPISET_T:
             return equivalent_mpiset(value1, value2);
-        case(OPT_OMPTOPTS_T):
+        case OPT_OMPTOPTS_T:
             return equivalent_ompt_opts(value1, value2);
         case OPT_TLPSUM_T:
             return equivalent_talp_summary(value1, value2);
