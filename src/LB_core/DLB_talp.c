@@ -32,6 +32,7 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+#include "support/talp_output.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_barrier.h"
@@ -175,6 +176,9 @@ void talp_finalize(subprocess_descriptor_t *spd) {
         || spd->options.talp_summary & SUMMARY_POP_RAW) {
         monitoring_regions_report_all(spd);
     }
+
+    /* Print/write all collected summaries */
+    talp_output_finalize(spd->options.talp_output_file);
 
     if (spd == thread_spd) {
         /* Keep the timers allocated until the program finalizes */
@@ -454,8 +458,6 @@ static void talp_node_summary(const subprocess_descriptor_t *spd) {
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-enum { MONITOR_MAX_KEY_LEN = 128 };
-
 static dlb_monitor_t **regions = NULL;
 static int nregions = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -641,20 +643,11 @@ static void monitoring_region_report_pop_metrics(dlb_monitor_t *monitor) {
             float lb = (float)app_sum_useful / (elapsed_useful * P);
             float lb_in = (float)(node_sum_useful * N) / (elapsed_useful * P);
             float lb_out = (float)app_sum_useful / (node_sum_useful * N);
-            char elapsed_time_str[16];
-            ns_to_human(elapsed_time_str, 16, elapsed_time);
-            info("######### Monitoring Region POP Metrics #########");
-            info("### Name:                       %s", monitor->name);
-            info("### Elapsed Time :              %s", elapsed_time_str);
-            info("### Parallel efficiency :       %1.2f", parallel_efficiency);
-            info("###   - Communication eff. :    %1.2f", communication_efficiency);
-            info("###   - Load Balance :          %1.2f", lb);
-            info("###       - LB_in :             %1.2f", lb_in);
-            info("###       - LB_out:             %1.2f", lb_out);
+
+            talp_output_record_pop_metrics(monitor->name, elapsed_time,
+                    parallel_efficiency, communication_efficiency, lb, lb_in, lb_out);
         } else {
-            info("######### Monitoring Region POP Metrics #########");
-            info("### Name:                       %s", monitor->name);
-            info("###                  No data                  ###");
+            talp_output_record_pop_metrics(monitor->name, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
         }
     }
 #else
@@ -668,22 +661,14 @@ static void monitoring_region_report_pop_raw(dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
     monitor_app_summary_t *app_summary = monitor_data->app_summary;
     if (app_summary != NULL) {
-        if (app_summary->elapsed_time > 0) {
-            int P = app_summary->total_cpus;
-            int N = app_summary->total_nodes;
-            int64_t elapsed_time = app_summary->elapsed_time;
-            int64_t elapsed_useful = app_summary->elapsed_useful;
-            int64_t app_sum_useful = app_summary->app_sum_useful;
-            int64_t node_sum_useful = app_summary->node_sum_useful;
-            info("######### Monitoring Region POP Raw Data #########");
-            info("### Name:                       %s", monitor->name);
-            info("### Number of CPUs:             %d", P);
-            info("### Number of nodes:            %d", N);
-            info("### Elapsed Time:               %"PRId64" ns", elapsed_time);
-            info("### Elapsed Useful:             %"PRId64" ns", elapsed_useful);
-            info("### Useful CPU Time (Total):    %"PRId64" ns", app_sum_useful);
-            info("### Useful CPU Time (Node):     %"PRId64" ns", node_sum_useful);
-        }
+        talp_output_record_pop_raw(
+                monitor->name,
+                app_summary->total_cpus,
+                app_summary->total_nodes,
+                app_summary->elapsed_time,
+                app_summary->elapsed_useful,
+                app_summary->app_sum_useful,
+                app_summary->node_sum_useful);
     }
 #else
     warning("Option --talp-summary=pop-raw is set but DLB is not intercepting MPI calls.");
