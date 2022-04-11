@@ -29,6 +29,7 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <limits.h>
 
 typedef enum OptionFlags {
     OPT_CLEAR      = 0,
@@ -45,6 +46,7 @@ typedef enum OptionTypes {
     OPT_NEG_BOOL_T,
     OPT_INT_T,
     OPT_STR_T,
+    OPT_PTR_PATH_T, // pointer to char[PATH_MAX]
     OPT_VB_T,       // verbose_opts_t
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_INST_T,     // instrument_items_t
@@ -334,6 +336,17 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_BOOL_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-output-file",
+        .default_value  = "",
+        .description    = OFFSET"Write TALP metrics to a file. If this option is not provided,\n"
+                          OFFSET"the output is printed to stderr.\n"
+                          OFFSET"Accepted formats: *.json, *.xml, *.csv. Any other for plain text.\n",
+        .offset         = offsetof(options_t, talp_output_file),
+        .type           = OPT_PTR_PATH_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
     // barrier
     {
         .var_name       = "LB_NULL",
@@ -392,6 +405,17 @@ static const opts_dict_t* get_entry_by_name(const char *name) {
     return NULL;
 }
 
+static int set_ptr_path_value(void *option, const char *str_value) {
+    int path_len = snprintf(NULL, 0, "%s", str_value);
+    if (path_len > 0) {
+        *(char**)option = malloc(sizeof(char)*(path_len+1));
+        snprintf(*(char**)option, PATH_MAX, "%s", str_value);
+    } else {
+        *(char**)option = NULL;
+    }
+    return DLB_SUCCESS;
+}
+
 static int set_value(option_type_t type, void *option, const char *str_value) {
     switch(type) {
         case OPT_BOOL_T:
@@ -403,6 +427,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
         case OPT_STR_T:
             snprintf(option, MAX_OPTION_LENGTH, "%s", str_value);
             return DLB_SUCCESS;
+        case OPT_PTR_PATH_T:
+            return set_ptr_path_value(option, str_value);
         case OPT_VB_T:
             return parse_verbose_opts(str_value, (verbose_opts_t*)option);
         case OPT_VBFMT_T:
@@ -442,6 +468,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return int_value;
         case OPT_STR_T:
             return (char*)option;
+        case OPT_PTR_PATH_T:
+            return *(const char**)option ? *(const char**)option : "";
         case OPT_VB_T:
             return verbose_opts_tostr(*(verbose_opts_t*)option);
         case OPT_VBFMT_T:
@@ -478,6 +506,9 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
             return equivalent_int(value1, value2);
         case OPT_STR_T:
             return strcmp(value1, value2) == 0;
+        case OPT_PTR_PATH_T:
+            return *(const char**)value1 && *(const char**)value2
+                && strcmp(*(const char**)value1, *(const char**)value2) == 0;
         case OPT_VB_T:
             return equivalent_verbose_opts(value1, value2);
         case OPT_VBFMT_T:
@@ -505,7 +536,7 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
 }
 
 /* Parse DLB_ARGS and remove argument if found */
-static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value) {
+static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value, size_t arg_max_len) {
     *arg_value = 0;
     /* Tokenize a copy of dlb_args with " "(blank) delimiter */
     char *progress = dlb_args;
@@ -531,7 +562,7 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
                 /* Obtain value */
                 char *value = strtok_r(NULL, "=", &end_equal);
                 fatal_cond(!value, "Bad format parsing DLB_ARGS: --argument=value");
-                snprintf(arg_value, MAX_OPTION_LENGTH, "%s", value);
+                snprintf(arg_value, arg_max_len, "%s", value);
                 remove_token = true;
             }
         } else {
@@ -591,16 +622,33 @@ void options_init(options_t *options, const char *dlb_args) {
         strcpy(dlb_args_from_env, env);
     }
 
+    /* Preallocate two buffers large enough to save any intermediate option value */
+    char *arg_value_from_api = malloc(sizeof(char)*PATH_MAX);
+    char *arg_value_from_env = malloc(sizeof(char)*PATH_MAX);
+
     int i;
     for (i=0; i<NUM_OPTIONS; ++i) {
         const opts_dict_t *entry = &options_dictionary[i];
         const char *rhs = NULL;                             /* pointer to rhs to be parsed */
-        char arg_value_from_api[MAX_OPTION_LENGTH] = "";    /* */
-        char arg_value_from_env[MAX_OPTION_LENGTH] = "";    /* */
+
+        /* Set-up specific argument length */
+        size_t arg_max_len;
+        switch (entry->type) {
+            case OPT_PTR_PATH_T:
+                arg_max_len = PATH_MAX-1;
+                break;
+            default:
+                arg_max_len = MAX_OPTION_LENGTH-1;
+                break;
+        }
+
+        /* Reset intermediate buffers */
+        arg_value_from_api[0] = '\0';
+        arg_value_from_env[0] = '\0';
 
         /* Parse dlb_args from API */
         if (dlb_args_from_api) {
-            parse_dlb_args(dlb_args_from_api, entry->arg_name, arg_value_from_api);
+            parse_dlb_args(dlb_args_from_api, entry->arg_name, arg_value_from_api, arg_max_len);
             if (strlen(arg_value_from_api) > 0) {
                 rhs = arg_value_from_api;
             }
@@ -608,7 +656,7 @@ void options_init(options_t *options, const char *dlb_args) {
 
         /* Parse DLB_ARGS from env */
         if (dlb_args_from_env) {
-            parse_dlb_args(dlb_args_from_env, entry->arg_name, arg_value_from_env);
+            parse_dlb_args(dlb_args_from_env, entry->arg_name, arg_value_from_env, arg_max_len);
             if (strlen(arg_value_from_env) > 0) {
                 if (rhs && !values_are_equivalent(entry->type, rhs, arg_value_from_env)) {
                     warning("Overwriting option %s = %s",
@@ -660,6 +708,10 @@ void options_init(options_t *options, const char *dlb_args) {
         }
     }
 
+    /* Free intermediate buffers */
+    free(arg_value_from_api);
+    free(arg_value_from_env);
+
     /* Safety checks and free local buffers */
     if (dlb_args_from_api) {
         char *str = dlb_args_from_api;
@@ -684,6 +736,13 @@ void options_init(options_t *options, const char *dlb_args) {
             }
         }
         free(dlb_args_from_env);
+    }
+}
+
+void options_finalize(options_t *options) {
+    if (options->talp_output_file) {
+        free(options->talp_output_file);
+        options->talp_output_file = NULL;
     }
 }
 
@@ -767,6 +826,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
             case OPT_STR_T:
                 b += sprintf(b, "(string)");
                 break;
+            case OPT_PTR_PATH_T:
+                b += sprintf(b, "(path)");
+                break;
             case OPT_VB_T:
                 b += sprintf(b, "{%s}", get_verbose_opts_choices());
                 break;
@@ -785,6 +847,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
             case OPT_POL_T:
                 b += sprintf(b, "[%s]", get_policy_choices());
                 break;
+            case OPT_MASK_T:
+                b += sprintf(b, "(cpuset)");
+                break;
             case OPT_MODE_T:
                 b += sprintf(b, "[%s]", get_mode_choices());
                 break;
@@ -797,8 +862,6 @@ void options_print_variables(const options_t *options, bool print_extended) {
             case OPT_TLPSUM_T:
                 b += sprintf(b, "{%s}", get_talp_summary_choices());
                 break;
-            default:
-                b += sprintf(b, "(unknown)");
         }
         b += sprintf(b, "\n");
 

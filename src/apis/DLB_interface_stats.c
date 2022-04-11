@@ -39,6 +39,7 @@ int DLB_Stats_Init(void) {
         options_t options;
         options_init(&options, NULL);
         shm_key = options.shm_key;
+        options_finalize(&options);
     }
     shmem_cpuinfo_ext__init(shm_key);
     shmem_procinfo_ext__init(shm_key);

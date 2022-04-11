@@ -159,6 +159,14 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--verbose=yes");
     assert(options_1.verbose == VB_ALL);
 
+    // Test --talp-output-file
+    options_init(&options_1, "");
+    assert(options_1.talp_output_file == NULL);
+    options_finalize(&options_1);
+    options_init(&options_1, "--talp-output-file=myfile.txt");
+    assert(strcmp(options_1.talp_output_file, "myfile.txt") == 0);
+    options_finalize(&options_1);
+
     // bug: "--lewi --lewi-greedy" is well parsed but "--lewi-greedy --lewi" is not.
     options_init(&options_1, "--lewi --lewi-greedy");
     assert(options_1.lewi && options_1.lewi_greedy);
