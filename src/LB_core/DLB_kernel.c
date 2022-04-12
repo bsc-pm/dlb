@@ -60,10 +60,26 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     timer_init();
 
     // Infer LeWI mode
-    spd->lb_policy = !spd->options.lewi ? POLICY_NONE :
-        spd->options.preinit_pid ? POLICY_LEWI_MASK :
-        mask ? POLICY_LEWI_MASK :
-        POLICY_LEWI;
+    spd->lb_policy =
+        !spd->options.lewi          ? POLICY_NONE :
+        spd->options.ompt           ? POLICY_LEWI_MASK :
+        spd->options.preinit_pid    ? POLICY_LEWI_MASK :
+        mask                        ? POLICY_LEWI_MASK :
+                                      POLICY_LEWI;
+
+    // Check if real process mask is needed and possible incompatibilities
+    // (Basically, always except if classic LeWI)
+    bool mask_is_needed = (
+            spd->lb_policy == POLICY_LEWI_MASK
+            || spd->options.drom
+            || spd->options.talp
+            || spd->options.ompt
+            || spd->options.preinit_pid);
+    if (mask_is_needed && spd->lb_policy == POLICY_LEWI) {
+        warning("Classic LeWI support with no cpuset binding is not compatible"
+                " with newer DLB modules. DLB_Init cannot continue.");
+        return DLB_ERR_NOCOMP;
+    }
 
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm, spd->options.talp);
@@ -71,8 +87,8 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
-    } else if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.talp) {
-        // These modes require mask support, best effort querying the system
+    } else if (mask_is_needed) {
+        // Best effort querying the system
         sched_getaffinity(0, sizeof(cpu_set_t), &spd->process_mask);
     } else if (spd->lb_policy == POLICY_LEWI) {
         // If LeWI, we don't want the process mask, just a mask of size 'ncpus'
@@ -83,11 +99,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     }
 
     // Initialize shared memories
-    if (spd->lb_policy == POLICY_LEWI_MASK
-            || spd->options.drom
-            || spd->options.talp
-            || spd->options.preinit_pid) {
-
+    if (mask_is_needed) {
         // Initialize procinfo
         cpu_set_t new_process_mask;
         error = shmem_procinfo__init(spd->id, spd->options.preinit_pid,
@@ -145,7 +157,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     verbose(VB_OMPT, "Enabled verbose mode for OMPT experimental features");
 
     // Print number of cpus or mask
-    if (CPU_COUNT(&spd->process_mask) > 0) {
+    if (mask_is_needed) {
         info("Process CPU affinity mask: %s", mu_to_str(&spd->process_mask));
     }
 
@@ -174,6 +186,7 @@ int Finish(subprocess_descriptor_t *spd) {
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
             || spd->options.talp
+            || spd->options.ompt
             || spd->options.preinit_pid) {
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,

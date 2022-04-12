@@ -41,6 +41,7 @@ extern "C"
  *  \return DLB_ERR_INIT if DLB is already initialized
  *  \return DLB_ERR_PERM if DLB cannot register the mask passed by argument
  *  \return DLB_ERR_NOMEM if DLB cannot allocate more processes
+ *  \return DLB_ERR_NOCOMP if initialization options are incompatible
  *
  *  Parameters \p ncpus and \p mask are used to register CPUs owned by the
  *  calling process into the system. DLB advanced usage requires mask
