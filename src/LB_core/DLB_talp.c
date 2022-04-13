@@ -79,12 +79,12 @@ typedef struct process_info_t {
 
 /* Node summary */
 typedef struct monitor_node_summary_t {
-    process_info_t *process_info;
     int nelems;
     int64_t total_mpi_time;
     int64_t total_useful_time;
     int64_t max_mpi_time;
     int64_t max_useful_time;
+    process_info_t process_info[0];
 } monitor_node_summary_t;
 
 /* Private data per monitor */
@@ -92,11 +92,9 @@ typedef struct monitor_data_t {
     int     id;
     bool    started;
     monitor_app_summary_t *app_summary;
-    monitor_node_summary_t *node_summary;
 } monitor_data_t;
 
 
-static void talp_node_summary(const subprocess_descriptor_t *spd);
 static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd);
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name);
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd);
@@ -166,10 +164,6 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
     verbose(VB_TALP, "Finalizing TALP module");
 
-    /* Optional summaries */
-    if (spd->options.talp_summary & SUMMARY_NODE) {
-        talp_node_summary(spd);
-    }
     if (spd->options.talp_summary & SUMMARY_PROCESS
         || spd->options.talp_summary & SUMMARY_REGIONS
         || spd->options.talp_summary & SUMMARY_POP_METRICS
@@ -351,6 +345,8 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
      * MPI_Finalize */
     shmem_barrier__barrier();
 
+    monitor_node_summary_t *node_summary = NULL;
+
     if (_process_id == 0) {
         /* Obtain the PID list */
         int max_procs = mu_get_system_size();
@@ -360,8 +356,8 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
         qsort(pidlist, nelems, sizeof(pid_t), cmp_pids);
 
         /* Allocate node summary structure */
-        monitor_node_summary_t *node_summary = malloc(sizeof(monitor_node_summary_t));
-        node_summary->process_info = malloc(sizeof(process_info_t) * nelems);
+        node_summary = malloc(
+                sizeof(monitor_node_summary_t) + sizeof(process_info_t) * nelems);
         node_summary->nelems = nelems;
 
         int64_t total_mpi_time = 0;
@@ -396,58 +392,87 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
         node_summary->max_mpi_time = max_mpi_time;
         node_summary->max_useful_time = max_useful_time;
 
-        /* Save node_summary in the MPI monitor */
-        talp_info_t *talp_info = spd->talp_info;
-        monitor_data_t *monitor_data = talp_info->mpi_monitor._data;
-        monitor_data->node_summary = node_summary;
-
         free(pidlist);
     }
 
     /* Perform a final barrier so that all processes let the _process_id 0 to
      * gather all the data */
     shmem_barrier__barrier();
-#endif
-}
 
-static void talp_node_summary(const subprocess_descriptor_t *spd) {
-#if MPI_LIB
+    /* All main processes from each node send data to rank 0 */
     if (_process_id == 0) {
-        talp_info_t *talp_info = spd->talp_info;
-        monitor_data_t *monitor_data = talp_info->mpi_monitor._data;
-        monitor_node_summary_t *node_summary = monitor_data->node_summary;
-        if (node_summary != NULL) {
-            info(" |----------------------------------------------------------|");
-            info(" |                  Extended Report Node %d                 |", _node_id);
-            info(" |----------------------------------------------------------|");
-            info(" |  Process   |     Compute Time     |        MPI Time      |");
-            info(" |------------|----------------------|----------------------|");
-            int i;
-            for (i = 0; i < node_summary->nelems; ++i) {
-                info(" | %-10d | %18e s | %18e s |",
-                        node_summary->process_info[i].pid,
-                        nsecs_to_secs(node_summary->process_info[i].useful_time),
-                        nsecs_to_secs(node_summary->process_info[i].mpi_time));
-                info(" |------------|----------------------|----------------------|");
-            }
-            if (node_summary->nelems > 0) {
-                info(" |------------|----------------------|----------------------|");
-                info(" | %-10s | %18e s | %18e s |", "Node Avg",
-                        nsecs_to_secs(
-                            node_summary->total_useful_time / node_summary->nelems),
-                        nsecs_to_secs(
-                            node_summary->total_mpi_time / node_summary->nelems));
-                info(" |------------|----------------------|----------------------|");
-                info(" | %-10s | %18e s | %18e s |", "Node Max",
-                        nsecs_to_secs(node_summary->max_useful_time),
-                        nsecs_to_secs(node_summary->max_mpi_time));
-                info(" |------------|----------------------|----------------------|");
-            }
+        verbose(VB_TALP, "Node summary: gathering data");
 
-            free(node_summary->process_info);
-            node_summary->process_info = NULL;
-            free(node_summary);
-            monitor_data->node_summary = NULL;
+        /* MPI type: int64_t */
+        MPI_Datatype mpi_int64_type;
+#if MPI_VERSION >= 3
+        mpi_int64_type = MPI_INT64_T;
+#else
+        MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
+#endif
+
+        /* MPI type: pid_t */
+        MPI_Datatype mpi_pid_type;
+        MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(pid_t), &mpi_pid_type);
+
+        /* MPI struct type: process_info_t */
+        MPI_Datatype mpi_process_info_type;
+        {
+            int count = 2;
+            int blocklengths[] = {1, 2};
+            MPI_Aint displacements[] = {
+                offsetof(process_info_t, pid),
+                offsetof(process_info_t, mpi_time)};
+            MPI_Datatype types[] = {mpi_pid_type, mpi_int64_type};
+            MPI_Type_create_struct(count, blocklengths, displacements,
+                    types, &mpi_process_info_type);
+            MPI_Type_commit(&mpi_process_info_type);
+        }
+
+        /* MPI struct type: monitor_node_summary_t */
+        MPI_Datatype mpi_node_summary_type;
+        {
+            int count = 3;
+            int blocklengths[] = {1, 4, node_summary->nelems};
+            MPI_Aint displacements[] = {
+                offsetof(monitor_node_summary_t, nelems),
+                offsetof(monitor_node_summary_t, total_mpi_time),
+                offsetof(monitor_node_summary_t, process_info)};
+            MPI_Datatype types[] = {MPI_INT, mpi_int64_type, mpi_process_info_type};
+            MPI_Type_create_struct(count, blocklengths, displacements,
+                    types, &mpi_node_summary_type);
+            MPI_Type_commit(&mpi_node_summary_type);
+        }
+
+        /* Gather data */
+        void *recvbuf = NULL;
+        size_t node_summary_size = sizeof(monitor_node_summary_t)
+                + sizeof(process_info_t) * node_summary->nelems;
+        if (_mpi_rank == 0) {
+            recvbuf = malloc(_num_nodes * node_summary_size);
+        }
+        MPI_Gather(node_summary, 1, mpi_node_summary_type,
+                recvbuf, 1, mpi_node_summary_type,
+                0, getInterNodeComm());
+
+        /* Free send buffer */
+        free(node_summary);
+
+        /* Add records */
+        if (_mpi_rank == 0) {
+            int i;
+            for (i=0; i<_num_nodes; ++i) {
+                node_summary = recvbuf + node_summary_size*i;
+                talp_output_record_node(
+                        i,  /* _node_id */
+                        node_summary->nelems,
+                        node_summary->total_useful_time / node_summary->nelems,
+                        node_summary->total_mpi_time / node_summary->nelems,
+                        node_summary->max_useful_time,
+                        node_summary->max_mpi_time,
+                        node_summary->process_info);
+            }
+            free(recvbuf);
         }
     }
 #endif
@@ -535,10 +560,6 @@ static void monitoring_region_finalize(dlb_monitor_t *monitor) {
     if (monitor_data->app_summary != NULL) {
         free(monitor_data->app_summary);
         monitor_data->app_summary = NULL;
-    }
-    if (monitor_data->node_summary != NULL) {
-        free(monitor_data->node_summary);
-        monitor_data->node_summary = NULL;
     }
     free(monitor_data);
     monitor_data = NULL;

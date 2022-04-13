@@ -397,23 +397,227 @@ static void pop_to_csv(FILE *out_file) {
 /*********************************************************************************/
 /*    Node                                                                       */
 /*********************************************************************************/
+typedef struct ProcessInNodeRecord {
+    pid_t pid;
+    int64_t mpi_time;
+    int64_t useful_time;
+} process_in_node_record_t;
+typedef struct NodeRecord {
+    int node_id;
+    int nelems;
+    int64_t avg_useful_time;
+    int64_t avg_mpi_time;
+    int64_t max_useful_time;
+    int64_t max_mpi_time;
+    struct ProcessInNodeRecord *process;
+    struct NodeRecord *next;
+} node_record_t;
+static node_record_t *node_list_head = NULL;
+static node_record_t *node_list_tail = NULL;
+
+void talp_output_record_node(int node_id, int nelems, int64_t avg_useful_time,
+        int64_t avg_mpi_time, int64_t max_useful_time, int64_t max_mpi_time,
+        void * process_info) {
+
+    /* Allocate processes record and memcpy the entire array */
+    size_t process_record_size = sizeof(process_in_node_record_t) * nelems;
+    process_in_node_record_t *process_record = malloc(process_record_size);
+    memcpy(process_record, process_info, process_record_size);
+
+    /* Allocate node record and initialize */
+    node_record_t *node_record = malloc(sizeof(node_record_t));
+    *node_record = (const node_record_t) {
+        .node_id = node_id,
+        .nelems = nelems,
+        .avg_useful_time = avg_useful_time,
+        .avg_mpi_time = avg_mpi_time,
+        .max_useful_time = max_useful_time,
+        .max_mpi_time = max_mpi_time,
+        .process = process_record,
+        .next = NULL
+    };
+
+    /* Insert to list */
+    if (node_list_head == NULL) {
+        node_list_head = node_record;
+    } else {
+        node_list_tail->next = node_record;
+    }
+    node_list_tail = node_record;
+}
 
 static void node_print(void) {
+    node_record_t *node_record = node_list_head;
+    while (node_record != NULL) {
+        info(" |----------------------------------------------------------|");
+        info(" |                  Extended Report Node %4d               |",
+                node_record->node_id);
+        info(" |----------------------------------------------------------|");
+        info(" |  Process   |     Useful Time      |       MPI Time       |");
+        info(" |------------|----------------------|----------------------|");
+        int i;
+        for (i = 0; i < node_record->nelems; ++i) {
+            info(" | %-10d | %18e s | %18e s |",
+                    node_record->process[i].pid,
+                    nsecs_to_secs(node_record->process[i].useful_time),
+                    nsecs_to_secs(node_record->process[i].mpi_time));
+            info(" |------------|----------------------|----------------------|");
+        }
+        if (node_record->nelems > 0) {
+            info(" |------------|----------------------|----------------------|");
+            info(" | %-10s | %18e s | %18e s |", "Node Avg",
+                    nsecs_to_secs(node_record->avg_useful_time),
+                    nsecs_to_secs(node_record->avg_mpi_time));
+            info(" |------------|----------------------|----------------------|");
+            info(" | %-10s | %18e s | %18e s |", "Node Max",
+                    nsecs_to_secs(node_record->max_useful_time),
+                    nsecs_to_secs(node_record->max_mpi_time));
+            info(" |------------|----------------------|----------------------|");
+        }
+        node_record = node_record->next;
+    }
 }
 
 static void node_to_json(FILE *out_file) {
+    if (node_list_head == NULL)
+        return;
+
+    if (pop_metrics_num_records + pop_raw_num_records > 0) {
+        fprintf(out_file,",\n");
+    }
+    fprintf(out_file,
+                "  \"node\": [\n");
+    node_record_t *node_record = node_list_head;
+    while (node_record != NULL) {
+        fprintf(out_file,
+                "    {\n"
+                "      \"id\": \"%d\",\n"
+                "      \"process\": [\n",
+                node_record->node_id);
+        int i;
+        for (i = 0; i < node_record->nelems; ++i) {
+            fprintf(out_file,
+                "        {\n"
+                "          \"id\": %d,\n"
+                "          \"usefulTime\": %"PRId64",\n"
+                "          \"mpiTime\": %"PRId64"\n"
+                "        }%s\n",
+                node_record->process[i].pid,
+                node_record->process[i].useful_time,
+                node_record->process[i].mpi_time,
+                i+1 < node_record->nelems ? "," : "");
+        }
+        fprintf(out_file,
+                "      ],\n"
+                "      \"nodeAvg\": {\n"
+                "        \"usefulTime\": %"PRId64",\n"
+                "        \"mpiTime\": %"PRId64"\n"
+                "      },\n"
+                "      \"nodeMax\": {\n"
+                "        \"usefulTime\": %"PRId64",\n"
+                "        \"mpiTime\": %"PRId64"\n"
+                "      }\n"
+                "    }%s\n",
+                node_record->avg_useful_time,
+                node_record->avg_mpi_time,
+                node_record->max_useful_time,
+                node_record->max_mpi_time,
+                node_record->next != NULL ? "," : "");
+
+        node_record = node_record->next;
+    }
+    fprintf(out_file,
+                "  ]");         /* no eol */
 }
 
 static void node_to_xml(FILE *out_file) {
+    node_record_t *node_record = node_list_head;
+    while (node_record != NULL) {
+        fprintf(out_file,
+                "  <node>\n"
+                "    <id>%d</id>\n",
+                node_record->node_id);
+        int i;
+        for (i = 0; i < node_record->nelems; ++i) {
+            fprintf(out_file,
+                "    <process>\n"
+                "      <id>%d</id>\n"
+                "      <usefulTime>%"PRId64"</usefulTime>\n"
+                "      <mpiTime>%"PRId64"</mpiTime>\n"
+                "    </process>\n",
+                node_record->process[i].pid,
+                node_record->process[i].useful_time,
+                node_record->process[i].mpi_time);
+        }
+        fprintf(out_file,
+                "    <nodeAvg>\n"
+                "      <usefulTime>%"PRId64"</usefulTime>\n"
+                "      <mpiTime>%"PRId64"</mpiTime>\n"
+                "    </nodeAvg>\n"
+                "    <nodeMax>\n"
+                "      <usefulTime>%"PRId64"</usefulTime>\n"
+                "      <mpiTime>%"PRId64"</mpiTime>\n"
+                "    </nodeMax>\n"
+                "  </node>\n",
+                node_record->avg_useful_time,
+                node_record->avg_mpi_time,
+                node_record->max_useful_time,
+                node_record->max_mpi_time);
+
+        node_record = node_record->next;
+    }
 }
 
 static void node_to_csv(FILE *out_file) {
 }
 
 static void node_to_txt(FILE *out_file) {
+    node_record_t *node_record = node_list_head;
+    while (node_record != NULL) {
+        fprintf(out_file,
+                " |----------------------------------------------------------|\n"
+                " |                  Extended Report Node %4d               |\n"
+                " |----------------------------------------------------------|\n"
+                " |  Process   |     Useful Time      |       MPI Time       |\n"
+                " |------------|----------------------|----------------------|\n",
+                node_record->node_id);
+        int i;
+        for (i = 0; i < node_record->nelems; ++i) {
+            fprintf(out_file,
+                " | %-10d | %18e s | %18e s |\n"
+                " |------------|----------------------|----------------------|\n",
+                node_record->process[i].pid,
+                nsecs_to_secs(node_record->process[i].useful_time),
+                nsecs_to_secs(node_record->process[i].mpi_time));
+        }
+        if (node_record->nelems > 0) {
+            fprintf(out_file,
+                " |------------|----------------------|----------------------|\n"
+                " | %-10s | %18e s | %18e s |\n"
+                " |------------|----------------------|----------------------|\n"
+                " | %-10s | %18e s | %18e s |\n"
+                " |------------|----------------------|----------------------|\n",
+                    "Node Avg",
+                    nsecs_to_secs(node_record->avg_useful_time),
+                    nsecs_to_secs(node_record->avg_mpi_time),
+                    "Node Max",
+                    nsecs_to_secs(node_record->max_useful_time),
+                    nsecs_to_secs(node_record->max_mpi_time));
+        }
+        node_record = node_record->next;
+    }
 }
 
 static void node_finalize(void) {
+    node_record_t *node_record = node_list_head;
+    while (node_record != NULL) {
+        node_record_t *next = node_record->next;
+        free(node_record->process);
+        free(node_record);
+        node_record = next;
+    }
+    node_list_head = NULL;
+    node_list_tail = NULL;
 }
 
 
@@ -475,7 +679,8 @@ void talp_output_finalize(const char *output_file) {
         process_print();
     } else {
         /* Do not open file if process has no data */
-        if (pop_metrics_num_records + pop_raw_num_records == 0) return;
+        if (pop_metrics_num_records + pop_raw_num_records == 0
+                && node_list_head == NULL) return;
 
         /* Check file extension */
         typedef enum Extension {
