@@ -39,6 +39,7 @@ void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *
 const char* mu_to_str(const cpu_set_t *cpu_set);
 void mu_parse_mask(const char *str, cpu_set_t *mask);
 bool equivalent_masks(const char *str1, const char *str2);
+void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen);
 int mu_cmp_cpuids_by_ownership(const void *cpuid1, const void *cpuid2, void *mask);
 int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topology);
 

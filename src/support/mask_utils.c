@@ -513,6 +513,68 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
 }
 #pragma GCC visibility pop
 
+/* Equivalent to mu_to_str, but generate quoted string in str up to namelen-1 bytes */
+void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen) {
+    if (namelen < 2)
+        return;
+
+    int sys_size = get_sys_size();
+    char *b = str;
+    *(b++) = '"';
+    size_t bytes = 1;
+    bool entry_made = false;
+    int i;
+    for (i=0; i<sys_size; ++i) {
+        if (CPU_ISSET(i, mask)) {
+
+            /* Find range size */
+            int run = 0;
+            int j;
+            for (j=i+1; j<sys_size; ++j) {
+                if (CPU_ISSET(j, mask)) ++run;
+                else break;
+            }
+
+            /* Add ',' separator for subsequent entries */
+            if (entry_made) {
+                if (bytes+1 < namelen) {
+                    *(b++) = ',';
+                    ++bytes;
+                }
+            } else {
+                entry_made = true;
+            }
+
+            /* Write element, pair or range */
+            if (run == 0) {
+                int len = snprintf(NULL, 0, "%d", i);
+                if (bytes+len < namelen) {
+                    b += sprintf(b, "%d", i);
+                    bytes += len;
+                }
+            } else if (run == 1) {
+                int len = snprintf(NULL, 0, "%d,%d", i, i+1);
+                if (bytes+len < namelen) {
+                    b += sprintf(b, "%d,%d", i, i+1);
+                    bytes += len;
+                    ++i;
+                }
+            } else {
+                int len = snprintf(NULL, 0, "%d-%d", i, i+run);
+                if (bytes+len < namelen) {
+                    b += sprintf(b, "%d-%d", i, i+run);
+                    bytes += len;
+                    i += run;
+                }
+            }
+        }
+    }
+    if (bytes+1 < namelen) {
+        *(b++) = '"';
+        ++bytes;
+    }
+    *b = '\0';
+}
 
 bool equivalent_masks(const char *str1, const char *str2) {
     cpu_set_t mask1, mask2;

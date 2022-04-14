@@ -25,6 +25,7 @@
 
 #include <sched.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #define MAX_SIZE 16
@@ -105,6 +106,16 @@ int main( int argc, char **argv ) {
     assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 1, 1}) == 0 );
     mu_substract(&mask3, &mask1, &mask1);
     assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0}) == 0 );
+
+    assert( strcmp(mu_to_str(&mask1), "[0,1]") == 0 );
+    assert( strcmp(mu_to_str(&mask2), "[0-3]") == 0 );
+
+    enum { BUFFER_LEN = 16 };
+    char buffer[BUFFER_LEN];
+    mu_get_quoted_mask(&mask1, buffer, BUFFER_LEN);
+    assert( strcmp(buffer, "\"0,1\"") == 0 );
+    mu_get_quoted_mask(&mask2, buffer, BUFFER_LEN);
+    assert( strcmp(buffer, "\"0-3\"") == 0 );
 
     mu_finalize();
     return 0;
