@@ -86,7 +86,6 @@ typedef enum TalpSummaryType {
     SUMMARY_PROCESS     = 1 << 3,
     SUMMARY_ITERATION   = 1 << 4,
     SUMMARY_OMP         = 1 << 5,
-    SUMMARY_REGIONS     = 1 << 6,
 } talp_summary_t;
 
 typedef enum PolicyType {

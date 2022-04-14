@@ -165,7 +165,6 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     verbose(VB_TALP, "Finalizing TALP module");
 
     if (spd->options.talp_summary & SUMMARY_PROCESS
-        || spd->options.talp_summary & SUMMARY_REGIONS
         || spd->options.talp_summary & SUMMARY_POP_METRICS
         || spd->options.talp_summary & SUMMARY_POP_RAW) {
         monitoring_regions_report_all(spd);
@@ -841,14 +840,11 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
 }
 
 static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
-    /* Report MPI monitor */
+    /* Report MPI monitor and custom regions */
     if (spd->options.talp_summary & SUMMARY_PROCESS) {
         talp_info_t *talp_info = spd->talp_info;
         monitoring_region_report(spd, &talp_info->mpi_monitor);
-    }
 
-    /* Report custom regions */
-    if (spd->options.talp_summary & SUMMARY_REGIONS) {
         int i;
         for (i=0; i<nregions; ++i) {
             monitoring_region_report(spd, regions[i]);
