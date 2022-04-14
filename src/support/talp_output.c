@@ -569,6 +569,32 @@ static void node_to_xml(FILE *out_file) {
 }
 
 static void node_to_csv(FILE *out_file) {
+    if (node_list_head == NULL)
+        return;
+
+    /* Print header */
+    fprintf(out_file,
+            "NodeId,ProcessId,ProcessUsefulTime,ProcessMPITime,NodeAvgUsefulTime"
+            ",NodeAvgMPITime,NodeMaxUsefulTime,NodeMaxMPITime\n");
+
+    node_record_t *node_record = node_list_head;
+    while (node_record != NULL) {
+        int i;
+        for (i = 0; i < node_record->nelems; ++i) {
+            fprintf(out_file,
+                    "%d,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRId64"\n",
+                    node_record->node_id,
+                    node_record->process[i].pid,
+                    node_record->process[i].useful_time,
+                    node_record->process[i].mpi_time,
+                    node_record->avg_useful_time,
+                    node_record->avg_mpi_time,
+                    node_record->max_useful_time,
+                    node_record->max_mpi_time);
+
+        }
+        node_record = node_record->next;
+    }
 }
 
 static void node_to_txt(FILE *out_file) {
