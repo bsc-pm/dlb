@@ -44,6 +44,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <limits.h>
 
 
 /* Talp info per spd */
@@ -210,7 +211,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         }
 
         /* Gather data among MPIs if app summary is enabled  */
-        if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW)) {
+        if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW | SUMMARY_PROCESS)) {
             monitoring_regions_gather_app_data_all(spd);
         }
     }
@@ -459,11 +460,11 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 
         /* Add records */
         if (_mpi_rank == 0) {
-            int i;
-            for (i=0; i<_num_nodes; ++i) {
-                node_summary = recvbuf + node_summary_size*i;
+            int node_id;
+            for (node_id=0; node_id<_num_nodes; ++node_id) {
+                node_summary = recvbuf + node_summary_size*node_id;
                 talp_output_record_node(
-                        i,  /* _node_id */
+                        node_id,
                         node_summary->nelems,
                         node_summary->total_useful_time / node_summary->nelems,
                         node_summary->total_mpi_time / node_summary->nelems,
@@ -707,32 +708,110 @@ static void monitoring_region_gather_app_data(const subprocess_descriptor_t *spd
     int total_cpus;
     int total_nodes;
 
-    MPI_Datatype mpi_int64;
+    MPI_Datatype mpi_int64_type;
 #if MPI_VERSION >= 3
-    mpi_int64 = MPI_INT64_T;
+    mpi_int64_type = MPI_INT64_T;
 #else
-    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64);
+    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
 #endif
+
+    /* Note: we may be sending monitors info twice for PROCESS and POP reports
+     * but reducing by MPI communicators makes the implementation much easier
+     * and we don't expect the PROCESS summary to be very common */
+
+    /* Collect all monitors from all processes and record them */
+    if (spd->options.talp_summary & SUMMARY_PROCESS) {
+        /* Each process creates a serialized monitor to send to Rank 0 */
+        enum { CPUSET_MAX = 64 };
+        typedef struct serialized_monitor_t {
+            pid_t   pid;
+            int     num_measurements;
+            char    hostname[HOST_NAME_MAX];
+            char    cpuset[CPUSET_MAX];
+            char    cpuset_quoted[CPUSET_MAX];
+            int64_t elapsed_time;
+            int64_t elapsed_computation_time;
+            int64_t accumulated_MPI_time;
+            int64_t accumulated_computation_time;
+        } serialized_monitor_t;
+
+        serialized_monitor_t serialized_monitor = (const serialized_monitor_t) {
+            .pid = spd->id,
+            .num_measurements = monitor->num_measurements,
+            .elapsed_time = monitor->elapsed_time,
+            .elapsed_computation_time = monitor->elapsed_computation_time,
+            .accumulated_MPI_time = monitor->accumulated_MPI_time,
+            .accumulated_computation_time = monitor->accumulated_computation_time,
+        };
+
+       gethostname(serialized_monitor.hostname, HOST_NAME_MAX);
+       snprintf(serialized_monitor.cpuset, CPUSET_MAX, "%s", mu_to_str(&spd->process_mask));
+       mu_get_quoted_mask(&spd->process_mask, serialized_monitor.cpuset_quoted, CPUSET_MAX);
+
+        /* MPI struct type: serialized_monitor_t */
+        MPI_Datatype mpi_serialized_monitor_type;
+        {
+            int count = 3;
+            int blocklengths[] = {2, HOST_NAME_MAX+CPUSET_MAX*2, 4};
+            MPI_Aint displacements[] = {
+                offsetof(serialized_monitor_t, pid),
+                offsetof(serialized_monitor_t, hostname),
+                offsetof(serialized_monitor_t, elapsed_time)};
+            MPI_Datatype types[] = {MPI_INT, MPI_CHAR, mpi_int64_type};
+            MPI_Type_create_struct(count, blocklengths, displacements,
+                    types, &mpi_serialized_monitor_type);
+            MPI_Type_commit(&mpi_serialized_monitor_type);
+        }
+
+        /* Gather data */
+        serialized_monitor_t *recvbuf = NULL;
+        if (_mpi_rank == 0) {
+            recvbuf = malloc(_mpi_size * sizeof(serialized_monitor_t));
+        }
+        MPI_Gather(&serialized_monitor, 1, mpi_serialized_monitor_type,
+                recvbuf, 1, mpi_serialized_monitor_type,
+                0, MPI_COMM_WORLD);
+
+        /* Add records */
+        if (_mpi_rank == 0) {
+            int rank;
+            for (rank=0; rank<_mpi_size; ++rank) {
+                talp_output_record_process(
+                        monitor->name,
+                        rank,
+                        recvbuf[rank].pid,
+                        recvbuf[rank].num_measurements,
+                        recvbuf[rank].hostname,
+                        recvbuf[rank].cpuset,
+                        recvbuf[rank].cpuset_quoted,
+                        recvbuf[rank].elapsed_time,
+                        recvbuf[rank].elapsed_computation_time,
+                        recvbuf[rank].accumulated_MPI_time,
+                        recvbuf[rank].accumulated_computation_time);
+            }
+            free(recvbuf);
+        }
+    }
 
     /* Obtain the maximum elapsed time */
     MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
-            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
+            1, mpi_int64_type, MPI_MAX, 0, MPI_COMM_WORLD);
 
     /* Obtain the maximum elapsed useful time */
     MPI_Reduce(&monitor->elapsed_computation_time, &elapsed_useful,
-            1, mpi_int64, MPI_MAX, 0, MPI_COMM_WORLD);
+            1, mpi_int64_type, MPI_MAX, 0, MPI_COMM_WORLD);
 
     /* Obtain the sum of all computation time */
     MPI_Reduce(&monitor->accumulated_computation_time, &app_sum_useful,
-            1, mpi_int64, MPI_SUM, 0, MPI_COMM_WORLD);
+            1, mpi_int64_type, MPI_SUM, 0, MPI_COMM_WORLD);
 
     /* Obtain the sum of computation time of the most loaded node */
     int64_t local_node_useful = 0;
     MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
-            1, mpi_int64, MPI_SUM, 0, getNodeComm());
+            1, mpi_int64_type, MPI_SUM, 0, getNodeComm());
     if (_process_id == 0) {
         MPI_Reduce(&local_node_useful, &node_sum_useful,
-                1, mpi_int64, MPI_MAX, 0, getInterNodeComm());
+                1, mpi_int64_type, MPI_MAX, 0, getInterNodeComm());
     }
 
     /* Obtain the total number of CPUs used in all processes */
@@ -840,8 +919,12 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
 }
 
 static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
+#ifndef MPI_LIB
     /* Report MPI monitor and custom regions */
     if (spd->options.talp_summary & SUMMARY_PROCESS) {
+        if (spd->options.talp_output_file != NULL) {
+            warning("Process' regions to file not supported in non MPI library");
+        }
         talp_info_t *talp_info = spd->talp_info;
         monitoring_region_report(spd, &talp_info->mpi_monitor);
 
@@ -850,6 +933,7 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
             monitoring_region_report(spd, regions[i]);
         }
     }
+#endif
 
     /* Report POP Metrics summary */
     if (spd->options.talp_summary & SUMMARY_POP_METRICS) {

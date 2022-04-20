@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <pthread.h>
 
 /*********************************************************************************/
@@ -355,9 +356,9 @@ static void pop_to_csv(FILE *out_file) {
     /* Print header */
     fprintf(out_file, "Name%s%s\n",
             pop_metrics_num_records == 0 ? "" :
-            ",parallelEfficiency,communicationEfficiency,loadBalance,lbIn,lbOut",
+            ",ParallelEfficiency,CommunicationEfficiency,LoadBalance,LbIn,LbOut",
             pop_raw_num_records == 0 ? "" :
-            ",numCpus,numNodes,elapsedTime,elapsedUseful,usefulCpuTotal,usefulCpuNode"
+            ",NumCpus,NumNodes,ElapsedTime,ElapsedUseful,UsefulCpuTotal,UsefulCpuNode"
            );
 
     int i;
@@ -650,23 +651,278 @@ static void node_finalize(void) {
 /*********************************************************************************/
 /*    Process                                                                    */
 /*********************************************************************************/
+enum { CPUSET_MAX = 64 };
+typedef struct ProcessRecord {
+    int     rank;
+    pid_t   pid;
+    int     num_measurements;
+    char    hostname[HOST_NAME_MAX];
+    char    cpuset[CPUSET_MAX];
+    char    cpuset_quoted[CPUSET_MAX];
+    int64_t elapsed_time;
+    int64_t elapsed_useful_time;
+    int64_t accumulated_MPI_time;
+    int64_t accumulated_useful_time;
+    struct ProcessRecord *next;
+} process_record_t;
+
+typedef struct MonitorList {
+    char monitor_name[MONITOR_MAX_KEY_LEN];
+    process_record_t *process_list_head;
+    process_record_t *process_list_tail;
+    struct MonitorList *next;
+} monitor_list_t;
+
+static monitor_list_t *monitor_list_head = NULL;
+static monitor_list_t *monitor_list_tail = NULL;
+
+void talp_output_record_process(const char *monitor_name, int rank, pid_t pid,
+        int num_measurements, const char* hostname, const char *cpuset,
+        const char *cpuset_quoted, int64_t elapsed_time, int64_t elapsed_useful_time,
+        int64_t accumulated_MPI_time, int64_t accumulated_useful_time) {
+
+    /* Find monitor list or allocate new one */
+    monitor_list_t *monitor_list = monitor_list_head;
+    while(monitor_list != NULL) {
+        if (strcmp(monitor_list->monitor_name, monitor_name) == 0)
+            break;
+        monitor_list = monitor_list->next;
+    }
+
+    if (monitor_list == NULL) {
+        /* Allocate new monitor */
+        monitor_list = malloc(sizeof(monitor_list_t));
+        *monitor_list = (const monitor_list_t) {
+            .process_list_head = NULL,
+            .process_list_tail = NULL,
+        };
+        snprintf(monitor_list->monitor_name, MONITOR_MAX_KEY_LEN, "%s", monitor_name);
+
+        /* Insert to list */
+        if (monitor_list_head == NULL) {
+            monitor_list_head = monitor_list;
+        } else {
+            monitor_list_tail->next = monitor_list;
+        }
+        monitor_list_tail = monitor_list;
+    }
+
+    /* Allocate new process record */
+    process_record_t *process_record = malloc(sizeof(process_record_t));
+    *process_record = (const process_record_t) {
+        .rank = rank,
+        .pid = pid,
+        .num_measurements = num_measurements,
+        .elapsed_time = elapsed_time,
+        .elapsed_useful_time = elapsed_useful_time,
+        .accumulated_MPI_time = accumulated_MPI_time,
+        .accumulated_useful_time = accumulated_useful_time,
+        .next = NULL,
+    };
+    snprintf(process_record->hostname, HOST_NAME_MAX, "%s", hostname);
+    snprintf(process_record->cpuset, CPUSET_MAX, "%s", cpuset);
+    snprintf(process_record->cpuset_quoted, CPUSET_MAX, "%s", cpuset_quoted);
+
+    /* Add record to monitor list */
+    if (monitor_list->process_list_head == NULL) {
+        monitor_list->process_list_head = process_record;
+    } else {
+        monitor_list->process_list_tail->next = process_record;
+    }
+    monitor_list->process_list_tail = process_record;
+}
 
 static void process_print(void) {
+    monitor_list_t *monitor_list = monitor_list_head;
+    while (monitor_list != NULL) {
+        process_record_t *process_record = monitor_list->process_list_head;
+        while (process_record != NULL) {
+            info("########### Monitoring Region Summary ###########");
+            info("### Name:                       %s", monitor_list->monitor_name);
+            info("### Process:                    %d (%s)", process_record->pid, process_record->hostname);
+            info("### Rank:                       %d", process_record->rank);
+            info("### CpuSet:                     %s", process_record->cpuset);
+            info("### Elapsed time :              %.9g seconds",
+                    nsecs_to_secs(process_record->elapsed_time));
+            info("### Elapsed useful time :       %.9g seconds",
+                    nsecs_to_secs(process_record->elapsed_useful_time));
+            info("### MPI time :                  %.9g seconds",
+                    nsecs_to_secs(process_record->accumulated_MPI_time));
+            info("### Useful time :               %.9g seconds",
+                    nsecs_to_secs(process_record->accumulated_useful_time));
+            process_record = process_record->next;
+        }
+        monitor_list = monitor_list->next;;
+    }
 }
 
 static void process_to_json(FILE *out_file) {
+    if (monitor_list_head == NULL)
+        return;
+
+    if (pop_metrics_num_records + pop_raw_num_records > 0
+            || node_list_head != NULL) {
+        fprintf(out_file,",\n");
+    }
+    fprintf(out_file,
+                "  \"region\": [\n");
+    monitor_list_t *monitor_list = monitor_list_head;
+    while (monitor_list != NULL) {
+        fprintf(out_file,
+                "    {\n"
+                "      \"name\": \"%s\",\n"
+                "      \"process\": [\n",
+                monitor_list->monitor_name);
+        process_record_t *process_record = monitor_list->process_list_head;
+        while (process_record != NULL) {
+            fprintf(out_file,
+                "        {\n"
+                "          \"rank\": %d,\n"
+                "          \"pid\": %d,\n"
+                "          \"hostname\": \"%s\",\n"
+                "          \"cpuset\": %s,\n"
+                "          \"numMeasurements\": %d,\n"
+                "          \"elapsedTime\": %"PRId64",\n"
+                "          \"elapsedUseful\": %"PRId64",\n"
+                "          \"mpiTime\": %"PRId64",\n"
+                "          \"usefulTime\": %"PRId64"\n"
+                "        }%s\n",
+                process_record->rank,
+                process_record->pid,
+                process_record->hostname,
+                process_record->cpuset_quoted,
+                process_record->num_measurements,
+                process_record->elapsed_time,
+                process_record->elapsed_useful_time,
+                process_record->accumulated_MPI_time,
+                process_record->accumulated_useful_time,
+                process_record->next != NULL ? "," : "");
+            process_record = process_record->next;
+        }
+        fprintf(out_file,
+                "      ]\n"
+                "    }%s\n",
+                monitor_list->next != NULL ? "," : "");
+        monitor_list = monitor_list->next;
+    }
+    fprintf(out_file,
+                "  ]");         /* no eol */
 }
 
 static void process_to_xml(FILE *out_file) {
+    monitor_list_t *monitor_list = monitor_list_head;
+    while (monitor_list != NULL) {
+        fprintf(out_file,
+                "  <region>\n"
+                "    <name>%s</name>\n",
+                monitor_list->monitor_name);
+        process_record_t *process_record = monitor_list->process_list_head;
+        while (process_record != NULL) {
+            fprintf(out_file,
+                "    <process>\n"
+                "      <rank>%d</rank>\n"
+                "      <pid>%d</pid>\n"
+                "      <hostname>%s</hostname>\n"
+                "      <cpuset>%s</cpuset>\n"
+                "      <numMeasurements>%d</numMeasurements>\n"
+                "      <elapsedTime>%"PRId64"</elapsedTime>\n"
+                "      <elapsedUseful>%"PRId64"</elapsedUseful>\n"
+                "      <mpiTime>%"PRId64"</mpiTime>\n"
+                "      <usefulTime>%"PRId64"</usefulTime>\n"
+                "    </process>\n",
+                process_record->rank,
+                process_record->pid,
+                process_record->hostname,
+                process_record->cpuset_quoted,
+                process_record->num_measurements,
+                process_record->elapsed_time,
+                process_record->elapsed_useful_time,
+                process_record->accumulated_MPI_time,
+                process_record->accumulated_useful_time);
+            process_record = process_record->next;
+        }
+        fprintf(out_file,
+                "  </region>\n");
+        monitor_list = monitor_list->next;;
+    }
 }
 
 static void process_to_csv(FILE *out_file) {
+    if (monitor_list_head == NULL)
+        return;
+
+    /* Print header */
+    fprintf(out_file,
+            "Region,Rank,PID,Hostname,CpuSet,NumMeasurements"
+            ",ElapsedTime,ElapsedUsefulTime,MPITime,UsefulTime\n");
+
+    monitor_list_t *monitor_list = monitor_list_head;
+    while (monitor_list != NULL) {
+        process_record_t *process_record = monitor_list->process_list_head;
+        while (process_record != NULL) {
+            fprintf(out_file,
+                    "%s,%d,%d,%s,%s,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64"\n",
+                    monitor_list->monitor_name,
+                    process_record->rank,
+                    process_record->pid,
+                    process_record->hostname,
+                    process_record->cpuset_quoted,
+                    process_record->num_measurements,
+                    process_record->elapsed_time,
+                    process_record->elapsed_useful_time,
+                    process_record->accumulated_MPI_time,
+                    process_record->accumulated_useful_time);
+            process_record = process_record->next;
+        }
+        monitor_list = monitor_list->next;;
+    }
 }
 
 static void process_to_txt(FILE *out_file) {
+    monitor_list_t *monitor_list = monitor_list_head;
+    while (monitor_list != NULL) {
+        process_record_t *process_record = monitor_list->process_list_head;
+        while (process_record != NULL) {
+            fprintf(out_file,
+                    "########### Monitoring Region Summary ###########\n"
+                    "### Name:                      %s\n"
+                    "### Process:                   %d (%s)\n"
+                    "### Rank:                      %d\n"
+                    "### CpuSet:                    %s\n"
+                    "### Elapsed time :             %.9g seconds\n"
+                    "### Elapsed useful time :      %.9g seconds\n"
+                    "### MPI time :                 %.9g seconds\n"
+                    "### Useful time :              %.9g seconds\n",
+                    monitor_list->monitor_name,
+                    process_record->pid, process_record->hostname,
+                    process_record->rank,
+                    process_record->cpuset,
+                    nsecs_to_secs(process_record->elapsed_time),
+                    nsecs_to_secs(process_record->elapsed_useful_time),
+                    nsecs_to_secs(process_record->accumulated_MPI_time),
+                    nsecs_to_secs(process_record->accumulated_useful_time));
+
+            process_record = process_record->next;
+        }
+        monitor_list = monitor_list->next;;
+    }
 }
 
 static void process_finalize(void) {
+    monitor_list_t *monitor_list = monitor_list_head;
+    while (monitor_list != NULL) {
+        monitor_list_t *next_monitor_list = monitor_list->next;
+        process_record_t *process_record = monitor_list->process_list_head;
+        while (process_record != NULL) {
+            process_record_t *next_process = process_record->next;
+            free(process_record);
+            process_record = next_process;
+        }
+        free(monitor_list);
+        monitor_list = next_monitor_list;
+    }
+    monitor_list_head = NULL;
+    monitor_list_tail = NULL;
 }
 
 
@@ -706,7 +962,8 @@ void talp_output_finalize(const char *output_file) {
     } else {
         /* Do not open file if process has no data */
         if (pop_metrics_num_records + pop_raw_num_records == 0
-                && node_list_head == NULL) return;
+                && node_list_head == NULL
+                && monitor_list_head == NULL) return;
 
         /* Check file extension */
         typedef enum Extension {

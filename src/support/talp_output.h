@@ -21,6 +21,8 @@
 #define TALP_OUTPUT_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include <unistd.h>
 
 void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
         float parallel_efficiency, float communication_efficiency,
@@ -32,6 +34,11 @@ void talp_output_record_pop_raw(const char *name, int P, int N, int64_t elapsed_
 void talp_output_record_node(int node_id, int nelems, int64_t avg_useful_time,
         int64_t avg_mpi_time, int64_t max_useful_time, int64_t max_mpi_time,
         void * process_info);
+
+void talp_output_record_process(const char *monitor_name, int rank, pid_t pid,
+        int num_measurements, const char* hostname, const char *cpuset,
+        const char *cpuset_quoted, int64_t elapsed_time, int64_t elapsed_useful_time,
+        int64_t accumulated_MPI_time, int64_t accumulated_useful_time);
 
 void talp_output_finalize(const char *output_file);
 
