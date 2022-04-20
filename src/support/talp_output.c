@@ -398,11 +398,6 @@ static void pop_to_csv(FILE *out_file) {
 /*********************************************************************************/
 /*    Node                                                                       */
 /*********************************************************************************/
-typedef struct ProcessInNodeRecord {
-    pid_t pid;
-    int64_t mpi_time;
-    int64_t useful_time;
-} process_in_node_record_t;
 typedef struct NodeRecord {
     int node_id;
     int nelems;
@@ -418,7 +413,7 @@ static node_record_t *node_list_tail = NULL;
 
 void talp_output_record_node(int node_id, int nelems, int64_t avg_useful_time,
         int64_t avg_mpi_time, int64_t max_useful_time, int64_t max_mpi_time,
-        void * process_info) {
+        process_in_node_record_t *process_info) {
 
     /* Allocate processes record and memcpy the entire array */
     size_t process_record_size = sizeof(process_in_node_record_t) * nelems;

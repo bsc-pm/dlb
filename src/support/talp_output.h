@@ -24,6 +24,12 @@
 #include <stddef.h>
 #include <unistd.h>
 
+typedef struct ProcessInNodeRecord {
+    pid_t pid;
+    int64_t mpi_time;
+    int64_t useful_time;
+} process_in_node_record_t;
+
 void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
         float parallel_efficiency, float communication_efficiency,
         float lb, float lb_in, float lb_out);
@@ -33,7 +39,7 @@ void talp_output_record_pop_raw(const char *name, int P, int N, int64_t elapsed_
 
 void talp_output_record_node(int node_id, int nelems, int64_t avg_useful_time,
         int64_t avg_mpi_time, int64_t max_useful_time, int64_t max_mpi_time,
-        void * process_info);
+        process_in_node_record_t *process_info);
 
 void talp_output_record_process(const char *monitor_name, int rank, pid_t pid,
         int num_measurements, const char* hostname, const char *cpuset,
