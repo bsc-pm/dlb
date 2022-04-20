@@ -14,6 +14,7 @@ tests = {
     'mytime_00'           : {},
     'options_00'          : {},
     'queues_00'           : {},
+    'talp_output_00'      : {},
     'types_00'            : {},
   },
   '01_pm' : {
