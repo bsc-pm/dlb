@@ -351,15 +351,21 @@ bool equivalent_debug_opts(const char *str1, const char *str2) {
 
 /* talp_summary_t */
 static const talp_summary_t talp_summary_values[] =
-    {SUMMARY_NONE, SUMMARY_POP_METRICS, SUMMARY_NODE, SUMMARY_PROCESS,
-        SUMMARY_ITERATION, SUMMARY_OMP, SUMMARY_REGIONS, SUMMARY_POP_RAW};
+    {SUMMARY_NONE, SUMMARY_ALL, SUMMARY_POP_METRICS, SUMMARY_POP_RAW, SUMMARY_NODE,
+        SUMMARY_PROCESS, SUMMARY_ITERATION, SUMMARY_OMP};
 static const char* const talp_summary_choices[] =
-    {"none", "pop-metrics", "node", "process", "iteration", "omp", "regions", "pop-raw"};
+    {"none", "all", "pop-metrics", "pop-raw", "node", "process", "iteration", "omp"};
 static const char talp_summary_choices_str[] =
-    "none:pop-metrics:node:process:iteration:omp:regions:pop-raw";
+    "none:all:pop-metrics:pop-raw:node:process:iteration:omp";
 enum { talp_summary_nelems = sizeof(talp_summary_values) / sizeof(talp_summary_values[0]) };
 
 int parse_talp_summary(const char *str, talp_summary_t *value) {
+    /* particular case: '--talp-summary/--talp-summary=yes' enables only POP metrics */
+    if (strcmp(str, "yes") == 0) {
+        *value = SUMMARY_POP_METRICS;
+        return DLB_SUCCESS;
+    }
+
     *value = SUMMARY_NONE;
     int i;
     for (i=0; i<talp_summary_nelems; ++i) {
@@ -377,10 +383,18 @@ int parse_talp_summary(const char *str, talp_summary_t *value) {
 }
 
 const char* talp_summary_tostr(talp_summary_t value) {
+    // particular cases
+    if (value == SUMMARY_NONE) {
+        return "none";
+    }
+    if (value == SUMMARY_ALL) {
+        return "all";
+    }
+
     static char str[sizeof(talp_summary_choices_str)] = "";
     char *p = str;
     int i;
-    for (i=0; i<talp_summary_nelems; ++i) {
+    for (i=2; i<talp_summary_nelems; ++i) {
         if (value & talp_summary_values[i]) {
             if (p!=str) {
                 *p = ':';

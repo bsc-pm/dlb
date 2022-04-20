@@ -159,6 +159,8 @@ COMMON_SRCS = \
 	src/support/queues.c                    \
 	src/support/queues.h                    \
 	src/support/small_array.h               \
+	src/support/talp_output.c               \
+	src/support/talp_output.h               \
 	src/support/types.c                     \
 	src/support/types.h                     \
 	src/LB_comm/shmem.c                     \

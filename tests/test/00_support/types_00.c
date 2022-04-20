@@ -135,6 +135,12 @@ int main(int argc, char *argv[]) {
     talp_summary_t summary;
     err = parse_talp_summary("", &summary);         assert(!err && summary==SUMMARY_NONE);
     err = parse_talp_summary("node", &summary);     assert(!err && summary==SUMMARY_NODE);
+    err = parse_talp_summary("yes", &summary);      assert(!err && summary==SUMMARY_POP_METRICS);
+    err = parse_talp_summary("all", &summary);      assert(!err && summary==SUMMARY_ALL);
+    err = parse_talp_summary("pop", &summary);      assert(!err && summary==SUMMARY_NONE);
+    assert( strcmp(talp_summary_tostr(SUMMARY_NONE), "none") == 0 );
+    assert( strcmp(talp_summary_tostr(SUMMARY_ALL), "all") == 0 );
+    assert( strcmp(talp_summary_tostr(SUMMARY_POP_METRICS), "pop-metrics") == 0 );
     assert(  equivalent_talp_summary("omp:pop-raw", "pop-raw:omp") );
     assert( !equivalent_talp_summary("pop-metrics", "pop-raw") );
 

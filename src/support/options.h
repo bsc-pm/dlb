@@ -45,25 +45,27 @@ typedef struct Options {
     /* lewi */
     bool                lewi_keep_cpu_on_blocking_call;
     bool                lewi_respect_cpuset;
+    bool                lewi_greedy;
+    bool                lewi_warmup;
     mpi_set_t           lewi_mpi_calls;
     priority_t          lewi_affinity;
     ompt_opts_t         lewi_ompt;
-    bool                lewi_greedy;
-    bool                lewi_warmup;
     int                 lewi_max_parallelism;
     /* misc */
     char                shm_key[MAX_OPTION_LENGTH];
     pid_t               preinit_pid;
     debug_opts_t        debug_opts;
-    /* statistics */
+    /* talp */
     bool                talp;
-    talp_summary_t      talp_summary;
     bool                talp_external_profiler;
+    talp_summary_t      talp_summary;
+    char                *talp_output_file;
     /* barrier */
     int                 barrier_id;
 } options_t;
 
 void options_init(options_t *options, const char *dlb_args);
+void options_finalize(options_t *options);
 int options_set_variable(options_t *options, const char *var_name, const char *value);
 int options_get_variable(const options_t *options, const char *var_name, char *value);
 void options_print_variables(const options_t *options, bool print_extended);

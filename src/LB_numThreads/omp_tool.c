@@ -231,6 +231,7 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
         if (!err) {
             verbose(VB_OMPT, "OMPT callbacks succesfully registered");
             omp_thread_manager__init(&options);
+            options_finalize(&options);
             return 1;
         }
 
@@ -241,6 +242,8 @@ static int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num
 
         warning("DLB could not register itself as OpenMP tool");
     }
+
+    options_finalize(&options);
 
     return 0;
 }

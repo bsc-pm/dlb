@@ -48,6 +48,7 @@ int DLB_DROM_Attach(void) {
         options_init(&options, NULL);
         debug_init(&options);
         shm_key = options.shm_key;
+        options_finalize(&options);
     }
     shmem_cpuinfo_ext__init(shm_key);
     shmem_procinfo_ext__init(shm_key);

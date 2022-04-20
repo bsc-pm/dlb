@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,32 +17,35 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef MASK_UTILS_H
-#define MASK_UTILS_H
+#ifndef TALP_OUTPUT_H
+#define TALP_OUTPUT_H
 
-#include "support/types.h"
-#include <sched.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <unistd.h>
 
-void mu_init(void);
-void mu_finalize(void);
-int  mu_get_system_size(void);
-void mu_get_system_mask(cpu_set_t *mask);
-void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset);
-void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset);
-bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset);
-bool mu_is_superset(const cpu_set_t *superset, const cpu_set_t *subset);
-bool mu_is_proper_subset(const cpu_set_t *subset, const cpu_set_t *superset);
-bool mu_is_proper_superset(const cpu_set_t *superset, const cpu_set_t *subset);
-bool mu_intersects(const cpu_set_t *mask1, const cpu_set_t *mask2);
-void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend);
+typedef struct ProcessInNodeRecord {
+    pid_t pid;
+    int64_t mpi_time;
+    int64_t useful_time;
+} process_in_node_record_t;
 
-const char* mu_to_str(const cpu_set_t *cpu_set);
-void mu_parse_mask(const char *str, cpu_set_t *mask);
-bool equivalent_masks(const char *str1, const char *str2);
-void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen);
-int mu_cmp_cpuids_by_ownership(const void *cpuid1, const void *cpuid2, void *mask);
-int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topology);
+void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
+        float parallel_efficiency, float communication_efficiency,
+        float lb, float lb_in, float lb_out);
 
-void mu_testing_set_sys_size(int size);
+void talp_output_record_pop_raw(const char *name, int P, int N, int64_t elapsed_time,
+        int64_t elapsed_useful, int64_t app_sum_useful, int64_t node_sum_useful);
 
-#endif /* MASK_UTILS_H */
+void talp_output_record_node(int node_id, int nelems, int64_t avg_useful_time,
+        int64_t avg_mpi_time, int64_t max_useful_time, int64_t max_mpi_time,
+        process_in_node_record_t *process_info);
+
+void talp_output_record_process(const char *monitor_name, int rank, pid_t pid,
+        int num_measurements, const char* hostname, const char *cpuset,
+        const char *cpuset_quoted, int64_t elapsed_time, int64_t elapsed_useful_time,
+        int64_t accumulated_MPI_time, int64_t accumulated_useful_time);
+
+void talp_output_finalize(const char *output_file);
+
+#endif /* TALP_OUTPUT_H */

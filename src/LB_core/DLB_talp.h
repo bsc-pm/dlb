@@ -22,6 +22,8 @@
 
 #include <sched.h>
 
+enum { MONITOR_MAX_KEY_LEN = 128 };
+
 struct SubProcessDescriptor;
 struct dlb_monitor_t;
 

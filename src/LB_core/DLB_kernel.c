@@ -189,6 +189,7 @@ int Finish(subprocess_descriptor_t *spd) {
     timer_finalize();
     instrument_event(RUNTIME_EVENT, EVENT_FINALIZE, EVENT_END);
     instrument_finalize();
+    options_finalize(&spd->options);
     return error;
 }
 
@@ -717,6 +718,10 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
     shmem_cpuinfo__print_info(spd->options.shm_key, num_columns, print_flags);
     shmem_procinfo__print_info(spd->options.shm_key);
     shmem_barrier__print_info(spd->options.shm_key);
+
+    if (!spd->dlb_initialized) {
+        options_finalize(&spd->options);
+    }
 
     return DLB_SUCCESS;
 }

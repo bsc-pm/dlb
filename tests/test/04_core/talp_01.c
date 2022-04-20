@@ -161,7 +161,6 @@ int main(int argc, char *argv[]) {
 
     spd.options.talp_summary |= SUMMARY_NODE;
     spd.options.talp_summary |= SUMMARY_PROCESS;
-    spd.options.talp_summary |= SUMMARY_REGIONS;
     talp_finalize(&spd);
     assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
             == DLB_SUCCESS );
