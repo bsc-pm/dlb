@@ -368,6 +368,23 @@ int main( int argc, char **argv ) {
         assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     }
 
+    // Inheritance with an empty mask
+    {
+        cpu_set_t mask;
+
+        // parent process (p1) pre-initializes [0]
+        mu_parse_mask("0", &p1_mask);
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+
+        // p2 wants to register with an empty mask
+        CPU_ZERO(&p2_mask);
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( CPU_EQUAL(&p1_mask, &mask) );
+
+        // finalize
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
     // Finalize external
     assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 

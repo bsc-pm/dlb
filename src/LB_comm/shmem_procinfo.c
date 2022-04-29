@@ -324,7 +324,9 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
                 : &preinit_process->current_process_mask;
 
             // A: Simple inheritance, mask is not provided, or masks are equal
-            if (process_mask == NULL || CPU_EQUAL(process_mask, preinit_mask)) {
+            if (process_mask == NULL
+                    || CPU_COUNT(process_mask) == 0
+                    || CPU_EQUAL(process_mask, preinit_mask)) {
                 process = preinit_process;
                 process->pid = pid;
                 process->preregistered = false;
