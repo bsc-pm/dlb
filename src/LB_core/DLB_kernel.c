@@ -165,6 +165,8 @@ int Finish(subprocess_descriptor_t *spd) {
     instrument_event(RUNTIME_EVENT, EVENT_FINALIZE, EVENT_BEGIN);
     spd->dlb_enabled = false;
 
+    pm_finalize(&spd->pm);
+
     if (spd->options.talp) {
         talp_finalize(spd);
     }

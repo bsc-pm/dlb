@@ -54,6 +54,11 @@ void pm_init(pm_interface_t *pm, bool enable_talp) {
     else {}
 }
 
+void pm_finalize(pm_interface_t *pm) {
+    /* Reset all fields except enable_talp */
+    *pm = (pm_interface_t) {.talp_enabled = pm->talp_enabled};
+}
+
 int pm_get_num_threads(void) {
     return omp_get_max_threads ? omp_get_max_threads() : 0;
 }

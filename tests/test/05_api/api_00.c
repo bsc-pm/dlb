@@ -42,6 +42,12 @@ static void cb_disable_cpu(int cpuid, void *arg) {
     DLB_LendCpu(cpuid);
 }
 
+/* Callback to count how many times has been called */
+static int ntimes = 0;
+static void cb_count(int cpuid, void *arg) {
+    ++ntimes;
+}
+
 int main( int argc, char **argv ) {
     CPU_ZERO(&process_mask);
     CPU_SET(0, &process_mask);
@@ -142,6 +148,23 @@ int main( int argc, char **argv ) {
     DLB_LendCpu(0);
     assert( DLB_PrintShmem(0, DLB_COLOR_AUTO) == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_SUCCESS );
+
+    // Use different options to enable lewi and respect-cpuset=no
+    char options2[128];
+    snprintf(options2, 128, "--lewi --lewi-respect-cpuset=no --shm-key=%s", SHMEM_KEY);
+
+    // Test that callbacks are never invoked on Finalize
+    mu_parse_mask("0-3", &process_mask);
+    assert( DLB_Init(0, &process_mask, options2) == DLB_SUCCESS );
+    ntimes = 0;
+    assert( DLB_CallbackSet(dlb_callback_disable_cpu,
+                (dlb_callback_t)cb_count, NULL) == DLB_SUCCESS);
+    assert( DLB_CallbackSet(dlb_callback_enable_cpu,
+                (dlb_callback_t)cb_count, NULL) == DLB_SUCCESS);
+    assert( DLB_AcquireCpu(4) == DLB_SUCCESS );
+    assert( ntimes == 1 );
+    assert( DLB_Finalize() == DLB_SUCCESS );
+    assert( ntimes == 1 );
 
     return 0;
 }
