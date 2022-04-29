@@ -239,7 +239,7 @@ int lewi_mask_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
     int error = DLB_SUCCESS;
     if (max > 0) {
         lewi_info_t *lewi_info = spd->lewi_info;
-        lewi_info->max_parallelism = 0;
+        lewi_info->max_parallelism = max;
         SMALL_ARRAY(pid_t, new_guests, node_size);
         SMALL_ARRAY(pid_t, victims, node_size);
         error = shmem_cpuinfo__update_max_parallelism(spd->id, max, new_guests, victims);

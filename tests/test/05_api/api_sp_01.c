@@ -302,6 +302,21 @@ int main( int argc, char **argv ) {
                  && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
         assert_loop( CPU_COUNT(&sp2_mask) == 2
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+
+        // Subprocess 1 lends everything
+        CPU_ZERO(&sp1_mask);
+        assert( DLB_LendCpuMask_sp(handler1, &sys_mask) == DLB_SUCCESS );
+
+        // Subprocess 2 borrows everything (can't, max_parallelism still 2)
+        assert( DLB_Borrow_sp(handler2) == DLB_NOUPDT );
+        assert_loop( CPU_COUNT(&sp2_mask) == 2
+                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
+
+        // Subprocess 1 acquire its CPUs
+        assert( DLB_AcquireCpuMask_sp(handler1, &sp1_process_mask) == DLB_SUCCESS );
+
+        // Subprocess 2 resets max_parallelism
+        DLB_UnsetMaxParallelism_sp(handler2);
     }
 
     /* Test CpusInMask */
