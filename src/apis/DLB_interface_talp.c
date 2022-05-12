@@ -37,11 +37,11 @@
 /*********************************************************************************/
 
 int DLB_TALP_Attach(void) {
+    options_t options;
     const char *shm_key;
     if (thread_spd && thread_spd->dlb_initialized) {
         shm_key = thread_spd->options.shm_key;
     } else {
-        options_t options;
         options_init(&options, NULL);
         shm_key = options.shm_key;
     }
