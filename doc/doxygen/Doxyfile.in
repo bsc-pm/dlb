@@ -2128,30 +2128,12 @@ PERL_PATH              = /usr/bin/perl
 # Configuration options related to the dot tool
 #---------------------------------------------------------------------------
 
-# If the CLASS_DIAGRAMS tag is set to YES, doxygen will generate a class diagram
-# (in HTML and LaTeX) for classes with base or super classes. Setting the tag to
-# NO turns the diagrams off. Note that this option also works with HAVE_DOT
-# disabled, but it is recommended to install and use dot, since it yields more
-# powerful graphs.
-# The default value is: YES.
-
-CLASS_DIAGRAMS         = NO
-
-# You can define message sequence charts within doxygen comments using the \msc
-# command. Doxygen will then run the mscgen tool (see:
-# http://www.mcternan.me.uk/mscgen/)) to produce the chart and insert it in the
-# documentation. The MSCGEN_PATH tag allows you to specify the directory where
-# the mscgen tool resides. If left empty the tool is assumed to be found in the
-# default search path.
-
-MSCGEN_PATH            = 
-
 # You can include diagrams made with dia in doxygen documentation. Doxygen will
 # then run dia to produce the diagram and insert it in the documentation. The
 # DIA_PATH tag allows you to specify the directory where the dia binary resides.
 # If left empty dia is assumed to be found in the default search path.
 
-DIA_PATH               = 
+DIA_PATH               =
 
 # If set to YES the inheritance and collaboration graphs will hide inheritance
 # and usage relations if the target is undocumented or is not a class.
@@ -2200,13 +2182,16 @@ DOT_FONTSIZE           = 10
 # the path where dot can find it using this tag.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-DOT_FONTPATH           = 
+DOT_FONTPATH           =
 
-# If the CLASS_GRAPH tag is set to YES then doxygen will generate a graph for
-# each documented class showing the direct and indirect inheritance relations.
-# Setting this tag to YES will force the CLASS_DIAGRAMS tag to NO.
+# If the CLASS_GRAPH tag is set to YES (or GRAPH) then doxygen will generate a
+# graph for each documented class showing the direct and indirect inheritance
+# relations. In case HAVE_DOT is set as well dot will be used to draw the graph,
+# otherwise the built-in generator will be used. If the CLASS_GRAPH tag is set
+# to TEXT the direct and indirect inheritance relations will be shown as texts /
+# links.
+# Possible values are: NO, YES, TEXT and GRAPH.
 # The default value is: YES.
-# This tag requires that the tag HAVE_DOT is set to YES.
 
 CLASS_GRAPH            = YES
 
