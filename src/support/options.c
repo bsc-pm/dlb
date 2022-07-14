@@ -780,10 +780,12 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
 /* API Printer. Also, dlb -h/-hh output */
 void options_print_variables(const options_t *options, bool print_extended) {
     enum { buffer_size = 8192 };
-    char buffer[buffer_size] = "DLB Options:\n\n"
-                                "The library configuration can be set using arguments\n"
-                                "added to the DLB_ARGS environment variable.\n"
-                                "Possible options are listed below:\n\n";
+    char buffer[buffer_size] =
+        "DLB Options:\n\n"
+        "DLB is configured by setting these flags in the DLB_ARGS environment variable.\n"
+        "Possible options are listed below:\n\n"
+        "Option                  Current value   Possible value (type) / [choice] / {val1:val2}\n"
+        "--------------------------------------------------------------------------------------\n";
     char *b = buffer + strlen(buffer);
     int i;
     for (i=0; i<NUM_OPTIONS; ++i) {

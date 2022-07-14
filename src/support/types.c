@@ -581,7 +581,7 @@ bool equivalent_mpiset(const char *str1, const char *str2) {
 /* ompt_opts_t */
 static const ompt_opts_t ompt_opts_values[] = {OMPT_OPTS_MPI, OMPT_OPTS_BORROW, OMPT_OPTS_LEND};
 static const char* const ompt_opts_choices[] = {"mpi", "borrow", "lend"};
-static const char ompt_opts_choices_str[] = "mpi, borrow, lend";
+static const char ompt_opts_choices_str[] = "mpi:borrow:lend";
 enum { ompt_opts_nelems = sizeof(ompt_opts_values) / sizeof(ompt_opts_values[0]) };
 
 int parse_ompt_opts(const char *str, ompt_opts_t *value) {
