@@ -225,15 +225,15 @@ if mpi_dep.found()
     preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
   )
 
-  mpi_sources = [sources, mpi_common_sources, mpi_common_gen, mpi_gen_sources]
+  mpi_sources = [sources, mpi_common_sources, mpi_common_gen, mpi_gen_sources, mpif_gen_sources]
   mpif_sources = [sources, mpi_common_sources, mpi_common_gen, mpif_gen_sources]
 
   libdlb_mpi = library(
-    'dlb_mpi', [mpi_sources, mpi_gen_intercept_sources],
+    'dlb_mpi', [mpi_sources, mpi_gen_intercept_sources, mpif_gen_intercept_sources],
     include_directories : common_includes,
     c_args : mpi_cpp_flags,
     objects : dlb_common_objects,
-    dependencies : [common_deps, mpi_dep],
+    dependencies : [common_deps, mpi_dep, mpif_dep],
     gnu_symbol_visibility : 'hidden',
     install : true,
   )
@@ -243,7 +243,7 @@ if mpi_dep.found()
     include_directories : common_includes,
     c_args : [mpi_cpp_flags, instr_cpp_flags],
     objects : dlb_common_objects,
-    dependencies : [common_deps, mpi_dep],
+    dependencies : [common_deps, mpi_dep, mpif_dep],
     gnu_symbol_visibility : 'hidden',
     install : true,
   )
