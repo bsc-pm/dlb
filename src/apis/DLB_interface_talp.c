@@ -137,3 +137,11 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
     }
     return talp_collect_pop_metrics(thread_spd, monitor, pop_metrics);
 }
+
+int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
+    spd_enter_dlb(NULL);
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return talp_collect_node_metrics(thread_spd, monitor, node_metrics);
+}

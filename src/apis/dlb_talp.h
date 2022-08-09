@@ -80,6 +80,30 @@ typedef struct dlb_pop_metrics_t {
     float   lb_out;
 } dlb_pop_metrics_t;
 
+/*! Node metrics (of one monitor) collected asynchronously from the shared memory */
+typedef struct dlb_node_metrics_t {
+    /*! Node identifier, only meaningful value if MPI is enabled */
+    int     node_id;
+    /*! Number of processes per node */
+    int     processes_per_node;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation
+     * of all processes in the node */
+    int64_t total_useful_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time of communication
+     * of all processes in the node */
+    int64_t total_mpi_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation
+     * of the process with the highest value */
+    int64_t max_useful_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time of communication
+     * of the process with the highest value */
+    int64_t max_mpi_time;
+    /*! Node Load Balance coefficient */
+    float   load_balance;
+    /*! Node Efficiency coefficient */
+    float   parallel_efficiency;
+} dlb_node_metrics_t;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -183,6 +207,19 @@ int DLB_MonitoringRegionReport(const dlb_monitor_t *handle);
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics);
+
+/*! \brief Collect TALP node metrics. This function does not synchronize with any process.
+ *  \param[in] monitor Monitoring handle that identifies the region,
+ *                     or DLB_MPI_REGION macro (NULL) if implicit MPI region
+ *  \param[out] node_metrics Allocated structure where the collected metrics will be stored
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
+ *  \return DLB_ERR_NOCOMP if monitor != DLB_MPI_REGION or --talp-external-profiler is disabled
+ *
+ *  For now, this function only accepts the implicit MPI region and must be called
+ *  if both flags --talp and --talp-external-profiler are enabled.
+ */
+int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics);
 
 #ifdef __cplusplus
 }

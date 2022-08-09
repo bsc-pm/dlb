@@ -101,11 +101,9 @@ static int cmp_regions(const void *region1, const void *region2) {
 }
 #endif
 
-#if MPI_LIB
 static int cmp_pids(const void *pid1, const void *pid2) {
     return *(pid_t*)pid1 - *(pid_t*)pid2;
 }
-#endif
 
 
 /*********************************************************************************/
@@ -1072,5 +1070,69 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     /* Resume monitor */
     monitoring_region_start(spd, monitor);
 #endif
+    return DLB_SUCCESS;
+}
+
+int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
+        dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
+    talp_info_t *talp_info = spd->talp_info;
+    if (!talp_info->external_profiler) return DLB_ERR_NOCOMP;
+    if (monitor != NULL) return DLB_ERR_NOCOMP;
+
+    monitor = &talp_info->mpi_monitor;
+
+    int64_t total_mpi_time = 0;
+    int64_t total_useful_time = 0;
+    int64_t max_mpi_time = 0;
+    int64_t max_useful_time = 0;
+
+    /* Stop monitor so that metrics are updated */
+    monitoring_region_stop(spd, monitor);
+
+    /* Obtain the PID list */
+    int max_procs = mu_get_system_size();
+    pid_t *pidlist = malloc(max_procs * sizeof(pid_t));
+    int nelems;
+    shmem_procinfo__getpidlist(pidlist, &nelems, max_procs);
+    qsort(pidlist, nelems, sizeof(pid_t), cmp_pids);
+
+    /* Iterate the PID list and gather times of every process */
+    int i;
+    for (i = 0; i <nelems; ++i) {
+        if (pidlist[i] != 0) {
+            int64_t mpi_time;
+            int64_t useful_time;
+            shmem_procinfo__gettimes(pidlist[i], &mpi_time, &useful_time);
+
+            /* Accumulate total and max values */
+            total_mpi_time +=  mpi_time;
+            total_useful_time += useful_time;
+            if (max_mpi_time < mpi_time) max_mpi_time = mpi_time;
+            if (max_useful_time < useful_time) max_useful_time = useful_time;
+        }
+    }
+    free(pidlist);
+
+#if MPI_LIB
+    int node_id = _node_id;
+#else
+    int node_id = 0;
+#endif
+
+    /* Initialize structure */
+    *node_metrics = (const dlb_node_metrics_t) {
+        .node_id = node_id,
+        .processes_per_node = nelems,
+        .total_useful_time = total_useful_time,
+        .total_mpi_time = total_mpi_time,
+        .max_useful_time = max_useful_time,
+        .max_mpi_time = max_mpi_time,
+        .load_balance = ((float)total_useful_time / nelems) / max_useful_time,
+        .parallel_efficiency = (float)total_useful_time / (total_useful_time + total_mpi_time),
+    };
+
+    /* Resume monitor */
+    monitoring_region_start(spd, monitor);
+
     return DLB_SUCCESS;
 }
