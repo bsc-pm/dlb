@@ -23,6 +23,8 @@
 #include <time.h>
 #include <stdint.h>
 
+#define DLB_MPI_REGION NULL
+
 enum { DLB_MONITOR_NAME_MAX = 128 };
 
 /*! TALP public structure */
@@ -48,6 +50,35 @@ typedef struct dlb_monitor_t {
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;
+
+/*! POP metrics (of one monitor) collected from all processes */
+typedef struct dlb_pop_metrics_t {
+    /*! Name of the monitor */
+    char    name[DLB_MONITOR_NAME_MAX];
+    /*! Total number of CPUs used by the processes that have used the region */
+    int     total_cpus;
+    /*! Total number of nodes used by the processes that have used the region */
+    int     total_nodes;
+    /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
+    int64_t elapsed_time;
+    /*! Time (in nanoseconds) of the accumulated elapsed time in computation inside the region */
+    int64_t elapsed_useful;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in all the nodes */
+    int64_t app_sum_useful;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in the most
+     * loaded node*/
+    int64_t node_sum_useful;
+    /*! ParallelEfficiency = Communication Efficiency * LoadBalance */
+    float   parallel_efficiency;
+    /*! Efficiency lost due to transfer and serialization */
+    float   communication_efficiency;
+    /*! LoadBalance = LoadBalanceIn * LoadBalanceOut */
+    float   lb;
+    /*! Intra-node Load Balance coefficient */
+    float   lb_in;
+    /*! Inter-node Load Balance coefficient */
+    float   lb_out;
+} dlb_pop_metrics_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -143,6 +174,15 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle);
+
+/*! \brief Perform an MPI collective communication to collect POP metrics.
+ *  \param[in] monitor Monitoring handle that identifies the region,
+ *                     or DLB_MPI_REGION macro (NULL) if implicit MPI region
+ *  \param[out] pop_metrics Allocated structure where the collected metrics will be stored
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
+ */
+int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics);
 
 #ifdef __cplusplus
 }

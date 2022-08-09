@@ -973,3 +973,104 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
     }
 #endif
 }
+
+
+/*********************************************************************************/
+/*    TALP collect functions                                                     */
+/*********************************************************************************/
+
+/* Perform MPI collective calls and compute the current POP metrics for the
+ * specified monitor. If monitor is NULL, the implicit MPI monitoring region
+ * is assumed.
+ * Pre-conditions:
+ *  - the given monitor must have been registered in all MPI ranks
+ *  - pop_metrics is an allocated structure
+ */
+int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
+        dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics) {
+#ifdef MPI_LIB
+    talp_info_t *talp_info = spd->talp_info;
+    if (monitor == NULL) {
+        monitor = &talp_info->mpi_monitor;
+    }
+
+    /* Stop monitor so that metrics are updated */
+    monitoring_region_stop(spd, monitor);
+
+    int64_t elapsed_time;
+    int64_t elapsed_useful;
+    int64_t app_sum_useful;
+    int64_t node_sum_useful;
+    int total_cpus;
+    int total_nodes;
+
+    /* Obtain the maximum elapsed time */
+    MPI_Allreduce(&monitor->elapsed_time, &elapsed_time,
+            1, mpi_int64_type, MPI_MAX, MPI_COMM_WORLD);
+
+    /* Obtain the maximum elapsed useful time */
+    MPI_Allreduce(&monitor->elapsed_computation_time, &elapsed_useful,
+            1, mpi_int64_type, MPI_MAX, MPI_COMM_WORLD);
+
+    /* Obtain the sum of all computation time */
+    MPI_Allreduce(&monitor->accumulated_computation_time, &app_sum_useful,
+            1, mpi_int64_type, MPI_SUM, MPI_COMM_WORLD);
+
+    /* Obtain the sum of computation time of the most loaded node */
+    int64_t local_node_useful = 0;
+    MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
+            1, mpi_int64_type, MPI_SUM, 0, getNodeComm());
+    if (_process_id == 0) {
+        MPI_Reduce(&local_node_useful, &node_sum_useful,
+                1, mpi_int64_type, MPI_MAX, 0, getInterNodeComm());
+    }
+    MPI_Bcast(&node_sum_useful, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
+
+    /* Obtain the total number of CPUs used in all processes */
+    int ncpus = monitor->num_measurements > 0 ? talp_info->ncpus : 0;
+    MPI_Allreduce(&ncpus, &total_cpus,
+            1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+    /* Obtain the total number of nodes used in this region */
+    int local_node_used = 0;
+    int i_used_this_node = monitor->num_measurements > 0 ? 1 : 0;
+    MPI_Reduce(&i_used_this_node, &local_node_used,
+            1, MPI_INT, MPI_MAX, 0, getNodeComm());
+    if (_process_id == 0) {
+        MPI_Reduce(&local_node_used, &total_nodes,
+                1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
+    }
+    MPI_Bcast(&total_nodes, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
+
+    /* Initialize structure */
+    *pop_metrics = (const dlb_pop_metrics_t) {
+        .total_cpus = total_cpus,
+        .total_nodes = total_nodes,
+        .elapsed_time = elapsed_time,
+        .elapsed_useful = elapsed_useful,
+        .app_sum_useful = app_sum_useful,
+        .node_sum_useful = node_sum_useful,
+    };
+
+    snprintf(pop_metrics->name, DLB_MONITOR_NAME_MAX, "%s", monitor->name);
+
+    /* Compute POP metrics only if needed */
+    if (elapsed_time > 0) {
+        float parallel_efficiency = (float)app_sum_useful / (elapsed_time * total_cpus);
+        float communication_efficiency = (float)elapsed_useful / elapsed_time;
+        float lb = (float)app_sum_useful / (elapsed_useful * total_cpus);
+        float lb_in =
+            (float)(node_sum_useful * total_nodes) / (elapsed_useful * total_cpus);
+        float lb_out = (float)app_sum_useful / (node_sum_useful * total_nodes);
+        pop_metrics->parallel_efficiency = parallel_efficiency;
+        pop_metrics->communication_efficiency = communication_efficiency;
+        pop_metrics->lb = lb;
+        pop_metrics->lb_in = lb_in;
+        pop_metrics->lb_out = lb_out;
+    }
+
+    /* Resume monitor */
+    monitoring_region_start(spd, monitor);
+#endif
+    return DLB_SUCCESS;
+}

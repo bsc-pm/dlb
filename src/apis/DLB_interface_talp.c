@@ -129,3 +129,11 @@ int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
     }
     return monitoring_region_report(thread_spd, handle);
 }
+
+int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics) {
+    spd_enter_dlb(NULL);
+    if (unlikely(!thread_spd->talp_info)) {
+        return DLB_ERR_NOTALP;
+    }
+    return talp_collect_pop_metrics(thread_spd, monitor, pop_metrics);
+}
