@@ -23,6 +23,8 @@
 #include <time.h>
 #include <stdint.h>
 
+enum { DLB_MONITOR_NAME_MAX = 128 };
+
 /*! TALP public structure */
 typedef struct dlb_monitor_t {
     /*! Name of the monitor */
@@ -68,7 +70,7 @@ int DLB_TALP_Attach(void);
 
 /*! \brief Detach current process from DLB system
  *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_NOSHMEM if cannot find shared memory to dettach from
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory to detach from
  *
  *  If previously attached, a process must call this function to correctly close
  *  file descriptors and clean data.
@@ -103,38 +105,42 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-/*! \brief Get the pointer of the implicit MPI Monitorig Region
- *  \return monitor handle to be used on queries
+/*! \brief Get the pointer of the implicit MPI Monitoring Region
+ *  \return monitor handle to be used on queries, or NULL if TALP is not enabled
  */
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void);
 
 /*! \brief Register a new Monitoring Region
  *  \param[in] name Name to identify the new region
- *  \return monitor handle to be used on subsequent calls
+ *  \return monitor handle to be used on subsequent calls, or NULL if TALP is not enabled
  */
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
 
 /*! \brief Reset monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
 /*! \brief Start (or unpause) monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 
 /*! \brief Stop (or pause) monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 
 /*! \brief Print a report to stderr of the monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle);
 

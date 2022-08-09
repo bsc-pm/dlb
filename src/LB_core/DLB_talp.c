@@ -74,6 +74,10 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_report_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
 
+#if MPI_LIB
+static MPI_Datatype mpi_int64_type;
+#endif
+
 /* Reserved regions ids */
 enum { MPI_MONITORING_REGION_ID = 1 };
 
@@ -138,6 +142,15 @@ void talp_init(subprocess_descriptor_t *spd) {
             MPI_MONITORING_REGION_ID, "MPI Execution");
 
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
+
+    /* Initialize MPI type */
+#if MPI_LIB
+# if MPI_VERSION >= 3
+    mpi_int64_type = MPI_INT64_T;
+# else
+    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
+# endif
+#endif
 }
 
 static void talp_destroy(void) {
@@ -393,14 +406,6 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
     if (_process_id == 0) {
         verbose(VB_TALP, "Node summary: gathering data");
 
-        /* MPI type: int64_t */
-        MPI_Datatype mpi_int64_type;
-#if MPI_VERSION >= 3
-        mpi_int64_type = MPI_INT64_T;
-#else
-        MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
-#endif
-
         /* MPI type: pid_t */
         MPI_Datatype mpi_pid_type;
         MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(pid_t), &mpi_pid_type);
@@ -492,7 +497,7 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
         if (!anonymous_region) {
             int i;
             for (i=0; i<nregions; ++i) {
-                if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN-1) == 0) {
+                if (strncmp(regions[i]->name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
                     monitor = regions[i];
                     pthread_mutex_unlock(&mutex);
                     return monitor;
@@ -515,8 +520,8 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
 
     // Initialize after the mutex is unlocked
     if (anonymous_region) {
-        char monitor_name[MONITOR_MAX_KEY_LEN];
-        snprintf(monitor_name, MONITOR_MAX_KEY_LEN, "Anonymous Region %d", get_anonymous_id());
+        char monitor_name[DLB_MONITOR_NAME_MAX];
+        snprintf(monitor_name, DLB_MONITOR_NAME_MAX, "Anonymous Region %d", get_anonymous_id());
         monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
     } else {
         monitoring_region_initialize(monitor, get_new_monitor_id(), name);
@@ -531,8 +536,8 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
     *monitor_data = (const monitor_data_t) {.id = id};
 
     /* Allocate monitor name */
-    char *allocated_name = malloc(MONITOR_MAX_KEY_LEN*sizeof(char));
-    snprintf(allocated_name, MONITOR_MAX_KEY_LEN, "%s", name);
+    char *allocated_name = malloc(DLB_MONITOR_NAME_MAX*sizeof(char));
+    snprintf(allocated_name, DLB_MONITOR_NAME_MAX, "%s", name);
 
     /* Initialize monitor */
     *monitor = (const dlb_monitor_t) {
@@ -740,19 +745,6 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
 #ifdef MPI_LIB
 /* Gather data of a monitor among all ranks and record it in rank 0 */
 static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    int64_t elapsed_time;
-    int64_t elapsed_useful;
-    int64_t app_sum_useful;
-    int64_t node_sum_useful;
-    int total_cpus;
-    int total_nodes;
-
-    MPI_Datatype mpi_int64_type;
-#if MPI_VERSION >= 3
-    mpi_int64_type = MPI_INT64_T;
-#else
-    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
-#endif
 
     /* Note: we may be sending monitors info twice for PROCESS and POP reports
      * but reducing by MPI communicators makes the implementation much easier
@@ -834,6 +826,13 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 
     /* SUMMARY POP: Compute POP metrics and record */
     if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW)) {
+        int64_t elapsed_time;
+        int64_t elapsed_useful;
+        int64_t app_sum_useful;
+        int64_t node_sum_useful;
+        int total_cpus;
+        int total_nodes;
+
         /* Obtain the maximum elapsed time */
         MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
                 1, mpi_int64_type, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -917,7 +916,7 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
     /*** 2: Gather data from custom regions: ***/
 
     /* Gather recvcounts for each process */
-    int chars_to_send = nregions * MONITOR_MAX_KEY_LEN;
+    int chars_to_send = nregions * DLB_MONITOR_NAME_MAX;
     int *recvcounts = malloc(_mpi_size * sizeof(int));
     MPI_Allgather(&chars_to_send, 1, MPI_INT,
             recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
@@ -931,9 +930,9 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
 
     if (total_chars > 0) {
         /* Prepare sendbuffer */
-        char *sendbuffer = malloc(nregions * MONITOR_MAX_KEY_LEN * sizeof(char));
+        char *sendbuffer = malloc(nregions * DLB_MONITOR_NAME_MAX * sizeof(char));
         for (i=0; i<nregions; ++i) {
-            strcpy(&sendbuffer[i*MONITOR_MAX_KEY_LEN], regions[i]->name);
+            strcpy(&sendbuffer[i*DLB_MONITOR_NAME_MAX], regions[i]->name);
         }
 
         /* Prepare recvbuffer */
@@ -948,11 +947,11 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
         }
 
         /* Gather all regions */
-        MPI_Allgatherv(sendbuffer, nregions * MONITOR_MAX_KEY_LEN, MPI_CHAR,
+        MPI_Allgatherv(sendbuffer, nregions * DLB_MONITOR_NAME_MAX, MPI_CHAR,
                 recvbuffer, recvcounts, displs, MPI_CHAR, MPI_COMM_WORLD);
 
         /* Register all regions. Existing ones will be skipped. */
-        for (i=0; i<total_chars; i+=MONITOR_MAX_KEY_LEN) {
+        for (i=0; i<total_chars; i+=DLB_MONITOR_NAME_MAX) {
             monitoring_region_register(&recvbuffer[i]);
         }
 

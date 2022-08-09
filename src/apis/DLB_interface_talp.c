@@ -84,6 +84,9 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
 
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void) {
     spd_enter_dlb(NULL);
+    if (unlikely(!thread_spd->talp_info)) {
+        return NULL;
+    }
     return monitoring_region_get_MPI_region(thread_spd);
 }
 
