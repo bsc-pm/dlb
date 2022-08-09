@@ -74,6 +74,10 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_report_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
 
+#if MPI_LIB
+static MPI_Datatype mpi_int64_type;
+#endif
+
 /* Reserved regions ids */
 enum { MPI_MONITORING_REGION_ID = 1 };
 
@@ -97,11 +101,9 @@ static int cmp_regions(const void *region1, const void *region2) {
 }
 #endif
 
-#if MPI_LIB
 static int cmp_pids(const void *pid1, const void *pid2) {
     return *(pid_t*)pid1 - *(pid_t*)pid2;
 }
-#endif
 
 
 /*********************************************************************************/
@@ -138,6 +140,15 @@ void talp_init(subprocess_descriptor_t *spd) {
             MPI_MONITORING_REGION_ID, "MPI Execution");
 
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
+
+    /* Initialize MPI type */
+#if MPI_LIB
+# if MPI_VERSION >= 3
+    mpi_int64_type = MPI_INT64_T;
+# else
+    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
+# endif
+#endif
 }
 
 static void talp_destroy(void) {
@@ -393,14 +404,6 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
     if (_process_id == 0) {
         verbose(VB_TALP, "Node summary: gathering data");
 
-        /* MPI type: int64_t */
-        MPI_Datatype mpi_int64_type;
-#if MPI_VERSION >= 3
-        mpi_int64_type = MPI_INT64_T;
-#else
-        MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
-#endif
-
         /* MPI type: pid_t */
         MPI_Datatype mpi_pid_type;
         MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(pid_t), &mpi_pid_type);
@@ -492,7 +495,7 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
         if (!anonymous_region) {
             int i;
             for (i=0; i<nregions; ++i) {
-                if (strncmp(regions[i]->name, name, MONITOR_MAX_KEY_LEN-1) == 0) {
+                if (strncmp(regions[i]->name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
                     monitor = regions[i];
                     pthread_mutex_unlock(&mutex);
                     return monitor;
@@ -515,8 +518,8 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
 
     // Initialize after the mutex is unlocked
     if (anonymous_region) {
-        char monitor_name[MONITOR_MAX_KEY_LEN];
-        snprintf(monitor_name, MONITOR_MAX_KEY_LEN, "Anonymous Region %d", get_anonymous_id());
+        char monitor_name[DLB_MONITOR_NAME_MAX];
+        snprintf(monitor_name, DLB_MONITOR_NAME_MAX, "Anonymous Region %d", get_anonymous_id());
         monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
     } else {
         monitoring_region_initialize(monitor, get_new_monitor_id(), name);
@@ -531,8 +534,8 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
     *monitor_data = (const monitor_data_t) {.id = id};
 
     /* Allocate monitor name */
-    char *allocated_name = malloc(MONITOR_MAX_KEY_LEN*sizeof(char));
-    snprintf(allocated_name, MONITOR_MAX_KEY_LEN, "%s", name);
+    char *allocated_name = malloc(DLB_MONITOR_NAME_MAX*sizeof(char));
+    snprintf(allocated_name, DLB_MONITOR_NAME_MAX, "%s", name);
 
     /* Initialize monitor */
     *monitor = (const dlb_monitor_t) {
@@ -740,19 +743,6 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
 #ifdef MPI_LIB
 /* Gather data of a monitor among all ranks and record it in rank 0 */
 static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    int64_t elapsed_time;
-    int64_t elapsed_useful;
-    int64_t app_sum_useful;
-    int64_t node_sum_useful;
-    int total_cpus;
-    int total_nodes;
-
-    MPI_Datatype mpi_int64_type;
-#if MPI_VERSION >= 3
-    mpi_int64_type = MPI_INT64_T;
-#else
-    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
-#endif
 
     /* Note: we may be sending monitors info twice for PROCESS and POP reports
      * but reducing by MPI communicators makes the implementation much easier
@@ -834,6 +824,13 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 
     /* SUMMARY POP: Compute POP metrics and record */
     if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW)) {
+        int64_t elapsed_time;
+        int64_t elapsed_useful;
+        int64_t app_sum_useful;
+        int64_t node_sum_useful;
+        int total_cpus;
+        int total_nodes;
+
         /* Obtain the maximum elapsed time */
         MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
                 1, mpi_int64_type, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -917,7 +914,7 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
     /*** 2: Gather data from custom regions: ***/
 
     /* Gather recvcounts for each process */
-    int chars_to_send = nregions * MONITOR_MAX_KEY_LEN;
+    int chars_to_send = nregions * DLB_MONITOR_NAME_MAX;
     int *recvcounts = malloc(_mpi_size * sizeof(int));
     MPI_Allgather(&chars_to_send, 1, MPI_INT,
             recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
@@ -931,9 +928,9 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
 
     if (total_chars > 0) {
         /* Prepare sendbuffer */
-        char *sendbuffer = malloc(nregions * MONITOR_MAX_KEY_LEN * sizeof(char));
+        char *sendbuffer = malloc(nregions * DLB_MONITOR_NAME_MAX * sizeof(char));
         for (i=0; i<nregions; ++i) {
-            strcpy(&sendbuffer[i*MONITOR_MAX_KEY_LEN], regions[i]->name);
+            strcpy(&sendbuffer[i*DLB_MONITOR_NAME_MAX], regions[i]->name);
         }
 
         /* Prepare recvbuffer */
@@ -948,11 +945,11 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
         }
 
         /* Gather all regions */
-        MPI_Allgatherv(sendbuffer, nregions * MONITOR_MAX_KEY_LEN, MPI_CHAR,
+        MPI_Allgatherv(sendbuffer, nregions * DLB_MONITOR_NAME_MAX, MPI_CHAR,
                 recvbuffer, recvcounts, displs, MPI_CHAR, MPI_COMM_WORLD);
 
         /* Register all regions. Existing ones will be skipped. */
-        for (i=0; i<total_chars; i+=MONITOR_MAX_KEY_LEN) {
+        for (i=0; i<total_chars; i+=DLB_MONITOR_NAME_MAX) {
             monitoring_region_register(&recvbuffer[i]);
         }
 
@@ -973,4 +970,169 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
         gather_monitor_data(spd, regions[i]);
     }
 #endif
+}
+
+
+/*********************************************************************************/
+/*    TALP collect functions                                                     */
+/*********************************************************************************/
+
+/* Perform MPI collective calls and compute the current POP metrics for the
+ * specified monitor. If monitor is NULL, the implicit MPI monitoring region
+ * is assumed.
+ * Pre-conditions:
+ *  - the given monitor must have been registered in all MPI ranks
+ *  - pop_metrics is an allocated structure
+ */
+int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
+        dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics) {
+#ifdef MPI_LIB
+    talp_info_t *talp_info = spd->talp_info;
+    if (monitor == NULL) {
+        monitor = &talp_info->mpi_monitor;
+    }
+
+    /* Stop monitor so that metrics are updated */
+    monitoring_region_stop(spd, monitor);
+
+    int64_t elapsed_time;
+    int64_t elapsed_useful;
+    int64_t app_sum_useful;
+    int64_t node_sum_useful;
+    int total_cpus;
+    int total_nodes;
+
+    /* Obtain the maximum elapsed time */
+    MPI_Allreduce(&monitor->elapsed_time, &elapsed_time,
+            1, mpi_int64_type, MPI_MAX, MPI_COMM_WORLD);
+
+    /* Obtain the maximum elapsed useful time */
+    MPI_Allreduce(&monitor->elapsed_computation_time, &elapsed_useful,
+            1, mpi_int64_type, MPI_MAX, MPI_COMM_WORLD);
+
+    /* Obtain the sum of all computation time */
+    MPI_Allreduce(&monitor->accumulated_computation_time, &app_sum_useful,
+            1, mpi_int64_type, MPI_SUM, MPI_COMM_WORLD);
+
+    /* Obtain the sum of computation time of the most loaded node */
+    int64_t local_node_useful = 0;
+    MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
+            1, mpi_int64_type, MPI_SUM, 0, getNodeComm());
+    if (_process_id == 0) {
+        MPI_Reduce(&local_node_useful, &node_sum_useful,
+                1, mpi_int64_type, MPI_MAX, 0, getInterNodeComm());
+    }
+    MPI_Bcast(&node_sum_useful, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
+
+    /* Obtain the total number of CPUs used in all processes */
+    int ncpus = monitor->num_measurements > 0 ? talp_info->ncpus : 0;
+    MPI_Allreduce(&ncpus, &total_cpus,
+            1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+    /* Obtain the total number of nodes used in this region */
+    int local_node_used = 0;
+    int i_used_this_node = monitor->num_measurements > 0 ? 1 : 0;
+    MPI_Reduce(&i_used_this_node, &local_node_used,
+            1, MPI_INT, MPI_MAX, 0, getNodeComm());
+    if (_process_id == 0) {
+        MPI_Reduce(&local_node_used, &total_nodes,
+                1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
+    }
+    MPI_Bcast(&total_nodes, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
+
+    /* Initialize structure */
+    *pop_metrics = (const dlb_pop_metrics_t) {
+        .total_cpus = total_cpus,
+        .total_nodes = total_nodes,
+        .elapsed_time = elapsed_time,
+        .elapsed_useful = elapsed_useful,
+        .app_sum_useful = app_sum_useful,
+        .node_sum_useful = node_sum_useful,
+    };
+
+    snprintf(pop_metrics->name, DLB_MONITOR_NAME_MAX, "%s", monitor->name);
+
+    /* Compute POP metrics only if needed */
+    if (elapsed_time > 0) {
+        float parallel_efficiency = (float)app_sum_useful / (elapsed_time * total_cpus);
+        float communication_efficiency = (float)elapsed_useful / elapsed_time;
+        float lb = (float)app_sum_useful / (elapsed_useful * total_cpus);
+        float lb_in =
+            (float)(node_sum_useful * total_nodes) / (elapsed_useful * total_cpus);
+        float lb_out = (float)app_sum_useful / (node_sum_useful * total_nodes);
+        pop_metrics->parallel_efficiency = parallel_efficiency;
+        pop_metrics->communication_efficiency = communication_efficiency;
+        pop_metrics->lb = lb;
+        pop_metrics->lb_in = lb_in;
+        pop_metrics->lb_out = lb_out;
+    }
+
+    /* Resume monitor */
+    monitoring_region_start(spd, monitor);
+#endif
+    return DLB_SUCCESS;
+}
+
+int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
+        dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
+    talp_info_t *talp_info = spd->talp_info;
+    if (!talp_info->external_profiler) return DLB_ERR_NOCOMP;
+    if (monitor != NULL) return DLB_ERR_NOCOMP;
+
+    monitor = &talp_info->mpi_monitor;
+
+    int64_t total_mpi_time = 0;
+    int64_t total_useful_time = 0;
+    int64_t max_mpi_time = 0;
+    int64_t max_useful_time = 0;
+
+    /* Stop monitor so that metrics are updated */
+    monitoring_region_stop(spd, monitor);
+
+    /* Obtain the PID list */
+    int max_procs = mu_get_system_size();
+    pid_t *pidlist = malloc(max_procs * sizeof(pid_t));
+    int nelems;
+    shmem_procinfo__getpidlist(pidlist, &nelems, max_procs);
+    qsort(pidlist, nelems, sizeof(pid_t), cmp_pids);
+
+    /* Iterate the PID list and gather times of every process */
+    int i;
+    for (i = 0; i <nelems; ++i) {
+        if (pidlist[i] != 0) {
+            int64_t mpi_time;
+            int64_t useful_time;
+            shmem_procinfo__gettimes(pidlist[i], &mpi_time, &useful_time);
+
+            /* Accumulate total and max values */
+            total_mpi_time +=  mpi_time;
+            total_useful_time += useful_time;
+            if (max_mpi_time < mpi_time) max_mpi_time = mpi_time;
+            if (max_useful_time < useful_time) max_useful_time = useful_time;
+        }
+    }
+    free(pidlist);
+
+#if MPI_LIB
+    int node_id = _node_id;
+#else
+    int node_id = 0;
+#endif
+
+    /* Initialize structure */
+    *node_metrics = (const dlb_node_metrics_t) {
+        .node_id = node_id,
+        .processes_per_node = nelems,
+        .total_useful_time = total_useful_time,
+        .total_mpi_time = total_mpi_time,
+        .max_useful_time = max_useful_time,
+        .max_mpi_time = max_mpi_time,
+        .load_balance = ((float)total_useful_time / nelems) / max_useful_time,
+        .parallel_efficiency = (float)total_useful_time / (total_useful_time + total_mpi_time),
+    };
+
+    /* Resume monitor */
+    monitoring_region_start(spd, monitor);
+
+    return DLB_SUCCESS;
 }

@@ -19,6 +19,7 @@
 
 #include "support/talp_output.h"
 
+#include "apis/dlb_talp.h"
 #include "LB_core/DLB_talp.h"
 #include "support/debug.h"
 #include "support/mytime.h"
@@ -57,8 +58,8 @@ void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
     pop_metrics = ptr;
 
     /* Allocate monitor name */
-    char *allocated_name = malloc(MONITOR_MAX_KEY_LEN*sizeof(char));
-    snprintf(allocated_name, MONITOR_MAX_KEY_LEN, "%s", name);
+    char *allocated_name = malloc(DLB_MONITOR_NAME_MAX*sizeof(char));
+    snprintf(allocated_name, DLB_MONITOR_NAME_MAX, "%s", name);
 
     /* Initialize structure */
     pop_metrics[pop_metrics_num_records-1] = (const pop_metrics_record_t) {
@@ -219,8 +220,8 @@ void talp_output_record_pop_raw(const char *name, int P, int N, int64_t elapsed_
     pop_raw = ptr;
 
     /* Allocate monitor name */
-    char *allocated_name = malloc(MONITOR_MAX_KEY_LEN*sizeof(char));
-    snprintf(allocated_name, MONITOR_MAX_KEY_LEN, "%s", name);
+    char *allocated_name = malloc(DLB_MONITOR_NAME_MAX*sizeof(char));
+    snprintf(allocated_name, DLB_MONITOR_NAME_MAX, "%s", name);
 
     /* Initialize structure */
     pop_raw[pop_raw_num_records-1] = (const pop_raw_record_t) {
@@ -662,7 +663,7 @@ typedef struct ProcessRecord {
 } process_record_t;
 
 typedef struct MonitorList {
-    char monitor_name[MONITOR_MAX_KEY_LEN];
+    char monitor_name[DLB_MONITOR_NAME_MAX];
     process_record_t *process_list_head;
     process_record_t *process_list_tail;
     struct MonitorList *next;
@@ -691,7 +692,7 @@ void talp_output_record_process(const char *monitor_name, int rank, pid_t pid,
             .process_list_head = NULL,
             .process_list_tail = NULL,
         };
-        snprintf(monitor_list->monitor_name, MONITOR_MAX_KEY_LEN, "%s", monitor_name);
+        snprintf(monitor_list->monitor_name, DLB_MONITOR_NAME_MAX, "%s", monitor_name);
 
         /* Insert to list */
         if (monitor_list_head == NULL) {

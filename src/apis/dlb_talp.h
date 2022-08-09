@@ -23,6 +23,10 @@
 #include <time.h>
 #include <stdint.h>
 
+#define DLB_MPI_REGION NULL
+
+enum { DLB_MONITOR_NAME_MAX = 128 };
+
 /*! TALP public structure */
 typedef struct dlb_monitor_t {
     /*! Name of the monitor */
@@ -47,6 +51,59 @@ typedef struct dlb_monitor_t {
     void        *_data;
 } dlb_monitor_t;
 
+/*! POP metrics (of one monitor) collected from all processes */
+typedef struct dlb_pop_metrics_t {
+    /*! Name of the monitor */
+    char    name[DLB_MONITOR_NAME_MAX];
+    /*! Total number of CPUs used by the processes that have used the region */
+    int     total_cpus;
+    /*! Total number of nodes used by the processes that have used the region */
+    int     total_nodes;
+    /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
+    int64_t elapsed_time;
+    /*! Time (in nanoseconds) of the accumulated elapsed time in computation inside the region */
+    int64_t elapsed_useful;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in all the nodes */
+    int64_t app_sum_useful;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in the most
+     * loaded node*/
+    int64_t node_sum_useful;
+    /*! ParallelEfficiency = Communication Efficiency * LoadBalance */
+    float   parallel_efficiency;
+    /*! Efficiency lost due to transfer and serialization */
+    float   communication_efficiency;
+    /*! LoadBalance = LoadBalanceIn * LoadBalanceOut */
+    float   lb;
+    /*! Intra-node Load Balance coefficient */
+    float   lb_in;
+    /*! Inter-node Load Balance coefficient */
+    float   lb_out;
+} dlb_pop_metrics_t;
+
+/*! Node metrics (of one monitor) collected asynchronously from the shared memory */
+typedef struct dlb_node_metrics_t {
+    /*! Node identifier, only meaningful value if MPI is enabled */
+    int     node_id;
+    /*! Number of processes per node */
+    int     processes_per_node;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation
+     * of all processes in the node */
+    int64_t total_useful_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time of communication
+     * of all processes in the node */
+    int64_t total_mpi_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation
+     * of the process with the highest value */
+    int64_t max_useful_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time of communication
+     * of the process with the highest value */
+    int64_t max_mpi_time;
+    /*! Node Load Balance coefficient */
+    float   load_balance;
+    /*! Node Efficiency coefficient */
+    float   parallel_efficiency;
+} dlb_node_metrics_t;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -68,7 +125,7 @@ int DLB_TALP_Attach(void);
 
 /*! \brief Detach current process from DLB system
  *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_NOSHMEM if cannot find shared memory to dettach from
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory to detach from
  *
  *  If previously attached, a process must call this function to correctly close
  *  file descriptors and clean data.
@@ -103,40 +160,66 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-/*! \brief Get the pointer of the implicit MPI Monitorig Region
- *  \return monitor handle to be used on queries
+/*! \brief Get the pointer of the implicit MPI Monitoring Region
+ *  \return monitor handle to be used on queries, or NULL if TALP is not enabled
  */
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void);
 
 /*! \brief Register a new Monitoring Region
  *  \param[in] name Name to identify the new region
- *  \return monitor handle to be used on subsequent calls
+ *  \return monitor handle to be used on subsequent calls, or NULL if TALP is not enabled
  */
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
 
 /*! \brief Reset monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
 /*! \brief Start (or unpause) monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 
 /*! \brief Stop (or pause) monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 
 /*! \brief Print a report to stderr of the monitoring region
  *  \param[in] handle Monitoring handle that identifies the region
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle);
+
+/*! \brief Perform an MPI collective communication to collect POP metrics.
+ *  \param[in] monitor Monitoring handle that identifies the region,
+ *                     or DLB_MPI_REGION macro (NULL) if implicit MPI region
+ *  \param[out] pop_metrics Allocated structure where the collected metrics will be stored
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
+ */
+int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics);
+
+/*! \brief Collect TALP node metrics. This function does not synchronize with any process.
+ *  \param[in] monitor Monitoring handle that identifies the region,
+ *                     or DLB_MPI_REGION macro (NULL) if implicit MPI region
+ *  \param[out] node_metrics Allocated structure where the collected metrics will be stored
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOTALP if TALP is not enabled
+ *  \return DLB_ERR_NOCOMP if monitor != DLB_MPI_REGION or --talp-external-profiler is disabled
+ *
+ *  For now, this function only accepts the implicit MPI region and must be called
+ *  if both flags --talp and --talp-external-profiler are enabled.
+ */
+int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics);
 
 #ifdef __cplusplus
 }

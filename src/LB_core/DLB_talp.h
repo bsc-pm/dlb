@@ -22,10 +22,10 @@
 
 #include <sched.h>
 
-enum { MONITOR_MAX_KEY_LEN = 128 };
-
 struct SubProcessDescriptor;
 struct dlb_monitor_t;
+struct dlb_pop_metrics_t;
+struct dlb_node_metrics_t;
 
 /*  Initializes the module structures */
 void talp_init(struct SubProcessDescriptor *spd);
@@ -68,5 +68,11 @@ int monitoring_region_stop(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor);
 int monitoring_region_report(const struct SubProcessDescriptor *spd,
         const struct dlb_monitor_t *monitor);
+
+int talp_collect_pop_metrics(const struct SubProcessDescriptor *spd,
+        struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);
+
+int talp_collect_node_metrics(const struct SubProcessDescriptor *spd,
+        struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
 
 #endif
