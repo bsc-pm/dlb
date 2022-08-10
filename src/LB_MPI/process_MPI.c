@@ -59,18 +59,31 @@ static MPI_Comm mpi_comm_internode;     /* MPI Communicator with 1 representativ
 
 void before_init(void) {
 #if MPI_VERSION >= 3 && defined(MPI_LIBRARY_VERSION)
-    /* If MPI-3, compare the library version with the MPI detected at configure time */
-    char version[MPI_MAX_LIBRARY_VERSION_STRING];
-    int resultlen;
-    MPI_Get_library_version(version, &resultlen);
-    char *newline = strchr(version, '\n');
-    if (newline) *newline = '\0'; /* MPI_LIBRARY_VERSION only contains the first line */
-    if (strcmp(version, MPI_LIBRARY_VERSION) != 0) {
-        if (newline) *newline = '\n'; /* put back the newline if printing */
-        warning("MPI library versions differ:\n"
-                "  Configured with: %s\n"
-                "  Executed with  : %s",
-                MPI_LIBRARY_VERSION, version);
+    /* If MPI-3, compare the library version with the MPI detected at configure time
+     * (only if --debug-opts=warn-mpi-version) */
+    bool warn_mpi_version;
+    if (thread_spd && thread_spd->dlb_initialized) {
+        warn_mpi_version = thread_spd->options.debug_opts & DBG_WARNMPI;
+    } else {
+        options_t options;
+        options_init(&options, NULL);
+        warn_mpi_version = options.debug_opts & DBG_WARNMPI;
+        options_finalize(&options);
+    }
+
+    if (warn_mpi_version) {
+        char version[MPI_MAX_LIBRARY_VERSION_STRING];
+        int resultlen;
+        MPI_Get_library_version(version, &resultlen);
+        char *newline = strchr(version, '\n');
+        if (newline) *newline = '\0'; /* MPI_LIBRARY_VERSION only contains the first line */
+        if (strcmp(version, MPI_LIBRARY_VERSION) != 0) {
+            if (newline) *newline = '\n'; /* put back the newline if printing */
+            warning("MPI library versions differ:\n"
+                    "  Configured with: %s\n"
+                    "  Executed with  : %s",
+                    MPI_LIBRARY_VERSION, version);
+        }
     }
 #endif
 }
