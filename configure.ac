@@ -82,8 +82,23 @@ AC_PROG_CPP
 AC_PROG_CC([$CC])
 AM_PROG_CC_C_O
 
+dnl Autoconf 2.69 and below need this macro to check for C99
+dnl In newer versions the macro is deprecated
+m4_version_prereq([2.70], [:], [AC_PROG_CC_C99])
+
 # use the C compiler for the following checks
 AC_LANG([C])
+
+# Add minimum c99 standard
+#       if ac_cv_prog_cc_c{11,99} is set and its value is not 'no', no-op
+AS_IF([${ac_cv_prog_cc_c11+:} false && test x"$ac_cv_prog_cc_c11" != xno], [:],
+      [${ac_cv_prog_cc_c99+:} false && test x"$ac_cv_prog_cc_c99" != xno], [:],
+      # if ac_cv_prog_cc_c89 is set and its value is not 'no', add -std=c99
+      [${ac_cv_prog_cc_c89+:} false && test x"$ac_cv_prog_cc_c89" != xno], [
+        AX_CHECK_COMPILE_FLAG([-std=c99], [cstd="-std=c99"])
+        AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $cstd])
+      ]
+)
 
 # icc needs -we10006 to promote unrecognized flags from warning to error
 AX_CHECK_COMPILE_FLAG([-we10006], [intel_we_flag="-we10006"])
