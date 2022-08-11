@@ -24,6 +24,7 @@
 #include "support/types.h"
 #include "support/mask_utils.h"
 #include "support/debug.h"
+#include "LB_core/spd.h"
 
 #include <string.h>
 #include <stddef.h>
@@ -535,6 +536,59 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
     return false;
 }
 
+static void copy_value(option_type_t type, void *dest, const char *src) {
+    switch(type) {
+        case OPT_BOOL_T:
+            memcpy(dest, src, sizeof(bool));
+            break;
+        case OPT_NEG_BOOL_T:
+            memcpy(dest, src, sizeof(bool));
+            break;
+        case OPT_INT_T:
+            memcpy(dest, src, sizeof(int));
+            break;
+        case OPT_STR_T:
+            memcpy(dest, src, sizeof(char)*MAX_OPTION_LENGTH);
+            break;
+        case OPT_PTR_PATH_T:
+            fatal("copy_value of type OPT_PTR_PATH_T not supported");
+            break;
+        case OPT_VB_T:
+            memcpy(dest, src, sizeof(verbose_opts_t));
+            break;
+        case OPT_VBFMT_T:
+            memcpy(dest, src, sizeof(verbose_fmt_t));
+            break;
+        case OPT_INST_T:
+            memcpy(dest, src, sizeof(instrument_items_t));
+            break;
+        case OPT_DBG_T:
+            memcpy(dest, src, sizeof(debug_opts_t));
+            break;
+        case OPT_PRIO_T:
+            memcpy(dest, src, sizeof(priority_t));
+            break;
+        case OPT_POL_T:
+            memcpy(dest, src, sizeof(policy_t));
+            break;
+        case OPT_MASK_T:
+            memcpy(dest, src, sizeof(cpu_set_t));
+            break;
+        case OPT_MODE_T:
+            memcpy(dest, src, sizeof(interaction_mode_t));
+            break;
+        case OPT_MPISET_T:
+            memcpy(dest, src, sizeof(mpi_set_t));
+            break;
+        case OPT_OMPTOPTS_T:
+            memcpy(dest, src, sizeof(ompt_opts_t));
+            break;
+        case OPT_TLPSUM_T:
+            memcpy(dest, src, sizeof(talp_summary_t));
+            break;
+    }
+}
+
 /* Parse DLB_ARGS and remove argument if found */
 static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value, size_t arg_max_len) {
     *arg_value = 0;
@@ -743,6 +797,72 @@ void options_finalize(options_t *options) {
     if (options->talp_output_file) {
         free(options->talp_output_file);
         options->talp_output_file = NULL;
+    }
+}
+
+/* Obtain value of specific entry, either from DLB_ARGS or from thread_spd->options */
+void options_parse_entry(const char *var_name, void *option) {
+    const opts_dict_t *entry = get_entry_by_name(var_name);
+    ensure(entry, "%s: bad variable name '%s'", __func__, var_name);
+
+    if (thread_spd && thread_spd->dlb_initialized) {
+        copy_value(entry->type, option, (char*)&thread_spd->options + entry->offset);
+    } else {
+        /* Simplified options_init just for this entry */
+
+        /* Copy DLB_ARGS into a local buffer */
+        char *dlb_args_from_env = NULL;
+        const char *env = getenv("DLB_ARGS");
+        if (env) {
+            size_t len = strlen(env) + 1;
+            dlb_args_from_env = malloc(sizeof(char)*len);
+            strcpy(dlb_args_from_env, env);
+        }
+
+        /* Pointer to rhs to be parsed */
+        const char *rhs = NULL;
+
+        /* Set-up specific argument length */
+        size_t arg_max_len;
+        switch (entry->type) {
+            case OPT_PTR_PATH_T:
+                arg_max_len = PATH_MAX-1;
+                break;
+            default:
+                arg_max_len = MAX_OPTION_LENGTH-1;
+                break;
+        }
+
+        /* Preallocate a buffer large enough to save the option value */
+        char *arg_value_from_env = malloc(sizeof(char)*(arg_max_len+1));
+        arg_value_from_env[0] = '\0';
+
+        /* Parse DLB_ARGS from env */
+        if (dlb_args_from_env) {
+            parse_dlb_args(dlb_args_from_env, entry->arg_name, arg_value_from_env, arg_max_len);
+            if (strlen(arg_value_from_env) > 0) {
+                rhs = arg_value_from_env;
+            }
+        }
+
+        /* Assign option = rhs, and nullify rhs if error */
+        if (rhs) {
+            int error = set_value(entry->type, option, rhs);
+            if (error) {
+                rhs = NULL;
+            }
+        }
+
+        /* Set default value if needed */
+        if (!rhs) {
+            set_value(entry->type, option, entry->default_value);
+        }
+
+        /* Free buffers */
+        free(arg_value_from_env);
+        if (dlb_args_from_env) {
+            free(dlb_args_from_env);
+        }
     }
 }
 

@@ -24,7 +24,9 @@
 #include "apis/dlb_errors.h"
 #include "support/types.h"
 #include "support/options.h"
+#include "LB_core/spd.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -177,6 +179,57 @@ int main( int argc, char **argv ) {
     //      (werror will cause "Unrecognized options" warning to fail)
     options_init(&options_1, "--debug-opts=werror");
     assert(options_1.debug_opts & DBG_WERROR);
+
+    // Test individual entry parsing
+    bool lewi;
+    bool lewi_mpi;
+    int barrier_id;
+    char *shm_key = malloc(sizeof(char)*MAX_OPTION_LENGTH);
+    char *talp_file = malloc(sizeof(char)*PATH_MAX);
+    verbose_opts_t vb_opts;
+    verbose_fmt_t vb_fmt;
+    ompt_opts_t ompt_opts;
+    instrument_items_t instr_items;
+    mpi_set_t mpiset;
+    priority_t prio;
+    interaction_mode_t mode;
+    talp_summary_t talp_sum;
+    // 1) without thread_spd->options
+    setenv("DLB_ARGS", "--lewi --lewi-mpi --barrier-id=3 --shm-key=custom_key"
+            " --verbose=talp --lewi-ompt=mpi", 1);
+    options_parse_entry("--lewi", &lewi);               assert(lewi == true);
+    options_parse_entry("--lewi-mpi", &lewi_mpi);       assert(lewi_mpi == false);
+    options_parse_entry("--barrier-id", &barrier_id);   assert(barrier_id == 3);
+    options_parse_entry("--shm-key", shm_key);          assert(strcmp(shm_key, "custom_key") == 0);
+    options_parse_entry("--verbose", &vb_opts);         assert(vb_opts == VB_TALP);
+    options_parse_entry("--lewi-ompt", &ompt_opts);     assert(ompt_opts == OMPT_OPTS_MPI);
+    // other default values
+    options_parse_entry("--verbose-format", &vb_fmt);   assert(vb_fmt == (VBF_NODE|VBF_SPID));
+    options_parse_entry("--instrument", &instr_items);  assert(instr_items == INST_ALL);
+    options_parse_entry("--lewi-mpi-calls", &mpiset);   assert(mpiset == MPISET_ALL);
+    options_parse_entry("--lewi-affinity", &prio);      assert(prio == PRIO_NEARBY_FIRST);
+    options_parse_entry("--mode", &mode);               assert(mode == MODE_POLLING);
+    options_parse_entry("--talp-summary", &talp_sum);   assert(talp_sum == SUMMARY_POP_METRICS);
+    // 2) with existing thread_spd
+    spd_enter_dlb(NULL);
+    options_init(&thread_spd->options, NULL);
+    thread_spd->dlb_initialized = true;
+    unsetenv("DLB_ARGS");
+    options_parse_entry("--lewi", &lewi);               assert(lewi == true);
+    options_parse_entry("--lewi-mpi", &lewi_mpi);       assert(lewi_mpi == false);
+    options_parse_entry("--barrier-id", &barrier_id);   assert(barrier_id == 3);
+    options_parse_entry("--shm-key", shm_key);          assert(strcmp(shm_key, "custom_key") == 0);
+    options_parse_entry("--verbose", &vb_opts);         assert(vb_opts == VB_TALP);
+    options_parse_entry("--lewi-ompt", &ompt_opts);     assert(ompt_opts == OMPT_OPTS_MPI);
+    // other default values
+    options_parse_entry("--verbose-format", &vb_fmt);   assert(vb_fmt == (VBF_NODE|VBF_SPID));
+    options_parse_entry("--instrument", &instr_items);  assert(instr_items == INST_ALL);
+    options_parse_entry("--lewi-mpi-calls", &mpiset);   assert(mpiset == MPISET_ALL);
+    options_parse_entry("--lewi-affinity", &prio);      assert(prio == PRIO_NEARBY_FIRST);
+    options_parse_entry("--mode", &mode);               assert(mode == MODE_POLLING);
+    options_parse_entry("--talp-summary", &talp_sum);   assert(talp_sum == SUMMARY_POP_METRICS);
+    free(shm_key);
+    free(talp_file);
 
     return 0;
 }

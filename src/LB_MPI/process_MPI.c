@@ -61,17 +61,9 @@ void before_init(void) {
 #if MPI_VERSION >= 3 && defined(MPI_LIBRARY_VERSION)
     /* If MPI-3, compare the library version with the MPI detected at configure time
      * (only if --debug-opts=warn-mpi-version) */
-    bool warn_mpi_version;
-    if (thread_spd && thread_spd->dlb_initialized) {
-        warn_mpi_version = thread_spd->options.debug_opts & DBG_WARNMPI;
-    } else {
-        options_t options;
-        options_init(&options, NULL);
-        warn_mpi_version = options.debug_opts & DBG_WARNMPI;
-        options_finalize(&options);
-    }
-
-    if (warn_mpi_version) {
+    debug_opts_t debug_opts;
+    options_parse_entry("--debug-opts", &debug_opts);
+    if (debug_opts & DBG_WARNMPI) {
         char version[MPI_MAX_LIBRARY_VERSION_STRING];
         int resultlen;
         MPI_Get_library_version(version, &resultlen);

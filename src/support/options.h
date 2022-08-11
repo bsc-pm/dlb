@@ -66,6 +66,7 @@ typedef struct Options {
 
 void options_init(options_t *options, const char *dlb_args);
 void options_finalize(options_t *options);
+void options_parse_entry(const char *var_name, void *option);
 int options_set_variable(options_t *options, const char *var_name, const char *value);
 int options_get_variable(const options_t *options, const char *var_name, char *value);
 void options_print_variables(const options_t *options, bool print_extended);
