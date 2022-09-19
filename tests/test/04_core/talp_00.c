@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
     /* Test MPI monitor values are correct and greater than custom monitor */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
-    assert( mpi_monitor->accumulated_computation_time != 0 );
+    assert( mpi_monitor->accumulated_computation_time > 0 );
     assert( mpi_monitor->accumulated_computation_time > monitor->accumulated_computation_time );
     assert( mpi_monitor->elapsed_time > monitor->elapsed_time );
 

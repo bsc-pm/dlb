@@ -52,9 +52,9 @@ typedef struct talp_info_t {
     dlb_monitor_t   mpi_monitor;            /* monitor MPI_Init -> MPI_Finalize */
     int64_t         sample_start_time;      /* global start time to update all regions */
     bool            external_profiler;      /* whether to update shmem on every sample */
-    bool            use_counters;           /* whether to use just counters or cpu masks */
-    int             num_workers;            /* counter for CPUs doing computation */
-    int             num_mpi;                /* counter for CPUs doing mpi */
+    bool            use_integers;           /* whether to use just integers or cpu masks */
+    int             num_workers;            /* number of CPUs doing computation */
+    int             num_mpi;                /* number of CPUs doing mpi */
     int             ncpus;                  /* Number of process CPUs */
     cpu_set_t       workers_mask;           /* CPUs doing computation */
     cpu_set_t       mpi_mask;               /* CPUs doing MPI */
@@ -121,12 +121,12 @@ void talp_init(subprocess_descriptor_t *spd) {
     };
     if (pm_get_num_threads() == 0) {
         /* Probably pure MPI, use only 1 CPU */
-        talp_info->use_counters = true;
+        talp_info->use_integers = true;
         talp_info->num_workers = 1;
         talp_info->ncpus = 1;
     } else {
         /* OpenMP/OmpSs detected, use process mask as workers mask */
-        talp_info->use_counters = false;
+        talp_info->use_integers = false;
         memcpy(&talp_info->workers_mask, &spd->process_mask, sizeof(cpu_set_t));
         talp_info->ncpus = CPU_COUNT(&talp_info->workers_mask);
     }
@@ -221,7 +221,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
 
 /* The following CPU/cpuset functions should only be called with malleable
  * executions where CPU masks have been initialized. On pure MPI executions
- * they should never be called so it's safe to not ask for the use_counters
+ * they should never be called so it's safe to not ask for the use_integers
  * boolean. */
 
 void talp_cpu_enable(const subprocess_descriptor_t *spd, int cpuid) {
@@ -285,8 +285,8 @@ void talp_in_mpi(const subprocess_descriptor_t *spd) {
         /* Update all monitors */
         monitoring_regions_update_all(spd);
 
-        /* Update counters/masks */
-        if (talp_info->use_counters) {
+        /* Update integers/masks */
+        if (talp_info->use_integers) {
             talp_info->num_workers = 0;
             talp_info->num_mpi = 1;
         } else if (spd->options.lewi) {
@@ -311,8 +311,8 @@ void talp_out_mpi(const subprocess_descriptor_t *spd){
         /* Update all monitors */
         monitoring_regions_update_all(spd);
 
-        /* Update counters/masks */
-        if (talp_info->use_counters) {
+        /* Update integers/masks */
+        if (talp_info->use_integers) {
             talp_info->num_workers = 1;
             talp_info->num_mpi = 0;
         } else if (spd->options.lewi) {
@@ -660,7 +660,7 @@ static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd) 
 static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
 
     talp_info_t *talp_info = spd->talp_info;
-    bool use_counters = talp_info->use_counters;
+    bool use_integers = talp_info->use_integers;
 
     /* Sample ends here, compute duration and begin new sample */
     int64_t now = get_time_in_ns();
@@ -669,17 +669,17 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
 
     /* Compute elapsed computation time */
     int64_t elapsed_computation_time =
-        (use_counters && talp_info->num_workers > 0)
-        || (!use_counters && CPU_COUNT(&talp_info->workers_mask)) > 0
+        (use_integers && talp_info->num_workers > 0)
+        || (!use_integers && CPU_COUNT(&talp_info->workers_mask)) > 0
                 ? sample_duration : 0;
 
     /* Compute MPI time */
     int64_t mpi_time = sample_duration *
-        (use_counters ? talp_info->num_mpi : CPU_COUNT(&talp_info->mpi_mask));
+        (use_integers ? talp_info->num_mpi : CPU_COUNT(&talp_info->mpi_mask));
 
     /* Compute computation time */
     int64_t computation_time = sample_duration *
-        (use_counters ? talp_info->num_workers : CPU_COUNT(&talp_info->workers_mask));
+        (use_integers ? talp_info->num_workers : CPU_COUNT(&talp_info->workers_mask));
 
     /* Update MPI monitor */
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
