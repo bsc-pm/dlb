@@ -199,6 +199,15 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
  */
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle);
 
+ /*! \brief Update all monitoring regions
+  *  \return DLB_SUCCESS on success
+  *
+  *  Monitoring regions are only updated in certain situations, like when
+  *  starting/stopping a region, or finalizing MPI. This routine forces the
+  *  update of all started monitoring regions
+ */
+int DLB_MonitoringRegionsUpdate(void);
+
 /*! \brief Perform an MPI collective communication to collect POP metrics.
  *  \param[in] monitor Monitoring handle that identifies the region,
  *                     or DLB_MPI_REGION macro (NULL) if implicit MPI region

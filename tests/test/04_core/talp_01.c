@@ -40,16 +40,27 @@
 
 enum { USLEEP_TIME = 100000 };
 
-typedef struct talp_info_t {
-    dlb_monitor_t   mpi_monitor;
-    int64_t         sample_start_time;
-    bool            external_profiler;
-    bool            use_counters;
+typedef struct talp_microsample_t {
+    int64_t         start_time;
     int             num_workers;
     int             num_mpi;
-    int             ncpus;
     cpu_set_t       workers_mask;
     cpu_set_t       mpi_mask;
+} talp_microsample_t;
+
+typedef struct talp_sample_t {
+    int64_t         elapsed_computation_time;
+    int64_t         mpi_time;
+    int64_t         computation_time;
+} talp_sample_t;
+
+typedef struct talp_info_t {
+    dlb_monitor_t       mpi_monitor;
+    bool                external_profiler;
+    bool                use_integers;
+    int                 ncpus;
+    talp_sample_t       sample;
+    talp_microsample_t  microsample;
 } talp_info_t;
 
 
@@ -71,12 +82,14 @@ int main(int argc, char *argv[]) {
 
     bool lewi = spd.options.lewi;
     talp_info_t *talp_info = spd.talp_info;
+    talp_sample_t *sample = &talp_info->sample;
+    talp_microsample_t *microsample = &talp_info->microsample;
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
 
     /* Simulate threaded execution, fix talp_init */
-    talp_info->use_counters = false;
-    memcpy(&talp_info->workers_mask, &spd.process_mask, sizeof(cpu_set_t));
-    talp_info->ncpus = CPU_COUNT(&talp_info->workers_mask);
+    talp_info->use_integers = false;
+    memcpy(&microsample->workers_mask, &spd.process_mask, sizeof(cpu_set_t));
+    talp_info->ncpus = CPU_COUNT(&microsample->workers_mask);
 
     /* Start MPI monitoring region */
     talp_mpi_init(&spd);
@@ -87,28 +100,34 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->elapsed_time == 0 );
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus );
-    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+    assert( CPU_COUNT(&microsample->workers_mask) == ncpus );
+    assert( CPU_COUNT(&microsample->mpi_mask) == 0 );
     assert( talp_info->ncpus == ncpus );
 
-    /* Entering MPI */
+    /* Entering MPI, sample is updated, region not yet */
     talp_in_mpi(&spd);
-    assert( mpi_monitor->accumulated_MPI_time == 0 );
-    assert( mpi_monitor->accumulated_computation_time != 0 );
+    assert( sample->elapsed_computation_time > 0 );
+    assert( sample->mpi_time == 0 );
+    assert( sample->computation_time > 0 );
     if (lewi) {
-        assert( CPU_COUNT(&talp_info->workers_mask) == ncpus-1 );
-        assert( CPU_COUNT(&talp_info->mpi_mask) == 1 );
+        assert( CPU_COUNT(&microsample->workers_mask) == ncpus-1 );
+        assert( CPU_COUNT(&microsample->mpi_mask) == 1 );
     } else {
-        assert( CPU_COUNT(&talp_info->workers_mask) == 0 );
-        assert( CPU_COUNT(&talp_info->mpi_mask) == ncpus );
+        assert( CPU_COUNT(&microsample->workers_mask) == 0 );
+        assert( CPU_COUNT(&microsample->mpi_mask) == ncpus );
     }
 
     /* Leaving MPI */
     talp_out_mpi(&spd);
-    assert( mpi_monitor->accumulated_MPI_time != 0 );
-    assert( mpi_monitor->accumulated_computation_time != 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus );
-    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+    assert( sample->mpi_time > 0 );
+    assert( sample->computation_time > 0 );
+    assert( CPU_COUNT(&microsample->workers_mask) == ncpus );
+    assert( CPU_COUNT(&microsample->mpi_mask) == 0 );
+
+    /* Update regions */
+    assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
+    assert( mpi_monitor->accumulated_MPI_time > 0 );
+    assert( mpi_monitor->accumulated_computation_time > 0 );
 
     /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
     int64_t mpi_time = -1;
@@ -122,13 +141,13 @@ int main(int argc, char *argv[]) {
 
     /* Disable CPU */
     talp_cpu_disable(&spd, cpuid);
-    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus-1 );
-    int64_t time_computation_before = mpi_monitor->accumulated_computation_time;
+    assert( CPU_COUNT(&microsample->workers_mask) == ncpus-1 );
+    int64_t time_computation_before = sample->computation_time;
     usleep(USLEEP_TIME);
 
     /* Enable CPU */
     talp_cpu_enable(&spd, cpuid);
-    int64_t time_computation = mpi_monitor->accumulated_computation_time - time_computation_before;
+    int64_t time_computation = sample->computation_time - time_computation_before;
     if (ncpus == 1) {
         assert( time_computation == 0 );
     } else {

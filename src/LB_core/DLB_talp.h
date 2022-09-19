@@ -68,6 +68,7 @@ int monitoring_region_stop(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor);
 int monitoring_region_report(const struct SubProcessDescriptor *spd,
         const struct dlb_monitor_t *monitor);
+int monitoring_regions_force_update(const struct SubProcessDescriptor *spd);
 
 int talp_collect_pop_metrics(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);

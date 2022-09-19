@@ -39,16 +39,27 @@
 
 enum { USLEEP_TIME = 1000 };
 
-typedef struct talp_info_t {
-    dlb_monitor_t   mpi_monitor;
-    int64_t         sample_start_time;
-    bool            external_profiler;
-    bool            use_counters;
+typedef struct talp_microsample_t {
+    int64_t         start_time;
     int             num_workers;
     int             num_mpi;
-    int             ncpus;
     cpu_set_t       workers_mask;
     cpu_set_t       mpi_mask;
+} talp_microsample_t;
+
+typedef struct talp_sample_t {
+    int64_t         elapsed_computation_time;
+    int64_t         mpi_time;
+    int64_t         computation_time;
+} talp_sample_t;
+
+typedef struct talp_info_t {
+    dlb_monitor_t       mpi_monitor;
+    bool                external_profiler;
+    bool                use_integers;
+    int                 ncpus;
+    talp_sample_t       sample;
+    talp_microsample_t  microsample;
 } talp_info_t;
 
 
@@ -75,8 +86,8 @@ int main(int argc, char *argv[]) {
     /* TALP initial values */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( talp_info->num_workers == 1 );
-    assert( talp_info->num_mpi == 0 );
+    assert( talp_info->microsample.num_workers == 1 );
+    assert( talp_info->microsample.num_mpi == 0 );
     assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
 
     /* Start and Stop MPI monitor */
