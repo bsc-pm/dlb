@@ -988,7 +988,7 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     }
 
     /* Stop monitor so that metrics are updated */
-    monitoring_region_stop(spd, monitor);
+    bool resume_region = monitoring_region_stop(spd, monitor) == DLB_SUCCESS;
 
     int64_t elapsed_time;
     int64_t elapsed_useful;
@@ -1063,7 +1063,9 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     }
 
     /* Resume monitor */
-    monitoring_region_start(spd, monitor);
+    if (resume_region) {
+        monitoring_region_start(spd, monitor);
+    }
 #endif
     return DLB_SUCCESS;
 }
@@ -1082,7 +1084,7 @@ int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
     int64_t max_useful_time = 0;
 
     /* Stop monitor so that metrics are updated */
-    monitoring_region_stop(spd, monitor);
+    bool resume_region = monitoring_region_stop(spd, monitor) == DLB_SUCCESS;
 
     /* Obtain the PID list */
     int max_procs = mu_get_system_size();
@@ -1127,7 +1129,9 @@ int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
     };
 
     /* Resume monitor */
-    monitoring_region_start(spd, monitor);
+    if (resume_region) {
+        monitoring_region_start(spd, monitor);
+    }
 
     return DLB_SUCCESS;
 }
