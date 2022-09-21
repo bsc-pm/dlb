@@ -27,6 +27,7 @@
 #include "LB_core/spd.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
+#include "support/atomic.h"
 #include "support/options.h"
 
 #include <sched.h>
@@ -39,27 +40,20 @@
 
 enum { USLEEP_TIME = 1000 };
 
-typedef struct talp_microsample_t {
-    int64_t         start_time;
-    int             num_workers;
-    int             num_mpi;
-    cpu_set_t       workers_mask;
-    cpu_set_t       mpi_mask;
-} talp_microsample_t;
-
-typedef struct talp_sample_t {
-    int64_t         elapsed_computation_time;
-    int64_t         mpi_time;
-    int64_t         computation_time;
+typedef struct DLB_ALIGN_CACHE talp_sample_t {
+    atomic_int_least64_t    mpi_time;
+    atomic_int_least64_t    useful_time;
+    int64_t     last_updated_timestamp;
+    bool        in_useful;
+    bool        cpu_disabled;
 } talp_sample_t;
 
 typedef struct talp_info_t {
     dlb_monitor_t       mpi_monitor;
     bool                external_profiler;
-    bool                use_integers;
     int                 ncpus;
-    talp_sample_t       sample;
-    talp_microsample_t  microsample;
+    talp_sample_t       **samples;
+    pthread_mutex_t     samples_mutex;
 } talp_info_t;
 
 
@@ -86,8 +80,6 @@ int main(int argc, char *argv[]) {
     /* TALP initial values */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( talp_info->microsample.num_workers == 1 );
-    assert( talp_info->microsample.num_mpi == 0 );
     assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
 
     /* Start and Stop MPI monitor */

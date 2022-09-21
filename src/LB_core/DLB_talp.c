@@ -47,43 +47,41 @@
 #include <limits.h>
 
 
-/* The microsample contains the current information not yet accumulated to the sample,
- * i.e., the start time, and which CPUs are doing computation and wich ones are doing MPI.
- * The microsample starts and ends on each one of the following scenarios:
- *  - In/Out of MPI
- *  - Change of active CPUs
- *  - Start/End of sample
- */
-typedef struct talp_microsample_t {
-    int64_t         start_time;             /* start time to compute the end of the microsample */
-    int             num_workers;            /* number of CPUs doing computation */
-    int             num_mpi;                /* number of CPUs doing MPI */
-    cpu_set_t       workers_mask;           /* CPUs doing computation */
-    cpu_set_t       mpi_mask;               /* CPUs doing MPI */
-} talp_microsample_t;
+/* The macrosample contains the accumulated metrics of samples of all threads.
+ * It is only constructed when samples are gathered, and then it is used to
+ * update all started monitoring regions. */
+typedef struct talp_macrosample_t {
+    int64_t mpi_time;
+    int64_t useful_time;
+    int64_t elapsed_useful_time;
+} talp_macrosample_t;
 
-/* The sample contains the accumulated values of all microsamples inside this sample,
- * i.e., elapsed, mpi and useful time.
- * When the sample ends, all started monitoring regions are updated.
- * The sample starts and ends on each one of the following scenarios:
+/* The sample contains the temporary per-thread accumulated values of all the
+ * measured metrics. Once the sample ends, a macrosample is created using
+ * samples from all threads. The sample starts and ends on each one of the
+ * following scenarios:
  *  - MPI Init/Finalize
  *  - a region starts or stops
  *  - a request from the API
  */
-typedef struct talp_sample_t {
-    int64_t     elapsed_computation_time;
-    int64_t     mpi_time;
-    int64_t     computation_time;
+typedef struct DLB_ALIGN_CACHE talp_sample_t {
+    /* Sample accumulated values */
+    atomic_int_least64_t    mpi_time;
+    atomic_int_least64_t    useful_time;
+    /* Sample temporary values */
+    int64_t     last_updated_timestamp;
+    bool        in_useful;
+    bool        cpu_disabled;
 } talp_sample_t;
 
 /* Talp info per spd */
 typedef struct talp_info_t {
     dlb_monitor_t       mpi_monitor;        /* monitor MPI_Init -> MPI_Finalize */
     bool                external_profiler;  /* whether to update shmem on every sample */
-    bool                use_integers;       /* whether to use just integers or cpu masks */
     int                 ncpus;              /* Number of process CPUs */
-    talp_sample_t       sample;             /* Ongoing sample, added to all monitors when finished */
-    talp_microsample_t  microsample;        /* Ongoing microsample, added to sample when finished */
+    talp_sample_t       **samples;          /* Per-thread ongoing sample,
+                                               added to all monitors when finished */
+    pthread_mutex_t     samples_mutex;      /* Mutex to protect samples allocation/iteration */
 } talp_info_t;
 
 /* Private data per monitor */
@@ -96,7 +94,8 @@ typedef struct monitor_data_t {
 static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd);
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name);
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd);
-static void monitoring_regions_update_all(const subprocess_descriptor_t *spd);
+static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
+        const talp_macrosample_t *macrosample);
 static void monitoring_regions_report_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
 
@@ -142,23 +141,10 @@ void talp_init(subprocess_descriptor_t *spd) {
 
     /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
-    *talp_info = (talp_info_t) {
+    *talp_info = (const talp_info_t) {
         .external_profiler = spd->options.talp_external_profiler,
+        .samples_mutex = PTHREAD_MUTEX_INITIALIZER,
     };
-    if (pm_get_num_threads() == 0) {
-        /* Probably pure MPI, use only 1 CPU */
-        talp_info->use_integers = true;
-        talp_info->microsample.num_workers = 1;
-        talp_info->ncpus = 1;
-    } else {
-        /* OpenMP/OmpSs detected, use process mask as workers mask */
-        talp_info->use_integers = false;
-        memcpy(&talp_info->microsample.workers_mask, &spd->process_mask, sizeof(cpu_set_t));
-        talp_info->ncpus = CPU_COUNT(&talp_info->microsample.workers_mask);
-    }
-    fatal_cond(talp_info->ncpus <= 0,
-            "TALP was unable to detect number of CPUS. Please, report bug at "
-            PACKAGE_BUGREPORT);
     spd->talp_info = talp_info;
 
     /* Initialize MPI monitor */
@@ -206,6 +192,97 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     }
 }
 
+
+/*********************************************************************************/
+/*    Sample functions                                                           */
+/*********************************************************************************/
+
+/* Get the TLS associated sample */
+static talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd) {
+    static __thread talp_sample_t* sample = NULL;
+
+    /* Thread already has an allocated sample, return it */
+    if (likely(sample != NULL)) return sample;
+
+    /* Otherwise, allocate */
+    talp_info_t *talp_info = spd->talp_info;
+    pthread_mutex_lock(&talp_info->samples_mutex);
+    {
+        int ncpus = ++talp_info->ncpus;
+        void *p = realloc(talp_info->samples, sizeof(talp_sample_t*)*ncpus);
+        if (p) {
+            talp_info->samples = p;
+            talp_info->samples[ncpus-1] = malloc(sizeof(talp_sample_t));
+            sample = talp_info->samples[ncpus-1];
+        }
+    }
+    pthread_mutex_unlock(&talp_info->samples_mutex);
+
+    fatal_cond(sample == NULL, "TALP: could not allocate thread sample");
+
+    *sample = (const talp_sample_t) {
+        .in_useful = true,
+    };
+
+    return sample;
+}
+
+/* Compute new microsample (time since last update) and update sample values */
+static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sample) {
+    /* Compute duration and set new last_updated_timestamp */
+    int64_t now = get_time_in_ns();
+    int64_t microsample_duration = now - sample->last_updated_timestamp;
+    sample->last_updated_timestamp = now;
+
+    /* Compute MPI time */
+    int64_t mpi_time = sample->in_useful ? 0 : microsample_duration;
+
+    /* Compute useful time */
+    int64_t useful_time = sample->in_useful ? microsample_duration : 0;
+
+    /* Update sample */
+    DLB_ATOMIC_ADD_RLX(&sample->mpi_time, mpi_time);
+    DLB_ATOMIC_ADD_RLX(&sample->useful_time, useful_time);
+}
+
+/* Accumulate values from samples of all threads and update regions */
+static void talp_gather_samples(const subprocess_descriptor_t *spd) {
+    talp_info_t *talp_info = spd->talp_info;
+    talp_sample_t *thread_sample = talp_get_thread_sample(spd);
+
+    /* Update thread sample with the last microsample */
+    talp_update_sample(spd, thread_sample);
+
+    /* Accumulate samples from all threads */
+    talp_macrosample_t macrosample = (const talp_macrosample_t) {};
+    pthread_mutex_lock(&talp_info->samples_mutex);
+    {
+        int i;
+        for (i=0; i<talp_info->ncpus; ++i) {
+            talp_sample_t *sample = talp_info->samples[i];
+
+            /* Atomically extract and reset sample values */
+            int64_t mpi_time = DLB_ATOMIC_EXCH_RLX(&sample->mpi_time, 0);
+            int64_t useful_time = DLB_ATOMIC_EXCH_RLX(&sample->useful_time, 0);
+
+            /* Accumulate */
+            macrosample.mpi_time += mpi_time;
+            macrosample.useful_time += useful_time;
+            macrosample.elapsed_useful_time = max_int64(
+                    macrosample.elapsed_useful_time, useful_time);
+        }
+    }
+    pthread_mutex_unlock(&talp_info->samples_mutex);
+
+    /* Update all started regions */
+    monitoring_regions_update_all(spd, &macrosample);
+}
+
+
+/*********************************************************************************/
+/*    TALP MPI functions                                                         */
+/*********************************************************************************/
+
 /* Start MPI monitoring region */
 void talp_mpi_init(const subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = spd->talp_info;
@@ -240,177 +317,28 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     }
 }
 
-/*********************************************************************************/
-/*    Sample and microsample: begin and end previous one                         */
-/*********************************************************************************/
-
-static void talp_begin_microsample(const subprocess_descriptor_t *spd) {
-    talp_info_t *talp_info = spd->talp_info;
-    talp_sample_t *sample = &talp_info->sample;
-    talp_microsample_t *microsample = &talp_info->microsample;
-    bool use_integers = talp_info->use_integers;
-
-    /* Microsample ends here, compute duration and set new start time */
-    int64_t now = get_time_in_ns();
-    int64_t microsample_duration = now - microsample->start_time;
-    microsample->start_time = now;
-
-    /* Compute elapsed computation time */
-    int64_t elapsed_computation_time =
-        (use_integers && microsample->num_workers > 0)
-        || (!use_integers && CPU_COUNT(&microsample->workers_mask)) > 0
-                ? microsample_duration : 0;
-
-    /* Compute MPI time */
-    int64_t mpi_time = microsample_duration *
-        (use_integers ? microsample->num_mpi : CPU_COUNT(&microsample->mpi_mask));
-
-    /* Compute computation time */
-    int64_t computation_time = microsample_duration *
-        (use_integers ? microsample->num_workers : CPU_COUNT(&microsample->workers_mask));
-
-    /* Update sample */
-    sample->elapsed_computation_time += elapsed_computation_time;
-    sample->mpi_time += mpi_time;
-    sample->computation_time += computation_time;
-}
-
-static void talp_begin_sample(const subprocess_descriptor_t *spd) {
-    talp_info_t *talp_info = spd->talp_info;
-    talp_sample_t *sample = &talp_info->sample;
-
-    /* Update current sample with the last microsample and begin a new one */
-    talp_begin_microsample(spd);
-
-    /* Update all started regions */
-    monitoring_regions_update_all(spd);
-
-    /* Reset sample */
-    *sample = (talp_sample_t) {};
-}
-
-/*********************************************************************************/
-/*    TALP state change functions (update masks, compute sample times)           */
-/*********************************************************************************/
-
-/* The following CPU/cpuset functions should only be called with malleable
- * executions where CPU masks have been initialized. On pure MPI executions
- * they should never be called so it's safe to not ask for the use_integers
- * boolean. */
-
-void talp_cpu_enable(const subprocess_descriptor_t *spd, int cpuid) {
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        talp_microsample_t *microsample = &talp_info->microsample;
-        if (!CPU_ISSET(cpuid, &microsample->workers_mask)) {
-            talp_begin_microsample(spd);
-            CPU_SET(cpuid, &microsample->workers_mask);
-            verbose(VB_TALP, "Enabling CPU %d. New workers mask: %s",
-                    cpuid, mu_to_str(&microsample->workers_mask));
-        }
-    }
-}
-
-void talp_cpuset_enable(const subprocess_descriptor_t *spd, const cpu_set_t *cpu_mask) {
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        talp_microsample_t *microsample = &talp_info->microsample;
-        if (!mu_is_subset(cpu_mask, &microsample->workers_mask)) {
-            talp_begin_microsample(spd);
-            CPU_OR(&microsample->workers_mask, &microsample->workers_mask, cpu_mask);
-        }
-    }
-}
-
-void talp_cpu_disable(const subprocess_descriptor_t *spd, int cpuid) {
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        talp_microsample_t *microsample = &talp_info->microsample;
-        if (CPU_ISSET(cpuid, &microsample->workers_mask)) {
-            talp_begin_microsample(spd);
-            CPU_CLR(cpuid, &microsample->workers_mask);
-            verbose(VB_TALP, "Disabling CPU %d. New workers mask: %s",
-                    cpuid, mu_to_str(&microsample->workers_mask));
-        }
-    }
-}
-
-void talp_cpuset_disable(const subprocess_descriptor_t *spd, const cpu_set_t *cpu_mask) {
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        talp_microsample_t *microsample = &talp_info->microsample;
-        if (mu_intersects(cpu_mask, &microsample->workers_mask)) {
-            talp_begin_microsample(spd);
-            mu_substract(&microsample->workers_mask, &microsample->workers_mask, cpu_mask);
-        }
-    }
-}
-
-void talp_cpuset_set(const subprocess_descriptor_t *spd, const cpu_set_t *cpu_mask) {
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        talp_microsample_t *microsample = &talp_info->microsample;
-        if (!CPU_EQUAL(cpu_mask, &microsample->workers_mask)) {
-            talp_begin_microsample(spd);
-            memcpy(&microsample->workers_mask, cpu_mask, sizeof(cpu_set_t));
-        }
-    }
-}
-/* End of cpuset functions */
-
 void talp_in_mpi(const subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
-
-        /* End & begin microsample */
-        talp_begin_microsample(spd);
-
-        /* Update integers/masks */
-        talp_microsample_t *microsample = &talp_info->microsample;
-        if (talp_info->use_integers) {
-            microsample->num_workers = 0;
-            microsample->num_mpi = 1;
-        } else if (spd->options.lewi) {
-            /* Current CPU goes from worker to MPI mask */
-            int cpuid = sched_getcpu();
-            CPU_SET(cpuid, &microsample->mpi_mask);
-            CPU_CLR(cpuid, &microsample->workers_mask);
-            verbose(VB_TALP, "Inside MPI. New workers mask: %s",
-                    mu_to_str(&microsample->workers_mask));
-        } else {
-            /* All CPUs go to MPI mask */
-            memcpy(&microsample->mpi_mask, &microsample->workers_mask, sizeof(cpu_set_t));
-            CPU_ZERO(&microsample->workers_mask);
-        }
+        talp_sample_t *sample = talp_get_thread_sample(spd);
+        talp_update_sample(spd, sample);
+        sample->in_useful = false;
     }
 }
 
 void talp_out_mpi(const subprocess_descriptor_t *spd){
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
-
-        /* End & begin microsample */
-        talp_begin_microsample(spd);
-
-        /* Update integers/masks */
-        talp_microsample_t *microsample = &talp_info->microsample;
-        if (talp_info->use_integers) {
-            microsample->num_workers = 1;
-            microsample->num_mpi = 0;
-        } else if (spd->options.lewi) {
-            /* Current CPU goes from MPI to worker */
-            int cpuid = sched_getcpu();
-            CPU_CLR(cpuid, &microsample->mpi_mask);
-            CPU_SET(cpuid, &microsample->workers_mask);
-            verbose(VB_TALP, "Outside MPI. New workers mask: %s",
-                    mu_to_str(&microsample->workers_mask));
-        } else {
-            /* All CPUs go to workers mask */
-            memcpy(&microsample->workers_mask, &microsample->mpi_mask, sizeof(cpu_set_t));
-            CPU_ZERO(&microsample->mpi_mask);
-        }
+        talp_sample_t *sample = talp_get_thread_sample(spd);
+        talp_update_sample(spd, sample);
+        sample->in_useful = true;
     }
 }
+
+
+/*********************************************************************************/
+/*    Other functions                                                            */
+/*********************************************************************************/
 
 static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 #if MPI_LIB
@@ -661,8 +589,8 @@ int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *m
     monitor_data_t *monitor_data = monitor->_data;
 
     if (!monitor_data->started) {
-        /* Begin new sample */
-        talp_begin_sample(spd);
+        /* Gather samples from all threads and update regions */
+        talp_gather_samples(spd);
 
         verbose(VB_TALP, "Starting region %s", monitor->name);
         instrument_event(MONITOR_REGION, monitor_data->id, EVENT_BEGIN);
@@ -684,8 +612,8 @@ int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *mo
     monitor_data_t *monitor_data = monitor->_data;
 
     if (monitor_data->started) {
-        /* Begin new sample */
-        talp_begin_sample(spd);
+        /* Gather samples from all threads and update regions */
+        talp_gather_samples(spd);
 
         /* Stop timer */
         monitor->stop_time = get_time_in_ns();
@@ -719,7 +647,7 @@ int monitoring_region_report(const subprocess_descriptor_t *spd, const dlb_monit
 }
 
 int monitoring_regions_force_update(const subprocess_descriptor_t *spd) {
-    talp_begin_sample(spd);
+    talp_gather_samples(spd);
     return DLB_SUCCESS;
 }
 
@@ -744,18 +672,18 @@ static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd) 
     pthread_mutex_unlock(&mutex);
 }
 
-static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
+static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
+        const talp_macrosample_t *macrosample) {
     talp_info_t *talp_info = spd->talp_info;
-    talp_sample_t *sample = &talp_info->sample;
 
     /* Update MPI monitor */
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
     monitor_data_t *mpi_monitor_data = mpi_monitor->_data;
     if (mpi_monitor_data != NULL
             && mpi_monitor_data->started) {
-        mpi_monitor->elapsed_computation_time += sample->elapsed_computation_time;
-        mpi_monitor->accumulated_MPI_time += sample->mpi_time;
-        mpi_monitor->accumulated_computation_time += sample->computation_time;
+        mpi_monitor->elapsed_computation_time += macrosample->elapsed_useful_time;
+        mpi_monitor->accumulated_MPI_time += macrosample->mpi_time;
+        mpi_monitor->accumulated_computation_time += macrosample->useful_time;
         /* Update shared memory only if requested */
         if (talp_info->external_profiler) {
             shmem_procinfo__settimes(spd->id,
@@ -770,9 +698,9 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd) {
         dlb_monitor_t *monitor = regions[i];
         monitor_data_t *monitor_data = monitor->_data;
         if (monitor_data->started) {
-            monitor->elapsed_computation_time += sample->elapsed_computation_time;
-            monitor->accumulated_MPI_time += sample->mpi_time;
-            monitor->accumulated_computation_time += sample->computation_time;
+            monitor->elapsed_computation_time += macrosample->elapsed_useful_time;
+            monitor->accumulated_MPI_time += macrosample->mpi_time;
+            monitor->accumulated_computation_time += macrosample->useful_time;
         }
     }
 }

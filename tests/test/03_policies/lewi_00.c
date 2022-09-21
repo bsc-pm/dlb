@@ -47,7 +47,7 @@ int main( int argc, char **argv ) {
     spd.id = getpid();
     options_init(&spd.options, options);
     debug_init(&spd.options);
-    pm_init(&spd.pm, false /* talp */);
+    pm_init(&spd.pm);
 
     sched_getaffinity(0, sizeof(cpu_set_t), &spd.process_mask);
     nthreads = CPU_COUNT(&spd.process_mask);

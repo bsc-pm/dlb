@@ -31,7 +31,6 @@
 #include "support/types.h"
 #include "support/mytime.h"
 #include "support/mask_utils.h"
-#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 
 #include <sched.h>
@@ -1556,7 +1555,6 @@ int auto_resize_start(){
                 CPU_SET(i,&shdata->resize_mask);
                 CPU_CLR(i,&mask);
                 set_new_mask(process, &mask, false, false);
-                talp_cpu_disable(thread_spd, i);
                 break;
             }
         }
@@ -1576,7 +1574,6 @@ int auto_resize_start(){
                 CPU_CLR(i, &shdata->resize_mask);
                 shmem_unlock(shm_handler);
                 set_new_mask(process,&mask, false, false);
-                talp_cpu_enable(thread_spd, i);
                 break;
             }
         }

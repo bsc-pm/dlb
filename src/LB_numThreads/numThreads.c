@@ -19,7 +19,6 @@
 
 #include "LB_numThreads/numThreads.h"
 
-#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
 #include "support/tracing.h"
@@ -42,9 +41,9 @@ static void packed_omp_set_num_threads(int nthreads, void *arg) {
 }
 
 
-void pm_init(pm_interface_t *pm, bool enable_talp) {
+void pm_init(pm_interface_t *pm) {
 
-    *pm = (pm_interface_t) {.talp_enabled = enable_talp};
+    *pm = (const pm_interface_t) {};
 
     /* OpenMP */
     if (OMP_SYMBOLS_DEFINED) {
@@ -55,8 +54,8 @@ void pm_init(pm_interface_t *pm, bool enable_talp) {
 }
 
 void pm_finalize(pm_interface_t *pm) {
-    /* Reset all fields except enable_talp */
-    *pm = (pm_interface_t) {.talp_enabled = pm->talp_enabled};
+    /* Reset all fields */
+    *pm = (const pm_interface_t) {};
 }
 
 int pm_get_num_threads(void) {
@@ -159,9 +158,6 @@ int update_threads(const pm_interface_t *pm, int threads) {
 }
 
 int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    if (pm->talp_enabled) {
-        talp_cpuset_set(thread_spd, cpu_set);
-    }
     if (pm->dlb_callback_set_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -172,9 +168,6 @@ int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    if (pm->talp_enabled) {
-        talp_cpuset_set(thread_spd, cpu_set);
-    }
     if (pm->dlb_callback_set_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -185,9 +178,6 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    if (pm->talp_enabled) {
-        talp_cpuset_enable(thread_spd, cpu_set);
-    }
     if (pm->dlb_callback_add_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -198,9 +188,6 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 }
 
 int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
-    if (pm->talp_enabled) {
-        talp_cpuset_enable(thread_spd, cpu_set);
-    }
     if (pm->dlb_callback_add_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -220,9 +207,6 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
         return add_mask(pm, &cpu_set);
     }
 
-    if (pm->talp_enabled) {
-        talp_cpu_enable(thread_spd, cpuid);
-    }
     if (pm->dlb_callback_enable_cpu_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
@@ -242,9 +226,6 @@ int disable_cpu(const pm_interface_t *pm, int cpuid) {
         return set_mask(pm, &cpu_set);
     }
 
-    if (pm->talp_enabled) {
-        talp_cpu_disable(thread_spd, cpuid);
-    }
     if (pm->dlb_callback_disable_cpu_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }

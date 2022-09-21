@@ -39,17 +39,6 @@ void talp_mpi_init(const struct SubProcessDescriptor *spd);
 /* Stop MPI monitoring region */
 void talp_mpi_finalize(const struct SubProcessDescriptor *spd);
 
-/*  Enables the cpuid/cpu_mask for the current process */
-void talp_cpu_enable(const struct SubProcessDescriptor *spd, int cpuid);
-void talp_cpuset_enable(const struct SubProcessDescriptor *spd, const cpu_set_t *cpu_mask);
-
-/*  Disables the cpuid/cpu_mask for the current process */
-void talp_cpu_disable(const struct SubProcessDescriptor *spd, int cpuid);
-void talp_cpuset_disable(const struct SubProcessDescriptor *spd, const cpu_set_t *cpu_mask);
-
-/* Set new cpu_mask */
-void talp_cpuset_set(const struct SubProcessDescriptor *spd, const cpu_set_t *cpu_mask);
-
 /*  Update the metrics when entering MPI */
 void talp_in_mpi(const struct SubProcessDescriptor *spd);
 

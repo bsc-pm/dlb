@@ -62,7 +62,7 @@ tests = {
     'spd_00'              : {},
     'talp_00'             : {},
     'talp_01'             : {},
-    'talp_01_lewi'        : {'source' : 'talp_01.c', 'dlb_args' : '--no-lewi'},
+    'talp_01_lewi'        : {'source' : 'talp_01.c', 'dlb_args' : '--lewi'},
   },
   '05_api' : {
     'api_00'              : {},

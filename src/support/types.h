@@ -21,6 +21,7 @@
 #define TYPES_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef enum VerboseOptions {
     VB_CLEAR    = 0,
@@ -123,6 +124,7 @@ typedef enum OMPTMVersion {
 
 static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }
+static inline int max_int64(int64_t a, int64_t b) { return a > b ? a : b; }
 
 int  parse_bool(const char *str, bool *value);
 bool equivalent_bool(const char *str1, const char *str2);
