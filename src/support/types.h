@@ -108,11 +108,18 @@ typedef enum MPISet {
 } mpi_set_t;
 
 typedef enum OMPTOptions {
-    OMPT_OPTS_CLEAR     = 0,
-    OMPT_OPTS_MPI       = 1 << 0,
-    OMPT_OPTS_BORROW    = 1 << 1,
-    OMPT_OPTS_LEND      = 1 << 2
-} ompt_opts_t;
+    OMPTOOL_OPTS_CLEAR      = 0,
+    OMPTOOL_OPTS_MPI        = 1 << 0,
+    OMPTOOL_OPTS_BORROW     = 1 << 1,
+    OMPTOOL_OPTS_LEND       = 1 << 2,
+    OMPTOOL_OPTS_AGGRESSIVE = 0xF
+} omptool_opts_t;
+
+typedef enum OMPTMVersion {
+    OMPTM_OMP5,
+    OMPTM_FREE_AGENTS,
+    OMPTM_ROLE_SHIFT
+} omptm_version_t;
 
 static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }
@@ -180,10 +187,16 @@ const char* mpiset_tostr(mpi_set_t value);
 const char* get_mpiset_choices(void);
 bool equivalent_mpiset(const char *str1, const char *str2);
 
-/* ompt_opts_t */
-int parse_ompt_opts(const char *str, ompt_opts_t *value);
-const char* ompt_opts_tostr(ompt_opts_t value);
-const char* get_ompt_opts_choices(void);
-bool equivalent_ompt_opts(const char *str1, const char *str2);
+/* omptool_opts_t */
+int parse_omptool_opts(const char *str, omptool_opts_t *value);
+const char* omptool_opts_tostr(omptool_opts_t value);
+const char* get_omptool_opts_choices(void);
+bool equivalent_omptool_opts(const char *str1, const char *str2);
+
+/* omptm_version_t */
+int parse_omptm_version(const char *str, omptm_version_t *value);
+const char* omptm_version_tostr(omptm_version_t value);
+const char* get_omptm_version_choices(void);
+bool equivalent_omptm_version_opts(const char *str1, const char *str2);
 
 #endif /* TYPES_H */

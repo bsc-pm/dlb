@@ -17,15 +17,18 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "LB_numThreads/omp_thread_manager.h"
+#include "LB_numThreads/omptm_omp5.h"
 
 #include "apis/dlb.h"
 #include "support/debug.h"
+#include "support/tracing.h"
 #include "support/types.h"
 #include "support/mask_utils.h"
+#include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 
 #include <sched.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
@@ -33,6 +36,11 @@
 
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 static void (*set_num_threads_fn)(int) = NULL;
+
+enum {
+    PARALLEL_UNSET,
+    PARALLEL_LEVEL_1,
+};
 
 
 /*********************************************************************************/
@@ -43,7 +51,7 @@ static cpu_set_t active_mask, process_mask;
 static bool lewi = false;
 static bool drom = false;
 static pid_t pid;
-static ompt_opts_t ompt_opts;
+static omptool_opts_t omptool_opts;
 
 static void cb_enable_cpu(int cpuid, void *arg) {
     CPU_SET(cpuid, &active_mask);
@@ -61,54 +69,7 @@ static void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
     set_num_threads_fn(CPU_COUNT(&active_mask));
 }
 
-
-void omp_thread_manager__init(const options_t *options) {
-    if (omp_set_num_threads) {
-        set_num_threads_fn = omp_set_num_threads;
-    } else {
-        void *handle = dlopen("libomp.so", RTLD_LAZY | RTLD_GLOBAL);
-        if (handle == NULL) {
-            handle = dlopen("libiomp5.so", RTLD_LAZY | RTLD_GLOBAL);
-        }
-        if (handle == NULL) {
-            handle = dlopen("libgomp.so", RTLD_LAZY | RTLD_GLOBAL);
-        }
-        if (handle != NULL)  {
-            set_num_threads_fn = dlsym(handle, "omp_set_num_threads");
-        }
-        fatal_cond(set_num_threads_fn == NULL, "omp_set_num_threads cannot be found");
-    }
-
-    lewi = options->lewi;
-    drom = options->drom;
-    ompt_opts = options->lewi_ompt;
-    pid = getpid();
-    if (lewi || drom) {
-        int err;
-        err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_CallbackSet enable_cpu: %s", DLB_Strerror(err));
-        }
-        err = DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_CallbackSet disable_cpu: %s", DLB_Strerror(err));
-        }
-        err = DLB_CallbackSet(dlb_callback_set_process_mask,
-                (dlb_callback_t)cb_set_process_mask, NULL);
-        if (err != DLB_SUCCESS) {
-            warning("DLB_CallbackSet set_process_mask: %s", DLB_Strerror(err));
-        }
-        shmem_procinfo__getprocessmask(pid, &process_mask, 0);
-        memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
-        verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
-        omp_thread_manager__lend();
-    }
-}
-
-void omp_thread_manager__finalize(void) {
-}
-
-void omp_thread_manager__borrow(void) {
+static void omptm_omp5__borrow(void) {
     /* The "Exponential Weighted Moving Average" is an average computed
      * with weighting factors that decrease exponentially on new samples.
      * I.e,: Most recent values are more significant for the average */
@@ -123,7 +84,7 @@ void omp_thread_manager__borrow(void) {
         DLB_PollDROM_Update();
     }
 
-    if (lewi && ompt_opts & OMPT_OPTS_BORROW) {
+    if (lewi && omptool_opts & OMPTOOL_OPTS_BORROW) {
         int err_return = DLB_Return();
         int err_reclaim = DLB_Reclaim();
         int err_borrow = DLB_BorrowCpus(cpus_to_borrow);
@@ -148,8 +109,8 @@ void omp_thread_manager__borrow(void) {
     }
 }
 
-void omp_thread_manager__lend(void) {
-    if (lewi && ompt_opts & OMPT_OPTS_LEND) {
+static void omptm_omp5__lend(void) {
+    if (lewi && omptool_opts & OMPTOOL_OPTS_LEND) {
         set_num_threads_fn(1);
         CPU_ZERO(&active_mask);
         CPU_SET(sched_getcpu(), &active_mask);
@@ -158,8 +119,7 @@ void omp_thread_manager__lend(void) {
     }
 }
 
-// FIXME name function when merging with free_agents branch
-void omp_thread_manager__lend_from_api(void) {
+void omptm_omp5__lend_from_api(void) {
     if (lewi) {
         set_num_threads_fn(1);
         CPU_ZERO(&active_mask);
@@ -169,12 +129,59 @@ void omp_thread_manager__lend_from_api(void) {
     }
 }
 
+void omptm_omp5__init(pid_t process_id, const options_t *options) {
+    if (omp_set_num_threads) {
+        set_num_threads_fn = omp_set_num_threads;
+    } else {
+        void *handle = dlopen("libomp.so", RTLD_LAZY | RTLD_GLOBAL);
+        if (handle == NULL) {
+            handle = dlopen("libiomp5.so", RTLD_LAZY | RTLD_GLOBAL);
+        }
+        if (handle == NULL) {
+            handle = dlopen("libgomp.so", RTLD_LAZY | RTLD_GLOBAL);
+        }
+        if (handle != NULL)  {
+            set_num_threads_fn = dlsym(handle, "omp_set_num_threads");
+        }
+        fatal_cond(set_num_threads_fn == NULL, "omp_set_num_threads cannot be found");
+    }
+
+    lewi = options->lewi;
+    drom = options->drom;
+    omptool_opts = options->lewi_ompt;
+    pid = process_id;
+    if (lewi || drom) {
+        int err;
+        err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_CallbackSet enable_cpu: %s", DLB_Strerror(err));
+        }
+        err = DLB_CallbackSet(dlb_callback_disable_cpu, (dlb_callback_t)cb_disable_cpu, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_CallbackSet disable_cpu: %s", DLB_Strerror(err));
+        }
+        err = DLB_CallbackSet(dlb_callback_set_process_mask,
+                (dlb_callback_t)cb_set_process_mask, NULL);
+        if (err != DLB_SUCCESS) {
+            warning("DLB_CallbackSet set_process_mask: %s", DLB_Strerror(err));
+        }
+        shmem_procinfo__getprocessmask(pid, &process_mask, 0);
+        memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
+        verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
+        omptm_omp5__lend();
+    }
+}
+
+void omptm_omp5__finalize(void) {
+}
+
+
 /* lb_funcs.into_blocking_call has already been called and
  * the current CPU will be lent according to the --lew-mpi option
  * This function just lends the rest of the CPUs
  */
-void omp_thread_manager__IntoBlockingCall(void) {
-    if (lewi && ompt_opts & OMPT_OPTS_MPI) {
+void omptm_omp5__IntoBlockingCall(void) {
+    if (lewi && omptool_opts & OMPTOOL_OPTS_MPI) {
         int mycpu = sched_getcpu();
 
         /* Lend every CPU except the current one */
@@ -192,10 +199,71 @@ void omp_thread_manager__IntoBlockingCall(void) {
     }
 }
 
-void omp_thread_manager__OutOfBlockingCall(void) {
-    if (lewi && ompt_opts & OMPT_OPTS_MPI) {
+void omptm_omp5__OutOfBlockingCall(void) {
+    if (lewi && omptool_opts & OMPTOOL_OPTS_MPI) {
         DLB_Reclaim();
     }
 }
 
 
+void omptm_omp5__parallel_begin(
+        ompt_data_t *encountering_task_data,
+        const ompt_frame_t *encountering_task_frame,
+        ompt_data_t *parallel_data,
+        unsigned int requested_parallelism,
+        int flags,
+        const void *codeptr_ra) {
+    /* From OpenMP spec:
+     * "The exit frame associated with the initial task that is not nested
+     *  inside any OpenMP construct is NULL."
+     */
+    if (encountering_task_frame->exit_frame.ptr == NULL
+            && flags & ompt_parallel_team) {
+        /* This is a non-nested parallel construct encountered by the initial task.
+         * Set parallel_data to an appropriate value so that worker threads know
+         * when they start their explicit task for this parallel region.
+         */
+        parallel_data->value = PARALLEL_LEVEL_1;
+
+        omptm_omp5__borrow();
+    }
+}
+
+void omptm_omp5__parallel_end(
+        ompt_data_t *parallel_data,
+        ompt_data_t *encountering_task_data,
+        int flags,
+        const void *codeptr_ra) {
+    if (parallel_data->value == PARALLEL_LEVEL_1) {
+        omptm_omp5__lend();
+        parallel_data->value = PARALLEL_UNSET;
+    }
+}
+
+void omptm_omp5__implicit_task(
+        ompt_scope_endpoint_t endpoint,
+        ompt_data_t *parallel_data,
+        ompt_data_t *task_data,
+        unsigned int actual_parallelism,
+        unsigned int index,
+        int flags) {
+    if (endpoint == ompt_scope_begin) {
+        if (parallel_data &&
+                parallel_data->value == PARALLEL_LEVEL_1) {
+            int cpuid = shmem_cpuinfo__get_thread_binding(pid, index);
+            int current_cpuid = sched_getcpu();
+            if (cpuid >=0 && cpuid != current_cpuid) {
+                cpu_set_t thread_mask;
+                CPU_ZERO(&thread_mask);
+                CPU_SET(cpuid, &thread_mask);
+                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+                instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
+                verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
+            }
+            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
+        }
+    } else if (endpoint == ompt_scope_end) {
+        instrument_event(REBIND_EVENT,   0, EVENT_END);
+        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+    }
+}

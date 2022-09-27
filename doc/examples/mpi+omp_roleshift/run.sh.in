@@ -22,9 +22,10 @@ if [[ $DLB == 1 ]] ; then
     else
         PRELOAD="$DLB_HOME/lib/libdlb_mpi.so"
     fi
-    export DLB_ARGS+=" --lewi --ompt --lewi-ompt=mpi:borrow"
+    export DLB_ARGS+=" --lewi --ompt --lewi-ompt=mpi:borrow --ompt-thread-manager=role-shift"
     export OMP_WAIT_POLICY=passive
     export KMP_BLOCKTIME=0
+    export KMP_FREE_AGENT_NUM_THREADS=1
 
     # Advanced: use --lewi-keep-one-cpu
     if [[ $LEWI_KEEP_ONE_CPU == 1 ]] ; then
@@ -36,9 +37,10 @@ if [[ $DLB == 1 ]] ; then
 else
     if [[ $TRACE == 1 ]] ; then
         TRACENAME="pils.prv"
-        PRELOAD="$EXTRAE_HOME/lib/libompitrace.so"
+        PRELOAD="$EXTRAE_HOME/lib/libompitrace.so:$EXTRAE_HOME/lib/libompt-freeagent-tracer.so"
         export EXTRAE_CONFIG_FILE="extrae.xml"
     fi
+    export KMP_FREE_AGENT_NUM_THREADS=$NUMTHREADS
     export DLB_ARGS+=" --no-lewi"
 fi
 

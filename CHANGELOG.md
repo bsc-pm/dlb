@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- Free agent and Role-shift OMPT thread managers to support LeWI with both
+  implementations
+- Flag `--ompt-thread-manager` to select which OpenMP implementation to use
 
 ## [3.2] 2022-03-16
 ### Added

@@ -107,6 +107,13 @@ int main( int argc, char **argv ) {
     mu_substract(&mask3, &mask1, &mask1);
     assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0}) == 0 );
 
+    assert( CPU_COUNT(&mask1) > 1 );
+    assert( mu_get_single_cpu(&mask1) == -1);
+    CPU_ZERO(&mask3);
+    assert( mu_get_single_cpu(&mask3) == -1);
+    CPU_SET(5, &mask3);
+    assert( mu_get_single_cpu(&mask3) == 5);
+
     assert( strcmp(mu_to_str(&mask1), "[0,1]") == 0 );
     assert( strcmp(mu_to_str(&mask2), "[0-3]") == 0 );
 

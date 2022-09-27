@@ -333,6 +333,8 @@ AC_CONFIG_FILES([
     doc/examples/mpi+omp/Makefile
     doc/examples/mpi+omp_ompt/run.sh
     doc/examples/mpi+omp_ompt/Makefile
+    doc/examples/mpi+omp_roleshift/run.sh
+    doc/examples/mpi+omp_roleshift/Makefile
     doc/examples/mpi+ompss/run.sh
     doc/examples/mpi+ompss/Makefile
     doc/examples/ompt/Makefile

@@ -1289,7 +1289,7 @@ int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max,
                     victims[cpuid] = pid;
                 }
             } else if (cpuinfo->guest == pid) {
-                // Since owned_count is still unkown, just save our guested CPUs
+                // Since owned_count is still unknown, just save our guested CPUs
                 guested_cpus[guested_count++] = cpuid;
             }
         }
@@ -1404,6 +1404,55 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num) {
         binding = -1;
     }
     return binding;
+}
+
+/* Find the nth non owned CPU for a given PID.
+ * The count always starts from the first owned CPU.
+ * ex: process has mask [4,7] in a system mask [0-7],
+ *         1st CPU (id=0) is 0
+ *         4th CPU (id=3) is 3
+ *         id > 3 -> -1
+ */
+int shmem_cpuinfo__get_nth_non_owned_cpu(pid_t pid, int nth_cpu) {
+    int idx = 0;
+    int owned_cpus = 0;
+    int non_owned_cpus = 0;
+    SMALL_ARRAY(int, non_owned_cpu_list, node_size);
+
+    /* Construct non owned CPU list */
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        if (cpuinfo->owner == pid) {
+            if (owned_cpus++ == 0) {
+                idx = non_owned_cpus;
+            }
+        } else if (cpuinfo->state != CPU_DISABLED) {
+            non_owned_cpu_list[non_owned_cpus++] = cpuid;
+        }
+    }
+
+    /* Find the nth element starting from the first owned CPU */
+    if (nth_cpu < non_owned_cpus) {
+        idx = (idx + nth_cpu) % non_owned_cpus;
+        return non_owned_cpu_list[idx];
+    } else {
+        return -1;
+    }
+}
+
+/* Return the number of registered CPUs not owned by the given PID */
+int shmem_cpuinfo__get_number_of_non_owned_cpus(pid_t pid) {
+    int num_non_owned_cpus = 0;
+    int cpuid;
+    for (cpuid=0; cpuid<node_size; ++cpuid) {
+        cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+        if (cpuinfo->owner != pid
+                && cpuinfo->state != CPU_DISABLED) {
+            ++num_non_owned_cpus;
+        }
+    }
+    return num_non_owned_cpus;
 }
 
 int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpuid) {
