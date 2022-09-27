@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
 
     // Application elapsed time
     t_end=usecs();
-    app_time = ((double)(t_end-t_start))/1000000;
+    app_time = (t_end-t_start)/1000000.0;
     if (me ==0) printf("\nApplication time = %f \n", app_time);
 
     MPI_Finalize();

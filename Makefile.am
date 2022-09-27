@@ -173,6 +173,10 @@ COMMON_SRCS = \
 	src/LB_core/lb_funcs.h                  \
 	src/LB_core/spd.c                       \
 	src/LB_core/spd.h                       \
+	src/LB_numThreads/omptool.c             \
+	src/LB_numThreads/omptool.h             \
+	src/LB_numThreads/omp-tools.h           \
+	src/LB_numThreads/ompt-multiplex.h      \
 	src/apis/DLB_interface.c                \
 	src/apis/DLB_interfaceF.c               \
 	src/apis/DLB_interface_drom.c           \
@@ -205,10 +209,12 @@ SRCS = \
 	src/support/tracing.h                   \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
-	src/LB_numThreads/omp_thread_manager.c  \
-	src/LB_numThreads/omp_thread_manager.h  \
-	src/LB_numThreads/omp_tool.c            \
-	src/LB_numThreads/ompt.h                \
+	src/LB_numThreads/omptm_omp5.c          \
+	src/LB_numThreads/omptm_omp5.h          \
+	src/LB_numThreads/omptm_free_agents.c   \
+	src/LB_numThreads/omptm_free_agents.h   \
+	src/LB_numThreads/omptm_role_shift.c    \
+	src/LB_numThreads/omptm_role_shift.h    \
 	src/LB_comm/comm_lend_light.c           \
 	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem_cpuinfo.c             \
@@ -462,6 +468,7 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_runtime.cfg \
 	doc/paraver_cfgs/DLB_num_threads.cfg \
 	doc/paraver_cfgs/DLB_rebind_threads.cfg \
+	doc/paraver_cfgs/DLB_thread_binding.cfg \
 	doc/paraver_cfgs/DLB_loop.cfg \
 	doc/paraver_cfgs/DLB_regions.cfg \
 	doc/paraver_cfgs/DLB_Give_Want_number_of_cpus.cfg \
@@ -519,6 +526,22 @@ mpiompomptexamples_files_nodist = \
 mpiompomptexamplesdir = $(docdir)/examples/MPI+OMP_OMPT
 dist_mpiompomptexamples_DATA = $(mpiompomptexamples_files)
 nodist_mpiompomptexamples_DATA = $(mpiompomptexamples_files_nodist)
+
+### MPI+OMP (ROLE-SHIFT) ###
+roleshiftexamples_files = \
+	doc/examples/mpi+omp_roleshift/README \
+	doc/examples/mpi+omp_roleshift/mpi_omp_pils.c \
+	doc/examples/mpi+omp_roleshift/extrae.xml \
+	$(END)
+
+roleshiftexamples_files_nodist = \
+	doc/examples/mpi+omp_roleshift/Makefile \
+	doc/examples/mpi+omp_roleshift/run.sh \
+	$(END)
+
+roleshiftexamplesdir = $(docdir)/examples/MPI+OMP_roleshift
+dist_roleshiftexamples_DATA = $(roleshiftexamples_files)
+nodist_roleshiftexamples_DATA = $(roleshiftexamples_files_nodist)
 
 ### MPI+OmpSs ###
 mpiompssexamples_files = \
@@ -923,7 +946,10 @@ if ENABLE_COVERAGE
 COVERAGE_DIR = tests/coverage
 coverage: check-recursive
 	$(mkdir_p) $(COVERAGE_DIR)
-	gcovr . --root $(top_srcdir) --html --html-details -o $(COVERAGE_DIR)/index.html
+	gcovr . --root $(top_srcdir) \
+		--exclude '.*/gtree.c'  \
+		--exclude '.*/ompt-multiplex.h' \
+		--html --html-details -o $(COVERAGE_DIR)/index.html
 
 clean-coverage:
 	find $(abs_top_builddir) -name '*.gcno' -or -name '*.gcda' -delete
@@ -946,6 +972,7 @@ install-data-hook:
 	chmod +x $(DESTDIR)$(mpiompomptexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompssexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(omptexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(roleshiftexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(statsexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(talpexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(regionsexamplesdir)/run.sh

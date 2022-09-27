@@ -309,6 +309,21 @@ void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *
     CPU_AND(result, minuend, &xor);
 }
 
+/* Return the one and only enabled CPU in mask, or -1 if count != 1 */
+int mu_get_single_cpu(const cpu_set_t *mask) {
+    int cpu_count = CPU_COUNT(mask);
+    if (cpu_count == 1) {
+        int sys_size = get_sys_size();
+        int i;
+        for (i=0; i<sys_size; ++i) {
+            if (CPU_ISSET(i, mask)) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
 // mu_to_str and mu_parse_mask functions are used by DLB utilities
 // We export their dynamic symbols to avoid code duplication,
 // although they do not belong to the public API

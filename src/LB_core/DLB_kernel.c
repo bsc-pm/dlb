@@ -26,7 +26,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
-#include "LB_numThreads/omp_thread_manager.h"
+#include "LB_numThreads/omptool.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -41,6 +41,7 @@
 
 #include <sched.h>
 #include <string.h>
+#include <pthread.h>
 
 
 /* Status */
@@ -60,14 +61,26 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     timer_init();
 
     // Infer LeWI mode
-    spd->lb_policy = !spd->options.lewi ? POLICY_NONE :
-        spd->options.preinit_pid ? POLICY_LEWI_MASK :
-        mask ? POLICY_LEWI_MASK :
-        POLICY_LEWI;
+    spd->lb_policy =
+        !spd->options.lewi          ? POLICY_NONE :
+        spd->options.ompt           ? POLICY_LEWI_MASK :
+        spd->options.preinit_pid    ? POLICY_LEWI_MASK :
+        mask                        ? POLICY_LEWI_MASK :
+                                      POLICY_LEWI;
 
-    fatal_cond(spd->lb_policy == POLICY_LEWI && spd->options.ompt,
-            "LeWI with OMPT support requires the application to be pre-initialized.\n"
-            "Please run: dlb_run <application>");
+    // Check if real process mask is needed and possible incompatibilities
+    // (Basically, always except if classic LeWI)
+    bool mask_is_needed = (
+            spd->lb_policy == POLICY_LEWI_MASK
+            || spd->options.drom
+            || spd->options.talp
+            || spd->options.ompt
+            || spd->options.preinit_pid);
+    if (mask_is_needed && spd->lb_policy == POLICY_LEWI) {
+        warning("Classic LeWI support with no cpuset binding is not compatible"
+                " with newer DLB modules. DLB_Init cannot continue.");
+        return DLB_ERR_NOCOMP;
+    }
 
     // Initialize the rest of the subprocess descriptor
     pm_init(&spd->pm, spd->options.talp);
@@ -75,8 +88,8 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
-    } else if (spd->lb_policy == POLICY_LEWI_MASK || spd->options.drom || spd->options.talp) {
-        // These modes require mask support, best effort querying the system
+    } else if (mask_is_needed) {
+        // Best effort querying the system
         sched_getaffinity(0, sizeof(cpu_set_t), &spd->process_mask);
     } else if (spd->lb_policy == POLICY_LEWI) {
         // If LeWI, we don't want the process mask, just a mask of size 'ncpus'
@@ -87,11 +100,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     }
 
     // Initialize shared memories
-    if (spd->lb_policy == POLICY_LEWI_MASK
-            || spd->options.drom
-            || spd->options.talp
-            || spd->options.preinit_pid) {
-
+    if (mask_is_needed) {
         // Initialize procinfo
         cpu_set_t new_process_mask;
         error = shmem_procinfo__init(spd->id, spd->options.preinit_pid,
@@ -149,7 +158,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     verbose(VB_OMPT, "Enabled verbose mode for OMPT experimental features");
 
     // Print number of cpus or mask
-    if (CPU_COUNT(&spd->process_mask) > 0) {
+    if (mask_is_needed) {
         info("Process CPU affinity mask: %s", mu_to_str(&spd->process_mask));
     }
 
@@ -180,6 +189,7 @@ int Finish(subprocess_descriptor_t *spd) {
     if (spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
             || spd->options.talp
+            || spd->options.ompt
             || spd->options.preinit_pid) {
         shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
@@ -195,10 +205,12 @@ int Finish(subprocess_descriptor_t *spd) {
     return error;
 }
 
-int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-
+int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask,
+        const char *lb_args) {
     // Initialize options
-    options_init(&spd->options, NULL);
+    options_init(&spd->options, lb_args);
+    if (spd->options.preinit_pid == 0) return DLB_ERR_INIT;
+
     debug_init(&spd->options);
 
     // Initialize subprocess descriptor
@@ -292,16 +304,28 @@ void OutOfCommunication(void) {
 void IntoBlockingCall(int is_iter, int blocking_mode) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
-        spd->lb_funcs.into_blocking_call(spd);
-        omp_thread_manager__IntoBlockingCall();
+        /* If the current thread is pinned to more than one CPU,
+         * we better skip LeWI doing the blocking call (see #167) */
+        cpu_set_t thread_mask;
+        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+        if (CPU_COUNT(&thread_mask) == 1) {
+            spd->lb_funcs.into_blocking_call(spd);
+            omptool__into_blocking_call();
+        }
     }
 }
 
 void OutOfBlockingCall(int is_iter) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->dlb_enabled) {
-        spd->lb_funcs.out_of_blocking_call(spd, is_iter);
-        omp_thread_manager__OutOfBlockingCall();
+        /* If the current thread is pinned to more than one CPU,
+         * we better skip LeWI doing the blocking call (see #167) */
+        cpu_set_t thread_mask;
+        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+        if (CPU_COUNT(&thread_mask) == 1) {
+            spd->lb_funcs.out_of_blocking_call(spd, is_iter);
+            omptool__outof_blocking_call();
+        }
     }
 }
 
@@ -315,7 +339,7 @@ int lend(const subprocess_descriptor_t *spd) {
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
         instrument_event(GIVE_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
-        omp_thread_manager__lend_from_api();
+        omptool__lend_from_api();
         error = spd->lb_funcs.lend(spd);
         if (error == DLB_SUCCESS && spd->options.talp) {
             talp_cpuset_disable(spd, &spd->process_mask);

@@ -192,7 +192,7 @@ int main(int argc, char* argv[]) {
     if(me==0) printf("Final time: %6.3f\n", final_time);
 
     // Application elapsed time
-    app_time = ((double)(t_end-t_start))/1000000;
+    app_time = (t_end-t_start)/1000000.0;
     if (me ==0) printf("\nApplication time = %f \n", app_time);
 
     MPI_Finalize();

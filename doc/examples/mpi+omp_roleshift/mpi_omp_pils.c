@@ -19,6 +19,7 @@
 
 #include <sys/time.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <mpi.h>
@@ -72,7 +73,9 @@ void iter(double * app_time, int *fib, int usec) {
     *fib=computation(35, usec);
     t_end=usecs();
 
-    *app_time += (t_end-t_start)/1000000.0;
+    double iter_time=(t_end-t_start)/1000000.0;
+    #pragma omp atomic
+    *app_time += iter_time;
 }
 
 int main(int argc, char* argv[]) {
@@ -148,11 +151,12 @@ int main(int argc, char* argv[]) {
             tope=MIN(steps, i+BS);
 
             int j;
-            #pragma omp parallel for private(j) reduction(+:iter_time) shared(fib)
             for(j=i; j<tope; j++){
+            #pragma omp task shared(fib, usec, iter_time) free_agent(true)
                 iter(&iter_time, &fib, usec);
             }
         }
+        #pragma omp taskwait
 
         // Total computation time for each process
         printf("%d: Total time: %6.3f\n",me, iter_time);

@@ -18,6 +18,8 @@ tests = {
     'types_00'            : {},
   },
   '01_pm' : {
+    # FIXME: omptm_free_agents_00.c not yet supported in meson test
+    'omptool_00'          : {},
     'pm_00'               : {},
   },
   '02_shmem' : {

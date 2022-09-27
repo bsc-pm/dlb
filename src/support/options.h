@@ -49,12 +49,13 @@ typedef struct Options {
     bool                lewi_warmup;
     mpi_set_t           lewi_mpi_calls;
     priority_t          lewi_affinity;
-    ompt_opts_t         lewi_ompt;
+    omptool_opts_t      lewi_ompt;
     int                 lewi_max_parallelism;
     /* misc */
     char                shm_key[MAX_OPTION_LENGTH];
     pid_t               preinit_pid;
     debug_opts_t        debug_opts;
+    omptm_version_t     omptm_version;
     /* talp */
     bool                talp;
     bool                talp_external_profiler;

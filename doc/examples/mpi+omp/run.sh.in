@@ -23,8 +23,6 @@ if [[ $DLB == 1 ]] ; then
         PRELOAD="$DLB_HOME/lib/libdlb_mpi.so"
     fi
     export DLB_ARGS+=" --lewi"
-    export OMP_WAIT_POLICY=passive
-    export OMP_PROC_BIND=false
 
     # Advanced: use --lewi-keep-one-cpu
     if [[ $LEWI_KEEP_ONE_CPU == 1 ]] ; then
@@ -42,6 +40,8 @@ else
     export DLB_ARGS+=" --no-lewi"
 fi
 
+export OMP_WAIT_POLICY=passive
+export OMP_PROC_BIND=false
 export OMP_NUM_THREADS=$NUMTHREADS
 $MPIEXEC -np 2 $MPIEXEC_NOBIND_FLAG env LD_PRELOAD="$PRELOAD" $APP $ARGS
 

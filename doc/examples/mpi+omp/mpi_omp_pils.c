@@ -45,7 +45,7 @@ int computation (int num, int usec) {
     int64_t t_start = usecs();
     int64_t t_now;
     do {
-        for(i=0; i<x; i++) {
+        for (i=0; i<x; i++) {
             p+=a*i;
             p=p/i;
         }
@@ -73,7 +73,7 @@ void iter(double * app_time, int *fib, int usec) {
     *fib=computation(35, usec);
     t_end=usecs();
 
-    *app_time += ((double)(t_end-t_start))/1000000;
+    *app_time += (t_end-t_start)/1000000.0;
 }
 
 int main(int argc, char* argv[]) {
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
 
     // Application elapsed time
     t_end=usecs();
-    app_time = ((double)(t_end-t_start))/1000000;
+    app_time = (t_end-t_start)/1000000.0;
     if (me ==0) printf("\nApplication time = %f \n", app_time);
 
     MPI_Finalize();

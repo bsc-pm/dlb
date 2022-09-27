@@ -188,7 +188,7 @@ int main( int argc, char **argv ) {
     char *talp_file = malloc(sizeof(char)*PATH_MAX);
     verbose_opts_t vb_opts;
     verbose_fmt_t vb_fmt;
-    ompt_opts_t ompt_opts;
+    omptool_opts_t ompt_opts;
     instrument_items_t instr_items;
     mpi_set_t mpiset;
     priority_t prio;
@@ -202,7 +202,7 @@ int main( int argc, char **argv ) {
     options_parse_entry("--barrier-id", &barrier_id);   assert(barrier_id == 3);
     options_parse_entry("--shm-key", shm_key);          assert(strcmp(shm_key, "custom_key") == 0);
     options_parse_entry("--verbose", &vb_opts);         assert(vb_opts == VB_TALP);
-    options_parse_entry("--lewi-ompt", &ompt_opts);     assert(ompt_opts == OMPT_OPTS_MPI);
+    options_parse_entry("--lewi-ompt", &ompt_opts);     assert(ompt_opts == OMPTOOL_OPTS_MPI);
     // other default values
     options_parse_entry("--verbose-format", &vb_fmt);   assert(vb_fmt == (VBF_NODE|VBF_SPID));
     options_parse_entry("--instrument", &instr_items);  assert(instr_items == INST_ALL);
@@ -220,7 +220,7 @@ int main( int argc, char **argv ) {
     options_parse_entry("--barrier-id", &barrier_id);   assert(barrier_id == 3);
     options_parse_entry("--shm-key", shm_key);          assert(strcmp(shm_key, "custom_key") == 0);
     options_parse_entry("--verbose", &vb_opts);         assert(vb_opts == VB_TALP);
-    options_parse_entry("--lewi-ompt", &ompt_opts);     assert(ompt_opts == OMPT_OPTS_MPI);
+    options_parse_entry("--lewi-ompt", &ompt_opts);     assert(ompt_opts == OMPTOOL_OPTS_MPI);
     // other default values
     options_parse_entry("--verbose-format", &vb_fmt);   assert(vb_fmt == (VBF_NODE|VBF_SPID));
     options_parse_entry("--instrument", &instr_items);  assert(instr_items == INST_ALL);

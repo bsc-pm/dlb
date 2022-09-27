@@ -17,17 +17,33 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef OMP_THREAD_MANAGER_H
-#define OMP_THREAD_MANAGER_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
 
-#include "support/options.h"
+#include "LB_numThreads/omp-tools.h"
+#include "LB_numThreads/omptool.h"
+#include "apis/dlb_errors.h"
 
-void omp_thread_manager__init(const options_t *options);
-void omp_thread_manager__finalize(void);
-void omp_thread_manager__borrow(void);
-void omp_thread_manager__lend(void);
-void omp_thread_manager__lend_from_api(void);
-void omp_thread_manager__IntoBlockingCall(void);
-void omp_thread_manager__OutOfBlockingCall(void);
+#include <sched.h>
+#include <string.h>
+#include <assert.h>
 
-#endif /* OMP_THREAD_MANAGER_H */
+ompt_start_tool_result_t* ompt_start_tool(
+        unsigned int omp_version, const char *runtime_version);
+
+
+static void* lookup_fn (const char *interface_function_name) {
+    return NULL;
+}
+
+int main (int argc, char *argv[]) {
+    /* Initialize OMPT tool */
+    ompt_start_tool_result_t *tool_result = ompt_start_tool(1, "Fake OpenMP runtime");
+    assert( tool_result );
+    assert( tool_result->initialize );
+    assert( tool_result->finalize );
+    tool_result->initialize((ompt_function_lookup_t)lookup_fn, 0, NULL);
+
+    return 0;
+}
