@@ -317,6 +317,15 @@ static const opts_dict_t options_dictionary[] = {
     },
     // talp
     {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-openmp",
+        .default_value  = "no",
+        .description    = OFFSET"Select whether to measure OpenMP metrics. (Experimental)",
+        .offset         = offsetof(options_t, talp_openmp),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+    },
+    {
         .var_name       = "LB_TALP_SUMM",
         .arg_name       = "--talp-summary",
         .default_value  = "pop-metrics",
@@ -383,7 +392,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--ompt-thread-manager",
-        .default_value  = "omp5",
+        .default_value  = "none",
         .description    = OFFSET"OMPT Thread Manager version.",
         .offset         = offsetof(options_t, omptm_version),
         .type           = OPT_OMPTM_T,

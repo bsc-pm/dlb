@@ -117,6 +117,7 @@ typedef enum OMPTOptions {
 } omptool_opts_t;
 
 typedef enum OMPTMVersion {
+    OMPTM_NONE,
     OMPTM_OMP5,
     OMPTM_FREE_AGENTS,
     OMPTM_ROLE_SHIFT
