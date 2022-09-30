@@ -41,10 +41,9 @@ typedef struct pm_interface {
     void                            *dlb_callback_enable_cpu_arg;
     dlb_callback_disable_cpu_t       dlb_callback_disable_cpu_ptr;
     void                            *dlb_callback_disable_cpu_arg;
-    bool                             talp_enabled;
 } pm_interface_t;
 
-void pm_init(pm_interface_t *pm, bool enable_talp);
+void pm_init(pm_interface_t *pm);
 void pm_finalize(pm_interface_t *pm);
 int pm_get_num_threads(void);
 int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,

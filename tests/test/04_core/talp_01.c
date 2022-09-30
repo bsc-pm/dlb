@@ -29,6 +29,7 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
+#include "support/atomic.h"
 #include "support/mytime.h"
 
 #include <sched.h>
@@ -40,16 +41,20 @@
 
 enum { USLEEP_TIME = 100000 };
 
+typedef struct DLB_ALIGN_CACHE talp_sample_t {
+    atomic_int_least64_t    mpi_time;
+    atomic_int_least64_t    useful_time;
+    int64_t     last_updated_timestamp;
+    bool        in_useful;
+    bool        cpu_disabled;
+} talp_sample_t;
+
 typedef struct talp_info_t {
-    dlb_monitor_t   mpi_monitor;
-    int64_t         sample_start_time;
-    bool            external_profiler;
-    bool            use_counters;
-    int             num_workers;
-    int             num_mpi;
-    int             ncpus;
-    cpu_set_t       workers_mask;
-    cpu_set_t       mpi_mask;
+    dlb_monitor_t       mpi_monitor;
+    bool                external_profiler;
+    int                 ncpus;
+    talp_sample_t       **samples;
+    pthread_mutex_t     samples_mutex;
 } talp_info_t;
 
 
@@ -58,25 +63,28 @@ int main(int argc, char *argv[]) {
     /* Process Mask size can be 1..N */
     cpu_set_t process_mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-    int ncpus = CPU_COUNT(&process_mask);
 
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
     subprocess_descriptor_t spd = {.id = 111};
     options_init(&spd.options, options);
+
+    bool lewi = spd.options.lewi;
+    if (lewi) {
+        /* FIXME: This test is temporarily disabled with LeWI
+         * It needs to be rewritten once LeWI is supported again on TALP
+         */
+        return 0;
+    }
+
     memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
             NULL, spd.options.shm_key) == DLB_SUCCESS );
     talp_init(&spd);
 
-    bool lewi = spd.options.lewi;
+
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
-
-    /* Simulate threaded execution, fix talp_init */
-    talp_info->use_counters = false;
-    memcpy(&talp_info->workers_mask, &spd.process_mask, sizeof(cpu_set_t));
-    talp_info->ncpus = CPU_COUNT(&talp_info->workers_mask);
 
     /* Start MPI monitoring region */
     talp_mpi_init(&spd);
@@ -87,28 +95,30 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->elapsed_time == 0 );
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus );
-    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
-    assert( talp_info->ncpus == ncpus );
+    assert( talp_info->samples[0]->mpi_time == 0 );
+    assert( talp_info->samples[0]->useful_time == 0 );
+    assert( talp_info->samples[0]->in_useful == true );
+    assert( talp_info->samples[0]->cpu_disabled == false );
+    assert( talp_info->ncpus == 1 );
 
-    /* Entering MPI */
+    /* Entering MPI, sample is updated, region not yet */
     talp_in_mpi(&spd);
-    assert( mpi_monitor->accumulated_MPI_time == 0 );
-    assert( mpi_monitor->accumulated_computation_time != 0 );
-    if (lewi) {
-        assert( CPU_COUNT(&talp_info->workers_mask) == ncpus-1 );
-        assert( CPU_COUNT(&talp_info->mpi_mask) == 1 );
-    } else {
-        assert( CPU_COUNT(&talp_info->workers_mask) == 0 );
-        assert( CPU_COUNT(&talp_info->mpi_mask) == ncpus );
-    }
+    assert( talp_info->samples[0]->last_updated_timestamp < get_time_in_ns() );
+    assert( talp_info->samples[0]->mpi_time == 0 );
+    assert( talp_info->samples[0]->useful_time > 0 );
+    assert( talp_info->samples[0]->in_useful == false );
 
     /* Leaving MPI */
     talp_out_mpi(&spd);
-    assert( mpi_monitor->accumulated_MPI_time != 0 );
-    assert( mpi_monitor->accumulated_computation_time != 0 );
-    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus );
-    assert( CPU_COUNT(&talp_info->mpi_mask) == 0 );
+    assert( talp_info->samples[0]->last_updated_timestamp < get_time_in_ns() );
+    assert( talp_info->samples[0]->mpi_time > 0 );
+    assert( talp_info->samples[0]->useful_time > 0 );
+    assert( talp_info->samples[0]->in_useful == true );
+
+    /* Update regions */
+    assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
+    assert( mpi_monitor->accumulated_MPI_time > 0 );
+    assert( mpi_monitor->accumulated_computation_time > 0 );
 
     /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
     int64_t mpi_time = -1;
@@ -119,21 +129,6 @@ int main(int argc, char *argv[]) {
 
     int cpuid = sched_getcpu();
     assert( CPU_ISSET(cpuid, &process_mask) );
-
-    /* Disable CPU */
-    talp_cpu_disable(&spd, cpuid);
-    assert( CPU_COUNT(&talp_info->workers_mask) == ncpus-1 );
-    int64_t time_computation_before = mpi_monitor->accumulated_computation_time;
-    usleep(USLEEP_TIME);
-
-    /* Enable CPU */
-    talp_cpu_enable(&spd, cpuid);
-    int64_t time_computation = mpi_monitor->accumulated_computation_time - time_computation_before;
-    if (ncpus == 1) {
-        assert( time_computation == 0 );
-    } else {
-        assert( time_computation > 0 );
-    }
 
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test");

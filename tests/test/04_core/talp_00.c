@@ -27,6 +27,7 @@
 #include "LB_core/spd.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
+#include "support/atomic.h"
 #include "support/options.h"
 
 #include <sched.h>
@@ -39,16 +40,20 @@
 
 enum { USLEEP_TIME = 1000 };
 
+typedef struct DLB_ALIGN_CACHE talp_sample_t {
+    atomic_int_least64_t    mpi_time;
+    atomic_int_least64_t    useful_time;
+    int64_t     last_updated_timestamp;
+    bool        in_useful;
+    bool        cpu_disabled;
+} talp_sample_t;
+
 typedef struct talp_info_t {
-    dlb_monitor_t   mpi_monitor;
-    int64_t         sample_start_time;
-    bool            external_profiler;
-    bool            use_counters;
-    int             num_workers;
-    int             num_mpi;
-    int             ncpus;
-    cpu_set_t       workers_mask;
-    cpu_set_t       mpi_mask;
+    dlb_monitor_t       mpi_monitor;
+    bool                external_profiler;
+    int                 ncpus;
+    talp_sample_t       **samples;
+    pthread_mutex_t     samples_mutex;
 } talp_info_t;
 
 
@@ -75,8 +80,6 @@ int main(int argc, char *argv[]) {
     /* TALP initial values */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
     assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( talp_info->num_workers == 1 );
-    assert( talp_info->num_mpi == 0 );
     assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
 
     /* Start and Stop MPI monitor */
@@ -92,7 +95,7 @@ int main(int argc, char *argv[]) {
 
     /* Test MPI monitor values are correct and greater than custom monitor */
     assert( mpi_monitor->accumulated_MPI_time == 0 );
-    assert( mpi_monitor->accumulated_computation_time != 0 );
+    assert( mpi_monitor->accumulated_computation_time > 0 );
     assert( mpi_monitor->accumulated_computation_time > monitor->accumulated_computation_time );
     assert( mpi_monitor->elapsed_time > monitor->elapsed_time );
 

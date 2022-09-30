@@ -45,6 +45,8 @@
 #define DLB_ATOMIC_ST(ptr, val)             atomic_store(ptr, val)
 #define DLB_ATOMIC_ST_RLX(ptr, val)         atomic_store_explicit(ptr, val, memory_order_relaxed)
 #define DLB_ATOMIC_ST_REL(ptr, val)         atomic_store_explicit(ptr, val, memory_order_release)
+#define DLB_ATOMIC_EXCH(ptr, val)           atomic_exchange(ptr, val)
+#define DLB_ATOMIC_EXCH_RLX(ptr, val)       atomic_exchange_explicit(ptr, val, memory_order_relaxed)
 #define DLB_ATOMIC_CMP_EXCH_WEAK(ptr, expected, desired) \
                                             atomic_compare_exchange_weak(ptr, &expected, desired)
 
@@ -71,6 +73,8 @@
 #define DLB_ATOMIC_ST(ptr, val)             __sync_synchronize(); (*ptr) = (val); __sync_synchronize()
 #define DLB_ATOMIC_ST_RLX(ptr, val)         (*ptr) = (val)
 #define DLB_ATOMIC_ST_REL(ptr, val)         (*ptr) = (val); __sync_synchronize()
+#define DLB_ATOMIC_EXCH(ptr, val)           __sync_synchronize(); __sync_lock_test_and_set(ptr, val)
+#define DLB_ATOMIC_EXCH_RLX(ptr, val)       __sync_lock_test_and_set(ptr, val)
 #define DLB_ATOMIC_CMP_EXCH_WEAK(ptr, oldval, newval) \
                                             __sync_bool_compare_and_swap(ptr, oldval, newval)
 

@@ -79,7 +79,7 @@ int main( int argc, char **argv ) {
     CPU_ZERO(&mask);
     CPU_ZERO(&process_mask);
     pm_interface_t pm;
-    pm_init(&pm, false /* talp */);
+    pm_init(&pm);
 
     // Call callbacks without initialization and check DLB_ERR_NOCBK
     assert( update_threads(&pm, 2) == DLB_ERR_NOCBK );

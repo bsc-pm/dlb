@@ -83,7 +83,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     }
 
     // Initialize the rest of the subprocess descriptor
-    pm_init(&spd->pm, spd->options.talp);
+    pm_init(&spd->pm);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
     if (mask) {
         // Preferred case, mask is provided by the user
@@ -215,7 +215,7 @@ int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask,
 
     // Initialize subprocess descriptor
     spd->lb_policy = POLICY_NONE;
-    pm_init(&spd->pm, false /* talp */);
+    pm_init(&spd->pm);
     set_lb_funcs(&spd->lb_funcs, spd->lb_policy);
     spd->id = spd->options.preinit_pid;
     memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
@@ -341,9 +341,6 @@ int lend(const subprocess_descriptor_t *spd) {
         instrument_event(GIVE_CPUS_EVENT, CPU_SETSIZE, EVENT_BEGIN);
         omptool__lend_from_api();
         error = spd->lb_funcs.lend(spd);
-        if (error == DLB_SUCCESS && spd->options.talp) {
-            talp_cpuset_disable(spd, &spd->process_mask);
-        }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
@@ -358,9 +355,6 @@ int lend_cpu(const subprocess_descriptor_t *spd, int cpuid) {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
         instrument_event(GIVE_CPUS_EVENT, 1, EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpu(spd, cpuid);
-        if (error == DLB_SUCCESS && spd->options.talp) {
-            talp_cpu_disable(spd, cpuid);
-        }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }
@@ -389,9 +383,6 @@ int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
         instrument_event(GIVE_CPUS_EVENT, CPU_COUNT(mask), EVENT_BEGIN);
         error = spd->lb_funcs.lend_cpu_mask(spd, mask);
-        if (error == DLB_SUCCESS && spd->options.talp) {
-            talp_cpuset_disable(spd, mask);
-        }
         instrument_event(GIVE_CPUS_EVENT, 0, EVENT_END);
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_END);
     }

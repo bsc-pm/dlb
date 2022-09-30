@@ -20,8 +20,35 @@
 #ifndef OMPTOOL_H
 #define OMPTOOL_H
 
+#include "LB_numThreads/omp-tools.h"
+#include "support/options.h"
+
+typedef struct {
+    /* Init & Finalize function */
+    void (*init)(pid_t, const options_t*);
+    void (*finalize)(void);
+    /* MPI calls */
+    void (*into_mpi)(void);
+    void (*outof_mpi)(void);
+    /* Intercept Lend */
+    void (*lend_from_api)(void);
+    /* OMPT callbacks */
+    ompt_callback_thread_begin_t      thread_begin;
+    ompt_callback_thread_end_t        thread_end;
+    ompt_callback_thread_role_shift_t thread_role_shift;
+    ompt_callback_parallel_begin_t    parallel_begin;
+    ompt_callback_parallel_end_t      parallel_end;
+    ompt_callback_task_create_t       task_create;
+    ompt_callback_task_schedule_t     task_schedule;
+    ompt_callback_implicit_task_t     implicit_task;
+    ompt_callback_work_t              work;
+    ompt_callback_sync_region_t       sync_region;
+} funcs_t;
+
 void omptool__into_blocking_call(void);
 void omptool__outof_blocking_call(void);
 void omptool__lend_from_api(void);
+void omptool_testing__setup_omp_fn_ptrs(const funcs_t *talp_tests_funcs,
+        const funcs_t *omptm_test_funcs);
 
 #endif /* OMPTOOL_H */
