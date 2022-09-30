@@ -30,9 +30,10 @@ if [[ -z $DLB_HOME ]] ; then
 fi
 
 # If the application is not linked with DLB, select which DLB version to preload.
-# Choose between the non-MPI version, or the MPI versions for C/C++ or Fortran
+# Preloading libdlb_mpi.so should work most of the time, as it will intercept
+# both C/C++ and Fortran MPI.
 #preload="$DLB_HOME/lib/libdlb.so"
-#preload="$DLB_HOME/lib/libdlb_mpi.so"
+preload="$DLB_HOME/lib/libdlb_mpi.so"
 #preload="$DLB_HOME/lib/libdlb_mpif.so"
 
 env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"
