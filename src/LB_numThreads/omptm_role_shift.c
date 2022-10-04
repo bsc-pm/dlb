@@ -136,10 +136,11 @@ static void cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void cb_disable_cpu(int cpuid, void *arg) {
-    fatal_cond((DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) != OWN &&
-                 DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) != BORROWED),
-        "Disabling an already disabled CPU");
-    
+    if((DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) != OWN &&
+                 DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) != BORROWED)){
+        //CPU already disabled, just skip it
+        return;
+    }
     cas_bit((atomic_int *)&cpu_data[cpuid].ownership, OWN, LENT);
     cas_bit((atomic_int *)&cpu_data[cpuid].ownership, BORROWED, UNKNOWN);
     if(cpu_data[cpuid].fa){
