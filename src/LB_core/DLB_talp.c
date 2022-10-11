@@ -54,6 +54,7 @@ typedef struct talp_macrosample_t {
     int64_t mpi_time;
     int64_t useful_time;
     int64_t elapsed_useful_time;
+    int     num_mpi_calls;
 } talp_macrosample_t;
 
 /* The sample contains the temporary per-thread accumulated values of all the
@@ -68,6 +69,7 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
     /* Sample accumulated values */
     atomic_int_least64_t    mpi_time;
     atomic_int_least64_t    useful_time;
+    atomic_int              num_mpi_calls;
     /* Sample temporary values */
     int64_t     last_updated_timestamp;
     bool        in_useful;
@@ -264,12 +266,14 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
             /* Atomically extract and reset sample values */
             int64_t mpi_time = DLB_ATOMIC_EXCH_RLX(&sample->mpi_time, 0);
             int64_t useful_time = DLB_ATOMIC_EXCH_RLX(&sample->useful_time, 0);
+            int num_mpi_calls = DLB_ATOMIC_EXCH_RLX(&sample->num_mpi_calls, 0);
 
             /* Accumulate */
             macrosample.mpi_time += mpi_time;
             macrosample.useful_time += useful_time;
             macrosample.elapsed_useful_time = max_int64(
                     macrosample.elapsed_useful_time, useful_time);
+            macrosample.num_mpi_calls += num_mpi_calls;
         }
     }
     pthread_mutex_unlock(&talp_info->samples_mutex);
@@ -289,6 +293,10 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
     if (talp_info) {
         /* Start MPI region */
         monitoring_region_start(spd, &talp_info->mpi_monitor);
+
+        /* Add MPI_Init */
+        talp_sample_t *sample = talp_get_thread_sample(spd);
+        DLB_ATOMIC_ADD_RLX(&sample->num_mpi_calls, 1);
     }
 }
 
@@ -296,6 +304,10 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
 void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
+        /* Add MPI_Finalize */
+        talp_sample_t *sample = talp_get_thread_sample(spd);
+        DLB_ATOMIC_ADD_RLX(&sample->num_mpi_calls, 1);
+
         /* Stop MPI region */
         monitoring_region_stop(spd, &talp_info->mpi_monitor);
 
@@ -331,6 +343,7 @@ void talp_out_mpi(const subprocess_descriptor_t *spd){
     if (talp_info) {
         talp_sample_t *sample = talp_get_thread_sample(spd);
         talp_update_sample(spd, sample);
+        DLB_ATOMIC_ADD_RLX(&sample->num_mpi_calls, 1);
         sample->in_useful = true;
     }
 }
@@ -684,6 +697,7 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
         mpi_monitor->elapsed_computation_time += macrosample->elapsed_useful_time;
         mpi_monitor->accumulated_MPI_time += macrosample->mpi_time;
         mpi_monitor->accumulated_computation_time += macrosample->useful_time;
+        mpi_monitor->num_mpi_calls += macrosample->num_mpi_calls;
         /* Update shared memory only if requested */
         if (talp_info->external_profiler) {
             shmem_procinfo__settimes(spd->id,
@@ -701,6 +715,7 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
             monitor->elapsed_computation_time += macrosample->elapsed_useful_time;
             monitor->accumulated_MPI_time += macrosample->mpi_time;
             monitor->accumulated_computation_time += macrosample->useful_time;
+            monitor->num_mpi_calls += macrosample->num_mpi_calls;
         }
     }
 }
@@ -825,6 +840,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         int64_t node_sum_useful;
         int total_cpus;
         int total_nodes;
+        int num_mpi_calls;
 
         /* Obtain the maximum elapsed time */
         MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
@@ -863,6 +879,10 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                     1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
         }
 
+        /* Obtain the total number of MPI calls */
+        MPI_Reduce(&monitor->num_mpi_calls, &num_mpi_calls, 1,
+                MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
         if (_mpi_rank == 0) {
             if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
                 if (elapsed_time > 0) {
@@ -889,10 +909,12 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                         monitor->name,
                         total_cpus,
                         total_nodes,
+                        _mpi_size,
                         elapsed_time,
                         elapsed_useful,
                         app_sum_useful,
-                        node_sum_useful);
+                        node_sum_useful,
+                        num_mpi_calls);
             }
         }
     }

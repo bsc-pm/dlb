@@ -47,6 +47,8 @@ typedef struct dlb_monitor_t {
     int64_t     accumulated_MPI_time;
     /*! Time (in nanoseconds) of the accumulated CPU time in computation inside the region */
     int64_t     accumulated_computation_time;
+    /*! Number of measured MPI calls */
+    int         num_mpi_calls;
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;

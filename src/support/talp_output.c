@@ -202,16 +202,19 @@ typedef struct POPRawRecord {
     char *name;
     int P;
     int N;
+    int num_ranks;
     int64_t elapsed_time;
     int64_t elapsed_useful;
     int64_t app_sum_useful;
     int64_t node_sum_useful;
+    int num_mpi_calls;
 } pop_raw_record_t;
 static int pop_raw_num_records = 0;
 static pop_raw_record_t *pop_raw = NULL;
 
-void talp_output_record_pop_raw(const char *name, int P, int N, int64_t elapsed_time,
-        int64_t elapsed_useful, int64_t app_sum_useful, int64_t node_sum_useful) {
+void talp_output_record_pop_raw(const char *name, int P, int N, int num_ranks,
+        int64_t elapsed_time, int64_t elapsed_useful, int64_t app_sum_useful,
+        int64_t node_sum_useful, int num_mpi_calls) {
 
     /* Realloc array */
     ++pop_raw_num_records;
@@ -228,10 +231,12 @@ void talp_output_record_pop_raw(const char *name, int P, int N, int64_t elapsed_
         .name = allocated_name,
         .P = P,
         .N = N,
+        .num_ranks = num_ranks,
         .elapsed_time = elapsed_time,
         .elapsed_useful = elapsed_useful,
         .app_sum_useful = app_sum_useful,
         .node_sum_useful = node_sum_useful,
+        .num_mpi_calls = num_mpi_calls,
     };
 }
 
@@ -241,13 +246,15 @@ static void pop_raw_print(void) {
         pop_raw_record_t *record = &pop_raw[i];
         if (record->elapsed_time > 0) {
             info("######### Monitoring Region POP Raw Data #########");
-            info("### Name:                       %s", record->name);
-            info("### Number of CPUs:             %d", record->P);
-            info("### Number of nodes:            %d", record->N);
-            info("### Elapsed Time:               %"PRId64" ns", record->elapsed_time);
-            info("### Elapsed Useful:             %"PRId64" ns", record->elapsed_useful);
-            info("### Useful CPU Time (Total):    %"PRId64" ns", record->app_sum_useful);
-            info("### Useful CPU Time (Node):     %"PRId64" ns", record->node_sum_useful);
+            info("### Name:                         %s", record->name);
+            info("### Number of CPUs:               %d", record->P);
+            info("### Number of nodes:              %d", record->N);
+            info("### Number of ranks:              %d", record->num_ranks);
+            info("### Elapsed Time:                 %"PRId64" ns", record->elapsed_time);
+            info("### Elapsed Useful:               %"PRId64" ns", record->elapsed_useful);
+            info("### Useful CPU Time (Total):      %"PRId64" ns", record->app_sum_useful);
+            info("### Useful CPU Time (Node):       %"PRId64" ns", record->node_sum_useful);
+            info("### Number of MPI calls (Total):  %d", record->num_mpi_calls);
         }
     }
 }
@@ -267,18 +274,22 @@ static void pop_raw_to_json(FILE *out_file) {
                     "      \"name\": \"%s\",\n"
                     "      \"numCpus\": %d,\n"
                     "      \"numNodes\": %d,\n"
+                    "      \"numRanks\": %d,\n"
                     "      \"elapsedTime\": %"PRId64",\n"
                     "      \"elapsedUseful\": %"PRId64",\n"
                     "      \"usefulCpuTotal\": %"PRId64",\n"
-                    "      \"usefulCpuNode\": %"PRId64"\n"
+                    "      \"usefulCpuNode\": %"PRId64",\n"
+                    "      \"numMPICalls\": %d\n"
                     "    }%s\n",
                     record->name,
                     record->P,
                     record->N,
+                    record->num_ranks,
                     record->elapsed_time,
                     record->elapsed_useful,
                     record->app_sum_useful,
                     record->node_sum_useful,
+                    record->num_mpi_calls,
                     i+1 < pop_raw_num_records ? "," : "");
         }
         fprintf(out_file,
@@ -295,18 +306,22 @@ static void pop_raw_to_xml(FILE *out_file) {
                 "    <name>%s</name>\n"
                 "    <numCpus>%d</numCpus>\n"
                 "    <numNodes>%d</numNodes>\n"
+                "    <numRanks>%d</numRanks>\n"
                 "    <elapsedTime>%"PRId64"</elapsedTime>\n"
                 "    <elapsedUseful>%"PRId64"</elapsedUseful>\n"
                 "    <usefulCpuTotal>%"PRId64"</usefulCpuTotal>\n"
                 "    <usefulCpuNode>%"PRId64"</usefulCpuNode>\n"
+                "    <numMPICalls>%d</numMPICalls>\n"
                 "  </popRaw>\n",
                 record->name,
                 record->P,
                 record->N,
+                record->num_ranks,
                 record->elapsed_time,
                 record->elapsed_useful,
                 record->app_sum_useful,
-                record->node_sum_useful);
+                record->node_sum_useful,
+                record->num_mpi_calls);
     }
 }
 
@@ -317,20 +332,24 @@ static void pop_raw_to_txt(FILE *out_file) {
         if (record->elapsed_time > 0) {
             fprintf(out_file,
                     "######### Monitoring Region POP Raw Data #########\n"
-                    "### Name:                       %s\n"
-                    "### Number of CPUs:             %d\n"
-                    "### Number of nodes:            %d\n"
-                    "### Elapsed Time:               %"PRId64" ns\n"
-                    "### Elapsed Useful:             %"PRId64" ns\n"
-                    "### Useful CPU Time (Total):    %"PRId64" ns\n"
-                    "### Useful CPU Time (Node):     %"PRId64" ns\n",
+                    "### Name:                          %s\n"
+                    "### Number of CPUs:                %d\n"
+                    "### Number of nodes:               %d\n"
+                    "### Number of ranks:               %d\n"
+                    "### Elapsed Time:                  %"PRId64" ns\n"
+                    "### Elapsed Useful:                %"PRId64" ns\n"
+                    "### Useful CPU Time (Total):       %"PRId64" ns\n"
+                    "### Useful CPU Time (Node):        %"PRId64" ns\n"
+                    "### Number of MPI calls (Total):   %d\n",
                     record->name,
                     record->P,
                     record->N,
+                    record->num_ranks,
                     record->elapsed_time,
                     record->elapsed_useful,
                     record->app_sum_useful,
-                    record->node_sum_useful);
+                    record->node_sum_useful,
+                    record->num_mpi_calls);
         }
     }
 }
@@ -359,7 +378,8 @@ static void pop_to_csv(FILE *out_file) {
             pop_metrics_num_records == 0 ? "" :
             ",ParallelEfficiency,CommunicationEfficiency,LoadBalance,LbIn,LbOut",
             pop_raw_num_records == 0 ? "" :
-            ",NumCpus,NumNodes,ElapsedTime,ElapsedUseful,UsefulCpuTotal,UsefulCpuNode"
+            ",NumCpus,NumNodes,NumRanks,ElapsedTime,ElapsedUseful,UsefulCpuTotal"
+            ",UsefulCpuNode,numMPICalls"
            );
 
     int i;

@@ -34,8 +34,9 @@ void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
         float parallel_efficiency, float communication_efficiency,
         float lb, float lb_in, float lb_out);
 
-void talp_output_record_pop_raw(const char *name, int P, int N, int64_t elapsed_time,
-        int64_t elapsed_useful, int64_t app_sum_useful, int64_t node_sum_useful);
+void talp_output_record_pop_raw(const char *name, int P, int N, int num_ranks,
+        int64_t elapsed_time, int64_t elapsed_useful, int64_t app_sum_useful,
+        int64_t node_sum_useful, int num_mpi_calls);
 
 void talp_output_record_node(int node_id, int nelems, int64_t avg_useful_time,
         int64_t avg_mpi_time, int64_t max_useful_time, int64_t max_mpi_time,
