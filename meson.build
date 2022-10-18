@@ -31,7 +31,8 @@ endif
 instr_cpp_flags = '-DINSTRUMENTATION_VERSION'
 
 if get_option('buildtype') == 'debug'
-  extra_arguments = [
+  # C arguments
+  extra_cc_arguments = [
     # '-Wall',  # default warning_level is already 1
     '-Werror',
     '-Wshadow',
@@ -43,7 +44,7 @@ if get_option('buildtype') == 'debug'
     '-Wvla',
   ]
 
-  foreach arg : extra_arguments
+  foreach arg : extra_cc_arguments
     if cc.has_argument(arg)
       add_project_arguments(arg, language : 'c')
     endif

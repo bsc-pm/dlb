@@ -69,8 +69,10 @@ AC_SUBST([DEB_RELEASE])
 ################################################################################
 # Configure compiler and compiler flags
 ################################################################################
-# If CFLAGS is not user-defined, define it as empty to avoid AC_PROG_CC setting it to default '-g -O2'
+# If CFLAGS / FCFLAGS are not user-defined, define then as empty to avoid
+# AC_PROG_CC and AC_PROG_FC setting then to the default value '-g -O2'
 : ${CFLAGS=""}
+: ${FCFLAGS=""}
 
 # Checks for programs
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
@@ -149,10 +151,10 @@ AS_IF([test "x$FC" = x], [
 ], [
     # use the Fortran compiler for the following checks
     AC_LANG_PUSH([Fortran])
-    AX_CHECK_COMPILE_FLAG([-pthread], [AC_FFLAGS="${AC_FFLAGS} -pthread"])
+    AX_CHECK_COMPILE_FLAG([-pthread], [AC_FCFLAGS="${AC_FCFLAGS} -pthread"])
     AS_IF([test "x$developer_version" = xyes], [
-        AX_CHECK_COMPILE_FLAG([-Wall], [AC_FFLAGS="${AC_FFLAGS} -Wall"])
-        AX_CHECK_COMPILE_FLAG([-Werror], [AC_FFLAGS="${AC_FFLAGS} -Werror"])
+        AX_CHECK_COMPILE_FLAG([-Wall], [AC_FCFLAGS="${AC_FCFLAGS} -Wall"])
+        AX_CHECK_COMPILE_FLAG([-Werror], [AC_FCFLAGS="${AC_FCFLAGS} -Werror"])
     ])
     AC_LANG_POP([Fortran])
 ])
@@ -201,19 +203,19 @@ AC_SUBST([TEST_VERSIONS])
 COMMON_CPPFLAGS="-D_GNU_SOURCE"
 
 PERFO_CFLAGS="-g -O3"
-PERFO_FFLAGS="-g -O3"
+PERFO_FCFLAGS="-g -O3"
 PERFO_CPPFLAGS="$COMMON_CPPFLAGS"
 
 DEBUG_CFLAGS="-g -O0"
-DEBUG_FFLAGS="-g -O0"
+DEBUG_FCFLAGS="-g -O0"
 DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION"
 
 INSTR_CFLAGS="-g -O3"
-INSTR_FFLAGS="-g -O3"
+INSTR_FCFLAGS="-g -O3"
 INSTR_CPPFLAGS="$COMMON_CPPFLAGS -DINSTRUMENTATION_VERSION"
 
 INSTR_DEBUG_CFLAGS="-g -O0"
-INSTR_DEBUG_FFLAGS="-g -O0"
+INSTR_DEBUG_FCFLAGS="-g -O0"
 INSTR_DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
 ### Coverage ###
@@ -227,7 +229,7 @@ AC_MSG_RESULT([$enable_coverage])
 
 AS_IF([test "x$enable_coverage" = xyes], [
     DEBUG_CFLAGS="$DEBUG_CFLAGS $COVERAGE_FLAGS"
-    DEBUG_FFLAGS="$DEBUG_FFLAGS $COVERAGE_FLAGS"
+    DEBUG_FCFLAGS="$DEBUG_FCFLAGS $COVERAGE_FLAGS"
 
     AC_CHECK_PROG([gcovr], [gcovr], [yes])
     AS_IF([test "x$gcovr" != xyes], [
@@ -251,16 +253,16 @@ AM_CONDITIONAL([ENABLE_VIEWER_SCRIPTS], [test "x$enable_viewer_scripts" = xyes])
 
 
 AC_SUBST([PERFO_CFLAGS])
-AC_SUBST([PERFO_FFLAGS])
+AC_SUBST([PERFO_FCFLAGS])
 AC_SUBST([PERFO_CPPFLAGS])
 AC_SUBST([DEBUG_CFLAGS])
-AC_SUBST([DEBUG_FFLAGS])
+AC_SUBST([DEBUG_FCFLAGS])
 AC_SUBST([DEBUG_CPPFLAGS])
 AC_SUBST([INSTR_CFLAGS])
-AC_SUBST([INSTR_FFLAGS])
+AC_SUBST([INSTR_FCFLAGS])
 AC_SUBST([INSTR_CPPFLAGS])
 AC_SUBST([INSTR_DEBUG_CFLAGS])
-AC_SUBST([INSTR_DEBUG_FFLAGS])
+AC_SUBST([INSTR_DEBUG_FCFLAGS])
 AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 
@@ -399,7 +401,7 @@ AC_DEFINE_UNQUOTED([NCPUS_AT_CONFIGURE_TIME], [$ncpus], [Number of CPUs detected
 ################################################################################
 
 AC_SUBST([AC_CFLAGS])
-AC_SUBST([AC_FFLAGS])
+AC_SUBST([AC_FCFLAGS])
 AC_SUBST([AC_LDFLAGS])
 
 # generate the final Makefile etc.

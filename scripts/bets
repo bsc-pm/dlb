@@ -316,13 +316,13 @@ compile_fortran ()
 
    #test values
    fc_=${test_FC:-$fc_}
-   fflags=${test_FFLAGS:-$FFLAGS}
+   fflags=${test_FCFLAGS:-$FCFLAGS}
    ldflags=${test_LDFLAGS:-$LDFLAGS}
 
    #version values
    eval tmp=\${test_FC_$version}
    fc_=${tmp:-$fc_}
-   eval tmp=\"\${test_FFLAGS_$version}\"
+   eval tmp=\"\${test_FCFLAGS_$version}\"
    fflags="$tmp $fflags"
    out_param=""
    eval current_test_nolink=\${test_nolink:-\${test_nolink_$version}}
@@ -527,7 +527,7 @@ merge_c_compile_vars ()
 merge_fortran_compile_vars ()
 {
    eval test_FC_$1="\${test_FC_$2:-\$test_FC_$3}"
-   eval test_FFLAGS_$1=\"\${test_FFLAGS_$2} \${test_FFLAGS_$3}\"
+   eval test_FCFLAGS_$1=\"\${test_FCFLAGS_$2} \${test_FCFLAGS_$3}\"
    eval test_LDFLAGS_$1=\"\${test_LDFLAGS_$2} \${test_LDFLAGS_$3}\"
 }
 
