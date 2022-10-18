@@ -207,14 +207,14 @@ typedef struct POPRawRecord {
     int64_t elapsed_useful;
     int64_t app_sum_useful;
     int64_t node_sum_useful;
-    int num_mpi_calls;
+    uint64_t num_mpi_calls;
 } pop_raw_record_t;
 static int pop_raw_num_records = 0;
 static pop_raw_record_t *pop_raw = NULL;
 
 void talp_output_record_pop_raw(const char *name, int P, int N, int num_ranks,
         int64_t elapsed_time, int64_t elapsed_useful, int64_t app_sum_useful,
-        int64_t node_sum_useful, int num_mpi_calls) {
+        int64_t node_sum_useful, uint64_t num_mpi_calls) {
 
     /* Realloc array */
     ++pop_raw_num_records;
@@ -254,7 +254,7 @@ static void pop_raw_print(void) {
             info("### Elapsed Useful:               %"PRId64" ns", record->elapsed_useful);
             info("### Useful CPU Time (Total):      %"PRId64" ns", record->app_sum_useful);
             info("### Useful CPU Time (Node):       %"PRId64" ns", record->node_sum_useful);
-            info("### Number of MPI calls (Total):  %d", record->num_mpi_calls);
+            info("### Number of MPI calls (Total):  %"PRIu64, record->num_mpi_calls);
         }
     }
 }
@@ -279,7 +279,7 @@ static void pop_raw_to_json(FILE *out_file) {
                     "      \"elapsedUseful\": %"PRId64",\n"
                     "      \"usefulCpuTotal\": %"PRId64",\n"
                     "      \"usefulCpuNode\": %"PRId64",\n"
-                    "      \"numMPICalls\": %d\n"
+                    "      \"numMPICalls\": %"PRIu64"\n"
                     "    }%s\n",
                     record->name,
                     record->P,
@@ -311,7 +311,7 @@ static void pop_raw_to_xml(FILE *out_file) {
                 "    <elapsedUseful>%"PRId64"</elapsedUseful>\n"
                 "    <usefulCpuTotal>%"PRId64"</usefulCpuTotal>\n"
                 "    <usefulCpuNode>%"PRId64"</usefulCpuNode>\n"
-                "    <numMPICalls>%d</numMPICalls>\n"
+                "    <numMPICalls>%"PRIu64"</numMPICalls>\n"
                 "  </popRaw>\n",
                 record->name,
                 record->P,
@@ -340,7 +340,7 @@ static void pop_raw_to_txt(FILE *out_file) {
                     "### Elapsed Useful:                %"PRId64" ns\n"
                     "### Useful CPU Time (Total):       %"PRId64" ns\n"
                     "### Useful CPU Time (Node):        %"PRId64" ns\n"
-                    "### Number of MPI calls (Total):   %d\n",
+                    "### Number of MPI calls (Total):   %"PRIu64"\n",
                     record->name,
                     record->P,
                     record->N,
@@ -402,13 +402,14 @@ static void pop_to_csv(FILE *out_file) {
         }
 
         if (raw_record) {
-            fprintf(out_file, ",%d,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64,
+            fprintf(out_file, ",%d,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRIu64,
                     raw_record->P,
                     raw_record->N,
                     raw_record->elapsed_time,
                     raw_record->elapsed_useful,
                     raw_record->app_sum_useful,
-                    raw_record->node_sum_useful);
+                    raw_record->node_sum_useful,
+                    raw_record->num_mpi_calls);
         }
 
         fprintf(out_file, "\n");

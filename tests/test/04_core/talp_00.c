@@ -43,7 +43,7 @@ enum { USLEEP_TIME = 1000 };
 typedef struct DLB_ALIGN_CACHE talp_sample_t {
     atomic_int_least64_t    mpi_time;
     atomic_int_least64_t    useful_time;
-    atomic_int              num_mpi_calls;
+    atomic_uint_least64_t   num_mpi_calls;
     int64_t     last_updated_timestamp;
     bool        in_useful;
     bool        cpu_disabled;

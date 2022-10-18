@@ -56,6 +56,7 @@
 #define atomic_int              volatile int
 #define atomic_uint             volatile unsigned int
 #define atomic_int_least64_t    volatile int64_t
+#define atomic_uint_least64_t   volatile uint64_t
 #define atomic_bool             volatile bool
 
 #define DLB_ATOMIC_ADD(ptr, val)            __sync_fetch_and_add(ptr, val)

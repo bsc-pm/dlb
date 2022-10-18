@@ -54,7 +54,7 @@ typedef struct talp_macrosample_t {
     int64_t mpi_time;
     int64_t useful_time;
     int64_t elapsed_useful_time;
-    int     num_mpi_calls;
+    uint64_t num_mpi_calls;
 } talp_macrosample_t;
 
 /* The sample contains the temporary per-thread accumulated values of all the
@@ -69,7 +69,7 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
     /* Sample accumulated values */
     atomic_int_least64_t    mpi_time;
     atomic_int_least64_t    useful_time;
-    atomic_int              num_mpi_calls;
+    atomic_uint_least64_t   num_mpi_calls;
     /* Sample temporary values */
     int64_t     last_updated_timestamp;
     bool        in_useful;
@@ -103,6 +103,7 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
 
 #if MPI_LIB
 static MPI_Datatype mpi_int64_type;
+static MPI_Datatype mpi_uint64_type;
 #endif
 
 /* Reserved regions ids */
@@ -159,8 +160,10 @@ void talp_init(subprocess_descriptor_t *spd) {
 #if MPI_LIB
 # if MPI_VERSION >= 3
     mpi_int64_type = MPI_INT64_T;
+    mpi_uint64_type = MPI_UINT64_T;
 # else
     MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
+    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(uint64_t), &mpi_uint64_type);
 # endif
 #endif
 }
@@ -266,7 +269,7 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
             /* Atomically extract and reset sample values */
             int64_t mpi_time = DLB_ATOMIC_EXCH_RLX(&sample->mpi_time, 0);
             int64_t useful_time = DLB_ATOMIC_EXCH_RLX(&sample->useful_time, 0);
-            int num_mpi_calls = DLB_ATOMIC_EXCH_RLX(&sample->num_mpi_calls, 0);
+            uint64_t num_mpi_calls = DLB_ATOMIC_EXCH_RLX(&sample->num_mpi_calls, 0);
 
             /* Accumulate */
             macrosample.mpi_time += mpi_time;
@@ -840,7 +843,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         int64_t node_sum_useful;
         int total_cpus;
         int total_nodes;
-        int num_mpi_calls;
+        uint64_t num_mpi_calls;
 
         /* Obtain the maximum elapsed time */
         MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
@@ -881,7 +884,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 
         /* Obtain the total number of MPI calls */
         MPI_Reduce(&monitor->num_mpi_calls, &num_mpi_calls, 1,
-                MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+                mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
 
         if (_mpi_rank == 0) {
             if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
