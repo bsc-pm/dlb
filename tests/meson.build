@@ -49,6 +49,7 @@ tests = {
     'shmem_fail_00'       : {'should_fail': true},
     'shmem_fail_01'       : {'should_fail': true},
     'shmem_versions_00'   : {},
+    'mngo_00'             : {},
   },
   '03_policies' : {
     'lewi_00'             : {},
