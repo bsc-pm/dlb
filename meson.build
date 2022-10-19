@@ -159,6 +159,8 @@ sources = [
   'src/LB_core/DLB_kernel.h',
   'src/LB_core/DLB_talp.c',
   'src/LB_core/DLB_talp.h',
+  'src/LB_core/DLB_mngo.c',
+  'src/LB_core/DLB_mngo.h',
 ]
 
 libdlb = library(

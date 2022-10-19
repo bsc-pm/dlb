@@ -17,42 +17,65 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef SPD_H
-#define SPD_H
+#ifndef DLB_CORE_MNGO_H
+#define DLB_CORE_MNGO_H
 
-#include "LB_core/lb_funcs.h"
+#include "../LB_comm/shmem_mngo.h"
 
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+/**
+ * The size of the MNGO history
+ */
+#define MNGO_HISTORY_WIDNOW 16
 
-#include <sys/types.h>
+/**
+ * This structure holds the history of the application's performance throught
+ * the different MNGO samples. As well ass the decisions taken by MNGO.
+ *
+ * With the intention to use this values for future decisions.
+ */
+typedef struct {
+  /**
+   * Circular buffer state
+   */
+  int head; // The index to the youngest valid value
+  int tail; // The index to the oldest valid value
 
-/* Sub-process Descriptor */
+  /**
+   * History of enabled dlb modules
+   */
+  // History of LeWI state throught MNGO samples
+  bool lewi[MNGO_HISTORY_WIDNOW];
+  // History of DROM state throught MNGO samples
+  bool drom[MNGO_HISTORY_WIDNOW];
 
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_preinitialized;
-    bool dlb_enabled;
-    cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    void *lewi_info;
-    void *talp_info;
-    void *mngo_info;
-} subprocess_descriptor_t;
+  /**
+   * History of performance
+   */
+  // History of parallel efficiencies
+  float parallel_efficiency[MNGO_HISTORY_WIDNOW];
+  // History of load balance
+  float load_balance_efficiency[MNGO_HISTORY_WIDNOW];
+} mngo_history_t;
 
-extern __thread subprocess_descriptor_t *thread_spd;
+/**
+ * This structure holds the information necessary for MNGO to work. 
+ */
+typedef struct DLB_mngo_info_t {
+  // The manager id / Or MngoID
+  size_t mid;
 
-void spd_enter_dlb(subprocess_descriptor_t *spd);
-void spd_register(subprocess_descriptor_t *spd);
-void spd_unregister(const subprocess_descriptor_t *spd);
-void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
-pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
-const subprocess_descriptor_t** spd_get_spds(void);
+  // The manager pthread
+  pthread_t thread;
 
-#endif /* SPD_H */
+  // The TALP monitor necessary for the metric gathering
+  struct dlb_monitor_t *monitor; 
+
+  // History of MNGO actions and app performance
+  mngo_history_t history;        
+} mngo_info_t;
+
+void mngo_init(struct SubProcessDescriptor *spd);
+
+void mngo_fini(struct SubProcessDescriptor *spd);
+
+#endif
