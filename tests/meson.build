@@ -50,6 +50,7 @@ tests = {
     'shmem_fail_01'       : {'should_fail': true},
     'shmem_versions_00'   : {},
     'mngo_00'             : {},
+    'mngo_01'             : {},
   },
   '03_policies' : {
     'lewi_00'             : {},

@@ -1,0 +1,163 @@
+/*********************************************************************************/
+/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*                                                                               */
+/*  This file is part of the DLB library.                                        */
+/*                                                                               */
+/*  DLB is free software: you can redistribute it and/or modify                  */
+/*  it under the terms of the GNU Lesser General Public License as published by  */
+/*  the Free Software Foundation, either version 3 of the License, or            */
+/*  (at your option) any later version.                                          */
+/*                                                                               */
+/*  DLB is distributed in the hope that it will be useful,                       */
+/*  but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*  GNU Lesser General Public License for more details.                          */
+/*                                                                               */
+/*  You should have received a copy of the GNU Lesser General Public License     */
+/*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
+/*********************************************************************************/
+
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
+
+#include "unique_shmem.h"
+
+#include "LB_comm/shmem.h"
+#include "LB_comm/shmem_mngo.h"
+#include "apis/dlb_errors.h"
+#include "support/mask_utils.h"
+
+#include <assert.h>
+#include <sched.h>
+#include <sys/types.h>
+
+static void assert_mngo_message_eq(const mngo_message_t *a,
+                                   const mngo_message_t *b) {
+  assert(a->mngo == b->mngo);
+  assert(a->lewi == b->lewi);
+  assert(a->drom == b->drom);
+}
+
+int main(int argc, char *argv[]) {
+
+  enum { SYS_SIZE = 2 };
+
+  mu_init();
+  mu_testing_set_sys_size(SYS_SIZE);
+
+  size_t manager_id_1;
+
+  /* Initialize shmem mngo (first instance) */
+  assert(shmem_mngo_init(SHMEM_KEY, &manager_id_1) == DLB_SUCCESS);
+
+  /* Simulate inbox is full (read) */
+  {
+    mngo_message_t message_read;
+    mngo_message_t message_send = (const mngo_message_t){
+        .mngo = MNGO_NONE,
+        .lewi = ACTION_ENABLE_MODULE,
+        .drom = ACTION_DISABLE_MODULE,
+    };
+
+    assert(shmem_mngo_send_message(manager_id_1, &message_send,
+                                   DLB_MNGO_SHM_TRY) == DLB_SUCCESS);
+
+    assert(shmem_mngo_send_message(manager_id_1, &message_send,
+                                   DLB_MNGO_SHM_TRY) == DLB_ERR_UNKNOWN);
+
+    assert(shmem_mngo_read_message(manager_id_1, &message_read) == DLB_SUCCESS);
+
+    assert_mngo_message_eq(&message_send, &message_read);
+  }
+
+  size_t manager_id_2;
+  assert(shmem_mngo_init(SHMEM_KEY, &manager_id_2) == DLB_SUCCESS);
+  /* Simulate inbox is full (broadcast) */
+  {
+    mngo_message_t message_read;
+    mngo_message_t message_send = (const mngo_message_t){
+        .mngo = MNGO_NONE,
+        .lewi = ACTION_ENABLE_MODULE,
+        .drom = ACTION_DISABLE_MODULE,
+    };
+
+    assert(shmem_mngo_send_message(manager_id_1, &message_send,
+                                   DLB_MNGO_SHM_TRY) == DLB_SUCCESS);
+
+    assert(shmem_mngo_broadcast_message(&message_send, DLB_MNGO_SHM_TRY) ==
+           DLB_ERR_UNKNOWN);
+
+    assert(shmem_mngo_read_message(manager_id_1, &message_read) == DLB_SUCCESS);
+
+    assert_mngo_message_eq(&message_send, &message_read);
+
+    assert(shmem_mngo_broadcast_message(&message_send, DLB_MNGO_SHM_TRY) ==
+           DLB_SUCCESS);
+
+    assert(shmem_mngo_read_message(manager_id_1, &message_read) == DLB_SUCCESS);
+    assert_mngo_message_eq(&message_send, &message_read);
+
+    assert(shmem_mngo_read_message(manager_id_2, &message_read) == DLB_SUCCESS);
+    assert_mngo_message_eq(&message_send, &message_read);
+  }
+
+  /* Simulate overwrite message */
+  {
+    mngo_message_t message_read;
+    mngo_message_t message_send_1 = (const mngo_message_t){
+        .mngo = MNGO_NONE,
+        .lewi = ACTION_ENABLE_MODULE,
+        .drom = ACTION_DISABLE_MODULE,
+    };
+
+    mngo_message_t message_send_2 = (const mngo_message_t){
+        .mngo = MNGO_NONE,
+        .lewi = ACTION_DISABLE_MODULE,
+        .drom = ACTION_ENABLE_MODULE,
+    };
+
+    assert(shmem_mngo_send_message(manager_id_1, &message_send_1,
+                                   DLB_MNGO_SHM_TRY) == DLB_SUCCESS);
+
+    assert(shmem_mngo_send_message(manager_id_1, &message_send_2,
+                                   DLB_MNGO_SHM_FORCE) == DLB_SUCCESS);
+
+    assert(shmem_mngo_read_message(manager_id_1, &message_read) == DLB_SUCCESS);
+
+    assert_mngo_message_eq(&message_send_2, &message_read);
+  }
+
+  /* Simulate inbox is empty */
+  {
+    mngo_message_t message_read;
+
+    assert(shmem_mngo_read_message(manager_id_1, &message_read) ==
+           DLB_ERR_UNKNOWN);
+  }
+
+  /* Simulate perform operation with mid bigger than max */
+  {
+    mngo_message_t message_read;
+    mngo_message_t message_send = (const mngo_message_t){
+        .mngo = MNGO_NONE,
+        .lewi = ACTION_ENABLE_MODULE,
+        .drom = ACTION_DISABLE_MODULE,
+    };
+
+    assert(shmem_mngo_read_message(SYS_SIZE, &message_read) == DLB_ERR_UNKNOWN);
+
+    assert(shmem_mngo_send_message(SYS_SIZE, &message_send, DLB_MNGO_SHM_TRY) ==
+           DLB_ERR_UNKNOWN);
+  }
+
+  /* Initialize shmem when all slots are allocated */
+  {
+    size_t manager_id_3;
+    assert(shmem_mngo_init(SHMEM_KEY, &manager_id_3) == DLB_ERR_NOSHMEM);
+  }
+
+  /* Finalize shmem mngo */
+  assert(shmem_mngo_fini(manager_id_1) == DLB_SUCCESS);
+  assert(shmem_mngo_fini(manager_id_2) == DLB_SUCCESS);
+}
