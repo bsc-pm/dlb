@@ -62,12 +62,12 @@ int DLB_Finalize_sp(dlb_handler_t handler) {
 
 int DLB_Enable_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
-    return set_dlb_enabled(handler, true);
+    return set_lewi_enabled(handler, true);
 }
 
 int DLB_Disable_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
-    return set_dlb_enabled(handler, false);
+    return set_lewi_enabled(handler, false);
 }
 
 int DLB_SetMaxParallelism_sp(dlb_handler_t handler, int max) {

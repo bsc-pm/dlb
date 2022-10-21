@@ -162,7 +162,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         info("Process CPU affinity mask: %s", mu_to_str(&spd->process_mask));
     }
 
-    spd->dlb_enabled = true;
+    spd->lewi_enabled = true;
     instrument_event(RUNTIME_EVENT, EVENT_INIT, EVENT_END);
     instrument_event(DLB_MODE_EVENT, EVENT_ENABLED, EVENT_BEGIN);
 
@@ -172,7 +172,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 int Finish(subprocess_descriptor_t *spd) {
     int error = DLB_SUCCESS;
     instrument_event(RUNTIME_EVENT, EVENT_FINALIZE, EVENT_BEGIN);
-    spd->dlb_enabled = false;
+    spd->lewi_enabled = false;
 
     pm_finalize(&spd->pm);
 
@@ -234,9 +234,9 @@ int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask,
     return error;
 }
 
-int set_dlb_enabled(subprocess_descriptor_t *spd, bool enabled) {
+int set_lewi_enabled(subprocess_descriptor_t *spd, bool enabled) {
     int error = DLB_SUCCESS;
-    if (__sync_bool_compare_and_swap(&spd->dlb_enabled, !enabled, enabled)) {
+    if (__sync_bool_compare_and_swap(&spd->lewi_enabled, !enabled, enabled)) {
         if (enabled) {
             spd->lb_funcs.enable(spd);
             instrument_event(DLB_MODE_EVENT, EVENT_ENABLED, EVENT_BEGIN);
@@ -252,7 +252,7 @@ int set_dlb_enabled(subprocess_descriptor_t *spd, bool enabled) {
 
 int set_max_parallelism(subprocess_descriptor_t *spd, int max) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_MAX_PARALLELISM, EVENT_BEGIN);
@@ -266,7 +266,7 @@ int set_max_parallelism(subprocess_descriptor_t *spd, int max) {
 
 int unset_max_parallelism(subprocess_descriptor_t *spd) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_MAX_PARALLELISM, EVENT_BEGIN);
@@ -282,7 +282,7 @@ int unset_max_parallelism(subprocess_descriptor_t *spd) {
 
 void IntoCommunication(void) {
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->dlb_enabled) {
+    if (spd->lewi_enabled) {
         spd->lb_funcs.into_communication(spd);
     }
     if(spd->options.talp) {
@@ -292,7 +292,7 @@ void IntoCommunication(void) {
 
 void OutOfCommunication(void) {
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->dlb_enabled) {
+    if (spd->lewi_enabled) {
         spd->lb_funcs.out_of_communication(spd);
     }
     if(spd->options.talp) {
@@ -303,7 +303,7 @@ void OutOfCommunication(void) {
 
 void IntoBlockingCall(int is_iter, int blocking_mode) {
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->dlb_enabled) {
+    if (spd->lewi_enabled) {
         /* If the current thread is pinned to more than one CPU,
          * we better skip LeWI doing the blocking call (see #167) */
         cpu_set_t thread_mask;
@@ -317,7 +317,7 @@ void IntoBlockingCall(int is_iter, int blocking_mode) {
 
 void OutOfBlockingCall(int is_iter) {
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->dlb_enabled) {
+    if (spd->lewi_enabled) {
         /* If the current thread is pinned to more than one CPU,
          * we better skip LeWI doing the blocking call (see #167) */
         cpu_set_t thread_mask;
@@ -334,7 +334,7 @@ void OutOfBlockingCall(int is_iter) {
 
 int lend(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
@@ -349,7 +349,7 @@ int lend(const subprocess_descriptor_t *spd) {
 
 int lend_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
@@ -363,7 +363,7 @@ int lend_cpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int lend_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
@@ -377,7 +377,7 @@ int lend_cpus(const subprocess_descriptor_t *spd, int ncpus) {
 
 int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_LEND, EVENT_BEGIN);
@@ -394,7 +394,7 @@ int lend_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 
 int reclaim(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
@@ -408,7 +408,7 @@ int reclaim(const subprocess_descriptor_t *spd) {
 
 int reclaim_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
@@ -422,7 +422,7 @@ int reclaim_cpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int reclaim_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
@@ -436,7 +436,7 @@ int reclaim_cpus(const subprocess_descriptor_t *spd, int ncpus) {
 
 int reclaim_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RECLAIM, EVENT_BEGIN);
@@ -453,7 +453,7 @@ int reclaim_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) 
 
 int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_BEGIN);
@@ -467,7 +467,7 @@ int acquire_cpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int acquire_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_BEGIN);
@@ -481,7 +481,7 @@ int acquire_cpus(const subprocess_descriptor_t *spd, int ncpus) {
 
 int acquire_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_BEGIN);
@@ -495,7 +495,7 @@ int acquire_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) 
 
 int acquire_cpus_in_mask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_ACQUIRE, EVENT_BEGIN);
@@ -512,7 +512,7 @@ int acquire_cpus_in_mask(const subprocess_descriptor_t *spd, int ncpus, const cp
 
 int borrow(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
@@ -526,7 +526,7 @@ int borrow(const subprocess_descriptor_t *spd) {
 
 int borrow_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
@@ -540,7 +540,7 @@ int borrow_cpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int borrow_cpus(const subprocess_descriptor_t *spd, int ncpus) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
@@ -554,7 +554,7 @@ int borrow_cpus(const subprocess_descriptor_t *spd, int ncpus) {
 
 int borrow_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
@@ -568,7 +568,7 @@ int borrow_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
 
 int borrow_cpus_in_mask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_BORROW, EVENT_BEGIN);
@@ -584,7 +584,7 @@ int borrow_cpus_in_mask(const subprocess_descriptor_t *spd, int ncpus, const cpu
 
 int return_all(const subprocess_descriptor_t *spd) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RETURN, EVENT_BEGIN);
@@ -596,7 +596,7 @@ int return_all(const subprocess_descriptor_t *spd) {
 
 int return_cpu(const subprocess_descriptor_t *spd, int cpuid) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RETURN, EVENT_BEGIN);
@@ -608,7 +608,7 @@ int return_cpu(const subprocess_descriptor_t *spd, int cpuid) {
 
 int return_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
     int error;
-    if (!spd->dlb_enabled) {
+    if (!spd->lewi_enabled) {
         error = DLB_ERR_DISBLD;
     } else {
         instrument_event(RUNTIME_EVENT, EVENT_RETURN, EVENT_BEGIN);
@@ -717,7 +717,7 @@ int node_barrier_detach(void) {
 
 int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid) {
     int error = DLB_SUCCESS;
-    if (spd->dlb_enabled) {
+    if (spd->lewi_enabled) {
         error = spd->lb_funcs.check_cpu_availability(spd, cpuid);
     } else {
         error = DLB_ERR_DISBLD;

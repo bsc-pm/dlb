@@ -75,7 +75,7 @@ int DLB_Enable(void) {
     if (unlikely(!thread_spd->dlb_initialized)) {
         return DLB_ERR_NOINIT;
     }
-    return set_dlb_enabled(thread_spd, true);
+    return set_lewi_enabled(thread_spd, true);
 }
 
 int DLB_Disable(void) {
@@ -83,7 +83,7 @@ int DLB_Disable(void) {
     if (unlikely(!thread_spd->dlb_initialized)) {
         return DLB_ERR_NOINIT;
     }
-    return set_dlb_enabled(thread_spd, false);
+    return set_lewi_enabled(thread_spd, false);
 }
 
 int DLB_SetMaxParallelism(int max) {
