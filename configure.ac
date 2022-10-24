@@ -97,17 +97,21 @@ AS_IF([${ac_cv_prog_cc_c11+:} false && test x"$ac_cv_prog_cc_c11" != xno], [:],
       [${ac_cv_prog_cc_c99+:} false && test x"$ac_cv_prog_cc_c99" != xno], [:],
       # if ac_cv_prog_cc_c89 is set and its value is not 'no', add -std=c99
       [${ac_cv_prog_cc_c89+:} false && test x"$ac_cv_prog_cc_c89" != xno], [
-        AX_CHECK_COMPILE_FLAG([-std=c99], [cstd="-std=c99"])
-        AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $cstd])
+        AX_CHECK_COMPILE_FLAG([-std=c99], [AC_CFLAGS="${AC_CFLAGS} -std=c99"])
       ]
 )
 
-# icc needs -we10006 to promote unrecognized flags from warning to error
-AX_CHECK_COMPILE_FLAG([-we10006], [intel_we_flag="-we10006"])
-AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $intel_we_flag])
-# icc >= 19 needs -we10148 instead
-AX_CHECK_COMPILE_FLAG([-we10148], [intel_we_flag="-we10148"])
-AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $intel_we_flag])
+# save CFLAGS before flag testing
+AX_VAR_PUSHVALUE([CFLAGS])
+
+# Intel compilers need additional flags to promote unrecognized flags from warning to error
+# Ideally, -diag-error=warn should be used, but this flag promotes several other warnings
+# that are otherwise hidden. Another solution is to use -diag-error=<code>, but GCC does not
+# complain about it. The final solution is to use the flag -we<code>, although deprecated,
+# it still works.
+# Ref: https://www.intel.com/content/www/us/en/develop/documentation/cpp-compiler-developer-guide-and-reference/top/compiler-reference/error-handling-1.html
+AX_CHECK_COMPILE_FLAG([-we10006], [CFLAGS="${CFLAGS} -we10006"])
+AX_CHECK_COMPILE_FLAG([-we10148], [CFLAGS="${CFLAGS} -we10148"])
 
 # fccpx needs this env. variable to promote unrecognized flags from warning to error
 AX_VAR_PUSHVALUE([FCOMP_UNRECOGNIZED_OPTION], [error])
@@ -151,11 +155,23 @@ AS_IF([test "x$FC" = x], [
 ], [
     # use the Fortran compiler for the following checks
     AC_LANG_PUSH([Fortran])
+
+    # save FCFLAGS before flag testing
+    AX_VAR_PUSHVALUE([FCFLAGS])
+
+    # Intel flags to promote unrecognized flags from warning to error
+    AX_CHECK_COMPILE_FLAG([-we10148], [FCFLAGS="${FCFLAGS} -we10148"])
+    AX_CHECK_COMPILE_FLAG([-we10157], [FCFLAGS="${FCFLAGS} -we10157"])
+
     AX_CHECK_COMPILE_FLAG([-pthread], [AC_FCFLAGS="${AC_FCFLAGS} -pthread"])
     AS_IF([test "x$developer_version" = xyes], [
         AX_CHECK_COMPILE_FLAG([-Wall], [AC_FCFLAGS="${AC_FCFLAGS} -Wall"])
         AX_CHECK_COMPILE_FLAG([-Werror], [AC_FCFLAGS="${AC_FCFLAGS} -Werror"])
     ])
+
+    # restore FCFLAGS
+    AX_VAR_POPVALUE([FCFLAGS])
+
     AC_LANG_POP([Fortran])
 ])
 AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
