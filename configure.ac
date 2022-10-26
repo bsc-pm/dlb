@@ -148,6 +148,7 @@ AX_VAR_POPVALUE([CFLAGS])
 
 ##### Fortran Compiler checks #####
 AC_PROG_FC
+AC_FC_FREEFORM
 
 # Disable Fortran tests if FC is not found
 AS_IF([test "x$FC" = x], [
@@ -167,12 +168,16 @@ AS_IF([test "x$FC" = x], [
     AS_IF([test "x$developer_version" = xyes], [
         AX_CHECK_COMPILE_FLAG([-Wall], [AC_FCFLAGS="${AC_FCFLAGS} -Wall"])
         AX_CHECK_COMPILE_FLAG([-Werror], [AC_FCFLAGS="${AC_FCFLAGS} -Werror"])
+        AX_CHECK_COMPILE_FLAG([-Wno-c-binding-type], [AC_FCFLAGS="${AC_FCFLAGS} -Wno-c-binding-type"])
     ])
 
     # restore FCFLAGS
     AX_VAR_POPVALUE([FCFLAGS])
 
     AC_LANG_POP([Fortran])
+
+    # Check for assumed type support (TYPE(*)), or defer to REAL
+    AX_CHECK_FORTRAN_IGNORE_TKR
 ])
 AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
 
@@ -432,6 +437,7 @@ Installation prefix       : $prefix
 Debug version             : $enable_debug
 Instrumentation version   : $enable_instrumentation
 Instr + debug version     : $enable_instrumentation_debug
+MPI Fortran 08 bindings   : $mpi_f08
 External libraries:"])
 
 AS_ECHO_N(["

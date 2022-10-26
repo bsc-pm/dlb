@@ -6,6 +6,7 @@ project('DLB', 'c', 'fortran',
 )
 
 cc = meson.get_compiler('c')
+fc = meson.get_compiler('fortran')
 
 
 ### Dependencies
@@ -51,6 +52,17 @@ if get_option('buildtype') == 'debug'
   endforeach
 
   add_project_arguments('-DDEBUG_VERSION', language : 'c')
+
+  # Fortran arguments
+  extra_fc_arguments = [
+    '-Wno-c-binding-type',
+  ]
+
+  foreach arg : extra_fc_arguments
+    if fc.has_argument(arg)
+      add_project_arguments(arg, language : 'fortran')
+    endif
+  endforeach
 endif
 
 
@@ -207,6 +219,7 @@ if mpi_dep.found()
   mpi_common_gen = gen.process(
     'src/LB_MPI/MPI_calls_coded.c.in',
     'src/LB_MPI/MPI_calls_coded.h.in',
+    'src/LB_MPI/MPI_interceptF08.F90.in',
     preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
   )
 

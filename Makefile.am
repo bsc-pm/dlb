@@ -52,6 +52,7 @@ endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
 AM_CFLAGS = $(AC_CFLAGS)
+AM_FCFLAGS = $(AC_FCFLAGS)
 AM_LDFLAGS = $(AC_LDFLAGS) -avoid-version
 if HAVE_HWLOC
 AM_CPPFLAGS += $(HWLOC_CPPFLAGS) -DHWLOC_LIB
@@ -134,6 +135,12 @@ EXTRA_DIST    += src/LB_MPI/MPI_interceptF.c.in
 CLEANFILES    += src/LB_MPI/MPI_interceptF.c
 BUILT_SOURCES += src/LB_MPI/MPI_interceptF.c
 src/LB_MPI/MPI_interceptF.c: $(top_srcdir)/src/LB_MPI/MPI_interceptF.c.in $(MPICALLS_DB)
+	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
+
+EXTRA_DIST    += src/LB_MPI/MPI_interceptF08.F90.in
+CLEANFILES    += src/LB_MPI/MPI_interceptF08.F90
+BUILT_SOURCES += src/LB_MPI/MPI_interceptF08.F90
+src/LB_MPI/MPI_interceptF08.F90: $(top_srcdir)/src/LB_MPI/MPI_interceptF08.F90.in $(MPICALLS_DB)
 	$(PYGEN_verbose)$(MPI_GENERATOR) -i $< -o $@ -j $(MPICALLS_DB)
 
 
@@ -280,12 +287,19 @@ MPI_COMMON_SRCS_GEN = \
 	src/LB_MPI/MPI_calls_coded.c    \
 	$(END)
 
+if MPI_F08
+MPI_COMMON_SRCS_GEN += \
+	src/LB_MPI/MPI_interceptF08.F90 \
+	$(END)
+endif
+
 AM_MPI_CPPFLAGS = $(MPI_CPPFLAGS) -DMPI_LIB
 AM_MPI_LDFLAGS = $(MPI_LDFLAGS)
 
 noinst_LTLIBRARIES += libdlb_mpi_common.la
 libdlb_mpi_common_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_common_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_mpi_common_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_common_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_common_la_SOURCES = $(MPI_COMMON_SRCS) $(SRCS)
 nodist_libdlb_mpi_common_la_SOURCES = $(MPI_COMMON_SRCS_GEN)
@@ -295,6 +309,7 @@ if DEBUG_LIB
 noinst_LTLIBRARIES += libdlb_mpi_common_dbg.la
 libdlb_mpi_common_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_common_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
+libdlb_mpi_common_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_common_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_common_dbg_la_SOURCES = $(MPI_COMMON_SRCS) $(SRCS)
 nodist_libdlb_mpi_common_dbg_la_SOURCES = $(MPI_COMMON_SRCS_GEN)
@@ -305,6 +320,7 @@ if INSTRUMENTATION_LIB
 noinst_LTLIBRARIES += libdlb_mpi_common_instr.la
 libdlb_mpi_common_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_common_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
+libdlb_mpi_common_instr_la_FCFLAGS = $(INSTR_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_common_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_common_instr_la_SOURCES = $(MPI_COMMON_SRCS) $(SRCS)
 nodist_libdlb_mpi_common_instr_la_SOURCES = $(MPI_COMMON_SRCS_GEN)
@@ -315,6 +331,7 @@ if INSTRUMENTATION_DEBUG_LIB
 noinst_LTLIBRARIES += libdlb_mpi_common_instr_dbg.la
 libdlb_mpi_common_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_common_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
+libdlb_mpi_common_instr_dbg_la_FCFLAGS = $(INSTR_DEBUG_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_common_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_common_instr_dbg_la_SOURCES = $(MPI_COMMON_SRCS) $(SRCS)
 nodist_libdlb_mpi_common_instr_dbg_la_SOURCES = $(MPI_COMMON_SRCS_GEN)

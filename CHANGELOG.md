@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Free agent and Role-shift OMPT thread managers to support LeWI with both
   implementations
 - Flag `--ompt-thread-manager` to select which OpenMP implementation to use
+- MPI Fortran 2008 bindings
 
 ## [3.2] 2022-03-16
 ### Added

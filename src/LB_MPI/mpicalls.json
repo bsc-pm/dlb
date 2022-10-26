@@ -4,219 +4,253 @@
             "name": "MPI_Allgather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather|_Blocking"
         },
         {
             "name": "MPI_Allgatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcounts(*), displs(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather|_Blocking"
         },
         {
             "name": "MPI_Allreduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Reduce|_Blocking"
         },
         {
             "name": "MPI_Alltoall",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_All2All|_Blocking"
         },
         {
             "name": "MPI_Alltoallv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int *sendcounts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *sdispls, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *rdispls, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcounts(*), sdispls(*), recvcounts(*), rdispls(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_All2All|_Blocking"
         },
         {
             "name": "MPI_Barrier",
             "cpar": "MPI_Comm comm",
             "fpar": "MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Barrier|_Blocking"
         },
         {
             "name": "MPI_Bcast",
             "cpar": "void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm",
             "fpar": "void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE :: buffer; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Bcast|_Blocking"
         },
         {
             "name": "MPI_Bsend",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send|_Blocking"
         },
         {
             "name": "MPI_Bsend_init",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Cancel",
             "cpar": "MPI_Request *request",
             "fpar": "MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Request), INTENT(IN) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Cart_create",
             "cpar": "MPI_Comm comm_old, int ndims, MPI3_CONST int dims[], MPI3_CONST int periods[], int reorder, MPI_Comm *comm_cart",
             "fpar": "MPI_Fint *comm_old, MPI_Fint *ndims, MPI3_CONST MPI_Fint *dims, MPI3_CONST MPI_Fint *periods, MPI_Fint *reorder, MPI_Fint *comm_cart, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm_old; INTEGER, INTENT(IN) :: ndims, dims(ndims); LOGICAL, INTENT(IN) :: periods(ndims), reorder; TYPE(MPI_Comm), INTENT(OUT) :: comm_cart; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm|_Blocking"
         },
         {
             "name": "MPI_Cart_sub",
             "cpar": "MPI_Comm comm, MPI3_CONST int remain_dims[], MPI_Comm *newcomm",
-            "fpar": "MPI_Fint *comm, MPI3_CONST MPI_Fint *remain_dims, MPI_Fint *comm_new, MPI_Fint *ierror",
+            "fpar": "MPI_Fint *comm, MPI3_CONST MPI_Fint *remain_dims, MPI_Fint *newcomm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; LOGICAL, INTENT(IN) :: remain_dims(*); TYPE(MPI_Comm), INTENT(OUT) :: newcomm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_create",
             "cpar": "MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm",
             "fpar": "MPI_Fint *comm, MPI_Fint *group, MPI_Fint *newcomm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Group), INTENT(IN) :: group; TYPE(MPI_Comm), INTENT(OUT) :: newcomm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_dup",
             "cpar": "MPI_Comm comm, MPI_Comm *newcomm",
             "fpar": "MPI_Fint *comm, MPI_Fint *newcomm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Comm), INTENT(OUT) :: newcomm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_free",
             "cpar": "MPI_Comm *comm",
             "fpar": "MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(INOUT) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_rank",
             "cpar": "MPI_Comm comm, int *rank",
             "fpar": "MPI_Fint *comm, MPI_Fint *rank, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, INTENT(OUT) :: rank; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_size",
             "cpar": "MPI_Comm comm, int *size",
             "fpar": "MPI_Fint *comm, MPI_Fint *size, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, INTENT(OUT) :: size; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_spawn",
             "cpar": "MPI3_CONST char *command, char *argv[], int maxprocs, MPI_Info info, int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
-            "fpar": "MPI3_CONST char *command, char *argv, MPI_Fint *maxprocs, MPI_Fint *info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *intercomm, MPI_Fint *array_of_errcodes, MPI_Fint *ierror",
+            "fpar": "MPI3_CONST char *command, char *argv, MPI_Fint *maxprocs, MPI_Fint *info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *intercomm, MPI_Fint *array_of_errcodes, MPI_Fint *ierror, int cmd_len, int string_len",
+            "f08par": "CHARACTER(LEN=*), INTENT(IN) :: command, argv(*); INTEGER, INTENT(IN) :: maxprocs, root; TYPE(MPI_Info), INTENT(IN) :: info; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Comm), INTENT(OUT) :: intercomm; INTEGER :: array_of_errcodes(*); INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_spawn_multiple",
             "cpar": "int count, char *array_of_commands[], char **array_of_argv[], MPI3_CONST int array_of_maxprocs[], MPI3_CONST MPI_Info array_of_info[], int root, MPI_Comm comm, MPI_Comm *intercomm, int array_of_errcodes[]",
-            "fpar": "MPI_Fint *count, char *array_of_commands, char *array_of_argv, MPI3_CONST MPI_Fint *array_of_maxprocs, MPI3_CONST MPI_Fint *array_of_info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *intercomm, MPI_Fint *array_of_errcodes, MPI_Fint *ierror",
+            "fpar": "MPI_Fint *count, char *array_of_commands, char *array_of_argv, MPI3_CONST MPI_Fint *array_of_maxprocs, MPI3_CONST MPI_Fint *array_of_info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *intercomm, MPI_Fint *array_of_errcodes, MPI_Fint *ierror, int cmd_string_len, int argv_string_len",
+            "f08par": "INTEGER, INTENT(IN) :: count, array_of_maxprocs(*), root; CHARACTER(LEN=*), INTENT(IN) :: array_of_commands(*); CHARACTER(LEN=*), INTENT(IN) :: array_of_argv(count, *); TYPE(MPI_Info), INTENT(IN) :: array_of_info; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Comm), INTENT(OUT) :: intercomm; INTEGER :: array_of_errcodes(*); INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_Comm_split",
             "cpar": "MPI_Comm comm, int color, int key, MPI_Comm *newcomm",
             "fpar": "MPI_Fint *comm, MPI_Fint *color, MPI_Fint *key, MPI_Fint *newcomm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, INTENT(IN) :: color, key; TYPE(MPI_Comm), INTENT(OUT) :: newcomm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Comm"
         },
         {
             "name": "MPI_File_close",
             "cpar": "MPI_File *fh",
             "fpar": "MPI_File *fh, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(INOUT) :: fh; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_open",
             "cpar": "MPI_Comm comm, MPI3_CONST char *filename, int amode, MPI_Info info, MPI_File *fh",
-            "fpar": "MPI_Fint *comm, char *filename, MPI_Fint *amode, MPI_Fint *info, MPI_File *fh, MPI_Fint *len, MPI_Fint *ierror",
-            "tags": "_IO",
-            "enabled": false,
-            "_comment": "MPI_File_open currently disabled due to problems considering a Fortran string as a char*"
+            "fpar": "MPI_Fint *comm, char *filename, MPI_Fint *amode, MPI_Fint *info, MPI_File *fh, MPI_Fint *ierror, int name_len",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; CHARACTER(LEN=*), INTENT(IN) :: filename; INTEGER, INTENT(IN) :: amode; TYPE(MPI_Info), INTENT(IN) :: info; TYPE(MPI_File), INTENT(OUT) :: fh; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
+            "tags": "_IO"
         },
         {
             "name": "MPI_File_read",
             "cpar": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; IGNORE_TKR_TYPE :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_read_all",
             "cpar": "MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; IGNORE_TKR_TYPE :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_read_at",
             "cpar": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, MPI_Offset *offset, void* buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; INTEGER(KIND=MPI_OFFSET_KIND), INTENT(IN) :: offset; IGNORE_TKR_TYPE :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_read_at_all",
             "cpar": "MPI_File fh, MPI_Offset offset, void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, MPI_Offset *offset, void* buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; INTEGER(KIND=MPI_OFFSET_KIND), INTENT(IN) :: offset; IGNORE_TKR_TYPE :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_write",
             "cpar": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_write_all",
             "cpar": "MPI_File fh, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_write_at",
             "cpar": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, MPI_Offset *offset, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; INTEGER(KIND=MPI_OFFSET_KIND), INTENT(IN) :: offset; IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_File_write_at_all",
             "cpar": "MPI_File fh, MPI_Offset offset, MPI3_CONST void *buf, int count, MPI_Datatype datatype, MPI_Status *status",
             "fpar": "MPI_File *fh, MPI_Offset *offset, MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Status *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_File), INTENT(IN) :: fh; INTEGER(KIND=MPI_OFFSET_KIND), INTENT(IN) :: offset; IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_IO"
         },
         {
             "name": "MPI_Finalize",
             "cpar": "void",
             "fpar": "MPI_Fint *ierror",
+            "f08par": "INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Gather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather|_Blocking"
         },
         {
             "name": "MPI_Gatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcounts(*), displs(*), root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather|_Blocking"
         },
         {
             "name": "MPI_Get",
             "cpar": "void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
             "fpar": "MPI_Fint *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, MPI_Fint *target_rank, MPI_Fint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, ASYNCHRONOUS :: origin_addr; INTEGER, INTENT(IN) :: origin_count, target_rank, target_count; TYPE(MPI_Datatype), INTENT(IN) :: origin_datatype, target_datatype; INTEGER(KIND=MPI_ADDRESS_KIND), INTENT(IN) :: target_disp; TYPE(MPI_Win), INTENT(IN) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Iallgather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather",
             "info": "MPI3_only"
         },
         {
             "name": "MPI_Iallgatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int recvcounts[], MPI3_CONST int displs[], MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
-            "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcount, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount; INTEGER, INTENT(IN), ASYNCHRONOUS :: recvcounts(*), displs(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather",
             "info": "MPI3_only"
         },
@@ -224,6 +258,7 @@
             "name": "MPI_Iallreduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror ",
             "tags": "_Reduce",
             "info": "MPI3_only"
         },
@@ -231,6 +266,7 @@
             "name": "MPI_Ialltoall",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_All2All",
             "info": "MPI3_only"
         },
@@ -238,6 +274,7 @@
             "name": "MPI_Ialltoallv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int sendcounts[], MPI3_CONST int sdispls[], MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int recvcounts[], MPI3_CONST int rdispls[], MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *sdispls, MPI_Fint *sendtype, MPI_Fint *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *rdispls, MPI_Fint *recvtype, MPI_Fint *request, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN), ASYNCHRONOUS :: sendcounts(*), sdispls(*), recvcounts(*), rdispls(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_All2All",
             "info": "MPI3_only"
         },
@@ -245,6 +282,7 @@
             "name": "MPI_Ibarrier",
             "cpar": "MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Barrier",
             "info": "MPI3_only"
         },
@@ -252,6 +290,7 @@
             "name": "MPI_Ibcast",
             "cpar": "void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, ASYNCHRONOUS :: buffer; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Bcast",
             "info": "MPI3_only"
         },
@@ -259,12 +298,14 @@
             "name": "MPI_Ibsend",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Igather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather",
             "info": "MPI3_only"
         },
@@ -272,6 +313,7 @@
             "name": "MPI_Igatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int recvcounts[], MPI3_CONST int displs[], MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, root; INTEGER, INTENT(IN), ASYNCHRONOUS :: recvcounts(*), displs(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Gather",
             "info": "MPI3_only"
 
@@ -280,42 +322,49 @@
             "name": "MPI_Init",
             "cpar": "int *argc, char ***argv",
             "fpar": "MPI_Fint *ierror",
+            "f08par": "INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Init_thread",
             "cpar": "int *argc, char ***argv, int required, int *provided",
             "fpar": "MPI_Fint *required, MPI_Fint *provided, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: required; INTEGER, INTENT(OUT) :: provided; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Intercomm_create",
             "cpar": "MPI_Comm local_comm, int local_leader, MPI_Comm peer_comm, int remote_leader, int tag, MPI_Comm *newintercomm",
             "fpar": "MPI_Fint *local_comm, MPI_Fint *local_leader, MPI_Fint *peer_comm, MPI_Fint *remote_leader, MPI_Fint *tag, MPI_Fint *newintercomm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: local_comm, peer_comm; INTEGER, INTENT(IN) :: local_leader, remote_leader, tag; TYPE(MPI_Comm), INTENT(OUT) :: newintercomm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Intercomm_merge",
             "cpar": "MPI_Comm intercomm, int high, MPI_Comm *newintracomm",
             "fpar": "MPI_Fint *intercomm, MPI_Fint *high, MPI_Fint *newintracomm, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Comm), INTENT(IN) :: intercomm; LOGICAL, INTENT(IN) :: high; TYPE(MPI_Comm), INTENT(OUT) :: newintracomm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Iprobe",
             "cpar": "int source, int tag, MPI_Comm comm, int *flag, MPI_Status *status",
             "fpar": "MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: source, tag; TYPE(MPI_Comm), INTENT(IN) :: comm; LOGICAL, INTENT(OUT) :: flag; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Test"
         },
         {
             "name": "MPI_Irecv",
             "cpar": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, source, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Receive"
         },
         {
             "name": "MPI_Ireduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Reduce",
             "info": "MPI3_only"
 
@@ -324,6 +373,7 @@
             "name": "MPI_Ireduce_scatter",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST int recvcounts[], MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN), ASYNCHRONOUS :: recvcounts(*); TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Reduce",
             "info": "MPI3_only"
 
@@ -332,12 +382,14 @@
             "name": "MPI_Irsend",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Iscan",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Scan",
             "info": "MPI3_only"
 
@@ -346,6 +398,7 @@
             "name": "MPI_Iscatter",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Scatter",
             "info": "MPI3_only"
 
@@ -354,6 +407,7 @@
             "name": "MPI_Iscatterv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int sendcounts[], MPI3_CONST int displs[], MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: sendbuf; IGNORE_TKR_TYPE, ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN), ASYNCHRONOUS :: sendcounts(*), displs(*); INTEGER, INTENT(IN) :: recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Scatter",
             "info": "MPI3_only"
 
@@ -362,228 +416,266 @@
             "name": "MPI_Isend",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Issend",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Probe",
             "cpar": "int source, int tag, MPI_Comm comm, MPI_Status *status",
             "fpar": "MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: source, tag; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Test"
         },
         {
             "name": "MPI_Put",
             "cpar": "MPI3_CONST void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win",
             "fpar": "MPI3_CONST void *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, MPI_Fint *target_rank, MPI_Fint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: origin_addr; INTEGER, INTENT(IN) :: origin_count, target_rank, target_count; TYPE(MPI_Datatype), INTENT(IN) :: origin_datatype, target_datatype; INTEGER(KIND=MPI_ADDRESS_KIND), INTENT(IN) :: target_disp; TYPE(MPI_Win), INTENT(IN) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Recv",
             "cpar": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status",
             "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE :: buf; INTEGER, INTENT(IN) :: count, source, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Receive|_Blocking"
         },
         {
             "name": "MPI_Recv_init",
             "cpar": "void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, source, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Receive"
         },
         {
             "name": "MPI_Reduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Reduce|_Blocking"
         },
         {
             "name": "MPI_Reduce_scatter",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST int *recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: recvcounts(*); TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Reduce|_Blocking"
         },
         {
             "name": "MPI_Request_free",
             "cpar": "MPI_Request *request",
             "fpar": "MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Request), INTENT(INOUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Request_get_status",
             "cpar": "MPI_Request request, int *flag, MPI_Status *status",
             "fpar": "MPI_Fint *request, int *flag, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Request), INTENT(IN) :: request; LOGICAL, INTENT(OUT) :: flag; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Test"
         },
         {
             "name": "MPI_Rsend",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send|_Blocking"
         },
         {
             "name": "MPI_Rsend_init",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Scan",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Scan|_Blocking"
         },
         {
             "name": "MPI_Scatter",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Scatter|_Blocking"
         },
         {
             "name": "MPI_Scatterv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int *sendcounts, MPI3_CONST int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "fpar": "MPI3_CONST void *sendbuf, MPI3_CONST MPI_Fint *sendcounts, MPI3_CONST MPI_Fint *displs, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcounts(*), displs(*), recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Scatter|_Blocking"
         },
         {
             "name": "MPI_Send",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send|_Blocking"
         },
         {
             "name": "MPI_Send_init",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Sendrecv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
             "fpar": "MPI3_CONST void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, MPI_Fint *dest, MPI_Fint *sendtag, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: sendbuf; IGNORE_TKR_TYPE :: recvbuf; INTEGER, INTENT(IN) :: sendcount, dest, sendtag, recvcount, source, recvtag; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_SendRecv|_Blocking"
         },
         {
             "name": "MPI_Sendrecv_replace",
             "cpar": "void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status",
             "fpar": "void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *sendtag, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE :: buf; INTEGER, INTENT(IN) :: count, dest, sendtag, source, recvtag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_SendRecv|_Blocking"
         },
         {
             "name": "MPI_Ssend",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN) :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send|_Blocking"
         },
         {
             "name": "MPI_Ssend_init",
             "cpar": "MPI3_CONST void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request",
             "fpar": "MPI3_CONST void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, INTENT(IN), ASYNCHRONOUS :: buf; INTEGER, INTENT(IN) :: count, dest, tag; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Send"
         },
         {
             "name": "MPI_Start",
             "cpar": "MPI_Request *request",
             "fpar": "MPI_Fint *request, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Request), INTENT(INOUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Startall",
             "cpar": "int count, MPI_Request array_of_requests[]",
             "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: count; TYPE(MPI_Request), INTENT(INOUT) :: array_of_requests(count); INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Test",
             "cpar": "MPI_Request *request, int *flag, MPI_Status *status",
             "fpar": "MPI_Fint *request, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Request), INTENT(INOUT) :: request; LOGICAL, INTENT(OUT) :: flag; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Test"
         },
         {
             "name": "MPI_Testall",
             "cpar": "int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]",
             "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *flag, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: count; TYPE(MPI_Request), INTENT(INOUT) :: array_of_requests(count); LOGICAL, INTENT(OUT) :: flag; TYPE(MPI_Status) :: array_of_statuses; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Test"
         },
         {
             "name": "MPI_Testany",
             "cpar": "int count, MPI_Request array_of_requests[], int *indx, int *flag, MPI_Status *status",
             "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *index, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: count; TYPE(MPI_Request), INTENT(INOUT) :: array_of_requests(count); INTEGER, INTENT(OUT) :: index; LOGICAL, INTENT(OUT) :: flag; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Test"
         },
         {
             "name": "MPI_Testsome",
             "cpar": "int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]",
             "fpar": "MPI_Fint *incount, MPI_Fint *array_of_requests, MPI_Fint *outcount, MPI_Fint *array_of_indices, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: incount; TYPE(MPI_Request), INTENT(INOUT) :: array_of_requests(incount); INTEGER, INTENT(OUT) :: outcount, array_of_indices(*); TYPE(MPI_Status) :: array_of_statuses; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Test"
         },
         {
             "name": "MPI_Wait",
             "cpar": "MPI_Request *request, MPI_Status *status",
             "fpar": "MPI_Fint *request, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Request), INTENT(INOUT) :: request; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Wait|_Blocking"
         },
         {
             "name": "MPI_Waitall",
             "cpar": "int count, MPI_Request *array_of_requests, MPI_Status *array_of_statuses",
             "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: count; TYPE(MPI_Request), INTENT(INOUT) :: array_of_requests(count); TYPE(MPI_Status) :: array_of_statuses; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Wait|_Blocking"
         },
         {
             "name": "MPI_Waitany",
-            "cpar": "int count, MPI_Request *requests, int *index, MPI_Status *status",
-            "fpar": "MPI_Fint *count, MPI_Fint *requests, MPI_Fint *index, MPI_Fint *status, MPI_Fint *ierror",
+            "cpar": "int count, MPI_Request *array_of_requests, int *index, MPI_Status *status",
+            "fpar": "MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *index, MPI_Fint *status, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: count; TYPE(MPI_Request), INTENT(INOUT) :: array_of_requests(count); INTEGER, INTENT(OUT) :: index; TYPE(MPI_Status) :: status; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Wait|_Blocking"
         },
         {
             "name": "MPI_Waitsome",
             "cpar": "int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses",
             "fpar": "MPI_Fint *incount, MPI_Fint *array_of_requests, MPI_Fint *outcount, MPI_Fint *array_of_indices, MPI_Fint *array_of_statuses, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: incount; TYPE(MPI_Request), INTENT(INOUT) :: array_of_requests(incount); INTEGER, INTENT(OUT) :: outcount, array_of_indices(*); TYPE(MPI_Status) :: array_of_statuses; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": "_Wait|_Blocking"
         },
         {
             "name": "MPI_Win_complete",
             "cpar": "MPI_Win win",
             "fpar": "MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Win), INTENT(IN) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Win_create",
             "cpar": "void *base, MPI_Aint size, int disp_unit, MPI_Info info, MPI_Comm comm, MPI_Win *win",
             "fpar": "void *base, MPI_Aint *size, MPI_Fint *disp_unit, MPI_Fint *info, MPI_Fint *comm, MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "IGNORE_TKR_TYPE, ASYNCHRONOUS :: base; INTEGER(KIND=MPI_ADDRESS_KIND), INTENT(IN) :: size; INTEGER, INTENT(IN) :: disp_unit; TYPE(MPI_Info), INTENT(IN) :: info; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Win), INTENT(OUT) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Win_fence",
             "cpar": "int assert, MPI_Win win",
             "fpar": "MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "INTEGER, INTENT(IN) :: assert; TYPE(MPI_Win), INTENT(IN) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Win_free",
             "cpar": "MPI_Win *win",
             "fpar": "MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Win), INTENT(INOUT) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Win_post",
             "cpar": "MPI_Group group, int assert, MPI_Win win",
             "fpar": "MPI_Fint *group, MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Group), INTENT(IN) :: group; INTEGER, INTENT(IN) :: assert; TYPE(MPI_Win), INTENT(IN) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Win_start",
             "cpar": "MPI_Group group, int assert, MPI_Win win",
             "fpar": "MPI_Fint *group, MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Group), INTENT(IN) :: group; INTEGER, INTENT(IN) :: assert; TYPE(MPI_Win), INTENT(IN) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         },
         {
             "name": "MPI_Win_wait",
             "cpar": "MPI_Win win",
             "fpar": "MPI_Fint *win, MPI_Fint *ierror",
+            "f08par": "TYPE(MPI_Win), INTENT(IN) :: win; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
             "tags": ""
         }
     ]
