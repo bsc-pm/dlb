@@ -25,6 +25,7 @@ tests = {
   '02_shmem' : {
     'async_00' : {},
     'barrier_00'          : {},
+    'barrier_01'          : {},
     'cpuinfo_00'          : {},
     'cpuinfo_01_async'    : {'source' : 'cpuinfo_01.c', 'dlb_args' : '--mode=async'},
     'cpuinfo_01_poll'     : {'source' : 'cpuinfo_01.c', 'dlb_args' : '--mode=polling'},

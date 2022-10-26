@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
     int64_t last_borrow_value = 0;
     int64_t *last_borrow = &last_borrow_value;
     int requested_ncpus;
+    int barrier_id = 0;
 
     /* Initialize shared memories */
     assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
@@ -72,6 +73,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     shmem_barrier__init(SHMEM_KEY);
+    shmem_barrier__attach(barrier_id, true);
 
     /* Enable request queues */
     shmem_cpuinfo__enable_request_queues();
@@ -126,6 +128,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    shmem_barrier__detach(barrier_id);
     shmem_barrier__finalize(SHMEM_KEY);
 
     return 0;

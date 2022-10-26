@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -38,6 +38,7 @@
 
 typedef struct {
     bool initialized;
+    bool lewi;
     unsigned int participants;
     atomic_uint ntimes;
     atomic_uint count;
@@ -48,35 +49,27 @@ typedef struct {
     barrier_t barriers[0];
 } shdata_t;
 
-enum { SHMEM_BARRIER_VERSION = 4 };
+enum { SHMEM_BARRIER_VERSION = 5 };
 
-
-static bool attached = false;
-static int barrier_id = 0;
+static bool * attached = NULL;
 static int max_barriers;
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static const char *shmem_name = "barrier";
 
-static barrier_t* get_barrier() {
-    return &shdata->barriers[barrier_id];
-}
-
 static void cleanup_shmem(void *shdata_ptr, int pid) {
     shdata_t *shared_data = shdata_ptr;
-    barrier_t *barrier = &shared_data->barriers[barrier_id];
-    /* We don't have the shm_handler to lock in maintenance mode, just decrease */
-    --barrier->participants;
+
+    int i;
+    for (i = 0; i < max_barriers; i++) {
+        barrier_t *barrier = &shared_data->barriers[i];
+        /* We don't have the shm_handler to lock in maintenance mode, just decrease */
+        --barrier->participants;
+    }
 }
 
 void shmem_barrier__init(const char *shmem_key) {
     if (shm_handler != NULL) return;
-
-    if (thread_spd && thread_spd->options.barrier_id > 0) {
-        barrier_id = thread_spd->options.barrier_id;
-    } else {
-        barrier_id = 0;
-    }
 
     max_barriers = mu_get_system_size();
 
@@ -84,10 +77,9 @@ void shmem_barrier__init(const char *shmem_key) {
             sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
             shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
 
-    shmem_barrier__attach();
+    attached = calloc(max_barriers, sizeof(bool));
 
-    verbose(VB_BARRIER, "Barrier Module initialized. Participants: %d",
-            get_barrier()->participants);
+    verbose(VB_BARRIER, "Barrier Module initialized.");
 }
 
 void shmem_barrier_ext__init(const char *shmem_key) {
@@ -109,7 +101,8 @@ void shmem_barrier__finalize(const char *shmem_key) {
 
     verbose(VB_BARRIER, "Finalizing Barrier Module");
 
-    shmem_barrier__detach();
+    free(attached);
+    attached = NULL;
 
     shmem_finalize(shm_handler, NULL /* do not check if empty */);
     shm_handler = NULL;
@@ -121,6 +114,9 @@ int shmem_barrier_ext__finalize(void) {
         return DLB_ERR_NOSHMEM;
     }
 
+    free(attached);
+    attached = NULL;
+
     // Shared memory destruction
     shmem_finalize(shm_handler, NULL /* do not check if empty */);
     shm_handler = NULL;
@@ -129,13 +125,21 @@ int shmem_barrier_ext__finalize(void) {
     return DLB_SUCCESS;
 }
 
-int shmem_barrier__attach(void) {
-    if (shm_handler == NULL) return DLB_ERR_UNKNOWN;
-    if (attached) return DLB_NOUPDT;
+int shmem_barrier__get_system_id(void) {
+    return max_barriers-1;
+}
 
+int shmem_barrier__attach(int barrier_id, bool lewi) {
+    if (shm_handler == NULL) return DLB_ERR_UNKNOWN;
+    if (barrier_id < 0 || barrier_id >= max_barriers) {
+        return DLB_ERR_NOSHMEM;
+    }
+    if (attached[barrier_id]) return DLB_NOUPDT;
+
+    int participants = 0;
     shmem_lock_maintenance(shm_handler);
     {
-        barrier_t *barrier = get_barrier();
+        barrier_t *barrier = &shdata->barriers[barrier_id];
 
         if (barrier->count != 0) {
             shmem_unlock_maintenance(shm_handler);
@@ -150,7 +154,7 @@ int shmem_barrier__attach(void) {
         }
 
         /* Update participants */
-        ++barrier->participants;
+        participants = ++barrier->participants;
 
         /* Initialize barrier with the number of participants updated */
         pthread_barrierattr_t attr;
@@ -165,18 +169,24 @@ int shmem_barrier__attach(void) {
     }
     shmem_unlock_maintenance(shm_handler);
 
-    attached = true;
+    verbose(VB_BARRIER, "Attached to barrier %d. Participants: %d", barrier_id,
+            participants);
+
+    attached[barrier_id] = true;
 
     return DLB_SUCCESS;
 }
 
-int shmem_barrier__detach(void) {
+int shmem_barrier__detach(int barrier_id) {
     if (shm_handler == NULL) return DLB_ERR_UNKNOWN;
-    if (!attached) return DLB_NOUPDT;
+    if (barrier_id < 0 || barrier_id >= max_barriers) {
+        return DLB_ERR_NOSHMEM;
+    }
+    if (!attached[barrier_id]) return DLB_NOUPDT;
 
     shmem_lock_maintenance(shm_handler);
     {
-        barrier_t *barrier = get_barrier();
+        barrier_t *barrier = &shdata->barriers[barrier_id];
 
         if (barrier->count != 0) {
             shmem_unlock_maintenance(shm_handler);
@@ -205,16 +215,15 @@ int shmem_barrier__detach(void) {
     }
     shmem_unlock_maintenance(shm_handler);
 
-    attached = false;
+    attached[barrier_id] = false;
 
     return DLB_SUCCESS;
 }
 
-
-void shmem_barrier__barrier(void) {
+void shmem_barrier__barrier(int barrier_id) {
     if (unlikely(shm_handler == NULL)) return;
 
-    barrier_t *barrier = get_barrier();
+    barrier_t *barrier = &shdata->barriers[barrier_id];
 
     if (unlikely(!barrier->initialized)) {
         warning("Trying to use a non initialized barrier");
@@ -237,15 +246,19 @@ void shmem_barrier__barrier(void) {
         DLB_ATOMIC_ADD_RLX(&barrier->ntimes, 1);
     } else {
         // Only if this process is not the last one, act as a blocking call
-        talp_in_mpi(thread_spd);
-        IntoBlockingCall(0, 0);
+        if (barrier->lewi) {
+            talp_in_mpi(thread_spd);
+            IntoBlockingCall(0, 0);
+        }
 
         // Barrier
         pthread_barrier_wait(&barrier->barrier);
 
         // Recover resources for those processes that simulated a blocking call
-        OutOfBlockingCall(0);
-        talp_out_mpi(thread_spd);
+        if (barrier->lewi) {
+            OutOfBlockingCall(0);
+            talp_out_mpi(thread_spd);
+        }
     }
 
     unsigned int participants_left = DLB_ATOMIC_SUB_FETCH(&barrier->count, 1);
