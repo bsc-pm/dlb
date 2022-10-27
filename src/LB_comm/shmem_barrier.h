@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -25,9 +25,10 @@
 
 void shmem_barrier__init(const char *shmem_key);
 void shmem_barrier__finalize(const char *shmem_key);
-int  shmem_barrier__attach(void);
-int  shmem_barrier__detach(void);
-void shmem_barrier__barrier(void);
+int  shmem_barrier__get_system_id(void);
+int  shmem_barrier__attach(int barrier_id, bool lewi);
+int  shmem_barrier__detach(int barrier_id);
+void shmem_barrier__barrier(int barrier_id);
 
 void shmem_barrier__print_info(const char *shmem_key);
 bool shmem_barrier__exists(void);

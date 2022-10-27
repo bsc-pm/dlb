@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -96,9 +96,10 @@ static void check_async_version(void) {
 }
 
 static void check_barrier_version(void) {
-    enum { KNOWN_BARRIER_VERSION = 4 };
+    enum { KNOWN_BARRIER_VERSION = 5 };
     struct KnownBarrierShdata {
         bool bool1;
+        bool bool2;
         unsigned int int1;
         atomic_uint  int2;
         atomic_uint  int3;

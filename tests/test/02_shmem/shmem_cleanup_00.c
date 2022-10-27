@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -54,7 +54,9 @@ int main(int argc, char *argv[]) {
         assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+        int barrier_id = 0;
         shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__attach(barrier_id, true);
         ConfigShMem(1, 0, SHMEM_KEY);
 
         /* Invoke _exit so that call assert_shmem destructors are not called */
@@ -71,15 +73,18 @@ int main(int argc, char *argv[]) {
         assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+        int barrier_id = 0;
         shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__attach(barrier_id, true);
         ConfigShMem(1, 0, SHMEM_KEY);
 
         /* Barrier must not block because I'm the only participant */
-        shmem_barrier__barrier();
+        shmem_barrier__barrier(barrier_id);
 
         assert( shmem_cpuinfo__finalize(child_pid, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_procinfo__finalize(child_pid, false, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_async_finalize(child_pid) == DLB_SUCCESS );
+        shmem_barrier__detach(barrier_id);
         shmem_barrier__finalize(SHMEM_KEY);
         finalize_comm();
 

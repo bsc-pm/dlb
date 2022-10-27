@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -372,7 +372,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 
     /* Perform a barrier so that all processes in the node have arrived at the
      * MPI_Finalize */
-    shmem_barrier__barrier();
+    shmem_barrier__barrier(spd->options.barrier_id);
 
     if (_process_id == 0) {
         /* Obtain the PID list */
@@ -424,7 +424,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 
     /* Perform a final barrier so that all processes let the _process_id 0 to
      * gather all the data */
-    shmem_barrier__barrier();
+    shmem_barrier__barrier(spd->options.barrier_id);
 
     /* All main processes from each node send data to rank 0 */
     if (_process_id == 0) {

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -123,6 +123,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     }
     if (spd->options.barrier) {
         shmem_barrier__init(spd->options.shm_key);
+        shmem_barrier__attach(spd->options.barrier_id, true);
     }
     if (spd->options.mode == MODE_ASYNC) {
         error = shmem_async_init(spd->id, &spd->pm, &spd->process_mask, spd->options.shm_key);
@@ -184,6 +185,7 @@ int Finish(subprocess_descriptor_t *spd) {
         spd->lb_funcs.finalize = NULL;
     }
     if (spd->options.barrier) {
+        shmem_barrier__detach(spd->options.barrier_id);
         shmem_barrier__finalize(spd->options.shm_key);
     }
     if (spd->lb_policy == POLICY_LEWI_MASK
@@ -681,7 +683,7 @@ int node_barrier(void) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->options.barrier) {
         instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_BEGIN);
-        shmem_barrier__barrier();
+        shmem_barrier__barrier(spd->options.barrier_id);
         instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_END);
         error = DLB_SUCCESS;
     } else {
@@ -694,7 +696,7 @@ int node_barrier_attach(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->options.barrier) {
-        error = shmem_barrier__attach();
+        error = shmem_barrier__attach(spd->options.barrier_id, true);
     } else {
         error = DLB_ERR_NOCOMP;
     }
@@ -705,7 +707,7 @@ int node_barrier_detach(void) {
     int error;
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->options.barrier) {
-        error = shmem_barrier__detach();
+        error = shmem_barrier__detach(spd->options.barrier_id);
     } else {
         error = DLB_ERR_NOCOMP;
     }
