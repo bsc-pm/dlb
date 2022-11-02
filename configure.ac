@@ -167,8 +167,12 @@ AS_IF([test "x$FC" = x], [
     AX_CHECK_COMPILE_FLAG([-pthread], [AC_FCFLAGS="${AC_FCFLAGS} -pthread"])
     AS_IF([test "x$developer_version" = xyes], [
         AX_CHECK_COMPILE_FLAG([-Wall], [AC_FCFLAGS="${AC_FCFLAGS} -Wall"])
-        AX_CHECK_COMPILE_FLAG([-Werror], [AC_FCFLAGS="${AC_FCFLAGS} -Werror"])
         AX_CHECK_COMPILE_FLAG([-Wno-c-binding-type], [AC_FCFLAGS="${AC_FCFLAGS} -Wno-c-binding-type"])
+        AX_CHECK_FC_HONORS_NO_C_BINDING_TYPE([
+            dnl Old Fortran compilers may not fail with and unrecognized flag
+            dnl '-Wno-c-binding-type', so flag '-Werror' cannot be used.
+            AX_CHECK_COMPILE_FLAG([-Werror], [AC_FCFLAGS="${AC_FCFLAGS} -Werror"])
+        ])
     ])
 
     # restore FCFLAGS
@@ -176,8 +180,9 @@ AS_IF([test "x$FC" = x], [
 
     AC_LANG_POP([Fortran])
 
-    # Check for assumed type support (TYPE(*)), or defer to REAL
-    AX_CHECK_FORTRAN_IGNORE_TKR
+    # Check for assumed-type support (TYPE(*)), or defer to REAL
+    # and for assumed-rank entity (DIMENSION(..)), or defer to assumed-size arrays
+    AX_CHECK_FC_IGNORE_TYPE
 ])
 AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
 
@@ -437,7 +442,6 @@ Installation prefix       : $prefix
 Debug version             : $enable_debug
 Instrumentation version   : $enable_instrumentation
 Instr + debug version     : $enable_instrumentation_debug
-MPI Fortran 08 bindings   : $mpi_f08
 External libraries:"])
 
 AS_ECHO_N(["
@@ -446,6 +450,7 @@ AS_IF([test "x$with_mpi" = xno], [
     AS_ECHO(["no"])
 ], [
     AS_ECHO(["yes
+  F08 bindings:   $mpi_f08
   MPI_CPPFLAGS:   $MPI_CPPFLAGS
   MPI_LDFLAGS:    $MPI_LDFLAGS"])
 ])

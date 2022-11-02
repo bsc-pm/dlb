@@ -23,14 +23,23 @@
 
 ! These macros may be defined at configure time.
 ! If they are not, use some generic values:
-#ifndef IGNORE_TKR_TYPE
-#   define IGNORE_TKR_TYPE     TYPE(*), DIMENSION(*)
+#ifndef FORTRAN_IGNORE_TYPE
+#   define FORTRAN_IGNORE_TYPE  TYPE(*), DIMENSION(*)
 #endif
 #ifndef MPI_OFFSET_KIND
-#   define MPI_OFFSET_KIND     8
+#   define MPI_OFFSET_KIND      8
 #endif
 #ifndef MPI_ADDRESS_KIND
-#   define MPI_ADDRESS_KIND    8
+#   define MPI_ADDRESS_KIND     8
+#endif
+#ifndef MPI_COUNT_KIND
+#   define MPI_COUNT_KIND       8
+#endif
+#ifndef MPI_MAX_OBJECT_NAME
+#   define MPI_MAX_OBJECT_NAME  63
+#endif
+#ifndef MPI_MAX_PORT_NAME
+#   define MPI_MAX_PORT_NAME    1023
 #endif
 
 !PYGEN$ start
@@ -44,7 +53,7 @@ subroutine {MPI_NAME}_f08({F08_PAR_LIST})
         end subroutine {MPI_LCASE}
     end interface
 
-    call {MPI_LCASE}({F08_TO_C_ARG_LIST})
+    {F08_PRECALL_STMTS}call {MPI_LCASE}({F08_TO_C_ARG_LIST})
     if (present(ierror)) ierror = c_ierror
 
 end subroutine {MPI_NAME}_f08
