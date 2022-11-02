@@ -28,7 +28,8 @@
 #include <string.h>
 #include <assert.h>
 
-#define MAX_SIZE 16
+enum { MAX_SIZE = 16 };
+enum { SYS_SIZE = 8 };
 
 
 static int check_mask(const cpu_set_t *mask, const int *bits) {
@@ -47,6 +48,7 @@ int main( int argc, char **argv ) {
     mu_parse_mask("0,1", &mask1);
     mu_parse_mask("0-3", &mask2);
     mu_init();
+    mu_testing_set_sys_size(SYS_SIZE);
 
     assert(  mu_is_subset(&mask0, &mask0) );
     assert(  mu_is_subset(&mask0, &mask1) );
