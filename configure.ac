@@ -69,8 +69,10 @@ AC_SUBST([DEB_RELEASE])
 ################################################################################
 # Configure compiler and compiler flags
 ################################################################################
-# If CFLAGS is not user-defined, define it as empty to avoid AC_PROG_CC setting it to default '-g -O2'
+# If CFLAGS / FCFLAGS are not user-defined, define then as empty to avoid
+# AC_PROG_CC and AC_PROG_FC setting then to the default value '-g -O2'
 : ${CFLAGS=""}
+: ${FCFLAGS=""}
 
 # Checks for programs
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
@@ -95,17 +97,21 @@ AS_IF([${ac_cv_prog_cc_c11+:} false && test x"$ac_cv_prog_cc_c11" != xno], [:],
       [${ac_cv_prog_cc_c99+:} false && test x"$ac_cv_prog_cc_c99" != xno], [:],
       # if ac_cv_prog_cc_c89 is set and its value is not 'no', add -std=c99
       [${ac_cv_prog_cc_c89+:} false && test x"$ac_cv_prog_cc_c89" != xno], [
-        AX_CHECK_COMPILE_FLAG([-std=c99], [cstd="-std=c99"])
-        AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $cstd])
+        AX_CHECK_COMPILE_FLAG([-std=c99], [AC_CFLAGS="${AC_CFLAGS} -std=c99"])
       ]
 )
 
-# icc needs -we10006 to promote unrecognized flags from warning to error
-AX_CHECK_COMPILE_FLAG([-we10006], [intel_we_flag="-we10006"])
-AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $intel_we_flag])
-# icc >= 19 needs -we10148 instead
-AX_CHECK_COMPILE_FLAG([-we10148], [intel_we_flag="-we10148"])
-AX_VAR_PUSHVALUE([CFLAGS], [$CFLAGS $intel_we_flag])
+# save CFLAGS before flag testing
+AX_VAR_PUSHVALUE([CFLAGS])
+
+# Intel compilers need additional flags to promote unrecognized flags from warning to error
+# Ideally, -diag-error=warn should be used, but this flag promotes several other warnings
+# that are otherwise hidden. Another solution is to use -diag-error=<code>, but GCC does not
+# complain about it. The final solution is to use the flag -we<code>, although deprecated,
+# it still works.
+# Ref: https://www.intel.com/content/www/us/en/develop/documentation/cpp-compiler-developer-guide-and-reference/top/compiler-reference/error-handling-1.html
+AX_CHECK_COMPILE_FLAG([-we10006], [CFLAGS="${CFLAGS} -we10006"])
+AX_CHECK_COMPILE_FLAG([-we10148], [CFLAGS="${CFLAGS} -we10148"])
 
 # fccpx needs this env. variable to promote unrecognized flags from warning to error
 AX_VAR_PUSHVALUE([FCOMP_UNRECOGNIZED_OPTION], [error])
@@ -142,6 +148,7 @@ AX_VAR_POPVALUE([CFLAGS])
 
 ##### Fortran Compiler checks #####
 AC_PROG_FC
+AC_FC_FREEFORM
 
 # Disable Fortran tests if FC is not found
 AS_IF([test "x$FC" = x], [
@@ -149,12 +156,33 @@ AS_IF([test "x$FC" = x], [
 ], [
     # use the Fortran compiler for the following checks
     AC_LANG_PUSH([Fortran])
-    AX_CHECK_COMPILE_FLAG([-pthread], [AC_FFLAGS="${AC_FFLAGS} -pthread"])
+
+    # save FCFLAGS before flag testing
+    AX_VAR_PUSHVALUE([FCFLAGS])
+
+    # Intel flags to promote unrecognized flags from warning to error
+    AX_CHECK_COMPILE_FLAG([-we10148], [FCFLAGS="${FCFLAGS} -we10148"])
+    AX_CHECK_COMPILE_FLAG([-we10157], [FCFLAGS="${FCFLAGS} -we10157"])
+
+    AX_CHECK_COMPILE_FLAG([-pthread], [AC_FCFLAGS="${AC_FCFLAGS} -pthread"])
     AS_IF([test "x$developer_version" = xyes], [
-        AX_CHECK_COMPILE_FLAG([-Wall], [AC_FFLAGS="${AC_FFLAGS} -Wall"])
-        AX_CHECK_COMPILE_FLAG([-Werror], [AC_FFLAGS="${AC_FFLAGS} -Werror"])
+        AX_CHECK_COMPILE_FLAG([-Wall], [AC_FCFLAGS="${AC_FCFLAGS} -Wall"])
+        AX_CHECK_COMPILE_FLAG([-Wno-c-binding-type], [AC_FCFLAGS="${AC_FCFLAGS} -Wno-c-binding-type"])
+        AX_CHECK_FC_HONORS_NO_C_BINDING_TYPE([
+            dnl Old Fortran compilers may not fail with and unrecognized flag
+            dnl '-Wno-c-binding-type', so flag '-Werror' cannot be used.
+            AX_CHECK_COMPILE_FLAG([-Werror], [AC_FCFLAGS="${AC_FCFLAGS} -Werror"])
+        ])
     ])
+
+    # restore FCFLAGS
+    AX_VAR_POPVALUE([FCFLAGS])
+
     AC_LANG_POP([Fortran])
+
+    # Check for assumed-type support (TYPE(*)), or defer to REAL
+    # and for assumed-rank entity (DIMENSION(..)), or defer to assumed-size arrays
+    AX_CHECK_FC_IGNORE_TYPE
 ])
 AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
 
@@ -201,19 +229,19 @@ AC_SUBST([TEST_VERSIONS])
 COMMON_CPPFLAGS="-D_GNU_SOURCE"
 
 PERFO_CFLAGS="-g -O3"
-PERFO_FFLAGS="-g -O3"
+PERFO_FCFLAGS="-g -O3"
 PERFO_CPPFLAGS="$COMMON_CPPFLAGS"
 
 DEBUG_CFLAGS="-g -O0"
-DEBUG_FFLAGS="-g -O0"
+DEBUG_FCFLAGS="-g -O0"
 DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION"
 
 INSTR_CFLAGS="-g -O3"
-INSTR_FFLAGS="-g -O3"
+INSTR_FCFLAGS="-g -O3"
 INSTR_CPPFLAGS="$COMMON_CPPFLAGS -DINSTRUMENTATION_VERSION"
 
 INSTR_DEBUG_CFLAGS="-g -O0"
-INSTR_DEBUG_FFLAGS="-g -O0"
+INSTR_DEBUG_FCFLAGS="-g -O0"
 INSTR_DEBUG_CPPFLAGS="$COMMON_CPPFLAGS -DDEBUG_VERSION -DINSTRUMENTATION_VERSION"
 
 ### Coverage ###
@@ -227,7 +255,7 @@ AC_MSG_RESULT([$enable_coverage])
 
 AS_IF([test "x$enable_coverage" = xyes], [
     DEBUG_CFLAGS="$DEBUG_CFLAGS $COVERAGE_FLAGS"
-    DEBUG_FFLAGS="$DEBUG_FFLAGS $COVERAGE_FLAGS"
+    DEBUG_FCFLAGS="$DEBUG_FCFLAGS $COVERAGE_FLAGS"
 
     AC_CHECK_PROG([gcovr], [gcovr], [yes])
     AS_IF([test "x$gcovr" != xyes], [
@@ -251,16 +279,16 @@ AM_CONDITIONAL([ENABLE_VIEWER_SCRIPTS], [test "x$enable_viewer_scripts" = xyes])
 
 
 AC_SUBST([PERFO_CFLAGS])
-AC_SUBST([PERFO_FFLAGS])
+AC_SUBST([PERFO_FCFLAGS])
 AC_SUBST([PERFO_CPPFLAGS])
 AC_SUBST([DEBUG_CFLAGS])
-AC_SUBST([DEBUG_FFLAGS])
+AC_SUBST([DEBUG_FCFLAGS])
 AC_SUBST([DEBUG_CPPFLAGS])
 AC_SUBST([INSTR_CFLAGS])
-AC_SUBST([INSTR_FFLAGS])
+AC_SUBST([INSTR_FCFLAGS])
 AC_SUBST([INSTR_CPPFLAGS])
 AC_SUBST([INSTR_DEBUG_CFLAGS])
-AC_SUBST([INSTR_DEBUG_FFLAGS])
+AC_SUBST([INSTR_DEBUG_FCFLAGS])
 AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 
 
@@ -399,7 +427,7 @@ AC_DEFINE_UNQUOTED([NCPUS_AT_CONFIGURE_TIME], [$ncpus], [Number of CPUs detected
 ################################################################################
 
 AC_SUBST([AC_CFLAGS])
-AC_SUBST([AC_FFLAGS])
+AC_SUBST([AC_FCFLAGS])
 AC_SUBST([AC_LDFLAGS])
 
 # generate the final Makefile etc.
@@ -422,6 +450,7 @@ AS_IF([test "x$with_mpi" = xno], [
     AS_ECHO(["no"])
 ], [
     AS_ECHO(["yes
+  F08 bindings:   $mpi_f08
   MPI_CPPFLAGS:   $MPI_CPPFLAGS
   MPI_LDFLAGS:    $MPI_LDFLAGS"])
 ])

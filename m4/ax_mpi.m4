@@ -28,6 +28,10 @@ AC_DEFUN([AX_MPI],
         AS_IF([test "x$MPICC" = x], [
             AC_PATH_PROGS([MPICC], [$MPICC mpicc], [], [$PATH])
         ])
+        AC_PATH_PROGS([MPIFC], [$MPIFC mpif90 mpifort mpifc], [], [$user_mpi_bin])
+        AS_IF([test "x$MPIFC" = x], [
+            AC_PATH_PROGS([MPIFC], [$MPIFC mpif90 mpifort mpifc], [], [$PATH])
+        ])
         AC_PATH_PROGS([MPIEXEC], [mpiexec mpirun], [], [$user_mpi_bin])
         AS_IF([test "x$MPIEXEC" = x], [
             AC_PATH_PROGS([MPIEXEC], [mpiexec mpirun], [], [$PATH])
@@ -118,6 +122,31 @@ AC_DEFUN([AX_MPI],
         ])
         AC_LANG_POP([C])
 
+        ### MPI VERSION ###
+        AC_LANG_PUSH([C])
+        AC_LANG_CONFTEST([
+            AC_LANG_SOURCE([[
+                #include <mpi.h>
+                #include <stdio.h>
+                #include <stdlib.h>
+                int main(int argc, char *argv[])
+                {
+                    printf("%d.%d\n", MPI_VERSION, MPI_SUBVERSION);
+                    return EXIT_SUCCESS;
+                }
+            ]])
+        ])
+        AC_LANG_POP([C])
+
+        AC_MSG_CHECKING([for MPI version])
+        MPI_VERSION=""
+        AS_IF([$MPICC conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
+            MPI_VERSION="$(./conftest)"
+        ])
+        rm -f conftest
+        AC_MSG_RESULT([$MPI_VERSION])
+        AX_COMPARE_VERSION([$MPI_VERSION], [ge], [3.0], [mpi3=yes], [mpi3=no])
+
         ### MPI LIBRARY VERSION ###
         AC_LANG_PUSH([C])
         AC_LANG_CONFTEST([
@@ -141,20 +170,96 @@ AC_DEFUN([AX_MPI],
         AC_LANG_POP([C])
 
         AC_MSG_CHECKING([for MPI library version])
-        mpi_library_version=""
+        MPI_LIBRARY_VERSION=""
         AS_IF([$MPICC conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
-            mpi_library_version="$(./conftest)"
+            MPI_LIBRARY_VERSION="$(./conftest)"
         ])
         rm -f conftest
-        AC_MSG_RESULT([$mpi_library_version])
+        AC_MSG_RESULT([$MPI_LIBRARY_VERSION])
+
+        ### Check for MPI_OFFSET_KIND
+        AS_IF([test x"$FC" != x && test x"$mpi3" = xyes], [
+            AC_MSG_CHECKING([for MPI_OFFSET_KIND])
+            AC_LANG_PUSH([Fortran])
+            AC_LANG_CONFTEST([
+                AC_LANG_PROGRAM([], [[
+                    include 'mpif.h'
+                    write(*, '(I0)')  MPI_OFFSET_KIND
+                ]])
+            ])
+            AC_LANG_POP([Fortran])
+            AS_IF([$MPIFC $FCFLAGS conftest.f -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
+                mpi_offset_kind="$(./conftest)"
+            ])
+            rm -f conftest
+            AC_MSG_RESULT([$mpi_offset_kind])
+            AC_DEFINE_UNQUOTED([MPI_OFFSET_KIND], [$mpi_offset_kind], [MPI Fortran MPI_OFFSET_KIND])
+        ])
+
+        ### Check for MPI_ADDRESS_KIND
+        AS_IF([test x"$FC" != x && test x"$mpi3" = xyes], [
+            AC_MSG_CHECKING([for MPI_ADDRESS_KIND])
+            AC_LANG_PUSH([Fortran])
+            AC_LANG_CONFTEST([
+                AC_LANG_PROGRAM([], [[
+                    include 'mpif.h'
+                    write(*, '(I0)')  MPI_ADDRESS_KIND
+                ]])
+            ])
+            AC_LANG_POP([Fortran])
+            AS_IF([$MPIFC $FCFLAGS conftest.f -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
+                mpi_address_kind="$(./conftest)"
+            ])
+            rm -f conftest
+            AC_MSG_RESULT([$mpi_address_kind])
+            AC_DEFINE_UNQUOTED([MPI_ADDRESS_KIND], [$mpi_address_kind], [MPI Fortran MPI_ADDRESS_KIND])
+        ])
+
+        ### Check for MPI_COUNT_KIND
+        AS_IF([test x"$FC" != x && test x"$mpi3" = xyes], [
+            AC_MSG_CHECKING([for MPI_COUNT_KIND])
+            AC_LANG_PUSH([Fortran])
+            AC_LANG_CONFTEST([
+                AC_LANG_PROGRAM([], [[
+                    include 'mpif.h'
+                    write(*, '(I0)')  MPI_COUNT_KIND
+                ]])
+            ])
+            AC_LANG_POP([Fortran])
+            AS_IF([$MPIFC $FCFLAGS conftest.f -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
+                mpi_count_kind="$(./conftest)"
+            ])
+            rm -f conftest
+            AC_MSG_RESULT([$mpi_count_kind])
+            AC_DEFINE_UNQUOTED([MPI_COUNT_KIND], [$mpi_count_kind], [MPI Fortran MPI_COUNT_KIND])
+        ])
+
+        ### MPI Fortran 08 bindings ###
+        AC_MSG_CHECKING([whether to compile MPI Fortran 2008 interface])
+        AS_IF([test x"$FC" != x \
+                && test x"$mpi3" = xyes \
+                && test x"$mpi_offset_kind" != x \
+                && test x"$mpi_address_kind" != x \
+                && test x"$mpi_count_kind" != x \
+                && test x"$fc_ignore_type" != x], [
+            mpi_f08=yes
+        ], [
+            mpi_f08=no
+        ])
+        AC_MSG_RESULT([$mpi_f08])
     ])
 
     AC_SUBST([MPICC])
     AC_SUBST([MPIEXEC])
     AC_SUBST([MPIEXEC_BIND_OPTS])
+    AC_SUBST([MPI_VERSION])
+    AC_SUBST([MPI_LIBRARY_VERSION])
     AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != xno])
     AM_CONDITIONAL([MPI_TESTS], [test "x$enable_mpi_tests" != xno])
-    AC_DEFINE_UNQUOTED([MPI_LIBRARY_VERSION], ["$mpi_library_version"], [MPI Library version])
+    AM_CONDITIONAL([MPI_F08], [test x"$mpi_f08" = xyes])
+    AM_CONDITIONAL([HAVE_MPI_VERSION], [test "x$MPI_VERSION" != x])
+    AM_CONDITIONAL([HAVE_MPI_LIBRARY_VERSION], [test "x$MPI_LIBRARY_VERSION" != x])
+    AC_DEFINE_UNQUOTED([MPI_LIBRARY_VERSION], ["$MPI_LIBRARY_VERSION"], [MPI Library version])
 ])
 
 # AX_CHECK_MPI_CPPFLAGS([MPICC], [FLAGS], [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])

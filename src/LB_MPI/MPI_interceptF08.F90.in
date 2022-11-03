@@ -1,0 +1,61 @@
+!-------------------------------------------------------------------------------!
+!  Copyright 2009-2022 Barcelona Supercomputing Center                          !
+!                                                                               !
+!  This file is part of the DLB library.                                        !
+!                                                                               !
+!  DLB is free software: you can redistribute it and/or modify                  !
+!  it under the terms of the GNU Lesser General Public License as published by  !
+!  the Free Software Foundation, either version 3 of the License, or            !
+!  (at your option) any later version.                                          !
+!                                                                               !
+!  DLB is distributed in the hope that it will be useful,                       !
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of               !
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                !
+!  GNU Lesser General Public License for more details.                          !
+!                                                                               !
+!  You should have received a copy of the GNU Lesser General Public License     !
+!  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                !
+!-------------------------------------------------------------------------------!
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+! These macros may be defined at configure time.
+! If they are not, use some generic values:
+#ifndef FORTRAN_IGNORE_TYPE
+#   define FORTRAN_IGNORE_TYPE  TYPE(*), DIMENSION(*)
+#endif
+#ifndef MPI_OFFSET_KIND
+#   define MPI_OFFSET_KIND      8
+#endif
+#ifndef MPI_ADDRESS_KIND
+#   define MPI_ADDRESS_KIND     8
+#endif
+#ifndef MPI_COUNT_KIND
+#   define MPI_COUNT_KIND       8
+#endif
+#ifndef MPI_MAX_OBJECT_NAME
+#   define MPI_MAX_OBJECT_NAME  63
+#endif
+#ifndef MPI_MAX_PORT_NAME
+#   define MPI_MAX_PORT_NAME    1023
+#endif
+
+!PYGEN$ start
+subroutine {MPI_NAME}_f08({F08_PAR_LIST})
+    {F08_PAR_DECL}
+    INTEGER :: c_ierror
+    interface
+        subroutine {MPI_LCASE}({F_C_PAR_LIST}) &
+                BIND(c, name="{MPI_LCASE}")
+            {F_C_PAR_DECL}
+        end subroutine {MPI_LCASE}
+    end interface
+
+    {F08_PRECALL_STMTS}call {MPI_LCASE}({F08_TO_C_ARG_LIST})
+    if (present(ierror)) ierror = c_ierror
+
+end subroutine {MPI_NAME}_f08
+
+!PYGEN$ end

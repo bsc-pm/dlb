@@ -6,6 +6,7 @@ project('DLB', 'c', 'fortran',
 )
 
 cc = meson.get_compiler('c')
+fc = meson.get_compiler('fortran')
 
 
 ### Dependencies
@@ -31,7 +32,8 @@ endif
 instr_cpp_flags = '-DINSTRUMENTATION_VERSION'
 
 if get_option('buildtype') == 'debug'
-  extra_arguments = [
+  # C arguments
+  extra_cc_arguments = [
     # '-Wall',  # default warning_level is already 1
     '-Werror',
     '-Wshadow',
@@ -43,13 +45,24 @@ if get_option('buildtype') == 'debug'
     '-Wvla',
   ]
 
-  foreach arg : extra_arguments
+  foreach arg : extra_cc_arguments
     if cc.has_argument(arg)
       add_project_arguments(arg, language : 'c')
     endif
   endforeach
 
   add_project_arguments('-DDEBUG_VERSION', language : 'c')
+
+  # Fortran arguments
+  extra_fc_arguments = [
+    '-Wno-c-binding-type',
+  ]
+
+  foreach arg : extra_fc_arguments
+    if fc.has_argument(arg)
+      add_project_arguments(arg, language : 'fortran')
+    endif
+  endforeach
 endif
 
 
@@ -186,93 +199,20 @@ libdlb_instr = library(
 if mpi_dep.found()
   mpi_cpp_flags = '-DMPI_LIB'
 
-  prog_python = import('python').find_installation('python')
-  gen = generator(prog_python,
-    output : '@BASENAME@',
-    arguments : [
-      '@SOURCE_DIR@/scripts/pygen.py',
-      '--ifile', '@INPUT@', '--ofile', '@OUTPUT@',
-      '--json', '@SOURCE_DIR@/src/LB_MPI/mpicalls.json',
-    ]
+  check_mpi_version = '''
+    #include <mpi.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    int main(int argc, char *argv[])
+    {
+        printf("%d.%d", MPI_VERSION, MPI_SUBVERSION);
+        return EXIT_SUCCESS;
+    }
+    '''
+  runresult = cc.run(check_mpi_version,
+    dependencies : mpi_dep,
   )
-
-  mpi_common_sources = [
-    'src/LB_MPI/DPD.c',
-    'src/LB_MPI/DPD.h',
-    'src/LB_MPI/process_MPI.c',
-    'src/LB_MPI/process_MPI.h',
-  ]
-
-  mpi_common_gen = gen.process(
-    'src/LB_MPI/MPI_calls_coded.c.in',
-    'src/LB_MPI/MPI_calls_coded.h.in',
-    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
-  )
-
-  mpi_gen_sources = gen.process(
-    'src/LB_MPI/MPI_interface.c.in',
-    'src/LB_MPI/MPI_interface.h.in',
-    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
-  )
-
-  mpif_gen_sources = gen.process(
-    'src/LB_MPI/MPI_interfaceF.c.in',
-    'src/LB_MPI/MPI_interfaceF.h.in',
-    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
-  )
-
-  mpi_gen_intercept_sources = gen.process(
-    'src/LB_MPI/MPI_intercept.c.in',
-    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
-  )
-
-  mpif_gen_intercept_sources = gen.process(
-    'src/LB_MPI/MPI_interceptF.c.in',
-    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
-  )
-
-  mpi_sources = [sources, mpi_common_sources, mpi_common_gen, mpi_gen_sources, mpif_gen_sources]
-  mpif_sources = [sources, mpi_common_sources, mpi_common_gen, mpif_gen_sources]
-
-  libdlb_mpi = library(
-    'dlb_mpi', [mpi_sources, mpi_gen_intercept_sources, mpif_gen_intercept_sources],
-    include_directories : common_includes,
-    c_args : mpi_cpp_flags,
-    objects : dlb_common_objects,
-    dependencies : [common_deps, mpi_dep, mpif_dep],
-    gnu_symbol_visibility : 'hidden',
-    install : true,
-  )
-
-  libdlb_mpi_instr = library(
-    'dlb_mpi_instr', mpi_sources,
-    include_directories : common_includes,
-    c_args : [mpi_cpp_flags, instr_cpp_flags],
-    objects : dlb_common_objects,
-    dependencies : [common_deps, mpi_dep, mpif_dep],
-    gnu_symbol_visibility : 'hidden',
-    install : true,
-  )
-
-  libdlb_mpif = library(
-    'dlb_mpif', [mpif_sources, mpif_gen_intercept_sources],
-    include_directories : common_includes,
-    c_args : mpi_cpp_flags,
-    objects : dlb_common_objects,
-    dependencies : [common_deps, mpif_dep],
-    gnu_symbol_visibility : 'hidden',
-    install : true,
-  )
-
-  libdlb_mpif_instr = library(
-    'dlb_mpif_instr', mpif_sources,
-    include_directories : common_includes,
-    c_args : [mpi_cpp_flags, instr_cpp_flags],
-    objects : dlb_common_objects,
-    dependencies : [common_deps, mpif_dep],
-    gnu_symbol_visibility : 'hidden',
-    install : true,
-  )
+  mpi_version = runresult.stdout()
 
   check_mpi_library_version = '''
     #include <mpi.h>
@@ -293,6 +233,64 @@ if mpi_dep.found()
     dependencies : mpi_dep,
   )
   mpi_library_version = runresult.stdout()
+
+  prog_python = import('python').find_installation('python')
+  gen = generator(prog_python,
+    output : '@BASENAME@',
+    arguments : [
+      '@SOURCE_DIR@/scripts/pygen.py',
+      '--ifile', '@INPUT@', '--ofile', '@OUTPUT@',
+      '--json', '@SOURCE_DIR@/src/LB_MPI/mpicalls.json',
+      '--std', mpi_version,
+      '--lib', mpi_library_version,
+    ]
+  )
+
+  mpi_common_sources = [
+    'src/LB_MPI/DPD.c',
+    'src/LB_MPI/DPD.h',
+    'src/LB_MPI/process_MPI.c',
+    'src/LB_MPI/process_MPI.h',
+  ]
+
+  mpi_gen_sources = gen.process(
+    'src/LB_MPI/MPI_calls_coded.c.in',
+    'src/LB_MPI/MPI_calls_coded.h.in',
+    'src/LB_MPI/MPI_interceptF08.F90.in',
+    'src/LB_MPI/MPI_interface.c.in',
+    'src/LB_MPI/MPI_interface.h.in',
+    'src/LB_MPI/MPI_interfaceF.c.in',
+    'src/LB_MPI/MPI_interfaceF.h.in',
+    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
+  )
+
+  mpi_gen_intercept_sources = gen.process(
+    'src/LB_MPI/MPI_intercept.c.in',
+    'src/LB_MPI/MPI_interceptF.c.in',
+    preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
+  )
+
+  mpi_sources = [sources, mpi_common_sources, mpi_gen_sources]
+
+  libdlb_mpi = library(
+    'dlb_mpi', [mpi_sources, mpi_gen_intercept_sources],
+    include_directories : common_includes,
+    c_args : mpi_cpp_flags,
+    objects : dlb_common_objects,
+    dependencies : [common_deps, mpi_dep, mpif_dep],
+    gnu_symbol_visibility : 'hidden',
+    install : true,
+  )
+
+  libdlb_mpi_instr = library(
+    'dlb_mpi_instr', mpi_sources,
+    include_directories : common_includes,
+    c_args : [mpi_cpp_flags, instr_cpp_flags],
+    objects : dlb_common_objects,
+    dependencies : [common_deps, mpi_dep, mpif_dep],
+    gnu_symbol_visibility : 'hidden',
+    install : true,
+  )
 else
   mpi_library_version = ''
 endif

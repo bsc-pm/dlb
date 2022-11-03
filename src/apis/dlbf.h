@@ -235,13 +235,13 @@
             integer(kind=c_int) :: ierr
         end function dlb_barrier
 
-        function dlb_barrierattach() result (ierr)                            &
+        function dlb_barrierattach() result (ierr)                      &
      &          bind(c, name='DLB_BarrierAttach')
             use iso_c_binding
             integer(kind=c_int) :: ierr
         end function dlb_barrierattach
 
-        function dlb_barrierdetach() result (ierr)                            &
+        function dlb_barrierdetach() result (ierr)                      &
      &          bind(c, name='DLB_BarrierDetach')
             use iso_c_binding
             integer(kind=c_int) :: ierr
