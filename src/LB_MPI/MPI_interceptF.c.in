@@ -30,7 +30,7 @@
 
 // pmpi headers
 #pragma pygen start
-void p{MPI_LCASE}({F_PARAMS});
+void p{MPI_LCASE}({F_PARAMS}) __attribute__((weak));
 #pragma pygen end
 
 #pragma GCC visibility push(default)
