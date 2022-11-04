@@ -23,7 +23,7 @@ if [[ $DLB == 1 ]] ; then
     fi
 
     if [[ $TALP == 1 ]] ; then
-        export DLB_ARGS+=" --talp --talp-summary=pop-metrics:node"
+        export DLB_ARGS+=" --talp --talp-external-profiler --talp-summary=pop-metrics:node"
     fi
 else
     if [[ $TRACE == 1 ]] ; then

@@ -22,7 +22,7 @@ DLB_HOME = @prefix@
 MPICC= @MPICC@
 CFLAGS =
 CPPFLAGS = -I$(DLB_HOME)/include
-LDFLAGS =  -L$(DLB_HOME)/lib -ldlb -ldlb_mpi -Wl,-rpath,$(DLB_HOME)/lib
+LDFLAGS =  -L$(DLB_HOME)/lib -ldlb_mpi -Wl,-rpath,$(DLB_HOME)/lib
 
 all: talp_01 get_times
 
