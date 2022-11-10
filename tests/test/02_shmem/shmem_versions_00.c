@@ -164,29 +164,34 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 4 };
+    enum { KNOWN_PROCINFO_VERSION = 5 };
 
     struct KnownResizerData3 {
         char* name;
-        struct timespec  mpi_time;  // Elapsed
-        struct timespec  compute_time; // Elapsed * numCPU
-
+        struct timespec mpi_time;  // Elapsed
+        struct timespec compute_time; // Elapsed * numCPU
         struct timespec elapsed_time;  // Elapsed time
         struct timespec idle_time;
         struct timespec lend_time;
     };
-
-     struct KnownResizerData2{
+    struct KnownResizerData2 {
         struct timespec mpi_time;
         struct timespec compute_time;
         double percent;
         int niter;
     };
-     struct KnownResizerData{
-        struct KnownResizerData2  iterations[1000];
+    struct KnownResizerData {
+        struct KnownResizerData2 iterations[1000];
         int iter_num;
         double load_balance;
         struct KnownResizerData3 aux;
+    };
+    struct KnownTALPTimes {
+        atomic_int_least64_t int1;
+        atomic_int_least64_t int2;
+        atomic_int_least64_t int3;
+        atomic_int_least64_t int4;
+        bool bool1;
     };
     struct KnownProcinfo {
         pid_t pid;
@@ -200,8 +205,7 @@ static void check_procinfo_version(void) {
         double double1;
         double double2;
         struct KnownResizerData data1;
-        atomic_int_least64_t int2;
-        atomic_int_least64_t int3;
+        struct KnownTALPTimes talp1;
 #ifdef DLB_LOAD_AVERAGE
         // Load average fields:
         float float1[3];

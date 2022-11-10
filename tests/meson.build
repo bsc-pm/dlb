@@ -64,6 +64,7 @@ tests = {
     'talp_00'             : {},
     'talp_01'             : {},
     'talp_01_lewi'        : {'source' : 'talp_01.c', 'dlb_args' : '--lewi'},
+    'talp_02'             : {},
   },
   '05_api' : {
     'api_00'              : {},
