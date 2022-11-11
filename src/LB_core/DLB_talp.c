@@ -315,7 +315,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         monitoring_region_stop(spd, &talp_info->mpi_monitor);
 
         /* Update shared memory values */
-        shmem_procinfo__settimes(spd->id,
+        shmem_procinfo__set_app_times(spd->id,
                 talp_info->mpi_monitor.accumulated_MPI_time,
                 talp_info->mpi_monitor.accumulated_computation_time);
 
@@ -398,7 +398,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
             if (pidlist[i] != 0) {
                 int64_t mpi_time;
                 int64_t useful_time;
-                shmem_procinfo__gettimes(pidlist[i], &mpi_time, &useful_time);
+                shmem_procinfo__get_app_times(pidlist[i], &mpi_time, &useful_time);
 
                 /* Save times in local structure */
                 node_summary->process_info[i].pid = pidlist[i];
@@ -647,6 +647,11 @@ int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *mo
     return error;
 }
 
+bool monitoring_region_is_started(const subprocess_descriptor_t *spd,
+        const dlb_monitor_t *monitor) {
+    return ((monitor_data_t*)monitor->_data)->started;
+}
+
 int monitoring_region_report(const subprocess_descriptor_t *spd, const dlb_monitor_t *monitor) {
     info("########### Monitoring Region Summary ###########");
     info("### Name:                       %s", monitor->name);
@@ -703,7 +708,7 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
         mpi_monitor->num_mpi_calls += macrosample->num_mpi_calls;
         /* Update shared memory only if requested */
         if (talp_info->external_profiler) {
-            shmem_procinfo__settimes(spd->id,
+            shmem_procinfo__set_app_times(spd->id,
                     mpi_monitor->accumulated_MPI_time,
                     mpi_monitor->accumulated_computation_time);
         }
@@ -1098,10 +1103,9 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
 int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
     talp_info_t *talp_info = spd->talp_info;
-    if (!talp_info->external_profiler) return DLB_ERR_NOCOMP;
-    if (monitor != NULL) return DLB_ERR_NOCOMP;
-
-    monitor = &talp_info->mpi_monitor;
+    if (monitor == NULL) {
+        monitor = &talp_info->mpi_monitor;
+    }
 
     int64_t total_mpi_time = 0;
     int64_t total_useful_time = 0;
@@ -1110,6 +1114,14 @@ int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
 
     /* Stop monitor so that metrics are updated */
     bool resume_region = monitoring_region_stop(spd, monitor) == DLB_SUCCESS;
+
+    /* Update the shared memory with this process' metrics */
+    shmem_procinfo__set_region_times(spd->id,
+                    monitor->accumulated_MPI_time,
+                    monitor->accumulated_computation_time);
+
+    /* Perform a node barrier to ensure everyone has updated their metrics */
+    shmem_barrier__barrier(spd->options.barrier_id);
 
     /* Obtain the PID list */
     int max_procs = mu_get_system_size();
@@ -1124,7 +1136,7 @@ int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
         if (pidlist[i] != 0) {
             int64_t mpi_time;
             int64_t useful_time;
-            shmem_procinfo__gettimes(pidlist[i], &mpi_time, &useful_time);
+            shmem_procinfo__get_region_times(pidlist[i], &mpi_time, &useful_time);
 
             /* Accumulate total and max values */
             total_mpi_time +=  mpi_time;

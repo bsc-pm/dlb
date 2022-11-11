@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
     /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
     int64_t mpi_time = -1;
     int64_t useful_time = -1;
-    assert( shmem_procinfo__gettimes(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( shmem_procinfo__get_app_times(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time == 0 );
     assert( useful_time == 0 );
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
     /* Checking that the shmem has now been updated */
     mpi_time = -1;
     useful_time = -1;
-    assert( shmem_procinfo__gettimes(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( shmem_procinfo__get_app_times(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time == mpi_monitor->accumulated_MPI_time  );
     assert( useful_time == mpi_monitor->accumulated_computation_time );
 

@@ -62,7 +62,7 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
     int64_t mpi_time_ns;
     int64_t useful_time_ns;
-    int error = shmem_procinfo__gettimes(pid, &mpi_time_ns, &useful_time_ns);
+    int error = shmem_procinfo__get_app_times(pid, &mpi_time_ns, &useful_time_ns);
     if (error == DLB_SUCCESS) {
         *mpi_time = nsecs_to_secs(mpi_time_ns);
         *useful_time = nsecs_to_secs(useful_time_ns);
@@ -143,6 +143,9 @@ int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node
     spd_enter_dlb(NULL);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
+    }
+    if (unlikely(!thread_spd->options.barrier)) {
+        return DLB_ERR_NOCOMP;
     }
     return talp_collect_node_metrics(thread_spd, monitor, node_metrics);
 }

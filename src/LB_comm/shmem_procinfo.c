@@ -68,6 +68,21 @@ typedef struct {
     monitor_info_t aux;
 } auto_sizer_t;
 
+/* This struct is used by TALP to store some values to compute NodeMetrics
+ * or to allow metrics readings from an external profiler
+ */
+typedef struct talp_times_t {
+    /* MPI and Useful times of the MPI region intended
+     * to be ridden from external profiler */
+    atomic_int_least64_t app_mpi_time;
+    atomic_int_least64_t app_useful_time;
+    /* MPI and Useful times of any monitoring region,
+     * intended as a temporal storage to compute node metrics */
+    atomic_int_least64_t region_mpi_time;
+    atomic_int_least64_t region_useful_time;
+    bool                 region_valid;
+} talp_times_t;
+
 typedef struct {
     pid_t pid;
     bool dirty;
@@ -80,8 +95,7 @@ typedef struct {
     double cpu_usage;
     double cpu_avg_usage;
     auto_sizer_t auto_sizer;
-    atomic_int_least64_t mpi_time;
-    atomic_int_least64_t useful_time;
+    talp_times_t talp_times;
 #ifdef DLB_LOAD_AVERAGE
     // Load average fields:
     float load[3];              // 1min, 5min, 15mins
@@ -97,7 +111,7 @@ typedef struct {
     pinfo_t process_info[0];
 } shdata_t;
 
-enum { SHMEM_PROCINFO_VERSION = 4 };
+enum { SHMEM_PROCINFO_VERSION = 5 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -1162,14 +1176,14 @@ int shmem_procinfo__setcpuusage(pid_t pid,int index, double new_avg_usage) {
     return DLB_SUCCESS;
 }
 
-int shmem_procinfo__gettimes(pid_t pid, int64_t *mpi_time, int64_t *useful_time) {
+int shmem_procinfo__get_app_times(pid_t pid, int64_t *mpi_time, int64_t *useful_time) {
     int error = DLB_SUCCESS;
     pinfo_t *process = NULL;
     if (likely(shm_handler != NULL)) {
         process = get_process(pid);
         if (process) {
-            *mpi_time    = DLB_ATOMIC_LD_RLX(&process->mpi_time);
-            *useful_time = DLB_ATOMIC_LD_RLX(&process->useful_time);
+            *mpi_time    = DLB_ATOMIC_LD_RLX(&process->talp_times.app_mpi_time);
+            *useful_time = DLB_ATOMIC_LD_RLX(&process->talp_times.app_useful_time);
         } else {
             error = DLB_ERR_NOPROC;
         }
@@ -1180,11 +1194,37 @@ int shmem_procinfo__gettimes(pid_t pid, int64_t *mpi_time, int64_t *useful_time)
     return error;
 }
 
-void shmem_procinfo__settimes(pid_t pid, int64_t mpi_time, int64_t useful_time) {
+void shmem_procinfo__set_app_times(pid_t pid, int64_t mpi_time, int64_t useful_time) {
     if (likely(shm_handler != NULL)) {
         pinfo_t *process = get_process(pid);
-        DLB_ATOMIC_ST_RLX(&process->mpi_time, mpi_time);
-        DLB_ATOMIC_ST_RLX(&process->useful_time, useful_time);
+        DLB_ATOMIC_ST_RLX(&process->talp_times.app_mpi_time, mpi_time);
+        DLB_ATOMIC_ST_RLX(&process->talp_times.app_useful_time, useful_time);
+    }
+}
+
+int shmem_procinfo__get_region_times(pid_t pid, int64_t *mpi_time, int64_t *useful_time) {
+    int error = DLB_SUCCESS;
+    pinfo_t *process = NULL;
+    if (likely(shm_handler != NULL)) {
+        process = get_process(pid);
+        if (process) {
+            *mpi_time    = DLB_ATOMIC_LD_RLX(&process->talp_times.region_mpi_time);
+            *useful_time = DLB_ATOMIC_LD_RLX(&process->talp_times.region_useful_time);
+        } else {
+            error = DLB_ERR_NOPROC;
+        }
+    } else {
+        error = DLB_ERR_NOSHMEM;
+    }
+
+    return error;
+}
+
+void shmem_procinfo__set_region_times(pid_t pid, int64_t mpi_time, int64_t useful_time) {
+    if (likely(shm_handler != NULL)) {
+        pinfo_t *process = get_process(pid);
+        DLB_ATOMIC_ST_RLX(&process->talp_times.region_mpi_time, mpi_time);
+        DLB_ATOMIC_ST_RLX(&process->talp_times.region_useful_time, useful_time);
     }
 }
 
