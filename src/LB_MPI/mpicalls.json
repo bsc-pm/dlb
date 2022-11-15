@@ -251,249 +251,249 @@
             "name": "MPI_Allgather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather|_Blocking"
+            "tags": "_Gather|_Blocking|_Collective"
         },
         {
             "name": "MPI_Allgatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcounts(*), displs(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather|_Blocking"
+            "tags": "_Gather|_Blocking|_Collective"
         },
         {
             "name": "MPI_Allreduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce|_Blocking"
+            "tags": "_Reduce|_Blocking|_Collective"
         },
         {
             "name": "MPI_Alltoall",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_All2All|_Blocking"
+            "tags": "_All2All|_Blocking|_Collective"
         },
         {
             "name": "MPI_Alltoallv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int *sendcounts, MPI3_CONST int *sdispls, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *rdispls, MPI_Datatype recvtype, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcounts(*), sdispls(*), recvcounts(*), rdispls(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_All2All|_Blocking"
+            "tags": "_All2All|_Blocking|_Collective"
         },
         {
             "name": "MPI_Alltoallw",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int *sendcounts, MPI3_CONST int *sdispls, MPI3_CONST MPI_Datatype sendtypes[], void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *rdispls, MPI3_CONST MPI_Datatype recvtypes[], MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcounts(*), sdispls(*), recvcounts(*), rdispls(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtypes(*), recvtypes(*); TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_All2All|_Blocking"
+            "tags": "_All2All|_Blocking|_Collective"
         },
         {
             "name": "MPI_Barrier",
             "cpar": "MPI_Comm comm",
             "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Barrier|_Blocking"
+            "tags": "_Barrier|_Blocking|_Collective"
         },
         {
             "name": "MPI_Bcast",
             "cpar": "void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..) :: buffer; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Bcast|_Blocking"
+            "tags": "_Bcast|_Blocking|_Collective"
         },
         {
             "name": "MPI_Exscan",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": ""
+            "tags": "_Scan|_Blocking|_Collective"
         },{
             "name": "MPI_Gather",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather|_Blocking"
+            "tags": "_Gather|_Blocking|_Collective"
         },
         {
             "name": "MPI_Gatherv",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, MPI3_CONST int *recvcounts, MPI3_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcounts(*), displs(*), root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather|_Blocking"
+            "tags": "_Gather|_Blocking|_Collective"
         },
         {
             "name": "MPI_Iallgather",
             "cpar": "const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather",
+            "tags": "_Gather|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Iallgatherv",
             "cpar": "const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, const int recvcounts[], const int displs[], MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount; INTEGER, INTENT(IN), ASYNCHRONOUS :: recvcounts(*), displs(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather",
+            "tags": "_Gather|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Iallreduce",
             "cpar": "const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror ",
-            "tags": "_Reduce",
+            "tags": "_Reduce|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ialltoall",
             "cpar": "const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_All2All",
+            "tags": "_All2All|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ialltoallv",
             "cpar": "const void *sendbuf, const int sendcounts[], const int sdispls[], MPI_Datatype sendtype, void *recvbuf, const int recvcounts[], const int rdispls[], MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN), ASYNCHRONOUS :: sendcounts(*), sdispls(*), recvcounts(*), rdispls(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_All2All",
+            "tags": "_All2All|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ialltoallw",
             "cpar": "const void *sendbuf, const int sendcounts[], const int sdispls[], const MPI_Datatype sendtypes[], void *recvbuf, const int recvcounts[], const int rdispls[], const MPI_Datatype recvtypes[], MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN), ASYNCHRONOUS :: sendcounts(*), sdispls(*), recvcounts(*), rdispls(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtypes(*), recvtypes(*); TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_All2All",
+            "tags": "_All2All|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ibarrier",
             "cpar": "MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Barrier",
+            "tags": "_Barrier|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ibcast",
             "cpar": "void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), ASYNCHRONOUS :: buffer; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Bcast",
+            "tags": "_Bcast|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Iexscan",
             "cpar": "const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "",
+            "tags": "_Scan|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Igather",
             "cpar": "const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather",
+            "tags": "_Gather|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Igatherv",
             "cpar": "const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, const int recvcounts[], const int displs[], MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, root; INTEGER, INTENT(IN), ASYNCHRONOUS :: recvcounts(*), displs(*); TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Gather",
+            "tags": "_Gather|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ireduce",
             "cpar": "const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce",
+            "tags": "_Reduce|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ireduce_scatter",
             "cpar": "const void *sendbuf, void *recvbuf, const int recvcounts[], MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN), ASYNCHRONOUS :: recvcounts(*); TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce",
+            "tags": "_Reduce|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Ireduce_scatter_block",
             "cpar": "const void *sendbuf, void *recvbuf, int recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: recvcount; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce",
+            "tags": "_Reduce|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Iscan",
             "cpar": "const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Scan",
+            "tags": "_Scan|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Iscatter",
             "cpar": "const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Scatter",
+            "tags": "_Scatter|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Iscatterv",
             "cpar": "const void *sendbuf, const int sendcounts[], const int displs[], MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN), ASYNCHRONOUS :: sendbuf; TYPE(*), DIMENSION(..), ASYNCHRONOUS :: recvbuf; INTEGER, INTENT(IN), ASYNCHRONOUS :: sendcounts(*), displs(*); INTEGER, INTENT(IN) :: recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; TYPE(MPI_Request), INTENT(OUT) :: request; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Scatter",
+            "tags": "_Scatter|_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Op_commutative",
             "cpar": "MPI_Op op, int *commute",
             "f08par": "TYPE(MPI_Op), INTENT(IN) :: op; LOGICAL, INTENT(OUT) :: commute; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "",
+            "tags": "_Collective",
             "since": "MPI-2.2"
         },
         {
             "name": "MPI_Op_create",
             "cpar": "MPI_User_function *user_fn, int commute, MPI_Op *op",
             "f08par": "PROCEDURE(MPI_User_function) :: user_fn; LOGICAL, INTENT(IN) :: commute; TYPE(MPI_Op), INTENT(OUT) :: op; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": ""
+            "tags": "_Collective"
         },
         {
             "name": "MPI_Op_free",
             "cpar": "MPI_Op *op",
             "f08par": "TYPE(MPI_Op), INTENT(INOUT) :: op; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "",
+            "tags": "_Collective",
             "since": "MPI-3.0"
         },
         {
             "name": "MPI_Reduce",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: count, root; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce|_Blocking"
+            "tags": "_Reduce|_Blocking|_Collective"
         },
         {
             "name": "MPI_Reduce_local",
             "cpar": "MPI3_CONST void *inbuf, void *inoutbuf, int count, MPI_Datatype datatype, MPI_Op op",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: inbuf; TYPE(*), DIMENSION(..) :: inoutbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce|_Blocking",
+            "tags": "_Reduce|_Blocking|_Collective",
             "since": "MPI-2.2"
         },
         {
             "name": "MPI_Reduce_scatter",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, MPI3_CONST int recvcounts[], MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: recvcounts(*); TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce|_Blocking"
+            "tags": "_Reduce|_Blocking|_Collective"
         },
         {
             "name": "MPI_Reduce_scatter_block",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: recvcount; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Reduce|_Blocking",
+            "tags": "_Reduce|_Blocking|_Collective",
             "since": "MPI-2.2"
         },
         {
             "name": "MPI_Scan",
             "cpar": "MPI3_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: count; TYPE(MPI_Datatype), INTENT(IN) :: datatype; TYPE(MPI_Op), INTENT(IN) :: op; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Scan|_Blocking"
+            "tags": "_Scan|_Blocking|_Collective"
         },
         {
             "name": "MPI_Scatter",
             "cpar": "MPI3_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcount, recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Scatter|_Blocking"
+            "tags": "_Scatter|_Blocking|_Collective"
         },
         {
             "name": "MPI_Scatterv",
             "cpar": "MPI3_CONST void *sendbuf, MPI3_CONST int *sendcounts, MPI3_CONST int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm",
             "f08par": "TYPE(*), DIMENSION(..), INTENT(IN) :: sendbuf; TYPE(*), DIMENSION(..) :: recvbuf; INTEGER, INTENT(IN) :: sendcounts(*), displs(*), recvcount, root; TYPE(MPI_Datatype), INTENT(IN) :: sendtype, recvtype; TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror",
-            "tags": "_Scatter|_Blocking"
+            "tags": "_Scatter|_Blocking|_Collective"
         },
         "### MPI 3-1. A.2.4  Groups, Contexts, Communicators, and Caching Functions ###",
         {

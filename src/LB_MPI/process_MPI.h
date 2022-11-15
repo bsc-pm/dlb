@@ -34,8 +34,8 @@ extern int _mpis_per_node;    /* Numer of MPI processes per node */
 
 void before_init(void);
 void after_init(void);
-void before_mpi(mpi_call call, intptr_t buf, intptr_t dest);
-void after_mpi(mpi_call call_type);
+void before_mpi(mpi_call_t mpi_call);
+void after_mpi(mpi_call_t mpi_call);
 void before_finalize(void);
 void after_finalize(void);
 int is_mpi_ready(void);

@@ -293,8 +293,6 @@ endif
 #********************************************************************************
 if MPI_LIB
 MPI_COMMON_SRCS = \
-	src/LB_MPI/DPD.c                \
-	src/LB_MPI/DPD.h                \
 	src/LB_MPI/process_MPI.c        \
 	src/LB_MPI/process_MPI.h        \
 	$(END)

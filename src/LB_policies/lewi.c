@@ -126,7 +126,7 @@ int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     return DLB_SUCCESS;
 }
 
-int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
 
     if (enabled) {
         int cpus;

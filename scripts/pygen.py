@@ -501,7 +501,7 @@ def enrich(mpi_calls, mpi_std, lib_version):
             func['before'] = 'before_finalize()'
             func['after'] = 'after_finalize()'
         else:
-            func['before'] = 'before_mpi({0}, 0, 0)'.format(func['name'].replace('MPI_', ''))
+            func['before'] = 'before_mpi({0})'.format(func['name'].replace('MPI_', ''))
             func['after'] = 'after_mpi({0})'.format(func['name'].replace('MPI_', ''))
 
 

@@ -247,8 +247,7 @@ void shmem_barrier__barrier(int barrier_id) {
     } else {
         // Only if this process is not the last one, act as a blocking call
         if (barrier->lewi) {
-            talp_in_mpi(thread_spd);
-            IntoBlockingCall(0, 0);
+            into_mpi(/*is_blocking*/ true, /*is_collective*/ true, /*lewi_mpi*/ true);
         }
 
         // Barrier
@@ -256,8 +255,7 @@ void shmem_barrier__barrier(int barrier_id) {
 
         // Recover resources for those processes that simulated a blocking call
         if (barrier->lewi) {
-            OutOfBlockingCall(0);
-            talp_out_mpi(thread_spd);
+            out_of_mpi(/*is_blocking*/ true, /*is_collective*/ true, /*lewi_mpi*/ true);
         }
     }
 
