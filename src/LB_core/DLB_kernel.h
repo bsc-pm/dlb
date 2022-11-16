@@ -38,10 +38,8 @@ int set_max_parallelism(subprocess_descriptor_t *spd, int max);
 int unset_max_parallelism(subprocess_descriptor_t *spd);
 
 /* MPI specific */
-void IntoCommunication(void);
-void OutOfCommunication(void);
-void IntoBlockingCall(int is_iter, int is_single);
-void OutOfBlockingCall(int is_iter);
+void into_mpi(bool is_blocking, bool is_collective, bool lewi_mpi);
+void out_of_mpi(bool is_blocking, bool is_collective, bool lewi_mpi);
 
 /* Lend */
 int lend(const subprocess_descriptor_t *spd);

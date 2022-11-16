@@ -42,7 +42,7 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
         .into_communication     = (lb_func_kind1)disabled,
         .out_of_communication   = (lb_func_kind1)disabled,
         .into_blocking_call     = (lb_func_kind1)disabled,
-        .out_of_blocking_call   = (lb_func_kind2)disabled,
+        .out_of_blocking_call   = (lb_func_kind1)disabled,
         .lend                   = (lb_func_kind1)disabled,
         .lend_cpu               = (lb_func_kind2)disabled,
         .lend_cpus              = (lb_func_kind2)disabled,

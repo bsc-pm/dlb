@@ -20,6 +20,8 @@
 #ifndef MPI_CALLS_CODED_H
 #define MPI_CALLS_CODED_H
 
+#include <stdbool.h>
+
 enum type_mpi_call {
     _Unknown=0,
     _Send=1,
@@ -36,31 +38,31 @@ enum type_mpi_call {
     _Test=12,
     _Comm=13,
     _IO=14,
-//Last 16 bits: 0000000x yyyyyyyy
+//Last 16 bits: 000000zx yyyyyyyy
+// z : Collective
 // x : Blocking - No blocking
 // y : type mpi call [0-15]
-    _Blocking=0x10
+    _Blocking   = 1 << 16,
+    _Collective = 1 << 17,
 };
 
-#define is_blocking(x) (x) & 0x10
-#define is_collective(x) (         \
-        (((x) & 0xf) == _Barrier) || \
-        (((x) & 0xf) == _Bcast)   || \
-        (((x) & 0xf) == _All2All) || \
-        (((x) & 0xf) == _Gather)  || \
-        (((x) & 0xf) == _Scatter) || \
-        (((x) & 0xf) == _Reduce)     \
-        )
-
-typedef enum {
-    Unknown=0,
+typedef enum mpi_call_t {
+    Unknown = 0,
 #pragma pygen start
     {MPI_KEYNAME} = {TAGS},
 #pragma pygen end
     Not_implemented
-} mpi_call;
+} mpi_call_t;
 
 extern const char* mpi_call_names[];
+
+static inline bool is_mpi_blocking(mpi_call_t mpi_call) {
+    return !!(mpi_call & _Blocking);
+}
+
+static inline bool is_mpi_collective(mpi_call_t mpi_call) {
+    return !!(mpi_call & _Collective);
+}
 
 #endif //MPI_CALLS_CODED_H
 

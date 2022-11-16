@@ -38,7 +38,7 @@ typedef struct BalancePolicy {
     int (*into_communication)(const struct SubProcessDescriptor *spd);
     int (*out_of_communication)(const struct SubProcessDescriptor *spd);
     int (*into_blocking_call)(const struct SubProcessDescriptor *spd);
-    int (*out_of_blocking_call)(const struct SubProcessDescriptor *spd, int is_iter);
+    int (*out_of_blocking_call)(const struct SubProcessDescriptor *spd);
     /* Lend */
     int (*lend)(const struct SubProcessDescriptor *spd);
     int (*lend_cpu)(const struct SubProcessDescriptor *spd, int cpuid);

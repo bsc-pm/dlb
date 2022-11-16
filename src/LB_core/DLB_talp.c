@@ -332,21 +332,35 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     }
 }
 
-void talp_in_mpi(const subprocess_descriptor_t *spd) {
+void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(spd, sample);
+        if (!is_blocking_collective || !talp_info->external_profiler) {
+            /* Either this MPI call is not a blocking collective or the
+             * external_profiler is disabled: just update the sample */
+            talp_update_sample(spd, sample);
+        } else {
+            /* Otherwise, gather samples and update all monitoring regions */
+            talp_gather_samples(spd);
+        }
         sample->in_useful = false;
     }
 }
 
-void talp_out_mpi(const subprocess_descriptor_t *spd){
+void talp_out_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(spd, sample);
         DLB_ATOMIC_ADD_RLX(&sample->num_mpi_calls, 1);
+        if (!is_blocking_collective || !talp_info->external_profiler) {
+            /* Either this MPI call is not a blocking collective or the
+             * external_profiler is disabled: just update the sample */
+            talp_update_sample(spd, sample);
+        } else {
+            /* Otherwise, gather samples and update all monitoring regions */
+            talp_gather_samples(spd);
+        }
         sample->in_useful = true;
     }
 }

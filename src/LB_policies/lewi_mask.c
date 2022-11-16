@@ -296,7 +296,7 @@ int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     return error;
 }
 
-int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter) {
+int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
     if (!spd->options.lewi_keep_cpu_on_blocking_call) {
         int cpuid = sched_getcpu();

@@ -247,8 +247,6 @@ if mpi_dep.found()
   )
 
   mpi_common_sources = [
-    'src/LB_MPI/DPD.c',
-    'src/LB_MPI/DPD.h',
     'src/LB_MPI/process_MPI.c',
     'src/LB_MPI/process_MPI.h',
   ]

@@ -41,10 +41,10 @@ void talp_mpi_init(const struct SubProcessDescriptor *spd);
 void talp_mpi_finalize(const struct SubProcessDescriptor *spd);
 
 /*  Update the metrics when entering MPI */
-void talp_in_mpi(const struct SubProcessDescriptor *spd);
+void talp_in_mpi(const struct SubProcessDescriptor *spd, bool is_blocking_collective);
 
 /*  Update the metrics when going out MPI */
-void talp_out_mpi(const struct SubProcessDescriptor *spd);
+void talp_out_mpi(const struct SubProcessDescriptor *spd, bool is_blocking_collective);
 
 /* Obtain the implicit MPI region */
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(

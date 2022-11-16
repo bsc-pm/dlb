@@ -30,7 +30,7 @@ int lewi_mask_SetMaxParallelism(const subprocess_descriptor_t *spd, int max);
 int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd);
 
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd);
-int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd, int is_iter);
+int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd);
 
 int lewi_mask_Lend(const subprocess_descriptor_t *spd);
 int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid);

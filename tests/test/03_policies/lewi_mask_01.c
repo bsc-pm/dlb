@@ -447,7 +447,7 @@ int main( int argc, char **argv ) {
         // Enable --lewi-keep-one-cpu
         spd1.options.lewi_keep_cpu_on_blocking_call = true;
         assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_NOUPDT );
-        assert( lewi_mask_OutOfBlockingCall(&spd1, 0) == DLB_NOUPDT );
+        assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_NOUPDT );
 
         // These functions get the CPU id from sched_getcpu()
         // Force binding to CPU 0 or skip test
@@ -473,7 +473,7 @@ int main( int argc, char **argv ) {
                 assert( lewi_mask_LendCpu(&spd2, 0) == DLB_SUCCESS );
 
                 // Subprocess 1 leaves the blocking call
-                assert( lewi_mask_OutOfBlockingCall(&spd1, 0) == DLB_SUCCESS );
+                assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_SUCCESS );
             }
 
             /* Subprocess 1 reclaims */
@@ -486,7 +486,7 @@ int main( int argc, char **argv ) {
                 assert_loop( CPU_COUNT(&sp2_mask) == 3 && CPU_ISSET(0, &sp2_mask) );
 
                 // Subprocess 1 leaves the blocking call, CPU 0 is reclaimed
-                assert( lewi_mask_OutOfBlockingCall(&spd1, 0) == DLB_NOTED );
+                assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_NOTED );
 
                 // Subprocesses 2 needs to poll
                 if (mode == MODE_POLLING) {
@@ -529,7 +529,7 @@ int main( int argc, char **argv ) {
                 assert( lewi_mask_LendCpu(&spd1, 0) == DLB_SUCCESS );
 
                 // Subprocess 2 leaves the blocking call
-                assert( lewi_mask_OutOfBlockingCall(&spd2, 0) == DLB_SUCCESS );
+                assert( lewi_mask_OutOfBlockingCall(&spd2) == DLB_SUCCESS );
 
                 // Subprocess 2 lends CPU 0
                 CPU_CLR(0, &sp2_mask);
@@ -563,7 +563,7 @@ int main( int argc, char **argv ) {
                 assert_loop( CPU_COUNT(&sp1_mask) == 2 && CPU_ISSET(0, &sp1_mask) );
 
                 // Subprocess 2 leaves the blocking call
-                assert( lewi_mask_OutOfBlockingCall(&spd2, 0) == DLB_NOUPDT );
+                assert( lewi_mask_OutOfBlockingCall(&spd2) == DLB_NOUPDT );
 
                 // Subprocesses 2 needs to poll
                 if (mode == MODE_POLLING) {

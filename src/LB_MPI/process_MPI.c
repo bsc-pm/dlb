@@ -25,7 +25,6 @@
 
 #include "LB_MPI/process_MPI.h"
 
-#include "LB_MPI/DPD.h"
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
@@ -51,7 +50,6 @@ int _process_id = -1;
 static int use_dpd = 0;
 static int init_from_mpi = 0;
 static int mpi_ready = 0;
-static int is_iter = 0;
 static mpi_set_t lewi_mpi_calls = MPISET_ALL;
 
 static MPI_Comm mpi_comm_node;          /* MPI Communicator specific to the node */
@@ -206,42 +204,35 @@ void after_init(void) {
     mpi_ready = 1;
 }
 
-void before_mpi(mpi_call call_type, intptr_t buf, intptr_t dest) {
+void before_mpi(mpi_call_t mpi_call) {
     if(mpi_ready) {
         instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_BEGIN);
 
-        IntoCommunication();
+        bool is_blocking = is_mpi_blocking(mpi_call);
+        bool is_collective = is_mpi_collective(mpi_call);
+        bool lewi_mpi = is_blocking && (
+            lewi_mpi_calls == MPISET_ALL
+             || (lewi_mpi_calls == MPISET_BARRIER && mpi_call == Barrier)
+             || (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective));
 
-        if(use_dpd) {
-            unsigned long value = (unsigned long)((((buf>>5)^dest)<<5)|call_type);
-            unsigned ear_size, ear_level;
-            int valor_dpd=dynais(value,&ear_size,&ear_level);
-            //Only update if already treated previous iteration
-            if( valor_dpd==-1) add_event(LOOP_STATE,5);
-            else add_event(LOOP_STATE,valor_dpd);
-        }
-
-        if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
-                (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
-                (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
-            IntoBlockingCall(is_iter, 0);
-        }
+        into_mpi(is_blocking, is_collective, lewi_mpi);
 
         instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_END);
     }
 }
 
-void after_mpi(mpi_call call_type) {
+void after_mpi(mpi_call_t mpi_call) {
     if (mpi_ready) {
         instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_BEGIN);
 
-        if ((lewi_mpi_calls == MPISET_ALL && is_blocking(call_type)) ||
-                (lewi_mpi_calls == MPISET_BARRIER && call_type==Barrier) ||
-                (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective(call_type))) {
-            OutOfBlockingCall(is_iter);
-        }
+        bool is_blocking = is_mpi_blocking(mpi_call);
+        bool is_collective = is_mpi_collective(mpi_call);
+        bool lewi_mpi = is_blocking && (
+            lewi_mpi_calls == MPISET_ALL
+             || (lewi_mpi_calls == MPISET_BARRIER && mpi_call == Barrier)
+             || (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective));
 
-        OutOfCommunication();
+        out_of_mpi(is_blocking, is_collective, lewi_mpi);
 
         instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_END);
     }
