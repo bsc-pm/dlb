@@ -297,7 +297,7 @@ void into_mpi(bool is_blocking, bool is_collective, bool lewi_mpi) {
         }
     }
     if(spd->options.talp) {
-        talp_in_mpi(spd);
+        talp_in_mpi(spd, is_blocking && is_collective);
     }
 }
 
@@ -316,7 +316,7 @@ void out_of_mpi(bool is_blocking, bool is_collective, bool lewi_mpi) {
         spd->lb_funcs.out_of_communication(spd);
     }
     if(spd->options.talp) {
-        talp_out_mpi(spd);
+        talp_out_mpi(spd, is_blocking && is_collective);
     }
 }
 

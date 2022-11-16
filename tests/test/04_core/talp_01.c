@@ -103,14 +103,14 @@ int main(int argc, char *argv[]) {
     assert( talp_info->ncpus == 1 );
 
     /* Entering MPI, sample is updated, region not yet */
-    talp_in_mpi(&spd);
+    talp_in_mpi(&spd, /* is_blocking_collective */ false);
     assert( talp_info->samples[0]->last_updated_timestamp < get_time_in_ns() );
     assert( talp_info->samples[0]->mpi_time == 0 );
     assert( talp_info->samples[0]->useful_time > 0 );
     assert( talp_info->samples[0]->in_useful == false );
 
     /* Leaving MPI */
-    talp_out_mpi(&spd);
+    talp_out_mpi(&spd, /* is_blocking_collective */ false);
     assert( talp_info->samples[0]->last_updated_timestamp < get_time_in_ns() );
     assert( talp_info->samples[0]->mpi_time > 0 );
     assert( talp_info->samples[0]->useful_time > 0 );
@@ -124,18 +124,26 @@ int main(int argc, char *argv[]) {
     /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
     int64_t mpi_time = -1;
     int64_t useful_time = -1;
+    assert( talp_info->external_profiler == false );
     assert( shmem_procinfo__get_app_times(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time == 0 );
     assert( useful_time == 0 );
 
-    int cpuid = sched_getcpu();
-    assert( CPU_ISSET(cpuid, &process_mask) );
+    /* Enable --talp-external-profiler and test that the MPI region is updated */
+    mpi_time = -1;
+    useful_time = -1;
+    talp_info->external_profiler = true;
+    talp_in_mpi(&spd, /* is_blocking_collective */ true);
+    talp_out_mpi(&spd, /* is_blocking_collective */ true);
+    assert( shmem_procinfo__get_app_times(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( mpi_time > 0 );
+    assert( useful_time > 0 );
 
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test");
     monitoring_region_start(&spd, monitor);
-    talp_in_mpi(&spd);
-    talp_out_mpi(&spd);
+    talp_in_mpi(&spd, /* is_blocking_collective */ false);
+    talp_out_mpi(&spd, /* is_blocking_collective */ false);
     monitoring_region_stop(&spd, monitor);
 
     /* Finalize MPI */

@@ -124,8 +124,8 @@ int main(int argc, char *argv[]) {
         talp_mpi_init(&spd);
 
         /* MPI call */
-        talp_in_mpi(&spd);
-        talp_out_mpi(&spd);
+        talp_in_mpi(&spd, /* is_blocking_collective */ false);
+        talp_out_mpi(&spd, /* is_blocking_collective */ false);
 
         /* Stop MPI monitoring region so that we can collect its metrics twice
          * with the same values */
