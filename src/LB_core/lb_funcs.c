@@ -78,8 +78,6 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->disable                = lewi_DisableDLB;
             lb_funcs->set_max_parallelism    = lewi_SetMaxParallelism;
             lb_funcs->unset_max_parallelism  = lewi_UnsetMaxParallelism;
-            lb_funcs->into_communication     = lewi_IntoCommunication;
-            lb_funcs->out_of_communication   = lewi_OutOfCommunication;
             lb_funcs->into_blocking_call     = lewi_IntoBlockingCall;
             lb_funcs->out_of_blocking_call   = lewi_OutOfBlockingCall;
             lb_funcs->lend                   = lewi_Lend;

@@ -39,6 +39,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 static subprocess_descriptor_t spd1;
 static subprocess_descriptor_t spd2;
@@ -451,7 +452,8 @@ int main( int argc, char **argv ) {
 
         // These functions get the CPU id from sched_getcpu()
         // Force binding to CPU 0 or skip test
-        const cpu_set_t mask = { .__bits = {0x1} };       /* [0001] */
+        cpu_set_t mask;
+        mu_parse_mask("0", &mask);
         sched_setaffinity(0, sizeof(cpu_set_t), &mask);
         if (sched_getcpu() == 0) {
 
@@ -584,7 +586,21 @@ int main( int argc, char **argv ) {
                 }
             }
         } else {
-            printf("Skipping Into / Out of Blocking Calls tests\n");
+            printf("Skipping Into / Out of Blocking Calls tests (1 CPU)\n");
+        }
+
+        // Tests whether MPI functions correctly skip if current thread is
+        // bound to more than one CPU
+        mu_parse_mask("0,1", &mask);
+        sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+        cpu_set_t thread_mask;
+        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+        if (CPU_EQUAL(&mask, &thread_mask)) {
+            spd1.options.lewi_keep_cpu_on_blocking_call = false;
+            assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_NOUPDT );
+            assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_NOUPDT );
+        } else {
+            printf("Skipping Into / Out of Blocking Calls tests (2 CPUs)\n");
         }
     }
 

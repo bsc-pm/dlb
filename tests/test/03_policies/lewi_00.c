@@ -82,6 +82,16 @@ int main( int argc, char **argv ) {
         assert( nthreads == 3 );
     }
 
+    // Into MPI
+    assert( lewi_Reclaim(&spd) == DLB_SUCCESS );
+    assert( nthreads == original_nthreads );
+    assert( lewi_IntoBlockingCall(&spd) == DLB_SUCCESS );
+    assert( nthreads == 1 );
+
+    // Out of MPI
+    assert( lewi_OutOfBlockingCall(&spd) == DLB_SUCCESS );
+    assert( nthreads == original_nthreads );
+
     // MaxParallelism test with Borrow
     {
         // Lend
