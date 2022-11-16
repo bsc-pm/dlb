@@ -1,0 +1,29 @@
+27a28,33
+> #include <inttypes.h>
+> 
+> 
+> #ifdef DLB_REGIONS
+> #include <dlb_talp.h>
+> #endif
+279a286,289
+> #ifdef DLB_REGIONS
+>     dlb_monitor_t *monitor = DLB_MonitoringRegionRegister(NULL);
+> #endif
+> 
+288a299,302
+> #ifdef DLB_REGIONS
+>         DLB_MonitoringRegionStart(monitor);
+> #endif
+> 
+308a323,331
+> 
+> #ifdef DLB_REGIONS
+>         DLB_MonitoringRegionStop(monitor);
+> #endif
+>     }
+> 
+> #ifdef DLB_REGIONS
+>     if (mpi_rank == 0) {
+>         printf("accumulated_MPI_time: %" PRId64" ns\n", monitor->accumulated_MPI_time);
+309a333
+> #endif

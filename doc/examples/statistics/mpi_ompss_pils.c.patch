@@ -1,0 +1,22 @@
+27a28
+> #include <dlb_talp.h>
+31a33,34
+> #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+> 
+72a76
+> #pragma omp task
+80c84,86
+<     *iter_time += (t_end-t_start)/1000000.0;
+---
+>     double local_iter_time = (t_end-t_start)/1000000.0;
+>     #pragma omp atomic
+>     *iter_time += local_iter_time;
+293a300
+>             dlb_monitor_t region = DLB_MonitoringRegionRegister("Region");
+294a302
+>             DLB_MonitoringRegionStart(region);
+297a306,307
+>             DLB_MonitoringRegionStop(region);
+>             DLB_MonitoringRegionReport(region);
+298a309
+>         #pragma omp taskwait

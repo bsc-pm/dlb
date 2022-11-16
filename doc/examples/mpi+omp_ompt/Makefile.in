@@ -17,7 +17,8 @@
 #  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                #
 #################################################################################
 
-MPICC = @MPICC@
+# MPICC set to use clang by default, change the native compiler accordingly
+MPICC = I_MPI_CC=clang OMPI_CC=clang @MPICC@
 CFLAGS = @OPENMP_CFLAGS@
 
 mpi_omp_pils: mpi_omp_pils.c

@@ -20,7 +20,7 @@
 DLB_HOME = @prefix@
 
 MPICC = @MPICC@
-CFLAGS = @OPENMP_CFLAGS@
+CFLAGS = @OPENMP_CFLAGS@ -g
 CPPFLAGS = -I$(DLB_HOME)/include
 LDFLAGS = -L$(DLB_HOME)/lib -ldlb_instr -Wl,-rpath,$(DLB_HOME)/lib
 

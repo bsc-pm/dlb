@@ -1,0 +1,2 @@
+294a295
+>             #pragma omp parallel for private(j) reduction(+:iter_time) shared(fib)

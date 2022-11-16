@@ -1,0 +1,10 @@
+80c80,82
+<     *iter_time += (t_end-t_start)/1000000.0;
+---
+>     double local_iter_time = (t_end-t_start)/1000000.0;
+>     #pragma omp atomic
+>     *iter_time += local_iter_time;
+295a298
+>                 #pragma omp task shared(fib, task_usec, iter_time) free_agent(true)
+298a302
+>         #pragma omp taskwait

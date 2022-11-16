@@ -8,7 +8,7 @@ MPIEXEC=@MPIEXEC@
 USER_DEFINED_REGIONS=0
 
 APP="./mpi_pils"
-ARGS="/dev/null 1 100 10"
+ARGS="--loads 1000,2500 --grain 1.0 --iterations 100 --task-duration 10"
 
 if [[ $USER_DEFINED_REGIONS == 1 ]] ; then
     APP=${APP}_custom_region
