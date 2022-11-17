@@ -29,8 +29,6 @@ int lewi_DisableDLB(const subprocess_descriptor_t *spd);
 int lewi_SetMaxParallelism(const subprocess_descriptor_t *spd, int max);
 int lewi_UnsetMaxParallelism(const subprocess_descriptor_t *spd);
 
-int lewi_IntoCommunication(const subprocess_descriptor_t *spd);
-int lewi_OutOfCommunication(const subprocess_descriptor_t *spd);
 int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd);
 int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd);
 

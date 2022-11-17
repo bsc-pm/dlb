@@ -41,7 +41,6 @@
 
 #include <sched.h>
 #include <string.h>
-#include <pthread.h>
 
 
 /* Status */
@@ -285,16 +284,8 @@ int unset_max_parallelism(subprocess_descriptor_t *spd) {
 void into_mpi(bool is_blocking, bool is_collective, bool lewi_mpi) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->lewi_enabled && lewi_mpi) {
-        spd->lb_funcs.into_communication(spd);
-
-        /* If the current thread is pinned to more than one CPU,
-         * we better skip LeWI doing the blocking call (see #167) */
-        cpu_set_t thread_mask;
-        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-        if (CPU_COUNT(&thread_mask) == 1) {
-            spd->lb_funcs.into_blocking_call(spd);
-            omptool__into_blocking_call();
-        }
+        spd->lb_funcs.into_blocking_call(spd);
+        omptool__into_blocking_call();
     }
     if(spd->options.talp) {
         talp_in_mpi(spd, is_blocking && is_collective);
@@ -304,16 +295,8 @@ void into_mpi(bool is_blocking, bool is_collective, bool lewi_mpi) {
 void out_of_mpi(bool is_blocking, bool is_collective, bool lewi_mpi) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->lewi_enabled && lewi_mpi) {
-        /* If the current thread is pinned to more than one CPU,
-         * we better skip LeWI doing the blocking call (see #167) */
-        cpu_set_t thread_mask;
-        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-        if (CPU_COUNT(&thread_mask) == 1) {
-            spd->lb_funcs.out_of_blocking_call(spd);
-            omptool__outof_blocking_call();
-        }
-
-        spd->lb_funcs.out_of_communication(spd);
+        spd->lb_funcs.out_of_blocking_call(spd);
+        omptool__outof_blocking_call();
     }
     if(spd->options.talp) {
         talp_out_mpi(spd, is_blocking && is_collective);

@@ -30,6 +30,7 @@
 #include <sched.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 /* Node size will be the same for all processes in the node,
  * it is safe to be out of the shared memory */
@@ -282,16 +283,22 @@ int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
     if (!spd->options.lewi_keep_cpu_on_blocking_call) {
-        int cpuid = sched_getcpu();
-        lewi_info_t *lewi_info = spd->lewi_info;
-
-        /* Annotate current CPU to in_MPI cpuset */
-        fatal_cond(CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
-                "CPU %d already into blocking call", cpuid);
-        CPU_SET(cpuid,  &lewi_info->in_mpi_cpus);
-
-        /* Lend the current CPU */
-        error = lewi_mask_LendCpu(spd, cpuid);
+        cpu_set_t thread_mask;
+        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+        int cpuid = mu_get_single_cpu(&thread_mask);
+        if (cpuid >= 0) {
+#ifdef DEBUG_VERSION
+            /* Annotate current CPU to in_MPI cpuset */
+            lewi_info_t *lewi_info = spd->lewi_info;
+            fatal_cond(CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
+                    "CPU %d already into blocking call", cpuid);
+            CPU_SET(cpuid,  &lewi_info->in_mpi_cpus);
+#endif
+            /* Lend the current CPU */
+            error = lewi_mask_LendCpu(spd, cpuid);
+        } else {
+            /* The thread contains more than one CPU in its affinity mask, skip */
+        }
     }
     return error;
 }
@@ -299,41 +306,48 @@ int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
     if (!spd->options.lewi_keep_cpu_on_blocking_call) {
-        int cpuid = sched_getcpu();
-        lewi_info_t *lewi_info = spd->lewi_info;
+        cpu_set_t thread_mask;
+        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+        int cpuid = mu_get_single_cpu(&thread_mask);
+        if (cpuid >= 0) {
+            lewi_info_t *lewi_info = spd->lewi_info;
+#ifdef DEBUG_VERSION
+            /* Clear current CPU from in_MPI cpuset */
+            fatal_cond(!CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
+                    "CPU %d is not into blocking call", cpuid);
+            CPU_CLR(cpuid,  &lewi_info->in_mpi_cpus);
+#endif
 
-        /* Clear current CPU from in_MPI cpuset */
-        fatal_cond(!CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
-                "CPU %d is not into blocking call", cpuid);
-        CPU_CLR(cpuid,  &lewi_info->in_mpi_cpus);
-
-        if (CPU_ISSET(cpuid, &spd->process_mask)) {
-            /* Acquire only if the CPU is owned, but do not call any enable CPU callback */
-            pid_t new_guest;
-            pid_t victim;
-            error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &new_guest, &victim);
-            if (error == DLB_NOTED) {
-                if (spd->options.mode == MODE_ASYNC) {
-                    if (victim > 0) {
-                        /* If the CPU is guested, just disable visitor */
-                        shmem_async_disable_cpu(victim, cpuid);
+            if (CPU_ISSET(cpuid, &spd->process_mask)) {
+                /* Acquire only if the CPU is owned, but do not call any enable CPU callback */
+                pid_t new_guest;
+                pid_t victim;
+                error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &new_guest, &victim);
+                if (error == DLB_NOTED) {
+                    if (spd->options.mode == MODE_ASYNC) {
+                        if (victim > 0) {
+                            /* If the CPU is guested, just disable visitor */
+                            shmem_async_disable_cpu(victim, cpuid);
+                        }
                     }
                 }
             }
-        }
-        else {
-            /* Otherwise, Borrow CPU, but also ignoring the enable callbacks */
-            pid_t new_guest;
-            error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &new_guest);
-            if (error != DLB_SUCCESS) {
-                /* Annotate the CPU as pending to bypass the shared memory for the next query */
-                CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
+            else {
+                /* Otherwise, Borrow CPU, but also ignoring the enable callbacks */
+                pid_t new_guest;
+                error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &new_guest);
+                if (error != DLB_SUCCESS) {
+                    /* Annotate the CPU as pending to bypass the shared memory for the next query */
+                    CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
 
-                /* Disable CPU if async mode */
-                if (spd->options.mode == MODE_ASYNC) {
-                    shmem_async_disable_cpu(spd->id, cpuid);
+                    /* Disable CPU if async mode */
+                    if (spd->options.mode == MODE_ASYNC) {
+                        shmem_async_disable_cpu(spd->id, cpuid);
+                    }
                 }
             }
+        } else {
+            /* The thread contains more than one CPU in its affinity mask, skip */
         }
     }
     return error;
