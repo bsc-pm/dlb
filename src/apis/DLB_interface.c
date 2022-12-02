@@ -365,4 +365,10 @@ int DLB_AutoSizer_end(){
     spd_enter_dlb(NULL);
     return auto_resize_end();
 }
+
+int DLB_SetObserverRole(bool thread_is_observer) {
+    spd_enter_dlb(NULL);
+    return set_observer_role(thread_is_observer);
+}
+
 #pragma GCC visibility pop

@@ -43,6 +43,11 @@
 #include <string.h>
 
 
+/* By default all threads are participants.
+ * A thread may change this value to avoid participating in LeWI and TALP metrics. */
+__thread bool thread_is_observer = false;
+
+
 /* Status */
 
 int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
@@ -282,6 +287,9 @@ int unset_max_parallelism(subprocess_descriptor_t *spd) {
 /* MPI specific */
 
 void into_mpi(dlb_mpi_flags_t flags) {
+    /* Observer threads do not trigger LeWI nor TALP on MPI calls */
+    if (unlikely(thread_is_observer)) return;
+
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->lewi_enabled && flags.lewi_mpi) {
         spd->lb_funcs.into_blocking_call(spd);
@@ -293,6 +301,9 @@ void into_mpi(dlb_mpi_flags_t flags) {
 }
 
 void out_of_mpi(dlb_mpi_flags_t flags) {
+    /* Observer threads do not trigger LeWI nor TALP on MPI calls */
+    if (unlikely(thread_is_observer)) return;
+
     const subprocess_descriptor_t *spd = thread_spd;
     if (spd->lewi_enabled && flags.lewi_mpi) {
         spd->lb_funcs.out_of_blocking_call(spd);
@@ -714,5 +725,10 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
         options_finalize(&spd->options);
     }
 
+    return DLB_SUCCESS;
+}
+
+int set_observer_role(bool is_observer) {
+    thread_is_observer = is_observer;
     return DLB_SUCCESS;
 }

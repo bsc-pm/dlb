@@ -93,6 +93,7 @@ typedef struct monitor_data_t {
 } monitor_data_t;
 
 
+static void talp_dealloc_samples(const subprocess_descriptor_t *spd);
 static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd);
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name);
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd);
@@ -105,6 +106,8 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
 static MPI_Datatype mpi_int64_type;
 static MPI_Datatype mpi_uint64_type;
 #endif
+
+extern __thread bool thread_is_observer;
 
 /* Reserved regions ids */
 enum { MPI_MONITORING_REGION_ID = 1 };
@@ -140,6 +143,7 @@ static int cmp_pids(const void *pid1, const void *pid2) {
 
 void talp_init(subprocess_descriptor_t *spd) {
     ensure(!spd->talp_info, "TALP already initialized");
+    ensure(!thread_is_observer, "An observer thread cannot call talp_init");
     verbose(VB_TALP, "Initializing TALP module");
 
     /* Initialize talp info */
@@ -176,6 +180,7 @@ static void talp_destroy(void) {
 
 void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
+    ensure(!thread_is_observer, "An observer thread cannot call talp_finalize");
     verbose(VB_TALP, "Finalizing TALP module");
 
     if (spd->options.talp_summary & SUMMARY_PROCESS
@@ -186,6 +191,9 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 
     /* Print/write all collected summaries */
     talp_output_finalize(spd->options.talp_output_file);
+
+    /* Deallocate samples structure */
+    talp_dealloc_samples(spd);
 
     if (spd == thread_spd) {
         /* Keep the timers allocated until the program finalizes */
@@ -202,12 +210,15 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 /*    Sample functions                                                           */
 /*********************************************************************************/
 
+static __thread talp_sample_t* _tls_sample = NULL;
+
 /* Get the TLS associated sample */
 static talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd) {
-    static __thread talp_sample_t* sample = NULL;
-
     /* Thread already has an allocated sample, return it */
-    if (likely(sample != NULL)) return sample;
+    if (likely(_tls_sample != NULL)) return _tls_sample;
+
+    /* Observer threads don't have a valid sample */
+    if (unlikely(thread_is_observer)) return NULL;
 
     /* Otherwise, allocate */
     talp_info_t *talp_info = spd->talp_info;
@@ -218,22 +229,41 @@ static talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd)
         if (p) {
             talp_info->samples = p;
             talp_info->samples[ncpus-1] = malloc(sizeof(talp_sample_t));
-            sample = talp_info->samples[ncpus-1];
+            _tls_sample = talp_info->samples[ncpus-1];
         }
     }
     pthread_mutex_unlock(&talp_info->samples_mutex);
 
-    fatal_cond(sample == NULL, "TALP: could not allocate thread sample");
+    fatal_cond(_tls_sample == NULL, "TALP: could not allocate thread sample");
 
-    *sample = (const talp_sample_t) {
+    *_tls_sample = (const talp_sample_t) {
         .in_useful = true,
     };
 
-    return sample;
+    return _tls_sample;
+}
+
+static void talp_dealloc_samples(const subprocess_descriptor_t *spd) {
+    /* This only nullifies the current thread pointer, but this function is
+     * only really important when TALP is finalized and then initialized again
+     */
+    _tls_sample = NULL;
+
+    /* */
+    talp_info_t *talp_info = spd->talp_info;
+    pthread_mutex_lock(&talp_info->samples_mutex);
+    {
+        free(talp_info->samples);
+        talp_info->samples = NULL;
+    }
+    pthread_mutex_unlock(&talp_info->samples_mutex);
 }
 
 /* Compute new microsample (time since last update) and update sample values */
 static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sample) {
+    /* Observer threads ignore this function */
+    if (unlikely(sample == NULL)) return;
+
     /* Compute duration and set new last_updated_timestamp */
     int64_t now = get_time_in_ns();
     int64_t microsample_duration = now - sample->last_updated_timestamp;
@@ -292,6 +322,7 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
 
 /* Start MPI monitoring region */
 void talp_mpi_init(const subprocess_descriptor_t *spd) {
+    ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_init");
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         /* Start MPI region */
@@ -305,6 +336,7 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
 
 /* Stop MPI monitoring region and gather APP data if needed  */
 void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
+    ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_finalize");
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         /* Add MPI_Finalize */
@@ -333,6 +365,9 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
 }
 
 void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+    /* Observer threads may call MPI functions, but TALP must ignore them */
+    if (unlikely(thread_is_observer)) return;
+
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         talp_sample_t *sample = talp_get_thread_sample(spd);
@@ -349,6 +384,9 @@ void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective
 }
 
 void talp_out_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+    /* Observer threads may call MPI functions, but TALP must ignore them */
+    if (unlikely(thread_is_observer)) return;
+
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         talp_sample_t *sample = talp_get_thread_sample(spd);
