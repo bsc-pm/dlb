@@ -135,13 +135,12 @@ common_srcs = [
   'src/apis/DLB_interface_talp.c',
 ]
 
+# Convenience library to speed up compilation
 libdlb_common = static_library(
   'dlb_common', common_srcs,
   include_directories : common_includes,
   install : false,
 )
-
-dlb_common_objects = libdlb_common.extract_all_objects(recursive : true)
 
 sources = [
   'src/support/debug.c',
@@ -175,7 +174,7 @@ sources = [
 libdlb = library(
   'dlb', sources,
   include_directories : common_includes,
-  objects : dlb_common_objects,
+  link_whole: libdlb_common,
   dependencies : common_deps,
   gnu_symbol_visibility : 'hidden',
   install : true,
@@ -185,10 +184,20 @@ libdlb_instr = library(
   'dlb_instr', sources,
   include_directories : common_includes,
   c_args : instr_cpp_flags,
-  objects : dlb_common_objects,
+  link_whole: libdlb_common,
   dependencies : common_deps,
   gnu_symbol_visibility : 'hidden',
   install : true,
+)
+
+# Static library only used for testing
+libdlb_test = static_library(
+  'dlb_test', sources,
+  include_directories : common_includes,
+  link_with: libdlb_common,
+  dependencies : common_deps,
+  install : false,
+  build_by_default : false,
 )
 
 
@@ -274,7 +283,7 @@ if mpi_dep.found()
     'dlb_mpi', [mpi_sources, mpi_gen_intercept_sources],
     include_directories : common_includes,
     c_args : mpi_cpp_flags,
-    objects : dlb_common_objects,
+    link_whole: libdlb_common,
     dependencies : [common_deps, mpi_dep, mpif_dep],
     gnu_symbol_visibility : 'hidden',
     install : true,
@@ -284,7 +293,7 @@ if mpi_dep.found()
     'dlb_mpi_instr', mpi_sources,
     include_directories : common_includes,
     c_args : [mpi_cpp_flags, instr_cpp_flags],
-    objects : dlb_common_objects,
+    link_whole: libdlb_common,
     dependencies : [common_deps, mpi_dep, mpif_dep],
     gnu_symbol_visibility : 'hidden',
     install : true,

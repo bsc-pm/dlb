@@ -91,10 +91,6 @@ test_includes = [
   include_directories('../src/apis'), # for fortran tests
 ]
 
-test_objects = [
-  libdlb.extract_all_objects(recursive : true),
-]
-
 initial_env = environment()
 
 foreach suite, suite_tests : tests
@@ -103,7 +99,7 @@ foreach suite, suite_tests : tests
     test_path = 'test/' + suite + '/' + test_file
     exe = executable(test_name, test_path,
       include_directories : test_includes,
-      objects : test_objects,
+      link_whole: libdlb_test,
       dependencies : common_deps,
       build_by_default: false,
       install : false
