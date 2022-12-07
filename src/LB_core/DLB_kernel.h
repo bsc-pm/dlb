@@ -27,6 +27,12 @@
 #include <sched.h>
 #include <stdbool.h>
 
+typedef struct dlb_mpi_flags_t {
+    bool is_blocking;
+    bool is_collective;
+    bool lewi_mpi;
+} dlb_mpi_flags_t;
+
 /* Status */
 int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         const cpu_set_t *mask, const char *lb_args);
@@ -38,8 +44,8 @@ int set_max_parallelism(subprocess_descriptor_t *spd, int max);
 int unset_max_parallelism(subprocess_descriptor_t *spd);
 
 /* MPI specific */
-void into_mpi(bool is_blocking, bool is_collective, bool lewi_mpi);
-void out_of_mpi(bool is_blocking, bool is_collective, bool lewi_mpi);
+void into_mpi(dlb_mpi_flags_t flags);
+void out_of_mpi(dlb_mpi_flags_t flags);
 
 /* Lend */
 int lend(const subprocess_descriptor_t *spd);
