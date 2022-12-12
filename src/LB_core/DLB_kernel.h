@@ -91,5 +91,6 @@ int node_barrier_detach(void);
 int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid);
 int print_shmem(subprocess_descriptor_t *spd, int num_columns,
         dlb_printshmem_flags_t print_flags);
+int set_observer_role(bool is_observer);
 
 #endif //DLB_KERNEL_H

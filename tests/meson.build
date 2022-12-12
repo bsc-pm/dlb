@@ -52,7 +52,7 @@ tests = {
     'shmem_versions_00'   : {},
   },
   '03_policies' : {
-    'lewi_00'             : {},
+    'lewi_classic_00'     : {'source' : 'lewi_00.c'},
     'lewi_mask_00'        : {},
     'lewi_mask_01_async'  : {'source' : 'lewi_mask_01.c', 'dlb_args' : '--mode=async'},
     'lewi_mask_01_poll'   : {'source' : 'lewi_mask_01.c', 'dlb_args' : '--mode=polling'},
@@ -60,6 +60,7 @@ tests = {
   },
   '04_core' : {
     'drom_00'             : {},
+    'lewi_00'             : {},
     'spd_00'              : {},
     'talp_00'             : {},
     'talp_01'             : {},

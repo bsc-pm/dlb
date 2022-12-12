@@ -59,7 +59,7 @@ void pm_finalize(pm_interface_t *pm) {
 }
 
 int pm_get_num_threads(void) {
-    return omp_get_max_threads ? omp_get_max_threads() : 0;
+    return omp_get_max_threads ? omp_get_max_threads() : 1;
 }
 
 int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,

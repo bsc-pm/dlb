@@ -34,6 +34,7 @@
 #include "support/mytime.h"
 
 #include <float.h>
+#include <pthread.h>
 #include <sched.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -97,6 +98,30 @@ static void print_node_metrics(const dlb_node_metrics_t *node_metrics) {
           );
 }
 
+static void* observer_func(void *arg) {
+    subprocess_descriptor_t *spd = arg;
+
+    /* Set up observer flag */
+    set_observer_role(true);
+
+    /* Get MPI region */
+    const dlb_monitor_t *mpi_region = monitoring_region_get_MPI_region(spd);
+    assert( mpi_region != NULL );
+    int num_measurements = mpi_region->num_measurements;
+
+    /* An observer may call MPI functions without affecting TALP */
+    talp_in_mpi(spd, true);
+    talp_out_mpi(spd, true);
+    assert( num_measurements == mpi_region->num_measurements );
+
+    /* Get MPI metrics */
+    dlb_node_metrics_t node_metrics;
+    assert( talp_collect_node_metrics(spd, DLB_MPI_REGION, &node_metrics) == DLB_SUCCESS );
+    assert( node_metrics.processes_per_node == 1 );
+
+    return NULL;
+}
+
 
 int main(int argc, char *argv[]) {
     // This test needs at least room for 2 CPUs
@@ -146,6 +171,44 @@ int main(int argc, char *argv[]) {
         assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
         assert( talp_collect_node_metrics(&spd, monitor, &node_metrics3) == DLB_SUCCESS );
         assert( monitoring_region_is_started(&spd, monitor) );
+
+        /* Finalize */
+        talp_mpi_finalize(&spd);
+        talp_finalize(&spd);
+        assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
+                == DLB_SUCCESS );
+    }
+
+    /* Single thread + observer thread */
+    {
+        subprocess_descriptor_t spd = {.id = 111};
+        options_init(&spd.options, options);
+        mu_parse_mask("0", &spd.process_mask);
+        assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
+                NULL, spd.options.shm_key) == DLB_SUCCESS );
+        talp_init(&spd);
+        talp_info_t *talp_info = spd.talp_info;
+        talp_info->external_profiler = true;
+        /* dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor; */
+
+        /* Start MPI monitoring region */
+        talp_mpi_init(&spd);
+
+        /* MPI call */
+        talp_in_mpi(&spd, /* is_blocking_collective */ false);
+        talp_out_mpi(&spd, /* is_blocking_collective */ false);
+
+        /* Observer thread is created here */
+        pthread_t observer_pthread;
+        pthread_create(&observer_pthread, NULL, observer_func, &spd);
+        pthread_join(observer_pthread, NULL);
+
+        /* MPI call (force update) */
+        talp_in_mpi(&spd, /* is_blocking_collective */ true);
+        talp_out_mpi(&spd, /* is_blocking_collective */ true);
+
+        /* Upon gathering samples, only one thread sample has been reduced */
+        assert( talp_info->ncpus == 1 );
 
         /* Finalize */
         talp_mpi_finalize(&spd);

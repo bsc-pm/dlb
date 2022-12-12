@@ -22,6 +22,7 @@
 
 #include "dlb_types.h"
 #include "dlb_errors.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -561,6 +562,19 @@ int DLB_AutoSizerStart(void);
  *  \return DLB_SUCCESS on success
  */
 int DLB_AutoSizerEnd(void);
+
+/*! \brief Modify the current thread DLB role to either observer or particpant
+ *  \param[in] thread_is_observer true to set current thread to 'observer',
+ *                                false to 'participant'
+ *  \return DLB_SUCCESS on success
+ *
+ *  By default, all threads are DLB participants, meaning that they invoke LeWI
+ *  when needed or measure performance metrics when TALP is enabled. A thread
+ *  that sets its role to 'observer' will still be able to invoke MPI calls
+ *  or TALP functions, including managing monitoring regions, but it will not
+ *  trigger LeWI nor any TALP measuring metrics.
+ */
+int DLB_SetObserverRole(bool thread_is_observer);
 
 #ifdef __cplusplus
 }
