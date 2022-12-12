@@ -816,6 +816,7 @@ int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, dlb_drom_flags_t 
 static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_flags_t flags) {
     int error;
     bool return_stolen = flags & DLB_RETURN_STOLEN;
+    bool skip_auto_update = flags & DLB_NO_SYNC;
     pinfo_t *process = my_pinfo;
     shmem_lock(shm_handler);
     {
@@ -827,7 +828,7 @@ static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_f
         }
 
         /* Update current mask now */
-        if (error == DLB_SUCCESS) {
+        if (error == DLB_SUCCESS && !skip_auto_update) {
             memcpy(&process->current_process_mask, &process->future_process_mask,
                     sizeof(cpu_set_t));
             process->dirty = false;

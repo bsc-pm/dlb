@@ -31,6 +31,7 @@ typedef enum dlb_drom_flags_e {
     DLB_RETURN_STOLEN   = 1 << 1,
     DLB_SYNC_QUERY      = 1 << 2,
     DLB_SYNC_NOW        = 1 << 3,
+    DLB_NO_SYNC         = 1 << 4,
 } dlb_drom_flags_t;
 
 // PrintShmem flags

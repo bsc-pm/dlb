@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
         assert( DLB_DROM_GetProcessMask(0, &mask, 0) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &process_mask) );
 
-        /* Set mask a new mask with 1 less CPU */
+        /* Set a new mask with 1 less CPU */
         int i;
         for (i=0; i<CPU_SETSIZE; ++i) {
             if (CPU_ISSET(i, &mask)) {
@@ -123,12 +123,15 @@ int main(int argc, char **argv) {
         }
         assert( DLB_DROM_SetProcessMask(0, &mask, 0) == DLB_SUCCESS );
         cpu_set_t new_mask;
+        assert( DLB_PollDROM(NULL, &new_mask) == DLB_NOUPDT );
         assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &new_mask) );
         assert( CPU_COUNT(&new_mask) + 1 == CPU_COUNT(&process_mask) );
-        assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_SUCCESS );
-        assert( CPU_EQUAL(&mask, &new_mask) );
-        assert( CPU_COUNT(&new_mask) + 1 == CPU_COUNT(&process_mask) );
+
+        /* Set again the original mask with DLB_NO_SYNC */
+        assert( DLB_DROM_SetProcessMask(0, &process_mask, DLB_NO_SYNC) == DLB_SUCCESS );
+        assert( DLB_PollDROM(NULL, &new_mask) == DLB_SUCCESS );
+        assert( CPU_EQUAL(&process_mask, &new_mask) );
 
         assert( DLB_Finalize() == DLB_SUCCESS );
     }

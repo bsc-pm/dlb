@@ -644,7 +644,8 @@ int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flag
     int error = shmem_procinfo__setprocessmask(pid, mask, flags);
     if (error == DLB_SUCCESS
             && thread_spd->dlb_initialized
-            && (pid == 0 || pid == thread_spd->id)) {
+            && (pid == 0 || pid == thread_spd->id)
+            && !(flags & DLB_NO_SYNC)) {
         /* Mask has been successfully set by own process, do like a poll_drom_update */
         if (thread_spd->options.lewi) {
             /* If LeWI, resolve reclaimed CPUs */
