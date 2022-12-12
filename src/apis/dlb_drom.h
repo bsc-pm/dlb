@@ -96,12 +96,15 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
  *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
  *                      operations, the caller process gets blocked until the target
  *                      process resolves them, or the query times out.\n
- *      DLB_SYNC_NOW:   Force mask synchronization if target is the current process.
- *                      If pid is 0 or current process id, and setting the new mask
- *                      succeeds, this operation automatically forces the synchronization
- *                      with the set_process_mask callback. It has the equivalent
- *                      behaviour as invoking DLB_PollDROM_Update() after a
- *                      successful operation.
+ *      DLB_SYNC_NOW:   -- DEPRECATED, ENABLED BY DEFAULT unless DLB_NO_SYNC is used --
+ *                      If the target pid is 0, or self pid, and the new mask
+ *                      can be immediate applied, force mask synchronization.
+ *                      This operation automatically forces the synchronization
+ *                      with the set_process_mask callback. It has the
+ *                      equivalent behaviour as invoking DLB_PollDROM_Update()
+ *                      after a successful operation.\n
+ *      DLB_NO_SYNC:    Only if the target is the current process, disable automatic
+ *                      mask synchronization
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
