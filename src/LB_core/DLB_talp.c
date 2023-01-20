@@ -159,17 +159,6 @@ void talp_init(subprocess_descriptor_t *spd) {
             MPI_MONITORING_REGION_ID, "MPI Execution");
 
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
-
-    /* Initialize MPI type */
-#if MPI_LIB
-# if MPI_VERSION >= 3
-    mpi_int64_type = MPI_INT64_T;
-    mpi_uint64_type = MPI_UINT64_T;
-# else
-    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
-    MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(uint64_t), &mpi_uint64_type);
-# endif
-#endif
 }
 
 static void talp_destroy(void) {
@@ -323,6 +312,18 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
 /* Start MPI monitoring region */
 void talp_mpi_init(const subprocess_descriptor_t *spd) {
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_init");
+
+    /* Initialize MPI type */
+#if MPI_LIB
+# if MPI_VERSION >= 3
+    mpi_int64_type = MPI_INT64_T;
+    mpi_uint64_type = MPI_UINT64_T;
+# else
+    PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
+    PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(uint64_t), &mpi_uint64_type);
+# endif
+#endif
+
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
         /* Start MPI region */
@@ -484,7 +485,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 
         /* MPI type: pid_t */
         MPI_Datatype mpi_pid_type;
-        MPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(pid_t), &mpi_pid_type);
+        PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(pid_t), &mpi_pid_type);
 
         /* MPI struct type: process_in_node_record_t */
         MPI_Datatype mpi_process_info_type;
@@ -495,9 +496,9 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
                 offsetof(process_in_node_record_t, pid),
                 offsetof(process_in_node_record_t, mpi_time)};
             MPI_Datatype types[] = {mpi_pid_type, mpi_int64_type};
-            MPI_Type_create_struct(count, blocklengths, displacements,
+            PMPI_Type_create_struct(count, blocklengths, displacements,
                     types, &mpi_process_info_type);
-            MPI_Type_commit(&mpi_process_info_type);
+            PMPI_Type_commit(&mpi_process_info_type);
         }
 
         /* MPI struct type: monitor_node_summary_t */
@@ -510,9 +511,9 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
                 offsetof(monitor_node_summary_t, total_mpi_time),
                 offsetof(monitor_node_summary_t, process_info)};
             MPI_Datatype types[] = {MPI_INT, mpi_int64_type, mpi_process_info_type};
-            MPI_Type_create_struct(count, blocklengths, displacements,
+            PMPI_Type_create_struct(count, blocklengths, displacements,
                     types, &mpi_node_summary_type);
-            MPI_Type_commit(&mpi_node_summary_type);
+            PMPI_Type_commit(&mpi_node_summary_type);
         }
 
         /* Gather data */
@@ -522,7 +523,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
         if (_mpi_rank == 0) {
             recvbuf = malloc(_num_nodes * node_summary_size);
         }
-        MPI_Gather(node_summary, 1, mpi_node_summary_type,
+        PMPI_Gather(node_summary, 1, mpi_node_summary_type,
                 recvbuf, 1, mpi_node_summary_type,
                 0, getInterNodeComm());
 
@@ -857,9 +858,9 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                 offsetof(serialized_monitor_t, hostname),
                 offsetof(serialized_monitor_t, elapsed_time)};
             MPI_Datatype types[] = {MPI_INT, MPI_CHAR, mpi_int64_type};
-            MPI_Type_create_struct(count, blocklengths, displacements,
+            PMPI_Type_create_struct(count, blocklengths, displacements,
                     types, &mpi_serialized_monitor_type);
-            MPI_Type_commit(&mpi_serialized_monitor_type);
+            PMPI_Type_commit(&mpi_serialized_monitor_type);
         }
 
         /* Gather data */
@@ -867,7 +868,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         if (_mpi_rank == 0) {
             recvbuf = malloc(_mpi_size * sizeof(serialized_monitor_t));
         }
-        MPI_Gather(&serialized_monitor, 1, mpi_serialized_monitor_type,
+        PMPI_Gather(&serialized_monitor, 1, mpi_serialized_monitor_type,
                 recvbuf, 1, mpi_serialized_monitor_type,
                 0, MPI_COMM_WORLD);
 
@@ -903,44 +904,44 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         uint64_t num_mpi_calls;
 
         /* Obtain the maximum elapsed time */
-        MPI_Reduce(&monitor->elapsed_time, &elapsed_time,
+        PMPI_Reduce(&monitor->elapsed_time, &elapsed_time,
                 1, mpi_int64_type, MPI_MAX, 0, MPI_COMM_WORLD);
 
         /* Obtain the maximum elapsed useful time */
-        MPI_Reduce(&monitor->elapsed_computation_time, &elapsed_useful,
+        PMPI_Reduce(&monitor->elapsed_computation_time, &elapsed_useful,
                 1, mpi_int64_type, MPI_MAX, 0, MPI_COMM_WORLD);
 
         /* Obtain the sum of all computation time */
-        MPI_Reduce(&monitor->accumulated_computation_time, &app_sum_useful,
+        PMPI_Reduce(&monitor->accumulated_computation_time, &app_sum_useful,
                 1, mpi_int64_type, MPI_SUM, 0, MPI_COMM_WORLD);
 
         /* Obtain the sum of computation time of the most loaded node */
         int64_t local_node_useful = 0;
-        MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
+        PMPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
                 1, mpi_int64_type, MPI_SUM, 0, getNodeComm());
         if (_process_id == 0) {
-            MPI_Reduce(&local_node_useful, &node_sum_useful,
+            PMPI_Reduce(&local_node_useful, &node_sum_useful,
                     1, mpi_int64_type, MPI_MAX, 0, getInterNodeComm());
         }
 
         /* Obtain the total number of CPUs used in all processes */
         talp_info_t *talp_info = spd->talp_info;
         int ncpus = monitor->num_measurements > 0 ? talp_info->ncpus : 0;
-        MPI_Reduce(&ncpus, &total_cpus,
+        PMPI_Reduce(&ncpus, &total_cpus,
                 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
         /* Obtain the total number of nodes used in this region */
         int local_node_used = 0;
         int i_used_this_node = monitor->num_measurements > 0 ? 1 : 0;
-        MPI_Reduce(&i_used_this_node, &local_node_used,
+        PMPI_Reduce(&i_used_this_node, &local_node_used,
                 1, MPI_INT, MPI_MAX, 0, getNodeComm());
         if (_process_id == 0) {
-            MPI_Reduce(&local_node_used, &total_nodes,
+            PMPI_Reduce(&local_node_used, &total_nodes,
                     1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
         }
 
         /* Obtain the total number of MPI calls */
-        MPI_Reduce(&monitor->num_mpi_calls, &num_mpi_calls, 1,
+        PMPI_Reduce(&monitor->num_mpi_calls, &num_mpi_calls, 1,
                 mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
 
         if (_mpi_rank == 0) {
@@ -993,7 +994,7 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
     /* Gather recvcounts for each process */
     int chars_to_send = nregions * DLB_MONITOR_NAME_MAX;
     int *recvcounts = malloc(_mpi_size * sizeof(int));
-    MPI_Allgather(&chars_to_send, 1, MPI_INT,
+    PMPI_Allgather(&chars_to_send, 1, MPI_INT,
             recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
 
     /* Compute total characters to gather via MPI */
@@ -1022,7 +1023,7 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
         }
 
         /* Gather all regions */
-        MPI_Allgatherv(sendbuffer, nregions * DLB_MONITOR_NAME_MAX, MPI_CHAR,
+        PMPI_Allgatherv(sendbuffer, nregions * DLB_MONITOR_NAME_MAX, MPI_CHAR,
                 recvbuffer, recvcounts, displs, MPI_CHAR, MPI_COMM_WORLD);
 
         /* Register all regions. Existing ones will be skipped. */
@@ -1080,42 +1081,42 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     int total_nodes;
 
     /* Obtain the maximum elapsed time */
-    MPI_Allreduce(&monitor->elapsed_time, &elapsed_time,
+    PMPI_Allreduce(&monitor->elapsed_time, &elapsed_time,
             1, mpi_int64_type, MPI_MAX, MPI_COMM_WORLD);
 
     /* Obtain the maximum elapsed useful time */
-    MPI_Allreduce(&monitor->elapsed_computation_time, &elapsed_useful,
+    PMPI_Allreduce(&monitor->elapsed_computation_time, &elapsed_useful,
             1, mpi_int64_type, MPI_MAX, MPI_COMM_WORLD);
 
     /* Obtain the sum of all computation time */
-    MPI_Allreduce(&monitor->accumulated_computation_time, &app_sum_useful,
+    PMPI_Allreduce(&monitor->accumulated_computation_time, &app_sum_useful,
             1, mpi_int64_type, MPI_SUM, MPI_COMM_WORLD);
 
     /* Obtain the sum of computation time of the most loaded node */
     int64_t local_node_useful = 0;
-    MPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
+    PMPI_Reduce(&monitor->accumulated_computation_time, &local_node_useful,
             1, mpi_int64_type, MPI_SUM, 0, getNodeComm());
     if (_process_id == 0) {
-        MPI_Reduce(&local_node_useful, &node_sum_useful,
+        PMPI_Reduce(&local_node_useful, &node_sum_useful,
                 1, mpi_int64_type, MPI_MAX, 0, getInterNodeComm());
     }
-    MPI_Bcast(&node_sum_useful, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
+    PMPI_Bcast(&node_sum_useful, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
 
     /* Obtain the total number of CPUs used in all processes */
     int ncpus = monitor->num_measurements > 0 ? talp_info->ncpus : 0;
-    MPI_Allreduce(&ncpus, &total_cpus,
+    PMPI_Allreduce(&ncpus, &total_cpus,
             1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
     /* Obtain the total number of nodes used in this region */
     int local_node_used = 0;
     int i_used_this_node = monitor->num_measurements > 0 ? 1 : 0;
-    MPI_Reduce(&i_used_this_node, &local_node_used,
+    PMPI_Reduce(&i_used_this_node, &local_node_used,
             1, MPI_INT, MPI_MAX, 0, getNodeComm());
     if (_process_id == 0) {
-        MPI_Reduce(&local_node_used, &total_nodes,
+        PMPI_Reduce(&local_node_used, &total_nodes,
                 1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
     }
-    MPI_Bcast(&total_nodes, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
+    PMPI_Bcast(&total_nodes, 1, mpi_int64_type, 0, MPI_COMM_WORLD);
 
     /* Initialize structure */
     *pop_metrics = (const dlb_pop_metrics_t) {

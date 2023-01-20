@@ -64,7 +64,7 @@ void before_init(void) {
     if (debug_opts & DBG_WARNMPI) {
         char version[MPI_MAX_LIBRARY_VERSION_STRING];
         int resultlen;
-        MPI_Get_library_version(version, &resultlen);
+        PMPI_Get_library_version(version, &resultlen);
         char *newline = strchr(version, '\n');
         if (newline) *newline = '\0'; /* MPI_LIBRARY_VERSION only contains the first line */
         if (strcmp(version, MPI_LIBRARY_VERSION) != 0) {
@@ -81,20 +81,20 @@ void before_init(void) {
 /* Compute global, local ids and create the node communicator */
 static void get_mpi_info(void) {
 
-    MPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
-    MPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
+    PMPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
+    PMPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
 
 #if MPI_VERSION >= 3
     /* Node communicator, obtain also local id and number of MPIs in this node */
-    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0 /* key */,
+    PMPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0 /* key */,
             MPI_INFO_NULL, &mpi_comm_node);
-    MPI_Comm_rank(mpi_comm_node, &_process_id);
-    MPI_Comm_size(mpi_comm_node, &_mpis_per_node);
+    PMPI_Comm_rank(mpi_comm_node, &_process_id);
+    PMPI_Comm_size(mpi_comm_node, &_mpis_per_node);
 
     /* Communicator with 1 representative per node, obtain node id and total number */
-    MPI_Comm_split(MPI_COMM_WORLD, _process_id, 0 /* key */, &mpi_comm_internode);
-    MPI_Comm_rank(mpi_comm_internode, &_node_id);
-    MPI_Comm_size(mpi_comm_internode, &_num_nodes);
+    PMPI_Comm_split(MPI_COMM_WORLD, _process_id, 0 /* key */, &mpi_comm_internode);
+    PMPI_Comm_rank(mpi_comm_internode, &_node_id);
+    PMPI_Comm_size(mpi_comm_internode, &_num_nodes);
 #else
     char hostname[HOST_NAME_MAX] = {'\0'};
     char (*recvData)[HOST_NAME_MAX] = malloc(_mpi_size * sizeof(char[HOST_NAME_MAX]));
@@ -103,14 +103,15 @@ static void get_mpi_info(void) {
         perror("gethostname");
     }
 
-    MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-    int error_code = PMPI_Allgather (hostname, HOST_NAME_MAX, MPI_CHAR, recvData, HOST_NAME_MAX, MPI_CHAR, MPI_COMM_WORLD);
+    PMPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+    int error_code = PMPI_Allgather(hostname, HOST_NAME_MAX, MPI_CHAR,
+            recvData, HOST_NAME_MAX, MPI_CHAR, MPI_COMM_WORLD);
 
     if (error_code != MPI_SUCCESS) {
         char error_string[BUFSIZ];
         int length_of_error_string;
 
-        MPI_Error_string(error_code, error_string, &length_of_error_string);
+        PMPI_Error_string(error_code, error_string, &length_of_error_string);
         fatal( "%3d: %s", _mpi_rank, error_string );
     }
 
@@ -179,8 +180,8 @@ static void get_mpi_info(void) {
      * _process_id = _mpi_rank % _mpis_per_node;
      ********************************************/
 
-    MPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
-    MPI_Comm_split( MPI_COMM_WORLD, _process_id, 0, &mpi_comm_internode);
+    PMPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
+    PMPI_Comm_split( MPI_COMM_WORLD, _process_id, 0, &mpi_comm_internode);
 #endif
 }
 
