@@ -37,12 +37,27 @@ export DLB_ARGS="$DLB_ARGS --ompt"
 
 # OMPT policy flags for LeWI. Select when DLB will invoke LewI functions.
 # Possible values: {mpi, borrow, lend}, default: none
-export DLB_ARGS="$DLB_ARGS --lewi-ompt=mpi:borrow:lend"
+export DLB_ARGS="$DLB_ARGS --lewi-ompt=mpi:borrow"
+
+# OMPT Thread Manager. Select which Thread Manager will be used to manage the
+# OpenMP library. Possible values:
+#   - 'omp5': OpenMP 5.0 standard. DLB will do its best to manage threads with
+#               the standard OMPT interface.
+#   - 'role-shift': If using our custom free agent threads implementation in
+#               the LLVM OpenMP runtime.
+export DLB_ARGS="$DLB_ARGS --ompt-thread-manager=omp5"
+# export DLB_ARGS="$DLB_ARGS --ompt-thread-manager=role-shift"
 
 
 #################################################################################
 ### OpenMP runtime options                                                    ###
 #################################################################################
+
+# Binding: DLB benefits the most if OpenMP threads are pinned to different CPUs
+# We recommend the following default values although another ones like close or
+# spread for the BIND or cores for PLACES may as well be valid.
+export OMP_PROC_BIND=true
+export OMP_PLACES=threads
 
 # Set the OpenMP threads waiting policy to 'passive', they will consume a minimal
 # number of cycles while waiting.
@@ -57,6 +72,13 @@ export OMP_WAIT_POLICY=passive
 
 # Set the time, in milliseconds, that a thread should wait before sleeping.
 # export KMP_BLOCKTIME=0
+
+
+## LLVM specific variables for our free agent threads implementation.
+# If using --ompt-thread-manager=role-shift, we recommend at least
+# KMP_FREE_AGENT_NUM_THREADS=1 to enable initial support for free agent
+# threads, or the initial number of cpus-per-task.
+# export KMP_FREE_AGENT_NUM_THREADS=1
 
 
 #################################################################################
