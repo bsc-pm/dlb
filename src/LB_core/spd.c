@@ -52,7 +52,7 @@ void spd_enter_dlb(subprocess_descriptor_t *spd) {
 /*    GTree modification functions                                               */
 /*********************************************************************************/
 static gint key_compare_func(gconstpointer a, gconstpointer b) {
-    return *(const size_t*)a - *(const size_t*)b;
+    return (uintptr_t)a < (uintptr_t)b ? -1 : (uintptr_t)a > (uintptr_t)b;
 }
 
 void spd_register(subprocess_descriptor_t *spd) {

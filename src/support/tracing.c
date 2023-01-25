@@ -60,7 +60,7 @@ typedef struct EventInfo {
 static GTree *event_tree = NULL;
 
 static gint key_compare_func(gconstpointer a, gconstpointer b) {
-    return (uintptr_t)a - (uintptr_t)b;
+    return (uintptr_t)a < (uintptr_t)b ? -1 : (uintptr_t)a > (uintptr_t)b;
 }
 
 /* Define Extrae custom type based on a dynamic event */
