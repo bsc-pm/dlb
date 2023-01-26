@@ -394,7 +394,7 @@ def enrich_f08_to_c_arg_list(fpar, f08par, name):
 """
 def enrich(mpi_calls, mpi_std, lib_version):
     # Parse library version, for now we only found broken functions in Open MPI
-    match = re.match(r"Open MPI v(\d\.\d\.\d).*", lib_version)
+    match = re.match(r"Open MPI v(\d\.\d+\.\d).*", lib_version)
     if match:
         library_name = "Open MPI"
         library_version = match.group(1)
