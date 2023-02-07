@@ -1,0 +1,5 @@
+27a28
+> #include <dlb.h>
+294a296,297
+>             DLB_Borrow();
+>             #pragma omp parallel for private(j) reduction(+:iter_time) shared(fib)

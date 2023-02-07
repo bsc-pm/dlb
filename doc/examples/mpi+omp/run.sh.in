@@ -12,7 +12,7 @@ NUMTHREADS=2
 MPIEXEC_NOBIND_FLAG=""          # Try '--bind-to none' or '-binding none'
 
 APP="./mpi_omp_pils"
-ARGS="/dev/null 0.1 50 500"
+ARGS="--loads 1000,2500 --grain 0.1 --iterations 50 --task-duration 500 --verbose"
 
 if [[ $DLB == 1 ]] ; then
     if [[ $TRACE == 1 ]] ; then

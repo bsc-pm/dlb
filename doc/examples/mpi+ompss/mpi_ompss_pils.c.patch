@@ -1,0 +1,10 @@
+72a73
+> #pragma omp task
+80c81,83
+<     *iter_time += (t_end-t_start)/1000000.0;
+---
+>     double local_iter_time = (t_end-t_start)/1000000.0;
+>     #pragma omp atomic
+>     *iter_time += local_iter_time;
+298a302
+>         #pragma omp taskwait

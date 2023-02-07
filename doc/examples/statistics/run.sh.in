@@ -4,7 +4,7 @@
 MPIEXEC=@MPIEXEC@
 
 APP="./mpi_ompss_pils"
-ARGS="/dev/null 1 100000 50"
+ARGS="--loads 100,250 --grain 1.0 --iterations 100000 --task-duration 50"
 
 export NX_ARGS="--enable-dlb"
 export LB_POLICY="No"

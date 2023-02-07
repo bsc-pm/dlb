@@ -25,12 +25,9 @@
 #include <stdbool.h>
 #include <getopt.h>
 #include <mpi.h>
-#include <dlb_talp.h>
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 
 static const char DEFAULT_LOADS[] = "1000,2500";
 static double DEFAULT_PARALL_GRAIN = 1.0;
@@ -73,7 +70,6 @@ static double LoadUnbalance(int loads[], int mpi_size) {
     return (double)sum / (mpi_size*max);
 }
 
-#pragma omp task
 static void iter(double *iter_time, int *fib, int usec) {
     int64_t t_start, t_end;
 
@@ -81,9 +77,7 @@ static void iter(double *iter_time, int *fib, int usec) {
     *fib=computation(35, usec);
     t_end=usecs();
 
-    double local_iter_time = (t_end-t_start)/1000000.0;
-    #pragma omp atomic
-    *iter_time += local_iter_time;
+    *iter_time += (t_end-t_start)/1000000.0;
 }
 
 static int parse_load_list(int loads[], int mpi_size, const char *arg) {
@@ -297,16 +291,11 @@ int main(int argc, char* argv[]) {
 
             int upper_bound = MIN(steps, i+BS);
 
-            dlb_monitor_t region = DLB_MonitoringRegionRegister("Region");
             int j;
-            DLB_MonitoringRegionStart(region);
             for(j=i; j<upper_bound; j++){
                 iter(&iter_time, &fib, task_usec);
             }
-            DLB_MonitoringRegionStop(region);
-            DLB_MonitoringRegionReport(region);
         }
-        #pragma omp taskwait
 
         // Total computation time for each process
         if (verbose) {
