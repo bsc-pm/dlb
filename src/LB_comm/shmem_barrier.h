@@ -26,6 +26,7 @@
 void shmem_barrier__init(const char *shmem_key);
 void shmem_barrier__finalize(const char *shmem_key);
 int  shmem_barrier__get_system_id(void);
+int  shmem_barrier__get_num_participants(int barrier_id);
 int  shmem_barrier__attach(int barrier_id, bool lewi);
 int  shmem_barrier__detach(int barrier_id);
 void shmem_barrier__barrier(int barrier_id);
