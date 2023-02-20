@@ -94,15 +94,16 @@ typedef struct monitor_data_t {
 
 
 static void talp_dealloc_samples(const subprocess_descriptor_t *spd);
-static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd);
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name);
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
         const talp_macrosample_t *macrosample);
 static void monitoring_regions_report_all(const subprocess_descriptor_t *spd);
-static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
 
 #if MPI_LIB
+static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
+static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd);
+
 static MPI_Datatype mpi_int64_type;
 static MPI_Datatype mpi_uint64_type;
 #endif
@@ -352,16 +353,29 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
                 talp_info->mpi_monitor.accumulated_MPI_time,
                 talp_info->mpi_monitor.accumulated_computation_time);
 
-        /* Gather data among processes in the node if node summary is enabled */
-        if (spd->options.talp_summary & SUMMARY_NODE) {
-            talp_node_summary_gather_data(spd);
-        }
+#ifdef MPI_LIB
+        /* If performing any kind of TALP summary, check that the number of processes
+         * registered in the shared memory matches with the number of MPI processes in the node.
+         * This check is needed to avoid deadlocks on finalize. */
+        if (spd->options.talp_summary) {
+            if (shmem_barrier__get_num_participants(spd->options.barrier_id) == _mpis_per_node) {
 
-        /* Gather data among MPIs if any of these summaries is enabled  */
-        if (spd->options.talp_summary
-                & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW | SUMMARY_PROCESS)) {
-            monitoring_regions_gather_data(spd);
+                /* Gather data among processes in the node if node summary is enabled */
+                if (spd->options.talp_summary & SUMMARY_NODE) {
+                    talp_node_summary_gather_data(spd);
+                }
+
+                /* Gather data among MPIs if any of these summaries is enabled  */
+                if (spd->options.talp_summary
+                        & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW | SUMMARY_PROCESS)) {
+                    monitoring_regions_gather_data(spd);
+                }
+            } else {
+                warning("The number of MPI processes and processes registered in DLB differ."
+                        " TALP will not print any summary.");
+            }
         }
+#endif
     }
 }
 
@@ -409,8 +423,8 @@ void talp_out_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collectiv
 /*    Other functions                                                            */
 /*********************************************************************************/
 
-static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 #if MPI_LIB
+static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
     /* Node summary */
     typedef struct monitor_node_summary_t {
         int nelems;
@@ -547,8 +561,8 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
             free(recvbuf);
         }
     }
-#endif
 }
+#endif
 
 
 /*********************************************************************************/
@@ -982,9 +996,9 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 }
 #endif
 
+#ifdef MPI_LIB
 /* Gather data from all monitoring regions */
 static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
-#ifdef MPI_LIB
     /*** 1: Gather data from MPI monitor ***/
     talp_info_t *talp_info = spd->talp_info;
     gather_monitor_data(spd, &talp_info->mpi_monitor);
@@ -1047,8 +1061,8 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
     for (i=0; i<nregions; ++i) {
         gather_monitor_data(spd, regions[i]);
     }
-#endif
 }
+#endif
 
 
 /*********************************************************************************/

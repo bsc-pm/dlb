@@ -129,6 +129,12 @@ int shmem_barrier__get_system_id(void) {
     return max_barriers-1;
 }
 
+int shmem_barrier__get_num_participants(int barrier_id) {
+    /* FIXME: This function may return a wrong value
+     * while the barrier is in maintenance mode. */
+    return shdata->barriers[barrier_id].participants;
+}
+
 int shmem_barrier__attach(int barrier_id, bool lewi) {
     if (shm_handler == NULL) return DLB_ERR_UNKNOWN;
     if (barrier_id < 0 || barrier_id >= max_barriers) {
