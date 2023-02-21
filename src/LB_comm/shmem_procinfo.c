@@ -105,13 +105,14 @@ typedef struct {
 
 typedef struct {
     bool initialized;
+    bool allow_cpu_sharing;     // efectively, disables DROM functionalities
     struct timespec initial_time;
     cpu_set_t free_mask;        // Contains the CPUs in the system not owned
     cpu_set_t resize_mask;        // Contains the CPUs in the system not owned
     pinfo_t process_info[0];
 } shdata_t;
 
-enum { SHMEM_PROCINFO_VERSION = 5 };
+enum { SHMEM_PROCINFO_VERSION = 6 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -241,6 +242,12 @@ static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
     // Return if empty mask
     if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
+    // Return if sharing is allowed and, thus, we don't need to check CPU overlapping
+    if (shdata->allow_cpu_sharing) {
+        verbose(VB_DROM, "Process %d registering shared mask %s", new_owner->pid, mu_to_str(mask));
+        return DLB_SUCCESS;
+    }
+
     verbose(VB_DROM, "Process %d registering mask %s", new_owner->pid, mu_to_str(mask));
     int error = DLB_SUCCESS;
     if (mu_is_subset(mask, &shdata->free_mask)) {
@@ -258,8 +265,8 @@ static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
     return error;
 }
 
-int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
-        cpu_set_t *new_process_mask, const char *shmem_key) {
+static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
+        cpu_set_t *new_process_mask, const char *shmem_key, bool allow_cpu_sharing) {
     int error = DLB_SUCCESS;
 
     // Shared memory creation
@@ -273,13 +280,20 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
             get_time(&shdata->initial_time);
             mu_get_system_mask(&shdata->free_mask);
             shdata->initialized = true;
+            shdata->allow_cpu_sharing = allow_cpu_sharing;
+        } else {
+            if (shdata->allow_cpu_sharing != allow_cpu_sharing) {
+                // For now we require all processes registering the procinfo
+                // to have the same value in 'allow_cpu_sharing'
+                error = DLB_ERR_NOCOMP;
+            }
         }
 
         // Iterate the processes array to find the two potential pointers:
         pinfo_t *empty_spot = NULL;
         pinfo_t *preinit_process = NULL;
         int p;
-        for (p = 0; p < max_processes; p++) {
+        for (p = 0; p < max_processes && error >= DLB_SUCCESS; p++) {
             if (empty_spot == NULL
                     && shdata->process_info[p].pid == NOBODY) {
                 /* First empty spot */
@@ -302,10 +316,9 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
                 /* This process is already registered */
                 error = DLB_ERR_INIT;
             }
-            if (error == DLB_ERR_INIT
-                    || (empty_spot
-                        && ((preinit_pid && preinit_process) || !preinit_pid))) {
-                /* Error or everything needed is found */
+            if (empty_spot
+                    && ((preinit_pid && preinit_process) || !preinit_pid)) {
+                /* Everything needed is found */
                 break;
             }
         }
@@ -423,7 +436,7 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
                 }
             }
 
-            if (error == DLB_NOTED) {
+            if (error == DLB_NOTED && new_process_mask) {
                 // If the process has correctly inherit all/some of the CPUs,
                 // update the output mask with the appropriate CPU mask
                 // we cannot resolve the dirty flag yet
@@ -433,7 +446,8 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
                         sizeof(cpu_set_t));
             }
         }
-        else if (error != DLB_ERR_INIT) {
+        else if (error != DLB_ERR_INIT && error != DLB_ERR_NOCOMP) {
+            shmem_unlock(shm_handler);
             fatal("Unhandled case in %s: preinit_pid: %d, preinit_process: %p, error: %d.\n"
                     "Please, report bug at %s",
                     __FUNCTION__, preinit_pid, preinit_process, error, PACKAGE_BUGREPORT);
@@ -446,7 +460,7 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
     }
     shmem_unlock(shm_handler);
 
-    if (error == DLB_ERR_NOMEM || error == DLB_ERR_PERM) {
+    if (error == DLB_ERR_NOMEM || error == DLB_ERR_PERM || error == DLB_ERR_NOCOMP) {
         warn_error(error);
     }
 
@@ -457,6 +471,16 @@ int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_
     }
 
     return error;
+}
+
+int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
+        cpu_set_t *new_process_mask, const char *shmem_key) {
+    return shmem_procinfo__init_(pid, preinit_pid, process_mask, new_process_mask, shmem_key, false);
+}
+
+int shmem_procinfo__init_with_cpu_sharing(pid_t pid, pid_t preinit_pid,
+        const cpu_set_t *process_mask, const char *shmem_key) {
+    return shmem_procinfo__init_(pid, preinit_pid, process_mask, NULL, shmem_key, true);
 }
 
 int shmem_procinfo_ext__init(const char *shmem_key) {
@@ -526,7 +550,7 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
 
     if (error == DLB_ERR_INIT) {
         verbose(VB_SHMEM, "Process %d already registered", pid);
-    } else if (error == DLB_ERR_PERM) {
+    } else if (error == DLB_ERR_PERM || error == DLB_ERR_NOCOMP) {
         warn_error(DLB_ERR_PERM);
     } else if (process == NULL) {
         error = DLB_ERR_NOMEM;
@@ -545,6 +569,13 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
 static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_stolen) {
     // Return if empty mask
     if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
+
+    // Return if sharing is allowed and, thus, we don't need keep track of free_mask
+    // nor stolen CPUs
+    if (shdata->allow_cpu_sharing) {
+        verbose(VB_DROM, "Process %d unregistering shared mask %s", owner->pid, mu_to_str(mask));
+        return DLB_SUCCESS;
+    }
 
     verbose(VB_DROM, "Process %d unregistering mask %s", owner->pid, mu_to_str(mask));
     if (return_stolen) {
@@ -840,6 +871,8 @@ static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_f
         verbose(VB_DROM, "Setting mask: current process is already dirty");
     } else if (error == DLB_ERR_PERM) {
         verbose(VB_DROM, "Setting mask: cannot steal mask %s", mu_to_str(mask));
+    } else if (error == DLB_ERR_NOCOMP) {
+        verbose(VB_DROM, "Setting mask: cannot steal mask if shmem has been intialized with CPU sharing");
     }
 
     return error;
@@ -925,6 +958,8 @@ int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_fl
         verbose(VB_DROM, "Setting mask: process %d is already dirty", pid);
     } else if (error == DLB_ERR_PERM) {
         verbose(VB_DROM, "Setting mask: cannot steal mask %s", mu_to_str(mask));
+    } else if (error == DLB_ERR_NOCOMP) {
+        verbose(VB_DROM, "Setting mask: cannot steal mask if shmem has been intialized with CPU sharing");
     }
 
     return error;
@@ -1534,6 +1569,9 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
  *  - If the CPU is UNSET and owned by the process -> unregister
  */
 static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen) {
+    // this function cannot be used if allowing CPU sharing
+    if (shdata->allow_cpu_sharing) return DLB_ERR_NOCOMP;
+
     cpu_set_t cpus_to_acquire;
     cpu_set_t cpus_to_steal;
     cpu_set_t cpus_to_free;

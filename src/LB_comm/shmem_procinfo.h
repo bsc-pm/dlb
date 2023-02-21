@@ -29,6 +29,8 @@
 /* Init / Register */
 int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
         cpu_set_t *new_process_mask, const char *shmem_key);
+int shmem_procinfo__init_with_cpu_sharing(pid_t pid, pid_t preinit_pid,
+        const cpu_set_t *process_mask, const char *shmem_key);
 int shmem_procinfo_ext__init(const char *shmem_key);
 int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags);
 

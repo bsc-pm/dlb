@@ -224,6 +224,19 @@ int main( int argc, char **argv ) {
         }
     }
 
+    // Check incompatible shmem options
+    {
+        assert( shmem_procinfo__init_with_cpu_sharing(111, 0, &process_mask, SHMEM_KEY)
+                == DLB_SUCCESS );
+
+        dlb_drom_flags_t flags = 0;
+        cpu_set_t mask;
+        mu_parse_mask("0", &mask);
+        assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_ERR_NOCOMP );
+
+        assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
+    }
+
 
     return 0;
 }
