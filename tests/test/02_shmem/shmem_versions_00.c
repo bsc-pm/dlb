@@ -164,7 +164,7 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 5 };
+    enum { KNOWN_PROCINFO_VERSION = 6 };
 
     struct KnownResizerData3 {
         char* name;
@@ -215,6 +215,7 @@ static void check_procinfo_version(void) {
 
     struct KnownProcinfoShdata {
         bool bool1;
+        bool bool2;
         struct timespec time;
         cpu_set_t mask1;
         cpu_set_t mask2;

@@ -83,5 +83,28 @@ int main( int argc, char **argv ) {
     shmem_procinfo__print_info(SHMEM_KEY);
     assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
+    // Test init sharing CPUs
+    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+    assert( shmem_procinfo__init_with_cpu_sharing(111, 0, &process_mask, SHMEM_KEY)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__init_with_cpu_sharing(222, 0, &process_mask, SHMEM_KEY)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__getprocessmask(111, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
+    assert( CPU_EQUAL(&process_mask, &new_mask) );
+    assert( shmem_procinfo__getprocessmask(222, &new_mask, DLB_SYNC_QUERY) == DLB_SUCCESS );
+    assert( CPU_EQUAL(&process_mask, &new_mask) );
+    assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(222, false, SHMEM_KEY) == DLB_SUCCESS );
+    // Subsequent "regular inits" with shared masks should still fail
+    assert( shmem_procinfo__init(111, 0, &process_mask, NULL, SHMEM_KEY)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__init(222, 0, &process_mask, NULL, SHMEM_KEY)
+            == DLB_ERR_PERM );
+    // Mixed "inits" will fail
+    cpu_set_t empty_mask = {};
+    assert( shmem_procinfo__init_with_cpu_sharing(333, 0, &empty_mask, SHMEM_KEY)
+            == DLB_ERR_NOCOMP );
+    assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
+
     return 0;
 }

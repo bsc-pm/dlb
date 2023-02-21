@@ -316,6 +316,11 @@ void warn_error(int error) {
                 shmem_procinfo__print_info(thread_spd->options.shm_key);
             }
             break;
+        case DLB_ERR_NOCOMP:
+            warning("DLB could not initialize the shared memory due to incompatible"
+                    " options among processes, likely ones sharing CPUs and others not."
+                    " Please, if you believe this is a bug contact us at " PACKAGE_BUGREPORT);
+            break;
     }
 }
 
