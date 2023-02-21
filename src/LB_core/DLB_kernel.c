@@ -77,7 +77,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     bool mask_is_needed = (
             spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
-            || spd->options.talp
             || spd->options.ompt
             || spd->options.preinit_pid);
     if (mask_is_needed && spd->lb_policy == POLICY_LEWI) {
@@ -92,7 +91,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
-    } else if (mask_is_needed) {
+    } else if (mask_is_needed || spd->options.talp) {
         // Best effort querying the system
         sched_getaffinity(0, sizeof(cpu_set_t), &spd->process_mask);
     } else if (spd->lb_policy == POLICY_LEWI) {
@@ -124,6 +123,11 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         error = shmem_cpuinfo__init(spd->id, spd->options.preinit_pid,
                 &spd->process_mask, spd->options.shm_key);
         if (error != DLB_SUCCESS) return error;
+    } else if (spd->options.talp) {
+        // If mask is not needed but TALP is enabled, we still need to
+        // initialize shmem_procinfo but allowing CPU sharing
+        error = shmem_procinfo__init_with_cpu_sharing(spd->id, spd->options.preinit_pid,
+                &spd->process_mask, spd->options.shm_key);
     }
     if (spd->options.barrier) {
         shmem_barrier__init(spd->options.shm_key);

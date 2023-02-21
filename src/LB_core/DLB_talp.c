@@ -34,7 +34,6 @@
 #include "support/mask_utils.h"
 #include "support/talp_output.h"
 #include "LB_comm/shmem_procinfo.h"
-#include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_barrier.h"
 #ifdef MPI_LIB
 #include "LB_MPI/process_MPI.h"
