@@ -248,19 +248,29 @@ void after_mpi(mpi_call_t mpi_call) {
 }
 
 void before_finalize(void) {
-    mpi_ready = 0;
-    talp_mpi_finalize(thread_spd);
-}
-
-void after_finalize(void) {
-    if (init_from_mpi == 1) {
+    if (mpi_ready) {
+        mpi_ready = 0;
+        talp_mpi_finalize(thread_spd);
+    }
+    if (init_from_mpi) {
         init_from_mpi = 0;
         DLB_Finalize();
     }
 }
 
+void after_finalize(void) {}
+
 int is_mpi_ready(void) {
     return mpi_ready;
+}
+
+/* Finalize MPI variables and other modules in case DLB_Finalize is called preemptively */
+void process_MPI__finalize(void) {
+    if (mpi_ready) {
+        mpi_ready = 0;
+        init_from_mpi = 0;
+        talp_mpi_finalize(thread_spd);
+    }
 }
 
 MPI_Comm getNodeComm(void) {
