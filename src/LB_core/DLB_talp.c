@@ -369,6 +369,9 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
                         & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW | SUMMARY_PROCESS)) {
                     monitoring_regions_gather_data(spd);
                 }
+
+                /* Synchronize all processes in node before continuing with DLB finalization  */
+                shmem_barrier__barrier(spd->options.barrier_id);
             } else {
                 warning("The number of MPI processes and processes registered in DLB differ."
                         " TALP will not print any summary.");
