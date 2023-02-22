@@ -38,7 +38,8 @@ void before_mpi(mpi_call_t mpi_call);
 void after_mpi(mpi_call_t mpi_call);
 void before_finalize(void);
 void after_finalize(void);
-int is_mpi_ready(void);
+int  is_mpi_ready(void);
+void process_MPI__finalize(void);
 MPI_Comm getNodeComm(void);
 MPI_Comm getInterNodeComm(void);
 

@@ -38,6 +38,9 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+#ifdef MPI_LIB
+#include "LB_MPI/process_MPI.h"
+#endif
 
 #include <sched.h>
 #include <string.h>
@@ -181,6 +184,13 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 int Finish(subprocess_descriptor_t *spd) {
     int error = DLB_SUCCESS;
     instrument_event(RUNTIME_EVENT, EVENT_FINALIZE, EVENT_BEGIN);
+
+#if MPI_LIB
+    /* If DLB_Finalize is called preemptively, we need to finalize also the MPI
+     * module */
+    process_MPI__finalize();
+#endif
+
     spd->lewi_enabled = false;
 
     pm_finalize(&spd->pm);
