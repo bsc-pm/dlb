@@ -116,6 +116,15 @@ int main( int argc, char **argv ) {
     CPU_SET(5, &mask3);
     assert( mu_get_single_cpu(&mask3) == 5);
 
+    assert( mu_get_first_cpu(&mask1) == 0 );
+    assert( mu_get_last_cpu(&mask1) == 1 );
+    CPU_ZERO(&mask3);
+    assert( mu_get_first_cpu(&mask3) == -1 );
+    assert( mu_get_last_cpu(&mask3) == -1 );
+    CPU_SET(42, &mask3);
+    assert( mu_get_first_cpu(&mask3) == 42 );
+    assert( mu_get_last_cpu(&mask3) == 42 );
+
     assert( strcmp(mu_to_str(&mask1), "[0,1]") == 0 );
     assert( strcmp(mu_to_str(&mask2), "[0-3]") == 0 );
 

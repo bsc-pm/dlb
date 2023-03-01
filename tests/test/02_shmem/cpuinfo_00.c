@@ -51,6 +51,12 @@ int main( int argc, char **argv ) {
     int requested_ncpus = 0;
     int i, j;
 
+    // FIXME: this test assumes that the system's mask is 0..system_size
+    //        skip otherwise
+    if (CPU_COUNT(&process_mask) != system_size) {
+        return 0;
+    }
+
     // Setup dummy priority CPUs
     for (i=0, j=0; i<system_size; ++i) {
         if (CPU_ISSET(i, &process_mask)) {

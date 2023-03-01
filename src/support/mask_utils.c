@@ -55,13 +55,6 @@ typedef struct {
 static mu_system_loc_t sys = {0};
 static bool mu_initialized = false;
 
-static int get_sys_size(void) {
-    if (sys.size) return sys.size;
-    int nproc_onln = sysconf(_SC_NPROCESSORS_ONLN);
-    if (nproc_onln > 0) return nproc_onln;
-    fatal("Cannot obtain system size. Contact us at " PACKAGE_BUGREPORT
-            " or configure DLB with HWLOC support.");
-}
 
 #if defined IS_BGQ_MACHINE
 static void set_bgq_info( void ) {
@@ -151,7 +144,7 @@ static void parse_mask_from_file(const char *filename, cpu_set_t *mask) {
 static void parse_system_files(void) {
     /* Parse system mask */
     parse_mask_from_file(PATH_SYSTEM_MASK, &sys.sys_mask);
-    sys.size = CPU_COUNT(&sys.sys_mask);
+    sys.size = mu_get_last_cpu(&sys.sys_mask) + 1;
 
     /* Parse node masks */
     int nnodes = 0;
@@ -184,7 +177,13 @@ static void parse_system_files(void) {
 
     /* Fallback if some info could not be parsed */
     if (!sys.size) {
-        sys.size = get_sys_size();
+        int nproc_onln = sysconf(_SC_NPROCESSORS_ONLN);
+        if (nproc_onln > 0) {
+            sys.size = nproc_onln;
+        } else {
+            fatal("Cannot obtain system size. Contact us at " PACKAGE_BUGREPORT
+                    " or configure DLB with HWLOC support.");
+        }
         int i;
         for (i=0; i<sys.size; ++i) {
             CPU_SET(i, &sys.sys_mask);
@@ -230,18 +229,18 @@ void mu_finalize( void ) {
 }
 
 int mu_get_system_size( void ) {
-    if (__builtin_expect(!mu_initialized, 0)) mu_init();
+    if (unlikely(!mu_initialized)) mu_init();
     return sys.size;
 }
 
 void mu_get_system_mask(cpu_set_t *mask) {
-    if (__builtin_expect(!mu_initialized, 0)) mu_init();
+    if (unlikely(!mu_initialized)) mu_init();
     memcpy(mask, &sys.sys_mask, sizeof(cpu_set_t));
 }
 
 // Return Mask of sockets covering at least 1 CPU of cpuset
 void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
-    if (__builtin_expect(!mu_initialized, 0)) mu_init();
+    if (unlikely(!mu_initialized)) mu_init();
     CPU_ZERO(parent_set);
     int i;
     for (i=0; i<sys.num_parents; ++i) {
@@ -255,7 +254,7 @@ void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpus
 
 // Return Mask of sockets containing all CPUs in cpuset
 void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
-    if (__builtin_expect(!mu_initialized, 0)) mu_init();
+    if (unlikely(!mu_initialized)) mu_init();
     CPU_ZERO(parent_set);
     int i;
     for (i=0; i<sys.num_parents; ++i) {
@@ -311,11 +310,40 @@ void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *
 
 /* Return the one and only enabled CPU in mask, or -1 if count != 1 */
 int mu_get_single_cpu(const cpu_set_t *mask) {
-    int cpu_count = CPU_COUNT(mask);
-    if (cpu_count == 1) {
-        int sys_size = get_sys_size();
+    if (CPU_COUNT(mask) == 1) {
+        int sys_size = mu_get_system_size();
         int i;
         for (i=0; i<sys_size; ++i) {
+            if (CPU_ISSET(i, mask)) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+/* Return the first enabled CPU in mask, or -1 if mask is empty
+ * NOTE: no mu_init required, using CPU_SETSIZE
+ */
+int mu_get_first_cpu(const cpu_set_t *mask) {
+    if (CPU_COUNT(mask) > 0) {
+        int i;
+        for (i=0; i<CPU_SETSIZE; ++i) {
+            if (CPU_ISSET(i, mask)) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+/* Return the last enabled CPU in mask, or -1 if mask is empty
+ * NOTE: no mu_init required, using CPU_SETSIZE
+ */
+int mu_get_last_cpu(const cpu_set_t *mask) {
+    if (CPU_COUNT(mask) > 0) {
+        int i;
+        for (i=CPU_SETSIZE; i>=0; --i) {
             if (CPU_ISSET(i, mask)) {
                 return i;
             }
@@ -330,7 +358,7 @@ int mu_get_single_cpu(const cpu_set_t *mask) {
 #pragma GCC visibility push(default)
 const char* mu_to_str( const cpu_set_t *mask ) {
 
-    int sys_size = get_sys_size();
+    int sys_size = mu_get_system_size();
     static __thread char buffer[CPU_SETSIZE*4];
     char *b = buffer;
     *(b++) = '[';
@@ -373,7 +401,7 @@ const char* mu_to_str( const cpu_set_t *mask ) {
 }
 
 static void parse_64_bits_mask(cpu_set_t *mask, int offset, const char *str, int base) {
-    int sys_size = get_sys_size();
+    int sys_size = mu_get_system_size();
     unsigned long long int number = strtoull(str, NULL, base);
     int i = offset;
     while (number > 0 && i < sys_size) {
@@ -391,7 +419,9 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     int str_len = strnlen(str, CPU_SETSIZE+1);
     if ( str_len == 0 || str_len > CPU_SETSIZE) return;
 
-    int sys_size = get_sys_size();
+    /* mu_parse_mask is called from mu_init, use sys.size if possible
+     * or fallback to the worst case scenario */
+    int sys_size = sys.size ? sys.size : CPU_SETSIZE;
     regex_t regex_bitmask;
     regex_t regex_hexmask;
     regex_t regex_range;
@@ -533,7 +563,7 @@ void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen) {
     if (namelen < 2)
         return;
 
-    int sys_size = get_sys_size();
+    int sys_size = mu_get_system_size();
     char *b = str;
     *(b++) = '"';
     size_t bytes = 1;
@@ -613,7 +643,7 @@ int mu_cmp_cpuids_by_ownership(const void *cpuid1, const void *cpuid2, void *mas
 
     /* Find first CPU */
     int first_cpu = 0;
-    int sys_size = get_sys_size();
+    int sys_size = mu_get_system_size();
     int i;
     for (i=0; i<sys_size; ++i) {
         if (CPU_ISSET(i, process_mask)) {
@@ -700,7 +730,7 @@ int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topo
     if (cpu1_level == 1) {
         cpu_set_t *level0_mask = _topology;
         int first_cpu = 0;
-        int sys_size = get_sys_size();
+        int sys_size = mu_get_system_size();
         int i;
         for (i=0; i<sys_size; ++i) {
             if (CPU_ISSET(i, level0_mask)) {
