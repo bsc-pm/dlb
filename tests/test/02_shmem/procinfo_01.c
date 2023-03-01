@@ -58,26 +58,29 @@ int main( int argc, char **argv ) {
     // Check shared memory capacity
     {
         // This loop should completely fill the shared memory
-        int cpuid;
-        for (cpuid=0; cpuid<num_cpus; ++cpuid) {
+        // WARNING: this test only works if proces_mask is 0..N-1
+        if (CPU_COUNT(&process_mask) == mu_get_system_size()) {
+            int cpuid;
+            for (cpuid=0; cpuid<num_cpus; ++cpuid) {
+                CPU_ZERO(&process_mask);
+                CPU_SET(cpuid, &process_mask);
+                assert( shmem_procinfo__init(pid+cpuid, 0, &process_mask, NULL, SHMEM_KEY)
+                        == DLB_SUCCESS );
+            }
+
+            // Another initialization should return error
             CPU_ZERO(&process_mask);
-            CPU_SET(cpuid, &process_mask);
             assert( shmem_procinfo__init(pid+cpuid, 0, &process_mask, NULL, SHMEM_KEY)
-                    == DLB_SUCCESS );
+                    == DLB_ERR_NOMEM );
+
+            // Finalize all
+            for (cpuid=0; cpuid<num_cpus; ++cpuid) {
+                assert( shmem_procinfo__finalize(pid+cpuid, false, SHMEM_KEY) == DLB_SUCCESS );
+            }
+
+            // Check that the shared memory has been finalized
+            assert( shmem_procinfo__getprocessmask(pid, NULL, DLB_SYNC_QUERY) == DLB_ERR_NOSHMEM );
         }
-
-        // Another initialization should return error
-        CPU_ZERO(&process_mask);
-        assert( shmem_procinfo__init(pid+cpuid, 0, &process_mask, NULL, SHMEM_KEY)
-                == DLB_ERR_NOMEM );
-
-        // Finalize all
-        for (cpuid=0; cpuid<num_cpus; ++cpuid) {
-            assert( shmem_procinfo__finalize(pid+cpuid, false, SHMEM_KEY) == DLB_SUCCESS );
-        }
-
-        // Check that the shared memory has been finalized
-        assert( shmem_procinfo__getprocessmask(pid, NULL, DLB_SYNC_QUERY) == DLB_ERR_NOSHMEM );
     }
 
     // Check that each subprocess finalizes its own part of the shared memory

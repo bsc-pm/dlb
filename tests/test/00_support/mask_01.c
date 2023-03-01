@@ -27,7 +27,22 @@
 #include <assert.h>
 
 int main( int argc, char **argv ) {
-    fprintf(stdout, "System size: %d\n", mu_get_system_size());
+    fprintf(stderr, "System size: %d\n", mu_get_system_size());
+
+    cpu_set_t process_mask;
+    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+    int last_cpu = -1;
+    int i;
+    for (i=CPU_SETSIZE; i>=0; --i) {
+        if (CPU_ISSET(i, &process_mask)) {
+            last_cpu = i;
+            break;
+        }
+    }
+    if (last_cpu) {
+        fprintf(stderr, "Last CPU detected in the system: %d\n", last_cpu);
+        assert( mu_get_system_size() == last_cpu + 1 );
+    }
 
     cpu_set_t lb_mask1;
     mu_parse_mask("0-1,3,5-7", &lb_mask1);
