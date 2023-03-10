@@ -809,7 +809,7 @@ int monitoring_region_report(const subprocess_descriptor_t *spd, const dlb_monit
             nsecs_to_secs(monitor->accumulated_computation_time));
     info("###      CpuSet:  %s", mu_to_str(&spd->process_mask));
 #ifdef PAPI_LIB
-    info("### IPC: in TESTING ");
+    info("### IPC:                        %f ",(float) monitor->accumulated_instructions / (float) monitor->accumulated_cycles);
 #endif
     return DLB_SUCCESS;
 }
@@ -1071,11 +1071,9 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
        /* Obtain the sum of cycles */ 
         MPI_Reduce(&monitor->accumulated_cycles, &cycles, 1,
                 mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
-        verbose(VB_TALP,"heyyyyyyyyyyyyy we have %llu cycles", cycles);
        /* Obtain the sum of instructions*/ 
         MPI_Reduce(&monitor->accumulated_instructions, &instructions, 1,
                 mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
-        verbose(VB_TALP,"heyyyyyyyyyyyyy we have %llu instructions", instructions);
         #endif
 
         if (_mpi_rank == 0) {
@@ -1113,7 +1111,6 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                         num_mpi_calls,
                         cycles, 
                         instructions);
-                        verbose(VB_TALP,"we do be here");
                 #else
                         num_mpi_calls,
                    /*We do not have cycles and instructions here*/
