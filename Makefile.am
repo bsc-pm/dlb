@@ -59,6 +59,11 @@ AM_CPPFLAGS += $(HWLOC_CPPFLAGS) -DHWLOC_LIB
 AM_LDFLAGS += $(HWLOC_LDFLAGS) $(HWLOC_LIBS)
 endif
 
+if HAVE_PAPI
+AM_CPPFLAGS += $(PAPI_CPPFLAGS) -DPAPI_LIB
+AM_LDFLAGS += $(PAPI_LDFLAGS) $(PAPI_LIBS)
+endif
+
 #################################################################################
 ### src                                                                       ###
 #################################################################################
@@ -84,6 +89,7 @@ if MPI_LIB
 nodist_include_HEADERS = src/LB_MPI/MPI_interface.h \
 			 src/LB_MPI/MPI_interfaceF.h
 endif
+
 
 #********************************************************************************
 # Built Sources

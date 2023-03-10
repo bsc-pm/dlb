@@ -45,6 +45,9 @@
 #include <pthread.h>
 #include <limits.h>
 
+#ifdef PAPI_LIB
+#include <papi.h>
+#endif
 
 /* The macrosample contains the accumulated metrics of samples of all threads.
  * It is only constructed when samples are gathered, and then it is used to
@@ -54,6 +57,10 @@ typedef struct talp_macrosample_t {
     int64_t useful_time;
     int64_t elapsed_useful_time;
     uint64_t num_mpi_calls;
+  #ifdef PAPI_LIB 
+    long long cycles; 
+    long long instructions;
+  #endif 
 } talp_macrosample_t;
 
 /* The sample contains the temporary per-thread accumulated values of all the
@@ -73,6 +80,11 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
     int64_t     last_updated_timestamp;
     bool        in_useful;
     bool        cpu_disabled;
+   /*PAPI counters collected data*/
+#ifdef PAPI_LIB
+    atomic_int_least64_t  instructions; 
+    atomic_int_least64_t  cycles;
+#endif
 } talp_sample_t;
 
 /* Talp info per spd */
@@ -108,6 +120,14 @@ static MPI_Datatype mpi_uint64_type;
 #endif
 
 extern __thread bool thread_is_observer;
+
+#if PAPI_LIB
+int Events[2]={PAPI_TOT_CYC, PAPI_TOT_INS};
+int EventSet = PAPI_NULL;
+int ret = 0; 
+unsigned long int tid;
+long long values[2];
+#endif
 
 /* Reserved regions ids */
 enum { MPI_MONITORING_REGION_ID = 1 };
@@ -159,12 +179,35 @@ void talp_init(subprocess_descriptor_t *spd) {
             MPI_MONITORING_REGION_ID, "MPI Execution");
 
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
+
+    /* Initialize and start running PAPI */
+#if PAPI_LIB
+    /* Library init */
+    if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) warning("PAPI Library versions differ");
+
+    /* Activate thread tracing */
+    ret = PAPI_thread_init(pthread_self);
+
+    ret += PAPI_register_thread();
+
+    /* Eventset creation */
+    ret += PAPI_create_eventset(&EventSet);
+
+    ret += PAPI_add_events(EventSet,Events,2);
+
+    /* Start tracing  */
+    ret += PAPI_start(EventSet);
+    if (ret != PAPI_OK) warning("PAPI Error during initialization");
+#endif
 }
 
 static void talp_destroy(void) {
     monitoring_regions_finalize_all(thread_spd);
     free(thread_spd->talp_info);
     thread_spd->talp_info = NULL;
+#ifdef PAPI_LIB
+    PAPI_shutdown();
+#endif
 }
 
 void talp_finalize(subprocess_descriptor_t *spd) {
@@ -255,6 +298,13 @@ static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t
 
     /* Compute duration and set new last_updated_timestamp */
     int64_t now = get_time_in_ns();
+
+#ifdef PAPI_LIB 
+	/* Stops counting and stores value */ 
+	ret = PAPI_stop(EventSet, values); 
+	if (ret != PAPI_OK) verbose(VB_TALP, "stop return code: %d, %s", ret, PAPI_strerror(ret));
+#endif
+    
     int64_t microsample_duration = now - sample->last_updated_timestamp;
     sample->last_updated_timestamp = now;
 
@@ -267,6 +317,20 @@ static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t
     /* Update sample */
     DLB_ATOMIC_ADD_RLX(&sample->mpi_time, mpi_time);
     DLB_ATOMIC_ADD_RLX(&sample->useful_time, useful_time);
+    
+    #ifdef PAPI_LIB
+	/* Atomically adds values to structure */ 		
+	DLB_ATOMIC_ADD_RLX(&sample->cycles, values[0]);
+    	DLB_ATOMIC_ADD_RLX(&sample->instructions, values[1]);
+
+	/* Resets counters and restarts counting */ 
+	ret = PAPI_reset(EventSet);
+	if (ret != PAPI_OK)  verbose(VB_TALP, "Error resetting counters");
+	
+	ret = PAPI_start(EventSet);
+	if (ret != PAPI_OK)  verbose(VB_TALP, "Error starting counting counters again");
+    #endif
+
 }
 
 /* Accumulate values from samples of all threads and update regions */
@@ -281,7 +345,7 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
     talp_macrosample_t macrosample = (const talp_macrosample_t) {};
     pthread_mutex_lock(&talp_info->samples_mutex);
     {
-        int i;
+	int i;
         for (i=0; i<talp_info->ncpus; ++i) {
             talp_sample_t *sample = talp_info->samples[i];
 
@@ -289,13 +353,20 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
             int64_t mpi_time = DLB_ATOMIC_EXCH_RLX(&sample->mpi_time, 0);
             int64_t useful_time = DLB_ATOMIC_EXCH_RLX(&sample->useful_time, 0);
             uint64_t num_mpi_calls = DLB_ATOMIC_EXCH_RLX(&sample->num_mpi_calls, 0);
-
+	#ifdef PAPI_LIB
+	    long long cycles = DLB_ATOMIC_EXCH_RLX(&sample->cycles, 0);
+	    long long instructions = DLB_ATOMIC_EXCH_RLX(&sample->instructions, 0);
+	#endif
             /* Accumulate */
             macrosample.mpi_time += mpi_time;
             macrosample.useful_time += useful_time;
             macrosample.elapsed_useful_time = max_int64(
                     macrosample.elapsed_useful_time, useful_time);
             macrosample.num_mpi_calls += num_mpi_calls;
+	#ifdef PAPI_LIB
+	    macrosample.cycles += cycles;
+	    macrosample.instructions += instructions;
+	#endif
         }
     }
     pthread_mutex_unlock(&talp_info->samples_mutex);
@@ -662,6 +733,10 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
     monitor->elapsed_computation_time = 0;
     monitor->accumulated_MPI_time = 0;
     monitor->accumulated_computation_time = 0;
+#ifdef PAPI_LIB
+    monitor->accumulated_cycles= 0;
+    monitor->accumulated_instructions = 0;
+#endif
 
     monitor_data_t *monitor_data = monitor->_data;
     monitor_data->started = false;
@@ -733,6 +808,9 @@ int monitoring_region_report(const subprocess_descriptor_t *spd, const dlb_monit
     info("### Computation time :          %.9g seconds",
             nsecs_to_secs(monitor->accumulated_computation_time));
     info("###      CpuSet:  %s", mu_to_str(&spd->process_mask));
+#ifdef PAPI_LIB
+    info("### IPC: in TESTING ");
+#endif
     return DLB_SUCCESS;
 }
 
@@ -775,6 +853,10 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
         mpi_monitor->accumulated_MPI_time += macrosample->mpi_time;
         mpi_monitor->accumulated_computation_time += macrosample->useful_time;
         mpi_monitor->num_mpi_calls += macrosample->num_mpi_calls;
+	#ifdef PAPI_LIB
+        mpi_monitor->accumulated_cycles += macrosample->cycles; 
+        mpi_monitor->accumulated_instructions += macrosample->instructions; 
+	#endif
         /* Update shared memory only if requested */
         if (talp_info->external_profiler) {
             shmem_procinfo__set_app_times(spd->id,
@@ -793,6 +875,10 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
             monitor->accumulated_MPI_time += macrosample->mpi_time;
             monitor->accumulated_computation_time += macrosample->useful_time;
             monitor->num_mpi_calls += macrosample->num_mpi_calls;
+	#ifdef PAPI_LIB
+            monitor->accumulated_cycles += macrosample->cycles; 
+            monitor->accumulated_instructions += macrosample->instructions; 
+	#endif
         }
     }
 }
@@ -849,6 +935,11 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
             int64_t elapsed_computation_time;
             int64_t accumulated_MPI_time;
             int64_t accumulated_computation_time;
+        #ifdef PAPI_LIB
+            long long accumulated_cycles;
+            long long accumulated_instructions; 
+            float  ipc;
+        #endif
         } serialized_monitor_t;
 
         serialized_monitor_t serialized_monitor = (const serialized_monitor_t) {
@@ -858,6 +949,11 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
             .elapsed_computation_time = monitor->elapsed_computation_time,
             .accumulated_MPI_time = monitor->accumulated_MPI_time,
             .accumulated_computation_time = monitor->accumulated_computation_time,
+        #ifdef PAPI_LIB
+            .accumulated_cycles = monitor->accumulated_cycles,
+            .accumulated_instructions = monitor->accumulated_instructions,
+	        .ipc = (float) monitor->accumulated_instructions / (float) monitor->accumulated_cycles,
+        #endif
         };
 
        gethostname(serialized_monitor.hostname, HOST_NAME_MAX);
@@ -867,13 +963,14 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         /* MPI struct type: serialized_monitor_t */
         MPI_Datatype mpi_serialized_monitor_type;
         {
-            int count = 3;
-            int blocklengths[] = {2, HOST_NAME_MAX+CPUSET_MAX*2, 4};
+            int count = 4;
+            int blocklengths[] = {2, HOST_NAME_MAX+CPUSET_MAX*2, 4, 1};
             MPI_Aint displacements[] = {
                 offsetof(serialized_monitor_t, pid),
                 offsetof(serialized_monitor_t, hostname),
-                offsetof(serialized_monitor_t, elapsed_time)};
-            MPI_Datatype types[] = {MPI_INT, MPI_CHAR, mpi_int64_type};
+                offsetof(serialized_monitor_t, elapsed_time),
+                offsetof(serialized_monitor_t, ipc)};
+            MPI_Datatype types[] = {MPI_INT, MPI_CHAR, mpi_int64_type, MPI_FLOAT};
             PMPI_Type_create_struct(count, blocklengths, displacements,
                     types, &mpi_serialized_monitor_type);
             PMPI_Type_commit(&mpi_serialized_monitor_type);
@@ -903,8 +1000,14 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                         recvbuf[rank].elapsed_time,
                         recvbuf[rank].elapsed_computation_time,
                         recvbuf[rank].accumulated_MPI_time,
-                        recvbuf[rank].accumulated_computation_time);
-            }
+		#ifdef PAPI_LIB
+                        recvbuf[rank].accumulated_computation_time,
+                        recvbuf[rank].ipc);
+        #else 
+                        recvbuf[rank].accumulated_computation_time,
+			            0);
+		#endif 
+	     }
             free(recvbuf);
         }
     }
@@ -918,6 +1021,10 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         int total_cpus;
         int total_nodes;
         uint64_t num_mpi_calls;
+    #ifdef PAPI_LIB
+        long long cycles; 
+        long long instructions; 
+    #endif
 
         /* Obtain the maximum elapsed time */
         PMPI_Reduce(&monitor->elapsed_time, &elapsed_time,
@@ -960,6 +1067,17 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         PMPI_Reduce(&monitor->num_mpi_calls, &num_mpi_calls, 1,
                 mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
 
+        #ifdef PAPI_LIB
+       /* Obtain the sum of cycles */ 
+        MPI_Reduce(&monitor->accumulated_cycles, &cycles, 1,
+                mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
+        verbose(VB_TALP,"heyyyyyyyyyyyyy we have %llu cycles", cycles);
+       /* Obtain the sum of instructions*/ 
+        MPI_Reduce(&monitor->accumulated_instructions, &instructions, 1,
+                mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
+        verbose(VB_TALP,"heyyyyyyyyyyyyy we have %llu instructions", instructions);
+        #endif
+
         if (_mpi_rank == 0) {
             if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
                 if (elapsed_time > 0) {
@@ -991,7 +1109,16 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                         elapsed_useful,
                         app_sum_useful,
                         node_sum_useful,
-                        num_mpi_calls);
+                #ifdef PAPI_LIB
+                        num_mpi_calls,
+                        cycles, 
+                        instructions);
+                        verbose(VB_TALP,"we do be here");
+                #else
+                        num_mpi_calls,
+                   /*We do not have cycles and instructions here*/
+                        0,0);
+                #endif
             }
         }
     }
