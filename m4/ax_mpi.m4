@@ -347,8 +347,9 @@ AC_DEFUN([AX_CHECK_MPI_LDFLAGS],
     AS_IF([test "x$ac_cv_search_MPI_Init" = x || test "x$ac_cv_search_MPI_Init" = xno], [
         AX_VAR_PUSHVALUE([LIBS], [""])
         AX_VAR_PUSHVALUE([LDFLAGS], [$2])
+        AS_IF([test x"$cross_compiling" = xyes ], [LDFLAGS="$LDFLAGS -Wl,-z,undefs"], [])
         AS_UNSET([ac_cv_search_MPI_Init])
-        AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$2 $LIBS"])
+        AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$LDFLAGS $LIBS"])
         AX_VAR_POPVALUE([LDFLAGS])
         AX_VAR_POPVALUE([LIBS])
     ])
