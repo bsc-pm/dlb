@@ -139,6 +139,7 @@ common_srcs = [
 libdlb_common = static_library(
   'dlb_common', common_srcs,
   include_directories : common_includes,
+  gnu_symbol_visibility : 'hidden',
   install : false,
 )
 
