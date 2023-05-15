@@ -9,6 +9,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   implementations
 - Flag `--ompt-thread-manager` to select which OpenMP implementation to use
 - MPI Fortran 2008 bindings
+- TALP flag to generate file in different output formats `--talp-output-file`
+- New TALP collective functions to gather and compute metrics:
+  `DLB_TALP_CollectPOPMetrics` and `DLB_TALP_CollectNodeMetrics`
+
+### Changed
+- `libdlb_mpi.so` and `libdlb_mpi_*.so` have now both C and Fortran MPI symbols
+
+### Fixed
+- Fixed DROM pre-initialization if child had empty cpuset affinity
+- Fixed `--lewi-max-parallelism`
+- Fixed several TALP bugs
+- Fixed some finalization errors during MPI finalize
+- Fixed cpuset parsing when provided a non-contiguous mask
 
 ## [3.2] 2022-03-16
 ### Added
