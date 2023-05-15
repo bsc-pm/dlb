@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [Unreleased]
+
 ## [3.3] 2023-05-15
 ### Added
 - Free agent and Role-shift OMPT thread managers to support LeWI with both
@@ -248,6 +250,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.3...HEAD
 [3.3]: https://github.com/bsc-pm/dlb/compare/v3.2...v3.3
 [3.2]: https://github.com/bsc-pm/dlb/compare/v3.1...v3.2
 [3.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.1
