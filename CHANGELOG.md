@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Fixed
+- Fixed wrong generated code for `MPI_Initialized` and `MPI_Finalized`
 
 ## [3.3] 2023-05-15
 ### Added

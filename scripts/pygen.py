@@ -494,10 +494,10 @@ def enrich(mpi_calls, mpi_std, lib_version):
             func['tags'] = '_Unknown'
 
         # Set before and after funtions
-        if 'MPI_Init' in func['name']:
+        if func['name'] in ('MPI_Init', 'MPI_Init_thread'):
             func['before'] = 'before_init()'
             func['after'] = 'after_init()'
-        elif 'MPI_Finalize' in func['name']:
+        elif func['name'] == 'MPI_Finalize':
             func['before'] = 'before_finalize()'
             func['after'] = 'after_finalize()'
         else:
