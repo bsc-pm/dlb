@@ -52,7 +52,7 @@
 #include <execinfo.h>
 #endif
 
-verbose_opts_t vb_opts = VB_CLEAR;
+verbose_opts_t vb_opts = VB_UNDEF;
 
 enum { VBFORMAT_LEN = 128 };
 static verbose_fmt_t vb_fmt;
@@ -204,6 +204,13 @@ void info0(const char *fmt, ...) {
 
 #undef verbose
 void verbose(verbose_opts_t flag, const char *fmt, ...) {
+    /* Parse verbose options if verbose() was invoked before DLB_Init */
+    if (unlikely(vb_opts == VB_UNDEF)) {
+        options_t options;
+        options_init(&options, NULL);
+        debug_init(&options);
+    }
+
     va_list list;
     va_start(list, fmt);
     if      (vb_opts & flag & VB_API)     { vprint(stderr, "DLB API", fmt, list); }

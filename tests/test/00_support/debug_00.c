@@ -22,9 +22,16 @@
 </testinfo>*/
 
 #include "support/debug.h"
+#include "support/env.h"
 #include "support/options.h"
 
 int main( int argc, char **argv ) {
+
+    /* verbose function may be invoked before DLB_Init */
+    dlb_setenv("DLB_ARGS", "--verbose=drom", NULL, ENV_APPEND);
+    verbose(VB_DROM, "This message should be visible");
+    verbose(VB_TALP, "This one should not");
+
     options_t options;
     options_init(&options, "--verbose-format=node:pid:thread");
     debug_init(&options);
