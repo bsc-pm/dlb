@@ -1,5 +1,5 @@
 project('DLB', 'c', 'fortran',
-  version : '3.3',
+  version : '3.3.1',
   license: ' LGPL-3.0-or-later',
   default_options : [
   ]
