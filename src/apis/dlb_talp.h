@@ -50,11 +50,11 @@ typedef struct dlb_monitor_t {
     /*! Number of measured MPI calls */
     int         num_mpi_calls;
 #ifdef PAPI_LIB
-    /*! Number of measured instructions */ 
-    long long   accumulated_instructions; 
-    /*! Number of measured cycles*/ 
+    /*! Number of measured instructions */
+    long long   accumulated_instructions;
+    /*! Number of measured cycles*/
     long long   accumulated_cycles;
-#endif 
+#endif
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;

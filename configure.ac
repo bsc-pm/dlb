@@ -312,7 +312,7 @@ AX_MPI
 # check for HWLOC
 AX_HWLOC
 
-# check for PAPI 
+# check for PAPI
 AX_PAPI
 
 # check for SPHINX
