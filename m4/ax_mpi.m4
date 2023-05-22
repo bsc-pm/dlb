@@ -47,14 +47,16 @@ AC_DEFUN([AX_MPI],
             [],
             [AC_MSG_ERROR([Cannot find MPI libraries])])
 
-        ### MPI TESTS ###
-        AC_MSG_CHECKING([whether to enable MPI test suite])
-        AC_ARG_ENABLE([mpi-tests],
-            AS_HELP_STRING([--enable-mpi-tests], [enable MPI tests]),
-            [], dnl Implicit: enable_mpi_tests=$enableval
-            [enable_mpi_tests=no]
-        )
-        AC_MSG_RESULT([$enable_mpi_tests])
+        ### MPI TESTS  ###
+        # deprecated, keep variable in case we want to re-do them, but don't show option in configure
+        enable_mpi_tests=no
+        dnl AC_MSG_CHECKING([whether to enable MPI test suite])
+        dnl AC_ARG_ENABLE([mpi-tests],
+        dnl     AS_HELP_STRING([--enable-mpi-tests], [enable MPI tests]),
+        dnl     [], dnl Implicit: enable_mpi_tests=$enableval
+        dnl     [enable_mpi_tests=no]
+        dnl )
+        dnl AC_MSG_RESULT([$enable_mpi_tests])
 
         AS_IF([test "x$enable_mpi_tests" != xno], [
             AC_MSG_WARN([Option --enable-mpi-tests is currently not supported and has no effect.])
@@ -105,22 +107,6 @@ AC_DEFUN([AX_MPI],
                 ])
             ])
         ])
-
-        ### MPI EXPORT ENV. VAR. ###
-        AC_LANG_PUSH([C])
-        AC_LANG_CONFTEST([
-            AC_LANG_SOURCE([[
-                #include <stdlib.h>
-                #include <string.h>
-                int main(int argc, char *argv[])
-                {
-                    char *var = getenv("CONFTEST_VARIABLE");
-                    if (var && strcmp(var, "CONFTEST") == 0) return EXIT_SUCCESS;
-                    return EXIT_FAILURE;
-                }
-            ]])
-        ])
-        AC_LANG_POP([C])
 
         ### MPI VERSION ###
         AC_LANG_PUSH([C])
