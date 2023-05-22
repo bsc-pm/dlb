@@ -59,6 +59,11 @@ AM_CPPFLAGS += $(HWLOC_CPPFLAGS) -DHWLOC_LIB
 AM_LDFLAGS += $(HWLOC_LDFLAGS) $(HWLOC_LIBS)
 endif
 
+if HAVE_PAPI
+AM_CPPFLAGS += $(PAPI_CPPFLAGS) -DPAPI_LIB
+AM_LDFLAGS += $(PAPI_LDFLAGS) $(PAPI_LIBS)
+endif
+
 #################################################################################
 ### src                                                                       ###
 #################################################################################

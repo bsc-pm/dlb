@@ -49,6 +49,12 @@ typedef struct dlb_monitor_t {
     int64_t     accumulated_computation_time;
     /*! Number of measured MPI calls */
     int         num_mpi_calls;
+#ifdef PAPI_LIB
+    /*! Number of measured instructions */
+    long long   accumulated_instructions;
+    /*! Number of measured cycles*/
+    long long   accumulated_cycles;
+#endif
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;

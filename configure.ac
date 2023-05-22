@@ -312,6 +312,9 @@ AX_MPI
 # check for HWLOC
 AX_HWLOC
 
+# check for PAPI
+AX_PAPI
+
 # check for SPHINX
 AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
 AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
@@ -463,4 +466,14 @@ AS_IF([test "x$with_hwloc" = xno], [
     AS_ECHO(["yes
   HWLOC_CPPFLAGS: $HWLOC_CPPFLAGS
   HWLOC_LDFLAGS:  $HWLOC_LDFLAGS"])
+])
+
+AS_ECHO_N(["
+* PAPI: "])
+AS_IF([test "x$with_papi" = xno], [
+    AS_ECHO(["no"])
+], [
+    AS_ECHO(["yes
+  PAPI_CPPFLAGS: $PAPI_CPPFLAGS
+  PAPI_LDFLAGS:  $PAPI_LDFLAGS"])
 ])

@@ -48,6 +48,10 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
     int64_t     last_updated_timestamp;
     bool        in_useful;
     bool        cpu_disabled;
+#ifdef PAPI_LIB
+    atomic_int_least64_t  instructions;
+    atomic_int_least64_t  cycles;
+#endif
 } talp_sample_t;
 
 typedef struct talp_info_t {

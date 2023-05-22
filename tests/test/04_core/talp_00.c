@@ -47,6 +47,10 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
     int64_t     last_updated_timestamp;
     bool        in_useful;
     bool        cpu_disabled;
+#ifdef PAPI_LIB
+    atomic_int_least64_t  instructions;
+    atomic_int_least64_t  cycles;
+#endif
 } talp_sample_t;
 
 typedef struct talp_info_t {
@@ -99,6 +103,10 @@ int main(int argc, char *argv[]) {
     assert( mpi_monitor->accumulated_computation_time > 0 );
     assert( mpi_monitor->accumulated_computation_time > monitor->accumulated_computation_time );
     assert( mpi_monitor->elapsed_time > monitor->elapsed_time );
+#ifdef PAPI_LIB
+    assert( mpi_monitor->accumulated_instructions > monitor->accumulated_instructions );
+    assert( mpi_monitor->accumulated_cycles > monitor->accumulated_cycles );
+#endif
 
     /* Test custom monitor values */
     assert( monitor->num_measurements == 1 );
@@ -108,6 +116,10 @@ int main(int argc, char *argv[]) {
     assert( monitor->num_resets == 1 );
     assert( monitor->accumulated_MPI_time == 0 );
     assert( monitor->accumulated_computation_time == 0 );
+#ifdef PAPI_LIB
+    assert( monitor->accumulated_instructions == 0 );
+    assert( monitor->accumulated_cycles == 0 );
+#endif
 
     /* Test number of measurements */
     for (i=0; i<NUM_MEASUREMENTS; ++i) {
@@ -168,6 +180,7 @@ int main(int argc, char *argv[]) {
     dlb_monitor_t *monitor8 = monitoring_region_register(long_name);
     assert( monitor7 == monitor8 );
     monitoring_region_report(&spd, monitor7);
+    monitoring_region_report(&spd, mpi_monitor);
 
     talp_finalize(&spd);
 
