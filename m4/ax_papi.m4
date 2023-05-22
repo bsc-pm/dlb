@@ -7,7 +7,7 @@ AC_DEFUN([AX_PAPI],
     AC_ARG_WITH([papi],
         AS_HELP_STRING([--with-papi@<:@=DIR@:>@], [add PAPI support]),
         [], dnl Implicit: with_papi=$enableval
-        [with_papi:check]
+        [with_papi=check]
     )
     AC_MSG_RESULT([$with_papi])
 

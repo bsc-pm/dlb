@@ -53,7 +53,7 @@ static void record_metrics(void) {
 
     talp_output_record_pop_metrics("Region 1", 100, 0.89f, 0.99f, 0.9f, 0.9f, 1.0f);
 
-    talp_output_record_pop_raw("Region 1", 8, 1, 3, 100, 90, 500, 500, 42);
+    talp_output_record_pop_raw("Region 1", 8, 1, 3, 100, 90, 500, 500, 42, 10000, 20000);
 
     process_in_node_record_t process[] = {
         {.pid = 111, .mpi_time = 100, .useful_time = 200 },
@@ -62,7 +62,7 @@ static void record_metrics(void) {
     talp_output_record_node(0, 2, 100, 100, 200, 200, process);
 
     talp_output_record_process("Region 1", 0, 111, 1, "hostname",
-            "[0-3]", "\"0-3\"", 100, 100, 100, 100);
+            "[0-3]", "\"0-3\"", 100, 100, 100, 100, 2.0f);
 }
 
 int main(int argc, char *argv[]) {
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     /* CSV */
     char *csv_filename, *csv1, *csv2, *csv3;
     asprintf(&csv_filename, "%s/talp.csv", tmpdir);
-    talp_output_record_pop_raw("Region 1", 8, 1, 3, 100, 90, 500, 500, 42);
+    talp_output_record_pop_raw("Region 1", 8, 1, 3, 100, 90, 500, 500, 42, 10000, 20000);
     talp_output_finalize(csv_filename);
     error += access(csv_filename, F_OK );
     asprintf(&csv1, "%s/talp-pop.csv", tmpdir);
