@@ -16,7 +16,8 @@ rt_dep = cc.find_library('rt', required : true)
 dl_dep = cc.find_library('dl', required : true)
 thread_dep = dependency('threads')
 hwloc_dep = dependency('hwloc', required : get_option('hwloc'))
-common_deps = [m_dep, rt_dep, dl_dep, thread_dep, hwloc_dep]
+papi_dep = dependency('papi', required : get_option('papi'))
+common_deps = [m_dep, rt_dep, dl_dep, thread_dep, hwloc_dep, papi_dep]
 mpi_dep = dependency('mpi', language : 'c', required : get_option('mpi'))
 mpif_dep = dependency('mpi', language : 'fortran', required : get_option('mpi'))
 
@@ -27,6 +28,9 @@ add_project_arguments('-DHAVE_CONFIG_H', language : 'c')
 add_project_arguments('-D_GNU_SOURCE', language : 'c')
 if hwloc_dep.found()
   add_project_arguments('-DHWLOC_LIB', language : 'c')
+endif
+if papi_dep.found()
+  add_project_arguments('-DPAPI_LIB', language : 'c')
 endif
 
 instr_cpp_flags = '-DINSTRUMENTATION_VERSION'
@@ -428,5 +432,6 @@ summary({'CC': cc.get_id() + ' ' + cc.version(),
          'Build': build_type_descr,
         }, section: 'Compilation')
 summary({'HWLOC': hwloc_dep.found(),
+         'PAPI': papi_dep.found(),
          'MPI': mpi_dep.found(),
         }, section: 'Configuration')
