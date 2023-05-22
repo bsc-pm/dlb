@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 import os
 import sys
 from optparse import OptionParser
@@ -110,9 +110,9 @@ def main(argv):
         config_lines += [line]
         i +=1
 
-    print 'exec_versions=\"'+ versions +'\"'
+    print('exec_versions=\"'+ versions +'\"')
     for line in config_lines:
-        print line
+        print(line)
 
 
 if __name__ == "__main__":
