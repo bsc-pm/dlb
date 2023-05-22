@@ -935,12 +935,15 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
             int64_t elapsed_computation_time;
             int64_t accumulated_MPI_time;
             int64_t accumulated_computation_time;
-# ifdef PAPI_LIB
-            long long accumulated_cycles;
-            long long accumulated_instructions;
-            float  ipc;
-# endif
+            float   ipc;
         } serialized_monitor_t;
+
+#ifdef PAPI_LIB
+        float ipc = monitor->accumulated_cycles == 0 ? 0.0f
+            : (float)monitor->accumulated_instructions / monitor->accumulated_cycles;
+#else
+        float ipc = 0.0f;
+#endif
 
         serialized_monitor_t serialized_monitor = (const serialized_monitor_t) {
             .pid = spd->id,
@@ -949,11 +952,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
             .elapsed_computation_time = monitor->elapsed_computation_time,
             .accumulated_MPI_time = monitor->accumulated_MPI_time,
             .accumulated_computation_time = monitor->accumulated_computation_time,
-# ifdef PAPI_LIB
-            .accumulated_cycles = monitor->accumulated_cycles,
-            .accumulated_instructions = monitor->accumulated_instructions,
-            .ipc = (float) monitor->accumulated_instructions / (float) monitor->accumulated_cycles,
-# endif
+            .ipc = ipc,
         };
 
        gethostname(serialized_monitor.hostname, HOST_NAME_MAX);
@@ -1001,12 +1000,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                         recvbuf[rank].elapsed_computation_time,
                         recvbuf[rank].accumulated_MPI_time,
                         recvbuf[rank].accumulated_computation_time,
-# ifdef PAPI_LIB
-                        recvbuf[rank].ipc
-# else
-                        0
-# endif
-                        );
+                        recvbuf[rank].ipc);
             }
             free(recvbuf);
         }
