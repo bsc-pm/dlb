@@ -1069,10 +1069,10 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 
         #ifdef PAPI_LIB
        /* Obtain the sum of cycles */ 
-        MPI_Reduce(&monitor->accumulated_cycles, &cycles, 1,
+        PMPI_Reduce(&monitor->accumulated_cycles, &cycles, 1,
                 mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
        /* Obtain the sum of instructions*/ 
-        MPI_Reduce(&monitor->accumulated_instructions, &instructions, 1,
+        PMPI_Reduce(&monitor->accumulated_instructions, &instructions, 1,
                 mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
         #endif
 
