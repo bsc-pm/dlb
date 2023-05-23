@@ -114,7 +114,7 @@ int parse_verbose_opts(const char *str, verbose_opts_t *value) {
 
     *value = VB_CLEAR;
 
-    /* verbose opts contain substrings as options so we need to disambiguate */
+    /* tokenize multiple options separated by ':' */
     char *end_token = NULL;
     size_t len = strlen(str) + 1;
     char *str_copy = malloc(sizeof(char)*len);
@@ -127,6 +127,9 @@ int parse_verbose_opts(const char *str, verbose_opts_t *value) {
                 *value |= verbose_opts_values[i];
                 break;
             }
+        }
+        if (i == verbose_opts_nelems) {
+            warning("Unknown --verbose option: %s", token);
         }
         token = strtok_r(NULL, ":", &end_token);
     }
@@ -184,7 +187,7 @@ enum { verbose_fmt_nelems = sizeof(verbose_fmt_values) / sizeof(verbose_fmt_valu
 int parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     *value = VBF_CLEAR;
 
-    /* verbose_fmt contain substrings as options so we need to disambiguate */
+    /* tokenize multiple options separated by ':' */
     char *end_token = NULL;
     size_t len = strlen(str) + 1;
     char *str_copy = malloc(sizeof(char)*len);
@@ -197,6 +200,9 @@ int parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
                 *value |= verbose_fmt_values[i];
                 break;
             }
+        }
+        if (i == verbose_fmt_nelems) {
+            warning("Unknown --verbose-format option: %s", token);
         }
         token = strtok_r(NULL, ":", &end_token);
     }
@@ -250,17 +256,35 @@ int parse_instrument_items(const char *str, instrument_items_t *value) {
         return DLB_SUCCESS;
     }
 
+    /* particular case: '--no-instrument/--instrument=no' disables all instrument items */
+    if (strcmp(str, "no") == 0) {
+        *value = INST_NONE;
+        return DLB_SUCCESS;
+    }
+
     *value = INST_NONE;
-    int i;
-    for (i=0; i<instrument_items_nelems; ++i) {
-        if (strstr(str, instrument_items_choices[i]) != NULL) {
-            if (instrument_items_values[i] == INST_NONE) {
-                *value = INST_NONE;
+
+    /* tokenize multiple options separated by ':' */
+    char *end_token = NULL;
+    size_t len = strlen(str) + 1;
+    char *str_copy = malloc(sizeof(char)*len);
+    strcpy(str_copy, str);
+    char *token = strtok_r(str_copy, ":", &end_token);
+    while (token) {
+        int i;
+        for (i=0; i<instrument_items_nelems; ++i) {
+            if (strcmp(token, instrument_items_choices[i]) == 0) {
+                *value |= instrument_items_values[i];
                 break;
             }
-            *value |= instrument_items_values[i];
         }
+        if (i == instrument_items_nelems) {
+            warning("Unknown --instrument option: %s", token);
+        }
+        token = strtok_r(NULL, ":", &end_token);
     }
+    free(str_copy);
+
     return DLB_SUCCESS;
 }
 
@@ -366,18 +390,40 @@ int parse_talp_summary(const char *str, talp_summary_t *value) {
         return DLB_SUCCESS;
     }
 
-    *value = SUMMARY_NONE;
-    int i;
-    for (i=0; i<talp_summary_nelems; ++i) {
-        if (strstr(str, talp_summary_choices[i]) != NULL) {
-            *value |= talp_summary_values[i];
-        }
+    /* particular case: '--no-talp-summary/--talp-summary=no' disables all summaries */
+    if (strcmp(str, "no") == 0) {
+        *value = SUMMARY_NONE;
+        return DLB_SUCCESS;
     }
 
-    /* Support deprecated values */
-    if (strstr(str, "app") != NULL) {
-        *value |= SUMMARY_POP_METRICS;
+    *value = SUMMARY_NONE;
+
+    /* tokenize multiple options separated by ':' */
+    char *end_token = NULL;
+    size_t len = strlen(str) + 1;
+    char *str_copy = malloc(sizeof(char)*len);
+    strcpy(str_copy, str);
+    char *token = strtok_r(str_copy, ":", &end_token);
+    while (token) {
+        int i;
+        for (i=0; i<talp_summary_nelems; ++i) {
+            if (strcmp(token, talp_summary_choices[i]) == 0) {
+                *value |= talp_summary_values[i];
+                break;
+            }
+
+            /* Support deprecated values */
+            if (strcmp(token, "app") == 0) {
+                *value |= SUMMARY_POP_METRICS;
+                break;
+            }
+        }
+        if (i == talp_summary_nelems) {
+            warning("Unknown --talp-summary option: %s", token);
+        }
+        token = strtok_r(NULL, ":", &end_token);
     }
+    free(str_copy);
 
     return DLB_SUCCESS;
 }
@@ -582,17 +628,34 @@ bool equivalent_mpiset(const char *str1, const char *str2) {
 static const omptool_opts_t omptool_opts_values[] =
     {OMPTOOL_OPTS_MPI, OMPTOOL_OPTS_BORROW, OMPTOOL_OPTS_LEND, OMPTOOL_OPTS_AGGRESSIVE};
 static const char* const omptool_opts_choices[] = {"mpi", "borrow", "lend", "aggressive"};
-static const char omptool_opts_choices_str[] = "mpi:borrow:lend, aggressive";
+static const char omptool_opts_choices_str[] = "{mpi:borrow:lend}, aggressive";
 enum { omptool_opts_nelems = sizeof(omptool_opts_values) / sizeof(omptool_opts_values[0]) };
 
 int parse_omptool_opts(const char *str, omptool_opts_t *value) {
+
     *value = OMPTOOL_OPTS_CLEAR;
-    int i;
-    for (i=0; i<omptool_opts_nelems; ++i) {
-        if (strstr(str, omptool_opts_choices[i]) != NULL) {
-            *value |= omptool_opts_values[i];
+
+    /* tokenize multiple options separated by ':' */
+    char *end_token = NULL;
+    size_t len = strlen(str) + 1;
+    char *str_copy = malloc(sizeof(char)*len);
+    strcpy(str_copy, str);
+    char *token = strtok_r(str_copy, ":", &end_token);
+    while (token) {
+        int i;
+        for (i=0; i<omptool_opts_nelems; ++i) {
+            if (strcmp(token, omptool_opts_choices[i]) == 0) {
+                *value |= omptool_opts_values[i];
+                break;
+            }
         }
+        if (i == omptool_opts_nelems) {
+            warning("Unknown --lewi-ompt option: %s", token);
+        }
+        token = strtok_r(NULL, ":", &end_token);
     }
+    free(str_copy);
+
     return DLB_SUCCESS;
 }
 
