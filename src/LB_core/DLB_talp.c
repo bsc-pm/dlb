@@ -1306,7 +1306,7 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     return DLB_SUCCESS;
 }
 
-int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
+int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
     talp_info_t *talp_info = spd->talp_info;
     if (monitor == NULL) {
@@ -1359,6 +1359,11 @@ int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
     int node_id = 0;
 #endif
 
+    /* We can compute the elapsed time, only needed to calculate communication
+     * efficiency, as the sum of all Useful + MPI times divided by the number
+     * of processes (we may ignore the remainder of the division) */
+    int64_t elapsed_time = (total_useful_time + total_mpi_time) / nelems;
+
     /* Initialize structure */
     *node_metrics = (const dlb_node_metrics_t) {
         .node_id = node_id,
@@ -1367,8 +1372,9 @@ int talp_collect_node_metrics(const subprocess_descriptor_t *spd,
         .total_mpi_time = total_mpi_time,
         .max_useful_time = max_useful_time,
         .max_mpi_time = max_mpi_time,
-        .load_balance = ((float)total_useful_time / nelems) / max_useful_time,
         .parallel_efficiency = (float)total_useful_time / (total_useful_time + total_mpi_time),
+        .communication_efficiency = (float)max_useful_time / elapsed_time,
+        .load_balance = ((float)total_useful_time / nelems) / max_useful_time,
     };
 
     /* Resume monitor */

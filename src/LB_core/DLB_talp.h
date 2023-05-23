@@ -65,7 +65,7 @@ int monitoring_regions_force_update(const struct SubProcessDescriptor *spd);
 int talp_collect_pop_metrics(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);
 
-int talp_collect_node_metrics(const struct SubProcessDescriptor *spd,
+int talp_collect_pop_node_metrics(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
 
 #endif

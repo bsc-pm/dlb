@@ -139,7 +139,7 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
     return talp_collect_pop_metrics(thread_spd, monitor, pop_metrics);
 }
 
-int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
+int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
     spd_enter_dlb(NULL);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
@@ -147,5 +147,8 @@ int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node
     if (unlikely(!thread_spd->options.barrier)) {
         return DLB_ERR_NOCOMP;
     }
-    return talp_collect_node_metrics(thread_spd, monitor, node_metrics);
+    return talp_collect_pop_node_metrics(thread_spd, monitor, node_metrics);
 }
+
+int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics)
+    __attribute__((alias("DLB_TALP_CollectPOPNodeMetrics")));

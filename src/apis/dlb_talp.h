@@ -106,10 +106,12 @@ typedef struct dlb_node_metrics_t {
     /*! Time (in nanoseconds) of the accumulated CPU time of communication
      * of the process with the highest value */
     int64_t max_mpi_time;
+    /*! Node ParallelEfficiency = Communication Efficiency * LoadBalance */
+    float   parallel_efficiency;
+    /*! Node efficiency lost due to transfer and serialization */
+    float   communication_efficiency;
     /*! Node Load Balance coefficient */
     float   load_balance;
-    /*! Node Efficiency coefficient */
-    float   parallel_efficiency;
 } dlb_node_metrics_t;
 
 #ifdef __cplusplus
@@ -236,7 +238,10 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
  *  This functions performs a node barrier to collect the data. All processes that
  *  are running in the node must invoke this function.
  */
-int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics);
+int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics);
+
+int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics)
+    __attribute__((deprecated("DLB_TALP_CollectPOPNodeMetrics")));
 
 #ifdef __cplusplus
 }
