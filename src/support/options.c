@@ -642,8 +642,11 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
             if (strcmp(argument, arg_name) == 0) {
                 /* Obtain value */
                 char *value = strtok_r(NULL, "=", &end_equal);
-                fatal_cond(!value, "Bad format parsing DLB_ARGS: --argument=value");
-                snprintf(arg_value, arg_max_len, "%s", value);
+                if (value) {
+                    snprintf(arg_value, arg_max_len, "%s", value);
+                } else {
+                    warning("Bad format parsing of DLB_ARGS. Option %s with empty value", token);
+                }
                 remove_token = true;
             }
         } else {
