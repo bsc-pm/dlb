@@ -180,28 +180,28 @@ const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void);
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
 
 /*! \brief Reset monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
 /*! \brief Start (or unpause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 
 /*! \brief Stop (or pause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 
 /*! \brief Print a report to stderr of the monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */

@@ -82,105 +82,152 @@ int main(int argc, char *argv[]) {
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
 
-    /* TALP initial values */
-    assert( mpi_monitor->accumulated_MPI_time == 0 );
-    assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
-
-    /* Start and Stop MPI monitor */
-    talp_mpi_init(&spd);
-    usleep(USLEEP_TIME);
-    talp_mpi_finalize(&spd);
-
-    /* Start and Stop custom monitoring region */
+    /* Register custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register("Test monitor");
     assert( monitor != NULL );
-    monitoring_region_start(&spd, monitor);
-    monitoring_region_stop(&spd, monitor);
 
-    /* Test MPI monitor values are correct and greater than custom monitor */
-    assert( mpi_monitor->accumulated_MPI_time == 0 );
-    assert( mpi_monitor->accumulated_computation_time > 0 );
-    assert( mpi_monitor->accumulated_computation_time > monitor->accumulated_computation_time );
-    assert( mpi_monitor->elapsed_time > monitor->elapsed_time );
-#ifdef PAPI_LIB
-    assert( mpi_monitor->accumulated_instructions > monitor->accumulated_instructions );
-    assert( mpi_monitor->accumulated_cycles > monitor->accumulated_cycles );
-#endif
+    /* Test MPI + nested user defined region */
+    {
+        /* TALP initial values */
+        assert( mpi_monitor->accumulated_MPI_time == 0 );
+        assert( mpi_monitor->accumulated_computation_time == 0 );
+        assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
 
-    /* Test custom monitor values */
-    assert( monitor->num_measurements == 1 );
-    assert( monitor->accumulated_MPI_time == 0 );
-    assert( monitor->accumulated_computation_time != 0 );
-    monitoring_region_reset(monitor);
-    assert( monitor->num_resets == 1 );
-    assert( monitor->accumulated_MPI_time == 0 );
-    assert( monitor->accumulated_computation_time == 0 );
-#ifdef PAPI_LIB
-    assert( monitor->accumulated_instructions == 0 );
-    assert( monitor->accumulated_cycles == 0 );
-#endif
+        /* Start MPI monitor */
+        talp_mpi_init(&spd);
 
-    /* Test number of measurements */
-    for (i=0; i<NUM_MEASUREMENTS; ++i) {
+        /* Start and Stop custom monitoring region */
         monitoring_region_start(&spd, monitor);
         monitoring_region_stop(&spd, monitor);
+
+        /* Stop MPI monitor */
+        talp_mpi_finalize(&spd);
+
+        /* Test MPI monitor values are correct and greater than custom monitor */
+        assert( mpi_monitor->accumulated_MPI_time == 0 );
+        assert( mpi_monitor->accumulated_computation_time > 0 );
+        assert( mpi_monitor->accumulated_computation_time > monitor->accumulated_computation_time );
+        assert( mpi_monitor->elapsed_time > monitor->elapsed_time );
+#ifdef PAPI_LIB
+        assert( mpi_monitor->accumulated_instructions > monitor->accumulated_instructions );
+        assert( mpi_monitor->accumulated_cycles > monitor->accumulated_cycles );
+#endif
+
+        /* Test custom monitor values */
+        assert( monitor->num_measurements == 1 );
+        assert( monitor->accumulated_MPI_time == 0 );
+        assert( monitor->accumulated_computation_time != 0 );
+        assert( monitoring_region_reset(&spd, monitor) == DLB_SUCCESS );
+        assert( monitor->num_resets == 1 );
+        assert( monitor->accumulated_MPI_time == 0 );
+        assert( monitor->accumulated_computation_time == 0 );
+#ifdef PAPI_LIB
+        assert( monitor->accumulated_instructions == 0 );
+        assert( monitor->accumulated_cycles == 0 );
+#endif
     }
-    assert( monitor->num_measurements == NUM_MEASUREMENTS );
-    int64_t last_elapsed_measurement = monitor->stop_time - monitor->start_time;
-    assert( last_elapsed_measurement > 0 );
-    assert( last_elapsed_measurement * NUM_MEASUREMENTS/10 < monitor->elapsed_time );
+
+    /* Test that reset/start/stop/report may also be invoked with the implicit DLB_MPI_REGION */
+    {
+        /* Reset MPI monitoring region */
+        assert( monitoring_region_reset(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
+        assert( !monitoring_region_is_started(mpi_monitor) );
+        assert( mpi_monitor->elapsed_time == 0 );
+        assert( mpi_monitor->num_measurements == 0 );
+
+        /* Start MPI monitor */
+        talp_mpi_init(&spd);
+
+        /* Stop MPI monitoring region */
+        assert( monitoring_region_stop(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
+        assert( !monitoring_region_is_started(mpi_monitor) );
+        assert( mpi_monitor->elapsed_time > 0 );
+        assert( mpi_monitor->num_measurements == 1 );
+
+        /* Start MPI monitoring region */
+        assert( monitoring_region_start(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
+        assert( monitoring_region_is_started(mpi_monitor) );
+
+        /* Stop MPI monitor */
+        talp_mpi_finalize(&spd);
+
+        /* Report MPI region */
+        assert( monitoring_region_report(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
+    }
+
+    /* Test number of measurements */
+    {
+        for (i=0; i<NUM_MEASUREMENTS; ++i) {
+            monitoring_region_start(&spd, monitor);
+            monitoring_region_stop(&spd, monitor);
+        }
+        assert( monitor->num_measurements == NUM_MEASUREMENTS );
+        int64_t last_elapsed_measurement = monitor->stop_time - monitor->start_time;
+        assert( last_elapsed_measurement > 0 );
+        assert( last_elapsed_measurement * NUM_MEASUREMENTS/10 < monitor->elapsed_time );
+    }
 
     /* Test invalid start/stop call order */
-    assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
-    assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
-    assert( monitoring_region_start(&spd, monitor) == DLB_NOUPDT );
-    assert( monitoring_region_stop(&spd, monitor) == DLB_SUCCESS );
-    assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
+    {
+        assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
+        assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
+        assert( monitoring_region_start(&spd, monitor) == DLB_NOUPDT );
+        assert( monitoring_region_stop(&spd, monitor) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
+    }
 
     /* Test nested regions */
-    dlb_monitor_t *monitor1 = monitoring_region_register("Test nested 1");
-    dlb_monitor_t *monitor2 = monitoring_region_register("Test nested 2");
-    dlb_monitor_t *monitor3 = monitoring_region_register("Test nested 3");
-    monitoring_region_start(&spd, monitor1);
-    usleep(USLEEP_TIME);
-    for (i=0; i<NUM_MEASUREMENTS; ++i) {
-        monitoring_region_start(&spd, monitor2);
+    {
+        dlb_monitor_t *monitor1 = monitoring_region_register("Test nested 1");
+        dlb_monitor_t *monitor2 = monitoring_region_register("Test nested 2");
+        dlb_monitor_t *monitor3 = monitoring_region_register("Test nested 3");
+        monitoring_region_start(&spd, monitor1);
         usleep(USLEEP_TIME);
-        for (j=0; j<NUM_MEASUREMENTS; ++j) {
-            monitoring_region_start(&spd, monitor3);
+        for (i=0; i<NUM_MEASUREMENTS; ++i) {
+            monitoring_region_start(&spd, monitor2);
             usleep(USLEEP_TIME);
-            monitoring_region_stop(&spd, monitor3);
+            for (j=0; j<NUM_MEASUREMENTS; ++j) {
+                monitoring_region_start(&spd, monitor3);
+                usleep(USLEEP_TIME);
+                monitoring_region_stop(&spd, monitor3);
+            }
+            usleep(USLEEP_TIME);
+            monitoring_region_stop(&spd, monitor2);
         }
         usleep(USLEEP_TIME);
-        monitoring_region_stop(&spd, monitor2);
+        monitoring_region_stop(&spd, monitor1);
+        assert( monitor1->num_measurements == 1 );
+        assert( monitor2->num_measurements == NUM_MEASUREMENTS );
+        assert( monitor3->num_measurements == NUM_MEASUREMENTS * NUM_MEASUREMENTS );
+        assert( monitor1->elapsed_time > monitor2->elapsed_time );
+        assert( monitor2->elapsed_time > monitor3->elapsed_time );
     }
-    usleep(USLEEP_TIME);
-    monitoring_region_stop(&spd, monitor1);
-    assert( monitor1->num_measurements == 1 );
-    assert( monitor2->num_measurements == NUM_MEASUREMENTS );
-    assert( monitor3->num_measurements == NUM_MEASUREMENTS * NUM_MEASUREMENTS );
-    assert( monitor1->elapsed_time > monitor2->elapsed_time );
-    assert( monitor2->elapsed_time > monitor3->elapsed_time );
 
     /* Test monitor register with repeated or NULL names */
-    dlb_monitor_t *monitor4 = monitoring_region_register("Test nested 3");
-    assert( monitor4 == monitor3 );
-    dlb_monitor_t *monitor5 = monitoring_region_register(NULL);
-    assert( monitor5 != NULL );
-    dlb_monitor_t *monitor6 = monitoring_region_register(NULL);
-    assert( monitor6 != NULL );
-    assert( monitor6 != monitor5 );
-    assert( strcmp(monitor5->name, "Anonymous Region 1") == 0 );
-    assert( strcmp(monitor6->name, "Anonymous Region 2") == 0 );
+    {
+        dlb_monitor_t *monitor3 = monitoring_region_register("Test nested 3");
+        dlb_monitor_t *monitor4 = monitoring_region_register("Test nested 3");
+        assert( monitor4 == monitor3 );
+        dlb_monitor_t *monitor5 = monitoring_region_register(NULL);
+        assert( monitor5 != NULL );
+        dlb_monitor_t *monitor6 = monitoring_region_register(NULL);
+        assert( monitor6 != NULL );
+        assert( monitor6 != monitor5 );
+        assert( strcmp(monitor5->name, "Anonymous Region 1") == 0 );
+        assert( strcmp(monitor6->name, "Anonymous Region 2") == 0 );
+    }
 
     /* Test monitor name length */
-    const char *long_name = "This is a very long name. It is so long that it is more than MONITOR_MAX_KEY_LEN which, at the time of writing, should be 128 characters.";
-    dlb_monitor_t *monitor7 = monitoring_region_register(long_name);
-    dlb_monitor_t *monitor8 = monitoring_region_register(long_name);
-    assert( monitor7 == monitor8 );
-    monitoring_region_report(&spd, monitor7);
-    monitoring_region_report(&spd, mpi_monitor);
+    {
+        const char *long_name = "This is a very long name. It is so long that"
+            " it is more than MONITOR_MAX_KEY_LEN which, at the time of writing,"
+            " should be 128 characters.";
+        dlb_monitor_t *monitor7 = monitoring_region_register(long_name);
+        dlb_monitor_t *monitor8 = monitoring_region_register(long_name);
+        assert( monitor7 == monitor8 );
+        monitoring_region_report(&spd, monitor7);
+        monitoring_region_report(&spd, mpi_monitor);
+    }
 
     talp_finalize(&spd);
 

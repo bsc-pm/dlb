@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
         dlb_node_metrics_t node_metrics2;
         assert( talp_collect_node_metrics(&spd, DLB_MPI_REGION, &node_metrics1) == DLB_SUCCESS );
         assert( talp_collect_node_metrics(&spd, mpi_monitor, &node_metrics2) == DLB_SUCCESS );
-        assert( !monitoring_region_is_started(&spd, mpi_monitor) );
+        assert( !monitoring_region_is_started(mpi_monitor) );
         assert( cmp_node_metrics(&node_metrics1, &node_metrics2) == 0 );
         print_node_metrics(&node_metrics1);
 
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
         dlb_monitor_t *monitor = monitoring_region_register(NULL);
         assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
         assert( talp_collect_node_metrics(&spd, monitor, &node_metrics3) == DLB_SUCCESS );
-        assert( monitoring_region_is_started(&spd, monitor) );
+        assert( monitoring_region_is_started(monitor) );
 
         /* Finalize */
         talp_mpi_finalize(&spd);

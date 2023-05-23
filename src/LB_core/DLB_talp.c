@@ -722,7 +722,12 @@ static void monitoring_region_finalize(dlb_monitor_t *monitor) {
     monitor->name = NULL;
 }
 
-int monitoring_region_reset(dlb_monitor_t *monitor) {
+int monitoring_region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+    if (monitor == NULL) {
+        talp_info_t *talp_info = spd->talp_info;
+        monitor = &talp_info->mpi_monitor;
+    }
+
     ++(monitor->num_resets);
     monitor->num_measurements = 0;
     monitor->start_time = 0;
@@ -743,6 +748,11 @@ int monitoring_region_reset(dlb_monitor_t *monitor) {
 }
 
 int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+    if (monitor == NULL) {
+        talp_info_t *talp_info = spd->talp_info;
+        monitor = &talp_info->mpi_monitor;
+    }
+
     int error;
     monitor_data_t *monitor_data = monitor->_data;
 
@@ -766,6 +776,11 @@ int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *m
 }
 
 int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+    if (monitor == NULL) {
+        talp_info_t *talp_info = spd->talp_info;
+        monitor = &talp_info->mpi_monitor;
+    }
+
     int error;
     monitor_data_t *monitor_data = monitor->_data;
 
@@ -789,12 +804,16 @@ int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *mo
     return error;
 }
 
-bool monitoring_region_is_started(const subprocess_descriptor_t *spd,
-        const dlb_monitor_t *monitor) {
+bool monitoring_region_is_started(const dlb_monitor_t *monitor) {
     return ((monitor_data_t*)monitor->_data)->started;
 }
 
 int monitoring_region_report(const subprocess_descriptor_t *spd, const dlb_monitor_t *monitor) {
+    if (monitor == NULL) {
+        talp_info_t *talp_info = spd->talp_info;
+        monitor = &talp_info->mpi_monitor;
+    }
+
     info("########### Monitoring Region Summary ###########");
     info("### Name:                       %s", monitor->name);
     info("### Elapsed time :              %.9g seconds",
