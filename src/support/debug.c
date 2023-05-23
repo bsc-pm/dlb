@@ -58,11 +58,13 @@ enum { VBFORMAT_LEN = 128 };
 static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
 static bool quiet = false;
+static bool silent = false;
 static bool werror = false;
 static pthread_mutex_t dlb_clean_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void debug_init(const options_t *options) {
     quiet = options->quiet;
+    silent = options->silent;
     werror = options->debug_opts & DBG_WERROR;
     vb_opts = options->verbose;
     vb_fmt = options->verbose_fmt;
@@ -85,46 +87,55 @@ void debug_init(const options_t *options) {
 }
 
 static void vprint(FILE *fp, const char *prefix, const char *fmt, va_list list) {
-    if (!quiet) {
-        // Write timestamp
-        enum { TIMESTAMP_MAX_SIZE = 32 };
-        char timestamp[TIMESTAMP_MAX_SIZE];
-        if (vb_fmt & VBF_TSTAMP) {
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
-            strftime(timestamp, TIMESTAMP_MAX_SIZE, "[%Y-%m-%dT%T] ", tm);
-        } else {
-            timestamp[0] = '\0';
-        }
-
-        // Write spid
-        enum { SPID_MAX_SIZE = 16 };
-        char spid[SPID_MAX_SIZE];
-        if (vb_fmt & VBF_SPID && thread_spd) {
-            snprintf(spid, SPID_MAX_SIZE, ":%d", thread_spd->id);
-        } else {
-            spid[0] = '\0';
-        }
-
-        // Write thread id
-        enum { THREADID_MAX_SIZE = 24 };
-        char threadid[THREADID_MAX_SIZE];
-        if (vb_fmt & VBF_THREAD) {
-            snprintf(threadid, THREADID_MAX_SIZE, ":%ld", syscall(SYS_gettid));
-        } else {
-            threadid[0] = '\0';
-        }
-
-        // Allocate message in an intermediate buffer and print in one function
-        char *msg;
-        vasprintf(&msg, fmt, list);
-        fprintf(fp, "%s%s[%s%s%s]: %s\n", timestamp, prefix, fmt_str, spid, threadid, msg);
-        free(msg);
+    // Write timestamp
+    enum { TIMESTAMP_MAX_SIZE = 32 };
+    char timestamp[TIMESTAMP_MAX_SIZE];
+    if (vb_fmt & VBF_TSTAMP) {
+        time_t t = time(NULL);
+        struct tm *tm = localtime(&t);
+        strftime(timestamp, TIMESTAMP_MAX_SIZE, "[%Y-%m-%dT%T] ", tm);
+    } else {
+        timestamp[0] = '\0';
     }
+
+    // Write spid
+    enum { SPID_MAX_SIZE = 16 };
+    char spid[SPID_MAX_SIZE];
+    if (vb_fmt & VBF_SPID && thread_spd) {
+        snprintf(spid, SPID_MAX_SIZE, ":%d", thread_spd->id);
+    } else {
+        spid[0] = '\0';
+    }
+
+    // Write thread id
+    enum { THREADID_MAX_SIZE = 24 };
+    char threadid[THREADID_MAX_SIZE];
+    if (vb_fmt & VBF_THREAD) {
+        snprintf(threadid, THREADID_MAX_SIZE, ":%ld", syscall(SYS_gettid));
+    } else {
+        threadid[0] = '\0';
+    }
+
+    // Allocate message in an intermediate buffer and print in one function
+    char *msg;
+    vasprintf(&msg, fmt, list);
+    fprintf(fp, "%s%s[%s%s%s]: %s\n", timestamp, prefix, fmt_str, spid, threadid, msg);
+    free(msg);
 }
 
 static void __attribute__((__noreturn__)) vfatal(const char *fmt, va_list list) {
-    vprint(stderr, "DLB PANIC", fmt, list);
+    /* Parse --silent option if fatal() was invoked before init */
+    if (unlikely(vb_opts == VB_UNDEF)) {
+        /* If fatal() was invoked before debug_init, we want to parse the
+         * --silent option but ensuring that parsing the options does not cause
+         *  a recursive fatal error */
+        vb_opts = VB_CLEAR;
+        options_parse_entry("--silent", &silent);
+    }
+
+    if (!silent) {
+        vprint(stderr, "DLB PANIC", fmt, list);
+    }
     dlb_clean();
     abort();
 }
@@ -153,7 +164,14 @@ void fatal0(const char *fmt, ...) {
 }
 
 static void vwarning(const char *fmt, va_list list) {
-    vprint(stderr, "DLB WARNING", fmt, list);
+    /* Parse --silent option if warning() was invoked before init */
+    if (unlikely(vb_opts == VB_UNDEF)) {
+        options_parse_entry("--silent", &silent);
+    }
+
+    if (!silent) {
+        vprint(stderr, "DLB WARNING", fmt, list);
+    }
 }
 
 void warning(const char *fmt, ...) {
@@ -179,7 +197,15 @@ void warning0(const char *fmt, ...) {
 }
 
 static void vinfo(const char *fmt, va_list list) {
-    vprint(stderr, "DLB", fmt, list);
+    /* Parse --quiet and --silent options if info() was invoked before init */
+    if (unlikely(vb_opts == VB_UNDEF)) {
+        options_parse_entry("--quiet", &quiet);
+        options_parse_entry("--silent", &silent);
+    }
+
+    if (!quiet && !silent) {
+        vprint(stderr, "DLB", fmt, list);
+    }
 }
 
 void info(const char *fmt, ...) {
@@ -202,14 +228,27 @@ void info0(const char *fmt, ...) {
 #endif
 }
 
+void info0_force_print(const char *fmt, ...) {
+#ifdef MPI_LIB
+    if (_mpi_rank <= 0) {
+#endif
+        va_list list;
+        va_start(list, fmt);
+        vprint(stderr, "DLB", fmt, list);
+        va_end(list);
+#ifdef MPI_LIB
+    }
+#endif
+}
+
 #undef verbose
 void verbose(verbose_opts_t flag, const char *fmt, ...) {
-    /* Parse verbose options if verbose() was invoked before DLB_Init */
+    /* Parse verbose options if verbose() was invoked before init */
     if (unlikely(vb_opts == VB_UNDEF)) {
-        options_t options;
-        options_init(&options, NULL);
-        debug_init(&options);
+        options_parse_entry("--verbose", &vb_opts);
     }
+
+    if (quiet) return;
 
     va_list list;
     va_start(list, fmt);

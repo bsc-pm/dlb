@@ -39,6 +39,7 @@ void warning(const char *fmt, ...)  __attribute__ ((format (printf, 1, 2)));
 void warning0(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 void info(const char *fmt, ...)     __attribute__ ((format (printf, 1, 2)));
 void info0(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
+void info0_force_print(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
 void verbose(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
 void print_backtrace(void);
 void dlb_clean(void);

@@ -36,6 +36,7 @@ typedef struct Options {
     interaction_mode_t  mode;
     /* verbose */
     bool                quiet;
+    bool                silent;
     verbose_opts_t      verbose;
     verbose_fmt_t       verbose_fmt;
     /* instrument */
