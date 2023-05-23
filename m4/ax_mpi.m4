@@ -5,7 +5,7 @@ AC_DEFUN([AX_MPI],
 [
     AC_MSG_CHECKING([for MPI])
     AC_ARG_WITH([mpi],
-        AS_HELP_STRING([--with-mpi@<:@=DIR@:>@], [build also libraries with MPI support]),
+        AS_HELP_STRING([--with-mpi@<:@=DIR@:>@], [build libdlb_mpi.so, a library to intercept both C and Fortran MPI]),
         [], dnl Implicit: with_mpi=$withvalue
         [with_mpi=no]
     )
@@ -47,14 +47,16 @@ AC_DEFUN([AX_MPI],
             [],
             [AC_MSG_ERROR([Cannot find MPI libraries])])
 
-        ### MPI TESTS ###
-        AC_MSG_CHECKING([whether to enable MPI test suite])
-        AC_ARG_ENABLE([mpi-tests],
-            AS_HELP_STRING([--enable-mpi-tests], [enable MPI tests]),
-            [], dnl Implicit: enable_mpi_tests=$enableval
-            [enable_mpi_tests=no]
-        )
-        AC_MSG_RESULT([$enable_mpi_tests])
+        ### MPI TESTS  ###
+        # deprecated, keep variable in case we want to re-do them, but don't show option in configure
+        enable_mpi_tests=no
+        dnl AC_MSG_CHECKING([whether to enable MPI test suite])
+        dnl AC_ARG_ENABLE([mpi-tests],
+        dnl     AS_HELP_STRING([--enable-mpi-tests], [enable MPI tests]),
+        dnl     [], dnl Implicit: enable_mpi_tests=$enableval
+        dnl     [enable_mpi_tests=no]
+        dnl )
+        dnl AC_MSG_RESULT([$enable_mpi_tests])
 
         AS_IF([test "x$enable_mpi_tests" != xno], [
             AC_MSG_WARN([Option --enable-mpi-tests is currently not supported and has no effect.])
@@ -105,22 +107,6 @@ AC_DEFUN([AX_MPI],
                 ])
             ])
         ])
-
-        ### MPI EXPORT ENV. VAR. ###
-        AC_LANG_PUSH([C])
-        AC_LANG_CONFTEST([
-            AC_LANG_SOURCE([[
-                #include <stdlib.h>
-                #include <string.h>
-                int main(int argc, char *argv[])
-                {
-                    char *var = getenv("CONFTEST_VARIABLE");
-                    if (var && strcmp(var, "CONFTEST") == 0) return EXIT_SUCCESS;
-                    return EXIT_FAILURE;
-                }
-            ]])
-        ])
-        AC_LANG_POP([C])
 
         ### MPI VERSION ###
         AC_LANG_PUSH([C])
@@ -234,6 +220,24 @@ AC_DEFUN([AX_MPI],
             AC_DEFINE_UNQUOTED([MPI_COUNT_KIND], [$mpi_count_kind], [MPI Fortran MPI_COUNT_KIND])
         ])
 
+        ### Check for specific C MPI library
+        AC_MSG_CHECKING([whether to compile libdlb_mpic.so, containing only C MPI symbols])
+        AC_ARG_ENABLE([c-mpi-library],
+            AS_HELP_STRING([--enable-c-mpi-library], [compile also a DLB MPI library specific for C]),
+            [], dnl Implicit: enable_c_mpi_library=$enableval
+            [enable_c_mpi_library=no]
+        )
+        AC_MSG_RESULT([$enable_c_mpi_library])
+        #
+        ### Check for specific Fortran MPI library
+        AC_MSG_CHECKING([whether to compile libdlb_mpif.so, containing only Fortran MPI symbols])
+        AC_ARG_ENABLE([fortran-mpi-library],
+            AS_HELP_STRING([--enable-fortran-mpi-library], [compile also a DLB MPI library specific for Fortran]),
+            [], dnl Implicit: enable_fortran_mpi_library=$enableval
+            [enable_fortran_mpi_library=no]
+        )
+        AC_MSG_RESULT([$enable_fortran_mpi_library])
+
         ### MPI Fortran 08 bindings ###
         AC_MSG_CHECKING([whether to compile MPI Fortran 2008 interface])
         AS_IF([test x"$FC" != x \
@@ -255,6 +259,8 @@ AC_DEFUN([AX_MPI],
     AC_SUBST([MPI_VERSION])
     AC_SUBST([MPI_LIBRARY_VERSION])
     AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != xno])
+    AM_CONDITIONAL([MPIC_LIB], [test "x$enable_c_mpi_library" != xno])
+    AM_CONDITIONAL([MPIF_LIB], [test "x$enable_fortran_mpi_library" != xno])
     AM_CONDITIONAL([MPI_TESTS], [test "x$enable_mpi_tests" != xno])
     AM_CONDITIONAL([MPI_F08], [test x"$mpi_f08" = xyes])
     AM_CONDITIONAL([HAVE_MPI_VERSION], [test "x$MPI_VERSION" != x])
