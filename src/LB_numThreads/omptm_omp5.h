@@ -43,6 +43,11 @@ void omptm_omp5__parallel_end(
         int flags,
         const void *codeptr_ra);
 
+void omptm_omp5__task_schedule(
+        ompt_data_t *prior_task_data,
+        ompt_task_status_t prior_task_status,
+        ompt_data_t *next_task_data);
+
 void omptm_omp5__implicit_task(
         ompt_scope_endpoint_t endpoint,
         ompt_data_t *parallel_data,
@@ -50,5 +55,12 @@ void omptm_omp5__implicit_task(
         unsigned int actual_parallelism,
         unsigned int index,
         int flags);
+
+void omptm_omp5__sync_region(
+        ompt_sync_region_t kind,
+        ompt_scope_endpoint_t endpoint,
+        ompt_data_t *parallel_data,
+        ompt_data_t *task_data,
+        const void *codeptr_ra);
 
 #endif /* OMPTM_OMP5_H */

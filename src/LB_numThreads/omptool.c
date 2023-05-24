@@ -291,10 +291,10 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
                 .parallel_begin     = omptm_omp5__parallel_begin,
                 .parallel_end       = omptm_omp5__parallel_end,
                 .task_create        = NULL,
-                .task_schedule      = NULL,
+                .task_schedule      = omptm_omp5__task_schedule,
                 .implicit_task      = omptm_omp5__implicit_task,
                 .work               = NULL,
-                .sync_region        = NULL,
+                .sync_region        = omptm_omp5__sync_region,
             };
         } else if (omptm_version == OMPTM_FREE_AGENTS) {
             verbose(VB_OMPT, "Enabling experimental support with free agent threads");

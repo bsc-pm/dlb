@@ -240,6 +240,17 @@ void omptm_omp5__parallel_end(
     }
 }
 
+void omptm_omp5__task_schedule(
+        ompt_data_t *prior_task_data,
+        ompt_task_status_t prior_task_status,
+        ompt_data_t *next_task_data) {
+    if (prior_task_status == ompt_task_switch) {
+        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
+    } else if (prior_task_status == ompt_task_complete) {
+        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+    }
+}
+
 void omptm_omp5__implicit_task(
         ompt_scope_endpoint_t endpoint,
         ompt_data_t *parallel_data,
@@ -262,7 +273,30 @@ void omptm_omp5__implicit_task(
             }
             instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
         }
-    } else if (endpoint == ompt_scope_end) {
+    }
+    /* LLVM implementation may emit implicit-task-end too late, binding events
+     * will be closed at sync-region-implicit-parallel */
+}
+
+void omptm_omp5__sync_region(
+        ompt_sync_region_t kind,
+        ompt_scope_endpoint_t endpoint,
+        ompt_data_t *parallel_data,
+        ompt_data_t *task_data,
+        const void *codeptr_ra) {
+    /* Warning: at the time of writing (May 2023), LLVM upstream still uses the
+     * deprecated kind ompt_sync_region_barrier_implicit for the
+     * sync-region-implicit-parallel event, so we cannot yet remove the
+     * deprecated enum. The problem with keeping it is that we are finalizing
+     * the event earlier if there are other implicit barriers, like in a single
+     * construct.
+     */
+    if ((kind == ompt_sync_region_barrier_implicit_parallel
+                || kind == ompt_sync_region_barrier_implicit)
+            && endpoint == ompt_scope_begin
+            && parallel_data->value == PARALLEL_LEVEL_1) {
+        /* A thread participating in the level 1 parallel region
+         * has reached the implicit barrier */
         instrument_event(REBIND_EVENT,   0, EVENT_END);
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);
     }
