@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "support/options.h"
 
 #include "apis/dlb_types.h"
@@ -797,7 +801,8 @@ void options_init(options_t *options, const char *dlb_args) {
             fatal_cond(!(entry->flags & OPT_OPTIONAL),
                     "Variable %s must be defined", entry->arg_name);
             int error = set_value(entry->type, (char*)options+entry->offset, entry->default_value);
-            fatal_cond(error, "Bad parsing of default value %s", entry->default_value);
+            fatal_cond(error, "Internal error parsing default value %s=%s. Please, report bug at %s.",
+                    entry->arg_name, entry->default_value, PACKAGE_BUGREPORT);
         }
     }
 
