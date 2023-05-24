@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "support/options.h"
 
 #include "apis/dlb_types.h"
@@ -150,10 +154,19 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--quiet",
         .default_value  = "no",
-        .description    = OFFSET"Suppress all output from DLB, even error messages.",
+        .description    = OFFSET"Suppress VERBOSE and INFO messages from DLB, still shows\n"
+                          OFFSET"WARNING and PANIC messages.",
         .offset         = offsetof(options_t, quiet),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--silent",
+        .default_value  = "no",
+        .description    = OFFSET"Suppress all output from DLB, even error messages.",
+        .offset         = offsetof(options_t, silent),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
     }, {
         .var_name       = "LB_VERBOSE",
         .arg_name       = "--verbose",
@@ -642,8 +655,11 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
             if (strcmp(argument, arg_name) == 0) {
                 /* Obtain value */
                 char *value = strtok_r(NULL, "=", &end_equal);
-                fatal_cond(!value, "Bad format parsing DLB_ARGS: --argument=value");
-                snprintf(arg_value, arg_max_len, "%s", value);
+                if (value) {
+                    snprintf(arg_value, arg_max_len, "%s", value);
+                } else {
+                    warning("Bad format parsing of DLB_ARGS. Option %s with empty value", token);
+                }
                 remove_token = true;
             }
         } else {
@@ -785,7 +801,8 @@ void options_init(options_t *options, const char *dlb_args) {
             fatal_cond(!(entry->flags & OPT_OPTIONAL),
                     "Variable %s must be defined", entry->arg_name);
             int error = set_value(entry->type, (char*)options+entry->offset, entry->default_value);
-            fatal_cond(error, "Bad parsing of default value %s", entry->default_value);
+            fatal_cond(error, "Internal error parsing default value %s=%s. Please, report bug at %s.",
+                    entry->arg_name, entry->default_value, PACKAGE_BUGREPORT);
         }
     }
 
@@ -1030,7 +1047,8 @@ void options_print_variables(const options_t *options, bool print_extended) {
                     "    export DLB_ARGS=\"--lewi --no-drom\"\n"
                     "    export DLB_ARGS=\"--lewi=yes --drom=no\"\n");
 
-    info0("%s", buffer);
+    /* This function must print always and ignore options --quiet and --silent */
+    info0_force_print("%s", buffer);
 }
 
 /* Print which LeWI flags are enabled during DLB_Init */

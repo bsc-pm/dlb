@@ -180,6 +180,12 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--debug-opts=werror");
     assert(options_1.debug_opts & DBG_WERROR);
 
+    // bug: "--option=" should not cause fatal errors, just warnings,
+    // and the value must be the default
+    options_init(&options_1, "--lewi-mpi-calls=");
+    options_init(&options_2, "");
+    assert(options_1.lewi_mpi_calls == options_2.lewi_mpi_calls);
+
     // Test individual entry parsing
     bool lewi;
     bool lewi_mpi;

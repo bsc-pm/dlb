@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
     assert( strcmp(verbose_opts_tostr(VB_API|VB_SHMEM), "api:shmem") == 0 );
     assert(  equivalent_verbose_opts("api:shmem", "shmem:api") );
     assert( !equivalent_verbose_opts("api:shmem", "shmem") );
+    assert( !equivalent_verbose_opts("drom:async", "drom_async") );
 
     verbose_fmt_t fmt;
     parse_verbose_fmt("", &fmt);                    assert(fmt==VBF_CLEAR);
@@ -91,12 +92,13 @@ int main(int argc, char *argv[]) {
     assert( strcmp(verbose_fmt_tostr(VBF_NODE|VBF_MPINODE), "node:mpinode") == 0 );
     assert(  equivalent_verbose_fmt("node:thread", "thread:node") );
     assert( !equivalent_verbose_fmt("node:thread", "thread") );
+    assert( !equivalent_verbose_fmt("node:thread", "node_thread") );
 
     instrument_items_t inst;
     parse_instrument_items("", &inst);              assert(inst==INST_NONE);
     parse_instrument_items("null", &inst);          assert(inst==INST_NONE);
     parse_instrument_items("none", &inst);          assert(inst==INST_NONE);
-    parse_instrument_items("all:none", &inst);      assert(inst==INST_NONE);
+    parse_instrument_items("all:none", &inst);      assert(inst==INST_ALL);
     parse_instrument_items("all:lewi", &inst);      assert(inst==INST_ALL);
     parse_instrument_items("null:mpi:lewi:drom:talp:barrier:ompt:cpus", &inst);
     assert(inst == (INST_MPI | INST_LEWI | INST_DROM | INST_TALP | INST_BARR
@@ -107,6 +109,7 @@ int main(int argc, char *argv[]) {
     assert(strcmp(instrument_items_tostr(INST_LEWI|INST_DROM), "lewi:drom") == 0);
     assert(  equivalent_instrument_items("all", "thread:node:all") );
     assert( !equivalent_instrument_items("talp", "barrier") );
+    assert( !equivalent_instrument_items("all", "callbacks") );
 
     priority_t prio;
     err = parse_priority("", &prio);                assert(err);
@@ -143,6 +146,7 @@ int main(int argc, char *argv[]) {
     assert( strcmp(talp_summary_tostr(SUMMARY_POP_METRICS), "pop-metrics") == 0 );
     assert(  equivalent_talp_summary("omp:pop-raw", "pop-raw:omp") );
     assert( !equivalent_talp_summary("pop-metrics", "pop-raw") );
+    assert( !equivalent_talp_summary("node:process", "node_process") );
 
     interaction_mode_t mode;
     err = parse_mode("", &mode);                    assert(err);
@@ -166,7 +170,9 @@ int main(int argc, char *argv[]) {
                                                         ompt==(OMPTOOL_OPTS_MPI|OMPTOOL_OPTS_BORROW));
     assert(strcmp(omptool_opts_tostr(OMPTOOL_OPTS_MPI|OMPTOOL_OPTS_BORROW), "mpi:borrow") == 0);
     assert(  equivalent_omptool_opts("lend:borrow", "borrow:borrow:lend") );
+    assert(  equivalent_omptool_opts("aggressive", "aggressive:mpi:borrow:lend") );
     assert( !equivalent_omptool_opts("lend", "mpi") );
+    assert( !equivalent_omptool_opts("lend:mpi", "lend_mpi") );
 
     omptm_version_t omptm;
     err = parse_omptm_version("", &omptm);          assert(err);
