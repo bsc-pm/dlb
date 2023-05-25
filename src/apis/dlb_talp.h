@@ -106,10 +106,12 @@ typedef struct dlb_node_metrics_t {
     /*! Time (in nanoseconds) of the accumulated CPU time of communication
      * of the process with the highest value */
     int64_t max_mpi_time;
+    /*! Node ParallelEfficiency = Communication Efficiency * LoadBalance */
+    float   parallel_efficiency;
+    /*! Node efficiency lost due to transfer and serialization */
+    float   communication_efficiency;
     /*! Node Load Balance coefficient */
     float   load_balance;
-    /*! Node Efficiency coefficient */
-    float   parallel_efficiency;
 } dlb_node_metrics_t;
 
 #ifdef __cplusplus
@@ -180,28 +182,28 @@ const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void);
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
 
 /*! \brief Reset monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
 /*! \brief Start (or unpause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 
 /*! \brief Stop (or pause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 
 /*! \brief Print a report to stderr of the monitoring region
- *  \param[in] handle Monitoring handle that identifies the region
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
@@ -236,7 +238,10 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
  *  This functions performs a node barrier to collect the data. All processes that
  *  are running in the node must invoke this function.
  */
-int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics);
+int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics);
+
+int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics)
+    __attribute__((deprecated("DLB_TALP_CollectPOPNodeMetrics")));
 
 #ifdef __cplusplus
 }

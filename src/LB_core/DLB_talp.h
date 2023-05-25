@@ -51,13 +51,13 @@ const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const struct SubProcessDescriptor *spd);
 
 struct dlb_monitor_t* monitoring_region_register(const char* name);
-int monitoring_region_reset(struct dlb_monitor_t *monitor);
+int monitoring_region_reset(const struct SubProcessDescriptor *spd,
+        struct dlb_monitor_t *monitor);
 int monitoring_region_start(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor);
 int monitoring_region_stop(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor);
-bool monitoring_region_is_started(const struct SubProcessDescriptor *spd,
-        const struct dlb_monitor_t *monitor);
+bool monitoring_region_is_started(const struct dlb_monitor_t *monitor);
 int monitoring_region_report(const struct SubProcessDescriptor *spd,
         const struct dlb_monitor_t *monitor);
 int monitoring_regions_force_update(const struct SubProcessDescriptor *spd);
@@ -65,7 +65,7 @@ int monitoring_regions_force_update(const struct SubProcessDescriptor *spd);
 int talp_collect_pop_metrics(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);
 
-int talp_collect_node_metrics(const struct SubProcessDescriptor *spd,
+int talp_collect_pop_node_metrics(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
 
 #endif
