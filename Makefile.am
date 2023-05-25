@@ -300,6 +300,36 @@ libdlb_instr_dbg_la_LIBADD = libdlb_common_dbg.la
 endif
 
 #********************************************************************************
+# libdlb_mpif08.la
+#********************************************************************************
+# Note: MPI_interceptF08.F90 is compiled and linked separately in a convenience
+# static library. This usually avoids using FC for linking libdlb_mpi.so and
+# reduces problems in some systems.
+
+LDADD_MPIF08 =
+LDADD_MPIF08_DEBUG =
+
+if MPI_F08
+MPIF08_SRCS_GEN = \
+	src/LB_MPI/MPI_interceptF08.F90 \
+	$(END)
+
+LDADD_MPIF08 += libdlb_mpif08.la
+noinst_LTLIBRARIES += libdlb_mpif08.la
+libdlb_mpif08_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS)
+libdlb_mpif08_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
+nodist_libdlb_mpif08_la_SOURCES = $(MPIF08_SRCS_GEN)
+
+if DEBUG_LIB
+LDADD_MPIF08_DEBUG += libdlb_mpif08_dbg.la
+noinst_LTLIBRARIES += libdlb_mpif08_dbg.la
+libdlb_mpif08_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS)
+libdlb_mpif08_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
+nodist_libdlb_mpif08_dbg_la_SOURCES = $(MPIF08_SRCS_GEN)
+endif
+endif #MPI_F08
+
+#********************************************************************************
 # libdlb_mpi.so
 #********************************************************************************
 if MPI_LIB
@@ -317,12 +347,6 @@ MPI_SRCS_GEN = \
 	src/LB_MPI/MPI_interfaceF.h     \
 	$(END)
 
-if MPI_F08
-MPI_SRCS_GEN += \
-	src/LB_MPI/MPI_interceptF08.F90 \
-	$(END)
-endif
-
 MPI_INTR_GEN = \
 	src/LB_MPI/MPI_intercept.c      \
 	src/LB_MPI/MPI_interceptF.c     \
@@ -331,43 +355,39 @@ MPI_INTR_GEN = \
 lib_LTLIBRARIES += libdlb_mpi.la
 libdlb_mpi_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
-libdlb_mpi_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_la_SOURCES = $(MPI_SRCS_GEN) $(MPI_INTR_GEN)
-libdlb_mpi_la_LIBADD = libdlb_common.la
+libdlb_mpi_la_LIBADD = libdlb_common.la $(LDADD_MPIF08)
 
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpi_dbg.la
 libdlb_mpi_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
-libdlb_mpi_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS_GEN) $(MPI_INTR_GEN)
-libdlb_mpi_dbg_la_LIBADD = libdlb_common_dbg.la
+libdlb_mpi_dbg_la_LIBADD = libdlb_common_dbg.la $(LDADD_MPIF08_DEBUG)
 endif
 
 if INSTRUMENTATION_LIB
 lib_LTLIBRARIES += libdlb_mpi_instr.la
 libdlb_mpi_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
-libdlb_mpi_instr_la_FCFLAGS = $(INSTR_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_instr_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS_GEN)
-libdlb_mpi_instr_la_LIBADD = libdlb_common.la
+libdlb_mpi_instr_la_LIBADD = libdlb_common.la $(LDADD_MPIF08)
 endif
 
 if INSTRUMENTATION_DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpi_instr_dbg.la
 libdlb_mpi_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
-libdlb_mpi_instr_dbg_la_FCFLAGS = $(INSTR_DEBUG_FCFLAGS) $(AM_FCFLAGS)
 libdlb_mpi_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpi_instr_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_GEN)
-libdlb_mpi_instr_dbg_la_LIBADD = libdlb_common_dbg.la
+libdlb_mpi_instr_dbg_la_LIBADD = libdlb_common_dbg.la $(LDADD_MPIF08_DEBUG)
 endif
 endif #MPI_LIB
 
@@ -467,7 +487,7 @@ libdlb_mpif_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpif_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_la_SOURCES = $(MPIF_SRCS_GEN) $(MPIF_INTR_GEN)
-libdlb_mpif_la_LIBADD = libdlb_common.la
+libdlb_mpif_la_LIBADD = libdlb_common.la $(LDADD_MPIF08)
 
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpif_dbg.la
@@ -476,7 +496,7 @@ libdlb_mpif_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpif_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS_GEN) $(MPIF_INTR_GEN)
-libdlb_mpif_dbg_la_LIBADD = libdlb_common_dbg.la
+libdlb_mpif_dbg_la_LIBADD = libdlb_common_dbg.la $(LDADD_MPIF08_DEBUG)
 endif
 
 if INSTRUMENTATION_LIB
@@ -486,7 +506,7 @@ libdlb_mpif_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpif_instr_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS_GEN)
-libdlb_mpif_instr_la_LIBADD = libdlb_common.la
+libdlb_mpif_instr_la_LIBADD = libdlb_common.la $(LDADD_MPIF08)
 endif
 
 if INSTRUMENTATION_DEBUG_LIB
@@ -496,7 +516,7 @@ libdlb_mpif_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_mpif_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
 libdlb_mpif_instr_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_GEN)
-libdlb_mpif_instr_dbg_la_LIBADD = libdlb_common_dbg.la
+libdlb_mpif_instr_dbg_la_LIBADD = libdlb_common_dbg.la $(LDADD_MPIF08_DEBUG)
 endif
 endif #MPIF_LIB
 endif #MPI_LIB
