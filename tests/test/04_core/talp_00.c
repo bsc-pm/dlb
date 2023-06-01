@@ -40,28 +40,6 @@
 
 enum { USLEEP_TIME = 1000 };
 
-typedef struct DLB_ALIGN_CACHE talp_sample_t {
-    atomic_int_least64_t    mpi_time;
-    atomic_int_least64_t    useful_time;
-    atomic_uint_least64_t   num_mpi_calls;
-    int64_t     last_updated_timestamp;
-    bool        in_useful;
-    bool        cpu_disabled;
-#ifdef PAPI_LIB
-    atomic_int_least64_t  instructions;
-    atomic_int_least64_t  cycles;
-#endif
-} talp_sample_t;
-
-typedef struct talp_info_t {
-    dlb_monitor_t       mpi_monitor;
-    bool                external_profiler;
-    int                 ncpus;
-    talp_sample_t       **samples;
-    pthread_mutex_t     samples_mutex;
-} talp_info_t;
-
-
 int main(int argc, char *argv[]) {
 
     enum { NUM_MEASUREMENTS = 10 };

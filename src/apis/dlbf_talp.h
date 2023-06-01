@@ -27,6 +27,9 @@
         integer(kind=c_int64_t) :: elapsed_computation_time
         integer(kind=c_int64_t) :: accumulated_MPI_time
         integer(kind=c_int64_t) :: accumulated_computation_time
+        integer(kind=c_int64_t) :: num_mpi_calls
+        integer(kind=c_int64_t) :: accumulated_instructions
+        integer(kind=c_int64_t) :: accumulated_cycles
         type(c_ptr)             :: data_
        end type
 

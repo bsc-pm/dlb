@@ -56,46 +56,12 @@ typedef struct talp_macrosample_t {
     int64_t mpi_time;
     int64_t useful_time;
     int64_t elapsed_useful_time;
-    uint64_t num_mpi_calls;
+    int64_t num_mpi_calls;
 #ifdef PAPI_LIB
-    long long cycles;
-    long long instructions;
+    int64_t cycles;
+    int64_t instructions;
 #endif
 } talp_macrosample_t;
-
-/* The sample contains the temporary per-thread accumulated values of all the
- * measured metrics. Once the sample ends, a macrosample is created using
- * samples from all threads. The sample starts and ends on each one of the
- * following scenarios:
- *  - MPI Init/Finalize
- *  - a region starts or stops
- *  - a request from the API
- */
-typedef struct DLB_ALIGN_CACHE talp_sample_t {
-    /* Sample accumulated values */
-    atomic_int_least64_t    mpi_time;
-    atomic_int_least64_t    useful_time;
-    atomic_uint_least64_t   num_mpi_calls;
-    /* Sample temporary values */
-    int64_t     last_updated_timestamp;
-    bool        in_useful;
-    bool        cpu_disabled;
-   /*PAPI counters collected data*/
-#ifdef PAPI_LIB
-    atomic_int_least64_t  instructions;
-    atomic_int_least64_t  cycles;
-#endif
-} talp_sample_t;
-
-/* Talp info per spd */
-typedef struct talp_info_t {
-    dlb_monitor_t       mpi_monitor;        /* monitor MPI_Init -> MPI_Finalize */
-    bool                external_profiler;  /* whether to update shmem on every sample */
-    int                 ncpus;              /* Number of process CPUs */
-    talp_sample_t       **samples;          /* Per-thread ongoing sample,
-                                               added to all monitors when finished */
-    pthread_mutex_t     samples_mutex;      /* Mutex to protect samples allocation/iteration */
-} talp_info_t;
 
 /* Private data per monitor */
 typedef struct monitor_data_t {
@@ -116,7 +82,6 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd);
 static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd);
 
 static MPI_Datatype mpi_int64_type;
-static MPI_Datatype mpi_uint64_type;
 #endif
 
 extern __thread bool thread_is_observer;
@@ -349,10 +314,10 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
             /* Atomically extract and reset sample values */
             int64_t mpi_time = DLB_ATOMIC_EXCH_RLX(&sample->mpi_time, 0);
             int64_t useful_time = DLB_ATOMIC_EXCH_RLX(&sample->useful_time, 0);
-            uint64_t num_mpi_calls = DLB_ATOMIC_EXCH_RLX(&sample->num_mpi_calls, 0);
+            int64_t num_mpi_calls = DLB_ATOMIC_EXCH_RLX(&sample->num_mpi_calls, 0);
 #ifdef PAPI_LIB
-            long long cycles = DLB_ATOMIC_EXCH_RLX(&sample->cycles, 0);
-            long long instructions = DLB_ATOMIC_EXCH_RLX(&sample->instructions, 0);
+            int64_t cycles = DLB_ATOMIC_EXCH_RLX(&sample->cycles, 0);
+            int64_t instructions = DLB_ATOMIC_EXCH_RLX(&sample->instructions, 0);
 #endif
 
             /* Accumulate */
@@ -386,10 +351,8 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
 #if MPI_LIB
 # if MPI_VERSION >= 3
     mpi_int64_type = MPI_INT64_T;
-    mpi_uint64_type = MPI_UINT64_T;
 # else
     PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
-    PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(uint64_t), &mpi_uint64_type);
 # endif
 #endif
 
@@ -728,18 +691,12 @@ int monitoring_region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *m
         monitor = &talp_info->mpi_monitor;
     }
 
-    ++(monitor->num_resets);
-    monitor->num_measurements = 0;
-    monitor->start_time = 0;
-    monitor->stop_time = 0;
-    monitor->elapsed_time = 0;
-    monitor->elapsed_computation_time = 0;
-    monitor->accumulated_MPI_time = 0;
-    monitor->accumulated_computation_time = 0;
-#ifdef PAPI_LIB
-    monitor->accumulated_cycles = 0;
-    monitor->accumulated_instructions = 0;
-#endif
+    /* Reset everything except these fields: */
+    *monitor = (const dlb_monitor_t) {
+        .name = monitor->name,
+        .num_resets = monitor->num_resets + 1,
+        ._data = monitor->_data,
+    };
 
     monitor_data_t *monitor_data = monitor->_data;
     monitor_data->started = false;
@@ -957,12 +914,8 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
             float   ipc;
         } serialized_monitor_t;
 
-#ifdef PAPI_LIB
         float ipc = monitor->accumulated_cycles == 0 ? 0.0f
             : (float)monitor->accumulated_instructions / monitor->accumulated_cycles;
-#else
-        float ipc = 0.0f;
-#endif
 
         serialized_monitor_t serialized_monitor = (const serialized_monitor_t) {
             .pid = spd->id,
@@ -1027,17 +980,25 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 
     /* SUMMARY POP: Compute POP metrics and record */
     if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW)) {
+        int total_cpus;
+        int total_nodes;
         int64_t elapsed_time;
         int64_t elapsed_useful;
         int64_t app_sum_useful;
         int64_t node_sum_useful;
-        int total_cpus;
-        int total_nodes;
-        uint64_t num_mpi_calls;
-# ifdef PAPI_LIB
-        long long cycles;
-        long long instructions;
-# endif
+        int64_t num_mpi_calls;
+        int64_t cycles;
+        int64_t instructions;
+
+        /* Obtain the total number of nodes used in this region */
+        int local_node_used = 0;
+        int i_used_this_node = monitor->num_measurements > 0 ? 1 : 0;
+        PMPI_Reduce(&i_used_this_node, &local_node_used,
+                1, MPI_INT, MPI_MAX, 0, getNodeComm());
+        if (_process_id == 0) {
+            PMPI_Reduce(&local_node_used, &total_nodes,
+                    1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
+        }
 
         /* Obtain the maximum elapsed time */
         PMPI_Reduce(&monitor->elapsed_time, &elapsed_time,
@@ -1066,27 +1027,20 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         PMPI_Reduce(&ncpus, &total_cpus,
                 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-        /* Obtain the total number of nodes used in this region */
-        int local_node_used = 0;
-        int i_used_this_node = monitor->num_measurements > 0 ? 1 : 0;
-        PMPI_Reduce(&i_used_this_node, &local_node_used,
-                1, MPI_INT, MPI_MAX, 0, getNodeComm());
-        if (_process_id == 0) {
-            PMPI_Reduce(&local_node_used, &total_nodes,
-                    1, MPI_INT, MPI_SUM, 0, getInterNodeComm());
-        }
-
         /* Obtain the total number of MPI calls */
         PMPI_Reduce(&monitor->num_mpi_calls, &num_mpi_calls, 1,
-                mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
+                mpi_int64_type, MPI_SUM, 0, MPI_COMM_WORLD);
 
 # ifdef PAPI_LIB
         /* Obtain the sum of cycles */
         PMPI_Reduce(&monitor->accumulated_cycles, &cycles, 1,
-                mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
+                mpi_int64_type, MPI_SUM, 0, MPI_COMM_WORLD);
         /* Obtain the sum of instructions*/
         PMPI_Reduce(&monitor->accumulated_instructions, &instructions, 1,
-                mpi_uint64_type, MPI_SUM, 0, MPI_COMM_WORLD);
+                mpi_int64_type, MPI_SUM, 0, MPI_COMM_WORLD);
+#else
+        cycles = 0;
+        instructions = 0;
 # endif
 
         if (_mpi_rank == 0) {
@@ -1121,14 +1075,8 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                         app_sum_useful,
                         node_sum_useful,
                         num_mpi_calls,
-# ifdef PAPI_LIB
                         cycles,
-                        instructions
-# else
-                        /* We do not have cycles and instructions here */
-                        0, 0
-# endif
-                        );
+                        instructions);
             }
         }
     }

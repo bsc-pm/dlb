@@ -25,6 +25,7 @@
 #endif
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /* Atomic operations */
 
