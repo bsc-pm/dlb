@@ -283,18 +283,6 @@
             integer(kind=c_int), value, intent(in) :: errnum
         end function dlb_strerror
 
-        function dlb_autosizer_start() result(ierr)                     &
-     &          bind(c, name='DLB_AutoSizer_start')
-            use iso_c_binding
-            integer(kind=c_int) :: ierr
-        end function dlb_autosizer_start
-
-        function dlb_autosizer_end() result(ierr)                       &
-     &          bind(c, name='DLB_AutoSizer_end')
-            use iso_c_binding
-            integer(kind=c_int) :: ierr
-        end function dlb_autosizer_end
-
       end interface
 
 ! -*- fortran -*-  vim: set ft=fortran:

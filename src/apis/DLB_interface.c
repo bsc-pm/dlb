@@ -357,15 +357,6 @@ const char* DLB_Strerror(int errnum) {
     return error_get_str(errnum);
 }
 
-int DLB_AutoSizer_start(){
-    spd_enter_dlb(NULL);
-    return auto_resize_start();
-}
-int DLB_AutoSizer_end(){
-    spd_enter_dlb(NULL);
-    return auto_resize_end();
-}
-
 int DLB_SetObserverRole(bool thread_is_observer) {
     spd_enter_dlb(NULL);
     return set_observer_role(thread_is_observer);

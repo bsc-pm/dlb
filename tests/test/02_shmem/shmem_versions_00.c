@@ -164,28 +164,8 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 6 };
+    enum { KNOWN_PROCINFO_VERSION = 7 };
 
-    struct KnownResizerData3 {
-        char* name;
-        struct timespec mpi_time;  // Elapsed
-        struct timespec compute_time; // Elapsed * numCPU
-        struct timespec elapsed_time;  // Elapsed time
-        struct timespec idle_time;
-        struct timespec lend_time;
-    };
-    struct KnownResizerData2 {
-        struct timespec mpi_time;
-        struct timespec compute_time;
-        double percent;
-        int niter;
-    };
-    struct KnownResizerData {
-        struct KnownResizerData2 iterations[1000];
-        int iter_num;
-        double load_balance;
-        struct KnownResizerData3 aux;
-    };
     struct KnownTALPTimes {
         atomic_int_least64_t int1;
         atomic_int_least64_t int2;
@@ -193,7 +173,7 @@ static void check_procinfo_version(void) {
         atomic_int_least64_t int4;
         bool bool1;
     };
-    struct KnownProcinfo {
+    struct DLB_ALIGN_CACHE KnownProcinfo {
         pid_t pid;
         bool bool1;
         bool bool2;
@@ -204,7 +184,6 @@ static void check_procinfo_version(void) {
         // Cpu Usage fields:
         double double1;
         double double2;
-        struct KnownResizerData data1;
         struct KnownTALPTimes talp1;
 #ifdef DLB_LOAD_AVERAGE
         // Load average fields:
@@ -218,7 +197,6 @@ static void check_procinfo_version(void) {
         bool bool2;
         struct timespec time;
         cpu_set_t mask1;
-        cpu_set_t mask2;
         struct KnownProcinfo info[0];
     };
 

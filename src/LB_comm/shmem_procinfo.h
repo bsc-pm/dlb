@@ -72,7 +72,4 @@ bool shmem_procinfo__exists(void);
 int  shmem_procinfo__version(void);
 size_t shmem_procinfo__size(void);
 
-int auto_resize_start(void);
-int auto_resize_end(void);
-
 #endif /* SHMEM_PROCINFO_H */
