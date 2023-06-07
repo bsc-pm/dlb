@@ -21,11 +21,13 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "apis/dlb_talp.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_talp.h"
 #include "support/mask_utils.h"
 #include "support/atomic.h"
 
@@ -210,12 +212,40 @@ static void check_procinfo_version(void) {
     assert( size == known_size );
 }
 
+static void check_talp_version(void) {
+    enum { KNOWN_TALP_VERSION = 1 };
+    enum { KNOWN_DEFAULT_REGIONS_PER_PROC = 10 };
+
+    struct DLB_ALIGN_CACHE TalpRegion {
+        char name[DLB_MONITOR_NAME_MAX];
+        atomic_int_least64_t int1;
+        atomic_int_least64_t int2;
+        pid_t pid;
+    };
+
+    struct KnownTalpShdata {
+        bool bool1;
+        int int1;
+        struct TalpRegion talp_region[0];
+    };
+
+    int version = shmem_talp__version();
+    size_t size = shmem_talp__size();
+    size_t known_size = sizeof(struct KnownTalpShdata)
+        + sizeof(struct TalpRegion)*mu_get_system_size()*KNOWN_DEFAULT_REGIONS_PER_PROC;
+    fprintf(stderr, "shmem_talp version %d, size: %zu, known_size: %zu\n",
+            version, size, known_size);
+    assert( version == KNOWN_TALP_VERSION );
+    assert( size == known_size );
+}
+
 int main(int argc, char **argv) {
     check_shmem_sync_version();
     check_async_version();
     check_barrier_version();
     check_cpuinfo_version();
     check_procinfo_version();
+    check_talp_version();
 
     return 0;
 }

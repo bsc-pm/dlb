@@ -27,11 +27,13 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_barrier.h"
+#include "LB_comm/shmem_talp.h"
 #include "support/mask_utils.h"
 #include "apis/dlb_errors.h"
 
 #include <sched.h>
 #include <sys/types.h>
+#include <stdint.h>
 #include <assert.h>
 
 int main(int argc, char *argv[]) {
@@ -74,6 +76,8 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     shmem_barrier__init(SHMEM_KEY);
     shmem_barrier__attach(barrier_id, true);
+    assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );    /* p1_pid and p2_pid */
+    assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );
 
     /* Enable request queues */
     shmem_cpuinfo__enable_request_queues();
@@ -116,10 +120,25 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_cpuinfo__acquire_cpu(p3_pid, 19, new_guests, victims) == DLB_NOTED );
 
+    /* Register some TALP regions */
+    int region_id1 = -1;
+    assert( shmem_talp__register(p1_pid, "Custom region 1", &region_id1) == DLB_SUCCESS );
+    assert( region_id1 == 0 );
+    assert( shmem_talp__set_times(region_id1, 111111, 111111) == DLB_SUCCESS );
+    int region_id2 = -1 ;
+    assert( shmem_talp__register(p1_pid, "Region 2", &region_id2) == DLB_SUCCESS );
+    assert( region_id2 == 1 );
+    assert( shmem_talp__set_times(region_id2, INT64_MAX, 42) == DLB_SUCCESS );
+    int region_id3 = -1;
+    assert( shmem_talp__register(p2_pid, "Custom region 1", &region_id3) == DLB_SUCCESS );
+    assert( region_id3 == 2 );
+    assert( shmem_talp__set_times(region_id3, 0, 4242) == DLB_SUCCESS );
+
     /* Print */
     shmem_cpuinfo__print_info(NULL, 0, true);
     shmem_procinfo__print_info(NULL);
     shmem_barrier__print_info(NULL);
+    shmem_talp__print_info(NULL, 0);
 
     /* Finalize shared memories */
     assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
@@ -130,6 +149,8 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     shmem_barrier__detach(barrier_id);
     shmem_barrier__finalize(SHMEM_KEY);
+    assert( shmem_talp__finalize(p1_pid) == DLB_SUCCESS );
+    assert( shmem_talp__finalize(p2_pid) == DLB_SUCCESS );
 
     return 0;
 }

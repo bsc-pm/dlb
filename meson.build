@@ -123,6 +123,8 @@ common_srcs = [
   'src/LB_comm/shmem_async.h',
   'src/LB_comm/shmem_barrier.c',
   'src/LB_comm/shmem_barrier.h',
+  'src/LB_comm/shmem_talp.c',
+  'src/LB_comm/shmem_talp.h',
   'src/LB_core/lb_funcs.c',
   'src/LB_core/lb_funcs.h',
   'src/LB_core/spd.c',

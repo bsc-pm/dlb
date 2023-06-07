@@ -32,6 +32,7 @@
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_talp.h"
 #include "LB_core/spd.h"
 
 #ifdef MPI_LIB
@@ -298,6 +299,9 @@ static void clean_shmems(pid_t id, const char *shmem_key) {
     if (shmem_procinfo__exists()) {
         shmem_procinfo__finalize(id, false, shmem_key);
     }
+    if (shmem_talp__exists()) {
+        shmem_talp__finalize(id);
+    }
     shmem_async_finalize(id);
 }
 
@@ -325,14 +329,13 @@ void dlb_clean(void) {
         finalize_comm();
 
         /* Destroy shared memories if they still exist */
-        if (shmem_exists("cpuinfo", shmem_key)) {
-            shmem_destroy("cpuinfo", shmem_key);
-        }
-        if (shmem_exists("procinfo", shmem_key)) {
-            shmem_destroy("procinfo", shmem_key);
-        }
-        if (shmem_exists("async", shmem_key)) {
-            shmem_destroy("async", shmem_key);
+        const char *shmem_names[] = {"cpuinfo", "procinfo", "talp", "async"};
+        enum { shmem_nelems = sizeof(shmem_names) / sizeof(shmem_names[0]) };
+        int i;
+        for (i=0; i<shmem_nelems; ++i) {
+            if (shmem_exists(shmem_names[i], shmem_key)) {
+                shmem_destroy(shmem_names[i], shmem_key);
+            }
         }
     }
     pthread_mutex_unlock(&dlb_clean_mutex);
