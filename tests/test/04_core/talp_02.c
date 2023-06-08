@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
 
         /* User defined region */
         dlb_node_metrics_t node_metrics3;
-        dlb_monitor_t *monitor = monitoring_region_register(NULL);
+        dlb_monitor_t *monitor = monitoring_region_register(&spd, NULL);
         assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
         assert( talp_collect_pop_node_metrics(&spd, monitor, &node_metrics3) == DLB_SUCCESS );
         assert( monitoring_region_is_started(monitor) );

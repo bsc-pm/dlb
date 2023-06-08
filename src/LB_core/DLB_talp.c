@@ -28,13 +28,14 @@
 #include "apis/dlb_errors.h"
 #include "support/atomic.h"
 #include "support/debug.h"
+#include "support/error.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
 #include "support/talp_output.h"
-#include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_barrier.h"
+#include "LB_comm/shmem_talp.h"
 #ifdef MPI_LIB
 #include "LB_MPI/process_MPI.h"
 #endif
@@ -66,12 +67,14 @@ typedef struct talp_macrosample_t {
 /* Private data per monitor */
 typedef struct monitor_data_t {
     int     id;
+    int     node_shared_id;     /* id for allocating region in the shmem */
     bool    started;
 } monitor_data_t;
 
 
 static void talp_dealloc_samples(const subprocess_descriptor_t *spd);
-static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name);
+static void monitoring_region_initialize(dlb_monitor_t *monitor, int id,
+        const char *name, pid_t pid);
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
         const talp_macrosample_t *macrosample);
@@ -89,6 +92,8 @@ extern __thread bool thread_is_observer;
 #if PAPI_LIB
 static int EventSet = PAPI_NULL;
 #endif
+
+const char *mpi_region_name = "MPI Execution";
 
 /* Reserved regions ids */
 enum { MPI_MONITORING_REGION_ID = 1 };
@@ -113,10 +118,6 @@ static int cmp_regions(const void *region1, const void *region2) {
 }
 #endif
 
-static int cmp_pids(const void *pid1, const void *pid2) {
-    return *(pid_t*)pid1 - *(pid_t*)pid2;
-}
-
 
 /*********************************************************************************/
 /*    Init / Finalize                                                            */
@@ -135,9 +136,12 @@ void talp_init(subprocess_descriptor_t *spd) {
     };
     spd->talp_info = talp_info;
 
+    /* Initialize shared memory */
+    shmem_talp__init(spd->options.shm_key, spd->options.talp_regions_per_proc);
+
     /* Initialize MPI monitor */
     monitoring_region_initialize(&talp_info->mpi_monitor,
-            MPI_MONITORING_REGION_ID, "MPI Execution");
+            MPI_MONITORING_REGION_ID, mpi_region_name, spd->id);
 
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
 
@@ -187,6 +191,9 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 
     /* Deallocate samples structure */
     talp_dealloc_samples(spd);
+
+    /* Finalize shared memory */
+    shmem_talp__finalize(spd->id);
 
     if (spd == thread_spd) {
         /* Keep the timers allocated until the program finalizes */
@@ -380,7 +387,8 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         monitoring_region_stop(spd, &talp_info->mpi_monitor);
 
         /* Update shared memory values */
-        shmem_procinfo__set_app_times(spd->id,
+        monitor_data_t *monitor_data = talp_info->mpi_monitor._data;
+        shmem_talp__set_times(monitor_data->node_shared_id,
                 talp_info->mpi_monitor.accumulated_MPI_time,
                 talp_info->mpi_monitor.accumulated_computation_time);
 
@@ -476,12 +484,11 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
     shmem_barrier__barrier(spd->options.barrier_id);
 
     if (_process_id == 0) {
-        /* Obtain the PID list */
+        /* Obtain a list of regions associated with "MPI Region", sorted by PID */
         int max_procs = mu_get_system_size();
-        pid_t *pidlist = malloc(max_procs * sizeof(pid_t));
+        talp_region_list_t *region_list = malloc(max_procs * sizeof(talp_region_list_t));
         int nelems;
-        shmem_procinfo__getpidlist(pidlist, &nelems, max_procs);
-        qsort(pidlist, nelems, sizeof(pid_t), cmp_pids);
+        shmem_talp__getregionlist(region_list, &nelems, max_procs, mpi_region_name);
 
         /* Allocate node summary structure */
         node_summary = malloc(
@@ -496,22 +503,19 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
         /* Iterate the PID list and gather times of every process */
         int i;
         for (i = 0; i <nelems; ++i) {
-            if (pidlist[i] != 0) {
-                int64_t mpi_time;
-                int64_t useful_time;
-                shmem_procinfo__get_app_times(pidlist[i], &mpi_time, &useful_time);
+            int64_t mpi_time = region_list[i].mpi_time;
+            int64_t useful_time = region_list[i].useful_time;
 
-                /* Save times in local structure */
-                node_summary->process_info[i].pid = pidlist[i];
-                node_summary->process_info[i].mpi_time = mpi_time;
-                node_summary->process_info[i].useful_time = useful_time;
+            /* Save times in local structure */
+            node_summary->process_info[i].pid = region_list[i].pid;
+            node_summary->process_info[i].mpi_time = mpi_time;
+            node_summary->process_info[i].useful_time = useful_time;
 
-                /* Accumulate total and max values */
-                total_mpi_time +=  mpi_time;
-                total_useful_time += useful_time;
-                if (max_mpi_time < mpi_time) max_mpi_time = mpi_time;
-                if (max_useful_time < useful_time) max_useful_time = useful_time;
-            }
+            /* Accumulate total and max values */
+            total_mpi_time += mpi_time;
+            total_useful_time += useful_time;
+            max_mpi_time = max_int64(mpi_time, max_mpi_time);
+            max_useful_time = max_int64(useful_time, max_useful_time);
         }
 
         /* Save accumulated values */
@@ -520,7 +524,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
         node_summary->max_mpi_time = max_mpi_time;
         node_summary->max_useful_time = max_useful_time;
 
-        free(pidlist);
+        free(region_list);
     }
 
     /* Perform a final barrier so that all processes let the _process_id 0 to
@@ -613,7 +617,8 @@ const struct dlb_monitor_t* monitoring_region_get_MPI_region(
     return talp_info ? &talp_info->mpi_monitor : NULL;
 }
 
-dlb_monitor_t* monitoring_region_register(const char* name) {
+dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
+        const char* name) {
     dlb_monitor_t *monitor = NULL;
     bool anonymous_region = (name == NULL || *name == '\0');
     pthread_mutex_lock(&mutex);
@@ -647,18 +652,22 @@ dlb_monitor_t* monitoring_region_register(const char* name) {
     if (anonymous_region) {
         char monitor_name[DLB_MONITOR_NAME_MAX];
         snprintf(monitor_name, DLB_MONITOR_NAME_MAX, "Anonymous Region %d", get_anonymous_id());
-        monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name);
+        monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name, spd->id);
     } else {
-        monitoring_region_initialize(monitor, get_new_monitor_id(), name);
+        monitoring_region_initialize(monitor, get_new_monitor_id(), name, spd->id);
     }
 
     return monitor;
 }
 
-static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const char *name) {
+static void monitoring_region_initialize(dlb_monitor_t *monitor,
+        int id, const char *name, pid_t pid) {
     /* Initialize private monitor data */
     monitor_data_t *monitor_data = malloc(sizeof(monitor_data_t));
-    *monitor_data = (const monitor_data_t) {.id = id};
+    *monitor_data = (const monitor_data_t) {
+        .id = id,
+        .node_shared_id = -1,
+    };
 
     /* Allocate monitor name */
     char *allocated_name = malloc(DLB_MONITOR_NAME_MAX*sizeof(char));
@@ -672,6 +681,13 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const c
 
     /* Register name in the instrumentation tool */
     instrument_register_event(MONITOR_REGION, monitor_data->id, name);
+
+    /* Register region in shmem */
+    int err = shmem_talp__register(pid, monitor->name, &monitor_data->node_shared_id);
+    if (err < DLB_SUCCESS) {
+        warning("Could not register region %s in shared memory, error: %s",
+                monitor->name, error_get_str(err));
+    }
 }
 
 static void monitoring_region_finalize(dlb_monitor_t *monitor) {
@@ -835,7 +851,7 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
 #endif
         /* Update shared memory only if requested */
         if (talp_info->external_profiler) {
-            shmem_procinfo__set_app_times(spd->id,
+            shmem_talp__set_times(mpi_monitor_data->node_shared_id,
                     mpi_monitor->accumulated_MPI_time,
                     mpi_monitor->accumulated_computation_time);
         }
@@ -855,6 +871,12 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
             monitor->accumulated_cycles += macrosample->cycles;
             monitor->accumulated_instructions += macrosample->instructions;
 #endif
+        }
+        /* Update shared memory only if requested */
+        if (talp_info->external_profiler) {
+            shmem_talp__set_times(monitor_data->node_shared_id,
+                    monitor->accumulated_MPI_time,
+                    monitor->accumulated_computation_time);
         }
     }
 }
@@ -1129,7 +1151,7 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
 
         /* Register all regions. Existing ones will be skipped. */
         for (i=0; i<total_chars; i+=DLB_MONITOR_NAME_MAX) {
-            monitoring_region_register(&recvbuffer[i]);
+            monitoring_region_register(spd, &recvbuffer[i]);
         }
 
         free(sendbuffer);
@@ -1270,36 +1292,33 @@ int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
     bool resume_region = monitoring_region_stop(spd, monitor) == DLB_SUCCESS;
 
     /* Update the shared memory with this process' metrics */
-    shmem_procinfo__set_region_times(spd->id,
-                    monitor->accumulated_MPI_time,
-                    monitor->accumulated_computation_time);
+    monitor_data_t *monitor_data = monitor->_data;
+    shmem_talp__set_times(monitor_data->node_shared_id,
+            monitor->accumulated_MPI_time,
+            monitor->accumulated_computation_time);
 
     /* Perform a node barrier to ensure everyone has updated their metrics */
     shmem_barrier__barrier(spd->options.barrier_id);
 
-    /* Obtain the PID list */
+    /* Obtain a list of regions in the node associated with given region */
     int max_procs = mu_get_system_size();
-    pid_t *pidlist = malloc(max_procs * sizeof(pid_t));
+    talp_region_list_t *region_list = malloc(max_procs * sizeof(talp_region_list_t));
     int nelems;
-    shmem_procinfo__getpidlist(pidlist, &nelems, max_procs);
-    qsort(pidlist, nelems, sizeof(pid_t), cmp_pids);
+    shmem_talp__getregionlist(region_list, &nelems, max_procs, monitor->name);
 
     /* Iterate the PID list and gather times of every process */
     int i;
     for (i = 0; i <nelems; ++i) {
-        if (pidlist[i] != 0) {
-            int64_t mpi_time;
-            int64_t useful_time;
-            shmem_procinfo__get_region_times(pidlist[i], &mpi_time, &useful_time);
+        int64_t mpi_time = region_list[i].mpi_time;
+        int64_t useful_time = region_list[i].useful_time;
 
-            /* Accumulate total and max values */
-            total_mpi_time +=  mpi_time;
-            total_useful_time += useful_time;
-            if (max_mpi_time < mpi_time) max_mpi_time = mpi_time;
-            if (max_useful_time < useful_time) max_useful_time = useful_time;
-        }
+        /* Accumulate total and max values */
+        total_mpi_time += mpi_time;
+        total_useful_time += useful_time;
+        max_mpi_time = max_int64(mpi_time, max_mpi_time);
+        max_useful_time = max_int64(useful_time, max_useful_time);
     }
-    free(pidlist);
+    free(region_list);
 
 #if MPI_LIB
     int node_id = _node_id;

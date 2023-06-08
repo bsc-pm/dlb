@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
 
     /* Register custom monitoring region */
-    dlb_monitor_t *monitor = monitoring_region_register("Test monitor");
+    dlb_monitor_t *monitor = monitoring_region_register(&spd, "Test monitor");
     assert( monitor != NULL );
 
     /* Test MPI + nested user defined region */
@@ -156,9 +156,9 @@ int main(int argc, char *argv[]) {
 
     /* Test nested regions */
     {
-        dlb_monitor_t *monitor1 = monitoring_region_register("Test nested 1");
-        dlb_monitor_t *monitor2 = monitoring_region_register("Test nested 2");
-        dlb_monitor_t *monitor3 = monitoring_region_register("Test nested 3");
+        dlb_monitor_t *monitor1 = monitoring_region_register(&spd, "Test nested 1");
+        dlb_monitor_t *monitor2 = monitoring_region_register(&spd, "Test nested 2");
+        dlb_monitor_t *monitor3 = monitoring_region_register(&spd, "Test nested 3");
         monitoring_region_start(&spd, monitor1);
         usleep(USLEEP_TIME);
         for (i=0; i<NUM_MEASUREMENTS; ++i) {
@@ -183,12 +183,12 @@ int main(int argc, char *argv[]) {
 
     /* Test monitor register with repeated or NULL names */
     {
-        dlb_monitor_t *monitor3 = monitoring_region_register("Test nested 3");
-        dlb_monitor_t *monitor4 = monitoring_region_register("Test nested 3");
+        dlb_monitor_t *monitor3 = monitoring_region_register(&spd, "Test nested 3");
+        dlb_monitor_t *monitor4 = monitoring_region_register(&spd, "Test nested 3");
         assert( monitor4 == monitor3 );
-        dlb_monitor_t *monitor5 = monitoring_region_register(NULL);
+        dlb_monitor_t *monitor5 = monitoring_region_register(&spd, NULL);
         assert( monitor5 != NULL );
-        dlb_monitor_t *monitor6 = monitoring_region_register(NULL);
+        dlb_monitor_t *monitor6 = monitoring_region_register(&spd, NULL);
         assert( monitor6 != NULL );
         assert( monitor6 != monitor5 );
         assert( strcmp(monitor5->name, "Anonymous Region 1") == 0 );
@@ -200,8 +200,8 @@ int main(int argc, char *argv[]) {
         const char *long_name = "This is a very long name. It is so long that"
             " it is more than MONITOR_MAX_KEY_LEN which, at the time of writing,"
             " should be 128 characters.";
-        dlb_monitor_t *monitor7 = monitoring_region_register(long_name);
-        dlb_monitor_t *monitor8 = monitoring_region_register(long_name);
+        dlb_monitor_t *monitor7 = monitoring_region_register(&spd, long_name);
+        dlb_monitor_t *monitor8 = monitoring_region_register(&spd, long_name);
         assert( monitor7 == monitor8 );
         monitoring_region_report(&spd, monitor7);
         monitoring_region_report(&spd, mpi_monitor);

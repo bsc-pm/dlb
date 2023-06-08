@@ -26,7 +26,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
-#include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_talp.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/atomic.h"
@@ -43,10 +43,6 @@ enum { USLEEP_TIME = 100000 };
 
 int main(int argc, char *argv[]) {
 
-    /* Process Mask size can be 1..N */
-    cpu_set_t process_mask;
-    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
     subprocess_descriptor_t spd = {.id = 111};
@@ -60,11 +56,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
-            NULL, spd.options.shm_key) == DLB_SUCCESS );
     talp_init(&spd);
-
 
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
@@ -107,7 +99,7 @@ int main(int argc, char *argv[]) {
     int64_t mpi_time = -1;
     int64_t useful_time = -1;
     assert( talp_info->external_profiler == false );
-    assert( shmem_procinfo__get_app_times(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time == 0 );
     assert( useful_time == 0 );
 
@@ -117,12 +109,12 @@ int main(int argc, char *argv[]) {
     talp_info->external_profiler = true;
     talp_in_mpi(&spd, /* is_blocking_collective */ true);
     talp_out_mpi(&spd, /* is_blocking_collective */ true);
-    assert( shmem_procinfo__get_app_times(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time > 0 );
     assert( useful_time > 0 );
 
     /* Create a custom monitoring region */
-    dlb_monitor_t *monitor = monitoring_region_register("Test");
+    dlb_monitor_t *monitor = monitoring_region_register(&spd, "Test");
     monitoring_region_start(&spd, monitor);
     talp_in_mpi(&spd, /* is_blocking_collective */ false);
     talp_out_mpi(&spd, /* is_blocking_collective */ false);
@@ -141,15 +133,13 @@ int main(int argc, char *argv[]) {
     /* Checking that the shmem has now been updated */
     mpi_time = -1;
     useful_time = -1;
-    assert( shmem_procinfo__get_app_times(spd.id, &mpi_time, &useful_time) == DLB_SUCCESS );
+    assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time == mpi_monitor->accumulated_MPI_time  );
     assert( useful_time == mpi_monitor->accumulated_computation_time );
 
     spd.options.talp_summary |= SUMMARY_NODE;
     spd.options.talp_summary |= SUMMARY_PROCESS;
     talp_finalize(&spd);
-    assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
-            == DLB_SUCCESS );
 
     return 0;
 }

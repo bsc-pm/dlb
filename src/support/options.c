@@ -366,10 +366,20 @@ static const opts_dict_t options_dictionary[] = {
         .default_value  = "",
         .description    = OFFSET"Write TALP metrics to a file. If this option is not provided,\n"
                           OFFSET"the output is printed to stderr.\n"
-                          OFFSET"Accepted formats: *.json, *.xml, *.csv. Any other for plain text.\n",
+                          OFFSET"Accepted formats: *.json, *.xml, *.csv. Any other for plain text.",
         .offset         = offsetof(options_t, talp_output_file),
         .type           = OPT_PTR_PATH_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-regions-per-proc",
+        .default_value  = "10",
+        .description    = OFFSET"Number of TALP regions per process to allocate in the shared\n"
+                          OFFSET"memory.",
+        .offset         = offsetof(options_t, talp_regions_per_proc),
+        .type           = OPT_INT_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     },
     // barrier
     {

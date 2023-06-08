@@ -26,6 +26,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_talp.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
@@ -41,12 +42,14 @@ int DLB_TALP_Attach(void) {
     options_parse_entry("--shm-key", &shm_key);
     shmem_cpuinfo_ext__init(shm_key);
     shmem_procinfo_ext__init(shm_key);
+    shmem_talp_ext__init(shm_key, 0);
     return DLB_SUCCESS;
 }
 
 int DLB_TALP_Detach(void) {
     int error = shmem_cpuinfo_ext__finalize();
     error = error ? error : shmem_procinfo_ext__finalize();
+    error = error ? error : shmem_talp_ext__finalize();
     return error;
 }
 
@@ -60,9 +63,14 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
 }
 
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
+    /* Obtain the node shared id for "MPI Region" for the current pid */
+    int node_shared_id;
+    int error = shmem_talp__register(pid, "MPI Region", &node_shared_id);
+    if (error < DLB_SUCCESS) return error;
+
     int64_t mpi_time_ns;
     int64_t useful_time_ns;
-    int error = shmem_procinfo__get_app_times(pid, &mpi_time_ns, &useful_time_ns);
+    error = shmem_talp__get_times(node_shared_id, &mpi_time_ns, &useful_time_ns);
     if (error == DLB_SUCCESS) {
         *mpi_time = nsecs_to_secs(mpi_time_ns);
         *useful_time = nsecs_to_secs(useful_time_ns);
@@ -88,7 +96,7 @@ dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
-    return monitoring_region_register(name);
+    return monitoring_region_register(thread_spd, name);
 }
 
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle){

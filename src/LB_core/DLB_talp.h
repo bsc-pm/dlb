@@ -89,7 +89,8 @@ void talp_out_mpi(const struct SubProcessDescriptor *spd, bool is_blocking_colle
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const struct SubProcessDescriptor *spd);
 
-struct dlb_monitor_t* monitoring_region_register(const char* name);
+struct dlb_monitor_t* monitoring_region_register(
+        const struct SubProcessDescriptor *spd, const char* name);
 int monitoring_region_reset(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor);
 int monitoring_region_start(const struct SubProcessDescriptor *spd,
