@@ -108,4 +108,6 @@ int talp_collect_pop_metrics(const struct SubProcessDescriptor *spd,
 int talp_collect_pop_node_metrics(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
 
+int talp_query_pop_node_metrics(const char *name, struct dlb_node_metrics_t *node_metrics);
+
 #endif

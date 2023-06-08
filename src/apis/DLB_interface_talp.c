@@ -78,6 +78,10 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
     return error;
 }
 
+int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics) {
+    return talp_query_pop_node_metrics(name, node_metrics);
+}
+
 
 /*********************************************************************************/
 /*    TALP Monitoring Regions                                                    */

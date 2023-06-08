@@ -1276,17 +1276,94 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     return DLB_SUCCESS;
 }
 
+/* Function that may be called from a third-party process to compute
+ * node_metrics for a given region */
+int talp_query_pop_node_metrics(const char *name, dlb_node_metrics_t *node_metrics) {
+
+    if (name == NULL) {
+        name = mpi_region_name;
+    }
+
+    int error = DLB_SUCCESS;
+    int64_t total_mpi_time = 0;
+    int64_t total_useful_time = 0;
+    int64_t max_mpi_time = 0;
+    int64_t max_useful_time = 0;
+
+    /* Obtain a list of regions in the node associated with given region */
+    int max_procs = mu_get_system_size();
+    talp_region_list_t *region_list = malloc(max_procs * sizeof(talp_region_list_t));
+    int nelems;
+    shmem_talp__getregionlist(region_list, &nelems, max_procs, name);
+
+    /* Count how many processes have started the region */
+    int processes_per_node = 0;
+
+    /* Iterate the PID list and gather times of every process */
+    int i;
+    for (i = 0; i <nelems; ++i) {
+        int64_t mpi_time = region_list[i].mpi_time;
+        int64_t useful_time = region_list[i].useful_time;
+
+        /* Accumulate total and max values */
+        if (mpi_time > 0 || useful_time > 0) {
+            ++processes_per_node;
+            total_mpi_time += mpi_time;
+            total_useful_time += useful_time;
+            max_mpi_time = max_int64(mpi_time, max_mpi_time);
+            max_useful_time = max_int64(useful_time, max_useful_time);
+        }
+    }
+    free(region_list);
+
+#if MPI_LIB
+    int node_id = _node_id;
+#else
+    int node_id = 0;
+#endif
+
+    if (processes_per_node > 0) {
+        /* We can compute the elapsed time, only needed to calculate communication
+        * efficiency, as the sum of all Useful + MPI times divided by the number
+        * of processes (we may ignore the remainder of the division) */
+        int64_t elapsed_time = (total_useful_time + total_mpi_time) / processes_per_node;
+
+        float parallel_efficiency = 0.0f;
+        float communication_efficiency = 0.0f;
+        float load_balance = 0.0f;
+        if (total_useful_time + total_mpi_time > 0) {
+            parallel_efficiency = (float)total_useful_time / (total_useful_time + total_mpi_time);
+            communication_efficiency = (float)max_useful_time / elapsed_time;
+            load_balance = ((float)total_useful_time / processes_per_node) / max_useful_time;
+        }
+
+        /* Initialize structure */
+        *node_metrics = (const dlb_node_metrics_t) {
+            .node_id = node_id,
+            .processes_per_node = processes_per_node,
+            .total_useful_time = total_useful_time,
+            .total_mpi_time = total_mpi_time,
+            .max_useful_time = max_useful_time,
+            .max_mpi_time = max_mpi_time,
+            .parallel_efficiency = parallel_efficiency,
+            .communication_efficiency = communication_efficiency,
+            .load_balance = load_balance,
+        };
+        snprintf(node_metrics->name, DLB_MONITOR_NAME_MAX, "%s", name);
+    } else {
+        error = DLB_ERR_NOENT;
+    }
+
+    return error;
+}
+
+/* Node-collective function to compute node_metrics for a given region */
 int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
     talp_info_t *talp_info = spd->talp_info;
     if (monitor == NULL) {
         monitor = &talp_info->mpi_monitor;
     }
-
-    int64_t total_mpi_time = 0;
-    int64_t total_useful_time = 0;
-    int64_t max_mpi_time = 0;
-    int64_t max_useful_time = 0;
 
     /* Stop monitor so that metrics are updated */
     bool resume_region = monitoring_region_stop(spd, monitor) == DLB_SUCCESS;
@@ -1300,49 +1377,8 @@ int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
     /* Perform a node barrier to ensure everyone has updated their metrics */
     shmem_barrier__barrier(spd->options.barrier_id);
 
-    /* Obtain a list of regions in the node associated with given region */
-    int max_procs = mu_get_system_size();
-    talp_region_list_t *region_list = malloc(max_procs * sizeof(talp_region_list_t));
-    int nelems;
-    shmem_talp__getregionlist(region_list, &nelems, max_procs, monitor->name);
-
-    /* Iterate the PID list and gather times of every process */
-    int i;
-    for (i = 0; i <nelems; ++i) {
-        int64_t mpi_time = region_list[i].mpi_time;
-        int64_t useful_time = region_list[i].useful_time;
-
-        /* Accumulate total and max values */
-        total_mpi_time += mpi_time;
-        total_useful_time += useful_time;
-        max_mpi_time = max_int64(mpi_time, max_mpi_time);
-        max_useful_time = max_int64(useful_time, max_useful_time);
-    }
-    free(region_list);
-
-#if MPI_LIB
-    int node_id = _node_id;
-#else
-    int node_id = 0;
-#endif
-
-    /* We can compute the elapsed time, only needed to calculate communication
-     * efficiency, as the sum of all Useful + MPI times divided by the number
-     * of processes (we may ignore the remainder of the division) */
-    int64_t elapsed_time = (total_useful_time + total_mpi_time) / nelems;
-
-    /* Initialize structure */
-    *node_metrics = (const dlb_node_metrics_t) {
-        .node_id = node_id,
-        .processes_per_node = nelems,
-        .total_useful_time = total_useful_time,
-        .total_mpi_time = total_mpi_time,
-        .max_useful_time = max_useful_time,
-        .max_mpi_time = max_mpi_time,
-        .parallel_efficiency = (float)total_useful_time / (total_useful_time + total_mpi_time),
-        .communication_efficiency = (float)max_useful_time / elapsed_time,
-        .load_balance = ((float)total_useful_time / nelems) / max_useful_time,
-    };
+    /* Compute node metrics for that region name */
+    talp_query_pop_node_metrics(monitor->name, node_metrics);
 
     /* Resume monitor */
     if (resume_region) {

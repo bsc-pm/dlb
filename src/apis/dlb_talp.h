@@ -88,6 +88,8 @@ typedef struct dlb_pop_metrics_t {
 
 /*! Node metrics (of one monitor) collected asynchronously from the shared memory */
 typedef struct dlb_node_metrics_t {
+    /*! Name of the monitor */
+    char    name[DLB_MONITOR_NAME_MAX];
     /*! Node identifier, only meaningful value if MPI is enabled */
     int     node_id;
     /*! Number of processes per node */
@@ -163,6 +165,16 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len);
  */
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
 
+/*! \brief From either 1st or 3rd party, query node metrics for one region
+ *  \param[in] name Name to identify the region
+ *  \param[out] node_metrics Allocated structure where the collected metrics will be stored
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOENT if no data for the given name
+ *
+ *  If called from a third party, this function requires the application to run
+ *  with DLB_ARGS+=" --talp-external-profiler"
+ */
+int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics);
 
 /*********************************************************************************/
 /*    TALP Monitoring Regions                                                    */
