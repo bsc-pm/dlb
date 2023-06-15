@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,37 +17,44 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_OUTPUT_H
-#define TALP_OUTPUT_H
+#ifndef SHMEM_TALP_H
+#define SHMEM_TALP_H
 
+#include <sys/types.h>
+#include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
-#include <unistd.h>
 
-typedef struct ProcessInNodeRecord {
+typedef struct talp_region_list_t {
     pid_t pid;
-    int64_t mpi_time;
-    int64_t useful_time;
-} process_in_node_record_t;
+    int region_id;
+    int_least64_t mpi_time;
+    int_least64_t useful_time;
+} talp_region_list_t;
 
-void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
-        float parallel_efficiency, float communication_efficiency,
-        float lb, float lb_in, float lb_out);
+/* Init */
+int shmem_talp__init(const char *shmem_key, int regions_per_process);
+int shmem_talp_ext__init(const char *shmem_key, int regions_per_process);
 
-void talp_output_record_pop_raw(const char *name, int P, int N, int num_ranks,
-        int64_t elapsed_time, int64_t elapsed_useful, int64_t app_sum_useful,
-        int64_t node_sum_useful, int64_t num_mpi_calls,
-        int64_t cycles, int64_t instructions);
+/* Finalize */
+int shmem_talp__finalize(pid_t pid);
+int shmem_talp_ext__finalize(void);
 
-void talp_output_record_node(int node_id, int nelems, int64_t avg_useful_time,
-        int64_t avg_mpi_time, int64_t max_useful_time, int64_t max_mpi_time,
-        process_in_node_record_t *process_info);
+/* Register */
+int shmem_talp__register(pid_t pid, const char *name, int *node_shared_id);
 
-void talp_output_record_process(const char *monitor_name, int rank, pid_t pid,
-        int num_measurements, const char* hostname, const char *cpuset,
-        const char *cpuset_quoted, int64_t elapsed_time, int64_t elapsed_useful_time,
-        int64_t accumulated_MPI_time, int64_t accumulated_useful_time, float ipc);
+/* Getters */
+int shmem_talp__getpidlist(pid_t *pidlist, int *nelems, int max_len);
+int shmem_talp__getregionlist(talp_region_list_t *region_list, int *nelems,
+        int max_len, const char *name);
+int shmem_talp__get_times(int region_id, int64_t *mpi_time, int64_t *useful_time);
 
-void talp_output_finalize(const char *output_file);
+/* Setters */
+int shmem_talp__set_times(int region_id, int64_t mpi_time, int64_t useful_time);
 
-#endif /* TALP_OUTPUT_H */
+/* Misc */
+void shmem_talp__print_info(const char *shmem_key, int regions_per_process);
+bool shmem_talp__exists(void);
+int  shmem_talp__version(void);
+size_t shmem_talp__size(void);
+
+#endif /* SHMEM_TALP_H */

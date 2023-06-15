@@ -553,16 +553,6 @@ int DLB_PrintShmem(int num_columns, dlb_printshmem_flags_t print_flags);
  */
 const char* DLB_Strerror(int errnum);
 
-/*! \brief API call to  adjust the resources of an application
- *  \return DLB_SUCCESS on success
- */
-int DLB_AutoSizerStart(void);
-
-/*! \brief API call to  adjust the resources of an application
- *  \return DLB_SUCCESS on success
- */
-int DLB_AutoSizerEnd(void);
-
 /*! \brief Modify the current thread DLB role to either observer or particpant
  *  \param[in] thread_is_observer true to set current thread to 'observer',
  *                                false to 'participant'
@@ -575,6 +565,9 @@ int DLB_AutoSizerEnd(void);
  *  trigger LeWI nor any TALP measuring metrics.
  */
 int DLB_SetObserverRole(bool thread_is_observer);
+
+int DLB_AutoSizerStart(void) __attribute__((deprecated));
+int DLB_AutoSizerEnd(void) __attribute__((deprecated));
 
 #ifdef __cplusplus
 }

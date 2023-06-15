@@ -44,24 +44,6 @@
 /* Test TALP node metrics */
 
 
-typedef struct DLB_ALIGN_CACHE talp_sample_t {
-    atomic_int_least64_t    mpi_time;
-    atomic_int_least64_t    useful_time;
-    atomic_uint_least64_t   num_mpi_calls;
-    int64_t     last_updated_timestamp;
-    bool        in_useful;
-    bool        cpu_disabled;
-} talp_sample_t;
-
-typedef struct talp_info_t {
-    dlb_monitor_t       mpi_monitor;
-    bool                external_profiler;
-    int                 ncpus;
-    talp_sample_t       **samples;
-    pthread_mutex_t     samples_mutex;
-} talp_info_t;
-
-
 static int cmp_node_metrics(const dlb_node_metrics_t *node_metrics1,
         const dlb_node_metrics_t *node_metrics2) {
     if (node_metrics1->node_id == node_metrics2->node_id
@@ -167,7 +149,7 @@ int main(int argc, char *argv[]) {
 
         /* User defined region */
         dlb_node_metrics_t node_metrics3;
-        dlb_monitor_t *monitor = monitoring_region_register(NULL);
+        dlb_monitor_t *monitor = monitoring_region_register(&spd, NULL);
         assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
         assert( talp_collect_pop_node_metrics(&spd, monitor, &node_metrics3) == DLB_SUCCESS );
         assert( monitoring_region_is_started(monitor) );

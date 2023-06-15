@@ -49,6 +49,7 @@ tests = {
     'shmem_cleanup_00'    : {},
     'shmem_fail_00'       : {'should_fail': true},
     'shmem_fail_01'       : {'should_fail': true},
+    'shmem_talp_00'       : {'source' : 'talp_00.c'},
     'shmem_versions_00'   : {},
   },
   '03_policies' : {

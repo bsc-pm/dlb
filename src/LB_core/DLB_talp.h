@@ -20,13 +20,52 @@
 #ifndef DLB_CORE_TALP_H
 #define DLB_CORE_TALP_H
 
+#include "apis/dlb_talp.h"
+#include "support/atomic.h"
+
+#include <pthread.h>
 #include <sched.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+/* The structs below are only for private DLB_talp.c use, but they are defined
+ * in this header for testing purposes. */
+
+/* The sample contains the temporary per-thread accumulated values of all the
+ * measured metrics. Once the sample ends, a macrosample is created using
+ * samples from all threads. The sample starts and ends on each one of the
+ * following scenarios:
+ *  - MPI Init/Finalize
+ *  - a region starts or stops
+ *  - a request from the API
+ */
+typedef struct DLB_ALIGN_CACHE talp_sample_t {
+    /* Sample accumulated values */
+    atomic_int_least64_t    mpi_time;
+    atomic_int_least64_t    useful_time;
+    atomic_int_least64_t    num_mpi_calls;
+#if PAPI_LIB
+    atomic_int_least64_t    instructions;
+    atomic_int_least64_t    cycles;
+#endif
+    /* Sample temporary values */
+    int64_t     last_updated_timestamp;
+    bool        in_useful;
+    bool        cpu_disabled;
+} talp_sample_t;
+
+/* Talp info per spd */
+typedef struct talp_info_t {
+    dlb_monitor_t       mpi_monitor;        /* monitor MPI_Init -> MPI_Finalize */
+    bool                external_profiler;  /* whether to update shmem on every sample */
+    int                 ncpus;              /* Number of process CPUs */
+    talp_sample_t       **samples;          /* Per-thread ongoing sample,
+                                               added to all monitors when finished */
+    pthread_mutex_t     samples_mutex;      /* Mutex to protect samples allocation/iteration */
+} talp_info_t;
+
 
 struct SubProcessDescriptor;
-struct dlb_monitor_t;
-struct dlb_pop_metrics_t;
-struct dlb_node_metrics_t;
 
 /*  Initializes the module structures */
 void talp_init(struct SubProcessDescriptor *spd);
@@ -50,7 +89,8 @@ void talp_out_mpi(const struct SubProcessDescriptor *spd, bool is_blocking_colle
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const struct SubProcessDescriptor *spd);
 
-struct dlb_monitor_t* monitoring_region_register(const char* name);
+struct dlb_monitor_t* monitoring_region_register(
+        const struct SubProcessDescriptor *spd, const char* name);
 int monitoring_region_reset(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor);
 int monitoring_region_start(const struct SubProcessDescriptor *spd,
@@ -67,5 +107,7 @@ int talp_collect_pop_metrics(const struct SubProcessDescriptor *spd,
 
 int talp_collect_pop_node_metrics(const struct SubProcessDescriptor *spd,
         struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
+
+int talp_query_pop_node_metrics(const char *name, struct dlb_node_metrics_t *node_metrics);
 
 #endif

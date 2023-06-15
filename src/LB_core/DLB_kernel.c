@@ -31,6 +31,7 @@
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_comm/shmem_talp.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
@@ -735,6 +736,7 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
     shmem_cpuinfo__print_info(spd->options.shm_key, num_columns, print_flags);
     shmem_procinfo__print_info(spd->options.shm_key);
     shmem_barrier__print_info(spd->options.shm_key);
+    shmem_talp__print_info(spd->options.shm_key, 0);
 
     if (!spd->dlb_initialized) {
         options_finalize(&spd->options);

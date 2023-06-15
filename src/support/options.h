@@ -63,6 +63,7 @@ typedef struct Options {
     bool                talp_external_profiler;
     talp_summary_t      talp_summary;
     char                *talp_output_file;
+    int                 talp_regions_per_proc;
     /* barrier */
     int                 barrier_id;
 } options_t;

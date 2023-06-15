@@ -44,46 +44,8 @@ enum { NOBODY = 0 };
 enum { SYNC_POLL_DELAY = 10000 };           /* 10^4 ns = 10 ms */
 enum { SYNC_POLL_TIMEOUT = 1000000000 };    /* 10^9 ns = 1s */
 
-//static const long UPDATE_USAGE_MIN_THRESHOLD    =  100000000L;   // 10^8 ns = 100ms
-//static const long UPDATE_LOADAVG_MIN_THRESHOLD  = 1000000000L;   // 10^9 ns = 1s
-//static const double LOG2E = 1.44269504088896340736;
-typedef struct monitor_info_t {
-    char *placeholder1;
-    struct timespec  mpi_time;
-    struct timespec  compute_time;
-    struct timespec placeholder2;
-    struct timespec placeholder3;
-    struct timespec placeholder4;
-} monitor_info_t;
-typedef struct {
-    struct timespec mpi_time;
-    struct timespec compute_time;
-    double percent;
-    int niter;
-} iter_t;
-typedef struct {
-    iter_t iterations[1000];
-    int iter_num;
-    double load_balance;
-    monitor_info_t aux;
-} auto_sizer_t;
 
-/* This struct is used by TALP to store some values to compute NodeMetrics
- * or to allow metrics readings from an external profiler
- */
-typedef struct talp_times_t {
-    /* MPI and Useful times of the MPI region intended
-     * to be ridden from external profiler */
-    atomic_int_least64_t app_mpi_time;
-    atomic_int_least64_t app_useful_time;
-    /* MPI and Useful times of any monitoring region,
-     * intended as a temporal storage to compute node metrics */
-    atomic_int_least64_t region_mpi_time;
-    atomic_int_least64_t region_useful_time;
-    bool                 region_valid;
-} talp_times_t;
-
-typedef struct {
+typedef struct DLB_ALIGN_CACHE pinfo_t {
     pid_t pid;
     bool dirty;
     bool preregistered;
@@ -94,8 +56,6 @@ typedef struct {
     // Cpu Usage fields:
     double cpu_usage;
     double cpu_avg_usage;
-    auto_sizer_t auto_sizer;
-    talp_times_t talp_times;
 #ifdef DLB_LOAD_AVERAGE
     // Load average fields:
     float load[3];              // 1min, 5min, 15mins
@@ -108,11 +68,10 @@ typedef struct {
     bool allow_cpu_sharing;     // efectively, disables DROM functionalities
     struct timespec initial_time;
     cpu_set_t free_mask;        // Contains the CPUs in the system not owned
-    cpu_set_t resize_mask;        // Contains the CPUs in the system not owned
     pinfo_t process_info[0];
 } shdata_t;
 
-enum { SHMEM_PROCINFO_VERSION = 6 };
+enum { SHMEM_PROCINFO_VERSION = 7 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -1212,58 +1171,6 @@ int shmem_procinfo__setcpuusage(pid_t pid,int index, double new_avg_usage) {
     return DLB_SUCCESS;
 }
 
-int shmem_procinfo__get_app_times(pid_t pid, int64_t *mpi_time, int64_t *useful_time) {
-    int error = DLB_SUCCESS;
-    pinfo_t *process = NULL;
-    if (likely(shm_handler != NULL)) {
-        process = get_process(pid);
-        if (process) {
-            *mpi_time    = DLB_ATOMIC_LD_RLX(&process->talp_times.app_mpi_time);
-            *useful_time = DLB_ATOMIC_LD_RLX(&process->talp_times.app_useful_time);
-        } else {
-            error = DLB_ERR_NOPROC;
-        }
-    } else {
-        error = DLB_ERR_NOSHMEM;
-    }
-
-    return error;
-}
-
-void shmem_procinfo__set_app_times(pid_t pid, int64_t mpi_time, int64_t useful_time) {
-    if (likely(shm_handler != NULL)) {
-        pinfo_t *process = get_process(pid);
-        DLB_ATOMIC_ST_RLX(&process->talp_times.app_mpi_time, mpi_time);
-        DLB_ATOMIC_ST_RLX(&process->talp_times.app_useful_time, useful_time);
-    }
-}
-
-int shmem_procinfo__get_region_times(pid_t pid, int64_t *mpi_time, int64_t *useful_time) {
-    int error = DLB_SUCCESS;
-    pinfo_t *process = NULL;
-    if (likely(shm_handler != NULL)) {
-        process = get_process(pid);
-        if (process) {
-            *mpi_time    = DLB_ATOMIC_LD_RLX(&process->talp_times.region_mpi_time);
-            *useful_time = DLB_ATOMIC_LD_RLX(&process->talp_times.region_useful_time);
-        } else {
-            error = DLB_ERR_NOPROC;
-        }
-    } else {
-        error = DLB_ERR_NOSHMEM;
-    }
-
-    return error;
-}
-
-void shmem_procinfo__set_region_times(pid_t pid, int64_t mpi_time, int64_t useful_time) {
-    if (likely(shm_handler != NULL)) {
-        pinfo_t *process = get_process(pid);
-        DLB_ATOMIC_ST_RLX(&process->talp_times.region_mpi_time, mpi_time);
-        DLB_ATOMIC_ST_RLX(&process->talp_times.region_useful_time, useful_time);
-    }
-}
-
 
 /*********************************************************************************/
 /* Misc                                                                          */
@@ -1606,76 +1513,4 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool
     error = error ? error : unregister_mask(process, &cpus_to_free, return_stolen);
 
     return error;
-}
-
-int auto_resize_start(){
-    if ( !thread_spd->talp_info ) return 0 ;
-    pinfo_t *process = get_process(thread_spd->id);
-    auto_sizer_t * au = &process->auto_sizer;
-
-    if( au->iter_num == 0)return DLB_SUCCESS;
-    shmem_lock(shm_handler);
-    {
-        // FIXME: fix type
-        /* monitoring_region_start(&process->auto_sizer.aux); */
-    }
-    shmem_unlock(shm_handler);
-
-    int last_iter = au->iter_num - 1;
-    int i;
-    double temp = process->auto_sizer.iterations[last_iter].percent;
-
-    if( temp < 0.4){
-        cpu_set_t mask;
-        mask = process->current_process_mask;
-        if (CPU_COUNT(&mask) == 1) return DLB_SUCCESS;
-        for(i = max_processes - 1; i > 0; i--){
-            if(CPU_ISSET(i,&mask)){
-                CPU_SET(i,&shdata->resize_mask);
-                CPU_CLR(i,&mask);
-                set_new_mask(process, &mask, false, false);
-                break;
-            }
-        }
-    }
-    else if( temp > 0.9){
-        cpu_set_t mask;
-        mask = process->current_process_mask;
-        if(CPU_COUNT(&shdata->resize_mask) == 0) return DLB_SUCCESS;
-        for(i = 0; i < max_cpus; ++i){
-            if(CPU_ISSET(i,&shdata->resize_mask)){
-                shmem_lock(shm_handler);
-                if(!CPU_ISSET(i,&shdata->resize_mask)){
-                    shmem_unlock(shm_handler);
-                    continue;
-                }
-                CPU_SET(i,&mask);
-                CPU_CLR(i, &shdata->resize_mask);
-                shmem_unlock(shm_handler);
-                set_new_mask(process,&mask, false, false);
-                break;
-            }
-        }
-    }
-    return DLB_SUCCESS;
-}
-
-int auto_resize_end(){
-    if ( !thread_spd->talp_info ) return 0 ;
-    shmem_lock(shm_handler);
-    {
-        pinfo_t *process = get_process(thread_spd->id);
-        monitor_info_t * monitor = &process->auto_sizer.aux;
-        // FIXME: fix type
-        /* monitoring_region_stop(monitor); */
-        iter_t* it = &process->auto_sizer.iterations[process->auto_sizer.iter_num];
-        it->mpi_time = monitor->mpi_time;
-        it->compute_time = monitor->compute_time;
-        it->percent = to_secs(it->compute_time) / ( to_secs(it->compute_time) + to_secs(it->mpi_time));
-        ++process->auto_sizer.iter_num;
-    }
-    shmem_unlock(shm_handler);
-
-    return DLB_SUCCESS;
-
 }

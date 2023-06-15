@@ -207,19 +207,17 @@ typedef struct POPRawRecord {
     int64_t elapsed_useful;
     int64_t app_sum_useful;
     int64_t node_sum_useful;
-    uint64_t num_mpi_calls;
-#ifdef PAPI_LIB
-    long long cycles;
-    long long instructions;
-#endif
-
+    int64_t num_mpi_calls;
+    int64_t cycles;
+    int64_t instructions;
 } pop_raw_record_t;
 static int pop_raw_num_records = 0;
 static pop_raw_record_t *pop_raw = NULL;
 
 void talp_output_record_pop_raw(const char *name, int P, int N, int num_ranks,
         int64_t elapsed_time, int64_t elapsed_useful, int64_t app_sum_useful,
-        int64_t node_sum_useful, uint64_t num_mpi_calls, long long cycles, long long instructions) {
+        int64_t node_sum_useful, int64_t num_mpi_calls, int64_t cycles,
+        int64_t instructions) {
 
     /* Realloc array */
     ++pop_raw_num_records;
@@ -242,10 +240,8 @@ void talp_output_record_pop_raw(const char *name, int P, int N, int num_ranks,
         .app_sum_useful = app_sum_useful,
         .node_sum_useful = node_sum_useful,
         .num_mpi_calls = num_mpi_calls,
-#ifdef PAPI_LIB
         .cycles = cycles,
         .instructions = instructions,
-#endif
     };
 }
 
@@ -263,11 +259,9 @@ static void pop_raw_print(void) {
             info("### Elapsed Useful:               %"PRId64" ns", record->elapsed_useful);
             info("### Useful CPU Time (Total):      %"PRId64" ns", record->app_sum_useful);
             info("### Useful CPU Time (Node):       %"PRId64" ns", record->node_sum_useful);
-            info("### Number of MPI calls (Total):  %"PRIu64, record->num_mpi_calls);
-#ifdef PAPI_LIB
-            info("### Number of cycles (Total):     %llu", record->cycles);
-            info("### Number of instructions (T.):  %llu", record->instructions);
-#endif
+            info("### Number of MPI calls (Total):  %"PRId64, record->num_mpi_calls);
+            info("### Number of cycles (Total):     %"PRId64, record->cycles);
+            info("### Number of instructions (T.):  %"PRId64, record->instructions);
         }
     }
 }
@@ -292,7 +286,9 @@ static void pop_raw_to_json(FILE *out_file) {
                     "      \"elapsedUseful\": %"PRId64",\n"
                     "      \"usefulCpuTotal\": %"PRId64",\n"
                     "      \"usefulCpuNode\": %"PRId64",\n"
-                    "      \"numMPICalls\": %"PRIu64"\n"
+                    "      \"numMPICalls\": %"PRId64",\n"
+                    "      \"cycles\": %"PRId64",\n"
+                    "      \"instructions\": %"PRId64"\n"
                     "    }%s\n",
                     record->name,
                     record->P,
@@ -303,6 +299,8 @@ static void pop_raw_to_json(FILE *out_file) {
                     record->app_sum_useful,
                     record->node_sum_useful,
                     record->num_mpi_calls,
+                    record->cycles,
+                    record->instructions,
                     i+1 < pop_raw_num_records ? "," : "");
         }
         fprintf(out_file,
@@ -324,7 +322,9 @@ static void pop_raw_to_xml(FILE *out_file) {
                 "    <elapsedUseful>%"PRId64"</elapsedUseful>\n"
                 "    <usefulCpuTotal>%"PRId64"</usefulCpuTotal>\n"
                 "    <usefulCpuNode>%"PRId64"</usefulCpuNode>\n"
-                "    <numMPICalls>%"PRIu64"</numMPICalls>\n"
+                "    <numMPICalls>%"PRId64"</numMPICalls>\n"
+                "    <cycles>%"PRId64"</cycles>\n"
+                "    <instructions>%"PRId64"</instructions>\n"
                 "  </popRaw>\n",
                 record->name,
                 record->P,
@@ -334,7 +334,9 @@ static void pop_raw_to_xml(FILE *out_file) {
                 record->elapsed_useful,
                 record->app_sum_useful,
                 record->node_sum_useful,
-                record->num_mpi_calls);
+                record->num_mpi_calls,
+                record->cycles,
+                record->instructions);
     }
 }
 
@@ -353,12 +355,9 @@ static void pop_raw_to_txt(FILE *out_file) {
                     "### Elapsed Useful:                %"PRId64" ns\n"
                     "### Useful CPU Time (Total):       %"PRId64" ns\n"
                     "### Useful CPU Time (Node):        %"PRId64" ns\n"
-                    "### Number of MPI calls (Total):   %"PRIu64"\n"
-#ifdef PAPI_LIB
-                    "### Number of cycles (Total):      %llu\n"
-                    "### Number of instructions (T.):   %llu\n"
-#endif
-                    ,
+                    "### Number of MPI calls (Total):   %"PRId64"\n"
+                    "### Number of cycles (Total):      %"PRId64"\n"
+                    "### Number of instructions (T.):   %"PRId64"\n",
                     record->name,
                     record->P,
                     record->N,
@@ -367,13 +366,9 @@ static void pop_raw_to_txt(FILE *out_file) {
                     record->elapsed_useful,
                     record->app_sum_useful,
                     record->node_sum_useful,
-                    record->num_mpi_calls
-#ifdef PAPI_LIB
-                    ,
+                    record->num_mpi_calls,
                     record->cycles,
-                    record->instructions
-#endif
-            );
+                    record->instructions);
         }
     }
 }
@@ -403,7 +398,7 @@ static void pop_to_csv(FILE *out_file) {
             ",ParallelEfficiency,CommunicationEfficiency,LoadBalance,LbIn,LbOut",
             pop_raw_num_records == 0 ? "" :
             ",NumCpus,NumNodes,NumRanks,ElapsedTime,ElapsedUseful,UsefulCpuTotal"
-            ",UsefulCpuNode,numMPICalls"
+            ",UsefulCpuNode,numMPICalls,cycles,instructions"
            );
 
     int i;
@@ -426,14 +421,16 @@ static void pop_to_csv(FILE *out_file) {
         }
 
         if (raw_record) {
-            fprintf(out_file, ",%d,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRIu64,
+            fprintf(out_file, ",%d,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRIu64",%"PRIu64",%"PRIu64,
                     raw_record->P,
                     raw_record->N,
                     raw_record->elapsed_time,
                     raw_record->elapsed_useful,
                     raw_record->app_sum_useful,
                     raw_record->node_sum_useful,
-                    raw_record->num_mpi_calls);
+                    raw_record->num_mpi_calls,
+                    raw_record->cycles,
+                    raw_record->instructions);
         }
 
         fprintf(out_file, "\n");
@@ -704,9 +701,7 @@ typedef struct ProcessRecord {
     int64_t elapsed_useful_time;
     int64_t accumulated_MPI_time;
     int64_t accumulated_useful_time;
-#ifdef PAPI_LIB
     float  ipc;
-#endif
     struct ProcessRecord *next;
 } process_record_t;
 
@@ -761,9 +756,7 @@ void talp_output_record_process(const char *monitor_name, int rank, pid_t pid,
         .elapsed_useful_time = elapsed_useful_time,
         .accumulated_MPI_time = accumulated_MPI_time,
         .accumulated_useful_time = accumulated_useful_time,
-#ifdef PAPI_LIB
         .ipc = ipc,
-#endif
         .next = NULL,
     };
     snprintf(process_record->hostname, HOST_NAME_MAX, "%s", hostname);
@@ -797,10 +790,7 @@ static void process_print(void) {
                     nsecs_to_secs(process_record->accumulated_MPI_time));
             info("### Useful time :               %.9g seconds",
                     nsecs_to_secs(process_record->accumulated_useful_time));
-#ifdef PAPI_LIB
-            info("### IPC  :                     %.2f",
-                    process_record->ipc);
-#endif
+            info("### IPC  :                     %.2f", process_record->ipc);
             process_record = process_record->next;
         }
         monitor_list = monitor_list->next;;
@@ -836,10 +826,8 @@ static void process_to_json(FILE *out_file) {
                 "          \"elapsedTime\": %"PRId64",\n"
                 "          \"elapsedUseful\": %"PRId64",\n"
                 "          \"mpiTime\": %"PRId64",\n"
-                "          \"usefulTime\": %"PRId64"\n"
-#ifdef PAPI_LIB
-                "          \"IPC\": %f,\n"
-#endif
+                "          \"usefulTime\": %"PRId64",\n"
+                "          \"IPC\": %f\n"
                 "        }%s\n",
                 process_record->rank,
                 process_record->pid,
@@ -850,9 +838,7 @@ static void process_to_json(FILE *out_file) {
                 process_record->elapsed_useful_time,
                 process_record->accumulated_MPI_time,
                 process_record->accumulated_useful_time,
-#ifdef PAPI_LIB
                 process_record->ipc,
-#endif
                 process_record->next != NULL ? "," : "");
             process_record = process_record->next;
         }
@@ -886,9 +872,7 @@ static void process_to_xml(FILE *out_file) {
                 "      <elapsedUseful>%"PRId64"</elapsedUseful>\n"
                 "      <mpiTime>%"PRId64"</mpiTime>\n"
                 "      <usefulTime>%"PRId64"</usefulTime>\n"
-#ifdef PAPI_LIB
                 "      <IPC>%f</IPC>\n"
-#endif
                 "    </process>\n",
                 process_record->rank,
                 process_record->pid,
@@ -898,13 +882,8 @@ static void process_to_xml(FILE *out_file) {
                 process_record->elapsed_time,
                 process_record->elapsed_useful_time,
                 process_record->accumulated_MPI_time,
-                process_record->accumulated_useful_time
-#ifdef PAPI_LIB
-                , process_record->ipc
-#endif
-                );
-
-
+                process_record->accumulated_useful_time,
+                process_record->ipc);
             process_record = process_record->next;
         }
         fprintf(out_file,
@@ -920,14 +899,14 @@ static void process_to_csv(FILE *out_file) {
     /* Print header */
     fprintf(out_file,
             "Region,Rank,PID,Hostname,CpuSet,NumMeasurements"
-            ",ElapsedTime,ElapsedUsefulTime,MPITime,UsefulTime\n");
+            ",ElapsedTime,ElapsedUsefulTime,MPITime,UsefulTime,IPC\n");
 
     monitor_list_t *monitor_list = monitor_list_head;
     while (monitor_list != NULL) {
         process_record_t *process_record = monitor_list->process_list_head;
         while (process_record != NULL) {
             fprintf(out_file,
-                    "%s,%d,%d,%s,%s,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64"\n",
+                    "%s,%d,%d,%s,%s,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64",%f\n",
                     monitor_list->monitor_name,
                     process_record->rank,
                     process_record->pid,
@@ -937,7 +916,8 @@ static void process_to_csv(FILE *out_file) {
                     process_record->elapsed_time,
                     process_record->elapsed_useful_time,
                     process_record->accumulated_MPI_time,
-                    process_record->accumulated_useful_time);
+                    process_record->accumulated_useful_time,
+                    process_record->ipc);
             process_record = process_record->next;
         }
         monitor_list = monitor_list->next;;
@@ -959,10 +939,7 @@ static void process_to_txt(FILE *out_file) {
                     "### Elapsed useful time :      %.9g seconds\n"
                     "### MPI time :                 %.9g seconds\n"
                     "### Useful time :              %.9g seconds\n"
-#ifdef PAPI_LIB
-                    "### IPC:                       %.2f \n"
-#endif
-                    ,
+                    "### IPC:                       %.2f\n",
                     monitor_list->monitor_name,
                     process_record->pid, process_record->hostname,
                     process_record->rank,
@@ -970,12 +947,8 @@ static void process_to_txt(FILE *out_file) {
                     nsecs_to_secs(process_record->elapsed_time),
                     nsecs_to_secs(process_record->elapsed_useful_time),
                     nsecs_to_secs(process_record->accumulated_MPI_time),
-                    nsecs_to_secs(process_record->accumulated_useful_time)
-#ifdef PAPI_LIB
-                    , process_record->ipc
-#endif
-                    );
-
+                    nsecs_to_secs(process_record->accumulated_useful_time),
+                    process_record->ipc);
             process_record = process_record->next;
         }
         monitor_list = monitor_list->next;
