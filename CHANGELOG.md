@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- PAPI support for TALP metrics
+- `libdlb_mpic.so` and `libdlb_mpic_*.so` are C MPI only libraries
+  that may be built using `--enable-c-mpi-library` at configure time
+- Functions to reset, stop, start and report monitoring regions now
+  accept the special argument DLB_MPI_REGION for the implicit region
+- Function `DLB_TALP_QueryPOPNodeMetrics` for third-party applications
+  to query pop metrics. Requires `--talp-external-profiler`.
+
+### Changed
+- `libdlb_mpif.so` and `libdlb_mpif_*.so` are no longer built by default,
+  only if `--enable-fortran-mpi-library` is set at configure time
+- Flag `--quiet` now only suppresses INFO and VERBOSE, added new flag
+  `--silent` to keep the old functionality to suppress all messages
+- Refactor `DLB_TALP_CollectNodeMetrics` to
+  `DLB_TALP_CollectPOPNodeMetrics` and add communication efficiency
+
 ### Fixed
 - Fixed wrong generated code for `MPI_Initialized` and `MPI_Finalized`
 
