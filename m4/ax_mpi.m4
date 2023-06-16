@@ -274,14 +274,26 @@ AC_DEFUN([AX_CHECK_MPI_CPPFLAGS],
 [
     # MPICC -show checks take priority over custom flags
     AS_IF([test -f $$1], [
+        # OpenMPI
         AS_IF([mpicc_showme_compile=$($$1 -showme:compile 2>&AS_MESSAGE_LOG_FD)], [
             AX_VAR_PUSHVALUE([CPPFLAGS], [$mpicc_showme_compile])
             AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$mpicc_showme_compile"])
             AX_VAR_POPVALUE([CPPFLAGS])
         ])
+	# Generic flag
         AS_IF([test "x$ac_cv_header_mpi_h" != xyes], [
             AS_IF([mpicc_show_c=$($$1 -show -c 2>&AS_MESSAGE_LOG_FD)], [
                 mpicc_show_c=$(echo $mpicc_show_c | tr -s ' ' | cut -d' ' -f3-)
+                AX_VAR_PUSHVALUE([CPPFLAGS], [$mpicc_show_c])
+                AS_UNSET([ac_cv_header_mpi_h])
+                AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$mpicc_show_c"])
+                AX_VAR_POPVALUE([CPPFLAGS])
+            ])
+        ])
+        # Generic flag with quoted paths
+        AS_IF([test "x$ac_cv_header_mpi_h" != xyes], [
+            AS_IF([mpicc_show_c=$($$1 -show -c 2>&AS_MESSAGE_LOG_FD)], [
+                mpicc_show_c=$(echo $mpicc_show_c | tr -s ' ' | cut -d' ' -f3- | sed 's|"||g')
                 AX_VAR_PUSHVALUE([CPPFLAGS], [$mpicc_show_c])
                 AS_UNSET([ac_cv_header_mpi_h])
                 AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$mpicc_show_c"])
@@ -319,6 +331,7 @@ AC_DEFUN([AX_CHECK_MPI_LDFLAGS],
 
     # MPICC -show checks take priority over custom flags
     AS_IF([test -f $$1], [
+        # OpenMPI
         AS_IF([mpicc_showme_link=$($$1 -showme:link 2>&AS_MESSAGE_LOG_FD)], [
             AX_VAR_PUSHVALUE([LIBS], [""])
             AX_VAR_PUSHVALUE([LDFLAGS], [$mpicc_showme_link])
@@ -326,6 +339,7 @@ AC_DEFUN([AX_CHECK_MPI_LDFLAGS],
             AX_VAR_POPVALUE([LDFLAGS])
             AX_VAR_POPVALUE([LIBS])
         ])
+        # MPICH
         AS_IF([test "x$ac_cv_search_MPI_Init" = x || test "x$ac_cv_search_MPI_Init" = xno], [
             AS_IF([mpicc_link_info=$($$1 -link_info 2>&AS_MESSAGE_LOG_FD)], [
                 mpicc_link_info=$(echo $mpicc_link_info | tr -s ' ' | cut -d' ' -f2-)
@@ -337,9 +351,34 @@ AC_DEFUN([AX_CHECK_MPI_LDFLAGS],
                 AX_VAR_POPVALUE([LIBS])
             ])
         ])
+        # Intel oneAPI quoted paths
+        AS_IF([test "x$ac_cv_search_MPI_Init" = x || test "x$ac_cv_search_MPI_Init" = xno], [
+            AS_IF([mpicc_link_info=$($$1 -link_info 2>&AS_MESSAGE_LOG_FD)], [
+                mpicc_link_info=$(echo $mpicc_link_info | tr -s ' ' | cut -d' ' -f2- | sed 's|"||g')
+                AX_VAR_PUSHVALUE([LIBS], [""])
+                AX_VAR_PUSHVALUE([LDFLAGS], [$mpicc_link_info])
+                AS_UNSET([ac_cv_search_MPI_Init])
+                AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$mpicc_link_info"])
+                AX_VAR_POPVALUE([LDFLAGS])
+                AX_VAR_POPVALUE([LIBS])
+            ])
+        ])
+	# Generic flag
         AS_IF([test "x$ac_cv_search_MPI_Init" = x || test "x$ac_cv_search_MPI_Init" = xno], [
             AS_IF([mpicc_show=$($$1 -show 2>&AS_MESSAGE_LOG_FD)], [
                 mpicc_show=$(echo $mpicc_show | tr -s ' ' | cut -d' ' -f2-)
+                AX_VAR_PUSHVALUE([LIBS], [""])
+                AX_VAR_PUSHVALUE([LDFLAGS], [$mpicc_show])
+                AS_UNSET([ac_cv_search_MPI_Init])
+                AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$mpicc_show"])
+                AX_VAR_POPVALUE([LDFLAGS])
+                AX_VAR_POPVALUE([LIBS])
+            ])
+        ])
+        # Generic flag with quoted paths
+        AS_IF([test "x$ac_cv_search_MPI_Init" = x || test "x$ac_cv_search_MPI_Init" = xno], [
+            AS_IF([mpicc_show=$($$1 -show 2>&AS_MESSAGE_LOG_FD)], [
+                mpicc_show=$(echo $mpicc_show | tr -s ' ' | cut -d' ' -f2- | sed 's|"||g')
                 AX_VAR_PUSHVALUE([LIBS], [""])
                 AX_VAR_PUSHVALUE([LDFLAGS], [$mpicc_show])
                 AS_UNSET([ac_cv_search_MPI_Init])
