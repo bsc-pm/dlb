@@ -76,16 +76,29 @@ int main(int argc, char *argv[]) {
     assert( talp_info->samples[0]->cpu_disabled == false );
     assert( talp_info->ncpus == 1 );
 
+    /* We are getting timestamps before and after talp_in_mpi / talp_out_mpi
+     * to check whether sample->last_updated_timestamp is updated. Equivalence
+     * is accepted because clock_gettime is allowed to return the same value on
+     * successive calls. */
+    int64_t time_before;
+    int64_t time_after;
+
     /* Entering MPI, sample is updated, region not yet */
+    time_before = get_time_in_ns();
     talp_in_mpi(&spd, /* is_blocking_collective */ false);
-    assert( talp_info->samples[0]->last_updated_timestamp < get_time_in_ns() );
+    time_after = get_time_in_ns();
+    assert( talp_info->samples[0]->last_updated_timestamp >= time_before
+		    && talp_info->samples[0]->last_updated_timestamp <= time_after );
     assert( talp_info->samples[0]->mpi_time == 0 );
     assert( talp_info->samples[0]->useful_time > 0 );
     assert( talp_info->samples[0]->in_useful == false );
 
     /* Leaving MPI */
+    time_before = get_time_in_ns();
     talp_out_mpi(&spd, /* is_blocking_collective */ false);
-    assert( talp_info->samples[0]->last_updated_timestamp < get_time_in_ns() );
+    time_after = get_time_in_ns();
+    assert( talp_info->samples[0]->last_updated_timestamp >= time_before
+		    && talp_info->samples[0]->last_updated_timestamp <= time_after );
     assert( talp_info->samples[0]->mpi_time > 0 );
     assert( talp_info->samples[0]->useful_time > 0 );
     assert( talp_info->samples[0]->in_useful == true );
