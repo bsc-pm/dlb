@@ -989,7 +989,7 @@ void options_print_variables(const options_t *options, bool print_extended) {
         if (name_len < 24) {
             b += sprintf(b, "%s:%s", entry->arg_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
         } else {
-            b += sprintf(b, "%s:\n\t\t\t", entry->arg_name);
+            b += snprintf(b, 128, "%s:\n\t\t\t", entry->arg_name);
         }
 
         /* Value */
