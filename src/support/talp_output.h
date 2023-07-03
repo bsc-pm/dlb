@@ -31,7 +31,7 @@ typedef struct ProcessInNodeRecord {
 } process_in_node_record_t;
 
 void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
-        float parallel_efficiency, float communication_efficiency,
+        float avg_ipc, float parallel_efficiency, float communication_efficiency,
         float lb, float lb_in, float lb_out);
 
 void talp_output_record_pop_raw(const char *name, int P, int N, int num_ranks,

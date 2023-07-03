@@ -1068,6 +1068,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         if (_mpi_rank == 0) {
             if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
                 if (elapsed_time > 0) {
+                    float avg_ipc = cycles ? (float)instructions / cycles : 0.0f;
                     float parallel_efficiency = (float)app_sum_useful / (elapsed_time * total_cpus);
                     float communication_efficiency = (float)elapsed_useful / elapsed_time;
                     float lb = (float)app_sum_useful / (elapsed_useful * total_cpus);
@@ -1077,13 +1078,15 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                     talp_output_record_pop_metrics(
                             monitor->name,
                             elapsed_time,
+                            avg_ipc,
                             parallel_efficiency,
                             communication_efficiency,
                             lb,
                             lb_in,
                             lb_out);
                 } else {
-                    talp_output_record_pop_metrics(monitor->name, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+                    talp_output_record_pop_metrics(monitor->name,
+                            0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                 }
             }
             if (spd->options.talp_summary & SUMMARY_POP_RAW) {

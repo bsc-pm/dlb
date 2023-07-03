@@ -37,6 +37,7 @@
 typedef struct POPMetricsRecord {
     char *name;
     int64_t elapsed_time;
+    float avg_ipc;
     float parallel_efficiency;
     float communication_efficiency;
     float lb;
@@ -47,7 +48,7 @@ static int pop_metrics_num_records = 0;
 static pop_metrics_record_t *pop_metrics = NULL;
 
 void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
-        float parallel_efficiency, float communication_efficiency,
+        float avg_ipc, float parallel_efficiency, float communication_efficiency,
         float lb, float lb_in, float lb_out) {
 
     /* Realloc array */
@@ -65,6 +66,7 @@ void talp_output_record_pop_metrics(const char *name, int64_t elapsed_time,
     pop_metrics[pop_metrics_num_records-1] = (const pop_metrics_record_t) {
         .name = allocated_name,
         .elapsed_time = elapsed_time,
+        .avg_ipc = avg_ipc,
         .parallel_efficiency = parallel_efficiency,
         .communication_efficiency = communication_efficiency,
         .lb = lb,
@@ -83,11 +85,14 @@ static void pop_metrics_print(void) {
             info("######### Monitoring Region POP Metrics #########");
             info("### Name:                       %s", record->name);
             info("### Elapsed Time :              %s", elapsed_time_str);
+            if (record->avg_ipc > 0.0f) {
+                info("### Average IPC :               %1.2f", record->avg_ipc);
+            }
             info("### Parallel efficiency :       %1.2f", record->parallel_efficiency);
             info("###   - Communication eff. :    %1.2f", record->communication_efficiency);
             info("###   - Load Balance :          %1.2f", record->lb);
             info("###       - LB_in :             %1.2f", record->lb_in);
-            info("###       - LB_out:             %1.2f", record->lb_out);
+            info("###       - LB_out :            %1.2f", record->lb_out);
         } else {
             info("######### Monitoring Region POP Metrics #########");
             info("### Name:                       %s", record->name);
@@ -107,6 +112,7 @@ static void pop_metrics_to_json(FILE *out_file) {
                     "    {\n"
                     "      \"name\": \"%s\",\n"
                     "      \"elapsedTime\": %"PRId64",\n"
+                    "      \"averageIPC\": %.2f,\n"
                     "      \"parallelEfficiency\": %.2f,\n"
                     "      \"communicationEfficiency\": %.2f,\n"
                     "      \"loadBalance\": %.2f,\n"
@@ -115,6 +121,7 @@ static void pop_metrics_to_json(FILE *out_file) {
                     "    }%s\n",
                     record->name,
                     record->elapsed_time,
+                    record->avg_ipc,
                     record->parallel_efficiency,
                     record->communication_efficiency,
                     record->lb,
@@ -135,6 +142,7 @@ static void pop_metrics_to_xml(FILE *out_file) {
                 "  <popMetrics>\n"
                 "    <name>%s</name>\n"
                 "    <elapsedTime>%"PRId64"</elapsedTime>\n"
+                "    <averageIPC>%.2f</averageIPC>\n"
                 "    <parallelEfficiency>%.2f</parallelEfficiency>\n"
                 "    <communicationEfficiency>%.2f</communicationEfficiency>\n"
                 "    <loadBalance>%.2f</loadBalance>\n"
@@ -143,6 +151,7 @@ static void pop_metrics_to_xml(FILE *out_file) {
                 "  </popMetrics>\n",
                 record->name,
                 record->elapsed_time,
+                record->avg_ipc,
                 record->parallel_efficiency,
                 record->communication_efficiency,
                 record->lb,
@@ -162,13 +171,15 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "######### Monitoring Region POP Metrics #########\n"
                     "### Name:                       %s\n"
                     "### Elapsed Time :              %s\n"
+                    "### Average IPC :               %1.2f\n"
                     "### Parallel efficiency :       %1.2f\n"
                     "###   - Communication eff. :    %1.2f\n"
                     "###   - Load Balance :          %1.2f\n"
                     "###       - LB_in :             %1.2f\n"
-                    "###       - LB_out:             %1.2f\n",
+                    "###       - LB_out :            %1.2f\n",
                     record->name,
                     elapsed_time_str,
+                    record->avg_ipc,
                     record->parallel_efficiency,
                     record->communication_efficiency,
                     record->lb,
@@ -790,7 +801,7 @@ static void process_print(void) {
                     nsecs_to_secs(process_record->accumulated_MPI_time));
             info("### Useful time :               %.9g seconds",
                     nsecs_to_secs(process_record->accumulated_useful_time));
-            info("### IPC  :                     %.2f", process_record->ipc);
+            info("### IPC :                       %.2f", process_record->ipc);
             process_record = process_record->next;
         }
         monitor_list = monitor_list->next;;
