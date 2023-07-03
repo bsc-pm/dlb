@@ -18,7 +18,7 @@ AC_DEFUN([AX_PAPI],
             ])
             AS_IF([test -d "$with_papi/lib"], [
                 user_papi_libdir="$with_papi/lib"
-                user_papi_lib_flags="-L$with_papi/lib"
+                user_papi_lib_flags="-L$with_papi/lib -Wl,-rpath,$with_papi/lib"
             ])
         ])
 
