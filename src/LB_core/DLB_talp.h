@@ -58,6 +58,7 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
 typedef struct talp_info_t {
     dlb_monitor_t       mpi_monitor;        /* monitor MPI_Init -> MPI_Finalize */
     bool                external_profiler;  /* whether to update shmem on every sample */
+    bool                papi;               /* whether to collect PAPI counters */
     int                 ncpus;              /* Number of process CPUs */
     talp_sample_t       **samples;          /* Per-thread ongoing sample,
                                                added to all monitors when finished */

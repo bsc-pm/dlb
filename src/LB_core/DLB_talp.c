@@ -132,6 +132,7 @@ void talp_init(subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
     *talp_info = (const talp_info_t) {
         .external_profiler = spd->options.talp_external_profiler,
+        .papi = spd->options.talp_papi,
         .samples_mutex = PTHREAD_MUTEX_INITIALIZER,
     };
     spd->talp_info = talp_info;
@@ -147,22 +148,46 @@ void talp_init(subprocess_descriptor_t *spd) {
 
     /* Initialize and start running PAPI */
 #ifdef PAPI_LIB
-    /* Library init */
-    if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) warning("PAPI Library versions differ");
+    if (talp_info->papi) {
+        /* Library init */
+        if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
+            warning("PAPI Library versions differ");
+        }
 
-    /* Activate thread tracing */
-    int error = PAPI_thread_init(pthread_self);
-    error += PAPI_register_thread();
+        /* Activate thread tracing */
+        int error = PAPI_thread_init(pthread_self);
+        if (error != PAPI_OK) {
+            warning("PAPI Error during thread initialization. %d: %s",
+                    error, PAPI_strerror(error));
+        }
 
-    /* Eventset creation */
-    error += PAPI_create_eventset(&EventSet);
+        error = PAPI_register_thread();
+        if (error != PAPI_OK) {
+            warning("PAPI Error during thread registration. %d: %s",
+                    error, PAPI_strerror(error));
+        }
 
-    int Events[2] = {PAPI_TOT_CYC, PAPI_TOT_INS};
-    error += PAPI_add_events(EventSet, Events, 2);
+        /* Eventset creation */
+        error = PAPI_create_eventset(&EventSet);
+        if (error != PAPI_OK) {
+            warning("PAPI Error during eventset creation. %d: %s",
+                    error, PAPI_strerror(error));
+        }
 
-    /* Start tracing  */
-    error += PAPI_start(EventSet);
-    if (error != PAPI_OK) warning("PAPI Error during initialization");
+        int Events[2] = {PAPI_TOT_CYC, PAPI_TOT_INS};
+        error = PAPI_add_events(EventSet, Events, 2);
+        if (error != PAPI_OK) {
+            warning("PAPI Error adding events. %d: %s",
+                    error, PAPI_strerror(error));
+        }
+
+        /* Start tracing  */
+        error = PAPI_start(EventSet);
+        if (error != PAPI_OK) {
+            warning("PAPI Error during tracing initialization: %d: %s",
+                    error, PAPI_strerror(error));
+        }
+    }
 #endif
 }
 
@@ -170,9 +195,6 @@ static void talp_destroy(void) {
     monitoring_regions_finalize_all(thread_spd);
     free(thread_spd->talp_info);
     thread_spd->talp_info = NULL;
-#ifdef PAPI_LIB
-    PAPI_shutdown();
-#endif
 }
 
 void talp_finalize(subprocess_descriptor_t *spd) {
@@ -194,6 +216,13 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 
     /* Finalize shared memory */
     shmem_talp__finalize(spd->id);
+
+#ifdef PAPI_LIB
+    talp_info_t *talp_info = spd->talp_info;
+    if (talp_info->papi) {
+        PAPI_shutdown();
+    }
+#endif
 
     if (spd == thread_spd) {
         /* Keep the timers allocated until the program finalizes */
@@ -260,7 +289,8 @@ static void talp_dealloc_samples(const subprocess_descriptor_t *spd) {
 }
 
 /* Compute new microsample (time since last update) and update sample values */
-static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sample) {
+static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sample,
+        bool papi) {
     /* Observer threads ignore this function */
     if (unlikely(sample == NULL)) return;
 
@@ -270,8 +300,12 @@ static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t
 #ifdef PAPI_LIB
     /* Stop counting and store papi_values */
     long long papi_values[2];
-    int error = PAPI_stop(EventSet, papi_values);
-    if (error != PAPI_OK) verbose(VB_TALP, "stop return code: %d, %s", error, PAPI_strerror(error));
+    if (papi) {
+        int error = PAPI_stop(EventSet, papi_values);
+        if (error != PAPI_OK) {
+            verbose(VB_TALP, "stop return code: %d, %s", error, PAPI_strerror(error));
+        }
+    }
 #endif
 
     int64_t microsample_duration = now - sample->last_updated_timestamp;
@@ -288,16 +322,18 @@ static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t
     DLB_ATOMIC_ADD_RLX(&sample->useful_time, useful_time);
 
 #ifdef PAPI_LIB
-    /* Atomically add papi_values to structure */
-    DLB_ATOMIC_ADD_RLX(&sample->cycles, papi_values[0]);
-    DLB_ATOMIC_ADD_RLX(&sample->instructions, papi_values[1]);
+    if (papi) {
+        /* Atomically add papi_values to structure */
+        DLB_ATOMIC_ADD_RLX(&sample->cycles, papi_values[0]);
+        DLB_ATOMIC_ADD_RLX(&sample->instructions, papi_values[1]);
 
-    /* Reset counters and restart counting */
-    error = PAPI_reset(EventSet);
-    if (error != PAPI_OK) verbose(VB_TALP, "Error resetting counters");
+        /* Reset counters and restart counting */
+        int error = PAPI_reset(EventSet);
+        if (error != PAPI_OK) verbose(VB_TALP, "Error resetting counters");
 
-    error = PAPI_start(EventSet);
-    if (error != PAPI_OK) verbose(VB_TALP, "Error starting counting counters again");
+        error = PAPI_start(EventSet);
+        if (error != PAPI_OK) verbose(VB_TALP, "Error starting counting counters again");
+    }
 #endif
 
 }
@@ -308,7 +344,7 @@ static void talp_gather_samples(const subprocess_descriptor_t *spd) {
     talp_sample_t *thread_sample = talp_get_thread_sample(spd);
 
     /* Update thread sample with the last microsample */
-    talp_update_sample(spd, thread_sample);
+    talp_update_sample(spd, thread_sample, talp_info->papi);
 
     /* Accumulate samples from all threads */
     talp_macrosample_t macrosample = (const talp_macrosample_t) {};
@@ -431,7 +467,7 @@ void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective
         if (!is_blocking_collective || !talp_info->external_profiler) {
             /* Either this MPI call is not a blocking collective or the
              * external_profiler is disabled: just update the sample */
-            talp_update_sample(spd, sample);
+            talp_update_sample(spd, sample, talp_info->papi);
         } else {
             /* Otherwise, gather samples and update all monitoring regions */
             talp_gather_samples(spd);
@@ -451,7 +487,7 @@ void talp_out_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collectiv
         if (!is_blocking_collective || !talp_info->external_profiler) {
             /* Either this MPI call is not a blocking collective or the
              * external_profiler is disabled: just update the sample */
-            talp_update_sample(spd, sample);
+            talp_update_sample(spd, sample, talp_info->papi);
         } else {
             /* Otherwise, gather samples and update all monitoring regions */
             talp_gather_samples(spd);

@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     CPU_ZERO(&process_mask);
     CPU_SET(cpu, &process_mask);
 
-    char options[64] = "--talp --shm-key=";
+    char options[64] = "--talp --talp-papi --shm-key=";
     strcat(options, SHMEM_KEY);
     subprocess_descriptor_t spd = {.id = 111};
     options_init(&spd.options, options);
