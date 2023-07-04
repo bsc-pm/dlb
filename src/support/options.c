@@ -339,6 +339,15 @@ static const opts_dict_t options_dictionary[] = {
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     },
     {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-papi",
+        .default_value  = "no",
+        .description    = OFFSET"Select whether to collect PAPI counters.",
+        .offset         = offsetof(options_t, talp_papi),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
+    {
         .var_name       = "LB_TALP_SUMM",
         .arg_name       = "--talp-summary",
         .default_value  = "pop-metrics",

@@ -51,7 +51,7 @@ static void delete_test_directory(void) {
 
 static void record_metrics(void) {
 
-    talp_output_record_pop_metrics("Region 1", 100, 0.89f, 0.99f, 0.9f, 0.9f, 1.0f);
+    talp_output_record_pop_metrics("Region 1", 100, 2.0f, 0.89f, 0.99f, 0.9f, 0.9f, 1.0f);
 
     talp_output_record_pop_raw("Region 1", 8, 1, 3, 100, 90, 500, 500, 42, 10000, 20000);
 
