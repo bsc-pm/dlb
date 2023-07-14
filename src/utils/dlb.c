@@ -39,7 +39,7 @@
  *      Barcelona Supercomputing Center (pm-tools@bsc.es)
  *  \section seealso SEE ALSO
  *      \ref dlb_run "dlb_run"(1), \ref dlb_shm "dlb_shm"(1),
- *      \ref dlb_taskset "dllb_taskset"(1)
+ *      \ref dlb_taskset "dlb_taskset"(1)
  */
 
 #ifdef HAVE_CONFIG_H
