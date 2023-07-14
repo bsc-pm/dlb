@@ -147,8 +147,8 @@ void talp_init(subprocess_descriptor_t *spd) {
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
 
     /* Initialize and start running PAPI */
-#ifdef PAPI_LIB
     if (talp_info->papi) {
+#ifdef PAPI_LIB
         /* Library init */
         if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
             warning("PAPI Library versions differ");
@@ -187,8 +187,11 @@ void talp_init(subprocess_descriptor_t *spd) {
             warning("PAPI Error during tracing initialization: %d: %s",
                     error, PAPI_strerror(error));
         }
-    }
+#else
+        warning("DLB has not been configured with PAPI support, disabling option.");
+        talp_info->papi = false;
 #endif
+    }
 }
 
 static void talp_destroy(void) {
@@ -296,18 +299,6 @@ static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t
 
     /* Compute duration and set new last_updated_timestamp */
     int64_t now = get_time_in_ns();
-
-#ifdef PAPI_LIB
-    /* Stop counting and store papi_values */
-    long long papi_values[2];
-    if (papi) {
-        int error = PAPI_stop(EventSet, papi_values);
-        if (error != PAPI_OK) {
-            verbose(VB_TALP, "stop return code: %d, %s", error, PAPI_strerror(error));
-        }
-    }
-#endif
-
     int64_t microsample_duration = now - sample->last_updated_timestamp;
     sample->last_updated_timestamp = now;
 
@@ -323,19 +314,24 @@ static void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t
 
 #ifdef PAPI_LIB
     if (papi) {
-        /* Atomically add papi_values to structure */
-        DLB_ATOMIC_ADD_RLX(&sample->cycles, papi_values[0]);
-        DLB_ATOMIC_ADD_RLX(&sample->instructions, papi_values[1]);
+        /* Read counters only if the sample is in_useful */
+        if (sample->in_useful) {
+            long long papi_values[2];
+            int error = PAPI_read(EventSet, papi_values);
+            if (error != PAPI_OK) {
+                verbose(VB_TALP, "stop return code: %d, %s", error, PAPI_strerror(error));
+            }
+
+            /* Atomically add papi_values to structure */
+            DLB_ATOMIC_ADD_RLX(&sample->cycles, papi_values[0]);
+            DLB_ATOMIC_ADD_RLX(&sample->instructions, papi_values[1]);
+        }
 
         /* Reset counters and restart counting */
         int error = PAPI_reset(EventSet);
         if (error != PAPI_OK) verbose(VB_TALP, "Error resetting counters");
-
-        error = PAPI_start(EventSet);
-        if (error != PAPI_OK) verbose(VB_TALP, "Error starting counting counters again");
     }
 #endif
-
 }
 
 /* Accumulate values from samples of all threads and update regions */
