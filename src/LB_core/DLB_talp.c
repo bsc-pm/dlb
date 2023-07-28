@@ -429,6 +429,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
          * registered in the shared memory matches with the number of MPI processes in the node.
          * This check is needed to avoid deadlocks on finalize. */
         if (spd->options.talp_summary) {
+            verbose(VB_TALP, "Gathering TALP metrics");
             if (shmem_barrier__get_num_participants(spd->options.barrier_id) == _mpis_per_node) {
 
                 /* Gather data among processes in the node if node summary is enabled */
@@ -618,6 +619,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
         if (_mpi_rank == 0) {
             int node_id;
             for (node_id=0; node_id<_num_nodes; ++node_id) {
+                verbose(VB_TALP, "Node summary: recording node %d", node_id);
                 node_summary = recvbuf + node_summary_size*node_id;
                 talp_output_record_node(
                         node_id,
@@ -953,6 +955,10 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 
     /* SUMMARY PROCESS: Collect monitor from all processes and record them all */
     if (spd->options.talp_summary & SUMMARY_PROCESS) {
+        if (_mpi_rank == 0) {
+            verbose(VB_TALP, "Process summary: gathering region %s", monitor->name);
+        }
+
         /* Each process creates a serialized monitor to send to Rank 0 */
         enum { CPUSET_MAX = 64 };
         typedef struct serialized_monitor_t {
@@ -1014,6 +1020,8 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         if (_mpi_rank == 0) {
             int rank;
             for (rank=0; rank<_mpi_size; ++rank) {
+                verbose(VB_TALP, "Process summary: recording region %s on rank %d",
+                        monitor->name, rank);
                 talp_output_record_process(
                         monitor->name,
                         rank,
@@ -1034,6 +1042,10 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 
     /* SUMMARY POP: Compute POP metrics and record */
     if (spd->options.talp_summary & (SUMMARY_POP_METRICS | SUMMARY_POP_RAW)) {
+        if (_mpi_rank == 0) {
+            verbose(VB_TALP, "TALP summary: gathering region %s", monitor->name);
+        }
+
         int total_cpus;
         int total_nodes;
         int64_t elapsed_time;
@@ -1100,6 +1112,7 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         if (_mpi_rank == 0) {
             if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
                 if (elapsed_time > 0) {
+                    verbose(VB_TALP, "TALP summary: recording region %s", monitor->name);
                     float avg_ipc = cycles ? (float)instructions / cycles : 0.0f;
                     float parallel_efficiency = (float)app_sum_useful / (elapsed_time * total_cpus);
                     float communication_efficiency = (float)elapsed_useful / elapsed_time;
@@ -1117,11 +1130,13 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
                             lb_in,
                             lb_out);
                 } else {
+                    verbose(VB_TALP, "TALP summary: recording empty region %s", monitor->name);
                     talp_output_record_pop_metrics(monitor->name,
                             0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                 }
             }
             if (spd->options.talp_summary & SUMMARY_POP_RAW) {
+                verbose(VB_TALP, "TALP raw summary: recording region %s", monitor->name);
                 talp_output_record_pop_raw(
                         monitor->name,
                         total_cpus,
