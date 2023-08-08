@@ -17,7 +17,11 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#define CLIENT_TOOL_LIBRARIES_VAR "DLB_TOOL_LIBRARIES"
+/* Configure second tool with:
+ *  DLB_TOOL_LIBRARIES
+ *  DLB_TOOL_VERBOSE_INIT
+ */
+#define OMPT_MULTIPLEX_TOOL_NAME "DLB"
 #include "LB_numThreads/ompt-multiplex.h"
 
 #include "LB_numThreads/omptool.h"
@@ -547,7 +551,7 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
         verbose(VB_OMPT, "  KMP_LIBRARY: %s", getenv("KMP_LIBRARY"));
         verbose(VB_OMPT, "  KMP_BLOCKTIME: %s", getenv("KMP_BLOCKTIME"));
     }
-    /* when GCC 11 is released: else if "gomp", print GOMP_SPINCOUNT */
+    /* when GCC implements OMPT: else if "gomp", print GOMP_SPINCOUNT */
 
     verbose(VB_OMPT, "DLB with OMPT support is %s", options.ompt ? "ENABLED" : "DISABLED");
 
