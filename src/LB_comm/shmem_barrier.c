@@ -150,7 +150,7 @@ int shmem_barrier__attach(int barrier_id, bool lewi) {
         if (barrier->count != 0) {
             shmem_unlock_maintenance(shm_handler);
             fatal("Barrier Shared memory inconsistency. Initializing Shared Memory "
-                    "while Barrier is un use (count = %d).\n"
+                    "while Barrier is in use (count = %d).\n"
                     "Please, report at " PACKAGE_BUGREPORT, barrier->count);
         }
 
@@ -172,6 +172,7 @@ int shmem_barrier__attach(int barrier_id, bool lewi) {
         /* Initialize other fields */
         barrier->count = 0;
         barrier->initialized = true;
+        barrier->lewi = lewi;
     }
     shmem_unlock_maintenance(shm_handler);
 
