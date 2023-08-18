@@ -116,11 +116,14 @@ int main(int argc, char *argv[]) {
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
 
+    /* This spd needs static storage to spport talp atexit dtor */
+    static subprocess_descriptor_t spd = {0};
+
     /* Single thread */
     {
         printf("pid: %d\n", getpid());
         /* Init spd */
-        subprocess_descriptor_t spd = {.id = 111};
+        spd = (const subprocess_descriptor_t){.id = 111};
         spd_enter_dlb(&spd);
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
@@ -170,7 +173,7 @@ int main(int argc, char *argv[]) {
 
     /* Single thread + observer thread */
     {
-        subprocess_descriptor_t spd = {.id = 111};
+        spd = (const subprocess_descriptor_t){.id = 111};
         spd_enter_dlb(&spd);
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
