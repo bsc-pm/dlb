@@ -62,6 +62,7 @@ tests = {
   '04_core' : {
     'drom_00'             : {},
     'lewi_00'             : {},
+    'node_barrier_00'     : {},
     'spd_00'              : {},
     'talp_00'             : {},
     'talp_01'             : {},

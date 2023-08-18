@@ -23,13 +23,19 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+enum { BARRIER_NAME_MAX = 32 };
+
+typedef struct barrier_t barrier_t;
+
 void shmem_barrier__init(const char *shmem_key);
 void shmem_barrier__finalize(const char *shmem_key);
 int  shmem_barrier__get_system_id(void);
-int  shmem_barrier__get_num_participants(int barrier_id);
-int  shmem_barrier__attach(int barrier_id, bool lewi);
-int  shmem_barrier__detach(int barrier_id);
-void shmem_barrier__barrier(int barrier_id);
+int  shmem_barrier__get_max_barriers(void);
+barrier_t* shmem_barrier__find(const char *barrier_name);
+barrier_t* shmem_barrier__register(const char *barrier_name, bool lewi);
+int  shmem_barrier__attach(barrier_t *barrier);
+int  shmem_barrier__detach(barrier_t *barrier);
+void shmem_barrier__barrier(barrier_t *barrier);
 
 void shmem_barrier__print_info(const char *shmem_key);
 bool shmem_barrier__exists(void);

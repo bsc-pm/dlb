@@ -25,6 +25,7 @@
 
 #include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
+#include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_talp.h"
@@ -82,6 +83,7 @@ static void print_node_metrics(const dlb_node_metrics_t *node_metrics) {
 
 static void* observer_func(void *arg) {
     subprocess_descriptor_t *spd = arg;
+    spd_enter_dlb(spd);
 
     /* Set up observer flag */
     set_observer_role(true);
@@ -119,10 +121,13 @@ int main(int argc, char *argv[]) {
         printf("pid: %d\n", getpid());
         /* Init spd */
         subprocess_descriptor_t spd = {.id = 111};
+        spd_enter_dlb(&spd);
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
         assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
                 NULL, spd.options.shm_key) == DLB_SUCCESS );
+        shmem_barrier__init(spd.options.shm_key);
+        node_barrier_init(&spd);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
         dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
@@ -157,6 +162,8 @@ int main(int argc, char *argv[]) {
         /* Finalize */
         talp_mpi_finalize(&spd);
         talp_finalize(&spd);
+        node_barrier_finalize(&spd);
+        shmem_barrier__finalize(spd.options.shm_key);
         assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
                 == DLB_SUCCESS );
     }
@@ -164,14 +171,16 @@ int main(int argc, char *argv[]) {
     /* Single thread + observer thread */
     {
         subprocess_descriptor_t spd = {.id = 111};
+        spd_enter_dlb(&spd);
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
         assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
                 NULL, spd.options.shm_key) == DLB_SUCCESS );
+        shmem_barrier__init(spd.options.shm_key);
+        node_barrier_init(&spd);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
         talp_info->external_profiler = true;
-        /* dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor; */
 
         /* Start MPI monitoring region */
         talp_mpi_init(&spd);
@@ -195,6 +204,8 @@ int main(int argc, char *argv[]) {
         /* Finalize */
         talp_mpi_finalize(&spd);
         talp_finalize(&spd);
+        node_barrier_finalize(&spd);
+        shmem_barrier__finalize(spd.options.shm_key);
         assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
                 == DLB_SUCCESS );
     }

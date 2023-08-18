@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,42 +17,18 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef SPD_H
-#define SPD_H
+#ifndef NODE_BARRIER_H
+#define NODE_BARRIER_H
 
-#include "LB_core/lb_funcs.h"
+#include "LB_core/spd.h"
+#include "LB_comm/shmem_barrier.h"
 
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+void node_barrier_init(subprocess_descriptor_t *spd);
+void node_barrier_finalize(subprocess_descriptor_t *spd);
+barrier_t* node_barrier_register(subprocess_descriptor_t *spd,
+        const char *barrier_name, int flags);
+int node_barrier(const subprocess_descriptor_t *spd, barrier_t *barrier);
+int node_barrier_attach(subprocess_descriptor_t *spd, barrier_t *barrier);
+int node_barrier_detach(subprocess_descriptor_t *spd, barrier_t *barrier);
 
-#include <sys/types.h>
-
-/* Sub-process Descriptor */
-
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_preinitialized;
-    bool lewi_enabled;
-    cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    void *lewi_info;
-    void *talp_info;
-    void *barrier_info;
-} subprocess_descriptor_t;
-
-extern __thread subprocess_descriptor_t *thread_spd;
-
-void spd_enter_dlb(subprocess_descriptor_t *spd);
-void spd_register(subprocess_descriptor_t *spd);
-void spd_unregister(const subprocess_descriptor_t *spd);
-void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
-pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
-const subprocess_descriptor_t** spd_get_spds(void);
-
-#endif /* SPD_H */
+#endif /* NODE_BARRIER_H */

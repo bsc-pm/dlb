@@ -19,6 +19,7 @@
 
 #include "apis/dlb.h"
 
+#include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -319,17 +320,42 @@ int DLB_CheckCpuAvailability(int cpuid) {
 
 int DLB_Barrier(void) {
     spd_enter_dlb(NULL);
-    return node_barrier();
+    return node_barrier(thread_spd, NULL);
 }
 
 int DLB_BarrierAttach(void) {
     spd_enter_dlb(NULL);
-    return node_barrier_attach();
+    return node_barrier_attach(thread_spd, NULL);
 }
 
 int DLB_BarrierDetach(void) {
     spd_enter_dlb(NULL);
-    return node_barrier_detach();
+    return node_barrier_detach(thread_spd, NULL);
+}
+
+dlb_barrier_t* DLB_BarrierNamedRegister(const char *barrier_name,
+        dlb_barrier_flags_t flags) {
+    spd_enter_dlb(NULL);
+    return (dlb_barrier_t*)node_barrier_register(thread_spd, barrier_name, flags);
+}
+
+dlb_barrier_t* DLB_BarrierNamedGet(const char *barrier_name,
+        dlb_barrier_flags_t flags)
+    __attribute__((alias("DLB_BarrierNamedRegister")));
+
+int DLB_BarrierNamed(dlb_barrier_t *barrier) {
+    spd_enter_dlb(NULL);
+    return node_barrier(thread_spd, (barrier_t*)barrier);
+}
+
+int DLB_BarrierNamedAttach(dlb_barrier_t *barrier) {
+    spd_enter_dlb(NULL);
+    return node_barrier_attach(thread_spd, (barrier_t*)barrier);
+}
+
+int DLB_BarrierNamedDetach(dlb_barrier_t *barrier) {
+    spd_enter_dlb(NULL);
+    return node_barrier_detach(thread_spd, (barrier_t*)barrier);
 }
 
 int DLB_SetVariable(const char *variable, const char *value) {

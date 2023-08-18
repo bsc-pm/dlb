@@ -82,11 +82,6 @@ int poll_drom(const subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_
 int poll_drom_update(const subprocess_descriptor_t *spd);
 int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
-/* Barrier */
-int node_barrier(void);
-int node_barrier_attach(void);
-int node_barrier_detach(void);
-
 /* Misc */
 int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid);
 int print_shmem(subprocess_descriptor_t *spd, int num_columns,

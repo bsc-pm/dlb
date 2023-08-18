@@ -32,10 +32,11 @@
 #include "apis/dlb_errors.h"
 
 #include <assert.h>
-#include <unistd.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 
 /* Test node barrier */
@@ -46,7 +47,16 @@ struct data {
     pthread_barrier_t barrier;
 };
 
+void* barrier_fn(void *arg) {
+    barrier_t *barrier = arg;
+    shmem_barrier__barrier(barrier);
+    return NULL;
+}
+
 int main(int argc, char **argv) {
+
+    const char *barrier_name = "barrier";
+    bool lewi = false;
 
     /* Test barrier with one process */
     {
@@ -57,16 +67,28 @@ int main(int argc, char **argv) {
         thread_spd->id = getpid();
 
         printf("Testing barrier with one process\n");
-        int barrier_id = 0;
         shmem_barrier__init(SHMEM_KEY);
-        shmem_barrier__attach(barrier_id, true);
-        shmem_barrier__barrier(barrier_id);
+        assert( shmem_barrier__register(NULL, lewi) == NULL );
+        assert( shmem_barrier__find(NULL) == NULL );
+        barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
+        assert( barrier != NULL );
+        shmem_barrier__barrier(barrier);
         shmem_barrier__print_info(SHMEM_KEY);
-        assert( shmem_barrier__attach(barrier_id, true) == DLB_NOUPDT );
-        assert( shmem_barrier__detach(barrier_id) == DLB_SUCCESS );
-        assert( shmem_barrier__detach(barrier_id) == DLB_NOUPDT );
-        assert( shmem_barrier__attach(barrier_id, true) == DLB_SUCCESS );
-        shmem_barrier__detach(barrier_id);
+        assert( shmem_barrier__attach(barrier) == 2 );
+        assert( shmem_barrier__attach(barrier) == 3 );
+        assert( shmem_barrier__detach(barrier) == 2 );
+        assert( shmem_barrier__detach(barrier) == 1 );
+        shmem_barrier__barrier(barrier);
+
+        /* Perform a barrier with two threads of the same process*/
+        assert( shmem_barrier__attach(barrier) == 2 );
+        pthread_t thread1, thread2;
+        pthread_create(&thread1, NULL, barrier_fn, barrier);
+        pthread_create(&thread2, NULL, barrier_fn, barrier);
+        pthread_join(thread1, NULL);
+        pthread_join(thread2, NULL);
+        assert( shmem_barrier__detach(barrier) == 1 );
+
         shmem_barrier__finalize(SHMEM_KEY);
     }
 
@@ -79,29 +101,35 @@ int main(int argc, char **argv) {
         thread_spd->id = getpid();
 
         printf("Testing multiple init/finalize\n");
-        int barrier_id = 0;
         shmem_barrier__init(SHMEM_KEY);
-        shmem_barrier__attach(barrier_id, true);
+        barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
+        assert( barrier != NULL );
+        barrier_t *barrier_copy = shmem_barrier__find(barrier_name);
+        assert( barrier == barrier_copy);
+        assert( shmem_barrier__attach(barrier) == 2 );
         shmem_barrier__init(SHMEM_KEY);
-        shmem_barrier__attach(barrier_id, true);
+        assert( shmem_barrier__attach(barrier) == 3 );
         assert( shmem_barrier__exists() );
-        shmem_barrier__detach(barrier_id);
+        assert( shmem_barrier__detach(barrier) == 2 );
         shmem_barrier__finalize(SHMEM_KEY);
         assert( !shmem_barrier__exists() );
-        shmem_barrier__detach(barrier_id);
+        assert( shmem_barrier__detach(barrier) == DLB_ERR_NOSHMEM );
         shmem_barrier__finalize(SHMEM_KEY);
         shmem_barrier__init(SHMEM_KEY);
-        shmem_barrier__attach(barrier_id, true);
+        barrier = shmem_barrier__register(barrier_name, lewi);
+        assert( barrier != NULL );
         assert( shmem_barrier__exists() );
-        shmem_barrier__detach(barrier_id);
+        assert( shmem_barrier__detach(barrier) == 0 );
+        assert( shmem_barrier__detach(barrier) == DLB_ERR_PERM );
+        assert( shmem_barrier__attach(barrier) == DLB_ERR_PERM );
+        shmem_barrier__barrier(barrier); /* no effect */
+        assert( shmem_barrier__find(NULL) == NULL );
         shmem_barrier__finalize(SHMEM_KEY);
-        shmem_barrier__detach(barrier_id);
+        assert( shmem_barrier__detach(barrier) == DLB_ERR_NOSHMEM );
         shmem_barrier__finalize(SHMEM_KEY);
-        shmem_barrier__detach(barrier_id);
-        shmem_barrier__finalize(SHMEM_KEY);
-        shmem_barrier__detach(barrier_id);
-        shmem_barrier__finalize(SHMEM_KEY);
+        assert( shmem_barrier__detach(NULL) == DLB_ERR_UNKNOWN );
         assert( !shmem_barrier__exists() );
+        assert( shmem_barrier__find(NULL) == NULL );
     }
 
     /* Test barrier with N processes */
@@ -133,9 +161,9 @@ int main(int argc, char **argv) {
                 debug_init(&options);
                 spd_enter_dlb(NULL);
                 thread_spd->id = getpid();
-                int barrier_id = 0;
                 shmem_barrier__init(SHMEM_KEY);
-                shmem_barrier__attach(barrier_id, true);
+                barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
+                assert( barrier != NULL );
 
                 // Attach to the "test" shared memory and synchronize
                 handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
@@ -145,9 +173,9 @@ int main(int argc, char **argv) {
 
                 // All processes do multiple DLB_Barriers once they have initialized
                 printf("Child %d successfully initialized\n", child);
-                shmem_barrier__barrier(barrier_id);
-                shmem_barrier__barrier(barrier_id);
-                shmem_barrier__barrier(barrier_id);
+                shmem_barrier__barrier(barrier);
+                shmem_barrier__barrier(barrier);
+                shmem_barrier__barrier(barrier);
                 printf("Child %d completed all barriers\n", child);
 
                 // Only one process prints shmem info
@@ -156,7 +184,7 @@ int main(int argc, char **argv) {
                 }
 
                 // Finalize both shared memories
-                shmem_barrier__detach(barrier_id);
+                assert( shmem_barrier__detach(barrier) >= 0 );
                 shmem_barrier__finalize(SHMEM_KEY);
                 shmem_finalize(handler, NULL);
 
@@ -213,13 +241,13 @@ int main(int argc, char **argv) {
                 debug_init(&options);
                 spd_enter_dlb(NULL);
                 thread_spd->id = getpid();
-                int barrier_id = 0;
                 shmem_barrier__init(SHMEM_KEY);
-                shmem_barrier__attach(barrier_id, true);
+                barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
+                assert( barrier != NULL );
 
                 // Child 1 does DLB_BarrierDetach
                 if (child == 1) {
-                    assert( shmem_barrier__detach(barrier_id) == DLB_SUCCESS );
+                    assert( shmem_barrier__detach(barrier) >= 0 );
                 }
 
                 // Attach to the "test" shared memory and synchronize
@@ -230,9 +258,9 @@ int main(int argc, char **argv) {
 
                 if (child != 1) {
                     // All other processes do multiple DLB_Barriers once they have initialized
-                    shmem_barrier__barrier(barrier_id);
-                    shmem_barrier__barrier(barrier_id);
-                    shmem_barrier__barrier(barrier_id);
+                    shmem_barrier__barrier(barrier);
+                    shmem_barrier__barrier(barrier);
+                    shmem_barrier__barrier(barrier);
                 }
 
                 // Only one process prints shmem info
@@ -241,7 +269,9 @@ int main(int argc, char **argv) {
                 }
 
                 // Finalize both shared memories
-                shmem_barrier__detach(barrier_id);
+                if (child != 1) {
+                    assert( shmem_barrier__detach(barrier) >= 0 );
+                }
                 shmem_barrier__finalize(SHMEM_KEY);
                 shmem_finalize(handler, NULL);
 

@@ -67,7 +67,6 @@ int main(int argc, char *argv[]) {
     int64_t last_borrow_value = 0;
     int64_t *last_borrow = &last_borrow_value;
     int requested_ncpus;
-    int barrier_id = 0;
 
     /* Initialize shared memories */
     assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
@@ -75,7 +74,10 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     shmem_barrier__init(SHMEM_KEY);
-    shmem_barrier__attach(barrier_id, true);
+    barrier_t *default_barrier = shmem_barrier__register("Barrier 0", 0);
+    assert( default_barrier != NULL );
+    barrier_t *barrier1 = shmem_barrier__register("Barrier 1", DLB_BARRIER_LEWI_OFF);
+    assert( barrier1 != NULL );
     assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );    /* p1_pid and p2_pid */
     assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );
 
@@ -147,7 +149,8 @@ int main(int argc, char *argv[]) {
     assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-    shmem_barrier__detach(barrier_id);
+    assert( shmem_barrier__detach(default_barrier) == 0 );
+    assert( shmem_barrier__detach(barrier1) == 0 );
     shmem_barrier__finalize(SHMEM_KEY);
     assert( shmem_talp__finalize(p1_pid) == DLB_SUCCESS );
     assert( shmem_talp__finalize(p2_pid) == DLB_SUCCESS );

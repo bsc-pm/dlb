@@ -74,16 +74,16 @@ int main(int argc, char **argv) {
     {
         printf("Testing multiple attach/detach\n");
         assert( DLB_Init(0, 0, options)             == DLB_SUCCESS );
-        assert( DLB_BarrierAttach()                 == DLB_NOUPDT );
+        assert( DLB_BarrierAttach()                 == DLB_ERR_PERM );
         assert( shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
+        assert( DLB_BarrierDetach()                 == 0 );
         assert( shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
-        assert( DLB_BarrierAttach()                 == DLB_SUCCESS );
+        assert( DLB_BarrierDetach()                 == DLB_ERR_PERM );
+        assert( DLB_BarrierAttach()                 == 1 );
         assert( shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
-        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
-        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
+        assert( DLB_BarrierDetach()                 == 0 );
+        assert( DLB_BarrierDetach()                 == DLB_ERR_PERM );
+        assert( DLB_BarrierDetach()                 == DLB_ERR_PERM );
         assert( DLB_Finalize()                      == DLB_SUCCESS );
         assert( !shmem_barrier__exists() );
     }
@@ -176,6 +176,7 @@ int main(int argc, char **argv) {
 
     /* Test barrier with N processes where 1 of them detaches from the barrier */
     {
+        printf("Testing barrier with N processes and one of them detaches\n");
         int ncpus;
         struct data *shdata;
         shmem_handler_t *handler;
@@ -201,7 +202,7 @@ int main(int argc, char **argv) {
 
                 // Child 1 does DLB_BarrierDetach
                 if (child == 1) {
-                    assert( DLB_BarrierDetach() == DLB_SUCCESS );
+                    assert( DLB_BarrierDetach() >= 0 );
                 }
 
                 // Attach to the "test" shared memory and synchronize
