@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   accept the special argument DLB_MPI_REGION for the implicit region
 - Function `DLB_TALP_QueryPOPNodeMetrics` for third-party applications
   to query pop metrics. Requires `--talp-external-profiler`.
+- Named barriers and several API functions to manage them
+- Added `--lewi-barrier` and `--lewi-barrier-select` to fine-tune
+  which barriers activate LeWI.
 
 ### Changed
 - `libdlb_mpif.so` and `libdlb_mpif_*.so` are no longer built by default,
