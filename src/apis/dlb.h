@@ -535,6 +535,9 @@ int DLB_BarrierDetach(void);
  *      DLB_BARRIER_LEWI_RUNTIME: whether this barrier will be used for LewI
  *                              operations will be decided at run time
  *
+ *  Names with commas (,) are supported, but will not work properly when using
+ *  the --lewi-barrier-select option to select LeWI barriers at run time.
+ *
  *  Note: DLB_BarrierNamedRegister and DLB_BarrierNamedGet are equivalent.
  */
 dlb_barrier_t* DLB_BarrierNamedRegister(const char *barrier_name,

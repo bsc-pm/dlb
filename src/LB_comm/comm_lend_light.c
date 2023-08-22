@@ -35,7 +35,10 @@ struct shdata {
 };
 
 struct shdata *shdata;
-static shmem_handler_t *shm_handler = NULL;;
+static shmem_handler_t *shm_handler = NULL;
+static const char *shmem_name = "lewi";
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static int subprocesses_attached = 0;
 
 static void cleanup_shmem(void *shdata_ptr, int pid) {
     struct shdata *shared_data = shdata_ptr;
@@ -46,13 +49,27 @@ static bool is_shmem_empty(void) {
     return shdata && shdata->attached_nprocs == 0;
 }
 
+static void open_shmem(const char *shmem_key) {
+    pthread_mutex_lock(&mutex);
+    {
+        if (shm_handler == NULL) {
+            shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata),
+                    shmem_name, shmem_key, SHMEM_VERSION_IGNORE, cleanup_shmem);
+            subprocesses_attached = 1;
+        } else {
+            ++subprocesses_attached;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
+
 void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key) {
     verbose(VB_SHMEM, "LoadCommonConfig");
     defaultCPUS=defCPUS;
     greedy=is_greedy;
 
-    shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata), "lewi", shmem_key,
-            SHMEM_VERSION_IGNORE, cleanup_shmem);
+    // Shared memory creation
+    open_shmem(shmem_key);
 
     if (__sync_fetch_and_add(&shdata->attached_nprocs, 1) == 0) {
         // Initialize shared memory if this is the 1st process attached
@@ -66,10 +83,22 @@ void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key) {
     }
 }
 
+static void close_shmem(void) {
+    pthread_mutex_lock(&mutex);
+    {
+        if (--subprocesses_attached == 0) {
+            shmem_finalize(shm_handler, is_shmem_empty);
+            shm_handler = NULL;
+            shdata = NULL;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
+
 void finalize_comm() {
     if (shm_handler) {
         __sync_fetch_and_sub(&shdata->attached_nprocs, 1);
-        shmem_finalize(shm_handler, is_shmem_empty);
+        close_shmem();
     }
 }
 

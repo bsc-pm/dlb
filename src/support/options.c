@@ -276,6 +276,29 @@ static const opts_dict_t options_dictionary[] = {
         .flags          = OPT_OPTIONAL
     }, {
         .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-barrier",
+        .default_value  = "yes",
+        .description    = OFFSET"Select whether DLB_Barrier calls (unnamed barriers only) will\n"
+                          OFFSET"activate LeWI and lend their CPUs. Named barriers can be\n"
+                          OFFSET"configured individually in the source code, or using the\n"
+                          OFFSET"--lewi-barrier-select.",
+        .offset         = offsetof(options_t, lewi_barrier),
+        .type           = OPT_BOOL_T,
+        .flags          = OPT_OPTIONAL | OPT_READONLY
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-barrier-select",
+        .default_value  = "",
+        .description    = OFFSET"Comma separated values of barrier names that will activate\n"
+                          OFFSET"LeWI. Warning: by setting this option to any non-blank value,\n"
+                          OFFSET"the option --lewi-barrier is ignored. Use 'default' to also\n"
+                          OFFSET"control the default unnamed barrier.\n"
+                          OFFSET"e.g.: --lewi-barrier-select=default,barrier3",
+        .offset         = offsetof(options_t, lewi_barrier_select),
+        .type           = OPT_STR_T,
+        .flags          = OPT_OPTIONAL | OPT_READONLY | OPT_ADVANCED
+    }, {
+        .var_name       = "LB_NULL",
         .arg_name       = "--lewi-affinity",
         .default_value  = "nearby-first",
         .description    = OFFSET"Prioritize resource sharing based on hardware affinity.\n"

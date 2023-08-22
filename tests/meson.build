@@ -63,6 +63,7 @@ tests = {
     'drom_00'             : {},
     'lewi_00'             : {},
     'node_barrier_00'     : {},
+    'node_barrier_01'     : {},
     'spd_00'              : {},
     'talp_00'             : {},
     'talp_01'             : {},

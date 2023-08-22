@@ -37,7 +37,7 @@
 #include <string.h>
 #include <unistd.h>
 
-/* */
+/* Test node_barrier module */
 
 struct pthread_args {
     subprocess_descriptor_t *spd;

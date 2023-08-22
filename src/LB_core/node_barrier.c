@@ -46,11 +46,65 @@ typedef struct barrier_info {
 static const char *default_barrier_name = "default";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/* Parse, for the specific barrier, whether it should do LeWI based on:
+ * - if barrier_name == default_barrier_name:
+ *      if lewi_barrier and !lewi_barrier_select;
+ *      or "default" in lewi_barrier_select
+ * - else:
+ *      if barrier_flags has LEWI;
+ *      or if barrier_flags has SELECTIVE and name in lewi_barrier_select
+ */
+static bool parse_lewi_barrier(const char *barrier_name, bool lewi_barrier,
+        const char *lewi_barrier_select, int api_flags) {
+    if (strncmp(barrier_name, default_barrier_name, BARRIER_NAME_MAX) == 0) {
+        if (strlen(lewi_barrier_select) == 0) {
+            /* Default barrier: --lewi-barrier-select not set, --lewi-barrier dictates */
+            return lewi_barrier;
+        }
+    } else {
+        if (api_flags == DLB_BARRIER_LEWI_ON) {
+            /* Named barrier: LeWI is forced by API */
+            return true;
+        } else if (api_flags == DLB_BARRIER_LEWI_OFF) {
+            /* Named barrier: LeWI is disallowed by API */
+            return false;
+        }
+    }
+
+    /* Find barrier_name in --lewi-barrier-select */
+    size_t len = strlen(lewi_barrier_select);
+    if (len > 0) {
+        bool found_in_select = false;
+        char *barrier_select_copy = malloc(sizeof(char)*(len+1));
+        strcpy(barrier_select_copy, lewi_barrier_select);
+        char *saveptr;
+        char *token = strtok_r(barrier_select_copy, ",", &saveptr);
+        while (token) {
+            if (strcmp(token, barrier_name) == 0) {
+                found_in_select = true;
+                break;
+            }
+            /* next token */
+            token = strtok_r(NULL, ",", &saveptr);
+        }
+        free(barrier_select_copy);
+
+        return found_in_select;
+    }
+
+    return false;
+}
+
 void node_barrier_init(subprocess_descriptor_t *spd) {
     if (spd->barrier_info != NULL) {
         fatal("Cannot initialize Node Barrier, barrier_info not NULL\n"
                 "Please, report bug at " PACKAGE_BUGREPORT);
     }
+
+    /* Even though default_barrier_name may change, no harm to use it here
+     * because we parse the user's options. */
+    bool lewi_barrier = parse_lewi_barrier(default_barrier_name,
+            spd->options.lewi_barrier, spd->options.lewi_barrier_select, 0);
 
     barrier_info_t *barrier_info;
     pthread_mutex_lock(&mutex);
@@ -72,7 +126,7 @@ void node_barrier_init(subprocess_descriptor_t *spd) {
 
         /* Initialize default barrier */
         barrier_info->default_barrier = shmem_barrier__register(
-                barrier_info->default_barrier_name, DLB_BARRIER_LEWI_ON);
+                barrier_info->default_barrier_name, lewi_barrier);
 
         /* Initialize barrier_list */
         barrier_info->max_barriers = shmem_barrier__get_max_barriers();
@@ -136,7 +190,10 @@ barrier_t* node_barrier_register(subprocess_descriptor_t *spd,
 
         /* Register if not found */
         if (barrier == NULL) {
-            barrier = shmem_barrier__register(barrier_name, flags);
+            bool lewi_barrier = parse_lewi_barrier(barrier_name,
+                    spd->options.lewi_barrier,
+                    spd->options.lewi_barrier_select, flags);
+            barrier = shmem_barrier__register(barrier_name, lewi_barrier);
             if (barrier == NULL) return NULL;
         }
 
@@ -220,9 +277,12 @@ int node_barrier_attach(subprocess_descriptor_t *spd, barrier_t *barrier) {
         if (barrier == NULL) {
             if (barrier_info->default_barrier == NULL) {
                 /* Register default barrier again */
+                bool lewi_barrier = parse_lewi_barrier(default_barrier_name,
+                        spd->options.lewi_barrier,
+                        spd->options.lewi_barrier_select, 0);
                 barrier_info->default_barrier = shmem_barrier__register(
                         barrier_info->default_barrier_name,
-                        DLB_BARRIER_LEWI_ON);
+                        lewi_barrier);
                 // return number of participants
                 error = barrier_info->default_barrier ? 1 : DLB_ERR_NOMEM;
             } else {
