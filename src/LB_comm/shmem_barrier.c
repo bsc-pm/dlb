@@ -400,12 +400,13 @@ void shmem_barrier__barrier(barrier_t *barrier) {
         } else {
             // Only if this process is not the last one, act as a blocking call
             if (barrier->flags.lewi) {
-                dlb_mpi_flags_t mpi_flags = (const dlb_mpi_flags_t) {
+                sync_call_flags_t mpi_flags = (const sync_call_flags_t) {
+                    .is_dlb_barrier = true,
                     .is_blocking = true,
                     .is_collective = true,
-                    .lewi_mpi = true,
+                    .do_lewi = true,
                 };
-                into_mpi(mpi_flags);
+                into_sync_call(mpi_flags);
             }
 
             // Barrier
@@ -413,12 +414,13 @@ void shmem_barrier__barrier(barrier_t *barrier) {
 
             // Recover resources for those processes that simulated a blocking call
             if (barrier->flags.lewi) {
-                dlb_mpi_flags_t mpi_flags = (const dlb_mpi_flags_t) {
+                sync_call_flags_t mpi_flags = (const sync_call_flags_t) {
+                    .is_dlb_barrier = true,
                     .is_blocking = true,
                     .is_collective = true,
-                    .lewi_mpi = true,
+                    .do_lewi = true,
                 };
-                out_of_mpi(mpi_flags);
+                out_of_sync_call(mpi_flags);
             }
         }
 

@@ -94,8 +94,8 @@ static void* observer_func(void *arg) {
     int num_measurements = mpi_region->num_measurements;
 
     /* An observer may call MPI functions without affecting TALP */
-    talp_in_mpi(spd, true);
-    talp_out_mpi(spd, true);
+    talp_into_sync_call(spd, true);
+    talp_out_of_sync_call(spd, true);
     assert( num_measurements == mpi_region->num_measurements );
 
     /* Get MPI metrics */
@@ -139,8 +139,8 @@ int main(int argc, char *argv[]) {
         talp_mpi_init(&spd);
 
         /* MPI call */
-        talp_in_mpi(&spd, /* is_blocking_collective */ false);
-        talp_out_mpi(&spd, /* is_blocking_collective */ false);
+        talp_into_sync_call(&spd, /* is_blocking_collective */ false);
+        talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
 
         /* Stop MPI monitoring region so that we can collect its metrics twice
          * with the same values */
@@ -189,8 +189,8 @@ int main(int argc, char *argv[]) {
         talp_mpi_init(&spd);
 
         /* MPI call */
-        talp_in_mpi(&spd, /* is_blocking_collective */ false);
-        talp_out_mpi(&spd, /* is_blocking_collective */ false);
+        talp_into_sync_call(&spd, /* is_blocking_collective */ false);
+        talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
 
         /* Observer thread is created here */
         pthread_t observer_pthread;
@@ -198,8 +198,8 @@ int main(int argc, char *argv[]) {
         pthread_join(observer_pthread, NULL);
 
         /* MPI call (force update) */
-        talp_in_mpi(&spd, /* is_blocking_collective */ true);
-        talp_out_mpi(&spd, /* is_blocking_collective */ true);
+        talp_into_sync_call(&spd, /* is_blocking_collective */ true);
+        talp_out_of_sync_call(&spd, /* is_blocking_collective */ true);
 
         /* Upon gathering samples, only one thread sample has been reduced */
         assert( talp_info->ncpus == 1 );

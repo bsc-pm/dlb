@@ -461,7 +461,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     }
 }
 
-void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+void talp_into_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
     /* Observer threads may call MPI functions, but TALP must ignore them */
     if (unlikely(thread_is_observer)) return;
 
@@ -480,7 +480,7 @@ void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective
     }
 }
 
-void talp_out_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+void talp_out_of_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
     /* Observer threads may call MPI functions, but TALP must ignore them */
     if (unlikely(thread_is_observer)) return;
 

@@ -80,11 +80,11 @@ void talp_mpi_init(const struct SubProcessDescriptor *spd);
 /* Stop MPI monitoring region */
 void talp_mpi_finalize(const struct SubProcessDescriptor *spd);
 
-/*  Update the metrics when entering MPI */
-void talp_in_mpi(const struct SubProcessDescriptor *spd, bool is_blocking_collective);
+/*  Update the metrics when entering MPI / DLB_Barrier */
+void talp_into_sync_call(const struct SubProcessDescriptor *spd, bool is_blocking_collective);
 
-/*  Update the metrics when going out MPI */
-void talp_out_mpi(const struct SubProcessDescriptor *spd, bool is_blocking_collective);
+/*  Update the metrics when going out MPI / DLB_Barrier */
+void talp_out_of_sync_call(const struct SubProcessDescriptor *spd, bool is_blocking_collective);
 
 /* Obtain the implicit MPI region */
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(

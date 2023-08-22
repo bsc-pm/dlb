@@ -304,37 +304,37 @@ int unset_max_parallelism(subprocess_descriptor_t *spd) {
 }
 
 
-/* MPI specific */
+/* Sync-call specific (MPI, DLB_Barrier, etc.) */
 
-void into_mpi(dlb_mpi_flags_t flags) {
-    /* Observer threads do not trigger LeWI nor TALP on MPI calls */
+void into_sync_call(sync_call_flags_t flags) {
+    /* Observer threads do not trigger LeWI nor TALP on sync calls */
     if (unlikely(thread_is_observer)) return;
 
     const subprocess_descriptor_t *spd = thread_spd;
     if (unlikely(spd == NULL)) return;
 
-    if (spd->lewi_enabled && flags.lewi_mpi) {
+    if (spd->lewi_enabled && flags.do_lewi) {
         spd->lb_funcs.into_blocking_call(spd);
         omptool__into_blocking_call();
     }
     if(spd->options.talp) {
-        talp_in_mpi(spd, flags.is_blocking && flags.is_collective);
+        talp_into_sync_call(spd, flags.is_blocking && flags.is_collective);
     }
 }
 
-void out_of_mpi(dlb_mpi_flags_t flags) {
+void out_of_sync_call(sync_call_flags_t flags) {
     /* Observer threads do not trigger LeWI nor TALP on MPI calls */
     if (unlikely(thread_is_observer)) return;
 
     const subprocess_descriptor_t *spd = thread_spd;
     if (unlikely(spd == NULL)) return;
 
-    if (spd->lewi_enabled && flags.lewi_mpi) {
+    if (spd->lewi_enabled && flags.do_lewi) {
         spd->lb_funcs.out_of_blocking_call(spd);
         omptool__outof_blocking_call();
     }
     if(spd->options.talp) {
-        talp_out_mpi(spd, flags.is_blocking && flags.is_collective);
+        talp_out_of_sync_call(spd, flags.is_blocking && flags.is_collective);
     }
 }
 
