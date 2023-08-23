@@ -41,9 +41,6 @@ void __kmp_set_thread_roles1(int how_many, ompt_role_t r) __attribute((weak));
 void __kmp_set_thread_roles2(int tid, ompt_role_t r) __attribute((weak));
 int __kmp_get_thread_id(void) __attribute((weak));
 
-void Extrae_change_num_threads (unsigned) __attribute__((weak));
-void Extrae_set_threadid_function (unsigned (*)(void)) __attribute__((weak));
-
 /* Enum for ompt_data_t *parallel_data to detect level 1 (non nested) parallel
  * regions */
 enum {
@@ -94,11 +91,6 @@ typedef struct DLB_ALIGN_CACHE CPU_Data {
 static atomic_int registered_threads = 0; 
 static cpu_data_t *cpu_data = NULL;
 static int *cpu_by_id = NULL;
-
-static unsigned int get_thread_id(void){
-    unsigned int a = (unsigned int)__kmp_get_thread_id();
-    return a;
-}
 
 static int get_id_from_cpu(int cpuid){
     int i;
@@ -203,12 +195,6 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
     }
     memcpy(&active_mask, &primary_thread_mask, sizeof(cpu_set_t));
 
-    //Extrae functions configuration
-    if(Extrae_change_num_threads){
-        Extrae_change_num_threads(system_size);
-        Extrae_set_threadid_function(&get_thread_id);
-    }
-    
     if (lewi) {
         int err;
         err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
