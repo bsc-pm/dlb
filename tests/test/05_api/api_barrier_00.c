@@ -28,9 +28,10 @@
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem.h"
 #include "LB_core/spd.h"
+#include "support/atomic.h"
+#include "support/debug.h"
 #include "support/mask_utils.h"
 #include "support/options.h"
-#include "support/debug.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -46,7 +47,14 @@ void __gcov_flush() __attribute__((weak));
 
 struct data {
     pthread_barrier_t barrier;
+    atomic_int ntimes;
 };
+
+/* Callback to count how many times the LeWI module has invoked it */
+static int ntimes = 0;
+static void cb_count(int num_threads, void *arg) {
+    ++ntimes;
+}
 
 int main(int argc, char **argv) {
 
@@ -66,16 +74,16 @@ int main(int argc, char **argv) {
     {
         printf("Testing multiple attach/detach\n");
         assert( DLB_Init(0, 0, options)             == DLB_SUCCESS );
-        assert( DLB_BarrierAttach()                 == DLB_NOUPDT );
+        assert( DLB_BarrierAttach()                 == DLB_ERR_PERM );
         assert( shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
+        assert( DLB_BarrierDetach()                 == 0 );
         assert( shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
-        assert( DLB_BarrierAttach()                 == DLB_SUCCESS );
+        assert( DLB_BarrierDetach()                 == DLB_ERR_PERM );
+        assert( DLB_BarrierAttach()                 == 1 );
         assert( shmem_barrier__exists() );
-        assert( DLB_BarrierDetach()                 == DLB_SUCCESS );
-        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
-        assert( DLB_BarrierDetach()                 == DLB_NOUPDT );
+        assert( DLB_BarrierDetach()                 == 0 );
+        assert( DLB_BarrierDetach()                 == DLB_ERR_PERM );
+        assert( DLB_BarrierDetach()                 == DLB_ERR_PERM );
         assert( DLB_Finalize()                      == DLB_SUCCESS );
         assert( !shmem_barrier__exists() );
     }
@@ -103,8 +111,12 @@ int main(int argc, char **argv) {
             pid_t pid = fork();
             assert( pid >= 0 );
             if (pid == 0) {
-                // All childs initialize DLB
-                assert( DLB_Init(0, 0, options) == DLB_SUCCESS );
+                // All childs initialize DLB, LeWI enabled for this test
+                char options_plus_lewi[72];
+                snprintf(options_plus_lewi, 72, "--lewi %s", options);
+                assert( DLB_Init(0, 0, options_plus_lewi) == DLB_SUCCESS );
+                assert( DLB_CallbackSet(dlb_callback_set_num_threads,
+                            (dlb_callback_t)cb_count, NULL) == DLB_SUCCESS);
 
                 // Attach to the "test" shared memory and synchronize
                 handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
@@ -118,6 +130,15 @@ int main(int argc, char **argv) {
                 assert( DLB_Barrier() == DLB_SUCCESS );
                 assert( DLB_Barrier() == DLB_SUCCESS );
                 printf("Child %d completed all barriers\n", child);
+
+                // Accumulate the number of times that the LeWI callbacks have
+                // been triggered
+                DLB_ATOMIC_ADD(&shdata->ntimes, ntimes);
+                error = pthread_barrier_wait(&shdata->barrier);
+                assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+                // Check that the barriers have triggered the LeWI callbacks
+                assert( shdata->ntimes > 0 );
 
                 // Only one process prints shmem info
                 if (child == 1) {
@@ -155,6 +176,7 @@ int main(int argc, char **argv) {
 
     /* Test barrier with N processes where 1 of them detaches from the barrier */
     {
+        printf("Testing barrier with N processes and one of them detaches\n");
         int ncpus;
         struct data *shdata;
         shmem_handler_t *handler;
@@ -180,7 +202,7 @@ int main(int argc, char **argv) {
 
                 // Child 1 does DLB_BarrierDetach
                 if (child == 1) {
-                    assert( DLB_BarrierDetach() == DLB_SUCCESS );
+                    assert( DLB_BarrierDetach() >= 0 );
                 }
 
                 // Attach to the "test" shared memory and synchronize

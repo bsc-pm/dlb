@@ -17,7 +17,12 @@
 !  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                !
 !-------------------------------------------------------------------------------!
 
-       include 'dlbf-errors.h'
+      include 'dlbf-errors.h'
+      integer, parameter :: DLB_COLOR_AUTO              = 1
+      integer, parameter :: DLB_COLOR_ALWAYS            = 2
+      integer, parameter :: DLB_BARRIER_LEWI_OFF        = 0
+      integer, parameter :: DLB_BARRIER_LEWI_ON         = 1
+      integer, parameter :: DLB_BARRIER_LEWI_RUNTIME    = 2
 
        interface
         function dlb_init(ncpus, mask, dlb_args) result (ierr)          &
@@ -53,6 +58,12 @@
             integer(kind=c_int) :: ierr
             integer(kind=c_int), value, intent(in) :: maxp
         end function dlb_setmaxparallelism
+
+        function dlb_unsetmaxparallelism() result (ierr)                &
+     &          bind(c, name='DLB_UnsetMaxParallelism')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+        end function dlb_unsetmaxparallelism
 
         function dlb_callbackset(which, callback) result (ierr)         &
      &          bind(c, name='DLB_CallbackSet')
@@ -247,6 +258,45 @@
             integer(kind=c_int) :: ierr
         end function dlb_barrierdetach
 
+        function dlb_barriernamedregister(barrier_name, flags)          &
+     &          result (handle)                                         &
+     &          bind(c, name='DLB_BarrierNamedRegister')
+            use iso_c_binding
+            type(c_ptr) :: handle
+            character(kind=c_char), intent(in) :: barrier_name(*)
+            integer(kind=c_int), value, intent(in) :: flags
+        end function dlb_barriernamedregister
+
+        function dlb_barriernamedget(barrier_name, flags)               &
+     &          result (handle)                                         &
+     &          bind(c, name='DLB_BarrierNamedGet')
+            use iso_c_binding
+            type(c_ptr) :: handle
+            character(kind=c_char), intent(in) :: barrier_name(*)
+            integer(kind=c_int), value, intent(in) :: flags
+        end function dlb_barriernamedget
+
+        function dlb_barriernamed(handle)                               &
+     &         result (ierr) bind(c, name='DLB_BarrierNamed')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+            type(c_ptr), value, intent(in) :: handle
+        end function dlb_barriernamed
+
+        function dlb_barriernamedattach(handle)                         &
+     &         result (ierr) bind(c, name='DLB_BarrierNamedAttach')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+            type(c_ptr), value, intent(in) :: handle
+        end function dlb_barriernamedattach
+
+        function dlb_barriernameddetach(handle)                         &
+     &         result (ierr) bind(c, name='DLB_BarrierNamedDetach')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+            type(c_ptr), value, intent(in) :: handle
+        end function dlb_barriernameddetach
+
         function dlb_setvariable(variable, val) result (ierr)           &
      &          bind(c, name='DLB_SetVariable')
             use iso_c_binding
@@ -269,11 +319,12 @@
             integer(kind=c_int) :: ierr
         end function dlb_printvariables
 
-        function dlb_printshmem(num_columns) result (ierr)              &
+        function dlb_printshmem(num_columns, flags) result (ierr)       &
      &          bind(c, name='DLB_PrintShmem')
             use iso_c_binding
             integer(kind=c_int) :: ierr
             integer(kind=c_int), value, intent(in) :: num_columns
+            integer(kind=c_int), value, intent(in) :: flags
         end function dlb_printshmem
 
         function dlb_strerror(errnum) result(str)                       &
@@ -282,6 +333,13 @@
             type(c_ptr) :: str
             integer(kind=c_int), value, intent(in) :: errnum
         end function dlb_strerror
+
+        function dlb_setobserverrole(thread_is_observer) result (ierr)  &
+     &          bind(c, name='DLB_SetObserverRole')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+            logical(kind=c_bool) :: thread_is_observer
+        end function dlb_setobserverrole
 
       end interface
 

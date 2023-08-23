@@ -21,6 +21,7 @@
 #define DLB_TYPES_H
 
 // Opaque types
+typedef struct dlb_barrier_t dlb_barrier_t;
 typedef void* dlb_handler_t;
 typedef void* dlb_cpu_set_t;
 typedef const void* const_dlb_cpu_set_t;
@@ -39,6 +40,13 @@ typedef enum dlb_printshmem_flags_e {
     DLB_COLOR_AUTO      = 1,
     DLB_COLOR_ALWAYS    = 2
 } dlb_printshmem_flags_t;
+
+// Barrier flags
+typedef enum dlb_barrier_flags_e {
+    DLB_BARRIER_LEWI_OFF        = 0,
+    DLB_BARRIER_LEWI_ON         = 1 << 0,
+    DLB_BARRIER_LEWI_RUNTIME    = 1 << 1,
+} dlb_barrier_flags_t;
 
 // Generic dummy callback type
 typedef void (*dlb_callback_t)(void);

@@ -211,15 +211,16 @@ void before_mpi(mpi_call_t mpi_call) {
 
         bool is_blocking = is_mpi_blocking(mpi_call);
         bool is_collective = is_mpi_collective(mpi_call);
-        dlb_mpi_flags_t flags = (const dlb_mpi_flags_t) {
+        sync_call_flags_t flags = (const sync_call_flags_t) {
+            .is_mpi = true,
             .is_blocking = is_blocking,
             .is_collective = is_collective,
-            .lewi_mpi = is_blocking && (
+            .do_lewi = is_blocking && (
                         lewi_mpi_calls == MPISET_ALL
                         || (lewi_mpi_calls == MPISET_BARRIER && mpi_call == Barrier)
                         || (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective)),
         };
-        into_mpi(flags);
+        into_sync_call(flags);
 
         instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_END);
     }
@@ -231,15 +232,16 @@ void after_mpi(mpi_call_t mpi_call) {
 
         bool is_blocking = is_mpi_blocking(mpi_call);
         bool is_collective = is_mpi_collective(mpi_call);
-        dlb_mpi_flags_t flags = (const dlb_mpi_flags_t) {
+        sync_call_flags_t flags = (const sync_call_flags_t) {
+            .is_mpi = true,
             .is_blocking = is_blocking,
             .is_collective = is_collective,
-            .lewi_mpi = is_blocking && (
+            .do_lewi = is_blocking && (
                     lewi_mpi_calls == MPISET_ALL
                     || (lewi_mpi_calls == MPISET_BARRIER && mpi_call == Barrier)
                     || (lewi_mpi_calls == MPISET_COLLECTIVES && is_collective)),
         };
-        out_of_mpi(flags);
+        out_of_sync_call(flags);
 
         instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_END);
     }

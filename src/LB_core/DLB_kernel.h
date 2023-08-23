@@ -27,11 +27,13 @@
 #include <sched.h>
 #include <stdbool.h>
 
-typedef struct dlb_mpi_flags_t {
-    bool is_blocking;
-    bool is_collective;
-    bool lewi_mpi;
-} dlb_mpi_flags_t;
+typedef struct sync_call_flags_t {
+    bool is_mpi:1;
+    bool is_blocking:1;
+    bool is_collective:1;
+    bool is_dlb_barrier:1;
+    bool do_lewi:1;
+} sync_call_flags_t;
 
 /* Status */
 int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
@@ -43,9 +45,9 @@ int set_lewi_enabled(subprocess_descriptor_t *spd, bool enabled);
 int set_max_parallelism(subprocess_descriptor_t *spd, int max);
 int unset_max_parallelism(subprocess_descriptor_t *spd);
 
-/* MPI specific */
-void into_mpi(dlb_mpi_flags_t flags);
-void out_of_mpi(dlb_mpi_flags_t flags);
+/* Sync-call specific (MPI, DLB_Barrier, etc.) */
+void into_sync_call(sync_call_flags_t flags);
+void out_of_sync_call(sync_call_flags_t flags);
 
 /* Lend */
 int lend(const subprocess_descriptor_t *spd);
@@ -81,11 +83,6 @@ int return_cpu_mask(const subprocess_descriptor_t *spd, const cpu_set_t *mask);
 int poll_drom(const subprocess_descriptor_t *spd, int *new_cpus, cpu_set_t *new_mask);
 int poll_drom_update(const subprocess_descriptor_t *spd);
 int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
-
-/* Barrier */
-int node_barrier(void);
-int node_barrier_attach(void);
-int node_barrier_detach(void);
 
 /* Misc */
 int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid);

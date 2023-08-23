@@ -482,33 +482,105 @@ int DLB_PollDROM_Update(void);
  */
 int DLB_CheckCpuAvailability(int cpuid);
 
-/*! \brief Barrier between processes in the node
+/*! \brief Perform a DLB Barrier among processes in the node
  *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if the process has detached from the default barrier
  *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
+ *
+ *  This function performs a shared-memory-based barrier among all DLB processes
+ *  in the node, unless thay have previously detached.
+ *  The number of participants in the barrier is adaptive, which may produce
+ *  undesired results if there is no synchronization between the attach/detach
+ *  process and the barrier itself.
  */
 int DLB_Barrier(void);
 
-/*! \brief Attach process to the DLB_Barrier team
- *  \return DLB_SUCCESS on success
- *  \return DLB_NOUPDT if process was already attached
+/*! \brief Attach process to the DLB Barrier team
+ *  \return a positive integer with the updated number of participants
+ *  \return DLB_ERR_PERM if process was already attached, or if all processes detached
+ *  \return DLB_ERR_NOMEM if the process cannot attach to more barriers
  *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *
  *  If the process had previusly called DLB_BarrierDetach, this function allows
- *  a process to become part again of the DLB_Barrier team. Otherwise it has no
+ *  a process to become part again of the DLB Barrier team. Otherwise, it has no
  *  effect.
  */
 int DLB_BarrierAttach(void);
 
-/*! \brief Barrier between processes in the node
- *  \return DLB_SUCCESS on success
- *  \return DLB_NOUPDT if process was already detached
+/*! \brief Detach process from the DLB Barrier team
+ *  \return a non-negative integer with the updated number of participants
+ *  \return DLB_ERR_PERM if process was already detached
  *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *
- *  Remove process from the DLB_Barrier team. The process will no longer be able
- *  to call DLB_Barrier. Other processes in the team will not synchronize with this
- *  process on their respective calls to DLB_Barrier.
+ *  Remove process from the DLB Barrier team. Subsequent calls to DLB_Barrier
+ *  from this process will have no effect. Other processes in the team will not
+ *  synchronize with this process on their respective calls to DLB_Barrier.
  */
 int DLB_BarrierDetach(void);
+
+/*! \brief Register, or obtain, a named barrier
+ *  \param[in] barrier_name the name for the new barrier, or barrier to obtain
+ *  \param[in] flags barrier flags, see below
+ *  \return barrier associated to that name, or NULL on error
+ *
+ *  This function registers a new barrier or obtains the pointer to an already
+ *  created barrier with the same name. The returned pointer is an opaque
+ *  handle to use in other named barrier functions. This functions allows the
+ *  following flags:
+ *      DLB_BARRIER_LEWI_ON: the barrier may be used to perform LeWI operations
+ *      DLB_BARRIER_LEWI_OFF: the barrier will not be used to perform LeWI
+ *                              operations
+ *      DLB_BARRIER_LEWI_RUNTIME: whether this barrier will be used for LewI
+ *                              operations will be decided at run time
+ *
+ *  Names with commas (,) are supported, but will not work properly when using
+ *  the --lewi-barrier-select option to select LeWI barriers at run time.
+ *
+ *  Note: DLB_BarrierNamedRegister and DLB_BarrierNamedGet are equivalent.
+ */
+dlb_barrier_t* DLB_BarrierNamedRegister(const char *barrier_name,
+        dlb_barrier_flags_t flags);
+
+/*! \copydoc DLB_BarrierNamedRegister */
+dlb_barrier_t* DLB_BarrierNamedGet(const char *barrier_name,
+        dlb_barrier_flags_t flags);
+
+/*! \brief Perform a DLB Barrier using the named barrier among processes in the node
+ *  \param[in] barrier named barrier
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_NOUPDT if the process has detached from the barrier
+ *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
+ *
+ *  This function is equivalent to DLB_Barrier, but providing a named barrier
+ */
+int DLB_BarrierNamed(dlb_barrier_t *barrier);
+
+/*! \brief Attach process to the named barrier team
+ *  \param[in] barrier named barrier to attach to
+ *  \return a positive integer with the updated number of participants
+ *  \return DLB_NOUPDT if process was already attached
+ *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *
+ *  This function is equivalent to DLB_BarrierAttach, but providing a named
+ *  barrier
+ */
+int DLB_BarrierNamedAttach(dlb_barrier_t *barrier);
+
+/*! \brief Detach process from the named barrier team
+ *  \param[in] barrier named barrier to detach from
+ *  \return a non-negative integer with the updated number of participants
+ *  \return DLB_NOUPDT if process was already detached
+ *  \return DLB_ERR_NOCOMP if DLB Barrier is not enabled (option --barrier)
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_PERM if all processes have detached from the barrier
+ *
+ *  This function is equivalent to DLB_BarrierDetach, but providing a named
+ *  barrier
+ */
+int DLB_BarrierNamedDetach(dlb_barrier_t *barrier);
 
 /*! \brief Change the value of a DLB internal variable
  *  \param[in] variable Internal variable to set

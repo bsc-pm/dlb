@@ -98,14 +98,20 @@ static void check_async_version(void) {
 }
 
 static void check_barrier_version(void) {
-    enum { KNOWN_BARRIER_VERSION = 5 };
+    enum { KNOWN_BARRIER_VERSION = 6 };
+    enum { KNOWN_BARRIER_NAME_MAX = 32 };
+    struct KnownBarrierFlags {
+        bool flag1:1;
+        bool flag2:1;
+    };
     struct KnownBarrierShdata {
-        bool bool1;
-        bool bool2;
-        unsigned int int1;
-        atomic_uint  int2;
+        char char1[KNOWN_BARRIER_NAME_MAX];
+        struct KnownBarrierFlags flags;
+        unsigned int int2;
         atomic_uint  int3;
+        atomic_uint  int4;
         pthread_barrier_t barrier;
+        pthread_rwlock_t rwlock;
     };
 
     int version = shmem_barrier__version();

@@ -25,6 +25,7 @@
 
 #include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
+#include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_talp.h"
@@ -82,6 +83,7 @@ static void print_node_metrics(const dlb_node_metrics_t *node_metrics) {
 
 static void* observer_func(void *arg) {
     subprocess_descriptor_t *spd = arg;
+    spd_enter_dlb(spd);
 
     /* Set up observer flag */
     set_observer_role(true);
@@ -92,8 +94,8 @@ static void* observer_func(void *arg) {
     int num_measurements = mpi_region->num_measurements;
 
     /* An observer may call MPI functions without affecting TALP */
-    talp_in_mpi(spd, true);
-    talp_out_mpi(spd, true);
+    talp_into_sync_call(spd, true);
+    talp_out_of_sync_call(spd, true);
     assert( num_measurements == mpi_region->num_measurements );
 
     /* Get MPI metrics */
@@ -114,15 +116,21 @@ int main(int argc, char *argv[]) {
     char options[64] = "--talp --shm-key=";
     strcat(options, SHMEM_KEY);
 
+    /* This spd needs static storage to spport talp atexit dtor */
+    static subprocess_descriptor_t spd = {0};
+
     /* Single thread */
     {
         printf("pid: %d\n", getpid());
         /* Init spd */
-        subprocess_descriptor_t spd = {.id = 111};
+        spd = (const subprocess_descriptor_t){.id = 111};
+        spd_enter_dlb(&spd);
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
         assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
                 NULL, spd.options.shm_key) == DLB_SUCCESS );
+        shmem_barrier__init(spd.options.shm_key);
+        node_barrier_init(&spd);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
         dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
@@ -131,8 +139,8 @@ int main(int argc, char *argv[]) {
         talp_mpi_init(&spd);
 
         /* MPI call */
-        talp_in_mpi(&spd, /* is_blocking_collective */ false);
-        talp_out_mpi(&spd, /* is_blocking_collective */ false);
+        talp_into_sync_call(&spd, /* is_blocking_collective */ false);
+        talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
 
         /* Stop MPI monitoring region so that we can collect its metrics twice
          * with the same values */
@@ -157,28 +165,32 @@ int main(int argc, char *argv[]) {
         /* Finalize */
         talp_mpi_finalize(&spd);
         talp_finalize(&spd);
+        node_barrier_finalize(&spd);
+        shmem_barrier__finalize(spd.options.shm_key);
         assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
                 == DLB_SUCCESS );
     }
 
     /* Single thread + observer thread */
     {
-        subprocess_descriptor_t spd = {.id = 111};
+        spd = (const subprocess_descriptor_t){.id = 111};
+        spd_enter_dlb(&spd);
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
         assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
                 NULL, spd.options.shm_key) == DLB_SUCCESS );
+        shmem_barrier__init(spd.options.shm_key);
+        node_barrier_init(&spd);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
         talp_info->external_profiler = true;
-        /* dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor; */
 
         /* Start MPI monitoring region */
         talp_mpi_init(&spd);
 
         /* MPI call */
-        talp_in_mpi(&spd, /* is_blocking_collective */ false);
-        talp_out_mpi(&spd, /* is_blocking_collective */ false);
+        talp_into_sync_call(&spd, /* is_blocking_collective */ false);
+        talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
 
         /* Observer thread is created here */
         pthread_t observer_pthread;
@@ -186,8 +198,8 @@ int main(int argc, char *argv[]) {
         pthread_join(observer_pthread, NULL);
 
         /* MPI call (force update) */
-        talp_in_mpi(&spd, /* is_blocking_collective */ true);
-        talp_out_mpi(&spd, /* is_blocking_collective */ true);
+        talp_into_sync_call(&spd, /* is_blocking_collective */ true);
+        talp_out_of_sync_call(&spd, /* is_blocking_collective */ true);
 
         /* Upon gathering samples, only one thread sample has been reduced */
         assert( talp_info->ncpus == 1 );
@@ -195,6 +207,8 @@ int main(int argc, char *argv[]) {
         /* Finalize */
         talp_mpi_finalize(&spd);
         talp_finalize(&spd);
+        node_barrier_finalize(&spd);
+        shmem_barrier__finalize(spd.options.shm_key);
         assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
                 == DLB_SUCCESS );
     }

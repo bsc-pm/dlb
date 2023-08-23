@@ -24,6 +24,7 @@
 #include "LB_core/DLB_kernel.h"
 
 #include "LB_core/DLB_talp.h"
+#include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_numThreads/omptool.h"
@@ -60,7 +61,11 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     int error = DLB_SUCCESS;
 
     // Initialize common modules (spd->id and instrumentation module ASAP)
-    spd->id = id;
+    *spd = (const subprocess_descriptor_t) {
+        .id = id,
+        .dlb_initialized = spd->dlb_initialized,
+        .dlb_preinitialized = spd->dlb_preinitialized,
+    };
     options_init(&spd->options, lb_args);
     debug_init(&spd->options);
     init_tracing(&spd->options);
@@ -135,7 +140,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     }
     if (spd->options.barrier) {
         shmem_barrier__init(spd->options.shm_key);
-        shmem_barrier__attach(spd->options.barrier_id, true);
+        node_barrier_init(spd);
     }
     if (spd->options.mode == MODE_ASYNC) {
         error = shmem_async_init(spd->id, &spd->pm, &spd->process_mask, spd->options.shm_key);
@@ -204,7 +209,7 @@ int Finish(subprocess_descriptor_t *spd) {
         spd->lb_funcs.finalize = NULL;
     }
     if (spd->options.barrier) {
-        shmem_barrier__detach(spd->options.barrier_id);
+        node_barrier_finalize(spd);
         shmem_barrier__finalize(spd->options.shm_key);
     }
     if (spd->lb_policy == POLICY_LEWI_MASK
@@ -299,33 +304,37 @@ int unset_max_parallelism(subprocess_descriptor_t *spd) {
 }
 
 
-/* MPI specific */
+/* Sync-call specific (MPI, DLB_Barrier, etc.) */
 
-void into_mpi(dlb_mpi_flags_t flags) {
-    /* Observer threads do not trigger LeWI nor TALP on MPI calls */
+void into_sync_call(sync_call_flags_t flags) {
+    /* Observer threads do not trigger LeWI nor TALP on sync calls */
     if (unlikely(thread_is_observer)) return;
 
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->lewi_enabled && flags.lewi_mpi) {
+    if (unlikely(spd == NULL)) return;
+
+    if (spd->lewi_enabled && flags.do_lewi) {
         spd->lb_funcs.into_blocking_call(spd);
         omptool__into_blocking_call();
     }
     if(spd->options.talp) {
-        talp_in_mpi(spd, flags.is_blocking && flags.is_collective);
+        talp_into_sync_call(spd, flags.is_blocking && flags.is_collective);
     }
 }
 
-void out_of_mpi(dlb_mpi_flags_t flags) {
+void out_of_sync_call(sync_call_flags_t flags) {
     /* Observer threads do not trigger LeWI nor TALP on MPI calls */
     if (unlikely(thread_is_observer)) return;
 
     const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->lewi_enabled && flags.lewi_mpi) {
+    if (unlikely(spd == NULL)) return;
+
+    if (spd->lewi_enabled && flags.do_lewi) {
         spd->lb_funcs.out_of_blocking_call(spd);
         omptool__outof_blocking_call();
     }
     if(spd->options.talp) {
-        talp_out_mpi(spd, flags.is_blocking && flags.is_collective);
+        talp_out_of_sync_call(spd, flags.is_blocking && flags.is_collective);
     }
 }
 
@@ -670,45 +679,6 @@ int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flag
             shmem_cpuinfo__update_ownership(thread_spd->id, mask, NULL);
         }
         set_process_mask(&thread_spd->pm, mask);
-    }
-    return error;
-}
-
-
-/* Barrier */
-
-int node_barrier(void) {
-    int error;
-    const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->options.barrier) {
-        instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_BEGIN);
-        shmem_barrier__barrier(spd->options.barrier_id);
-        instrument_event(RUNTIME_EVENT, EVENT_BARRIER, EVENT_END);
-        error = DLB_SUCCESS;
-    } else {
-        error = DLB_ERR_NOCOMP;
-    }
-    return error;
-}
-
-int node_barrier_attach(void) {
-    int error;
-    const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->options.barrier) {
-        error = shmem_barrier__attach(spd->options.barrier_id, true);
-    } else {
-        error = DLB_ERR_NOCOMP;
-    }
-    return error;
-}
-
-int node_barrier_detach(void) {
-    int error;
-    const subprocess_descriptor_t *spd = thread_spd;
-    if (spd->options.barrier) {
-        error = shmem_barrier__detach(spd->options.barrier_id);
-    } else {
-        error = DLB_ERR_NOCOMP;
     }
     return error;
 }

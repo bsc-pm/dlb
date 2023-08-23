@@ -30,6 +30,7 @@
 #include "support/options.h"
 #include "support/debug.h"
 #include "apis/dlb_errors.h"
+#include "apis/dlb_types.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -57,30 +58,30 @@ int main(int argc, char **argv) {
         thread_spd->id = getpid();
 
         printf("Testing multiple barriers with one process\n");
-        int barrier_id_1 = 0;
-        int barrier_id_2 = 1;
 
         shmem_barrier__init(SHMEM_KEY);
-        assert( shmem_barrier__attach(barrier_id_1, true) == DLB_SUCCESS );
-        assert( shmem_barrier__attach(barrier_id_2, true) == DLB_SUCCESS );
+        int max_barriers = shmem_barrier__get_max_barriers();
+        barrier_t *barrier0 = shmem_barrier__register("Barrier 0", DLB_BARRIER_LEWI_OFF);
+        assert( barrier0 != NULL );
+        if (max_barriers > 2) {
+            barrier_t *barrier1 = shmem_barrier__register("Barrier 1", DLB_BARRIER_LEWI_OFF);
+            assert( barrier1 != NULL );
+            barrier_t *barrier2 = shmem_barrier__register("Barrier 2", DLB_BARRIER_LEWI_ON);
+            assert( barrier2 != NULL );
+            barrier_t *barrier3 = shmem_barrier__register("Barrier 2", DLB_BARRIER_LEWI_ON);
+            assert( barrier2 == barrier3 );
+            assert( shmem_barrier__detach(barrier3) == 1 );
 
-        assert( shmem_barrier__detach(barrier_id_1) == DLB_SUCCESS );
-        assert( shmem_barrier__attach(barrier_id_1, true) == DLB_SUCCESS );
+            assert( shmem_barrier__attach(barrier2) == 2 );
+            assert( shmem_barrier__attach(barrier2) == 3 );
+            assert( shmem_barrier__detach(barrier2) == 2 );
+            assert( shmem_barrier__detach(barrier2) == 1 );
 
-        assert( shmem_barrier__attach(barrier_id_2, true) == DLB_NOUPDT );
+            assert( shmem_barrier__detach(barrier1) == 0 );
+            assert( shmem_barrier__detach(barrier2) == 0 );
+        }
 
-        assert( shmem_barrier__detach(barrier_id_2) == DLB_SUCCESS );
-        assert( shmem_barrier__attach(barrier_id_2, true) == DLB_SUCCESS );
-
-        assert( shmem_barrier__detach(barrier_id_1) == DLB_SUCCESS );
-        assert( shmem_barrier__attach(barrier_id_1, true) == DLB_SUCCESS );
-
-        assert( shmem_barrier__detach(barrier_id_2) == DLB_SUCCESS );
-        assert( shmem_barrier__detach(barrier_id_2) == DLB_NOUPDT );
-        assert( shmem_barrier__attach(barrier_id_2, true) == DLB_SUCCESS );
-
-        assert( shmem_barrier__detach(barrier_id_1) == DLB_SUCCESS );
-        assert( shmem_barrier__detach(barrier_id_2) == DLB_SUCCESS );
+        assert( shmem_barrier__detach(barrier0) == 0 );
         shmem_barrier__finalize(SHMEM_KEY);
     }
 
@@ -91,16 +92,29 @@ int main(int argc, char **argv) {
         debug_init(&options);
         spd_enter_dlb(NULL);
         thread_spd->id = getpid();
+        shmem_barrier__init(SHMEM_KEY);
 
         printf("Testing multiple barriers with one process\n");
-        int barrier_id_1 = shmem_barrier__get_system_id();
-        int barrier_id_2 = barrier_id_1 + 1;
+        uint16_t max_barriers = (uint16_t)shmem_barrier__get_max_barriers();
+        barrier_t **barrier_list = calloc(max_barriers+1, sizeof(barrier_t*));
+        char barrier_name[16];
+        bool lewi = false;
 
-        shmem_barrier__init(SHMEM_KEY);
-        assert( shmem_barrier__attach(barrier_id_1, true) == DLB_SUCCESS );
-        assert( shmem_barrier__attach(barrier_id_2, true) == DLB_ERR_NOSHMEM );
-
-        assert( shmem_barrier__detach(barrier_id_1) == DLB_SUCCESS );
+        /* Register MAX+1 barriers (twice to check the detach actually frees up space) */
+        int i, j;
+        for (j=0; j<2; ++j) {
+            for (i=0; i<max_barriers; ++i) {
+                snprintf(barrier_name, 16, "Barrier %6d", i);
+                barrier_list[i] = shmem_barrier__register(barrier_name, lewi);
+                assert( barrier_list[i] != NULL );
+            }
+            snprintf(barrier_name, 16, "Doesn't fit");
+            barrier_list[i] = shmem_barrier__register(barrier_name, lewi);
+            assert( barrier_list[i] == NULL );
+            for (i=0; i<max_barriers; ++i) {
+                assert( shmem_barrier__detach(barrier_list[i]) == 0 );
+            }
+        }
 
         shmem_barrier__finalize(SHMEM_KEY);
     }

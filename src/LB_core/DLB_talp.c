@@ -23,6 +23,7 @@
 
 #include "LB_core/DLB_talp.h"
 
+#include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
@@ -34,7 +35,6 @@
 #include "support/options.h"
 #include "support/mask_utils.h"
 #include "support/talp_output.h"
-#include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_talp.h"
 #ifdef MPI_LIB
 #include "LB_MPI/process_MPI.h"
@@ -229,7 +229,13 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 
     if (spd == thread_spd) {
         /* Keep the timers allocated until the program finalizes */
-        atexit(talp_destroy);
+        /* Note: if talp_finalize is called more than once (especially in
+         * tests), the talp_destroy only need to be invoked once */
+        static bool talp_destroy_dtor = false;
+        if (!talp_destroy_dtor) {
+            atexit(talp_destroy);
+            talp_destroy_dtor = true;
+        }
     } else {
         monitoring_regions_finalize_all(spd);
         free(spd->talp_info);
@@ -430,7 +436,8 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
          * This check is needed to avoid deadlocks on finalize. */
         if (spd->options.talp_summary) {
             verbose(VB_TALP, "Gathering TALP metrics");
-            if (shmem_barrier__get_num_participants(spd->options.barrier_id) == _mpis_per_node) {
+            /* FIXME: use Named Barrier */
+            /* if (shmem_barrier__get_num_participants(spd->options.barrier_id) == _mpis_per_node) { */
 
                 /* Gather data among processes in the node if node summary is enabled */
                 if (spd->options.talp_summary & SUMMARY_NODE) {
@@ -444,17 +451,17 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
                 }
 
                 /* Synchronize all processes in node before continuing with DLB finalization  */
-                shmem_barrier__barrier(spd->options.barrier_id);
-            } else {
-                warning("The number of MPI processes and processes registered in DLB differ."
-                        " TALP will not print any summary.");
-            }
+                node_barrier(spd, NULL);
+            /* } else { */
+            /*     warning("The number of MPI processes and processes registered in DLB differ." */
+            /*             " TALP will not print any summary."); */
+            /* } */
         }
 #endif
     }
 }
 
-void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+void talp_into_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
     /* Observer threads may call MPI functions, but TALP must ignore them */
     if (unlikely(thread_is_observer)) return;
 
@@ -473,7 +480,7 @@ void talp_in_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective
     }
 }
 
-void talp_out_mpi(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+void talp_out_of_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
     /* Observer threads may call MPI functions, but TALP must ignore them */
     if (unlikely(thread_is_observer)) return;
 
@@ -514,7 +521,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 
     /* Perform a barrier so that all processes in the node have arrived at the
      * MPI_Finalize */
-    shmem_barrier__barrier(spd->options.barrier_id);
+    node_barrier(spd, NULL);
 
     if (_process_id == 0) {
         /* Obtain a list of regions associated with "MPI Region", sorted by PID */
@@ -562,7 +569,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 
     /* Perform a final barrier so that all processes let the _process_id 0 to
      * gather all the data */
-    shmem_barrier__barrier(spd->options.barrier_id);
+    node_barrier(spd, NULL);
 
     /* All main processes from each node send data to rank 0 */
     if (_process_id == 0) {
@@ -1425,7 +1432,7 @@ int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
             monitor->accumulated_computation_time);
 
     /* Perform a node barrier to ensure everyone has updated their metrics */
-    shmem_barrier__barrier(spd->options.barrier_id);
+    node_barrier(spd, NULL);
 
     /* Compute node metrics for that region name */
     talp_query_pop_node_metrics(monitor->name, node_metrics);

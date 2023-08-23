@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
     assert( talp_info->samples[0]->cpu_disabled == false );
     assert( talp_info->ncpus == 1 );
 
-    /* We are getting timestamps before and after talp_in_mpi / talp_out_mpi
+    /* We are getting timestamps before and after talp_into_sync_call / talp_out_of_sync_call
      * to check whether sample->last_updated_timestamp is updated. Equivalence
      * is accepted because clock_gettime is allowed to return the same value on
      * successive calls. */
@@ -85,20 +85,20 @@ int main(int argc, char *argv[]) {
 
     /* Entering MPI, sample is updated, region not yet */
     time_before = get_time_in_ns();
-    talp_in_mpi(&spd, /* is_blocking_collective */ false);
+    talp_into_sync_call(&spd, /* is_blocking_collective */ false);
     time_after = get_time_in_ns();
     assert( talp_info->samples[0]->last_updated_timestamp >= time_before
-		    && talp_info->samples[0]->last_updated_timestamp <= time_after );
+            && talp_info->samples[0]->last_updated_timestamp <= time_after );
     assert( talp_info->samples[0]->mpi_time == 0 );
     assert( talp_info->samples[0]->useful_time > 0 );
     assert( talp_info->samples[0]->in_useful == false );
 
     /* Leaving MPI */
     time_before = get_time_in_ns();
-    talp_out_mpi(&spd, /* is_blocking_collective */ false);
+    talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
     time_after = get_time_in_ns();
     assert( talp_info->samples[0]->last_updated_timestamp >= time_before
-		    && talp_info->samples[0]->last_updated_timestamp <= time_after );
+            && talp_info->samples[0]->last_updated_timestamp <= time_after );
     assert( talp_info->samples[0]->mpi_time > 0 );
     assert( talp_info->samples[0]->useful_time > 0 );
     assert( talp_info->samples[0]->in_useful == true );
@@ -120,8 +120,8 @@ int main(int argc, char *argv[]) {
     mpi_time = -1;
     useful_time = -1;
     talp_info->external_profiler = true;
-    talp_in_mpi(&spd, /* is_blocking_collective */ true);
-    talp_out_mpi(&spd, /* is_blocking_collective */ true);
+    talp_into_sync_call(&spd, /* is_blocking_collective */ true);
+    talp_out_of_sync_call(&spd, /* is_blocking_collective */ true);
     assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time > 0 );
     assert( useful_time > 0 );
@@ -129,8 +129,8 @@ int main(int argc, char *argv[]) {
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register(&spd, "Test");
     monitoring_region_start(&spd, monitor);
-    talp_in_mpi(&spd, /* is_blocking_collective */ false);
-    talp_out_mpi(&spd, /* is_blocking_collective */ false);
+    talp_into_sync_call(&spd, /* is_blocking_collective */ false);
+    talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
     monitoring_region_stop(&spd, monitor);
 
     /* Finalize MPI */

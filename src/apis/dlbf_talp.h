@@ -71,7 +71,7 @@
 
         function dlb_monitoringregionregister(region_name)              &
      &          result (handle)                                         &
-                bind(c, name='DLB_MonitoringRegionRegister')
+     &          bind(c, name='DLB_MonitoringRegionRegister')
             use iso_c_binding
             type(c_ptr) :: handle
             character(kind=c_char), intent(in) :: region_name(*)

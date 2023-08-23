@@ -52,13 +52,14 @@ static void* observer_func(void *arg) {
     set_observer_role(true);
 
     int prev_ntimes = ntimes;
-    dlb_mpi_flags_t flags = (const dlb_mpi_flags_t) {
+    sync_call_flags_t flags = (const sync_call_flags_t) {
+        .is_mpi = true,
         .is_blocking = true,
         .is_collective = true,
-        .lewi_mpi = true,
+        .do_lewi = true,
     };
-    into_mpi(flags);
-    out_of_mpi(flags);
+    into_sync_call(flags);
+    out_of_sync_call(flags);
     assert( prev_ntimes == ntimes );
 
     return NULL;
@@ -91,13 +92,14 @@ int main(int argc, char *argv[]) {
 
     /* Test that MPI functions invoque callbacks */
     int prev_ntimes = ntimes;
-    dlb_mpi_flags_t flags = (const dlb_mpi_flags_t) {
+    sync_call_flags_t flags = (const sync_call_flags_t) {
+        .is_mpi = true,
         .is_blocking = true,
         .is_collective = true,
-        .lewi_mpi = true,
+        .do_lewi = true,
     };
-    into_mpi(flags);
-    out_of_mpi(flags);
+    into_sync_call(flags);
+    out_of_sync_call(flags);
     assert( prev_ntimes < ntimes );
 
     /* Test that MPI functions called from an observer thread do not invoque
