@@ -84,6 +84,7 @@ tests = {
     'api_sp_03_async'     : {'source' : 'api_sp_03.c', 'dlb_args' : '--mode=async'},
     'api_sp_03_poll'      : {'source' : 'api_sp_03.c', 'dlb_args' : '--mode=polling'},
     'fortran_api_00'      : {'source' : 'fortran_api_00.f90'},
+    'fortran_api_barrier_00' : {'source' : 'fortran_api_barrier_00.f90'},
     'fortran_api_talp_00' : {'source' : 'fortran_api_talp_00.f90'},
   },
 }

@@ -35,6 +35,8 @@ program test
     if (dlb_lend() /= DLB_ERR_DISBLD ) call abort
     if (dlb_enable() /= DLB_SUCCESS ) call abort
     if (dlb_setmaxparallelism(1) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_unsetmaxparallelism() /= DLB_ERR_NOPOL ) call abort
+    if (dlb_setobserverrole(logical(.false.,c_bool)) /= DLB_SUCCESS ) call abort
 
     ! Lend
     if (dlb_lend() /= DLB_ERR_NOPOL ) call abort
