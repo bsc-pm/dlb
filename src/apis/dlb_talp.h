@@ -146,7 +146,7 @@ int DLB_TALP_Detach(void);
  *  \param[out] ncpus the number of CPUs
  *  \return DLB_SUCCESS on success
  */
-int DLB_TALP_GetNumCpus(int *ncpus);
+int DLB_TALP_GetNumCPUs(int *ncpus);
 
 /*! \brief Get the list of running processes registered in the DLB system
  *  \param[out] pidlist The output list
