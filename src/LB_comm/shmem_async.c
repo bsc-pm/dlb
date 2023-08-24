@@ -178,7 +178,7 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
     int h;
     for (h = 0; h < max_helpers; ++h) {
         if (shared_data->helpers[h].pid == pid) {
-            shared_data->helpers[h] = (const helper_t){{{0}}};
+            shared_data->helpers[h] = (const helper_t){};
         }
     }
 }

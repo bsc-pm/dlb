@@ -47,7 +47,6 @@ int _node_id = -1;
 int _num_nodes = -1;
 int _process_id = -1;
 
-static int use_dpd = 0;
 static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static mpi_set_t lewi_mpi_calls = MPISET_ALL;
@@ -196,10 +195,7 @@ void after_init(void) {
         debug_init(&thread_spd->options);
     }
 
-    // Policies that used dpd have been temporarily disabled
-    //use_dpd = (policy == POLICY_RAL || policy == POLICY_WEIGHT || policy == POLICY_JUST_PROF);
     talp_mpi_init(thread_spd);
-    use_dpd = 0;
     lewi_mpi_calls = thread_spd->options.lewi_mpi_calls;
 
     mpi_ready = 1;

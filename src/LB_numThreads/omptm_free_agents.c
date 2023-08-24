@@ -53,7 +53,6 @@ enum {
 static bool lewi = false;
 static pid_t pid;
 static omptool_opts_t omptool_opts;
-static int primary_thread_cpu;
 static int system_size;
 
 /* Masks */
@@ -403,7 +402,6 @@ void omptm_free_agents__init(pid_t process_id, const options_t *options) {
         if (CPU_ISSET(cpuid, &process_mask)) {
             if (++encountered_cpus == 1) {
                 /* First encountered CPU belongs to the primary thread */
-                primary_thread_cpu = cpuid;
                 CPU_SET(cpuid, &primary_thread_mask);
                 cpu_data[cpuid].roles = ROLE_PRIMARY;
                 cpu_data[cpuid].state = CPU_STATE_IN_PARALLEL;

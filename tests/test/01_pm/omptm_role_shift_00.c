@@ -119,7 +119,6 @@ int main (int argc, char *argv[]) {
         setenv("KMP_FREE_AGENT_NUM_THREADS", "8", 1);
         omptm_role_shift__init(p1_pid, &thread_spd->options);
 
-        assert( primary_thread_cpu == 0 );
         assert( num_free_agents == 8 );
         assert( registered_threads == 8 );
 
@@ -132,7 +131,6 @@ int main (int argc, char *argv[]) {
         setenv("KMP_FREE_AGENT_NUM_THREADS", "8", 1);
         omptm_role_shift__init(p1_pid, &thread_spd->options);
 
-        assert( primary_thread_cpu == 0 );
         assert( num_free_agents == 8 );
         assert( registered_threads == 8 );
 
@@ -145,7 +143,6 @@ int main (int argc, char *argv[]) {
         setenv("KMP_FREE_AGENT_NUM_THREADS", "4", 1);
         omptm_role_shift__init(p1_pid, &thread_spd->options);
 
-        assert( primary_thread_cpu == 0 );
         assert( num_free_agents == 4 );
         assert( registered_threads == 8 );
 

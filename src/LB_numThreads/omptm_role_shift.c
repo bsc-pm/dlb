@@ -53,7 +53,6 @@ enum {
 static bool lewi = false;
 static pid_t pid;
 static omptool_opts_t omptool_opts;
-static int primary_thread_cpu;
 static int system_size;
 static int default_num_threads;
 static atomic_int num_free_agents = 0;
@@ -182,7 +181,6 @@ void omptm_role_shift__init(pid_t process_id, const options_t *options) {
         if(CPU_ISSET(i, &process_mask)){
             if(++encountered_cpus == 1){
                 //First encountered CPU belongs to the primary thread
-                primary_thread_cpu = i;
                 CPU_SET(i, &primary_thread_mask);
                 cpu_by_id[encountered_cpus - 1] = i;
             }
