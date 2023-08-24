@@ -326,9 +326,6 @@ int main (int argc, char *argv[]) {
         assert(cpu_data[4].ownership == OWN);
     }
 
-    // Enable MPI OMPT policy flag
-    omptool_opts = OMPTOOL_OPTS_MPI;
-
     /* Test IntoBlockingCall and OutOfBlockingCall */
     {
         /* P1 is outside a parallel region, and invokes IntoBlockingCall */

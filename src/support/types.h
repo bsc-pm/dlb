@@ -110,11 +110,11 @@ typedef enum MPISet {
 } mpi_set_t;
 
 typedef enum OMPTOptions {
-    OMPTOOL_OPTS_CLEAR      = 0,
-    OMPTOOL_OPTS_MPI        = 1 << 0,
+    OMPTOOL_OPTS_NONE       = 0,
+    /* OMPTOOL_OPTS_MPI        = 1 << 0, DEPRECATED */
     OMPTOOL_OPTS_BORROW     = 1 << 1,
     OMPTOOL_OPTS_LEND       = 1 << 2,
-    OMPTOOL_OPTS_AGGRESSIVE = 0xF
+    /* OMPTOOL_OPTS_AGGRESSIVE = 0xF     DEPRECATED */
 } omptool_opts_t;
 
 typedef enum OMPTMVersion {

@@ -27,6 +27,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 - Fixed wrong generated code for `MPI_Initialized` and `MPI_Finalized`
 
+### Deprecated
+- `--lewi-ompt` no longer accepts "mpi" nor "aggressive" as values.
+  Automatic LeWI via synchronization calls is now done with
+  `--lewi-mpi-calls` for MPI and `--lewi-barrier` or
+  `--lewi-barrier-select` for DLB Barriers.
+
 ## [3.3] 2023-05-15
 ### Added
 - Free agent and Role-shift OMPT thread managers to support LeWI with both

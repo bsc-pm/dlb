@@ -410,9 +410,6 @@ int main (int argc, char *argv[]) {
         assert( DLB_ATOMIC_LD(&cpu_data[5].state) & CPU_STATE_IDLE );
     }
 
-    // Enable MPI OMPT policy flag
-    omptool_opts = OMPTOOL_OPTS_MPI;
-
     /* Test IntoBlockingCall and OutOfBlockingCall: easy, no reclaim */
     {
         /* P1 is outside a parallel region, and invokes IntoBlockingCall */

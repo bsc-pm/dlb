@@ -181,7 +181,7 @@ void omptm_omp5__finalize(void) {
  * This function just lends the rest of the CPUs
  */
 void omptm_omp5__IntoBlockingCall(void) {
-    if (lewi && omptool_opts & OMPTOOL_OPTS_MPI) {
+    if (lewi) {
         int mycpu = sched_getcpu();
 
         /* Lend every CPU except the current one */
@@ -200,7 +200,7 @@ void omptm_omp5__IntoBlockingCall(void) {
 }
 
 void omptm_omp5__OutOfBlockingCall(void) {
-    if (lewi && omptool_opts & OMPTOOL_OPTS_MPI) {
+    if (lewi) {
         DLB_Reclaim();
     }
 }

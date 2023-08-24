@@ -459,7 +459,7 @@ void omptm_free_agents__finalize(void) {
 /*********************************************************************************/
 
 void omptm_free_agents__IntoBlockingCall(void) {
-    if (lewi && omptool_opts & OMPTOOL_OPTS_MPI) {
+    if (lewi) {
 
         /* Don't know what to do if a Blocking Call is invoked inside a
          * parallel region. We could ignore it, but then we should also ignore
@@ -497,7 +497,7 @@ void omptm_free_agents__OutOfBlockingCall(void) {
              * Do not reclaim since going out of a blocking call is not
              * an indication that the CPUs may be needed. */
         }
-        else if (omptool_opts & OMPTOOL_OPTS_MPI) {
+        else {
             cpu_set_t cpus_to_reclaim;
             CPU_ZERO(&cpus_to_reclaim);
 

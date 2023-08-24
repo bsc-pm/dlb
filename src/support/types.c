@@ -626,14 +626,14 @@ bool equivalent_mpiset(const char *str1, const char *str2) {
 
 /* omptool_opts_t */
 static const omptool_opts_t omptool_opts_values[] =
-    {OMPTOOL_OPTS_MPI, OMPTOOL_OPTS_BORROW, OMPTOOL_OPTS_LEND, OMPTOOL_OPTS_AGGRESSIVE};
-static const char* const omptool_opts_choices[] = {"mpi", "borrow", "lend", "aggressive"};
-static const char omptool_opts_choices_str[] = "{mpi:borrow:lend}, aggressive";
+    {OMPTOOL_OPTS_NONE, OMPTOOL_OPTS_BORROW, OMPTOOL_OPTS_LEND};
+static const char* const omptool_opts_choices[] = {"none", "borrow", "lend"};
+static const char omptool_opts_choices_str[] = "none, {borrow:lend}";
 enum { omptool_opts_nelems = sizeof(omptool_opts_values) / sizeof(omptool_opts_values[0]) };
 
 int parse_omptool_opts(const char *str, omptool_opts_t *value) {
 
-    *value = OMPTOOL_OPTS_CLEAR;
+    *value = OMPTOOL_OPTS_NONE;
 
     /* tokenize multiple options separated by ':' */
     char *end_token = NULL;
@@ -660,13 +660,11 @@ int parse_omptool_opts(const char *str, omptool_opts_t *value) {
 }
 
 const char* omptool_opts_tostr(omptool_opts_t value) {
-    if(value == OMPTOOL_OPTS_AGGRESSIVE)
-        return "aggressive";
     static char str[sizeof(omptool_opts_choices_str)] = "";
     char *p = str;
     int i;
     for (i=0; i<omptool_opts_nelems; ++i) {
-        if (value & omptool_opts_values[i] && omptool_opts_values[i] != OMPTOOL_OPTS_AGGRESSIVE) {
+        if (value & omptool_opts_values[i]) {
             if (p!=str) {
                 *p = ':';
                 ++p;

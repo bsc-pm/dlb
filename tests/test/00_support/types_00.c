@@ -164,15 +164,14 @@ int main(int argc, char *argv[]) {
     assert( !equivalent_mpiset("all", "collectives") );
 
     omptool_opts_t ompt;
-    err = parse_omptool_opts("", &ompt);            assert(!err && ompt==OMPTOOL_OPTS_CLEAR);
+    err = parse_omptool_opts("", &ompt);            assert(!err && ompt==OMPTOOL_OPTS_NONE);
     err = parse_omptool_opts("lend", &ompt);        assert(!err && ompt==OMPTOOL_OPTS_LEND);
-    err = parse_omptool_opts("mpi:borrow", &ompt);  assert(!err &&
-                                                        ompt==(OMPTOOL_OPTS_MPI|OMPTOOL_OPTS_BORROW));
-    assert(strcmp(omptool_opts_tostr(OMPTOOL_OPTS_MPI|OMPTOOL_OPTS_BORROW), "mpi:borrow") == 0);
+    err = parse_omptool_opts("lend:borrow", &ompt);
+    assert(!err && ompt==(OMPTOOL_OPTS_LEND|OMPTOOL_OPTS_BORROW));
+    assert(strcmp(omptool_opts_tostr(OMPTOOL_OPTS_BORROW), "borrow") == 0);
     assert(  equivalent_omptool_opts("lend:borrow", "borrow:borrow:lend") );
-    assert(  equivalent_omptool_opts("aggressive", "aggressive:mpi:borrow:lend") );
-    assert( !equivalent_omptool_opts("lend", "mpi") );
-    assert( !equivalent_omptool_opts("lend:mpi", "lend_mpi") );
+    assert( !equivalent_omptool_opts("lend", "borrow") );
+    assert( !equivalent_omptool_opts("lend:borrow", "lend_borrow") );
 
     omptm_version_t omptm;
     err = parse_omptm_version("", &omptm);          assert(err);

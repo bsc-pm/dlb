@@ -224,7 +224,7 @@ void omptm_role_shift__finalize(void) {
 
 /*TODO: what happens when executing in "ompss" mode*/
 void omptm_role_shift__IntoBlockingCall(void) {
-    if (lewi && omptool_opts & OMPTOOL_OPTS_MPI) {
+    if (lewi) {
         /* Don't know what to do if a Blocking Call is invoked inside a
          * parallel region. We could ignore it, but then we should also ignore
          * the associated OutOfBlockingCall, and how would we know it? */
@@ -264,7 +264,7 @@ void omptm_role_shift__OutOfBlockingCall(void) {
              * an indication that the CPUs may be needed. 
              * OMPTOOL_OPTS_AGGRESSIVE executes this if too. */
         }
-        else if (omptool_opts & OMPTOOL_OPTS_MPI) {
+        else {
             DLB_Reclaim();
         }
     }
@@ -401,11 +401,14 @@ void omptm_role_shift__task_create(
         /* For now, let's assume that we always want to increase the number
          * of active threads whenever a task is created
          */
-        if(omptool_opts == OMPTOOL_OPTS_AGGRESSIVE){
-            DLB_BorrowCpus(1);
+        if (lewi) {
+            if(omptool_opts == OMPTOOL_OPTS_LEND) {
+                DLB_BorrowCpus(1);
+            }
+            else {
+                DLB_AcquireCpus(1);
+            }
         }
-        else
-            DLB_AcquireCpus(1);
     }
 }
 
@@ -414,8 +417,8 @@ void omptm_role_shift__task_schedule(
         ompt_task_status_t prior_task_status,
         ompt_data_t *next_task_data) {
     if (prior_task_status == ompt_task_switch) {
-        if (DLB_ATOMIC_SUB(&pending_tasks, 1) > 1) {
-            if(omptool_opts == OMPTOOL_OPTS_AGGRESSIVE)
+        if (lewi && DLB_ATOMIC_SUB(&pending_tasks, 1) > 1) {
+            if(omptool_opts == OMPTOOL_OPTS_LEND)
                 DLB_BorrowCpus(1);
             else
                 DLB_AcquireCpus(1);
@@ -437,16 +440,12 @@ void omptm_role_shift__task_schedule(
                     cb_disable_cpu(cpuid, NULL);
                 }
             }
-            /* Lend CPU if no more tasks */
-            else if (DLB_ATOMIC_LD(&pending_tasks) == 0 && 
-                     (((DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) ==  BORROWED) || omptool_opts & OMPTOOL_OPTS_LEND) ||
-                     omptool_opts == OMPTOOL_OPTS_AGGRESSIVE)) {
+            /* Lend CPU if no more tasks and CPU is borrowed, or policy is LEND */
+            else if (DLB_ATOMIC_LD(&pending_tasks) == 0
+                    && (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) == BORROWED
+                        || omptool_opts & OMPTOOL_OPTS_LEND)) {
                 cb_disable_cpu(cpuid, NULL);
-                /* TODO: only lend free agents not part of the process mask */
-                /*       or, depending on the ompt dlb policy */
-                if (!CPU_ISSET(cpuid, &process_mask) || omptool_opts == OMPTOOL_OPTS_AGGRESSIVE) {
-                    DLB_LendCpu(cpuid);
-                }
+                DLB_LendCpu(cpuid);
             }
         }
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);

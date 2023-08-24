@@ -314,14 +314,17 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-ompt",
-        .default_value  = "",
-        .description    = OFFSET"OMPT policy flags for LeWI. If OMPT mode is enabled, set when\n"
+        .default_value  = "borrow",
+        .description    = OFFSET"OMPT option flags for LeWI. If OMPT mode is enabled, set when\n"
                           OFFSET"DLB can automatically invoke LeWI functions to lend or borrow\n"
-                          OFFSET"CPUs. If \"mpi\" is set, LeWI will be invoked before and after\n"
-                          OFFSET"each eligible MPI call. If \"borrow\" is set, DLB will try to\n"
-                          OFFSET"borrow CPUs before each non nested parallel construct. If the\n"
-                          OFFSET"flag \"lend\" is set, DLB will lend all non used CPUs after\n"
-                          OFFSET"each non nested parallel construct.\n"
+                          OFFSET"CPUs. If \"none\" is set, LeWI will not be invoked automatically.\n"
+                          OFFSET"If \"borrow\" is set, DLB will try to borrow CPUs in certain\n"
+                          OFFSET"situations; typically, before non nested parallel constructs if\n"
+                          OFFSET"the OMPT thread manager is omp5 and on each task creation and\n"
+                          OFFSET"task switch in other thread managers. (This option is the default\n"
+                          OFFSET"and should be enough in most of the cases). If the flag \"lend\"\n"
+                          OFFSET"is set, DLB will lend all non used CPUs after each non nested\n"
+                          OFFSET"parallel construct and task completion on external threads.\n"
                           OFFSET"Multiple flags can be selected at the same time.",
         .offset         = offsetof(options_t, lewi_ompt),
         .type           = OPT_OMPTOPTS_T,
