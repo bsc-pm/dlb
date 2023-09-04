@@ -24,6 +24,7 @@
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
 #include "LB_core/DLB_talp.h"
+#include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_talp.h"
@@ -38,6 +39,10 @@
 /*********************************************************************************/
 
 int DLB_TALP_Attach(void) {
+    spd_enter_dlb(NULL);
+    if (!thread_spd->dlb_initialized) {
+        set_observer_role(true);
+    }
     char shm_key[MAX_OPTION_LENGTH];
     options_parse_entry("--shm-key", &shm_key);
     shmem_cpuinfo_ext__init(shm_key);

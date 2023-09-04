@@ -60,6 +60,9 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     int error = DLB_SUCCESS;
 
+    // Set it to false in case one thread is an observer but then Initializes DLB
+    thread_is_observer = false;
+
     // Initialize common modules (spd->id and instrumentation module ASAP)
     *spd = (const subprocess_descriptor_t) {
         .id = id,

@@ -62,6 +62,21 @@ int main(int argc, char *argv[]) {
         assert( DLB_TALP_Detach() == DLB_SUCCESS );
     }
 
+    /* Test that an external process should not call these functions */
+    {
+        assert( DLB_TALP_Attach() == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionGetMPIRegion() == NULL );
+        assert( DLB_MonitoringRegionRegister("Name") == NULL );
+        assert( DLB_MonitoringRegionReset(DLB_MPI_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionStart(DLB_MPI_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionStop(DLB_MPI_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionReport(DLB_MPI_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionsUpdate() == DLB_ERR_NOTALP );
+        assert( DLB_TALP_CollectPOPMetrics(NULL, NULL) == DLB_ERR_NOTALP );
+        assert( DLB_TALP_CollectPOPNodeMetrics(NULL, NULL) == DLB_ERR_NOTALP );
+        assert( DLB_TALP_Detach() == DLB_SUCCESS );
+    }
+
     /* Test DLB_TALP_Attach before other processes */
     {
         struct data *shdata;
