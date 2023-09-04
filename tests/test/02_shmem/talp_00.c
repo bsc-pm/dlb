@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
     /* Get region */
     talp_region_list_t region;
-    assert( shmem_talp__get_region(&region, 42, "Fake region") == DLB_ERR_NOENT );
+    assert( shmem_talp__get_region(&region, 42, "Fake region") == DLB_ERR_NOPROC );
     assert( shmem_talp__get_region(&region, p1_pid, "Custom region 1") == DLB_SUCCESS );
     assert( region.pid == p1_pid
             && region.region_id == 0

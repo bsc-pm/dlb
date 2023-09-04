@@ -307,7 +307,7 @@ static int cmp_region_list(const void *elem1, const void *elem2) {
 int shmem_talp__get_region(talp_region_list_t *region, pid_t pid, const char *name) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
-    int error = DLB_ERR_NOENT;
+    int error = DLB_ERR_NOPROC;
     shmem_lock(shm_handler);
     {
         int region_id;
@@ -504,4 +504,8 @@ size_t shmem_talp__size(void) {
         regions_per_proc_initialized ? regions_per_proc_initialized : DEFAULT_REGIONS_PER_PROC;
     int num_regions = mu_get_system_size() * regions_per_process;
     return sizeof(shdata_t) + sizeof(talp_region_t)*num_regions;
+}
+
+int shmem_talp__get_max_regions(void) {
+    return shdata ? shdata->max_regions : 0;
 }

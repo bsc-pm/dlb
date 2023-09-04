@@ -75,6 +75,31 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
     return error;
 }
 
+int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
+        int *nelems, int max_len) {
+    int shmem_max_regions = shmem_talp__get_max_regions();
+    if (max_len > shmem_max_regions) {
+        max_len = shmem_max_regions;
+    }
+    if (name == DLB_MPI_REGION) {
+        name = monitoring_region_get_MPI_region_name();
+    }
+    talp_region_list_t *region_list = malloc(sizeof(talp_region_list_t)*max_len);
+    int error = shmem_talp__get_regionlist(region_list, nelems, max_len, name);
+    if (error == DLB_SUCCESS) {
+        int i;
+        for (i=0; i<*nelems; ++i) {
+            node_times_list[i] = (const dlb_node_times_t) {
+                .pid         = region_list[i].pid,
+                .mpi_time    = region_list[i].mpi_time,
+                .useful_time = region_list[i].useful_time,
+            };
+        }
+    }
+    free(region_list);
+    return error;
+}
+
 int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics) {
     return talp_query_pop_node_metrics(name, node_metrics);
 }
