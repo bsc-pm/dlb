@@ -105,6 +105,22 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__init_with_cpu_sharing(333, 0, &empty_mask, SHMEM_KEY)
             == DLB_ERR_NOCOMP );
     assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
+    // Flag not decided if initializing from ext__init (no cpu sharing first)
+    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(111, 0, &process_mask, NULL, SHMEM_KEY)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__init_with_cpu_sharing(222, 0, &process_mask, SHMEM_KEY)
+            == DLB_ERR_NOCOMP );
+    assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
+    // Flag not decided if initializing from ext__init (with cpu sharing first)
+    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init_with_cpu_sharing(111, 0, &process_mask, SHMEM_KEY)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__init(222, 0, &process_mask, NULL, SHMEM_KEY)
+            == DLB_ERR_NOCOMP );
+    assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
 
     return 0;
 }

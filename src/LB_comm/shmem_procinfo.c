@@ -63,15 +63,20 @@ typedef struct DLB_ALIGN_CACHE pinfo_t {
 #endif
 } pinfo_t;
 
+typedef struct procinfo_flags {
+    bool initialized:1;
+    bool allow_cpu_sharing:1;   // efectively, disables DROM functionalities
+    bool cpu_sharing_unknown:1; // set when flag is not not during initialization
+} procinfo_flags_t;
+
 typedef struct {
-    bool initialized;
-    bool allow_cpu_sharing;     // efectively, disables DROM functionalities
+    procinfo_flags_t flags;
     struct timespec initial_time;
     cpu_set_t free_mask;        // Contains the CPUs in the system not owned
     pinfo_t process_info[0];
 } shdata_t;
 
-enum { SHMEM_PROCINFO_VERSION = 7 };
+enum { SHMEM_PROCINFO_VERSION = 8 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -202,7 +207,7 @@ static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
     if (CPU_COUNT(mask) == 0) return DLB_SUCCESS;
 
     // Return if sharing is allowed and, thus, we don't need to check CPU overlapping
-    if (shdata->allow_cpu_sharing) {
+    if (shdata->flags.allow_cpu_sharing) {
         verbose(VB_DROM, "Process %d registering shared mask %s", new_owner->pid, mu_to_str(mask));
         return DLB_SUCCESS;
     }
@@ -235,17 +240,22 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
     shmem_lock(shm_handler);
     {
         // Initialize some values if this is the 1st process attached to the shmem
-        if (!shdata->initialized) {
+        if (!shdata->flags.initialized) {
             get_time(&shdata->initial_time);
             mu_get_system_mask(&shdata->free_mask);
-            shdata->initialized = true;
-            shdata->allow_cpu_sharing = allow_cpu_sharing;
-        } else {
-            if (shdata->allow_cpu_sharing != allow_cpu_sharing) {
-                // For now we require all processes registering the procinfo
-                // to have the same value in 'allow_cpu_sharing'
-                error = DLB_ERR_NOCOMP;
-            }
+            shdata->flags = (const procinfo_flags_t) {
+                .initialized = true,
+                .allow_cpu_sharing = allow_cpu_sharing,
+            };
+        } else if (shdata->flags.cpu_sharing_unknown) {
+            /* Already initialized but cpu_sharing unknown, probably due to
+             * initiazing the shared memory via shmem_procinfo_ext__init */
+            shdata->flags.allow_cpu_sharing = allow_cpu_sharing;
+            shdata->flags.cpu_sharing_unknown = false;
+        } else if (shdata->flags.allow_cpu_sharing != allow_cpu_sharing) {
+            // For now we require all processes registering the procinfo
+            // to have the same value in 'allow_cpu_sharing'
+            error = DLB_ERR_NOCOMP;
         }
 
         // Iterate the processes array to find the two potential pointers:
@@ -449,10 +459,13 @@ int shmem_procinfo_ext__init(const char *shmem_key) {
     shmem_lock(shm_handler);
     {
         // Initialize some values if this is the 1st process attached to the shmem
-        if (!shdata->initialized) {
+        if (!shdata->flags.initialized) {
             get_time(&shdata->initial_time);
             mu_get_system_mask(&shdata->free_mask);
-            shdata->initialized = true;
+            shdata->flags = (const procinfo_flags_t) {
+                .initialized = true,
+                .cpu_sharing_unknown = true,
+            };
         }
     }
     shmem_unlock(shm_handler);
@@ -531,7 +544,7 @@ static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_st
 
     // Return if sharing is allowed and, thus, we don't need keep track of free_mask
     // nor stolen CPUs
-    if (shdata->allow_cpu_sharing) {
+    if (shdata->flags.allow_cpu_sharing) {
         verbose(VB_DROM, "Process %d unregistering shared mask %s", owner->pid, mu_to_str(mask));
         return DLB_SUCCESS;
     }
@@ -1477,7 +1490,7 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
  */
 static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen) {
     // this function cannot be used if allowing CPU sharing
-    if (shdata->allow_cpu_sharing) return DLB_ERR_NOCOMP;
+    if (shdata->flags.allow_cpu_sharing) return DLB_ERR_NOCOMP;
 
     cpu_set_t cpus_to_acquire;
     cpu_set_t cpus_to_steal;
