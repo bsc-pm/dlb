@@ -198,6 +198,21 @@ int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
  */
 int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics);
 
+
+/*********************************************************************************/
+/** DISCLAIMER:
+ *      The functions declared above are intended to be called from 1st-party or
+ *      3rd-party programs indistinctly; that is, DLB applications, or external
+ *      profilers as long as they invoke DLB_TALP_Attach.
+ *
+ *      The functions declared below are intended to be called only from 1st-party
+ *      programs, and they should return an error if they are called from external
+ *      profilers.
+ *
+ *      This header file may be split in two in the next major release.
+ */
+/*********************************************************************************/
+
 /*********************************************************************************/
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
