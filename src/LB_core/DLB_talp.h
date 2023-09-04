@@ -90,6 +90,8 @@ void talp_out_of_sync_call(const struct SubProcessDescriptor *spd, bool is_block
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const struct SubProcessDescriptor *spd);
 
+const char* monitoring_region_get_MPI_region_name(void);
+
 struct dlb_monitor_t* monitoring_region_register(
         const struct SubProcessDescriptor *spd, const char* name);
 int monitoring_region_reset(const struct SubProcessDescriptor *spd,

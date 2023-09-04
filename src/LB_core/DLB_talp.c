@@ -524,11 +524,11 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
     node_barrier(spd, NULL);
 
     if (_process_id == 0) {
-        /* Obtain a list of regions associated with "MPI Region", sorted by PID */
+        /* Obtain a list of regions associated with "MPI Execution", sorted by PID */
         int max_procs = mu_get_system_size();
         talp_region_list_t *region_list = malloc(max_procs * sizeof(talp_region_list_t));
         int nelems;
-        shmem_talp__getregionlist(region_list, &nelems, max_procs, mpi_region_name);
+        shmem_talp__get_regionlist(region_list, &nelems, max_procs, mpi_region_name);
 
         /* Allocate node summary structure */
         node_summary = malloc(
@@ -656,6 +656,10 @@ const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = spd->talp_info;
     return talp_info ? &talp_info->mpi_monitor : NULL;
+}
+
+const char* monitoring_region_get_MPI_region_name(void) {
+    return mpi_region_name;
 }
 
 dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
@@ -1351,7 +1355,7 @@ int talp_query_pop_node_metrics(const char *name, dlb_node_metrics_t *node_metri
     int max_procs = mu_get_system_size();
     talp_region_list_t *region_list = malloc(max_procs * sizeof(talp_region_list_t));
     int nelems;
-    shmem_talp__getregionlist(region_list, &nelems, max_procs, name);
+    shmem_talp__get_regionlist(region_list, &nelems, max_procs, name);
 
     /* Count how many processes have started the region */
     int processes_per_node = 0;

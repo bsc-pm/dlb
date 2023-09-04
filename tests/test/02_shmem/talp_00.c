@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
 
     assert( shmem_talp__finalize(42) == DLB_ERR_NOSHMEM );
     assert( shmem_talp__register(42, "", NULL) == DLB_ERR_NOSHMEM );
-    assert( shmem_talp__getpidlist(NULL, NULL, 0) == DLB_ERR_NOSHMEM );
-    assert( shmem_talp__getregionlist(NULL, NULL, 0, NULL) == DLB_ERR_NOSHMEM );
+    assert( shmem_talp__get_pidlist(NULL, NULL, 0) == DLB_ERR_NOSHMEM );
+    assert( shmem_talp__get_regionlist(NULL, NULL, 0, NULL) == DLB_ERR_NOSHMEM );
     assert( shmem_talp__get_times(0, NULL, NULL) == DLB_ERR_NOSHMEM );
     assert( shmem_talp__set_times(0, 0, 0) == DLB_ERR_NOSHMEM );
 
@@ -71,27 +71,36 @@ int main(int argc, char *argv[]) {
     assert( shmem_talp__set_times(-1, 0, 0) == DLB_ERR_NOENT );
     assert( shmem_talp__get_times(-1, NULL, NULL) == DLB_ERR_NOENT );
 
+    /* Get region */
+    talp_region_list_t region;
+    assert( shmem_talp__get_region(&region, 42, "Fake region") == DLB_ERR_NOENT );
+    assert( shmem_talp__get_region(&region, p1_pid, "Custom region 1") == DLB_SUCCESS );
+    assert( region.pid == p1_pid
+            && region.region_id == 0
+            && region.mpi_time == 111111
+            && region.useful_time == 222222 );
+
     enum { max_len = 8 };
     int nelems;
 
     /* Get pidlist */
     pid_t pidlist[max_len];
-    assert( shmem_talp__getpidlist(pidlist, &nelems, max_len) == DLB_SUCCESS );
+    assert( shmem_talp__get_pidlist(pidlist, &nelems, max_len) == DLB_SUCCESS );
     assert( nelems == 2 );
     assert( pidlist[0] == p1_pid && pidlist[1] == p2_pid );
 
     /* Get region id list */
     talp_region_list_t region_list[max_len];
-    assert( shmem_talp__getregionlist(region_list, &nelems, max_len,
+    assert( shmem_talp__get_regionlist(region_list, &nelems, max_len,
                 "Custom region 1") == DLB_SUCCESS );
     assert( nelems == 2 );
     assert( region_list[0].pid == p1_pid && region_list[0].region_id == 0 );
     assert( region_list[1].pid == p2_pid && region_list[1].region_id == 2 );
-    assert( shmem_talp__getregionlist(region_list, &nelems, max_len,
+    assert( shmem_talp__get_regionlist(region_list, &nelems, max_len,
                 "Region 2") == DLB_SUCCESS );
     assert( nelems == 1 );
     assert( region_list[0].pid == p1_pid && region_list[0].region_id == 1 );
-    assert( shmem_talp__getregionlist(region_list, &nelems, max_len,
+    assert( shmem_talp__get_regionlist(region_list, &nelems, max_len,
                 "nonexistent region") == DLB_SUCCESS );
     assert( nelems == 0 );
 

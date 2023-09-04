@@ -28,10 +28,14 @@
 #include "support/env.h"
 #include "support/mask_utils.h"
 #include "LB_comm/shmem.h"
+#include "LB_core/DLB_talp.h"
+#include "LB_core/spd.h"
 
+#include <math.h>
 #include <pthread.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 void __gcov_flush() __attribute__((weak));
 
@@ -85,6 +89,7 @@ int main(int argc, char *argv[]) {
 
         if (child) {
             assert( DLB_Init(0, 0, NULL) == DLB_SUCCESS );
+            talp_mpi_init(thread_spd);
             handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
                     SHMEM_VERSION_IGNORE, NULL);
         }
@@ -92,9 +97,33 @@ int main(int argc, char *argv[]) {
         int error = pthread_barrier_wait(&shdata->barrier);
         assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
+        // Parent process checks existing process with empty MPI and useful values
         if (parent) {
             assert( DLB_TALP_GetPidList(&pidlist, &nelems, 1) == DLB_SUCCESS );
             assert( nelems == 1 && pidlist == pid);
+            double mpi_time, useful_time;
+            assert( DLB_TALP_GetTimes(pid, &mpi_time, &useful_time) == DLB_SUCCESS );
+            assert( fabs(mpi_time) < 1e-6 && fabs(useful_time) < 1e-6 );
+        }
+
+        error = pthread_barrier_wait(&shdata->barrier);
+        assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+        // Child process simulates some time in computation
+        if (child) {
+            usleep(1000); /* 1 ms */
+            assert( DLB_MonitoringRegionsUpdate() == DLB_SUCCESS );
+        }
+
+        error = pthread_barrier_wait(&shdata->barrier);
+        assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+        // Parent process checks times again
+        if (parent) {
+            double mpi_time, useful_time;
+            assert( DLB_TALP_GetTimes(pid, &mpi_time, &useful_time) == DLB_SUCCESS );
+            assert( fabs(mpi_time) < 1e-6 );
+            assert( fabs(useful_time) > 1e-3 && fabs(useful_time) < 1 );
         }
 
         error = pthread_barrier_wait(&shdata->barrier);

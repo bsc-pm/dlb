@@ -43,8 +43,9 @@ int shmem_talp_ext__finalize(void);
 int shmem_talp__register(pid_t pid, const char *name, int *node_shared_id);
 
 /* Getters */
-int shmem_talp__getpidlist(pid_t *pidlist, int *nelems, int max_len);
-int shmem_talp__getregionlist(talp_region_list_t *region_list, int *nelems,
+int shmem_talp__get_pidlist(pid_t *pidlist, int *nelems, int max_len);
+int shmem_talp__get_region(talp_region_list_t *region, pid_t pid, const char *name);
+int shmem_talp__get_regionlist(talp_region_list_t *region_list, int *nelems,
         int max_len, const char *name);
 int shmem_talp__get_times(int region_id, int64_t *mpi_time, int64_t *useful_time);
 
