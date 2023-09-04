@@ -271,7 +271,7 @@ int shmem_talp__register(pid_t pid, const char *name, int *node_shared_id) {
 /*********************************************************************************/
 
 /* Obtain a list of PIDs that have registered a region */
-int shmem_talp__getpidlist(pid_t *pidlist, int *nelems, int max_len) {
+int shmem_talp__get_pidlist(pid_t *pidlist, int *nelems, int max_len) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     *nelems = 0;
@@ -303,8 +303,37 @@ static int cmp_region_list(const void *elem1, const void *elem2) {
     return ((talp_region_list_t*)elem1)->pid - ((talp_region_list_t*)elem2)->pid;
 }
 
+/* Look up for a registered monitoring region with the given "name" and "pid". */
+int shmem_talp__get_region(talp_region_list_t *region, pid_t pid, const char *name) {
+    if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
+
+    int error = DLB_ERR_NOPROC;
+    shmem_lock(shm_handler);
+    {
+        int region_id;
+        int max_regions = shdata->max_regions;
+        for (region_id = 0; region_id < max_regions; ++region_id) {
+            talp_region_t *talp_region = &shdata->talp_region[region_id];
+            if (talp_region->pid == pid
+                    && strncmp(talp_region->name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
+                *region = (const talp_region_list_t) {
+                    .pid = pid,
+                    .region_id = region_id,
+                    .mpi_time = DLB_ATOMIC_LD_RLX(&talp_region->mpi_time),
+                    .useful_time = DLB_ATOMIC_LD_RLX(&talp_region->useful_time),
+                };
+                error = DLB_SUCCESS;
+                break;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return error;
+}
+
 /* Obtain a list of regions for a given name, sorted by PID */
-int shmem_talp__getregionlist(talp_region_list_t *region_list, int *nelems,
+int shmem_talp__get_regionlist(talp_region_list_t *region_list, int *nelems,
         int max_len, const char *name) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
@@ -475,4 +504,8 @@ size_t shmem_talp__size(void) {
         regions_per_proc_initialized ? regions_per_proc_initialized : DEFAULT_REGIONS_PER_PROC;
     int num_regions = mu_get_system_size() * regions_per_process;
     return sizeof(shdata_t) + sizeof(talp_region_t)*num_regions;
+}
+
+int shmem_talp__get_max_regions(void) {
+    return shdata ? shdata->max_regions : 0;
 }

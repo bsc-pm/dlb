@@ -114,6 +114,16 @@ typedef struct dlb_node_metrics_t {
     float   load_balance;
 } dlb_node_metrics_t;
 
+/*! Node raw times (of one monitor) collected asynchronously from the shared memory */
+typedef struct dlb_node_times_t {
+    /*! Process ID */
+    pid_t pid;
+    /*! Time (in nanoseconds) of the accumulated CPU time of communication */
+    int64_t mpi_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation */
+    int64_t useful_time;
+} dlb_node_times_t;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -162,8 +172,20 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len);
  *  \param[out] mpi_time CPU time spent on MPI in seconds
  *  \param[out] useful_time CPU time spend on useful computation in seconds
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  */
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
+
+/*! \brief Get the list of raw times for the specified region
+ *  \param[in] name Name to identify the region
+ *  \param[out] node_times_list The output list
+ *  \param[out] nelems Number of elements in the list
+ *  \param[in] max_len Max capacity of the list
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ */
+int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
+        int *nelems, int max_len);
 
 /*! \brief From either 1st or 3rd party, query node metrics for one region
  *  \param[in] name Name to identify the region
@@ -175,6 +197,21 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
  *  with DLB_ARGS+=" --talp-external-profiler"
  */
 int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics);
+
+
+/*********************************************************************************/
+/** DISCLAIMER:
+ *      The functions declared above are intended to be called from 1st-party or
+ *      3rd-party programs indistinctly; that is, DLB applications, or external
+ *      profilers as long as they invoke DLB_TALP_Attach.
+ *
+ *      The functions declared below are intended to be called only from 1st-party
+ *      programs, and they should return an error if they are called from external
+ *      profilers.
+ *
+ *      This header file may be split in two in the next major release.
+ */
+/*********************************************************************************/
 
 /*********************************************************************************/
 /*    TALP Monitoring Regions                                                    */

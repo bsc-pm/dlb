@@ -24,6 +24,7 @@
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
 #include "LB_core/DLB_talp.h"
+#include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_talp.h"
@@ -38,6 +39,10 @@
 /*********************************************************************************/
 
 int DLB_TALP_Attach(void) {
+    spd_enter_dlb(NULL);
+    if (!thread_spd->dlb_initialized) {
+        set_observer_role(true);
+    }
     char shm_key[MAX_OPTION_LENGTH];
     options_parse_entry("--shm-key", &shm_key);
     shmem_cpuinfo_ext__init(shm_key);
@@ -63,18 +68,40 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
 }
 
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
-    /* Obtain the node shared id for "MPI Region" for the current pid */
-    int node_shared_id;
-    int error = shmem_talp__register(pid, "MPI Region", &node_shared_id);
-    if (error < DLB_SUCCESS) return error;
+    talp_region_list_t region;
+    int error = shmem_talp__get_region(&region, pid,
+            monitoring_region_get_MPI_region_name());
 
-    int64_t mpi_time_ns;
-    int64_t useful_time_ns;
-    error = shmem_talp__get_times(node_shared_id, &mpi_time_ns, &useful_time_ns);
     if (error == DLB_SUCCESS) {
-        *mpi_time = nsecs_to_secs(mpi_time_ns);
-        *useful_time = nsecs_to_secs(useful_time_ns);
+        *mpi_time = nsecs_to_secs(region.mpi_time);
+        *useful_time = nsecs_to_secs(region.useful_time);
     }
+
+    return error;
+}
+
+int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
+        int *nelems, int max_len) {
+    int shmem_max_regions = shmem_talp__get_max_regions();
+    if (max_len > shmem_max_regions) {
+        max_len = shmem_max_regions;
+    }
+    if (name == DLB_MPI_REGION) {
+        name = monitoring_region_get_MPI_region_name();
+    }
+    talp_region_list_t *region_list = malloc(sizeof(talp_region_list_t)*max_len);
+    int error = shmem_talp__get_regionlist(region_list, nelems, max_len, name);
+    if (error == DLB_SUCCESS) {
+        int i;
+        for (i=0; i<*nelems; ++i) {
+            node_times_list[i] = (const dlb_node_times_t) {
+                .pid         = region_list[i].pid,
+                .mpi_time    = region_list[i].mpi_time,
+                .useful_time = region_list[i].useful_time,
+            };
+        }
+    }
+    free(region_list);
     return error;
 }
 

@@ -172,7 +172,7 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 7 };
+    enum { KNOWN_PROCINFO_VERSION = 8 };
 
     struct KnownTALPTimes {
         atomic_int_least64_t int1;
@@ -199,10 +199,14 @@ static void check_procinfo_version(void) {
         struct timespec time;
 #endif
     };
+    struct KnownProcinfoFlags {
+        bool flag1:1;
+        bool flag2:1;
+        bool flag3:1;
+    };
 
     struct KnownProcinfoShdata {
-        bool bool1;
-        bool bool2;
+        struct KnownProcinfoFlags flags;
         struct timespec time;
         cpu_set_t mask1;
         struct KnownProcinfo info[0];

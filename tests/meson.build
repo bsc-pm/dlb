@@ -78,6 +78,7 @@ tests = {
     'api_drom_01'         : {},
     'api_drom_02'         : {},
     'api_monitor_00'      : {},
+    'api_talp_attach_00'  : {},
     'api_sp_00'           : {},
     'api_sp_01_async'     : {'source' : 'api_sp_01.c', 'dlb_args' : '--mode=async'},
     'api_sp_01_poll'      : {'source' : 'api_sp_01.c', 'dlb_args' : '--mode=polling'},
