@@ -166,5 +166,12 @@ int main( int argc, char **argv ) {
     assert( DLB_Finalize() == DLB_SUCCESS );
     assert( ntimes == 1 );
 
+    // Test multiple finalizes with all modules enabled
+    char options3[128];
+    snprintf(options3, 128, "--lewi --drom --talp --async --shm-key=%s", SHMEM_KEY);
+    assert( DLB_Init(0, &process_mask, options3) == DLB_SUCCESS );
+    assert( DLB_Finalize() == DLB_SUCCESS );
+    assert( DLB_Finalize() == DLB_NOUPDT );
+
     return 0;
 }

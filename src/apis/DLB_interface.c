@@ -22,7 +22,6 @@
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
-#include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "support/env.h"
 #include "support/error.h"
@@ -49,9 +48,19 @@ int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
 
 int DLB_Finalize(void) {
     spd_enter_dlb(NULL);
-    thread_spd->dlb_initialized = false;
-    thread_spd->dlb_preinitialized = false;
-    return Finish(thread_spd);
+    if (__sync_bool_compare_and_swap(&thread_spd->dlb_initialized, true, false) ) {
+        return Finish(thread_spd);
+    } else if (__sync_bool_compare_and_swap(&thread_spd->dlb_preinitialized, true, false) ) {
+        /* This is to support the case when a single process does DLB_PreInit + DLB_Init
+         * The first DLB_Finalize must finalize everything except the CPUs not inherited
+         * during DLB_Init, if any. The second finalize must clean up the procinfo shmem.
+         */
+        shmem_procinfo__finalize(thread_spd->id,
+                thread_spd->options.debug_opts & DBG_RETURNSTOLEN,
+                thread_spd->options.shm_key);
+        return DLB_SUCCESS;
+    }
+    return DLB_NOUPDT;
 }
 
 int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ) {

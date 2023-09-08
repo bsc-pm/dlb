@@ -56,7 +56,7 @@ int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args);
 /*! \brief Finalize DLB library and clean up all its data structures.
  *          Must be called by each process before exiting the system.
  *  \return DLB_SUCCESS on success
- *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_NOUPDT if DLB is not initialized
  */
 int DLB_Finalize(void);
 

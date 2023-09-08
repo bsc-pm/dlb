@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
         assert( DLB_Init(0, &current_mask, NULL) == DLB_SUCCESS );
 
         /* A second Init should return error */
-        /* assert( DLB_Init(0, &current_mask, NULL) == DLB_ERR_INIT ); */
+        assert( DLB_Init(0, &current_mask, NULL) == DLB_ERR_INIT );
 
         /* Check current mask */
         assert( DLB_DROM_Attach() == DLB_SUCCESS );
