@@ -127,8 +127,6 @@ common_srcs = [
   'src/LB_comm/shmem_talp.h',
   'src/LB_core/lb_funcs.c',
   'src/LB_core/lb_funcs.h',
-  'src/LB_core/node_barrier.c',
-  'src/LB_core/node_barrier.h',
   'src/LB_core/spd.c',
   'src/LB_core/spd.h',
   'src/LB_numThreads/omptool.c',
@@ -178,6 +176,8 @@ sources = [
   'src/LB_core/DLB_kernel.h',
   'src/LB_core/DLB_talp.c',
   'src/LB_core/DLB_talp.h',
+  'src/LB_core/node_barrier.c',
+  'src/LB_core/node_barrier.h',
 ]
 
 libdlb = library(
