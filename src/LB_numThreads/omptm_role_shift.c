@@ -296,17 +296,19 @@ void omptm_role_shift__thread_begin(ompt_thread_t thread_type,
             pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
             verbose(VB_OMPT, "Binding a free agent to CPU %d", cpuid);
             instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
-            if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
-                if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
-                    cb_disable_cpu(cpuid, NULL);
+            if (lewi) {
+                if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
+                    if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
+                        cb_disable_cpu(cpuid, NULL);
+                    }
                 }
-            }
-            else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
-                cb_disable_cpu(cpuid, NULL);
-                /* TODO: only lend free agents not part of the process mask */
-                /*       or, depending on the ompt dlb policy */
-                if (!CPU_ISSET(cpuid, &process_mask)) {
-                    DLB_LendCpu(cpuid);
+                else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
+                    cb_disable_cpu(cpuid, NULL);
+                    /* TODO: only lend free agents not part of the process mask */
+                    /*       or, depending on the ompt dlb policy */
+                    if (!CPU_ISSET(cpuid, &process_mask)) {
+                        DLB_LendCpu(cpuid);
+                    }
                 }
             }
         }
@@ -335,18 +337,18 @@ void omptm_role_shift__thread_role_shift(ompt_data_t *thread_data,
         if(next_role == OMP_ROLE_COMMUNICATOR) return; //Don't supported now
         if(CPU_ISSET(cpuid, &process_mask)) //One of the initial/worker threads. Don't need to check for own CPUs.
             return;
-        if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
-            if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
-                cb_disable_cpu(cpuid, NULL);
+        if (lewi) {
+            if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
+                if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
+                    cb_disable_cpu(cpuid, NULL);
+                }
             }
-        }
-        else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
-            cb_disable_cpu(cpuid, NULL);
-            /* TODO: only lend free agents not part of the process mask */
-            /*       or, depending on the ompt dlb policy */
-            //if (!CPU_ISSET(cpuid, &process_mask)) {
-            DLB_LendCpu(cpuid);
-            //}
+            else if (DLB_ATOMIC_LD(&pending_tasks) == 0
+                    && (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) == BORROWED
+                        || omptool_opts & OMPTOOL_OPTS_LEND)) {
+                cb_disable_cpu(cpuid, NULL);
+                DLB_LendCpu(cpuid);
+            }
         }
     }
 }
@@ -426,7 +428,7 @@ void omptm_role_shift__task_schedule(
         instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     } else if (prior_task_status == ompt_task_complete) {
         int cpuid = cpu_by_id[global_tid];
-        if (cpuid >= 0 && cpu_data[cpuid].fa) {
+        if (lewi && cpuid >= 0 && cpu_data[cpuid].fa) {
             /* Return CPU if reclaimed */
             if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
                 if(DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) == UNKNOWN){

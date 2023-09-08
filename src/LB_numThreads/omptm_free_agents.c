@@ -583,7 +583,7 @@ void omptm_free_agents__parallel_begin(
         DLB_ATOMIC_ST(&in_parallel, true);
 
         /* Only if requested_parallelism == process_mask, reclaim all our lent CPUs, if needed */
-        /* Otherwise, each thread will be responsible to reclaim themselves */
+        /* Otherwise, each thread will be responsible for reclaiming themselves */
         if (requested_parallelism == (unsigned)CPU_COUNT(&process_mask)) {
             int cpus_to_reclaim = 0;
             int cpuid_to_reclaim = -1;
@@ -697,9 +697,10 @@ void omptm_free_agents__task_schedule(
             else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
                 cb_disable_cpu(cpuid, NULL);
 
-                /* TODO: only lend free agents not part of the process mask */
-                /*       or, depending on the ompt dlb policy */
-                if (!CPU_ISSET(cpuid, &process_mask)) {
+                /* Lend only free agents not part of the process mask */
+                /* or, lend anyway if LEND policy */
+                if (!CPU_ISSET(cpuid, &process_mask)
+                        || omptool_opts & OMPTOOL_OPTS_LEND) {
                     DLB_LendCpu(cpuid);
                 }
             }
