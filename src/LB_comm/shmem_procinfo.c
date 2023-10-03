@@ -823,11 +823,10 @@ static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_f
     pinfo_t *process = my_pinfo;
     shmem_lock(shm_handler);
     {
-        if (process->dirty) {
-            /* Do not allow another operation if process is already dirty */
-            error = DLB_ERR_PDIRTY;
-        } else {
+        if (!process->dirty || CPU_EQUAL(mask, &process->future_process_mask)) {
             error = set_new_mask(process, mask, false /* sync */, return_stolen);
+        } else {
+            error = DLB_ERR_PDIRTY;
         }
 
         /* Update current mask now */
