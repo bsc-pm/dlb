@@ -93,7 +93,7 @@
  *      In all the examples above the argument means CPUs with logical id #0, #5, #6, #7.
  *
  *  \section author AUTHOR
- *      Barcelona Supercomputing Center (pm-tools@bsc.es)
+ *      Barcelona Supercomputing Center (dlb@bsc.es)
  *  \section seealso SEE ALSO
  *      \ref dlb "dlb"(1), \ref dlb_run "dlb_run"(1), \ref dlb_shm "dlb_shm"(1)
  */

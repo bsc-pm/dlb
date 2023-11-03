@@ -34,7 +34,7 @@
  *          <DD>Print usage.</DD>
  *      </DL>
  *  \section author AUTHOR
- *      Barcelona Supercomputing Center (pm-tools@bsc.es)
+ *      Barcelona Supercomputing Center (dlb@bsc.es)
  *  \section seealso SEE ALSO
  *      \ref dlb "dlb"(1), \ref dlb_run "dlb_run"(1),
  *      \ref dlb_taskset "dlb_taskset"(1)

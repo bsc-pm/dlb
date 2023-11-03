@@ -35,7 +35,7 @@
  *          its return code upon finalization.</DD>
  *      </DL>
  *  \section author AUTHOR
- *      Barcelona Supercomputing Center (pm-tools@bsc.es)
+ *      Barcelona Supercomputing Center (dlb@bsc.es)
  *  \section seealso SEE ALSO
  *      \ref dlb "dlb"(1), \ref dlb_shm "dlb_shm"(1),
  *      \ref dlb_taskset "dlb_taskset"(1)

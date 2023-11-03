@@ -150,7 +150,7 @@ at International Conference in Parallel Processing 2009, ICPP09.
 ## Contact Information
 
 For questions, suggestions and bug reports, you can contact us via e-mail
-at pm-tools@bsc.es.
+at dlb@bsc.es.
 
 [DLB]: https://pm.bsc.es/dlb
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
