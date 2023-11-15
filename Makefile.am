@@ -905,10 +905,12 @@ dist_man_MANS = \
 	$(END)
 
 $(man1_builddir)/doxy.stamp: $(bin_sources)
+	@$(MKDIR_P) $(man1_builddir)
 	$(DOXYMAN1_verbose)$(DOXYGEN) $(DOXYFILE_MAN1)
 	@touch $(man1_builddir)/doxy.stamp
 
 $(man3_builddir)/doxy.stamp: $(installheaders)
+	@$(MKDIR_P) $(man3_builddir)
 	$(DOXYMAN3_verbose)$(DOXYGEN) $(DOXYFILE_MAN3)
 	@touch $(man3_builddir)/doxy.stamp
 
