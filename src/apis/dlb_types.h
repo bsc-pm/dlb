@@ -33,6 +33,7 @@ typedef enum dlb_drom_flags_e {
     DLB_SYNC_QUERY      = 1 << 2,
     DLB_SYNC_NOW        = 1 << 3,
     DLB_NO_SYNC         = 1 << 4,
+    DLB_FREE_CPUS_SLURM = 1 << 5,
 } dlb_drom_flags_t;
 
 // PrintShmem flags

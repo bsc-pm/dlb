@@ -719,7 +719,8 @@ int poll_drom_update(const subprocess_descriptor_t *spd) {
 }
 
 int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
-    int error = shmem_procinfo__setprocessmask(pid, mask, flags);
+    cpu_set_t free_cpu_mask;
+    int error = shmem_procinfo__setprocessmask(pid, mask, flags, &free_cpu_mask);
     if (error == DLB_SUCCESS
             && thread_spd->dlb_initialized
             && (pid == 0 || pid == thread_spd->id)
@@ -734,6 +735,32 @@ int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flag
         }
         set_process_mask(&thread_spd->pm, mask);
     }
+    if (error == DLB_SUCCESS && (flags & DLB_FREE_CPUS_SLURM)) {
+        // Slurm freeing
+        char *mask_str = mu_parse_to_slurm_format(&free_cpu_mask);
+        if (mask_str == NULL)
+            return DLB_ERR_UNKNOWN;
+        char *args[6];
+        if (!secure_getenv("SLURM_JOBID") || !secure_getenv("SLURMD_NODENAME"))
+            return DLB_ERR_UNKNOWN;
+        asprintf(&args[0], "scontrol");
+        asprintf(&args[1], "update");
+        asprintf(&args[2], "jobid=%s", secure_getenv("SLURM_JOBID"));
+        asprintf(&args[3], "nodename=%s", secure_getenv("SLURMD_NODENAME"));
+        asprintf(&args[4], "cpumaskoff=%s", mask_str);
+        args[5] = NULL;
+
+        int res_pid = fork();
+        if (res_pid < 0)
+            return DLB_ERR_UNKNOWN;
+        else if (res_pid == 0) 
+            execvp("scontrol", args);
+
+        for (int i = 0; i < 5; ++i)
+            free(args[i]);
+        free(mask_str);
+    }
+    
     return error;
 }
 

@@ -22,8 +22,11 @@
 </testinfo>*/
 
 #include "support/mask_utils.h"
+#include "apis/dlb_errors.h"
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <assert.h>
 
 int main( int argc, char **argv ) {
@@ -54,6 +57,15 @@ int main( int argc, char **argv ) {
     cpu_set_t lb_mask2;
     mu_parse_mask("0-1,3,5-7", &lb_mask2);
     fprintf(stdout, "LB Mask: %s\n", mu_to_str(&lb_mask2));
+
+    // Test hexadecimal transformation
+    cpu_set_t lb_mask3;
+    mu_testing_set_sys_size(130);
+    mu_parse_mask("0-1,4,7,31,63,127-129", &lb_mask3);
+    char *out_str = mu_parse_to_slurm_format(&lb_mask3);
+    fprintf(stdout, "Slurm mask: %s\n", out_str);
+    assert(strcmp(out_str, "0x380000000000000008000000080000093") == 0);
+    free(out_str);
     mu_finalize();
 
     assert(CPU_EQUAL(&lb_mask1, &lb_mask2));

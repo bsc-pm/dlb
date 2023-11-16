@@ -139,7 +139,7 @@ int main( int argc, char **argv ) {
                 == DLB_SUCCESS );
         mu_parse_mask("0-1", &p3_new_mask);
         /* error because p1 is still dirty */
-        assert( shmem_procinfo__setprocessmask(p3_pid, &p3_new_mask, DLB_STEAL_CPUS)
+        assert( shmem_procinfo__setprocessmask(p3_pid, &p3_new_mask, DLB_STEAL_CPUS, NULL)
                 == DLB_ERR_PERM );
 
         // roll back

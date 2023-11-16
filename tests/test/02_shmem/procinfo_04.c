@@ -87,7 +87,7 @@ int main( int argc, char **argv ) {
     // Assign all CPUs to sub-process 2
     cpu_set_t new_p2_mask;
     CPU_OR(&new_p2_mask, &original_p1_mask, &original_p2_mask);
-    assert( shmem_procinfo__setprocessmask(p2_pid, &new_p2_mask, 0) == DLB_SUCCESS );
+    assert( shmem_procinfo__setprocessmask(p2_pid, &new_p2_mask, 0, NULL) == DLB_SUCCESS );
 
     // Sub-process 2 polls
     int ncpus = 0;

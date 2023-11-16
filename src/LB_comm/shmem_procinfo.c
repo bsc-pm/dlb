@@ -89,7 +89,8 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
 static pinfo_t *my_pinfo = NULL;
 
-static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen);
+static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, 
+        bool return_stolen, cpu_set_t *free_cpu_mask);
 static void close_shmem(void);
 
 static pid_t get_parent_pid(pid_t pid) {
@@ -507,7 +508,7 @@ int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags
                     error = register_mask(process, mask);
                 } else {
                     // Otherwise, steal CPUs if necessary
-                    error = set_new_mask(process, mask, sync, return_stolen);
+                    error = set_new_mask(process, mask, sync, return_stolen, NULL);
                 }
                 if (error) {
                     // Release shared memory spot
@@ -822,7 +823,8 @@ int shmem_procinfo__getprocessmask(pid_t pid, cpu_set_t *mask, dlb_drom_flags_t 
 }
 
 /* PRE: shm_handler and my_pinfo are not NULL */
-static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_flags_t flags) {
+static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_flags_t flags,
+        cpu_set_t *free_cpu_mask) {
     int error;
     bool return_stolen = flags & DLB_RETURN_STOLEN;
     bool skip_auto_update = flags & DLB_NO_SYNC;
@@ -830,7 +832,7 @@ static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_f
     shmem_lock(shm_handler);
     {
         if (!process->dirty || CPU_EQUAL(mask, &process->future_process_mask)) {
-            error = set_new_mask(process, mask, false /* sync */, return_stolen);
+            error = set_new_mask(process, mask, false /* sync */, return_stolen, free_cpu_mask);
         } else {
             error = DLB_ERR_PDIRTY;
         }
@@ -855,13 +857,14 @@ static int shmem_procinfo__setprocessmask_self(const cpu_set_t *mask, dlb_drom_f
     return error;
 }
 
-int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags) {
+int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags,
+        cpu_set_t *free_cpu_mask) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     /* Specific case, if pid is 0 the target is the current process */
     if (pid == 0) {
         if (my_pinfo != NULL) {
-            return shmem_procinfo__setprocessmask_self(mask, flags);
+            return shmem_procinfo__setprocessmask_self(mask, flags, free_cpu_mask);
         } else {
             return DLB_ERR_NOPROC;
         }
@@ -869,7 +872,7 @@ int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_fl
 
     /* Specific case, if pid is current process */
     if (my_pinfo != NULL && my_pinfo->pid == pid) {
-        return shmem_procinfo__setprocessmask_self(mask, flags);
+        return shmem_procinfo__setprocessmask_self(mask, flags, free_cpu_mask);
     }
 
     bool sync = flags & DLB_SYNC_QUERY;
@@ -890,7 +893,7 @@ int shmem_procinfo__setprocessmask(pid_t pid, const cpu_set_t *mask, dlb_drom_fl
         }
 
         // Set new mask if everything ok
-        error = error ? error : set_new_mask(process, mask, sync, return_stolen);
+        error = error ? error : set_new_mask(process, mask, sync, return_stolen, free_cpu_mask);
     }
     shmem_unlock(shm_handler);
 
@@ -1493,7 +1496,8 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
  *  - If the CPU is SET, used and not owned -> steal
  *  - If the CPU is UNSET and owned by the process -> unregister
  */
-static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool return_stolen) {
+static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, 
+        bool return_stolen, cpu_set_t *free_cpu_mask) {
     // this function cannot be used if allowing CPU sharing
     if (shdata->flags.allow_cpu_sharing) return DLB_ERR_NOCOMP;
 
@@ -1511,13 +1515,13 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool
                 // CPU is not being used
                 CPU_SET(c, &cpus_to_acquire);
             } else {
-                if (!CPU_ISSET(c, &process->future_process_mask)) {
+                if (!CPU_ISSET(c, &process->current_process_mask)) {
                     // CPU is being used by other process
                     CPU_SET(c, &cpus_to_steal);
                 }
             }
         } else {
-            if (CPU_ISSET(c, &process->future_process_mask)) {
+            if (CPU_ISSET(c, &process->current_process_mask)) {
                 // CPU no longer used by this process
                 CPU_SET(c, &cpus_to_free);
             }
@@ -1529,6 +1533,8 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, bool
     error = error ? error : steal_mask(process, &cpus_to_steal, sync, /* dry_run */ false);
     error = error ? error : register_mask(process, &cpus_to_acquire);
     error = error ? error : unregister_mask(process, &cpus_to_free, return_stolen);
+    if (error == DLB_SUCCESS && free_cpu_mask)
+        memcpy(free_cpu_mask, &cpus_to_free, sizeof(cpu_set_t));
 
     return error;
 }

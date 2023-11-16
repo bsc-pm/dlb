@@ -26,6 +26,8 @@
 
 #include <sched.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 typedef struct sync_call_flags_t {
     bool is_mpi:1;
