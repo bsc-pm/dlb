@@ -973,16 +973,16 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         /* Each process creates a serialized monitor to send to Rank 0 */
         enum { CPUSET_MAX = 64 };
         typedef struct serialized_monitor_t {
-            pid_t   pid;
-            int     num_measurements;
             char    hostname[HOST_NAME_MAX];
             char    cpuset[CPUSET_MAX];
             char    cpuset_quoted[CPUSET_MAX];
+            int     pid;
+            int     num_measurements;
+            float   ipc;
             int64_t elapsed_time;
             int64_t elapsed_computation_time;
             int64_t accumulated_MPI_time;
             int64_t accumulated_computation_time;
-            float   ipc;
         } serialized_monitor_t;
 
         float ipc = monitor->accumulated_cycles == 0 ? 0.0f
@@ -991,11 +991,11 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         serialized_monitor_t serialized_monitor = (const serialized_monitor_t) {
             .pid = spd->id,
             .num_measurements = monitor->num_measurements,
+            .ipc = ipc,
             .elapsed_time = monitor->elapsed_time,
             .elapsed_computation_time = monitor->elapsed_computation_time,
             .accumulated_MPI_time = monitor->accumulated_MPI_time,
             .accumulated_computation_time = monitor->accumulated_computation_time,
-            .ipc = ipc,
         };
 
        gethostname(serialized_monitor.hostname, HOST_NAME_MAX);
@@ -1006,13 +1006,13 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
         MPI_Datatype mpi_serialized_monitor_type;
         {
             int count = 4;
-            int blocklengths[] = {2, HOST_NAME_MAX+CPUSET_MAX*2, 4, 1};
+            int blocklengths[] = {HOST_NAME_MAX+CPUSET_MAX*2, 2, 1, 4};
             MPI_Aint displacements[] = {
-                offsetof(serialized_monitor_t, pid),
                 offsetof(serialized_monitor_t, hostname),
-                offsetof(serialized_monitor_t, elapsed_time),
-                offsetof(serialized_monitor_t, ipc)};
-            MPI_Datatype types[] = {MPI_INT, MPI_CHAR, mpi_int64_type, MPI_FLOAT};
+                offsetof(serialized_monitor_t, pid),
+                offsetof(serialized_monitor_t, ipc),
+                offsetof(serialized_monitor_t, elapsed_time)};
+            MPI_Datatype types[] = {MPI_CHAR, MPI_INT, MPI_FLOAT, mpi_int64_type};
             PMPI_Type_create_struct(count, blocklengths, displacements,
                     types, &mpi_serialized_monitor_type);
             PMPI_Type_commit(&mpi_serialized_monitor_type);
