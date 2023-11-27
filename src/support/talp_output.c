@@ -404,11 +404,11 @@ static void pop_to_csv(FILE *out_file) {
         return;
 
     /* Print header */
-    fprintf(out_file, "Name%s%s\n",
+    fprintf(out_file, "Name,ElapsedTime,IPC%s%s\n",
             pop_metrics_num_records == 0 ? "" :
             ",ParallelEfficiency,CommunicationEfficiency,LoadBalance,LbIn,LbOut",
             pop_raw_num_records == 0 ? "" :
-            ",NumCpus,NumNodes,NumRanks,ElapsedTime,ElapsedUseful,UsefulCpuTotal"
+            ",NumCpus,NumNodes,NumRanks,ElapsedUseful,UsefulCpuTotal"
             ",UsefulCpuNode,numMPICalls,cycles,instructions"
            );
 
@@ -419,8 +419,14 @@ static void pop_to_csv(FILE *out_file) {
         pop_raw_record_t *raw_record =
             i < pop_raw_num_records ? &pop_raw[i] : NULL;
 
+        float ipc = metrics_record ? metrics_record->avg_ipc :
+            raw_record->cycles > 0 ? (float)raw_record->instructions / raw_record->cycles : 0.0f;
+
         /* Assuming that if both records are not NULL, they are the same region */
-        fprintf(out_file, "%s", metrics_record ? metrics_record->name : raw_record->name);
+        fprintf(out_file, "%s,%"PRId64",%1.2f",
+                metrics_record ? metrics_record->name : raw_record->name,
+                metrics_record ? metrics_record->elapsed_time : raw_record->elapsed_time,
+                ipc);
 
         if (metrics_record) {
             fprintf(out_file, ",%.2f,%.2f,%.2f,%.2f,%.2f",
@@ -432,10 +438,16 @@ static void pop_to_csv(FILE *out_file) {
         }
 
         if (raw_record) {
-            fprintf(out_file, ",%d,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRIu64",%"PRIu64",%"PRIu64,
+            fprintf(out_file,
+                    /* P, N, num_ranks */
+                    ",%d,%d,%d"
+                    /* 3 useful */
+                    ",%"PRId64",%"PRId64",%"PRId64
+                    /* num_mpi_calls, cycles, instructions */
+                    ",%"PRIu64",%"PRIu64",%"PRIu64,
                     raw_record->P,
                     raw_record->N,
-                    raw_record->elapsed_time,
+                    raw_record->num_ranks,
                     raw_record->elapsed_useful,
                     raw_record->app_sum_useful,
                     raw_record->node_sum_useful,
