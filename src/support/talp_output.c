@@ -398,19 +398,21 @@ static void pop_raw_finalize(void) {
 /*    POP Metrics + POP Raw CSV                                                  */
 /*********************************************************************************/
 
-static void pop_to_csv(FILE *out_file) {
+static void pop_to_csv(FILE *out_file, bool append) {
     int num_records = max_int(pop_metrics_num_records, pop_raw_num_records);
     if (num_records == 0)
         return;
 
-    /* Print header */
-    fprintf(out_file, "Name%s%s\n",
-            pop_metrics_num_records == 0 ? "" :
-            ",ParallelEfficiency,CommunicationEfficiency,LoadBalance,LbIn,LbOut",
-            pop_raw_num_records == 0 ? "" :
-            ",NumCpus,NumNodes,NumRanks,ElapsedTime,ElapsedUseful,UsefulCpuTotal"
-            ",UsefulCpuNode,numMPICalls,cycles,instructions"
-           );
+    if (!append) {
+        /* Print header */
+        fprintf(out_file, "Name,ElapsedTime,IPC%s%s\n",
+                pop_metrics_num_records == 0 ? "" :
+                ",ParallelEfficiency,CommunicationEfficiency,LoadBalance,LbIn,LbOut",
+                pop_raw_num_records == 0 ? "" :
+                ",NumCpus,NumNodes,NumRanks,ElapsedUseful,UsefulCpuTotal"
+                ",UsefulCpuNode,numMPICalls,cycles,instructions"
+               );
+    }
 
     int i;
     for (i=0; i<num_records; ++i) {
@@ -419,8 +421,14 @@ static void pop_to_csv(FILE *out_file) {
         pop_raw_record_t *raw_record =
             i < pop_raw_num_records ? &pop_raw[i] : NULL;
 
+        float ipc = metrics_record ? metrics_record->avg_ipc :
+            raw_record->cycles > 0 ? (float)raw_record->instructions / raw_record->cycles : 0.0f;
+
         /* Assuming that if both records are not NULL, they are the same region */
-        fprintf(out_file, "%s", metrics_record ? metrics_record->name : raw_record->name);
+        fprintf(out_file, "%s,%"PRId64",%1.2f",
+                metrics_record ? metrics_record->name : raw_record->name,
+                metrics_record ? metrics_record->elapsed_time : raw_record->elapsed_time,
+                ipc);
 
         if (metrics_record) {
             fprintf(out_file, ",%.2f,%.2f,%.2f,%.2f,%.2f",
@@ -432,10 +440,16 @@ static void pop_to_csv(FILE *out_file) {
         }
 
         if (raw_record) {
-            fprintf(out_file, ",%d,%d,%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRIu64",%"PRIu64",%"PRIu64,
+            fprintf(out_file,
+                    /* P, N, num_ranks */
+                    ",%d,%d,%d"
+                    /* 3 useful */
+                    ",%"PRId64",%"PRId64",%"PRId64
+                    /* num_mpi_calls, cycles, instructions */
+                    ",%"PRIu64",%"PRIu64",%"PRIu64,
                     raw_record->P,
                     raw_record->N,
-                    raw_record->elapsed_time,
+                    raw_record->num_ranks,
                     raw_record->elapsed_useful,
                     raw_record->app_sum_useful,
                     raw_record->node_sum_useful,
@@ -618,14 +632,16 @@ static void node_to_xml(FILE *out_file) {
     }
 }
 
-static void node_to_csv(FILE *out_file) {
+static void node_to_csv(FILE *out_file, bool append) {
     if (node_list_head == NULL)
         return;
 
-    /* Print header */
-    fprintf(out_file,
-            "NodeId,ProcessId,ProcessUsefulTime,ProcessMPITime,NodeAvgUsefulTime"
-            ",NodeAvgMPITime,NodeMaxUsefulTime,NodeMaxMPITime\n");
+    if (!append) {
+        /* Print header */
+        fprintf(out_file,
+                "NodeId,ProcessId,ProcessUsefulTime,ProcessMPITime,NodeAvgUsefulTime"
+                ",NodeAvgMPITime,NodeMaxUsefulTime,NodeMaxMPITime\n");
+    }
 
     node_record_t *node_record = node_list_head;
     while (node_record != NULL) {
@@ -903,14 +919,16 @@ static void process_to_xml(FILE *out_file) {
     }
 }
 
-static void process_to_csv(FILE *out_file) {
+static void process_to_csv(FILE *out_file, bool append) {
     if (monitor_list_head == NULL)
         return;
 
-    /* Print header */
-    fprintf(out_file,
-            "Region,Rank,PID,Hostname,CpuSet,NumMeasurements"
-            ",ElapsedTime,ElapsedUsefulTime,MPITime,UsefulTime,IPC\n");
+    if (!append) {
+        /* Print header */
+        fprintf(out_file,
+                "Region,Rank,PID,Hostname,CpuSet,NumMeasurements"
+                ",ElapsedTime,ElapsedUsefulTime,MPITime,UsefulTime,IPC\n");
+    }
 
     monitor_list_t *monitor_list = monitor_list_head;
     while (monitor_list != NULL) {
@@ -1057,11 +1075,19 @@ void talp_output_finalize(const char *output_file) {
                 size_t pop_file_len = filename_useful_len + strlen(pop_ext) + 1;
                 char *pop_filename = malloc(sizeof(char)*pop_file_len);
                 sprintf(pop_filename, "%.*s%s", filename_useful_len, output_file, pop_ext);
-                FILE *pop_file = fopen(pop_filename, "w");
+                FILE *pop_file;
+                bool append_to_csv;
+                if (access(pop_filename, F_OK) == 0) {
+                    pop_file = fopen(pop_filename, "a");
+                    append_to_csv = true;
+                } else {
+                    pop_file = fopen(pop_filename, "w");
+                    append_to_csv = false;
+                }
                 if (pop_file == NULL) {
                     warning("Cannot open file %s: %s", pop_filename, strerror(errno));
                 } else {
-                    pop_to_csv(pop_file);
+                    pop_to_csv(pop_file, append_to_csv);
                     fclose(pop_file);
                 }
             }
@@ -1072,11 +1098,19 @@ void talp_output_finalize(const char *output_file) {
                 size_t node_file_len = filename_useful_len + strlen(node_ext) + 1;
                 char *node_filename = malloc(sizeof(char)*node_file_len);
                 sprintf(node_filename, "%.*s%s", filename_useful_len, output_file, node_ext);
-                FILE *node_file = fopen(node_filename, "w");
+                FILE *node_file;
+                bool append_to_csv;
+                if (access(node_filename, F_OK) == 0) {
+                    node_file = fopen(node_filename, "a");
+                    append_to_csv = true;
+                } else {
+                    node_file = fopen(node_filename, "w");
+                    append_to_csv = false;
+                }
                 if (node_file == NULL) {
                     warning("Cannot open file %s: %s", node_filename, strerror(errno));
                 } else {
-                    node_to_csv(node_file);
+                    node_to_csv(node_file, append_to_csv);
                     fclose(node_file);
                 }
             }
@@ -1087,11 +1121,19 @@ void talp_output_finalize(const char *output_file) {
                 size_t process_file_len = filename_useful_len + strlen(process_ext) + 1;
                 char *process_filename = malloc(sizeof(char)*process_file_len);
                 sprintf(process_filename, "%.*s%s", filename_useful_len, output_file, process_ext);
-                FILE *process_file = fopen(process_filename, "w");
+                FILE *process_file;
+                bool append_to_csv;
+                if (access(process_filename, F_OK) == 0) {
+                    process_file = fopen(process_filename, "a");
+                    append_to_csv = true;
+                } else {
+                    process_file = fopen(process_filename, "w");
+                    append_to_csv = false;
+                }
                 if (process_file == NULL) {
                     warning("Cannot open file %s: %s", process_filename, strerror(errno));
                 } else {
-                    process_to_csv(process_file);
+                    process_to_csv(process_file, append_to_csv);
                     fclose(process_file);
                 }
             }
@@ -1100,7 +1142,17 @@ void talp_output_finalize(const char *output_file) {
         /* Write to file */
         else {
             /* Open file */
-            FILE *out_file = fopen(output_file, "w");
+            FILE *out_file;
+            bool append_to_csv;
+            if (extension == EXT_CSV
+                    && access(output_file, F_OK) == 0) {
+                /* Specific case where new entries are appended to existing csv */
+                out_file = fopen(output_file, "a");
+                append_to_csv = true;
+            } else {
+                out_file = fopen(output_file, "w");
+                append_to_csv = false;
+            }
             if (out_file == NULL) {
                 warning("Cannot open file %s: %s", output_file, strerror(errno));
             } else {
@@ -1123,9 +1175,9 @@ void talp_output_finalize(const char *output_file) {
                         xml_footer(out_file);
                         break;
                     case EXT_CSV:
-                        pop_to_csv(out_file);
-                        node_to_csv(out_file);
-                        process_to_csv(out_file);
+                        pop_to_csv(out_file, append_to_csv);
+                        node_to_csv(out_file, append_to_csv);
+                        process_to_csv(out_file, append_to_csv);
                         break;
                     case EXT_TXT:
                         pop_metrics_to_txt(out_file);

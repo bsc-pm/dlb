@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   `--silent` to keep the old functionality to suppress all messages
 - Refactor `DLB_TALP_CollectNodeMetrics` to
   `DLB_TALP_CollectPOPNodeMetrics` and add communication efficiency
+- TALP now appends to CSV files if they already exist
 
 ### Fixed
 - Fixed wrong generated code for `MPI_Initialized` and `MPI_Finalized`

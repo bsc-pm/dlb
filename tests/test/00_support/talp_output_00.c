@@ -49,6 +49,21 @@ static void delete_test_directory(void) {
     tmpdir_template = NULL;
 }
 
+static int count_lines(const char *filename) {
+    int lines = 0;
+    FILE *file = fopen(filename, "r");
+    if (file != NULL) {
+        int c;
+        for (c = getc(file); c != EOF; c = getc(file)) {
+            if (c == '\n') {
+                ++lines;
+            }
+        }
+        fclose(file);
+    }
+    return lines;
+}
+
 static void record_metrics(void) {
 
     talp_output_record_pop_metrics("Region 1", 100, 2.0f, 0.89f, 0.99f, 0.9f, 0.9f, 1.0f);
@@ -97,6 +112,9 @@ int main(int argc, char *argv[]) {
     talp_output_record_pop_raw("Region 1", 8, 1, 3, 100, 90, 500, 500, 42, 10000, 20000);
     talp_output_finalize(csv_filename);
     error += access(csv_filename, F_OK );
+    talp_output_record_pop_raw("Region 2", 4, 1, 2, 100, 90, 300, 300, 42, 10000, 20000);
+    talp_output_finalize(csv_filename);
+    error += count_lines(csv_filename) - 3;  // test append, count_lines should return 3
     asprintf(&csv1, "%s/talp-pop.csv", tmpdir);
     asprintf(&csv2, "%s/talp-node.csv", tmpdir);
     asprintf(&csv3, "%s/talp-process.csv", tmpdir);
