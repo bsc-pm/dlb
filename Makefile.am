@@ -475,12 +475,6 @@ MPIF_SRCS_GEN = \
 	src/LB_MPI/MPI_interfaceF.h     \
 	$(END)
 
-if MPI_F08
-MPIF_SRCS_GEN += \
-	src/LB_MPI/MPI_interceptF08.F90 \
-	$(END)
-endif
-
 MPIF_INTR_GEN = \
 	src/LB_MPI/MPI_interceptF.c     \
 	$(END)
