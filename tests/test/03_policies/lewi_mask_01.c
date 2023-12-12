@@ -97,8 +97,8 @@ int main( int argc, char **argv ) {
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, spd1.options.shm_key)
             == DLB_SUCCESS);
-    assert( shmem_cpuinfo__init(spd1.id, 0, &spd1.process_mask, spd1.options.shm_key)
-            == DLB_SUCCESS);
+    assert( shmem_cpuinfo__init(spd1.id, 0, &spd1.process_mask, spd1.options.shm_key,
+                spd1.options.lewi_color) == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp1_cb_enable_cpu, NULL) == DLB_SUCCESS);
     assert( pm_callback_set(&spd1.pm, dlb_callback_disable_cpu,
@@ -112,8 +112,8 @@ int main( int argc, char **argv ) {
     memcpy(&spd2.process_mask, &sp2_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd2.id, 0, &spd2.process_mask, NULL, spd2.options.shm_key)
             == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(spd2.id, 0, &spd2.process_mask, spd2.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(spd2.id, 0, &spd2.process_mask, spd2.options.shm_key,
+                spd2.options.lewi_color) == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)sp2_cb_enable_cpu, NULL) == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu,
@@ -606,7 +606,8 @@ int main( int argc, char **argv ) {
 
     // Finalize subprocess 1
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key, spd1.options.lewi_color)
+            == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd1.id, false, spd1.options.shm_key) == DLB_SUCCESS );
     if (mode == MODE_ASYNC) {
         assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
@@ -642,7 +643,8 @@ int main( int argc, char **argv ) {
 
     // Finalize subprocess 2
     assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(spd2.id, spd2.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd2.id, spd2.options.shm_key, spd2.options.lewi_color)
+            == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd2.id, false, spd2.options.shm_key) == DLB_SUCCESS );
     if (mode == MODE_ASYNC) {
         assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );

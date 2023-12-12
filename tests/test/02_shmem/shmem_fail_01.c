@@ -34,10 +34,20 @@ struct data {
 
 int main(int argc, char **argv) {
     struct data *shdata;
-    shmem_handler_t *handler1 = shmem_init((void**)&shdata, sizeof(struct data),
-            "cpuinfo", SHMEM_KEY, 1, NULL);
-    shmem_handler_t *handler2 = shmem_init((void**)&shdata, sizeof(struct data),
-            "cpuinfo", SHMEM_KEY, 2, NULL);
+    shmem_handler_t *handler1 = shmem_init((void**)&shdata,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "cpuinfo",
+                .key = SHMEM_KEY,
+                .version = 1,
+            });
+    shmem_handler_t *handler2 = shmem_init((void**)&shdata,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "cpuinfo",
+                .key = SHMEM_KEY,
+                .version = 2,
+            });
 
     /* This should not be reached, but it's here to ensure that the test fails
      * due to the shmem_init abort, and not due to the unfinished shmem destructor

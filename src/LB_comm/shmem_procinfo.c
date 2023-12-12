@@ -191,8 +191,14 @@ static void open_shmem(const char *shmem_key) {
             max_cpus = mu_get_system_size();
             max_processes = max_cpus;
 
-            shm_handler = shmem_init((void**)&shdata, shmem_procinfo__size(),
-                    shmem_name, shmem_key, SHMEM_PROCINFO_VERSION, cleanup_shmem);
+            shm_handler = shmem_init((void**)&shdata,
+                    &(const shmem_props_t) {
+                        .size = shmem_procinfo__size(),
+                        .name = shmem_name,
+                        .key = shmem_key,
+                        .version = SHMEM_PROCINFO_VERSION,
+                        .cleanup_fn = cleanup_shmem,
+                    });
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

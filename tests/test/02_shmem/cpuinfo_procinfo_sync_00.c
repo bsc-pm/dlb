@@ -64,8 +64,12 @@ int main( int argc, char **argv ) {
         /* Both parent and child execute concurrently */
         int error;
         struct data *shdata;
-        shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
-                "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+        shmem_handler_t *handler = shmem_init((void**)&shdata,
+                &(const shmem_props_t) {
+                    .size = sizeof(struct data),
+                    .name = "test",
+                    .key = SHMEM_KEY,
+                });
         shmem_lock(handler);
         {
             if (!shdata->initialized) {
@@ -82,7 +86,7 @@ int main( int argc, char **argv ) {
         /* Parent initilizes sub-process */
         if (new_pid > 0) {
             assert( shmem_procinfo__init(pid, 0, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-            assert( shmem_cpuinfo__init(pid, 0, &mask, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_cpuinfo__init(pid, 0, &mask, SHMEM_KEY, 0) == DLB_SUCCESS );
         }
 
         /* Child initilizes external */
@@ -155,7 +159,7 @@ int main( int argc, char **argv ) {
     assert( shmem_cpuinfo__get_thread_binding(pid, 3) == -1 );
 
     /* Finalize sub-process */
-    assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
 
     return 0;

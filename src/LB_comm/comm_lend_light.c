@@ -53,8 +53,14 @@ static void open_shmem(const char *shmem_key) {
     pthread_mutex_lock(&mutex);
     {
         if (shm_handler == NULL) {
-            shm_handler = shmem_init((void**)&shdata, sizeof(struct shdata),
-                    shmem_name, shmem_key, SHMEM_VERSION_IGNORE, cleanup_shmem);
+            shm_handler = shmem_init((void**)&shdata,
+                    &(const shmem_props_t) {
+                        .size = sizeof(struct shdata),
+                        .name = shmem_name,
+                        .key = shmem_key,
+                        .version = SHMEM_VERSION_IGNORE,
+                        .cleanup_fn = cleanup_shmem,
+                    });
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

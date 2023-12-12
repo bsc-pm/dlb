@@ -21,52 +21,66 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-/* Test that shared memories are cleaned when the process aborts.
- * The fork is necessary to call the assert_noshm in the destructor
- */
-
 #include "unique_shmem.h"
 
-#include "LB_comm/shmem_cpuinfo.h"
-#include "LB_core/spd.h"
-#include "support/debug.h"
-#include "support/options.h"
-#include "apis/dlb_errors.h"
+#include "LB_comm/shmem.h"
+#include "support/mask_utils.h"
 
-#include <sched.h>
-#include <unistd.h>
 #include <assert.h>
-#include <signal.h>
+#include <unistd.h>
 #include <sys/wait.h>
 
-void __gcov_flush() __attribute__((weak));
+/* Create two shmems with different color */
+
+enum { SHMEM_VERSION = 42 };
+
+struct data {
+    int foo;
+};
 
 int main(int argc, char **argv) {
-    // Create a child process
-    pid_t pid = fork();
-    assert( pid >= 0 );
-    if (pid == 0) {
-        cpu_set_t process_mask;
-        sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+    struct data *shdata1, *shdata2;
+    shmem_handler_t *handler1, *handler2;
 
-        // Initialize spd to include PID in the PANIC message
-        subprocess_descriptor_t spd;
-        spd_enter_dlb(&spd);
-        spd.id = getpid();
-        options_init(&spd.options, NULL);
-        debug_init(&spd.options);
+    // Create a shmem
+    handler1 = shmem_init((void**)&shdata1,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "test",
+                .key = SHMEM_KEY,
+                .version = SHMEM_VERSION,
+                .color = 1,
+            });
+    shdata1->foo = 1;
 
-        // Create shared memory
-        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+    // Try to create another shmem with the same name and same color
+    handler2 = shmem_init((void**)&shdata2,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "test",
+                .key = SHMEM_KEY,
+                .version = SHMEM_VERSION,
+                .color = 1,
+            });
+    assert( handler2 != NULL && handler1 != handler2 );
+    assert( shdata2  != NULL &&  shdata1 != shdata2 );
+    assert( shdata1->foo == shdata2->foo );
 
-        if (__gcov_flush) __gcov_flush();
-        fatal("This fatal should clean shmems");
-    }
+    // Create another shmem with same name name, but different color (different regions)
+    handler2 = shmem_init((void**)&shdata2,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "test",
+                .key = SHMEM_KEY,
+                .version = SHMEM_VERSION,
+                .color = 2,
+            });
+    shdata2->foo = 2;
+    assert( &shdata1 != &shdata2 );
+    assert( shdata1->foo != shdata2->foo );
 
-    // Wait child and end execution correctly in order to call destructors
-    int wstatus;
-    assert( waitpid(pid, &wstatus, 0) > 0 );
-    assert( WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGABRT );
+    shmem_finalize(handler1, NULL);
+    shmem_finalize(handler2, NULL);
 
     return 0;
 }

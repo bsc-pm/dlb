@@ -292,9 +292,9 @@ void print_backtrace(void) {
 #endif
 }
 
-static void clean_shmems(pid_t id, const char *shmem_key) {
+static void clean_shmems(pid_t id, const char *shmem_key, int lewi_color) {
     if (shmem_cpuinfo__exists()) {
-        shmem_cpuinfo__finalize(id, shmem_key);
+        shmem_cpuinfo__finalize(id, shmem_key, lewi_color);
     }
     if (shmem_procinfo__exists()) {
         shmem_procinfo__finalize(id, false, shmem_key);
@@ -314,7 +314,8 @@ void dlb_clean(void) {
         while (*spd) {
             pid_t id = (*spd)->id;
             const char *shmem_key = (*spd)->options.shm_key;
-            clean_shmems(id, shmem_key);
+            int lewi_color = (*spd)->options.lewi_color;
+            clean_shmems(id, shmem_key, lewi_color);
             ++spd;
         }
         free(spds);
@@ -322,7 +323,8 @@ void dlb_clean(void) {
         /* Then, try to finalize current pid */
         pid_t pid = thread_spd ? thread_spd->id : getpid();
         const char *shmem_key = thread_spd ? thread_spd->options.shm_key : NULL;
-        clean_shmems(pid, shmem_key);
+        int lewi_color = thread_spd ? thread_spd->options.lewi_color : 0;
+        clean_shmems(pid, shmem_key, lewi_color);
 
         /* Finalize shared memories that do not support subprocesses */
         shmem_barrier__finalize(shmem_key);

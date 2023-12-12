@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     /* Parent process pre-initializes [0-3], "child" processes inherit one by one */
     {
         /* DLB_DROM_Attach: */
-        assert( shmem_cpuinfo_ext__init(SHMEM_KEY)  == DLB_SUCCESS );
+        assert( shmem_cpuinfo_ext__init(SHMEM_KEY, 0)  == DLB_SUCCESS );
         assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
         /* DLB_DROM_PreInit: */

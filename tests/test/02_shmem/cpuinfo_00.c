@@ -68,7 +68,7 @@ int main( int argc, char **argv ) {
     }
 
     // Init
-    assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
 
     /* Tests using mycpu */
 
@@ -211,16 +211,16 @@ int main( int argc, char **argv ) {
     for (i=0; i<system_size; ++i) { assert( victims[i] == -1 ); }
 
     // Finalize
-    assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
 
     /* Test inherit CPUs from preinit pid */
     {
         pid_t preinit_pid = pid+1;
-        assert( shmem_cpuinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo_ext__init(SHMEM_KEY, 0) == DLB_SUCCESS );
         assert( shmem_cpuinfo_ext__preinit(preinit_pid, &process_mask, 0) == DLB_SUCCESS );
         assert( shmem_cpuinfo_ext__finalize() == DLB_SUCCESS );
 
-        assert( shmem_cpuinfo__init(pid, preinit_pid, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(pid, preinit_pid, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
 
         // Lend mask
         assert( shmem_cpuinfo__lend_cpu_mask(pid, &process_mask, new_guests) == DLB_SUCCESS );
@@ -235,15 +235,15 @@ int main( int argc, char **argv ) {
             assert( victims[i] == -1 );
         }
 
-        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 
     /* Test registering with empty mask */
     {
         CPU_ZERO(&process_mask);
-        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
-        shmem_cpuinfo__print_info(SHMEM_KEY, 0, true);
-        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+        shmem_cpuinfo__print_info(SHMEM_KEY, 0, 0, true);
+        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 
     free(new_guests);

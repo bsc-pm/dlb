@@ -104,8 +104,14 @@ static void open_shmem(const char *shmem_key, int regions_per_process) {
             regions_per_proc_initialized = regions_per_process ?
                 regions_per_process : DEFAULT_REGIONS_PER_PROC;
 
-            shm_handler = shmem_init((void**)&shdata, shmem_talp__size(),
-                    shmem_name, shmem_key, SHMEM_TALP_VERSION, cleanup_shmem);
+            shm_handler = shmem_init((void**)&shdata,
+                    &(const shmem_props_t) {
+                        .size = shmem_talp__size(),
+                        .name = shmem_name,
+                        .key = shmem_key,
+                        .version = SHMEM_TALP_VERSION,
+                        .cleanup_fn = cleanup_shmem,
+                    });
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

@@ -88,8 +88,8 @@ static void init_subprocess(subprocess_descriptor_t *spd, cpu_set_t *sp_mask,
     memcpy(&spd->process_mask, sp_mask, sizeof(cpu_set_t));
     assert( shmem_procinfo__init(spd->id, 0, &spd->process_mask, NULL, spd->options.shm_key)
             == DLB_SUCCESS );
-    assert( shmem_cpuinfo__init(spd->id, 0, &spd->process_mask, spd->options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(spd->id, 0, &spd->process_mask, spd->options.shm_key,
+                spd->options.lewi_color) == DLB_SUCCESS );
     assert( shmem_async_init(spd->id, &spd->pm, &spd->process_mask, spd->options.shm_key)
             == DLB_SUCCESS );
     assert( pm_callback_set(&spd->pm, dlb_callback_enable_cpu, cb_enable, NULL) == DLB_SUCCESS );
@@ -99,7 +99,8 @@ static void init_subprocess(subprocess_descriptor_t *spd, cpu_set_t *sp_mask,
 
 static void finalize_subprocess(subprocess_descriptor_t *spd) {
     assert( lewi_mask_Finalize(spd) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(spd->id, spd->options.shm_key) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(spd->id, spd->options.shm_key, spd->options.lewi_color)
+            == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd->id, false, spd->options.shm_key) == DLB_SUCCESS );
     assert( shmem_async_finalize(spd->id) == DLB_SUCCESS );
 }

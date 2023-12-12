@@ -83,16 +83,27 @@ void shmem_barrier__init(const char *shmem_key) {
     max_barriers = mu_get_system_size();
 
     shm_handler = shmem_init((void**)&shdata,
-            sizeof(shdata_t) + sizeof(barrier_t)*max_barriers,
-            shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
+            &(const shmem_props_t) {
+                .size = shmem_barrier__size(),
+                .name = shmem_name,
+                .key = shmem_key,
+                .version = SHMEM_BARRIER_VERSION,
+                .cleanup_fn = cleanup_shmem,
+            });
 
     verbose(VB_BARRIER, "Barrier Module initialized.");
 }
 
 void shmem_barrier_ext__init(const char *shmem_key) {
     max_barriers = mu_get_system_size();
-    shm_handler = shmem_init((void**)&shdata, shmem_barrier__size(),
-            shmem_name, shmem_key, SHMEM_BARRIER_VERSION, cleanup_shmem);
+    shm_handler = shmem_init((void**)&shdata,
+            &(const shmem_props_t) {
+                .size = shmem_barrier__size(),
+                .name = shmem_name,
+                .key = shmem_key,
+                .version = SHMEM_BARRIER_VERSION,
+                .cleanup_fn = cleanup_shmem,
+            });
 }
 
 void shmem_barrier__finalize(const char *shmem_key) {

@@ -353,6 +353,16 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, lewi_max_parallelism),
         .type           = OPT_INT_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--lewi-color",
+        .default_value  = "0",
+        .description    = OFFSET"Set the LeWI color of the process, allowing the creation of\n"
+                          OFFSET"different disjoint subgroups for resource sharing. Processes\n"
+                          OFFSET"will only share resources with other processes of the same color.",
+        .offset         = offsetof(options_t, lewi_color),
+        .type           = OPT_INT_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
     },
     // talp
     {

@@ -140,14 +140,20 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
     }
 }
 
-static void open_shmem(const char *shmem_key) {
+static void open_shmem(const char *shmem_key, int shmem_color) {
     pthread_mutex_lock(&mutex);
     {
         if (shm_handler == NULL) {
             node_size = mu_get_system_size();
             shm_handler = shmem_init((void**)&shdata,
-                    sizeof(shdata_t) + sizeof(cpuinfo_t)*node_size,
-                    shmem_name, shmem_key, SHMEM_CPUINFO_VERSION, cleanup_shmem);
+                    &(const shmem_props_t) {
+                        .size = shmem_cpuinfo__size(),
+                        .name = shmem_name,
+                        .key = shmem_key,
+                        .color = shmem_color,
+                        .version = SHMEM_CPUINFO_VERSION,
+                        .cleanup_fn = cleanup_shmem,
+                    });
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;
@@ -213,7 +219,7 @@ static int register_process(pid_t pid, pid_t preinit_pid, const cpu_set_t *mask,
 }
 
 int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
-        const char *shmem_key) {
+        const char *shmem_key, int shmem_color) {
     int error = DLB_SUCCESS;
 
     // Update post_mortem preference
@@ -233,7 +239,7 @@ int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_m
     }
 
     // Shared memory creation
-    open_shmem(shmem_key);
+    open_shmem(shmem_key, shmem_color);
 
     //cpu_set_t affinity_mask;
     //mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
@@ -263,14 +269,14 @@ int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_m
     if (error != DLB_SUCCESS) {
         verbose(VB_SHMEM,
                 "Error during shmem_cpuinfo initialization, finalizing shared memory");
-        shmem_cpuinfo__finalize(pid, shmem_key);
+        shmem_cpuinfo__finalize(pid, shmem_key, shmem_color);
     }
 
     return error;
 }
 
-int shmem_cpuinfo_ext__init(const char *shmem_key) {
-    open_shmem(shmem_key);
+int shmem_cpuinfo_ext__init(const char *shmem_key, int shmem_color) {
+    open_shmem(shmem_key, shmem_color);
     return DLB_SUCCESS;
 }
 
@@ -348,12 +354,12 @@ static void deregister_process(pid_t pid) {
     }
 }
 
-int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key) {
+int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key, int shmem_color) {
     if (shm_handler == NULL) {
         /* cpuinfo_finalize may be called to finalize existing process
          * even if the file descriptor is not opened. (DLB_PreInit + forc-exec case) */
         if (shmem_exists(shmem_name, shmem_key)) {
-            open_shmem(shmem_key);
+            open_shmem(shmem_key, shmem_color);
         } else {
             return DLB_ERR_NOSHMEM;
         }
@@ -1562,13 +1568,13 @@ float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state) {
     return usage;
 }
 
-void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
+void shmem_cpuinfo__print_info(const char *shmem_key, int shmem_color, int columns,
         dlb_printshmem_flags_t print_flags) {
 
     /* If the shmem is not opened, obtain a temporary fd */
     bool temporary_shmem = shm_handler == NULL;
     if (temporary_shmem) {
-        shmem_cpuinfo_ext__init(shmem_key);
+        shmem_cpuinfo_ext__init(shmem_key, shmem_color);
     }
 
     /* Make a full copy of the shared memory */

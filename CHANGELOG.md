@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Named barriers and several API functions to manage them
 - Added `--lewi-barrier` and `--lewi-barrier-select` to fine-tune
   which barriers activate LeWI.
+- Added `--lewi-color` to select specific key only for LeWI
 
 ### Changed
 - `libdlb_mpif.so` and `libdlb_mpif_*.so` are no longer built by default,

@@ -116,8 +116,12 @@ int main(int argc, char **argv) {
         /* All processes attach to a helper shared memory and synchronize */
         int error;
         struct data *shdata;
-        shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
-                "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+        shmem_handler_t *handler = shmem_init((void**)&shdata,
+                &(const shmem_props_t) {
+                    .size = sizeof(struct data),
+                    .name = "test",
+                    .key = SHMEM_KEY,
+                });
         shmem_lock(handler);
         {
             if (!shdata->initialized) {
@@ -235,8 +239,12 @@ int main(int argc, char **argv) {
         /* All processes attach to a helper shared memory and synchronize */
         int error;
         struct data *shdata;
-        shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
-                "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+        shmem_handler_t *handler = shmem_init((void**)&shdata,
+                &(const shmem_props_t) {
+                    .size = sizeof(struct data),
+                    .name = "test",
+                    .key = SHMEM_KEY,
+                });
         shmem_lock(handler);
         {
             if (!shdata->initialized) {
