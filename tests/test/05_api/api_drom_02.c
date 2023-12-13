@@ -45,6 +45,15 @@ struct data {
     int initialized;
 };
 
+static shmem_handler_t* open_shmem(void **shdata) {
+    return shmem_init(shdata,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "test",
+                .key = SHMEM_KEY,
+            });
+}
+
 void __gcov_flush() __attribute__((weak));
 
 void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
@@ -150,8 +159,7 @@ int main(int argc, char **argv) {
             /* Both parent and child execute concurrently */
             int error;
             struct data *shdata;
-            shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
-                    "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+            shmem_handler_t *handler = open_shmem((void**)&shdata);
             shmem_lock(handler);
             {
                 if (!shdata->initialized) {
@@ -271,8 +279,7 @@ int main(int argc, char **argv) {
             /* Both parent and child execute concurrently */
             int error;
             struct data *shdata;
-            shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
-                    "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+            shmem_handler_t *handler = open_shmem((void**)&shdata);
             shmem_lock(handler);
             {
                 if (!shdata->initialized) {
@@ -375,8 +382,7 @@ int main(int argc, char **argv) {
                 /* Child initializes test shmem */
                 int error;
                 struct data *shdata;
-                shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
-                        "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+                shmem_handler_t *handler = open_shmem((void**)&shdata);
                 shmem_lock(handler);
                 {
                     if (!shdata->initialized) {
@@ -420,8 +426,7 @@ int main(int argc, char **argv) {
         /* Parent process initializes test shmem */
         int error;
         struct data *shdata;
-        shmem_handler_t *handler = shmem_init((void**)&shdata, sizeof(struct data),
-                "test", SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+        shmem_handler_t *handler = open_shmem((void**)&shdata);
         shmem_lock(handler);
         {
             if (!shdata->initialized) {

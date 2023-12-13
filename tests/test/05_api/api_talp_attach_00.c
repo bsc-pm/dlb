@@ -44,6 +44,15 @@ struct data {
     pthread_barrier_t barrier;
 };
 
+static shmem_handler_t* open_shmem(void **shdata) {
+    return shmem_init(shdata,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "test",
+                .key = SHMEM_KEY,
+            });
+}
+
 int main(int argc, char *argv[]) {
     char dlb_args[64] = "--talp --talp-external-profiler --shm-key=";
     strcat(dlb_args, SHMEM_KEY);
@@ -83,8 +92,7 @@ int main(int argc, char *argv[]) {
         shmem_handler_t *handler;
 
         // Parent process creates shmem and initializes barrier
-        handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                SHMEM_VERSION_IGNORE, NULL);
+        handler = open_shmem((void**)&shdata);
         pthread_barrierattr_t attr;
         assert( pthread_barrierattr_init(&attr) == 0 );
         assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
@@ -106,8 +114,7 @@ int main(int argc, char *argv[]) {
         if (child) {
             assert( DLB_Init(0, 0, NULL) == DLB_SUCCESS );
             talp_mpi_init(thread_spd);
-            handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                    SHMEM_VERSION_IGNORE, NULL);
+            handler = open_shmem((void**)&shdata);
         }
 
         int error = pthread_barrier_wait(&shdata->barrier);
@@ -180,8 +187,7 @@ int main(int argc, char *argv[]) {
         shmem_handler_t *handler;
 
         // Parent process creates shmem and initializes barrier
-        handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                SHMEM_VERSION_IGNORE, NULL);
+        handler = open_shmem((void**)&shdata);
         pthread_barrierattr_t attr;
         assert( pthread_barrierattr_init(&attr) == 0 );
         assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
@@ -196,8 +202,7 @@ int main(int argc, char *argv[]) {
 
         if (child) {
             assert( DLB_Init(0, 0, NULL) == DLB_SUCCESS );
-            handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                    SHMEM_VERSION_IGNORE, NULL);
+            handler = open_shmem((void**)&shdata);
         }
 
         int error = pthread_barrier_wait(&shdata->barrier);
@@ -249,8 +254,7 @@ int main(int argc, char *argv[]) {
         shmem_handler_t *handler;
 
         // Parent process creates shmem and initializes barrier
-        handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                SHMEM_VERSION_IGNORE, NULL);
+        handler = open_shmem((void**)&shdata);
         pthread_barrierattr_t attr;
         assert( pthread_barrierattr_init(&attr) == 0 );
         assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
@@ -277,8 +281,7 @@ int main(int argc, char *argv[]) {
         if (child) {
             assert( DLB_Init(0, 0, NULL) == DLB_SUCCESS );
             talp_mpi_init(thread_spd);
-            handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                    SHMEM_VERSION_IGNORE, NULL);
+            handler = open_shmem((void**)&shdata);
         }
 
         int error = pthread_barrier_wait(&shdata->barrier);

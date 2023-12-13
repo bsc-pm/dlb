@@ -141,8 +141,12 @@ int main(int argc, char **argv) {
 
         // Master process creates shmem and initializes barrier
         ncpus = mu_get_system_size();
-        handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                SHMEM_VERSION_IGNORE, NULL);
+        handler = shmem_init((void**)&shdata,
+                &(const shmem_props_t) {
+                    .size = sizeof(struct data),
+                    .name = "test",
+                    .key = SHMEM_KEY,
+                });
         pthread_barrierattr_t attr;
         assert( pthread_barrierattr_init(&attr) == 0 );
         assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
@@ -166,8 +170,12 @@ int main(int argc, char **argv) {
                 assert( barrier != NULL );
 
                 // Attach to the "test" shared memory and synchronize
-                handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                        SHMEM_VERSION_IGNORE, NULL);
+                handler = shmem_init((void**)&shdata,
+                        &(const shmem_props_t) {
+                            .size = sizeof(struct data),
+                            .name = "test",
+                            .key = SHMEM_KEY,
+                        });
                 int error = pthread_barrier_wait(&shdata->barrier);
                 assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
@@ -221,8 +229,12 @@ int main(int argc, char **argv) {
 
         // Master process creates shmem and initializes barrier
         ncpus = mu_get_system_size();
-        handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                SHMEM_VERSION_IGNORE, NULL);
+        handler = shmem_init((void**)&shdata,
+                &(const shmem_props_t) {
+                    .size = sizeof(struct data),
+                    .name = "test",
+                    .key = SHMEM_KEY,
+                });
         pthread_barrierattr_t attr;
         assert( pthread_barrierattr_init(&attr) == 0 );
         assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
@@ -251,8 +263,12 @@ int main(int argc, char **argv) {
                 }
 
                 // Attach to the "test" shared memory and synchronize
-                handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                        SHMEM_VERSION_IGNORE, NULL);
+                handler = shmem_init((void**)&shdata,
+                        &(const shmem_props_t) {
+                            .size = sizeof(struct data),
+                            .name = "test",
+                            .key = SHMEM_KEY,
+                        });
                 int error = pthread_barrier_wait(&shdata->barrier);
                 assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 

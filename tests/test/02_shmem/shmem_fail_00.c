@@ -34,7 +34,11 @@ struct data {
 
 int main(int argc, char **argv) {
     struct data *shdata;
-    shmem_init((void**)&shdata, sizeof(struct data), "cpuinfo",
-            SHMEM_KEY, SHMEM_VERSION_IGNORE, NULL);
+    shmem_init((void**)&shdata,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "cpuinfo",
+                .key = SHMEM_KEY,
+            });
     return 0;
 }

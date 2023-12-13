@@ -95,7 +95,8 @@ static bool shmem_consistency_remove_pid(pid_t *pidlist, pid_t pid) {
     return last_one;
 }
 
-void shmem_consistency_check_version(unsigned int creator_version, unsigned int process_version) {
+static void shmem_consistency_check_version(unsigned int creator_version,
+        unsigned int process_version) {
     if (creator_version != SHMEM_VERSION_IGNORE) {
         fatal_cond(creator_version != process_version,
                 "The existing DLB shared memory version differs from the expected one.\n"
@@ -105,10 +106,31 @@ void shmem_consistency_check_version(unsigned int creator_version, unsigned int 
     }
 }
 
+static void get_shmem_filename(char *filename, const char *shmem_module,
+        const char *shmem_key, int shmem_color) {
+    if (shmem_key && shmem_key[0] != '\0') {
+        if (shmem_color <= 0) {
+            snprintf(filename, SHM_NAME_LENGTH, "/DLB_%s_%s",
+                    shmem_module, shmem_key);
+        } else {
+            snprintf(filename, SHM_NAME_LENGTH, "/DLB_%s_%d_%s",
+                    shmem_module, shmem_color, shmem_key);
+        }
+    } else {
+        if (shmem_color <= 0) {
+            snprintf(filename, SHM_NAME_LENGTH, "/DLB_%s_%d",
+                    shmem_module, getuid());
+        } else {
+            snprintf(filename, SHM_NAME_LENGTH, "/DLB_%s_%d_%d",
+                    shmem_module, shmem_color, getuid());
+        }
+    }
+}
 
-shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
-        const char *shmem_key, unsigned int shmem_version, void (*cleanup_fn)(void*,int)) {
+
+shmem_handler_t* shmem_init(void **shdata, const shmem_props_t *shmem_props) {
     pid_t pid = getpid();
+    const char *shmem_module = shmem_props->name;
     verbose(VB_SHMEM, "Shared Memory Init: pid(%d), module(%s)", pid, shmem_module);
 
     /* Allocate new Shared Memory handler */
@@ -119,14 +141,13 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
      *   shsync and shdata are both variable in size
      */
     size_t shsync_size = shmem_shsync__size();
+    size_t shdata_size = shmem_props->size;
     handler->shm_size = shsync_size + shdata_size;
 
     /* Get /dev/shm/ file names to create */
-    if (shmem_key && shmem_key[0] != '\0') {
-        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%s", shmem_module, shmem_key);
-    } else {
-        snprintf(handler->shm_filename, SHM_NAME_LENGTH, "/DLB_%s_%d", shmem_module, getuid());
-    }
+    const char *shmem_key = shmem_props->key;
+    int shmem_color = shmem_props->color;
+    get_shmem_filename(handler->shm_filename, shmem_module, shmem_key, shmem_color);
 
     /* Obtain a file descriptor for the shmem */
     int fd = shm_open(handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
@@ -169,7 +190,7 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         }
 
         /* Set Shared Memory version */
-        handler->shsync->shmem_version = shmem_version;
+        handler->shsync->shmem_version = shmem_props->version;
         handler->shsync->shsync_version = SHMEM_SYNC_VERSION;
 
         handler->shsync->initialized = 1;
@@ -195,8 +216,8 @@ shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem
         fatal("pthread_mutex_timedlock error: %s", strerror(error));
     }
     shmem_consistency_check_version(handler->shsync->shsync_version, SHMEM_SYNC_VERSION);
-    shmem_consistency_check_version(handler->shsync->shmem_version, shmem_version);
-    shmem_consistency_check_pids(handler->shsync->pidlist, pid, cleanup_fn, *shdata);
+    shmem_consistency_check_version(handler->shsync->shmem_version, shmem_props->version);
+    shmem_consistency_check_pids(handler->shsync->pidlist, pid, shmem_props->cleanup_fn, *shdata);
     pthread_mutex_unlock(&handler->shsync->shmem_mutex);
 
     return handler;

@@ -54,6 +54,7 @@ typedef struct Options {
     priority_t          lewi_affinity;
     omptool_opts_t      lewi_ompt;
     int                 lewi_max_parallelism;
+    int                 lewi_color;
     /* misc */
     char                shm_key[MAX_OPTION_LENGTH];
     pid_t               preinit_pid;

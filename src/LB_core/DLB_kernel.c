@@ -117,23 +117,30 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialize shared memories
     if (mask_is_needed) {
         // Initialize procinfo
-        cpu_set_t new_process_mask;
-        error = shmem_procinfo__init(spd->id, spd->options.preinit_pid,
-                &spd->process_mask, &new_process_mask, spd->options.shm_key);
+        if (spd->options.lewi_color == 0) {
+            cpu_set_t new_process_mask;
+            error = shmem_procinfo__init(spd->id, spd->options.preinit_pid,
+                    &spd->process_mask, &new_process_mask, spd->options.shm_key);
 
-        // If the process has been pre-initialized (error=DLB_NOTED),
-        // the mask provided by shmem_procinfo__init must overwrite the process mask
-        if (error == DLB_NOTED) {
-            set_process_mask(&spd->pm, &new_process_mask);
-            memcpy(&spd->process_mask, &new_process_mask, sizeof(cpu_set_t));
-            error = DLB_SUCCESS;
+            // If the process has been pre-initialized (error=DLB_NOTED),
+            // the mask provided by shmem_procinfo__init must overwrite the process mask
+            if (error == DLB_NOTED) {
+                set_process_mask(&spd->pm, &new_process_mask);
+                memcpy(&spd->process_mask, &new_process_mask, sizeof(cpu_set_t));
+                error = DLB_SUCCESS;
+            }
+        } else {
+            // If using --lewi-color, we also need to initialize procinfo with cpu sharing
+            error = shmem_procinfo__init_with_cpu_sharing(spd->id, spd->options.preinit_pid,
+                    &spd->process_mask, spd->options.shm_key);
         }
+
 
         if (error != DLB_SUCCESS) return error;
 
         // Initialize cpuinfo
         error = shmem_cpuinfo__init(spd->id, spd->options.preinit_pid,
-                &spd->process_mask, spd->options.shm_key);
+                &spd->process_mask, spd->options.shm_key, spd->options.lewi_color);
         if (error != DLB_SUCCESS) return error;
     } else if (spd->options.talp) {
         // If mask is not needed but TALP is enabled, we still need to
@@ -220,7 +227,7 @@ int Finish(subprocess_descriptor_t *spd) {
             || spd->options.talp
             || spd->options.ompt
             || spd->options.preinit_pid) {
-        shmem_cpuinfo__finalize(spd->id, spd->options.shm_key);
+        shmem_cpuinfo__finalize(spd->id, spd->options.shm_key, spd->options.lewi_color);
         shmem_procinfo__finalize(spd->id, spd->options.debug_opts & DBG_RETURNSTOLEN,
                 spd->options.shm_key);
     }
@@ -251,7 +258,7 @@ int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask,
 
     // Initialize modules
     int error = DLB_SUCCESS;
-    error = error ? error : shmem_cpuinfo_ext__init(spd->options.shm_key);
+    error = error ? error : shmem_cpuinfo_ext__init(spd->options.shm_key, spd->options.lewi_color);
     error = error ? error : shmem_procinfo_ext__init(spd->options.shm_key);
     error = error ? error : shmem_procinfo_ext__preinit(spd->id, mask, 0);
     error = error ? error : shmem_cpuinfo_ext__preinit(spd->id, mask, 0);
@@ -706,7 +713,8 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
         debug_init(&spd->options);
     }
 
-    shmem_cpuinfo__print_info(spd->options.shm_key, num_columns, print_flags);
+    shmem_cpuinfo__print_info(spd->options.shm_key, spd->options.lewi_color,
+            num_columns, print_flags);
     shmem_procinfo__print_info(spd->options.shm_key);
     shmem_barrier__print_info(spd->options.shm_key);
     shmem_talp__print_info(spd->options.shm_key, 0);

@@ -43,20 +43,35 @@ int main(int argc, char **argv) {
     shmem_handler_t *handler1, *handler2;
 
     // Create a shmem
-    handler1 = shmem_init((void**)&shdata1, sizeof(struct data), "cpuinfo", SHMEM_KEY,
-            SHMEM_VERSION, NULL);
+    handler1 = shmem_init((void**)&shdata1,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "cpuinfo",
+                .key = SHMEM_KEY,
+                .version = SHMEM_VERSION,
+            });
     shdata1->foo = 1;
 
     // Try to create another shmem with the same name, it maps another region but same content
-    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo", SHMEM_KEY,
-            SHMEM_VERSION, NULL);
+    handler2 = shmem_init((void**)&shdata2,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "cpuinfo",
+                .key = SHMEM_KEY,
+                .version = SHMEM_VERSION,
+            });
     assert( handler2 != NULL && handler1 != handler2 );
     assert( shdata2  != NULL &&  shdata1 != shdata2 );
     assert( shdata1->foo == shdata2->foo );
 
     // Create a shmem with custom key
-    handler2 = shmem_init((void**)&shdata2, sizeof(struct data), "cpuinfo","42",
-            SHMEM_VERSION, NULL);
+    handler2 = shmem_init((void**)&shdata2,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "cpuinfo",
+                .key = "42",
+                .version = SHMEM_VERSION,
+            });
     shdata2->foo = 2;
     assert( &shdata1 != &shdata2 );
     assert( shdata1->foo != shdata2->foo );

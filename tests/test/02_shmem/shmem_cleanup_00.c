@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     assert( pid >= 0 );
     if (pid == 0) {
         pid_t child_pid = getpid();
-        assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
         assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
         shmem_barrier__init(SHMEM_KEY);
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     assert( pid >= 0 );
     if (pid == 0) {
         pid_t child_pid = getpid();
-        assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
         assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
         shmem_barrier__init(SHMEM_KEY);
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
         /* Barrier must not block because I'm the only participant */
         shmem_barrier__barrier(barrier);
 
-        assert( shmem_cpuinfo__finalize(child_pid, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(child_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
         assert( shmem_procinfo__finalize(child_pid, false, SHMEM_KEY) == DLB_SUCCESS );
         assert( shmem_async_finalize(child_pid) == DLB_SUCCESS );
         assert( shmem_barrier__detach(barrier) == 0 );

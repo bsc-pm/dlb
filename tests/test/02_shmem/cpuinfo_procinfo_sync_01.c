@@ -41,14 +41,14 @@ int main( int argc, char **argv ) {
     /* Multi init - finalize */
     cpu_set_t empty_mask;
     CPU_ZERO(&empty_mask);
-    assert( shmem_cpuinfo__init(42, 0, &empty_mask, SHMEM_KEY)        == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(42, 0, &empty_mask, SHMEM_KEY, 0)     == DLB_SUCCESS );
     assert( shmem_procinfo__init(42, 0, &empty_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo_ext__init(SHMEM_KEY)                        == DLB_SUCCESS );
+    assert( shmem_cpuinfo_ext__init(SHMEM_KEY, 0)                     == DLB_SUCCESS );
     assert( shmem_procinfo_ext__init(SHMEM_KEY)                       == DLB_SUCCESS );
 
     assert( shmem_cpuinfo_ext__finalize()                       == DLB_SUCCESS );
     assert( shmem_procinfo_ext__finalize()                      == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(42, SHMEM_KEY)              == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(42, SHMEM_KEY, 0)           == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(42, false, SHMEM_KEY)      == DLB_SUCCESS );
 
     /* CPU stealing */
@@ -58,7 +58,7 @@ int main( int argc, char **argv ) {
         cpu_set_t p1_mask;
         mu_parse_mask("0-3", &p1_mask);
         assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY, 0)     == DLB_SUCCESS );
 
         /* Process 2 enters and steals CPU 3 */
         pid_t p2_pid = 222;
@@ -71,7 +71,7 @@ int main( int argc, char **argv ) {
         cpu_set_t new_mask;
         assert( shmem_procinfo__init(p2_pid, p2_pid, &p2_mask, &new_mask, SHMEM_KEY) == DLB_NOTED );
         assert( CPU_EQUAL(&new_mask, &p2_mask) );
-        assert( shmem_cpuinfo__init(p2_pid, p2_pid, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__init(p2_pid, p2_pid, &p2_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
 
         /* Process 1 polls DROM */
         assert( shmem_procinfo__polldrom(p1_pid, NULL, &new_mask) == DLB_SUCCESS );
@@ -87,9 +87,9 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__check_cpu_availability(p2_pid, 3) == DLB_SUCCESS );
 
         /* Finalize shmems */
-        assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY)              == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0)           == DLB_SUCCESS );
         assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY)      == DLB_SUCCESS );
-        assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY)              == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0)           == DLB_SUCCESS );
         assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY)      == DLB_SUCCESS );
     }
 

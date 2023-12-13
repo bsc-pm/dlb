@@ -194,8 +194,13 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *proce
         if (shm_handler == NULL) {
             max_helpers = mu_get_system_size();
             shm_handler = shmem_init((void**)&shdata,
-                    sizeof(shdata_t) + sizeof(helper_t)*max_helpers,
-                    shmem_name, shmem_key, SHMEM_ASYNC_VERSION, cleanup_shmem);
+                    &(const shmem_props_t) {
+                        .size = shmem_async__size(),
+                        .name = shmem_name,
+                        .key = shmem_key,
+                        .version = SHMEM_ASYNC_VERSION,
+                        .cleanup_fn = cleanup_shmem,
+                    });
             subprocesses_attached = 1;
         } else {
             ++subprocesses_attached;

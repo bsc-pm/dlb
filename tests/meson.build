@@ -44,6 +44,7 @@ tests = {
     'procinfo_04'         : {},
     'shmem_00'            : {},
     'shmem_01'            : {},
+    'shmem_02'            : {},
     'shmem_abort_00'      : {},
     'shmem_abort_01'      : {},
     'shmem_cleanup_00'    : {},
@@ -73,6 +74,7 @@ tests = {
   '05_api' : {
     'api_00'              : {},
     'api_01'              : {},
+    'api_02'              : {},
     'api_barrier_00'      : {},
     'api_drom_00'         : {},
     'api_drom_01'         : {},

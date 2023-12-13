@@ -45,7 +45,9 @@ int DLB_TALP_Attach(void) {
     }
     char shm_key[MAX_OPTION_LENGTH];
     options_parse_entry("--shm-key", &shm_key);
-    shmem_cpuinfo_ext__init(shm_key);
+    int lewi_color;
+    options_parse_entry("--lewi-color", &lewi_color);
+    shmem_cpuinfo_ext__init(shm_key, lewi_color);
     shmem_procinfo_ext__init(shm_key);
     shmem_talp_ext__init(shm_key, 0);
     return DLB_SUCCESS;

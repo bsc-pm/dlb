@@ -48,8 +48,12 @@ int main(int argc, char **argv) {
 
     // Master process creates shmem and initializes barrier
     ncpus = mu_get_system_size();
-    handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-            SHMEM_VERSION_IGNORE, NULL);
+    handler = shmem_init((void**)&shdata,
+            &(const shmem_props_t) {
+                .size = sizeof(struct data),
+                .name = "test",
+                .key = SHMEM_KEY,
+            });
     fprintf(stdout, "shmem name: %s\n", get_shm_filename(handler));
     pthread_barrierattr_t attr;
     assert( pthread_barrierattr_init(&attr) == 0 );
@@ -65,8 +69,12 @@ int main(int argc, char **argv) {
         assert( pid >= 0 );
         if (pid == 0) {
             // Each child will attach to the shared memory
-            handler = shmem_init((void**)&shdata, sizeof(struct data), "test", SHMEM_KEY,
-                    SHMEM_VERSION_IGNORE, NULL);
+            handler = shmem_init((void**)&shdata,
+                    &(const shmem_props_t) {
+                        .size = sizeof(struct data),
+                        .name = "test",
+                        .key = SHMEM_KEY,
+                    });
             pthread_barrier_wait(&shdata->barrier);                             // Barrier 1
 
             // Everyone performs a locked decrement

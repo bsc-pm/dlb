@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     CPU_SET(3, &p2_mask);
 
     // Init P1
-    assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
 
     // P1 temporarily acquires CPUs 2 and 3
     CPU_SET(2, &p1_mask);
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
 
     // Init P2
-    assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
 
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 3 );
 
     // Finalize
-    assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
 
     return 0;
 }

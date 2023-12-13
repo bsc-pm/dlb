@@ -29,12 +29,12 @@
 
 /* Init */
 int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
-        const char *shmem_key);
-int shmem_cpuinfo_ext__init(const char *shmem_key);
+        const char *shmem_key, int shmem_color);
+int shmem_cpuinfo_ext__init(const char *shmem_key, int shmem_color);
 int shmem_cpuinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags);
 
 /* Finalize */
-int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key);
+int shmem_cpuinfo__finalize(pid_t pid, const char *shmem_key, int shmem_color);
 int shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__postfinalize(pid_t pid);
 
@@ -95,6 +95,6 @@ typedef enum {
 
 int shmem_cpuinfo_ext__getnumcpus(void);
 float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);
-void shmem_cpuinfo__print_info(const char *shmem_key, int columns,
+void shmem_cpuinfo__print_info(const char *shmem_key, int shmem_color, int columns,
         dlb_printshmem_flags_t print_flags);
 #endif /* SHMEM_CPUINFO_H */

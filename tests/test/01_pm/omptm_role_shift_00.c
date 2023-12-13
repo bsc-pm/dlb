@@ -98,8 +98,8 @@ int main (int argc, char *argv[]) {
     cpu_set_t p2_mask;
     mu_parse_mask("2,3,6,7", &p2_mask);
     pid_t p2_pid = 222;
-    assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, thread_spd->options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, thread_spd->options.shm_key,
+                thread_spd->options.lewi_color) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, thread_spd->options.shm_key)
             == DLB_SUCCESS );
 
@@ -495,7 +495,8 @@ int main (int argc, char *argv[]) {
     /* Finalize */
     assert( Finish(thread_spd) == DLB_SUCCESS );
     omptm_role_shift__finalize();
-    assert( shmem_cpuinfo__finalize(p2_pid, thread_spd->options.shm_key) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__finalize(p2_pid, thread_spd->options.shm_key,
+                thread_spd->options.lewi_color) == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(p2_pid, false, thread_spd->options.shm_key) == DLB_SUCCESS );
 
     return 0;

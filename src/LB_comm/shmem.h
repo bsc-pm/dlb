@@ -53,10 +53,18 @@ typedef struct {
     shmem_sync_t    *shsync;
 } shmem_handler_t;
 
+typedef struct {
+    size_t          size;
+    const char      *name;
+    const char      *key;
+    int             color;
+    unsigned int    version;
+    void (*cleanup_fn)(void*,int);
+} shmem_props_t;
+
 enum { SHMEM_VERSION_IGNORE = 0 };
 
-shmem_handler_t* shmem_init(void **shdata, size_t shdata_size, const char *shmem_module,
-        const char *shmem_key, unsigned int shmem_version, void (*cleanup_fn)(void*,int));
+shmem_handler_t* shmem_init(void **shdata, const shmem_props_t *shmem_props);
 void shmem_finalize(shmem_handler_t *handler, bool (*is_empty_fn)(void));
 void shmem_lock(shmem_handler_t *handler);
 void shmem_unlock(shmem_handler_t *handler);
