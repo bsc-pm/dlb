@@ -20,6 +20,11 @@ AC_DEFUN([AX_PAPI],
                 user_papi_libdir="$with_papi/lib"
                 user_papi_lib_flags="-L$with_papi/lib -Wl,-rpath,$with_papi/lib"
             ])
+	    AS_IF([test -d "$with_papi/lib64"], [
+                user_papi_libdir="$with_papi/lib64"
+                user_papi_lib_flags="-L$with_papi/lib64 -Wl,-rpath,$with_papi/lib64"
+            ])
+
         ])
 
         ### PAPI INCLUDES ###
