@@ -31,9 +31,9 @@ To achieve this DLB will lend the CPUs of a process waiting in a blocking MPI ca
 
 .. _drom:
 
-=========================================
-Dynamic Resource Ownership Manager (DROM)
-=========================================
+========================================
+DROM: Dynamic Resource Ownership Manager
+========================================
 
 DROM is a new module included in the DLB library, it offers an API to change
 the computational resources assigned to a process at run time.
@@ -46,9 +46,9 @@ the computational resources assigned to a process at run time.
 
 .. _talp:
 
-============================================
-Tracking Application Live Performance (TALP)
-============================================
+===========================================
+TALP: Tracking Application Live Performance
+===========================================
 
 TALP is another module included in DLB that allows to measure the parallel efficiency
 of an execution by intercepting the MPI calls. The data obtained by TALP is available

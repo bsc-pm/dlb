@@ -44,12 +44,16 @@ application, and then calls the original MPI function by using the PMPI
 profiling interface.
 
 To enable MPI support for DLB, the application must be either linked or
-preloaded with one of the DLB MPI libraries, e.g., ``libdlb_mpi*.so``.  Using
+preloaded with the DLB MPI library ``libdlb_mpi.so``.  Using
 the preload mechanism has the advantage that the application binary is the
 same as the original, and it only requires setting an environment variable
 before the execution.
 
 Use the environment variable ``LD_PRELOAD`` to specify the MPI DLB library.
+
+The library ``libdlb_mpi.so`` should intercept both C and Fortran MPI symbols.
+In case of problems, check out the specific
+:ref:`DLB configure flags<dlb-configure-flags>` to build separate libraries.
 
 .. _non-busy-mpi-calls:
 
@@ -71,10 +75,14 @@ want to keep the CPU when an MPI blocking function is invoked, use the option
 ==========================
 Parallel regions in OpenMP
 ==========================
-OpenMP parallelism is based on a fork-join model, where threads are created, or
-at least assigned to a team, only when the running thread encounters a parallel
-construct.
+OpenMP (5.2 and below) parallelism is based on a fork-join model, where threads
+are created, or at least assigned to a team, only when the running thread
+encounters a parallel construct.
 
 This model limits DLB because it can only assign CPUs to a process just before
 a parallel construct. For this reason, an application with very few parallel
 constructs may take minimal advantage from DLB.
+
+This limitation may be overcome with the upcoming OpenMP 6.0 and its free-agent
+threads, where tasks may be assigned to threads that may be created later and
+are not part of a parallel region.

@@ -36,8 +36,8 @@ export DLB_ARGS="$DLB_ARGS --ompt"
 #export DLB_ARGS="$DLB_ARGS --verbose=ompt"
 
 # OMPT policy flags for LeWI. Select when DLB will invoke LewI functions.
-# Possible values: {mpi, borrow, lend}, default: none
-export DLB_ARGS="$DLB_ARGS --lewi-ompt=mpi:borrow"
+# Possible values: [none, {borrow:lend}], default: borrow
+#export DLB_ARGS="$DLB_ARGS --lewi-ompt=borrow"
 
 # OMPT Thread Manager. Select which Thread Manager will be used to manage the
 # OpenMP library. Possible values:
@@ -90,9 +90,11 @@ if [[ -z $DLB_HOME ]] ; then
 fi
 
 # If the application is not linked with DLB, select which DLB version to preload.
-# Choose between the non-MPI version, or the MPI versions for C/C++ or Fortran
-preload="$DLB_HOME/lib/libdlb.so"
-#preload="$DLB_HOME/lib/libdlb_mpi.so"
+# Choose between the non-MPI version, the standard MPI version, or the specific
+# C/C++ or Fortran MPI.
+#preload="$DLB_HOME/lib/libdlb.so"
+preload="$DLB_HOME/lib/libdlb_mpi.so"
+#preload="$DLB_HOME/lib/libdlb_mpic.so"
 #preload="$DLB_HOME/lib/libdlb_mpif.so"
 
 $DLB_HOME/bin/dlb_run env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"

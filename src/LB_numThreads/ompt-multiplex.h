@@ -42,7 +42,9 @@
 #endif
 #include <dlfcn.h>
 #include <errno.h>
+#ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
+#endif
 #include <inttypes.h>
 /* #include <omp-tools.h> */
 /* #include <omp.h> */
