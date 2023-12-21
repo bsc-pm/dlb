@@ -108,7 +108,7 @@ We distinguish the effects into two multiplicative submetrics namely:
     \frac{ \max_{j} (\sum_{i \in \mathbb{N}_{j}}^{} T^{u}_{i}) \times N_{n} }{ (\max_{i} T^{u}_{i}) \times N_{p} }
 
 ----------
- Inter-node Load Balance
+ Inter-node Load Balance (LB_out)
 ----------
 .. math::
     \frac{  \sum_{i}^{N_{p}} T^{u}_{i} }{ (\sum_{i \in \mathbb{N}_{j}}^{N_{p}} T^{u}_{i}) \times N_{n}}
