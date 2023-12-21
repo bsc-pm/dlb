@@ -33,15 +33,7 @@ metrics that TALP reports are:
             * Intra-node Load Balance (or LB_in)
             * Inter-node Load Balance (or LB_out)
 
-The Parallel Efficiency corresponds to the global MPI efficiency; this is the
-ratio of useful computation versus the time lost due to MPI Communication
-Serialization, MPI Communication Transfer and MPI Load Balance. TALP also
-computes two new metrics not defined in the POP Standard Metrics; Load Balance
-can actually be decomposed in two more metrics, the Intra-node Load Balance
-that corresponds to the Load Balance inside the node of the most loaded node
-(the limiting factor), and the Inter-node Load Balance that identifies the Load
-Balance among nodes.
-
+An indepth explaination of the POP metrics computed by TALP can be found in the POP Metrics Overview below.
 
 Reporting POP metrics at the end of the execution
 =================================================
@@ -128,6 +120,7 @@ Inter-node Load Balance determines the load balance between the nodes.
 ----------
  Average IPC
 ----------
+This metric requires PAPI to be enabled! 
 
 For this metric we introduce the number of instructions :math:`I_i` and the number of cycles they took as :math:`C_i` by the :math:`i`-th MPI process.
 
