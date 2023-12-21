@@ -30,10 +30,10 @@ metrics that TALP reports are:
     * Parallel Efficiency
         * Communication Efficiency
         * Load Balance
-            * Intra-node Load Balance (or LB_in)
-            * Inter-node Load Balance (or LB_out)
+            * Intra-node Load Balance (LB_in)
+            * Inter-node Load Balance (LB_out)
 
-An indepth explaination of the POP metrics computed by TALP can be found in the POP Metrics Overview below.
+An in-depth explanation of the POP metrics computed by TALP can be found in the POP Metrics Overview below.
 
 Reporting POP metrics at the end of the execution
 =================================================
@@ -60,66 +60,63 @@ And you will obtain a report similar to this one at the end::
 
 
 POP Metrics Overview
-=================================================
+====================
 As already pointed out above, TALP is able to generate some of the POP Metrics per region.
 In this section we provide some insight into how they compute and what they tell.
 For all the calculations below, we assume that :math:`T^{u}_{i}` is the time the :math:`i`-th MPI process spends in application code doing useful work. 
 Note, that this explicitly excludes any time spent in the MPI routines.
 Furthermore we also define :math:`T^{e}_{i}` to be the total runtime of the :math:`i`-th MPI process including inside the MPI routines.
-Also we denote :math:`N_{p}` as thex number of processes available in ``MPI_COMM_WORLD``
-Let :math:`\mathbb{N}_{j}` denote the index set containing the MPI process indeces :math:`i` beeing located at Node :math:`j`.
+Also we denote :math:`N_{p}` as the number of processes available in ``MPI_COMM_WORLD``.
+Let :math:`\mathbb{N}_{j}` denote the index set containing the MPI process indices :math:`i` being located at Node :math:`j`.
 We furthermore denote :math:`N_{n}` as the number of compute compute nodes participating in the execution.
 
-----------
- Parallel Efficiency
-----------
+Parallel Efficiency
+-------------------
 .. math::
     \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{\max_{i} T^{e}_{i} \times N_{p} }
 
 The parallel efficiency can also be seen as a measure of how efficient the parallelisation of the code is. 
-We distinguish the effects into two multiplicative submetrics namely:
-  * Communication Efficiency
-  * Load Balance
+We distinguish the effects into two multiplicative sub-metrics namely:
 
-----------
- Communication Efficiency
-----------
+    * Communication Efficiency
+    * Load Balance
+
+Communication Efficiency
+------------------------
 .. math::
     \frac{ \max_{i} T^{u}_{i} }{ \max_{i} T^{e}_{i} }
 
-A low Communication Efficiency is mainly explained by larger amounts of time beeing spent in communication rather than "useful" computations. 
-This is either indicative of a suboptimal parallelisation/communication strategy or the problem size being too small for the amount of resources used, so communication creates a larger overhead compared to computations.
+A low Communication Efficiency is mainly explained by larger amounts of time being spent in communication rather than "useful" computations. 
+This is either indicative of a suboptimal parallelisation/communication strategy or the problem size being too small for the amount of resources used, so communication creates a larger overhead compared to computation.
 
-----------
- Load Balance
-----------
+Load Balance
+------------
 .. math::
     \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{ \max_{i} T^{u}_{i} \times N_{p}}
 
 The Load balance metric identifies how much efficiency is lost due to uneven computation time distribution.
-We furthermore divide this into two submetrics: 
+We furthermore divide this into two sub-metrics:
+
   * Intra-node Load Balance
   * Inter-node Load Balance
 
-----------
- Intra-node Load Balance (LB_in)
-----------
+Intra-node Load Balance (LB_in)
+-------------------------------
 .. math::
     \frac{ \max_{j} (\sum_{i \in \mathbb{N}_{j}}^{} T^{u}_{i}) \times N_{n} }{ (\max_{i} T^{u}_{i}) \times N_{p} }
 
 Intra-node Load Balance determines the load balance inside the most loaded node. 
-This load imbalance can be mitigated by using LEWI. 
-----------
- Inter-node Load Balance (LB_out)
-----------
+This load imbalance can be mitigated by using LeWI.
+
+Inter-node Load Balance (LB_out)
+--------------------------------
 .. math::
     \frac{  \sum_{i}^{N_{p}} T^{u}_{i} }{ (\sum_{i \in \mathbb{N}_{j}}^{N_{p}} T^{u}_{i}) \times N_{n}}
 
 Inter-node Load Balance determines the load balance between the nodes.
 
-----------
- Average IPC
-----------
+Average IPC
+-----------
 This metric requires PAPI to be enabled! 
 
 For this metric we introduce the number of instructions :math:`I_i` and the number of cycles they took as :math:`C_i` by the :math:`i`-th MPI process.
@@ -128,18 +125,18 @@ For this metric we introduce the number of instructions :math:`I_i` and the numb
     \frac{  \sum_{i}^{N_{p}} I_i }{ \sum_{i}^{N_{p}} C_i}
 
 
-In superscalar machines, its possible to complete more than 1 instruction per clock cycle. So this value ranges in most modern X86_64 from 0 to a maxmimum of 4. 
-Anything below 1 for a computational region is normally a bad sign and should  be investigated. 
+In superscalar machines, it's possible to complete more than 1 instruction per clock cycle. So this value ranges in most modern X86_64 from 0 to a maximum of 4. 
+Anything below 1 for a computational region is normally a bad sign and should be investigated. 
 
 
-Definining custom monitoring regions
-====================================
+Defining custom monitoring regions
+==================================
 
 By default, TALP reports the entire MPI execution from ``MPI_Init`` to
 ``MPI_Finalize``. Applications may also use user-defined regions to monitor
 different sub-regions of the code.
 
-A monitoring region may be registered using the funtion
+A monitoring region may be registered using the function
 ``DLB_MonitoringRegionRegister``; multiple calls with the same non-null
 char pointer will return the same region. A region will not start until
 the function ``DLB_MonitoringRegionStart`` is called, and needs to
