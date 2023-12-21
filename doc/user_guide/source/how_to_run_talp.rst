@@ -72,8 +72,8 @@ POP Metrics Overview
 As already pointed out above, TALP is able to generate some of the POP Metrics per region.
 In this section we provide some insight into how they compute and what they tell.
 For all the calculations below, we assume that :math:`T^{u}_{i}` is the time the :math:`i`-th MPI process spends in application code doing useful work. 
-Note, that this explicitly excludes any time spent in MPI.
-Furthermore we also define :math:`T^{e}_{i}` to be the total runtime of the :math:`i`-th MPI process including MPI.
+Note, that this explicitly excludes any time spent in the MPI routines.
+Furthermore we also define :math:`T^{e}_{i}` to be the total runtime of the :math:`i`-th MPI process including inside the MPI routines.
 Also we denote :math:`N_{p}` as thex number of processes available in ``MPI_COMM_WORLD``
 Let :math:`\mathbb{N}_{j}` denote the index set containing the MPI process indeces :math:`i` beeing located at Node :math:`j`.
 We furthermore denote :math:`N_{n}` as the number of compute compute nodes participating in the execution.
