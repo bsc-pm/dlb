@@ -12,9 +12,8 @@ By intercepting MPI calls, DLB is able to detect when the process reaches a
 state where the worker threads are idle, then it may temporarily yield the
 process assigned CPUs to another process that would benefit from them.
 
-Depending on the Programming Model used and the runtime, in case of OpenMP,
-DLB may be used automatically, or sometimes with a few modifications in the
-source code.
+Depending on the programming model, DLB may be used automatically. Sometimes, a few modifications in the
+source code are necessary. In OpenMP-based codes, it also depends on the runtime implementation if DLB can be used automatically.
 
 .. _how_to_scripts:
 

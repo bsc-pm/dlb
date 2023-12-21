@@ -142,7 +142,7 @@ char pointer will return the same region. A region will not start until
 the function ``DLB_MonitoringRegionStart`` is called, and needs to
 finish with the function ``DLB_MonitoringRegionStop`` at some point
 before ``MPI_Finalize``. A monitoring region may be paused and resumed
-multiple times. Basic usage example for C and Fortran:
+multiple times. Note, that the Fortran symbols are not case-sensitive. Basic usage example for C and Fortran:
 
 .. code-block:: c
 
@@ -167,7 +167,7 @@ multiple times. Basic usage example for C and Fortran:
     type(c_ptr) :: dlb_handle
     integer :: err
     ...
-    dlb_handle = dlb_monitoringregionregister(c_char_"Region 1"//C_NULL_CHAR)
+    dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
     ...
     do ...
         ! Resume region
@@ -200,7 +200,7 @@ For Fortran codes, the struct may be accessed like in this example:
     integer :: ierr
     character(16), pointer :: monitor_name
     ...
-    dlb_handle = dlb_monitoringregionregister(c_char_"Region 1"//C_NULL_CHAR)
+    dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
     err = DLB_MonitoringRegionStart(dlb_handle)
     err = DLB_MonitoringRegionStop(dlb_handle)
     ...
