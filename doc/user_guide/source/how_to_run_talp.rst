@@ -76,7 +76,7 @@ We furthermore denote :math:`N_{n}` as the number of compute compute nodes parti
 .. math::
     \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{\max_{i} T^{e}_{i} \times N_{p} }
 
-The parallel efficiency can also be seen a measure how efficient the parallelisation of the code is. 
+The parallel efficiency can also be seen as a measure of how efficient the parallelisation of the code is. 
 We distinguish the effects into two multiplicative submetrics namely:
   * Communication Efficiency
   * Load Balance
@@ -88,7 +88,7 @@ We distinguish the effects into two multiplicative submetrics namely:
     \frac{ \max_{i} T^{u}_{i} }{ \max_{i} T^{e}_{i} }
 
 A low Communication Efficiency is mainly explained by larger amounts of time beeing spent in communication rather than "useful" computations. 
-This is either indicative of a suboptimal parallelisation/communication strategy or the problem size beeing to small, so communication creates a larger overhead compared to computations.
+This is either indicative of a suboptimal parallelisation/communication strategy or the problem size being too small for the amount of resources used, so communication creates a larger overhead compared to computations.
 
 ----------
  Load Balance
