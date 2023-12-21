@@ -67,6 +67,60 @@ And you will obtain a report similar to this one at the end::
     DLB[<hostname>:<pid>]: ###       - LB_out:             0.98
 
 
+POP Metrics Overview
+=================================================
+As already pointed out above, TALP is able to generate some of the POP Metrics per region.
+In this section we provide some insight into how they compute and what they tell.
+For all the calculations below, we assume that :math:`T_^{u}_{i}` is the time the :math:`i`-th MPI process spends in application code doing useful work. 
+Note, that this explicitly excludes any time spent in MPI.
+Furthermore we also define :math:`T^{e}_{i}` to be the total runtime of the :math:`i`-th MPI process including MPI.
+Also we denote :math:`N_{p}` as the number of processes available in ``MPI_COMM_WORLD``
+Let :math:`\mathbb{N}_{j}` denote the index set containing the MPI process indeces :math:`i` beeing located at Node :math:`j`. 
+
+----------
+ Parallel Efficiency
+----------
+.. math::
+    \frac{ \sum_{i}^{N_{process}} T^{useful}_{i} }{\max_{i} T^{elapsed}_{i} \times N_{process} }
+
+
+
+----------
+ Communication Efficiency
+----------
+.. math::
+    \frac{ \max_{i} T^{useful}_{i} }{ \max_{i} T^{elapsed}_{i} }
+----------
+ Load Balance
+----------
+.. math::
+    \frac{ \sum_{i}^{N_{process}} T^{useful}_{i} }{ \max_{i} T^{useful}_{i} \times N_{process}}
+
+----------
+ Intra-node Load Balance (LB_in)
+----------
+.. math::
+    \frac{ \max_{j} (\sum_{i \in \mathbb{N}_{j}}^{N_{process}} T^{useful}_{i}) }{ \max_{i} T^{useful}_{i} \times N_{process} }
+
+----------
+ Inter-node Load Balance
+----------
+.. math::
+    \frac{  \sum_{i}^{N_{process}} T^{useful}_{i} }{ (\sum_{i \in \mathbb{N}_{j}}^{N_{process}} T^{useful}_{i}) \times N_{process}}
+
+
+----------
+ Average IPC
+----------
+
+Parallel Efficiency
+Communication Efficiency
+Load Balance
+Intra-node Load Balance (or LB_in)
+Inter-node Load Balance (or LB_out)
+Average IPC (only available with PAPI enabled)
+
+
 Definining custom monitoring regions
 ====================================
 
