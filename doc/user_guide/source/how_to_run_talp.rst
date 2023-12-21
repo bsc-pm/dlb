@@ -95,11 +95,19 @@ We distinguish the effects into two multiplicative submetrics namely:
 .. math::
     \frac{ \max_{i} T^{u}_{i} }{ \max_{i} T^{e}_{i} }
 
+A low Communication Efficiency is mainly explained by larger amounts of time beeing spent in communication rather than "useful" computations. 
+This is either indicative of a suboptimal parallelisation/communication strategy or the problem size beeing to small, so communication creates a larger overhead compared to computations.
+
 ----------
  Load Balance
 ----------
 .. math::
     \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{ \max_{i} T^{u}_{i} \times N_{p}}
+
+The Load balance metric identifies how much efficiency is lost due to uneven computation time distribution.
+We furthermore divide this into two submetrics: 
+  * Intra-node Load Balance
+  * Inter-node Load Balance
 
 ----------
  Intra-node Load Balance (LB_in)
@@ -107,23 +115,28 @@ We distinguish the effects into two multiplicative submetrics namely:
 .. math::
     \frac{ \max_{j} (\sum_{i \in \mathbb{N}_{j}}^{} T^{u}_{i}) \times N_{n} }{ (\max_{i} T^{u}_{i}) \times N_{p} }
 
+Intra-node Load Balance determines the load balance inside the most loaded node. 
+This load imbalance can be mitigated by using LEWI. 
 ----------
  Inter-node Load Balance
 ----------
 .. math::
     \frac{  \sum_{i}^{N_{p}} T^{u}_{i} }{ (\sum_{i \in \mathbb{N}_{j}}^{N_{p}} T^{u}_{i}) \times N_{n}}
 
+Inter-node Load Balance determines the load balance between the nodes.
 
 ----------
  Average IPC
 ----------
+
 For this metric we introduce the number of instructions :math:`I_i` and the number of cycles they took as :math:`C_i` by the :math:`i`-th MPI process.
 
 .. math::
     \frac{  \sum_{i}^{N_{p}} I_i }{ \sum_{i}^{N_{p}} C_i}
 
 
-
+In superscalar machines, its possible to complete more than 1 instruction per clock cycle. So this value ranges in most modern X86_64 from 0 to a maxmimum of 4. 
+Anything below 1 for a computational region is normally a bad sign and should  be investigated. 
 
 
 Definining custom monitoring regions
