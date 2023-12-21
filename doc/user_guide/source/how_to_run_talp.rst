@@ -71,54 +71,59 @@ POP Metrics Overview
 =================================================
 As already pointed out above, TALP is able to generate some of the POP Metrics per region.
 In this section we provide some insight into how they compute and what they tell.
-For all the calculations below, we assume that :math:`T_^{u}_{i}` is the time the :math:`i`-th MPI process spends in application code doing useful work. 
+For all the calculations below, we assume that :math:`T^{u}_{i}` is the time the :math:`i`-th MPI process spends in application code doing useful work. 
 Note, that this explicitly excludes any time spent in MPI.
 Furthermore we also define :math:`T^{e}_{i}` to be the total runtime of the :math:`i`-th MPI process including MPI.
-Also we denote :math:`N_{p}` as the number of processes available in ``MPI_COMM_WORLD``
-Let :math:`\mathbb{N}_{j}` denote the index set containing the MPI process indeces :math:`i` beeing located at Node :math:`j`. 
+Also we denote :math:`N_{p}` as thex number of processes available in ``MPI_COMM_WORLD``
+Let :math:`\mathbb{N}_{j}` denote the index set containing the MPI process indeces :math:`i` beeing located at Node :math:`j`.
+We furthermore denote :math:`N_{n}` as the number of compute compute nodes participating in the execution.
 
 ----------
  Parallel Efficiency
 ----------
 .. math::
-    \frac{ \sum_{i}^{N_{process}} T^{useful}_{i} }{\max_{i} T^{elapsed}_{i} \times N_{process} }
+    \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{\max_{i} T^{e}_{i} \times N_{p} }
 
-
+The parallel efficiency can also be seen a measure how efficient the parallelisation of the code is. 
+We distinguish the effects into two multiplicative submetrics namely:
+  * Communication Efficiency
+  * Load Balance
 
 ----------
  Communication Efficiency
 ----------
 .. math::
-    \frac{ \max_{i} T^{useful}_{i} }{ \max_{i} T^{elapsed}_{i} }
+    \frac{ \max_{i} T^{u}_{i} }{ \max_{i} T^{e}_{i} }
+
 ----------
  Load Balance
 ----------
 .. math::
-    \frac{ \sum_{i}^{N_{process}} T^{useful}_{i} }{ \max_{i} T^{useful}_{i} \times N_{process}}
+    \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{ \max_{i} T^{u}_{i} \times N_{p}}
 
 ----------
  Intra-node Load Balance (LB_in)
 ----------
 .. math::
-    \frac{ \max_{j} (\sum_{i \in \mathbb{N}_{j}}^{N_{process}} T^{useful}_{i}) }{ \max_{i} T^{useful}_{i} \times N_{process} }
+    \frac{ \max_{j} (\sum_{i \in \mathbb{N}_{j}}^{} T^{u}_{i}) \times N_{n} }{ (\max_{i} T^{u}_{i}) \times N_{p} }
 
 ----------
  Inter-node Load Balance
 ----------
 .. math::
-    \frac{  \sum_{i}^{N_{process}} T^{useful}_{i} }{ (\sum_{i \in \mathbb{N}_{j}}^{N_{process}} T^{useful}_{i}) \times N_{process}}
+    \frac{  \sum_{i}^{N_{p}} T^{u}_{i} }{ (\sum_{i \in \mathbb{N}_{j}}^{N_{p}} T^{u}_{i}) \times N_{n}}
 
 
 ----------
  Average IPC
 ----------
+For this metric we introduce the number of instructions :math:`I_i` and the number of cycles they took as :math:`C_i` by the :math:`i`-th MPI process.
 
-Parallel Efficiency
-Communication Efficiency
-Load Balance
-Intra-node Load Balance (or LB_in)
-Inter-node Load Balance (or LB_out)
-Average IPC (only available with PAPI enabled)
+.. math::
+    \frac{  \sum_{i}^{N_{p}} I_i }{ \sum_{i}^{N_{p}} C_i}
+
+
+
 
 
 Definining custom monitoring regions
