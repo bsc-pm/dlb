@@ -114,8 +114,66 @@ preload a DLB MPI library if you want MPI support::
 DLB can be fine tuned with the option ``--lewi-ompt``, see section :ref:`ompt`
 for more details.
 
+LewI option flags
+=================
+--lewi-keep-one-cpu=<bool>
+    Whether the CPU of the thread that encounters a blocking call
+    (MPI blocking call or DLB_Barrier) is also lent in the LeWI policy.
 
-**Footnotes**
+--lewi-respect-cpuset=<bool>
+    Whether to respect the set of CPUs registered in DLB to
+    use with LeWI. If disabled, all unknown CPUs are available
+    for any process to borrow.
+
+--lewi-mpi-calls=<none,all,barrier,collectives>
+    Select which type of MPI calls will make LeWI to lend their
+    CPUs. If set to ``all``, LeWI will act on all blocking MPI calls,
+    If set to other values, only those types will trigger LeWI.
+
+--lewi-barrier=<bool>
+    Select whether DLB_Barrier calls (unnamed barriers only) will
+    activate LeWI and lend their CPUs. Named barriers can be
+    configured individually in the source code, or using the
+    ``--lewi-barrier-select``.
+
+--lewi-barrier-select=<barrier_name1,barrier_name2,...>
+    Comma separated values of barrier names that will activate
+    LeWI. Warning: by setting this option to any non-blank value,
+    the option ``--lewi-barrier`` is ignored. Use ``default`` to also
+    control the default unnamed barrier.
+    e.g.: ``--lewi-barrier-select=default,barrier3``
+
+--lewi-affinity=<any,nearby-first,nearby-only,spread-ifempty>
+    Prioritize resource sharing based on hardware affinity.
+    ``nearby-first`` will try to assign first resources that share the
+    same socket or NUMA node with the current process. ``nearby-only``
+    will only assign those near the process. ``spread-ifempty`` will
+    prioritize also nearby resources, and then it will assign CPUS
+    in other sockets or NUMA nodes only if there is no other
+    that can benefit from those.
+
+--lewi-ompt=<none,{borrow:lend}>
+    OMPT option flags for LeWI. If OMPT mode is enabled, set when
+    DLB can automatically invoke LeWI functions to lend or borrow
+    CPUs. If "none" is set, LeWI will not be invoked automatically.
+    If "borrow" is set, DLB will try to borrow CPUs in certain
+    situations; typically, before non nested parallel constructs if
+    the OMPT thread manager is omp5 and on each task creation and
+    task switch in other thread managers. (This option is the default
+    and should be enough in most of the cases). If the flag "lend"
+    is set, DLB will lend all non used CPUs after each non nested
+    parallel construct and task completion on external threads.
+    Multiple flags can be selected at the same time.
+
+--lewi-max-parallelism=<int>
+    Set the maximum level of parallelism for the LeWI algorithm.
+
+--lewi-color=<int>
+    Set the LeWI color of the process, allowing the creation of
+    different disjoint subgroups for resource sharing. Processes
+    will only share resources with other processes of the same color.
+
+.. rubric:: Footnotes
 
 .. [#mpi_wrapper] These examples are assuming OpenMPI and thus specific variables and
     flags are used, like the variable ``OMPI_CC`` or the flag ``--bind-to``.

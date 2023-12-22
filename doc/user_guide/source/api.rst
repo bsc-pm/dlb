@@ -4,37 +4,75 @@ Public API
 
 DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided into:
 
-**Basic set**
-    The basic set contains the general purpose functions that are common to other
-    modules. The different functions are explained in detail in section :ref:`basic-api`.
+.. glossary::
 
-**LeWI: Lend When Idle**
-    The LeWI API is oriented to be used by runtimes to manage the CPU sharing between
-    other processes but can also be used on applications to use the ``LeWI``
-    algorithm. These functions are explained in detail in section
-    :ref:`lewi-api`.
+    Basic set
+        The basic set contains the general purpose functions that are common to other
+        modules. The different functions are explained in detail in section :ref:`basic-api`.
 
-**DROM: Dynamic Resource Ownership Manager**
-    The DROM API manages the CPU ownership of each DLB running process. For a more
-    detailed description see :ref:`drom`. These functions are described in section
-    :ref:`drom-api`.
+    LeWI: Lend When Idle
+        The LeWI API is oriented to be used by runtimes to manage the CPU sharing between
+        other processes but can also be used on applications to use the ``LeWI``
+        algorithm. These functions are explained in detail in section
+        :ref:`lewi-api`.
 
-**TALP: Tracking Application Live Performance**
-    The TALP API is used to obtain measured metrics from other processes as well as
-    to define custom monitoring regions, see :ref:`talp`. These functions are
-    described in section :ref:`talp-api`.
+    DROM: Dynamic Resource Ownership Manager
+        The DROM API manages the CPU ownership of each DLB running process. For a more
+        detailed description see :ref:`drom`. These functions are described in section
+        :ref:`drom-api`.
 
-**MPI API**
-    This is a specific API for MPI. We offer an MPI interface that will be called by
-    Extrae if we are tracing the application or internally in the MPI intercept API.
-    All the calls of this API are of the form shown below, and thus not documented.
+    TALP: Tracking Application Live Performance
+        The TALP API is used to obtain measured metrics from other processes as well as
+        to define custom monitoring regions, see :ref:`talp`. These functions are
+        described in section :ref:`talp-api`.
 
-    - DLB_<mpi_call_name>_enter(...)
-    - DLB_<mpi_call_name>_leave(...)
+    MPI API
+        This is a specific API for MPI. We offer an MPI interface that will be called by
+        Extrae if we are tracing the application or internally in the MPI intercept API.
+        All the calls of this API are of the form shown below, and thus not documented.
+
+        - DLB_<mpi_call_name>_enter(...)
+        - DLB_<mpi_call_name>_leave(...)
 
 
 ..     TALP: Tracking Application Live Performance
 ..        To be done
+
+
+=========
+DLB Types
+=========
+
+The following types may be used in the DLB interface:
+
+.. glossary::
+
+    dlb_cpu_set_t
+        Opaque type that corresponds to ``cpu_set_t *``. See ``<sched.h>``.
+
+    const_dlb_cpu_set_t
+        Opaque type that corresponds to ``const cpu_set_t *``.
+
+    dlb_callbacks_t
+        Enum to identify the type of callback. See ``"dlb_types.h"``.
+
+    dlb_callback_t
+        Opaque type for callback function.
+
+    dlb_printshmem_flags_t
+        Print shared memory flags. See ``"dlb_types.h"``.
+
+    dlb_drom_flags_t
+        DROM flags. See ``"dlb_types.h"``.
+
+    dlb_monitor_t
+        Monitoring region. See ``"dlb_talp.h"`` and :ref:`talp-custom-regions`.
+
+    dlb_node_metrics_t
+        Output struct where POP node metrics are stored. See ``"dlb_talp.h"``.
+
+    dlb_pop_metrics_t
+        Output struct where POP metrics are stored. See ``"dlb_talp.h"``.
 
 
 .. _basic-api:
@@ -45,7 +83,7 @@ DLB Basic API
 
 These functions make the basic API to be used independently from which DLB mode is enabled.
 
-.. function:: int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char \*dlb_args)
+.. function:: int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args)
 
     Initialize DLB library and all its internal data structures. Must be called once and only
     once by each process in the DLB system.
@@ -75,18 +113,18 @@ These functions make the basic API to be used independently from which DLB mode 
     time, subsequent calls to borrow CPUs will be ignored until some of them are returned.
 
 
-.. function:: int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void \*arg)
-              int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t \*callback, void \*\*arg)
+.. function:: int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void *arg)
+              int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg)
 
     Setter and Getter for DLB callbacks. See section :ref:`callbacks`.
 
-.. function:: int DLB_PollDROM(int \*ncpus, dlb_cpu_set_t mask)
+.. function:: int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask)
               int DLB_PollDROM_Update(void)
 
     Poll DROM module to check if the process needs to adapt to a new mask or number of CPUs.
 
-.. function:: int DLB_SetVariable(const char \*variable, const char \*value)
-              int DLB_GetVariable(const char \*variable, char \*value)
+.. function:: int DLB_SetVariable(const char *variable, const char *value)
+              int DLB_GetVariable(const char *variable, char *value)
 
     Set or get a DLB internal variable. These variables are the same ones specified in ``DLB_ARGS``,
     although not all of them can be modified at runtime. If the variable is readonly the setter
@@ -176,11 +214,11 @@ process mask of each DLB process.
 
     Detach process from DLB
 
-.. function:: int DLB_DROM_GetNumCpus(int \*ncpus)
+.. function:: int DLB_DROM_GetNumCpus(int *ncpus)
 
     Get the total number of available CPUs in the node
 
-.. function:: void DLB_DROM_GetPidList(int \*pidlist, int \*nelems, int max_len)
+.. function:: void DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len)
 
     Get the PID's attached to this module
 
@@ -211,17 +249,21 @@ and later it can obtain some data from the other DLB running processes.
 
     Detach process from DLB
 
-.. function:: int DLB_TALP_GetNumCpus(int \*ncpus)
+.. function:: int DLB_TALP_GetNumCpus(int *ncpus)
 
     Get the total number of available CPUs in the node
 
-.. function:: void DLB_TALP_GetPidList(int \*pidlist, int \*nelems, int max_len)
+.. function:: void DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len)
 
     Get the PID's attached to this module
 
-.. function:: int DLB_TALP_GetTimes(int pid, double \*mpi_time, double \*useful_time)
+.. function:: int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time)
 
     Get the CPU time on MPI and useful computation for the given process
+
+.. function:: DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics)
+
+   Compute POP Node Metrics for one region
 
 
 The second set of services are designed to be called from witihn the DLB running proceses.
@@ -232,22 +274,34 @@ new custom Monitoring Regions to delimit a specific part of the code.
 
      Get the pointer of the implicit MPI Monitorig Region
 
-.. function:: dlb_monitor_t* DLB_MonitoringRegionRegister(const char \*name)
+.. function:: dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name)
 
     Register a new Monitoring Region
 
-.. function:: int DLB_MonitoringRegionReset(dlb_monitor_t \*handle)
+.. function:: int DLB_MonitoringRegionReset(dlb_monitor_t *handle)
 
     Reset monitoring region
 
-.. function:: int DLB_MonitoringRegionStart(dlb_monitor_t \*handle)
+.. function:: int DLB_MonitoringRegionStart(dlb_monitor_t *handle)
 
-    Start (or unpause) monitoring region
+    Start (or resume) monitoring region
 
-.. function:: int DLB_MonitoringRegionStop(dlb_monitor_t \*handle)
+.. function:: int DLB_MonitoringRegionStop(dlb_monitor_t *handle)
 
     Stop (or pause) monitoring region
 
-.. function:: int DLB_MonitoringRegionReport(const dlb_monitor_t \*handle)
+.. function:: int DLB_MonitoringRegionReport(const dlb_monitor_t *handle)
 
     Print a Report by stdout of the monitoring region
+
+.. function:: int DLB_MonitoringRegionsUpdate(void)
+
+    Explicitly update all monitoring regions
+
+.. function:: int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics)
+
+    Perform an MPI collective communication to collect POP metrics
+
+.. function:: int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics)
+
+    Perform a node collective communication to collect TALP node metrics

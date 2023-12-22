@@ -129,6 +129,8 @@ In superscalar machines, it's possible to complete more than 1 instruction per c
 Anything below 1 for a computational region is normally a bad sign and should be investigated. 
 
 
+.. _talp-custom-regions:
+
 Defining custom monitoring regions
 ==================================
 
@@ -178,7 +180,7 @@ multiple times. Note, that the Fortran symbols are not case-sensitive. Basic usa
     enddo
 
 For every defined monitoring region, including the implicit global region
-name "MPI Execution", TALP will print or write a summary at the end of the
+named "MPI Execution", TALP will print or write a summary at the end of the
 execution.
 
 Inspecting monitoring regions within the source code
