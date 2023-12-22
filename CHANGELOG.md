@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased]
+## [3.4] 2023-12-22
 ### Added
 - PAPI support for TALP metrics
 - `libdlb_mpic.so` and `libdlb_mpic_*.so` are C MPI only libraries
@@ -280,7 +280,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.3...HEAD
+[3.4]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.4
 [3.3]: https://github.com/bsc-pm/dlb/compare/v3.2...v3.3
 [3.2]: https://github.com/bsc-pm/dlb/compare/v3.1...v3.2
 [3.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.1
