@@ -18,7 +18,7 @@
 export DLB_ARGS="$DLB_ARGS --talp"
 
 # Select which TALP summary to show
-# [app:node:process:iteration:omp:regions], default: pop-metrics
+# {none:all:pop-metrics:pop-raw:node:process}, default: pop-metrics
 #export DLB_ARGS="$DLB_ARGS --talp-summary=pop-metrics:process:regions"
 
 #################################################################################
@@ -34,6 +34,7 @@ fi
 # both C/C++ and Fortran MPI.
 #preload="$DLB_HOME/lib/libdlb.so"
 preload="$DLB_HOME/lib/libdlb_mpi.so"
+#preload="$DLB_HOME/lib/libdlb_mpic.so"
 #preload="$DLB_HOME/lib/libdlb_mpif.so"
 
 env LD_PRELOAD="$LD_PRELOAD:$preload" "$@"

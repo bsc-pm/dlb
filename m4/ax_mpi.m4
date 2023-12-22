@@ -245,7 +245,7 @@ AC_DEFUN([AX_MPI],
             [], dnl Implicit: enable_f08_interface=$enableval
             [enable_f08_interface=yes]
         )
-        AC_MSG_RESULT([$enable_mpi_tests])
+        AC_MSG_RESULT([$enable_f08_interface])
         AC_MSG_CHECKING([whether to compile Fortran 2008 MPI interface])
         AS_IF([test x"$FC" != x \
                 && test x"$enable_f08_interface" = xyes \

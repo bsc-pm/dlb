@@ -36,8 +36,8 @@ export DLB_ARGS="$DLB_ARGS --ompt"
 #export DLB_ARGS="$DLB_ARGS --verbose=ompt"
 
 # OMPT policy flags for LeWI. Select when DLB will invoke LewI functions.
-# Possible values: {mpi, borrow, lend}, default: none
-export DLB_ARGS="$DLB_ARGS --lewi-ompt=mpi:borrow:lend"
+# Possible values: [none, {borrow:lend}], default: borrow
+#export DLB_ARGS="$DLB_ARGS --lewi-ompt=borrow"
 
 # Select events to be instrumented
 # Possible values: {none:all:mpi:lewi:drom:talp:barrier:ompt:cpus:callbacks},
@@ -77,9 +77,11 @@ if [[ -z $DLB_HOME ]] ; then
 fi
 
 # If the application is not linked with DLB, select which DLB version to preload.
-# Choose between the non-MPI version, or the MPI versions for C/C++ or Fortran
+# Choose between the non-MPI version, the standard MPI version, or the specific
+# C/C++ or Fortran MPI.
 #preload="$DLB_HOME/lib/libdlb_instr.so"
 preload="$DLB_HOME/lib/libdlb_mpi_instr.so"
+#preload="$DLB_HOME/lib/libdlb_mpic_instr.so"
 #preload="$DLB_HOME/lib/libdlb_mpif_instr.so"
 
 if [[ -z $EXTRAE_HOME ]] ; then

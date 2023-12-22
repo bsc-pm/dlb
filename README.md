@@ -126,7 +126,7 @@ control through OMPT.
 4. **Example 4:** Get a TALP summary report at the end of an execution
 
     ```bash
-    export DLB_ARGS="--talp --talp-summary=app"
+    export DLB_ARGS="--talp --talp-summary=pop-metrics"
     PRELOAD=<DLB_PREFIX>/lib/libdlb_mpi.so
     mpirun <opts> env LD_PRELOAD="$PRELOAD" ./app
     ```

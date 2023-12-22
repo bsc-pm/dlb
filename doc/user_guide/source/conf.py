@@ -50,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'DLB'
-copyright = u'2015-2021, Barcelona Supercomputing Center'
+copyright = u'2015-2023, Barcelona Supercomputing Center'
 author = u'Marta Garcia and Victor Lopez'
 
 # The version info for the project you're documenting, acts as replacement for

@@ -155,7 +155,7 @@ Usage
 To enable OMPT support, DLB needs the option ``DLB_ARGS+=" --ompt"`` and the
 OpenMP runtime linked to the application must support this feature. If you are
 unsure of whether the OpenMP runtime you are using supports OMPT, you can run
-the example located in ``$DLB_HOME/share/doc/dlb/examples/OMPT``.
+the example located in ``$DLB_PREFIX/share/doc/dlb/examples/OMPT``.
 
 We do recommend to explicitly set the environment variable
 ``OMP_WAIT_POLICY="passive"``, since even if *passive* may be the default

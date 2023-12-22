@@ -148,7 +148,11 @@ AX_VAR_POPVALUE([CFLAGS])
 
 ##### Fortran Compiler checks #####
 AC_PROG_FC
-AC_FC_FREEFORM
+
+# use Fortran free-form by default
+# NOTE: we must override action-if-failure to no-op to avoid erroring if FC is
+# not found, because testing FC doesn't seem to work
+AC_FC_FREEFORM([:], [:])
 
 # Disable Fortran tests if FC is not found
 AS_IF([test "x$FC" = x], [
@@ -397,6 +401,9 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/faq.rst:doc/user_guide/source/faq.rst
     doc/user_guide/source/how_to_install.rst:doc/user_guide/source/how_to_install.rst
     doc/user_guide/source/how_to_run.rst:doc/user_guide/source/how_to_run.rst
+    doc/user_guide/source/how_to_run_lewi.rst:doc/user_guide/source/how_to_run_lewi.rst
+    doc/user_guide/source/how_to_run_drom.rst:doc/user_guide/source/how_to_run_drom.rst
+    doc/user_guide/source/how_to_run_talp.rst:doc/user_guide/source/how_to_run_talp.rst
     doc/user_guide/source/intro.rst:doc/user_guide/source/intro.rst
     doc/user_guide/source/man_pages_appendix.rst:doc/user_guide/source/man_pages_appendix.rst
     doc/user_guide/source/technical_requirements.rst:doc/user_guide/source/technical_requirements.rst
