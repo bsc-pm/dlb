@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env sh
 
 FC="@FC@"
 VERSIONS="@TEST_VERSIONS@"
