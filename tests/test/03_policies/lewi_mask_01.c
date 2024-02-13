@@ -351,7 +351,7 @@ int main( int argc, char **argv ) {
         assert_loop( CPU_COUNT(&sp2_mask) == 4
                 && CPU_ISSET(0, &sp2_mask) && CPU_ISSET(1, &sp2_mask) );
 
-        // Subprocess 1 acquire its CPUs
+        // Subprocess 1 acquires its CPUs
         assert( lewi_mask_AcquireCpuMask(&spd1, &sp1_process_mask) == DLB_NOTED );
 
         // Subprocess 2 sets max_parallelism to 2
@@ -363,9 +363,18 @@ int main( int argc, char **argv ) {
         assert_loop( CPU_COUNT(&sp2_mask) == 2
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
 
+        // Subprocess 2 removes any previous requests
+        if (mode == MODE_ASYNC) {
+            assert( lewi_mask_AcquireCpus(&spd2, 0) == DLB_SUCCESS );
+        }
+
         // Subprocess 1 lends everything
         CPU_ZERO(&sp1_mask);
         assert( lewi_mask_LendCpuMask(&spd1, &sp1_process_mask) == DLB_SUCCESS );
+
+        // check that the previous lend did not change subprocess 2 mask
+        assert( CPU_COUNT(&sp2_mask) == 2
+                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
 
         // Subprocess 2 borrows everything (can't, max_parallelism still 2)
         assert( lewi_mask_Borrow(&spd2) == DLB_NOUPDT );
