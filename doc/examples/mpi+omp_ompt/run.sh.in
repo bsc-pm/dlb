@@ -22,7 +22,7 @@ if [[ $DLB == 1 ]] ; then
     else
         PRELOAD="$DLB_HOME/lib/libdlb_mpi.so"
     fi
-    export DLB_ARGS+=" --lewi --ompt --lewi-ompt=mpi:borrow --ompt-thread-manager=omp5"
+    export DLB_ARGS+=" --lewi --ompt --lewi-ompt=borrow --ompt-thread-manager=omp5"
     export OMP_WAIT_POLICY=passive
     export KMP_BLOCKTIME=0
 
