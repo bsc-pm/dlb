@@ -316,8 +316,10 @@ int main(int argc, char *argv[]) {
             assert( node_times[0].pid == min_int(pid1, pid2) );
             assert( node_times[1].pid == max_int(pid1, pid2) );
             assert( node_times[0].mpi_time == 0 && node_times[1].mpi_time == 0 );
-            assert( fabs(node_times[0].useful_time) > 1e6 && fabs(node_times[0].useful_time) < 1e9 );
-            assert( fabs(node_times[1].useful_time) > 1e6 && fabs(node_times[1].useful_time) < 1e9 );
+            assert( llabs(node_times[0].useful_time) > 1e6
+                    && llabs(node_times[0].useful_time) < 1e9 );
+            assert( llabs(node_times[1].useful_time) > 1e6
+                    && llabs(node_times[1].useful_time) < 1e9 );
 
             // Test DLB_TALP_QueryPOPNodeMetrics
             dlb_node_metrics_t node_metrics;
