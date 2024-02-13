@@ -303,9 +303,18 @@ int main( int argc, char **argv ) {
         assert_loop( CPU_COUNT(&sp2_mask) == 2
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
 
+        // Subprocess 2 removes any previous requests
+        if (mode == MODE_ASYNC) {
+            assert( DLB_AcquireCpus_sp(handler2, 0) == DLB_SUCCESS );
+        }
+
         // Subprocess 1 lends everything
         CPU_ZERO(&sp1_mask);
         assert( DLB_LendCpuMask_sp(handler1, &sys_mask) == DLB_SUCCESS );
+
+        // check that the previous lend did not change subprocess 2 mask
+        assert( CPU_COUNT(&sp2_mask) == 2
+                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
 
         // Subprocess 2 borrows everything (can't, max_parallelism still 2)
         assert( DLB_Borrow_sp(handler2) == DLB_NOUPDT );

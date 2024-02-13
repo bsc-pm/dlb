@@ -1509,7 +1509,15 @@ void shmem_cpuinfo__remove_requests(pid_t pid) {
     {
         /* Remove any previous request for the specific pid */
         if (shdata->queues_enabled) {
+            /* Remove global requests (pair <pid,howmany>) */
             queue_proc_reqs_remove(&shdata->proc_requests, pid);
+
+            /* Remove specific CPU requests */
+            int cpuid;
+            for (cpuid=0; cpuid<node_size; ++cpuid) {
+                cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+                queue_pids_remove(&cpuinfo->requests, pid);
+            }
         }
     }
     shmem_unlock(shm_handler);
