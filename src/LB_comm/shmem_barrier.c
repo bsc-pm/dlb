@@ -438,7 +438,7 @@ void shmem_barrier__barrier(barrier_t *barrier) {
         unsigned int participants_left = DLB_ATOMIC_SUB_FETCH(&barrier->count, 1);
         bool last_out = participants_left == 0;
 
-        verbose(VB_BARRIER, "Leaving barrier%s%s", barrier->name, last_out ? " (last)" : "");
+        verbose(VB_BARRIER, "Leaving barrier %s%s", barrier->name, last_out ? " (last)" : "");
 
         /* WARNING: There may be a race condition with the 'count' value in
          *          consecutive barriers (A -> B), if one process increases the
