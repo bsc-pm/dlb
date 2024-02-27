@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env sh
 
 patch pils.c monitoring_regions/mpi_pils.c.patch    -o monitoring_regions/mpi_pils.c
 patch pils.c mpi+omp/mpi_omp_pils.c.patch           -o mpi+omp/mpi_omp_pils.c
