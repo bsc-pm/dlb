@@ -21,6 +21,7 @@
 #include "support/debug.h"
 #include "apis/dlb_errors.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -76,11 +77,12 @@ bool equivalent_negated_bool(const char *str1, const char *str2) {
 
 int parse_int(const char *str, int *value) {
     char *endptr;
-    int val = strtol(str, &endptr, 0);
-    if (errno == ERANGE || endptr == str) {
+    long val = strtol(str, &endptr, 0);
+    if ((val == 0 && endptr == str)
+            || ((val == LONG_MIN || val == LONG_MAX) && errno == ERANGE)) {
         return DLB_ERR_NOENT;
     }
-    *value = val;
+    *value = (int)val;
     return DLB_SUCCESS;
 }
 
