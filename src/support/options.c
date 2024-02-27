@@ -998,14 +998,24 @@ int options_get_variable(const options_t *options, const char *var_name, char *v
 
 /* API Printer. Also, dlb -h/-hh output */
 void options_print_variables(const options_t *options, bool print_extended) {
-    enum { buffer_size = 8192 };
-    char buffer[buffer_size] =
+
+    /* Initialize buffer */
+    print_buffer_t buffer;
+    printbuffer_init(&buffer);
+
+    /* Set up intermediate buffer per entry */
+    enum { MAX_ENTRY_LEN = 128 };
+    char entry_buffer[MAX_ENTRY_LEN];
+
+    /* Header (last \n is not needed) */
+    printbuffer_append(&buffer,
         "DLB Options:\n\n"
         "DLB is configured by setting these flags in the DLB_ARGS environment variable.\n"
         "Possible options are listed below:\n\n"
         "Option                  Current value   Possible value (type) / [choice] / {val1:val2}\n"
-        "--------------------------------------------------------------------------------------\n";
-    char *b = buffer + strlen(buffer);
+        "--------------------------------------------------------------------------------------"
+        );
+
     int i;
     for (i=0; i<NUM_OPTIONS; ++i) {
         const opts_dict_t *entry = &options_dictionary[i];
@@ -1020,90 +1030,110 @@ void options_print_variables(const options_t *options, bool print_extended) {
         if (entry->flags & OPT_ADVANCED
                 && !print_extended) continue;
 
+        /* Reset entry buffer */
+        entry_buffer[0] = '\0';
+        char *b = entry_buffer;
+        size_t max_entry_len = MAX_ENTRY_LEN;
+
         /* Name */
         size_t name_len = strlen(entry->arg_name) + 1;
         if (name_len < 24) {
-            b += sprintf(b, "%s:%s", entry->arg_name, name_len<8?"\t\t\t":name_len<16?"\t\t":"\t");
+            /* Option + tabs until column 24 */
+            b += sprintf(b, "%s:%s",
+                    entry->arg_name,
+                    name_len < 8 ? "\t\t\t" : name_len < 16 ? "\t\t" : "\t");
         } else {
-            b += snprintf(b, 128, "%s:\n\t\t\t", entry->arg_name);
+            /* Long option, break line */
+            b += snprintf(b, max_entry_len, "%s:\n\t\t\t", entry->arg_name);
         }
+        max_entry_len = MAX_ENTRY_LEN - (b - entry_buffer);
 
         /* Value */
         const char *value = get_value(entry->type, (char*)options+entry->offset);
         size_t value_len = strlen(value) + 1;
-        b += sprintf(b, "%s %s", value, value_len<8?"\t\t":value_len<16?"\t":"");
+        b += snprintf(b, max_entry_len, "%s %s",
+                value,
+                value_len < 8 ? "\t\t" : value_len < 16 ? "\t" : "");
+        max_entry_len = MAX_ENTRY_LEN - (b - entry_buffer);
 
         /* Choices */
         switch(entry->type) {
             case OPT_BOOL_T:
-                b += sprintf(b, "(bool)");
+                b += snprintf(b, max_entry_len, "(bool)");
                 break;
             case OPT_NEG_BOOL_T:
-                b += sprintf(b, "(bool)");
+                b += snprintf(b, max_entry_len, "(bool)");
                 break;
             case OPT_INT_T:
-                b += sprintf(b, "(int)");
+                b += snprintf(b, max_entry_len, "(int)");
                 break;
             case OPT_STR_T:
-                b += sprintf(b, "(string)");
+                b += snprintf(b, max_entry_len, "(string)");
                 break;
             case OPT_PTR_PATH_T:
-                b += sprintf(b, "(path)");
+                b += snprintf(b, max_entry_len, "(path)");
                 break;
             case OPT_VB_T:
-                b += sprintf(b, "{%s}", get_verbose_opts_choices());
+                b += snprintf(b, max_entry_len, "{%s}", get_verbose_opts_choices());
                 break;
             case OPT_VBFMT_T:
-                b += sprintf(b, "{%s}", get_verbose_fmt_choices());
+                b += snprintf(b, max_entry_len, "{%s}", get_verbose_fmt_choices());
                 break;
             case OPT_INST_T:
-                b += sprintf(b, "{%s}", get_instrument_items_choices());
+                b += snprintf(b, max_entry_len, "{%s}", get_instrument_items_choices());
                 break;
             case OPT_DBG_T:
-                b += sprintf(b, "{%s}", get_debug_opts_choices());
+                b += snprintf(b, max_entry_len, "{%s}", get_debug_opts_choices());
                 break;
             case OPT_PRIO_T:
-                b += sprintf(b, "[%s]", get_priority_choices());
+                b += snprintf(b, max_entry_len, "[%s]", get_priority_choices());
                 break;
             case OPT_POL_T:
-                b += sprintf(b, "[%s]", get_policy_choices());
+                b += snprintf(b, max_entry_len, "[%s]", get_policy_choices());
                 break;
             case OPT_MASK_T:
-                b += sprintf(b, "(cpuset)");
+                b += snprintf(b, max_entry_len, "(cpuset)");
                 break;
             case OPT_MODE_T:
-                b += sprintf(b, "[%s]", get_mode_choices());
+                b += snprintf(b, max_entry_len, "[%s]", get_mode_choices());
                 break;
             case OPT_MPISET_T:
-                b += sprintf(b, "[%s]", get_mpiset_choices());
+                b += snprintf(b, max_entry_len, "[%s]", get_mpiset_choices());
                 break;
             case OPT_OMPTOPTS_T:
-                b += sprintf(b, "[%s]", get_omptool_opts_choices());
+                b += snprintf(b, max_entry_len, "[%s]", get_omptool_opts_choices());
                 break;
             case OPT_TLPSUM_T:
-                b += sprintf(b, "{%s}", get_talp_summary_choices());
+                b += snprintf(b, max_entry_len, "{%s}", get_talp_summary_choices());
                 break;
             case OPT_OMPTM_T:
-                b += sprintf(b, "[%s]", get_omptm_version_choices());
+                b += snprintf(b, max_entry_len, "[%s]", get_omptm_version_choices());
                 break;
         }
-        b += sprintf(b, "\n");
 
-        /* Description if print_extended */
+        /* Append entry listing */
+        printbuffer_append(&buffer, entry_buffer);
+
+        /* Append long description if print_extended */
         if (print_extended) {
-            b += sprintf(b, "%s\n\n", entry->description);
+            printbuffer_append(&buffer, entry->description);
+            printbuffer_append(&buffer, "");
         }
 
     }
 
-    b += sprintf(b, "\n"
-                    "Boolean options accept both standalone flags and 'yes'/'no' parameters.\n"
-                    "These are equivalent flags:\n"
-                    "    export DLB_ARGS=\"--lewi --no-drom\"\n"
-                    "    export DLB_ARGS=\"--lewi=yes --drom=no\"\n");
+    /* Footer (last \n is not needed) */
+    printbuffer_append(&buffer,
+            "\n"
+            "Boolean options accept both standalone flags and 'yes'/'no' parameters.\n"
+            "These are equivalent flags:\n"
+            "    export DLB_ARGS=\"--lewi --no-drom\"\n"
+            "    export DLB_ARGS=\"--lewi=yes --drom=no\"");
 
     /* This function must print always and ignore options --quiet and --silent */
-    info0_force_print("%s", buffer);
+    info0_force_print("%s", buffer.addr);
+
+    printbuffer_destroy(&buffer);
 }
 
 /* Print which LeWI flags are enabled during DLB_Init */
