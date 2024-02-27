@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Description:
 #   Execute and trace an OmpSs application with the dynamic load policy LeWI

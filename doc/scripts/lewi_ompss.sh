@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Description:
 #   Execute an OmpSs application with the dynamic load policy LeWI (Lend When Idle).
