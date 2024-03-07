@@ -746,9 +746,10 @@ int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flag
         asprintf(&args[0], "scontrol");
         asprintf(&args[1], "update");
         asprintf(&args[2], "jobid=%s", secure_getenv("SLURM_JOBID"));
-        asprintf(&args[3], "nodename=%s", secure_getenv("SLURMD_NODENAME"));
-        asprintf(&args[4], "cpumaskoff=%s", mask_str);
-        args[5] = NULL;
+        //asprintf(&args[3], "nodename=%s", secure_getenv("SLURMD_NODENAME"));
+        //asprintf(&args[4], "cpumaskoff=%s", mask_str);
+        asprintf(&args[3], "dealloc=%s:%s", secure_getenv("SLURMD_NODENAME"), mask_str);
+        args[4] = NULL;
 
         int res_pid = fork();
         if (res_pid < 0)
