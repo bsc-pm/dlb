@@ -69,39 +69,39 @@ int main( int argc, char **argv ) {
 
     // Basic enable-disable test
     assert( DLB_Disable() == DLB_SUCCESS );
-    assert( DLB_Lend() == DLB_ERR_DISBLD );
+    assert( DLB_Lend() == DLB_ERR_NOLEWI );
     assert( DLB_Enable() == DLB_SUCCESS );
-    assert( DLB_SetMaxParallelism(1) == DLB_ERR_NOPOL );
+    assert( DLB_SetMaxParallelism(1) == DLB_ERR_NOLEWI );
 
     // Lend
-    assert( DLB_Lend() == DLB_ERR_NOPOL );
-    assert( DLB_LendCpu(0) == DLB_ERR_NOPOL );
-    assert( DLB_LendCpus(1) == DLB_ERR_NOPOL );
-    assert( DLB_LendCpuMask(&process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Lend() == DLB_ERR_NOLEWI );
+    assert( DLB_LendCpu(0) == DLB_ERR_NOLEWI );
+    assert( DLB_LendCpus(1) == DLB_ERR_NOLEWI );
+    assert( DLB_LendCpuMask(&process_mask) == DLB_ERR_NOLEWI );
 
     // Reclaim
-    assert( DLB_Reclaim() == DLB_ERR_NOPOL );
-    assert( DLB_ReclaimCpu(0) == DLB_ERR_NOPOL );
-    assert( DLB_ReclaimCpus(1) == DLB_ERR_NOPOL );
-    assert( DLB_ReclaimCpuMask(&process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Reclaim() == DLB_ERR_NOLEWI );
+    assert( DLB_ReclaimCpu(0) == DLB_ERR_NOLEWI );
+    assert( DLB_ReclaimCpus(1) == DLB_ERR_NOLEWI );
+    assert( DLB_ReclaimCpuMask(&process_mask) == DLB_ERR_NOLEWI );
 
     // Acquire
-    assert( DLB_AcquireCpu(0) == DLB_ERR_NOPOL );
-    assert( DLB_AcquireCpus(1) == DLB_ERR_NOPOL );
-    assert( DLB_AcquireCpuMask(&process_mask) == DLB_ERR_NOPOL );
-    assert( DLB_AcquireCpusInMask(1, &process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_AcquireCpu(0) == DLB_ERR_NOLEWI );
+    assert( DLB_AcquireCpus(1) == DLB_ERR_NOLEWI );
+    assert( DLB_AcquireCpuMask(&process_mask) == DLB_ERR_NOLEWI );
+    assert( DLB_AcquireCpusInMask(1, &process_mask) == DLB_ERR_NOLEWI );
 
     // Borrow
-    assert( DLB_Borrow() == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpu(1) == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpus(1) == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpuMask(&process_mask) == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpusInMask(1, &process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Borrow() == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpu(1) == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpus(1) == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpuMask(&process_mask) == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpusInMask(1, &process_mask) == DLB_ERR_NOLEWI );
 
     // Return
-    assert( DLB_Return() == DLB_ERR_NOPOL );
-    assert( DLB_ReturnCpu(0) == DLB_ERR_NOPOL );
-    assert( DLB_ReturnCpuMask(&process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Return() == DLB_ERR_NOLEWI );
+    assert( DLB_ReturnCpu(0) == DLB_ERR_NOLEWI );
+    assert( DLB_ReturnCpuMask(&process_mask) == DLB_ERR_NOLEWI );
 
     // Barrier
     assert( DLB_Barrier() == DLB_ERR_NOCOMP );
@@ -109,7 +109,7 @@ int main( int argc, char **argv ) {
     assert( DLB_BarrierDetach() == DLB_ERR_NOCOMP );
 
     // Misc
-    assert( DLB_CheckCpuAvailability(0) == DLB_ERR_NOPOL );
+    assert( DLB_CheckCpuAvailability(0) == DLB_ERR_NOLEWI );
     assert( DLB_PollDROM(NULL, NULL) == DLB_ERR_NOCOMP );
     assert( DLB_SetVariable("--drom", "1") == DLB_ERR_PERM );
     assert( DLB_SetVariable("--debug-opts", "foo") == DLB_SUCCESS );

@@ -20,6 +20,7 @@
 #include "support/error.h"
 
 #include "apis/dlb_errors.h"
+#include "support/debug.h"
 
 static const char* error_msg[] = {
     "DLB_NOUPDT (2): The requested operation does not need any action",
@@ -40,7 +41,8 @@ static const char* error_msg[] = {
     "DLB_ERR_REQST (-13): DLB cannot take more requests for a specific resource",
     "DLB_ERR_NOMEM (-14): DLB cannot allocate more processes into the shared memory",
     "DLB_ERR_NOPOL (-15): The operation is not defined in the current policy",
-    "DLB_ERR_NOTALP (-16): TALP is not initialized"
+    "DLB_ERR_NOTALP (-16): TALP is not initialized",
+    "DLB_ERR_NOTALP (-17): LeWI is not initialized"
 };
 
 const char* error_get_str(int errnum) {
@@ -48,4 +50,14 @@ const char* error_get_str(int errnum) {
         return "unknown errnum";
     }
     return error_msg[-errnum + _DLB_ERROR_UPPER_BOUND - 1];
+}
+
+/* Only for testing purposes */
+void error_check_num_messages(void) {
+    int num_errors = _DLB_ERROR_UPPER_BOUND - _DLB_ERROR_LOWER_BOUND - 1;
+    int num_error_msgs = sizeof(error_msg)/sizeof(error_msg[0]);
+    fatal_cond(num_errors != num_error_msgs,
+            "Number of errors: %d. Number of error messages: %d",
+            num_errors,
+            num_error_msgs);
 }

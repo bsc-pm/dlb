@@ -35,6 +35,7 @@
       integer, parameter :: DLB_ERR_REQST     = -13
       integer, parameter :: DLB_ERR_NOMEM     = -14
       integer, parameter :: DLB_ERR_NOPOL     = -15
-      integer, parameter :: DLB_ERR_NOTALP     = -16
+      integer, parameter :: DLB_ERR_NOTALP    = -16
+      integer, parameter :: DLB_ERR_NOLEWI    = -17
 
 ! -*- fortran -*-  vim: set ft=fortran:
