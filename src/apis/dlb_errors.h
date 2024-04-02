@@ -61,7 +61,9 @@ enum DLBErrorCodes {
     DLB_ERR_NOPOL           = -15,
     /*! TALP is not initialized */
     DLB_ERR_NOTALP          = -16,
-    _DLB_ERROR_LOWER_BOUND  = -17
+    /*! LeWI is not initialized */
+    DLB_ERR_NOLEWI          = -17,
+    _DLB_ERROR_LOWER_BOUND  = -18
 };
 
 #endif /* DLB_ERRORS_H */

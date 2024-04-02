@@ -30,6 +30,9 @@
 
 int main(int argc, char **argv) {
 
+    // Check if the number of error messages matches with the number of errors
+    error_check_num_messages();
+
     // Upper bound, error
     fprintf(stderr, "invalid errnum: %d, string: %s\n",
             _DLB_ERROR_UPPER_BOUND, error_get_str(_DLB_ERROR_UPPER_BOUND));

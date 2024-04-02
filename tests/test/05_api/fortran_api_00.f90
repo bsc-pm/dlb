@@ -32,41 +32,41 @@ program test
     if (err /= DLB_SUCCESS) call abort
 
     if (dlb_disable() /= DLB_SUCCESS ) call abort
-    if (dlb_lend() /= DLB_ERR_DISBLD ) call abort
+    if (dlb_lend() /= DLB_ERR_NOLEWI ) call abort
     if (dlb_enable() /= DLB_SUCCESS ) call abort
-    if (dlb_setmaxparallelism(1) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_unsetmaxparallelism() /= DLB_ERR_NOPOL ) call abort
+    if (dlb_setmaxparallelism(1) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_unsetmaxparallelism() /= DLB_ERR_NOLEWI ) call abort
     if (dlb_setobserverrole(logical(.false.,c_bool)) /= DLB_SUCCESS ) call abort
 
     ! Lend
-    if (dlb_lend() /= DLB_ERR_NOPOL ) call abort
-    if (dlb_lendcpu(0) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_lendcpus(1) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_lendcpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_lend() /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_lendcpu(0) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_lendcpus(1) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_lendcpumask(process_mask) /= DLB_ERR_NOLEWI ) call abort
 
     ! Reclaim
-    if (dlb_reclaim() /= DLB_ERR_NOPOL ) call abort
-    if (dlb_reclaimcpu(0) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_reclaimcpus(1) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_reclaimcpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_reclaim() /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_reclaimcpu(0) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_reclaimcpus(1) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_reclaimcpumask(process_mask) /= DLB_ERR_NOLEWI ) call abort
 
     ! Acquire
-    if (dlb_acquirecpu(0) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_acquirecpus(1) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_acquirecpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_acquirecpusinmask(1, process_mask) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_acquirecpu(0) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_acquirecpus(1) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_acquirecpumask(process_mask) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_acquirecpusinmask(1, process_mask) /= DLB_ERR_NOLEWI ) call abort
 
     ! Borrow
-    if (dlb_borrow() /= DLB_ERR_NOPOL ) call abort
-    if (dlb_borrowcpu(1) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_borrowcpus(1) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_borrowcpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_borrowcpusinmask(1, process_mask) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_borrow() /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_borrowcpu(1) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_borrowcpus(1) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_borrowcpumask(process_mask) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_borrowcpusinmask(1, process_mask) /= DLB_ERR_NOLEWI ) call abort
 
     ! Return
-    if (dlb_return() /= DLB_ERR_NOPOL ) call abort
-    if (dlb_returncpu(0) /= DLB_ERR_NOPOL ) call abort
-    if (dlb_returncpumask(process_mask) /= DLB_ERR_NOPOL ) call abort
+    if (dlb_return() /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_returncpu(0) /= DLB_ERR_NOLEWI ) call abort
+    if (dlb_returncpumask(process_mask) /= DLB_ERR_NOLEWI ) call abort
 
     ! Barrier
     if (dlb_barrier() /= DLB_ERR_NOCOMP ) call abort

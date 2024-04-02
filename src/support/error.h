@@ -21,5 +21,6 @@
 #define ERROR_H
 
 const char* error_get_str(int errnum);
+void error_check_num_messages(void);
 
 #endif /* ERROR_H */

@@ -65,39 +65,39 @@ int main( int argc, char **argv ) {
 
     // Basic enable-disable test
     assert( DLB_Disable_sp(handler) == DLB_SUCCESS );
-    assert( DLB_Lend_sp(handler) == DLB_ERR_DISBLD );
+    assert( DLB_Lend_sp(handler) == DLB_ERR_NOLEWI );
     assert( DLB_Enable_sp(handler) == DLB_SUCCESS );
-    assert( DLB_SetMaxParallelism_sp(handler, 1) == DLB_ERR_NOPOL );
+    assert( DLB_SetMaxParallelism_sp(handler, 1) == DLB_ERR_NOLEWI );
 
     // Lend
-    assert( DLB_Lend_sp(handler) == DLB_ERR_NOPOL );
-    assert( DLB_LendCpu_sp(handler, 0) == DLB_ERR_NOPOL );
-    assert( DLB_LendCpus_sp(handler, 1) == DLB_ERR_NOPOL );
-    assert( DLB_LendCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Lend_sp(handler) == DLB_ERR_NOLEWI );
+    assert( DLB_LendCpu_sp(handler, 0) == DLB_ERR_NOLEWI );
+    assert( DLB_LendCpus_sp(handler, 1) == DLB_ERR_NOLEWI );
+    assert( DLB_LendCpuMask_sp(handler, &process_mask) == DLB_ERR_NOLEWI );
 
     // Reclaim
-    assert( DLB_Reclaim_sp(handler) == DLB_ERR_NOPOL );
-    assert( DLB_ReclaimCpu_sp(handler, 0) == DLB_ERR_NOPOL );
-    assert( DLB_ReclaimCpus_sp(handler, 1) == DLB_ERR_NOPOL );
-    assert( DLB_ReclaimCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Reclaim_sp(handler) == DLB_ERR_NOLEWI );
+    assert( DLB_ReclaimCpu_sp(handler, 0) == DLB_ERR_NOLEWI );
+    assert( DLB_ReclaimCpus_sp(handler, 1) == DLB_ERR_NOLEWI );
+    assert( DLB_ReclaimCpuMask_sp(handler, &process_mask) == DLB_ERR_NOLEWI );
 
     // Acquire
-    assert( DLB_AcquireCpu_sp(handler, 0) == DLB_ERR_NOPOL );
-    assert( DLB_AcquireCpus_sp(handler, 1) == DLB_ERR_NOPOL );
-    assert( DLB_AcquireCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
-    assert( DLB_AcquireCpusInMask_sp(handler, 1, &process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_AcquireCpu_sp(handler, 0) == DLB_ERR_NOLEWI );
+    assert( DLB_AcquireCpus_sp(handler, 1) == DLB_ERR_NOLEWI );
+    assert( DLB_AcquireCpuMask_sp(handler, &process_mask) == DLB_ERR_NOLEWI );
+    assert( DLB_AcquireCpusInMask_sp(handler, 1, &process_mask) == DLB_ERR_NOLEWI );
 
     // Borrow
-    assert( DLB_Borrow_sp(handler) == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpu_sp(handler, 0) == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpus_sp(handler, 1) == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
-    assert( DLB_BorrowCpusInMask_sp(handler, 1, &process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Borrow_sp(handler) == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpu_sp(handler, 0) == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpus_sp(handler, 1) == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpuMask_sp(handler, &process_mask) == DLB_ERR_NOLEWI );
+    assert( DLB_BorrowCpusInMask_sp(handler, 1, &process_mask) == DLB_ERR_NOLEWI );
 
     // Return
-    assert( DLB_Return_sp(handler) == DLB_ERR_NOPOL );
-    assert( DLB_ReturnCpu_sp(handler, 0) == DLB_ERR_NOPOL );
-    assert( DLB_ReturnCpuMask_sp(handler, &process_mask) == DLB_ERR_NOPOL );
+    assert( DLB_Return_sp(handler) == DLB_ERR_NOLEWI );
+    assert( DLB_ReturnCpu_sp(handler, 0) == DLB_ERR_NOLEWI );
+    assert( DLB_ReturnCpuMask_sp(handler, &process_mask) == DLB_ERR_NOLEWI );
 
     // Misc
     assert( DLB_PollDROM_sp(handler, NULL, NULL) == DLB_ERR_NOCOMP );
