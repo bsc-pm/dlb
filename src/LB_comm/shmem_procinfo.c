@@ -89,7 +89,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
 static pinfo_t *my_pinfo = NULL;
 
-static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, 
+static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync,
         bool return_stolen, cpu_set_t *free_cpu_mask);
 static void close_shmem(void);
 
@@ -1496,7 +1496,7 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
  *  - If the CPU is SET, used and not owned -> steal
  *  - If the CPU is UNSET and owned by the process -> unregister
  */
-static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync, 
+static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync,
         bool return_stolen, cpu_set_t *free_cpu_mask) {
     // this function cannot be used if allowing CPU sharing
     if (shdata->flags.allow_cpu_sharing) return DLB_ERR_NOCOMP;
@@ -1533,8 +1533,9 @@ static int set_new_mask(pinfo_t *process, const cpu_set_t *mask, bool sync,
     error = error ? error : steal_mask(process, &cpus_to_steal, sync, /* dry_run */ false);
     error = error ? error : register_mask(process, &cpus_to_acquire);
     error = error ? error : unregister_mask(process, &cpus_to_free, return_stolen);
-    if (error == DLB_SUCCESS && free_cpu_mask)
+    if (error == DLB_SUCCESS && free_cpu_mask != NULL) {
         memcpy(free_cpu_mask, &cpus_to_free, sizeof(cpu_set_t));
+    }
 
     return error;
 }

@@ -126,7 +126,7 @@ int main( int argc, char **argv ) {
 
             // check the free mask
             assert( CPU_COUNT(&free_mask) == 1 );
-            assert( CPU_ISSET(1, &free_mask) && !CPU_ISSET(0, &free_mask) ); 
+            assert( CPU_ISSET(1, &free_mask) && !CPU_ISSET(0, &free_mask) );
 
             assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
             assert( CPU_COUNT(&mask) == 1 && CPU_ISSET(0, &mask) );
