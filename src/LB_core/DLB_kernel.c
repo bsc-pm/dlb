@@ -44,6 +44,7 @@
 #include "LB_MPI/process_MPI.h"
 #endif
 
+#include <limits.h>
 #include <sched.h>
 #include <string.h>
 
@@ -719,7 +720,8 @@ int poll_drom_update(const subprocess_descriptor_t *spd) {
 }
 
 int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
-    int error = shmem_procinfo__setprocessmask(pid, mask, flags);
+    cpu_set_t free_cpu_mask;
+    int error = shmem_procinfo__setprocessmask(pid, mask, flags, &free_cpu_mask);
     if (error == DLB_SUCCESS
             && thread_spd->dlb_initialized
             && (pid == 0 || pid == thread_spd->id)
@@ -734,6 +736,41 @@ int drom_setprocessmask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flag
         }
         set_process_mask(&thread_spd->pm, mask);
     }
+    if (error == DLB_SUCCESS && (flags & DLB_FREE_CPUS_SLURM)) {
+        // Slurm freeing
+        char *mask_str = mu_parse_to_slurm_format(&free_cpu_mask);
+        if (mask_str == NULL) {
+            warning("error parsing mask %s to Slurm format", mu_to_str(&free_cpu_mask));
+            return DLB_ERR_UNKNOWN;
+        }
+        if (!secure_getenv("SLURM_JOBID")) {
+            warning("SLURM_JOBID is mandatory");
+            return DLB_ERR_UNKNOWN;
+        }
+        char hostname[HOST_NAME_MAX];
+        gethostname(hostname, HOST_NAME_MAX);
+        char *args[5];
+        asprintf(&args[0], "scontrol");
+        asprintf(&args[1], "update");
+        asprintf(&args[2], "jobid=%s", secure_getenv("SLURM_JOBID"));
+        asprintf(&args[3], "dealloc=%s:%s", hostname, mask_str);
+        args[4] = NULL;
+
+        int res_pid = fork();
+        if (res_pid < 0) {
+            warning("fork error while invoking scontrol");
+            return DLB_ERR_UNKNOWN;
+        } else if (res_pid == 0) {
+            verbose(VB_DROM, "%s %s %s %s", args[0], args[1], args[2], args[3]);
+            execvp("scontrol", args);
+        }
+
+        for (int i = 0; i < 5; ++i) {
+            free(args[i]);
+        }
+        free(mask_str);
+    }
+
     return error;
 }
 

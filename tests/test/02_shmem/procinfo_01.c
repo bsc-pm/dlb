@@ -121,13 +121,19 @@ int main( int argc, char **argv ) {
 
             // remove CPU 1 from subprocess 1
             mu_parse_mask("0", &mask);
-            assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+            cpu_set_t free_mask;
+            assert( shmem_procinfo__setprocessmask(111, &mask, flags, &free_mask) == DLB_SUCCESS );
+
+            // check the free mask
+            assert( CPU_COUNT(&free_mask) == 1 );
+            assert( CPU_ISSET(1, &free_mask) && !CPU_ISSET(0, &free_mask) );
+
             assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
             assert( CPU_COUNT(&mask) == 1 && CPU_ISSET(0, &mask) );
 
             // removing CPU 0 from subprocess 1 is also allowed
             CPU_ZERO(&mask);
-            assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+            assert( shmem_procinfo__setprocessmask(111, &mask, flags, NULL) == DLB_SUCCESS );
             assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
             assert( CPU_COUNT(&mask) == 0 );
 
@@ -135,7 +141,7 @@ int main( int argc, char **argv ) {
             {
                 // set mask 0-2 to subprocess 1
                 mu_parse_mask("0-2", &mask);
-                assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &mask, flags, NULL) == DLB_SUCCESS );
                 // check that subprocess 2 has now only CPU 3
                 assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
                 assert( CPU_COUNT(&mask) == 1 && CPU_ISSET(3, &mask) );
@@ -145,7 +151,7 @@ int main( int argc, char **argv ) {
                         && CPU_ISSET(0, &mask) && CPU_ISSET(1, &mask) && CPU_ISSET(2, &mask) );
 
                 // set original mask to subprocess 1 (WITHOUT return_stolen)
-                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags, NULL) == DLB_SUCCESS );
                 // check that subprocess 2 has not been updated
                 assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_NOUPDT );
                 // check that subprocess 1 has CPUs 0-1
@@ -167,7 +173,7 @@ int main( int argc, char **argv ) {
             {
                 // set mask 0-2 to subprocess 1 (again)
                 mu_parse_mask("0-2", &mask);
-                assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &mask, flags, NULL) == DLB_SUCCESS );
                 // check that subprocess 2 has now only CPU 3
                 assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
                 assert( CPU_COUNT(&mask) == 1 && CPU_ISSET(3, &mask) );
@@ -178,7 +184,7 @@ int main( int argc, char **argv ) {
 
                 // set original mask to subprocess 1 (WITH return_stolen)
                 flags |= DLB_RETURN_STOLEN;
-                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags, NULL) == DLB_SUCCESS );
                 // check that subprocess 2 has CPUs 2-3
                 assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
                 assert( CPU_COUNT(&mask) == 2
@@ -196,7 +202,7 @@ int main( int argc, char **argv ) {
             {
                 // subprocess 1 gets all CPUs
                 mu_parse_mask("0-3", &mask);
-                assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &mask, flags, NULL) == DLB_SUCCESS );
                 // check that subprocess 2 has empty mask
                 assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
                 assert( CPU_COUNT(&mask) == 0 );
@@ -208,7 +214,7 @@ int main( int argc, char **argv ) {
 
                 // set original mask to subprocess 1 (WITH return_stolen)
                 flags |= DLB_RETURN_STOLEN;
-                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags, NULL) == DLB_SUCCESS );
                 // check that subprocess 2 has CPUs 2-3
                 assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
                 assert( CPU_COUNT(&mask) == 2
@@ -228,11 +234,11 @@ int main( int argc, char **argv ) {
 
                 // subprocess 1 steals one CPU from suprocess 2
                 mu_parse_mask("0-1,3", &mask);
-                assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &mask, flags, NULL) == DLB_SUCCESS );
 
                 // subprocess 2 changes mask to "2" before resolving previous change
                 mu_parse_mask("2", &mask);
-                assert( shmem_procinfo__setprocessmask(222, &mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(222, &mask, flags, NULL) == DLB_SUCCESS );
 
                 // check that subprocess 1 has CPUs 0-3
                 assert( shmem_procinfo__polldrom(111, NULL, &mask) == DLB_SUCCESS );
@@ -250,7 +256,7 @@ int main( int argc, char **argv ) {
 
                 // set original mask to subprocess 1 (WITH return_stolen)
                 flags |= DLB_RETURN_STOLEN;
-                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags) == DLB_SUCCESS );
+                assert( shmem_procinfo__setprocessmask(111, &p1_mask, flags, NULL) == DLB_SUCCESS );
                 // check that subprocess 2 has CPUs 2-3
                 assert( shmem_procinfo__polldrom(222, NULL, &mask) == DLB_SUCCESS );
                 assert( CPU_COUNT(&mask) == 2
@@ -277,7 +283,7 @@ int main( int argc, char **argv ) {
         dlb_drom_flags_t flags = 0;
         cpu_set_t mask;
         mu_parse_mask("0", &mask);
-        assert( shmem_procinfo__setprocessmask(111, &mask, flags) == DLB_ERR_NOCOMP );
+        assert( shmem_procinfo__setprocessmask(111, &mask, flags, NULL) == DLB_ERR_NOCOMP );
 
         assert( shmem_procinfo__finalize(111, false, SHMEM_KEY) == DLB_SUCCESS );
     }

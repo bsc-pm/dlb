@@ -621,6 +621,30 @@ void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen) {
     *b = '\0';
 }
 
+char * mu_parse_to_slurm_format(const cpu_set_t *mask) {
+    int sys_size = mu_get_system_size();
+    char *str = malloc((sys_size >> 2) + 3);
+    if (str < 0)
+        return NULL;
+    int i;
+    unsigned int offset = 2;
+    unsigned long long val = 0;
+    const int threshold = 4;
+    sprintf(str, "0x");
+    for (i=sys_size-1; i>=0; --i) {
+        if(CPU_ISSET(i, mask)) {
+            val |= 1 << (i%threshold);
+        }
+        if (i > 0 && i%threshold == 0) {
+            sprintf(str+offset, "%llx", val);
+            val = 0;
+            offset++;
+        }
+    }
+    sprintf(str+offset, "%llx", val);
+    return str;
+}
+
 bool equivalent_masks(const char *str1, const char *str2) {
     cpu_set_t mask1, mask2;
     mu_parse_mask(str1, &mask1);

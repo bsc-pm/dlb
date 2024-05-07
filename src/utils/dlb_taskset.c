@@ -161,6 +161,7 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
                 "  -r, --remove <cpu_list>  remove CPU ownership of any DLB process according to cpu_list\n"
                 "  -p, --pid                operate only on existing given pid\n"
                 "  -b, --borrow             stolen CPUs are recovered after process finalization\n"
+                "  -f, --free-to-slurm      make Slurm free CPUs\n"
                 "  -h, --help               print this help\n"
                 "\n"
                 "<cpu_list> argument accepts the following formats:\n"
@@ -172,9 +173,10 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
-static void set_affinity(pid_t pid, const cpu_set_t *new_mask, bool borrow) {
+static void set_affinity(pid_t pid, const cpu_set_t *new_mask, bool borrow, bool free_slurm) {
     DLB_DROM_Attach();
     dlb_drom_flags_t flags = borrow ? DLB_RETURN_STOLEN : 0;
+    flags = free_slurm ? flags | DLB_FREE_CPUS_SLURM : flags;
     int error = DLB_DROM_SetProcessMask(pid, new_mask, flags);
     dlb_check(error, pid, __FUNCTION__);
     DLB_DROM_Detach();
@@ -210,13 +212,14 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
     }
 }
 
-static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
+static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove, bool free_slurm) {
     int i, error;
 
     // Get current PID's mask
     cpu_set_t pid_mask;
     error = DLB_DROM_GetProcessMask(pid, &pid_mask, 0);
     dlb_check(error, pid, __FUNCTION__);
+    dlb_drom_flags_t flags = free_slurm ? DLB_FREE_CPUS_SLURM : 0;
 
     // Remove cpus from the PID's mask
     bool mask_dirty = false;
@@ -229,17 +232,17 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove) {
 
     // Apply final mask
     if (mask_dirty) {
-        error = DLB_DROM_SetProcessMask(pid, &pid_mask, 0);
+        error = DLB_DROM_SetProcessMask(pid, &pid_mask, flags);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's affinity set to: %s\n", pid, mu_to_str(&pid_mask));
     }
 }
 
-static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
+static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove, bool free_slurm) {
     DLB_DROM_Attach();
 
     if (pid) {
-        remove_affinity_of_one(pid, cpus_to_remove);
+        remove_affinity_of_one(pid, cpus_to_remove, free_slurm);
     }
     else {
         // Get PID list from DLB
@@ -250,7 +253,7 @@ static void remove_affinity(pid_t pid, const cpu_set_t *cpus_to_remove) {
         // Iterate pidlist
         int i;
         for (i=0; i<nelems; ++i) {
-            remove_affinity_of_one(pidlist[i], cpus_to_remove);
+            remove_affinity_of_one(pidlist[i], cpus_to_remove, free_slurm);
         }
         free(pidlist);
     }
@@ -302,6 +305,7 @@ int main(int argc, char *argv[]) {
     bool do_getpid = false;
     bool do_execute = false;
     bool borrow = false;
+    bool free_slurm = false;
 
     dlb_printshmem_flags_t print_flags = DLB_COLOR_AUTO;
     int list_columns = 0;
@@ -327,12 +331,13 @@ int main(int argc, char *argv[]) {
         {"getpid",   required_argument, NULL, 'g'},
         {"pid",      required_argument, NULL, 'p'},
         {"borrow",   no_argument,       NULL, 'b'},
+        {"free-to-slurm",   no_argument,NULL, 'f'},
         {"help",     no_argument,       NULL, 'h'},
         {"version",  no_argument,       NULL, 'v'},
         {0,          0,                 NULL, 0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "+l::g:s:c:r:g:p:bhv", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+l::g:s:c:r:g:p:bfhv", long_options, NULL)) != -1) {
         switch (opt) {
             case COLOR_OPTION:
                 if (optarg && strcasecmp (optarg, "no") == 0) {
@@ -367,6 +372,9 @@ int main(int argc, char *argv[]) {
             case 'b':
                 borrow = true;
                 break;
+            case 'f':
+                free_slurm = true;
+                break;
             case 'h':
                 usage(argv[0], stdout);
                 break;
@@ -389,7 +397,7 @@ int main(int argc, char *argv[]) {
 
     // Actions
     if (do_set && pid) {
-        set_affinity(pid, &cpu_list, borrow);
+        set_affinity(pid, &cpu_list, borrow, free_slurm);
     }
     else if (do_execute) {
         argv += optind;
@@ -397,7 +405,7 @@ int main(int argc, char *argv[]) {
         execute(argv, &cpu_list, borrow);
     }
     else if (do_remove) {
-        remove_affinity(pid, &cpu_list);
+        remove_affinity(pid, &cpu_list, free_slurm);
     }
     else if (do_getpid) {
         getpidof(process_pseudo_id);

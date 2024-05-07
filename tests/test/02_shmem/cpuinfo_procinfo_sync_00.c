@@ -102,7 +102,7 @@ int main( int argc, char **argv ) {
         if (new_pid == 0) {
             cpu_set_t new_mask;
             mu_parse_mask("0,1", &new_mask);
-            assert( shmem_procinfo__setprocessmask(pid, &new_mask, DLB_SYNC_QUERY)
+            assert( shmem_procinfo__setprocessmask(pid, &new_mask, DLB_SYNC_QUERY, NULL)
                     == DLB_SUCCESS );
         }
 
