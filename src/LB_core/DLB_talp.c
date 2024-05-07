@@ -123,6 +123,57 @@ static int cmp_regions(const void *region1, const void *region2) {
 /*    Init / Finalize                                                            */
 /*********************************************************************************/
 
+#ifdef PAPI_LIB
+static inline int init_papi(void) {
+    /* Library init */
+    if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
+        warning("PAPI Library versions differ");
+        return -1;
+    }
+
+    /* Activate thread tracing */
+    int error = PAPI_thread_init(pthread_self);
+    if (error != PAPI_OK) {
+        warning("PAPI Error during thread initialization. %d: %s",
+                error, PAPI_strerror(error));
+        return -1;
+    }
+
+    error = PAPI_register_thread();
+    if (error != PAPI_OK) {
+        warning("PAPI Error during thread registration. %d: %s",
+                error, PAPI_strerror(error));
+        return -1;
+    }
+
+    /* Eventset creation */
+    error = PAPI_create_eventset(&EventSet);
+    if (error != PAPI_OK) {
+        warning("PAPI Error during eventset creation. %d: %s",
+                error, PAPI_strerror(error));
+        return -1;
+    }
+
+    int Events[2] = {PAPI_TOT_CYC, PAPI_TOT_INS};
+    error = PAPI_add_events(EventSet, Events, 2);
+    if (error != PAPI_OK) {
+        warning("PAPI Error adding events. %d: %s",
+                error, PAPI_strerror(error));
+        return -1;
+    }
+
+    /* Start tracing  */
+    error = PAPI_start(EventSet);
+    if (error != PAPI_OK) {
+        warning("PAPI Error during tracing initialization: %d: %s",
+                error, PAPI_strerror(error));
+        return -1;
+    }
+
+    return 0;
+}
+#endif
+
 void talp_init(subprocess_descriptor_t *spd) {
     ensure(!spd->talp_info, "TALP already initialized");
     ensure(!thread_is_observer, "An observer thread cannot call talp_init");
@@ -149,43 +200,9 @@ void talp_init(subprocess_descriptor_t *spd) {
     /* Initialize and start running PAPI */
     if (talp_info->papi) {
 #ifdef PAPI_LIB
-        /* Library init */
-        if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
-            warning("PAPI Library versions differ");
-        }
-
-        /* Activate thread tracing */
-        int error = PAPI_thread_init(pthread_self);
-        if (error != PAPI_OK) {
-            warning("PAPI Error during thread initialization. %d: %s",
-                    error, PAPI_strerror(error));
-        }
-
-        error = PAPI_register_thread();
-        if (error != PAPI_OK) {
-            warning("PAPI Error during thread registration. %d: %s",
-                    error, PAPI_strerror(error));
-        }
-
-        /* Eventset creation */
-        error = PAPI_create_eventset(&EventSet);
-        if (error != PAPI_OK) {
-            warning("PAPI Error during eventset creation. %d: %s",
-                    error, PAPI_strerror(error));
-        }
-
-        int Events[2] = {PAPI_TOT_CYC, PAPI_TOT_INS};
-        error = PAPI_add_events(EventSet, Events, 2);
-        if (error != PAPI_OK) {
-            warning("PAPI Error adding events. %d: %s",
-                    error, PAPI_strerror(error));
-        }
-
-        /* Start tracing  */
-        error = PAPI_start(EventSet);
-        if (error != PAPI_OK) {
-            warning("PAPI Error during tracing initialization: %d: %s",
-                    error, PAPI_strerror(error));
+        if (init_papi() != 0) {
+            warning("PAPI initialization has failed, disabling option.");
+            talp_info->papi = false;
         }
 #else
         warning("DLB has not been configured with PAPI support, disabling option.");

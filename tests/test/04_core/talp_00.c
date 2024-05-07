@@ -86,10 +86,10 @@ int main(int argc, char *argv[]) {
         assert( mpi_monitor->accumulated_computation_time > 0 );
         assert( mpi_monitor->accumulated_computation_time > monitor->accumulated_computation_time );
         assert( mpi_monitor->elapsed_time > monitor->elapsed_time );
-#ifdef PAPI_LIB
-        assert( mpi_monitor->accumulated_instructions > monitor->accumulated_instructions );
-        assert( mpi_monitor->accumulated_cycles > monitor->accumulated_cycles );
-#endif
+        if (talp_info->papi) {
+            assert( mpi_monitor->accumulated_instructions > monitor->accumulated_instructions );
+            assert( mpi_monitor->accumulated_cycles > monitor->accumulated_cycles );
+        }
 
         /* Test custom monitor values */
         assert( monitor->num_measurements == 1 );
@@ -99,10 +99,10 @@ int main(int argc, char *argv[]) {
         assert( monitor->num_resets == 1 );
         assert( monitor->accumulated_MPI_time == 0 );
         assert( monitor->accumulated_computation_time == 0 );
-#ifdef PAPI_LIB
-        assert( monitor->accumulated_instructions == 0 );
-        assert( monitor->accumulated_cycles == 0 );
-#endif
+        if (talp_info->papi) {
+            assert( monitor->accumulated_instructions == 0 );
+            assert( monitor->accumulated_cycles == 0 );
+        }
     }
 
     /* Test that reset/start/stop/report may also be invoked with the implicit DLB_MPI_REGION */
