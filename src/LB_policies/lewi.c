@@ -45,7 +45,7 @@ static void setThreads_Lend_light(const pm_interface_t *pm, int numThreads);
 int lewi_Init(subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "LeWI Init");
 
-    default_cpus = CPU_COUNT(&spd->process_mask);
+    default_cpus = spd->lewi_ncpus;
 
     setThreads_Lend_light(&spd->pm, default_cpus);
 

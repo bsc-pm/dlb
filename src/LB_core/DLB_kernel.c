@@ -79,11 +79,12 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     // Infer LeWI mode
     spd->lb_policy =
-        !spd->options.lewi          ? POLICY_NONE :
-        spd->options.ompt           ? POLICY_LEWI_MASK :
-        spd->options.preinit_pid    ? POLICY_LEWI_MASK :
-        mask                        ? POLICY_LEWI_MASK :
-                                      POLICY_LEWI;
+        !spd->options.lewi              ? POLICY_NONE :
+        spd->options.ompt               ? POLICY_LEWI_MASK :
+        spd->options.preinit_pid        ? POLICY_LEWI_MASK :
+        mask                            ? POLICY_LEWI_MASK :
+        spd->options.mode == MODE_ASYNC ? POLICY_LEWI_ASYNC :
+                                          POLICY_LEWI;
 
     // Check if real process mask is needed and possible incompatibilities
     // (Basically, always except if classic LeWI)
@@ -92,7 +93,8 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
             || spd->options.drom
             || spd->options.ompt
             || spd->options.preinit_pid);
-    if (mask_is_needed && spd->lb_policy == POLICY_LEWI) {
+    if (mask_is_needed &&
+            (spd->lb_policy == POLICY_LEWI || spd->lb_policy == POLICY_LEWI_ASYNC)) {
         warning("Classic LeWI support with no cpuset binding is not compatible"
                 " with newer DLB modules. DLB_Init cannot continue.");
         return DLB_ERR_NOCOMP;
@@ -104,15 +106,16 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     if (mask) {
         // Preferred case, mask is provided by the user
         memcpy(&spd->process_mask, mask, sizeof(cpu_set_t));
-    } else if (mask_is_needed || spd->options.talp) {
+    } else {
         // Best effort querying the system
+        // (it may be late if DLB_Init is called after other RT sets this thread's affinity)
         sched_getaffinity(0, sizeof(cpu_set_t), &spd->process_mask);
-    } else if (spd->lb_policy == POLICY_LEWI) {
-        // If LeWI, we don't want the process mask, just a mask of size 'ncpus'
-        if (ncpus <= 0) ncpus = pm_get_num_threads();
-        CPU_ZERO(&spd->process_mask);
-        int i;
-        for (i=0; i<ncpus; ++i) CPU_SET(i, &spd->process_mask);
+    }
+
+    // ncpus is only used for classic LeWI
+    if (spd->lb_policy == POLICY_LEWI
+            || spd->lb_policy == POLICY_LEWI_ASYNC) {
+        spd->lewi_ncpus = ncpus > 0 ? ncpus : pm_get_num_threads();
     }
 
     // Initialize shared memories
@@ -135,7 +138,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
             error = shmem_procinfo__init_with_cpu_sharing(spd->id, spd->options.preinit_pid,
                     &spd->process_mask, spd->options.shm_key);
         }
-
 
         if (error != DLB_SUCCESS) return error;
 

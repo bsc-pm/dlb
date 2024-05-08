@@ -41,12 +41,14 @@ typedef enum HelperAction {
     ACTION_ENABLE_CPU,
     ACTION_DISABLE_CPU,
     ACTION_SET_MASK,
+    ACTION_SET_NUM_CPUS,
     ACTION_JOIN
 } action_t;
 
 typedef struct Message {
     action_t action;
     int cpuid;
+    int ncpus;
 } message_t;
 
 typedef struct {
@@ -70,7 +72,7 @@ typedef struct {
     helper_t helpers[0];
 } shdata_t;
 
-enum { SHMEM_ASYNC_VERSION = 2 };
+enum { SHMEM_ASYNC_VERSION = 3 };
 
 static int max_helpers = 0;
 static shdata_t *shdata = NULL;
@@ -160,6 +162,9 @@ static void* thread_start(void *arg) {
                 error = disable_cpu(pm, message.cpuid);
                 break;
             case ACTION_SET_MASK:
+                break;
+            case ACTION_SET_NUM_CPUS:
+                error = update_threads(pm, message.ncpus);
                 break;
             case ACTION_JOIN:
                 join = true;
@@ -313,9 +318,28 @@ void shmem_async_disable_cpu(pid_t pid, int cpuid) {
     }
 }
 
+void shmem_async_set_num_cpus(pid_t pid, int ncpus) {
+    verbose(VB_ASYNC, "Enqueuing petition for pid: %d, set num CPUs %d", pid, ncpus);
+    helper_t *helper = get_helper(pid);
+    if (helper) {
+        message_t message = { .action = ACTION_SET_NUM_CPUS, .ncpus = ncpus };
+        enqueue_message(helper, &message);
+    }
+}
+
 int shmem_async__version(void) {
     return SHMEM_ASYNC_VERSION;
 }
 size_t shmem_async__size(void) {
     return sizeof(shdata_t) + sizeof(helper_t)*mu_get_system_size();
+}
+
+/* Only for testing purposes. Block current thread until helper thread
+ * with the given pid has finished its pending requests */
+void shmem_async_wait_for_completion(pid_t pid) {
+    helper_t *helper = get_helper(pid);
+    while (helper->q_head != helper->q_tail) {
+        usleep(1000);
+        __sync_synchronize();
+    }
 }

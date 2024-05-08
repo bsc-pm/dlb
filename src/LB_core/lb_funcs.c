@@ -19,6 +19,7 @@
 
 #include "LB_core/lb_funcs.h"
 #include "LB_policies/lewi.h"
+#include "LB_policies/lewi_async.h"
 #include "LB_policies/lewi_mask.h"
 #include "apis/dlb_errors.h"
 
@@ -84,6 +85,20 @@ void set_lb_funcs(balance_policy_t *lb_funcs, policy_t policy) {
             lb_funcs->reclaim                = lewi_Reclaim;
             lb_funcs->borrow                 = lewi_Borrow;
             lb_funcs->borrow_cpus            = lewi_BorrowCpus;
+            break;
+        case POLICY_LEWI_ASYNC:
+            lb_funcs->init                   = lewi_async_Init;
+            lb_funcs->finalize               = lewi_async_Finalize;
+            lb_funcs->enable                 = lewi_async_Enable;
+            lb_funcs->disable                = lewi_async_Disable;
+            lb_funcs->into_blocking_call     = lewi_async_IntoBlockingCall;
+            lb_funcs->out_of_blocking_call   = lewi_async_OutOfBlockingCall;
+            lb_funcs->lend                   = lewi_async_Lend;
+            lb_funcs->lend_cpus              = lewi_async_LendCpus;
+            lb_funcs->reclaim                = lewi_async_Reclaim;
+            lb_funcs->acquire_cpus           = lewi_async_AcquireCpus;
+            lb_funcs->borrow                 = lewi_async_Borrow;
+            lb_funcs->borrow_cpus            = lewi_async_BorrowCpus;
             break;
         case POLICY_LEWI_MASK:
             lb_funcs->init                   = lewi_mask_Init;

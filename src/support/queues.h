@@ -24,6 +24,34 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+
+/*** queue_lewi_reqs_t ***********************************************************/
+/* queue_lewi_reqs_t is a packed set of pairs (<pid>,howmany), where <pid> is
+ * unique key; 'head' points to the next empty position and is always strictly
+ * less than QUEUE_LEWI_REQS_SIZE */
+
+enum { QUEUE_LEWI_REQS_SIZE = 256 };
+
+typedef struct {
+    pid_t        pid;
+    unsigned int howmany;
+} lewi_request_t;
+
+typedef struct {
+    lewi_request_t  queue[QUEUE_LEWI_REQS_SIZE];
+    unsigned int    head;
+} queue_lewi_reqs_t;
+
+void queue_lewi_reqs_init(queue_lewi_reqs_t *queue);
+unsigned int queue_lewi_reqs_size(const queue_lewi_reqs_t *queue);
+unsigned int queue_lewi_reqs_remove(queue_lewi_reqs_t *queue, pid_t pid);
+int queue_lewi_reqs_push(queue_lewi_reqs_t *queue, pid_t pid,
+        unsigned int howmany);
+unsigned int queue_lewi_reqs_pop_ncpus(queue_lewi_reqs_t *queue, unsigned int ncpus,
+        lewi_request_t *requests, unsigned int *nreqs, unsigned int maxreqs);
+unsigned int queue_lewi_reqs_get(queue_lewi_reqs_t *queue, pid_t pid);
+
+
 /*** queue_proc_reqs_t ***********************************************************/
 enum { QUEUE_PROC_REQS_SIZE = 4096 };
 

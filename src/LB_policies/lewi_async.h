@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -16,44 +16,25 @@
 /*  You should have received a copy of the GNU Lesser General Public License     */
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
+#ifndef LEWI_ASYNC_H
+#define LEWI_ASYNC_H
 
-#ifndef SPD_H
-#define SPD_H
+#include "LB_core/spd.h"
 
-#include "LB_core/lb_funcs.h"
+int lewi_async_Init(subprocess_descriptor_t *spd);
+int lewi_async_Finalize(subprocess_descriptor_t *spd);
 
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+int lewi_async_Enable(const subprocess_descriptor_t *spd);
+int lewi_async_Disable(const subprocess_descriptor_t *spd);
 
-#include <sys/types.h>
+int lewi_async_IntoBlockingCall(const subprocess_descriptor_t *spd);
+int lewi_async_OutOfBlockingCall(const subprocess_descriptor_t *spd);
 
-/* Sub-process Descriptor */
+int lewi_async_Lend(const subprocess_descriptor_t *spd);
+int lewi_async_LendCpus(const subprocess_descriptor_t *spd, int ncpus);
+int lewi_async_Reclaim(const subprocess_descriptor_t *spd);
+int lewi_async_AcquireCpus(const subprocess_descriptor_t *spd, int ncpus);
+int lewi_async_Borrow(const subprocess_descriptor_t *spd);
+int lewi_async_BorrowCpus(const subprocess_descriptor_t *spd, int ncpus);
 
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_preinitialized;
-    bool lewi_enabled;
-    cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    unsigned int lewi_ncpus;
-    void *lewi_info;
-    void *talp_info;
-    void *barrier_info;
-} subprocess_descriptor_t;
-
-extern __thread subprocess_descriptor_t *thread_spd;
-
-void spd_enter_dlb(subprocess_descriptor_t *spd);
-void spd_register(subprocess_descriptor_t *spd);
-void spd_unregister(const subprocess_descriptor_t *spd);
-void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
-pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
-const subprocess_descriptor_t** spd_get_spds(void);
-
-#endif /* SPD_H */
+#endif /* LEWI_ASYNC_H */

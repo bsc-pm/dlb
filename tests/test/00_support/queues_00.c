@@ -42,6 +42,143 @@ int main(int argc, char *argv[]) {
     mu_init();
     mu_testing_set_sys_size(SYS_SIZE);
 
+    /* queue_lewi_reqs_t */
+    {
+        unsigned int howmany;
+        queue_lewi_reqs_t queue;
+        queue_lewi_reqs_init(&queue);
+
+        /* Fill queue with requests from different pids */
+        howmany = 3;
+        for (i=0; i<QUEUE_LEWI_REQS_SIZE-1; ++i) {
+            assert( queue_lewi_reqs_size(&queue) == i );
+            assert( queue_lewi_reqs_push(&queue, i+1, howmany) == DLB_SUCCESS );
+        }
+        assert( queue_lewi_reqs_size(&queue) == QUEUE_LEWI_REQS_SIZE-1 );
+        assert( queue_lewi_reqs_push(&queue, i+1, howmany) == DLB_ERR_REQST );
+
+        /* Get values */
+        for (i=0; i<QUEUE_LEWI_REQS_SIZE-1; ++i) {
+            assert( queue_lewi_reqs_get(&queue, i+1) == howmany );
+        }
+
+        /* Remove non-existing PID */
+        assert( queue_lewi_reqs_remove(&queue, i*2) == 0 );
+        assert( queue_lewi_reqs_size(&queue) == QUEUE_LEWI_REQS_SIZE-1 );
+
+        /* Empty queue (forwards until N/2) */
+        unsigned int queue_size = QUEUE_LEWI_REQS_SIZE-1;
+        for (i=0; i<QUEUE_LEWI_REQS_SIZE/2; ++i) {
+            assert( queue_lewi_reqs_remove(&queue, i+1) == howmany );
+            assert( queue_lewi_reqs_size(&queue) == --queue_size );
+        }
+
+        /* Empty queue (backwards until N/2) */
+        for (i=QUEUE_LEWI_REQS_SIZE-2; i>=QUEUE_LEWI_REQS_SIZE/2; --i) {
+            assert( queue_lewi_reqs_remove(&queue, i+1) == howmany );
+            assert( queue_lewi_reqs_size(&queue) == --queue_size );
+        }
+
+        assert( queue_size == 0 );
+        assert( queue_lewi_reqs_size(&queue) == 0 );
+
+        /* Remove non-existing PID */
+        assert( queue_lewi_reqs_remove(&queue, i*2) == 0 );
+        assert( queue_lewi_reqs_size(&queue) == 0 );
+
+        /* PID 0 is not valid */
+        assert( queue_lewi_reqs_push(&queue, 0, 1) == DLB_NOUPDT );
+        assert( queue_lewi_reqs_size(&queue) == 0 );
+        assert( queue_lewi_reqs_remove(&queue, 0) == 0 );
+        assert( queue_lewi_reqs_size(&queue) == 0 );
+
+        /* Pushing en existing entry updates the value, or removes if 0 */
+        assert( queue_lewi_reqs_push(&queue, 111, 4 ) == DLB_SUCCESS );
+        assert( queue_lewi_reqs_size(&queue) == 1 );
+        assert( queue_lewi_reqs_push(&queue, 111, 2 ) == DLB_SUCCESS );
+        assert( queue_lewi_reqs_size(&queue) == 1 );
+        assert( queue_lewi_reqs_push(&queue, 111, 0 ) == DLB_SUCCESS );
+        assert( queue_lewi_reqs_size(&queue) == 0 );
+
+        /* Push multiple requests from the same pid, size should be stable */
+        pid = 12345;
+        howmany = 5;
+        for (i=0; i<QUEUE_LEWI_REQS_SIZE*2; ++i) {
+            assert( queue_lewi_reqs_push(&queue, pid, howmany) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_size(&queue) == 1 );
+        }
+        assert( queue_lewi_reqs_get(&queue, pid) == howmany*QUEUE_LEWI_REQS_SIZE*2 );
+        assert( queue_lewi_reqs_size(&queue) == 1 );
+        assert( queue_lewi_reqs_remove(&queue, pid) == howmany*QUEUE_LEWI_REQS_SIZE*2 );
+        assert( queue_lewi_reqs_size(&queue) == 0 );
+
+        /* Push request and ask more than it's in the queue */
+        {
+            lewi_request_t request;
+            unsigned int num_requests;
+            assert( queue_lewi_reqs_push(&queue, 111, 5) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_pop_ncpus(&queue, 42, &request,
+                        &num_requests, 1) == 42-5 );
+            assert( num_requests == 1 );
+            assert( request.pid == 111 && request.howmany == 5);
+        }
+
+        /* Push requests with ncpus '3', '5', '1' and pop 6. After that queue should
+         * contain [1, 2], and output requests should contain [2, 3, 1] */
+        {
+            enum { max_requests = 3 };
+            lewi_request_t requests[max_requests];
+            unsigned int num_requests;
+            assert( queue_lewi_reqs_push(&queue, 111, 3) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_push(&queue, 222, 5) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_push(&queue, 333, 1) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_pop_ncpus(&queue, 6, requests, &num_requests,
+                        max_requests) == 0 );
+            /* Output order is messed but it's not relevant */
+            assert( num_requests == 3 );
+            assert( requests[0].pid == 333 && requests[0].howmany == 1 );
+            assert( requests[1].pid == 111 && requests[1].howmany == 2 );
+            assert( requests[2].pid == 222 && requests[2].howmany == 3 );
+            /* Remove remaining entries */
+            for (i=0; i<3; ++i) {
+                assert( queue_lewi_reqs_pop_ncpus(&queue, 1, requests, &num_requests,
+                            max_requests) == 0 );
+                assert( num_requests == 1 );
+                assert( (requests[0].pid == 111 || requests[0].pid == 222)
+                        && requests[0].howmany == 1 );
+            }
+            assert( queue_lewi_reqs_pop_ncpus(&queue, 1, requests, &num_requests,
+                        max_requests) == 1 );
+            assert( num_requests == 0 );
+        }
+
+        /* Try to pop more requests than available */
+        {
+            enum { max_requests = 3 };
+            lewi_request_t requests[max_requests];
+            unsigned int num_requests;
+            assert( queue_lewi_reqs_size(&queue) == 0 );
+
+            /* With only one element */
+            assert( queue_lewi_reqs_push(&queue, 111, 4 ) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_pop_ncpus(&queue, 10, requests, &num_requests,
+                        max_requests) == 6 );
+            assert( num_requests == 1 );
+            assert( requests[0].pid == 111 && requests[0].howmany == 4 );
+            assert( queue_lewi_reqs_size(&queue) == 0 );
+
+            /* With more than one element */
+            assert( queue_lewi_reqs_push(&queue, 111, 4 ) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_push(&queue, 222, 5 ) == DLB_SUCCESS );
+            assert( queue_lewi_reqs_pop_ncpus(&queue, 10, requests, &num_requests,
+                        max_requests) == 1 );
+            assert( num_requests == 2 );
+            assert( requests[0].pid == 111 && requests[0].howmany == 4 );
+            assert( requests[1].pid == 222 && requests[1].howmany == 5 );
+            assert( queue_lewi_reqs_size(&queue) == 0 );
+        }
+    }
+
     /* queue_proc_reqs_t */
     {
         queue_proc_reqs_t queue;

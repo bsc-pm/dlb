@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "support/queues.h"
 
 #include "support/debug.h"
@@ -25,6 +29,160 @@
 #include <string.h>
 
 enum { NOBODY = 0 };
+
+/*** queue_lewi_reqs_t ***********************************************************/
+
+void queue_lewi_reqs_init(queue_lewi_reqs_t *queue) {
+    memset(queue, 0, sizeof(*queue));
+}
+
+unsigned int queue_lewi_reqs_size(const queue_lewi_reqs_t *queue) {
+    return queue->head;
+}
+
+/* Remove entry with given <pid> and pack list, return previous value if exists */
+unsigned int queue_lewi_reqs_remove(queue_lewi_reqs_t *queue, pid_t pid) {
+
+    if (unlikely(pid == 0)) return 0;
+    if (queue->head == 0) return 0;
+
+    /* The queue does not need to be ordered. Find element to remove and swap
+     * last position */
+    for (unsigned int i=0; i < queue->head; ++i) {
+        lewi_request_t *request = &queue->queue[i];
+        if (request->pid == pid) {
+            // return value
+            int howmany = request->howmany;
+
+            if (i+1 < queue->head) {
+                // this is not the last element, copy last one here
+                *request = queue->queue[queue->head-1];
+            }
+            --queue->head;
+
+            return howmany;
+        }
+    }
+
+    return 0;
+}
+
+/* Push entry with given <pid>, add value if already present */
+int queue_lewi_reqs_push(queue_lewi_reqs_t *queue, pid_t pid, unsigned int howmany) {
+
+    if (unlikely(pid == 0)) return DLB_NOUPDT;
+
+    /* Remove entry if value is reset to 0 */
+    if (howmany == 0) {
+        queue_lewi_reqs_remove(queue, pid);
+        return DLB_SUCCESS;
+    }
+
+    /* Find entry, if exists */
+    unsigned int i;
+    for (i=0; i<queue->head; ++i) {
+        if (queue->queue[i].pid == pid) {
+            /* Found, just update value */
+            queue->queue[i].howmany += howmany;
+            return DLB_SUCCESS;
+        }
+    }
+
+    /* No existing entry and 'head' points to the last position, which is reserved */
+    if (queue->head == QUEUE_LEWI_REQS_SIZE-1) {
+        return DLB_ERR_REQST;
+    }
+
+    /* 'i' (and 'head') points the new spot. Add entry. */
+    queue->queue[i] = (const lewi_request_t) {
+        .pid = pid,
+        .howmany = howmany,
+    };
+    ++queue->head;
+    return DLB_SUCCESS;
+}
+
+/* Remove entries with no values (howmany == 0) */
+static void queue_lewi_reqs_pack(queue_lewi_reqs_t *queue) {
+    unsigned int i, i_write;
+    for (i=0, i_write=0; i<queue->head; ++i) {
+        if (queue->queue[i].howmany > 0) {
+            if (i != i_write) {
+                queue->queue[i_write] = queue->queue[i];
+            }
+            ++i_write;
+        }
+    }
+    queue->head = i_write;
+}
+
+/* Sort in descending order by number of requests */
+static int sort_queue_lewi_reqs(const void *elem1, const void *elem2) {
+    return ((lewi_request_t*)elem2)->howmany - ((lewi_request_t*)elem1)->howmany;
+}
+
+/* Pop ncpus from the queue in an equal distribution, return array of accepted requests
+ * by argument, and number of CPUs not assigned */
+unsigned int queue_lewi_reqs_pop_ncpus(queue_lewi_reqs_t *queue, unsigned int ncpus,
+        lewi_request_t *requests, unsigned int *nreqs, unsigned int maxreqs) {
+
+    unsigned int queue_size = queue_lewi_reqs_size(queue);
+    if (queue_size == 0) {
+        *nreqs = 0;
+        return ncpus;
+    }
+
+    /* For evenly distribute CPU removal, we need to sort the queue by number
+     * of requests per process */
+    qsort(queue->queue, queue_size, sizeof(queue->queue[0]), sort_queue_lewi_reqs);
+
+    ensure(queue->queue[queue->head-1].howmany > 0, "Empty spots in the queue");
+
+    unsigned int i, j;
+    for (i = queue->head, j = 0; i-- > 0 && ncpus > 0 && j < maxreqs; ) {
+        lewi_request_t *request = &queue->queue[i];
+        /* For every iteration, we compute the CPUs to be popped by computing
+         * the minimum between an even distribution and the current request
+         * value. */
+        unsigned int ncpus_popped = min_uint(ncpus/(i+1), request->howmany);
+        if (ncpus_popped > 0) {
+            /* Assign number of CPUs to output array */
+            requests[j++] = (const lewi_request_t) {
+                .pid = request->pid,
+                .howmany = ncpus_popped,
+            };
+
+            /* Remove the CPUs from the queue */
+            request->howmany -= ncpus_popped;
+
+            /* Update number of CPUs to be popped */
+            ncpus -= ncpus_popped;
+        }
+    }
+
+    /* Update output array size */
+    *nreqs = j;
+
+    /* Pack queue, remove elements if howmany reached 0 */
+    queue_lewi_reqs_pack(queue);
+
+    return ncpus;
+}
+
+/* Return the value of requests of the given pid */
+unsigned int queue_lewi_reqs_get(queue_lewi_reqs_t *queue, pid_t pid) {
+
+    if (unlikely(pid == 0)) return 0;
+
+    for (unsigned int i = 0; i < queue->head; ++i) {
+        if (queue->queue[i].pid == pid) {
+            return queue->queue[i].howmany;
+        }
+    }
+
+    return 0;
+}
+
 
 /*** queue_proc_reqs_t ***********************************************************/
 
@@ -66,7 +224,7 @@ void queue_proc_reqs_remove(queue_proc_reqs_t *queue, pid_t pid) {
 
 int queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid,
         unsigned int howmany, const cpu_set_t *allowed) {
-    /* Remove entry if value is reseted to 0 */
+    /* Remove entry if value is reset to 0 */
     if (howmany == 0) {
         queue_proc_reqs_remove(queue, pid);
         return DLB_SUCCESS;
@@ -79,7 +237,7 @@ int queue_proc_reqs_push(queue_proc_reqs_t *queue, pid_t pid,
         return DLB_NOTED;
     }
 
-    /* If the queue is full, retun error code */
+    /* If the queue is full, return error code */
     unsigned int next_head = (queue->head + 1) % QUEUE_PROC_REQS_SIZE;
     if (__builtin_expect((next_head == queue->tail), 0)) {
         return DLB_ERR_REQST;

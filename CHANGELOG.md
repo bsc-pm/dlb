@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+ - Asynchronous support for classic LeWI
 
 ## [3.4] 2023-12-22
 ### Added

@@ -26,10 +26,12 @@
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_lewi_async.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_talp.h"
 #include "support/mask_utils.h"
 #include "support/atomic.h"
+#include "support/queues.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -66,11 +68,12 @@ static void check_shmem_sync_version(void) {
 }
 
 static void check_async_version(void) {
-    enum { KNOWN_ASYNC_VERSION = 2 };
+    enum { KNOWN_ASYNC_VERSION = 3 };
     enum { KNOWN_QUEUE_SIZE = 100 };
     struct KnownMessage {
         enum {ENUM1} enum1;
         int int1;
+        int int2;
     };
     struct KnownAsyncShdata {
         /* Queue attributes */
@@ -171,6 +174,32 @@ static void check_cpuinfo_version(void) {
     assert( size == known_size );
 }
 
+static void check_lewi_async_version(void) {
+    enum {KNOWN_LEWI_ASYNC_VERSION = 1 };
+
+    struct DLB_ALIGN_CACHE KnownLewiProcess {
+        pid_t pid;
+        unsigned int uint1;
+        unsigned int uint2;
+    };
+
+    struct KnownLewiAsyncShdata {
+        int int1;
+        int int2;
+        queue_lewi_reqs_t reqs;
+        struct KnownLewiProcess processes[0];
+    };
+
+    int version = shmem_lewi_async__version();
+    size_t size = shmem_lewi_async__size();
+    size_t known_size = sizeof(struct KnownLewiAsyncShdata)
+        + sizeof(struct KnownLewiProcess)*mu_get_system_size();
+    fprintf(stderr, "shmem_lewi_async version %d, size: %zu, known_size: %zu\n",
+            version, size, known_size);
+    assert( version == KNOWN_LEWI_ASYNC_VERSION );
+    assert( size == known_size );
+}
+
 static void check_procinfo_version(void) {
     enum { KNOWN_PROCINFO_VERSION = 8 };
 
@@ -254,6 +283,7 @@ int main(int argc, char **argv) {
     check_async_version();
     check_barrier_version();
     check_cpuinfo_version();
+    check_lewi_async_version();
     check_procinfo_version();
     check_talp_version();
 
