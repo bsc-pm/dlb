@@ -117,7 +117,7 @@ class MPIFile:
 """
 def variable_is_derived_type(variable, f08par):
     for line in f08par.split(';'):
-        if variable in re.split('\W+', line):
+        if variable in re.split(r'\W+', line):
             return 'type(mpi_' in line.lower()
     return False
 
@@ -126,7 +126,7 @@ def variable_is_derived_type(variable, f08par):
 """
 def variable_is_assumed_size_array(variable, f08par):
     for line in f08par.split(';'):
-        if variable in re.split('\W+', line):
+        if variable in re.split(r'\W+', line):
             return '{0}(*)'.format(variable) in line
     return False
 
@@ -135,7 +135,7 @@ def variable_is_assumed_size_array(variable, f08par):
 """
 def variable_is_procedure_type(variable, f08par):
     for line in f08par.split(';'):
-        if variable in re.split('\W+', line):
+        if variable in re.split(r'\W+', line):
             return 'procedure' in line.lower()
     return False
 
