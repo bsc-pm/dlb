@@ -23,6 +23,7 @@ Structure after installation
             │       │   ├── MPI+OmpSs
             │       │   ├── OMPT
             │       │   ├── TALP
+            │       │   ├── lewi_custom_rt
             │       │   ├── monitoring_regions
             │       │   └── statistics
             │       └── scripts
@@ -51,6 +52,7 @@ Structure after installation
             |       |   |-- MPI+OmpSs
             |       |   |-- OMPT
             |       |   |-- TALP
+            |       |   |-- lewi_custom_rt
             |       |   |-- monitoring_regions
             |       |   `-- statistics
             |       `-- scripts
@@ -130,6 +132,11 @@ to produce load balance issues between processes. The script ``run.sh`` is
 prepared to be modified by the user in order to try different executions and
 compare them. These options include enabling DLB, enabling some specific DLB
 option, enabling tracing, etc.
+
+LeWI with custom runtime system
+-------------------------------
+This example shows the integration of a multithreaded runtime system with
+LeWI in asynchronous mode.
 
 Monitoring Regions
 ------------------

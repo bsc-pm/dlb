@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# variables detected at configure time
+DLB_HOME=@prefix@
+MPIEXEC=@MPIEXEC@
+
+# variables to be modified by the user
+TRACE=${TRACE:-0}
+EXTRAE_HOME=${EXTRAE_HOME:-}
+
+if [[ $TRACE == 1 ]] ; then
+    preload="$EXTRAE_HOME/lib/libmpitrace.so"
+    export EXTRAE_CONFIG_FILE="extrae.xml"
+fi
+
+preload="$preload:$DLB_HOME/lib/libdlb_mpi.so"
+preload="$preload:$PWD/libcustom_rt.so"
+
+$MPIEXEC -n 2 env LD_PRELOAD=$preload ./app

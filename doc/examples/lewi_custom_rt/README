@@ -1,0 +1,38 @@
+README
+======
+
+This is a small example of a synthetic MPI application that runs with a custom
+shared memory runtime system.
+
+The application simulates an MPI program whose total duration, frequency and
+duration of MPI collective calls can be parameterized. The runtime library
+simulates a threading framework for each of the MPI processes; its constructor
+simulates the creation of threads and initializes the DLB library, and then
+simulates changing the number of threads when DLB triggers the appropriate
+callbacks.
+
+Compilation
+-----------
+Check that the Makefile paths are correct and:
+* Optionally, edit `app.c` and change TOTAL_DURATION, MPI_FREQUENCY, and
+  MPI_DURATION as needed
+* Run `make`
+
+Execution
+---------
+* Edit the script `run.sh`
+    * Check that the variables detected at configure time are correct
+    * Review the variables to be modified by the user and change them as you
+      like
+
+* Run the script `run.sh`
+    * The application performs a few MPI collective calls
+    * The runtime sets the number of threds for each process according to the
+      DLB callbacks
+
+* Set TRACE=1 and run again
+    * Open the generated Paraver trace and load the
+      mpi_calls_and_num_threads.cfg configuration file
+    * Note that the num_threads event is only updated after the first MPI call
+      due to the initial number being set at constructor time, before Extrae
+      initialization
