@@ -49,8 +49,10 @@ int main( int argc, char **argv ) {
     debug_init(&spd.options);
     pm_init(&spd.pm);
 
-    sched_getaffinity(0, sizeof(cpu_set_t), &spd.process_mask);
-    nthreads = CPU_COUNT(&spd.process_mask);
+    cpu_set_t process_mask;
+    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+    spd.lewi_ncpus = CPU_COUNT(&process_mask);
+    nthreads = spd.lewi_ncpus;
     int original_nthreads = nthreads;
 
     assert( pm_callback_set(&spd.pm, dlb_callback_set_num_threads,

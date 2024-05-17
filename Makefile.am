@@ -255,10 +255,14 @@ SRCS = \
 	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem_cpuinfo.c             \
 	src/LB_comm/shmem_cpuinfo.h             \
+	src/LB_comm/shmem_lewi_async.c          \
+	src/LB_comm/shmem_lewi_async.h          \
 	src/LB_comm/shmem_procinfo.c            \
 	src/LB_comm/shmem_procinfo.h            \
 	src/LB_policies/lewi.c                  \
 	src/LB_policies/lewi.h                  \
+	src/LB_policies/lewi_async.c            \
+	src/LB_policies/lewi_async.h            \
 	src/LB_policies/lewi_mask.c             \
 	src/LB_policies/lewi_mask.h             \
 	src/LB_core/DLB_kernel.c                \
@@ -599,6 +603,24 @@ dromexamples_files_nodist = \
 dromexamplesdir = $(docdir)/examples/DROM
 dist_dromexamples_DATA = $(dromexamples_files)
 nodist_dromexamples_DATA = $(dromexamples_files_nodist)
+
+### LeWI Custom RT ###
+lewicustomrtexamples_files = \
+	doc/examples/lewi_custom_rt/app.c \
+	doc/examples/lewi_custom_rt/custom_rt.c \
+	doc/examples/lewi_custom_rt/extrae.xml \
+	doc/examples/lewi_custom_rt/mpi_calls_and_num_threads.cfg \
+	doc/examples/lewi_custom_rt/README \
+	$(END)
+
+lewicustomrtexamples_files_nodist = \
+	doc/examples/lewi_custom_rt/Makefile \
+	doc/examples/lewi_custom_rt/run.sh \
+	$(END)
+
+lewicustomrtexamplesdir = $(docdir)/examples/lewi_custom_rt
+dist_lewicustomrtexamples_DATA = $(lewicustomrtexamples_files)
+nodist_lewicustomrtexamples_DATA = $(lewicustomrtexamples_files_nodist)
 
 ### MPI+OMP ###
 mpiompexamples_files = \
@@ -1075,6 +1097,7 @@ endif
 clean-local: clean-rpm clean-deb clean-doc clean-coverage
 
 install-data-hook:
+	chmod +x $(DESTDIR)$(lewicustomrtexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompomptexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompssexamplesdir)/run.sh

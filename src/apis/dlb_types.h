@@ -26,6 +26,10 @@ typedef void* dlb_handler_t;
 typedef void* dlb_cpu_set_t;
 typedef const void* const_dlb_cpu_set_t;
 
+// LeWI enums
+enum { DLB_DELETE_REQUESTS = 0 };
+enum { DLB_MAX_CPUS = 0x7fff };
+
 // DROM flags
 typedef enum dlb_drom_flags_e {
     DLB_STEAL_CPUS      = 1 << 0,

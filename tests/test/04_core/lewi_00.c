@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator"
+    test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
 #include "unique_shmem.h"

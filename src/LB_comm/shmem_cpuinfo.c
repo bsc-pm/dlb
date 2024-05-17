@@ -162,7 +162,7 @@ static void open_shmem(const char *shmem_key, int shmem_color) {
     pthread_mutex_unlock(&mutex);
 }
 
-static void init_shmem() {
+static void init_shmem(void) {
     // Initialize some values if this is the 1st process attached to the shmem
     if (shdata->initial_time.tv_sec == 0 && shdata->initial_time.tv_nsec == 0) {
         get_time(&shdata->initial_time);

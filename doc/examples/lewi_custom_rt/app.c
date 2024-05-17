@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,43 +17,45 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef SPD_H
-#define SPD_H
+/* This programs simulates an MPI application, where TOTAL_DURATION,
+ * MPI_FREQUENCY, and MPI_DURATION may be configured: */
 
-#include "LB_core/lb_funcs.h"
+enum { TOTAL_DURATION =  5 };   /* Program duration (seconds) */
+enum { MPI_FREQUENCY = 1 };     /* Time between MPI collective calls (seconds) */
+enum { MPI_DURATION = 100000};  /* MPI call duration for rank 0 (microseconds) */
 
-#include "LB_numThreads/numThreads.h"
-#include "support/options.h"
-#include "support/types.h"
+#include <mpi.h>
+#include <time.h>
+#include <unistd.h>
 
-#include <sys/types.h>
 
-/* Sub-process Descriptor */
+int main(int argc, char *argv[]) {
+    MPI_Init(&argc, &argv);
 
-typedef struct SubProcessDescriptor {
-    pid_t id;
-    bool dlb_initialized;
-    bool dlb_preinitialized;
-    bool lewi_enabled;
-    cpu_set_t process_mask;
-    cpu_set_t active_mask;
-    options_t options;
-    pm_interface_t pm;
-    policy_t lb_policy;
-    balance_policy_t lb_funcs;
-    unsigned int lewi_ncpus;
-    void *lewi_info;
-    void *talp_info;
-    void *barrier_info;
-} subprocess_descriptor_t;
+    int mpi_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-extern __thread subprocess_descriptor_t *thread_spd;
+    struct timespec begin;
+    clock_gettime(CLOCK_MONOTONIC, &begin);
 
-void spd_enter_dlb(subprocess_descriptor_t *spd);
-void spd_register(subprocess_descriptor_t *spd);
-void spd_unregister(const subprocess_descriptor_t *spd);
-void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
-pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
-const subprocess_descriptor_t** spd_get_spds(void);
+    struct timespec now = begin;
 
-#endif /* SPD_H */
+    while (begin.tv_sec + TOTAL_DURATION > now.tv_sec) {
+        /* Time between MPI collective calls */
+        if (mpi_rank == 0) {
+            usleep(MPI_FREQUENCY*1e6 - MPI_DURATION);
+        } else {
+            sleep(MPI_FREQUENCY);
+        }
+
+        /* MPI blocking call */
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        /* Update total duration */
+        clock_gettime(CLOCK_MONOTONIC, &now);
+    }
+
+    MPI_Finalize();
+
+    return 0;
+}

@@ -57,7 +57,6 @@ typedef enum OptionTypes {
     OPT_INST_T,     // instrument_items_t
     OPT_DBG_T,      // debug_opts_t
     OPT_PRIO_T,     // priority_t
-    OPT_POL_T,      // policy_t
     OPT_MASK_T,     // cpu_set_t
     OPT_MODE_T,     // interaction_mode_t
     OPT_MPISET_T,   // mpi_set_t
@@ -81,14 +80,6 @@ typedef struct {
 static const opts_dict_t options_dictionary[] = {
     // general options
     {
-        .var_name       = "LB_POLICY",
-        .arg_name       = "--policy",
-        .default_value  = "no",
-        .description    = "",
-        .offset         = SIZE_MAX,
-        .type           = OPT_POL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED | OPT_UNUSED
-    }, {
         .var_name       = "LB_LEWI",
         .arg_name       = "--lewi",
         .default_value  = "no",
@@ -526,8 +517,6 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_debug_opts(str_value, (debug_opts_t*)option);
         case OPT_PRIO_T:
             return parse_priority(str_value, (priority_t*)option);
-        case OPT_POL_T:
-            return parse_policy(str_value, (policy_t*)option);
         case OPT_MASK_T:
             mu_parse_mask(str_value, (cpu_set_t*)option);
             return DLB_SUCCESS;
@@ -569,8 +558,6 @@ static const char * get_value(option_type_t type, const void *option) {
             return debug_opts_tostr(*(debug_opts_t*)option);
         case OPT_PRIO_T:
             return priority_tostr(*(priority_t*)option);
-        case OPT_POL_T:
-            return policy_tostr(*(policy_t*)option);
         case OPT_MASK_T:
             return mu_to_str((cpu_set_t*)option);
         case OPT_MODE_T:
@@ -610,8 +597,6 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
             return equivalent_debug_opts(value1, value2);
         case OPT_PRIO_T:
             return equivalent_priority(value1, value2);
-        case OPT_POL_T:
-            return equivalent_policy(value1, value2);
         case OPT_MASK_T:
             return equivalent_masks(value1, value2);
         case OPT_MODE_T:
@@ -659,9 +644,6 @@ static void copy_value(option_type_t type, void *dest, const char *src) {
             break;
         case OPT_PRIO_T:
             memcpy(dest, src, sizeof(priority_t));
-            break;
-        case OPT_POL_T:
-            memcpy(dest, src, sizeof(policy_t));
             break;
         case OPT_MASK_T:
             memcpy(dest, src, sizeof(cpu_set_t));
@@ -1087,9 +1069,6 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_PRIO_T:
                 b += snprintf(b, max_entry_len, "[%s]", get_priority_choices());
-                break;
-            case OPT_POL_T:
-                b += snprintf(b, max_entry_len, "[%s]", get_policy_choices());
                 break;
             case OPT_MASK_T:
                 b += snprintf(b, max_entry_len, "(cpuset)");

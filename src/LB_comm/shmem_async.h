@@ -31,8 +31,11 @@ int shmem_async_finalize(pid_t pid);
 
 void shmem_async_enable_cpu(pid_t pid, int cpuid);
 void shmem_async_disable_cpu(pid_t pid, int cpuid);
+void shmem_async_set_num_cpus(pid_t pid, int ncpus);
 
 int shmem_async__version(void);
 size_t shmem_async__size(void);
+
+void shmem_async_wait_for_completion(pid_t pid);
 
 #endif /* SHMEM_ASYNC_H */

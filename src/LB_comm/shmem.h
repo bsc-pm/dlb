@@ -44,7 +44,7 @@ typedef struct {
 
 enum { SHMEM_SYNC_VERSION = 3 };
 
-enum { SHM_NAME_LENGTH = 32 };
+enum { SHM_NAME_LENGTH = 64 };
 
 typedef struct {
     size_t          shm_size;

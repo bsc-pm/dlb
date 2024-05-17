@@ -26,6 +26,8 @@
 #include <config.h>
 #endif
 
+#include "support/queues.h"
+
 #include <sys/types.h>
 #include <stdlib.h>
 
@@ -66,7 +68,7 @@ typedef struct SmallArrayPID {
     pid_t buffer[SMALL_ARRAY_DEFAULT_SIZE];
 } small_array_pid_t;
 
-static inline int* small_array_pid_t_init(small_array_pid_t *array, size_t size) {
+static inline pid_t* small_array_pid_t_init(small_array_pid_t *array, size_t size) {
     array->size = size;
     if (size <= SMALL_ARRAY_DEFAULT_SIZE) {
         array->values = array->buffer;
@@ -77,6 +79,30 @@ static inline int* small_array_pid_t_init(small_array_pid_t *array, size_t size)
 }
 
 static inline void small_array_pid_t_free(small_array_pid_t *array) {
+    if (array->size > SMALL_ARRAY_DEFAULT_SIZE) {
+        free(array->values);
+    }
+    array->values = NULL;
+}
+
+
+typedef struct SmallArrayLeWIRequest {
+    size_t size;
+    lewi_request_t *values;
+    lewi_request_t buffer[SMALL_ARRAY_DEFAULT_SIZE];
+} small_array_lewi_request_t;
+
+static inline lewi_request_t* small_array_lewi_request_t_init(small_array_lewi_request_t *array, size_t size) {
+    array->size = size;
+    if (size <= SMALL_ARRAY_DEFAULT_SIZE) {
+        array->values = array->buffer;
+    } else {
+        array->values = malloc(sizeof(lewi_request_t) * size);
+    }
+    return array->values;
+}
+
+static inline void small_array_lewi_request_t_free(small_array_lewi_request_t *array) {
     if (array->size > SMALL_ARRAY_DEFAULT_SIZE) {
         free(array->values);
     }

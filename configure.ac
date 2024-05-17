@@ -364,6 +364,8 @@ AC_CONFIG_FILES([
     Makefile
     tests/Makefile
     doc/examples/drom/Makefile
+    doc/examples/lewi_custom_rt/run.sh
+    doc/examples/lewi_custom_rt/Makefile
     doc/examples/mpi+omp/run.sh
     doc/examples/mpi+omp/Makefile
     doc/examples/mpi+omp_ompt/run.sh

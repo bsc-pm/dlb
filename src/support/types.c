@@ -509,10 +509,10 @@ bool equivalent_priority(const char *str1, const char *str2) {
     return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
 }
 
-/* policy_t */
-static const policy_t policy_values[] = {POLICY_NONE, POLICY_LEWI, POLICY_LEWI_MASK};
-static const char* const policy_choices[] = {"no", "LeWI", "LeWI_mask"};
-static const char policy_choices_str[] = "no, LeWI, LeWI_mask";
+/* policy_t: most of this stuff is depcrecated, only policy_tostr is still used */
+static const policy_t policy_values[] = {POLICY_NONE, POLICY_LEWI, POLICY_LEWI_ASYNC, POLICY_LEWI_MASK};
+static const char* const policy_choices[] = {"no", "LeWI", "LeWI_async", "LeWI_mask"};
+static const char policy_choices_str[] = "no, LeWI, LeWI_async, LeWI_mask";
 enum { policy_nelems = sizeof(policy_values) / sizeof(policy_values[0]) };
 
 int parse_policy(const char *str, policy_t *value) {

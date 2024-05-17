@@ -32,7 +32,7 @@ static char unique_shmem_key[SHMEM_KEY_MAX_LEN];
 
 static bool test_and_delete_shmems(void) {
     bool shmem_exists = false;
-    const char* const shmem_names[] = { "lewi", "cpuinfo", "procinfo", "async", "barrier", "talp", "test"};
+    const char* const shmem_names[] = { "lewi", "lewi_async", "cpuinfo", "procinfo", "async", "barrier", "talp", "test"};
     enum { shmem_names_nelems = sizeof(shmem_names) / sizeof(shmem_names[0]) };
     enum { SHMEM_MAX_NAME_LENGTH = 64 };
     char shm_filename[SHMEM_MAX_NAME_LENGTH];
