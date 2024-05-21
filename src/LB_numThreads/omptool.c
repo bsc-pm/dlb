@@ -126,18 +126,6 @@ static void multiplex__thread_end(
     }
 }
 
-static void multiplex__thread_role_shift(
-        ompt_data_t *thread_data,
-        ompt_role_t prior_role,
-        ompt_role_t next_role) {
-    if (talp_funcs.thread_role_shift) {
-        talp_funcs.thread_role_shift(thread_data, prior_role, next_role);
-    }
-    if (omptm_funcs.thread_role_shift) {
-        omptm_funcs.thread_role_shift(thread_data, prior_role, next_role);
-    }
-}
-
 static void multiplex__parallel_begin(
         ompt_data_t *encountering_task_data,
         const ompt_frame_t *encountering_task_frame,
@@ -346,7 +334,6 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
     multiplex_funcs = (const funcs_t) {
         .thread_begin           = multiplex__thread_begin,
         .thread_end             = multiplex__thread_end,
-        .thread_role_shift      = multiplex__thread_role_shift,
         .parallel_begin         = multiplex__parallel_begin,
         .parallel_end           = multiplex__parallel_end,
         .task_create            = multiplex__task_create,
@@ -369,6 +356,12 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
         } else {
             cb_funcs = NULL;
         }
+    }
+
+    /* The following function is a custom callback and it's only used in the
+     * experimental role-shift thread manager */
+    if (omptm_version == OMPTM_ROLE_SHIFT) {
+        cb_funcs->thread_role_shift = omptm_role_shift__thread_role_shift;
     }
 }
 
