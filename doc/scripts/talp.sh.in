@@ -24,6 +24,10 @@ export DLB_ARGS="$DLB_ARGS --talp"
 # Enable PAPI counters
 #export DLB_ARGS="$DLB_ARGS --talp-papi"
 
+# Write TALP metrics to file. Accepted formats: *.json, *.xml, *.csv.
+# Any other for plain text.
+#export DLB_ARGS="$DLB_ARGS --talp-output-file=talp.json"
+
 #################################################################################
 ### Run                                                                       ###
 #################################################################################
