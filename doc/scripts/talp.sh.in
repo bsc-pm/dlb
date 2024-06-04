@@ -4,7 +4,7 @@
 #   Execute an application with TALP enabled.
 #   Note that DLB needs to be initialized in some way, either by linking
 #   the application, or preloading a DLB library.
-#   With TALP, tipically an MPI based library will be needed to intercept
+#   With TALP, typically an MPI based library will be needed to intercept
 #   MPI calls.
 #
 # Usage:
@@ -20,6 +20,9 @@ export DLB_ARGS="$DLB_ARGS --talp"
 # Select which TALP summary to show
 # {none:all:pop-metrics:pop-raw:node:process}, default: pop-metrics
 #export DLB_ARGS="$DLB_ARGS --talp-summary=pop-metrics:process:regions"
+
+# Enable PAPI counters
+#export DLB_ARGS="$DLB_ARGS --talp-papi"
 
 #################################################################################
 ### Run                                                                       ###
