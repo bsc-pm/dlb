@@ -378,11 +378,11 @@ bool equivalent_debug_opts(const char *str1, const char *str2) {
 /* talp_summary_t */
 static const talp_summary_t talp_summary_values[] =
     {SUMMARY_NONE, SUMMARY_ALL, SUMMARY_POP_METRICS, SUMMARY_POP_RAW, SUMMARY_NODE,
-        SUMMARY_PROCESS, SUMMARY_ITERATION, SUMMARY_OMP};
+        SUMMARY_PROCESS};
 static const char* const talp_summary_choices[] =
-    {"none", "all", "pop-metrics", "pop-raw", "node", "process", "iteration", "omp"};
+    {"none", "all", "pop-metrics", "pop-raw", "node", "process"};
 static const char talp_summary_choices_str[] =
-    "none:all:pop-metrics:pop-raw:node:process:iteration:omp";
+    "none:all:pop-metrics:pop-raw:node:process";
 enum { talp_summary_nelems = sizeof(talp_summary_values) / sizeof(talp_summary_values[0]) };
 
 int parse_talp_summary(const char *str, talp_summary_t *value) {
