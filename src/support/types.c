@@ -80,6 +80,9 @@ int parse_int(const char *str, int *value) {
     long val = strtol(str, &endptr, 0);
     if ((val == 0 && endptr == str)
             || ((val == LONG_MIN || val == LONG_MAX) && errno == ERANGE)) {
+        debug_warning("Error parsing integer. str: %s, strlen: %lu, val: %ld, "
+                "errno: %d, strptr: %p, endptr: %p", str, strlen(str), val,
+                errno, str, endptr);
         return DLB_ERR_NOENT;
     }
     *value = (int)val;

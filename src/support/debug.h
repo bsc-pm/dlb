@@ -82,6 +82,8 @@ extern verbose_opts_t   vb_opts;
 #endif
 
 #ifdef DEBUG_VERSION
+#define debug_warning(...) warning(__VA_ARGS__)
+
 #define ensure(cond, ...) \
     do { \
         if (likely(cond)) ; else { fatal(__VA_ARGS__); } \
@@ -93,6 +95,7 @@ extern verbose_opts_t   vb_opts;
     } while (0)
 
 #else
+#define debug_warning(...)       do { (void)0; } while(0)
 #define ensure(cond, ...)        do { (void)0; } while(0)
 #define static_ensure(cond, ...) do { (void)0; } while(0)
 #endif
