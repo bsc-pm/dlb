@@ -74,7 +74,7 @@ typedef struct monitor_data_t {
 
 static void talp_dealloc_samples(const subprocess_descriptor_t *spd);
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id,
-        const char *name, pid_t pid);
+        const char *name, pid_t pid, bool have_shmem);
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd);
 static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
         const talp_macrosample_t *macrosample);
@@ -184,16 +184,20 @@ void talp_init(subprocess_descriptor_t *spd) {
     *talp_info = (const talp_info_t) {
         .external_profiler = spd->options.talp_external_profiler,
         .papi = spd->options.talp_papi,
+        .have_shmem = spd->options.talp_external_profiler
+            || spd->options.talp_summary & SUMMARY_NODE,
         .samples_mutex = PTHREAD_MUTEX_INITIALIZER,
     };
     spd->talp_info = talp_info;
 
     /* Initialize shared memory */
-    shmem_talp__init(spd->options.shm_key, spd->options.talp_regions_per_proc);
+    if (talp_info->have_shmem) {
+        shmem_talp__init(spd->options.shm_key, spd->options.talp_regions_per_proc);
+    }
 
     /* Initialize MPI monitor */
     monitoring_region_initialize(&talp_info->mpi_monitor,
-            MPI_MONITORING_REGION_ID, mpi_region_name, spd->id);
+            MPI_MONITORING_REGION_ID, mpi_region_name, spd->id, talp_info->have_shmem);
 
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
 
@@ -235,10 +239,12 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     talp_dealloc_samples(spd);
 
     /* Finalize shared memory */
-    shmem_talp__finalize(spd->id);
+    talp_info_t *talp_info = spd->talp_info;
+    if (talp_info->have_shmem) {
+        shmem_talp__finalize(spd->id);
+    }
 
 #ifdef PAPI_LIB
-    talp_info_t *talp_info = spd->talp_info;
     if (talp_info->papi) {
         PAPI_shutdown();
     }
@@ -442,10 +448,13 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         monitoring_region_stop(spd, &talp_info->mpi_monitor);
 
         /* Update shared memory values */
-        monitor_data_t *monitor_data = talp_info->mpi_monitor._data;
-        shmem_talp__set_times(monitor_data->node_shared_id,
-                talp_info->mpi_monitor.accumulated_MPI_time,
-                talp_info->mpi_monitor.accumulated_computation_time);
+        if (talp_info->have_shmem) {
+            // TODO: is it needed? isn't it updated when stopped?
+            monitor_data_t *monitor_data = talp_info->mpi_monitor._data;
+            shmem_talp__set_times(monitor_data->node_shared_id,
+                    talp_info->mpi_monitor.accumulated_MPI_time,
+                    talp_info->mpi_monitor.accumulated_computation_time);
+        }
 
 #ifdef MPI_LIB
         /* If performing any kind of TALP summary, check that the number of processes
@@ -711,19 +720,22 @@ dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
             " Please report at "PACKAGE_BUGREPORT);
 
     // Initialize after the mutex is unlocked
+    talp_info_t *talp_info = spd->talp_info;
     if (anonymous_region) {
         char monitor_name[DLB_MONITOR_NAME_MAX];
         snprintf(monitor_name, DLB_MONITOR_NAME_MAX, "Anonymous Region %d", get_anonymous_id());
-        monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name, spd->id);
+        monitoring_region_initialize(monitor, get_new_monitor_id(), monitor_name, spd->id,
+                talp_info->have_shmem);
     } else {
-        monitoring_region_initialize(monitor, get_new_monitor_id(), name, spd->id);
+        monitoring_region_initialize(monitor, get_new_monitor_id(), name, spd->id,
+                talp_info->have_shmem);
     }
 
     return monitor;
 }
 
 static void monitoring_region_initialize(dlb_monitor_t *monitor,
-        int id, const char *name, pid_t pid) {
+        int id, const char *name, pid_t pid, bool have_shmem) {
     /* Initialize private monitor data */
     monitor_data_t *monitor_data = malloc(sizeof(monitor_data_t));
     *monitor_data = (const monitor_data_t) {
@@ -745,10 +757,20 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor,
     instrument_register_event(MONITOR_REGION, monitor_data->id, name);
 
     /* Register region in shmem */
-    int err = shmem_talp__register(pid, monitor->name, &monitor_data->node_shared_id);
-    if (err < DLB_SUCCESS) {
-        warning("Could not register region %s in shared memory, error: %s",
-                monitor->name, error_get_str(err));
+    if (have_shmem) {
+        int err = shmem_talp__register(pid, monitor->name, &monitor_data->node_shared_id);
+        if (err == DLB_ERR_NOMEM) {
+            warning("Region %s has been correctly registered but cannot be shared among other"
+                    " processes due to lack of space in the TALP shared memory. Features like"
+                    " node report or gathering data from external processes may not work for"
+                    " this region. If needed, increase the TALP shared memory capacity using"
+                    " the flag --talp-regions-per-proc. Run dlb -hh for more info.",
+                    monitor->name);
+            exit(0);
+        } else if (err < DLB_SUCCESS) {
+            fatal("Unknown error registering region %s, please report bug at %s",
+                    monitor->name, PACKAGE_BUGREPORT);
+        }
     }
 }
 
@@ -1438,16 +1460,21 @@ int talp_query_pop_node_metrics(const char *name, dlb_node_metrics_t *node_metri
 /* Node-collective function to compute node_metrics for a given region */
 int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
+
     talp_info_t *talp_info = spd->talp_info;
-    if (monitor == NULL) {
-        monitor = &talp_info->mpi_monitor;
-    }
+    monitor = monitor ? monitor : &talp_info->mpi_monitor;
+    monitor_data_t *monitor_data = monitor->_data;
 
     /* Stop monitor so that metrics are updated */
     bool resume_region = monitoring_region_stop(spd, monitor) == DLB_SUCCESS;
 
+    /* This functionality needs a shared memory, create a temporary one if needed */
+    if (!talp_info->have_shmem) {
+        shmem_talp__init(spd->options.shm_key, 1);
+        shmem_talp__register(spd->id, monitor->name, &monitor_data->node_shared_id);
+    }
+
     /* Update the shared memory with this process' metrics */
-    monitor_data_t *monitor_data = monitor->_data;
     shmem_talp__set_times(monitor_data->node_shared_id,
             monitor->accumulated_MPI_time,
             monitor->accumulated_computation_time);
@@ -1457,6 +1484,11 @@ int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
 
     /* Compute node metrics for that region name */
     talp_query_pop_node_metrics(monitor->name, node_metrics);
+
+    /* Remove shared memory if it was a temporary one */
+    if (!talp_info->have_shmem) {
+        shmem_talp__finalize(spd->id);
+    }
 
     /* Resume monitor */
     if (resume_region) {

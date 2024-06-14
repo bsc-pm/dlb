@@ -56,6 +56,10 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    /* This test needs access to the shared memory. Workaround without enabling
+     * --talp-external-profiler */
+    spd.options.talp_summary |= SUMMARY_NODE;
+
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;

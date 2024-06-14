@@ -59,6 +59,7 @@ typedef struct talp_info_t {
     dlb_monitor_t       mpi_monitor;        /* monitor MPI_Init -> MPI_Finalize */
     bool                external_profiler;  /* whether to update shmem on every sample */
     bool                papi;               /* whether to collect PAPI counters */
+    bool                have_shmem;         /* whether to record data in shmem */
     int                 ncpus;              /* Number of process CPUs */
     talp_sample_t       **samples;          /* Per-thread ongoing sample,
                                                added to all monitors when finished */

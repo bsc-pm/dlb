@@ -198,13 +198,27 @@ int main(int argc, char *argv[]) {
     /* Test monitor name length */
     {
         const char *long_name = "This is a very long name. It is so long that"
-            " it is more than MONITOR_MAX_KEY_LEN which, at the time of writing,"
+            " it is more than DLB_MONITOR_NAME_MAX which, at the time of writing,"
             " should be 128 characters.";
         dlb_monitor_t *monitor7 = monitoring_region_register(&spd, long_name);
         dlb_monitor_t *monitor8 = monitoring_region_register(&spd, long_name);
         assert( monitor7 == monitor8 );
         monitoring_region_report(&spd, monitor7);
         monitoring_region_report(&spd, mpi_monitor);
+    }
+
+    /* Test creation of N regions */
+    {
+        enum { N = 1000 };
+        char name[DLB_MONITOR_NAME_MAX];
+        for (i=0; i<N; ++i) {
+            snprintf(name, DLB_MONITOR_NAME_MAX, "Loop Region %d", i);
+            dlb_monitor_t *loop_monitor = monitoring_region_register(&spd, name);
+            assert( loop_monitor != NULL );
+            assert( strncmp(name, loop_monitor->name, DLB_MONITOR_NAME_MAX) == 0 );
+            assert( monitoring_region_start(&spd, loop_monitor) == DLB_SUCCESS );
+            assert( monitoring_region_stop(&spd, loop_monitor) == DLB_SUCCESS );
+        }
     }
 
     talp_finalize(&spd);
