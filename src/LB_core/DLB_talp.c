@@ -766,7 +766,6 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor,
                     " this region. If needed, increase the TALP shared memory capacity using"
                     " the flag --talp-regions-per-proc. Run dlb -hh for more info.",
                     monitor->name);
-            exit(0);
         } else if (err < DLB_SUCCESS) {
             fatal("Unknown error registering region %s, please report bug at %s",
                     monitor->name, PACKAGE_BUGREPORT);
