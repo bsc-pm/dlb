@@ -30,6 +30,8 @@
 #include "support/atomic.h"
 #include "support/debug.h"
 #include "support/error.h"
+#include "support/gtree.h"
+#include "support/gslist.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
 #include "support/options.h"
@@ -73,6 +75,7 @@ typedef struct monitor_data_t {
 
 
 static void talp_dealloc_samples(const subprocess_descriptor_t *spd);
+static void init_regions(void);
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id,
         const char *name, pid_t pid, bool have_shmem);
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd);
@@ -109,14 +112,6 @@ static int get_anonymous_id(void) {
     static atomic_int id = 0;
     return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
 }
-
-#if MPI_LIB
-static int cmp_regions(const void *region1, const void *region2) {
-    const dlb_monitor_t* monitor1 = *((const dlb_monitor_t**)region1);
-    const dlb_monitor_t* monitor2 = *((const dlb_monitor_t**)region2);
-    return strcmp(monitor1->name, monitor2->name);
-}
-#endif
 
 
 /*********************************************************************************/
@@ -196,6 +191,7 @@ void talp_init(subprocess_descriptor_t *spd) {
     }
 
     /* Initialize MPI monitor */
+    init_regions();
     monitoring_region_initialize(&talp_info->mpi_monitor,
             MPI_MONITORING_REGION_ID, mpi_region_name, spd->id, talp_info->have_shmem);
 
@@ -213,12 +209,6 @@ void talp_init(subprocess_descriptor_t *spd) {
         talp_info->papi = false;
 #endif
     }
-}
-
-static void talp_destroy(void) {
-    monitoring_regions_finalize_all(thread_spd);
-    free(thread_spd->talp_info);
-    thread_spd->talp_info = NULL;
 }
 
 void talp_finalize(subprocess_descriptor_t *spd) {
@@ -250,20 +240,10 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     }
 #endif
 
-    if (spd == thread_spd) {
-        /* Keep the timers allocated until the program finalizes */
-        /* Note: if talp_finalize is called more than once (especially in
-         * tests), the talp_destroy only need to be invoked once */
-        static bool talp_destroy_dtor = false;
-        if (!talp_destroy_dtor) {
-            atexit(talp_destroy);
-            talp_destroy_dtor = true;
-        }
-    } else {
-        monitoring_regions_finalize_all(spd);
-        free(spd->talp_info);
-        spd->talp_info = NULL;
-    }
+    /* Deallocate monitoring regions and talp_info */
+    monitoring_regions_finalize_all(spd);
+    free(spd->talp_info);
+    spd->talp_info = NULL;
 }
 
 
@@ -674,9 +654,41 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-static dlb_monitor_t **regions = NULL;
-static int nregions = 0;
+static GTree *regions = NULL;
+static GSList *open_regions = NULL;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Compare region names */
+static gint key_compare_func(gconstpointer a, gconstpointer b) {
+    return strncmp(a, b, DLB_MONITOR_NAME_MAX-1);
+}
+
+static void dealloc_region(gpointer data) {
+
+    dlb_monitor_t *monitor = data;
+
+    /* Free private data */
+    monitor_data_t *monitor_data = monitor->_data;
+    free(monitor_data);
+    monitor_data = NULL;
+
+    /* Free name */
+    free((char*)monitor->name);
+    monitor->name = NULL;
+
+    /* Free monitor */
+    free(monitor);
+}
+
+static void init_regions(void) {
+    fatal_cond(regions != NULL || open_regions != NULL,
+            "Error initializing regions. Please report bug at "PACKAGE_BUGREPORT);
+
+    /* binary tree with all regions */
+    regions = g_tree_new_full(
+            (GCompareDataFunc)key_compare_func,
+            NULL, NULL, dealloc_region);
+}
 
 const struct dlb_monitor_t* monitoring_region_get_MPI_region(
         const subprocess_descriptor_t *spd) {
@@ -690,36 +702,29 @@ const char* monitoring_region_get_MPI_region_name(void) {
 
 dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
         const char* name) {
-    dlb_monitor_t *monitor = NULL;
-    bool anonymous_region = (name == NULL || *name == '\0');
-    pthread_mutex_lock(&mutex);
-    {
-        /* Found monitor if already registered */
-        if (!anonymous_region) {
-            int i;
-            for (i=0; i<nregions; ++i) {
-                if (strncmp(regions[i]->name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
-                    monitor = regions[i];
-                    pthread_mutex_unlock(&mutex);
-                    return monitor;
-                }
-            }
-        }
 
-        /* Otherwise, create new monitoring region */
-        ++nregions;
-        void *p = realloc(regions, sizeof(dlb_monitor_t*)*nregions);
-        if (p) {
-            regions = p;
-            regions[nregions-1] = malloc(sizeof(dlb_monitor_t));
-            monitor = regions[nregions-1];
+    dlb_monitor_t *monitor;
+    bool anonymous_region = (name == NULL || *name == '\0');
+
+    /* Found monitor if already registered */
+    if (!anonymous_region) {
+        pthread_mutex_lock(&mutex);
+        {
+            monitor = g_tree_lookup(regions, name);
+        }
+        pthread_mutex_unlock(&mutex);
+
+        if (monitor != NULL) {
+            return monitor;
         }
     }
-    pthread_mutex_unlock(&mutex);
+
+    /* Otherwise, create new monitoring region */
+    monitor = malloc(sizeof(dlb_monitor_t));
     fatal_cond(!monitor, "Could not register a new monitoring region."
             " Please report at "PACKAGE_BUGREPORT);
 
-    // Initialize after the mutex is unlocked
+    /* Initialize values */
     talp_info_t *talp_info = spd->talp_info;
     if (anonymous_region) {
         char monitor_name[DLB_MONITOR_NAME_MAX];
@@ -730,6 +735,13 @@ dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
         monitoring_region_initialize(monitor, get_new_monitor_id(), name, spd->id,
                 talp_info->have_shmem);
     }
+
+    /* Finally, insert */
+    pthread_mutex_lock(&mutex);
+    {
+        g_tree_insert(regions, (gpointer)monitor->name, monitor);
+    }
+    pthread_mutex_unlock(&mutex);
 
     return monitor;
 }
@@ -773,19 +785,8 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor,
     }
 }
 
-static void monitoring_region_finalize(dlb_monitor_t *monitor) {
-    /* Free private data */
-    monitor_data_t *monitor_data = monitor->_data;
-    free(monitor_data);
-    monitor_data = NULL;
-
-    /* Free name */
-    free((char*)monitor->name);
-    monitor->name = NULL;
-}
-
 int monitoring_region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    if (monitor == NULL) {
+    if (monitor == DLB_MPI_REGION) {
         talp_info_t *talp_info = spd->talp_info;
         monitor = &talp_info->mpi_monitor;
     }
@@ -804,7 +805,7 @@ int monitoring_region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *m
 }
 
 int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    if (monitor == NULL) {
+    if (monitor == DLB_MPI_REGION) {
         talp_info_t *talp_info = spd->talp_info;
         monitor = &talp_info->mpi_monitor;
     }
@@ -821,7 +822,13 @@ int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *m
 
         monitor->start_time = get_time_in_ns();
         monitor->stop_time = 0;
-        monitor_data->started = true;
+
+        pthread_mutex_lock(&mutex);
+        {
+            monitor_data->started = true;
+            open_regions = g_slist_prepend(open_regions, monitor);
+        }
+        pthread_mutex_unlock(&mutex);
 
         error = DLB_SUCCESS;
     } else {
@@ -832,9 +839,15 @@ int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *m
 }
 
 int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    if (monitor == NULL) {
+    if (monitor == DLB_MPI_REGION) {
         talp_info_t *talp_info = spd->talp_info;
         monitor = &talp_info->mpi_monitor;
+    } else if (monitor == DLB_LAST_OPEN_REGION) {
+        if (open_regions != NULL) {
+            monitor = open_regions->data;
+        } else {
+            return DLB_ERR_NOENT;
+        }
     }
 
     int error;
@@ -848,7 +861,13 @@ int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *mo
         monitor->stop_time = get_time_in_ns();
         monitor->elapsed_time += monitor->stop_time - monitor->start_time;
         ++(monitor->num_measurements);
-        monitor_data->started = false;
+
+        pthread_mutex_lock(&mutex);
+        {
+            monitor_data->started = false;
+            open_regions = g_slist_remove(open_regions, monitor);
+        }
+        pthread_mutex_unlock(&mutex);
 
         verbose(VB_TALP, "Stopping region %s", monitor->name);
         instrument_event(MONITOR_REGION, monitor_data->id, EVENT_END);
@@ -865,7 +884,7 @@ bool monitoring_region_is_started(const dlb_monitor_t *monitor) {
 }
 
 int monitoring_region_report(const subprocess_descriptor_t *spd, const dlb_monitor_t *monitor) {
-    if (monitor == NULL) {
+    if (monitor == DLB_MPI_REGION) {
         talp_info_t *talp_info = spd->talp_info;
         monitor = &talp_info->mpi_monitor;
     }
@@ -897,20 +916,18 @@ int monitoring_regions_force_update(const subprocess_descriptor_t *spd) {
 static void monitoring_regions_finalize_all(const subprocess_descriptor_t *spd) {
     /* Finalize MPI monitor */
     talp_info_t *talp_info = spd->talp_info;
-    monitoring_region_finalize(&talp_info->mpi_monitor);
+    dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
+    free(mpi_monitor->_data);
+    free((char*)mpi_monitor->name);
+    *mpi_monitor = (const dlb_monitor_t) {};
 
     /* De-allocate regions */
     pthread_mutex_lock(&mutex);
     {
-        int i;
-        for (i=0; i<nregions; ++i) {
-            monitoring_region_finalize(regions[i]);
-            free(regions[i]);
-            regions[i] = NULL;
-        }
-        free(regions);
+        g_tree_destroy(regions);
         regions = NULL;
-        nregions = 0;
+        g_slist_free(open_regions);
+        open_regions = NULL;
     }
     pthread_mutex_unlock(&mutex);
 }
@@ -941,11 +958,14 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
     }
 
     /* Update custom regions */
-    int i;
-    for (i=0; i<nregions; ++i) {
-        dlb_monitor_t *monitor = regions[i];
-        monitor_data_t *monitor_data = monitor->_data;
-        if (monitor_data->started) {
+    pthread_mutex_lock(&mutex);
+    {
+        for (GSList *node = open_regions;
+                node != NULL;
+                node = node->next) {
+            dlb_monitor_t *monitor = node->data;
+            monitor_data_t *monitor_data = monitor->_data;
+
             monitor->elapsed_computation_time += macrosample->elapsed_useful_time;
             monitor->accumulated_MPI_time += macrosample->mpi_time;
             monitor->accumulated_computation_time += macrosample->useful_time;
@@ -954,14 +974,16 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
             monitor->accumulated_cycles += macrosample->cycles;
             monitor->accumulated_instructions += macrosample->instructions;
 #endif
-        }
-        /* Update shared memory only if requested */
-        if (talp_info->external_profiler) {
-            shmem_talp__set_times(monitor_data->node_shared_id,
-                    monitor->accumulated_MPI_time,
-                    monitor->accumulated_computation_time);
+
+            /* Update shared memory only if requested */
+            if (talp_info->external_profiler) {
+                shmem_talp__set_times(monitor_data->node_shared_id,
+                        monitor->accumulated_MPI_time,
+                        monitor->accumulated_computation_time);
+            }
         }
     }
+    pthread_mutex_unlock(&mutex);
 }
 
 static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
@@ -976,9 +998,11 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
         talp_info_t *talp_info = spd->talp_info;
         monitoring_region_report(spd, &talp_info->mpi_monitor);
 
-        int i;
-        for (i=0; i<nregions; ++i) {
-            monitoring_region_report(spd, regions[i]);
+        for (GTreeNode *node = g_tree_node_first(regions);
+                node != NULL;
+                node = g_tree_node_next(node)) {
+            const dlb_monitor_t *monitor = g_tree_node_value(node);
+            monitoring_region_report(spd, monitor);
         }
     }
 
@@ -996,7 +1020,7 @@ static void monitoring_regions_report_all(const subprocess_descriptor_t *spd) {
 
 #ifdef MPI_LIB
 /* Gather data of a monitor among all ranks and record it in rank 0 */
-static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+static void gather_monitor_data(const subprocess_descriptor_t *spd, const dlb_monitor_t *monitor) {
 
     /* Note: we may be sending monitors info twice for PROCESS and POP reports
      * but reducing by MPI communicators makes the implementation much easier
@@ -1207,6 +1231,17 @@ static void gather_monitor_data(const subprocess_descriptor_t *spd, dlb_monitor_
 #ifdef MPI_LIB
 /* Gather data from all monitoring regions */
 static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
+
+    /* Warn about open regions */
+    for (GSList *node = open_regions;
+            node != NULL;
+            node = node->next) {
+        const dlb_monitor_t *monitor = node->data;
+        warning("Region %s is still open during MPI_Finalize."
+                " Collected data may be incomplete.",
+                monitor->name);
+    }
+
     /*** 1: Gather data from MPI monitor ***/
     talp_info_t *talp_info = spd->talp_info;
     gather_monitor_data(spd, &talp_info->mpi_monitor);
@@ -1214,6 +1249,7 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
     /*** 2: Gather data from custom regions: ***/
 
     /* Gather recvcounts for each process */
+    int nregions = g_tree_nnodes(regions);
     int chars_to_send = nregions * DLB_MONITOR_NAME_MAX;
     int *recvcounts = malloc(_mpi_size * sizeof(int));
     PMPI_Allgather(&chars_to_send, 1, MPI_INT,
@@ -1229,8 +1265,13 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
     if (total_chars > 0) {
         /* Prepare sendbuffer */
         char *sendbuffer = malloc(nregions * DLB_MONITOR_NAME_MAX * sizeof(char));
-        for (i=0; i<nregions; ++i) {
-            strcpy(&sendbuffer[i*DLB_MONITOR_NAME_MAX], regions[i]->name);
+        char *sendptr = sendbuffer;
+        for (GTreeNode *node = g_tree_node_first(regions);
+                node != NULL;
+                node = g_tree_node_next(node)) {
+            const dlb_monitor_t *monitor = g_tree_node_value(node);
+            strcpy(sendptr, monitor->name);
+            sendptr += DLB_MONITOR_NAME_MAX;
         }
 
         /* Prepare recvbuffer */
@@ -1260,14 +1301,12 @@ static void monitoring_regions_gather_data(const subprocess_descriptor_t *spd) {
 
     free(recvcounts);
 
-    /* Each monitoring region will be reduced by alphabetical order */
-    pthread_mutex_lock(&mutex);
-    qsort(regions, nregions, sizeof(dlb_monitor_t*), cmp_regions);
-    pthread_mutex_unlock(&mutex);
-
     /* Finally, reduce data */
-    for (i=0; i<nregions; ++i) {
-        gather_monitor_data(spd, regions[i]);
+    for (GTreeNode *node = g_tree_node_first(regions);
+            node != NULL;
+            node = g_tree_node_next(node)) {
+        const dlb_monitor_t *monitor = g_tree_node_value(node);
+        gather_monitor_data(spd, monitor);
     }
 }
 #endif
@@ -1288,7 +1327,7 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics) {
 #ifdef MPI_LIB
     talp_info_t *talp_info = spd->talp_info;
-    if (monitor == NULL) {
+    if (monitor == DLB_MPI_REGION) {
         monitor = &talp_info->mpi_monitor;
     }
 
