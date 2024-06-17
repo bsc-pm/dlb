@@ -17,7 +17,7 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-/* GTree implementtion from GLIB: */
+/* GTree implementation from GLIB: */
 
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
@@ -46,18 +46,16 @@
 #ifndef GTREE_H
 #define GTREE_H
 
-#include <inttypes.h>
-typedef int            gint;
-typedef gint           gboolean;
-typedef unsigned int   guint;
-typedef int8_t         gint8;
-typedef uint8_t        guint8;
-typedef void*          gpointer;
-typedef const void    *gconstpointer;
+#include "support/gtypes.h"
+
+typedef struct _GTree  GTree;
+typedef struct _GTreeNode GTreeNode;
+
 typedef gint         (*GCompareFunc) (gconstpointer a, gconstpointer b);
 typedef gint         (*GCompareDataFunc) (gconstpointer a, gconstpointer b, gpointer user_data);
 typedef void         (*GDestroyNotify) (gpointer data);
 typedef gboolean     (*GTraverseFunc) (gpointer key, gpointer value, gpointer data);
+typedef gboolean     (*GTraverseNodeFunc) (GTreeNode *node, gpointer data);
 
 typedef enum
 {
@@ -67,49 +65,61 @@ typedef enum
     G_LEVEL_ORDER
 } GTraverseType;
 
-typedef struct _GTree  GTree;
-
 
 /* Balanced binary trees
  */
-GTree*   g_tree_new             (GCompareFunc      key_compare_func);
-GTree*   g_tree_new_with_data   (GCompareDataFunc  key_compare_func,
-                                 gpointer          key_compare_data);
-GTree*   g_tree_new_full        (GCompareDataFunc  key_compare_func,
-                                 gpointer          key_compare_data,
-                                 GDestroyNotify    key_destroy_func,
-                                 GDestroyNotify    value_destroy_func);
-GTree*   g_tree_ref             (GTree            *tree);
-void     g_tree_unref           (GTree            *tree);
-void     g_tree_destroy         (GTree            *tree);
-void     g_tree_insert          (GTree            *tree,
-                                 gpointer          key,
-                                 gpointer          value);
-void     g_tree_replace         (GTree            *tree,
-                                 gpointer          key,
-                                 gpointer          value);
-gboolean g_tree_remove          (GTree            *tree,
-                                 gconstpointer     key);
-gboolean g_tree_steal           (GTree            *tree,
-                                 gconstpointer     key);
-gpointer g_tree_lookup          (GTree            *tree,
-                                 gconstpointer     key);
-gboolean g_tree_lookup_extended (GTree            *tree,
-                                 gconstpointer     lookup_key,
-                                 gpointer         *orig_key,
-                                 gpointer         *value);
-void     g_tree_foreach         (GTree            *tree,
-                                 GTraverseFunc     func,
-                                 gpointer          user_data);
-void     g_tree_traverse        (GTree            *tree,
-                                 GTraverseFunc     traverse_func,
-                                 GTraverseType     traverse_type,
-                                 gpointer          user_data);
-gpointer g_tree_search          (GTree            *tree,
-                                 GCompareFunc      search_func,
-                                 gconstpointer     user_data);
-gint     g_tree_height          (GTree            *tree);
-gint     g_tree_nnodes          (GTree            *tree);
+GTree*     g_tree_new             (GCompareFunc      key_compare_func);
+GTree*     g_tree_new_with_data   (GCompareDataFunc  key_compare_func,
+                                   gpointer          key_compare_data);
+GTree*     g_tree_new_full        (GCompareDataFunc  key_compare_func,
+                                   gpointer          key_compare_data,
+                                   GDestroyNotify    key_destroy_func,
+                                   GDestroyNotify    value_destroy_func);
+GTreeNode* g_tree_node_first      (GTree            *tree);
+GTreeNode* g_tree_node_last       (GTree            *tree);
+GTreeNode* g_tree_node_previous   (GTreeNode        *node);
+GTreeNode* g_tree_node_next       (GTreeNode        *node);
+GTree*     g_tree_ref             (GTree            *tree);
+void       g_tree_unref           (GTree            *tree);
+void       g_tree_destroy         (GTree            *tree);
+void       g_tree_insert          (GTree            *tree,
+                                   gpointer          key,
+                                   gpointer          value);
+void       g_tree_replace         (GTree            *tree,
+                                   gpointer          key,
+                                   gpointer          value);
+gboolean   g_tree_remove          (GTree            *tree,
+                                   gconstpointer     key);
+gboolean   g_tree_steal           (GTree            *tree,
+                                   gconstpointer     key);
+gpointer   g_tree_node_key        (GTreeNode        *node);
+gpointer   g_tree_node_value      (GTreeNode        *node);
+GTreeNode* g_tree_lookup_node     (GTree            *tree,
+                                   gconstpointer     key);
+gpointer   g_tree_lookup          (GTree            *tree,
+                                   gconstpointer     key);
+gboolean   g_tree_lookup_extended (GTree            *tree,
+                                   gconstpointer     lookup_key,
+                                   gpointer         *orig_key,
+                                   gpointer         *value);
+void       g_tree_foreach         (GTree            *tree,
+                                   GTraverseFunc     func,
+                                   gpointer          user_data);
+void       g_tree_foreach_node    (GTree            *tree,
+                                   GTraverseNodeFunc func,
+                                   gpointer          user_data);
+void       g_tree_traverse        (GTree            *tree,
+                                   GTraverseFunc     traverse_func,
+                                   GTraverseType     traverse_type,
+                                   gpointer          user_data);
+GTreeNode* g_tree_search_node     (GTree            *tree,
+                                   GCompareFunc      search_func,
+                                   gconstpointer     user_data);
+gpointer   g_tree_search          (GTree            *tree,
+                                   GCompareFunc      search_func,
+                                   gconstpointer     user_data);
+gint       g_tree_height          (GTree            *tree);
+gint       g_tree_nnodes          (GTree            *tree);
 
 
 #endif /* GTREE_H */

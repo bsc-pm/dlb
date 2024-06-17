@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #define DLB_MPI_REGION NULL
+#define DLB_LAST_OPEN_REGION (void*)1
 
 enum { DLB_MONITOR_NAME_MAX = 128 };
 
@@ -243,9 +244,11 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 
 /*! \brief Stop (or pause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
+ *  \param[in] handle Monitoring handle that identifies the region, DLB_MPI_REGION,
+ *                    or DLB_LAST_OPEN_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
+ *  \return DLB_ERR_NOENT if DLB_LAST_OPEN_REGION does not match any region
  */
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 

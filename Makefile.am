@@ -182,8 +182,11 @@ COMMON_SRCS = \
 	src/support/env.h                       \
 	src/support/error.c                     \
 	src/support/error.h                     \
+	src/support/gslist.c                    \
+	src/support/gslist.h                    \
 	src/support/gtree.c                     \
 	src/support/gtree.h                     \
+	src/support/gtypes.h                    \
 	src/support/mask_utils.c                \
 	src/support/mask_utils.h                \
 	src/support/mytime.c                    \

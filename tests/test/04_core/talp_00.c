@@ -221,6 +221,46 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    /* Test DLB_LAST_OPEN_REGION */
+    {
+        dlb_monitor_t *first = monitoring_region_register(&spd, "first");
+        dlb_monitor_t *last = monitoring_region_register(&spd, "last");
+
+        assert( monitoring_region_start(&spd, first) == DLB_SUCCESS );
+        assert( monitoring_region_start(&spd, last) == DLB_SUCCESS );
+        assert( last->num_measurements == 0 );
+        assert( first->num_measurements == 0 );
+
+        /* Stop last */
+        assert( monitoring_region_stop(&spd, DLB_LAST_OPEN_REGION) == DLB_SUCCESS );
+        assert( last->num_measurements == 1 );
+
+        /* Re-open and stop */
+        assert( monitoring_region_start(&spd, last) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, DLB_LAST_OPEN_REGION) == DLB_SUCCESS );
+        assert( last->num_measurements == 2 );
+
+        /* Stop first */
+        assert( monitoring_region_stop(&spd, DLB_LAST_OPEN_REGION) == DLB_SUCCESS );
+        assert( first->num_measurements == 1 );
+
+        /* No open regions */
+        assert( monitoring_region_stop(&spd, DLB_LAST_OPEN_REGION) == DLB_ERR_NOENT );
+
+        dlb_monitor_t *mid = monitoring_region_register(&spd, "mid");
+        assert( monitoring_region_start(&spd, first) == DLB_SUCCESS );
+        assert( monitoring_region_start(&spd, mid) == DLB_SUCCESS );
+        assert( monitoring_region_start(&spd, last) == DLB_SUCCESS );
+
+        /* Not properly nested, weird but still supported */
+        assert( monitoring_region_stop(&spd, mid) == DLB_SUCCESS );
+        assert( mid->num_measurements == 1 );
+        assert( monitoring_region_stop(&spd, DLB_LAST_OPEN_REGION) == DLB_SUCCESS );
+        assert( last->num_measurements == 3 );
+        assert( monitoring_region_stop(&spd, DLB_LAST_OPEN_REGION) == DLB_SUCCESS );
+        assert( first->num_measurements == 2 );
+    }
+
     talp_finalize(&spd);
 
     return 0;
