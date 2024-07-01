@@ -308,7 +308,7 @@ def enrich_f_c_par_decl(f08par, f_args):
         # Obtain a list with the last 'num_char_parameters' elements.
         len_var_names = f_args.split(',')[-num_char_parameters:]
         for len_var in len_var_names:
-            decl_block += newline + 'INTEGER, INTENT(IN) :: {0}'.format(len_var)
+            decl_block += newline + 'INTEGER, VALUE, INTENT(IN) :: {0}'.format(len_var.strip())
 
     return decl_block
 
