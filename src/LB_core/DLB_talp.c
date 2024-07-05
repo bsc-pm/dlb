@@ -936,28 +936,7 @@ static void monitoring_regions_update_all(const subprocess_descriptor_t *spd,
         const talp_macrosample_t *macrosample) {
     talp_info_t *talp_info = spd->talp_info;
 
-    /* Update MPI monitor */
-    dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
-    monitor_data_t *mpi_monitor_data = mpi_monitor->_data;
-    if (mpi_monitor_data != NULL
-            && mpi_monitor_data->started) {
-        mpi_monitor->elapsed_computation_time += macrosample->elapsed_useful_time;
-        mpi_monitor->accumulated_MPI_time += macrosample->mpi_time;
-        mpi_monitor->accumulated_computation_time += macrosample->useful_time;
-        mpi_monitor->num_mpi_calls += macrosample->num_mpi_calls;
-#ifdef PAPI_LIB
-        mpi_monitor->accumulated_cycles += macrosample->cycles;
-        mpi_monitor->accumulated_instructions += macrosample->instructions;
-#endif
-        /* Update shared memory only if requested */
-        if (talp_info->external_profiler) {
-            shmem_talp__set_times(mpi_monitor_data->node_shared_id,
-                    mpi_monitor->accumulated_MPI_time,
-                    mpi_monitor->accumulated_computation_time);
-        }
-    }
-
-    /* Update custom regions */
+    /* Update all open regions */
     pthread_mutex_lock(&mutex);
     {
         for (GSList *node = open_regions;
