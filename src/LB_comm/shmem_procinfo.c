@@ -73,7 +73,7 @@ typedef struct {
     procinfo_flags_t flags;
     struct timespec initial_time;
     cpu_set_t free_mask;        // Contains the CPUs in the system not owned
-    pinfo_t process_info[0];
+    pinfo_t process_info[];
 } shdata_t;
 
 enum { SHMEM_PROCINFO_VERSION = 9 };

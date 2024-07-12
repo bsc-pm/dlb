@@ -43,7 +43,7 @@ typedef struct lewi_async_shdata {
     unsigned int        attached_nprocs;
     queue_lewi_reqs_t   requests;       /* queue of requests */
     unsigned int        proc_list_head;
-    lewi_process_t      processes[0];   /* per-process lewi data */
+    lewi_process_t      processes[];    /* per-process lewi data */
 } lewi_async_shdata_t;
 
 enum { NOBODY = 0 };

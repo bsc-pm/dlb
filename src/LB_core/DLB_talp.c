@@ -520,7 +520,7 @@ static void talp_node_summary_gather_data(const subprocess_descriptor_t *spd) {
         int64_t total_useful_time;
         int64_t max_mpi_time;
         int64_t max_useful_time;
-        process_in_node_record_t process_info[0];
+        process_in_node_record_t process_info[];
     } monitor_node_summary_t;
 
     monitor_node_summary_t *node_summary = NULL;

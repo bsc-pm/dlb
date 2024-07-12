@@ -69,7 +69,7 @@ typedef struct {
     atomic_int_least64_t    timestamp_cpu_lent;
     bool                    queues_enabled;
     queue_proc_reqs_t       proc_requests;
-    cpuinfo_t               node_info[0];
+    cpuinfo_t               node_info[];
 } shdata_t;
 
 enum { SHMEM_CPUINFO_VERSION = 5 };

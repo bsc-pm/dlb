@@ -47,7 +47,7 @@ typedef struct DLB_ALIGN_CACHE talp_region_t {
 typedef struct {
     bool initialized;
     int max_regions;
-    talp_region_t talp_region[0];
+    talp_region_t talp_region[];
 } shdata_t;
 
 enum { SHMEM_TALP_VERSION = 1 };
