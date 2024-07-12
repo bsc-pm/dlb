@@ -52,7 +52,7 @@ static void check_shmem_sync_version(void) {
         int                 int2;
         enum {ENUM1}        enum1;
         pthread_mutex_t     mutex;
-        pid_t               pidlist[0];
+        pid_t               pidlist[];
     };
 
     int version = shmem_shsync__version();
@@ -159,7 +159,7 @@ static void check_cpuinfo_version(void) {
         int64_t int1;
         bool bool2;
         struct KnownQueueProcs queue;
-        struct KnownCpuinfo info[0];
+        struct KnownCpuinfo info[];
     };
 
     int version = shmem_cpuinfo__version();
@@ -202,7 +202,7 @@ static void check_procinfo_version(void) {
         struct KnownProcinfoFlags flags;
         struct timespec time;
         cpu_set_t mask1;
-        struct KnownProcinfo info[0];
+        struct KnownProcinfo info[];
     };
 
     int version = shmem_procinfo__version();
@@ -229,7 +229,7 @@ static void check_talp_version(void) {
     struct KnownTalpShdata {
         bool bool1;
         int int1;
-        struct TalpRegion talp_region[0];
+        struct TalpRegion talp_region[];
     };
 
     int version = shmem_talp__version();
