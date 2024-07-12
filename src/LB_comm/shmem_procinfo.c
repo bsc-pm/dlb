@@ -76,7 +76,7 @@ typedef struct {
     pinfo_t process_info[0];
 } shdata_t;
 
-enum { SHMEM_PROCINFO_VERSION = 8 };
+enum { SHMEM_PROCINFO_VERSION = 9 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;

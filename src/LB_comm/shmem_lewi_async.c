@@ -47,7 +47,7 @@ typedef struct lewi_async_shdata {
 } lewi_async_shdata_t;
 
 enum { NOBODY = 0 };
-enum { SHMEM_LEWI_ASYNC_VERSION = 1 };
+enum { SHMEM_LEWI_ASYNC_VERSION = 2 };
 
 static lewi_async_shdata_t *shdata = NULL;
 static shmem_handler_t *shm_handler = NULL;

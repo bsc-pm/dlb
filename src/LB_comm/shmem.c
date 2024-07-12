@@ -44,6 +44,7 @@
 #endif
 
 #include "LB_comm/shmem.h"
+#include "support/atomic.h"
 #include "support/debug.h"
 #include "support/options.h"
 #include "support/mytime.h"
@@ -362,6 +363,7 @@ int shmem_shsync__version(void) {
 
 size_t shmem_shsync__size(void) {
     size_t shsync_size = sizeof(shmem_sync_t) + sizeof(pid_t) * mu_get_system_size();
-    shsync_size = (shsync_size + 7) & ~7; // round up to 8 bytes
+    size_t alignment = DLB_CACHE_LINE; // in bytes
+    shsync_size = (shsync_size + (alignment - 1)) & ~(alignment - 1); // round up
     return shsync_size;
 }
