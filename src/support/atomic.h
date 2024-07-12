@@ -85,11 +85,11 @@
 
 /* Support for cache alignment, padding, etc. */
 
-#ifndef CACHE_LINE
-#define CACHE_LINE 128
+#ifndef DLB_CACHE_LINE
+#define DLB_CACHE_LINE 64
 #endif
 
-#define DLB_ALIGN_CACHE __attribute__((aligned(CACHE_LINE)))
+#define DLB_ALIGN_CACHE __attribute__((aligned(DLB_CACHE_LINE)))
 
 
 /* If flags does not contain 'bit', atomically:

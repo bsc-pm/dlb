@@ -58,7 +58,8 @@ static void check_shmem_sync_version(void) {
     int version = shmem_shsync__version();
     size_t size = shmem_shsync__size();
     size_t known_size = sizeof(struct KnownShmemSync) + sizeof(pid_t) * mu_get_system_size();
-    known_size = (known_size + 7) & ~7; // round up to 8 bytes
+    size_t alignment = DLB_CACHE_LINE; // in bytes
+    known_size = (known_size + (alignment - 1)) & ~(alignment - 1); // round up
     fprintf(stderr, "shmem_sync version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_SHMEM_SYNC_VERSION );
@@ -172,15 +173,8 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 8 };
+    enum { KNOWN_PROCINFO_VERSION = 9 };
 
-    struct KnownTALPTimes {
-        atomic_int_least64_t int1;
-        atomic_int_least64_t int2;
-        atomic_int_least64_t int3;
-        atomic_int_least64_t int4;
-        bool bool1;
-    };
     struct DLB_ALIGN_CACHE KnownProcinfo {
         pid_t pid;
         bool bool1;
@@ -192,7 +186,6 @@ static void check_procinfo_version(void) {
         // Cpu Usage fields:
         double double1;
         double double2;
-        struct KnownTALPTimes talp1;
 #ifdef DLB_LOAD_AVERAGE
         // Load average fields:
         float float1[3];

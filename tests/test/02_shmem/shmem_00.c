@@ -24,6 +24,7 @@
 #include "unique_shmem.h"
 
 #include "LB_comm/shmem.h"
+#include "support/atomic.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 
@@ -54,6 +55,10 @@ int main(int argc, char **argv) {
                 .name = "test",
                 .key = SHMEM_KEY,
             });
+
+    // check shdata is aligned to DLB_CACHE_LINE
+    assert( (intptr_t)shdata % DLB_CACHE_LINE == 0 );
+
     fprintf(stdout, "shmem name: %s\n", get_shm_filename(handler));
     pthread_barrierattr_t attr;
     assert( pthread_barrierattr_init(&attr) == 0 );
@@ -75,6 +80,10 @@ int main(int argc, char **argv) {
                         .name = "test",
                         .key = SHMEM_KEY,
                     });
+
+            // check shdata is aligned to DLB_CACHE_LINE
+            assert( (intptr_t)shdata % DLB_CACHE_LINE == 0 );
+
             pthread_barrier_wait(&shdata->barrier);                             // Barrier 1
 
             // Everyone performs a locked decrement
