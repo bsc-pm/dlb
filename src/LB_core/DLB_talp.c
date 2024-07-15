@@ -280,11 +280,14 @@ static talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd)
     pthread_mutex_lock(&talp_info->samples_mutex);
     {
         int ncpus = ++talp_info->ncpus;
-        void *p = realloc(talp_info->samples, sizeof(talp_sample_t*)*ncpus);
-        if (p) {
-            talp_info->samples = p;
-            talp_info->samples[ncpus-1] = malloc(sizeof(talp_sample_t));
-            _tls_sample = talp_info->samples[ncpus-1];
+        void *samples = realloc(talp_info->samples, sizeof(talp_sample_t*)*ncpus);
+        if (samples) {
+            talp_info->samples = samples;
+            void *new_sample;
+            if (posix_memalign(&new_sample, DLB_CACHE_LINE, sizeof(talp_sample_t)) == 0) {
+                _tls_sample = new_sample;
+                talp_info->samples[ncpus-1] = new_sample;
+            }
         }
     }
     pthread_mutex_unlock(&talp_info->samples_mutex);
