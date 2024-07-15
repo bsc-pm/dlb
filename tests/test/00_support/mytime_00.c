@@ -148,5 +148,21 @@ int main(int argc, char **argv) {
     ns_to_human(buf, 16, 1010000000);   assert( strcmp(buf, "1.01 s") == 0 );
     ns_to_human(buf, 16, INT64_MAX);    assert( strcmp(buf, "9223372036.85 s") == 0 );
 
+
+    /* formatted string tests*/
+
+    struct tm tm;
+
+    /* fill in values for 2024-07-15 05:14:13Z */
+    tm.tm_year = 2024 - 1900;
+    tm.tm_mon = 7 - 1;
+    tm.tm_mday = 15;
+    tm.tm_hour = 5;
+    tm.tm_min = 14;
+    tm.tm_sec = 13;
+    tm.tm_isdst = -1;
+    char* iso8601 = get_iso_8601_string(&tm);
+    assert( strcmp(iso8601, "2024-07-15T05:14:13Z") == 0 );
+
     return 0;
 }
