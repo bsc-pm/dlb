@@ -48,4 +48,7 @@ void timer_start(void *handler);
 void timer_stop(void *handler);
 void timer_finalize(void);
 
+
+char* get_iso_8601_string(struct tm *tm_info);
+
 #endif /* MYTIME_H */

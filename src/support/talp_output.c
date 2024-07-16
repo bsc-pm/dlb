@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "support/talp_output.h"
 
 #include "apis/dlb_talp.h"
@@ -30,6 +34,7 @@
 #include <string.h>
 #include <limits.h>
 #include <pthread.h>
+
 
 /*********************************************************************************/
 /*    POP Metrics                                                                */
@@ -1003,6 +1008,55 @@ static void process_finalize(void) {
 
 
 /*********************************************************************************/
+/*    TALP Metadata                                                                   */
+/*********************************************************************************/
+typedef struct TALPMetadataRecord {
+    char *time_of_creation; // ISO 8601 string 
+    char *dlb_version; // DLB version used
+} talp_metadata_record_t;
+static talp_metadata_record_t metadata_record;
+
+static void talp_output_record_metadata(void) {
+    /* Initialize structure */
+    time_t now = time(NULL);
+    metadata_record = (const talp_metadata_record_t) {
+        .time_of_creation = get_iso_8601_string(localtime(&now)),
+        .dlb_version = PACKAGE_VERSION
+    };
+}
+
+static void metadata_to_json(FILE *out_file) {
+    fprintf(out_file,
+                    "  \"dlbVersion\": \"%s\",\n"
+                    "  \"timestamp\": \"%s\",\n",
+                metadata_record.dlb_version,metadata_record.time_of_creation);
+}
+
+static void metadata_to_xml(FILE *out_file) {
+
+    fprintf(out_file,
+            "  <dlbVersion>%s</dlbVersion>\n"
+            "  <timestamp>%s</timestamp>\n",
+            metadata_record.dlb_version,
+            metadata_record.time_of_creation);
+}
+
+static void metadata_to_txt(FILE *out_file) {
+  
+    fprintf(out_file,
+            "################# TALP Metadata ##################\n"
+            "### DLB Version:                   %s\n"
+            "### Timestamp:                     %s\n",
+            metadata_record.dlb_version,
+            metadata_record.time_of_creation);
+}
+
+static void metadata_finalize(void) {
+    free(metadata_record.time_of_creation);
+}
+
+
+/*********************************************************************************/
 /*    Helper functions                                                           */
 /*********************************************************************************/
 
@@ -1029,6 +1083,9 @@ static void xml_footer(FILE *out_file) {
 /*********************************************************************************/
 
 void talp_output_finalize(const char *output_file) {
+
+    talp_output_record_metadata();
+    
     if (output_file == NULL) {
         /* No output file, just print all records */
         pop_metrics_print();
@@ -1160,6 +1217,7 @@ void talp_output_finalize(const char *output_file) {
                 switch(extension) {
                     case EXT_JSON:
                         json_header(out_file);
+                        metadata_to_json(out_file);
                         pop_metrics_to_json(out_file);
                         pop_raw_to_json(out_file);
                         node_to_json(out_file);
@@ -1168,6 +1226,7 @@ void talp_output_finalize(const char *output_file) {
                         break;
                     case EXT_XML:
                         xml_header(out_file);
+                        metadata_to_xml(out_file);
                         pop_metrics_to_xml(out_file);
                         pop_raw_to_xml(out_file);
                         node_to_xml(out_file);
@@ -1180,6 +1239,7 @@ void talp_output_finalize(const char *output_file) {
                         process_to_csv(out_file, append_to_csv);
                         break;
                     case EXT_TXT:
+                        metadata_to_txt(out_file);
                         pop_metrics_to_txt(out_file);
                         pop_raw_to_txt(out_file);
                         node_to_txt(out_file);
@@ -1193,6 +1253,7 @@ void talp_output_finalize(const char *output_file) {
     }
 
     // De-allocate all records
+    metadata_finalize();
     pop_metrics_finalize();
     pop_raw_finalize();
     node_finalize();
