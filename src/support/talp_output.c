@@ -1020,7 +1020,7 @@ void talp_output_record_metadata() {
     /* Initialize structure */
     time_t now = time(NULL);
     metadata_record = (const talp_metadata_record_t) {
-        .time_of_creation = get_iso_8601_string(gmtime(&now)),
+        .time_of_creation = get_iso_8601_string(localtime(&now)),
         .dlb_version = PACKAGE_VERSION
     };
 }
