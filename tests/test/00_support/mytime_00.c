@@ -26,6 +26,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <stdlib.h>
 
 int main(int argc, char **argv) {
 
@@ -163,6 +164,7 @@ int main(int argc, char **argv) {
     tm.tm_isdst = -1;
     char* iso8601 = get_iso_8601_string(&tm);
     assert( strcmp(iso8601, "2024-07-15T05:14:13") == 0 );
+    free(iso8601);
 
     return 0;
 }
