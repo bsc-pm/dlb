@@ -1016,7 +1016,7 @@ typedef struct TALPMetadataRecord {
 } talp_metadata_record_t;
 static talp_metadata_record_t metadata_record;
 
-void talp_output_record_metadata() {
+static void talp_output_record_metadata(void) {
     /* Initialize structure */
     time_t now = time(NULL);
     metadata_record = (const talp_metadata_record_t) {
