@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
 
     struct tm tm;
 
-    /* fill in values for 2024-07-15 05:14:13Z */
+    /* fill in values for 2024-07-15 05:14:13 */
     tm.tm_year = 2024 - 1900;
     tm.tm_mon = 7 - 1;
     tm.tm_mday = 15;
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
     tm.tm_sec = 13;
     tm.tm_isdst = -1;
     char* iso8601 = get_iso_8601_string(&tm);
-    assert( strcmp(iso8601, "2024-07-15T05:14:13Z") == 0 );
+    assert( strcmp(iso8601, "2024-07-15T05:14:13") == 0 );
 
     return 0;
 }

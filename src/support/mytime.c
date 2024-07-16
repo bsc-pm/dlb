@@ -249,12 +249,14 @@ void timer_finalize(void) {
 
 
 /* Formatted strings */
+
+// This function assumes localtime to be used, so no timezone information is specified
 char* get_iso_8601_string(struct tm *tm_info) {
     // requires 20 characters plus the null terminator
-    char *iso_8601_string = malloc(21);
+    char *iso_8601_string = malloc(20);
 
     // Format the tm structure into the ISO 8601 string
-    strftime(iso_8601_string, 21, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+    strftime(iso_8601_string, 20, "%Y-%m-%dT%H:%M:%S", tm_info);
 
     return iso_8601_string;
 }
