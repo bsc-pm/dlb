@@ -1019,40 +1019,24 @@ static talp_metadata_record_t metadata_record;
 void talp_output_record_metadata() {
     /* Initialize structure */
     time_t now = time(NULL);
-    
     metadata_record = (const talp_metadata_record_t) {
         .time_of_creation = get_iso_8601_string(gmtime(&now)),
         .dlb_version = PACKAGE_VERSION
     };
 }
 
-static void metadata_print(void) {
-  
-    info("################# TALP Metadata ##################");
-    info("### DLB Version:                  %s", metadata_record.dlb_version);
-    info("### Timestamp:                    %s", metadata_record.time_of_creation);
-    
-}
-
 static void metadata_to_json(FILE *out_file) {
     fprintf(out_file,
-                    "  \"metadata\":");
-
-    fprintf(out_file,
-                "    {\n"
-                "      \"dlbVersion\": \"%s\",\n"
-                "      \"timestamp\": \"%s\",\n"
-                "    }\n",
+                    "  \"dlbVersion\": \"%s\",\n"
+                    "  \"timestamp\": \"%s\",\n",
                 metadata_record.dlb_version,metadata_record.time_of_creation);
 }
 
 static void metadata_to_xml(FILE *out_file) {
 
     fprintf(out_file,
-            "  <metadata>\n"
-            "    <dlbVersion>%s</dlbVersion>\n"
-            "    <timestamp>%s</timestamp>\n"
-            "  </metadata>\n",
+            "  <dlbVersion>%s</dlbVersion>\n"
+            "  <timestamp>%s</timestamp>\n",
             metadata_record.dlb_version,
             metadata_record.time_of_creation);
 }
@@ -1065,8 +1049,6 @@ static void metadata_to_txt(FILE *out_file) {
             "### Timestamp:                     %s\n",
             metadata_record.dlb_version,
             metadata_record.time_of_creation);
-    
-
 }
 
 static void metadata_finalize(void) {
@@ -1106,7 +1088,6 @@ void talp_output_finalize(const char *output_file) {
     
     if (output_file == NULL) {
         /* No output file, just print all records */
-        metadata_print();
         pop_metrics_print();
         pop_raw_print();
         node_print();
