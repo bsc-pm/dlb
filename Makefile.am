@@ -750,10 +750,10 @@ sphinx_files = \
 	doc/user_guide/source/api.rst \
 	doc/user_guide/source/contents.rst \
 	doc/user_guide/source/faq.rst \
-	doc/user_guide/source/how_to_install.rst \
+	doc/user_guide/source/installation.rst \
 	doc/user_guide/source/how_to_run.rst \
 	doc/user_guide/source/index.rst \
-	doc/user_guide/source/intro.rst \
+	doc/user_guide/source/overview.rst \
 	doc/user_guide/source/technical_requirements.rst \
 	doc/user_guide/source/images/dlb_logo.png \
 	doc/user_guide/source/images/dlb_logo_white.png \
