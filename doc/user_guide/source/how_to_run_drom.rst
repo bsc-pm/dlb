@@ -1,5 +1,6 @@
 
 .. highlight:: bash
+.. _drom:
 
 ********************************************************************
 DROM for making the application react to changes in the CPU affinity

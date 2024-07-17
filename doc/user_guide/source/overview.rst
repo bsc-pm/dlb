@@ -42,9 +42,6 @@ To achieve this DLB will lend the CPUs of a process waiting in a blocking MPI ca
   
   Application without LeWI (left) and with LeWI (right)
 
-.. tip::
-  If you want to see LeWI in action on your machine, check out our :ref:`Quickstart into using LeWI <lewi_quickstart>`.
-
 
 .. _drom_overview:
 
@@ -52,8 +49,11 @@ To achieve this DLB will lend the CPUs of a process waiting in a blocking MPI ca
 DROM: Dynamic Resource Ownership Manager
 ========================================
 
-DROM offers an API to change the computational resources assigned to a process at run time.
-TODO: Extend here a bit
+DROM offers an API to change the computational resources assigned to a process at run time. 
+This can be useful if the application detects that it cannot use these resources efficiently and
+decides to release some of them. 
+This component can be used by an external entity like a job scheduler or ressource manager to reallocate the ressource mitigating coarse-grain load imbalance.
+
 
 .. figure:: images/drom.png
   :width: 300pt
