@@ -1,22 +1,71 @@
-.. DLB documentation master file, created by
-   sphinx-quickstart on Wed Jun 10 12:33:33 2015.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+:orphan:
 
-Welcome to DLB's documentation!
-===============================
+.. only:: html
+
+  .. image:: images/dlb_logo.png
+
+Welcome to the DLB documentation!
+===================================
+
+DLB is a collection of tools targeting HPC applications. 
+Its main goal is to help with the dynamic load balancing of hybrid codes, which use a nested parallelism model e.g MPI + OpenMP.
+DLB provides components to **modify ressources at runtime**, as well as a profiler to **gather performance metrics**. 
+
+.. note::
+   If you are new here, consider having a look at the :ref:`overview` first.
+
+
+If you want to contribute, please have a look at our `GitHub repository <https://github.com/bsc-pm/dlb/>`_.
+
+
+.. toctree::
+    :caption: Getting started
+    :maxdepth: 2
+    :hidden:
+
+    overview
+    installation
+    contents
+    technical_requirements
+
 
 .. toctree::
     :maxdepth: 2
+    :caption: LeWI
+    :hidden:
 
-    intro
-    technical_requirements
-    how_to_install
-    how_to_run
+    how_to_run_lewi
+
+.. toctree::
+    :maxdepth: 2
+    :caption: DROM
+    :hidden:
+
+    how_to_run_drom
+
+
+.. toctree::
+    :maxdepth: 2
+    :caption: TALP
+    :hidden:
+
+    how_to_run_talp
+
+
+.. toctree::
+    :maxdepth: 2
+    :caption: API Documentation
+    :hidden:
+
     api
     advance_usage
+
+.. toctree::
+    :maxdepth: 2
+    :caption: FAQ
+    :hidden:
+
     faq
-    contents
 
 
 @SPHINX_HAS_MANPAGES@.. only:: html
@@ -24,6 +73,7 @@ Welcome to DLB's documentation!
 @SPHINX_HAS_MANPAGES@    .. toctree::
 @SPHINX_HAS_MANPAGES@        :caption: Man pages
 @SPHINX_HAS_MANPAGES@        :maxdepth: 1
+@SPHINX_HAS_MANPAGES@        :hidden:
 @SPHINX_HAS_MANPAGES@
 @SPHINX_HAS_MANPAGES@        dlb
 @SPHINX_HAS_MANPAGES@        dlb_run
