@@ -17,11 +17,9 @@ Generally, in order to run DLB with your application, you need to follow these s
 
 3. Run you application as you would normally do.
 
-Jump into the following sections for a more detailed description of each use case:
+For more information we provide more detailed information depending on the component used:
 
-.. toctree::
-    :maxdepth: 1
+* :ref:`DROM <drom>`
+* :ref:`LeWI <lewi>`
+* :ref:`TALP <talp>`
 
-    how_to_run_lewi
-    how_to_run_drom
-    how_to_run_talp

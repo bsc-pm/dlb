@@ -1,5 +1,6 @@
 
 .. highlight:: bash
+.. _talp:
 
 ******************************************************
 TALP for monitoring the Programming Model efficiencies

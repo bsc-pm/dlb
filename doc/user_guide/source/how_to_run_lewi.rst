@@ -1,5 +1,6 @@
 
 .. highlight:: bash
+.. _lewi:
 
 ***********************************************
 LeWI for improving Load Balance in Applications
