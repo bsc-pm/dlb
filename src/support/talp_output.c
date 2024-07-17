@@ -425,7 +425,7 @@ static void pop_to_csv(FILE *out_file, bool append) {
             raw_record->cycles > 0 ? (float)raw_record->instructions / raw_record->cycles : 0.0f;
 
         /* Assuming that if both records are not NULL, they are the same region */
-        fprintf(out_file, "%s,%"PRId64",%1.2f",
+        fprintf(out_file, "\"%s\",%"PRId64",%1.2f",
                 metrics_record ? metrics_record->name : raw_record->name,
                 metrics_record ? metrics_record->elapsed_time : raw_record->elapsed_time,
                 ipc);
