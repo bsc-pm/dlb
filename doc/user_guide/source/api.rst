@@ -18,12 +18,12 @@ DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided
 
     DROM: Dynamic Resource Ownership Manager
         The DROM API manages the CPU ownership of each DLB running process. For a more
-        detailed description see :ref:`drom`. These functions are described in section
+        detailed description see :ref:`drom_overview`. These functions are described in section
         :ref:`drom-api`.
 
     TALP: Tracking Application Live Performance
         The TALP API is used to obtain measured metrics from other processes as well as
-        to define custom monitoring regions, see :ref:`talp`. These functions are
+        to define custom monitoring regions, see :ref:`talp_overview`. These functions are
         described in section :ref:`talp-api`.
 
     MPI API
@@ -203,7 +203,7 @@ Dynamic Resource Manager Interface
 ==================================
 
 The next set of functions can be used when the user has enabled the Dynamic Resource Ownership
-Manager (DROM) Module (see :ref:`drom`). With this interface the user can set or retrieve the
+Manager (DROM) Module (see :ref:`drom_overview`). With this interface the user can set or retrieve the
 process mask of each DLB process.
 
 .. function:: int DLB_DROM_Attach(void)
