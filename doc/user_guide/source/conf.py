@@ -116,14 +116,15 @@ html_theme = 'sphinx_rtd_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {
+html_theme_options = {
+    'collapse_navigation': False,
 #    "sidebarwidth" : "280",
 #    "font_family": '"Roboto Condensed", sans-serif',
 #    "caption_font_family": '"Roboto Condensed", sans-serif',
 #    "head_font_family": '"Roboto Condensed", sans-serif',
 #    "code_font_family": '"Roboto Mono", monospace',
 #    "show_powered_by": False,
-#}
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 html_theme_path = ['..']
