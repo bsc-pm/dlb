@@ -35,6 +35,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   `--lewi-mpi-calls` for MPI and `--lewi-barrier` or
   `--lewi-barrier-select` for DLB Barriers.
 
+## [3.3.1] 2023-05-18
+### Fixed
+- Fixed wrong generated code for `MPI_Initialized` and `MPI_Finalized`
+
 ## [3.3] 2023-05-15
 ### Added
 - Free agent and Role-shift OMPT thread managers to support LeWI with both
@@ -281,6 +285,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Binary `dlb`
 
 [3.4]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.4
+[3.3.1]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.3.1
 [3.3]: https://github.com/bsc-pm/dlb/compare/v3.2...v3.3
 [3.2]: https://github.com/bsc-pm/dlb/compare/v3.1...v3.2
 [3.1]: https://github.com/bsc-pm/dlb/compare/v3.0...v3.1
