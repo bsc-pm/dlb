@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
  - Asynchronous support for classic LeWI
 
+## [3.4.1] 2024-08-16
+### Fixed
+- Fix an error in the shared memory alignment that was causing
+  segmentation faults when compiling with `-march=native`
+- Avoid registering role shifting callbacks for other non-related
+  OpenMP thread managers
+- Update examples with supported options
+- Fix some parameters in the Fortran'08 interface
+- Be more resilient if PAPI fails to initialize
+- Enhance compatibility in other systems
+- Quote string names in csv files
+- Several other minor fixes
+
 ## [3.4] 2023-12-22
 ### Added
 - PAPI support for TALP metrics
@@ -289,6 +302,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Binary `dlb`
 
 [Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.4...HEAD
+[3.4.1]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.4.1
 [3.4]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.4
 [3.3.1]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.3.1
 [3.3]: https://github.com/bsc-pm/dlb/compare/v3.2...v3.3
