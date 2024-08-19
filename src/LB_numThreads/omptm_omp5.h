@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -62,5 +62,11 @@ void omptm_omp5__sync_region(
         ompt_data_t *parallel_data,
         ompt_data_t *task_data,
         const void *codeptr_ra);
+
+/* Functions for testing purposes */
+typedef struct array_cpuid_t array_cpuid_t;
+const cpu_set_t* omptm_omp5_testing__get_active_mask(void);
+const array_cpuid_t* omptm_omp5_testing__compute_and_get_cpu_bindings(void);
+void omptm_omp5_testing__set_num_threads_fn(void (*fn)(int));
 
 #endif /* OMPTM_OMP5_H */

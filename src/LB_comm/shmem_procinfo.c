@@ -248,12 +248,12 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
     {
         // Initialize some values if this is the 1st process attached to the shmem
         if (!shdata->flags.initialized) {
-            get_time(&shdata->initial_time);
-            mu_get_system_mask(&shdata->free_mask);
             shdata->flags = (const procinfo_flags_t) {
                 .initialized = true,
                 .allow_cpu_sharing = allow_cpu_sharing,
             };
+            get_time(&shdata->initial_time);
+            mu_get_system_mask(&shdata->free_mask);
         } else if (shdata->flags.cpu_sharing_unknown) {
             /* Already initialized but cpu_sharing unknown, probably due to
              * initiazing the shared memory via shmem_procinfo_ext__init */
@@ -343,6 +343,7 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
                     // Register the new CPUs in a placeholder process
                     pinfo_t new_process;
                     cpu_set_t new_cpus;
+                    CPU_ZERO(&new_cpus);
                     mu_substract(&new_cpus, process_mask, preinit_mask);
                     int register_error = register_mask(&new_process, &new_cpus);
                     if (register_error == DLB_SUCCESS) {
@@ -392,6 +393,7 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
                     // Register the new CPUs in a placeholder process
                     pinfo_t new_process;
                     cpu_set_t new_cpus;
+                    CPU_ZERO(&new_cpus);
                     mu_substract(&new_cpus, process_mask, preinit_mask);
                     int register_error = register_mask(&new_process, &new_cpus);
                     if (register_error == DLB_SUCCESS) {

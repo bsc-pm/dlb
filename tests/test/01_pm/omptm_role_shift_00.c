@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -30,14 +30,39 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_errors.h"
+#include "support/atomic.h"
 #include "support/mask_utils.h"
 
-#include <stdbool.h>
-#include <sched.h>
 #include <assert.h>
+#include <sched.h>
+#include <stdbool.h>
+#include <string.h>
 
-/* !!!: Including c file to invoke static methods and check static variables */
-#include "LB_numThreads/omptm_role_shift.c"
+/* array_cpuid_t */
+#define ARRAY_T cpuid_t
+#include "support/array_template.h"
+
+/* array_cpuinfo_task_t */
+#define ARRAY_T cpuinfo_task_t
+#define ARRAY_KEY_T pid_t
+#include "support/array_template.h"
+
+typedef enum CPUStatus {
+    OWN      = 0,
+    UNKNOWN  = 1 << 0,
+    LENT     = 1 << 1,
+    BORROWED = 1 << 2
+} cpu_status_t;
+
+typedef struct DLB_ALIGN_CACHE CPU_Data {
+    _Atomic(cpu_status_t) ownership;
+    bool         fa;
+} cpu_data_t;
+
+enum {
+    PARALLEL_UNSET,
+    PARALLEL_LEVEL_1,
+};
 
 // This test needs at least room for 8 CPUs
 enum { SYS_SIZE = 8 };
@@ -104,12 +129,13 @@ int main (int argc, char *argv[]) {
             == DLB_SUCCESS );
 
     // Setup dummy priority CPUs
-    int cpus_priority_array[SYS_SIZE];
-    int i;
-    for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i;
+    array_cpuid_t cpus_priority_array;
+    array_cpuid_t_init(&cpus_priority_array, SYS_SIZE);
+    for (int i=0; i<SYS_SIZE; ++i) array_cpuid_t_push(&cpus_priority_array, i);
 
-    pid_t new_guests[SYS_SIZE];
-    pid_t victims[SYS_SIZE];
+    array_cpuinfo_task_t tasks;
+    array_cpuinfo_task_t_init(&tasks, SYS_SIZE);
+
     int64_t last_borrow = 0;
 
     /* P1 inits free agents module with OMP_NUM_THREADS=1 and *
@@ -119,8 +145,8 @@ int main (int argc, char *argv[]) {
         setenv("KMP_FREE_AGENT_NUM_THREADS", "8", 1);
         omptm_role_shift__init(p1_pid, &thread_spd->options);
 
-        assert( num_free_agents == 8 );
-        assert( registered_threads == 8 );
+        assert( omptm_role_shift_testing__get_num_free_agents() == 8 );
+        assert( omptm_role_shift_testing__get_num_registered_threads() == 8 );
 
         omptm_role_shift__finalize();
     }
@@ -131,8 +157,8 @@ int main (int argc, char *argv[]) {
         setenv("KMP_FREE_AGENT_NUM_THREADS", "8", 1);
         omptm_role_shift__init(p1_pid, &thread_spd->options);
 
-        assert( num_free_agents == 8 );
-        assert( registered_threads == 8 );
+        assert( omptm_role_shift_testing__get_num_free_agents() == 8 );
+        assert( omptm_role_shift_testing__get_num_registered_threads() == 8 );
 
         omptm_role_shift__finalize();
     }
@@ -143,13 +169,13 @@ int main (int argc, char *argv[]) {
         setenv("KMP_FREE_AGENT_NUM_THREADS", "4", 1);
         omptm_role_shift__init(p1_pid, &thread_spd->options);
 
-        assert( num_free_agents == 4 );
-        assert( registered_threads == 8 );
+        assert( omptm_role_shift_testing__get_num_free_agents() == 4 );
+        assert( omptm_role_shift_testing__get_num_registered_threads() == 8 );
 
         omptm_role_shift__finalize();
     }
     // Initialize thread status array to false. They have not been created yet.
-    for (i=0; i<SYS_SIZE; ++i) {
+    for (int i=0; i<SYS_SIZE; ++i) {
         free_agent_threads_status[i] = false;
     }
 
@@ -158,9 +184,12 @@ int main (int argc, char *argv[]) {
     setenv("KMP_FREE_AGENT_NUM_THREADS", "4", 1);
     omptm_role_shift__init(p1_pid, &thread_spd->options);
 
+    int *cpu_by_id = omptm_role_shift_testing__get_cpu_by_id_ptr();
+    cpu_data_t *cpu_data = omptm_role_shift_testing__get_cpu_data_ptr();
+
     /* Emulate initial free agent threads creation based on env variables*/
     {
-        for (i=1; i<=3; ++i) {
+        for (int i=1; i<=3; ++i) {
             thread_id = i;
             omptm_role_shift__thread_begin(ompt_thread_other, NULL);
             free_agent_threads_status[i] = true;
@@ -187,14 +216,14 @@ int main (int argc, char *argv[]) {
         assert( cpu_by_id[7] == -1 );
 
         /* check all ids from CPU */
-        assert( get_id_from_cpu(0) == 0 );
-        assert( get_id_from_cpu(1) == 1 );
-        assert( get_id_from_cpu(2) == -1 );
-        assert( get_id_from_cpu(3) == -1 );
-        assert( get_id_from_cpu(4) == 2 );
-        assert( get_id_from_cpu(5) == 3 );
-        assert( get_id_from_cpu(6) == -1 );
-        assert( get_id_from_cpu(7) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(0) == 0 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(1) == 1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(2) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(3) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(4) == 2 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(5) == 3 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(6) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(7) == -1 );
     }
 
     /* Test the task_schedule function when there is no parallel region involved */
@@ -202,68 +231,68 @@ int main (int argc, char *argv[]) {
 
         /* Execute 4 pending tasks. There should not be any pending task after that.
            CPUs [2,3,6,7] should be inactive */
-        pending_tasks = 4;
+        omptm_role_shift_testing__set_pending_tasks(4);
         omptm_role_shift__task_schedule(NULL, ompt_task_switch, NULL);
         omptm_role_shift__task_schedule(NULL, ompt_task_switch, NULL);
         omptm_role_shift__task_schedule(NULL, ompt_task_switch, NULL);
         omptm_role_shift__task_schedule(NULL, ompt_task_switch, NULL);
         
-        assert( pending_tasks == 0 );
-        assert( get_id_from_cpu(0) == 0 );
-        assert( get_id_from_cpu(1) == 1 );
-        assert( get_id_from_cpu(2) == -1 );
-        assert( get_id_from_cpu(3) == -1 );
-        assert( get_id_from_cpu(4) == 2 );
-        assert( get_id_from_cpu(5) == 3 );
-        assert( get_id_from_cpu(6) == -1 );
-        assert( get_id_from_cpu(7) == -1 );
+        assert( omptm_role_shift_testing__get_pending_tasks() == 0 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(0) == 0 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(1) == 1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(2) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(3) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(4) == 2 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(5) == 3 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(6) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(7) == -1 );
        
         /* The four tasks end their execution, one by each thread.
            The process should retain the CPUs from the free agent threads
            since it's the owner and the lewi policy is not aggressive */
-        global_tid = 3;
+        omptm_role_shift_testing__set_global_tid(3);
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
-        global_tid = 2;
+        omptm_role_shift_testing__set_global_tid(2);
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
-        global_tid = 1;
+        omptm_role_shift_testing__set_global_tid(1);
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
-        global_tid = 0;
+        omptm_role_shift_testing__set_global_tid(0);
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
 
-        assert( get_id_from_cpu(0) == 0 );
-        assert( get_id_from_cpu(1) == 1 );
-        assert( get_id_from_cpu(2) == -1 );
-        assert( get_id_from_cpu(3) == -1 );
-        assert( get_id_from_cpu(4) == 2 );
-        assert( get_id_from_cpu(5) == 3 );
-        assert( get_id_from_cpu(6) == -1 );
-        assert( get_id_from_cpu(7) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(0) == 0 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(1) == 1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(2) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(3) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(4) == 2 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(5) == 3 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(6) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(7) == -1 );
     }
 
     /* Test the task_create callback. Creates 4 tasks, ensure that they
        are counted, and check that no CPU is acquired. */
     {
-        pending_tasks = 0;
+        omptm_role_shift_testing__set_pending_tasks(0);
         
         omptm_role_shift__task_create(NULL, NULL, NULL, ompt_task_explicit, 0, NULL);
-        assert(pending_tasks == 1);
+        assert(omptm_role_shift_testing__get_pending_tasks() == 1);
         omptm_role_shift__task_create(NULL, NULL, NULL, ompt_task_explicit, 0, NULL);
-        assert(pending_tasks == 2);
+        assert(omptm_role_shift_testing__get_pending_tasks() == 2);
         omptm_role_shift__task_create(NULL, NULL, NULL, ompt_task_explicit, 0, NULL);
-        assert(pending_tasks == 3);
+        assert(omptm_role_shift_testing__get_pending_tasks() == 3);
         omptm_role_shift__task_create(NULL, NULL, NULL, ompt_task_explicit, 0, NULL);
-        assert(pending_tasks == 4);
+        assert(omptm_role_shift_testing__get_pending_tasks() == 4);
 
-        assert( get_id_from_cpu(0) == 0 );
-        assert( get_id_from_cpu(1) == 1 );
-        assert( get_id_from_cpu(2) == -1 );
-        assert( get_id_from_cpu(3) == -1 );
-        assert( get_id_from_cpu(4) == 2 );
-        assert( get_id_from_cpu(5) == 3 );
-        assert( get_id_from_cpu(6) == -1 );
-        assert( get_id_from_cpu(7) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(0) == 0 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(1) == 1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(2) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(3) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(4) == 2 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(5) == 3 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(6) == -1 );
+        assert( omptm_role_shift_testing__get_id_from_cpu(7) == -1 );
 
-        pending_tasks = 0;
+        omptm_role_shift_testing__set_pending_tasks(0);
     }
 
     /* Check the parallel_begin and parallel_end callbacks. First, check that the
@@ -273,12 +302,12 @@ int main (int argc, char *argv[]) {
         ompt_data_t parallel_data;
         omptm_role_shift__parallel_begin(NULL, &encountering_task_frame,
                 &parallel_data, 4, ompt_parallel_team, NULL);
-        assert(in_parallel);
-        assert(current_parallel_size == 4);
+        assert(omptm_role_shift_testing__in_parallel());
+        assert(omptm_role_shift_testing__get_current_parallel_size() == 4);
         assert(parallel_data.value == PARALLEL_LEVEL_1);
 
         omptm_role_shift__parallel_end(&parallel_data, NULL, 0, NULL);
-        assert(!in_parallel);
+        assert(!omptm_role_shift_testing__in_parallel());
         assert(parallel_data.value == PARALLEL_UNSET);
 
         //Testing a nested parallel
@@ -288,27 +317,28 @@ int main (int argc, char *argv[]) {
         parallel_data_level2.ptr = 0x0;
         omptm_role_shift__parallel_begin(NULL, &encountering_task_frame,
                 &parallel_data, 4, ompt_parallel_team, NULL);
-        assert(in_parallel);
-        assert(current_parallel_size == 4);
+        assert(omptm_role_shift_testing__in_parallel());
+        assert(omptm_role_shift_testing__get_current_parallel_size() == 4);
         assert(parallel_data.value == PARALLEL_LEVEL_1);
 
         omptm_role_shift__parallel_begin(NULL, &encountering_task_frame_level2,
                 &parallel_data_level2, 2, ompt_parallel_team, NULL);
-        assert(in_parallel);
+        assert(omptm_role_shift_testing__in_parallel());
         assert(parallel_data.value == PARALLEL_LEVEL_1);
 
         omptm_role_shift__parallel_end(&parallel_data_level2, NULL, 0, NULL);
-        assert(in_parallel);
+        assert(omptm_role_shift_testing__in_parallel());
         assert(parallel_data.value == PARALLEL_LEVEL_1);
 
         omptm_role_shift__parallel_end(&parallel_data, NULL, 0, NULL);
-        assert(!in_parallel);
+        assert(!omptm_role_shift_testing__in_parallel());
         assert(parallel_data.value == PARALLEL_UNSET);
     }
 
     //Check basic actions of thread_role_shift callback
     {
-        global_tid = 2;
+        int global_tid = 2;
+        omptm_role_shift_testing__set_global_tid(global_tid);
         assert(cpu_by_id[global_tid] == 4);
         assert(cpu_data[4].ownership == OWN);
 
@@ -319,7 +349,7 @@ int main (int argc, char *argv[]) {
         assert(cpu_data[4].ownership == OWN);
         
         //NONE -> FA transition. Nothing should happen because the process owns the CPU
-        pending_tasks = 0;
+        omptm_role_shift_testing__set_pending_tasks(0);
         omptm_role_shift__thread_role_shift(NULL,
                 OMP_ROLE_NONE, OMP_ROLE_FREE_AGENT);
         assert(cpu_by_id[global_tid] == 4);
@@ -329,7 +359,7 @@ int main (int argc, char *argv[]) {
     /* Test IntoBlockingCall and OutOfBlockingCall */
     {
         /* P1 is outside a parallel region, and invokes IntoBlockingCall */
-        global_tid = 0;
+        omptm_role_shift_testing__set_global_tid(0);
         omptm_role_shift__IntoBlockingCall();
         assert(!free_agent_threads_status[1]);
         assert(!free_agent_threads_status[2]);
@@ -342,13 +372,26 @@ int main (int argc, char *argv[]) {
         /* P2 asks for all the CPUs, it should success (CPU 0 is not lent)  */
         //TODO: Not sure about CPU 0
         assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p2_pid, NULL,
-                    cpus_priority_array, PRIO_ANY, 0,
-                    &last_borrow, new_guests) == DLB_SUCCESS );
-        assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid
-                && new_guests[4] == p2_pid && new_guests[5] == p2_pid );
+                    &cpus_priority_array, PRIO_ANY, 0,
+                    &last_borrow, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 4 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 0
+                && tasks.items[0].action == ENABLE_CPU );
+        assert( tasks.items[1].pid == p2_pid
+                && tasks.items[1].cpuid == 1
+                && tasks.items[1].action == ENABLE_CPU );
+        assert( tasks.items[2].pid == p2_pid
+                && tasks.items[2].cpuid == 4
+                && tasks.items[2].action == ENABLE_CPU );
+        assert( tasks.items[3].pid == p2_pid
+                && tasks.items[3].cpuid == 5
+                && tasks.items[3].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         /* P2 returns P1's CPUs */
-        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p1_mask, new_guests) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p1_mask, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         /* P1 invokes OutOfBlockingCall */
         omptm_role_shift__OutOfBlockingCall();
@@ -367,8 +410,8 @@ int main (int argc, char *argv[]) {
         assert(cpu_data[3].ownership == UNKNOWN);
         assert(cpu_data[6].ownership == UNKNOWN);
         assert(cpu_data[7].ownership == UNKNOWN);
-        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, new_guests) == DLB_SUCCESS );
-        pending_tasks = 0;
+        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, &tasks) == DLB_SUCCESS );
+        omptm_role_shift_testing__set_pending_tasks(0);
         
         //Create two tasks. Free agents should be activated in CPUs 2 and 3
         thread_id = 4;
@@ -393,8 +436,8 @@ int main (int argc, char *argv[]) {
         assert(!free_agent_threads_status[6]);
         assert(!free_agent_threads_status[7]);
         
-        assert(pending_tasks == 2);
-        pending_tasks = 10;
+        assert(omptm_role_shift_testing__get_pending_tasks() == 2);
+        omptm_role_shift_testing__set_pending_tasks(10);
         //Schdeule 2 tasks. Two free agents should be created in CPUs 6 and 7
 
         thread_id = 6;
@@ -420,7 +463,7 @@ int main (int argc, char *argv[]) {
 
         //Thread 5 finishes a task and there are some pending tasks.
         //The status of the threads should not change.
-        global_tid = 5;
+        omptm_role_shift_testing__set_global_tid(5);
         //Update CPU data manually since thread_begin is not really called for this thread
         cpu_data[cpu_by_id[4]].fa = true;
         cpu_data[cpu_by_id[5]].fa = true;
@@ -436,7 +479,7 @@ int main (int argc, char *argv[]) {
         assert(free_agent_threads_status[6]);
         assert(free_agent_threads_status[7]);
 
-        pending_tasks = 0;
+        omptm_role_shift_testing__set_pending_tasks(0);
         //A task is finished an there are no pending tasks. 
         //The CPU should be lend to DLB and the state updated
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
@@ -450,15 +493,34 @@ int main (int argc, char *argv[]) {
         assert(free_agent_threads_status[7]);
 
         //P2 reclaims its process mask. CPU 3 can be immediately reclaimed
-        assert( shmem_cpuinfo__reclaim_all(p2_pid, new_guests, victims) == DLB_NOTED );
-        assert( new_guests[2] == p2_pid && new_guests[3] == p2_pid &&
-                new_guests[6] == p2_pid && new_guests[7] == p2_pid );
-        assert( victims[2] == p1_pid && victims[3] == -1 &&
-                victims[6] == p1_pid && victims[7] == p1_pid );
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, &tasks) == DLB_NOTED );
+        assert( tasks.count == 7 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 2
+                && tasks.items[0].action == DISABLE_CPU );
+        assert( tasks.items[1].pid == p2_pid
+                && tasks.items[1].cpuid == 2
+                && tasks.items[1].action == ENABLE_CPU );
+        assert( tasks.items[2].pid == p2_pid
+                && tasks.items[2].cpuid == 3
+                && tasks.items[2].action == ENABLE_CPU );
+        assert( tasks.items[3].pid == p1_pid
+                && tasks.items[3].cpuid == 6
+                && tasks.items[3].action == DISABLE_CPU );
+        assert( tasks.items[4].pid == p2_pid
+                && tasks.items[4].cpuid == 6
+                && tasks.items[4].action == ENABLE_CPU );
+        assert( tasks.items[5].pid == p1_pid
+                && tasks.items[5].cpuid == 7
+                && tasks.items[5].action == DISABLE_CPU );
+        assert( tasks.items[6].pid == p2_pid
+                && tasks.items[6].cpuid == 7
+                && tasks.items[6].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         //Threads 4, 6, and 7 (Free agents) finish a task.
         //The CPUs should be disabled and the threads change their role
-        global_tid = 4;
+        omptm_role_shift_testing__set_global_tid(4);
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
         assert(cpu_data[2].ownership == UNKNOWN);
         assert(cpu_data[3].ownership == UNKNOWN);
@@ -469,7 +531,7 @@ int main (int argc, char *argv[]) {
         assert(free_agent_threads_status[6]);
         assert(free_agent_threads_status[7]);
 
-        global_tid = 6;
+        omptm_role_shift_testing__set_global_tid(6);
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
         assert(cpu_data[2].ownership == UNKNOWN);
         assert(cpu_data[3].ownership == UNKNOWN);
@@ -480,7 +542,7 @@ int main (int argc, char *argv[]) {
         assert(!free_agent_threads_status[6]);
         assert(free_agent_threads_status[7]);
 
-        global_tid = 7;
+        omptm_role_shift_testing__set_global_tid(7);
         omptm_role_shift__task_schedule(NULL, ompt_task_complete, NULL);
         assert(cpu_data[2].ownership == UNKNOWN);
         assert(cpu_data[3].ownership == UNKNOWN);

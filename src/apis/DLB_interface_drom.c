@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -56,7 +56,7 @@ int DLB_DROM_Detach(void) {
 }
 
 int DLB_DROM_GetNumCpus(int *ncpus) {
-    *ncpus = shmem_cpuinfo_ext__getnumcpus();
+    *ncpus = mu_get_system_size();
     return DLB_SUCCESS;
 }
 
@@ -75,7 +75,7 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
 }
 
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     int error = drom_setprocessmask(pid, mask, flags);
     if (error == DLB_ERR_NOSHMEM) {
         DLB_DROM_Attach();

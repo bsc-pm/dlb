@@ -21,11 +21,12 @@
     test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
-#include "assert_loop.h"
 #include "unique_shmem.h"
 
 #include "apis/dlb_sp.h"
 #include "support/mask_utils.h"
+#include "LB_comm/shmem_async.h"
+#include "LB_core/spd.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -38,6 +39,8 @@ static dlb_handler_t handler1;
 static dlb_handler_t handler2;
 static cpu_set_t sp1_mask;
 static cpu_set_t sp2_mask;
+static bool sp1_enabled = true;
+static bool sp2_enabled = true;
 static interaction_mode_t mode;
 
 /* Subprocess 1 callbacks */
@@ -46,7 +49,7 @@ static void sp1_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp1_cb_disable_cpu(int cpuid, void *arg) {
-    if (mode == MODE_ASYNC) {
+    if (mode == MODE_ASYNC && sp1_enabled) {
         DLB_ReturnCpu_sp(handler1, cpuid);
     }
     CPU_CLR(cpuid, &sp1_mask);
@@ -58,10 +61,20 @@ static void sp2_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp2_cb_disable_cpu(int cpuid, void *arg) {
-    if (mode == MODE_ASYNC) {
+    if (mode == MODE_ASYNC && sp2_enabled) {
         DLB_ReturnCpu_sp(handler2, cpuid);
     }
     CPU_CLR(cpuid, &sp2_mask);
+}
+
+static void wait_for_async_completion(void) {
+    if (mode == MODE_ASYNC) {
+        pid_t pid1 = ((const subprocess_descriptor_t*)handler1)->id;
+        pid_t pid2 = ((const subprocess_descriptor_t*)handler2)->id;
+        shmem_async_wait_for_completion(pid1);
+        shmem_async_wait_for_completion(pid2);
+        __sync_synchronize();
+    }
 }
 
 int main( int argc, char **argv ) {
@@ -127,26 +140,26 @@ int main( int argc, char **argv ) {
         CPU_CLR(3, &sp2_mask);
         assert( DLB_LendCpu_sp(handler2, 3) == DLB_SUCCESS );
 
-        // Subprocess 1 may need to poll again */
+        // Subprocess 1 receives CPU 3
         if (mode == MODE_POLLING) {
             assert( DLB_AcquireCpu_sp(handler1, 3) == DLB_SUCCESS );
+        } else {
+            wait_for_async_completion();
         }
-
-        // Poll a certain number of times until mask1 contains CPU 3
-        assert_loop( CPU_ISSET(3, &sp1_mask) );
+        assert( CPU_ISSET(3, &sp1_mask) );
 
         // Subprocess 2 needs again CPU 3
         assert( DLB_AcquireCpu_sp(handler2, 3) == DLB_NOTED );
 
-        // Subprocesses 1 and 2 need to poll
+        // Resolve that Subprocess 2 contains CPU 3, and Subprocess 1 doesn't
         if (mode == MODE_POLLING) {
             assert( DLB_CheckCpuAvailability_sp(handler2, 3) == DLB_NOTED );
             assert( DLB_ReturnCpu_sp(handler1, 3) == DLB_SUCCESS );
             assert( DLB_CheckCpuAvailability_sp(handler2, 3) == DLB_SUCCESS );
+        } else {
+            wait_for_async_completion();
         }
-
-        // Poll a certain number of times until mask2 contains CPU 3, and mask1 doesn't
-        assert_loop( CPU_ISSET(3, &sp2_mask) );
+        assert(  CPU_ISSET(3, &sp2_mask) );
         assert( !CPU_ISSET(3, &sp1_mask) );
 
         // Subprocess 1 no longer needs CPU 1
@@ -159,13 +172,15 @@ int main( int argc, char **argv ) {
         // Subprocess 1 reclaims
         assert( DLB_ReclaimCpu_sp(handler1, 1) == DLB_NOTED );
 
-        // Subprocesses 1 & 2 needs to poll
+        // Resolve that Subprocess 1 contains CPU 1, and Subprocess 2 doesn't
         if (mode == MODE_POLLING) {
             assert( DLB_CheckCpuAvailability_sp(handler1, 1) == DLB_NOTED );
             assert( DLB_ReturnCpu_sp(handler2, 1) == DLB_SUCCESS );
             assert( DLB_CheckCpuAvailability_sp(handler1, 1) == DLB_SUCCESS );
+        } else {
+            wait_for_async_completion();
         }
-        assert_loop( CPU_ISSET(1, &sp1_mask) );
+        assert(  CPU_ISSET(1, &sp1_mask) );
         assert( !CPU_ISSET(1, &sp2_mask) );
 
         // Test that SP2 receives CPU 1 again if SP1 lends it again
@@ -175,16 +190,17 @@ int main( int argc, char **argv ) {
             assert( DLB_LendCpuMask_sp(handler1, &sys_mask) == DLB_SUCCESS );
 
             // CPU 1 was still requested by Subprocess 2
-            assert_loop( CPU_ISSET(1, &sp2_mask) );
+            wait_for_async_completion();
+            assert( CPU_ISSET(1, &sp2_mask) );
 
             // Subprocess 2 lends CPU 1
             CPU_CLR(1, &sp2_mask);
             assert( DLB_LendCpu_sp(handler2, 1) == DLB_SUCCESS );
 
-            // Subprocess aquires its mask
+            // Subprocess 1 acquires its mask
             assert( DLB_AcquireCpuMask_sp(handler1, &sp1_process_mask) == DLB_SUCCESS );
-            assert_loop( CPU_ISSET(0, &sp1_mask) );
-            assert_loop( CPU_ISSET(1, &sp1_mask) );
+            assert( CPU_ISSET(0, &sp1_mask) );
+            assert( CPU_ISSET(1, &sp1_mask) );
         }
     }
 
@@ -201,22 +217,25 @@ int main( int argc, char **argv ) {
         assert( DLB_ReclaimCpuMask_sp(handler1, &sp1_process_mask) == DLB_NOTED );
 
         // Subprocess 1 reclaims everything
-        assert( DLB_ReclaimCpuMask_sp(handler1, &sys_mask) == DLB_ERR_PERM );
+        err = DLB_ReclaimCpuMask_sp(handler1, &sys_mask);
+        assert( mode == MODE_ASYNC ? err == DLB_NOUPDT : err == DLB_NOTED );
 
         // Subprocess 2 lends external CPUs
         CPU_CLR(0, &sp2_mask);
         CPU_CLR(1, &sp2_mask);
         assert( DLB_LendCpuMask_sp(handler2, &sp1_process_mask) == DLB_SUCCESS );
 
-        // Subprocesses 1 needs to poll to set guest field
         if (mode == MODE_POLLING) {
-            assert_loop( DLB_CheckCpuAvailability_sp(handler1, 0) == DLB_SUCCESS );
-            assert_loop( DLB_CheckCpuAvailability_sp(handler1, 1) == DLB_SUCCESS );
+            // Subprocess 1 needs to poll to set guest field
+            assert( DLB_CheckCpuAvailability_sp(handler1, 0) == DLB_SUCCESS );
+            assert( DLB_CheckCpuAvailability_sp(handler1, 1) == DLB_SUCCESS );
+        } else {
+            wait_for_async_completion();
         }
 
         // Check everyone has their CPUs
-        assert_loop( CPU_EQUAL(&sp1_process_mask, &sp1_mask) );
-        assert_loop( CPU_EQUAL(&sp2_process_mask, &sp2_mask) );
+        assert( CPU_EQUAL(&sp1_process_mask, &sp1_mask) );
+        assert( CPU_EQUAL(&sp2_process_mask, &sp2_mask) );
     }
 
     /* Cpus tests */
@@ -227,7 +246,7 @@ int main( int argc, char **argv ) {
 
         // Subprocess 2 acquires one CPU
         assert( DLB_AcquireCpus_sp(handler2, 1) == DLB_SUCCESS );
-        assert_loop( CPU_ISSET(1, &sp2_mask) );
+        assert( CPU_ISSET(1, &sp2_mask) );
 
         // Subprocess 2 acquires one CPU again
         err = DLB_AcquireCpus_sp(handler2, 1);
@@ -235,7 +254,7 @@ int main( int argc, char **argv ) {
 
         // Subprocess 1 acquires 1 CPU, it should reclaim CPU 1
         assert( DLB_AcquireCpus_sp(handler1, 1) == DLB_NOTED );
-        assert_loop( CPU_ISSET(1, &sp1_mask) );
+        assert( CPU_ISSET(1, &sp1_mask) );
 
         // Subprocess 2 returns CPU 1 (async returns by callback)
         if (mode == MODE_POLLING) {
@@ -246,12 +265,14 @@ int main( int argc, char **argv ) {
 
         // Subprocess 1 needs to poll to set guest field
         if (mode == MODE_POLLING) {
-            assert_loop( DLB_CheckCpuAvailability_sp(handler1, 1) == DLB_SUCCESS );
+            assert( DLB_CheckCpuAvailability_sp(handler1, 1) == DLB_SUCCESS );
         }
 
         // Subprocess 2 no longer wants external CPUs
         assert( DLB_AcquireCpus_sp(handler2, 0) == DLB_SUCCESS );   /* general queue */
         assert( DLB_LendCpu_sp(handler2, 1) == DLB_SUCCESS );       /* CPU queue */
+
+        wait_for_async_completion();
     }
 
     /* Reset test */
@@ -262,20 +283,22 @@ int main( int argc, char **argv ) {
 
         // Subprocess 1 acquires one CPU
         assert( DLB_AcquireCpus_sp(handler1, 1) == DLB_SUCCESS );
-        assert_loop( CPU_ISSET(3, &sp1_mask) && CPU_COUNT(&sp1_mask) == 3 );
+        assert( CPU_ISSET(3, &sp1_mask) && CPU_COUNT(&sp1_mask) == 3 );
 
         // Subprocess 1 decides to shut down CPU 1 without notifying DLB
         CPU_CLR(1, &sp1_mask);
 
         // Subprocess 1 resets. CPU 1 should not be re-enabled
+        sp1_enabled = false;
         assert( DLB_Disable_sp(handler1) == DLB_SUCCESS );
-        assert_loop( CPU_ISSET(0, &sp1_mask) && CPU_COUNT(&sp1_mask) == 1 );
+        assert( CPU_ISSET(0, &sp1_mask) && CPU_COUNT(&sp1_mask) == 1 );
 
         // Subprocess 2 recovers CPU 3
         assert( DLB_AcquireCpu_sp(handler2, 3) == DLB_SUCCESS );
-        assert_loop( CPU_ISSET(3, &sp2_mask) );
+        assert( CPU_ISSET(3, &sp2_mask) );
 
         // Subprocess 1 enables DLB and CPU 1
+        sp1_enabled = true;
         assert( DLB_Enable_sp(handler1) == DLB_SUCCESS );
         CPU_SET(1, &sp1_mask);
     }
@@ -288,19 +311,23 @@ int main( int argc, char **argv ) {
 
         // Subprocess 2 borrows everything
         assert( DLB_Borrow_sp(handler2) == DLB_SUCCESS );
-        assert_loop( CPU_COUNT(&sp2_mask) == 4
+        assert( CPU_COUNT(&sp2_mask) == 4
                 && CPU_ISSET(0, &sp2_mask) && CPU_ISSET(1, &sp2_mask) );
 
-        // Subprocess 1 acquire its CPUs
+        // Subprocess 1 acquires its CPUs
         assert( DLB_AcquireCpuMask_sp(handler1, &sp1_process_mask) == DLB_NOTED );
 
         // Subprocess 2 sets max_parallelism to 2
         DLB_SetMaxParallelism_sp(handler2, 2);
 
+        if (mode == MODE_ASYNC) {
+            wait_for_async_completion();
+        }
+
         // Both SPs should have their own CPUs
-        assert_loop( CPU_COUNT(&sp1_mask) == 2
+        assert( CPU_COUNT(&sp1_mask) == 2
                  && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
-        assert_loop( CPU_COUNT(&sp2_mask) == 2
+        assert( CPU_COUNT(&sp2_mask) == 2
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
 
         // Subprocess 2 removes any previous requests
@@ -318,7 +345,7 @@ int main( int argc, char **argv ) {
 
         // Subprocess 2 borrows everything (can't, max_parallelism still 2)
         assert( DLB_Borrow_sp(handler2) == DLB_NOUPDT );
-        assert_loop( CPU_COUNT(&sp2_mask) == 2
+        assert( CPU_COUNT(&sp2_mask) == 2
                  && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
 
         // Subprocess 1 acquire its CPUs
@@ -329,8 +356,6 @@ int main( int argc, char **argv ) {
     }
 
     /* Test CpusInMask */
-    /* FIXME: this test has a race condition in mode=async */
-    if (mode != MODE_ASYNC)
     {
         // Construct a mask of only 1 CPU from subprocess 1, and all from subprocess 2
         cpu_set_t mask;
@@ -348,7 +373,7 @@ int main( int argc, char **argv ) {
 
         // Subprocess 2 tries to acquire 1 CPU from the auxiliar mask [0,2,3] (it should prioritize [2,3])
         assert( DLB_AcquireCpusInMask_sp(handler2, 1, &mask) == DLB_SUCCESS );
-        assert_loop( CPU_COUNT(&sp2_mask) == 2
+        assert( CPU_COUNT(&sp2_mask) == 2
                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask));
 
         // Subprocess 2 lends 1 CPU, again
@@ -358,7 +383,7 @@ int main( int argc, char **argv ) {
         // Subprocess 2 tries to acquire 4 CPUs from the auxiliar mask [0,2,3]
         err = DLB_AcquireCpusInMask_sp(handler2, 4, &mask);
         assert( mode == MODE_ASYNC ? err == DLB_NOTED : err == DLB_SUCCESS );
-        assert_loop( CPU_COUNT(&sp2_mask) == 3
+        assert( CPU_COUNT(&sp2_mask) == 3
                 && CPU_ISSET(0, &sp2_mask) && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask));
 
         // Subprocess 2 removes any previous requests
@@ -373,20 +398,20 @@ int main( int argc, char **argv ) {
 
         // Subprocess 2 borrows 1 CPU (twice) from the auxiliar mask [0,2,3] (it should prioritize [2,3])
         assert( DLB_BorrowCpusInMask_sp(handler2, 1, &mask) == DLB_SUCCESS );
-        assert_loop( CPU_COUNT(&sp2_mask) == 1 && CPU_ISSET(2, &sp2_mask));
+        assert( CPU_COUNT(&sp2_mask) == 1 && CPU_ISSET(2, &sp2_mask));
         assert( DLB_BorrowCpusInMask_sp(handler2, 1, &mask) == DLB_SUCCESS );
-        assert_loop( CPU_COUNT(&sp2_mask) == 2
+        assert( CPU_COUNT(&sp2_mask) == 2
                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask));
 
         // Subprocess 1 acquire its CPUs
         assert( DLB_AcquireCpuMask_sp(handler1, &sp1_process_mask) == DLB_SUCCESS );
-        assert_loop( CPU_COUNT(&sp1_mask) == 2
+        assert( CPU_COUNT(&sp1_mask) == 2
                 && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask));
 
         // Both SPs should have their own CPUs
-        assert_loop( CPU_COUNT(&sp1_mask) == 2
+        assert( CPU_COUNT(&sp1_mask) == 2
                 && CPU_ISSET(0, &sp1_mask) && CPU_ISSET(1, &sp1_mask) );
-        assert_loop( CPU_COUNT(&sp2_mask) == 2
+        assert( CPU_COUNT(&sp2_mask) == 2
                 && CPU_ISSET(2, &sp2_mask) && CPU_ISSET(3, &sp2_mask) );
     }
 

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -45,11 +45,9 @@ extern "C"
  *  \return DLB_ERR_NOCOMP if initialization options are incompatible
  *
  *  Parameters \p ncpus and \p mask are used to register CPUs owned by the
- *  calling process into the system. DLB advanced usage requires mask
- *  information so it is recommended to provide a CPU mask, but DLB also
- *  accepts an integer in case the program does not have the mask affinity
- *  details. Parameter \p dlb_args can be used in conjunction with DLB_ARGS,
- *  the former takes precedence in case of conflicting options.
+ *  calling process into the system. Both are optional but, if provided,
+ *  \p mask takes precedence. Parameter \p dlb_args can be used in conjunction
+ *  with DLB_ARGS; the latter takes precedence in case of conflicting options.
  */
 int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args);
 
@@ -156,8 +154,8 @@ int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg)
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
- *  process that demands more resources. If the CPU was originally owned by the
- *  process it may be reclaimed.
+ *  process that requests more resources. After lending a CPU, it can be reclaimed
+ *  if it was originally owned by the process.
  */
 int DLB_Lend(void);
 
@@ -168,8 +166,8 @@ int DLB_Lend(void);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
- *  process that demands more resources. If the CPU was originally owned by the
- *  process it may be reclaimed.
+ *  process that requests more resources. After lending a CPU, it can be reclaimed
+ *  if it was originally owned by the process.
  */
 int DLB_LendCpu(int cpuid);
 
@@ -181,8 +179,8 @@ int DLB_LendCpu(int cpuid);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
- *  process that demands more resources. If the CPU was originally owned by the
- *  process it may be reclaimed.
+ *  process that requests more resources. After lending a CPU, it can be reclaimed
+ *  if it was originally owned by the process.
  */
 int DLB_LendCpus(int ncpus);
 
@@ -193,8 +191,8 @@ int DLB_LendCpus(int ncpus);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
- *  process that demands more resources. If the CPU was originally owned by the
- *  process it may be reclaimed.
+ *  process that requests more resources. After lending a CPU, it can be reclaimed
+ *  if it was originally owned by the process.
  */
 int DLB_LendCpuMask(const_dlb_cpu_set_t mask);
 
@@ -210,8 +208,8 @@ int DLB_LendCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
- *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
- *  belong to the calling process.
+ *  Reclaim CPUs that were previously lent. The CPUs must originally belong to
+ *  the calling process.
  */
 int DLB_Reclaim(void);
 
@@ -224,8 +222,8 @@ int DLB_Reclaim(void);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *
- *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
- *  belong to the calling process.
+ *  Reclaim CPUs that were previously lent. The CPUs must originally belong to
+ *  the calling process.
  */
 int DLB_ReclaimCpu(int cpuid);
 
@@ -237,8 +235,8 @@ int DLB_ReclaimCpu(int cpuid);
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
- *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
- *  belong to the calling process.
+ *  Reclaim CPUs that were previously lent. The CPUs must originally belong to
+ *  the calling process.
  */
 int DLB_ReclaimCpus(int ncpus);
 
@@ -251,8 +249,8 @@ int DLB_ReclaimCpus(int ncpus);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *
- *  Reclaim CPUs that were previously lent. It is mandatory that the CPUs
- *  belong to the calling process.
+ *  Reclaim CPUs that were previously lent. The CPUs must originally belong to
+ *  the calling process.
  */
 int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask);
 
@@ -271,9 +269,9 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_ERR_PERM if the resources cannot be acquired
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  *
- *  Acquire CPUs from the system. If the CPU belongs to the process the call is
- *  equivalent to a *reclaim* action. Otherwise the process attempts to acquire
- *  a specific CPU in case it is available or enqueue a request if it's not.
+ *  Acquire CPUs from the system. If the CPU belongs to the process, the call is
+ *  equivalent to a *reclaim* action. Otherwise, the process attempts to acquire
+ *  a CPU. In asynchronous mode, it may enqueue a request for the CPU.
  */
 int DLB_AcquireCpu(int cpuid);
 
@@ -286,9 +284,9 @@ int DLB_AcquireCpu(int cpuid);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  *
- *  Acquire CPUs from the system. If the CPU belongs to the process the call is
- *  equivalent to a *reclaim* action. Otherwise the process attempts to acquire
- *  a specific CPU in case it is available or enqueue a request if it's not.
+ *  Acquire CPUs from the system. If the CPU belongs to the process, the call is
+ *  equivalent to a *reclaim* action. Otherwise, the process attempts to acquire
+ *  a CPU. In asynchronous mode, it may enqueue a request for the CPU.
  */
 int DLB_AcquireCpus(int ncpus);
 
@@ -302,9 +300,9 @@ int DLB_AcquireCpus(int ncpus);
  *  \return DLB_ERR_PERM if the resources cannot be acquired
  *  \return DLB_ERR_REQST if there are too many requests for these resources
  *
- *  Acquire CPUs from the system. If the CPU belongs to the process the call is
- *  equivalent to a *reclaim* action. Otherwise the process attempts to acquire
- *  a specific CPU in case it is available or enqueue a request if it's not.
+ *  Acquire CPUs from the system. If the CPU belongs to the process, the call is
+ *  equivalent to a *reclaim* action. Otherwise, the process attempts to acquire
+ *  a CPU. In asynchronous mode, it may enqueue a request for the CPU.
  */
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask);
 
@@ -319,9 +317,9 @@ int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_ERR_PERM if the resources cannot be acquired
  *  \return DLB_ERR_REQST if there are too many requests for these resources
  *
- *  Acquire CPUs from the system. If the CPU belongs to the process the call is
- *  equivalent to a *reclaim* action. Otherwise the process attempts to acquire
- *  a specific CPU in case it is available or enqueue a request if it's not.
+ *  Acquire CPUs from the system. If the CPU belongs to the process, the call is
+ *  equivalent to a *reclaim* action. Otherwise, the process attempts to acquire
+ *  a CPU. In asynchronous mode, it may enqueue a request for the CPU.
  */
 int DLB_AcquireCpusInMask(int ncpus, const_dlb_cpu_set_t mask);
 
@@ -400,12 +398,13 @@ int DLB_BorrowCpusInMask(int ncpus, const_dlb_cpu_set_t mask);
  *  \return DLB_ERR_NOINIT if DLB is not initialized
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be returned
+ *  \return DLB_ERR_NOCOMP if the mode asynchronous is enabled
  *
- *  Return CPUs to the system commonly triggered by a reclaim action from other
- *  process but stating that the current process still demands the usage of
- *  these CPUs. This action will enqueue a request for when the resources are
- *  available again.  If the caller does not want to keep the resource after
- *  receiving a *reclaim*, the correct action is *lend*.
+ *  In polling mode (the default), this routine checks whether the CPUs assigned
+ *  to the calling process needs to be returned. On success, a disable callback
+ *  is triggered.
+ *
+ *  In asynchronous mode, this routine has no effect.
  */
 int DLB_Return(void);
 
@@ -416,11 +415,11 @@ int DLB_Return(void);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be returned
  *
- *  Return CPUs to the system commonly triggered by a reclaim action from other
- *  process but stating that the current process still demands the usage of
- *  these CPUs. This action will enqueue a request for when the resources are
- *  available again.  If the caller does not want to keep the resource after
- *  receiving a *reclaim*, the correct action is *lend*.
+ *  In polling mode (the default), this routine checks whether the CPUs assigned
+ *  to the calling process needs to be returned. On success, a disable callback
+ *  is triggered.
+ *
+ *  In asynchronous mode, this routine has no effect.
  */
 int DLB_ReturnCpu(int cpuid);
 
@@ -430,11 +429,11 @@ int DLB_ReturnCpu(int cpuid);
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be returned
  *
- *  Return CPUs to the system commonly triggered by a reclaim action from other
- *  process but stating that the current process still demands the usage of
- *  these CPUs. This action will enqueue a request for when the resources are
- *  available again.  If the caller does not want to keep the resource after
- *  receiving a *reclaim*, the correct action is *lend*.
+ *  In polling mode (the default), this routine checks whether the CPUs assigned
+ *  to the calling process needs to be returned. On success, a disable callback
+ *  is triggered.
+ *
+ *  In asynchronous mode, this routine has no effect.
  */
 int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask);
 

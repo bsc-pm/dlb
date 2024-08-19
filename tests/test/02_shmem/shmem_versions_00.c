@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -31,7 +31,6 @@
 #include "LB_comm/shmem_talp.h"
 #include "support/mask_utils.h"
 #include "support/atomic.h"
-#include "support/queues.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -41,6 +40,22 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <time.h>
+
+/* queue_pid_t */
+#define QUEUE_T pid_t
+#define QUEUE_SIZE 8
+#include "support/queue_template.h"
+
+/* queue_lewi_mask_request_t */
+typedef struct {
+    pid_t        pid;
+    unsigned int howmany;
+    cpu_set_t    allowed;
+} lewi_mask_request_t;
+#define QUEUE_T lewi_mask_request_t
+#define QUEUE_KEY_T pid_t
+#define QUEUE_SIZE 1024
+#include "support/queue_template.h"
 
 // Check versions of all shmems
 
@@ -69,13 +84,15 @@ static void check_shmem_sync_version(void) {
 }
 
 static void check_async_version(void) {
-    enum { KNOWN_ASYNC_VERSION = 3 };
+    enum { KNOWN_ASYNC_VERSION = 4 };
     enum { KNOWN_QUEUE_SIZE = 100 };
     struct KnownMessage {
         enum {ENUM1} enum1;
         int int1;
         int int2;
+        cpu_set_t cpu_set;
     };
+    enum KnownStatus { status1, status2, status3 };
     struct KnownAsyncShdata {
         /* Queue attributes */
         struct KnownMessage message[KNOWN_QUEUE_SIZE];
@@ -90,6 +107,7 @@ static void check_async_version(void) {
         cpu_set_t mask;
         void *ptr1;
         bool bool1;
+        enum KnownStatus status;
     };
 
     int version = shmem_async__version();
@@ -128,40 +146,28 @@ static void check_barrier_version(void) {
 }
 
 static void check_cpuinfo_version(void) {
-    enum { KNOWN_CPUINFO_VERSION = 5 };
+    enum { KNOWN_CPUINFO_VERSION = 6 };
     enum { KNOWN_QUEUE_PROC_REQS_SIZE = 4096 };
     enum { KNOWN_QUEUE_PIDS_SIZE = 8 };
-    enum { KNOWN_NUM_STATS = 3 };
-    struct KnownProcRequest {
-        pid_t        pid;
-        unsigned int int1;
-        cpu_set_t    mask;
-    };
-    struct KnownQueueProcs {
-        struct KnownProcRequest queue[KNOWN_QUEUE_PROC_REQS_SIZE];
-        unsigned int int1;
-        unsigned int int2;
-    };
-    struct KnownPidsQueue {
-        pid_t queue[KNOWN_QUEUE_PIDS_SIZE];
-        unsigned int int1;
-        unsigned int int2;
-    };
     struct KnownCpuinfo {
         int int1;
         pid_t pid1;
         pid_t pid2;
         enum {ENUM1} enum1;
-        enum {ENUM2} enum2;
-        int64_t int3[KNOWN_NUM_STATS];
-        struct timespec time1;
-        struct KnownPidsQueue queue;
+        queue_pid_t queue;
+    };
+    struct KnownCpuinfoFlags {
+        bool flag1:1;
+        bool flag2:1;
+        bool flag3:1;
     };
     struct KnownCpuinfoShdata {
+        struct KnownCpuinfoFlags flags;
         struct timespec time1;
-        int64_t int1;
-        bool bool2;
-        struct KnownQueueProcs queue;
+        atomic_int_least64_t int1;
+        queue_lewi_mask_request_t queue;
+        cpu_set_t mask1;
+        cpu_set_t mask2;
         struct KnownCpuinfo info[];
     };
 

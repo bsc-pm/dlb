@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -41,6 +41,10 @@ typedef struct pm_interface {
     void                            *dlb_callback_enable_cpu_arg;
     dlb_callback_disable_cpu_t       dlb_callback_disable_cpu_ptr;
     void                            *dlb_callback_disable_cpu_arg;
+    dlb_callback_enable_cpu_set_t    dlb_callback_enable_cpu_set_ptr;
+    void                            *dlb_callback_enable_cpu_set_arg;
+    dlb_callback_disable_cpu_set_t   dlb_callback_disable_cpu_set_ptr;
+    void                            *dlb_callback_disable_cpu_set_arg;
 } pm_interface_t;
 
 void pm_init(pm_interface_t *pm);
@@ -58,5 +62,7 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
 int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set);
 int enable_cpu(const pm_interface_t *pm, int cpuid);
 int disable_cpu(const pm_interface_t *pm, int cpuid);
+int enable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set);
+int disable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set);
 
 #endif //NUMTHREADS_H

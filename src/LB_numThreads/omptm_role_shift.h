@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -78,5 +78,19 @@ void omptm_role_shift__sync_region(
         ompt_data_t *parallel_data,
         ompt_data_t *task_data,
         const void *codeptr_ra);
+
+/* Functions for testing purposes */
+int  omptm_role_shift_testing__get_num_free_agents(void);
+int  omptm_role_shift_testing__get_num_registered_threads(void);
+int  omptm_role_shift_testing__get_current_parallel_size(void);
+void omptm_role_shift_testing__set_pending_tasks(unsigned int num_tasks);
+unsigned int omptm_role_shift_testing__get_pending_tasks(void);
+void omptm_role_shift_testing__set_global_tid(int tid);
+bool omptm_role_shift_testing__in_parallel(void);
+int omptm_role_shift_testing__get_id_from_cpu(int cpuid);
+
+typedef struct CPU_Data cpu_data_t;
+cpu_data_t* omptm_role_shift_testing__get_cpu_data_ptr(void);
+int* omptm_role_shift_testing__get_cpu_by_id_ptr(void);
 
 #endif /* OMPTM_ROLE_SHIFT_H */

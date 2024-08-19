@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,14 +23,26 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_async.h"
 #include "apis/dlb_errors.h"
-#include "support/mask_utils.h"
 #include "support/debug.h"
+#include "support/gslist.h"
+#include "support/mask_utils.h"
 #include "support/small_array.h"
+#include "support/types.h"
 
 #include <sched.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+
+/* array_cpuid_t */
+#define ARRAY_T cpuid_t
+#include "support/array_template.h"
+
+/* array_cpuinfo_task_t */
+#define ARRAY_T cpuinfo_task_t
+#define ARRAY_KEY_T pid_t
+#include "support/array_template.h"
+
 
 /* Node size will be the same for all processes in the node,
  * it is safe to be out of the shared memory */
@@ -39,64 +51,64 @@ static int node_size = -1;
 /* LeWI_mask data is private for each process */
 typedef struct LeWI_mask_info {
     int64_t last_borrow;
-    int *cpus_priority_array;
     int max_parallelism;
+    array_cpuid_t cpus_priority_array;
     cpu_set_t pending_reclaimed_cpus;       /* CPUs that become reclaimed after an MPI */
     cpu_set_t in_mpi_cpus;                  /* CPUs inside an MPI call */
+    GSList *cpuid_arrays;                   /* thread-private pointers to free at finalize */
+    GSList *cpuinfo_task_arrays;            /* thread-private pointers to free at finalize */
+    pthread_mutex_t mutex;                  /* Mutex to protect lewi_info */
 } lewi_info_t;
 
 
-/* Combine cpus_priority_array and mask into cpu_array */
-static inline void fill_cpu_array(int cpu_array[], int cpus_priority_array[], const cpu_set_t *mask) {
-    int i, j;
-    for (i=0, j=0; i<node_size; ++i) {
-        int cpuid = cpus_priority_array[i];
-        if (cpuid != -1
-                && (mask == NULL || CPU_ISSET(cpuid, mask))) {
-            cpu_array[j++] = cpuid;
+/* Compute the common elements between a cpuid array a cpu_set:
+ * cpuid_t *result = cpuid_t *op1 AND cpu_set_t *op2
+ * (cpu_set_t* may be NULL, meaning neutral value)
+ */
+static inline void cpu_array_and(array_cpuid_t *result,
+        const array_cpuid_t *op1, const cpu_set_t *op2) {
+    for (unsigned int i = 0; i < op1->count; ++i) {
+        if (op2 == NULL || CPU_ISSET(op1->items[i], op2)) {
+            array_cpuid_t_push(result, op1->items[i]);
         }
-    }
-    for (; j<node_size; ++j) {
-        cpu_array[j] = -1;
     }
 }
 
 
-/* Construct a priority list of CPUs merging 4 lists:
- *  prio1: always owned CPUs
- *  prio2: nearby CPUs depending on the affinity option
- *  prio3: other CPUs in some affinity options
- *  rest:  fill '-1' to indicate non eligible CPUs
- */
-static int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
+/* Construct a priority list of CPUs considering the topology and the affinity mask */
+static void lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
         const cpu_set_t *process_mask) {
-    int *prio1 = malloc(node_size*sizeof(int));
-    int *prio2 = malloc(node_size*sizeof(int));
-    int *prio3 = malloc(node_size*sizeof(int));
-    int i, i1 = 0, i2 = 0, i3 = 0;
 
+    lewi_info_t *lewi_info = spd->lewi_info;
     priority_t priority = spd->options.lewi_affinity;
+
     cpu_set_t affinity_mask;
-    mu_get_parents_covering_cpuset(&affinity_mask, process_mask);
-    int cpuid;
-    for (cpuid=0; cpuid<node_size; ++cpuid) {
+    mu_get_nodes_intersecting_with_cpuset(&affinity_mask, process_mask);
+
+    /* Reset current priority array */
+    array_cpuid_t *cpus_priority_array = &lewi_info->cpus_priority_array;
+    array_cpuid_t_clear(cpus_priority_array);
+
+    /* First, construct a list of potentially available CPUs
+     * (owned + nearby, depending on the affinity policy) */
+    cpu_set_t system_mask;
+    mu_get_system_mask(&system_mask);
+    for (int cpuid = mu_get_first_cpu(&system_mask);
+            cpuid >= 0;
+            cpuid = mu_get_next_cpu(&system_mask, cpuid)) {
         if (CPU_ISSET(cpuid, process_mask)) {
-            prio1[i1++] = cpuid;
+            array_cpuid_t_push(cpus_priority_array, cpuid);
         } else {
             switch (priority) {
                 case PRIO_ANY:
-                    prio2[i2++] = cpuid;
+                    array_cpuid_t_push(cpus_priority_array, cpuid);
                     break;
                 case PRIO_NEARBY_FIRST:
-                    if (CPU_ISSET(cpuid, &affinity_mask)) {
-                        prio2[i2++] = cpuid;
-                    } else {
-                        prio3[i3++] = cpuid;
-                    }
+                    array_cpuid_t_push(cpus_priority_array, cpuid);
                     break;
                 case PRIO_NEARBY_ONLY:
                     if (CPU_ISSET(cpuid, &affinity_mask)) {
-                        prio2[i2++] = cpuid;
+                        array_cpuid_t_push(cpus_priority_array, cpuid);
                     }
                     break;
                 case PRIO_SPREAD_IFEMPTY:
@@ -106,31 +118,153 @@ static int lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
         }
     }
 
-    /* Sort prio2 and prio3 lists according to the topology */
-    if (i2 > 0 || i3 > 0) {
-        cpu_set_t topology[3];
-        memcpy(&topology[0], process_mask, sizeof(cpu_set_t));
-        memcpy(&topology[1], &affinity_mask, sizeof(cpu_set_t));
-        CPU_ZERO(&topology[2]);
-        qsort_r(prio2, i2, sizeof(int),
-                mu_cmp_cpuids_by_topology, &topology);
-        qsort_r(prio3, i3, sizeof(int),
-                mu_cmp_cpuids_by_topology, &topology);
+    /* Sort available CPUs according to the affinity */
+    cpu_set_t affinity[3];
+    memcpy(&affinity[0], process_mask, sizeof(cpu_set_t));
+    memcpy(&affinity[1], &affinity_mask, sizeof(cpu_set_t));
+    CPU_ZERO(&affinity[2]);
+    qsort_r(cpus_priority_array->items, cpus_priority_array->count,
+            sizeof(cpuid_t), mu_cmp_cpuids_by_affinity, &affinity);
+}
+
+
+/*********************************************************************************/
+/*    Thread-local pointers for temporary storage during LeWI calls              */
+/*********************************************************************************/
+
+/* Array of eligible CPUs. Usually a subset of the CPUs priority array. */
+static __thread array_cpuid_t _cpu_subset = {};
+
+static inline array_cpuid_t* get_cpu_subset(const subprocess_descriptor_t *spd) {
+    /* Thread already has an allocated array, return it */
+    if (likely(_cpu_subset.items != NULL)) {
+        array_cpuid_t_clear(&_cpu_subset);
+        return &_cpu_subset;
     }
 
-    /* Merge [<[prio1][prio2][prio3][-1]>] */
+    /* Otherwise, allocate */
+    array_cpuid_t_init(&_cpu_subset, node_size);
+
+    /* Add pointer to lewi_info to deallocate later */
     lewi_info_t *lewi_info = spd->lewi_info;
-    int *cpus_priority_array = lewi_info->cpus_priority_array;
-    memmove(&cpus_priority_array[0], prio1, sizeof(int)*i1);
-    memmove(&cpus_priority_array[i1], prio2, sizeof(int)*i2);
-    memmove(&cpus_priority_array[i1+i2], prio3, sizeof(int)*i3);
-    for (i=i1+i2+i3; i<node_size; ++i) cpus_priority_array[i] = -1;
+    pthread_mutex_lock(&lewi_info->mutex);
+    {
+        lewi_info->cpuid_arrays =
+            g_slist_prepend(lewi_info->cpuid_arrays, &_cpu_subset);
+    }
+    pthread_mutex_unlock(&lewi_info->mutex);
 
-    free(prio1);
-    free(prio2);
-    free(prio3);
+    return &_cpu_subset;
+}
 
-    return 0;
+/* Array of cpuinfo tasks. For enabling or disabling CPUs. */
+static __thread array_cpuinfo_task_t _tasks = {};
+
+static inline array_cpuinfo_task_t* get_tasks(const subprocess_descriptor_t *spd) {
+    /* Thread already has an allocated array, return it */
+    if (likely(_tasks.items != NULL)) {
+        array_cpuinfo_task_t_clear(&_tasks);
+        return &_tasks;
+    }
+
+    /* Otherwise, allocate */
+    array_cpuinfo_task_t_init(&_tasks, node_size*2);
+
+    /* Add pointer to lewi_info to deallocate later */
+    lewi_info_t *lewi_info = spd->lewi_info;
+    pthread_mutex_lock(&lewi_info->mutex);
+    {
+        lewi_info->cpuinfo_task_arrays =
+            g_slist_prepend(lewi_info->cpuinfo_task_arrays, &_tasks);
+    }
+    pthread_mutex_unlock(&lewi_info->mutex);
+
+    return &_tasks;
+}
+
+
+/*********************************************************************************/
+/*    Resolve cpuinfo tasks                                                      */
+/*********************************************************************************/
+
+static void resolve_cpuinfo_tasks(const subprocess_descriptor_t *restrict spd,
+        const array_cpuinfo_task_t *restrict tasks) {
+
+    size_t tasks_count = tasks->count;
+
+    /* We don't need it strictly sorted, but grouped by pid */
+    if (tasks_count > 2 ) {
+        array_cpuinfo_task_t_sort(&_tasks);
+    }
+
+    /* Iterate tasks by group of PIDs */
+    for (size_t i=0; i<tasks_count; ) {
+
+        /* count how many times this PID is repeated */
+        size_t j = i+1;
+        while (j < tasks_count
+                && tasks->items[j].pid == tasks->items[i].pid) {
+            ++j;
+        }
+        size_t num_tasks = j - i;
+
+        if (num_tasks == 1) {
+            /* resolve single task */
+            const cpuinfo_task_t *task = &tasks->items[i];
+            if (task->pid == spd->id) {
+                if (task->action == ENABLE_CPU) {
+                    enable_cpu(&spd->pm, task->cpuid);
+                }
+                else if (task->action == DISABLE_CPU) {
+                    disable_cpu(&spd->pm, task->cpuid);
+                }
+            }
+            else if (spd->options.mode == MODE_ASYNC) {
+                if (task->action == ENABLE_CPU) {
+                    shmem_async_enable_cpu(task->pid, task->cpuid);
+                }
+                else if (task->action == DISABLE_CPU) {
+                    shmem_async_disable_cpu(task->pid, task->cpuid);
+                    shmem_cpuinfo__return_async_cpu(task->pid, task->cpuid);
+                }
+            }
+        } else {
+            /* group tasks */
+            cpu_set_t cpus_to_enable = {};
+            cpu_set_t cpus_to_disable = {};
+            for (size_t k = i; k < i+num_tasks; ++k) {
+                const cpuinfo_task_t *task = &tasks->items[k];
+                if (task->action == ENABLE_CPU) {
+                    CPU_SET(task->cpuid, &cpus_to_enable);
+                }
+                else if (task->action == DISABLE_CPU) {
+                    CPU_SET(task->cpuid, &cpus_to_disable);
+                }
+            }
+
+            /* resolve group of tasks for the same PID */
+            const cpuinfo_task_t *task = &tasks->items[i];
+            if (task->pid == spd->id) {
+                if (CPU_COUNT(&cpus_to_enable) > 0) {
+                    enable_cpu_set(&spd->pm, &cpus_to_enable);
+                }
+                if (CPU_COUNT(&cpus_to_disable) > 0) {
+                    disable_cpu_set(&spd->pm, &cpus_to_disable);
+                }
+            }
+            else if (spd->options.mode == MODE_ASYNC) {
+                if (CPU_COUNT(&cpus_to_enable) > 0) {
+                    shmem_async_enable_cpu_set(task->pid, &cpus_to_enable);
+                }
+                if (CPU_COUNT(&cpus_to_disable) > 0) {
+                    shmem_async_disable_cpu_set(task->pid, &cpus_to_disable);
+                    shmem_cpuinfo__return_async_cpu_mask(task->pid, &cpus_to_disable);
+                }
+            }
+        }
+
+        i += num_tasks;
+    }
 }
 
 
@@ -145,12 +279,12 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
     /* Allocate and initialize private structure */
     spd->lewi_info = malloc(sizeof(lewi_info_t));
     lewi_info_t *lewi_info = spd->lewi_info;
-    lewi_info->last_borrow = 0;
-    lewi_info->cpus_priority_array = malloc(node_size*sizeof(int));
+    *lewi_info = (const lewi_info_t) {
+        .max_parallelism = spd->options.lewi_max_parallelism,
+        .mutex = PTHREAD_MUTEX_INITIALIZER,
+    };
+    array_cpuid_t_init(&lewi_info->cpus_priority_array, node_size);
     lewi_mask_UpdateOwnershipInfo(spd, &spd->process_mask);
-    lewi_info->max_parallelism = spd->options.lewi_max_parallelism;
-    CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
-    CPU_ZERO(&lewi_info->in_mpi_cpus);
 
     /* Enable request queues only in async mode */
     if (spd->options.mode == MODE_ASYNC) {
@@ -161,35 +295,38 @@ int lewi_mask_Init(subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
-    /* Deregister subprocess from the shared memory */
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    SMALL_ARRAY(pid_t, victims, node_size);
-    int error = shmem_cpuinfo__deregister(spd->id, new_guests, victims);
+    /* De-register subprocess from the shared memory */
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__deregister(spd->id, tasks);
     if (error == DLB_SUCCESS) {
-        bool async = spd->options.mode == MODE_ASYNC;
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            pid_t victim = victims[cpuid];
-            if (async) {
-                if (victim > 0) {
-                    shmem_async_disable_cpu(victim, cpuid);
-                }
-                if (new_guest > 0) {
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            } else {
-                if (new_guest >= 0) {
-                    disable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
 
-    /* De-allocate private structure */
+    /* Deallocate thread private arrays */
     lewi_info_t *lewi_info = spd->lewi_info;
-    free(lewi_info->cpus_priority_array);
-    lewi_info->cpus_priority_array = NULL;
+    pthread_mutex_lock(&lewi_info->mutex);
+    {
+        for (GSList *node = lewi_info->cpuid_arrays;
+                node != NULL;
+                node = node->next) {
+            array_cpuid_t *array = node->data;
+            array_cpuid_t_destroy(array);
+        }
+        g_slist_free(lewi_info->cpuid_arrays);
+
+        for (GSList *node = lewi_info->cpuinfo_task_arrays;
+                node != NULL;
+                node = node->next) {
+            array_cpuid_t *array = node->data;
+            array_cpuid_t_destroy(array);
+        }
+        g_slist_free(lewi_info->cpuinfo_task_arrays);
+    }
+    pthread_mutex_unlock(&lewi_info->mutex);
+
+
+    /* Deallocate private structure */
+    array_cpuid_t_destroy(&lewi_info->cpus_priority_array);
     free(lewi_info);
     lewi_info = NULL;
 
@@ -198,7 +335,7 @@ int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
 
 
 /*********************************************************************************/
-/*    LewI Modes (enable/disable, max_parallelism, ...)                          */
+/*    LeWI Modes (enable/disable, max_parallelism, ...)                          */
 /*********************************************************************************/
 
 int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd) {
@@ -208,30 +345,10 @@ int lewi_mask_EnableDLB(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_DisableDLB(const subprocess_descriptor_t *spd) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    SMALL_ARRAY(pid_t, victims, node_size);
-    int error = shmem_cpuinfo__reset(spd->id, new_guests, victims);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__reset(spd->id, tasks);
     if (error == DLB_SUCCESS) {
-        bool async = spd->options.mode == MODE_ASYNC;
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            pid_t victim = victims[cpuid];
-            if (async) {
-                if (victim > 0) {
-                    shmem_async_disable_cpu(victim, cpuid);
-                }
-                if (new_guest > 0) {
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            } else {
-                if (new_guest == spd->id) {
-                    enable_cpu(&spd->pm, cpuid);
-                } else if (victim == spd->id) {
-                    disable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
     return error;
 }
@@ -241,29 +358,10 @@ int lewi_mask_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
     if (max > 0) {
         lewi_info_t *lewi_info = spd->lewi_info;
         lewi_info->max_parallelism = max;
-        SMALL_ARRAY(pid_t, new_guests, node_size);
-        SMALL_ARRAY(pid_t, victims, node_size);
-        error = shmem_cpuinfo__update_max_parallelism(spd->id, max, new_guests, victims);
+        array_cpuinfo_task_t *tasks = get_tasks(spd);
+        error = shmem_cpuinfo__update_max_parallelism(spd->id, max, tasks);
         if (error == DLB_SUCCESS) {
-            bool async = spd->options.mode == MODE_ASYNC;
-            int cpuid;
-            for (cpuid=0; cpuid<node_size; ++cpuid) {
-                pid_t new_guest = new_guests[cpuid];
-                pid_t victim = victims[cpuid];
-                if (async) {
-                    if (victim == spd->id) {
-                        // victim can only be this subprocess
-                        shmem_async_disable_cpu(victim, cpuid);
-                    }
-                    if (new_guest > 0) {
-                        shmem_async_enable_cpu(new_guest, cpuid);
-                    }
-                } else {
-                    if (new_guest >= 0) {
-                        disable_cpu(&spd->pm, cpuid);
-                    }
-                }
-            }
+            resolve_cpuinfo_tasks(spd, tasks);
         }
     }
     return error;
@@ -320,29 +418,32 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
 
             if (CPU_ISSET(cpuid, &spd->process_mask)) {
                 /* Acquire only if the CPU is owned, but do not call any enable CPU callback */
-                pid_t new_guest;
-                pid_t victim;
-                error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &new_guest, &victim);
-                if (error == DLB_NOTED) {
-                    if (spd->options.mode == MODE_ASYNC) {
-                        if (victim > 0) {
+                array_cpuinfo_task_t *tasks = get_tasks(spd);
+                error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, tasks);
+                if (error == DLB_NOTED
+                        && spd->options.mode == MODE_ASYNC) {
+                    for (size_t i=0; i<tasks->count; ++i) {
+                        const cpuinfo_task_t *task = &tasks->items[i];
+                        if (task->action == DISABLE_CPU) {
                             /* If the CPU is guested, just disable visitor */
-                            shmem_async_disable_cpu(victim, cpuid);
+                            shmem_async_disable_cpu(task->pid, task->cpuid);
                         }
                     }
                 }
             }
             else {
                 /* Otherwise, Borrow CPU, but also ignoring the enable callbacks */
-                pid_t new_guest;
-                error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &new_guest);
+                array_cpuinfo_task_t *tasks = get_tasks(spd);
+                error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, tasks);
                 if (error != DLB_SUCCESS) {
                     /* Annotate the CPU as pending to bypass the shared memory for the next query */
                     CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
 
-                    /* Disable CPU if async mode */
+                    /* We lost the CPU while in MPI.
+                     * In async mode, we can just disable the CPU.
+                     * In polling mode, the process needs to call Return */
                     if (spd->options.mode == MODE_ASYNC) {
-                        shmem_async_disable_cpu(spd->id, cpuid);
+                        disable_cpu(&spd->pm, cpuid);
                     }
                 }
             }
@@ -365,14 +466,15 @@ int lewi_mask_Lend(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t new_guest;
-    int error = shmem_cpuinfo__lend_cpu(spd->id, cpuid, &new_guest);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__lend_cpu(spd->id, cpuid, tasks);
+
     if (error == DLB_SUCCESS) {
-        if (spd->options.mode == MODE_ASYNC && new_guest > 0) {
-            shmem_async_enable_cpu(new_guest, cpuid);
+        if (spd->options.mode == MODE_ASYNC) {
+            resolve_cpuinfo_tasks(spd, tasks);
         }
 
-        /* Clear possible pending reclaimed cpus */
+        /* Clear possible pending reclaimed CPUs */
         lewi_info_t *lewi_info = spd->lewi_info;
         CPU_CLR(cpuid, &lewi_info->pending_reclaimed_cpus);
     }
@@ -380,20 +482,14 @@ int lewi_mask_LendCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    int error = shmem_cpuinfo__lend_cpu_mask(spd->id, mask, new_guests);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__lend_cpu_mask(spd->id, mask, tasks);
     if (error == DLB_SUCCESS) {
         if (spd->options.mode == MODE_ASYNC) {
-            int cpuid;
-            for (cpuid=0; cpuid<node_size; ++cpuid) {
-                pid_t new_guest = new_guests[cpuid];
-                if (new_guest > 0) {
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            }
+            resolve_cpuinfo_tasks(spd, tasks);
         }
 
-        /* Clear possible pending reclaimed cpus */
+        /* Clear possible pending reclaimed CPUs */
         lewi_info_t *lewi_info = spd->lewi_info;
         mu_substract(&lewi_info->pending_reclaimed_cpus,
                 &lewi_info->pending_reclaimed_cpus, mask);
@@ -407,110 +503,33 @@ int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *m
 /*********************************************************************************/
 
 int lewi_mask_Reclaim(const subprocess_descriptor_t *spd) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    SMALL_ARRAY(pid_t, victims, node_size);
-    int error = shmem_cpuinfo__reclaim_all(spd->id, new_guests, victims);
-    if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        bool async = spd->options.mode == MODE_ASYNC;
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            pid_t victim = victims[cpuid];
-            if (async) {
-                if (victim > 0) {
-                    /* If the CPU is guested, just disable visitor */
-                    shmem_async_disable_cpu(victim, cpuid);
-                } else if (new_guest == spd->id) {
-                    /* Only enable if the CPU is free */
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            } else {
-                if (new_guest == spd->id) {
-                    /* Oversubscribe even if the CPU is guested */
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
-    }
-    return error;
+    /* Even though shmem_cpuinfo__reclaim_all exists,
+     * iterating the mask should be more efficient */
+    return lewi_mask_ReclaimCpuMask(spd, &spd->process_mask);
 }
 
 int lewi_mask_ReclaimCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t new_guest;
-    pid_t victim;
-    int error = shmem_cpuinfo__reclaim_cpu(spd->id, cpuid, &new_guest, &victim);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__reclaim_cpu(spd->id, cpuid, tasks);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        if (spd->options.mode == MODE_ASYNC) {
-            if (victim > 0) {
-                /* If the CPU is guested, just disable visitor */
-                shmem_async_disable_cpu(victim, cpuid);
-            } else if (new_guest == spd->id) {
-                /* Only enable if the CPU is free */
-                shmem_async_enable_cpu(new_guest, cpuid);
-            }
-        } else {
-            if (new_guest == spd->id) {
-                /* Oversubscribe even if the CPU is guested */
-                enable_cpu(&spd->pm, cpuid);
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
     return error;
 }
 
 int lewi_mask_ReclaimCpus(const subprocess_descriptor_t *spd, int ncpus) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    SMALL_ARRAY(pid_t, victims, node_size);
-    int error = shmem_cpuinfo__reclaim_cpus(spd->id, ncpus, new_guests, victims);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__reclaim_cpus(spd->id, ncpus, tasks);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        bool async = spd->options.mode == MODE_ASYNC;
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            pid_t victim = victims[cpuid];
-            if (async) {
-                if (victim > 0) {
-                    /* If the CPU is guested, just disable visitor */
-                    shmem_async_disable_cpu(victim, cpuid);
-                } else if (new_guest == spd->id) {
-                    /* Only enable if the CPU is free */
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            } else {
-                if (new_guest == spd->id) {
-                    /* Oversubscribe even if the CPU is guested */
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
     return error;
 }
 
 int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    SMALL_ARRAY(pid_t, victims, node_size);
-    int error = shmem_cpuinfo__reclaim_cpu_mask(spd->id, mask, new_guests, victims);
-    bool async = spd->options.mode == MODE_ASYNC;
-    int cpuid;
-    for (cpuid=0; cpuid<node_size; ++cpuid) {
-        pid_t new_guest = new_guests[cpuid];
-        pid_t victim = victims[cpuid];
-        if (async) {
-            if (victim > 0) {
-                /* If the CPU is guested, just disable visitor */
-                shmem_async_disable_cpu(victim, cpuid);
-            } else if (new_guest == spd->id) {
-                /* Only enable if the CPU is free */
-                shmem_async_enable_cpu(new_guest, cpuid);
-            }
-        } else {
-            if (new_guest == spd->id) {
-                /* Oversubscribe even if the CPU is guested */
-                enable_cpu(&spd->pm, cpuid);
-            }
-        }
-    }
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__reclaim_cpu_mask(spd->id, mask, tasks);
+    resolve_cpuinfo_tasks(spd, tasks);
     return error;
 }
 
@@ -520,24 +539,10 @@ int lewi_mask_ReclaimCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
 /*********************************************************************************/
 
 int lewi_mask_AcquireCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t new_guest;
-    pid_t victim;
-    int error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, &new_guest, &victim);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, tasks);
     if (error == DLB_SUCCESS || error == DLB_NOTED) {
-        if (spd->options.mode == MODE_ASYNC) {
-            if (victim > 0) {
-                /* If the CPU is guested, just disable visitor */
-                shmem_async_disable_cpu(victim, cpuid);
-            } else if (new_guest == spd->id) {
-                /* Only enable if the CPU is free */
-                shmem_async_enable_cpu(new_guest, cpuid);
-            }
-        } else {
-            if (new_guest == spd->id) {
-                /* Oversubscribe even if the CPU is guested */
-                enable_cpu(&spd->pm, cpuid);
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
     return error;
 }
@@ -558,44 +563,26 @@ int lewi_mask_AcquireCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t
     return lewi_mask_AcquireCpusInMask(spd, 0, mask);
 }
 
-int lewi_mask_AcquireCpusInMask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    SMALL_ARRAY(pid_t, victims, node_size);
+int lewi_mask_AcquireCpusInMask(const subprocess_descriptor_t *spd, int ncpus,
+        const cpu_set_t *mask) {
     lewi_info_t *lewi_info = spd->lewi_info;
     bool async = spd->options.mode == MODE_ASYNC;
     int64_t *last_borrow = async ? NULL : &lewi_info->last_borrow;
 
     /* Construct a CPU array based on cpus_priority_array and mask (if present) */
-    int *cpus_priority_array = lewi_info->cpus_priority_array;
-    SMALL_ARRAY(int, cpu_subset, node_size);
-    fill_cpu_array(cpu_subset, cpus_priority_array, mask);
+    array_cpuid_t *cpu_subset = get_cpu_subset(spd);
+    cpu_array_and(cpu_subset, &lewi_info->cpus_priority_array, mask);
 
-    /* Provide a number of requestes CPUs only if needed */
+    /* Provide a number of requested CPUs only if needed */
     int *requested_ncpus = ncpus > 0 ? &ncpus : NULL;
 
-    int error = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(spd->id, requested_ncpus, cpu_subset,
-            spd->options.lewi_affinity, lewi_info->max_parallelism, last_borrow, new_guests, victims);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(spd->id,
+            requested_ncpus, cpu_subset, spd->options.lewi_affinity,
+            lewi_info->max_parallelism, last_borrow, tasks);
 
     if (error != DLB_NOUPDT) {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            pid_t new_guest = new_guests[cpuid];
-            pid_t victim = victims[cpuid];
-            if (async) {
-                if (victim > 0) {
-                    /* If the CPU is guested, just disable visitor */
-                    shmem_async_disable_cpu(victim, cpuid);
-                } else if (new_guest == spd->id) {
-                    /* Only enable if the CPU is free */
-                    shmem_async_enable_cpu(new_guest, cpuid);
-                }
-            } else {
-                if (new_guest == spd->id) {
-                    /* Oversubscribe even if the CPU is guested */
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
     return error;
 }
@@ -612,16 +599,10 @@ int lewi_mask_Borrow(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_BorrowCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t new_guest;
-    int error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, &new_guest);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, tasks);
     if (error == DLB_SUCCESS) {
-        if (new_guest == spd->id) {
-            if (spd->options.mode == MODE_ASYNC) {
-                shmem_async_enable_cpu(spd->id, cpuid);
-            } else {
-                enable_cpu(&spd->pm, cpuid);
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
     return error;
 }
@@ -635,33 +616,24 @@ int lewi_mask_BorrowCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t 
 }
 
 int lewi_mask_BorrowCpusInMask(const subprocess_descriptor_t *spd, int ncpus, const cpu_set_t *mask) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
     lewi_info_t *lewi_info = spd->lewi_info;
     bool async = spd->options.mode == MODE_ASYNC;
     int64_t *last_borrow = async ? NULL : &lewi_info->last_borrow;
 
     /* Construct a CPU array based on cpus_priority_array and mask (if present) */
-    int *cpus_priority_array = lewi_info->cpus_priority_array;
-    SMALL_ARRAY(int, cpu_subset, node_size);
-    fill_cpu_array(cpu_subset, cpus_priority_array, mask);
+    array_cpuid_t *cpu_subset = get_cpu_subset(spd);
+    cpu_array_and(cpu_subset, &lewi_info->cpus_priority_array, mask);
 
-    /* Provide a number of requestes CPUs only if needed */
+    /* Provide a number of requested CPUs only if needed */
     int *requested_ncpus = ncpus > 0 ? &ncpus : NULL;
 
-    int error = shmem_cpuinfo__borrow_ncpus_from_cpu_subset(spd->id, requested_ncpus, cpu_subset,
-            spd->options.lewi_affinity, lewi_info->max_parallelism, last_borrow, new_guests);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__borrow_ncpus_from_cpu_subset(spd->id,
+            requested_ncpus, cpu_subset, spd->options.lewi_affinity,
+            lewi_info->max_parallelism, last_borrow, tasks);
 
     if (error == DLB_SUCCESS) {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (new_guests[cpuid] == spd->id) {
-                if (async) {
-                    shmem_async_enable_cpu(spd->id, cpuid);
-                } else {
-                    enable_cpu(&spd->pm, cpuid);
-                }
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     }
 
     return error;
@@ -674,28 +646,22 @@ int lewi_mask_BorrowCpusInMask(const subprocess_descriptor_t *spd, int ncpus, co
 
 int lewi_mask_Return(const subprocess_descriptor_t *spd) {
     if (spd->options.mode == MODE_ASYNC) {
-        // ReturnAll should not be called in async mode
+        // Return should not be called in async mode
         return DLB_ERR_NOCOMP;
     }
 
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    int error = shmem_cpuinfo__return_all(spd->id, new_guests);
-    int cpuid;
-    for (cpuid=0; cpuid<node_size; ++cpuid) {
-        pid_t new_guest = new_guests[cpuid];
-        if (new_guest >= 0 && new_guest != spd->id) {
-            disable_cpu(&spd->pm, cpuid);
-        }
-    }
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__return_all(spd->id, tasks);
+    resolve_cpuinfo_tasks(spd, tasks);
 
-    /* Check possible pending reclaimed cpus */
+    /* Check possible pending reclaimed CPUs */
     lewi_info_t *lewi_info = spd->lewi_info;
-    if (CPU_COUNT(&lewi_info->pending_reclaimed_cpus) > 0) {
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, &lewi_info->pending_reclaimed_cpus)) {
-                disable_cpu(&spd->pm, cpuid);
-            }
-        }
+    int cpuid = mu_get_first_cpu(&lewi_info->pending_reclaimed_cpus);
+    if (cpuid >= 0) {
+        do {
+            disable_cpu(&spd->pm, cpuid);
+            cpuid = mu_get_next_cpu(&lewi_info->pending_reclaimed_cpus, cpuid);
+        } while (cpuid >= 0);
         CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
         error = DLB_SUCCESS;
     }
@@ -704,20 +670,17 @@ int lewi_mask_Return(const subprocess_descriptor_t *spd) {
 }
 
 int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
-    pid_t new_guest;
-    int error = shmem_cpuinfo__return_cpu(spd->id, cpuid, &new_guest);
+    if (spd->options.mode == MODE_ASYNC) {
+        // Return should not be called in async mode
+        return DLB_ERR_NOCOMP;
+    }
+
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__return_cpu(spd->id, cpuid, tasks);
     if (error == DLB_SUCCESS || error == DLB_ERR_REQST) {
-        if (spd->options.mode == MODE_ASYNC) {
-            if (new_guest > 0) {
-                shmem_async_enable_cpu(new_guest, cpuid);
-            }
-        } else {
-            if (new_guest >= 0 && new_guest != spd->id) {
-                disable_cpu(&spd->pm, cpuid);
-            }
-        }
+        resolve_cpuinfo_tasks(spd, tasks);
     } else if (error == DLB_ERR_PERM) {
-        /* Check possible pending reclaimed cpus */
+        /* Check possible pending reclaimed CPUs */
         lewi_info_t *lewi_info = spd->lewi_info;
         if (CPU_ISSET(cpuid, &lewi_info->pending_reclaimed_cpus)) {
             CPU_CLR(cpuid, &lewi_info->pending_reclaimed_cpus);
@@ -729,32 +692,23 @@ int lewi_mask_ReturnCpu(const subprocess_descriptor_t *spd, int cpuid) {
 }
 
 int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *mask) {
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, new_guests);
-    bool async = spd->options.mode == MODE_ASYNC;
-    int cpuid;
-    for (cpuid=0; cpuid<node_size; ++cpuid) {
-        pid_t new_guest = new_guests[cpuid];
-        if (async) {
-            if (new_guest > 0) {
-                shmem_async_enable_cpu(new_guest, cpuid);
-            }
-        } else {
-            if (new_guest >= 0 && new_guest != spd->id) {
-                disable_cpu(&spd->pm, cpuid);
-            }
-        }
+    if (spd->options.mode == MODE_ASYNC) {
+        // Return should not be called in async mode
+        return DLB_ERR_NOCOMP;
     }
 
-    /* Check possible pending reclaimed cpus */
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    int error = shmem_cpuinfo__return_cpu_mask(spd->id, mask, tasks);
+    resolve_cpuinfo_tasks(spd, tasks);
+
+    /* Check possible pending reclaimed CPUs */
     lewi_info_t *lewi_info = spd->lewi_info;
     if (CPU_COUNT(&lewi_info->pending_reclaimed_cpus) > 0) {
         cpu_set_t cpus_to_return;
         CPU_AND(&cpus_to_return, &lewi_info->pending_reclaimed_cpus, mask);
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, &cpus_to_return)) {
-                disable_cpu(&spd->pm, cpuid);
-            }
+        for (int cpuid = mu_get_first_cpu(&cpus_to_return); cpuid >= 0;
+                cpuid = mu_get_next_cpu(&cpus_to_return, cpuid)) {
+            disable_cpu(&spd->pm, cpuid);
         }
         mu_substract(&lewi_info->pending_reclaimed_cpus,
                 &lewi_info->pending_reclaimed_cpus, &cpus_to_return);
@@ -773,29 +727,22 @@ int lewi_mask_CheckCpuAvailability(const subprocess_descriptor_t *spd, int cpuid
 
 int lewi_mask_UpdateOwnership(const subprocess_descriptor_t *spd,
         const cpu_set_t *process_mask) {
-    /* Udate priority array */
+    /* Update priority array */
     lewi_mask_UpdateOwnershipInfo(spd, process_mask);
 
     /* Update cpuinfo data and return reclaimed CPUs */
-    SMALL_ARRAY(pid_t, new_guests, node_size);
-    shmem_cpuinfo__update_ownership(spd->id, process_mask, new_guests);
+    array_cpuinfo_task_t *tasks = get_tasks(spd);
+    shmem_cpuinfo__update_ownership(spd->id, process_mask, tasks);
+    resolve_cpuinfo_tasks(spd, tasks);
 
-    int cpuid;
-    for (cpuid=0; cpuid<node_size; ++cpuid) {
-        pid_t new_guest = new_guests[cpuid];
-        if (new_guest >= 0 && new_guest != spd->id) {
-            disable_cpu(&spd->pm, cpuid);
-        }
-    }
-
-    /* Check possible pending reclaimed cpus */
+    /* Check possible pending reclaimed CPUs */
     lewi_info_t *lewi_info = spd->lewi_info;
-    if (CPU_COUNT(&lewi_info->pending_reclaimed_cpus) > 0) {
-        for (cpuid=0; cpuid<node_size; ++cpuid) {
-            if (CPU_ISSET(cpuid, &lewi_info->pending_reclaimed_cpus)) {
-                disable_cpu(&spd->pm, cpuid);
-            }
-        }
+    int cpuid = mu_get_first_cpu(&lewi_info->pending_reclaimed_cpus);
+    if (cpuid >= 0) {
+        do {
+            disable_cpu(&spd->pm, cpuid);
+            cpuid = mu_get_next_cpu(&lewi_info->pending_reclaimed_cpus, cpuid);
+        } while (cpuid >= 0);
         CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
     }
 

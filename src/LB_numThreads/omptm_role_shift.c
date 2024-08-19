@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -278,7 +278,7 @@ void omptm_role_shift__OutOfBlockingCall(void) {
 void omptm_role_shift__thread_begin(ompt_thread_t thread_type,
                                     ompt_data_t *thread_data){
     /* Set up thread local spd */
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     global_tid = __kmp_get_thread_id();
     fatal_cond(registered_threads > system_size,
             "DLB created more threads than existing CPUs in the node");
@@ -454,3 +454,47 @@ void omptm_role_shift__task_schedule(
     }
 }
 
+
+/*********************************************************************************/
+/*    Functions for testing purposes                                             */
+/*********************************************************************************/
+
+int omptm_role_shift_testing__get_num_free_agents(void) {
+    return num_free_agents;
+}
+
+int omptm_role_shift_testing__get_num_registered_threads(void) {
+    return registered_threads;
+}
+
+int omptm_role_shift_testing__get_current_parallel_size(void) {
+    return current_parallel_size;
+}
+
+void omptm_role_shift_testing__set_pending_tasks(unsigned int num_tasks) {
+    pending_tasks = num_tasks;
+}
+
+unsigned int omptm_role_shift_testing__get_pending_tasks(void) {
+    return pending_tasks;
+}
+
+void omptm_role_shift_testing__set_global_tid(int tid) {
+    global_tid = tid;
+}
+
+bool omptm_role_shift_testing__in_parallel(void) {
+    return in_parallel;
+}
+
+int omptm_role_shift_testing__get_id_from_cpu(int cpuid) {
+    return get_id_from_cpu(cpuid);
+}
+
+int* omptm_role_shift_testing__get_cpu_by_id_ptr(void) {
+    return cpu_by_id;
+}
+
+cpu_data_t* omptm_role_shift_testing__get_cpu_data_ptr(void) {
+    return cpu_data;
+}

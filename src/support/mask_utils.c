@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -25,53 +25,187 @@
 
 #include "support/debug.h"
 
-#if defined IS_BGQ_MACHINE
-#else
-#  if defined HWLOC_LIB
+#ifdef HWLOC_LIB
 #include <hwloc.h>
 #include <hwloc/bitmap.h>
 #include <hwloc/glibc-sched.h>
-#  endif
+#endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <dirent.h>
-#endif
 
 #include <sched.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <regex.h>
 
+#ifdef IS_BGQ_MACHINE
+static void parse_mask_from_file(const char *filename, cpu_set_t *mask)
+    __attribute__((unused));
+static int parse_hwloc(void) __attribute__((unused));
+static void parse_system_files(void) __attribute__((unused));
+#endif
+
+
+/*********************************************************************************/
+/*    mu_cpuset_t: custom cpuset type for mask utils                             */
+/*********************************************************************************/
+
+/* Initial values to accomodate up to CPU_SETSIZE CPUs.
+ * Later, they are reduced according to the machine specification */
+static unsigned int mu_cpuset_setsize = CPU_SETSIZE;
+static size_t mu_cpuset_alloc_size = CPU_ALLOC_SIZE(CPU_SETSIZE);
+static size_t mu_cpuset_num_ulongs = CPU_ALLOC_SIZE(CPU_SETSIZE) / sizeof(unsigned long);
+
+
+static inline void mu_cpuset_from_glibc_sched_affinity(mu_cpuset_t *mu_cpuset,
+        const cpu_set_t *cpu_set) {
+    *mu_cpuset = (const mu_cpuset_t) {
+        .set = CPU_ALLOC(mu_cpuset_setsize),
+        .alloc_size = mu_cpuset_alloc_size,
+        .count = CPU_COUNT_S(mu_cpuset_alloc_size, cpu_set),
+        .first_cpuid = mu_get_first_cpu(cpu_set),
+        .last_cpuid = mu_get_last_cpu(cpu_set),
+    };
+    memcpy(mu_cpuset->set, cpu_set, mu_cpuset_alloc_size);
+}
+
+#ifdef HWLOC_LIB
+static inline void mu_cpuset_from_hwloc_bitmap(mu_cpuset_t *mu_cpuset,
+        hwloc_const_bitmap_t bitmap, hwloc_topology_t topology) {
+    *mu_cpuset = (const mu_cpuset_t) {
+        .set = CPU_ALLOC(mu_cpuset_setsize),
+        .alloc_size = mu_cpuset_alloc_size,
+        .count = hwloc_bitmap_weight(bitmap),
+        .first_cpuid = hwloc_bitmap_first(bitmap),
+        .last_cpuid = hwloc_bitmap_last(bitmap),
+    };
+    hwloc_cpuset_to_glibc_sched_affinity(topology, bitmap, mu_cpuset->set,
+            mu_cpuset_alloc_size);
+}
+#endif
+
+
+/*********************************************************************************/
+/*    Mask utils system info                                                     */
+/*********************************************************************************/
+
+/* mask_utils main structure with system info */
 typedef struct {
-    int size;
-    int num_parents;
-    cpu_set_t *parents;
-    cpu_set_t sys_mask;
+    unsigned int  num_nodes;
+    unsigned int  num_cores;
+    unsigned int  num_cpus;
+    mu_cpuset_t   sys_mask;
+    mu_cpuset_t*  node_masks;
+    mu_cpuset_t*  core_masks_by_coreid;
+    mu_cpuset_t** core_masks_by_cpuid;
 } mu_system_loc_t;
+
+enum { BITS_PER_BYTE = 8 };
+enum { CPUS_PER_ULONG = sizeof(unsigned long) * BITS_PER_BYTE };
 
 static mu_system_loc_t sys = {0};
 static bool mu_initialized = false;
 
-
-#if defined IS_BGQ_MACHINE
-static void set_bgq_info( void ) {
-    sys.size = 64;
-    sys.num_parents = 1;
-    sys.parents = malloc( sizeof(cpu_set_t) );
-    CPU_ZERO( &(sys.parents[0]) );
-    CPU_ZERO( &sys.sys_mask );
-    int i;
-    for ( i=0; i<64; i++ ) {
-        CPU_SET( i, &(sys.parents[0]) );
-        CPU_SET( i, &sys.sys_mask );
-    }
+static void init_mu_struct(void) {
+    sys = (const mu_system_loc_t) {};
 }
-#else
-#  if defined HWLOC_LIB
-static int parse_hwloc( void ) {
+
+/* This function (re-)initializes 'sys' with the given cpu sets.
+ * It is used for specific set-ups, fallback, or testing purposes */
+static void init_system_masks(const cpu_set_t *sys_mask,
+        const cpu_set_t *core_masks, unsigned int num_cores,
+        const cpu_set_t *node_masks, unsigned int num_nodes) {
+
+    /* De-allocate structures if already initialized */
+    if (mu_initialized) {
+        mu_finalize();
+    } else {
+        init_mu_struct();
+    }
+
+    /*** System ***/
+    sys.num_cpus = mu_get_last_cpu(sys_mask) + 1;
+    mu_cpuset_setsize = sys.num_cpus;
+    mu_cpuset_num_ulongs = (mu_cpuset_setsize + CPUS_PER_ULONG - 1) / CPUS_PER_ULONG;
+    mu_cpuset_alloc_size = mu_cpuset_num_ulongs * sizeof(unsigned long);
+    sys.sys_mask = (const mu_cpuset_t) {
+        .set = CPU_ALLOC(mu_cpuset_setsize),
+        .count = CPU_COUNT_S(mu_cpuset_alloc_size, sys_mask),
+        .first_cpuid = 0,
+        .last_cpuid = mu_cpuset_setsize - 1,
+    };
+    memcpy(sys.sys_mask.set, sys_mask, mu_cpuset_alloc_size);
+
+    /*** Cores ***/
+    sys.num_cores = num_cores;
+    sys.core_masks_by_coreid = malloc(sys.num_cores * sizeof(mu_cpuset_t));
+    sys.core_masks_by_cpuid = calloc(sys.num_cpus, sizeof(mu_cpuset_t*));
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_masks[core_id]);
+        for (int cpuid = core_cpuset->first_cpuid;
+                cpuid >= 0;
+                cpuid = mu_get_next_cpu(core_cpuset->set, cpuid)) {
+            /* Save reference to another array indexed by cpuid */
+            sys.core_masks_by_cpuid[cpuid] = core_cpuset;
+        }
+    }
+
+    /*** NUMA Nodes ***/
+    sys.num_nodes = num_nodes;
+    sys.node_masks = malloc(sys.num_nodes * sizeof(mu_cpuset_t));
+    for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
+        mu_cpuset_from_glibc_sched_affinity(&sys.node_masks[node_id], &node_masks[node_id]);
+    }
+
+    mu_initialized = true;
+}
+
+
+/* This function (re-)initializes 'sys' given an overall number of resources.
+ * It is used for specific set-ups, fallback, or testing purposes */
+static void init_system(unsigned int num_cpus, unsigned int num_cores,
+        unsigned int num_nodes) {
+
+    /*** System ***/
+    cpu_set_t sys_mask;
+    CPU_ZERO(&sys_mask);
+    for (cpuid_t cpuid = 0; cpuid < num_cpus; ++cpuid) {
+        CPU_SET(cpuid, &sys_mask);
+    }
+
+    /*** Cores ***/
+    cpuid_t cpus_per_core = num_cpus / num_cores;
+    cpu_set_t *core_masks = calloc(num_cores, sizeof(cpu_set_t));
+    for (cpuid_t core_id = 0; core_id < num_cores; ++core_id) {
+        for (cpuid_t cpuid = core_id * cpus_per_core;
+                cpuid < (core_id+1) * cpus_per_core; ++cpuid) {
+            CPU_SET(cpuid, &core_masks[core_id]);
+        }
+    }
+
+    /*** NUMA Nodes ***/
+    cpuid_t cpus_per_node = num_cpus / num_nodes;
+    cpu_set_t *node_masks = calloc(num_nodes, sizeof(cpu_set_t));
+    for (cpuid_t node_id = 0; node_id < num_nodes; ++node_id) {
+        for (cpuid_t cpuid = node_id * cpus_per_node;
+                cpuid < (node_id+1) * cpus_per_node; ++cpuid) {
+            CPU_SET(cpuid, &node_masks[node_id]);
+        }
+    }
+
+    init_system_masks(&sys_mask, core_masks, num_cores, node_masks, num_nodes);
+    free(core_masks);
+    free(node_masks);
+}
+
+static int parse_hwloc(void) {
+#ifdef HWLOC_LIB
     /* Check runtime library compatibility */
     unsigned int hwloc_version = hwloc_get_api_version();
     if (hwloc_version >> 16 != HWLOC_API_VERSION >> 16) {
@@ -83,42 +217,74 @@ static int parse_hwloc( void ) {
     hwloc_topology_init(&topology);
     hwloc_topology_load(topology);
 
-    hwloc_obj_type_t obj_type = HWLOC_OBJ_NODE;
-    int nbobjs = hwloc_get_nbobjs_by_type(topology, obj_type);
-    if (nbobjs < 1) {
-        obj_type = HWLOC_OBJ_SOCKET;
-        nbobjs = hwloc_get_nbobjs_by_type(topology, obj_type);
-    }
+    /*** System ***/
+    hwloc_obj_t machine = hwloc_get_obj_by_type(topology, HWLOC_OBJ_MACHINE, 0);
+    sys.num_cpus = hwloc_bitmap_last(machine->cpuset) + 1;
+    mu_cpuset_setsize = sys.num_cpus;
+#if HWLOC_API_VERSION >= 0x00020100
+    mu_cpuset_num_ulongs = hwloc_bitmap_nr_ulongs(machine->cpuset);
+#else
+    mu_cpuset_num_ulongs = (mu_cpuset_setsize + CPUS_PER_ULONG - 1) / CPUS_PER_ULONG;
+#endif
+    mu_cpuset_alloc_size = mu_cpuset_num_ulongs * sizeof(unsigned long);
+    mu_cpuset_from_hwloc_bitmap(&sys.sys_mask, machine->cpuset, topology);
 
-    int nb_valid_objs = 0;
-    int i = 0;
-    for (i=0; i<nbobjs; ++i) {
-        hwloc_obj_t obj = hwloc_get_obj_by_type(topology, obj_type, i);
+    /*** Cores ***/
+    hwloc_obj_type_t core = HWLOC_OBJ_CORE;
+    sys.num_cores = hwloc_get_nbobjs_by_type(topology, core);
+    sys.core_masks_by_coreid = calloc(sys.num_cores, sizeof(mu_cpuset_t));
+    sys.core_masks_by_cpuid = calloc(sys.num_cpus, sizeof(mu_cpuset_t*));
+    unsigned int num_valid_cores = 0;
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        hwloc_obj_t obj = hwloc_get_obj_by_type(topology, core, core_id);
         if (!hwloc_bitmap_iszero(obj->cpuset)) {
-            ++nb_valid_objs;
-            void *ptr = realloc(sys.parents, nb_valid_objs*sizeof(cpu_set_t));
-            fatal_cond(!ptr, "realloc failed");
-            sys.parents = ptr;
-            hwloc_cpuset_to_glibc_sched_affinity(topology, obj->cpuset,
-                    &(sys.parents[nb_valid_objs-1]), sizeof(cpu_set_t));
+            ++num_valid_cores;
+            mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+            mu_cpuset_from_hwloc_bitmap(core_cpuset, obj->cpuset, topology);
+            for (int cpuid = core_cpuset->first_cpuid;
+                    cpuid >= 0;
+                    cpuid = hwloc_bitmap_next(obj->cpuset, cpuid)) {
+                /* Save reference to another array indexed by cpuid */
+                sys.core_masks_by_cpuid[cpuid] = core_cpuset;
+            }
         }
     }
 
-    fatal_cond(!nb_valid_objs, "HWLOC could not find affinity masks");
-    sys.num_parents = nb_valid_objs;
+    fatal_cond(!num_valid_cores, "HWLOC could not find Core affinity masks");
 
-    hwloc_obj_t machine = hwloc_get_obj_by_type(topology, HWLOC_OBJ_MACHINE, 0);
-    hwloc_cpuset_to_glibc_sched_affinity(topology, machine->cpuset, &(sys.sys_mask),
-            sizeof(cpu_set_t) );
-    sys.size = hwloc_bitmap_last(machine->cpuset) + 1;
+    if (sys.num_cores != num_valid_cores) {
+        verbose(VB_AFFINITY, "HWLOC found %d cores but only %d with a valid mask",
+                sys.num_cores, num_valid_cores);
+    }
+
+    /*** NUMA Nodes ***/
+    hwloc_obj_type_t node = HWLOC_OBJ_NODE;
+    sys.num_nodes = hwloc_get_nbobjs_by_type(topology, node);
+    sys.node_masks = calloc(sys.num_cores, sizeof(mu_cpuset_t));
+    unsigned int num_valid_nodes = 0;
+    for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
+        hwloc_obj_t obj = hwloc_get_obj_by_type(topology, node, node_id);
+        if (!hwloc_bitmap_iszero(obj->cpuset)) {
+            ++num_valid_nodes;
+            mu_cpuset_from_hwloc_bitmap(&sys.node_masks[node_id],
+                    obj->cpuset, topology);
+        }
+    }
+
+    fatal_cond(!num_valid_nodes, "HWLOC could not find Node affinity masks");
+
+    if (sys.num_nodes != num_valid_nodes) {
+        verbose(VB_AFFINITY, "HWLOC found %d nodes but only %d with a valid mask",
+                sys.num_nodes, num_valid_nodes);
+    }
 
     hwloc_topology_destroy(topology);
 
     return 0;
+#else
+    return -1;
+#endif
 }
-#  else
-static int parse_hwloc( void ) { return -1; }
-#  endif
 
 static void parse_mask_from_file(const char *filename, cpu_set_t *mask) {
     if (access(filename, F_OK) == 0) {
@@ -139,216 +305,511 @@ static void parse_mask_from_file(const char *filename, cpu_set_t *mask) {
     }
 }
 
+static int parse_int_from_file(const char *filename) {
+    int value = -1;
+    if (access(filename, F_OK) == 0) {
+        enum { BUF_LEN = 16 };
+        char buf[BUF_LEN];
+        FILE *fd = fopen(filename, "r");
+
+        if (!fgets(buf, BUF_LEN, fd)) {
+            fatal("cannot read %s\n", filename);
+        }
+        fclose(fd);
+
+        value = strtol(buf, NULL, 10);
+    }
+    return value;
+}
+
 #define PATH_SYSTEM_MASK "/sys/devices/system/cpu/present"
+#define PATH_SYSTEM_CPUS "/sys/devices/system/cpu"
 #define PATH_SYSTEM_NODE "/sys/devices/system/node"
 static void parse_system_files(void) {
-    /* Parse system mask */
-    parse_mask_from_file(PATH_SYSTEM_MASK, &sys.sys_mask);
-    sys.size = mu_get_last_cpu(&sys.sys_mask) + 1;
+    /*** System ***/
+    cpu_set_t system_mask;
+    parse_mask_from_file(PATH_SYSTEM_MASK, &system_mask);
+    sys.num_cpus = mu_get_last_cpu(&system_mask) + 1;
+    mu_cpuset_setsize = sys.num_cpus;
+    mu_cpuset_num_ulongs = (mu_cpuset_setsize + CPUS_PER_ULONG - 1) / CPUS_PER_ULONG;
+    mu_cpuset_alloc_size = mu_cpuset_num_ulongs * sizeof(unsigned long);
+    mu_cpuset_from_glibc_sched_affinity(&sys.sys_mask, &system_mask);
 
-    /* Parse node masks */
-    int nnodes = 0;
-    DIR *dir = opendir(PATH_SYSTEM_NODE);
+    /*** Cores ***/
+    // note that we are probably overallocating because we don't knwow the
+    // number of cores yet
+    sys.core_masks_by_coreid = calloc(sys.num_cpus, sizeof(mu_cpuset_t));
+    sys.core_masks_by_cpuid = calloc(sys.num_cpus, sizeof(mu_cpuset_t*));
+    int num_cores = 0;
+    DIR *dir = opendir(PATH_SYSTEM_CPUS);
+    if (dir) {
+        struct dirent *d;
+        while ((d = readdir(dir))) {
+            if (d && d->d_type == DT_DIR
+                    && strncmp(d->d_name, "cpu", 3) == 0
+                    && isdigit(d->d_name[3]) ) {
+
+                /* Get CPU id */
+                int cpu_id = strtol(d->d_name+3, NULL, 10);
+                fatal_cond(cpu_id < 0 || cpu_id > 1024, "Error parsing cpu_id");
+
+                /* Get core CPUs list */
+                cpu_set_t core_mask;
+                CPU_ZERO(&core_mask);
+                char filename[64];
+                snprintf(filename, 64, PATH_SYSTEM_CPUS
+                        "/%.8s/topology/thread_siblings_list", d->d_name);
+                parse_mask_from_file(filename, &core_mask);
+
+                /* Get core id, in some architectures this value may not be reliable */
+                snprintf(filename, 64, PATH_SYSTEM_CPUS "/%.8s/topology/core_id",
+                        d->d_name);
+                int core_id = parse_int_from_file(filename);
+
+                /* Try to respect parsed core_id */
+                if (core_id >= 0 && core_id < 1024) {
+                    mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+                    if (core_cpuset->set == NULL) {
+                        /* Save core mask */
+                        mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_mask);
+                        ++num_cores;
+                    } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core_cpuset->set, &core_mask)) {
+                        /* Core mask already saved */
+                    } else {
+                        /* Current core mask differ */
+                        core_id = -1;
+                    }
+                }
+
+                /* core_id has not been reliable, find an empty spot or same core */
+                for (unsigned int i = 0; i < sys.num_cpus && core_id == -1; ++i) {
+                    mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[i];
+                    if (core_cpuset->set == NULL) {
+                        /* Save core mask */
+                        mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_mask);
+                        ++num_cores;
+                        core_id = i;
+                    } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core_cpuset->set, &core_mask)) {
+                        /* Core mask already saved */
+                        core_id = i;
+                    }
+                }
+
+                fatal_cond(core_id == -1, "Could not obtain core id for CPU %d", cpu_id);
+
+                /* Add core mask reference to array indexed by CPU id */
+                sys.core_masks_by_cpuid[cpu_id] = &sys.core_masks_by_coreid[core_id];
+            }
+        }
+        closedir(dir);
+    }
+    sys.num_cores = num_cores;
+
+    /*** NUMA Nodes ***/
+    int num_nodes = 0;
+    dir = opendir(PATH_SYSTEM_NODE);
     if (dir) {
         struct dirent *d;
         while ((d = readdir(dir))) {
             if (d && d->d_type == DT_DIR
                     && strncmp(d->d_name, "node", 4) == 0
                     && isdigit(d->d_name[4]) ) {
-                /* Check that the node contains a valid mask */
-                cpu_set_t mask;
-                CPU_ZERO(&mask);
+
+                /* Get node id */
+                int node_id = strtol(d->d_name+4, NULL, 10);
+                fatal_cond(node_id < 0 || node_id > 1024, "Error parsing node_id");
+
+                /* Get node CPUs list */
+                cpu_set_t node_mask;
+                CPU_ZERO(&node_mask);
                 char filename[64];
                 snprintf(filename, 64, PATH_SYSTEM_NODE "/%.10s/cpulist", d->d_name);
-                parse_mask_from_file(filename, &mask);
-                /* Save parent's mask */
-                if (CPU_COUNT(&mask)>0) {
-                    ++nnodes;
-                    cpu_set_t *p = realloc(sys.parents, nnodes*sizeof(cpu_set_t));
+                parse_mask_from_file(filename, &node_mask);
+
+                /* Save node mask */
+                if (CPU_COUNT(&node_mask) > 0) {
+                    num_nodes = max_int(num_nodes, node_id + 1);
+                    mu_cpuset_t *p = realloc(sys.node_masks, num_nodes*sizeof(mu_cpuset_t));
                     fatal_cond(!p, "realloc failed");
-                    sys.parents = p;
-                    memcpy(&sys.parents[nnodes-1], &mask, sizeof(cpu_set_t));
+                    sys.node_masks = p;
+                    mu_cpuset_from_glibc_sched_affinity(&sys.node_masks[node_id], &node_mask);
                 }
             }
         }
         closedir(dir);
     }
-    sys.num_parents = nnodes;
+    sys.num_nodes = num_nodes;
 
     /* Fallback if some info could not be parsed */
-    if (!sys.size) {
+    if (sys.sys_mask.count == 0) {
         int nproc_onln = sysconf(_SC_NPROCESSORS_ONLN);
-        if (nproc_onln > 0) {
-            sys.size = nproc_onln;
-        } else {
-            fatal("Cannot obtain system size. Contact us at " PACKAGE_BUGREPORT
-                    " or configure DLB with HWLOC support.");
-        }
-        int i;
-        for (i=0; i<sys.size; ++i) {
-            CPU_SET(i, &sys.sys_mask);
-        }
-    }
-    if (!sys.num_parents) {
-        sys.num_parents = 1;
-        sys.parents = malloc(sizeof(cpu_set_t)*1);
-        memcpy(&sys.parents[0], &sys.sys_mask, sizeof(cpu_set_t));
+        fatal_cond(nproc_onln <= 0, "Cannot obtain system size. Contact us at "
+                PACKAGE_BUGREPORT " or configure DLB with HWLOC support.");
+        init_system(nproc_onln, nproc_onln, 1);
     }
 }
-#endif
+
+static void print_sys_info(void) {
+
+    verbose(VB_AFFINITY, "System mask: %s", mu_to_str(sys.sys_mask.set));
+
+    for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
+        verbose(VB_AFFINITY, "Node %d mask: %s",
+                node_id, mu_to_str(sys.node_masks[node_id].set));
+    }
+
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        verbose(VB_AFFINITY, "Core %d mask: %s",
+                core_id, mu_to_str(sys.core_masks_by_coreid[core_id].set));
+    }
+
+    for (int cpuid = sys.sys_mask.first_cpuid;
+            cpuid >= 0;
+            cpuid = mu_get_next_cpu(sys.sys_mask.set, cpuid)) {
+        const mu_cpuset_t *core_cpuset = sys.core_masks_by_cpuid[cpuid];
+        if (core_cpuset && core_cpuset->set) {
+            verbose(VB_AFFINITY, "CPU %d core mask: %s",
+                    cpuid, mu_to_str(core_cpuset->set));
+        }
+    }
+}
+
+
+/*********************************************************************************/
+/*    Mask utils public functions                                                */
+/*********************************************************************************/
 
 void mu_init( void ) {
     if ( !mu_initialized ) {
-        memset(&sys, 0, sizeof(sys));
+        init_mu_struct();
 
 #if defined IS_BGQ_MACHINE
-        set_bgq_info();
+        enum { BGQ_NUM_CPUS  = 64 };
+        enum { BGQ_NUM_CORES = 16 };
+        enum { BGQ_NUM_NODES = 1 };
+        init_system(BGQ_NUM_CPUS, BGQ_NUM_CORES, BGQ_NUM_NODES);
 #else
         /* Try to parse HW info from HWLOC first */
         if (parse_hwloc() != 0) {
             /* Fallback to system files if needed */
             parse_system_files();
         }
-#endif
 
         mu_initialized = true;
-
-        int i;
-        verbose(VB_AFFINITY, "System mask: %s", mu_to_str(&sys.sys_mask));
-        for (i=0; i<sys.num_parents; ++i) {
-            verbose(VB_AFFINITY, "Parent mask[%d]: %s", i, mu_to_str(&sys.parents[i]));
-        }
+#endif
+        print_sys_info();
     }
 }
 
 __attribute__((destructor))
 void mu_finalize( void ) {
-    free(sys.parents);
-    sys.parents = NULL;
+
+    CPU_FREE(sys.sys_mask.set);
+
+    /* Nodes */
+    for (unsigned int i = 0; i < sys.num_nodes; ++i) {
+        CPU_FREE(sys.node_masks[i].set);
+    }
+
+    /* Cores per core id */
+    for (unsigned int i = 0; i < sys.num_cores; ++i) {
+        CPU_FREE(sys.core_masks_by_coreid[i].set);
+    }
+
+    sys = (const mu_system_loc_t) {};
     mu_initialized = false;
+    mu_cpuset_setsize = CPU_SETSIZE;
+    mu_cpuset_alloc_size = CPU_ALLOC_SIZE(CPU_SETSIZE);
+    mu_cpuset_num_ulongs = CPU_ALLOC_SIZE(CPU_SETSIZE) / sizeof(unsigned long);
 }
 
 int mu_get_system_size( void ) {
     if (unlikely(!mu_initialized)) mu_init();
-    return sys.size;
+    return sys.sys_mask.last_cpuid + 1;
 }
 
 void mu_get_system_mask(cpu_set_t *mask) {
     if (unlikely(!mu_initialized)) mu_init();
-    memcpy(mask, &sys.sys_mask, sizeof(cpu_set_t));
+    CPU_ZERO(mask);
+    memcpy(mask, sys.sys_mask.set, mu_cpuset_alloc_size);
 }
 
-// Return Mask of sockets covering at least 1 CPU of cpuset
-void mu_get_parents_covering_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
+int mu_get_system_hwthreads_per_core(void) {
     if (unlikely(!mu_initialized)) mu_init();
-    CPU_ZERO(parent_set);
-    int i;
-    for (i=0; i<sys.num_parents; ++i) {
+    return sys.core_masks_by_coreid[0].count;
+}
+
+bool mu_system_has_smt(void) {
+    if (unlikely(!mu_initialized)) mu_init();
+    return sys.core_masks_by_coreid[0].count > 1;
+}
+
+int mu_get_core_id(int cpuid) {
+
+    if (cpuid < 0 || (unsigned)cpuid > sys.num_cpus) return -1;
+
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        if (CPU_ISSET_S(cpuid, mu_cpuset_alloc_size,
+                    sys.core_masks_by_coreid[core_id].set)) {
+            return core_id;
+        }
+    }
+
+    return -1;
+}
+
+const mu_cpuset_t* mu_get_core_mask(int cpuid) {
+
+    if (cpuid < 0 || (unsigned)cpuid > sys.num_cpus) return NULL;
+
+    return sys.core_masks_by_cpuid[cpuid];
+}
+
+const mu_cpuset_t* mu_get_core_mask_by_coreid(int core_id) {
+
+    if (core_id < 0 || (unsigned)core_id > sys.num_cores) return NULL;
+
+    return &sys.core_masks_by_coreid[core_id];
+}
+
+/* Return Mask of full NUMA nodes covering at least 1 CPU of cpuset:
+ * e.g.:
+ *  node0: [0-3]
+ *  node1: [4-7]
+ *  cpuset: [1-7]
+ *  returns [0-7]
+ */
+void mu_get_nodes_intersecting_with_cpuset(cpu_set_t *node_set, const cpu_set_t *cpuset) {
+
+    CPU_ZERO(node_set);
+    for (unsigned int i=0; i<sys.num_nodes; ++i) {
         cpu_set_t intxn;
-        CPU_AND(&intxn, &sys.parents[i], cpuset);
-        if (CPU_COUNT(&intxn) > 0) {
-            CPU_OR(parent_set, parent_set, &sys.parents[i]);
+        CPU_AND_S(mu_cpuset_alloc_size, &intxn, sys.node_masks[i].set, cpuset);
+        if (CPU_COUNT_S(mu_cpuset_alloc_size, &intxn) > 0) {
+            CPU_OR_S(mu_cpuset_alloc_size, node_set, node_set, sys.node_masks[i].set);
         }
     }
 }
 
-// Return Mask of sockets containing all CPUs in cpuset
-void mu_get_parents_inside_cpuset(cpu_set_t *parent_set, const cpu_set_t *cpuset) {
-    if (unlikely(!mu_initialized)) mu_init();
-    CPU_ZERO(parent_set);
-    int i;
-    for (i=0; i<sys.num_parents; ++i) {
-        if (mu_is_subset(&sys.parents[i], cpuset)) {
-            CPU_OR(parent_set, parent_set, &sys.parents[i]);
+/* Return Mask of full NUMA nodes containing all CPUs in cpuset:
+ * e.g.:
+ *  node0: [0-3]
+ *  node1: [4-7]
+ *  cpuset: [1-7]
+ *  returns [4-7]
+ */
+void mu_get_nodes_subset_of_cpuset(cpu_set_t *node_set, const cpu_set_t *cpuset) {
+
+    CPU_ZERO(node_set);
+    for (unsigned int i=0; i<sys.num_nodes; ++i) {
+        if (mu_is_subset(sys.node_masks[i].set, cpuset)) {
+            CPU_OR_S(mu_cpuset_alloc_size, node_set, node_set, sys.node_masks[i].set);
         }
     }
+}
+
+/* Return Mask of cores covering at least 1 CPU of cpuset:
+ * e.g.:
+ *  node0: [0-1]
+ *  node1: [2-3]
+ *  cpuset: [1-3]
+ *  returns [0-3]
+ */
+void mu_get_cores_intersecting_with_cpuset(cpu_set_t *core_set, const cpu_set_t *cpuset) {
+    CPU_ZERO(core_set);
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        const mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        cpu_set_t intxn;
+        CPU_AND_S(mu_cpuset_alloc_size, &intxn, core_cpuset->set, cpuset);
+        if (CPU_COUNT_S(mu_cpuset_alloc_size, &intxn) > 0) {
+            CPU_OR_S(mu_cpuset_alloc_size, core_set, core_set, core_cpuset->set);
+        }
+    }
+}
+
+/* Return Mask of cores containing all CPUs in cpuset:
+ * e.g.:
+ *  core0: [0-1]
+ *  core1: [2-3]
+ *  cpuset: [1-3]
+ *  returns [2-3]
+ */
+void mu_get_cores_subset_of_cpuset(cpu_set_t *core_set, const cpu_set_t *cpuset) {
+    CPU_ZERO(core_set);
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        const mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        if (mu_is_subset(core_cpuset->set, cpuset)) {
+            CPU_OR_S(mu_cpuset_alloc_size, core_set, core_set, core_cpuset->set);
+        }
+    }
+}
+
+/* Return the next enabled CPU in mask which pertains to the next core after
+ * prev_cpu, or -1 if not found. */
+int mu_get_cpu_next_core(const cpu_set_t *mask, int prev_cpu) {
+
+    if (unlikely(prev_cpu < -1)) return -1;
+
+    int prev_core = mu_get_core_id(prev_cpu);
+    int next_cpu = mu_get_next_cpu(mask, prev_cpu);
+    int next_core = mu_get_core_id(next_cpu);
+
+    while (next_cpu != -1
+            && next_core <= prev_core) {
+        next_cpu = mu_get_next_cpu(mask, next_cpu);
+        next_core = mu_get_core_id(next_cpu);
+    }
+
+    return next_cpu;
+}
+
+
+/* Basic mask utils functions that do not need to read system's topology,
+ * i.e., mostly mask operations */
+
+void mu_and(cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2) {
+    CPU_AND_S(mu_cpuset_alloc_size, result, mask1, mask2);
+}
+
+void mu_or(cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2) {
+    CPU_OR_S(mu_cpuset_alloc_size, result, mask1, mask2);
 }
 
 /* Returns true is all bits in subset are set in superset */
 bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset) {
     // The condition is true if the intersection is identical to subset
     cpu_set_t intxn;
-    CPU_AND(&intxn, subset, superset);
-    return CPU_EQUAL(&intxn, subset);
+    CPU_AND_S(mu_cpuset_alloc_size, &intxn, subset, superset);
+    return CPU_EQUAL_S(mu_cpuset_alloc_size, &intxn, subset);
 }
 
 /* Returns true is all bits in superset are set in subset */
 bool mu_is_superset(const cpu_set_t *superset, const cpu_set_t *subset) {
     // The condition is true if the intersection is identical to subset
     cpu_set_t intxn;
-    CPU_AND(&intxn, superset, subset);
-    return CPU_EQUAL(&intxn, subset);
+    CPU_AND_S(mu_cpuset_alloc_size, &intxn, superset, subset);
+    return CPU_EQUAL_S(mu_cpuset_alloc_size, &intxn, subset);
 }
 
 /* Returns true is all bits in subset are set in superset and they're not equal */
 bool mu_is_proper_subset(const cpu_set_t *subset, const cpu_set_t *superset) {
     cpu_set_t intxn;
-    CPU_AND(&intxn, subset, superset);
-    return CPU_EQUAL(&intxn, subset) && !CPU_EQUAL(subset, superset);
+    CPU_AND_S(mu_cpuset_alloc_size, &intxn, subset, superset);
+    return CPU_EQUAL_S(mu_cpuset_alloc_size, &intxn, subset)
+        && !CPU_EQUAL_S(mu_cpuset_alloc_size, subset, superset);
 }
 
 /* Returns true is all bits in superset are set in subset and they're not equal */
 bool mu_is_proper_superset(const cpu_set_t *superset, const cpu_set_t *subset) {
     cpu_set_t intxn;
-    CPU_AND(&intxn, superset, subset);
-    return CPU_EQUAL(&intxn, subset) && !CPU_EQUAL(superset, subset);
+    CPU_AND_S(mu_cpuset_alloc_size, &intxn, superset, subset);
+    return CPU_EQUAL_S(mu_cpuset_alloc_size, &intxn, subset)
+        && !CPU_EQUAL_S(mu_cpuset_alloc_size, superset, subset);
 }
 
 /* Return true if any bit is present in both sets */
 bool mu_intersects(const cpu_set_t *mask1, const cpu_set_t *mask2) {
     cpu_set_t intxn;
-    CPU_AND(&intxn, mask1, mask2);
-    return CPU_COUNT(&intxn) > 0;
+    CPU_AND_S(mu_cpuset_alloc_size, &intxn, mask1, mask2);
+    return CPU_COUNT_S(mu_cpuset_alloc_size, &intxn) > 0;
+}
+
+/* Return the number of bits set in mask */
+int mu_count(const cpu_set_t *mask) {
+    return CPU_COUNT_S(mu_cpuset_alloc_size, mask);
 }
 
 /* Return the minuend after substracting the bits in substrahend */
 void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend) {
     cpu_set_t xor;
-    CPU_XOR(&xor, minuend, substrahend);
-    CPU_AND(result, minuend, &xor);
+    CPU_XOR_S(mu_cpuset_alloc_size, &xor, minuend, substrahend);
+    CPU_AND_S(mu_cpuset_alloc_size, result, minuend, &xor);
 }
 
 /* Return the one and only enabled CPU in mask, or -1 if count != 1 */
 int mu_get_single_cpu(const cpu_set_t *mask) {
-    if (CPU_COUNT(mask) == 1) {
-        int sys_size = mu_get_system_size();
-        int i;
-        for (i=0; i<sys_size; ++i) {
-            if (CPU_ISSET(i, mask)) {
-                return i;
-            }
-        }
+    if (CPU_COUNT_S(mu_cpuset_alloc_size, mask) == 1) {
+        return mu_get_first_cpu(mask);
     }
     return -1;
 }
 
-/* Return the first enabled CPU in mask, or -1 if mask is empty
- * NOTE: no mu_init required, using CPU_SETSIZE
- */
+/* some of the following functions have been inspired by:
+ * https://github.com/open-mpi/hwloc/blob/master/hwloc/bitmap.c */
+
+/* Return the first enabled CPU in mask, or -1 if mask is empty */
 int mu_get_first_cpu(const cpu_set_t *mask) {
-    if (CPU_COUNT(mask) > 0) {
-        int i;
-        for (i=0; i<CPU_SETSIZE; ++i) {
-            if (CPU_ISSET(i, mask)) {
-                return i;
-            }
+
+    for (unsigned int i = 0; i < mu_cpuset_num_ulongs; ++i) {
+        unsigned long bits = mask->__bits[i];
+        if (bits) {
+            return ffsl(bits) - 1 + CPUS_PER_ULONG * i;
         }
     }
+
     return -1;
 }
 
-/* Return the last enabled CPU in mask, or -1 if mask is empty
- * NOTE: no mu_init required, using CPU_SETSIZE
- */
+/* Return the last enabled CPU in mask, or -1 if mask is empty */
 int mu_get_last_cpu(const cpu_set_t *mask) {
-    if (CPU_COUNT(mask) > 0) {
-        int i;
-        for (i=CPU_SETSIZE; i>=0; --i) {
-            if (CPU_ISSET(i, mask)) {
-                return i;
+
+    for (unsigned int i = mu_cpuset_num_ulongs; i-- > 0; ) {
+        unsigned long bits = mask->__bits[i];
+        if (bits) {
+            /* glibc does not provide a fls function, there are more optimal
+             * solutions, but this function is not that critical */
+            int cpuid = CPUS_PER_ULONG * i;
+            while (bits >>= 1) {
+                ++cpuid;
             }
+            return cpuid;
         }
     }
+
+    return -1;
+}
+
+/* Return the next enabled CPU in mask after prev, or -1 if not found */
+int mu_get_next_cpu(const cpu_set_t *mask, int prev) {
+
+    if (unlikely(prev < -1)) return -1;
+
+    for (unsigned int i = (prev + 1) / CPUS_PER_ULONG;
+            i < mu_cpuset_num_ulongs; ++i) {
+        unsigned long bits = mask->__bits[i];
+
+        /* mask bitmap only if previous cpu belong to current iteration */
+        if (prev >= 0 && (unsigned)prev / CPUS_PER_ULONG == i) {
+            bits &= ULONG_MAX << (prev % CPUS_PER_ULONG + 1);
+        }
+
+        if (bits) {
+            return ffsl(bits) - 1 + CPUS_PER_ULONG * i;
+        }
+    }
+
+    return -1;
+}
+
+/* Return the next unset CPU in mask after prev, or -1 if not found */
+int mu_get_next_unset(const cpu_set_t *mask, int prev) {
+
+    if (unlikely(prev < -1)) return -1;
+
+    for (unsigned int i = (prev + 1) / CPUS_PER_ULONG;
+            i < mu_cpuset_num_ulongs; ++i) {
+        unsigned long bits = ~(mask->__bits[i]);
+
+        /* mask bitmap only if previous cpu belong to current iteration */
+        if (prev >= 0 && (unsigned)prev / CPUS_PER_ULONG == i) {
+            bits &= ULONG_MAX << (prev % CPUS_PER_ULONG + 1);
+        }
+
+        if (bits) {
+            return ffsl(bits) - 1 + CPUS_PER_ULONG * i;
+        }
+    }
+
     return -1;
 }
 
@@ -358,40 +819,34 @@ int mu_get_last_cpu(const cpu_set_t *mask) {
 #pragma GCC visibility push(default)
 const char* mu_to_str( const cpu_set_t *mask ) {
 
-    int sys_size = mu_get_system_size();
     static __thread char buffer[CPU_SETSIZE*4];
     char *b = buffer;
     *(b++) = '[';
     bool entry_made = false;
-    int i;
-    for (i=0; i<sys_size; ++i) {
-        if (CPU_ISSET(i, mask)) {
+    for (int cpuid = mu_get_first_cpu(mask); cpuid >= 0;
+            cpuid = mu_get_next_cpu(mask, cpuid)) {
 
-            /* Find range size */
-            int run = 0;
-            int j;
-            for (j=i+1; j<sys_size; ++j) {
-                if (CPU_ISSET(j, mask)) ++run;
-                else break;
-            }
+        /* Find interval distance */
+        int next_unset = mu_get_next_unset(mask, cpuid);
+        int distance = next_unset > 0 ? next_unset - 1 - cpuid
+            : mu_get_last_cpu(mask) - cpuid;
 
-            /* Add ',' separator for subsequent entries */
-            if (entry_made) {
-                *(b++) = ',';
-            } else {
-                entry_made = true;
-            }
+        /* Add ',' separator for subsequent entries */
+        if (entry_made) {
+            *(b++) = ',';
+        } else {
+            entry_made = true;
+        }
 
-            /* Write element, pair or range */
-            if (run == 0) {
-                b += sprintf(b, "%d", i);
-            } else if (run == 1) {
-                b += sprintf(b, "%d,%d", i, i+1);
-                ++i;
-            } else {
-                b += sprintf(b, "%d-%d", i, i+run);
-                i += run;
-            }
+        /* Write element, pair or range */
+        if (distance == 0) {
+            b += sprintf(b, "%d", cpuid);
+        } else if (distance == 1) {
+            b += sprintf(b, "%d,%d", cpuid, cpuid+1);
+            ++cpuid;
+        } else {
+            b += sprintf(b, "%d-%d", cpuid, cpuid+distance);
+            cpuid += distance;
         }
     }
     *(b++) = ']';
@@ -400,11 +855,10 @@ const char* mu_to_str( const cpu_set_t *mask ) {
     return buffer;
 }
 
-static void parse_64_bits_mask(cpu_set_t *mask, int offset, const char *str, int base) {
-    int sys_size = mu_get_system_size();
-    unsigned long long int number = strtoull(str, NULL, base);
-    int i = offset;
-    while (number > 0 && i < sys_size) {
+static void parse_64_bits_mask(cpu_set_t *mask, unsigned int offset, const char *str, int base) {
+    unsigned long long number = strtoull(str, NULL, base);
+    unsigned int i = offset;
+    while (number > 0 && i < mu_cpuset_setsize) {
         if (number & 1) {
             CPU_SET(i, mask);
         }
@@ -416,12 +870,9 @@ static void parse_64_bits_mask(cpu_set_t *mask, int offset, const char *str, int
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if (!str) return;
 
-    int str_len = strnlen(str, CPU_SETSIZE+1);
+    size_t str_len = strnlen(str, CPU_SETSIZE+1);
     if ( str_len == 0 || str_len > CPU_SETSIZE) return;
 
-    /* mu_parse_mask is called from mu_init, use sys.size if possible
-     * or fallback to the worst case scenario */
-    int sys_size = sys.size ? sys.size : CPU_SETSIZE;
     regex_t regex_bitmask;
     regex_t regex_hexmask;
     regex_t regex_range;
@@ -447,9 +898,8 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if ( !regexec(&old_regex_bitmask, str, 0, NULL, 0) ) {
         warning("The binary form xxxxb is deprecated, please use 0bxxxx.");
         // Parse
-        int i;
-        for (i=0; i<str_len; i++) {
-            if ( str[i] == '1' && i < sys_size ) {
+        for (unsigned int i=0; i<str_len; i++) {
+            if ( str[i] == '1' && i < mu_cpuset_setsize ) {
                 CPU_SET( i, mask );
             }
         }
@@ -467,7 +917,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             char *str_copy = strdup(str);
             char *start_ptr;
             char *end_ptr = str_copy + strlen(str_copy);
-            int offset = 0;
+            unsigned int offset = 0;
             do {
                 start_ptr = strlen(str_copy) < 64 ? str_copy : end_ptr - 64;
                 parse_64_bits_mask(mask, offset, start_ptr, 2);
@@ -490,7 +940,7 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             char *str_copy = strdup(str);
             char *start_ptr;
             char *end_ptr = str_copy + strlen(str_copy);
-            int offset = 0;
+            unsigned int offset = 0;
             do {
                 start_ptr = strlen(str_copy) < 16 ? str_copy : end_ptr - 16;
                 parse_64_bits_mask(mask, offset, start_ptr, 16);
@@ -511,12 +961,12 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
             // Discard junk at the left
             if ( !isdigit(*ptr) ) { ptr++; continue; }
 
-            unsigned long int start_ = strtoul( ptr, &endptr, 10 );
-            int start = start_ < CPU_SETSIZE ? start_ : CPU_SETSIZE;
+            unsigned long start_ = strtoul( ptr, &endptr, 10 );
+            unsigned long start = start_ < mu_cpuset_setsize ? start_ : mu_cpuset_setsize;
             ptr = endptr;
 
             // Single element
-            if ( (*ptr == ',' || *ptr == '\0') && start < sys_size ) {
+            if ( (*ptr == ',' || *ptr == '\0') && start < mu_cpuset_setsize ) {
                 CPU_SET( start, mask );
                 ptr++;
                 continue;
@@ -527,14 +977,13 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
                 ptr++;
                 if ( !isdigit(*ptr) ) { ptr++; continue; }
 
-                unsigned long int end_ = strtoul( ptr, &endptr, 10 );
-                int end = end_ < CPU_SETSIZE ? end_ : CPU_SETSIZE;
+                unsigned long end_ = strtoul( ptr, &endptr, 10 );
+                unsigned long end = end_ < mu_cpuset_setsize ? end_ : mu_cpuset_setsize;
                 ptr = endptr;
 
                 // Valid range
                 if ( end > start ) {
-                    int i;
-                    for ( i=start; i<=end && i<sys_size; i++ ) {
+                    for ( unsigned long i=start; i<=end && i<mu_cpuset_setsize; i++ ) {
                         CPU_SET( i, mask );
                     }
                 }
@@ -563,54 +1012,48 @@ void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen) {
     if (namelen < 2)
         return;
 
-    int sys_size = mu_get_system_size();
     char *b = str;
     *(b++) = '"';
     size_t bytes = 1;
     bool entry_made = false;
-    int i;
-    for (i=0; i<sys_size; ++i) {
-        if (CPU_ISSET(i, mask)) {
+    for (int cpuid = mu_get_first_cpu(mask); cpuid >= 0;
+            cpuid = mu_get_next_cpu(mask, cpuid)) {
 
-            /* Find range size */
-            int run = 0;
-            int j;
-            for (j=i+1; j<sys_size; ++j) {
-                if (CPU_ISSET(j, mask)) ++run;
-                else break;
+        /* Find interval distance */
+        int next_unset = mu_get_next_unset(mask, cpuid);
+        int distance = next_unset > 0 ? next_unset - 1 - cpuid
+            : mu_get_last_cpu(mask) - cpuid;
+
+        /* Add ',' separator for subsequent entries */
+        if (entry_made) {
+            if (bytes+1 < namelen) {
+                *(b++) = ',';
+                ++bytes;
             }
+        } else {
+            entry_made = true;
+        }
 
-            /* Add ',' separator for subsequent entries */
-            if (entry_made) {
-                if (bytes+1 < namelen) {
-                    *(b++) = ',';
-                    ++bytes;
-                }
-            } else {
-                entry_made = true;
+        /* Write element, pair or range */
+        if (distance == 0) {
+            int len = snprintf(NULL, 0, "%d", cpuid);
+            if (bytes+len < namelen) {
+                b += sprintf(b, "%d", cpuid);
+                bytes += len;
             }
-
-            /* Write element, pair or range */
-            if (run == 0) {
-                int len = snprintf(NULL, 0, "%d", i);
-                if (bytes+len < namelen) {
-                    b += sprintf(b, "%d", i);
-                    bytes += len;
-                }
-            } else if (run == 1) {
-                int len = snprintf(NULL, 0, "%d,%d", i, i+1);
-                if (bytes+len < namelen) {
-                    b += sprintf(b, "%d,%d", i, i+1);
-                    bytes += len;
-                    ++i;
-                }
-            } else {
-                int len = snprintf(NULL, 0, "%d-%d", i, i+run);
-                if (bytes+len < namelen) {
-                    b += sprintf(b, "%d-%d", i, i+run);
-                    bytes += len;
-                    i += run;
-                }
+        } else if (distance == 1) {
+            int len = snprintf(NULL, 0, "%d,%d", cpuid, cpuid+1);
+            if (bytes+len < namelen) {
+                b += sprintf(b, "%d,%d", cpuid, cpuid+1);
+                bytes += len;
+                ++cpuid;
+            }
+        } else {
+            int len = snprintf(NULL, 0, "%d-%d", cpuid, cpuid+distance);
+            if (bytes+len < namelen) {
+                b += sprintf(b, "%d-%d", cpuid, cpuid+distance);
+                bytes += len;
+                cpuid += distance;
             }
         }
     }
@@ -622,20 +1065,18 @@ void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen) {
 }
 
 char * mu_parse_to_slurm_format(const cpu_set_t *mask) {
-    int sys_size = mu_get_system_size();
-    char *str = malloc((sys_size >> 2) + 3);
+    char *str = malloc((mu_cpuset_setsize >> 2) + 3);
     if (str < 0)
         return NULL;
-    int i;
     unsigned int offset = 2;
     unsigned long long val = 0;
     const int threshold = 4;
     sprintf(str, "0x");
-    for (i=sys_size-1; i>=0; --i) {
-        if(CPU_ISSET(i, mask)) {
-            val |= 1 << (i%threshold);
+    for (int cpuid = mu_get_last_cpu(mask); cpuid >= 0; --cpuid) {
+        if(CPU_ISSET(cpuid, mask)) {
+            val |= 1 << (cpuid % threshold);
         }
-        if (i > 0 && i%threshold == 0) {
+        if (cpuid > 0 && cpuid % threshold == 0) {
             sprintf(str+offset, "%llx", val);
             val = 0;
             offset++;
@@ -645,13 +1086,23 @@ char * mu_parse_to_slurm_format(const cpu_set_t *mask) {
     return str;
 }
 
-bool equivalent_masks(const char *str1, const char *str2) {
+bool mu_equivalent_masks(const char *str1, const char *str2) {
     cpu_set_t mask1, mask2;
     mu_parse_mask(str1, &mask1);
     mu_parse_mask(str2, &mask2);
     return CPU_EQUAL(&mask1, &mask2);
 }
 
+
+static int cmp_cpuids(cpuid_t cpuid1, cpuid_t cpuid2) {
+    int cpu1_core_id = mu_get_core_id(cpuid1);
+    int cpu2_core_id = mu_get_core_id(cpuid2);
+    if (cpu1_core_id == cpu2_core_id) {
+        return cpuid1 - cpuid2;
+    } else {
+        return cpu1_core_id - cpu2_core_id;
+    }
+}
 
 /* Compare CPUs so that:
  *  - owned CPUs first, in ascending order
@@ -661,25 +1112,14 @@ bool equivalent_masks(const char *str1, const char *str2) {
  */
 int mu_cmp_cpuids_by_ownership(const void *cpuid1, const void *cpuid2, void *mask) {
     /* Expand arguments */
-    int _cpuid1 = *(int*)cpuid1;
-    int _cpuid2 = *(int*)cpuid2;
+    cpuid_t _cpuid1 = *(cpuid_t*)cpuid1;
+    cpuid_t _cpuid2 = *(cpuid_t*)cpuid2;
     cpu_set_t *process_mask = mask;
-
-    /* Find first CPU */
-    int first_cpu = 0;
-    int sys_size = mu_get_system_size();
-    int i;
-    for (i=0; i<sys_size; ++i) {
-        if (CPU_ISSET(i, process_mask)) {
-            first_cpu = i;
-            break;
-        }
-    }
 
     if (CPU_ISSET(_cpuid1, process_mask)) {
         if (CPU_ISSET(_cpuid2, process_mask)) {
             /* both CPUs are owned: ascending order */
-            return _cpuid1 - _cpuid2;
+            return cmp_cpuids(_cpuid1, _cpuid2);
         } else {
             /* cpuid2 is NOT owned and cpuid1 IS */
             return -1;
@@ -690,45 +1130,44 @@ int mu_cmp_cpuids_by_ownership(const void *cpuid1, const void *cpuid2, void *mas
             return 1;
         } else {
             /* none is owned */
-            if ((_cpuid1 > first_cpu
-                        && _cpuid2 > first_cpu)
-                    || (_cpuid1 < first_cpu
-                        && _cpuid2 < first_cpu)) {
-                /* ascending order */
-                return _cpuid1 - _cpuid2;
+            int first_cpu = mu_get_first_cpu(process_mask);
+            int first_core = mu_get_core_id(first_cpu);
+            int cpu1_core_id = mu_get_core_id(_cpuid1);
+            int cpu2_core_id = mu_get_core_id(_cpuid2);
+            if ((cpu1_core_id > first_core
+                        && cpu2_core_id > first_core)
+                    || (cpu1_core_id < first_core
+                        && cpu2_core_id < first_core)) {
+                /* Both CPUs are either before or after the process mask */
+                return cmp_cpuids(_cpuid1, _cpuid2);
             } else {
-                if (_cpuid1 > first_cpu) {
-                    /* cpuid2 is not greater than first */
-                    return -1;
-                } else {
-                    /* cpuid1 is not greater than first */
-                    return 1;
-                }
+                /* Compare with respect to process mask */
+                return cmp_cpuids(first_cpu, _cpuid1);
             }
         }
     }
 }
 
 /* Compare CPUs so that:
- *  - CPUs are sorted according to the topology:
- *      * topology: array of cpu_set_t, each position represents a level
- *                  in the topology, the last position is an empty cpu set.
- *      (PRE: each topology level is a superset of the previous level mask)
- *  - Sorted by topology level in ascending order
+ *  - CPUs are sorted according to the affinity array:
+ *      * affinity: array of cpu_set_t, each position represents a level
+ *                  in the affinity, the last position is an empty cpu set.
+ *      (PRE: each affinity level is a superset of the previous level mask)
+ *  - Sorted by affinity level in ascending order
  *  - non-owned later, starting from the first owned, then ascending
- *  e.g.: topology: {{6-7}, {4-7}, {0-7}, {}}
+ *  e.g.: affinity: {{6-7}, {4-7}, {0-7}, {}}
  *      sorted_cpu_list = {6,7,4,5,0,1,2,3}
  */
-int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topology) {
+int mu_cmp_cpuids_by_affinity(const void *cpuid1, const void *cpuid2, void *affinity) {
     /* Expand arguments */
-    int _cpuid1 = *(int*)cpuid1;
-    int _cpuid2 = *(int*)cpuid2;
-    cpu_set_t *_topology = topology;
+    cpuid_t _cpuid1 = *(cpuid_t*)cpuid1;
+    cpuid_t _cpuid2 = *(cpuid_t*)cpuid2;
+    cpu_set_t *_affinity = affinity;
 
-    /* Find topology level of each CPU */
+    /* Find affinity level of each CPU */
     int cpu1_level = 0;
     int cpu2_level = 0;
-    cpu_set_t *mask = _topology;
+    cpu_set_t *mask = _affinity;
     while(CPU_COUNT(mask) > 0) {
         if (!CPU_ISSET(_cpuid1, mask)) {
             ++cpu1_level;
@@ -746,50 +1185,64 @@ int mu_cmp_cpuids_by_topology(const void *cpuid1, const void *cpuid2, void *topo
 
     /* If both are level 0, sort in ascending order */
     if (cpu1_level == 0) {
-        return _cpuid1 - _cpuid2;
+        return cmp_cpuids(_cpuid1, _cpuid2);
     }
 
     /* If both are level 1, sort from the first CPU in level 0 */
     /* e.g.: level0: [2,3], level1: [0,7] -> [4,5,6,7,0,1] */
     if (cpu1_level == 1) {
-        cpu_set_t *level0_mask = _topology;
-        int first_cpu = 0;
-        int sys_size = mu_get_system_size();
-        int i;
-        for (i=0; i<sys_size; ++i) {
-            if (CPU_ISSET(i, level0_mask)) {
-                first_cpu = i;
-                break;
-            }
-        }
-        if ((_cpuid1 > first_cpu
-                    && _cpuid2 > first_cpu)
-                || (_cpuid1 < first_cpu
-                    && _cpuid2 < first_cpu)) {
-            /* ascending order */
-            return _cpuid1 - _cpuid2;
+        cpu_set_t *level0_mask = _affinity;
+        int first_cpu = mu_get_first_cpu(level0_mask);
+        int first_core = mu_get_core_id(first_cpu);
+        int cpu1_core_id = mu_get_core_id(_cpuid1);
+        int cpu2_core_id = mu_get_core_id(_cpuid2);
+        if ((cpu1_core_id > first_core
+                    && cpu2_core_id > first_core)
+                || (cpu1_core_id < first_core
+                    && cpu2_core_id < first_core)) {
+            /* Both CPUs are either before or after the process mask */
+            return cmp_cpuids(_cpuid1, _cpuid2);
         } else {
-            if (_cpuid1 > first_cpu) {
-                /* cpuid2 is not greater than first */
-                return -1;
-            } else {
-                /* cpuid1 is not greater than first */
-                return 1;
-            }
+            /* Compare with respect to process mask */
+            return cmp_cpuids(first_cpu, _cpuid1);
         }
     }
 
     /* TODO: compute numa distance */
     /* Levels 2+, sort in ascending order */
-    return _cpuid1 - _cpuid2;
+    return cmp_cpuids(_cpuid1, _cpuid2);
+}
+
+
+/*********************************************************************************/
+/*    Mask utils testing functions                                               */
+/*********************************************************************************/
+
+bool mu_testing_is_initialized(void) {
+    return mu_initialized;
 }
 
 void mu_testing_set_sys_size(int size) {
-    // For testing purposes only
-    CPU_ZERO(&sys.sys_mask);
-    sys.size = size;
-    int i;
-    for (i=0; i<size; ++i) {
-        CPU_SET(i, &sys.sys_mask);
-    }
+    init_system(size, size, 1);
+    print_sys_info();
+}
+
+void mu_testing_set_sys(unsigned int num_cpus, unsigned int num_cores,
+        unsigned int num_nodes) {
+    init_system(num_cpus, num_cores, num_nodes);
+    print_sys_info();
+}
+
+void mu_testing_set_sys_masks(const cpu_set_t *sys_mask,
+        const cpu_set_t *core_masks, unsigned int num_cores,
+        const cpu_set_t *node_masks, unsigned int num_nodes) {
+    init_system_masks(sys_mask, core_masks, num_cores, node_masks, num_nodes);
+    print_sys_info();
+}
+
+void mu_testing_init_nohwloc(void) {
+    init_mu_struct();
+    parse_system_files();
+    mu_initialized = true;
+    print_sys_info();
 }

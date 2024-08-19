@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -29,6 +29,7 @@
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_talp.h"
 #include "support/mask_utils.h"
+#include "support/types.h"
 #include "apis/dlb_errors.h"
 
 #include <sched.h>
@@ -36,14 +37,22 @@
 #include <stdint.h>
 #include <assert.h>
 
+/* array_cpuid_t */
+#define ARRAY_T cpuid_t
+#include "support/array_template.h"
+
+/* array_cpuinfo_task_t */
+#define ARRAY_T cpuinfo_task_t
+#define ARRAY_KEY_T pid_t
+#include "support/array_template.h"
+
 int main(int argc, char *argv[]) {
     /* System size */
     enum { SYS_SIZE = 64 };
     mu_init();
     mu_testing_set_sys_size(SYS_SIZE);
-    pid_t new_guests[SYS_SIZE];
-    pid_t victims[SYS_SIZE];
-    int i, j;
+    array_cpuinfo_task_t tasks;
+    array_cpuinfo_task_t_init(&tasks, SYS_SIZE);
 
     /* Initialize local masks */
     pid_t p1_pid = 11111;
@@ -63,7 +72,8 @@ int main(int argc, char *argv[]) {
     assert( CPU_COUNT(&p1_p2_mask) == 0 );
 
     /* Other shmem parameters */
-    int cpus_priority_array[SYS_SIZE];
+    array_cpuid_t cpus_priority_array;
+    array_cpuid_t_init(&cpus_priority_array, SYS_SIZE);
     int64_t last_borrow_value = 0;
     int64_t *last_borrow = &last_borrow_value;
     int requested_ncpus;
@@ -86,33 +96,48 @@ int main(int argc, char *argv[]) {
 
     /* P2 requests 12 CPUs in the subset [4-15] */
     requested_ncpus = 12;
-    for (i=0, j=4; i<requested_ncpus; ++i) cpus_priority_array[i] = j++;
-    cpus_priority_array[i] = -1;
-    assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus, cpus_priority_array,
-            PRIO_ANY, 0 /* max_parallelism */, last_borrow, new_guests, victims) == DLB_NOTED );
+    array_cpuid_t_clear(&cpus_priority_array);
+    for (int i=4; i<4+requested_ncpus; ++i) array_cpuid_t_push(&cpus_priority_array, i);
+    assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
+                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                last_borrow, &tasks) == DLB_NOTED );
+    assert( tasks.count == 0 );
 
     /* CPUs 0-3 are lent (they remain idle) */
     cpu_set_t cpus_to_lend = { .__bits = {0xf} };
-    assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_to_lend, new_guests) == DLB_SUCCESS );
+    assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_to_lend, &tasks) == DLB_SUCCESS );
 
     /* CPUs 8-11 are lent and guested by P2 */
     cpu_set_t cpus_for_p2 = { .__bits = {0xf00} };
-    assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_for_p2, new_guests) == DLB_SUCCESS );
-    for (i=8; i<12; ++i) assert( new_guests[i] == p2_pid );
+    assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_for_p2, &tasks) == DLB_SUCCESS );
+    assert( tasks.count == 4 );
+    for (int i=0; i<4; ++i) {
+        assert( tasks.items[i].pid == p2_pid && tasks.items[i].cpuid == i+8
+                && tasks.items[i].action == ENABLE_CPU );
+    }
+    array_cpuinfo_task_t_clear(&tasks);
 
     /* CPUs 12-15 are lent, guested by P2 and reclaimed */
     cpu_set_t cpus_to_reclaim = { .__bits = {0xf000} };
-    assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_to_reclaim, new_guests) == DLB_SUCCESS );
-    for (i=12; i<16; ++i) assert( new_guests[i] == p2_pid );
-    assert( shmem_cpuinfo__reclaim_cpu_mask(p1_pid, &cpus_to_reclaim, new_guests, victims)
-            == DLB_NOTED );
+    assert( shmem_cpuinfo__lend_cpu_mask(p1_pid, &cpus_to_reclaim, &tasks) == DLB_SUCCESS );
+    assert( tasks.count == 4 );
+    for (int i=0; i<4; ++i) {
+        assert( tasks.items[i].pid == p2_pid && tasks.items[i].cpuid == i+12
+                && tasks.items[i].action == ENABLE_CPU );
+    }
+    array_cpuinfo_task_t_clear(&tasks);
+    assert( shmem_cpuinfo__reclaim_cpu_mask(p1_pid, &cpus_to_reclaim, &tasks) == DLB_NOTED );
+    assert( tasks.count == 8 ); /* 4 enable for p1_pid, 4 disable for p2_pid */
+    array_cpuinfo_task_t_clear(&tasks);
 
     /* P1 requests 4 CPUs in the subset [16-19] */
     requested_ncpus = 4;
-    for (i=0, j=16; i<requested_ncpus; ++i) cpus_priority_array[i] = j++;
-    cpus_priority_array[i] = -1;
-    assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus, cpus_priority_array,
-            PRIO_ANY, 0 /* max_parallelism */, last_borrow, new_guests, victims) == DLB_NOTED );
+    array_cpuid_t_clear(&cpus_priority_array);
+    for (int i=16; i<16+requested_ncpus; ++i) array_cpuid_t_push(&cpus_priority_array, i);
+    assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
+                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                last_borrow, &tasks) == DLB_NOTED );
+    assert( tasks.count == 0 );
 
     /* P3 registers one CPU and requests CPU 19 also */
     pid_t p3_pid = 33333;
@@ -120,7 +145,8 @@ int main(int argc, char *argv[]) {
     mu_parse_mask("63", &p3_mask);
     assert( shmem_cpuinfo__init(p3_pid, 0, &p3_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
     assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_cpuinfo__acquire_cpu(p3_pid, 19, new_guests, victims) == DLB_NOTED );
+    assert( shmem_cpuinfo__acquire_cpu(p3_pid, 19, &tasks) == DLB_NOTED );
+    assert( tasks.count == 0 );
 
     /* Register some TALP regions */
     int region_id1 = -1;

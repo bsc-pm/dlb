@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -36,7 +36,7 @@
 
 #pragma pygen start
 void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     verbose(VB_MPI_API, ">> {MPI_NAME}...............");
     {BEFORE_FUNC};
 }}

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -30,7 +30,9 @@ int shmem_async_init(pid_t pid, const struct pm_interface *pm,
 int shmem_async_finalize(pid_t pid);
 
 void shmem_async_enable_cpu(pid_t pid, int cpuid);
+void shmem_async_enable_cpu_set(pid_t pid, const cpu_set_t *cpu_set);
 void shmem_async_disable_cpu(pid_t pid, int cpuid);
+void shmem_async_disable_cpu_set(pid_t pid, const cpu_set_t *cpu_set);
 void shmem_async_set_num_cpus(pid_t pid, int ncpus);
 
 int shmem_async__version(void);

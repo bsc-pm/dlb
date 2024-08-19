@@ -1,6 +1,7 @@
 
 tests = {
   '00_support' : {
+    'array_template_00'   : {},
     'atomic_00'           : {},
     'debug_00'            : {},
     'env_00'              : {},
@@ -10,15 +11,17 @@ tests = {
     'mask_01'             : {},
     'mask_02'             : {},
     'mask_03'             : {},
-    'mask_04'             : {},
     'mytime_00'           : {},
     'options_00'          : {},
+    'queue_template_00'   : {},
     'queues_00'           : {},
     'talp_output_00'      : {},
     'types_00'            : {},
   },
   '01_pm' : {
-    # FIXME: omptm_free_agents_00.c not yet supported in meson test
+    'omptm_free_agents_00': {},
+    'omptm_omp5_00'       : {},
+    'omptm_role_shift_00' : {},
     'omptool_00'          : {},
     'pm_00'               : {},
   },
@@ -63,6 +66,7 @@ tests = {
     'lewi_mask_01_async'  : {'source' : 'lewi_mask_01.c', 'dlb_args' : '--mode=async'},
     'lewi_mask_01_poll'   : {'source' : 'lewi_mask_01.c', 'dlb_args' : '--mode=polling'},
     'lewi_mask_02'        : {},
+    'lewi_mask_smt_00'    : {},
   },
   '04_core' : {
     'drom_00'             : {},

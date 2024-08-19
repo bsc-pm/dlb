@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -64,7 +64,9 @@ typedef enum dlb_callbacks_e {
     dlb_callback_add_active_mask  = 4,
     dlb_callback_add_process_mask = 5,
     dlb_callback_enable_cpu       = 6,
-    dlb_callback_disable_cpu      = 7
+    dlb_callback_disable_cpu      = 7,
+    dlb_callback_enable_cpu_set   = 8,
+    dlb_callback_disable_cpu_set  = 9,
 } dlb_callbacks_t;
 
 // Callback signatures
@@ -75,5 +77,7 @@ typedef void (*dlb_callback_add_active_mask_t)(const_dlb_cpu_set_t mask, void *a
 typedef void (*dlb_callback_add_process_mask_t)(const_dlb_cpu_set_t mask, void *arg);
 typedef void (*dlb_callback_enable_cpu_t)(int cpuid, void *arg);
 typedef void (*dlb_callback_disable_cpu_t)(int cpuid, void *arg);
+typedef void (*dlb_callback_enable_cpu_set_t)(const_dlb_cpu_set_t mask, void *arg);
+typedef void (*dlb_callback_disable_cpu_set_t)(const_dlb_cpu_set_t mask, void *arg);
 
 #endif /* DLB_TYPES_H */

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -21,10 +21,10 @@
 
 #include "apis/dlb_stats.h"
 
-#include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
+#include "support/mask_utils.h"
 #include "support/options.h"
 
 #include <stddef.h>
@@ -34,21 +34,17 @@
 int DLB_Stats_Init(void) {
     char shm_key[MAX_OPTION_LENGTH];
     options_parse_entry("--shm-key", &shm_key);
-    int shmem_color;
-    options_parse_entry("--lewi-color", &shmem_color);
-    shmem_cpuinfo_ext__init(shm_key, shmem_color);
     shmem_procinfo_ext__init(shm_key);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_Finalize(void) {
-    shmem_cpuinfo_ext__finalize();
     shmem_procinfo_ext__finalize();
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetNumCpus(int *ncpus) {
-    *ncpus = shmem_cpuinfo_ext__getnumcpus();
+    *ncpus = mu_get_system_size();
     return DLB_SUCCESS;
 }
 
@@ -102,17 +98,14 @@ int DLB_Stats_GetLoadAvg(int pid, double *load) {
 }
 
 int DLB_Stats_GetCpuStateIdle(int cpu, float *percentage) {
-    *percentage = shmem_cpuinfo_ext__getcpustate(cpu, STATS_IDLE);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetCpuStateOwned(int cpu, float *percentage) {
-    *percentage = shmem_cpuinfo_ext__getcpustate(cpu, STATS_OWNED);
     return DLB_SUCCESS;
 }
 
 int DLB_Stats_GetCpuStateGuested(int cpu, float *percentage) {
-    *percentage = shmem_cpuinfo_ext__getcpustate(cpu, STATS_GUESTED);
     return DLB_SUCCESS;
 }
 
