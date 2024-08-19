@@ -33,7 +33,7 @@
         type(c_ptr)             :: data_
        end type
        type(c_ptr), parameter   :: DLB_MPI_REGION = c_null_ptr
-       type(c_ptr), parameter   :: DLB_LAST_OPEN_REGION = transfer(1, c_null_ptr)
+       type(c_ptr), parameter   :: DLB_LAST_OPEN_REGION = transfer(1_8, c_null_ptr)
 
        interface
         function dlb_talp_attach() result(ierr)                         &
