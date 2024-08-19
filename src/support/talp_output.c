@@ -1008,51 +1008,60 @@ static void process_finalize(void) {
 
 
 /*********************************************************************************/
-/*    TALP Metadata                                                                   */
+/*    TALP Common                                                                   */
 /*********************************************************************************/
-typedef struct TALPMetadataRecord {
-    char *time_of_creation; // ISO 8601 string 
-    char *dlb_version; // DLB version used
-} talp_metadata_record_t;
-static talp_metadata_record_t metadata_record;
+typedef struct TALPCommonRecord {
+    char *time_of_creation; // ISO 8601 string
+    char *dlb_major_version; // Major.Minor DLB version used
+    char *dlb_git_description; // GIT description output
+} talp_common_record_t;
+static talp_common_record_t common_record;
 
-static void talp_output_record_metadata(void) {
+static void talp_output_record_common(void) {
     /* Initialize structure */
     time_t now = time(NULL);
-    metadata_record = (const talp_metadata_record_t) {
+    common_record = (const talp_common_record_t) {
         .time_of_creation = get_iso_8601_string(localtime(&now)),
-        .dlb_version = PACKAGE_VERSION
+        .dlb_major_version = PACKAGE_VERSION,
+        .dlb_git_description = DLB_GIT_DESCRIPTION,
     };
 }
 
-static void metadata_to_json(FILE *out_file) {
+static void common_to_json(FILE *out_file) {
     fprintf(out_file,
                     "  \"dlbVersion\": \"%s\",\n"
+                    "  \"dlbGitVersion\": \"%s\",\n"
                     "  \"timestamp\": \"%s\",\n",
-                metadata_record.dlb_version,metadata_record.time_of_creation);
+                common_record.dlb_major_version,
+                common_record.dlb_git_description,
+                common_record.time_of_creation);
 }
 
-static void metadata_to_xml(FILE *out_file) {
+static void common_to_xml(FILE *out_file) {
 
     fprintf(out_file,
             "  <dlbVersion>%s</dlbVersion>\n"
+            "  <dlbGitVersion>%s</dlbGitVersion>\n"
             "  <timestamp>%s</timestamp>\n",
-            metadata_record.dlb_version,
-            metadata_record.time_of_creation);
+            common_record.dlb_major_version,
+            common_record.dlb_git_description,
+            common_record.time_of_creation);
 }
 
-static void metadata_to_txt(FILE *out_file) {
-  
+static void common_to_txt(FILE *out_file) {
+
     fprintf(out_file,
-            "################# TALP Metadata ##################\n"
+            "################ TALP Common Data ################\n"
             "### DLB Version:                   %s\n"
+            "### DLB Git Version:               %s\n"
             "### Timestamp:                     %s\n",
-            metadata_record.dlb_version,
-            metadata_record.time_of_creation);
+            common_record.dlb_major_version,
+            common_record.dlb_git_description,
+            common_record.time_of_creation);
 }
 
-static void metadata_finalize(void) {
-    free(metadata_record.time_of_creation);
+static void common_finalize(void) {
+    free(common_record.time_of_creation);
 }
 
 
@@ -1084,8 +1093,8 @@ static void xml_footer(FILE *out_file) {
 
 void talp_output_finalize(const char *output_file) {
 
-    talp_output_record_metadata();
-    
+    talp_output_record_common();
+
     if (output_file == NULL) {
         /* No output file, just print all records */
         pop_metrics_print();
@@ -1217,7 +1226,7 @@ void talp_output_finalize(const char *output_file) {
                 switch(extension) {
                     case EXT_JSON:
                         json_header(out_file);
-                        metadata_to_json(out_file);
+                        common_to_json(out_file);
                         pop_metrics_to_json(out_file);
                         pop_raw_to_json(out_file);
                         node_to_json(out_file);
@@ -1226,7 +1235,7 @@ void talp_output_finalize(const char *output_file) {
                         break;
                     case EXT_XML:
                         xml_header(out_file);
-                        metadata_to_xml(out_file);
+                        common_to_xml(out_file);
                         pop_metrics_to_xml(out_file);
                         pop_raw_to_xml(out_file);
                         node_to_xml(out_file);
@@ -1239,7 +1248,7 @@ void talp_output_finalize(const char *output_file) {
                         process_to_csv(out_file, append_to_csv);
                         break;
                     case EXT_TXT:
-                        metadata_to_txt(out_file);
+                        common_to_txt(out_file);
                         pop_metrics_to_txt(out_file);
                         pop_raw_to_txt(out_file);
                         node_to_txt(out_file);
@@ -1253,7 +1262,7 @@ void talp_output_finalize(const char *output_file) {
     }
 
     // De-allocate all records
-    metadata_finalize();
+    common_finalize();
     pop_metrics_finalize();
     pop_raw_finalize();
     node_finalize();

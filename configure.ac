@@ -26,25 +26,31 @@ AS_IF([test -e "$srcdir/.git"], [
     AC_MSG_CHECKING([revision of git repository])
     AS_IF([test x"$GIT" != x], [
         echo "$GIT" "$srcdir" >& AS_MESSAGE_LOG_FD
-        run_gitversion=`"$GIT" --git-dir=$srcdir/.git show "--pretty=format:%h %ci" HEAD | head -n 1`
-        run_gitbranch=`"$GIT" --git-dir=$srcdir/.git branch | grep ^* | sed s/*\ //g`
-        build_version="\"git $run_gitbranch $run_gitversion developer version\""
+        run_gitdescribe=`"$GIT" --git-dir=$srcdir/.git describe | head -n 1`
+        run_gitbranch=`"$GIT" --git-dir=$srcdir/.git rev-parse --abbrev-ref HEAD | head -n 1`
+        build_version="\"$run_gitdescribe $run_gitbranch\""
+        git_description="\"$run_gitdescribe\""
     ], [
-        build_version="\"unknown git commit\""
+        build_version="\"unknown build version, as git was not available\""
+        git_description="\"unknown revision\""
     ])
     AC_MSG_RESULT([$build_version])
     developer_version=yes
 ], [test -e $srcdir/VERSION], [
     AC_MSG_CHECKING([revision of distributed release])
-    run_gitversion=`cat $srcdir/VERSION`
-    build_version="\"$run_gitversion\""
+    run_build_version=`cat $srcdir/VERSION`
+    run_git_description=`cat $srcdir/VERSION | head -n 1 | cut -f 1 -d " "`
+    build_version="\"$run_build_version\""
+    git_description="\"$run_git_description\""
     developer_version=no
     AC_MSG_RESULT([$build_version])
 ], [
     build_version="\"unknown revision\""
+    git_description="\"unknown revision\""
     developer_version=no
 ])
 AC_DEFINE_UNQUOTED([DLB_BUILD_VERSION], [$build_version], [Build version])
+AC_DEFINE_UNQUOTED([DLB_GIT_DESCRIPTION], [$git_description], [Build version])
 
 AC_MSG_CHECKING([whether to enable developer mode])
 AC_ARG_ENABLE([developer-mode],

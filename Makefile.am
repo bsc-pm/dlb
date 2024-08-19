@@ -1119,9 +1119,9 @@ dist-hook:
 	if [ -x "$(GIT)" ]; \
 	then \
 	    "$(GIT)" --git-dir=$(top_srcdir)/.git log --pretty=format:"[%h] %cd : %s (%an)" --date=short > $(distdir)/ChangeLog; \
-	    git_run_version=`"$(GIT)" --git-dir=$(top_srcdir)/.git show --pretty=format:"%h %ci" HEAD | head -n 1`; \
-	    git_run_branch=`"$(GIT)" --git-dir=$(top_srcdir)/.git branch | grep ^* | sed s/*\ //g`; \
-	    git_version="git $${git_run_branch} $${git_run_version}"; \
+	    git_run_description=`"$(GIT)" --git-dir=$(top_srcdir)/.git describe | head -n 1`; \
+	    git_run_branch=`"$(GIT)" --git-dir=$(top_srcdir)/.git rev-parse --abbrev-ref HEAD | head -n 1`; \
+	    git_version="$${git_run_description} $${git_run_branch}"; \
 	    echo $${git_version} > ${distdir}/VERSION; \
 	elif [ -e $(top_srcdir)/VERSION ]; \
 	then \

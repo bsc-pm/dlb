@@ -409,12 +409,26 @@ subdir('tests')
 ### config.h                                                                  ###
 #################################################################################
 
+git_program = find_program('git', required : false)
+if git_program.found()
+  git_describe_result = run_command([git_program, 'describe'], capture : true, check : true)
+  git_branch_result = run_command([git_program, 'rev-parse','--abbrev-ref', 'HEAD'], capture : true, check : true)
+  git_description = git_describe_result.stdout().strip()
+  git_branch = git_branch_result.stdout().strip()
+  build_version = git_description + ' ' + git_branch
+else
+  git_description = 'unknown revision'
+  git_branch = 'unknown branch'
+  build_version = 'unknown build version, as git was not available'
+endif
+
 conf_data = configuration_data()
 conf_data.set_quoted('VERSION', meson.project_version())
 conf_data.set_quoted('PACKAGE', meson.project_name())
 conf_data.set_quoted('PACKAGE_BUGREPORT', 'dlb@bsc.es')
 conf_data.set_quoted('PACKAGE_VERSION', meson.project_version())
-conf_data.set_quoted('DLB_BUILD_VERSION', 'meson')
+conf_data.set_quoted('DLB_BUILD_VERSION', build_version)
+conf_data.set_quoted('DLB_GIT_DESCRIPTION', git_description)
 conf_data.set_quoted('DLB_CONFIGURE_ARGS', 'not supported')
 conf_data.set('HAVE_EMMINTRIN_H', cc.has_header('emmintrin.h'))
 conf_data.set('HAVE_EXECINFO_H', cc.has_header('execinfo.h'))
