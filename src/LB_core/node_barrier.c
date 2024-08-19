@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -28,7 +28,6 @@
 #include "LB_core/spd.h"
 #include "LB_comm/shmem_barrier.h"
 #include "support/debug.h"
-#include "support/gtree.h"
 #include "support/tracing.h"
 
 #include <pthread.h>

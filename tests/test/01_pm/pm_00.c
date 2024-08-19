@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,6 +23,7 @@
 
 #include "LB_numThreads/numThreads.h"
 #include "apis/dlb_errors.h"
+#include "support/mask_utils.h"
 
 #include <sched.h>
 #include <string.h>
@@ -74,6 +75,18 @@ static void cb_disable_cpu(int cpuid, void *arg) {
     CPU_CLR(cpuid, &process_mask);
 }
 
+static object_t cb_enable_cpu_set_arg = { .n = 8 };
+static void cb_enable_cpu_set(const cpu_set_t *cpu_set, void *arg) {
+    assert( ((object_t*)arg)->n == cb_enable_cpu_set_arg.n );
+    CPU_OR(&process_mask, &process_mask, cpu_set);
+}
+
+static object_t cb_disable_cpu_set_arg = { .n = 9 };
+static void cb_disable_cpu_set(const cpu_set_t *cpu_set, void *arg) {
+    assert( ((object_t*)arg)->n == cb_disable_cpu_set_arg.n );
+    mu_substract(&process_mask, &process_mask, cpu_set);
+}
+
 int main( int argc, char **argv ) {
     cpu_set_t mask;
     CPU_ZERO(&mask);
@@ -105,6 +118,10 @@ int main( int argc, char **argv ) {
                 (dlb_callback_t)cb_enable_cpu, &cb_enable_cpu_arg) == DLB_SUCCESS );
     assert( pm_callback_set(&pm, dlb_callback_disable_cpu,
                 (dlb_callback_t)cb_disable_cpu, &cb_disable_cpu_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_enable_cpu_set,
+                (dlb_callback_t)cb_enable_cpu_set, &cb_enable_cpu_set_arg) == DLB_SUCCESS );
+    assert( pm_callback_set(&pm, dlb_callback_disable_cpu_set,
+                (dlb_callback_t)cb_disable_cpu_set, &cb_disable_cpu_set_arg) == DLB_SUCCESS );
     assert( pm_callback_set(&pm, 42, (dlb_callback_t)main, NULL) == DLB_ERR_NOCBK );
 
     // Get callbacks
@@ -131,6 +148,12 @@ int main( int argc, char **argv ) {
     assert( pm_callback_get(&pm, dlb_callback_disable_cpu, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_disable_cpu );
     assert( arg == &cb_disable_cpu_arg );
+    assert( pm_callback_get(&pm, dlb_callback_enable_cpu_set, &cb, &arg) == DLB_SUCCESS );
+    assert( cb == (dlb_callback_t)cb_enable_cpu_set );
+    assert( arg == &cb_enable_cpu_set_arg );
+    assert( pm_callback_get(&pm, dlb_callback_disable_cpu_set, &cb, &arg) == DLB_SUCCESS );
+    assert( cb == (dlb_callback_t)cb_disable_cpu_set );
+    assert( arg == &cb_disable_cpu_set_arg );
     assert( pm_callback_get(&pm, 42, &cb, &arg) == DLB_ERR_NOCBK );
 
     // Call callback and check DLB_SUCCESS
@@ -143,6 +166,8 @@ int main( int argc, char **argv ) {
     assert( add_process_mask(&pm, &mask) == DLB_SUCCESS );
     assert( enable_cpu(&pm, 0) == DLB_SUCCESS );
     assert( disable_cpu(&pm, 0) == DLB_SUCCESS );
+    assert( enable_cpu_set(&pm, &mask) == DLB_SUCCESS );
+    assert( disable_cpu_set(&pm, &mask) == DLB_SUCCESS );
 
     // Call callback and check that the parameter is correct
     update_threads(&pm, 1);
@@ -155,6 +180,13 @@ int main( int argc, char **argv ) {
     assert( enable_cpu(&pm, 2) == DLB_SUCCESS );
     assert( CPU_COUNT(&process_mask) == 3 );
     assert( disable_cpu(&pm, 2) == DLB_SUCCESS );
+    assert( CPU_COUNT(&process_mask) == 2 );
+    CPU_ZERO(&mask);
+    CPU_SET(2, &mask);
+    CPU_SET(3, &mask);
+    assert( enable_cpu_set(&pm, &mask) == DLB_SUCCESS );
+    assert( CPU_COUNT(&process_mask) == 4 );
+    assert( disable_cpu_set(&pm, &mask) == DLB_SUCCESS );
     assert( CPU_COUNT(&process_mask) == 2 );
 
 

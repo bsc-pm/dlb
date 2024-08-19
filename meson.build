@@ -98,6 +98,7 @@ common_includes = include_directories('src')
 
 common_srcs = [
   'src/support/atomic.h',
+  'src/support/array_template.h',
   'src/support/env.c',
   'src/support/env.h',
   'src/support/error.c',
@@ -113,6 +114,7 @@ common_srcs = [
   'src/support/mytime.h',
   'src/support/options.c',
   'src/support/options.h',
+  'src/support/queue_template.h',
   'src/support/queues.c',
   'src/support/queues.h',
   'src/support/small_array.h',

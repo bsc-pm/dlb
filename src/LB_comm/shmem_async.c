@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -19,6 +19,7 @@
 
 #include "LB_comm/shmem_async.h"
 
+#include "LB_core/spd.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
@@ -39,16 +40,25 @@ enum { QUEUE_SIZE = 100 };
 typedef enum HelperAction {
     ACTION_NONE = 0,
     ACTION_ENABLE_CPU,
+    ACTION_ENABLE_CPU_SET,
     ACTION_DISABLE_CPU,
-    ACTION_SET_MASK,
+    ACTION_DISABLE_CPU_SET,
+    ACTION_SET_CPU_SET,
     ACTION_SET_NUM_CPUS,
     ACTION_JOIN
 } action_t;
+
+typedef enum HelperStatus {
+    HELPER_UNKOWN_STATUS = 0,
+    HELPER_WAITING,
+    HELPER_BUSY,
+} status_t;
 
 typedef struct Message {
     action_t action;
     int cpuid;
     int ncpus;
+    cpu_set_t cpu_set;
 } message_t;
 
 typedef struct {
@@ -65,6 +75,7 @@ typedef struct {
     cpu_set_t mask;
     const pm_interface_t *pm;
     bool joinable;
+    status_t status;
 } helper_t;
 
 
@@ -72,7 +83,7 @@ typedef struct {
     helper_t helpers[0];
 } shdata_t;
 
-enum { SHMEM_ASYNC_VERSION = 3 };
+enum { SHMEM_ASYNC_VERSION = 4 };
 
 static int max_helpers = 0;
 static shdata_t *shdata = NULL;
@@ -126,9 +137,11 @@ static void dequeue_message(helper_t *helper, message_t *message) {
     pthread_mutex_lock(&helper->q_lock);
 
     /* Block until there's some message in the queue */
+    helper->status = HELPER_WAITING;
     while (helper->q_head == helper->q_tail) {
         pthread_cond_wait(&helper->q_wait_data, &helper->q_lock);
     }
+    helper->status = HELPER_BUSY;
 
     /* Dequeue message and update tail */
     unsigned int next_tail = (helper->q_tail + 1) % QUEUE_SIZE;
@@ -140,6 +153,7 @@ static void dequeue_message(helper_t *helper, message_t *message) {
 }
 
 static void* thread_start(void *arg) {
+    spd_enter_dlb(thread_spd);
     helper_t *helper = arg;
     const pm_interface_t* const pm = helper->pm;
     pthread_setaffinity_np(helper->pth, sizeof(cpu_set_t), &helper->mask);
@@ -158,10 +172,16 @@ static void* thread_start(void *arg) {
             case ACTION_ENABLE_CPU:
                 error = enable_cpu(pm, message.cpuid);
                 break;
+            case ACTION_ENABLE_CPU_SET:
+                error = enable_cpu_set(pm, &message.cpu_set);
+                break;
             case ACTION_DISABLE_CPU:
                 error = disable_cpu(pm, message.cpuid);
                 break;
-            case ACTION_SET_MASK:
+            case ACTION_DISABLE_CPU_SET:
+                error = disable_cpu_set(pm, &message.cpu_set);
+                break;
+            case ACTION_SET_CPU_SET:
                 break;
             case ACTION_SET_NUM_CPUS:
                 error = update_threads(pm, message.ncpus);
@@ -309,11 +329,31 @@ void shmem_async_enable_cpu(pid_t pid, int cpuid) {
     }
 }
 
+void shmem_async_enable_cpu_set(pid_t pid, const cpu_set_t *cpu_set) {
+    verbose(VB_ASYNC, "Enqueuing petition for pid: %d, enable cpu set %s",
+            pid, mu_to_str(cpu_set));
+    helper_t *helper = get_helper(pid);
+    if (helper) {
+        message_t message = { .action = ACTION_ENABLE_CPU_SET, .cpu_set = *cpu_set };
+        enqueue_message(helper, &message);
+    }
+}
+
 void shmem_async_disable_cpu(pid_t pid, int cpuid) {
     verbose(VB_ASYNC, "Enqueuing petition for pid: %d, disable cpuid %d", pid, cpuid);
     helper_t *helper = get_helper(pid);
     if (helper) {
         message_t message = { .action = ACTION_DISABLE_CPU, .cpuid = cpuid };
+        enqueue_message(helper, &message);
+    }
+}
+
+void shmem_async_disable_cpu_set(pid_t pid, const cpu_set_t *cpu_set) {
+    verbose(VB_ASYNC, "Enqueuing petition for pid: %d, disable cpu set %s",
+            pid, mu_to_str(cpu_set));
+    helper_t *helper = get_helper(pid);
+    if (helper) {
+        message_t message = { .action = ACTION_DISABLE_CPU_SET, .cpu_set = *cpu_set };
         enqueue_message(helper, &message);
     }
 }
@@ -338,8 +378,15 @@ size_t shmem_async__size(void) {
  * with the given pid has finished its pending requests */
 void shmem_async_wait_for_completion(pid_t pid) {
     helper_t *helper = get_helper(pid);
-    while (helper->q_head != helper->q_tail) {
+    while(1) {
+        if (pthread_mutex_trylock(&helper->q_lock) == 0) {
+            if (helper->status == HELPER_WAITING
+                    && helper->q_head == helper->q_tail) {
+                pthread_mutex_unlock(&helper->q_lock);
+                break;
+            }
+            pthread_mutex_unlock(&helper->q_lock);
+        }
         usleep(1000);
-        __sync_synchronize();
     }
 }

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -39,7 +39,7 @@
 /*********************************************************************************/
 
 int DLB_TALP_Attach(void) {
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (!thread_spd->dlb_initialized) {
         set_observer_role(true);
     }
@@ -61,7 +61,7 @@ int DLB_TALP_Detach(void) {
 }
 
 int DLB_TALP_GetNumCPUs(int *ncpus) {
-    *ncpus = shmem_cpuinfo_ext__getnumcpus();
+    *ncpus = mu_get_system_size();
     return DLB_SUCCESS;
 }
 
@@ -117,7 +117,7 @@ int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metr
 /*********************************************************************************/
 
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void) {
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
@@ -125,7 +125,7 @@ const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void) {
 }
 
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
@@ -133,7 +133,7 @@ dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
 }
 
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
@@ -141,7 +141,7 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
 }
 
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
@@ -149,7 +149,7 @@ int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
 }
 
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
@@ -157,7 +157,7 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
 }
 
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
@@ -165,7 +165,7 @@ int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
 }
 
 int DLB_MonitoringRegionsUpdate(void) {
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
@@ -173,7 +173,7 @@ int DLB_MonitoringRegionsUpdate(void) {
 }
 
 int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics) {
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
@@ -181,7 +181,7 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
 }
 
 int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }

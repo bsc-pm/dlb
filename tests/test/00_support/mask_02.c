@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -21,120 +21,212 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+/* Test mask utils initialization */
+
 #include "support/mask_utils.h"
+#include "support/debug.h"
+#include "support/options.h"
 
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
-enum { MAX_SIZE = 16 };
-enum { SYS_SIZE = 8 };
 
+int main(int argc, char *argv[]) {
 
-static int check_mask(const cpu_set_t *mask, const int *bits) {
-    int i;
-    for (i=0; i<MAX_SIZE; ++i) {
-        if (CPU_ISSET(i, mask) && bits[i] == 0) return 1;
-        if (!CPU_ISSET(i, mask) && bits[i] == 1) return 1;
+    options_t options = { .verbose = VB_AFFINITY };
+    debug_init(&options);
+
+    cpu_set_t system_mask;
+    cpu_set_t zero_mask;
+    CPU_ZERO(&zero_mask);
+
+    /* Default, usually hwloc */
+    {
+        warning("===== Default init ======");
+
+        // check it's safe to call init and finalize twice
+        mu_init();
+        mu_init();
+        mu_finalize();
+        mu_finalize();
     }
-    return 0;
-}
 
-int main( int argc, char **argv ) {
+    /* Force no hwloc */
+    {
+        warning("===== No hwloc init =====");
 
-    cpu_set_t mask0, mask1, mask2, mask3;
-    CPU_ZERO(&mask0);
-    mu_parse_mask("0,1", &mask1);
-    mu_parse_mask("0-3", &mask2);
-    mu_init();
-    mu_testing_set_sys_size(SYS_SIZE);
+        mu_testing_init_nohwloc();
+        mu_finalize();
+    }
 
-    assert(  mu_is_subset(&mask0, &mask0) );
-    assert(  mu_is_subset(&mask0, &mask1) );
-    assert(  mu_is_subset(&mask0, &mask2) );
-    assert( !mu_is_subset(&mask1, &mask0) );
-    assert(  mu_is_subset(&mask1, &mask1) );
-    assert(  mu_is_subset(&mask1, &mask2) );
-    assert( !mu_is_subset(&mask2, &mask0) );
-    assert( !mu_is_subset(&mask2, &mask1) );
-    assert(  mu_is_subset(&mask2, &mask2) );
+    /* Custom size */
+    {
+        enum { SYS_SIZE = 70 };
+        warning("===== Size %d ===== ", SYS_SIZE);
 
-    assert(  mu_is_superset(&mask0, &mask0) );
-    assert( !mu_is_superset(&mask0, &mask1) );
-    assert( !mu_is_superset(&mask0, &mask2) );
-    assert(  mu_is_superset(&mask1, &mask0) );
-    assert(  mu_is_superset(&mask1, &mask1) );
-    assert( !mu_is_superset(&mask1, &mask2) );
-    assert(  mu_is_superset(&mask2, &mask0) );
-    assert(  mu_is_superset(&mask2, &mask1) );
-    assert(  mu_is_superset(&mask2, &mask2) );
+        mu_testing_set_sys_size(SYS_SIZE);
+        assert( mu_get_system_size() == SYS_SIZE );
+        mu_get_system_mask(&system_mask);
+        assert( CPU_COUNT(&system_mask) == SYS_SIZE
+                && mu_get_first_cpu(&system_mask) == 0
+                && mu_get_last_cpu(&system_mask) == SYS_SIZE - 1 );
+        assert( mu_system_has_smt() == false );
+        assert( mu_get_system_hwthreads_per_core() == 1 );
+        assert( mu_get_cpu_next_core(&system_mask, -2) == -1 );
+        assert( mu_get_cpu_next_core(&system_mask, -1) == 0 );
+        assert( mu_get_cpu_next_core(&system_mask, 0) == 1 );
+        assert( mu_get_cpu_next_core(&system_mask, 68) == 69 );
+        assert( mu_get_cpu_next_core(&system_mask, 69) == -1 );
+        mu_finalize();
+    }
 
-    assert( !mu_is_proper_subset(&mask0, &mask0) );
-    assert(  mu_is_proper_subset(&mask0, &mask1) );
-    assert(  mu_is_proper_subset(&mask0, &mask2) );
-    assert( !mu_is_proper_subset(&mask1, &mask0) );
-    assert( !mu_is_proper_subset(&mask1, &mask1) );
-    assert(  mu_is_proper_subset(&mask1, &mask2) );
-    assert( !mu_is_proper_subset(&mask2, &mask0) );
-    assert( !mu_is_proper_subset(&mask2, &mask1) );
-    assert( !mu_is_proper_subset(&mask2, &mask2) );
+    /* Custom size and topology */
+    {
+        enum { SYS_NCPUS = 32 };
+        enum { SYS_NCORES = 16 };
+        enum { SYS_NNODES = 4};
+        warning("===== ncpus: %d, ncores: %d, nnodes: %d ===== ",
+                SYS_NCPUS, SYS_NCORES, SYS_NNODES);
 
-    assert( !mu_is_proper_superset(&mask0, &mask0) );
-    assert( !mu_is_proper_superset(&mask0, &mask1) );
-    assert( !mu_is_proper_superset(&mask0, &mask2) );
-    assert(  mu_is_proper_superset(&mask1, &mask0) );
-    assert( !mu_is_proper_superset(&mask1, &mask1) );
-    assert( !mu_is_proper_superset(&mask1, &mask2) );
-    assert(  mu_is_proper_superset(&mask2, &mask0) );
-    assert(  mu_is_proper_superset(&mask2, &mask1) );
-    assert( !mu_is_proper_superset(&mask2, &mask2) );
+        mu_testing_set_sys(SYS_NCPUS, SYS_NCORES, SYS_NNODES);
+        assert( mu_get_system_size() == SYS_NCPUS );
+        mu_get_system_mask(&system_mask);
+        assert( CPU_COUNT(&system_mask) == SYS_NCPUS
+                && mu_get_first_cpu(&system_mask) == 0
+                && mu_get_last_cpu(&system_mask) == SYS_NCPUS - 1 );
+        assert( mu_system_has_smt() == true );
+        assert( mu_get_system_hwthreads_per_core() == 2 );
+        assert( mu_get_cpu_next_core(&system_mask, 0) == 2 );
+        assert( mu_get_cpu_next_core(&system_mask, 29) == 30 );
+        assert( mu_get_cpu_next_core(&system_mask, 30) == -1 );
+        assert( mu_get_cpu_next_core(&system_mask, 31) == -1 );
+        assert( mu_get_cpu_next_core(&system_mask, 32) == -1 );
+        mu_finalize();
+    }
 
-    assert( !mu_intersects(&mask0, &mask0) );
-    assert( !mu_intersects(&mask0, &mask1) );
-    assert( !mu_intersects(&mask0, &mask2) );
-    assert( !mu_intersects(&mask1, &mask0) );
-    assert(  mu_intersects(&mask1, &mask1) );
-    assert(  mu_intersects(&mask1, &mask2) );
-    assert( !mu_intersects(&mask2, &mask0) );
-    assert(  mu_intersects(&mask2, &mask1) );
-    assert(  mu_intersects(&mask2, &mask2) );
+    /* Heterogeneous with custom masks */
+    {
+        enum { NUM_CORES = 4 };
+        enum { NUM_NODES = 2 };
+        cpu_set_t core_masks[NUM_CORES];
+        cpu_set_t node_masks[NUM_NODES];
+        mu_parse_mask("0-1,5-12", &system_mask);
+        mu_parse_mask("5-6", &core_masks[0]);
+        mu_parse_mask("7-8", &core_masks[1]);
+        mu_parse_mask("9-10", &core_masks[2]);
+        mu_parse_mask("11-12", &core_masks[3]);
+        mu_parse_mask("5-10", &node_masks[0]);
+        mu_parse_mask("11-12", &node_masks[1]);
+        warning("===== Heterogeneous arch ===== ");
 
-    mu_substract(&mask3, &mask1, &mask0);
-    assert( check_mask(&mask3, (const int[MAX_SIZE]){1, 1, 0, 0}) == 0 );
-    mu_substract(&mask3, &mask1, &mask2);
-    assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0}) == 0 );
-    mu_substract(&mask3, &mask2, &mask1);
-    assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 1, 1}) == 0 );
-    mu_substract(&mask3, &mask1, &mask1);
-    assert( check_mask(&mask3, (const int[MAX_SIZE]){0, 0, 0, 0}) == 0 );
+        mu_testing_set_sys_masks(&system_mask, core_masks, NUM_CORES, node_masks, NUM_NODES);
+        assert( mu_get_system_size() == 13 );
+        assert( mu_system_has_smt() == true );
+        assert( mu_get_system_hwthreads_per_core() == 2 );
+        assert( mu_get_core_id(0) == -1 );
 
-    assert( CPU_COUNT(&mask1) > 1 );
-    assert( mu_get_single_cpu(&mask1) == -1);
-    CPU_ZERO(&mask3);
-    assert( mu_get_single_cpu(&mask3) == -1);
-    CPU_SET(5, &mask3);
-    assert( mu_get_single_cpu(&mask3) == 5);
+        /* Test functions that operate on NUMA nodes */
+        cpu_set_t affinity_mask;
+        mu_get_nodes_intersecting_with_cpuset(&affinity_mask, &system_mask);
+        assert( CPU_COUNT(&affinity_mask) == 8
+                && mu_get_first_cpu(&affinity_mask) == 5
+                && mu_get_last_cpu(&affinity_mask) == 12 );
+        mu_get_nodes_subset_of_cpuset(&affinity_mask, &system_mask);
+        assert( CPU_COUNT(&affinity_mask) == 8
+                && mu_get_first_cpu(&affinity_mask) == 5
+                && mu_get_last_cpu(&affinity_mask) == 12 );
+        mu_get_nodes_intersecting_with_cpuset(&affinity_mask, &zero_mask);
+        assert( CPU_COUNT(&affinity_mask) == 0 );
+        mu_get_nodes_subset_of_cpuset(&affinity_mask, &zero_mask);
+        assert( CPU_COUNT(&affinity_mask) == 0 );
 
-    assert( mu_get_first_cpu(&mask1) == 0 );
-    assert( mu_get_last_cpu(&mask1) == 1 );
-    CPU_ZERO(&mask3);
-    assert( mu_get_first_cpu(&mask3) == -1 );
-    assert( mu_get_last_cpu(&mask3) == -1 );
-    CPU_SET(42, &mask3);
-    assert( mu_get_first_cpu(&mask3) == 42 );
-    assert( mu_get_last_cpu(&mask3) == 42 );
+        /* Test functions that operate on cores */
+        cpu_set_t mask;
+        mu_parse_mask("6-11", &mask);
+        cpu_set_t result;
+        mu_get_cores_intersecting_with_cpuset(&result, &mask);
+        assert( CPU_COUNT(&result) == 8
+                && mu_get_first_cpu(&result) == 5
+                && mu_get_last_cpu(&result) == 12 );
+        mu_get_cores_subset_of_cpuset(&result, &mask);
+        assert( CPU_COUNT(&result) == 4
+                && mu_get_first_cpu(&result) == 7
+                && mu_get_last_cpu(&result) == 10 );
+        mu_get_cores_intersecting_with_cpuset(&result, &zero_mask);
+        assert( CPU_COUNT(&result) == 0 );
+        mu_get_cores_subset_of_cpuset(&result, &zero_mask);
+        assert( CPU_COUNT(&result) == 0 );
 
-    assert( strcmp(mu_to_str(&mask1), "[0,1]") == 0 );
-    assert( strcmp(mu_to_str(&mask2), "[0-3]") == 0 );
+        /* mu_get_core_mask */
+        assert( mu_get_core_mask(42) == NULL );
+        assert( CPU_COUNT_S(8, mu_get_core_mask(12)->set) == 2 );
+        assert( mu_get_core_mask(12)->count == 2 );
+        assert( mu_get_core_mask(12)->first_cpuid == 11 );
+        assert( mu_get_core_mask(12)->last_cpuid == 12 );
 
-    enum { BUFFER_LEN = 16 };
-    char buffer[BUFFER_LEN];
-    mu_get_quoted_mask(&mask1, buffer, BUFFER_LEN);
-    assert( strcmp(buffer, "\"0,1\"") == 0 );
-    mu_get_quoted_mask(&mask2, buffer, BUFFER_LEN);
-    assert( strcmp(buffer, "\"0-3\"") == 0 );
 
-    mu_finalize();
+        mu_finalize();
+    }
+
+    /* Core masks in a round-robin fashion */
+    {
+        enum { SYS_SIZE = 8 };
+        enum { NUM_CORES = 4 };
+        enum { NUM_NODES = 1 };
+        cpu_set_t core_masks[NUM_CORES];
+        cpu_set_t node_masks[NUM_NODES];
+        mu_parse_mask("0-7", &system_mask);
+        mu_parse_mask("0-7", &node_masks[0]);
+        mu_parse_mask("0,4", &core_masks[0]);
+        mu_parse_mask("1,5", &core_masks[1]);
+        mu_parse_mask("2,6", &core_masks[2]);
+        mu_parse_mask("3,7", &core_masks[3]);
+        warning("===== Round-robin arch ===== ");
+
+        mu_testing_set_sys_masks(&system_mask, core_masks, NUM_CORES, node_masks, NUM_NODES);
+        assert( mu_get_system_size() == SYS_SIZE );
+        assert( mu_system_has_smt() == true );
+        assert( mu_get_system_hwthreads_per_core() == 2 );
+        for (int i = 0; i < SYS_SIZE; ++i) {
+            int core_id = i % 4;
+            const mu_cpuset_t *core_mask = mu_get_core_mask(i);
+            const mu_cpuset_t *core_mask_ = mu_get_core_mask_by_coreid(core_id);
+            assert( core_mask_ == core_mask );
+            assert( mu_get_core_id(i) == core_id );
+            assert( core_mask->count == 2 );
+            assert( i == ( i < 4 ? core_mask->first_cpuid : core_mask->last_cpuid ) );
+            assert( mu_get_cpu_next_core(&system_mask, i) == ( core_id < 3
+                    ? i + 1 : -1 ) );
+        }
+    }
+
+    /* Test operations when system is smaller than mask's setsize */
+    {
+        warning("===== Other tests ===== ");
+
+        enum { SYS_SIZE = 64 };
+        mu_testing_set_sys_size(SYS_SIZE);
+
+        /* Create a mask will garbage at the end */
+        cpu_set_t mask;
+        mu_parse_mask("0-63", &mask);
+        mask.__bits[15] = 1;
+        assert( CPU_COUNT(&mask) > 64 );
+        assert( CPU_COUNT_S(8, &mask) == 64 );
+
+        /* Ensure that we only iterate valid CPUs */
+        int sum = 0;
+        for (int cpuid = mu_get_first_cpu(&mask); cpuid >= 0;
+                cpuid = mu_get_next_cpu(&mask, cpuid)) {
+            sum += cpuid;
+            fprintf(stderr, "cpuid: %d\n", cpuid);
+        }
+        assert( sum == 63*(63+1)/2 ); /* 0 + 1 .. + 63 */
+
+        mu_finalize();
+    }
+
     return 0;
 }

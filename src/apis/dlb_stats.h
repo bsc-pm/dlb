@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -121,22 +121,31 @@ int DLB_Stats_GetLoadAvg(int pid, double *load);
  *  \param[in] cpu CPU id
  *  \param[out] percentage percentage of state/total
  *  \return error code
+ *
+ *  DEPRECATED: Functionality no longer provided.
  */
-int DLB_Stats_GetCpuStateIdle(int cpu, float *percentage);
+int DLB_Stats_GetCpuStateIdle(int cpu, float *percentage)
+    __attribute__((deprecated("Functionality no longer provided")));
 
 /*! \brief Get the percentage of time that the CPU has been in state OWNED
  *  \param[in] cpu CPU id
  *  \param[out] percentage percentage of state/total
  *  \return error code
+ *
+ *  DEPRECATED: Functionality no longer provided.
  */
-int DLB_Stats_GetCpuStateOwned(int cpu, float *percentage);
+int DLB_Stats_GetCpuStateOwned(int cpu, float *percentage)
+    __attribute__((deprecated("Functionality no longer provided")));
 
 /*! \brief Get the percentage of time that the CPU has been in state GUESTED
  *  \param[in] cpu CPU id
  *  \param[out] percentage percentage of state/total
  *  \return error code
+ *
+ *  DEPRECATED: Functionality no longer provided.
  */
-int DLB_Stats_GetCpuStateGuested(int cpu, float *percentage);
+int DLB_Stats_GetCpuStateGuested(int cpu, float *percentage)
+    __attribute__((deprecated("Functionality no longer provided")));
 
 #ifdef __cplusplus
 }

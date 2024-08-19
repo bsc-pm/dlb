@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -29,6 +29,11 @@
 
 #include <assert.h>
 
+/* array_cpuinfo_task_t */
+#define ARRAY_T cpuinfo_task_t
+#define ARRAY_KEY_T pid_t
+#include "support/array_template.h"
+
 /* Thread binding tests involving LeWI */
 
 int main(int argc, char *argv[]) {
@@ -37,7 +42,8 @@ int main(int argc, char *argv[]) {
     mu_init();
     mu_testing_set_sys_size(SYS_SIZE);
 
-    pid_t new_guest, victim;
+    array_cpuinfo_task_t tasks;
+    array_cpuinfo_task_t_init(&tasks, SYS_SIZE);
 
     // Initialize local masks to [1100] and [0011]
     pid_t p1_pid = 111;
@@ -62,29 +68,34 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
 
     // P2 lends CPU 3 (thread 1), CPU 2 (thread 0) does not need to rebind
-    shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest);
+    shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == -1 );
 
     // P2 recovers CPU 3
-    shmem_cpuinfo__acquire_cpu(p2_pid, 3, &new_guest, &victim);
+    shmem_cpuinfo__acquire_cpu(p2_pid, 3, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
 
     // P2 lends CPU 2 (thread 0 needs reassigning)
-    shmem_cpuinfo__lend_cpu(p2_pid, 2, &new_guest);
+    shmem_cpuinfo__lend_cpu(p2_pid, 2, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 3 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == -1 );
 
     // P1 acquires CPU 2
-    shmem_cpuinfo__acquire_cpu(p1_pid, 2, &new_guest, &victim);
+    shmem_cpuinfo__acquire_cpu(p1_pid, 2, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 0) == 0 );
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 2) == 2 );
 
     // P1 lends CPUs 1 and 2
-    shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guest);
-    shmem_cpuinfo__lend_cpu(p1_pid, 2, &new_guest);
+    shmem_cpuinfo__lend_cpu(p1_pid, 1, &tasks);
+    shmem_cpuinfo__lend_cpu(p1_pid, 2, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 0) == 0 );
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == -1 );
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 2) == -1 );
@@ -94,34 +105,41 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == -1 );
 
     // P2 acquires CPUs 1 and 2 (owned CPUs first)
-    shmem_cpuinfo__acquire_cpu(p2_pid, 1, &new_guest, &victim);
-    shmem_cpuinfo__acquire_cpu(p2_pid, 2, &new_guest, &victim);
+    shmem_cpuinfo__acquire_cpu(p2_pid, 1, &tasks);
+    shmem_cpuinfo__acquire_cpu(p2_pid, 2, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 1 );
 
     // P1 acquires CPU 1 forcing oversubscription
-    shmem_cpuinfo__acquire_cpu(p1_pid, 1, &new_guest, &victim);
+    shmem_cpuinfo__acquire_cpu(p1_pid, 1, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 1 );
-    shmem_cpuinfo__lend_cpu(p2_pid, 1, &new_guest);
+    shmem_cpuinfo__lend_cpu(p2_pid, 1, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 1 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == -1 );
 
     // P2 acquires CPUs 1 (lent by P1), 2 (reclaimed) and 3 (borrowed)
-    shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guest);
-    shmem_cpuinfo__acquire_cpu(p2_pid, 1, &new_guest, &victim); /* lent */
-    shmem_cpuinfo__lend_cpu(p2_pid, 2, &new_guest);
-    shmem_cpuinfo__acquire_cpu(p1_pid, 2, &new_guest, &victim);
-    shmem_cpuinfo__acquire_cpu(p2_pid, 2, &new_guest, &victim); /* force OS */
-    shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guest);
-    shmem_cpuinfo__acquire_cpu(p2_pid, 3, &new_guest, &victim); /* borrow */
+    shmem_cpuinfo__lend_cpu(p1_pid, 1, &tasks);
+    shmem_cpuinfo__acquire_cpu(p2_pid, 1, &tasks); /* lent */
+    array_cpuinfo_task_t_clear(&tasks);
+    shmem_cpuinfo__lend_cpu(p2_pid, 2, &tasks);
+    shmem_cpuinfo__acquire_cpu(p1_pid, 2, &tasks);
+    shmem_cpuinfo__acquire_cpu(p2_pid, 2, &tasks); /* force OS */
+    array_cpuinfo_task_t_clear(&tasks);
+    shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks);
+    shmem_cpuinfo__acquire_cpu(p2_pid, 3, &tasks); /* borrow */
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 1) == 3 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 2) == 1 );
     /* P1 leaves and CPU 2 is no longer oversubscribed */
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == 2 );
-    shmem_cpuinfo__lend_cpu(p1_pid, 2, &new_guest);
+    shmem_cpuinfo__lend_cpu(p1_pid, 2, &tasks);
+    array_cpuinfo_task_t_clear(&tasks);
     assert( shmem_cpuinfo__get_thread_binding(p1_pid, 1) == -1 );
     assert( shmem_cpuinfo__get_thread_binding(p2_pid, 0) == 2 );
 

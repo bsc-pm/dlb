@@ -1,5 +1,5 @@
 #################################################################################
-#  Copyright 2009-2021 Barcelona Supercomputing Center                          #
+#  Copyright 2009-2024 Barcelona Supercomputing Center                          #
 #                                                                               #
 #  This file is part of the DLB library.                                        #
 #                                                                               #
@@ -177,6 +177,7 @@ src/LB_MPI/MPI_interceptF08.F90: $(top_srcdir)/src/LB_MPI/MPI_interceptF08.F90.i
 # These sources do not depend on any MPI nor instrumentation version, only debug
 COMMON_SRCS = \
 	$(installheaders)                       \
+	src/support/array_template.h            \
 	src/support/atomic.h                    \
 	src/support/env.c                       \
 	src/support/env.h                       \
@@ -193,6 +194,7 @@ COMMON_SRCS = \
 	src/support/mytime.h                    \
 	src/support/options.c                   \
 	src/support/options.h                   \
+	src/support/queue_template.h            \
 	src/support/queues.c                    \
 	src/support/queues.h                    \
 	src/support/small_array.h               \

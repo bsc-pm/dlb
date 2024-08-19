@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -54,7 +54,6 @@ static void sp1_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp1_cb_disable_cpu(int cpuid, void *arg) {
-    lewi_mask_ReturnCpu(&spd1, cpuid);
     CPU_CLR(cpuid, &sp1_mask);
 }
 
@@ -64,7 +63,6 @@ static void sp2_cb_enable_cpu(int cpuid, void *arg) {
 }
 
 static void sp2_cb_disable_cpu(int cpuid, void *arg) {
-    lewi_mask_ReturnCpu(&spd2, cpuid);
     CPU_CLR(cpuid, &sp2_mask);
 }
 

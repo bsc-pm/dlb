@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,8 +20,21 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#if NCPUS_AT_CONFIGURE_TIME > 256
+typedef uint8_t cpuid_t;
+#define PRICPUID PRIu8
+#else
+typedef uint16_t cpuid_t;
+#define PRICPUID PRIu16
+#endif
 
 typedef enum VerboseOptions {
     VB_CLEAR    = 0,

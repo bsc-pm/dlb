@@ -26,6 +26,20 @@
 #include <sys/types.h>
 #include <sched.h>
 
+/* Packed enum to try to make cpuinfo_task_t size 8 bytes */
+typedef enum __attribute__((__packed__)) {
+    ENABLE_CPU,
+    DISABLE_CPU
+} cpuinfo_action_t;
+
+typedef struct cpuinfo_task_t {
+    pid_t            pid;
+    cpuid_t          cpuid;
+    cpuinfo_action_t action;
+} cpuinfo_task_t;
+
+typedef struct array_cpuid_t array_cpuid_t;
+typedef struct array_cpuinfo_task_t array_cpuinfo_task_t;
 
 /* Init */
 int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
@@ -39,38 +53,48 @@ int shmem_cpuinfo_ext__finalize(void);
 int shmem_cpuinfo_ext__postfinalize(pid_t pid);
 
 /* Lend */
-int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, pid_t *new_guest);
-int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
+int shmem_cpuinfo__lend_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *restrict mask,
+        array_cpuinfo_task_t *restrict tasks);
 
 /* Reclaim */
-int shmem_cpuinfo__reclaim_all(pid_t pid, pid_t new_guests[], pid_t victims[]);
-int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim);
-int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, pid_t new_guests[], pid_t victims[]);
-int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[],
-        pid_t victims[]);
+int shmem_cpuinfo__reclaim_all(pid_t pid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *restrict mask,
+        array_cpuinfo_task_t *restrict tasks);
 
 /* Acquire */
-int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, pid_t *new_guest, pid_t *victim);
+int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
 int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
-        pid_t pid, int *requested_ncpus, int cpus_priority_array[], priority_t priority,
-        int max_parallelism, int64_t *last_borrow, pid_t new_guests[], pid_t victims[]);
+        pid_t pid, int *restrict requested_ncpus,
+        const array_cpuid_t *restrict cpus_priority_array,
+        priority_t priority, int max_parallelism,
+        int64_t *restrict last_borrow, array_cpuinfo_task_t *restrict tasks);
 
 /* Borrow */
-int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, pid_t *new_guest);
+int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
 int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
-        pid_t pid, int *requested_ncpus, int cpus_priority_array[], priority_t priority,
-        int max_parallelism, int64_t *last_borrow, pid_t new_guests[]);
+        pid_t pid, int *restrict requested_ncpus,
+        const array_cpuid_t *restrict cpus_priority_array, priority_t priority,
+        int max_parallelism, int64_t *restrict last_borrow,
+        array_cpuinfo_task_t *restrict tasks);
 
 /* Return */
-int shmem_cpuinfo__return_all(pid_t pid, pid_t new_guests[]);
-int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, pid_t *new_guest);
-int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask, pid_t new_guests[]);
+int shmem_cpuinfo__return_all(pid_t pid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__return_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__return_cpu_mask(pid_t pid, const cpu_set_t *mask,
+        array_cpuinfo_task_t *restrict tasks);
+void shmem_cpuinfo__return_async_cpu(pid_t pid, cpuid_t cpuid);
+void shmem_cpuinfo__return_async_cpu_mask(pid_t pid, const cpu_set_t *mask);
 
 /* Others */
-int shmem_cpuinfo__deregister(pid_t pid, pid_t new_guests[], pid_t victims[]);
-int shmem_cpuinfo__reset(pid_t pid, pid_t new_guests[], pid_t victims[]);
-int shmem_cpuinfo__update_max_parallelism(pid_t pid, int max, pid_t new_guests[], pid_t victims[]);
-void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *process_mask, pid_t new_guests[]);
+int shmem_cpuinfo__deregister(pid_t pid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__reset(pid_t pid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__update_max_parallelism(pid_t pid, unsigned int max,
+        array_cpuinfo_task_t *restrict tasks);
+void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *restrict process_mask,
+        array_cpuinfo_task_t *restrict tasks);
 int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
 int shmem_cpuinfo__get_nth_non_owned_cpu(pid_t pid, int nth_cpu);
 int shmem_cpuinfo__get_number_of_non_owned_cpus(pid_t pid);
@@ -81,20 +105,11 @@ void shmem_cpuinfo__remove_requests(pid_t pid);
 int shmem_cpuinfo__version(void);
 size_t shmem_cpuinfo__size(void);
 
-/* WIP: TALP */
-
-void shmem_cpuinfo__print_cpu_times(void);
-
-// Simplified states to keep statistics
-typedef enum {
-    STATS_IDLE = 0,
-    STATS_OWNED,
-    STATS_GUESTED,
-    _NUM_STATS
-} stats_state_t;
-
-int shmem_cpuinfo_ext__getnumcpus(void);
-float shmem_cpuinfo_ext__getcpustate(int cpu, stats_state_t state);
 void shmem_cpuinfo__print_info(const char *shmem_key, int shmem_color, int columns,
         dlb_printshmem_flags_t print_flags);
+
+int shmem_cpuinfo_testing__get_num_proc_requests(void);
+int shmem_cpuinfo_testing__get_num_cpu_requests(int cpuid);
+const cpu_set_t* shmem_cpuinfo_testing__get_free_cpu_set(void);
+const cpu_set_t* shmem_cpuinfo_testing__get_occupied_core_set(void);
 #endif /* SHMEM_CPUINFO_H */

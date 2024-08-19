@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -37,6 +37,9 @@ enum { SMALL_ARRAY_DEFAULT_SIZE = NCPUS_AT_CONFIGURE_TIME };
 enum { SMALL_ARRAY_DEFAULT_SIZE = 64 };
 #endif
 
+
+/*** SmallArray for int types ***/
+
 typedef struct SmallArrayInt {
     size_t size;
     int *values;
@@ -62,6 +65,8 @@ static inline void small_array_int_free(small_array_int_t *array) {
 }
 
 
+/*** SmallArray for pid_t types ***/
+
 typedef struct SmallArrayPID {
     size_t size;
     pid_t *values;
@@ -86,13 +91,42 @@ static inline void small_array_pid_t_free(small_array_pid_t *array) {
 }
 
 
+/*** SmallArray for cpuid_t types ***/
+
+typedef struct SmallArrayCpuid {
+    size_t size;
+    cpuid_t *values;
+    cpuid_t buffer[SMALL_ARRAY_DEFAULT_SIZE];
+} small_array_cpuid_t;
+
+static inline cpuid_t* small_array_cpuid_t_init(small_array_cpuid_t *array, size_t size) {
+    array->size = size;
+    if (size <= SMALL_ARRAY_DEFAULT_SIZE) {
+        array->values = array->buffer;
+    } else {
+        array->values = malloc(sizeof(cpuid_t) * size);
+    }
+    return array->values;
+}
+
+static inline void small_array_cpuid_t_free(small_array_cpuid_t *array) {
+    if (array->size > SMALL_ARRAY_DEFAULT_SIZE) {
+        free(array->values);
+    }
+    array->values = NULL;
+}
+
+
+/*** SmallArray for lewi_request_t types ***/
+
 typedef struct SmallArrayLeWIRequest {
     size_t size;
     lewi_request_t *values;
     lewi_request_t buffer[SMALL_ARRAY_DEFAULT_SIZE];
 } small_array_lewi_request_t;
 
-static inline lewi_request_t* small_array_lewi_request_t_init(small_array_lewi_request_t *array, size_t size) {
+static inline lewi_request_t* small_array_lewi_request_t_init(
+        small_array_lewi_request_t *array, size_t size) {
     array->size = size;
     if (size <= SMALL_ARRAY_DEFAULT_SIZE) {
         array->values = array->buffer;

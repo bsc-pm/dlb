@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -93,6 +93,14 @@ int pm_callback_set(pm_interface_t *pm, dlb_callbacks_t which,
             pm->dlb_callback_disable_cpu_ptr = (dlb_callback_disable_cpu_t)callback;
             pm->dlb_callback_disable_cpu_arg = arg;
             break;
+        case dlb_callback_enable_cpu_set:
+            pm->dlb_callback_enable_cpu_set_ptr = (dlb_callback_enable_cpu_set_t)callback;
+            pm->dlb_callback_enable_cpu_set_arg = arg;
+            break;
+        case dlb_callback_disable_cpu_set:
+            pm->dlb_callback_disable_cpu_set_ptr = (dlb_callback_disable_cpu_set_t)callback;
+            pm->dlb_callback_disable_cpu_set_arg = arg;
+            break;
         default:
             return DLB_ERR_NOCBK;
     }
@@ -129,6 +137,14 @@ int pm_callback_get(const pm_interface_t *pm, dlb_callbacks_t which,
         case dlb_callback_disable_cpu:
             *callback = (dlb_callback_t)pm->dlb_callback_disable_cpu_ptr;
             *arg = pm->dlb_callback_disable_cpu_arg;
+            break;
+        case dlb_callback_enable_cpu_set:
+            *callback = (dlb_callback_t)pm->dlb_callback_enable_cpu_set_ptr;
+            *arg = pm->dlb_callback_enable_cpu_set_arg;
+            break;
+        case dlb_callback_disable_cpu_set:
+            *callback = (dlb_callback_t)pm->dlb_callback_disable_cpu_set_ptr;
+            *arg = pm->dlb_callback_disable_cpu_set_arg;
             break;
         default:
             return DLB_ERR_NOCBK;
@@ -179,6 +195,17 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
 
 int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_add_active_mask_ptr == NULL) {
+        if (pm->dlb_callback_enable_cpu_ptr != NULL) {
+            /* fallback to enable_cpu */
+            for (int cpuid = mu_get_first_cpu(cpu_set);
+                    cpuid >= 0;
+                    cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
+                instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+                pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
+                instrument_event(CALLBACK_EVENT, 0, EVENT_END);
+            }
+            return DLB_SUCCESS;
+        }
         return DLB_ERR_NOCBK;
     }
     instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
@@ -204,7 +231,7 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
         cpu_set_t cpu_set;
         CPU_ZERO(&cpu_set);
         CPU_SET(cpuid, &cpu_set);
-        return add_mask(pm, &cpu_set);
+        return enable_cpu_set(pm, &cpu_set);
     }
 
     if (pm->dlb_callback_enable_cpu_ptr == NULL) {
@@ -212,6 +239,27 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
     }
     instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
+    return DLB_SUCCESS;
+}
+
+int enable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    if (pm->dlb_callback_enable_cpu_set_ptr == NULL) {
+        if (pm->dlb_callback_enable_cpu_ptr != NULL) {
+            /* fallback to enable_cpu */
+            for (int cpuid = mu_get_first_cpu(cpu_set);
+                    cpuid >= 0;
+                    cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
+                instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+                pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
+                instrument_event(CALLBACK_EVENT, 0, EVENT_END);
+            }
+            return DLB_SUCCESS;
+        }
+        return DLB_ERR_NOCBK;
+    }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    pm->dlb_callback_enable_cpu_set_ptr(cpu_set, pm->dlb_callback_enable_cpu_set_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }
@@ -231,6 +279,27 @@ int disable_cpu(const pm_interface_t *pm, int cpuid) {
     }
     instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
     pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
+    instrument_event(CALLBACK_EVENT, 0, EVENT_END);
+    return DLB_SUCCESS;
+}
+
+int disable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
+    if (pm->dlb_callback_disable_cpu_set_ptr == NULL) {
+        if (pm->dlb_callback_disable_cpu_ptr != NULL) {
+            /* fallback to disable_cpu */
+            for (int cpuid = mu_get_first_cpu(cpu_set);
+                    cpuid >= 0;
+                    cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
+                instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+                pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
+                instrument_event(CALLBACK_EVENT, 0, EVENT_END);
+            }
+            return DLB_SUCCESS;
+        }
+        return DLB_ERR_NOCBK;
+    }
+    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    pm->dlb_callback_disable_cpu_set_ptr(cpu_set, pm->dlb_callback_disable_cpu_set_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
 }

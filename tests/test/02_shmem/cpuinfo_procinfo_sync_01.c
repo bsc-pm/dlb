@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -31,6 +31,10 @@
 #include <sched.h>
 #include <assert.h>
 
+/* array_cpuinfo_task_t */
+#define ARRAY_T cpuinfo_task_t
+#define ARRAY_KEY_T pid_t
+#include "support/array_template.h"
 
 int main( int argc, char **argv ) {
     /* This test needs at least room for 4 CPUs */
@@ -75,10 +79,14 @@ int main( int argc, char **argv ) {
 
         /* Process 1 polls DROM */
         assert( shmem_procinfo__polldrom(p1_pid, NULL, &new_mask) == DLB_SUCCESS );
-        pid_t new_guests[SYS_SIZE];
-        shmem_cpuinfo__update_ownership(p1_pid, &new_mask, new_guests);
-        assert( new_guests[3] == p2_pid );
-        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
+        array_cpuinfo_task_t tasks;
+        array_cpuinfo_task_t_init(&tasks, SYS_SIZE);
+        shmem_cpuinfo__update_ownership(p1_pid, &new_mask, &tasks);
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == DISABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         /* All CPUs are correctly guested */
         assert( shmem_cpuinfo__check_cpu_availability(p1_pid, 0) == DLB_SUCCESS );

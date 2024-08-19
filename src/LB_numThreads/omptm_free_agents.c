@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -323,7 +323,7 @@ static int get_free_agent_binding(int thread_id) {
     cpu_set_t available_process_cpus;
     mu_substract(&available_process_cpus, &process_mask, &primary_thread_mask);
     mu_substract(&available_process_cpus, &available_process_cpus, &worker_threads_mask);
-    int num_free_agents_in_available_cpus = CPU_COUNT(&available_process_cpus);
+    int num_free_agents_in_available_cpus = mu_count(&available_process_cpus);
     if (thread_id < num_free_agents_in_available_cpus) {
         /* Simpler scenario: the default workers mask plus primary does not cover
          * all the CPUs in the process mask and the free agent thread_id is low
@@ -525,7 +525,7 @@ void omptm_free_agents__thread_begin(
         ompt_thread_t thread_type,
         ompt_data_t *thread_data) {
     /* Set up thread local spd */
-    spd_enter_dlb(NULL);
+    spd_enter_dlb(thread_spd);
 
     if (thread_type == ompt_thread_other) {
         int thread_id = __kmp_get_free_agent_id();
@@ -769,4 +769,61 @@ void omptm_free_agents__sync_region(
          * has reached the implicit barrier */
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);
     }
+}
+
+
+/*********************************************************************************/
+/*    Functions for testing purposes                                             */
+/*********************************************************************************/
+
+void omptm_free_agents_testing__set_worker_binding(int cpuid) {
+    __worker_binding = cpuid;
+}
+
+void omptm_free_agents_testing__set_free_agent_id(int id) {
+    __free_agent_id = id;
+}
+
+void omptm_free_agents_testing__set_pending_tasks(unsigned int num_tasks) {
+    pending_tasks = num_tasks;
+}
+
+void omptm_free_agents_testing__acquire_one_free_agent(void) {
+    acquire_one_free_agent();
+}
+
+bool omptm_free_agents_testing__in_parallel(void) {
+    return DLB_ATOMIC_LD(&in_parallel);
+}
+
+bool omptm_free_agents_testing__check_cpu_in_parallel(int cpuid) {
+    return DLB_ATOMIC_LD(&cpu_data[cpuid].state) & CPU_STATE_IN_PARALLEL;
+}
+
+bool omptm_free_agents_testing__check_cpu_idle(int cpuid) {
+    return DLB_ATOMIC_LD(&cpu_data[cpuid].state) & CPU_STATE_IDLE;
+}
+
+bool omptm_free_agents_testing__check_cpu_free_agent_enabled(int cpuid) {
+    return DLB_ATOMIC_LD(&cpu_data[cpuid].state) & CPU_STATE_FREE_AGENT_ENABLED;
+}
+
+int omptm_free_agents_testing__get_num_enabled_free_agents(void) {
+    return DLB_ATOMIC_LD(&num_enabled_free_agents);
+}
+
+int omptm_free_agents_testing__get_free_agent_cpu(int thread_id) {
+    return free_agent_cpu_list[thread_id];
+}
+
+int omptm_free_agents_testing__get_free_agent_binding(int thread_id) {
+    return get_free_agent_binding(thread_id);
+}
+
+int omptm_free_agents_testing__get_free_agent_id_by_cpuid(int cpuid) {
+    return get_free_agent_id_by_cpuid(cpuid);
+}
+
+int omptm_free_agents_testing__get_free_agent_cpuid_by_id(int thread_id) {
+    return get_free_agent_cpuid_by_id(thread_id);
 }

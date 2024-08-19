@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -73,5 +73,20 @@ void omptm_free_agents__sync_region(
         ompt_data_t *parallel_data,
         ompt_data_t *task_data,
         const void *codeptr_ra);
+
+/* Functions for testing purposes */
+void omptm_free_agents_testing__set_worker_binding(int cpuid);
+void omptm_free_agents_testing__set_free_agent_id(int id);
+void omptm_free_agents_testing__set_pending_tasks(unsigned int num_tasks);
+void omptm_free_agents_testing__acquire_one_free_agent(void);
+bool omptm_free_agents_testing__in_parallel(void);
+bool omptm_free_agents_testing__check_cpu_in_parallel(int cpuid);
+bool omptm_free_agents_testing__check_cpu_idle(int cpuid);
+bool omptm_free_agents_testing__check_cpu_free_agent_enabled(int cpuid);
+int  omptm_free_agents_testing__get_num_enabled_free_agents(void);
+int  omptm_free_agents_testing__get_free_agent_cpu(int thread_id);
+int  omptm_free_agents_testing__get_free_agent_binding(int cpuid);
+int  omptm_free_agents_testing__get_free_agent_id_by_cpuid(int cpuid);
+int  omptm_free_agents_testing__get_free_agent_cpuid_by_id(int thread_id);
 
 #endif /* OMPTM_FREE_AGENTS_H */

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -29,6 +29,7 @@
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
 #include "support/options.h"
+#include "support/types.h"
 
 #include <sched.h>
 #include <sys/types.h>
@@ -36,6 +37,15 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+
+/* array_cpuid_t */
+#define ARRAY_T cpuid_t
+#include "support/array_template.h"
+
+/* array_cpuinfo_task_t */
+#define ARRAY_T cpuinfo_task_t
+#define ARRAY_KEY_T pid_t
+#include "support/array_template.h"
 
 // Basic checks for checking Borrow and Acquire features
 
@@ -56,8 +66,8 @@ int main( int argc, char **argv ) {
     CPU_ZERO(&p2_mask);
     CPU_SET(2, &p2_mask);
     CPU_SET(3, &p2_mask);
-    pid_t new_guests[SYS_SIZE];
-    pid_t victims[SYS_SIZE];
+    array_cpuinfo_task_t tasks;
+    array_cpuinfo_task_t_init(&tasks, SYS_SIZE);
 
     // Init
     assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
@@ -76,214 +86,267 @@ int main( int argc, char **argv ) {
     int requested_ncpus;
 
     // Setup dummy priority CPUs
-    int cpus_priority_array[SYS_SIZE];
-    int i;
-    for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i;
+    array_cpuid_t cpus_priority_array;
+    array_cpuid_t_init(&cpus_priority_array, SYS_SIZE);
+    for (int i=0; i<SYS_SIZE; ++i) array_cpuid_t_push(&cpus_priority_array, i);
 
     int err;
 
     /*** BorrowCpus test ***/
     {
         // Process 2 releases CPU 3
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] <= 0 );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // Process 1 wants to BORROW up to 2 CPUs
         requested_ncpus = 2;
         assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                    last_borrow, new_guests) == DLB_SUCCESS );
-        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1);
-        assert( new_guests[3] == p1_pid );
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 2 releases CPU 2
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 2, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] <= 0 );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 2, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // Process 2 reclaims all
-        assert( shmem_cpuinfo__reclaim_all(p2_pid, new_guests, victims) == DLB_NOTED );
-        assert( new_guests[0] == -1     && new_guests[1] == -1 );
-        assert( new_guests[2] == p2_pid && new_guests[3] == p2_pid );
-        assert( victims[0] == -1 && victims[1] == -1 && victims[2] == -1 );
-        assert( victims[3] == p1_pid );
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, &tasks) == DLB_NOTED );
+        assert( tasks.count == 3 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 2
+                && tasks.items[0].action == ENABLE_CPU );
+        assert( tasks.items[1].pid == p1_pid
+                && tasks.items[1].cpuid == 3
+                && tasks.items[1].action == DISABLE_CPU );
+        assert( tasks.items[2].pid == p2_pid
+                && tasks.items[2].cpuid == 3
+                && tasks.items[2].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 1 releases CPU 3
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == p2_pid );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 && tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 3 && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
     }
 
     /*** AcquireCpus test ***/
     {
         // Process 2 releases CPU 3
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] <= 0 );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // Process 1 wants to ACQUIRE 2 CPUs
         requested_ncpus = 2;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                    last_borrow, new_guests, victims);
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
-        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
-        assert( new_guests[3] == p1_pid );
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 2 releases CPU 2
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 2, &new_guests[0]) == DLB_SUCCESS );
-        assert( async ? new_guests[0] == p1_pid : new_guests[0] == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 2, &tasks) == DLB_SUCCESS );
+        assert( async ? tasks.count == 1 && tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 2 && tasks.items[0].action == ENABLE_CPU
+                : tasks.count == 0 );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // If polling, process 1 needs to ask again for the last CPU
         if (!async) {
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                    last_borrow, new_guests, victims) == DLB_SUCCESS );
-            assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[3] == -1 );
-            assert( new_guests[2] == p1_pid );
-            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks) == DLB_SUCCESS );
+            assert( tasks.count == 1 );
+            assert( tasks.items[0].pid == p1_pid
+                    && tasks.items[0].cpuid == 2
+                    && tasks.items[0].action == ENABLE_CPU );
+            array_cpuinfo_task_t_clear(&tasks);
         }
 
         // Process 2 reclaims all
-        assert( shmem_cpuinfo__reclaim_all(p2_pid, new_guests, victims) == DLB_NOTED );
-        assert( new_guests[0] == -1     && new_guests[1] == -1 );
-        assert( new_guests[2] == p2_pid && new_guests[3] == p2_pid );
-        assert( victims[0] == -1     && victims[1] == -1 );
-        assert( victims[2] == p1_pid && victims[3] == p1_pid );
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, &tasks) == DLB_NOTED );
+        assert( tasks.count == 4 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 2
+                && tasks.items[0].action == DISABLE_CPU );
+        assert( tasks.items[1].pid == p2_pid
+                && tasks.items[1].cpuid == 2
+                && tasks.items[1].action == ENABLE_CPU );
+        assert( tasks.items[2].pid == p1_pid
+                && tasks.items[2].cpuid == 3
+                && tasks.items[2].action == DISABLE_CPU );
+        assert( tasks.items[3].pid == p2_pid
+                && tasks.items[3].cpuid == 3
+                && tasks.items[3].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 1 releases CPU 2 and 3
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 2, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == p2_pid );
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == p2_pid );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 2, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 && tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 2 && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 && tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 3 && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
     }
 
     /*** AcquireCpus with late reply ***/
     {
         // Process 2 releases CPU 3
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] <= 0 );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // Process 1 wants to ACQUIRE 2 CPUs
         requested_ncpus = 2;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                    last_borrow, new_guests, victims);
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
-        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
-        assert( new_guests[3] == p1_pid );
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 1 wants to cancel previous request
         shmem_cpuinfo__remove_requests(p1_pid);
 
         // Process 1 releases CPU 3
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] <= 0 );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // Process 2 reclaims all
-        assert( shmem_cpuinfo__reclaim_all(p2_pid, new_guests, victims) == DLB_SUCCESS );
-        assert( new_guests[0] == -1 && new_guests[1] == -1 && new_guests[2] == -1 );
-        assert( new_guests[3] == p2_pid );
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
     }
 
     /*** AcquireCpus one by one with some CPUs already reclaimed ***/
     {
         // Process 1 releases CPUs 0 and 1
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 0, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == 0 );
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 0, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 1, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // Process 2 acquires CPU 0
-        assert( shmem_cpuinfo__acquire_cpu(p2_pid, 0, &new_guests[0], &victims[0])
-                == DLB_SUCCESS );
-        assert( new_guests[0] == p2_pid );
-        assert( victims[0] == -1 );
+        assert( shmem_cpuinfo__acquire_cpu(p2_pid, 0, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 0
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 1 acquires 1 CPU (acquires CPU 1 first, currently idle)
         requested_ncpus = 1;
         assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                    last_borrow, new_guests, victims) == DLB_SUCCESS );
-        assert( new_guests[1] == p1_pid );
-        assert( new_guests[0] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
-        assert( victims[0] == -1 && victims[1] == -1 && victims[2] == -1 && victims[3] == -1 );
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 1
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 1 acquires 1 CPU (reclaims CPU 0)
         requested_ncpus = 1;
         assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                    last_borrow, new_guests, victims) == DLB_NOTED );
-        assert( new_guests[0] == p1_pid );
-        assert( new_guests[1] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
-        assert( victims[0] == p2_pid );
-        assert( victims[1] == -1 && victims[2] == -1 && victims[3] == -1 );
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks) == DLB_NOTED );
+        assert( tasks.count == 2 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 0
+                && tasks.items[0].action == DISABLE_CPU );
+        assert( tasks.items[1].pid == p1_pid
+                && tasks.items[1].cpuid == 0
+                && tasks.items[1].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 2 returns CPU 0
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 0, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == p1_pid );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 0, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 && tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 0 && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
     }
 
     /*** AcquireCpus of CPUs not in the priority array ***/
     {
         // Process 2 acquires 1 CPU, but only allowing CPUs [2, 3, 1]
-        i = 0;
-        cpus_priority_array[i++] = 2;
-        cpus_priority_array[i++] = 3;
-        cpus_priority_array[i++] = 1;
-        for (; i<SYS_SIZE; ++i) cpus_priority_array[i] = -1;
+        array_cpuid_t_clear(&cpus_priority_array);
+        array_cpuid_t_push(&cpus_priority_array, 2);
+        array_cpuid_t_push(&cpus_priority_array, 3);
+        array_cpuid_t_push(&cpus_priority_array, 1);
         requested_ncpus = 1;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                    last_borrow, new_guests, victims);
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
-        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( tasks.count == 0 );
 
         // Process 1 releases CPU 0
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 0, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 0, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // If polling, process 2 needs to ask again (no update because CPU 0 is not eligible)
         if (!async) {
             requested_ncpus = 1;
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                        cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                        last_borrow, new_guests, victims) == DLB_NOUPDT );
-            for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
-            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+                        &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                        last_borrow, &tasks) == DLB_NOUPDT );
+            assert( tasks.count == 0 );
         }
 
         // Process 1 acquires CPU 0 (currently idle)
-        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 0, &new_guests[0], &victims[0])
-                == DLB_SUCCESS );
-        assert( new_guests[0] == p1_pid );
-        assert( victims[0] == -1 );
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 0, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 0
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // Process 1 releases CPU 1
-        assert( shmem_cpuinfo__lend_cpu(p1_pid, 1, &new_guests[0]) == DLB_SUCCESS );
-        assert( async ? new_guests[0] == p2_pid : new_guests[0] == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p1_pid, 1, &tasks) == DLB_SUCCESS );
+        assert( async ? tasks.count == 1 && tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 1 && tasks.items[0].action == ENABLE_CPU
+                : tasks.count == 0 );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // If polling, process 2 needs to ask again
         if (!async) {
             requested_ncpus = 1;
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                        cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                        last_borrow, new_guests, victims) == DLB_SUCCESS );
-            assert( new_guests[1] == p2_pid );
-            assert( new_guests[0] == -1 && new_guests[2] == -1 && new_guests[3] == -1 );
-            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+                        &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                        last_borrow, &tasks) == DLB_SUCCESS );
+            assert( tasks.count == 1 );
+            assert( tasks.items[0].pid == p2_pid
+                    && tasks.items[0].cpuid == 1
+                    && tasks.items[0].action == ENABLE_CPU );
+            array_cpuinfo_task_t_clear(&tasks);
         }
 
         // Process 2 releases CPU 1
-        assert( shmem_cpuinfo__lend_cpu(p2_pid, 1, &new_guests[0]) == DLB_SUCCESS );
-        assert( new_guests[0] == 0 );
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 1, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
 
         // 1 acquires CPU 1 (currently idle)
-        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 1, &new_guests[0], &victims[0])
-                == DLB_SUCCESS );
-        assert( new_guests[0] == p1_pid );
-        assert( victims[0] == -1 );
+        assert( shmem_cpuinfo__acquire_cpu(p1_pid, 1, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 1
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
     }
 
     // Finalize
@@ -293,7 +356,8 @@ int main( int argc, char **argv ) {
     /* Test lend post mortem feature */
     {
         // Reset cpu priority
-        for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i;
+        array_cpuid_t_clear(&cpus_priority_array);
+        for (int i=0; i<SYS_SIZE; ++i) array_cpuid_t_push(&cpus_priority_array, i);
 
         // Set up fake spd to set post-mortem option
         subprocess_descriptor_t spd;
@@ -310,10 +374,16 @@ int main( int argc, char **argv ) {
 
         // P2 borrows P1 CPUs
         assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */, last_borrow,
-                    new_guests) == DLB_SUCCESS );
-        assert( new_guests[0] == p2_pid && new_guests[1] == p2_pid );
-        assert( new_guests[2] == -1 && new_guests[3] == -1 );
+                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    last_borrow, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 2 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 0
+                && tasks.items[0].action == ENABLE_CPU );
+        assert( tasks.items[1].pid == p2_pid
+                && tasks.items[1].cpuid == 1
+                && tasks.items[1].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
 
         // P2 finalizes
         assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
@@ -322,7 +392,8 @@ int main( int argc, char **argv ) {
     /* Test early finalization with pending actions */
     {
         // Reset cpu priority
-        for (i=0; i<SYS_SIZE; ++i) cpus_priority_array[i] = i;
+        array_cpuid_t_clear(&cpus_priority_array);
+        for (int i=0; i<SYS_SIZE; ++i) array_cpuid_t_push(&cpus_priority_array, i);
 
         // Set up fake spd to set post-mortem option
         subprocess_descriptor_t spd;
@@ -334,50 +405,49 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
         if (async) { shmem_cpuinfo__enable_request_queues(); }
 
-        // P2 lends CPUs 2 & 3
-        assert( shmem_cpuinfo__lend_cpu_mask(p2_pid, &p2_mask, new_guests) == DLB_SUCCESS );
-        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] <= 0 ); }
-
-        // P1 borrows all
-        assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p1_pid, NULL /* requested_ncpus */,
-                    cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */, last_borrow,
-                    new_guests) == DLB_SUCCESS );
-        assert( new_guests[0] == -1     && new_guests[1] == -1 );
-        assert( new_guests[2] == p1_pid && new_guests[3] == p1_pid );
-
         // P2 asks for as many CPUs as SYS_SIZE
         requested_ncpus = SYS_SIZE;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                last_borrow, new_guests, victims);
+                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
-        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( tasks.count == 0 );
 
         // P1 finalizes
-        assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__deregister(p1_pid, &tasks) == DLB_SUCCESS );
         if (async) {
-            for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == p2_pid ); }
+            assert( tasks.count == 2 );
+            assert( tasks.items[0].pid == p2_pid
+                    && tasks.items[0].cpuid == 0
+                    && tasks.items[0].action == ENABLE_CPU );
+            assert( tasks.items[1].pid == p2_pid
+                    && tasks.items[1].cpuid == 1
+                    && tasks.items[1].action == ENABLE_CPU );
+            array_cpuinfo_task_t_clear(&tasks);
         } else {
-            for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == 0 ); }
+            assert( tasks.count == 0 );
         }
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
         assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
 
         // If polling, P2 needs to ask again for SYS_SIZE CPUs
         if (!async) {
             requested_ncpus = SYS_SIZE;
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                        cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
-                        last_borrow, new_guests, victims) == DLB_SUCCESS );
-            for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == p2_pid ); }
-            for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+                        &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                        last_borrow, &tasks) == DLB_SUCCESS );
+            assert( tasks.count == 2 );
+            assert( tasks.items[0].pid == p2_pid
+                    && tasks.items[0].cpuid == 0
+                    && tasks.items[0].action == ENABLE_CPU );
+            assert( tasks.items[1].pid == p2_pid
+                    && tasks.items[1].cpuid == 1
+                    && tasks.items[1].action == ENABLE_CPU );
+            array_cpuinfo_task_t_clear(&tasks);
         }
 
         // P2 finalizes
-        assert( shmem_cpuinfo__deregister(p1_pid, new_guests, victims) == DLB_SUCCESS );
-        for (i=0; i<SYS_SIZE; ++i) { assert( new_guests[i] == -1 ); }
-        for (i=0; i<SYS_SIZE; ++i) { assert( victims[i] == -1 ); }
+        assert( shmem_cpuinfo__deregister(p1_pid, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
         assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 

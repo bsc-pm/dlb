@@ -48,10 +48,7 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__getprocessmask(pid, NULL, DLB_SYNC_QUERY) == DLB_ERR_NOSHMEM );
     assert( shmem_procinfo__polldrom(pid, NULL, NULL) == DLB_ERR_NOSHMEM );
 
-    // Init with too many CPUs
-    CPU_SET(mu_get_system_size(), &process_mask);
-    assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_ERR_PERM );
-    // Init (good)
+    // Init
     CPU_CLR(mu_get_system_size(), &process_mask);
     assert( shmem_procinfo__init(pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
     // A second init for the same pid should fail

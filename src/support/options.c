@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -598,7 +598,7 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
         case OPT_PRIO_T:
             return equivalent_priority(value1, value2);
         case OPT_MASK_T:
-            return equivalent_masks(value1, value2);
+            return mu_equivalent_masks(value1, value2);
         case OPT_MODE_T:
             return equivalent_mode(value1, value2);
         case OPT_MPISET_T:

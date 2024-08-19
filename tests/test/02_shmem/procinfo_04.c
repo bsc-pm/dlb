@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -45,6 +45,7 @@
 int main( int argc, char **argv ) {
     // This test needs at least room for 4 CPUs
     enum { SYS_SIZE = 4 };
+    enum { MASK_SIZE = sizeof(unsigned long) };
     mu_init();
     mu_testing_set_sys_size(SYS_SIZE);
 
@@ -70,7 +71,7 @@ int main( int argc, char **argv ) {
     pid_t p2_pid = 222;
     CPU_ZERO(&p2_mask);
     assert( shmem_procinfo__init(p2_pid, p2_preinit_pid, NULL, &p2_mask, SHMEM_KEY) == DLB_NOTED );
-    assert( CPU_EQUAL(&original_p2_mask, &p2_mask) );
+    assert( CPU_EQUAL_S(MASK_SIZE, &original_p2_mask, &p2_mask) );
 
     // Initialize sub-process 1
     pid_t p1_pid = 111;
@@ -79,7 +80,7 @@ int main( int argc, char **argv ) {
     cpu_set_t p1_mask_after;
     /* P1 needs to readjust its mask: [1111] - [1100] = [0011] */
     mu_substract(&p1_mask_after, &original_p1_mask, &original_p2_mask);
-    assert( CPU_EQUAL(&p1_mask_after, &p1_mask) );
+    assert( CPU_EQUAL_S(MASK_SIZE, &p1_mask_after, &p1_mask) );
 
     // Finalize sub-process 1
     assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
@@ -92,8 +93,8 @@ int main( int argc, char **argv ) {
     // Sub-process 2 polls
     int ncpus = 0;
     assert( shmem_procinfo__polldrom(p2_pid, &ncpus, &p2_mask) == DLB_SUCCESS );
-    assert( ncpus == CPU_COUNT(&new_p2_mask) );
-    assert( CPU_EQUAL(&new_p2_mask, &p2_mask) );
+    assert( ncpus == CPU_COUNT_S(MASK_SIZE, &new_p2_mask) );
+    assert( CPU_EQUAL_S(MASK_SIZE, &new_p2_mask, &p2_mask) );
 
     // Finalize sub-process 2
     assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
