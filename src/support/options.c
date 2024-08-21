@@ -986,7 +986,7 @@ void options_print_variables(const options_t *options, bool print_extended) {
     printbuffer_init(&buffer);
 
     /* Set up intermediate buffer per entry */
-    enum { MAX_ENTRY_LEN = 128 };
+    enum { MAX_ENTRY_LEN = 256 };
     char entry_buffer[MAX_ENTRY_LEN];
 
     /* Header (last \n is not needed) */
@@ -1026,8 +1026,14 @@ void options_print_variables(const options_t *options, bool print_extended) {
                     name_len < 8 ? "\t\t\t" : name_len < 16 ? "\t\t" : "\t");
         } else {
             /* Long option, break line */
-            b += snprintf(b, max_entry_len, "%s:\n\t\t\t", entry->arg_name);
+            b += sprintf(b, "%s:\n\t\t\t",
+                    entry->arg_name);
         }
+
+        /* Check if output was truncated, and update remaining entry length */
+        fatal_cond((b - entry_buffer) >= MAX_ENTRY_LEN,
+                "Output truncated in in %s. Please report bug at %s",
+                __func__, PACKAGE_BUGREPORT);
         max_entry_len = MAX_ENTRY_LEN - (b - entry_buffer);
 
         /* Value */
@@ -1036,6 +1042,11 @@ void options_print_variables(const options_t *options, bool print_extended) {
         b += snprintf(b, max_entry_len, "%s %s",
                 value,
                 value_len < 8 ? "\t\t" : value_len < 16 ? "\t" : "");
+
+        /* Check if output was truncated, and update remaining entry length */
+        fatal_cond((b - entry_buffer) >= MAX_ENTRY_LEN,
+                "Output truncated in in %s. Please report bug at %s",
+                __func__, PACKAGE_BUGREPORT);
         max_entry_len = MAX_ENTRY_LEN - (b - entry_buffer);
 
         /* Choices */
@@ -1089,6 +1100,11 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 b += snprintf(b, max_entry_len, "[%s]", get_omptm_version_choices());
                 break;
         }
+
+        /* Check if output was truncated */
+        fatal_cond((b - entry_buffer) >= MAX_ENTRY_LEN,
+                "Buffer overflow in %s. Please report bug at %s",
+                __func__, PACKAGE_BUGREPORT);
 
         /* Append entry listing */
         printbuffer_append(&buffer, entry_buffer);
