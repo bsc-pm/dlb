@@ -1021,12 +1021,12 @@ void options_print_variables(const options_t *options, bool print_extended) {
         size_t name_len = strlen(entry->arg_name) + 1;
         if (name_len < 24) {
             /* Option + tabs until column 24 */
-            b += sprintf(b, "%s:%s",
+            b += snprintf(b, max_entry_len, "%s:%s",
                     entry->arg_name,
                     name_len < 8 ? "\t\t\t" : name_len < 16 ? "\t\t" : "\t");
         } else {
             /* Long option, break line */
-            b += sprintf(b, "%s:\n\t\t\t",
+            b += snprintf(b, max_entry_len, "%s:\n\t\t\t",
                     entry->arg_name);
         }
 
