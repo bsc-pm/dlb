@@ -32,7 +32,7 @@ program test
     type(c_ptr) :: dlb_handle_1, dlb_handle_2, dlb_handle_3
     character(9), pointer :: monitor_name
 
-    err = dlb_init(0, C_NULL_PTR, c_char_"--talp"//C_NULL_CHAR)
+    err = DLB_Init(0, C_NULL_PTR, c_char_"--talp"//C_NULL_CHAR)
     if (err /= DLB_SUCCESS) call abort
 
     dlb_handle_1 = DLB_MonitoringRegionRegister(c_char_"region 1"//C_NULL_CHAR)
@@ -74,13 +74,13 @@ program test
 
     if (dlb_monitor%num_measurements /= N) call abort
 
-    err = dlb_monitoringregionreport(dlb_handle_1)
+    err = DLB_MonitoringRegionReport(dlb_handle_1)
     if (err /= DLB_SUCCESS) call abort
-    err = dlb_monitoringregionreport(dlb_handle_2)
+    err = DLB_MonitoringRegionReport(dlb_handle_2)
     if (err /= DLB_SUCCESS) call abort
-    err = dlb_monitoringregionreport(dlb_handle_3)
+    err = DLB_MonitoringRegionReport(dlb_handle_3)
     if (err /= DLB_SUCCESS) call abort
 
-    err = dlb_finalize()
+    err = DLB_Finalize()
     if (err /= DLB_SUCCESS) call abort
 end program test

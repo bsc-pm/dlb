@@ -30,7 +30,7 @@ program test
     type(c_ptr) :: dlb_barrier_1, dlb_barrier_2
     ! character(9), pointer :: barrier_name
 
-    err = dlb_init(0, C_NULL_PTR, c_char_"--barrier"//C_NULL_CHAR)
+    err = DLB_Init(0, C_NULL_PTR, c_char_"--barrier"//C_NULL_CHAR)
     if (err /= DLB_SUCCESS) call abort
 
     dlb_barrier_1 = DLB_BarrierNamedRegister(                       &
@@ -58,6 +58,6 @@ program test
     err = DLB_Printshmem(0, DLB_COLOR_AUTO);
     if (err /= DLB_SUCCESS) call abort
 
-    err = dlb_finalize()
+    err = DLB_Finalize()
     if (err /= DLB_SUCCESS) call abort
 end program test
