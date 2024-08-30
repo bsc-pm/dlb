@@ -32,6 +32,7 @@ import shlex
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
+    'sphinxmermaid',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -297,3 +298,14 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+
+# Mermaid style
+sphinxmermaid_mermaid_init = {
+    'theme': 'base',
+    'themeVariables': {
+        'primaryColor': '#e7f2fa',
+        'primaryBorderColor': '#6ab0de',
+        'secondaryColor': '#ffffff'
+    }
+}
