@@ -1392,8 +1392,10 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     if (resume_region) {
         monitoring_region_start(spd, monitor);
     }
-#endif
     return DLB_SUCCESS;
+#else
+    return DLB_ERR_NOCOMP;
+#endif
 }
 
 /* Function that may be called from a third-party process to compute

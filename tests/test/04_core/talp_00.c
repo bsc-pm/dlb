@@ -261,6 +261,12 @@ int main(int argc, char *argv[]) {
         assert( first->num_measurements == 2 );
     }
 
+    /* Test function not compatble without MPI support */
+    {
+        dlb_pop_metrics_t pop_metrics;
+        assert( talp_collect_pop_metrics(&spd, mpi_monitor, &pop_metrics) == DLB_ERR_NOCOMP );
+    }
+
     talp_finalize(&spd);
 
     return 0;

@@ -274,6 +274,7 @@ int DLB_MonitoringRegionsUpdate(void);
  *  \param[out] pop_metrics Allocated structure where the collected metrics will be stored
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
+ *  \return DLB_ERR_NOCOMP if the DLB library does not support MPI
  */
 int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics);
 
