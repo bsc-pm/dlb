@@ -501,6 +501,10 @@ bool shmem_talp__exists(void) {
     return shm_handler != NULL;
 }
 
+bool shmem_talp__initialized(void) {
+    return shdata && shdata->initialized;
+}
+
 int shmem_talp__version(void) {
     return SHMEM_TALP_VERSION;
 }

@@ -39,17 +39,22 @@
 /*********************************************************************************/
 
 int DLB_TALP_Attach(void) {
+    int lewi_color;
+    char shm_key[MAX_OPTION_LENGTH];
+    char *shm_key_ptr;
     spd_enter_dlb(thread_spd);
     if (!thread_spd->dlb_initialized) {
         set_observer_role(true);
+        options_parse_entry("--shm-key", shm_key);
+        options_parse_entry("--lewi-color", &lewi_color);
+        shm_key_ptr = shm_key;
+    } else {
+        lewi_color = thread_spd->options.lewi_color;
+        shm_key_ptr = thread_spd->options.shm_key;
     }
-    char shm_key[MAX_OPTION_LENGTH];
-    options_parse_entry("--shm-key", &shm_key);
-    int lewi_color;
-    options_parse_entry("--lewi-color", &lewi_color);
-    shmem_cpuinfo_ext__init(shm_key, lewi_color);
-    shmem_procinfo_ext__init(shm_key);
-    shmem_talp_ext__init(shm_key, 0);
+    shmem_cpuinfo_ext__init(shm_key_ptr, lewi_color);
+    shmem_procinfo_ext__init(shm_key_ptr);
+    shmem_talp_ext__init(shm_key_ptr, 0);
     return DLB_SUCCESS;
 }
 
@@ -70,13 +75,27 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
 }
 
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
-    talp_region_list_t region;
-    int error = shmem_talp__get_region(&region, pid,
-            monitoring_region_get_MPI_region_name());
+    int error;
+    if (pid == 0 || (thread_spd && thread_spd->id == pid)) {
+        /* Same process */
+        const dlb_monitor_t *monitor = monitoring_region_get_MPI_region(thread_spd);
+        if (monitor != NULL) {
+            *mpi_time = nsecs_to_secs(monitor->accumulated_MPI_time);
+            *useful_time = nsecs_to_secs(monitor->accumulated_computation_time);
+            error = DLB_SUCCESS;
+        } else {
+            error = DLB_ERR_NOTALP;
+        }
+    } else {
+        /* Different process, fetch from shared memory */
+        talp_region_list_t region;
+        error = shmem_talp__get_region(&region, pid,
+                monitoring_region_get_MPI_region_name());
 
-    if (error == DLB_SUCCESS) {
-        *mpi_time = nsecs_to_secs(region.mpi_time);
-        *useful_time = nsecs_to_secs(region.useful_time);
+        if (error == DLB_SUCCESS) {
+            *mpi_time = nsecs_to_secs(region.mpi_time);
+            *useful_time = nsecs_to_secs(region.useful_time);
+        }
     }
 
     return error;
@@ -84,31 +103,46 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
 
 int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
         int *nelems, int max_len) {
-    int shmem_max_regions = shmem_talp__get_max_regions();
-    if (max_len > shmem_max_regions) {
-        max_len = shmem_max_regions;
-    }
-    if (name == DLB_MPI_REGION) {
-        name = monitoring_region_get_MPI_region_name();
-    }
-    talp_region_list_t *region_list = malloc(sizeof(talp_region_list_t)*max_len);
-    int error = shmem_talp__get_regionlist(region_list, nelems, max_len, name);
-    if (error == DLB_SUCCESS) {
-        int i;
-        for (i=0; i<*nelems; ++i) {
-            node_times_list[i] = (const dlb_node_times_t) {
-                .pid         = region_list[i].pid,
-                .mpi_time    = region_list[i].mpi_time,
-                .useful_time = region_list[i].useful_time,
-            };
+
+    int error;
+
+    if (shmem_talp__initialized()) {
+        /* Only if a worker process started with --talp-external-profiler */
+        int shmem_max_regions = shmem_talp__get_max_regions();
+        if (max_len > shmem_max_regions) {
+            max_len = shmem_max_regions;
         }
+        if (name == DLB_MPI_REGION) {
+            name = monitoring_region_get_MPI_region_name();
+        }
+        talp_region_list_t *region_list = malloc(sizeof(talp_region_list_t)*max_len);
+        error = shmem_talp__get_regionlist(region_list, nelems, max_len, name);
+        if (error == DLB_SUCCESS) {
+            int i;
+            for (i=0; i<*nelems; ++i) {
+                node_times_list[i] = (const dlb_node_times_t) {
+                    .pid         = region_list[i].pid,
+                    .mpi_time    = region_list[i].mpi_time,
+                    .useful_time = region_list[i].useful_time,
+                };
+            }
+        }
+        free(region_list);
+    } else {
+        /* shmem does not exist */
+        error = DLB_ERR_NOSHMEM;
     }
-    free(region_list);
+
     return error;
 }
 
 int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics) {
-    return talp_query_pop_node_metrics(name, node_metrics);
+    if (shmem_talp__initialized()) {
+        /* Only if a worker process started with --talp-external-profiler */
+        return talp_query_pop_node_metrics(name, node_metrics);
+    } else {
+        return DLB_ERR_NOSHMEM;
+    }
 }
 
 

@@ -55,6 +55,7 @@ int shmem_talp__set_times(int region_id, int64_t mpi_time, int64_t useful_time);
 /* Misc */
 void shmem_talp__print_info(const char *shmem_key, int regions_per_process);
 bool shmem_talp__exists(void);
+bool shmem_talp__initialized(void);
 int  shmem_talp__version(void);
 size_t shmem_talp__size(void);
 int shmem_talp__get_max_regions(void);

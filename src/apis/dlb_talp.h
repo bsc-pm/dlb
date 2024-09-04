@@ -149,7 +149,7 @@ int DLB_TALP_Attach(void);
  *  \return DLB_ERR_NOSHMEM if cannot find shared memory to detach from
  *
  *  If previously attached, a process must call this function to correctly close
- *  file descriptors and clean data.
+ *  internal DLB file descriptors and clean data.
  */
 int DLB_TALP_Detach(void);
 
@@ -169,11 +169,13 @@ int DLB_TALP_GetNumCPUs(int *ncpus);
 int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len);
 
 /*! \brief Get the CPU time spent on MPI and useful computation for the given process
- *  \param[in] pid target Process ID
+ *  \param[in] pid target Process ID, or 0 if own process
  *  \param[out] mpi_time CPU time spent on MPI in seconds
  *  \param[out] useful_time CPU time spend on useful computation in seconds
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *  \return DLB_ERR_NOTALP if target is own process and TALP is not enabled
  */
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
 
@@ -184,6 +186,9 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time);
  *  \param[in] max_len Max capacity of the list
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOSHMEM if cannot find shared memory
+ *
+ *  Note: This function requires DLB_ARGS+=" --talp-external-profiler" even if
+ *  it's called from 1st-party programs.
  */
 int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
         int *nelems, int max_len);
@@ -193,9 +198,10 @@ int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
  *  \param[out] node_metrics Allocated structure where the collected metrics will be stored
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOENT if no data for the given name
+ *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *
- *  If called from a third party, this function requires the application to run
- *  with DLB_ARGS+=" --talp-external-profiler"
+ *  Note: This function requires DLB_ARGS+=" --talp-external-profiler" even if
+ *  it's called from 1st-party programs.
  */
 int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics);
 
