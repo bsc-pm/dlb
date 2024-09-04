@@ -13,6 +13,8 @@ Structure after installation
         ├── bin
         ├── include
         ├── lib
+        │   └── cmake
+        │       └── DLB
         └── share
             ├── doc
             │   └── dlb
