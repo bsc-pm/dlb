@@ -567,6 +567,27 @@ dlb_tester_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS) $(OPENMP_CFLAGS)
 dlb_tester_LDADD = libdlb.la
 endif
 
+
+#********************************************************************************
+# cmake
+#********************************************************************************
+CMAKE_CONFIG_FILE = $(top_srcdir)/cmake/DLBConfig.cmake
+CMAKE_VERSION_FILE = $(top_srcdir)/cmake/DLBConfigVersion.cmake.in
+CMAKE_VERSION_GEN_FILE = $(builddir)/cmake/DLBConfigVersion.cmake
+
+EXTRA_DIST += \
+	$(CMAKE_CONFIG_FILE)  \
+	$(CMAKE_VERSION_FILE) \
+	$(END)
+
+# needed for install and uninstall rules
+CMAKE_FILES_INSTALL_DIR = $(libdir)/cmake
+DLB_CMAKE_FILES_INSTALL_DIR = $(CMAKE_FILES_INSTALL_DIR)/DLB
+DLB_CMAKE_INSTALLED_FILES = \
+	$(DLB_CMAKE_FILES_INSTALL_DIR)/DLBConfig.cmake \
+	$(DLB_CMAKE_FILES_INSTALL_DIR)/DLBConfigVersion.cmake \
+	$(END)
+
 #################################################################################
 ### doc                                                                       ###
 #################################################################################
@@ -595,6 +616,17 @@ dist_paravercfgs_DATA = $(paraver_cfgs)
 #********************************************************************************
 # Examples
 #********************************************************************************
+### CMAKE project ###
+cmakeexamples_files = \
+	doc/examples/cmake_project/app.c \
+	doc/examples/cmake_project/app.f90 \
+	doc/examples/cmake_project/CMakeLists.txt \
+	doc/examples/cmake_project/README.md \
+	$(END)
+
+cmakeexamplesdir = $(docdir)/examples/cmake_project
+dist_cmakeexamples_DATA = $(cmakeexamples_files)
+
 ### DROM ###
 dromexamples_files = \
 	doc/examples/drom/drom_01.c \
@@ -1100,6 +1132,23 @@ endif
 #################################################################################
 
 clean-local: clean-rpm clean-deb clean-doc clean-coverage
+
+install-data-local:
+	cmake_dest_dir="$(DESTDIR)$(DLB_CMAKE_FILES_INSTALL_DIR)"; \
+	$(MKDIR_P) "$$cmake_dest_dir"; \
+	$(INSTALL_DATA) $(CMAKE_CONFIG_FILE) "$$cmake_dest_dir"; \
+	$(INSTALL_DATA) $(CMAKE_VERSION_GEN_FILE) "$$cmake_dest_dir";
+
+uninstall-local:
+	for file in $(DESTDIR)$(DLB_CMAKE_INSTALLED_FILES); do \
+		rm -f "$(DESTDIR)$$file"; \
+	done
+	if test -d $(DESTDIR)$(DLB_CMAKE_FILES_INSTALL_DIR); \
+		then rmdir $(DESTDIR)$(DLB_CMAKE_FILES_INSTALL_DIR); \
+	fi
+	if test -d $(DESTDIR)$(CMAKE_FILES_INSTALL_DIR); \
+		then rmdir $(DESTDIR)$(CMAKE_FILES_INSTALL_DIR); \
+	fi
 
 install-data-hook:
 	chmod +x $(DESTDIR)$(lewicustomrtexamplesdir)/run.sh
