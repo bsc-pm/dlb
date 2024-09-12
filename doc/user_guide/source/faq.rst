@@ -24,6 +24,62 @@ with different number of threads.
 If this limitation cannot be solved, you can use the DLB API to only change the
 number of threads on code regions that are safe to do so.
 
+How to decide which DLB library to link with or to preload?
+===========================================================
+
+Linking with DLB is only necessary if the application uses the DLB API. In this
+case, we recommend linking with the ``libdlb.so`` dynamic library, even if it's
+an MPI application:
+
+.. code-block:: sh
+
+   DLB_PREFIX="<path-to-DLB-installation>"
+
+   # Manually specifying link flags
+   <cc/mpicc> app.c ... -I"$DLB_PREFIX"/include -L"$DLB_PREFIX"/lib -ldlb -Wl,-rpath,"$DLB_PREFIX"/lib
+
+   # or cmake-based project (and adding find_package(DLB REQUIRED))
+   export CMAKE_PREFIX_PATH+=":$DLB_PREFIX/lib"
+   cmake <source-dir> ...
+
+Preloading the DLB library is necessary unless the application does not use
+MPI or Extrae, and it has already been linked with the base ``libdlb.so``.
+For all other scenarios, use the following chart to decide which library
+to preload using the ``LD_PRELOAD`` environment variable:
+
+.. only:: html
+
+    .. mermaid::
+
+        flowchart LR
+            start[What to LD_PRELOAD?]
+            mpi[MPI Application?]
+            extrae1[Running with Extrae?]
+            extrae2[Running with Extrae?]
+
+            mpi_extrae[**libdlb_mpi_instr.so**]
+            mpi_noextrae[**libdlb_mpi.so**]
+
+            nompi_extrae[**libdlb_instr.so**]
+            nompi_noextrae[**libdlb.so**]
+
+
+            start --> mpi
+
+            mpi -- Yes --> extrae1
+            mpi -- No  --> extrae2
+
+            extrae1 -- Yes --> mpi_extrae
+            extrae1 -- No  --> mpi_noextrae
+
+            extrae2 -- Yes --> nompi_extrae
+            extrae2 -- No  --> nompi_noextrae
+
+.. only:: latex
+
+  .. image:: images/ld_preload.png
+
+
 Which should I use, LeWI or DROM for my application?
 ====================================================
 
