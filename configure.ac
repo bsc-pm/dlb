@@ -1,8 +1,22 @@
 
-AC_INIT([DLB],[3.5a],[dlb@bsc.es])
+AC_INIT([DLB],
+        m4_esyscmd([scripts/git-version-gen .tarball-version]),
+        [dlb@bsc.es],
+        [dlb],
+        [https://pm.bsc.es/dlb])
 AC_CONFIG_SRCDIR([src/LB_core/DLB_kernel.c])
 
-configure_orig_arguments="$@"
+# Save configure arguments, ignore the ones we are not interested in
+dlb_config_args="$0"
+for arg in ${1+"$@"}; do
+    case $arg in
+        --no-create) ;;
+        --no-recursion) ;;
+        --*able-developer-mode) ;;
+        --*able-extra-warnings) ;;
+        *) AS_VAR_APPEND([dlb_config_args], [" $arg"])
+    esac
+done
 
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 AC_CONFIG_MACRO_DIR([m4])
@@ -21,51 +35,50 @@ AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 ################################################################################
 AC_ARG_VAR([GIT], [distributed version control system])
 AC_PATH_PROG([GIT], [git], [])
-# Make sure build_version is double-quoted!
+
+build_from_git=no
+dlb_version_string="$PACKAGE $VERSION"
 AS_IF([test -e "$srcdir/.git"], [
     AC_MSG_CHECKING([revision of git repository])
     AS_IF([test x"$GIT" != x], [
-        echo "$GIT" "$srcdir" >& AS_MESSAGE_LOG_FD
-        run_gitdescribe=`"$GIT" --git-dir=$srcdir/.git describe | head -n 1`
-        run_gitbranch=`"$GIT" --git-dir=$srcdir/.git rev-parse --abbrev-ref HEAD | head -n 1`
-        build_version="\"$run_gitdescribe $run_gitbranch\""
-        git_description="\"$run_gitdescribe\""
+        dlb_git_branch=`"$GIT" --git-dir=$srcdir/.git rev-parse --abbrev-ref HEAD`
+        dlb_git_describe=`"$GIT" --git-dir=$srcdir/.git describe HEAD`
+        dlb_version_string="$PACKAGE $VERSION ($dlb_git_branch)"
+        AC_MSG_RESULT([$dlb_git_describe ($dlb_git_branch)])
+        build_from_git=yes
     ], [
-        build_version="\"unknown build version, as git was not available\""
-        git_description="\"unknown revision\""
+        AC_MSG_RESULT([unknown])
     ])
-    AC_MSG_RESULT([$build_version])
-    developer_version=yes
-], [test -e $srcdir/VERSION], [
+], [test -e $srcdir/.tarball-version], [
     AC_MSG_CHECKING([revision of distributed release])
-    run_build_version=`cat $srcdir/VERSION`
-    run_git_description=`cat $srcdir/VERSION | head -n 1 | cut -f 1 -d " "`
-    build_version="\"$run_build_version\""
-    git_description="\"$run_git_description\""
-    developer_version=no
-    AC_MSG_RESULT([$build_version])
-], [
-    build_version="\"unknown revision\""
-    git_description="\"unknown revision\""
-    developer_version=no
+    AC_MSG_RESULT([$VERSION])
 ])
-AC_DEFINE_UNQUOTED([DLB_BUILD_VERSION], [$build_version], [Build version])
-AC_DEFINE_UNQUOTED([DLB_GIT_DESCRIPTION], [$git_description], [Build version])
+AC_DEFINE_UNQUOTED([DLB_VERSION_STRING], ["$dlb_version_string"], [dlb version string, and possibly branch])
 
-AC_MSG_CHECKING([whether to enable developer mode])
+# DEPRECATED --enable-developer-mode in favor of --enable-extra-warnings
 AC_ARG_ENABLE([developer-mode],
-    AS_HELP_STRING([--enable-developer-mode], [use stricter error compilation flags]),
-    [
-        AS_IF([test x"$enable_developer_mode" = xyes], [
-            developer_version=yes
-        ])
-     ],
-     []
+    AS_HELP_STRING([--enable-developer-mode],
+                   [(deprecated: use --enable-extra-warnings instead)
+                    use stricter error compilation flags]),
+    [], dnl Implicit: enable_developer_mode=$enableval
+    [enable_developer_mode=no]
 )
-AC_MSG_RESULT([$developer_version])
 
-dlb_config_args='"'$(echo "$0 $configure_orig_arguments")'"'
-AC_DEFINE_UNQUOTED([DLB_CONFIGURE_ARGS], [$dlb_config_args], [Configure line])
+AC_MSG_CHECKING([whether to enable extra warnings])
+AC_ARG_ENABLE([extra-warnings],
+    AS_HELP_STRING([--enable-extra-warnings],
+                   [enable -Wall, -Werror, and other extra warning flags
+                    (enabled by default if project is a git repository, disabled otherwise)]),
+    [], dnl Implicit: enable_extra_warnings=$enableval
+    [enable_extra_warnings=$build_from_git]
+)
+# keep compatibility until removal
+AS_IF([test x"$enable_developer_mode" = xyes && test x"$enable_extra_warnings" = xno], [
+       enable_extra_warnings=yes
+])
+AC_MSG_RESULT([$enable_extra_warnings])
+
+AC_DEFINE_UNQUOTED([DLB_CONFIGURE_ARGS], ["$dlb_config_args"], [Configure options])
 
 # Debian release
 AC_CHECK_PROG([DEB_RELEASE], [lsb_release], [$(lsb_release -sc)], [])
@@ -126,7 +139,7 @@ export FCOMP_UNRECOGNIZED_OPTION
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
 AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])
-AS_IF([test "x$developer_version" = xyes], [
+AS_IF([test "x$enable_extra_warnings" = xyes], [
     AX_CHECK_COMPILE_FLAG([-Wall], [AC_CFLAGS="${AC_CFLAGS} -Wall"])
     AX_CHECK_COMPILE_FLAG([-Werror], [AC_CFLAGS="${AC_CFLAGS} -Werror"])
     AX_CHECK_COMPILE_FLAG([-Wshadow], [AC_CFLAGS="${AC_CFLAGS} -Wshadow"])
@@ -175,7 +188,7 @@ AS_IF([test "x$FC" = x], [
     AX_CHECK_COMPILE_FLAG([-we10157], [FCFLAGS="${FCFLAGS} -we10157"])
 
     AX_CHECK_COMPILE_FLAG([-pthread], [AC_FCFLAGS="${AC_FCFLAGS} -pthread"])
-    AS_IF([test "x$developer_version" = xyes], [
+    AS_IF([test "x$enable_extra_warnings" = xyes], [
         AX_CHECK_COMPILE_FLAG([-Wall], [AC_FCFLAGS="${AC_FCFLAGS} -Wall"])
         AX_CHECK_COMPILE_FLAG([-Wno-c-binding-type], [AC_FCFLAGS="${AC_FCFLAGS} -Wno-c-binding-type"])
         AX_CHECK_FC_HONORS_NO_C_BINDING_TYPE([
@@ -462,10 +475,15 @@ AC_SUBST([AC_LDFLAGS])
 # generate the final Makefile etc.
 AC_OUTPUT
 
+# Generate an underlined title
+summary_title="$PACKAGE_STRING configuration summary"
+summary_title_len="${#summary_title}"
+summary_title_underline="$(printf '%*s' "$summary_title_len" | tr ' ' '=')"
+
 # Summary
 AS_ECHO(["
-$PACKAGE_STRING configuration summary
-=============================
+$summary_title
+$summary_title_underline
 
 Installation prefix       : $prefix
 Debug version             : $enable_debug

@@ -1091,6 +1091,7 @@ LIT_EXTRA = scripts/lit/PKG-INFO \
 EXTRA_DIST += \
 	scripts/bets \
 	scripts/dlb.spec \
+	scripts/git-version-gen \
 	scripts/pygen.py \
 	scripts/viewer/dlb_cpu_usage.in \
 	scripts/viewer/dlb_viewer.py.in \
@@ -1180,6 +1181,14 @@ endif
 
 
 #################################################################################
+### other files                                                               ###
+#################################################################################
+EXTRA_DIST += meson.build \
+	      meson_options.txt \
+	      tests/meson.build \
+	      $(END)
+
+#################################################################################
 ### Hooks                                                                     ###
 #################################################################################
 
@@ -1224,12 +1233,10 @@ install-data-hook:
 dist-hook:
 	if [ -x "$(GIT)" ]; \
 	then \
-	    "$(GIT)" --git-dir=$(top_srcdir)/.git log --pretty=format:"[%h] %cd : %s (%an)" --date=short > $(distdir)/ChangeLog; \
-	    git_run_description=`"$(GIT)" --git-dir=$(top_srcdir)/.git describe | head -n 1`; \
-	    git_run_branch=`"$(GIT)" --git-dir=$(top_srcdir)/.git rev-parse --abbrev-ref HEAD | head -n 1`; \
-	    git_version="$${git_run_description} $${git_run_branch}"; \
-	    echo $${git_version} > ${distdir}/VERSION; \
-	elif [ -e $(top_srcdir)/VERSION ]; \
+	    "$(GIT)" --git-dir=$(top_srcdir)/.git log --pretty=format:"[%h] %cd : %s (%an)" --date=short \
+	        > $(distdir)/ChangeLog; \
+	    echo $(VERSION) > $(distdir)/.tarball-version; \
+	elif [ -e $(top_srcdir)/.tarball-version ]; \
 	then \
-	    cp $(top_srcdir)/VERSION $(distdir)/VERSION; \
+	    cp $(top_srcdir)/.tarball-version $(distdir)/.tarball-version; \
 	fi

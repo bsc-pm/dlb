@@ -1,9 +1,13 @@
-project('DLB', 'c', 'fortran',
-  version : '3.5a',
+project('dlb', 'c', 'fortran',
+  version : run_command('scripts/git-version-gen', '.tarball-version',
+    check : true).stdout().strip(),
   license: ' LGPL-3.0-or-later',
   default_options : [
   ]
 )
+
+# Generate .tarball-version file on a 'meson dist' command
+meson.add_dist_script('scripts/meson-set-dist-version.sh', meson.project_version())
 
 cc = meson.get_compiler('c')
 fc = meson.get_compiler('fortran')
@@ -413,27 +417,27 @@ subdir('tests')
 ### config.h                                                                  ###
 #################################################################################
 
+project_name_lowercase = meson.project_name().to_lower()
+dlb_version_string = project_name_lowercase + ' ' + meson.project_version()
+
 git_program = find_program('git', required : false)
 if git_program.found()
-  git_describe_result = run_command([git_program, 'describe'], capture : true, check : true)
-  git_branch_result = run_command([git_program, 'rev-parse','--abbrev-ref', 'HEAD'], capture : true, check : true)
-  git_description = git_describe_result.stdout().strip()
-  git_branch = git_branch_result.stdout().strip()
-  build_version = git_description + ' ' + git_branch
-else
-  git_description = 'unknown revision'
-  git_branch = 'unknown branch'
-  build_version = 'unknown build version, as git was not available'
+  git_branch_result = run_command(
+      [git_program, 'rev-parse','--abbrev-ref', 'HEAD'], capture : true, check : false
+    )
+  if git_branch_result.returncode() == 0
+    dlb_version_string += ' (' + git_branch_result.stdout().strip() + ')'
+  endif
 endif
 
 conf_data = configuration_data()
 conf_data.set_quoted('VERSION', meson.project_version())
-conf_data.set_quoted('PACKAGE', meson.project_name())
+conf_data.set_quoted('PACKAGE', project_name_lowercase)
 conf_data.set_quoted('PACKAGE_BUGREPORT', 'dlb@bsc.es')
+conf_data.set_quoted('PACKAGE_NAME', meson.project_name())
 conf_data.set_quoted('PACKAGE_VERSION', meson.project_version())
-conf_data.set_quoted('DLB_BUILD_VERSION', build_version)
-conf_data.set_quoted('DLB_GIT_DESCRIPTION', git_description)
-conf_data.set_quoted('DLB_CONFIGURE_ARGS', 'not supported')
+conf_data.set_quoted('DLB_CONFIGURE_ARGS', 'meson setup ' + meson.build_options())
+conf_data.set_quoted('DLB_VERSION_STRING', dlb_version_string)
 conf_data.set('HAVE_EMMINTRIN_H', cc.has_header('emmintrin.h'))
 conf_data.set('HAVE_EXECINFO_H', cc.has_header('execinfo.h'))
 conf_data.set('HAVE_IMMINTRIN_H', cc.has_header('immintrin.h'))
