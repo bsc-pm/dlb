@@ -1235,8 +1235,15 @@ dist-hook:
 	then \
 	    "$(GIT)" --git-dir=$(top_srcdir)/.git log --pretty=format:"[%h] %cd : %s (%an)" --date=short \
 	        > $(distdir)/ChangeLog; \
+	    echo $(DLB_GIT_BRANCH) > $(distdir)/.tarball-git-branch; \
 	    echo $(VERSION) > $(distdir)/.tarball-version; \
-	elif [ -e $(top_srcdir)/.tarball-version ]; \
-	then \
-	    cp $(top_srcdir)/.tarball-version $(distdir)/.tarball-version; \
+	else \
+	    if [ -e $(top_srcdir)/.tarball-git-branch ]; \
+	    then \
+	        cp $(top_srcdir)/.tarball-git-branch $(distdir)/.tarball-git-branch; \
+	    fi; \
+	    if [ -e $(top_srcdir)/.tarball-version ]; \
+	    then \
+	        cp $(top_srcdir)/.tarball-version $(distdir)/.tarball-version; \
+	    fi; \
 	fi

@@ -37,6 +37,7 @@ AC_ARG_VAR([GIT], [distributed version control system])
 AC_PATH_PROG([GIT], [git], [])
 
 build_from_git=no
+dlb_git_branch=""
 dlb_version_string="$PACKAGE $VERSION"
 AS_IF([test -e "$srcdir/.git"], [
     AC_MSG_CHECKING([revision of git repository])
@@ -54,6 +55,10 @@ AS_IF([test -e "$srcdir/.git"], [
     AC_MSG_RESULT([$VERSION])
 ])
 AC_DEFINE_UNQUOTED([DLB_VERSION_STRING], ["$dlb_version_string"], [dlb version string, and possibly branch])
+
+# branch is needed for internal CI pipelines
+DLB_GIT_BRANCH="$dlb_git_branch"
+AC_SUBST([DLB_GIT_BRANCH])
 
 # DEPRECATED --enable-developer-mode in favor of --enable-extra-warnings
 AC_ARG_ENABLE([developer-mode],

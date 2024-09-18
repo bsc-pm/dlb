@@ -6,9 +6,6 @@ project('dlb', 'c', 'fortran',
   ]
 )
 
-# Generate .tarball-version file on a 'meson dist' command
-meson.add_dist_script('scripts/meson-set-dist-version.sh', meson.project_version())
-
 cc = meson.get_compiler('c')
 fc = meson.get_compiler('fortran')
 
@@ -419,6 +416,7 @@ subdir('tests')
 
 project_name_lowercase = meson.project_name().to_lower()
 dlb_version_string = project_name_lowercase + ' ' + meson.project_version()
+dlb_git_branch = ''
 
 git_program = find_program('git', required : false)
 if git_program.found()
@@ -426,7 +424,8 @@ if git_program.found()
       [git_program, 'rev-parse','--abbrev-ref', 'HEAD'], capture : true, check : false
     )
   if git_branch_result.returncode() == 0
-    dlb_version_string += ' (' + git_branch_result.stdout().strip() + ')'
+    dlb_git_branch = git_branch_result.stdout().strip()
+    dlb_version_string += ' (' + dlb_git_branch + ')'
   endif
 endif
 
@@ -444,6 +443,18 @@ conf_data.set('HAVE_IMMINTRIN_H', cc.has_header('immintrin.h'))
 conf_data.set('HAVE_STDATOMIC_H', cc.has_header('stdatomic.h'))
 conf_data.set_quoted('MPI_LIBRARY_VERSION', mpi_library_version)
 config_h = configure_file( output : 'config.h', configuration : conf_data)
+
+
+#################################################################################
+### dist                                                                      ###
+#################################################################################
+
+# Generate .tarbal-git-branch and .tarball-version files on a 'meson dist' command
+meson.add_dist_script(
+  'scripts/meson-dist-gen.sh',
+  dlb_git_branch,
+  meson.project_version()
+)
 
 
 #################################################################################
