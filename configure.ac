@@ -370,6 +370,7 @@ AC_CONFIG_FILES([
     Makefile
     tests/Makefile
     cmake/DLBConfigVersion.cmake
+    doc/examples/barrier/Makefile
     doc/examples/drom/Makefile
     doc/examples/lewi_custom_rt/run.sh
     doc/examples/lewi_custom_rt/Makefile

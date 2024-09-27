@@ -616,6 +616,22 @@ dist_paravercfgs_DATA = $(paraver_cfgs)
 #********************************************************************************
 # Examples
 #********************************************************************************
+### Barrier ###
+barrierexamples_files = \
+	doc/examples/barrier/app.c \
+	doc/examples/barrier/extrae.xml \
+	doc/examples/barrier/README \
+	doc/examples/barrier/run.sh \
+	$(END)
+
+barrierexamples_files_nodist = \
+	doc/examples/barrier/Makefile \
+	$(END)
+
+barrierexamplesdir = $(docdir)/examples/barrier
+dist_barrierexamples_DATA = $(barrierexamples_files)
+nodist_barrierexamples_DATA = $(barrierexamples_files_nodist)
+
 ### CMAKE project ###
 cmakeexamples_files = \
 	doc/examples/cmake_project/app.c \
@@ -1151,6 +1167,7 @@ uninstall-local:
 	fi
 
 install-data-hook:
+	chmod +x $(DESTDIR)$(barrierexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(lewicustomrtexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompomptexamplesdir)/run.sh
