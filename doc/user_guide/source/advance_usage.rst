@@ -83,6 +83,21 @@ how to register these callbacks::
         DLB_Finalize();
     }
 
+The following table contains the callbacks that DLB may call for each of the listed modes:
+
+    +------------+--------------------------------+
+    | Mode       | Available callbacks            |
+    +============+================================+
+    | LeWI       | dlb_callback_set_num_threads   |
+    +------------+--------------------------------+
+    | LeWI mask  | | dlb_callback_enable_cpu      |
+    |            | | dlb_callback_enable_cpu_set  |
+    |            | | dlb_callback_disable_cpu     |
+    |            | | dlb_callback_disable_cpu_set |
+    +------------+--------------------------------+
+    | DROM       | dlb_callback_set_process_mask  |
+    +------------+--------------------------------+
+
 
 .. _asynchronous:
 
