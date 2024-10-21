@@ -2212,9 +2212,9 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int shmem_color, int colum
         printbuffer_append(&buffer, line);
     }
     for (lewi_mask_request_t *it =
-            queue_lewi_mask_request_t_front(&shdata->lewi_mask_requests);
+            queue_lewi_mask_request_t_front(&shdata_copy->lewi_mask_requests);
             it != NULL;
-            it = queue_lewi_mask_request_t_next(&shdata->lewi_mask_requests, it)) {
+            it = queue_lewi_mask_request_t_next(&shdata_copy->lewi_mask_requests, it)) {
         snprintf(line, MAX_LINE_LEN,
                 "    %*d: %d, %s",
                 max_digits, it->pid, it->howmany, mu_to_str(&it->allowed));
