@@ -101,7 +101,7 @@ int main( int argc, char **argv ) {
         // Process 1 wants to BORROW up to 2 CPUs
         requested_ncpus = 2;
         assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks) == DLB_SUCCESS );
         assert( tasks.count == 1 );
         assert( tasks.items[0].pid == p1_pid
@@ -143,7 +143,7 @@ int main( int argc, char **argv ) {
         // Process 1 wants to ACQUIRE 2 CPUs
         requested_ncpus = 2;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
         assert( tasks.count == 1 );
@@ -162,7 +162,7 @@ int main( int argc, char **argv ) {
         // If polling, process 1 needs to ask again for the last CPU
         if (!async) {
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks) == DLB_SUCCESS );
             assert( tasks.count == 1 );
             assert( tasks.items[0].pid == p1_pid
@@ -208,7 +208,7 @@ int main( int argc, char **argv ) {
         // Process 1 wants to ACQUIRE 2 CPUs
         requested_ncpus = 2;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_SUCCESS );
         assert( tasks.count == 1 );
@@ -252,7 +252,7 @@ int main( int argc, char **argv ) {
         // Process 1 acquires 1 CPU (acquires CPU 1 first, currently idle)
         requested_ncpus = 1;
         assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks) == DLB_SUCCESS );
         assert( tasks.count == 1 );
         assert( tasks.items[0].pid == p1_pid
@@ -263,7 +263,7 @@ int main( int argc, char **argv ) {
         // Process 1 acquires 1 CPU (reclaims CPU 0)
         requested_ncpus = 1;
         assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks) == DLB_NOTED );
         assert( tasks.count == 2 );
         assert( tasks.items[0].pid == p2_pid
@@ -290,7 +290,7 @@ int main( int argc, char **argv ) {
         array_cpuid_t_push(&cpus_priority_array, 1);
         requested_ncpus = 1;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( tasks.count == 0 );
@@ -303,7 +303,7 @@ int main( int argc, char **argv ) {
         if (!async) {
             requested_ncpus = 1;
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                        &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                        &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                         last_borrow, &tasks) == DLB_NOUPDT );
             assert( tasks.count == 0 );
         }
@@ -327,7 +327,7 @@ int main( int argc, char **argv ) {
         if (!async) {
             requested_ncpus = 1;
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                        &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                        &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                         last_borrow, &tasks) == DLB_SUCCESS );
             assert( tasks.count == 1 );
             assert( tasks.items[0].pid == p2_pid
@@ -374,7 +374,7 @@ int main( int argc, char **argv ) {
 
         // P2 borrows P1 CPUs
         assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p2_pid, NULL /* requested_ncpus */,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     last_borrow, &tasks) == DLB_SUCCESS );
         assert( tasks.count == 2 );
         assert( tasks.items[0].pid == p2_pid
@@ -408,7 +408,7 @@ int main( int argc, char **argv ) {
         // P2 asks for as many CPUs as SYS_SIZE
         requested_ncpus = SYS_SIZE;
         err = shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                 last_borrow, &tasks);
         assert( async ? err == DLB_NOTED : err == DLB_NOUPDT );
         assert( tasks.count == 0 );
@@ -433,7 +433,7 @@ int main( int argc, char **argv ) {
         if (!async) {
             requested_ncpus = SYS_SIZE;
             assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                        &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                        &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                         last_borrow, &tasks) == DLB_SUCCESS );
             assert( tasks.count == 2 );
             assert( tasks.items[0].pid == p2_pid

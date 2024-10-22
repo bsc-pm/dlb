@@ -431,7 +431,7 @@ int main( int argc, char **argv ) {
         array_cpuid_t_init(&cpus_priority_array, SYS_SIZE);
         array_cpuid_t_push(&cpus_priority_array, 3);
         assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                    &cpus_priority_array, PRIO_ANY,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO,
                     /* max_parallelism */ 0, /* last_borrow */ NULL, &tasks)
                 == DLB_SUCCESS );
         assert( tasks.count == 1 );
@@ -468,7 +468,7 @@ int main( int argc, char **argv ) {
         array_cpuid_t_push(&cpus_priority_array, 0);
         array_cpuid_t_push(&cpus_priority_array, 1);
         assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_cpus,
-                    &cpus_priority_array, PRIO_NEARBY_FIRST,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO,
                     /* max_parallelism */ 0, /* last_borrow */ NULL, &tasks)
                 == async ? DLB_NOTED : DLB_SUCCESS );
         assert( tasks.count == 1 );

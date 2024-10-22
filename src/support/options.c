@@ -56,7 +56,7 @@ typedef enum OptionTypes {
     OPT_VBFMT_T,    // verbose_fmt_t
     OPT_INST_T,     // instrument_items_t
     OPT_DBG_T,      // debug_opts_t
-    OPT_PRIO_T,     // priority_t
+    OPT_LEWI_AFF_T, // lewi_affinity_t
     OPT_MASK_T,     // cpu_set_t
     OPT_MODE_T,     // interaction_mode_t
     OPT_MPISET_T,   // mpi_set_t
@@ -291,16 +291,25 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-affinity",
-        .default_value  = "nearby-first",
-        .description    = OFFSET"Prioritize resource sharing based on hardware affinity.\n"
-                          OFFSET"Nearby-first will try to assign first resources that share the\n"
-                          OFFSET"same socket or NUMA node with the current process. Nearby-only\n"
-                          OFFSET"will only assign those near the process. Spread-ifempty will\n"
-                          OFFSET"prioritize also nearby resources, and then it will assign CPUS\n"
-                          OFFSET"in other sockets or NUMA nodes only if there is no other\n"
-                          OFFSET"that can benefit from those.",
+        .default_value  = "auto",
+        .description    = OFFSET"Select which affinity policy to use.\n"
+                          OFFSET"With 'auto', DLB will infer the LeWI policy for either classic\n"
+                          OFFSET"(no mask support) or LeWI_mask depending on a number of factors.\n"
+                          OFFSET"To override the automatic detection, use either 'none' or 'mask'\n"
+                          OFFSET"to select the respective policy.\n"
+                          OFFSET"The tokens 'nearby-first', 'nearby-only', and 'spread-ifempty'\n"
+                          OFFSET"also enforce mask support with extended policies.\n"
+                          OFFSET"'nearby-first' is the default policy when LeWI has mask support\n"
+                          OFFSET"and will instruct LeWI to assign resources that share the same\n"
+                          OFFSET"socket or NUMA node with the current process first, then the\n"
+                          OFFSET"rest.\n"
+                          OFFSET"'nearby-only' will make LeWI assign only those resources that\n"
+                          OFFSET"are near the process.\n"
+                          OFFSET"'spread-ifempty' will also prioritise nearby resources, but the\n"
+                          OFFSET"rest will only be considered if all CPUs in that socket or NUMA\n"
+                          OFFSET"node has been lent to DLB.",
         .offset         = offsetof(options_t, lewi_affinity),
-        .type           = OPT_PRIO_T,
+        .type           = OPT_LEWI_AFF_T,
         .flags          = OPT_OPTIONAL
     }, {
         .var_name       = "LB_NULL",
@@ -308,12 +317,12 @@ static const opts_dict_t options_dictionary[] = {
         .default_value  = "borrow",
         .description    = OFFSET"OMPT option flags for LeWI. If OMPT mode is enabled, set when\n"
                           OFFSET"DLB can automatically invoke LeWI functions to lend or borrow\n"
-                          OFFSET"CPUs. If \"none\" is set, LeWI will not be invoked automatically.\n"
-                          OFFSET"If \"borrow\" is set, DLB will try to borrow CPUs in certain\n"
+                          OFFSET"CPUs. If 'none' is set, LeWI will not be invoked automatically.\n"
+                          OFFSET"If 'borrow' is set, DLB will try to borrow CPUs in certain\n"
                           OFFSET"situations; typically, before non nested parallel constructs if\n"
                           OFFSET"the OMPT thread manager is omp5 and on each task creation and\n"
                           OFFSET"task switch in other thread managers. (This option is the default\n"
-                          OFFSET"and should be enough in most of the cases). If the flag \"lend\"\n"
+                          OFFSET"and should be enough in most of the cases). If the flag 'lend'\n"
                           OFFSET"is set, DLB will lend all non used CPUs after each non nested\n"
                           OFFSET"parallel construct and task completion on external threads.\n"
                           OFFSET"Multiple flags can be selected at the same time.",
@@ -515,8 +524,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_instrument_items(str_value, (instrument_items_t*)option);
         case OPT_DBG_T:
             return parse_debug_opts(str_value, (debug_opts_t*)option);
-        case OPT_PRIO_T:
-            return parse_priority(str_value, (priority_t*)option);
+        case OPT_LEWI_AFF_T:
+            return parse_lewi_affinity(str_value, (lewi_affinity_t*)option);
         case OPT_MASK_T:
             mu_parse_mask(str_value, (cpu_set_t*)option);
             return DLB_SUCCESS;
@@ -556,8 +565,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return instrument_items_tostr(*(instrument_items_t*)option);
         case OPT_DBG_T:
             return debug_opts_tostr(*(debug_opts_t*)option);
-        case OPT_PRIO_T:
-            return priority_tostr(*(priority_t*)option);
+        case OPT_LEWI_AFF_T:
+            return lewi_affinity_tostr(*(lewi_affinity_t*)option);
         case OPT_MASK_T:
             return mu_to_str((cpu_set_t*)option);
         case OPT_MODE_T:
@@ -595,8 +604,8 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
             return equivalent_instrument_items(value1, value2);
         case OPT_DBG_T:
             return equivalent_debug_opts(value1, value2);
-        case OPT_PRIO_T:
-            return equivalent_priority(value1, value2);
+        case OPT_LEWI_AFF_T:
+            return equivalent_lewi_affinity(value1, value2);
         case OPT_MASK_T:
             return mu_equivalent_masks(value1, value2);
         case OPT_MODE_T:
@@ -642,8 +651,8 @@ static void copy_value(option_type_t type, void *dest, const char *src) {
         case OPT_DBG_T:
             memcpy(dest, src, sizeof(debug_opts_t));
             break;
-        case OPT_PRIO_T:
-            memcpy(dest, src, sizeof(priority_t));
+        case OPT_LEWI_AFF_T:
+            memcpy(dest, src, sizeof(lewi_affinity_t));
             break;
         case OPT_MASK_T:
             memcpy(dest, src, sizeof(cpu_set_t));
@@ -1078,8 +1087,8 @@ void options_print_variables(const options_t *options, bool print_extended) {
             case OPT_DBG_T:
                 b += snprintf(b, max_entry_len, "{%s}", get_debug_opts_choices());
                 break;
-            case OPT_PRIO_T:
-                b += snprintf(b, max_entry_len, "[%s]", get_priority_choices());
+            case OPT_LEWI_AFF_T:
+                b += snprintf(b, max_entry_len, "[%s]", get_lewi_affinity_choices());
                 break;
             case OPT_MASK_T:
                 b += snprintf(b, max_entry_len, "(cpuset)");
@@ -1146,9 +1155,9 @@ void options_print_lewi_flags(const options_t *options) {
     parse_mpiset(entry->default_value, &default_lewi_mpi_calls);
 
     // --lewi-affinity
-    priority_t default_lewi_affinity;
+    lewi_affinity_t default_lewi_affinity;
     entry = get_entry_by_name("--lewi-affinity");
-    parse_priority(entry->default_value, &default_lewi_affinity);
+    parse_lewi_affinity(entry->default_value, &default_lewi_affinity);
 
     // --lewi-ompt
     omptool_opts_t default_lewi_ompt;
@@ -1167,7 +1176,7 @@ void options_print_lewi_flags(const options_t *options) {
             info0("  --lewi-mpi-calls=%s", mpiset_tostr(options->lewi_mpi_calls));
         }
         if (options->lewi_affinity != default_lewi_affinity) {
-            info0("  --lewi-affinity=%s", priority_tostr(options->lewi_affinity));
+            info0("  --lewi-affinity=%s", lewi_affinity_tostr(options->lewi_affinity));
         }
         if (options->lewi_ompt != default_lewi_ompt) {
             info0("  --lewi-ompt=%s", omptool_opts_tostr(options->lewi_ompt));

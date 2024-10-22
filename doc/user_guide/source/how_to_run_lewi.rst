@@ -144,24 +144,33 @@ LewI option flags
     control the default unnamed barrier.
     e.g.: ``--lewi-barrier-select=default,barrier3``
 
---lewi-affinity=<any,nearby-first,nearby-only,spread-ifempty>
-    Prioritize resource sharing based on hardware affinity.
-    ``nearby-first`` will try to assign first resources that share the
-    same socket or NUMA node with the current process. ``nearby-only``
-    will only assign those near the process. ``spread-ifempty`` will
-    prioritize also nearby resources, and then it will assign CPUS
-    in other sockets or NUMA nodes only if there is no other
-    that can benefit from those.
+--lewi-affinity=<auto,none,mask,nearby-first,nearby-only,spread-ifempty>
+    Select which affinity policy to use.
+    With ``auto``, DLB will infer the LeWI policy for either classic
+    (no mask support) or LeWI_mask depending on a number of factors.
+    To override the automatic detection, use either ``none`` or ``mask``
+    to select the respective policy.
+    The tokens ``nearby-first``, ``nearby-only`` and ``spread-ifempty``
+    also enforce mask support with extended policies.
+    ``nearby-first`` is the default policy when LeWI has mask support
+    and will instruct LeWI to assign resources that share the same
+    socket or NUMA node with the current process first, then the
+    rest.
+    ``nearby-only`` will make LeWI assign only those resources that
+    are near the process.
+    ``spread-ifempty`` will also prioritise nearby resources, but the
+    rest will only be considered if all CPUs in that socket or NUMA
+    node has been lent to DLB.
 
 --lewi-ompt=<none,{borrow:lend}>
     OMPT option flags for LeWI. If OMPT mode is enabled, set when
     DLB can automatically invoke LeWI functions to lend or borrow
-    CPUs. If "none" is set, LeWI will not be invoked automatically.
-    If "borrow" is set, DLB will try to borrow CPUs in certain
+    CPUs. If ``none`` is set, LeWI will not be invoked automatically.
+    If ``borrow`` is set, DLB will try to borrow CPUs in certain
     situations; typically, before non nested parallel constructs if
     the OMPT thread manager is omp5 and on each task creation and
     task switch in other thread managers. (This option is the default
-    and should be enough in most of the cases). If the flag "lend"
+    and should be enough in most of the cases). If the flag ``lend``
     is set, DLB will lend all non used CPUs after each non nested
     parallel construct and task completion on external threads.
     Multiple flags can be selected at the same time.

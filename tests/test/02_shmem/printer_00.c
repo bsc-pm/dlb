@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     array_cpuid_t_clear(&cpus_priority_array);
     for (int i=4; i<4+requested_ncpus; ++i) array_cpuid_t_push(&cpus_priority_array, i);
     assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p2_pid, &requested_ncpus,
-                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                 last_borrow, &tasks) == DLB_NOTED );
     assert( tasks.count == 0 );
 
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
     array_cpuid_t_clear(&cpus_priority_array);
     for (int i=16; i<16+requested_ncpus; ++i) array_cpuid_t_push(&cpus_priority_array, i);
     assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
-                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                 last_borrow, &tasks) == DLB_NOTED );
     assert( tasks.count == 0 );
 

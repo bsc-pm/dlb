@@ -64,7 +64,7 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--lewi=yes --drom=1 --lewi-affinity=nearby-only");
     assert(options_1.lewi == true);
     assert(options_1.drom == true);
-    assert(options_1.lewi_affinity == PRIO_NEARBY_ONLY);
+    assert(options_1.lewi_affinity == LEWI_AFFINITY_NEARBY_ONLY);
     options_init(&options_1, "--talp");
     assert(options_1.talp == true);
 
@@ -197,7 +197,7 @@ int main( int argc, char **argv ) {
     omptool_opts_t ompt_opts;
     instrument_items_t instr_items;
     mpi_set_t mpiset;
-    priority_t prio;
+    lewi_affinity_t aff;
     interaction_mode_t mode;
     talp_summary_t talp_sum;
     // 1) without thread_spd->options
@@ -213,7 +213,7 @@ int main( int argc, char **argv ) {
     options_parse_entry("--verbose-format", &vb_fmt);   assert(vb_fmt == (VBF_NODE|VBF_SPID));
     options_parse_entry("--instrument", &instr_items);  assert(instr_items == INST_ALL);
     options_parse_entry("--lewi-mpi-calls", &mpiset);   assert(mpiset == MPISET_ALL);
-    options_parse_entry("--lewi-affinity", &prio);      assert(prio == PRIO_NEARBY_FIRST);
+    options_parse_entry("--lewi-affinity", &aff);       assert(aff == LEWI_AFFINITY_AUTO);
     options_parse_entry("--mode", &mode);               assert(mode == MODE_POLLING);
     options_parse_entry("--talp-summary", &talp_sum);   assert(talp_sum == SUMMARY_POP_METRICS);
     // 2) with existing thread_spd
@@ -231,7 +231,7 @@ int main( int argc, char **argv ) {
     options_parse_entry("--verbose-format", &vb_fmt);   assert(vb_fmt == (VBF_NODE|VBF_SPID));
     options_parse_entry("--instrument", &instr_items);  assert(instr_items == INST_ALL);
     options_parse_entry("--lewi-mpi-calls", &mpiset);   assert(mpiset == MPISET_ALL);
-    options_parse_entry("--lewi-affinity", &prio);      assert(prio == PRIO_NEARBY_FIRST);
+    options_parse_entry("--lewi-affinity", &aff);       assert(aff == LEWI_AFFINITY_AUTO);
     options_parse_entry("--mode", &mode);               assert(mode == MODE_POLLING);
     options_parse_entry("--talp-summary", &talp_sum);   assert(talp_sum == SUMMARY_POP_METRICS);
     free(shm_key);

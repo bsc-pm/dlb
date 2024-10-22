@@ -452,7 +452,7 @@ int main (int argc, char *argv[]) {
 
         /* P2 asks for all the CPUs, it should success (CPU 0 is not lent)  */
         assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(p2_pid, NULL,
-                    &cpus_priority_array, PRIO_ANY, 0,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0,
                     &last_borrow, &tasks) == DLB_SUCCESS );
         assert( tasks.count == 3 );
         assert( tasks.items[0].pid == p2_pid

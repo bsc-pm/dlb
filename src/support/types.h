@@ -86,12 +86,14 @@ typedef enum DebugOptions {
     DBG_WARNMPI      = 1 << 3,
 } debug_opts_t;
 
-typedef enum PriorityType {
-    PRIO_ANY,
-    PRIO_NEARBY_FIRST,
-    PRIO_NEARBY_ONLY,
-    PRIO_SPREAD_IFEMPTY
-} priority_t;
+typedef enum LewiAffinity {
+    LEWI_AFFINITY_AUTO,
+    LEWI_AFFINITY_NONE,
+    LEWI_AFFINITY_MASK,
+    LEWI_AFFINITY_NEARBY_FIRST,
+    LEWI_AFFINITY_NEARBY_ONLY,
+    LEWI_AFFINITY_SPREAD_IFEMPTY,
+} lewi_affinity_t;
 
 typedef enum TalpSummaryType {
     SUMMARY_NONE        = 0,
@@ -174,11 +176,11 @@ const char* debug_opts_tostr(debug_opts_t value);
 const char* get_debug_opts_choices(void);
 bool equivalent_debug_opts(const char *str1, const char *str2);
 
-/* priority_t */
-int parse_priority(const char *str, priority_t *value);
-const char* priority_tostr(priority_t value);
-const char* get_priority_choices(void);
-bool equivalent_priority(const char *str1, const char *str2);
+/* lewi_affinity_t */
+int parse_lewi_affinity(const char *str, lewi_affinity_t *value);
+const char* lewi_affinity_tostr(lewi_affinity_t value);
+const char* get_lewi_affinity_choices(void);
+bool equivalent_lewi_affinity(const char *str1, const char *str2);
 
 /* policy_t */
 int parse_policy(const char *str, policy_t *value);

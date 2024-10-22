@@ -80,7 +80,7 @@ static void lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
         const cpu_set_t *process_mask) {
 
     lewi_info_t *lewi_info = spd->lewi_info;
-    priority_t priority = spd->options.lewi_affinity;
+    lewi_affinity_t lewi_affinity = spd->options.lewi_affinity;
 
     cpu_set_t affinity_mask;
     mu_get_nodes_intersecting_with_cpuset(&affinity_mask, process_mask);
@@ -99,21 +99,24 @@ static void lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
         if (CPU_ISSET(cpuid, process_mask)) {
             array_cpuid_t_push(cpus_priority_array, cpuid);
         } else {
-            switch (priority) {
-                case PRIO_ANY:
+            switch (lewi_affinity) {
+                case LEWI_AFFINITY_AUTO:
+                case LEWI_AFFINITY_MASK:
+                case LEWI_AFFINITY_NEARBY_FIRST:
                     array_cpuid_t_push(cpus_priority_array, cpuid);
                     break;
-                case PRIO_NEARBY_FIRST:
-                    array_cpuid_t_push(cpus_priority_array, cpuid);
-                    break;
-                case PRIO_NEARBY_ONLY:
+                case LEWI_AFFINITY_NEARBY_ONLY:
                     if (CPU_ISSET(cpuid, &affinity_mask)) {
                         array_cpuid_t_push(cpus_priority_array, cpuid);
                     }
                     break;
-                case PRIO_SPREAD_IFEMPTY:
+                case LEWI_AFFINITY_SPREAD_IFEMPTY:
                     // This case cannot be pre-computed
                     break;
+                case LEWI_AFFINITY_NONE:
+                    /* LEWI_AFFINITY_NONE should force LeWI without mask support */
+                    fatal("Unhandled LEWI_AFFINITY_NONE in LeWI mask. "
+                            "Please report bug");
             }
         }
     }

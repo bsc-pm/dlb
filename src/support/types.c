@@ -470,45 +470,54 @@ bool equivalent_talp_summary(const char *str1, const char *str2) {
 }
 
 
-/* priority_t */
-static const priority_t priority_values[] =
-    {PRIO_ANY, PRIO_NEARBY_FIRST, PRIO_NEARBY_ONLY, PRIO_SPREAD_IFEMPTY};
-static const char* const priority_choices[] =
-    {"any", "nearby-first", "nearby-only", "spread-ifempty"};
-static const char priority_choices_str[] =
-    "any, nearby-first, nearby-only, spread-ifempty";
-enum { priority_nelems = sizeof(priority_values) / sizeof(priority_values[0]) };
+/* lewi_affinity_t */
+static const lewi_affinity_t lewi_affinity_values[] =
+    {LEWI_AFFINITY_AUTO, LEWI_AFFINITY_NONE, LEWI_AFFINITY_MASK,
+        LEWI_AFFINITY_NEARBY_FIRST, LEWI_AFFINITY_NEARBY_ONLY, LEWI_AFFINITY_SPREAD_IFEMPTY};
+static const char* const lewi_affinity_choices[] =
+    {"auto", "none", "mask", "nearby-first", "nearby-only", "spread-ifempty"};
+static const char lewi_affinity_choices_str[] =
+    "auto, none, mask, nearby-first,"LINE_BREAK
+    "nearby-only, spread-ifempty";
+enum { lewi_affinity_nelems = sizeof(lewi_affinity_values) / sizeof(lewi_affinity_values[0]) };
 
-int parse_priority(const char *str, priority_t *value) {
-    int i;
-    for (i=0; i<priority_nelems; ++i) {
-        if (strcasecmp(str, priority_choices[i]) == 0) {
-            *value = priority_values[i];
+int parse_lewi_affinity(const char *str, lewi_affinity_t *value) {
+
+    for (int i = 0; i < lewi_affinity_nelems; ++i) {
+        if (strcasecmp(str, lewi_affinity_choices[i]) == 0) {
+            *value = lewi_affinity_values[i];
             return DLB_SUCCESS;
         }
     }
+
+    /* Support deprecated values */
+    if (strcasecmp(str, "any") == 0) {
+        *value = LEWI_AFFINITY_MASK;
+        return DLB_SUCCESS;
+    }
+
     return DLB_ERR_NOENT;
 }
 
-const char* priority_tostr(priority_t value) {
+const char* lewi_affinity_tostr(lewi_affinity_t value) {
     int i;
-    for (i=0; i<priority_nelems; ++i) {
-        if (priority_values[i] == value) {
-            return priority_choices[i];
+    for (i=0; i<lewi_affinity_nelems; ++i) {
+        if (lewi_affinity_values[i] == value) {
+            return lewi_affinity_choices[i];
         }
     }
     return "unknown";
 }
 
-const char* get_priority_choices(void) {
-    return priority_choices_str;
+const char* get_lewi_affinity_choices(void) {
+    return lewi_affinity_choices_str;
 }
 
-bool equivalent_priority(const char *str1, const char *str2) {
-    priority_t value1 = PRIO_ANY;
-    priority_t value2 = PRIO_NEARBY_FIRST;
-    int err1 = parse_priority(str1, &value1);
-    int err2 = parse_priority(str2, &value2);
+bool equivalent_lewi_affinity(const char *str1, const char *str2) {
+    lewi_affinity_t value1 = LEWI_AFFINITY_NONE;
+    lewi_affinity_t value2 = LEWI_AFFINITY_MASK;
+    int err1 = parse_lewi_affinity(str1, &value1);
+    int err2 = parse_lewi_affinity(str2, &value2);
     return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
 }
 

@@ -1109,7 +1109,7 @@ static int borrow_cpus_in_array_cpuid_t(pid_t pid,
 int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
         pid_t pid, int *restrict requested_ncpus,
         const array_cpuid_t *restrict cpus_priority_array,
-        priority_t priority, int max_parallelism,
+        lewi_affinity_t lewi_affinity, int max_parallelism,
         int64_t *restrict last_borrow, array_cpuinfo_task_t *restrict tasks) {
 
     /* Return immediately if requested_ncpus is present and not greater than zero */
@@ -1427,7 +1427,7 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restri
 
 int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
         pid_t pid, int *restrict requested_ncpus,
-        const array_cpuid_t *restrict cpus_priority_array, priority_t priority,
+        const array_cpuid_t *restrict cpus_priority_array, lewi_affinity_t lewi_affinity,
         int max_parallelism, int64_t *restrict last_borrow,
         array_cpuinfo_task_t *restrict tasks) {
 
@@ -1436,7 +1436,8 @@ int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
         return DLB_NOUPDT;
     }
 
-    /* Return immediately if the timestamp of the last unsuccessful borrow is newer than the last CPU lent */
+    /* Return immediately if the timestamp of the last unsuccessful borrow is
+     * newer than the last CPU lent */
     if (last_borrow && *last_borrow > DLB_ATOMIC_LD_ACQ(&shdata->timestamp_cpu_lent)) {
         return DLB_NOUPDT;
     }
@@ -1475,7 +1476,7 @@ int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
         }
 
         /* Only if --priority=spread-ifempty, borrow CPUs if there are free NUMA nodes */
-        if (priority == PRIO_SPREAD_IFEMPTY && ncpus > 0) {
+        if (lewi_affinity == LEWI_AFFINITY_SPREAD_IFEMPTY && ncpus > 0) {
             cpu_set_t free_nodes;
             mu_get_nodes_subset_of_cpuset(&free_nodes, &shdata->free_cpus);
             if (borrow_cpus_in_cpu_set_t(pid, &free_nodes, &ncpus, tasks) == DLB_SUCCESS) {

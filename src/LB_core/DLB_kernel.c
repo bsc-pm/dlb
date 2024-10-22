@@ -79,12 +79,18 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     // Infer LeWI mode
     spd->lb_policy =
-        !spd->options.lewi              ? POLICY_NONE :
-        spd->options.ompt               ? POLICY_LEWI_MASK :
-        spd->options.preinit_pid        ? POLICY_LEWI_MASK :
-        mask                            ? POLICY_LEWI_MASK :
-        spd->options.mode == MODE_ASYNC ? POLICY_LEWI_ASYNC :
-                                          POLICY_LEWI;
+        !spd->options.lewi                                  ? POLICY_NONE :
+        spd->options.lewi_affinity == LEWI_AFFINITY_NONE    ? POLICY_LEWI :
+        spd->options.lewi_affinity != LEWI_AFFINITY_AUTO    ? POLICY_LEWI_MASK :
+        spd->options.ompt                                   ? POLICY_LEWI_MASK :
+        spd->options.preinit_pid                            ? POLICY_LEWI_MASK :
+        mask                                                ? POLICY_LEWI_MASK :
+                                                              POLICY_LEWI;
+
+    if (spd->lb_policy == POLICY_LEWI
+            && spd->options.mode == MODE_ASYNC) {
+        spd->lb_policy = POLICY_LEWI_ASYNC;
+    }
 
     // Check if real process mask is needed and possible incompatibilities
     // (Basically, always except if classic LeWI)

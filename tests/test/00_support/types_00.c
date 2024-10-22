@@ -111,15 +111,21 @@ int main(int argc, char *argv[]) {
     assert( !equivalent_instrument_items("talp", "barrier") );
     assert( !equivalent_instrument_items("all", "callbacks") );
 
-    priority_t prio;
-    err = parse_priority("", &prio);                assert(err);
-    err = parse_priority("null", &prio);            assert(err);
-    err = parse_priority("any", &prio);             assert(!err && prio==PRIO_ANY);
-    err = parse_priority("nearby-first", &prio);    assert(!err && prio==PRIO_NEARBY_FIRST);
-    err = parse_priority("nearby-only", &prio);     assert(!err && prio==PRIO_NEARBY_ONLY);
-    err = parse_priority("spread-ifempty", &prio);  assert(!err && prio==PRIO_SPREAD_IFEMPTY);
-    assert(  equivalent_priority("nearby-first", "nearby-first") );
-    assert( !equivalent_priority("nearby-first", "any") );
+    lewi_affinity_t aff;
+    err = parse_lewi_affinity("", &aff);                assert(err);
+    err = parse_lewi_affinity("null", &aff);            assert(err);
+    err = parse_lewi_affinity("auto", &aff);            assert(!err && aff==LEWI_AFFINITY_AUTO);
+    err = parse_lewi_affinity("none", &aff);            assert(!err && aff==LEWI_AFFINITY_NONE);
+    err = parse_lewi_affinity("mask", &aff);            assert(!err && aff==LEWI_AFFINITY_MASK);
+    err = parse_lewi_affinity("any", &aff);             assert(!err && aff==LEWI_AFFINITY_MASK);
+    err = parse_lewi_affinity("nearby-first", &aff);    assert(!err
+                                                            && aff==LEWI_AFFINITY_NEARBY_FIRST);
+    err = parse_lewi_affinity("nearby-only", &aff);     assert(!err
+                                                            && aff==LEWI_AFFINITY_NEARBY_ONLY);
+    err = parse_lewi_affinity("spread-ifempty", &aff);  assert(!err
+                                                            && aff==LEWI_AFFINITY_SPREAD_IFEMPTY);
+    assert(  equivalent_lewi_affinity("nearby-first", "nearby-first") );
+    assert( !equivalent_lewi_affinity("nearby-first", "any") );
 
     policy_t pol;
     err = parse_policy("", &pol);                   assert(err);

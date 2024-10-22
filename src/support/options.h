@@ -51,7 +51,7 @@ typedef struct Options {
     mpi_set_t           lewi_mpi_calls;
     bool                lewi_barrier;
     char                lewi_barrier_select[MAX_OPTION_LENGTH];
-    priority_t          lewi_affinity;
+    lewi_affinity_t     lewi_affinity;
     omptool_opts_t      lewi_ompt;
     int                 lewi_max_parallelism;
     int                 lewi_color;

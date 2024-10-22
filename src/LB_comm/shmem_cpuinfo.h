@@ -69,14 +69,14 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restr
 int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
         pid_t pid, int *restrict requested_ncpus,
         const array_cpuid_t *restrict cpus_priority_array,
-        priority_t priority, int max_parallelism,
+        lewi_affinity_t lewi_affinity, int max_parallelism,
         int64_t *restrict last_borrow, array_cpuinfo_task_t *restrict tasks);
 
 /* Borrow */
 int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
 int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
         pid_t pid, int *restrict requested_ncpus,
-        const array_cpuid_t *restrict cpus_priority_array, priority_t priority,
+        const array_cpuid_t *restrict cpus_priority_array, lewi_affinity_t lewi_affinity,
         int max_parallelism, int64_t *restrict last_borrow,
         array_cpuinfo_task_t *restrict tasks);
 

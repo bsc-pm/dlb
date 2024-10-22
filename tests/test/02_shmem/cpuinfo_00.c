@@ -144,7 +144,7 @@ int main( int argc, char **argv ) {
     // Borrow CPUs
     requested_ncpus = 1;
     assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid, &requested_ncpus,
-                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                 &last_borrow, &tasks)
             == DLB_SUCCESS );
     assert( tasks.count == 1 );
@@ -201,7 +201,7 @@ int main( int argc, char **argv ) {
 
     // Acquire mask
     assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid, NULL /* requested_ncpus */,
-                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                 &last_borrow, &tasks) >= 0 );
     assert( tasks.count == (unsigned)system_size );
     for (int i=0; i<system_size; ++i) {
@@ -221,7 +221,7 @@ int main( int argc, char **argv ) {
 
     // Borrow all
     assert( shmem_cpuinfo__borrow_ncpus_from_cpu_subset(pid, NULL /* requested_ncpus */,
-                &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                 &last_borrow, &tasks) == DLB_SUCCESS );
     assert( tasks.count == (unsigned)system_size );
     for (int i=0; i<system_size; ++i) {
@@ -254,7 +254,7 @@ int main( int argc, char **argv ) {
         array_cpuinfo_task_t_clear(&tasks);
         // Acquire all CPUs again
         assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(pid, NULL /* requested_ncpus */,
-                    &cpus_priority_array, PRIO_ANY, 0 /* max_parallelism */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
                     &last_borrow, &tasks) == DLB_SUCCESS );
         array_cpuinfo_task_t_clear(&tasks);
     }
