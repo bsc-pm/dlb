@@ -16,4 +16,4 @@ fi
 preload="$preload:$DLB_HOME/lib/libdlb_mpi.so"
 preload="$preload:$PWD/libcustom_rt.so"
 
-$MPIEXEC -n 2 env LD_PRELOAD=$preload ./app
+$MPIEXEC -n 2 env LD_PRELOAD="$preload" ./app

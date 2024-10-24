@@ -26,6 +26,7 @@ Structure after installation
             │       │   ├── OMPT
             │       │   ├── TALP
             │       │   ├── lewi_custom_rt
+            │       │   ├── lewi_mask_consumer
             │       │   ├── monitoring_regions
             │       │   └── statistics
             │       └── scripts
@@ -55,6 +56,7 @@ Structure after installation
             |       |   |-- OMPT
             |       |   |-- TALP
             |       |   |-- lewi_custom_rt
+            |       |   |-- lewi_mask_consumer
             |       |   |-- monitoring_regions
             |       |   `-- statistics
             |       `-- scripts
@@ -139,6 +141,12 @@ LeWI with custom runtime system
 -------------------------------
 This example shows the integration of a multithreaded runtime system with
 LeWI in asynchronous mode.
+
+LeWI Mask with a consumer service
+---------------------------------
+This example shows the integration of a service that asynchronously requests
+the maximum number of CPUs and an MPI application that lends its resources
+during an MPI blocking call.
 
 Monitoring Regions
 ------------------

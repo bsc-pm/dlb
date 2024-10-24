@@ -1,0 +1,39 @@
+README
+======
+
+This is a small example with two standalone applications. One is a synthetic
+MPI application that executes a few steps with an introduced load imbalance.
+The other is a non-MPI application that starts with a "logical" empty
+affinity CPU set and adds a request to DLB to borrow as many CPUs as possible
+from other applications.
+
+The MPI application simulates an MPI program whose total duration, frequency
+and duration of MPI collective calls can be parameterized. The non-MPI
+application simulates a service that can always benefit from using as many CPUs
+as possible; its constructor initializes the DLB library and then prints a
+message whenever these are granted or revoked.
+
+Compilation
+-----------
+Check that the Makefile paths are correct and:
+* Optionally, edit `app.c` and change TOTAL_DURATION, MPI_FREQUENCY, and
+  MPI_DURATION as needed
+* Run `make`
+
+Execution
+---------
+* Edit the script `run.sh`
+    * Check that the variables detected at configure time are correct
+    * Review the variables to be modified by the user and change them as you
+      like
+
+* Run the consumer application (service, non-MPI):
+    * `./app_consumer`
+
+* Run the script `run.sh`
+    * The application performs a few MPI collective calls, on each one,
+      DLB reassigns the CPUs blocked in MPIs to the consumer application.
+    * This step can be repeated multiple times while the consumer application
+      is running.
+
+* End the consumer application typing `q<Enter>`

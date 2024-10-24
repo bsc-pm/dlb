@@ -675,6 +675,22 @@ lewicustomrtexamplesdir = $(docdir)/examples/lewi_custom_rt
 dist_lewicustomrtexamples_DATA = $(lewicustomrtexamples_files)
 nodist_lewicustomrtexamples_DATA = $(lewicustomrtexamples_files_nodist)
 
+### LeWI Mask consumer ###
+lewimaskconsumerexamples_files = \
+	doc/examples/lewi_mask_consumer/app.c \
+	doc/examples/lewi_mask_consumer/app_consumer.c \
+	doc/examples/lewi_mask_consumer/README \
+	$(END)
+
+lewimaskconsumerexamples_files_nodist = \
+	doc/examples/lewi_mask_consumer/Makefile \
+	doc/examples/lewi_mask_consumer/run.sh \
+	$(END)
+
+lewimaskconsumerexamplesdir = $(docdir)/examples/lewi_mask_consumer
+dist_lewimaskconsumerexamples_DATA = $(lewimaskconsumerexamples_files)
+nodist_lewimaskconsumerexamples_DATA = $(lewimaskconsumerexamples_files_nodist)
+
 ### MPI+OMP ###
 mpiompexamples_files = \
 	doc/examples/mpi+omp/README \
@@ -1169,6 +1185,7 @@ uninstall-local:
 install-data-hook:
 	chmod +x $(DESTDIR)$(barrierexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(lewicustomrtexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(lewimaskconsumerexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompomptexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompssexamplesdir)/run.sh

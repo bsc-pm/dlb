@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# variables detected at configure time
+DLB_HOME=@prefix@
+MPIEXEC=@MPIEXEC@
+
+preload="$DLB_HOME/lib/libdlb_mpi.so"
+export DLB_ARGS="--mode=async --lewi --lewi-mpi-calls=barrier --lewi-affinity=mask"
+
+$MPIEXEC -n 2 env LD_PRELOAD="$preload" ./app

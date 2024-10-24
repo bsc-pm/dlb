@@ -374,6 +374,8 @@ AC_CONFIG_FILES([
     doc/examples/drom/Makefile
     doc/examples/lewi_custom_rt/run.sh
     doc/examples/lewi_custom_rt/Makefile
+    doc/examples/lewi_mask_consumer/run.sh
+    doc/examples/lewi_mask_consumer/Makefile
     doc/examples/mpi+omp/run.sh
     doc/examples/mpi+omp/Makefile
     doc/examples/mpi+omp_ompt/run.sh
