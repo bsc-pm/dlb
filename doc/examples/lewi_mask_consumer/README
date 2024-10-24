@@ -37,3 +37,7 @@ Execution
       is running.
 
 * End the consumer application typing `q<Enter>`
+
+* If, by any chance, some application crashed or it was not gracefully
+  terminated, you may run `dlb_shm -d` to delete the persistent DLB shared
+  memory.
