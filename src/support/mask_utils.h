@@ -38,6 +38,7 @@ int  mu_get_system_size(void);
 void mu_get_system_mask(cpu_set_t *mask);
 int  mu_get_system_hwthreads_per_core(void);
 bool mu_system_has_smt(void);
+int  mu_get_num_cores(void);
 int  mu_get_core_id(int cpuid);
 const mu_cpuset_t* mu_get_core_mask(int cpuid);
 const mu_cpuset_t* mu_get_core_mask_by_coreid(int core_id);

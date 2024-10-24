@@ -66,7 +66,8 @@ tests = {
     'lewi_mask_01_async'  : {'source' : 'lewi_mask_01.c', 'dlb_args' : '--mode=async'},
     'lewi_mask_01_poll'   : {'source' : 'lewi_mask_01.c', 'dlb_args' : '--mode=polling'},
     'lewi_mask_02'        : {},
-    'lewi_mask_smt_00'    : {},
+    'lewi_mask_smt_00_async' : {'source' : 'lewi_mask_smt_00.c', 'dlb_args' : '--mode=async'},
+    'lewi_mask_smt_00_poll'  : {'source' : 'lewi_mask_smt_00.c', 'dlb_args' : '--mode=polling'},
   },
   '04_core' : {
     'drom_00'             : {},

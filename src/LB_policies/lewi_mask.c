@@ -74,6 +74,16 @@ static inline void cpu_array_and(array_cpuid_t *result,
     }
 }
 
+/* Construct a cpuid array from a cpu_set_t */
+static inline void cpu_array_from_cpuset(array_cpuid_t *result,
+        const cpu_set_t *cpu_set) {
+    for (int cpuid = mu_get_first_cpu(cpu_set);
+            cpuid >= 0;
+            cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
+        array_cpuid_t_push(result, cpuid);
+    }
+}
+
 
 /* Construct a priority list of CPUs considering the topology and the affinity mask */
 static void lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
@@ -195,7 +205,8 @@ static void resolve_cpuinfo_tasks(const subprocess_descriptor_t *restrict spd,
 
     size_t tasks_count = tasks->count;
 
-    /* We don't need it strictly sorted, but grouped by pid */
+    /* We don't need it strictly sorted, but if there are 3 or more tasks
+     * we need to group them by pid */
     if (tasks_count > 2 ) {
         array_cpuinfo_task_t_sort(&_tasks);
     }
@@ -381,79 +392,131 @@ int lewi_mask_UnsetMaxParallelism(const subprocess_descriptor_t *spd) {
 /*    MPI                                                                        */
 /*********************************************************************************/
 
+/* Obtain thread mask and remove first core if keep_cpu_on_blocking_call */
+static inline void get_mask_for_blocking_call(
+        cpu_set_t *cpu_set, bool keep_cpu_on_blocking_call) {
+
+    /* Obtain current thread's affinity mask */
+    pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), cpu_set);
+
+    if (keep_cpu_on_blocking_call) {
+        /* Remove the first core */
+        int first_cpuid = mu_get_first_cpu(cpu_set);
+        const mu_cpuset_t *first_core = mu_get_core_mask(first_cpuid);
+        mu_substract(cpu_set, cpu_set, first_core->set);
+    }
+}
+
+/* Lend the CPUs of the thread encountering the blocking call */
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
-    if (!spd->options.lewi_keep_cpu_on_blocking_call) {
-        cpu_set_t thread_mask;
-        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-        int cpuid = mu_get_single_cpu(&thread_mask);
-        if (cpuid >= 0) {
+
+    /* Obtain affinity mask to lend */
+    cpu_set_t cpu_set;
+    get_mask_for_blocking_call(&cpu_set,
+            spd->options.lewi_keep_cpu_on_blocking_call);
+
+    if (mu_count(&cpu_set) > 0) {
 #ifdef DEBUG_VERSION
-            /* Annotate current CPU to in_MPI cpuset */
-            lewi_info_t *lewi_info = spd->lewi_info;
-            fatal_cond(CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
-                    "CPU %d already into blocking call", cpuid);
-            CPU_SET(cpuid,  &lewi_info->in_mpi_cpus);
+        /* Add cpu_set to in_mpi_cpus */
+        lewi_info_t *lewi_info = spd->lewi_info;
+        fatal_cond(mu_intersects(&lewi_info->in_mpi_cpus, &cpu_set),
+                    "Some CPU in %s already into blocking call", mu_to_str(&cpu_set));
+        mu_or(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
 #endif
-            /* Lend the current CPU */
-            error = lewi_mask_LendCpu(spd, cpuid);
-        } else {
-            /* The thread contains more than one CPU in its affinity mask, skip */
-        }
+        verbose(VB_MICROLB, "In blocking call, lending %s", mu_to_str(&cpu_set));
+
+        /* Finally, lend mask */
+        error = lewi_mask_LendCpuMask(spd, &cpu_set);
     }
     return error;
 }
 
+/* Reclaim the CPUs that were lent when encountering the blocking call.
+ * The thread must have not change its affinity mask since then. */
 int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
     int error = DLB_NOUPDT;
-    if (!spd->options.lewi_keep_cpu_on_blocking_call) {
-        cpu_set_t thread_mask;
-        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-        int cpuid = mu_get_single_cpu(&thread_mask);
-        if (cpuid >= 0) {
-            lewi_info_t *lewi_info = spd->lewi_info;
+
+    /* Obtain affinity mask to reclaim */
+    cpu_set_t cpu_set;
+    get_mask_for_blocking_call(&cpu_set,
+            spd->options.lewi_keep_cpu_on_blocking_call);
+
+    if (mu_count(&cpu_set) > 0) {
+        lewi_info_t *lewi_info = spd->lewi_info;
 #ifdef DEBUG_VERSION
-            /* Clear current CPU from in_MPI cpuset */
-            fatal_cond(!CPU_ISSET(cpuid,  &lewi_info->in_mpi_cpus),
-                    "CPU %d is not into blocking call", cpuid);
-            CPU_CLR(cpuid,  &lewi_info->in_mpi_cpus);
+        /* Clear cpu_set from in_mpi_cpus */
+        fatal_cond(!mu_is_subset(&lewi_info->in_mpi_cpus, &cpu_set),
+                "Some CPU in %s is not into blocking call", mu_to_str(&cpu_set));
+        mu_substract(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
 #endif
+        verbose(VB_MICROLB, "Out of blocking call, acquiring %s", mu_to_str(&cpu_set));
 
-            if (CPU_ISSET(cpuid, &spd->process_mask)) {
-                /* Acquire only if the CPU is owned, but do not call any enable CPU callback */
-                array_cpuinfo_task_t *tasks = get_tasks(spd);
-                error = shmem_cpuinfo__acquire_cpu(spd->id, cpuid, tasks);
-                if (error == DLB_NOTED
-                        && spd->options.mode == MODE_ASYNC) {
-                    for (size_t i=0; i<tasks->count; ++i) {
-                        const cpuinfo_task_t *task = &tasks->items[i];
-                        if (task->action == DISABLE_CPU) {
-                            /* If the CPU is guested, just disable visitor */
-                            shmem_async_disable_cpu(task->pid, task->cpuid);
+        /* If there are owned CPUs to reclaim: */
+        cpu_set_t owned_cpus;
+        mu_and(&owned_cpus, &cpu_set, &spd->process_mask);
+        if (mu_count(&owned_cpus) > 0) {
+
+            /* Construct a CPU array from owned_cpus */
+            array_cpuid_t *cpu_subset = get_cpu_subset(spd);
+            cpu_array_from_cpuset(cpu_subset, &owned_cpus);
+
+            /* Acquire CPUs, but do not call any enable CPU callback */
+            array_cpuinfo_task_t *tasks = get_tasks(spd);
+            error = shmem_cpuinfo__acquire_from_cpu_subset(spd->id, cpu_subset, tasks);
+
+            /* Once CPUs are acquired from the shmem, we don't need to call
+             * any ENABLE callback because they weren't disabled in IntoBlockingCall.
+             * Only if asynchronous mode, keep DISABLE tasks, otherwise remove all. */
+            if (error == DLB_NOTED
+                    && spd->options.mode == MODE_ASYNC) {
+                for (size_t i = 0, i_write = 0; i < tasks->count; ++i) {
+                    const cpuinfo_task_t *task = &tasks->items[i];
+                    if (task->action == DISABLE_CPU) {
+                        if (i != i_write) {
+                            tasks->items[i_write] = tasks->items[i];
                         }
+                        ++i_write;
                     }
                 }
+                /* Async: resolve only DISABLE tasks */
+                resolve_cpuinfo_tasks(spd, tasks);
+            } else {
+                /* Polling: clear tasks */
+                array_cpuinfo_task_t_clear(tasks);
             }
-            else {
-                /* Otherwise, Borrow CPU, but also ignoring the enable callbacks */
-                array_cpuinfo_task_t *tasks = get_tasks(spd);
-                error = shmem_cpuinfo__borrow_cpu(spd->id, cpuid, tasks);
-                if (error != DLB_SUCCESS) {
-                    /* Annotate the CPU as pending to bypass the shared memory for the next query */
-                    CPU_SET(cpuid, &lewi_info->pending_reclaimed_cpus);
+        }
 
-                    /* We lost the CPU while in MPI.
-                     * In async mode, we can just disable the CPU.
-                     * In polling mode, the process needs to call Return */
-                    if (spd->options.mode == MODE_ASYNC) {
-                        disable_cpu(&spd->pm, cpuid);
-                    }
+        /* If there are ONLY non-owned CPUs to reclaim:
+         * (if some owned CPU was already reclaimed, we forget about non-owned) */
+        cpu_set_t non_owned_cpus;
+        mu_substract(&non_owned_cpus, &cpu_set, &spd->process_mask);
+        if (mu_count(&non_owned_cpus) > 0
+                && mu_count(&owned_cpus) == 0) {
+
+            /* Construct a CPU array from non_owned_cpus */
+            array_cpuid_t *cpu_subset = get_cpu_subset(spd);
+            cpu_array_from_cpuset(cpu_subset, &non_owned_cpus);
+
+            /* Borrow CPUs, but also ignoring the enable callbacks */
+            array_cpuinfo_task_t *tasks = get_tasks(spd);
+            error = shmem_cpuinfo__borrow_from_cpu_subset(spd->id, cpu_subset, tasks);
+
+            if (error != DLB_SUCCESS) {
+                /* Annotate the CPU as pending to bypass the shared memory for the next query */
+                mu_or(&lewi_info->pending_reclaimed_cpus, &lewi_info->pending_reclaimed_cpus,
+                        &non_owned_cpus);
+
+                /* We lost the CPU while in MPI.
+                    * In async mode, we can just disable the CPU.
+                    * In polling mode, the process needs to call Return */
+                if (spd->options.mode == MODE_ASYNC) {
+                    disable_cpu_set(&spd->pm, &non_owned_cpus);
                 }
             }
-        } else {
-            /* The thread contains more than one CPU in its affinity mask, skip */
         }
     }
+
     return error;
 }
 

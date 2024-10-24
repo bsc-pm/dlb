@@ -163,27 +163,38 @@ static void* thread_start(void *arg) {
     while(!join || helper->q_head != helper->q_tail) {
         message_t message;
         dequeue_message(helper, &message);
-        verbose(VB_ASYNC, "Helper thread attending petition %d", message.action);
 
         int error = 0;
         switch(message.action) {
             case ACTION_NONE:
+                verbose(VB_ASYNC, "Helper thread attending petition: NONE");
                 break;
             case ACTION_ENABLE_CPU:
+                verbose(VB_ASYNC,
+                        "Helper thread attending petition: ENABLE %d",
+                        message.cpuid);
                 error = enable_cpu(pm, message.cpuid);
                 break;
             case ACTION_ENABLE_CPU_SET:
+                verbose(VB_ASYNC, "Helper thread attending petition: ENABLE_CPU_SET %s",
+                        mu_to_str(&message.cpu_set));
                 error = enable_cpu_set(pm, &message.cpu_set);
                 break;
             case ACTION_DISABLE_CPU:
+                verbose(VB_ASYNC, "Helper thread attending petition: DISABLE %d",
+                        message.cpuid);
                 error = disable_cpu(pm, message.cpuid);
                 break;
             case ACTION_DISABLE_CPU_SET:
+                verbose(VB_ASYNC, "Helper thread attending petition: DISABLE_CPU_SET %s",
+                        mu_to_str(&message.cpu_set));
                 error = disable_cpu_set(pm, &message.cpu_set);
                 break;
             case ACTION_SET_CPU_SET:
                 break;
             case ACTION_SET_NUM_CPUS:
+                verbose(VB_ASYNC, "Helper thread attending petition: SET_NUM_CPUS %d",
+                        message.ncpus);
                 error = update_threads(pm, message.ncpus);
                 break;
             case ACTION_JOIN:

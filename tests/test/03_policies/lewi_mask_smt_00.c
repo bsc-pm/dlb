@@ -18,13 +18,14 @@
 /*********************************************************************************/
 
 /*<testinfo>
-    test_generator="gens/basic-generator"
+    test_generator="gens/basic-generator -a --mode=polling|--mode=async"
 </testinfo>*/
 
 #include "unique_shmem.h"
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
+#include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_policies/lewi_mask.h"
@@ -47,6 +48,7 @@ static subprocess_descriptor_t spd1;
 static subprocess_descriptor_t spd2;
 static cpu_set_t sp1_mask;
 static cpu_set_t sp2_mask;
+static interaction_mode_t mode;
 
 /* Subprocess 1 callbacks */
 static void sp1_cb_enable_cpu(int cpuid, void *arg) {
@@ -64,6 +66,14 @@ static void sp2_cb_enable_cpu(int cpuid, void *arg) {
 
 static void sp2_cb_disable_cpu(int cpuid, void *arg) {
     CPU_CLR(cpuid, &sp2_mask);
+}
+
+static void wait_for_async_completion(void) {
+    if (mode == MODE_ASYNC) {
+        shmem_async_wait_for_completion(spd1.id);
+        shmem_async_wait_for_completion(spd2.id);
+        __sync_synchronize();
+    }
 }
 
 int main(int argc, char *arg[]) {
@@ -110,6 +120,16 @@ int main(int argc, char *arg[]) {
     assert( pm_callback_set(&spd2.pm, dlb_callback_disable_cpu,
                 (dlb_callback_t)sp2_cb_disable_cpu, NULL) == DLB_SUCCESS );
     assert( lewi_mask_Init(&spd2) == DLB_SUCCESS );
+
+    // Get interaction mode
+    assert( spd1.options.mode == spd2.options.mode );
+    mode = spd1.options.mode;
+    if (mode == MODE_ASYNC) {
+        assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask, spd2.options.shm_key)
+                == DLB_SUCCESS );
+        assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask, spd1.options.shm_key)
+                == DLB_SUCCESS );
+    }
 
     // Get pointers to the shmem auxiliary cpu sets
     const cpu_set_t *free_cpus = shmem_cpuinfo_testing__get_free_cpu_set();
@@ -168,11 +188,15 @@ int main(int argc, char *arg[]) {
         // Subprocess 1 reclaims CPU 2
         assert( lewi_mask_ReclaimCpu(&spd1, 2) == DLB_NOTED );
         assert_expected("2,4-7", &sp1_mask);
-        assert( CPU_COUNT(free_cpus) == 0 );
-        assert_expected("0-3", occupied_cores);
 
-        // Subprocess 2 must return all CPUS in core
-        assert( lewi_mask_Return(&spd2) == DLB_SUCCESS );
+        if (mode == MODE_POLLING) {
+            // Subprocess 2 must return all CPUS in core
+            assert( CPU_COUNT(free_cpus) == 0 );
+            assert_expected("0-3", occupied_cores);
+            assert( lewi_mask_Return(&spd2) == DLB_SUCCESS );
+        } else {
+            wait_for_async_completion();
+        }
         assert( CPU_EQUAL(&sp2_mask, &spd2.process_mask) );
         assert_expected("0-1,3", free_cpus);
         assert( CPU_COUNT(occupied_cores) == 0 );
@@ -184,17 +208,55 @@ int main(int argc, char *arg[]) {
         assert( CPU_COUNT(occupied_cores) == 0 );
     }
 
+    /* Test asynchronous borrow */
+    if (mode == MODE_ASYNC)
+    {
+        // Subprocess 1 asks for the maximum number of CPUs
+        assert( lewi_mask_AcquireCpus(&spd1, DLB_MAX_CPUS) == DLB_NOTED );
+
+        // Subprocess 2 lends core [12-15]
+        cpu_set_t cpus_to_lend;
+        mu_parse_mask("12-15", &cpus_to_lend);
+        mu_substract(&sp2_mask, &sp2_mask, &cpus_to_lend);
+        assert( lewi_mask_LendCpuMask(&spd2, &cpus_to_lend) == DLB_SUCCESS );
+
+        wait_for_async_completion();
+
+        // Subprocess 1 should have its mask updated
+        assert_expected("0-7,12-15", &sp1_mask);
+        assert( CPU_COUNT(free_cpus) == 0 );
+        assert_expected("12-15", occupied_cores);
+
+        // Subprocess 2 reclaims all
+        assert( lewi_mask_Reclaim(&spd2) == DLB_NOTED );
+        assert_expected("8-15", &sp2_mask);
+
+        wait_for_async_completion();
+
+        // Subprocess 1 should have its initial mask
+        assert_expected("0-7", &sp1_mask);
+
+        // Remove requests
+        assert( lewi_mask_AcquireCpus(&spd1, DLB_DELETE_REQUESTS) == DLB_SUCCESS );
+    }
+
     // Finalize subprocess 1
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key, spd1.options.lewi_color)
             == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd1.id, false, spd1.options.shm_key) == DLB_SUCCESS );
+    if (mode == MODE_ASYNC) {
+        assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
+    }
 
     // Finalize subprocess 2
     assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(spd2.id, spd2.options.shm_key, spd2.options.lewi_color)
             == DLB_SUCCESS );
     assert( shmem_procinfo__finalize(spd2.id, false, spd2.options.shm_key) == DLB_SUCCESS );
+    if (mode == MODE_ASYNC) {
+        assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
+    }
 
     return 0;
 }

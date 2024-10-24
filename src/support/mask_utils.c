@@ -544,6 +544,11 @@ bool mu_system_has_smt(void) {
     return sys.core_masks_by_coreid[0].count > 1;
 }
 
+int mu_get_num_cores(void) {
+    if (unlikely(!mu_initialized)) mu_init();
+    return sys.num_cores;
+}
+
 int mu_get_core_id(int cpuid) {
 
     if (cpuid < 0 || (unsigned)cpuid > sys.num_cpus) return -1;

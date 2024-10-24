@@ -287,6 +287,10 @@ int DLB_AcquireCpu(int cpuid);
  *  Acquire CPUs from the system. If the CPU belongs to the process, the call is
  *  equivalent to a *reclaim* action. Otherwise, the process attempts to acquire
  *  a CPU. In asynchronous mode, it may enqueue a request for the CPU.
+ *
+ *  This function allows these two special values for ncpus in asynchronous mode:
+ *      - DLB_MAX_CPUS: add a request for the maximum amount of resources.
+ *      - DLB_DELETE_REQUESTS: delete previous requests
  */
 int DLB_AcquireCpus(int ncpus);
 

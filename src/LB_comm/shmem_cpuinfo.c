@@ -33,6 +33,7 @@
 #include "support/small_array.h"
 #include "support/atomic.h"
 
+#include <limits.h>
 #include <sched.h>
 #include <unistd.h>
 #include <string.h>
@@ -627,6 +628,32 @@ static void lend_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks)
                         .pid = new_guest,
                         .cpuid = cpuid,
                     });
+
+            // If SMT is enabled, this CPU could have been the last lent
+            // CPU in core, allowing find_new_guest to find new guests for
+            // the rest of CPUs in the core. Iterate the rest of cpus now:
+            const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
+            for (int cpuid_in_core = core_mask->first_cpuid;
+                    cpuid_in_core >= 0;
+                    cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
+                if (cpuid_in_core != cpuid) {
+                    cpuinfo_t *cpuinfo_in_core = &shdata->node_info[cpuid_in_core];
+                    if (cpuinfo_in_core->guest == NOBODY) {
+                        new_guest = find_new_guest(cpuinfo_in_core);
+                        if (new_guest != NOBODY) {
+                            cpuinfo_in_core->guest = new_guest;
+                            array_cpuinfo_task_t_push(
+                                    tasks,
+                                    (const cpuinfo_task_t) {
+                                    .action = ENABLE_CPU,
+                                    .pid = new_guest,
+                                    .cpuid = cpuid_in_core,
+                                    });
+                            CPU_CLR(cpuid_in_core, &shdata->free_cpus);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -692,7 +719,8 @@ int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *restrict mask,
 
     shmem_lock(shm_handler);
     {
-        for (int cpuid = mu_get_first_cpu(mask); cpuid >= 0;
+        for (int cpuid = mu_get_first_cpu(mask);
+                cpuid >= 0;
                 cpuid = mu_get_next_cpu(mask, cpuid)) {
             lend_cpu(pid, cpuid, tasks);
 
@@ -771,6 +799,34 @@ static int reclaim_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict task
     return error;
 }
 
+static int reclaim_core(pid_t pid, cpuid_t core_id,
+        array_cpuinfo_task_t *restrict tasks,
+        unsigned int *num_reclaimed) {
+
+    int error = DLB_NOUPDT;
+    *num_reclaimed = 0;
+
+    const mu_cpuset_t *core_mask = mu_get_core_mask_by_coreid(core_id);
+    for (int cpuid_in_core = core_mask->first_cpuid;
+            cpuid_in_core >= 0;
+            cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
+        int local_error = reclaim_cpu(pid, cpuid_in_core, tasks);
+        if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
+            ++(*num_reclaimed);
+            if (error != DLB_NOTED) {
+                error = local_error;
+            }
+        } else if (shdata->node_info[cpuid_in_core].guest == pid) {
+            /* already guested, continue */
+        } else {
+            /* could not be borrowed for other reason, stop iterating */
+            break;
+        }
+    }
+
+    return error;
+}
+
 int shmem_cpuinfo__reclaim_all(pid_t pid, array_cpuinfo_task_t *restrict tasks) {
     int error = DLB_NOUPDT;
     shmem_lock(shm_handler);
@@ -823,6 +879,31 @@ int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restr
     {
         error = reclaim_cpu(pid, cpuid, tasks);
 
+        /* If the CPU was actually reclaimed and SMT is enabled, the rest of
+         * the CPUs in the core need to be disabled.
+         * Note that we are not changing the CPU state to BUSY because the owner
+         * still has not reclaim it. */
+        if (error == DLB_NOTED
+                && shdata->flags.hw_has_smt) {
+            const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
+            for (int cpuid_in_core = core_mask->first_cpuid;
+                    cpuid_in_core >= 0;
+                    cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
+                if (cpuid_in_core != cpuid) {
+                    const cpuinfo_t *cpuinfo = &shdata->node_info[cpuid_in_core];
+                    if (cpuinfo->guest != pid) {
+                        array_cpuinfo_task_t_push(
+                                tasks,
+                                (const cpuinfo_task_t) {
+                                    .action = DISABLE_CPU,
+                                    .pid = cpuinfo->guest,
+                                    .cpuid = cpuid_in_core,
+                                });
+                    }
+                }
+            }
+        }
+
         // if (!error) //DLB_DEBUG( CPU_SET(cpu, &recovered_cpus); )
 
         // Look for Idle CPUs, only in DEBUG or INSTRUMENTATION
@@ -854,19 +935,20 @@ int shmem_cpuinfo__reclaim_cpus(pid_t pid, int ncpus, array_cpuinfo_task_t *rest
 
     shmem_lock(shm_handler);
     {
-        int cpuid;
-        for (cpuid=0; cpuid<node_size && ncpus>0; ++cpuid) {
-            int local_error = reclaim_cpu(pid, cpuid, tasks);
+        int num_cores = mu_get_num_cores();
+        for (int core_id = 0; core_id < num_cores && ncpus>0; ++core_id) {
+            unsigned int num_reclaimed;
+            int local_error = reclaim_core(pid, core_id, tasks, &num_reclaimed);
             switch(local_error) {
                 case DLB_NOTED:
                     // max priority, always overwrite
                     error = DLB_NOTED;
-                    --ncpus;
+                    ncpus -= num_reclaimed;
                     break;
                 case DLB_SUCCESS:
                     // medium priority, only update if error is in lowest priority
                     error = (error == DLB_NOTED) ? DLB_NOTED : DLB_SUCCESS;
-                    --ncpus;
+                    ncpus -= num_reclaimed;
                     break;
                 case DLB_NOUPDT:
                     // lowest priority, default value
@@ -1023,18 +1105,23 @@ static int acquire_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict task
     return error;
 }
 
-static int acquire_core(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks) {
+static int acquire_core(pid_t pid, cpuid_t core_id,
+        array_cpuinfo_task_t *restrict tasks,
+        unsigned int *num_acquired) {
 
     int error = DLB_NOUPDT;
+    *num_acquired = 0;
 
-    const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
+    const mu_cpuset_t *core_mask = mu_get_core_mask_by_coreid(core_id);
     for (int cpuid_in_core = core_mask->first_cpuid;
             cpuid_in_core >= 0;
             cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
         int local_error = acquire_cpu(pid, cpuid_in_core, tasks);
-        if ((local_error == DLB_SUCCESS || local_error == DLB_NOTED)
-                && error != DLB_NOTED) {
-            error = local_error;
+        if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
+            ++(*num_acquired);
+            if (error != DLB_NOTED) {
+                error = local_error;
+            }
         } else if (shdata->node_info[cpuid_in_core].guest == pid) {
             /* already guested, continue */
         } else {
@@ -1051,7 +1138,7 @@ static int acquire_cpus_in_array_cpuid_t(pid_t pid,
         int *restrict ncpus, array_cpuinfo_task_t *restrict tasks) {
 
     int error = DLB_NOUPDT;
-    int _ncpus = *ncpus;
+    int _ncpus = ncpus != NULL ? *ncpus : INT_MAX;
     const bool hw_has_smt = shdata->flags.hw_has_smt;
 
     /* Acquire all CPUs in core if possible
@@ -1068,10 +1155,10 @@ static int acquire_cpus_in_array_cpuid_t(pid_t pid,
         if (hw_has_smt) {
             cpuid_t core_id = shdata->node_info[cpuid].core_id;
             if (prev_core_id != core_id) {
-                unsigned int prev_tasks_count = array_cpuinfo_task_t_count(tasks);
-                local_error = acquire_core(pid, cpuid, tasks);
+                unsigned int num_acquired;
+                local_error = acquire_core(pid, core_id, tasks, &num_acquired);
                 if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
-                    _ncpus -= array_cpuinfo_task_t_count(tasks) - prev_tasks_count;
+                    _ncpus -= num_acquired;
                     if (error != DLB_NOTED) error = local_error;
                 }
                 prev_core_id = core_id;
@@ -1085,7 +1172,10 @@ static int acquire_cpus_in_array_cpuid_t(pid_t pid,
         }
     }
 
-    *ncpus = _ncpus;
+    if (ncpus != NULL) {
+        *ncpus = _ncpus;
+    }
+
     return error;
 }
 
@@ -1097,6 +1187,27 @@ int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restr
     shmem_lock(shm_handler);
     {
         error = acquire_cpu(pid, cpuid, tasks);
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
+/* Simplification of shmem_cpuinfo__acquire_ncpus_from_cpu_subset when we just
+ * want to iterate all CPUs in set.
+ * This function is intended to be called when leaving a blocking call and the
+ * process knows that the provided CPUs were previously lent and need to be
+ * reclaimed.
+ *
+ * PRE: all CPUS are owned */
+int shmem_cpuinfo__acquire_from_cpu_subset(
+        pid_t pid,
+        const array_cpuid_t *restrict array_cpuid,
+        array_cpuinfo_task_t *restrict tasks) {
+
+    int error;
+    shmem_lock(shm_handler);
+    {
+        error = acquire_cpus_in_array_cpuid_t(pid, array_cpuid, NULL, tasks);
     }
     shmem_unlock(shm_handler);
     return error;
@@ -1309,16 +1420,19 @@ static int borrow_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks
     return error;
 }
 
-static int borrow_core(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks) {
+static int borrow_core(pid_t pid, cpuid_t core_id, array_cpuinfo_task_t *restrict tasks,
+        unsigned int *num_borrowed) {
 
     int error = DLB_NOUPDT;
+    *num_borrowed = 0;
 
-    const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
+    const mu_cpuset_t *core_mask = mu_get_core_mask_by_coreid(core_id);
     for (int cpuid_in_core = core_mask->first_cpuid;
             cpuid_in_core >= 0;
             cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
         if (borrow_cpu(pid, cpuid_in_core, tasks) == DLB_SUCCESS) {
             /* successfully borrowed, continue */
+            ++(*num_borrowed);
             error = DLB_SUCCESS;
         } else if (shdata->node_info[cpuid_in_core].guest == pid) {
             /* already guested, continue */
@@ -1337,7 +1451,7 @@ static int borrow_cpus_in_array_cpuid_t(pid_t pid,
         int *restrict ncpus, array_cpuinfo_task_t *restrict tasks) {
 
     int error = DLB_NOUPDT;
-    int _ncpus = *ncpus;
+    int _ncpus = ncpus != NULL ? *ncpus : INT_MAX;
     const bool hw_has_smt = shdata->flags.hw_has_smt;
 
     /* Borrow all CPUs in core if possible
@@ -1353,9 +1467,9 @@ static int borrow_cpus_in_array_cpuid_t(pid_t pid,
         if (hw_has_smt) {
             cpuid_t core_id = shdata->node_info[cpuid].core_id;
             if (prev_core_id != core_id) {
-                unsigned int prev_tasks_count = array_cpuinfo_task_t_count(tasks);
-                if (borrow_core(pid, cpuid, tasks) == DLB_SUCCESS) {
-                    _ncpus -= array_cpuinfo_task_t_count(tasks) - prev_tasks_count;
+                unsigned int num_borrowed;
+                if (borrow_core(pid, core_id, tasks, &num_borrowed) == DLB_SUCCESS) {
+                    _ncpus -= num_borrowed;
                     error = DLB_SUCCESS;
                 }
                 prev_core_id = core_id;
@@ -1368,7 +1482,10 @@ static int borrow_cpus_in_array_cpuid_t(pid_t pid,
         }
     }
 
-    *ncpus = _ncpus;
+    if (ncpus != NULL) {
+        *ncpus = _ncpus;
+    }
+
     return error;
 }
 
@@ -1378,7 +1495,7 @@ static int borrow_cpus_in_cpu_set_t(pid_t pid,
         int *restrict ncpus, array_cpuinfo_task_t *restrict tasks) {
 
     int error = DLB_NOUPDT;
-    int _ncpus = *ncpus;
+    int _ncpus = ncpus != NULL ? *ncpus : INT_MAX;
     const bool hw_has_smt = shdata->flags.hw_has_smt;
 
     /* Borrow all CPUs in core if possible
@@ -1392,9 +1509,9 @@ static int borrow_cpus_in_cpu_set_t(pid_t pid,
         if (hw_has_smt) {
             cpuid_t core_id = shdata->node_info[cpuid].core_id;
             if (prev_core_id != core_id) {
-                unsigned int prev_tasks_count = array_cpuinfo_task_t_count(tasks);
-                if (borrow_core(pid, cpuid, tasks) == DLB_SUCCESS) {
-                    _ncpus -= array_cpuinfo_task_t_count(tasks) - prev_tasks_count;
+                unsigned int num_borrowed;
+                if (borrow_core(pid, core_id, tasks, &num_borrowed) == DLB_SUCCESS) {
+                    _ncpus -= num_borrowed;
                     error = DLB_SUCCESS;
                 }
                 prev_core_id = core_id;
@@ -1407,7 +1524,10 @@ static int borrow_cpus_in_cpu_set_t(pid_t pid,
         }
     }
 
-    *ncpus = _ncpus;
+    if (ncpus != NULL) {
+        *ncpus = _ncpus;
+    }
+
     return error;
 }
 
@@ -1420,6 +1540,26 @@ int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restri
     shmem_lock(shm_handler);
     {
         error = borrow_cpu(pid, cpuid, tasks);
+    }
+    shmem_unlock(shm_handler);
+    return error;
+}
+
+/* Simplification of shmem_cpuinfo__borrow_ncpus_from_cpu_subset when we just
+ * want to iterate all CPUs in set.
+ * This function is intended to be called when leaving a blocking call and the
+ * process knows that the provided CPUs were previously lent and may try to
+ * borrow again.
+ */
+int shmem_cpuinfo__borrow_from_cpu_subset(
+        pid_t pid,
+        const array_cpuid_t *restrict array_cpuid,
+        array_cpuinfo_task_t *restrict tasks) {
+
+    int error;
+    shmem_lock(shm_handler);
+    {
+        error = borrow_cpus_in_array_cpuid_t(pid, array_cpuid, NULL, tasks);
     }
     shmem_unlock(shm_handler);
     return error;
@@ -1613,6 +1753,7 @@ static inline void shmem_cpuinfo__return_async(pid_t pid, cpuid_t cpuid) {
         cpuinfo->guest = cpuinfo->owner;
     } else {
         cpuinfo->guest = NOBODY;
+        CPU_SET(cpuid, &shdata->free_cpus);
     }
 
     // Possibly clear CPU from occupies cores set
@@ -1622,7 +1763,7 @@ static inline void shmem_cpuinfo__return_async(pid_t pid, cpuid_t cpuid) {
     queue_pid_t_enqueue(&cpuinfo->requests, pid);
 }
 
-/* Only for asynchronous mode. This is function is intended to be called after
+/* Only for asynchronous mode. This function is intended to be called after
  * a disable_cpu callback.
  * This function resolves returned CPUs, fixes guest and add a new request */
 void shmem_cpuinfo__return_async_cpu(pid_t pid, cpuid_t cpuid) {

@@ -486,17 +486,17 @@ int main( int argc, char **argv ) {
 
     /* Into / Out of Blocking Calls */
     {
-        // Enable --lewi-keep-one-cpu
-        spd1.options.lewi_keep_cpu_on_blocking_call = true;
-        assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_NOUPDT );
-        assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_NOUPDT );
-
         // These functions get the CPU id from sched_getcpu()
         // Force binding to CPU 0 or skip test
         cpu_set_t mask;
         mu_parse_mask("0", &mask);
         sched_setaffinity(0, sizeof(cpu_set_t), &mask);
         if (sched_getcpu() == 0) {
+
+            // Enable --lewi-keep-one-cpu
+            spd1.options.lewi_keep_cpu_on_blocking_call = true;
+            assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_NOUPDT );
+            assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_NOUPDT );
 
             // Disable --lewi-keep-one-cpu
             spd1.options.lewi_keep_cpu_on_blocking_call = false;
@@ -637,22 +637,6 @@ int main( int argc, char **argv ) {
         } else {
             printf("Skipping Into / Out of Blocking Calls tests (1 CPU)\n");
         }
-
-        // Tests whether MPI functions correctly skip if current thread is
-        // bound to more than one CPU
-        mu_parse_mask("0,1", &mask);
-        sched_setaffinity(0, sizeof(cpu_set_t), &mask);
-        cpu_set_t thread_mask;
-        pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-        if (CPU_EQUAL(&mask, &thread_mask)) {
-            spd1.options.lewi_keep_cpu_on_blocking_call = false;
-            assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_NOUPDT );
-            assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_NOUPDT );
-        } else {
-            printf("Skipping Into / Out of Blocking Calls tests (2 CPUs)\n");
-        }
-
-        check_no_requests();
     }
 
     // Finalize subprocess 1

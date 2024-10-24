@@ -66,6 +66,10 @@ int shmem_cpuinfo__reclaim_cpu_mask(pid_t pid, const cpu_set_t *restrict mask,
 
 /* Acquire */
 int shmem_cpuinfo__acquire_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__acquire_from_cpu_subset(
+        pid_t pid,
+        const array_cpuid_t *restrict array_cpuid,
+        array_cpuinfo_task_t *restrict tasks);
 int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
         pid_t pid, int *restrict requested_ncpus,
         const array_cpuid_t *restrict cpus_priority_array,
@@ -74,6 +78,10 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
 
 /* Borrow */
 int shmem_cpuinfo__borrow_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks);
+int shmem_cpuinfo__borrow_from_cpu_subset(
+        pid_t pid,
+        const array_cpuid_t *restrict array_cpuid,
+        array_cpuinfo_task_t *restrict tasks);
 int shmem_cpuinfo__borrow_ncpus_from_cpu_subset(
         pid_t pid, int *restrict requested_ncpus,
         const array_cpuid_t *restrict cpus_priority_array, lewi_affinity_t lewi_affinity,
