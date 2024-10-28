@@ -22,9 +22,11 @@ Structure after installation
             │       │   ├── DROM
             │       │   ├── MPI+OMP
             │       │   ├── MPI+OMP_OMPT
+            │       │   ├── MPI+OMP_roleshift
             │       │   ├── MPI+OmpSs
             │       │   ├── OMPT
             │       │   ├── TALP
+            │       │   ├── cmake_project
             │       │   ├── lewi_custom_rt
             │       │   ├── lewi_mask_consumer
             │       │   ├── monitoring_regions
@@ -45,6 +47,8 @@ Structure after installation
         |-- bin
         |-- include
         |-- lib
+            `-- cmake
+            |   `-- DLB
         `-- share
             |-- doc
             |   `-- dlb
@@ -52,9 +56,11 @@ Structure after installation
             |       |   |-- DROM
             |       |   |-- MPI+OMP
             |       |   |-- MPI+OMP_OMPT
+            |       |   |-- MPI+OMP_roleshift
             |       |   |-- MPI+OmpSs
             |       |   |-- OMPT
             |       |   |-- TALP
+            |       |   |-- cmake_project
             |       |   |-- lewi_custom_rt
             |       |   |-- lewi_mask_consumer
             |       |   |-- monitoring_regions
@@ -85,48 +91,47 @@ Binaries
 Libraries
 =========
 
-DLB installs different versions of the library for different situations, but in general you
-should only focus on these ones:
+DLB installs different versions of the library for different situations. The main
+ones are:
 
 **libdlb.so**
     Link against this library only if your application needs to call some DLB API function.
 
 **libdlb_mpi.so**
-    Link in the correct order or just preload it using ``LD_PRELOAD`` environment variable
+    Preferably, just for preloading using the ``LD_PRELOAD`` environment variable
     if you want DLB to intercept MPI calls.
 
-**libdlb_mpif.so**
-    Same case as above, but to intercept MPI Fortran calls.
+**libdlb_mpic.so**
+    Not installed by default, check :ref:`dlb-mpi-confgure-flags`. Use only if
+    ``libdlb_mpi.so`` causes some kind of incompatibility between C and Fortran symbols.
 
-Remember that if the programming model already supports DLB (as in Nanos++), you don't need
-to link against any library.
+**libdlb_mpif.so**
+    Not installed by default, check :ref:`dlb-mpi-confgure-flags`. Use only if
+    ``libdlb_mpi.so`` causes some kind of incompatibility between C and Fortran symbols.
+
+There are other libraries that are variations of the above ones for instrumenting or debugging.
+These libraries will have the suffixes ``dbg``, ``instr``, or ``instr_dbg``.
 
 Examples
 ========
 
 DLB distributes some examples that are installed in the
-``${DLB_PREFIX}/share/doc/dlb/examples/`` directory. Each example consists of a ``README``
+``<dlb_install_path>/share/doc/dlb/examples/`` directory. Each example consists of a ``README``
 file with a brief description and the steps to follow, a C source code file, a ``Makefile``
 to compile the source code and a script ``run.sh`` to run the example.
 
-Some Makefile variables have been filled at configure time. They should should
-not need any modification but you may check that everything is correct.  Some
-Makefiles assume that Mercurium is configured in the ``PATH``.
+Some Makefile variables have been filled at configure time. They should
+not need any modification but you may check that everything is correct.
 
 .. note::
-    In order to enable tracing you need an Extrae installation and to correctly set the
-    ``EXTRAE_HOME`` environment variable.
+    In order to enable tracing you need to set ``EXTRAE_HOME`` environment variable
+    to a valid Extrae installation.
 
 DROM
 ----
 This example allows you to execute a program with DROM support that prints messages
 when its process mask changes. You can run ``dlb_taskset`` while the program is
 running and see how it reacts to the different commands.
-
-OMPT
-----
-This example is a small utility to check whether the application has been linked to
-an OpenMP runtime library that suports OMPT.
 
 MPI + OpenMP  /  MPI + OpenMP (OMPT)  /  MPI + OmpSs
 ----------------------------------------------------
@@ -148,15 +153,24 @@ This example shows the integration of a service that asynchronously requests
 the maximum number of CPUs and an MPI application that lends its resources
 during an MPI blocking call.
 
-Monitoring Regions
-------------------
-This example shows the usage of the TALP Monitorin Regions, how can they be placed
-in a region of the code and obtain some metrics from it.
-
 TALP
 ----
 This example shows how a process can attach to DLB and obtain the CPU time on MPI and
 the CPU time on useful computation.
+
+Monitoring Regions
+------------------
+This example shows the usage of the TALP Monitoring Regions, how can they be placed
+in a region of the code and obtain some metrics from it.
+
+OMPT
+----
+This example is a small utility to check whether the application has been linked to
+an OpenMP runtime library that supports OMPT.
+
+CMake project
+-------------
+This example provides a minimal CMake Project for both Fortran and C code examples.
 
 Statistics
 ----------
@@ -175,12 +189,13 @@ queries to the first PILS program and obtain some statistics about CPU usage.
 Scripts
 =======
 
-These scripts are provided for users to simplify the process of enabling some DLB
-module for their applications. These scripts should be copied to a write-access location,
-modify them if needed and execute them before the application. Typically, these scripts
-are correctly configured and should work out of the box, but it is recommended to double
-check the *Run* section at the bottom of the files and check whether the appropriate
-DLB library is configured. Refer to :ref:`how_to_scripts` for a usage example.
+These scripts are provided for users to simplify the process of enabling some
+DLB modules for their applications. These scripts may be copied to a writable
+location, modified as required, and run alongside the application as in
+``./dlb_script.sh <app> <args>``. Typically, these scripts are correctly
+configured and should work out of the box, but it is recommended to double
+check the *Run* section at the bottom of the files and that the appropriate DLB
+library is configured. See :ref:`examples` for a usage example.
 
 **lewi_omp.sh**
     This script enables the LeWI module on OpenMP applications. It also enables OMPT

@@ -29,7 +29,7 @@ the execution or as a report at the end.
 1. Build requirements
     * A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC or IA64)
     * C compiler
-    * Python 2.4 or higher
+    * Python 2.4 or higher (Python 3 recommended)
     * GNU Autotools, only needed if you want to build from the repository.
 2. Download the DLB source code:
     1. Either from our website: [DLB Downloads][].

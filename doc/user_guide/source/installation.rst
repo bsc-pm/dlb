@@ -10,26 +10,25 @@ Build requirements
 
 * A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC or IA64)
 * C compiler
-* Python 2.4 or higher
+* Python 2.4 or higher (Python 3 recommended)
 
 
 Installation steps
 ==================
 
-#. Get the latest DLB *tarball* from https://pm.bsc.es/dlb-downloads. Unpack the
-   file and enter the new directory::
+#. Get the latest DLB *tarball* from https://pm.bsc.es/dlb-downloads::
 
-    $ tar xzf dlb-x.y.tar.gz
-    $ cd dlb-x.y/
+    tar xzf dlb-x.y.tar.gz
+    cd dlb-x.y/
 
 #. Configure it, with optionally some of the :ref:`DLB configure flags<dlb-configure-flags>`::
 
-   $ ./configure --prefix=<DLB_PREFIX> [--with-mpi]
+    ./configure --prefix=<dlb_install_path> [--with-mpi]
 
 #. Build and install::
 
-   $ make
-   $ make install
+    make
+    make install
 
 Other installation methods
 ==========================
@@ -40,22 +39,23 @@ Downloading from git repository
 If DLB is downloaded from https://github.com/bsc-pm/dlb or other git
 repository, additional software is needed, such as autoconf, automake, and
 libtool. Once the project is downloaded, run ``bootstrap.sh`` to generate the
-appropriate build files. Then, follow the installation steps described above.
+appropriate build files. Then, follow the installation steps described above
+in steps 2 and 3.
 
 Meson
 -----
 
 DLB also offers the possibility to configure and build with Meson and Ninja.
-The current meson build script does not provide all the functionalities of the
-*autotools* scripts; mainly documentation and examples are not yet integrated,
-but it is a great alternative for developers or quick installations since it
-significantly improves the build and testing times.
+The current meson build script does not provide all the functionality of the
+*autotools* scripts, in particular documentation and examples are not yet integrated,
+but it is a great alternative for developers or quick installations as it
+significantly improves build and test times.
 
-To set up a meson build directory and build, and install, simply run::
+To set up a meson build, run::
 
-    $ meson setup <build_dir> -Dmpi=enabled -Dprefix=<dlb_installation_prefix>
-    $ cd <build_dir>
-    $ ninja install
+    meson setup <build_dir> -Dmpi=enabled -Dprefix=<dlb_install_path>
+    cd <build_dir>
+    ninja install
 
 .. _dlb-configure-flags:
 
@@ -101,6 +101,8 @@ measure the IPC of the instrumented regions.
 
 --with-papi=<papi_prefix>
     Specify where to find the PAPI libraries.
+
+.. _dlb-mpi-confgure-flags:
 
 Additional MPI configure flags
 ------------------------------
