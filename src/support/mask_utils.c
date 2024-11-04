@@ -501,7 +501,8 @@ void mu_init( void ) {
     }
 }
 
-__attribute__((destructor))
+/* This function used to be declared as destructor but it may be dangerous
+ * with the OpenMP / DLB finalization at destruction time. */
 void mu_finalize( void ) {
 
     CPU_FREE(sys.sys_mask.set);

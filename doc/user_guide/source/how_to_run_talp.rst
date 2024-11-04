@@ -238,14 +238,22 @@ average IPC.
 TALP option flags
 =================
 
+--talp-openmp=<bool>
+    Select whether to measure OpenMP metrics. (Experimental)
+
 --talp-papi=<bool>
     Select whether to collect PAPI counters.
 
---talp-summary=<none:all:pop-metrics:pop-raw:node:process>
-    List of summaries, separated by ``:``, to write at the end: ``pop-metrics``
-    is the default option, ``pop-raw`` shows the  raw metrics used to compute
-    the POP metrics, ``node`` and ``process`` show a summary for each node and
-    process respectively.
+--talp-summary=<none:all:pop-metrics:node:process>
+    List of summaries, separated by ``:``, to write at the end of the execution:
+    ``pop-metrics``, the default option, will print a short report if no
+    ``--talp-output-file`` is specified. Otherwise, a more verbose file is
+    generated containing all metrics collected by TALP.
+    ``node`` and ``process`` show a summary for each node and process respectively.
+
+    **Deprecated options:**
+
+    ``pop-raw`` will be removed in the next release. The output will be available using the ``pop-metrics`` summary.
 
 --talp-external-profiler=<bool>
     Enable live metrics update to the shared memory. This flag is only needed
@@ -253,8 +261,22 @@ TALP option flags
 
 --talp-output-file=<path>
     Write TALP metrics to a file. If this option is not provided, the output is
-    printed to stderr. Accepted formats: \*.json, \*.xml, \*.csv. Any other for
-    plain text.
+    printed to stderr. Accepted formats: ``*.json``, ``*.csv``. Any
+    other for plain text.
+
+    **Deprecated formats:**
+
+    The ``*.xml`` file ending is deprecated and will be removed in the next release.
+
+--talp-region-select=<string>
+    Select TALP regions to enable. The option accepts the special values
+    ``all``, to enable all TALP regions, and ``none`` to disable them all. An
+    empty value is equivalent to ``all``. Additionally, a comma separated list
+    of region names may be specified to enable only these regions. The implicit
+    monitoring region may be specified with the special token ``application``.
+    Note that names with spaces are not supported.
+    e.g.: ``--talp-region-select=none``,
+    ``--talp-region-select=application,region3``
 
 --talp-regions-per-proc=<int>
     Number of TALP regions per process to allocate in the shared memory.

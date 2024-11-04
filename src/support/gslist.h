@@ -67,6 +67,7 @@ GSList*  g_slist_prepend                 (GSList           *list,
                                           gpointer          data);
 GSList*  g_slist_remove                  (GSList           *list,
                                           gconstpointer     data);
+GSList*  g_slist_reverse                 (GSList           *list);
 guint    g_slist_length                  (GSList           *list);
 void     g_slist_foreach                 (GSList           *list,
                                           GFunc             func,

@@ -27,6 +27,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_core/spd.h"
+#include "LB_numThreads/omptool.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -275,10 +276,10 @@ void omptm_role_shift__OutOfBlockingCall(void) {
 /*  OMPT registered callbacks                                                    */
 /*********************************************************************************/
 
-void omptm_role_shift__thread_begin(ompt_thread_t thread_type,
-                                    ompt_data_t *thread_data){
+void omptm_role_shift__thread_begin(ompt_thread_t thread_type) {
     /* Set up thread local spd */
     spd_enter_dlb(thread_spd);
+
     global_tid = __kmp_get_thread_id();
     fatal_cond(registered_threads > system_size,
             "DLB created more threads than existing CPUs in the node");
@@ -354,103 +355,72 @@ void omptm_role_shift__thread_role_shift(ompt_data_t *thread_data,
 }
 
 
-void omptm_role_shift__parallel_begin(
-        ompt_data_t *encountering_task_data,
-        const ompt_frame_t *encountering_task_frame,
-        ompt_data_t *parallel_data,
-        unsigned int requested_parallelism,
-        int flags,
-        const void *codeptr_ra) {
-    /* From OpenMP spec:
-     * "The exit frame associated with the initial task that is not nested
-     *  inside any OpenMP construct is NULL."
-     */
-    if (encountering_task_frame->exit_frame.ptr == NULL
-            && flags & ompt_parallel_team) {
-
-        /* This is a non-nested parallel construct encountered by the initial task.
-         * Set parallel_data to an appropriate value so that worker threads know
-         * when they start their explicit task for this parallel region.
-         */
-        parallel_data->value = PARALLEL_LEVEL_1;
+void omptm_role_shift__parallel_begin(omptool_parallel_data_t *parallel_data) {
+    if (parallel_data->level == 1) {
         DLB_ATOMIC_ST(&in_parallel, true);
-        DLB_ATOMIC_ST(&current_parallel_size, requested_parallelism);
+        DLB_ATOMIC_ST(&current_parallel_size, parallel_data->requested_parallelism);
     }
 }
 
-void omptm_role_shift__parallel_end(
-        ompt_data_t *parallel_data,
-        ompt_data_t *encountering_task_data,
-        int flags,
-        const void *codeptr_ra) {
-    if (parallel_data->value == PARALLEL_LEVEL_1) {
-        parallel_data->value = PARALLEL_UNSET;
+void omptm_role_shift__parallel_end(omptool_parallel_data_t *parallel_data) {
+    if (parallel_data->level == 1) {
         DLB_ATOMIC_ST(&in_parallel, false);
     }
 }
 
-void omptm_role_shift__task_create(
-        ompt_data_t *encountering_task_data,
-        const ompt_frame_t *encountering_task_frame,
-        ompt_data_t *new_task_data,
-        int flags,
-        int has_dependences,
-        const void *codeptr_ra) {
-    if (flags & ompt_task_explicit) {
-        /* Increment the amount of pending tasks */
-        DLB_ATOMIC_ADD(&pending_tasks, 1);
+void omptm_role_shift__task_create(void) {
+    /* Increment the amount of pending tasks */
+    DLB_ATOMIC_ADD(&pending_tasks, 1);
 
-        /* For now, let's assume that we always want to increase the number
-         * of active threads whenever a task is created
-         */
-        if (lewi) {
-            if(omptool_opts == OMPTOOL_OPTS_LEND) {
-                DLB_BorrowCpus(1);
-            }
-            else {
-                DLB_AcquireCpus(1);
-            }
+    /* For now, let's assume that we always want to increase the number
+        * of active threads whenever a task is created
+        */
+    if (lewi) {
+        if(omptool_opts == OMPTOOL_OPTS_LEND) {
+            DLB_BorrowCpus(1);
+        }
+        else {
+            DLB_AcquireCpus(1);
         }
     }
 }
 
-void omptm_role_shift__task_schedule(
-        ompt_data_t *prior_task_data,
-        ompt_task_status_t prior_task_status,
-        ompt_data_t *next_task_data) {
-    if (prior_task_status == ompt_task_switch) {
-        if (lewi && DLB_ATOMIC_SUB(&pending_tasks, 1) > 1) {
-            if(omptool_opts == OMPTOOL_OPTS_LEND)
-                DLB_BorrowCpus(1);
-            else
-                DLB_AcquireCpus(1);
-        }
-        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
-    } else if (prior_task_status == ompt_task_complete) {
-        int cpuid = cpu_by_id[global_tid];
-        if (lewi && cpuid >= 0 && cpu_data[cpuid].fa) {
-            /* Return CPU if reclaimed */
-            if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
-                if(DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) == UNKNOWN){
-                    /* Previously we have returned the CPU, but the free agent didn't do a role shift event to be rescheduled
-                     * This can happen when the thread receives a change from NONE to FA just after a FA to NONE change. In that case,
-                     * the second shift cancels the first one and the thread doesn't emit a callback. Just deactivate the thread. */
-                    DLB_ATOMIC_SUB(&num_free_agents, 1);
-                    __kmp_set_thread_roles2(global_tid, OMP_ROLE_NONE);
-                }
-                else if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
-                    cb_disable_cpu(cpuid, NULL);
-                }
+void omptm_role_shift__task_complete(void) {
+    int cpuid = cpu_by_id[global_tid];
+    if (lewi && cpuid >= 0 && cpu_data[cpuid].fa) {
+        /* Return CPU if reclaimed */
+        if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
+            if(DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) == UNKNOWN) {
+                /* Previously we have returned the CPU, but the free agent
+                 * didn't do a role shift event to be rescheduled This can
+                 * happen when the thread receives a change from NONE to FA
+                 * just after a FA to NONE change. In that case, the second
+                 * shift cancels the first one and the thread doesn't emit a
+                 * callback. Just deactivate the thread. */
+                DLB_ATOMIC_SUB(&num_free_agents, 1);
+                __kmp_set_thread_roles2(global_tid, OMP_ROLE_NONE);
             }
-            /* Lend CPU if no more tasks and CPU is borrowed, or policy is LEND */
-            else if (DLB_ATOMIC_LD(&pending_tasks) == 0
-                    && (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) == BORROWED
-                        || omptool_opts & OMPTOOL_OPTS_LEND)) {
+            else if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
                 cb_disable_cpu(cpuid, NULL);
-                DLB_LendCpu(cpuid);
             }
         }
-        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+        /* Lend CPU if no more tasks and CPU is borrowed, or policy is LEND */
+        else if (DLB_ATOMIC_LD(&pending_tasks) == 0
+                && (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].ownership) == BORROWED
+                    || omptool_opts & OMPTOOL_OPTS_LEND)) {
+            cb_disable_cpu(cpuid, NULL);
+            DLB_LendCpu(cpuid);
+        }
+    }
+}
+
+void omptm_role_shift__task_switch(void) {
+    if (lewi && DLB_ATOMIC_SUB(&pending_tasks, 1) > 1) {
+        if(omptool_opts == OMPTOOL_OPTS_LEND) {
+            DLB_BorrowCpus(1);
+        } else {
+            DLB_AcquireCpus(1);
+        }
     }
 }
 

@@ -154,6 +154,17 @@ int main(int argc, char *argv[]) {
     assert( !equivalent_talp_summary("pop-metrics", "pop-raw") );
     assert( !equivalent_talp_summary("node:process", "node_process") );
 
+    talp_model_t talp_model;
+    err = parse_talp_model("", &talp_model);
+    assert( err );
+    err = parse_talp_model("hybrid-v1", &talp_model);
+    assert( !err && talp_model == TALP_MODEL_HYBRID_V1 );
+    err = parse_talp_model("hybrid-v2", &talp_model);
+    assert( !err && talp_model == TALP_MODEL_HYBRID_V2 );
+    assert( strcmp(talp_model_tostr(TALP_MODEL_HYBRID_V2), "hybrid-v2") == 0 );
+    assert(  equivalent_talp_model("hybrid-v1", "hybrid-v1") );
+    assert( !equivalent_talp_model("hybrid-v1", "hybrid-v2") );
+
     interaction_mode_t mode;
     err = parse_mode("", &mode);                    assert(err);
     err = parse_mode("null", &mode);                assert(err);

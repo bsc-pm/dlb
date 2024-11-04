@@ -23,8 +23,9 @@
 
 #include "unique_shmem.h"
 
-#include "LB_numThreads/omp-tools.h"
 #include "LB_numThreads/omptm_free_agents.h"
+#include "LB_numThreads/omptool.h"
+#include "LB_numThreads/omp-tools.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -171,7 +172,7 @@ int main (int argc, char *argv[]) {
     {
         for (int i=0; i<SYS_SIZE-1; ++i) {
             free_agent_id = i;
-            omptm_free_agents__thread_begin(ompt_thread_other, NULL);
+            omptm_free_agents__thread_begin(ompt_thread_other);
         }
 
         /* All free agents are disabled */
@@ -289,23 +290,19 @@ int main (int argc, char *argv[]) {
         }
 
         /* P1 starts a parallel region with 4 threads */
-        ompt_frame_t encountering_task_frame = {.exit_frame.ptr = NULL };
-        ompt_data_t parallel_data;
-        omptm_free_agents__parallel_begin(
-                NULL, &encountering_task_frame, &parallel_data,
-                4, ompt_parallel_team, NULL);
+        omptool_parallel_data_t omptool_parallel_data = {
+            .level = 1,
+            .requested_parallelism = 4,
+        };
+        omptm_free_agents__parallel_begin(&omptool_parallel_data);
         omptm_free_agents_testing__set_worker_binding(0);
-        omptm_free_agents__implicit_task(
-                ompt_scope_begin, &parallel_data, NULL, 4, 0, 0);
+        omptm_free_agents__into_parallel_function(&omptool_parallel_data, 0);
         omptm_free_agents_testing__set_worker_binding(1);
-        omptm_free_agents__implicit_task(
-                ompt_scope_begin, &parallel_data, NULL, 4, 1, 0);
+        omptm_free_agents__into_parallel_function(&omptool_parallel_data, 1);
         omptm_free_agents_testing__set_worker_binding(4);
-        omptm_free_agents__implicit_task(
-                ompt_scope_begin, &parallel_data, NULL, 4, 2, 0);
+        omptm_free_agents__into_parallel_function(&omptool_parallel_data, 2);
         omptm_free_agents_testing__set_worker_binding(5);
-        omptm_free_agents__implicit_task(
-                ompt_scope_begin, &parallel_data, NULL, 4, 3, 0);
+        omptm_free_agents__into_parallel_function(&omptool_parallel_data, 3);
         assert( omptm_free_agents_testing__check_cpu_in_parallel(0) );
         assert( omptm_free_agents_testing__check_cpu_in_parallel(1) );
         assert( omptm_free_agents_testing__check_cpu_in_parallel(4) );
@@ -335,7 +332,7 @@ int main (int argc, char *argv[]) {
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 4 );
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(2);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
         assert( free_agent_threads_status[free_agent_id] == true );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 4 );
 
@@ -343,7 +340,7 @@ int main (int argc, char *argv[]) {
         omptm_free_agents_testing__set_pending_tasks(0);
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(2);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
         assert( free_agent_threads_status[free_agent_id] == false );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 3 );
 
@@ -377,39 +374,38 @@ int main (int argc, char *argv[]) {
         omptm_free_agents_testing__set_pending_tasks(10);
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(3);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
         assert( free_agent_threads_status[free_agent_id] == false );
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(6);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
         assert( free_agent_threads_status[free_agent_id] == false );
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(7);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
         assert( free_agent_threads_status[free_agent_id] == false );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 0 );
 
         /* P1 starts a nested parallel region, it should not affect anything */
-        ompt_frame_t encountering_task_frame_level2 = {.exit_frame.ptr = &main };
-        ompt_data_t parallel_data_level2 = {};
-        omptm_free_agents__parallel_begin(
-                NULL, &encountering_task_frame_level2, &parallel_data_level2,
-                1, ompt_parallel_team, NULL);
-        omptm_free_agents__implicit_task(
-                ompt_scope_begin, &parallel_data_level2, NULL, 1, 0, 0);
+        omptool_parallel_data_t omptool_parallel_data_level2 = {
+            .level = 2,
+            .requested_parallelism = 1,
+        };
+        omptm_free_agents__parallel_begin(&omptool_parallel_data_level2);
+        omptm_free_agents__into_parallel_function(&omptool_parallel_data_level2, 0);
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 0 );
         omptm_free_agents_testing__acquire_one_free_agent();
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 0 );
 
         /* P1 finalizes nested parallel, nothing... */
-        omptm_free_agents__parallel_end(&parallel_data_level2, NULL, 0, NULL);
+        omptm_free_agents__parallel_end(&omptool_parallel_data_level2);
         assert( omptm_free_agents_testing__in_parallel() );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 0 );
         omptm_free_agents_testing__acquire_one_free_agent();
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 0 );
 
         /* P1 finalizes level 1 parallel */
-        omptm_free_agents__parallel_end(&parallel_data, NULL, 0, NULL);
+        omptm_free_agents__parallel_end(&omptool_parallel_data);
         assert( !omptm_free_agents_testing__in_parallel() );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 0 );
         assert( omptm_free_agents_testing__check_cpu_idle(1) );
@@ -427,17 +423,18 @@ int main (int argc, char *argv[]) {
         omptm_free_agents_testing__set_pending_tasks(0);
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(1);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
         assert( free_agent_threads_status[free_agent_id] == false );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 2 );
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(4);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
         assert( free_agent_threads_status[free_agent_id] == false );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 1 );
         free_agent_id = omptm_free_agents_testing__get_free_agent_id_by_cpuid(5);
         omptm_free_agents_testing__set_free_agent_id(free_agent_id);
-        omptm_free_agents__task_schedule(NULL, ompt_task_complete, NULL);
+        omptm_free_agents__task_complete();
+
         assert( free_agent_threads_status[free_agent_id] == false );
         assert( omptm_free_agents_testing__get_num_enabled_free_agents() == 0 );
         assert( omptm_free_agents_testing__check_cpu_idle(1) );

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -25,6 +25,7 @@
 
 #include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
+#include "LB_core/talp_types.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/atomic.h"
@@ -55,10 +56,11 @@ int main(int argc, char *argv[]) {
     subprocess_descriptor_t spd = {.id = 111};
     options_init(&spd.options, options);
     memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
+    spd_enter_dlb(&spd);
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;
-    dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
+    dlb_monitor_t *implicit_monitor = talp_info->monitor;
 
     /* Register custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register(&spd, "Test monitor");
@@ -67,70 +69,70 @@ int main(int argc, char *argv[]) {
     /* Test MPI + nested user defined region */
     {
         /* TALP initial values */
-        assert( mpi_monitor->accumulated_MPI_time == 0 );
-        assert( mpi_monitor->accumulated_computation_time == 0 );
-        assert( monitoring_region_get_MPI_region(&spd) == mpi_monitor );
+        assert( implicit_monitor->mpi_time == 0 );
+        assert( implicit_monitor->useful_time == 0 );
+        assert( monitoring_region_get_implicit_region(&spd) == implicit_monitor );
 
-        /* Start MPI monitor */
+        /* Start implicit monitor */
         talp_mpi_init(&spd);
 
         /* Start and Stop custom monitoring region */
         monitoring_region_start(&spd, monitor);
         monitoring_region_stop(&spd, monitor);
 
-        /* Stop MPI monitor */
+        /* Stop implicit monitor */
         talp_mpi_finalize(&spd);
 
-        /* Test MPI monitor values are correct and greater than custom monitor */
-        assert( mpi_monitor->accumulated_MPI_time == 0 );
-        assert( mpi_monitor->accumulated_computation_time > 0 );
-        assert( mpi_monitor->accumulated_computation_time > monitor->accumulated_computation_time );
-        assert( mpi_monitor->elapsed_time > monitor->elapsed_time );
-        if (talp_info->papi) {
-            assert( mpi_monitor->accumulated_instructions > monitor->accumulated_instructions );
-            assert( mpi_monitor->accumulated_cycles > monitor->accumulated_cycles );
+        /* Test implicit monitor values are correct and greater than custom monitor */
+        assert( implicit_monitor->mpi_time == 0 );
+        assert( implicit_monitor->useful_time > 0 );
+        assert( implicit_monitor->useful_time > monitor->useful_time );
+        assert( implicit_monitor->elapsed_time > monitor->elapsed_time );
+        if (talp_info->flags.papi) {
+            assert( implicit_monitor->instructions > monitor->instructions );
+            assert( implicit_monitor->cycles > monitor->cycles );
         }
 
         /* Test custom monitor values */
         assert( monitor->num_measurements == 1 );
-        assert( monitor->accumulated_MPI_time == 0 );
-        assert( monitor->accumulated_computation_time != 0 );
+        assert( monitor->mpi_time == 0 );
+        assert( monitor->useful_time != 0 );
         assert( monitoring_region_reset(&spd, monitor) == DLB_SUCCESS );
         assert( monitor->num_resets == 1 );
-        assert( monitor->accumulated_MPI_time == 0 );
-        assert( monitor->accumulated_computation_time == 0 );
-        if (talp_info->papi) {
-            assert( monitor->accumulated_instructions == 0 );
-            assert( monitor->accumulated_cycles == 0 );
+        assert( monitor->mpi_time == 0 );
+        assert( monitor->useful_time == 0 );
+        if (talp_info->flags.papi) {
+            assert( monitor->instructions == 0 );
+            assert( monitor->cycles == 0 );
         }
     }
 
-    /* Test that reset/start/stop/report may also be invoked with the implicit DLB_MPI_REGION */
+    /* Test that reset/start/stop/report may also be invoked with the implicit DLB_IMPLICIT_REGION */
     {
-        /* Reset MPI monitoring region */
-        assert( monitoring_region_reset(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
-        assert( !monitoring_region_is_started(mpi_monitor) );
-        assert( mpi_monitor->elapsed_time == 0 );
-        assert( mpi_monitor->num_measurements == 0 );
+        /* Reset implicit monitoring region */
+        assert( monitoring_region_reset(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
+        assert( !monitoring_region_is_started(implicit_monitor) );
+        assert( implicit_monitor->elapsed_time == 0 );
+        assert( implicit_monitor->num_measurements == 0 );
 
-        /* Start MPI monitor */
+        /* Start implicit monitor */
         talp_mpi_init(&spd);
 
-        /* Stop MPI monitoring region */
-        assert( monitoring_region_stop(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
-        assert( !monitoring_region_is_started(mpi_monitor) );
-        assert( mpi_monitor->elapsed_time > 0 );
-        assert( mpi_monitor->num_measurements == 1 );
+        /* Stop implicit monitoring region */
+        assert( monitoring_region_stop(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
+        assert( !monitoring_region_is_started(implicit_monitor) );
+        assert( implicit_monitor->elapsed_time > 0 );
+        assert( implicit_monitor->num_measurements == 1 );
 
-        /* Start MPI monitoring region */
-        assert( monitoring_region_start(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
-        assert( monitoring_region_is_started(mpi_monitor) );
+        /* Start implicit monitoring region */
+        assert( monitoring_region_start(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
+        assert( monitoring_region_is_started(implicit_monitor) );
 
-        /* Stop MPI monitor */
+        /* Stop implicit monitor */
         talp_mpi_finalize(&spd);
 
-        /* Report MPI region */
-        assert( monitoring_region_report(&spd, DLB_MPI_REGION) == DLB_SUCCESS );
+        /* Report implicit region */
+        assert( monitoring_region_report(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
     }
 
     /* Test number of measurements */
@@ -204,7 +206,55 @@ int main(int argc, char *argv[]) {
         dlb_monitor_t *monitor8 = monitoring_region_register(&spd, long_name);
         assert( monitor7 == monitor8 );
         monitoring_region_report(&spd, monitor7);
-        monitoring_region_report(&spd, mpi_monitor);
+        monitoring_region_report(&spd, implicit_monitor);
+    }
+
+    /* Test internal monitor */
+    {
+        dlb_monitor_t *monitor9 = monitoring_region_register(&spd, "Hidden monitor");
+        monitoring_region_set_internal(monitor9, true);
+        monitoring_region_report(&spd, monitor9);
+    }
+
+    /* Test --talp-region-select */
+    {
+        strcpy(spd.options.talp_region_select, "none");
+        dlb_monitor_t *monitor1 = monitoring_region_register(&spd, "disabled_monitor");
+        assert( monitoring_region_start(&spd, monitor1) == DLB_NOUPDT );
+        assert( monitoring_region_stop(&spd, monitor1) == DLB_NOUPDT );
+        assert( monitor1->num_measurements == 0 );
+
+        strcpy(spd.options.talp_region_select, "other_monitor");
+        dlb_monitor_t *monitor2 = monitoring_region_register(&spd, "not_enabled_monitor");
+        assert( monitoring_region_start(&spd, monitor2) == DLB_NOUPDT );
+        assert( monitoring_region_stop(&spd, monitor2) == DLB_NOUPDT );
+        assert( monitor2->num_measurements == 0 );
+
+        strcpy(spd.options.talp_region_select, "monitor4,monitor5");
+        dlb_monitor_t *monitor3 = monitoring_region_register(&spd, "monitor3");
+        assert( monitoring_region_start(&spd, monitor3) == DLB_NOUPDT );
+        assert( monitoring_region_stop(&spd, monitor3) == DLB_NOUPDT );
+        assert( monitor3->num_measurements == 0 );
+        dlb_monitor_t *monitor4 = monitoring_region_register(&spd, "monitor4");
+        assert( monitoring_region_start(&spd, monitor4) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor4) == DLB_SUCCESS );
+        assert( monitor4->num_measurements == 1 );
+        dlb_monitor_t *monitor5 = monitoring_region_register(&spd, "monitor5");
+        assert( monitoring_region_start(&spd, monitor5) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor5) == DLB_SUCCESS );
+        assert( monitor5->num_measurements == 1 );
+
+        strcpy(spd.options.talp_region_select, "");
+        dlb_monitor_t *monitor6 = monitoring_region_register(&spd, "monitor6");
+        assert( monitoring_region_start(&spd, monitor6) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor6) == DLB_SUCCESS );
+        assert( monitor6->num_measurements == 1 );
+
+        strcpy(spd.options.talp_region_select, "all");
+        dlb_monitor_t *monitor7 = monitoring_region_register(&spd, "monitor7");
+        assert( monitoring_region_start(&spd, monitor7) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor7) == DLB_SUCCESS );
+        assert( monitor7->num_measurements == 1 );
     }
 
     /* Test creation of N regions */
@@ -264,10 +314,30 @@ int main(int argc, char *argv[]) {
     /* Test function not compatble without MPI support */
     {
         dlb_pop_metrics_t pop_metrics;
-        assert( talp_collect_pop_metrics(&spd, mpi_monitor, &pop_metrics) == DLB_ERR_NOCOMP );
+        assert( talp_collect_pop_metrics(&spd, implicit_monitor, &pop_metrics) == DLB_ERR_NOCOMP );
     }
 
     talp_finalize(&spd);
+
+    /* Test --talp-region-select with implicit region, and finalize with open regions  */
+    {
+        strcpy(spd.options.talp_region_select, "region1,application");
+        talp_init(&spd);
+        implicit_monitor = monitoring_region_get_implicit_region(&spd);
+        assert( monitoring_region_start(&spd, implicit_monitor) == DLB_SUCCESS );
+        assert( monitoring_region_is_started(implicit_monitor) );
+        talp_finalize(&spd);
+    }
+
+    /* Test --talp-region-select without implicit region */
+    {
+        strcpy(spd.options.talp_region_select, "region1");
+        talp_init(&spd);
+        implicit_monitor = monitoring_region_get_implicit_region(&spd);
+        assert( monitoring_region_start(&spd, implicit_monitor) == DLB_NOUPDT );
+        assert( !monitoring_region_is_started(implicit_monitor) );
+        talp_finalize(&spd);
+    }
 
     return 0;
 }

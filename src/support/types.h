@@ -99,10 +99,15 @@ typedef enum TalpSummaryType {
     SUMMARY_NONE        = 0,
     SUMMARY_ALL         = 0xFFFF,
     SUMMARY_POP_METRICS = 1 << 0,
-    SUMMARY_POP_RAW     = 1 << 1,
+    SUMMARY_POP_RAW     = 1 << 1, // DEPRECATED
     SUMMARY_NODE        = 1 << 2,
     SUMMARY_PROCESS     = 1 << 3,
 } talp_summary_t;
+
+typedef enum TalpModel {
+    TALP_MODEL_HYBRID_V1,
+    TALP_MODEL_HYBRID_V2,
+} talp_model_t;
 
 typedef enum PolicyType {
     POLICY_NONE,
@@ -140,6 +145,7 @@ typedef enum OMPTMVersion {
 
 static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }
+static inline int64_t min_int64(int64_t a, int64_t b) { return a < b ? a : b; }
 static inline int64_t max_int64(int64_t a, int64_t b) { return a > b ? a : b; }
 static inline unsigned int min_uint(unsigned int a, unsigned int b) { return a < b ? a : b; }
 
@@ -193,6 +199,12 @@ int parse_talp_summary(const char *str, talp_summary_t *value);
 const char* talp_summary_tostr(talp_summary_t summary);
 const char* get_talp_summary_choices(void);
 bool equivalent_talp_summary(const char *str1, const char *str2);
+
+/* talp_model_t */
+int parse_talp_model(const char *str, talp_model_t *value);
+const char* talp_model_tostr(talp_model_t value);
+const char* get_talp_model_choices(void);
+bool equivalent_talp_model(const char *str1, const char *str2);
 
 /* interaction_mode_t */
 int parse_mode(const char *str, interaction_mode_t *value);

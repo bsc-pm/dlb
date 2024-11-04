@@ -26,6 +26,7 @@
 #include "support/mask_utils.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
+#include "LB_numThreads/omptool.h"
 
 #include <limits.h>
 #include <sched.h>
@@ -42,11 +43,6 @@
 
 void omp_set_num_threads(int nthreads) __attribute__((weak));
 static void (*set_num_threads_fn)(int) = NULL;
-
-enum {
-    PARALLEL_UNSET,
-    PARALLEL_LEVEL_1,
-};
 
 
 /*********************************************************************************/
@@ -373,48 +369,15 @@ void omptm_omp5__OutOfBlockingCall(void) {
 }
 
 
-void omptm_omp5__parallel_begin(
-        ompt_data_t *encountering_task_data,
-        const ompt_frame_t *encountering_task_frame,
-        ompt_data_t *parallel_data,
-        unsigned int requested_parallelism,
-        int flags,
-        const void *codeptr_ra) {
-    /* From OpenMP spec:
-     * "The exit frame associated with the initial task that is not nested
-     *  inside any OpenMP construct is NULL."
-     */
-    if (encountering_task_frame->exit_frame.ptr == NULL
-            && flags & ompt_parallel_team) {
-        /* This is a non-nested parallel construct encountered by the initial task.
-         * Set parallel_data to an appropriate value so that worker threads know
-         * when they start their explicit task for this parallel region.
-         */
-        parallel_data->value = PARALLEL_LEVEL_1;
-
+void omptm_omp5__parallel_begin(omptool_parallel_data_t *parallel_data) {
+    if (parallel_data->level == 1) {
         omptm_omp5__borrow();
     }
 }
 
-void omptm_omp5__parallel_end(
-        ompt_data_t *parallel_data,
-        ompt_data_t *encountering_task_data,
-        int flags,
-        const void *codeptr_ra) {
-    if (parallel_data->value == PARALLEL_LEVEL_1) {
+void omptm_omp5__parallel_end(omptool_parallel_data_t *parallel_data) {
+    if (parallel_data->level == 1) {
         omptm_omp5__lend();
-        parallel_data->value = PARALLEL_UNSET;
-    }
-}
-
-void omptm_omp5__task_schedule(
-        ompt_data_t *prior_task_data,
-        ompt_task_status_t prior_task_status,
-        ompt_data_t *next_task_data) {
-    if (prior_task_status == ompt_task_switch) {
-        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
-    } else if (prior_task_status == ompt_task_complete) {
-        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
     }
 }
 
@@ -422,54 +385,27 @@ static inline int get_thread_binding(int index) {
     return cpu_bindings.items[index % cpu_bindings.count];
 }
 
-void omptm_omp5__implicit_task(
-        ompt_scope_endpoint_t endpoint,
-        ompt_data_t *parallel_data,
-        ompt_data_t *task_data,
-        unsigned int actual_parallelism,
-        unsigned int index,
-        int flags) {
-    if (endpoint == ompt_scope_begin) {
-        if (parallel_data &&
-                parallel_data->value == PARALLEL_LEVEL_1) {
-            int cpuid = get_thread_binding(index);
-            int current_cpuid = sched_getcpu();
-            if (cpuid >= 0 && cpuid != current_cpuid) {
-                cpu_set_t thread_mask;
-                CPU_ZERO(&thread_mask);
-                CPU_SET(cpuid, &thread_mask);
-                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-                instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
-                verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
-            }
-            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
+void omptm_omp5__into_parallel_function(
+        omptool_parallel_data_t *parallel_data, unsigned int index) {
+    if (parallel_data->level == 1) {
+        int cpuid = get_thread_binding(index);
+        int current_cpuid = sched_getcpu();
+        if (cpuid >=0 && cpuid != current_cpuid) {
+            cpu_set_t thread_mask;
+            CPU_ZERO(&thread_mask);
+            CPU_SET(cpuid, &thread_mask);
+            pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+            instrument_event(REBIND_EVENT, cpuid+1, EVENT_BEGIN);
+            verbose(VB_OMPT, "Rebinding thread %d to CPU %d", index, cpuid);
         }
     }
-    /* LLVM implementation may emit implicit-task-end too late, binding events
-     * will be closed at sync-region-implicit-parallel */
 }
 
-void omptm_omp5__sync_region(
-        ompt_sync_region_t kind,
-        ompt_scope_endpoint_t endpoint,
-        ompt_data_t *parallel_data,
-        ompt_data_t *task_data,
-        const void *codeptr_ra) {
-    /* Warning: at the time of writing (May 2023), LLVM upstream still uses the
-     * deprecated kind ompt_sync_region_barrier_implicit for the
-     * sync-region-implicit-parallel event, so we cannot yet remove the
-     * deprecated enum. The problem with keeping it is that we are finalizing
-     * the event earlier if there are other implicit barriers, like in a single
-     * construct.
-     */
-    if ((kind == ompt_sync_region_barrier_implicit_parallel
-                || kind == ompt_sync_region_barrier_implicit)
-            && endpoint == ompt_scope_begin
-            && parallel_data->value == PARALLEL_LEVEL_1) {
+void omptm_omp5__into_parallel_implicit_barrier(omptool_parallel_data_t *parallel_data) {
+    if (parallel_data->level == 1) {
         /* A thread participating in the level 1 parallel region
          * has reached the implicit barrier */
         instrument_event(REBIND_EVENT,   0, EVENT_END);
-        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
     }
 }
 

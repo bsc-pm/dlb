@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -33,12 +33,14 @@
 #include <stdint.h>
 #include <assert.h>
 
+enum { KNOWN_DEFAULT_REGIONS_PER_PROC = 100 };
+
 int main(int argc, char *argv[]) {
     pid_t p1_pid = 111;
     pid_t p2_pid = 222;
 
     assert( shmem_talp__finalize(42) == DLB_ERR_NOSHMEM );
-    assert( shmem_talp__register(42, "", NULL) == DLB_ERR_NOSHMEM );
+    assert( shmem_talp__register(42, 1, "", NULL) == DLB_ERR_NOSHMEM );
     assert( shmem_talp__get_pidlist(NULL, NULL, 0) == DLB_ERR_NOSHMEM );
     assert( shmem_talp__get_regionlist(NULL, NULL, 0, NULL) == DLB_ERR_NOSHMEM );
     assert( shmem_talp__get_times(0, NULL, NULL) == DLB_ERR_NOSHMEM );
@@ -51,7 +53,7 @@ int main(int argc, char *argv[]) {
 
     /* Register some TALP regions */
     int region_id1 = -1;
-    assert( shmem_talp__register(p1_pid, "Custom region 1", &region_id1) == DLB_SUCCESS );
+    assert( shmem_talp__register(p1_pid, 1, "Custom region 1", &region_id1) == DLB_SUCCESS );
     assert( region_id1 == 0 );
     assert( shmem_talp__set_times(region_id1, 111111, 222222) == DLB_SUCCESS );
     int64_t mpi_time = -1;
@@ -59,11 +61,11 @@ int main(int argc, char *argv[]) {
     assert( shmem_talp__get_times(region_id1, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time == 111111 && useful_time == 222222);
     int region_id2 = -1 ;
-    assert( shmem_talp__register(p1_pid, "Region 2", &region_id2) == DLB_SUCCESS );
+    assert( shmem_talp__register(p1_pid, 1, "Region 2", &region_id2) == DLB_SUCCESS );
     assert( region_id2 == 1 );
     assert( shmem_talp__set_times(region_id2, INT64_MAX, 42) == DLB_SUCCESS );
     int region_id3 = -1;
-    assert( shmem_talp__register(p2_pid, "Custom region 1", &region_id3) == DLB_SUCCESS );
+    assert( shmem_talp__register(p2_pid, 1, "Custom region 1", &region_id3) == DLB_SUCCESS );
     assert( region_id3 == 2 );
     assert( shmem_talp__set_times(region_id3, 0, 4242) == DLB_SUCCESS );
     assert( shmem_talp__set_times(3, 0, 0) == DLB_ERR_NOENT );
@@ -104,17 +106,17 @@ int main(int argc, char *argv[]) {
                 "nonexistent region") == DLB_SUCCESS );
     assert( nelems == 0 );
 
-    /* Fill up memory from id 3 until mu_get_system_size * 10 */
+    /* Fill up memory from id 3 until mu_get_system_size * KNOWN_DEFAULT_REGIONS_PER_PROC */
     int i;
-    int expected_memory_capacity = mu_get_system_size() * 10;
+    int expected_memory_capacity = mu_get_system_size() * KNOWN_DEFAULT_REGIONS_PER_PROC;
     int region_id;
     for (i=3; i<expected_memory_capacity; ++i) {
         char name[32];
         snprintf(name, 32, "Region %d", i);
-        assert( shmem_talp__register(p1_pid, name, &region_id) == DLB_SUCCESS );
+        assert( shmem_talp__register(p1_pid, 1, name, &region_id) == DLB_SUCCESS );
         assert( region_id == i );
     }
-    assert( shmem_talp__register(p1_pid, "No mem", &region_id) == DLB_ERR_NOMEM );
+    assert( shmem_talp__register(p1_pid, 1, "No mem", &region_id) == DLB_ERR_NOMEM );
     assert( shmem_talp__set_times(i, 0, 0) == DLB_ERR_NOMEM );
     assert( shmem_talp__get_times(i, NULL, NULL) == DLB_ERR_NOMEM );
 

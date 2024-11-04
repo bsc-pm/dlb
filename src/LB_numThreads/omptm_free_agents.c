@@ -23,10 +23,10 @@
 #include "support/atomic.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
-#include "support/tracing.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_core/spd.h"
+#include "LB_numThreads/omptool.h"
 
 #include <sched.h>
 #include <unistd.h>
@@ -521,9 +521,7 @@ void omptm_free_agents__OutOfBlockingCall(void) {
 /*  OMPT registered callbacks                                                    */
 /*********************************************************************************/
 
-void omptm_free_agents__thread_begin(
-        ompt_thread_t thread_type,
-        ompt_data_t *thread_data) {
+void omptm_free_agents__thread_begin(ompt_thread_t thread_type) {
     /* Set up thread local spd */
     spd_enter_dlb(thread_spd);
 
@@ -561,30 +559,13 @@ void omptm_free_agents__thread_begin(
     }
 }
 
-void omptm_free_agents__parallel_begin(
-        ompt_data_t *encountering_task_data,
-        const ompt_frame_t *encountering_task_frame,
-        ompt_data_t *parallel_data,
-        unsigned int requested_parallelism,
-        int flags,
-        const void *codeptr_ra) {
-    /* From OpenMP spec:
-     * "The exit frame associated with the initial task that is not nested
-     *  inside any OpenMP construct is NULL."
-     */
-    if (encountering_task_frame->exit_frame.ptr == NULL
-            && flags & ompt_parallel_team) {
-
-        /* This is a non-nested parallel construct encountered by the initial task.
-         * Set parallel_data to an appropriate value so that worker threads know
-         * when they start their explicit task for this parallel region.
-         */
-        parallel_data->value = PARALLEL_LEVEL_1;
+void omptm_free_agents__parallel_begin(omptool_parallel_data_t *parallel_data) {
+    if (parallel_data->level == 1) {
         DLB_ATOMIC_ST(&in_parallel, true);
 
         /* Only if requested_parallelism == process_mask, reclaim all our lent CPUs, if needed */
         /* Otherwise, each thread will be responsible for reclaiming themselves */
-        if (requested_parallelism == (unsigned)CPU_COUNT(&process_mask)) {
+        if (parallel_data->requested_parallelism == (unsigned)CPU_COUNT(&process_mask)) {
             int cpus_to_reclaim = 0;
             int cpuid_to_reclaim = -1;
             cpu_set_t mask_to_reclaim;
@@ -626,13 +607,8 @@ void omptm_free_agents__parallel_begin(
     }
 }
 
-void omptm_free_agents__parallel_end(
-        ompt_data_t *parallel_data,
-        ompt_data_t *encountering_task_data,
-        int flags,
-        const void *codeptr_ra) {
-    if (parallel_data->value == PARALLEL_LEVEL_1) {
-        parallel_data->value = PARALLEL_UNSET;
+void omptm_free_agents__parallel_end(omptool_parallel_data_t *parallel_data) {
+    if (parallel_data->level == 1) {
         DLB_ATOMIC_ST(&in_parallel, false);
         /* All workers in parallel go to IDLE */
         int cpuid;
@@ -648,126 +624,80 @@ void omptm_free_agents__parallel_end(
     }
 }
 
-void omptm_free_agents__task_create(
-        ompt_data_t *encountering_task_data,
-        const ompt_frame_t *encountering_task_frame,
-        ompt_data_t *new_task_data,
-        int flags,
-        int has_dependences,
-        const void *codeptr_ra) {
-    if (flags & ompt_task_explicit) {
-        /* Increment the amount of pending tasks */
-        DLB_ATOMIC_ADD(&pending_tasks, 1);
+void omptm_free_agents__into_parallel_function(
+        omptool_parallel_data_t *parallel_data, unsigned int index) {
+    if (parallel_data->level == 1) {
+        /* Obtain CPU id */
+        /* FIXME: actually, we should test CPU binding every time we enter
+            * here, since the RT is free to rebind threads, but we need
+            * __worker_binding for testing */
+        int cpuid = __worker_binding;
+        if (cpuid == -1) {
+            cpu_set_t thread_mask;
+            pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
+            cpuid = mu_get_single_cpu(&thread_mask);
+            fatal_cond(cpuid == -1,
+                    "DLB does not currently support thread binding to more than one CPU,"
+                    " current CPU affinity mask for thread %d: %s."
+                    " Please, define OMP_PLACES=threads and run again.",
+                    index, mu_to_str(&thread_mask));
+            __worker_binding = cpuid;
+        }
 
-        /* For now, let's assume that we always want to increase the number
-         * of active threads whenever a task is created
-         */
-        acquire_one_free_agent();
+
+        /* Reclaim CPU if needed and set the appropriate state */
+        if (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].state) & CPU_STATE_LENT) {
+            DLB_ReclaimCpu(cpuid);
+        }
+        set_bit((atomic_int*)&cpu_data[cpuid].state, CPU_STATE_IN_PARALLEL);
+        verbose(VB_OMPT, "CPU %d starting an implicit task", cpuid);
     }
 }
 
-void omptm_free_agents__task_schedule(
-        ompt_data_t *prior_task_data,
-        ompt_task_status_t prior_task_status,
-        ompt_data_t *next_task_data) {
+void omptm_free_agents__task_create(void) {
+    /* Increment the amount of pending tasks */
+    DLB_ATOMIC_ADD(&pending_tasks, 1);
 
-    if (prior_task_status == ompt_task_switch) {
-        if (DLB_ATOMIC_SUB(&pending_tasks, 1) > 1) {
-            acquire_one_free_agent();
-        }
-        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
-    } else if (prior_task_status == ompt_task_complete) {
-        if (__free_agent_id >= 0) {
-            int cpuid = get_free_agent_cpuid_by_id(__free_agent_id);
-
-            /* Disable free agent thread if this CPU is needed for a worker thread */
-            if (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].state) & CPU_STATE_IN_PARALLEL
-                    || DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].wanted_for_parallel)) {
-                cb_disable_cpu(cpuid, NULL);
-            }
-
-            /* Return CPU if reclaimed */
-            else if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
-                if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
-                    cb_disable_cpu(cpuid, NULL);
-                }
-            }
-
-            /* Lend CPU if no more tasks */
-            else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
-                cb_disable_cpu(cpuid, NULL);
-
-                /* Lend only free agents not part of the process mask */
-                /* or, lend anyway if LEND policy */
-                if (!CPU_ISSET(cpuid, &process_mask)
-                        || omptool_opts & OMPTOOL_OPTS_LEND) {
-                    DLB_LendCpu(cpuid);
-                }
-            }
-        }
-        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
-    }
-}
-
-void omptm_free_agents__implicit_task(
-        ompt_scope_endpoint_t endpoint,
-        ompt_data_t *parallel_data,
-        ompt_data_t *task_data,
-        unsigned int actual_parallelism,
-        unsigned int index,
-        int flags) {
-    if (endpoint == ompt_scope_begin) {
-        if (parallel_data &&
-                parallel_data->value == PARALLEL_LEVEL_1) {
-            /* Implicit task for the non-nested parallel region */
-
-            /* Obtain CPU id */
-            /* FIXME: actually, we should test CPU binding every time we enter
-             * here, since the RT is free to rebind threads, but we need
-             * __worker_binding for testing */
-            int cpuid = __worker_binding;
-            if (cpuid == -1) {
-                cpu_set_t thread_mask;
-                pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &thread_mask);
-                cpuid = mu_get_single_cpu(&thread_mask);
-                fatal_cond(cpuid == -1,
-                        "DLB does not currently support thread binding to more than one CPU,"
-                        " current CPU affinity mask for thread %d: %s."
-                        " Please, define OMP_PLACES=threads and run again.",
-                        index, mu_to_str(&thread_mask));
-                __worker_binding = cpuid;
-            }
-
-
-            /* Reclaim CPU if needed and set the appropriate state */
-            if (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].state) & CPU_STATE_LENT) {
-                DLB_ReclaimCpu(cpuid);
-            }
-            set_bit((atomic_int*)&cpu_data[cpuid].state, CPU_STATE_IN_PARALLEL);
-            verbose(VB_OMPT, "CPU %d starting an implicit task", cpuid);
-
-            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
-        }
-    }
-
-    /* Implicit tasks are not guarenteed to end exactly at the end of
-     * the parallel region, so DLB cannot do anything based on that.
+    /* For now, let's assume that we always want to increase the number
+     * of active threads whenever a task is created
      */
+    acquire_one_free_agent();
 }
 
-void omptm_free_agents__sync_region(
-        ompt_sync_region_t kind,
-        ompt_scope_endpoint_t endpoint,
-        ompt_data_t *parallel_data,
-        ompt_data_t *task_data,
-        const void *codeptr_ra) {
-    if ((kind == ompt_sync_region_barrier_implicit_parallel
-                || kind == ompt_sync_region_barrier_implicit)
-            && endpoint == ompt_scope_begin
-            && parallel_data->value == PARALLEL_LEVEL_1) {
-        /* A thread participating in the level 1 parallel region
-         * has reached the implicit barrier */
-        instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+void omptm_free_agents__task_complete(void) {
+    if (__free_agent_id >= 0) {
+        int cpuid = get_free_agent_cpuid_by_id(__free_agent_id);
+
+        /* Disable free agent thread if this CPU is needed for a worker thread */
+        if (DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].state) & CPU_STATE_IN_PARALLEL
+                || DLB_ATOMIC_LD_RLX(&cpu_data[cpuid].wanted_for_parallel)) {
+            cb_disable_cpu(cpuid, NULL);
+        }
+
+        /* Return CPU if reclaimed */
+        else if (DLB_CheckCpuAvailability(cpuid) == DLB_ERR_PERM) {
+            if (DLB_ReturnCpu(cpuid) == DLB_ERR_PERM) {
+                cb_disable_cpu(cpuid, NULL);
+            }
+        }
+
+        /* Lend CPU if no more tasks */
+        else if (DLB_ATOMIC_LD(&pending_tasks) == 0) {
+            cb_disable_cpu(cpuid, NULL);
+
+            /* Lend only free agents not part of the process mask */
+            /* or, lend anyway if LEND policy */
+            if (!CPU_ISSET(cpuid, &process_mask)
+                    || omptool_opts & OMPTOOL_OPTS_LEND) {
+                DLB_LendCpu(cpuid);
+            }
+        }
+    }
+}
+
+void omptm_free_agents__task_switch(void) {
+    if (DLB_ATOMIC_SUB(&pending_tasks, 1) > 1) {
+        acquire_one_free_agent();
     }
 }
 

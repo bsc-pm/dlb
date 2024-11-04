@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -40,6 +40,7 @@ void before_finalize(void);
 void after_finalize(void);
 int  is_mpi_ready(void);
 void process_MPI__finalize(void);
+MPI_Comm getWorldComm(void);
 MPI_Comm getNodeComm(void);
 MPI_Comm getInterNodeComm(void);
 

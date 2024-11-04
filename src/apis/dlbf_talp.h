@@ -19,20 +19,27 @@
 
        type, bind(c) :: dlb_monitor_t
         type(c_ptr)             :: name_
+        integer(kind=c_int)     :: num_cpus
+        real(kind=c_float)      :: avg_cpus
+        integer(kind=c_int64_t) :: cycles
+        integer(kind=c_int64_t) :: instructions
         integer(kind=c_int)     :: num_measurements
         integer(kind=c_int)     :: num_resets
+        integer(kind=c_int64_t) :: num_mpi_calls
+        integer(kind=c_int64_t) :: num_omp_parallels
+        integer(kind=c_int64_t) :: num_omp_tasks
         integer(kind=c_int64_t) :: start_time
         integer(kind=c_int64_t) :: stop_time
         integer(kind=c_int64_t) :: elapsed_time
-        integer(kind=c_int64_t) :: elapsed_computation_time
-        integer(kind=c_int64_t) :: accumulated_MPI_time
-        integer(kind=c_int64_t) :: accumulated_computation_time
-        integer(kind=c_int64_t) :: num_mpi_calls
-        integer(kind=c_int64_t) :: accumulated_instructions
-        integer(kind=c_int64_t) :: accumulated_cycles
+        integer(kind=c_int64_t) :: useful_time
+        integer(kind=c_int64_t) :: mpi_time
+        integer(kind=c_int64_t) :: omp_load_imbalance_time
+        integer(kind=c_int64_t) :: omp_scheduling_time
+        integer(kind=c_int64_t) :: omp_serialization_time
         type(c_ptr)             :: data_
        end type
-       type(c_ptr), parameter   :: DLB_MPI_REGION = c_null_ptr
+       type(c_ptr), parameter   :: DLB_MPI_REGION = c_null_ptr   !! deprecated
+       type(c_ptr), parameter   :: DLB_IMPLICIT_REGION = c_null_ptr
        type(c_ptr), parameter   :: DLB_LAST_OPEN_REGION = transfer(1_8, c_null_ptr)
 
        interface
@@ -55,21 +62,12 @@
             real(c_double), intent(out) :: ncpus
         end function dlb_talp_getnumcpus
 
-        function dlb_talp_getmpitime(process, mpi_time) result(ierr)    &
-     &          bind(c,name='DLB_TALP_MPITimeGet')
+        function dlb_monitoringregiongetimplicit()                      &
+     &          result (handle)                                         &
+     &          bind(c, name='DLB_MonitoringRegionGetImplicit')
             use iso_c_binding
-            integer(kind=c_int) :: ierr
-            integer(kind=c_int), value, intent(in) :: process
-            real(c_double), intent(out) :: mpi_time
-        end function dlb_talp_getmpitime
-
-        function dlb_talp_getcputime(process, compute_time)             &
-     &          result(ierr) bind(c,name='DLB_TALP_CPUTimeGet')
-            use iso_c_binding
-            integer(kind=c_int) :: ierr
-            integer(kind=c_int), value, intent(in) :: process
-            real(c_double), intent(out) :: compute_time
-        end function dlb_talp_getcputime
+            type(c_ptr) :: handle
+        end function dlb_monitoringregiongetimplicit
 
         function dlb_monitoringregionregister(region_name)              &
      &          result (handle)                                         &
@@ -106,6 +104,12 @@
             integer(kind=c_int) :: ierr
             type(c_ptr), value, intent(in) :: handle
         end function dlb_monitoringregionreport
+
+        function dlb_monitoringregionupdate()                           &
+     &         result (ierr) bind(c, name='DLB_MonitoringRegionsUpdate')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+        end function dlb_monitoringregionupdate
       end interface
 
 ! -*- fortran -*-  vim: set ft=fortran:

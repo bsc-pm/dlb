@@ -140,6 +140,32 @@ g_slist_remove (GSList        *list,
 }
 
 /**
+ * g_slist_reverse:
+ * @list: a #GSList
+ *
+ * Reverses a #GSList.
+ *
+ * Returns: the start of the reversed #GSList
+ */
+GSList*
+g_slist_reverse (GSList *list)
+{
+  GSList *prev = NULL;
+
+  while (list)
+    {
+      GSList *next = list->next;
+
+      list->next = prev;
+
+      prev = list;
+      list = next;
+    }
+
+  return prev;
+}
+
+/**
  * g_slist_length:
  * @list: a #GSList
  *

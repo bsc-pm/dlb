@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -34,7 +34,7 @@
 
 
 enum { NOBODY = 0 };
-enum { DEFAULT_REGIONS_PER_PROC = 10 };
+enum { DEFAULT_REGIONS_PER_PROC = 100 };
 
 
 typedef struct DLB_ALIGN_CACHE talp_region_t {
@@ -42,6 +42,7 @@ typedef struct DLB_ALIGN_CACHE talp_region_t {
     atomic_int_least64_t mpi_time;
     atomic_int_least64_t useful_time;
     pid_t pid;
+    float avg_cpus;
 } talp_region_t;
 
 typedef struct {
@@ -50,7 +51,7 @@ typedef struct {
     talp_region_t talp_region[];
 } shdata_t;
 
-enum { SHMEM_TALP_VERSION = 1 };
+enum { SHMEM_TALP_VERSION = 3 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
@@ -225,7 +226,7 @@ int shmem_talp_ext__finalize(void) {
 
 /* Register monitoring region with name "name", or look up if already registered.
  * Return associated node-unique id by parameter. */
-int shmem_talp__register(pid_t pid, const char *name, int *node_shared_id) {
+int shmem_talp__register(pid_t pid, float avg_cpus, const char *name, int *node_shared_id) {
     if (shm_handler == NULL) return DLB_ERR_NOSHMEM;
 
     int error;
@@ -258,7 +259,7 @@ int shmem_talp__register(pid_t pid, const char *name, int *node_shared_id) {
             error = DLB_NOUPDT;
         } else if (region_id == max_regions && empty_spot != NULL) {
             /* Register new region */
-            *empty_spot = (const talp_region_t) {.pid = pid};
+            *empty_spot = (const talp_region_t) {.pid = pid, .avg_cpus = avg_cpus};
             snprintf(empty_spot->name, DLB_MONITOR_NAME_MAX, "%s", name);
             *node_shared_id = found_id;
             error = DLB_SUCCESS;
@@ -327,6 +328,7 @@ int shmem_talp__get_region(talp_region_list_t *region, pid_t pid, const char *na
                     .region_id = region_id,
                     .mpi_time = DLB_ATOMIC_LD_RLX(&talp_region->mpi_time),
                     .useful_time = DLB_ATOMIC_LD_RLX(&talp_region->useful_time),
+                    .avg_cpus = talp_region->avg_cpus,
                 };
                 error = DLB_SUCCESS;
                 break;
@@ -357,6 +359,7 @@ int shmem_talp__get_regionlist(talp_region_list_t *region_list, int *nelems,
                     .region_id = region_id,
                     .mpi_time = DLB_ATOMIC_LD_RLX(&talp_region->mpi_time),
                     .useful_time = DLB_ATOMIC_LD_RLX(&talp_region->useful_time),
+                    .avg_cpus = talp_region->avg_cpus,
                 };
             }
         }
@@ -398,6 +401,19 @@ int shmem_talp__set_times(int region_id, int64_t mpi_time, int64_t useful_time) 
 
     DLB_ATOMIC_ST_RLX(&talp_region->mpi_time, mpi_time);
     DLB_ATOMIC_ST_RLX(&talp_region->useful_time, useful_time);
+
+    return DLB_SUCCESS;
+}
+
+int shmem_talp__set_avg_cpus(int region_id, float avg_cpus) {
+    if (unlikely(shm_handler == NULL)) return DLB_ERR_NOSHMEM;
+    if (unlikely(region_id >= shdata->max_regions)) return DLB_ERR_NOMEM;
+    if (unlikely(region_id < 0)) return DLB_ERR_NOENT;
+
+    talp_region_t *talp_region = &shdata->talp_region[region_id];
+    if (unlikely(talp_region->pid == NOBODY)) return DLB_ERR_NOENT;
+
+    talp_region->avg_cpus = avg_cpus;
 
     return DLB_SUCCESS;
 }
@@ -510,8 +526,8 @@ int shmem_talp__version(void) {
 }
 
 size_t shmem_talp__size(void) {
-    int regions_per_process =
-        regions_per_proc_initialized ? regions_per_proc_initialized : DEFAULT_REGIONS_PER_PROC;
+    int regions_per_process = regions_per_proc_initialized ?
+        regions_per_proc_initialized : DEFAULT_REGIONS_PER_PROC;
     int num_regions = mu_get_system_size() * regions_per_process;
     return sizeof(shdata_t) + sizeof(talp_region_t)*num_regions;
 }
