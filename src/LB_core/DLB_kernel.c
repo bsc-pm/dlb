@@ -97,7 +97,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     bool mask_is_needed = (
             spd->lb_policy == POLICY_LEWI_MASK
             || spd->options.drom
-            || spd->options.ompt
             || spd->options.preinit_pid);
     if (mask_is_needed &&
             (spd->lb_policy == POLICY_LEWI || spd->lb_policy == POLICY_LEWI_ASYNC)) {

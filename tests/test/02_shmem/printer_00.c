@@ -150,15 +150,15 @@ int main(int argc, char *argv[]) {
 
     /* Register some TALP regions */
     int region_id1 = -1;
-    assert( shmem_talp__register(p1_pid, "Custom region 1", &region_id1) == DLB_SUCCESS );
+    assert( shmem_talp__register(p1_pid, 1, "Custom region 1", &region_id1) == DLB_SUCCESS );
     assert( region_id1 == 0 );
     assert( shmem_talp__set_times(region_id1, 111111, 111111) == DLB_SUCCESS );
     int region_id2 = -1 ;
-    assert( shmem_talp__register(p1_pid, "Region 2", &region_id2) == DLB_SUCCESS );
+    assert( shmem_talp__register(p1_pid, 1, "Region 2", &region_id2) == DLB_SUCCESS );
     assert( region_id2 == 1 );
     assert( shmem_talp__set_times(region_id2, INT64_MAX, 42) == DLB_SUCCESS );
     int region_id3 = -1;
-    assert( shmem_talp__register(p2_pid, "Custom region 1", &region_id3) == DLB_SUCCESS );
+    assert( shmem_talp__register(p2_pid, 1, "Custom region 1", &region_id3) == DLB_SUCCESS );
     assert( region_id3 == 2 );
     assert( shmem_talp__set_times(region_id3, 0, 4242) == DLB_SUCCESS );
 

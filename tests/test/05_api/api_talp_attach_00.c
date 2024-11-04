@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -78,12 +78,12 @@ int main(int argc, char *argv[]) {
     /* Test that an external process should not call these functions */
     {
         assert( DLB_TALP_Attach() == DLB_SUCCESS );
-        assert( DLB_MonitoringRegionGetMPIRegion() == NULL );
+        assert( DLB_MonitoringRegionGetImplicit() == NULL );
         assert( DLB_MonitoringRegionRegister("Name") == NULL );
-        assert( DLB_MonitoringRegionReset(DLB_MPI_REGION) == DLB_ERR_NOTALP );
-        assert( DLB_MonitoringRegionStart(DLB_MPI_REGION) == DLB_ERR_NOTALP );
-        assert( DLB_MonitoringRegionStop(DLB_MPI_REGION) == DLB_ERR_NOTALP );
-        assert( DLB_MonitoringRegionReport(DLB_MPI_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionReset(DLB_IMPLICIT_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionStart(DLB_IMPLICIT_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionStop(DLB_IMPLICIT_REGION) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionReport(DLB_IMPLICIT_REGION) == DLB_ERR_NOTALP );
         assert( DLB_MonitoringRegionsUpdate() == DLB_ERR_NOTALP );
         assert( DLB_TALP_CollectPOPMetrics(NULL, NULL) == DLB_ERR_NOTALP );
         assert( DLB_TALP_CollectPOPNodeMetrics(NULL, NULL) == DLB_ERR_NOTALP );
@@ -358,14 +358,16 @@ int main(int argc, char *argv[]) {
         if (parent) {
             // Test DLB_TALP_GetNodeTimes
             dlb_node_times_t node_times[2];
-            assert( DLB_TALP_GetNodeTimes(DLB_MPI_REGION, node_times, &nelems, 1) == DLB_SUCCESS );
+            assert( DLB_TALP_GetNodeTimes(DLB_IMPLICIT_REGION, node_times, &nelems, 1)
+                    == DLB_SUCCESS );
             assert( nelems == 1);
             assert( node_times[0].pid == pid1 || node_times[0].pid == pid2 );
 
-            assert( DLB_TALP_GetNodeTimes(DLB_MPI_REGION, node_times, &nelems, 2) == DLB_SUCCESS );
+            assert( DLB_TALP_GetNodeTimes(DLB_IMPLICIT_REGION, node_times, &nelems, 2)
+                    == DLB_SUCCESS );
             assert( nelems == 2);
 
-            assert( DLB_TALP_GetNodeTimes(DLB_MPI_REGION, node_times, &nelems, INT_MAX )
+            assert( DLB_TALP_GetNodeTimes(DLB_IMPLICIT_REGION, node_times, &nelems, INT_MAX )
                     == DLB_SUCCESS );
             assert( nelems == 2);
             fprintf(stderr, "0 pid: %d\n", node_times[0].pid);
@@ -381,7 +383,8 @@ int main(int argc, char *argv[]) {
 
             // Test DLB_TALP_QueryPOPNodeMetrics
             dlb_node_metrics_t node_metrics;
-            assert( DLB_TALP_QueryPOPNodeMetrics(DLB_MPI_REGION, &node_metrics) == DLB_SUCCESS );
+            assert( DLB_TALP_QueryPOPNodeMetrics(DLB_IMPLICIT_REGION, &node_metrics)
+                    == DLB_SUCCESS );
             assert( node_metrics.processes_per_node == 2 );
             assert( node_metrics.total_mpi_time == 0 );
             assert( node_metrics.total_useful_time > 1e6 && node_metrics.total_useful_time < 2e9 );

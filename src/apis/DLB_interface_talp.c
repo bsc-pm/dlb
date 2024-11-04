@@ -75,13 +75,15 @@ int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
 }
 
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
+
     int error;
+
     if (pid == 0 || (thread_spd && thread_spd->id == pid)) {
         /* Same process */
-        const dlb_monitor_t *monitor = monitoring_region_get_MPI_region(thread_spd);
+        const dlb_monitor_t *monitor = monitoring_region_get_implicit_region(thread_spd);
         if (monitor != NULL) {
-            *mpi_time = nsecs_to_secs(monitor->accumulated_MPI_time);
-            *useful_time = nsecs_to_secs(monitor->accumulated_computation_time);
+            *mpi_time = nsecs_to_secs(monitor->mpi_time);
+            *useful_time = nsecs_to_secs(monitor->useful_time);
             error = DLB_SUCCESS;
         } else {
             error = DLB_ERR_NOTALP;
@@ -90,7 +92,7 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
         /* Different process, fetch from shared memory */
         talp_region_list_t region;
         error = shmem_talp__get_region(&region, pid,
-                monitoring_region_get_MPI_region_name());
+                monitoring_region_get_implicit_region_name());
 
         if (error == DLB_SUCCESS) {
             *mpi_time = nsecs_to_secs(region.mpi_time);
@@ -112,14 +114,13 @@ int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
         if (max_len > shmem_max_regions) {
             max_len = shmem_max_regions;
         }
-        if (name == DLB_MPI_REGION) {
-            name = monitoring_region_get_MPI_region_name();
+        if (name == DLB_IMPLICIT_REGION) {
+            name = monitoring_region_get_implicit_region_name();
         }
         talp_region_list_t *region_list = malloc(sizeof(talp_region_list_t)*max_len);
         error = shmem_talp__get_regionlist(region_list, nelems, max_len, name);
         if (error == DLB_SUCCESS) {
-            int i;
-            for (i=0; i<*nelems; ++i) {
+            for (int i=0; i<*nelems; ++i) {
                 node_times_list[i] = (const dlb_node_times_t) {
                     .pid         = region_list[i].pid,
                     .mpi_time    = region_list[i].mpi_time,
@@ -150,13 +151,16 @@ int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metr
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void) {
+dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
-    return monitoring_region_get_MPI_region(thread_spd);
+    return monitoring_region_get_implicit_region(thread_spd);
 }
+
+const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
+    __attribute__((alias("DLB_MonitoringRegionGetImplicit")));
 
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     spd_enter_dlb(thread_spd);

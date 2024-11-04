@@ -194,6 +194,7 @@ COMMON_SRCS = \
 	src/support/mytime.h                    \
 	src/support/options.c                   \
 	src/support/options.h                   \
+	src/support/perf_metrics.h              \
 	src/support/queue_template.h            \
 	src/support/queues.c                    \
 	src/support/queues.h                    \
@@ -214,8 +215,7 @@ COMMON_SRCS = \
 	src/LB_core/lb_funcs.h                  \
 	src/LB_core/spd.c                       \
 	src/LB_core/spd.h                       \
-	src/LB_numThreads/omptool.c             \
-	src/LB_numThreads/omptool.h             \
+	src/LB_core/talp_types.h                \
 	src/LB_numThreads/omp-tools.h           \
 	src/LB_numThreads/ompt-multiplex.h      \
 	src/apis/DLB_interface.c                \
@@ -256,6 +256,8 @@ SRCS = \
 	src/LB_numThreads/omptm_free_agents.h   \
 	src/LB_numThreads/omptm_role_shift.c    \
 	src/LB_numThreads/omptm_role_shift.h    \
+	src/LB_numThreads/omptool.c             \
+	src/LB_numThreads/omptool.h             \
 	src/LB_comm/comm_lend_light.c           \
 	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem_cpuinfo.c             \
@@ -605,6 +607,8 @@ paraver_cfgs = \
 	doc/paraver_cfgs/DLB_rebind_threads.cfg \
 	doc/paraver_cfgs/DLB_thread_binding.cfg \
 	doc/paraver_cfgs/DLB_loop.cfg \
+	doc/paraver_cfgs/DLB_region_ipc.cfg \
+	doc/paraver_cfgs/DLB_region_state.cfg \
 	doc/paraver_cfgs/DLB_regions.cfg \
 	doc/paraver_cfgs/DLB_Give_Want_number_of_cpus.cfg \
 	doc/paraver_cfgs/DLB_callbacks.cfg \

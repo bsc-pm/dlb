@@ -80,6 +80,7 @@ tests = {
     'talp_01'             : {},
     'talp_01_lewi'        : {'source' : 'talp_01.c', 'dlb_args' : '--lewi'},
     'talp_02'             : {},
+    'talp_03'             : {},
   },
   '05_api' : {
     'api_00'              : {},

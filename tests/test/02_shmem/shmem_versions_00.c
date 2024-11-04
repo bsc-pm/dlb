@@ -251,14 +251,15 @@ static void check_procinfo_version(void) {
 }
 
 static void check_talp_version(void) {
-    enum { KNOWN_TALP_VERSION = 1 };
-    enum { KNOWN_DEFAULT_REGIONS_PER_PROC = 10 };
+    enum { KNOWN_TALP_VERSION = 3 };
+    enum { KNOWN_DEFAULT_REGIONS_PER_PROC = 100 };
 
     struct DLB_ALIGN_CACHE TalpRegion {
         char name[DLB_MONITOR_NAME_MAX];
         atomic_int_least64_t int1;
         atomic_int_least64_t int2;
         pid_t pid;
+        float float1;
     };
 
     struct KnownTalpShdata {

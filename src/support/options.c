@@ -62,6 +62,7 @@ typedef enum OptionTypes {
     OPT_MPISET_T,   // mpi_set_t
     OPT_OMPTOPTS_T, // omptool_opts_t
     OPT_TLPSUM_T,   // talp_summary_t
+    OPT_TLPMOD_T,   // talp_model_t
     OPT_OMPTM_T     // omptm_version_t
 } option_type_t;
 
@@ -372,7 +373,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Select whether to measure OpenMP metrics. (Experimental)",
         .offset         = offsetof(options_t, talp_openmp),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = OPT_READONLY | OPT_OPTIONAL
     },
     {
         .var_name       = "LB_NULL",
@@ -387,10 +388,33 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_TALP_SUMM",
         .arg_name       = "--talp-summary",
         .default_value  = "pop-metrics",
-        .description    = OFFSET"Select which verbose components will be printed. Multiple\n"
-                          OFFSET"components may be selected.",
+        .description    = OFFSET"List of summaries, separated by ':', to write at the end\n"
+                          OFFSET"of the execution: 'pop-metrics', the default option, will\n"
+                          OFFSET"print a short report if no '--talp-output-file' is specified.\n"
+                          OFFSET"Otherwise, a more verbose file is generated containing all\n"
+                          OFFSET"metrics collected by TALP. 'node' and 'process' show a \n"
+                          OFFSET"summary for each node and process respectively.\n"
+                          OFFSET"\n"
+                          OFFSET"Deprecated options:\n"
+                          OFFSET"'pop-raw' will be removed in the next release. The output \n"
+                          OFFSET"will be available using the 'pop-metrics' summary.",
         .offset         = offsetof(options_t, talp_summary),
         .type           = OPT_TLPSUM_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-output-file",
+        .default_value  = "",
+        .description    = OFFSET"Write TALP metrics to a file. If this option is not provided,\n"
+                          OFFSET"the output is printed to stderr.\n"
+                          OFFSET"Accepted formats: *.json, *.csv. Any other for plain text.\n"
+                          OFFSET"\n"
+                          OFFSET"Deprecated formats:\n"
+                          OFFSET"The *.xml file ending is deprecated and will be removed in\n"
+                          OFFSET"the next release.",
+        .offset         = offsetof(options_t, talp_output_file),
+        .type           = OPT_PTR_PATH_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL
     },
     {
@@ -407,23 +431,39 @@ static const opts_dict_t options_dictionary[] = {
     },
     {
         .var_name       = "LB_NULL",
-        .arg_name       = "--talp-output-file",
-        .default_value  = "",
-        .description    = OFFSET"Write TALP metrics to a file. If this option is not provided,\n"
-                          OFFSET"the output is printed to stderr.\n"
-                          OFFSET"Accepted formats: *.json, *.xml, *.csv. Any other for plain text.",
-        .offset         = offsetof(options_t, talp_output_file),
-        .type           = OPT_PTR_PATH_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
-    },
-    {
-        .var_name       = "LB_NULL",
         .arg_name       = "--talp-regions-per-proc",
-        .default_value  = "10",
+        .default_value  = "100",
         .description    = OFFSET"Number of TALP regions per process to allocate in the shared\n"
                           OFFSET"memory.",
         .offset         = offsetof(options_t, talp_regions_per_proc),
         .type           = OPT_INT_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-region-select",
+        .default_value  = "",
+        .description    = OFFSET"Select TALP regions to enable. The option accepts the\n"
+                          OFFSET"special values 'all', to enable all TALP regions, and 'none'\n"
+                          OFFSET"to disable them all. An empty value is equivalent to 'all'.\n"
+                          OFFSET"Additionally, a comma separated list of region names may be\n"
+                          OFFSET"specified to enable only these regions. The implicit monitoring\n"
+                          OFFSET"region may be specified with the special token 'application'.\n"
+                          OFFSET"Note that names with spaces are not supported.\n"
+                          OFFSET"e.g.: --talp-region-select=none\n"
+                          OFFSET"      --talp-region-select=application,region3",
+        .offset         = offsetof(options_t, talp_region_select),
+        .type           = OPT_STR_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-model",
+        .default_value  = "hybrid-v2",
+        .description    = OFFSET"For development use only.\n"
+                          OFFSET"Select which version of POP metrics to compute.",
+        .offset         = offsetof(options_t, talp_model),
+        .type           = OPT_TLPMOD_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     },
     // barrier
@@ -537,6 +577,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_omptool_opts(str_value, (omptool_opts_t*)option);
         case OPT_TLPSUM_T:
             return parse_talp_summary(str_value, (talp_summary_t*)option);
+        case OPT_TLPMOD_T:
+            return parse_talp_model(str_value, (talp_model_t*)option);
         case OPT_OMPTM_T:
             return parse_omptm_version(str_value, (omptm_version_t*)option);
     }
@@ -577,6 +619,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return omptool_opts_tostr(*(omptool_opts_t*)option);
         case OPT_TLPSUM_T:
             return talp_summary_tostr(*(talp_summary_t*)option);
+        case OPT_TLPMOD_T:
+            return talp_model_tostr(*(talp_model_t*)option);
         case OPT_OMPTM_T:
             return omptm_version_tostr(*(omptm_version_t*)option);
     }
@@ -616,6 +660,8 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
             return equivalent_omptool_opts(value1, value2);
         case OPT_TLPSUM_T:
             return equivalent_talp_summary(value1, value2);
+        case OPT_TLPMOD_T:
+            return equivalent_talp_model(value1, value2);
         case OPT_OMPTM_T:
             return equivalent_omptm_version_opts(value1, value2);
     }
@@ -668,6 +714,9 @@ static void copy_value(option_type_t type, void *dest, const char *src) {
             break;
         case OPT_TLPSUM_T:
             memcpy(dest, src, sizeof(talp_summary_t));
+            break;
+        case OPT_TLPMOD_T:
+            memcpy(dest, src, sizeof(talp_model_t));
             break;
         case OPT_OMPTM_T:
             memcpy(dest, src, sizeof(omptm_version_t));
@@ -1104,6 +1153,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_TLPSUM_T:
                 b += snprintf(b, max_entry_len, "{%s}", get_talp_summary_choices());
+                break;
+            case OPT_TLPMOD_T:
+                b += snprintf(b, max_entry_len, "[%s]", get_talp_model_choices());
                 break;
             case OPT_OMPTM_T:
                 b += snprintf(b, max_entry_len, "[%s]", get_omptm_version_choices());

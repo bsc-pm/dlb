@@ -68,6 +68,8 @@ typedef struct Options {
     talp_summary_t      talp_summary;
     char                *talp_output_file;
     int                 talp_regions_per_proc;
+    char                talp_region_select[MAX_OPTION_LENGTH];
+    talp_model_t        talp_model;
     /* barrier */
     int                 barrier_id;
 } options_t;

@@ -73,6 +73,12 @@ program test
     print *, dlb_monitor%elapsed_time
 
     if (dlb_monitor%num_measurements /= N) call abort
+    if (dlb_monitor%elapsed_time <= 0) call abort
+    if (dlb_monitor%useful_time <= 0) call abort
+    if (dlb_monitor%mpi_time /= 0) call abort
+    if (dlb_monitor%omp_load_imbalance_time /= 0) call abort
+    if (dlb_monitor%omp_scheduling_time /= 0) call abort
+    if (dlb_monitor%omp_serialization_time /= 0) call abort
 
     err = DLB_MonitoringRegionReport(dlb_handle_1)
     if (err /= DLB_SUCCESS) call abort

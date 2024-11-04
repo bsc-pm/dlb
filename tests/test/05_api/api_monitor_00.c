@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -24,6 +24,7 @@
 #include "unique_shmem.h"
 
 #include "LB_core/DLB_talp.h"
+#include "LB_core/spd.h"
 #include "apis/dlb.h"
 #include "apis/dlb_talp.h"
 #include "support/mytime.h"
@@ -42,36 +43,86 @@ int main(int argc, char **argv) {
     CPU_SET(1, &process_mask);
 
     /* Test DLB_ERR_NOTALP */
-    char notalp_opts[64] = "--shm-key=";
-    strcat(notalp_opts, SHMEM_KEY);
-    assert( DLB_Init(0, &process_mask, notalp_opts) == DLB_SUCCESS );
-    dlb_monitor_t *monitor1 = DLB_MonitoringRegionRegister("Test monitor");
-    assert( monitor1 == NULL );
-    assert( DLB_MonitoringRegionStart(monitor1) == DLB_ERR_NOTALP );
-    assert( DLB_MonitoringRegionStop(monitor1) == DLB_ERR_NOTALP );
-    assert( DLB_MonitoringRegionReset(monitor1) == DLB_ERR_NOTALP );
-    assert( DLB_MonitoringRegionReport(monitor1) == DLB_ERR_NOTALP );
-    assert( DLB_Finalize() == DLB_SUCCESS );
+    {
+        char notalp_opts[64] = "--shm-key=";
+        strcat(notalp_opts, SHMEM_KEY);
+        assert( DLB_Init(0, &process_mask, notalp_opts) == DLB_SUCCESS );
+        dlb_monitor_t *monitor = DLB_MonitoringRegionRegister("Test monitor");
+        assert( monitor == NULL );
+        assert( DLB_MonitoringRegionStart(monitor) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionStop(monitor) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionReset(monitor) == DLB_ERR_NOTALP );
+        assert( DLB_MonitoringRegionReport(monitor) == DLB_ERR_NOTALP );
+        assert( DLB_Finalize() == DLB_SUCCESS );
+    }
 
     /* Test with --talp enabled */
-    char options[64] = "--talp --shm-key=";
-    strcat(options, SHMEM_KEY);
-    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+    {
+        char options[64] = "--talp --talp-summary=all --shm-key=";
+        strcat(options, SHMEM_KEY);
+        assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
 
-    char value[16];
-    assert( DLB_GetVariable("--talp", value) == DLB_SUCCESS );
+        char value[16];
+        assert( DLB_GetVariable("--talp", value) == DLB_SUCCESS );
+        assert( strcmp(value, "yes") == 0 );
 
-    dlb_monitor_t *monitor2 = DLB_MonitoringRegionRegister("Test monitor");
-    assert( monitor2 != NULL );
+        dlb_monitor_t *monitor = DLB_MonitoringRegionRegister("Test monitor");
+        assert( monitor != NULL );
 
-    assert( DLB_MonitoringRegionStart(monitor2) == DLB_SUCCESS );
-    assert( DLB_MonitoringRegionStart(monitor2) == DLB_NOUPDT );
-    assert( DLB_MonitoringRegionStop(monitor2) == DLB_SUCCESS );
-    assert( DLB_MonitoringRegionStop(monitor2) == DLB_NOUPDT );
-    assert( DLB_MonitoringRegionReset(monitor2) == DLB_SUCCESS );
-    assert( DLB_MonitoringRegionReport(monitor2) == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionStart(monitor) == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionStart(monitor) == DLB_NOUPDT );
+        assert( DLB_MonitoringRegionStop(monitor) == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionStop(monitor) == DLB_NOUPDT );
+        assert( DLB_MonitoringRegionReset(monitor) == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionReport(monitor) == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionStart(monitor) == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionStop(monitor) == DLB_SUCCESS );
+        assert( monitor->useful_time == monitor->elapsed_time );
 
-    assert( DLB_Finalize() == DLB_SUCCESS );
+        assert( DLB_Finalize() == DLB_SUCCESS );
+    }
+
+    /* Test monitoring regions after MPI_Finalize */
+    {
+        char options[64] = "--talp --shm-key=";
+        strcat(options, SHMEM_KEY);
+        assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+
+        /* Create custom monitor */
+        dlb_monitor_t *custom_monitor = DLB_MonitoringRegionRegister("Custom monitor");
+        assert( DLB_MonitoringRegionStart(custom_monitor) == DLB_SUCCESS );
+
+        /* Simulate MPI_Init + MPI_Barrier + MPI_Finalize */
+        bool is_blocking_collective = true;
+        assert( DLB_Init(0, NULL, NULL) == DLB_ERR_INIT );
+        talp_mpi_init(thread_spd);
+        talp_into_sync_call(thread_spd, is_blocking_collective);
+        talp_out_of_sync_call(thread_spd, is_blocking_collective);
+        talp_mpi_finalize(thread_spd);
+
+        /* Implicit monitor should still be reachable */
+        const dlb_monitor_t *implicit_monitor = DLB_MonitoringRegionGetImplicit();
+        assert( implicit_monitor != NULL );
+        assert( implicit_monitor->num_measurements == 1 );
+        assert( implicit_monitor->num_mpi_calls == 3 );
+        assert( implicit_monitor->mpi_time > 0 );
+        assert( implicit_monitor->useful_time > 0 );
+
+        /* A region named "Application" (case-insensitive) is equivalent to the implicit region */
+        assert( DLB_MonitoringRegionRegister("Application") == implicit_monitor );
+        assert( DLB_MonitoringRegionRegister("application") == implicit_monitor );
+        assert( DLB_MonitoringRegionRegister("APPLICATION") == implicit_monitor );
+
+        /* Custom monitor should still be reachable too */
+        assert( DLB_MonitoringRegionStop(custom_monitor) == DLB_SUCCESS );
+        assert( custom_monitor->num_measurements == 1 );
+        assert( custom_monitor->num_mpi_calls == 3 );
+        assert( custom_monitor->mpi_time > 0 );
+        assert( custom_monitor->useful_time > 0 );
+        assert( custom_monitor->elapsed_time > implicit_monitor->elapsed_time );
+
+        assert( DLB_Finalize() == DLB_SUCCESS );
+    }
 
     return 0;
 }

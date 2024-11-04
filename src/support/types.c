@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -335,7 +335,8 @@ static const debug_opts_t debug_opts_values[] =
     {DBG_RETURNSTOLEN, DBG_WERROR, DBG_LPOSTMORTEM, DBG_WARNMPI};
 static const char* const debug_opts_choices[] =
     {"return-stolen", "werror", "lend-post-mortem", "warn-mpi-version"};
-static const char debug_opts_choices_str[] = "return-stolen:werror:lend-post-mortem:warn-mpi-version";
+static const char debug_opts_choices_str[] =
+    "return-stolen:werror:lend-post-mortem:warn-mpi-version";
 enum { debug_opts_nelems = sizeof(debug_opts_values) / sizeof(debug_opts_values[0]) };
 
 int parse_debug_opts(const char *str, debug_opts_t *value) {
@@ -375,6 +376,58 @@ bool equivalent_debug_opts(const char *str1, const char *str2) {
     parse_debug_opts(str1, &value1);
     parse_debug_opts(str2, &value2);
     return value1 == value2;
+}
+
+
+/* lewi_affinity_t */
+static const lewi_affinity_t lewi_affinity_values[] =
+    {LEWI_AFFINITY_AUTO, LEWI_AFFINITY_NONE, LEWI_AFFINITY_MASK,
+        LEWI_AFFINITY_NEARBY_FIRST, LEWI_AFFINITY_NEARBY_ONLY, LEWI_AFFINITY_SPREAD_IFEMPTY};
+static const char* const lewi_affinity_choices[] =
+    {"auto", "none", "mask", "nearby-first", "nearby-only", "spread-ifempty"};
+static const char lewi_affinity_choices_str[] =
+    "auto, none, mask, nearby-first,"LINE_BREAK
+    "nearby-only, spread-ifempty";
+enum { lewi_affinity_nelems = sizeof(lewi_affinity_values) / sizeof(lewi_affinity_values[0]) };
+
+int parse_lewi_affinity(const char *str, lewi_affinity_t *value) {
+
+    for (int i = 0; i < lewi_affinity_nelems; ++i) {
+        if (strcasecmp(str, lewi_affinity_choices[i]) == 0) {
+            *value = lewi_affinity_values[i];
+            return DLB_SUCCESS;
+        }
+    }
+
+    /* Support deprecated values */
+    if (strcasecmp(str, "any") == 0) {
+        *value = LEWI_AFFINITY_MASK;
+        return DLB_SUCCESS;
+    }
+
+    return DLB_ERR_NOENT;
+}
+
+const char* lewi_affinity_tostr(lewi_affinity_t value) {
+    int i;
+    for (i=0; i<lewi_affinity_nelems; ++i) {
+        if (lewi_affinity_values[i] == value) {
+            return lewi_affinity_choices[i];
+        }
+    }
+    return "unknown";
+}
+
+const char* get_lewi_affinity_choices(void) {
+    return lewi_affinity_choices_str;
+}
+
+bool equivalent_lewi_affinity(const char *str1, const char *str2) {
+    lewi_affinity_t value1 = LEWI_AFFINITY_NONE;
+    lewi_affinity_t value2 = LEWI_AFFINITY_MASK;
+    int err1 = parse_lewi_affinity(str1, &value1);
+    int err2 = parse_lewi_affinity(str2, &value2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
 }
 
 
@@ -430,6 +483,11 @@ int parse_talp_summary(const char *str, talp_summary_t *value) {
     }
     free(str_copy);
 
+    /* Deprecation warning */
+    if(*value & SUMMARY_POP_RAW && *value != SUMMARY_ALL){
+        warning("Deprecated: --talp-summary=pop-raw is deprecated. Use pop-metrics instead.");
+    }
+
     return DLB_SUCCESS;
 }
 
@@ -470,56 +528,45 @@ bool equivalent_talp_summary(const char *str1, const char *str2) {
 }
 
 
-/* lewi_affinity_t */
-static const lewi_affinity_t lewi_affinity_values[] =
-    {LEWI_AFFINITY_AUTO, LEWI_AFFINITY_NONE, LEWI_AFFINITY_MASK,
-        LEWI_AFFINITY_NEARBY_FIRST, LEWI_AFFINITY_NEARBY_ONLY, LEWI_AFFINITY_SPREAD_IFEMPTY};
-static const char* const lewi_affinity_choices[] =
-    {"auto", "none", "mask", "nearby-first", "nearby-only", "spread-ifempty"};
-static const char lewi_affinity_choices_str[] =
-    "auto, none, mask, nearby-first,"LINE_BREAK
-    "nearby-only, spread-ifempty";
-enum { lewi_affinity_nelems = sizeof(lewi_affinity_values) / sizeof(lewi_affinity_values[0]) };
+/* talp_model_t */
+static const talp_model_t talp_model_values[] = {TALP_MODEL_HYBRID_V1, TALP_MODEL_HYBRID_V2};
+static const char* const talp_model_choices[] = {"hybrid-v1", "hybrid-v2"};
+static const char talp_model_choices_str[] = "hybrid-v1, hybrid-v2";
+enum { talp_model_nelems = sizeof(talp_model_values) / sizeof(talp_model_values[0]) };
 
-int parse_lewi_affinity(const char *str, lewi_affinity_t *value) {
-
-    for (int i = 0; i < lewi_affinity_nelems; ++i) {
-        if (strcasecmp(str, lewi_affinity_choices[i]) == 0) {
-            *value = lewi_affinity_values[i];
+int parse_talp_model(const char *str, talp_model_t *value) {
+    int i;
+    for (i=0; i<talp_model_nelems; ++i) {
+        if (strcasecmp(str, talp_model_choices[i]) == 0) {
+            *value = talp_model_values[i];
             return DLB_SUCCESS;
         }
     }
-
-    /* Support deprecated values */
-    if (strcasecmp(str, "any") == 0) {
-        *value = LEWI_AFFINITY_MASK;
-        return DLB_SUCCESS;
-    }
-
     return DLB_ERR_NOENT;
 }
 
-const char* lewi_affinity_tostr(lewi_affinity_t value) {
+const char* talp_model_tostr(talp_model_t value) {
     int i;
-    for (i=0; i<lewi_affinity_nelems; ++i) {
-        if (lewi_affinity_values[i] == value) {
-            return lewi_affinity_choices[i];
+    for (i=0; i<talp_model_nelems; ++i) {
+        if (talp_model_values[i] == value) {
+            return talp_model_choices[i];
         }
     }
     return "unknown";
 }
 
-const char* get_lewi_affinity_choices(void) {
-    return lewi_affinity_choices_str;
+const char* get_talp_model_choices(void) {
+    return talp_model_choices_str;
 }
 
-bool equivalent_lewi_affinity(const char *str1, const char *str2) {
-    lewi_affinity_t value1 = LEWI_AFFINITY_NONE;
-    lewi_affinity_t value2 = LEWI_AFFINITY_MASK;
-    int err1 = parse_lewi_affinity(str1, &value1);
-    int err2 = parse_lewi_affinity(str2, &value2);
+bool equivalent_talp_model(const char *str1, const char *str2) {
+    talp_model_t value1 = TALP_MODEL_HYBRID_V1;
+    talp_model_t value2 = TALP_MODEL_HYBRID_V2;
+    int err1 = parse_talp_model(str1, &value1);
+    int err2 = parse_talp_model(str2, &value2);
     return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
 }
+
 
 /* policy_t: most of this stuff is depcrecated, only policy_tostr is still used */
 static const policy_t policy_values[] = {POLICY_NONE, POLICY_LEWI, POLICY_LEWI_ASYNC, POLICY_LEWI_MASK};

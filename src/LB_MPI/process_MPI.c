@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -51,6 +51,7 @@ static int init_from_mpi = 0;
 static int mpi_ready = 0;
 static mpi_set_t lewi_mpi_calls = MPISET_ALL;
 
+static MPI_Comm mpi_comm_world;         /* DLB's own MPI_COMM_WORLD */
 static MPI_Comm mpi_comm_node;          /* MPI Communicator specific to the node */
 static MPI_Comm mpi_comm_internode;     /* MPI Communicator with 1 representative per node */
 
@@ -80,18 +81,20 @@ void before_init(void) {
 /* Compute global, local ids and create the node communicator */
 static void get_mpi_info(void) {
 
-    PMPI_Comm_rank( MPI_COMM_WORLD, &_mpi_rank );
-    PMPI_Comm_size( MPI_COMM_WORLD, &_mpi_size );
+    /* Duplicate MPI_COMM_WORLD and get info */
+    PMPI_Comm_dup(MPI_COMM_WORLD, &mpi_comm_world);
+    PMPI_Comm_rank(mpi_comm_world, &_mpi_rank);
+    PMPI_Comm_size(mpi_comm_world, &_mpi_size);
 
 #if MPI_VERSION >= 3
     /* Node communicator, obtain also local id and number of MPIs in this node */
-    PMPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0 /* key */,
+    PMPI_Comm_split_type(mpi_comm_world, MPI_COMM_TYPE_SHARED, 0 /* key */,
             MPI_INFO_NULL, &mpi_comm_node);
     PMPI_Comm_rank(mpi_comm_node, &_process_id);
     PMPI_Comm_size(mpi_comm_node, &_mpis_per_node);
 
     /* Communicator with 1 representative per node, obtain node id and total number */
-    PMPI_Comm_split(MPI_COMM_WORLD, _process_id, 0 /* key */, &mpi_comm_internode);
+    PMPI_Comm_split(mpi_comm_world, _process_id, 0 /* key */, &mpi_comm_internode);
     PMPI_Comm_rank(mpi_comm_internode, &_node_id);
     PMPI_Comm_size(mpi_comm_internode, &_num_nodes);
 #else
@@ -102,9 +105,9 @@ static void get_mpi_info(void) {
         perror("gethostname");
     }
 
-    PMPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+    PMPI_Comm_set_errhandler(mpi_comm_world, MPI_ERRORS_RETURN);
     int error_code = PMPI_Allgather(hostname, HOST_NAME_MAX, MPI_CHAR,
-            recvData, HOST_NAME_MAX, MPI_CHAR, MPI_COMM_WORLD);
+            recvData, HOST_NAME_MAX, MPI_CHAR, mpi_comm_world);
 
     if (error_code != MPI_SUCCESS) {
         char error_string[BUFSIZ];
@@ -169,7 +172,7 @@ static void get_mpi_info(void) {
     free(recvData);
 
     int data[2];
-    PMPI_Scatter(procsIds, 2, MPI_INT, data, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    PMPI_Scatter(procsIds, 2, MPI_INT, data, 2, MPI_INT, 0, mpi_comm_world);
     free(procsIds);
     _process_id = data[0];
     _node_id    = data[1];
@@ -179,8 +182,8 @@ static void get_mpi_info(void) {
      * _process_id = _mpi_rank % _mpis_per_node;
      ********************************************/
 
-    PMPI_Comm_split( MPI_COMM_WORLD, _node_id, 0, &mpi_comm_node );
-    PMPI_Comm_split( MPI_COMM_WORLD, _process_id, 0, &mpi_comm_internode);
+    PMPI_Comm_split( mpi_comm_world, _node_id, 0, &mpi_comm_node );
+    PMPI_Comm_split( mpi_comm_world, _process_id, 0, &mpi_comm_internode);
 #endif
 }
 
@@ -269,6 +272,10 @@ void process_MPI__finalize(void) {
         init_from_mpi = 0;
         talp_mpi_finalize(thread_spd);
     }
+}
+
+MPI_Comm getWorldComm(void) {
+    return mpi_comm_world;
 }
 
 MPI_Comm getNodeComm(void) {

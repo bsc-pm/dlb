@@ -23,7 +23,8 @@
 #include <time.h>
 #include <stdint.h>
 
-#define DLB_MPI_REGION NULL
+#define DLB_MPI_REGION NULL          /* deprecated in favor of DLB_IMPLICIT_REGION */
+#define DLB_IMPLICIT_REGION NULL
 #define DLB_LAST_OPEN_REGION (void*)1
 
 enum { DLB_MONITOR_NAME_MAX = 128 };
@@ -32,59 +33,170 @@ enum { DLB_MONITOR_NAME_MAX = 128 };
 typedef struct dlb_monitor_t {
     /*! Name of the monitor */
     const char  *name;
+    /*! Number of active CPUs */
+    int         num_cpus;
+    /*! Average of CPUs assigned to the process during the region execution */
+    float       avg_cpus;
+    union {
+    /*! Number of measured cycles*/
+    int64_t     cycles;
+    int64_t     accumulated_cycles
+        __attribute__((deprecated("Use cycles instead")));
+    };
+    union {
+    /*! Number of measured instructions */
+    int64_t     instructions;
+    int64_t     accumulated_instructions
+        __attribute__((deprecated("Use instructions instead")));
+    };
     /*! Number of times that the region has been started and stopped */
     int         num_measurements;
     /*! Number of times that the region has been reset */
     int         num_resets;
+    /*! Number of measured MPI calls */
+    int64_t     num_mpi_calls;
+    /*! Number of measured OpenMP parallel regions */
+    int64_t     num_omp_parallels;
+    /*! Number of measured OpenMP explicit tasks */
+    int64_t     num_omp_tasks;
     /*! Absolute time (in nanoseconds) of the last time the region was started */
     int64_t     start_time;
     /*! Absolute time (in nanoseconds) of the last time the region was stopped */
     int64_t     stop_time;
+    union {
     /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
     int64_t     elapsed_time;
-    /*! Time (in nanoseconds) of the accumulated elapsed time in computation inside the region */
-    int64_t     elapsed_computation_time;
-    /*! Time (in nanoseconds) of the accumulated CPU time in MPI inside the region */
-    int64_t     accumulated_MPI_time;
-    /*! Time (in nanoseconds) of the accumulated CPU time in computation inside the region */
-    int64_t     accumulated_computation_time;
-    /*! Number of measured MPI calls */
-    int64_t     num_mpi_calls;
-    /*! Number of measured instructions */
-    int64_t     accumulated_instructions;
-    /*! Number of measured cycles*/
-    int64_t     accumulated_cycles;
+    int64_t     elapsed_computation_time
+        __attribute__((deprecated("No longer represented")));
+    };
+    union {
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation inside the region */
+    int64_t     useful_time;
+    int64_t     accumulated_computation_time
+        __attribute__((deprecated("Use useful_time instead")));
+    };
+    union {
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in MPI inside the region */
+    int64_t     mpi_time;
+    int64_t     accumulated_MPI_time
+        __attribute__((deprecated("Use mpi_time instead")));
+    };
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent due to load
+     * imbalance in OpenMP parallel regions */
+    int64_t     omp_load_imbalance_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent inside OpenMP
+     * parallel regions due to scheduling and overhead, not counting load imbalance */
+    int64_t     omp_scheduling_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent outside
+     * OpenMP parallel regions */
+    int64_t     omp_serialization_time;
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;
 
-/*! POP metrics (of one monitor) collected from all processes */
+/*! POP metrics (of one monitor) collected among all processes */
 typedef struct dlb_pop_metrics_t {
     /*! Name of the monitor */
-    char    name[DLB_MONITOR_NAME_MAX];
+    char        name[DLB_MONITOR_NAME_MAX];
+    union {
     /*! Total number of CPUs used by the processes that have used the region */
-    int     total_cpus;
+    int         num_cpus;
+    int         total_cpus
+        __attribute__((deprecated("Use num_cpus instead")));
+    };
+    /*! Total number of mpi processes that have used the region */
+    int         num_mpi_ranks;
+    union {
     /*! Total number of nodes used by the processes that have used the region */
-    int     total_nodes;
+    int         num_nodes;
+    int         total_nodes
+        __attribute__((deprecated("Use num_nodes instead")));
+    };
+    /*! Total average of CPUs used in the region. Only meaningful if LeWI enabled. */
+    float       avg_cpus;
+    /*! Total number of CPU cycles elapsed in that region during useful time */
+    double      cycles;
+    /*! Total number of instructions executed during useful time */
+    double      instructions;
+    /*! Number of times that the region has been started and stopped among all processes */
+    int64_t     num_measurements;
+    /*! Number of executed MPI calls combined among all MPI processes */
+    int64_t     num_mpi_calls;
+    /*! Number of encountered OpenMP parallel regions combined among all processes */
+    int64_t     num_omp_parallels;
+    /*! Number of encountered OpenMP tasks combined among all processes */
+    int64_t     num_omp_tasks;
+    union {
     /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
-    int64_t elapsed_time;
-    /*! Time (in nanoseconds) of the accumulated elapsed time in computation inside the region */
-    int64_t elapsed_useful;
-    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in all the nodes */
-    int64_t app_sum_useful;
-    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in the most
-     * loaded node*/
-    int64_t node_sum_useful;
-    /*! ParallelEfficiency = Communication Efficiency * LoadBalance */
-    float   parallel_efficiency;
-    /*! Efficiency lost due to transfer and serialization */
-    float   communication_efficiency;
-    /*! LoadBalance = LoadBalanceIn * LoadBalanceOut */
-    float   lb;
-    /*! Intra-node Load Balance coefficient */
-    float   lb_in;
-    /*! Inter-node Load Balance coefficient */
-    float   lb_out;
+    int64_t     elapsed_time;
+    int64_t     elapsed_useful
+        __attribute__((deprecated("No longer represented")));
+    int64_t     node_sum_useful
+        __attribute__((deprecated("No longer represented")));
+    };
+    union {
+    /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in the application */
+    int64_t     useful_time;
+    int64_t     app_sum_useful
+        __attribute__((deprecated("Use useful_time instead")));
+    };
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in MPI */
+    int64_t     mpi_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent due to load
+     * imbalance in OpenMP parallel regions */
+    int64_t     omp_load_imbalance_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent inside OpenMP
+     * parallel regions due to scheduling and overhead, not counting load imbalance */
+    int64_t     omp_scheduling_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent outside
+     * OpenMP parallel regions */
+    int64_t     omp_serialization_time;
+    /*! Useful time normalized to the number of resources in the application */
+    double      useful_normd_app;
+    /*! MPI time normalized to the number of resources in the application */
+    double      mpi_normd_app;
+    /*! Max value of useful times normalized at process level */
+    double      max_useful_normd_proc;
+    /*! Max value of useful times normalized at node level */
+    double      max_useful_normd_node;
+    /*! MPI time normalized at process level of the process with the max useful time */
+    double      mpi_normd_of_max_useful;
+    /*! Efficiency number [0.0 - 1.0] of the impact in the application's parallelization */
+    float       parallel_efficiency;
+    /*! Efficiency number of the impact in the MPI parallelization */
+    float       mpi_parallel_efficiency;
+    union {
+    /*! Efficiency lost due to MPI transfer and serialization */
+    float       mpi_communication_efficiency;
+    float       communication_efficiency
+        __attribute__((deprecated("Use mpi_communication_efficiency instead")));
+    };
+    union {
+    /*! Efficiency of the MPI Load Balance */
+    float       mpi_load_balance;
+    float       lb
+        __attribute__((deprecated("Use mpi_load_balance instead")));
+    };
+    union {
+    /*! Intra-node MPI Load Balance coefficient */
+    float       mpi_load_balance_in;
+    float       lb_in
+        __attribute__((deprecated("Use mpi_load_balance_in instead")));
+    };
+    union {
+    /*! Inter-node MPI Load Balance coefficient */
+    float       mpi_load_balance_out;
+    float       lb_out
+        __attribute__((deprecated("Use mpi_load_balance_out instead")));
+    };
+    /*! Efficiency number of the impact in the OpenMP parallelization */
+    float       omp_parallel_efficiency;
+    /*! Efficiency of the OpenMP Load Balance inside parallel regions */
+    float       omp_load_balance;
+    /*! Efficiency of the OpenMP scheduling inside parallel regions */
+    float       omp_scheduling_efficiency;
+    /*! Efficiency lost due to OpenMP threads outside of parallel regions */
+    float       omp_serialization_efficiency;
 } dlb_pop_metrics_t;
 
 /*! Node metrics (of one monitor) collected asynchronously from the shared memory */
@@ -129,6 +241,14 @@ typedef struct dlb_node_times_t {
 extern "C"
 {
 #endif
+
+/*********************************************************************************/
+/*                                                                               */
+/*  The following functions are intended to be called from 1st-party or          */
+/*  3rd-party programs indistinctly; that is, DLB applications, or external      */
+/*  profilers as long as they invoke DLB_TALP_Attach.                            */
+/*                                                                               */
+/*********************************************************************************/
 
 /*********************************************************************************/
 /*    TALP                                                                       */
@@ -207,76 +327,91 @@ int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metr
 
 
 /*********************************************************************************/
-/** DISCLAIMER:
- *      The functions declared above are intended to be called from 1st-party or
- *      3rd-party programs indistinctly; that is, DLB applications, or external
- *      profilers as long as they invoke DLB_TALP_Attach.
- *
- *      The functions declared below are intended to be called only from 1st-party
- *      programs, and they should return an error if they are called from external
- *      profilers.
- *
- *      This header file may be split in two in the next major release.
- */
+/*                                                                               */
+/*  The functions declared below are intended to be called only from 1st-party   */
+/*  programs, and they should return an error if they are called from external   */
+/*  profilers.                                                                   */
+/*                                                                               */
+/*  DISCLAIMER: This header file may be split in two in the next major release.  */
+/*                                                                               */
 /*********************************************************************************/
 
 /*********************************************************************************/
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-/*! \brief Get the pointer of the implicit MPI Monitoring Region
+/*! \brief Get the pointer of the implicit application-wide Monitoring Region
  *  \return monitor handle to be used on queries, or NULL if TALP is not enabled
  */
-const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void);
+dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void);
 
-/*! \brief Register a new Monitoring Region
- *  \param[in] name Name to identify the new region
+const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
+    __attribute__((deprecated("DLB_MonitoringRegionGetImplicit")));
+
+/*! \brief Register a new Monitoring Region, or obtain the associated pointer by name
+ *  \param[in] name Name to identify the region
  *  \return monitor handle to be used on subsequent calls, or NULL if TALP is not enabled
+ *
+ *  This function registers a new monitoring region or obtains the pointer to
+ *  an already created region with the same name. The name "Application" is a
+ *  special reserved name (case-insensitive); invoking this function with this name is
+ *  equivalent as invoking DLB_MonitoringRegionGetImplicit(). Otherwise, the region
+ *  name is treated case-sensitive.
  */
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
 
 /*! \brief Reset monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_IMPLICIT_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
 /*! \brief Start (or unpause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_IMPLICIT_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
+ *  \return DLB_ERR_PERM if this thread cannot start the monitoring region
+ *
+ *  Notes on multi-threading:
+ *    - It is not safe to start or stop regions in OpenMP worksharing constructs.
+ *    - If a region is started and stopped before the application has reached
+ *      maximum parallelism (e.g., before a parallel construct), the unused resources
+ *      will not be taken into account. This can result in higher OpenMP efficiencies
+ *      than expected.
  */
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 
 /*! \brief Stop (or pause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, DLB_MPI_REGION,
+ *  \param[in] handle Monitoring handle that identifies the region, DLB_IMPLICIT_REGION,
  *                    or DLB_LAST_OPEN_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  *  \return DLB_ERR_NOENT if DLB_LAST_OPEN_REGION does not match any region
+ *  \return DLB_ERR_PERM if this thread cannot stop the monitoring region
  */
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 
 /*! \brief Print a report to stderr of the monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, or DLB_MPI_REGION
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_IMPLICIT_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle);
 
- /*! \brief Update all monitoring regions
-  *  \return DLB_SUCCESS on success
-  *
-  *  Monitoring regions are only updated in certain situations, like when
-  *  starting/stopping a region, or finalizing MPI. This routine forces the
-  *  update of all started monitoring regions
- */
+/*! \brief Update all monitoring regions
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_PERM if this thread cannot update the monitoring region
+ *
+ *  Monitoring regions are only updated in certain situations, like when
+ *  starting/stopping a region, or finalizing MPI. This routine forces the
+ *  update of all started monitoring regions
+*/
 int DLB_MonitoringRegionsUpdate(void);
 
 /*! \brief Perform an MPI collective communication to collect POP metrics.
  *  \param[in] monitor Monitoring handle that identifies the region,
- *                     or DLB_MPI_REGION macro (NULL) if implicit MPI region
+ *                     or DLB_IMPLICIT_REGION macro (NULL) if implicit application-wide region
  *  \param[out] pop_metrics Allocated structure where the collected metrics will be stored
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
@@ -286,7 +421,7 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
 
 /*! \brief Perform a node collective communication to collect TALP node metrics.
  *  \param[in] monitor Monitoring handle that identifies the region,
- *                     or DLB_MPI_REGION macro (NULL) if implicit MPI region
+ *                     or DLB_IMPLICIT_REGION macro (NULL) if implicit application-wide region
  *  \param[out] node_metrics Allocated structure where the collected metrics will be stored
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled

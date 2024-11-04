@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -26,6 +26,7 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
+#include "LB_core/talp_types.h"
 #include "LB_comm/shmem_talp.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
@@ -37,13 +38,13 @@
 #include <string.h>
 #include <assert.h>
 
-/* Test MPI Monitoring Regions with/without LeWI */
+/* Test Implicit Monitoring Regions with/without LeWI */
 
 enum { USLEEP_TIME = 100000 };
 
 int main(int argc, char *argv[]) {
 
-    char options[64] = "--talp --shm-key=";
+    char options[64] = "--talp --talp-external-profiler --shm-key=";
     strcat(options, SHMEM_KEY);
     subprocess_descriptor_t spd = {.id = 111};
     options_init(&spd.options, options);
@@ -56,28 +57,26 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    /* This test needs access to the shared memory. Workaround without enabling
-     * --talp-external-profiler */
-    spd.options.talp_summary |= SUMMARY_NODE;
-
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;
-    dlb_monitor_t *mpi_monitor = &talp_info->mpi_monitor;
+    dlb_monitor_t *implicit_monitor = talp_info->monitor;
 
-    /* Start MPI monitoring region */
+    /* Disable external profiler for the following tests */
+    talp_info->flags.external_profiler = false;
+
+    /* Start implicit monitoring region */
     talp_mpi_init(&spd);
-    assert( mpi_monitor->num_measurements == 0 );
-    assert( mpi_monitor->num_resets == 0 );
-    assert( mpi_monitor->start_time != 0 );
-    assert( mpi_monitor->stop_time == 0 );
-    assert( mpi_monitor->elapsed_time == 0 );
-    assert( mpi_monitor->accumulated_MPI_time == 0 );
-    assert( mpi_monitor->accumulated_computation_time == 0 );
-    assert( talp_info->samples[0]->mpi_time == 0 );
-    assert( talp_info->samples[0]->useful_time == 0 );
-    assert( talp_info->samples[0]->in_useful == true );
-    assert( talp_info->samples[0]->cpu_disabled == false );
+    assert( implicit_monitor->num_measurements == 0 );
+    assert( implicit_monitor->num_resets == 0 );
+    assert( implicit_monitor->start_time != 0 );
+    assert( implicit_monitor->stop_time == 0 );
+    assert( implicit_monitor->elapsed_time == 0 );
+    assert( implicit_monitor->mpi_time == 0 );
+    assert( implicit_monitor->useful_time == 0 );
+    assert( talp_info->samples[0]->timers.useful == 0 );
+    assert( talp_info->samples[0]->timers.not_useful_mpi == 0 );
+    assert( talp_info->samples[0]->state == useful );
     assert( talp_info->ncpus == 1 );
 
     /* We are getting timestamps before and after talp_into_sync_call / talp_out_of_sync_call
@@ -93,9 +92,9 @@ int main(int argc, char *argv[]) {
     time_after = get_time_in_ns();
     assert( talp_info->samples[0]->last_updated_timestamp >= time_before
             && talp_info->samples[0]->last_updated_timestamp <= time_after );
-    assert( talp_info->samples[0]->mpi_time == 0 );
-    assert( talp_info->samples[0]->useful_time > 0 );
-    assert( talp_info->samples[0]->in_useful == false );
+    assert( talp_info->samples[0]->timers.useful > 0 );
+    assert( talp_info->samples[0]->timers.not_useful_mpi == 0 );
+    assert( talp_info->samples[0]->state == not_useful_mpi );
 
     /* Leaving MPI */
     time_before = get_time_in_ns();
@@ -103,27 +102,27 @@ int main(int argc, char *argv[]) {
     time_after = get_time_in_ns();
     assert( talp_info->samples[0]->last_updated_timestamp >= time_before
             && talp_info->samples[0]->last_updated_timestamp <= time_after );
-    assert( talp_info->samples[0]->mpi_time > 0 );
-    assert( talp_info->samples[0]->useful_time > 0 );
-    assert( talp_info->samples[0]->in_useful == true );
+    assert( talp_info->samples[0]->timers.useful > 0 );
+    assert( talp_info->samples[0]->timers.not_useful_mpi > 0 );
+    assert( talp_info->samples[0]->state == useful );
 
     /* Update regions */
     assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
-    assert( mpi_monitor->accumulated_MPI_time > 0 );
-    assert( mpi_monitor->accumulated_computation_time > 0 );
+    assert( implicit_monitor->mpi_time > 0 );
+    assert( implicit_monitor->useful_time > 0 );
 
     /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
     int64_t mpi_time = -1;
     int64_t useful_time = -1;
-    assert( talp_info->external_profiler == false );
+    assert( talp_info->flags.external_profiler == false );
     assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time == 0 );
     assert( useful_time == 0 );
 
-    /* Enable --talp-external-profiler and test that the MPI region is updated */
+    /* Enable --talp-external-profiler and test that the implicit region is updated */
     mpi_time = -1;
     useful_time = -1;
-    talp_info->external_profiler = true;
+    talp_info->flags.external_profiler = true;
     talp_into_sync_call(&spd, /* is_blocking_collective */ true);
     talp_out_of_sync_call(&spd, /* is_blocking_collective */ true);
     assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
@@ -139,20 +138,21 @@ int main(int argc, char *argv[]) {
 
     /* Finalize MPI */
     talp_mpi_finalize(&spd);
-    assert( mpi_monitor->num_measurements == 1 );
-    assert( mpi_monitor->num_resets == 0 );
-    assert( mpi_monitor->start_time != 0 );
-    assert( mpi_monitor->stop_time != 0 );
-    assert( mpi_monitor->elapsed_time == mpi_monitor->stop_time - mpi_monitor->start_time );
-    assert( mpi_monitor->accumulated_MPI_time != 0 );
-    assert( mpi_monitor->accumulated_computation_time != 0 );
+    assert( implicit_monitor->num_measurements == 1 );
+    assert( implicit_monitor->num_resets == 0 );
+    assert( implicit_monitor->start_time != 0 );
+    assert( implicit_monitor->stop_time != 0 );
+    assert( implicit_monitor->elapsed_time
+            == implicit_monitor->stop_time - implicit_monitor->start_time );
+    assert( implicit_monitor->mpi_time != 0 );
+    assert( implicit_monitor->useful_time != 0 );
 
     /* Checking that the shmem has now been updated */
     mpi_time = -1;
     useful_time = -1;
     assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
-    assert( mpi_time == mpi_monitor->accumulated_MPI_time  );
-    assert( useful_time == mpi_monitor->accumulated_computation_time );
+    assert( mpi_time == implicit_monitor->mpi_time  );
+    assert( useful_time == implicit_monitor->useful_time );
 
     spd.options.talp_summary |= SUMMARY_NODE;
     spd.options.talp_summary |= SUMMARY_PROCESS;

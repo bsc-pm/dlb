@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -32,6 +32,9 @@ typedef enum InstrumentEvent {
     CALLBACK_EVENT      = 800070,
     LOOP_STATE          = 800080,
     MONITOR_REGION      = 800100,
+    MONITOR_STATE       = 800101,
+    MONITOR_CYCLES      = 800110,
+    MONITOR_INSTR       = 800111,
 } instrument_event_t;
 
 typedef enum InstrumentRuntimeValue {
@@ -57,9 +60,18 @@ typedef enum InstrumentModeValue {
     EVENT_SINGLE        = 3,
 } instrument_mode_value_t;
 
+typedef enum InstrumentRegionState {
+    MONITOR_STATE_DISABLED = 0,
+    MONITOR_STATE_USEFUL = 1,
+    MONITOR_STATE_NOT_USEFUL_MPI = 2,
+    MONITOR_STATE_NOT_USEFUL_OMP_IN = 3,
+    MONITOR_STATE_NOT_USEFUL_OMP_OUT = 4,
+} instrument_region_state_t;
+
 typedef enum InstrumentAction {
     EVENT_BEGIN,
-    EVENT_END
+    EVENT_END,
+    EVENT_BEGINEND,
 } instrument_action_t;
 
 /*************************************/
@@ -68,6 +80,7 @@ typedef enum InstrumentAction {
 #include "support/options.h"
 void instrument_register_event(unsigned type, long long value, const char *value_description);
 void instrument_event(instrument_event_t type, long long value, instrument_action_t action);
+void instrument_nevent(unsigned count, instrument_event_t *types, long long *values);
 void add_event(unsigned type, long long value);
 void init_tracing(const options_t *options);
 void instrument_finalize(void);
@@ -75,6 +88,7 @@ void instrument_print_flags(void);
 #else
 #define instrument_register_event(type, value, value_description)
 #define instrument_event(type, value, action)
+#define instrument_nevent(count, types, values)
 #define add_event(type, value)
 #define init_tracing(options)
 #define instrument_finalize()

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -29,6 +29,7 @@ typedef struct talp_region_list_t {
     int region_id;
     int_least64_t mpi_time;
     int_least64_t useful_time;
+    float avg_cpus;
 } talp_region_list_t;
 
 /* Init */
@@ -40,7 +41,7 @@ int shmem_talp__finalize(pid_t pid);
 int shmem_talp_ext__finalize(void);
 
 /* Register */
-int shmem_talp__register(pid_t pid, const char *name, int *node_shared_id);
+int shmem_talp__register(pid_t pid, float avg_cpus, const char *name, int *node_shared_id);
 
 /* Getters */
 int shmem_talp__get_pidlist(pid_t *pidlist, int *nelems, int max_len);
@@ -51,6 +52,7 @@ int shmem_talp__get_times(int region_id, int64_t *mpi_time, int64_t *useful_time
 
 /* Setters */
 int shmem_talp__set_times(int region_id, int64_t mpi_time, int64_t useful_time);
+int shmem_talp__set_avg_cpus(int region_id, float avg_cpus);
 
 /* Misc */
 void shmem_talp__print_info(const char *shmem_key, int regions_per_process);

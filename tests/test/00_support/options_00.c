@@ -200,6 +200,7 @@ int main( int argc, char **argv ) {
     lewi_affinity_t aff;
     interaction_mode_t mode;
     talp_summary_t talp_sum;
+    talp_model_t talp_model;
     // 1) without thread_spd->options
     setenv("DLB_ARGS", "--lewi --lewi-mpi --barrier-id=3 --shm-key=custom_key"
             " --verbose=talp --lewi-ompt=borrow", 1);
@@ -216,6 +217,7 @@ int main( int argc, char **argv ) {
     options_parse_entry("--lewi-affinity", &aff);       assert(aff == LEWI_AFFINITY_AUTO);
     options_parse_entry("--mode", &mode);               assert(mode == MODE_POLLING);
     options_parse_entry("--talp-summary", &talp_sum);   assert(talp_sum == SUMMARY_POP_METRICS);
+    options_parse_entry("--talp-model", &talp_model);   assert(talp_model == TALP_MODEL_HYBRID_V2);
     // 2) with existing thread_spd
     spd_enter_dlb(NULL);
     options_init(&thread_spd->options, NULL);
@@ -234,6 +236,7 @@ int main( int argc, char **argv ) {
     options_parse_entry("--lewi-affinity", &aff);       assert(aff == LEWI_AFFINITY_AUTO);
     options_parse_entry("--mode", &mode);               assert(mode == MODE_POLLING);
     options_parse_entry("--talp-summary", &talp_sum);   assert(talp_sum == SUMMARY_POP_METRICS);
+    options_parse_entry("--talp-model", &talp_model);   assert(talp_model == TALP_MODEL_HYBRID_V2);
     free(shm_key);
     free(talp_file);
 

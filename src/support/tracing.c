@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -30,16 +30,22 @@
 // Extrae API calls
 void Extrae_event(unsigned type, long long value) __attribute__((weak));
 void Extrae_eventandcounters(unsigned type, long long value) __attribute__((weak));
+void Extrae_nevent(
+        unsigned count, unsigned *types, long long *values) __attribute__((weak));
+void Extrae_neventandcounters(
+        unsigned count, unsigned *types, long long *values) __attribute__((weak));
 void Extrae_define_event_type(unsigned *type, char *type_description, int *nvalues,
                                long long *values, char **values_description) __attribute__((weak));
-void Extrae_change_num_threads (unsigned n) __attribute__((weak));
+void Extrae_change_num_threads(unsigned n) __attribute__((weak));
 
 static bool tracing_initialized = false;
 static instrument_items_t instrument = INST_NONE;
 
-static void dummy (unsigned type, long long value) {}
+static void dummy(unsigned type, long long value) {}
+static void dummy_n(unsigned count, unsigned *types, long long *values) {}
 
 static void (*extrae_set_event) (unsigned type, long long value) = dummy;
+static void (*extrae_set_nevent) (unsigned count, unsigned *types, long long *values) = dummy_n;
 
 /* Event name dictionary */
 static char* get_event_name(unsigned int type) {
@@ -194,8 +200,15 @@ void instrument_event(instrument_event_t type, long long value, instrument_actio
             }
             break;
         case MONITOR_REGION:
+        case MONITOR_STATE:
             if (instrument & INST_TALP) {
                 extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        case MONITOR_CYCLES:
+        case MONITOR_INSTR:
+            if (instrument & INST_TALP) {
+                extrae_set_event(type, value);
             }
             break;
         case THREADS_USED_EVENT:
@@ -207,6 +220,10 @@ void instrument_event(instrument_event_t type, long long value, instrument_actio
             }
             break;
     }
+}
+
+void instrument_nevent(unsigned count, instrument_event_t *types, long long *values) {
+    extrae_set_nevent(count, types, values);
 }
 
 
@@ -225,8 +242,10 @@ void init_tracing(const options_t *options) {
         // Set up function
         if ( options->instrument_counters ) {
             extrae_set_event = Extrae_eventandcounters;
+            extrae_set_nevent = Extrae_neventandcounters;
         } else {
             extrae_set_event = Extrae_event;
+            extrae_set_nevent = Extrae_nevent;
         }
 
         unsigned type;
@@ -244,10 +263,27 @@ void init_tracing(const options_t *options) {
          char * value_loop[6] = { "NO_LOOP", "IN_LOOP", "NEW_ITERATION","NEW_LOOP","END_NEW_LOOP","END_LOOP"};
         Extrae_define_event_type(&type, "Dynais State", &n_values, values, value_loop);
 
-         //MONITOR_REGION
+        //MONITOR_REGION
         type=MONITOR_REGION;
         n_values=0;
         Extrae_define_event_type(&type, get_event_name(type), &n_values, NULL, NULL);
+
+        //MONITOR_STATE
+        type=MONITOR_STATE;
+        n_values=5;
+        char *monitor_state_desc[] = {"Disabled", "Useful", "Not useful MPI", "Not useful OMP in",
+            "Not useful OMP out"};
+        Extrae_define_event_type(&type, "DLB Region state", &n_values, values, monitor_state_desc);
+
+        //MONITOR_CYCLES
+        type=MONITOR_CYCLES;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB Region cycles", &n_values, NULL, NULL);
+
+        //MONITOR_INSTR
+        type=MONITOR_INSTR;
+        n_values=0;
+        Extrae_define_event_type(&type, "DLB Region instructions", &n_values, NULL, NULL);
 
 
         //RUNTIME_EVENT
