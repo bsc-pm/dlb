@@ -79,7 +79,9 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
 
     fputs((
                 "Options:\n"
-                "  -l, --list               print DLB shmem data, if any\n"
+                "  -l[N], --list[=N]        print DLB shmem data, if any\n"
+                "                           optional N argument to override num columns\n"
+                "  --color[=no]             override automatic color detection\n"
                 "  -d, --delete             delete shmem data\n"
                 /* Options --create and --file are experimental */
                 /* "  -c, --create             create and empty Shared Memory file\n" */
