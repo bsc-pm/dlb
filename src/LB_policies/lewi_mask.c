@@ -201,14 +201,14 @@ static inline array_cpuinfo_task_t* get_tasks(const subprocess_descriptor_t *spd
 /*********************************************************************************/
 
 static void resolve_cpuinfo_tasks(const subprocess_descriptor_t *restrict spd,
-        const array_cpuinfo_task_t *restrict tasks) {
+        array_cpuinfo_task_t *restrict tasks) {
 
     size_t tasks_count = tasks->count;
 
     /* We don't need it strictly sorted, but if there are 3 or more tasks
      * we need to group them by pid */
     if (tasks_count > 2 ) {
-        array_cpuinfo_task_t_sort(&_tasks);
+        array_cpuinfo_task_t_sort(tasks);
     }
 
     /* Iterate tasks by group of PIDs */
