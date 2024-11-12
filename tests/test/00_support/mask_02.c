@@ -21,7 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-/* Test mask utils initialization */
+/* Test mask utils initialization and system functions */
 
 #include "support/mask_utils.h"
 #include "support/debug.h"
@@ -103,6 +103,43 @@ int main(int argc, char *argv[]) {
         assert( mu_get_cpu_next_core(&system_mask, 30) == -1 );
         assert( mu_get_cpu_next_core(&system_mask, 31) == -1 );
         assert( mu_get_cpu_next_core(&system_mask, 32) == -1 );
+
+        /* Test core mask functions */
+        cpu_set_t mask;
+        mu_parse_mask("0-3", &mask);
+        assert( mu_count_cores(&mask) == 2 );  // [0,1] [2,3] are counted
+
+        mu_parse_mask("0,1,5,6,10,11", &mask);
+        assert( mu_count_cores(&mask) == 2 );  // [0,1] [10,11] are counted
+
+        mu_parse_mask("0-31", &mask);
+        assert( mu_count_cores(&mask) == SYS_NCORES ); // all are counted
+        assert( mu_get_last_coreid(&mask) == SYS_NCORES-1 );
+
+        int last_cpu;
+        while ( -1 != (last_cpu = mu_take_last_coreid(&mask)) ) {
+            assert( last_cpu == mu_count_cores(&mask) );
+        }
+
+        mu_zero(&mask);
+
+        cpu_set_t mask_correct;
+        mu_set_core(&mask, 0);
+        mu_parse_mask("0,1", &mask_correct);
+        assert( mu_equal(&mask, &mask_correct) );
+
+        mu_set_core(&mask, 3);
+        mu_parse_mask("0,1,6,7", &mask_correct);
+        assert( mu_equal(&mask, &mask_correct) );
+
+        mu_unset_core(&mask, 0);
+        mu_parse_mask("6,7", &mask_correct);
+        assert( mu_equal(&mask, &mask_correct) );
+
+        mu_unset_core(&mask, 3);
+        mu_zero(&mask_correct);
+        assert( mu_equal(&mask, &mask_correct) );
+
         mu_finalize();
     }
 
@@ -199,6 +236,22 @@ int main(int argc, char *argv[]) {
             assert( i == ( i < 4 ? core_mask->first_cpuid : core_mask->last_cpuid ) );
             assert( mu_get_cpu_next_core(&system_mask, i) == ( core_id < 3
                     ? i + 1 : -1 ) );
+        }
+
+        cpu_set_t mask;
+        mu_parse_mask("0,1,4,5", &mask);
+        assert( mu_count_cores(&mask) == 2 );
+
+        mu_parse_mask("0,1,2,3,4,5", &mask);
+        assert( mu_count_cores(&mask) == 2 );  // [0,4] [1,5] are counted
+
+        mu_parse_mask("0-7", &mask);
+        assert( mu_count_cores(&mask) == NUM_CORES ); // all are counted
+        assert( mu_get_last_coreid(&mask) == NUM_CORES-1 );
+
+        int last_cpu;
+        while ( -1 != (last_cpu = mu_take_last_coreid(&mask)) ) {
+            assert( last_cpu == mu_count_cores(&mask) );
         }
     }
 
