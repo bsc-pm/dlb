@@ -47,10 +47,19 @@ void mu_get_nodes_subset_of_cpuset(cpu_set_t *node_set, const cpu_set_t *cpuset)
 void mu_get_cores_intersecting_with_cpuset(cpu_set_t *core_set, const cpu_set_t *cpuset);
 void mu_get_cores_subset_of_cpuset(cpu_set_t *core_set, const cpu_set_t *cpuset);
 int  mu_get_cpu_next_core(const cpu_set_t *mask, int prev_cpu);
+int  mu_count_cores(const cpu_set_t *mask);
+int  mu_get_last_coreid(const cpu_set_t *mask);
+int  mu_take_last_coreid(cpu_set_t *mask);
+void mu_unset_core(cpu_set_t *mask, int coreid);
+void mu_set_core(cpu_set_t *mask, int coreid);
+
 
 /* Generic mask utilities */
+void mu_zero(cpu_set_t *result);
 void mu_and(cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2);
 void mu_or(cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2);
+void mu_xor (cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2);
+bool mu_equal(const cpu_set_t *mask1, const cpu_set_t *mask2);
 bool mu_is_subset(const cpu_set_t *subset, const cpu_set_t *superset);
 bool mu_is_superset(const cpu_set_t *superset, const cpu_set_t *subset);
 bool mu_is_proper_subset(const cpu_set_t *subset, const cpu_set_t *superset);

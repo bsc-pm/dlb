@@ -669,9 +669,99 @@ int mu_get_cpu_next_core(const cpu_set_t *mask, int prev_cpu) {
     return next_cpu;
 }
 
+/* We define as "complete" those cores that all the CPUs defined by
+ * sys.core_masks_by_coreid are enabled. */
+
+/* Return the number of complete cores in the mask.
+ * e.g.:
+ *  node0: [0-1]
+ *  node1: [2-3]
+ *  node2: [4-5]
+ *  cpuset: [0-4]
+ *  returns 2
+ */
+int mu_count_cores(const cpu_set_t *mask) {
+
+    int cores_count = 0;
+
+    for (unsigned int coreid = 0; coreid < sys.num_cores; coreid++) {
+        // Check if we have the complete set of CPUs form the core
+        if (mu_is_subset(sys.core_masks_by_coreid[coreid].set, mask)) {
+            cores_count++;
+        }
+    }
+
+    return cores_count;
+}
+
+/* Return the id of the last complete core in the mask if any, otherwise return 1.
+ * e.g.:
+ *  core0: [0-1]
+ *  core1: [2-3]
+ *  core2: [4-5]
+ *  cpuset: [0-3]
+ *  returns 1 (node1)
+ */
+int mu_get_last_coreid(const cpu_set_t *mask){
+    for (int coreid = sys.num_cores-1; coreid >= 0 ; coreid--) {
+        // Check if we have the complete set of CPUs form the core
+        if (mu_is_subset(sys.core_masks_by_coreid[coreid].set, mask)) {
+            return coreid;
+        }
+    }
+
+    return -1;
+}
+
+/* Disables the CPUs of the last complete core in the mask and returns its
+ * coreid if any, otherwise return -1.
+ * e.g.:
+ *  core0: [0-1]
+ *  core1: [2-3]
+ *  core2: [4-5]
+ *  cpuset: [2-5]
+ *  returns 2 (node2)
+ *  updated cpuset: [2-3]
+ */
+int mu_take_last_coreid(cpu_set_t *mask) {
+    int last_coreid = mu_get_last_coreid(mask);
+    if (last_coreid == -1) return -1;
+    mu_xor(mask, mask, sys.core_masks_by_coreid[last_coreid].set);
+    return last_coreid;
+}
+
+/* Enables all the CPUs of the core
+ * e.g.:
+ *  core0: [0-1]
+ *  core1: [2-3]
+ *  core2: [4-5]
+ *  cpuset: []
+ *  coreid: 1
+ *  updated cpuset: [2-3]
+ */
+void mu_set_core(cpu_set_t *mask, int coreid){
+    mu_or(mask, mask, sys.core_masks_by_coreid[coreid].set);
+}
+
+/* Disables all the CPUs of the core
+ * e.g.:
+ *  core0: [0-1]
+ *  core1: [2-3]
+ *  core2: [4-5]
+ *  cpuset: [0-5]
+ *  coreid: 1
+ *  updated cpuset: [0-1,4-5]
+ */
+void mu_unset_core(cpu_set_t *mask, int coreid){
+    mu_substract(mask, mask, sys.core_masks_by_coreid[coreid].set);
+}
 
 /* Basic mask utils functions that do not need to read system's topology,
  * i.e., mostly mask operations */
+
+void mu_zero(cpu_set_t *result) {
+    CPU_ZERO_S(mu_cpuset_alloc_size, result);
+}
 
 void mu_and(cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2) {
     CPU_AND_S(mu_cpuset_alloc_size, result, mask1, mask2);
@@ -679,6 +769,14 @@ void mu_and(cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2) {
 
 void mu_or(cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2) {
     CPU_OR_S(mu_cpuset_alloc_size, result, mask1, mask2);
+}
+
+void mu_xor (cpu_set_t *result, const cpu_set_t *mask1, const cpu_set_t *mask2) {
+    CPU_XOR_S(mu_cpuset_alloc_size, result, mask1, mask2);
+}
+
+bool mu_equal(const cpu_set_t *mask1, const cpu_set_t *mask2) {
+    return CPU_EQUAL_S(mu_cpuset_alloc_size, mask1, mask2) != 0;
 }
 
 /* Returns true is all bits in subset are set in superset */
