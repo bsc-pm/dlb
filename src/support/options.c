@@ -533,10 +533,10 @@ static const opts_dict_t* get_entry_by_name(const char *name) {
 }
 
 static int set_ptr_path_value(void *option, const char *str_value) {
-    int path_len = snprintf(NULL, 0, "%s", str_value);
-    if (path_len > 0) {
-        *(char**)option = malloc(sizeof(char)*(path_len+1));
-        snprintf(*(char**)option, PATH_MAX, "%s", str_value);
+    int path_len = snprintf(NULL, 0, "%s", str_value) + 1;
+    if (path_len > 1) {
+        *(char**)option = malloc(sizeof(char) * path_len);
+        snprintf(*(char**)option, path_len, "%s", str_value);
     } else {
         *(char**)option = NULL;
     }
