@@ -38,6 +38,15 @@
 #include <pthread.h>
 
 
+static float sanitized_ipc(float instructions, float cycles) {
+    if (instructions > 0 && cycles > 0) {
+        return instructions / cycles;
+    } else {
+        return 0.0f;
+    }
+}
+
+
 /*********************************************************************************/
 /*    Monitoring Region                                                          */
 /*********************************************************************************/
@@ -67,8 +76,7 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
     }
     info("### CpuSet:                                   %s", cpuset_str);
     if (have_papi) {
-        float ipc = monitor->cycles == 0 ? 0.0f
-            : (float)monitor->instructions / monitor->cycles;
+        float ipc = sanitized_ipc(monitor->instructions, monitor->cycles);
         info("### IPC:                                      %.2f ", ipc);
     }
     if (have_mpi) {
@@ -110,7 +118,7 @@ static void pop_metrics_print(void) {
 
         if (record->elapsed_time > 0) {
 
-            float avg_ipc = record->cycles == 0.0 ? 0.0f : record->instructions / record->cycles;
+            float avg_ipc = sanitized_ipc(record->instructions, record->cycles);
             char elapsed_time_str[16];
             ns_to_human(elapsed_time_str, 16, record->elapsed_time);
             info("############### Monitoring Region POP Metrics ###############");
@@ -892,7 +900,8 @@ static void process_print(void) {
                 info("### Not useful OMP Serialization:             %"PRId64" ns",
                         process_record->monitor.omp_serialization_time);
             }
-            if (process_record->monitor.cycles > 0) {
+            if (process_record->monitor.instructions > 0
+                    && process_record->monitor.cycles > 0) {
                 info("### IPC :                                     %.2f",
                         (float)process_record->monitor.instructions
                         / process_record->monitor.cycles);
@@ -1335,6 +1344,91 @@ static void xml_footer(FILE *out_file) {
 /*    Finalize                                                                   */
 /*********************************************************************************/
 
+static bool check_coefficient(float coeffiecient) {
+    return 0.0f <= coeffiecient && coeffiecient >= 1.0;
+}
+
+static void warn_negative_counters(void) {
+    static bool warned_once = false;
+    if (!warned_once) {
+        warning("Some obtained PAPI counters contain negative values. Check your"
+                " installation or report the error to %s", PACKAGE_BUGREPORT);
+        warned_once = true;
+    }
+}
+
+static void warn_wrong_coefficient(void) {
+    static bool warned_once = false;
+    if (!warned_once) {
+        warning("Some computed POP metric coefficient is not within the allowed"
+                " range [0.0, 1.0]. If you think this is an unexpected value,"
+                " please report the error to %s", PACKAGE_BUGREPORT);
+        warned_once = true;
+    }
+}
+
+static void sanitize_records(void) {
+
+    /* pop_metrics_records:
+     *  - instructions and cycles need to be >= 0
+     *  - computed efficiencyes need to be [0.0, 1.0]
+     */
+    for (GSList *node = pop_metrics_records;
+            node != NULL;
+            node = node->next) {
+
+        dlb_pop_metrics_t *record = node->data;
+
+        if (record->cycles < 0) {
+            record->cycles = 0.0;
+            warn_negative_counters();
+        }
+
+        if (record->instructions < 0) {
+            record->instructions = 0.0;
+            warn_negative_counters();
+        }
+
+        if (check_coefficient(record->parallel_efficiency)
+                && check_coefficient(record->mpi_parallel_efficiency)
+                && check_coefficient(record->mpi_communication_efficiency)
+                && check_coefficient(record->mpi_load_balance)
+                && check_coefficient(record->mpi_load_balance_in)
+                && check_coefficient(record->mpi_load_balance_out)
+                && check_coefficient(record->omp_parallel_efficiency)
+                && check_coefficient(record->omp_load_balance)
+                && check_coefficient(record->omp_scheduling_efficiency)
+                && check_coefficient(record->omp_serialization_efficiency)) {
+            warn_wrong_coefficient();
+        }
+    }
+
+    /* node_records: nothing to sanitize for now */
+
+    /* region_records: */
+    for (GSList *node = region_records;
+            node != NULL;
+            node = node->next) {
+
+        region_record_t *region_record = node->data;
+
+        for (int i = 0; i < region_record->num_mpi_ranks; ++i) {
+
+            dlb_monitor_t *monitor = &region_record->process_records[i].monitor;
+
+            if (monitor->cycles < 0) {
+                monitor->cycles = 0.0;
+                warn_negative_counters();
+            }
+
+            if (monitor->instructions < 0) {
+                monitor->instructions = 0.0;
+                warn_negative_counters();
+            }
+        }
+    }
+}
+
 void talp_output_finalize(const char *output_file) {
 
     /* For efficiency, all records are prepended to their respective lists and
@@ -1342,6 +1436,9 @@ void talp_output_finalize(const char *output_file) {
     pop_metrics_records = g_slist_reverse(pop_metrics_records);
     node_records        = g_slist_reverse(node_records);
     region_records      = g_slist_reverse(region_records);
+
+    /* Sanitize erroneous values */
+    sanitize_records();
 
     talp_output_record_common();
 
