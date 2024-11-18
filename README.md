@@ -138,13 +138,21 @@ Please refer to our [DLB User Guide][] for a more complete documentation.
 ## Citing DLB
 If you want to cite DLB, you can use the following publications:
 
-* [Hints to improve automatic load balancing with LeWI for hybrid applications][pub1_pdf]
+* [Hints to improve automatic load balancing with LeWI for hybrid applications][pub1_doi]
 at Journal of Parallel and Distributed Computing 2014.
-([ScienceDirect][pub1_ref]) ([bibtex][pub1_bib]) ([pdf][pub1_pdf])
+([bibtex][pub1_bib]) ([pdf][pub1_pdf])
 
-* [LeWI: A Runtime Balancing Algorithm for Nested Parallelism][pub2_pdf]
+* [LeWI: A Runtime Balancing Algorithm for Nested Parallelism][pub2_doi]
 at International Conference in Parallel Processing 2009, ICPP09.
-([IEEE Xplore][pub2_ref]) ([bibtex][pub2_bib]) ([pdf][pub2_pdf])
+([bibtex][pub2_bib]) ([pdf][pub2_pdf])
+
+* [DROM: Enabling Efficient and Effortless Malleability for Resource Managers][pub3_doi]
+at 47th International Conference on Parallel Processing, August 2018.
+([bibtex][pub3_bib]) ([pdf][pub3_pdf])
+
+* [TALP: A Lightweight Tool to Unveil Parallel Efficiency of Large-scale Executions][pub4_doi]
+at Performance EngineeRing, Modelling, Analysis, and VisualizatiOn STrategy, June 2021
+([bibtex][pub4_bib]) ([pdf][pub4_pdf])
 
 
 ## Contact Information
@@ -156,9 +164,15 @@ at dlb@bsc.es.
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
 [GitHub releases]: https://github.com/bsc-pm/dlb/releases
 [DLB User Guide]: https://pm.bsc.es/ftp/dlb/doc/user-guide/index.html
-[pub1_pdf]: https://pm.bsc.es/ftp/dlb/doc/JPDC_2014.pdf
-[pub1_ref]: http://www.sciencedirect.com/science/article/pii/S0743731514000926
+[pub1_doi]: http://dx.doi.org/10.1016/j.jpdc.2014.05.004
 [pub1_bib]: https://pm.bsc.es/ftp/dlb/doc/LeWI_JPDC14.bib
-[pub2_pdf]: https://pm.bsc.es/ftp/dlb/doc/LeWI_ICPP09.pdf
-[pub2_ref]: http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=5362480
+[pub1_pdf]: https://pm.bsc.es/ftp/dlb/doc/JPDC_2014.pdf
+[pub2_doi]: http://dx.doi.org/10.1109/ICPP.2009.56
 [pub2_bib]: https://pm.bsc.es/ftp/dlb/doc/LeWI_ICPP09.bib
+[pub2_pdf]: https://pm.bsc.es/ftp/dlb/doc/LeWI_ICPP09.pdf
+[pub3_doi]: https://doi.org/10.1145/3229710.3229752
+[pub3_bib]: https://pm.bsc.es/ftp/dlb/doc/2018_DROM.bib
+[pub3_pdf]: https://pm.bsc.es/ftp/dlb/doc/drom_preprint.pdf
+[pub4_doi]: https://doi.org/10.1145/3452412.3462753
+[pub4_bib]: https://pm.bsc.es/ftp/dlb/doc/TALP_PERMAVOST21.bib
+[pub4_pdf]: https://pm.bsc.es/ftp/dlb/doc/TALP_PERMAVOST21.pdf
