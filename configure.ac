@@ -384,6 +384,7 @@ AC_CONFIG_FILES([
     doc/examples/mpi+omp_roleshift/Makefile
     doc/examples/mpi+ompss/run.sh
     doc/examples/mpi+ompss/Makefile
+    doc/examples/named_barrier/Makefile
     doc/examples/ompt/Makefile
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
@@ -411,6 +412,7 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/api.rst:doc/user_guide/source/api.rst
     doc/user_guide/source/citing_dlb.rst:doc/user_guide/source/citing_dlb.rst
     doc/user_guide/source/contents.rst:doc/user_guide/source/contents.rst
+    doc/user_guide/source/dlb_barrier.rst:doc/user_guide/source/dlb_barrier.rst
     doc/user_guide/source/faq.rst:doc/user_guide/source/faq.rst
     doc/user_guide/source/installation.rst:doc/user_guide/source/installation.rst
     doc/user_guide/source/how_to_run.rst:doc/user_guide/source/how_to_run.rst

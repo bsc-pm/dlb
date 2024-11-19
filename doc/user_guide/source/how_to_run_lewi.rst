@@ -115,6 +115,8 @@ preload a DLB MPI library if you want MPI support::
 DLB can be fine tuned with the option ``--lewi-ompt``, see section :ref:`ompt`
 for more details.
 
+.. _lewi-option-flags:
+
 LewI option flags
 =================
 --lewi-keep-one-cpu=<bool>

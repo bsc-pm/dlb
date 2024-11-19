@@ -1,0 +1,36 @@
+#################################################################################
+#  Copyright 2009-2024 Barcelona Supercomputing Center                          #
+#                                                                               #
+#  This file is part of the DLB library.                                        #
+#                                                                               #
+#  DLB is free software: you can redistribute it and/or modify                  #
+#  it under the terms of the GNU Lesser General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or            #
+#  (at your option) any later version.                                          #
+#                                                                               #
+#  DLB is distributed in the hope that it will be useful,                       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of               #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                #
+#  GNU Lesser General Public License for more details.                          #
+#                                                                               #
+#  You should have received a copy of the GNU Lesser General Public License     #
+#  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                #
+#################################################################################
+
+DLB_HOME = @prefix@
+MPICC= @MPICC@
+
+# Comment this line to test without DLB
+DLB = -I$(DLB_HOME)/include -DDLB -L$(DLB_HOME)/lib -ldlb_instr -Wl,-rpath,$(DLB_HOME)/lib
+
+all: test_first test_second
+
+test_first: test_first.c
+	$(MPICC) -g -fopenmp $^ -o $@ $(DLB)
+
+test_second: test_second.c
+	$(MPICC) -g -fopenmp $^ -o $@ $(DLB)
+
+.PHONY: clean
+clean:
+	rm -f test_first test_second test_first.txt test_second.txt

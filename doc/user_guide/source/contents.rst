@@ -26,10 +26,12 @@ Structure after installation
             │       │   ├── MPI+OmpSs
             │       │   ├── OMPT
             │       │   ├── TALP
+            │       │   ├── barrier
             │       │   ├── cmake_project
             │       │   ├── lewi_custom_rt
             │       │   ├── lewi_mask_consumer
             │       │   ├── monitoring_regions
+            │       │   ├── named_barrier
             │       │   └── statistics
             │       └── scripts
             ├── man
@@ -60,10 +62,12 @@ Structure after installation
             |       |   |-- MPI+OmpSs
             |       |   |-- OMPT
             |       |   |-- TALP
+            |       |   |-- barrier
             |       |   |-- cmake_project
             |       |   |-- lewi_custom_rt
             |       |   |-- lewi_mask_consumer
             |       |   |-- monitoring_regions
+            |       |   |-- named_barrier
             |       |   `-- statistics
             |       `-- scripts
             |-- man
@@ -111,6 +115,8 @@ ones are:
 
 There are other libraries that are variations of the above ones for instrumenting or debugging.
 These libraries will have the suffixes ``dbg``, ``instr``, or ``instr_dbg``.
+
+.. _distributed_examples:
 
 Examples
 ========
@@ -167,6 +173,18 @@ OMPT
 ----
 This example is a small utility to check whether the application has been linked to
 an OpenMP runtime library that supports OMPT.
+
+Barrier
+-------
+This example shows a coupled application synchronizing with the ``DLB_Barrier``
+function.
+
+Named Barrier
+-------------
+This is another example of synchronisation between a coupled application
+running overlapped on the same resources.
+This time, each application consumes a result from the other that was generated
+in the previous iteration. The synchronisation is done using two named barriers.
 
 CMake project
 -------------
