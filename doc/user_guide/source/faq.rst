@@ -136,7 +136,7 @@ in some regions does not increase the performance if the parallel region is alre
 the memory bandwidth.
 
 Could it be that your application does not suffer from load imbalance? Try our performance tools
-to check it out. (http://tools.bsc.es)
+to check it out (http://tools.bsc.es) or use :ref:`TALP <talp>` to obtain some POP metrics.
 
 How do I share CPUs between unrelated applications?
 ===================================================
