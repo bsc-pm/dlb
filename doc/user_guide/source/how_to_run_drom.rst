@@ -29,12 +29,12 @@ configure the assigned CPUs of existing processes. It can also be used to
 launch new processes. Run ``dlb_taskset --help`` for further info::
 
     # Binaries app_1, app_2 and app_3 are assumed to be linked with DLB
-    $ export DLB_ARGS="--drom"
-    $ ./app_1 &                         # app_1 mask: [0-7]
-    $ dlb_taskset --remove 4-7          # app_1 mask: [0-3]
-    $ taskset -c 4-7 ./app_2 &          # app_1 mask: [0-3], app_2 mask: [4-7]
-    $ dlb_taskset -c 3,7 ./app_3 &      # app_1 mask: [0-2], app_2 mask: [4-6], app_3 mask: [3,7]
-    $ dlb_taskset --list
+    export DLB_ARGS="--drom"
+    ./app_1 &                         # app_1 mask: [0-7]
+    dlb_taskset --remove 4-7          # app_1 mask: [0-3]
+    taskset -c 4-7 ./app_2 &          # app_1 mask: [0-3], app_2 mask: [4-7]
+    dlb_taskset -c 3,7 ./app_3 &      # app_1 mask: [0-2], app_2 mask: [4-6], app_3 mask: [3,7]
+    dlb_taskset --list
 
 Note that in the previous example, all programs will also adjust the number of
 threads to match the number of CPUs in their CPU affinity mask as long as any of

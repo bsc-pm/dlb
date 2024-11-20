@@ -37,10 +37,6 @@ DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided
         - DLB_<mpi_call_name>_leave(...)
 
 
-..     TALP: Tracking Application Live Performance
-..        To be done
-
-
 =========
 DLB Types
 =========
@@ -59,7 +55,7 @@ The following types may be used in the DLB interface:
         Enum to identify the type of callback. See ``"dlb_types.h"``.
 
     dlb_callback_t
-        Opaque type for callback function.
+        Opaque type for function pointer.
 
     dlb_printshmem_flags_t
         Print shared memory flags. See ``"dlb_types.h"``.

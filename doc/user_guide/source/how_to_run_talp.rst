@@ -41,12 +41,14 @@ Reporting POP metrics at the end of the execution
 
 Simply run::
 
-    $ export DLB_ARGS="--talp"
-    $ mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
+    DLB_PREFIX="<path-to-DLB-installation>"
+
+    export DLB_ARGS="--talp"
+    mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 Or::
 
-    $ mpirun <options> "$DLB_PREFIX/share/doc/dlb/scripts/talp.sh" ./foo
+    mpirun <options> "$DLB_PREFIX/share/doc/dlb/scripts/talp.sh" ./foo
 
 And you will obtain a report similar to this one at the end::
 
@@ -183,6 +185,10 @@ multiple times. Note, that the Fortran symbols are not case-sensitive. Basic usa
 For every defined monitoring region, including the implicit global region
 named "MPI Execution", TALP will print or write a summary at the end of the
 execution.
+
+.. note::
+   See :ref:`example 3 <examples>` for more info on how to compile and link
+   with the DLB library.
 
 Inspecting monitoring regions within the source code
 ----------------------------------------------------

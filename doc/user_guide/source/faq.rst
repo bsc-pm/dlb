@@ -29,18 +29,16 @@ How to decide which DLB library to link with or to preload?
 
 Linking with DLB is only necessary if the application uses the DLB API. In this
 case, we recommend linking with the ``libdlb.so`` dynamic library, even if it's
-an MPI application:
+an MPI application::
 
-.. code-block:: sh
+    DLB_PREFIX="<path-to-DLB-installation>"
 
-   DLB_PREFIX="<path-to-DLB-installation>"
+    # Manually specifying compile and link flags
+    <cc/mpicc> app.c ... -I"$DLB_PREFIX"/include -L"$DLB_PREFIX"/lib -ldlb -Wl,-rpath,"$DLB_PREFIX"/lib
 
-   # Manually specifying link flags
-   <cc/mpicc> app.c ... -I"$DLB_PREFIX"/include -L"$DLB_PREFIX"/lib -ldlb -Wl,-rpath,"$DLB_PREFIX"/lib
-
-   # or cmake-based project (and adding find_package(DLB REQUIRED))
-   export CMAKE_PREFIX_PATH+=":$DLB_PREFIX/lib"
-   cmake <source-dir> ...
+    # or cmake-based project (and adding find_package(DLB REQUIRED))
+    export CMAKE_PREFIX_PATH+=":$DLB_PREFIX/lib"
+    cmake <source-dir> ...
 
 Preloading the DLB library is necessary unless the application does not use
 MPI or Extrae, and it has already been linked with the base ``libdlb.so``.
@@ -158,12 +156,12 @@ sharing CPUs only between them, and at the same time running applications *C* an
 and sharing CPUs also only between them. This can be done by setting different shared
 memories for each subset of applications with the option ``--shm-key``::
 
-    $ export DLB_ARGS="--lewi --shm-key=AB"
-    $ ./A &
-    $ ./B &
-    $ export DLB_ARGS="--lewi --shm-key=CD"
-    $ ./C &
-    $ ./D &
+    export DLB_ARGS="--lewi --shm-key=AB"
+    ./A &
+    ./B &
+    export DLB_ARGS="--lewi --shm-key=CD"
+    ./C &
+    ./D &
 
 
 .. tracing

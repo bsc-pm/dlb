@@ -29,9 +29,13 @@ options that may be of interest. To use these scripts, the recommended method is
 copy the script you want to use, review it or modify it if needed, and then run the
 script just before the application::
 
-    $ cp $DLB_PREFIX/share/doc/dlb/scripts/lewi_omp.sh .
-    # Optionally, review and edit lewi_omp.sh
-    $ mpirun <options> ./lewi_omp.sh ./foo
+    DLB_PREFIX="<path-to-DLB-installation>"
+
+    # Copy the lewi_omp.sh script and, optionally, review and edit it
+    cp $DLB_PREFIX/share/doc/dlb/scripts/lewi_omp.sh .
+
+    # Execute application with the DLB script
+    mpirun <options> ./lewi_omp.sh ./foo
 
 Refer to :ref:`scripts` for more information.
 
@@ -53,11 +57,11 @@ Then, enable DLB support in Nanos++ by setting the environment variable
 ``NX_ARGS="--enable-dlb --enable-block"``, and enable also LeWI in DLB with
 ``DLB_ARGS="--lewi"``::
 
+    OMPI_CC="smpcc --ompss [--dlb]" mpicc foo.c -o foo
 
-    $ OMPI_CC="smpcc --ompss [--dlb]" mpicc foo.c -o foo
-    $ export NX_ARGS="--enable-dlb --enable-block"
-    $ export DLB_ARGS="--lewi"
-    $ mpirun -n 2 ./foo
+    export NX_ARGS="--enable-dlb --enable-block"
+    export DLB_ARGS="--lewi"
+    mpirun -n 2 ./foo
 
 You may also enable MPI support for DLB after considering
 :ref:`non-busy-mpi-calls`. To do so, either link or preload the MPI flavour of
@@ -65,8 +69,10 @@ the DLB library.  If you find that the MPI blocking calls are busy waiting,
 consider using the option ``--lewi-keep-one-cpu`` to keep the CPU that is doing
 the blocking call for the current process::
 
-    $ export DLB_ARGS="--lewi"
-    $ mpirun -n 2 -x LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
+    DLB_PREFIX="<path-to-DLB-installation>"
+
+    export DLB_ARGS="--lewi"
+    mpirun -n 2 env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 
 
@@ -83,10 +89,13 @@ before parallel regions with a high computational load, or at least those near
 MPI blocking calls. Take into account that DLB cannot manage the CPU pinning of
 each thread and so each MPI rank should run without exclusive CPU binding::
 
-    $ mpicc -fopenmp foo.c -o foo -I"$DLB_PREFIX/include" \
-            -L"$DLB_PREFIX/lib" -ldlb_mpi -Wl,-rpath,"$DLB_PREFIX/lib"
-    $ export DLB_ARGS="--lewi"
-    $ mpirun -n 2 --bind-to none ./foo
+    DLB_PREFIX="<path-to-DLB-installation>"
+
+    mpicc -fopenmp foo.c -o foo -I"$DLB_PREFIX/include" \
+            -L"$DLB_PREFIX/lib" -ldlb -Wl,-rpath,"$DLB_PREFIX/lib"
+
+    export DLB_ARGS="--lewi"
+    mpirun -n 2 --bind-to none env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 
 MPI + OpenMP (with OMPT support)
@@ -101,16 +110,18 @@ source code.
 Note than DLB with OMPT support can manage the CPU pinning of each thread so
 each rank must run with an exclusive set of CPUs::
 
+    OMPI_CC=clang mpicc -fopenmp foo.c -o foo
 
-    $ OMPI_CC=clang mpicc -fopenmp foo.c -o foo
-    $ export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:lend"
-    $ mpirun -n 2 --bind-to core dlb_run ./foo
+    export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:lend"
+    mpirun -n 2 --bind-to core dlb_run ./foo
 
 Since this example does not need to be linked with DLB, you will need to
 preload a DLB MPI library if you want MPI support::
 
-    $ export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:mpi"
-    $ mpirun -n 2 --bind-to core dlb_run env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
+    DLB_PREFIX="<path-to-DLB-installation>"
+
+    export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:mpi"
+    mpirun -n 2 --bind-to core dlb_run env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 DLB can be fine tuned with the option ``--lewi-ompt``, see section :ref:`ompt`
 for more details.
