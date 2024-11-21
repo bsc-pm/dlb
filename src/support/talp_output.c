@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <locale.h>
 #include <pthread.h>
 
 
@@ -1442,6 +1443,14 @@ void talp_output_finalize(const char *output_file) {
 
     talp_output_record_common();
 
+    /* If the process has changed the locale, temporarily push the C locale to
+     * print floats with the expected notation (a comma as a decimal separator
+     * will break CSV and JSON files). The object associated with the locale
+     * can be safely freed after it has been set. */
+    locale_t new_locale = newlocale(LC_ALL, "C", 0);
+    uselocale(new_locale);
+    freelocale(new_locale);
+
     if (output_file == NULL) {
         /* No output file, just print all records */
         pop_metrics_print();
@@ -1612,6 +1621,9 @@ void talp_output_finalize(const char *output_file) {
             }
         }
     }
+
+    // Restore locale
+    uselocale(LC_GLOBAL_LOCALE);
 
     // De-allocate all records
     common_finalize();
