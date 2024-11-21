@@ -388,12 +388,13 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_TALP_SUMM",
         .arg_name       = "--talp-summary",
         .default_value  = "pop-metrics",
-        .description    = OFFSET"List of summaries, separated by ':', to be written at the end\n"
-                          OFFSET"of execution:\n"
-                          OFFSET"'pop-metrics', the default option, will print a subset of the\n"
-                          OFFSET"POP metrics if '--talp-output-file' is not specified.\n"
-                          OFFSET"Otherwise, a more verbose file will be generated with all the\n"
-                          OFFSET"metrics collected by TALP.\n"
+        .description    = OFFSET"Report TALP metrics at the end of the execution. If\n"
+                          OFFSET"'--talp-output-file' is not specified, a short summary is\n"
+                          OFFSET"printed. Otherwise, a more verbose file will be generated\n"
+                          OFFSET"with all the metrics collected by TALP, depending on the list\n"
+                          OFFSET"of requested summaries, separated by ':':\n"
+                          OFFSET"'pop-metrics', the default option, will report a subset of\n"
+                          OFFSET"the POP metrics.\n"
                           OFFSET"'process' will report the measurements of each process for\n"
                           OFFSET"each registered region.\n"
                           OFFSET"\n"
@@ -410,12 +411,14 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--talp-output-file",
         .default_value  = "",
-        .description    = OFFSET"Write TALP metrics to a file. If this option is not provided,\n"
-                          OFFSET"the output is printed to stderr.\n"
-                          OFFSET"Accepted formats: *.json, *.csv. Any other for plain text.\n"
+        .description    = OFFSET"Write extended TALP metrics to a file. If this option is\n"
+                          OFFSET"omitted, the output is printed to stderr.\n"
+                          OFFSET"The accepted formats are JSON and CSV, which are selected\n"
+                          OFFSET"using the file extensions *.json and *.csv, respectively.\n"
+                          OFFSET"Any other file extension will result in plain text output.\n"
                           OFFSET"\n"
                           OFFSET"Deprecated formats:\n"
-                          OFFSET"The *.xml file ending is deprecated and will be removed in\n"
+                          OFFSET"The *.xml file extension is deprecated and will be removed in\n"
                           OFFSET"the next release.",
         .offset         = offsetof(options_t, talp_output_file),
         .type           = OPT_PTR_PATH_T,
@@ -450,10 +453,11 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Select TALP regions to enable. The option accepts the\n"
                           OFFSET"special values 'all', to enable all TALP regions, and 'none'\n"
                           OFFSET"to disable them all. An empty value is equivalent to 'all'.\n"
-                          OFFSET"Additionally, a comma separated list of region names may be\n"
-                          OFFSET"specified to enable only these regions. The global monitoring\n"
-                          OFFSET"region may be specified with the special token 'global'.\n"
-                          OFFSET"Note that names with spaces are not supported.\n"
+                          OFFSET"Additionally, a comma-separated list of region names may be\n"
+                          OFFSET"specified to enable only those regions. The global monitoring\n"
+                          OFFSET"region can be specified with the special token 'global'.\n"
+                          OFFSET"Note that when using this feature, regions must not have\n"
+                          OFFSET"spaces in their names.\n"
                           OFFSET"e.g.: --talp-region-select=none\n"
                           OFFSET"      --talp-region-select=global,region3",
         .offset         = offsetof(options_t, talp_region_select),

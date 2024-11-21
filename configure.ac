@@ -419,6 +419,7 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/how_to_run_lewi.rst:doc/user_guide/source/how_to_run_lewi.rst
     doc/user_guide/source/how_to_run_drom.rst:doc/user_guide/source/how_to_run_drom.rst
     doc/user_guide/source/how_to_run_talp.rst:doc/user_guide/source/how_to_run_talp.rst
+    doc/user_guide/source/talp_metrics.rst:doc/user_guide/source/talp_metrics.rst
     doc/user_guide/source/talp_pages.rst:doc/user_guide/source/talp_pages.rst
     doc/user_guide/source/overview.rst:doc/user_guide/source/overview.rst
     doc/user_guide/source/man_pages_appendix.rst:doc/user_guide/source/man_pages_appendix.rst
@@ -432,6 +433,7 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/images/hpc_app.png:doc/user_guide/source/images/hpc_app.png
     doc/user_guide/source/images/LeWI.png:doc/user_guide/source/images/LeWI.png
     doc/user_guide/source/images/talp.png:doc/user_guide/source/images/talp.png
+    doc/user_guide/source/images/talp-efficiency-models.drawio.svg:doc/user_guide/source/images/talp-efficiency-models.drawio.svg
     doc/user_guide/source/images/ld_preload.png:doc/user_guide/source/images/ld_preload.png
     doc/user_guide/source/_static/custom.css:doc/user_guide/source/_static/custom.css
 ])

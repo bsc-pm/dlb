@@ -6,40 +6,26 @@
 TALP for monitoring the Programming Model efficiencies
 ******************************************************
 
-The TALP module is used to collect performance metrics of MPI applications (and
-OpenMP in the near future), like MPI communication efficiency or load balance
-coefficients.
+TALP is a low-overhead profiling tool used to collect performance metrics of MPI and OpenMP
+applications (OpenMP metrics are still experimental).
 
-TALP is a profiling tool with low overhead that allows to obtain performance
-metrics at the end of the execution, as well as to query them at run-time, via
-first-party code that executes in the address space of the program or a
-third-party program.
+These metrics can either be queried at runtime through an :ref:`API <talp-api>` or :ref:`reported at the end of the exection.<talp_report_at_the_end>`
+You can get insight into the performance of different regions inside your code using :ref:`user-defined regions.<talp-custom-regions>`
 
-The performance metrics reported by TALP are a subset of the `POP metrics
-<https://pop-coe.eu/node/69>`_. The POP metrics provide a quantitative analysis
-of the factors that are most relevant in parallelisation. The metrics are
-calculated as efficiencies between 0 and 1 in a hierarchical representation,
-with the top-level metric being the "Global Efficiency", which is decomposed in
-"Computation Efficiency" and "Parallel Efficiency", and these two decomposed in
-other finer-scope efficiencies and so on.
+An in-depth explanation of the metrics computed by TALP can be found :ref:`here <talp_metrics>`.
 
-Some of the POP metrics need several runs with different numbers of resources
-to compute them, such as the "Instruction Scaling" and "IPC Scaling". TALP only
-measures performance metrics of the current application and thus, the POP
-metrics that TALP reports are:
+:ref:`Here <talp_options>` you can get an overview of the different runtime options available when using TALP.
 
-    * Parallel Efficiency
-        * Communication Efficiency
-        * Load Balance
-            * Intra-node Load Balance (LB_in)
-            * Inter-node Load Balance (LB_out)
+A good way to get started is to just run your application and let TALP :ref:`report the metrics at the end of the execution.<talp_report_at_the_end>`
 
-An in-depth explanation of the POP metrics computed by TALP can be found in the POP Metrics Overview below.
+If you already have some executions of your application using TALP, you might wanna check out :ref:`TALP-Pages <talp_pages>` which can generate some plots using your JSON files.
+
+.. _talp_report_at_the_end:
 
 Reporting POP metrics at the end of the execution
 =================================================
 
-Simply run::
+After :ref:`installing DLB <dlb-installation>` you can simply run::
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
@@ -50,86 +36,26 @@ Or::
 
     mpirun <options> "$DLB_PREFIX/share/doc/dlb/scripts/talp.sh" ./foo
 
-And you will obtain a report similar to this one at the end::
+You will get a report similar to this on ``stderr`` at the end of the execution::
 
-    DLB[<hostname>:<pid>]: ######### Monitoring Region App Summary #########
-    DLB[<hostname>:<pid>]: ### Name:                       MPI Execution
-    DLB[<hostname>:<pid>]: ### Elapsed Time :              12.87 s
-    DLB[<hostname>:<pid>]: ### Parallel efficiency :       0.70
-    DLB[<hostname>:<pid>]: ###   - Communication eff. :    0.91
-    DLB[<hostname>:<pid>]: ###   - Load Balance :          0.77
-    DLB[<hostname>:<pid>]: ###       - LB_in :             0.79
-    DLB[<hostname>:<pid>]: ###       - LB_out:             0.98
-
-
-POP Metrics Overview
-====================
-As already pointed out above, TALP is able to generate some of the POP Metrics per region.
-In this section we provide some insight into how they compute and what they tell.
-For all the calculations below, we assume that :math:`T^{u}_{i}` is the time the :math:`i`-th MPI process spends in application code doing useful work. 
-Note, that this explicitly excludes any time spent in the MPI routines.
-Furthermore we also define :math:`T^{e}_{i}` to be the total runtime of the :math:`i`-th MPI process including inside the MPI routines.
-Also we denote :math:`N_{p}` as the number of processes available in ``MPI_COMM_WORLD``.
-Let :math:`\mathbb{N}_{j}` denote the index set containing the MPI process indices :math:`i` being located at Node :math:`j`.
-We furthermore denote :math:`N_{n}` as the number of compute compute nodes participating in the execution.
-
-Parallel Efficiency
--------------------
-.. math::
-    \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{\max_{i} T^{e}_{i} \times N_{p} }
-
-The parallel efficiency can also be seen as a measure of how efficient the parallelisation of the code is. 
-We distinguish the effects into two multiplicative sub-metrics namely:
-
-    * Communication Efficiency
-    * Load Balance
-
-Communication Efficiency
-------------------------
-.. math::
-    \frac{ \max_{i} T^{u}_{i} }{ \max_{i} T^{e}_{i} }
-
-A low Communication Efficiency is mainly explained by larger amounts of time being spent in communication rather than "useful" computations. 
-This is either indicative of a suboptimal parallelisation/communication strategy or the problem size being too small for the amount of resources used, so communication creates a larger overhead compared to computation.
-
-Load Balance
-------------
-.. math::
-    \frac{ \sum_{i}^{N_{p}} T^{u}_{i} }{ \max_{i} T^{u}_{i} \times N_{p}}
-
-The Load balance metric identifies how much efficiency is lost due to uneven computation time distribution.
-We furthermore divide this into two sub-metrics:
-
-  * Intra-node Load Balance
-  * Inter-node Load Balance
-
-Intra-node Load Balance (LB_in)
--------------------------------
-.. math::
-    \frac{ \max_{j} (\sum_{i \in \mathbb{N}_{j}}^{} T^{u}_{i}) \times N_{n} }{ (\max_{i} T^{u}_{i}) \times N_{p} }
-
-Intra-node Load Balance determines the load balance inside the most loaded node. 
-This load imbalance can be mitigated by using LeWI.
-
-Inter-node Load Balance (LB_out)
---------------------------------
-.. math::
-    \frac{  \sum_{i}^{N_{p}} T^{u}_{i} }{ (\sum_{i \in \mathbb{N}_{j}}^{N_{p}} T^{u}_{i}) \times N_{n}}
-
-Inter-node Load Balance determines the load balance between the nodes.
-
-Average IPC
------------
-This metric requires PAPI to be enabled! 
-
-For this metric we introduce the number of instructions :math:`I_i` and the number of cycles they took as :math:`C_i` by the :math:`i`-th MPI process.
-
-.. math::
-    \frac{  \sum_{i}^{N_{p}} I_i }{ \sum_{i}^{N_{p}} C_i}
+    DLB[<hostname>:<pid>]: ############### Monitoring Region POP Metrics ###############
+    DLB[<hostname>:<pid>]: ### Name:                                     Global
+    DLB[<hostname>:<pid>]: ### Elapsed Time:                             5 s
+    DLB[<hostname>:<pid>]: ### Average IPC:                              0.23
+    DLB[<hostname>:<pid>]: ### Parallel efficiency:                      0.40
+    DLB[<hostname>:<pid>]: ### MPI Parallel efficiency:                  0.67
+    DLB[<hostname>:<pid>]: ###   - MPI Communication efficiency:         0.83
+    DLB[<hostname>:<pid>]: ###   - MPI Load Balance:                     0.80
+    DLB[<hostname>:<pid>]: ###       - MPI Load Balance in:              0.80
+    DLB[<hostname>:<pid>]: ###       - MPI Load Balance out:             1.00
+    DLB[<hostname>:<pid>]: ### OpenMP Parallel efficiency:               0.60
+    DLB[<hostname>:<pid>]: ###   - OpenMP Load Balance:                  0.80
+    DLB[<hostname>:<pid>]: ###   - OpenMP Scheduling efficiency:         1.00
+    DLB[<hostname>:<pid>]: ###   - OpenMP Serialization efficiency:      0.75
 
 
-In superscalar machines, it's possible to complete more than 1 instruction per clock cycle. So this value ranges in most modern X86_64 from 0 to a maximum of 4. 
-Anything below 1 for a computational region is normally a bad sign and should be investigated. 
+You can also use ``--talp-output-file`` to generate CSV or JSON formatted files. More info in the options section :ref:`below <talp_options>`.
+
 
 
 .. _talp-custom-regions:
@@ -137,17 +63,38 @@ Anything below 1 for a computational region is normally a bad sign and should be
 Defining custom monitoring regions
 ==================================
 
-By default, TALP reports the entire MPI execution from ``MPI_Init`` to
-``MPI_Finalize``. Applications may also use user-defined regions to monitor
-different sub-regions of the code.
+TALP utilizes *monitoring regions* to track and report performance metrics. A
+monitoring region is a designated section of code marked for tracking.
+Initially, TALP defines a default monitoring region, called "Global", which
+spans from ``DLB_Init`` to ``DLB_Finalize``. Additionally, users can create
+custom monitoring regions through the DLB API.
 
-A monitoring region may be registered using the function
-``DLB_MonitoringRegionRegister``; multiple calls with the same non-null
-char pointer will return the same region. A region will not start until
-the function ``DLB_MonitoringRegionStart`` is called, and needs to
-finish with the function ``DLB_MonitoringRegionStop`` at some point
-before ``MPI_Finalize``. A monitoring region may be paused and resumed
-multiple times. Note, that the Fortran symbols are not case-sensitive. Basic usage example for C and Fortran:
+.. note::
+   The region between ``DLB_Init`` and ``DLB_Finalize`` can vary depending
+   on the initialisaton method used, whether it's automatic initialisation
+   with MPI or OpenMP, or direct initialisation through the DLB API.
+
+A monitoring region can be registered using the
+``DLB_MonitoringRegionRegister`` function. Multiple calls with the same
+non-null char pointer will return the same region. The region does not begin
+until the function ``DLB_MonitoringRegionStart`` is called, and must end with
+the function ``DLB_MonitoringRegionStop``.
+A monitoring region may be paused and resumed multiple times.
+All user-defined regions should be stopped before ``MPI_Finalize``.
+
+Here are a few restrictions for naming monitoring regions:
+
+- The name "Global" (case-insensitive) is reserved and cannot be used for any
+  user-defined region. If the user attempts to register a region with this
+  name, a pointer to the global region will be returned.
+- The names "all" and "none" (case-insensitive) are reserved and cannot be
+  used. Attempting to register a region with these names will result in an
+  error.
+- For user-defined regions, the name is case-sensitive, can contain up to
+  128 characters, and may include spaces (though spaces must be avoided when
+  using certain flags, as explained explained :ref:`below<talp_options>`).
+
+Basic usage examples for C and Fortran:
 
 .. code-block:: c
 
@@ -182,22 +129,21 @@ multiple times. Note, that the Fortran symbols are not case-sensitive. Basic usa
         err = DLB_MonitoringRegionStop(dlb_handle)
     enddo
 
-For every defined monitoring region, including the implicit global region
-named "MPI Execution", TALP will print or write a summary at the end of the
-execution.
+For each defined monitoring region, including the global region, TALP will
+print or write a summary at the end of the execution.
 
 .. note::
-   See :ref:`example 3 <examples>` for more info on how to compile and link
-   with the DLB library.
+   See :ref:`Example 3 of How to run with DLB<examples>` for more information
+   on compiling and linking with the DLB library.
 
 Inspecting monitoring regions within the source code
 ----------------------------------------------------
 
-The struct ``dlb_monitor_t`` is defined in ``dlb_talp.h``. Its fields may be
-accessed at any time, although some of them may lack some consistency if the
-region is not stopped.
+The struct ``dlb_monitor_t`` is defined in ``dlb_talp.h``. Its fields can be
+accessed at any time, although to guarantee that the values are up to date the
+region needs to be stopped.
 
-For Fortran codes, the struct may be accessed like in this example:
+For Fortran codes, the struct can be accessed as in this example:
 
 .. code-block:: fortran
 
@@ -220,19 +166,6 @@ For Fortran codes, the struct may be accessed like in this example:
     print *, dlb_monitor%elapsed_time
 
 
-Redirecting TALP output to a file
-=================================
-
-Use the flag ``--talp-output-file=<path>`` to select the output file of the
-TALP report, instead of the default printing to ``stderr``.
-
-TALP accept several output formats, which will be detected by file extension:
-``*.json``, ``*.xml``, and ``*.csv``. If the output file extension does not
-correspond to any of them, the output will be in plain text format. Note that
-for JSON and XML formats, TALP will overwrite the existing file, while if the
-file is CSV, TALP will append all executions as new rows. This may change in
-the future in favor of appending also to JSON and XML formats.
-
 Enabling Hardware Counters
 ==========================
 
@@ -240,6 +173,7 @@ Enabling Hardware Counters
 ``--talp-papi`` to ``DLB_ARGS``. With PAPI enabled, TALP will also report the
 average IPC.
 
+.. _talp_options:
 
 TALP option flags
 =================
@@ -250,12 +184,13 @@ TALP option flags
 --talp-papi=<bool>
     Select whether to collect PAPI counters.
 
---talp-summary=<none:all:pop-metrics:node:process>
-    List of summaries, separated by ``:``, to be written at the end of the execution:
+--talp-summary=<none:all:pop-metrics:process>
+    Report TALP metrics at the end of the execution. If ``--talp-output-file`` is not
+    specified, a short summary is printed. Otherwise, a more verbose file will be
+    generated with all the metrics collected by TALP, depending on the list of
+    requested summaries, separated by ``:``:
 
-    ``pop-metrics``, the default option, will print a subset of the POP metrics if
-    ``--talp-output-file`` is not specified. Otherwise, a more verbose file is
-    generated with all the metrics collected by TALP.
+    ``pop-metrics``, the default option, will report a subset of the POP metrics.
 
     ``process`` will report the measurements of each process for each
     registered region.
@@ -263,9 +198,9 @@ TALP option flags
     **Deprecated options:**
 
     ``pop-raw`` will be removed in the next release. The output will be
-    available using the ``pop-metrics`` summary.
+    available via the ``pop-metrics`` summary.
 
-    ``node`` will be removed in the next release. Its data may be derived from
+    ``node`` will be removed in the next release. Its data can be derived from
     the ``process`` report.
 
 --talp-external-profiler=<bool>
@@ -273,21 +208,24 @@ TALP option flags
     if there is an external program monitoring the application.
 
 --talp-output-file=<path>
-    Write TALP metrics to a file. If this option is not provided, the output is
-    printed to stderr. Accepted formats: ``*.json``, ``*.csv``. Any
-    other for plain text.
+    Write extended TALP metrics to a file. If this option is omitted, the output is
+    printed to stderr.
+    The accepted formats are JSON and CSV, which are selected using the file
+    extensions ``*.json`` and ``*.csv``, respectively. Any other file
+    extension will result in plain text output.
 
     **Deprecated formats:**
 
-    The ``*.xml`` file ending is deprecated and will be removed in the next release.
+    The ``*.xml`` file extension is deprecated and will be removed in the next release.
+
 
 --talp-region-select=<string>
     Select TALP regions to enable. The option accepts the special values
     ``all``, to enable all TALP regions, and ``none`` to disable them all. An
-    empty value is equivalent to ``all``. Additionally, a comma separated list
-    of region names may be specified to enable only these regions. The global
+    empty value is equivalent to ``all``. Additionally, a comma-separated list
+    of region names can be specified to enable only those regions. The global
     monitoring region may be specified with the special token ``global``.
-    Note that names with spaces are not supported.
+    Note that when using this feature, regions must not have spaces in their names.
     e.g.: ``--talp-region-select=none``,
     ``--talp-region-select=global,region3``
 
