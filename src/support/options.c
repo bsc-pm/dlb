@@ -388,16 +388,20 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_TALP_SUMM",
         .arg_name       = "--talp-summary",
         .default_value  = "pop-metrics",
-        .description    = OFFSET"List of summaries, separated by ':', to write at the end\n"
-                          OFFSET"of the execution: 'pop-metrics', the default option, will\n"
-                          OFFSET"print a short report if no '--talp-output-file' is specified.\n"
-                          OFFSET"Otherwise, a more verbose file is generated containing all\n"
-                          OFFSET"metrics collected by TALP. 'node' and 'process' show a \n"
-                          OFFSET"summary for each node and process respectively.\n"
+        .description    = OFFSET"List of summaries, separated by ':', to be written at the end\n"
+                          OFFSET"of execution:\n"
+                          OFFSET"'pop-metrics', the default option, will print a subset of the\n"
+                          OFFSET"POP metrics if '--talp-output-file' is not specified.\n"
+                          OFFSET"Otherwise, a more verbose file will be generated with all the\n"
+                          OFFSET"metrics collected by TALP.\n"
+                          OFFSET"'process' will report the measurements of each process for\n"
+                          OFFSET"each registered region.\n"
                           OFFSET"\n"
                           OFFSET"Deprecated options:\n"
                           OFFSET"'pop-raw' will be removed in the next release. The output \n"
-                          OFFSET"will be available using the 'pop-metrics' summary.",
+                          OFFSET"will be available using the 'pop-metrics' summary.\n"
+                          OFFSET"'node' will be removed in the next release. Its data may\n"
+                          OFFSET"be derived from the 'process' report.",
         .offset         = offsetof(options_t, talp_summary),
         .type           = OPT_TLPSUM_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL

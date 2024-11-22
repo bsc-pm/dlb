@@ -1162,6 +1162,7 @@ static void talp_record_process_summary(const subprocess_descriptor_t *spd,
     process_record_t process_record_send = {
         .rank = _mpi_rank,
         .pid = spd->id,
+        .node_id = _node_id,
         .monitor = *monitor,
     };
 
@@ -1231,17 +1232,18 @@ static void talp_record_process_summary(const subprocess_descriptor_t *spd,
     /* MPI struct type: process_record_t */
     MPI_Datatype mpi_process_record_type;
     {
-        int count = 6;
-        int blocklengths[] = {1, 1, HOST_NAME_MAX,
+        int count = 7;
+        int blocklengths[] = {1, 1, 1, HOST_NAME_MAX,
             TALP_OUTPUT_CPUSET_MAX, TALP_OUTPUT_CPUSET_MAX, 1};
         MPI_Aint displacements[] = {
             offsetof(process_record_t, rank),
             offsetof(process_record_t, pid),
+            offsetof(process_record_t, node_id),
             offsetof(process_record_t, hostname),
             offsetof(process_record_t, cpuset),
             offsetof(process_record_t, cpuset_quoted),
             offsetof(process_record_t, monitor)};
-        MPI_Datatype types[] = {MPI_INT, mpi_pid_type, MPI_CHAR, MPI_CHAR,
+        MPI_Datatype types[] = {MPI_INT, mpi_pid_type, MPI_INT, MPI_CHAR, MPI_CHAR,
             MPI_CHAR, mpi_dlb_monitor_type};
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);

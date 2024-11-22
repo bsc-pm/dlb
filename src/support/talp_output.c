@@ -944,6 +944,7 @@ static void process_to_json(FILE *out_file) {
                 "        {\n"
                 "          \"rank\": %d,\n"
                 "          \"pid\": %d,\n"
+                "          \"nodeId\": %d,\n"
                 "          \"hostname\": \"%s\",\n"
                 "          \"cpuset\": %s,\n"
                 "          \"numCpus\": %d,\n"
@@ -964,6 +965,7 @@ static void process_to_json(FILE *out_file) {
                 "        }%s\n",
                 process_record->rank,
                 process_record->pid,
+                process_record->node_id,
                 process_record->hostname,
                 process_record->cpuset_quoted,
                 process_record->monitor.num_cpus,
@@ -1013,6 +1015,7 @@ static void process_to_xml(FILE *out_file) {
                 "    <process>\n"
                 "      <rank>%d</rank>\n"
                 "      <pid>%d</pid>\n"
+                "      <nodeId>%d</nodeId>\n"
                 "      <hostname>%s</hostname>\n"
                 "      <cpuset>%s</cpuset>\n"
                 "      <numCpus>%d</numCpus>\n"
@@ -1033,6 +1036,7 @@ static void process_to_xml(FILE *out_file) {
                 "    </process>\n",
                 process_record->rank,
                 process_record->pid,
+                process_record->node_id,
                 process_record->hostname,
                 process_record->cpuset_quoted,
                 process_record->monitor.num_cpus,
@@ -1066,6 +1070,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                 "Region,"
                 "Rank,"
                 "PID,"
+                "NodeId,"
                 "Hostname,"
                 "CpuSet,"
                 "NumCpus,"
@@ -1099,6 +1104,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%s,"           /* Region */
                     "%d,"           /* Rank */
                     "%d,"           /* PID */
+                    "%d,"           /* NodeId */
                     "%s,"           /* Hostname */
                     "%s,"           /* CpuSet */
                     "%d"            /* NumCpus */
@@ -1119,6 +1125,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     region_record->name,
                     process_record->rank,
                     process_record->pid,
+                    process_record->node_id,
                     process_record->hostname,
                     process_record->cpuset_quoted,
                     process_record->monitor.num_cpus,

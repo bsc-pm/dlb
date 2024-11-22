@@ -245,15 +245,22 @@ TALP option flags
     Select whether to collect PAPI counters.
 
 --talp-summary=<none:all:pop-metrics:node:process>
-    List of summaries, separated by ``:``, to write at the end of the execution:
-    ``pop-metrics``, the default option, will print a short report if no
-    ``--talp-output-file`` is specified. Otherwise, a more verbose file is
-    generated containing all metrics collected by TALP.
-    ``node`` and ``process`` show a summary for each node and process respectively.
+    List of summaries, separated by ``:``, to be written at the end of the execution:
+
+    ``pop-metrics``, the default option, will print a subset of the POP metrics if
+    ``--talp-output-file`` is not specified. Otherwise, a more verbose file is
+    generated with all the metrics collected by TALP.
+
+    ``process`` will report the measurements of each process for each
+    registered region.
 
     **Deprecated options:**
 
-    ``pop-raw`` will be removed in the next release. The output will be available using the ``pop-metrics`` summary.
+    ``pop-raw`` will be removed in the next release. The output will be
+    available using the ``pop-metrics`` summary.
+
+    ``node`` will be removed in the next release. Its data may be derived from
+    the ``process`` report.
 
 --talp-external-profiler=<bool>
     Enable live metrics update to the shared memory. This flag is only needed

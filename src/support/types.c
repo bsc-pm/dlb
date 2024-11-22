@@ -438,7 +438,7 @@ static const talp_summary_t talp_summary_values[] =
 static const char* const talp_summary_choices[] =
     {"none", "all", "pop-metrics", "pop-raw", "node", "process"};
 static const char talp_summary_choices_str[] =
-    "none:all:pop-metrics:pop-raw:node:process";
+    "none:all:pop-metrics:process";
 enum { talp_summary_nelems = sizeof(talp_summary_values) / sizeof(talp_summary_values[0]) };
 
 int parse_talp_summary(const char *str, talp_summary_t *value) {
@@ -483,9 +483,14 @@ int parse_talp_summary(const char *str, talp_summary_t *value) {
     }
     free(str_copy);
 
-    /* Deprecation warning */
-    if(*value & SUMMARY_POP_RAW && *value != SUMMARY_ALL){
+    /* Deprecation warnings:  */
+
+    if (*value & SUMMARY_POP_RAW) {
         warning("Deprecated: --talp-summary=pop-raw is deprecated. Use pop-metrics instead.");
+    }
+
+    if (*value & SUMMARY_NODE) {
+        warning("Deprecated: --talp-summary=node is deprecated. Use process instead.");
     }
 
     return DLB_SUCCESS;
