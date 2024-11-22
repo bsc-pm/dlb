@@ -89,24 +89,24 @@ static void* observer_func(void *arg) {
     /* Set up observer flag */
     set_observer_role(true);
 
-    /* Get implicit region */
-    const dlb_monitor_t *implicit_monitor = monitoring_region_get_implicit_region(spd);
-    assert( implicit_monitor != NULL );
-    int num_measurements = implicit_monitor->num_measurements;
+    /* Get global region */
+    const dlb_monitor_t *global_monitor = monitoring_region_get_global_region(spd);
+    assert( global_monitor != NULL );
+    int num_measurements = global_monitor->num_measurements;
 
     /* An observer may call MPI functions without affecting TALP */
     talp_into_sync_call(spd, true);
     talp_out_of_sync_call(spd, true);
-    assert( num_measurements == implicit_monitor->num_measurements );
+    assert( num_measurements == global_monitor->num_measurements );
 
     /* An observer may not start/stop/update regions */
-    assert( monitoring_region_start(spd, DLB_IMPLICIT_REGION) == DLB_ERR_PERM );
-    assert( monitoring_region_stop(spd, DLB_IMPLICIT_REGION) == DLB_ERR_PERM );
+    assert( monitoring_region_start(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
+    assert( monitoring_region_stop(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
     assert( monitoring_regions_force_update(spd) == DLB_ERR_PERM );
 
     /* Get MPI metrics */
     dlb_node_metrics_t node_metrics;
-    assert( talp_collect_pop_node_metrics(spd, DLB_IMPLICIT_REGION, &node_metrics) == DLB_SUCCESS );
+    assert( talp_collect_pop_node_metrics(spd, DLB_GLOBAL_REGION, &node_metrics) == DLB_SUCCESS );
     assert( node_metrics.processes_per_node == 1 );
 
     return NULL;
@@ -139,27 +139,27 @@ int main(int argc, char *argv[]) {
         node_barrier_init(&spd);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
-        dlb_monitor_t *implicit_monitor = talp_info->monitor;
+        dlb_monitor_t *global_monitor = talp_info->monitor;
 
-        /* Start implicit monitoring region */
+        /* Start global monitoring region */
         talp_mpi_init(&spd);
 
         /* MPI call */
         talp_into_sync_call(&spd, /* is_blocking_collective */ false);
         talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
 
-        /* Stop implicit monitoring region so that we can collect its metrics twice
+        /* Stop global monitoring region so that we can collect its metrics twice
          * with the same values */
-        assert( monitoring_region_stop(&spd, implicit_monitor) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, global_monitor) == DLB_SUCCESS );
 
         /* Get MPI metrics */
         dlb_node_metrics_t node_metrics1;
         dlb_node_metrics_t node_metrics2;
-        assert( talp_collect_pop_node_metrics(&spd, DLB_IMPLICIT_REGION, &node_metrics1)
+        assert( talp_collect_pop_node_metrics(&spd, DLB_GLOBAL_REGION, &node_metrics1)
                 == DLB_SUCCESS );
-        assert( talp_collect_pop_node_metrics(&spd, implicit_monitor, &node_metrics2)
+        assert( talp_collect_pop_node_metrics(&spd, global_monitor, &node_metrics2)
                 == DLB_SUCCESS );
-        assert( !monitoring_region_is_started(implicit_monitor) );
+        assert( !monitoring_region_is_started(global_monitor) );
         assert( cmp_node_metrics(&node_metrics1, &node_metrics2) == 0 );
         print_node_metrics(&node_metrics1);
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         talp_info_t *talp_info = spd.talp_info;
         talp_info->flags.external_profiler = true;
 
-        /* Start implicit monitoring region */
+        /* Start global monitoring region */
         talp_mpi_init(&spd);
 
         /* MPI call */

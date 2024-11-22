@@ -38,8 +38,9 @@
         integer(kind=c_int64_t) :: omp_serialization_time
         type(c_ptr)             :: data_
        end type
-       type(c_ptr), parameter   :: DLB_MPI_REGION = c_null_ptr   !! deprecated
-       type(c_ptr), parameter   :: DLB_IMPLICIT_REGION = c_null_ptr
+       type(c_ptr), parameter   :: DLB_MPI_REGION = c_null_ptr      !! deprecated
+       type(c_ptr), parameter   :: DLB_IMPLICIT_REGION = c_null_ptr !! deprecated
+       type(c_ptr), parameter   :: DLB_GLOBAL_REGION = c_null_ptr
        type(c_ptr), parameter   :: DLB_LAST_OPEN_REGION = transfer(1_8, c_null_ptr)
 
        interface
@@ -62,9 +63,17 @@
             real(c_double), intent(out) :: ncpus
         end function dlb_talp_getnumcpus
 
+        function dlb_monitoringregiongetglobal()                        &
+     &          result (handle)                                         &
+     &          bind(c, name='DLB_MonitoringRegionGetGlobal')
+            use iso_c_binding
+            type(c_ptr) :: handle
+        end function dlb_monitoringregiongetglobal
+
+        !! deprecated: bind to DLB_MonitoringRegionGetGlobal()
         function dlb_monitoringregiongetimplicit()                      &
      &          result (handle)                                         &
-     &          bind(c, name='DLB_MonitoringRegionGetImplicit')
+     &          bind(c, name='DLB_MonitoringRegionGetGlobal')
             use iso_c_binding
             type(c_ptr) :: handle
         end function dlb_monitoringregiongetimplicit

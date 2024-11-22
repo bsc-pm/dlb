@@ -80,7 +80,7 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
 
     if (pid == 0 || (thread_spd && thread_spd->id == pid)) {
         /* Same process */
-        const dlb_monitor_t *monitor = monitoring_region_get_implicit_region(thread_spd);
+        const dlb_monitor_t *monitor = monitoring_region_get_global_region(thread_spd);
         if (monitor != NULL) {
             *mpi_time = nsecs_to_secs(monitor->mpi_time);
             *useful_time = nsecs_to_secs(monitor->useful_time);
@@ -92,7 +92,7 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
         /* Different process, fetch from shared memory */
         talp_region_list_t region;
         error = shmem_talp__get_region(&region, pid,
-                monitoring_region_get_implicit_region_name());
+                monitoring_region_get_global_region_name());
 
         if (error == DLB_SUCCESS) {
             *mpi_time = nsecs_to_secs(region.mpi_time);
@@ -114,8 +114,8 @@ int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
         if (max_len > shmem_max_regions) {
             max_len = shmem_max_regions;
         }
-        if (name == DLB_IMPLICIT_REGION) {
-            name = monitoring_region_get_implicit_region_name();
+        if (name == DLB_GLOBAL_REGION) {
+            name = monitoring_region_get_global_region_name();
         }
         talp_region_list_t *region_list = malloc(sizeof(talp_region_list_t)*max_len);
         error = shmem_talp__get_regionlist(region_list, nelems, max_len, name);
@@ -151,16 +151,19 @@ int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metr
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void) {
+dlb_monitor_t* DLB_MonitoringRegionGetGlobal(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
-    return monitoring_region_get_implicit_region(thread_spd);
+    return monitoring_region_get_global_region(thread_spd);
 }
 
+dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void)
+    __attribute__((alias("DLB_MonitoringRegionGetGlobal")));
+
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
-    __attribute__((alias("DLB_MonitoringRegionGetImplicit")));
+    __attribute__((alias("DLB_MonitoringRegionGetGlobal")));
 
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     spd_enter_dlb(thread_spd);

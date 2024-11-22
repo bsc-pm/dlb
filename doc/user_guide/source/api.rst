@@ -272,9 +272,9 @@ The second set of services are designed to be called from witihn the DLB running
 With these funcions, the process can obtain live metrics from TALP, as well as to define
 new custom Monitoring Regions to delimit a specific part of the code.
 
-.. function:: const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
+.. function:: const dlb_monitor_t* DLB_MonitoringRegionGetGlobal(void)
 
-     Get the pointer of the implicit MPI Monitorig Region
+     Get the pointer of the Global Monitorig Region
 
 .. function:: dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name)
 

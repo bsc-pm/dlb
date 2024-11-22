@@ -48,6 +48,7 @@ enum { TALP_OUTPUT_CPUSET_MAX = 128 };
 typedef struct process_record_t {
     int rank;
     pid_t pid;
+    int node_id;
     char hostname[HOST_NAME_MAX];
     char cpuset[TALP_OUTPUT_CPUSET_MAX];
     char cpuset_quoted[TALP_OUTPUT_CPUSET_MAX];

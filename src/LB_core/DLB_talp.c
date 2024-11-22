@@ -69,7 +69,7 @@ static MPI_Datatype mpi_int64_type;
 static __thread int EventSet = PAPI_NULL;
 #endif
 
-const char *implicit_region_name = "Application";
+const char *global_region_name = "Global";
 
 
 /*********************************************************************************/
@@ -139,9 +139,9 @@ static bool parse_region_select(const char *region_select, const char *region_na
             break;
         }
 
-        /* Special value 'application' and region is implicit region */
-        if (strcasecmp(region_name, implicit_region_name) == 0
-                && strcasecmp(token, implicit_region_name) == 0) {
+        /* Region name is same as global region, and same as token (ignoring case) */
+        if (strcasecmp(region_name, global_region_name) == 0
+                && strcasecmp(token, global_region_name) == 0) {
             found_in_select = true;
             break;
         }
@@ -196,14 +196,14 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const
     }
 }
 
-struct dlb_monitor_t* monitoring_region_get_implicit_region(
+struct dlb_monitor_t* monitoring_region_get_global_region(
         const subprocess_descriptor_t *spd) {
     talp_info_t *talp_info = spd->talp_info;
     return talp_info ? talp_info->monitor : NULL;
 }
 
-const char* monitoring_region_get_implicit_region_name(void) {
-    return implicit_region_name;
+const char* monitoring_region_get_global_region_name(void) {
+    return global_region_name;
 }
 
 dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
@@ -214,15 +214,15 @@ dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
 
     dlb_monitor_t *monitor = NULL;
     bool anonymous_region = (name == NULL || *name == '\0');
-    bool implicit_region = !anonymous_region && name == implicit_region_name;
+    bool global_region = !anonymous_region && name == global_region_name;
 
     /* Check again if the pointers are different but the string content is the
-     * same as the implicit region, ignoring case */
+     * same as the global region, ignoring case */
     if (!anonymous_region
-            && !implicit_region
-            && strncasecmp(implicit_region_name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
-        name = implicit_region_name;
-        implicit_region = true;
+            && !global_region
+            && strncasecmp(global_region_name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
+        name = global_region_name;
+        global_region = true;
     }
 
     /* Found monitor if already registered */
@@ -256,7 +256,7 @@ dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
 
     /* Initialize values */
     bool have_shmem = talp_info->flags.have_shmem
-        || (talp_info->flags.have_minimal_shmem && implicit_region);
+        || (talp_info->flags.have_minimal_shmem && global_region);
     monitoring_region_initialize(monitor, get_new_monitor_id(), name,
             spd->id, avg_cpus, spd->options.talp_region_select, have_shmem);
 
@@ -271,7 +271,7 @@ dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
 }
 
 int monitoring_region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    if (monitor == DLB_IMPLICIT_REGION) {
+    if (monitor == DLB_GLOBAL_REGION) {
         talp_info_t *talp_info = spd->talp_info;
         monitor = talp_info->monitor;
     }
@@ -294,7 +294,7 @@ int monitoring_region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *m
     if (unlikely(thread_is_observer)) return DLB_ERR_PERM;
 
     talp_info_t *talp_info = spd->talp_info;
-    if (monitor == DLB_IMPLICIT_REGION) {
+    if (monitor == DLB_GLOBAL_REGION) {
         monitor = talp_info->monitor;
     }
 
@@ -340,7 +340,7 @@ int monitoring_region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *mo
     if (unlikely(thread_is_observer)) return DLB_ERR_PERM;
 
     talp_info_t *talp_info = spd->talp_info;
-    if (monitor == DLB_IMPLICIT_REGION) {
+    if (monitor == DLB_GLOBAL_REGION) {
         monitor = talp_info->monitor;
     } else if (monitor == DLB_LAST_OPEN_REGION) {
         if (talp_info->open_regions != NULL) {
@@ -390,7 +390,7 @@ void monitoring_region_set_internal(struct dlb_monitor_t *monitor, bool internal
 
 int monitoring_region_report(const subprocess_descriptor_t *spd, const dlb_monitor_t *monitor) {
     talp_info_t *talp_info = spd->talp_info;
-    if (monitor == DLB_IMPLICIT_REGION) {
+    if (monitor == DLB_GLOBAL_REGION) {
         monitor = talp_info->monitor;
     }
     if (((monitor_data_t*)monitor->_data)->flags.internal) {
@@ -599,9 +599,9 @@ void talp_init(subprocess_descriptor_t *spd) {
         shmem_talp__init(spd->options.shm_key, regions_per_proc);
     }
 
-    /* Initialize implicit region monitor
+    /* Initialize global region monitor
      * (at this point we don't know how many CPUs, it will be fixed in talp_openmp_init) */
-    talp_info->monitor = monitoring_region_register(spd, implicit_region_name);
+    talp_info->monitor = monitoring_region_register(spd, global_region_name);
 
     verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
 
@@ -1018,7 +1018,7 @@ static void talp_record_monitor(const subprocess_descriptor_t *spd,
 /*********************************************************************************/
 
 #if MPI_LIB
-/* Compute Node summary of all Implicit Monitors and record data */
+/* Compute Node summary of all Global Monitors and record data */
 static void talp_record_node_summary(const subprocess_descriptor_t *spd) {
 
     node_record_t *node_summary = NULL;
@@ -1028,13 +1028,13 @@ static void talp_record_node_summary(const subprocess_descriptor_t *spd) {
      * MPI_Finalize */
     node_barrier(spd, NULL);
 
-    /* Node process 0 reduces all implicit regions from all processes in the node */
+    /* Node process 0 reduces all global regions from all processes in the node */
     if (_process_id == 0) {
-        /* Obtain a list of regions associated with the Implicit Region Name, sorted by PID */
+        /* Obtain a list of regions associated with the Global Region Name, sorted by PID */
         int max_procs = mu_get_system_size();
         talp_region_list_t *region_list = malloc(max_procs * sizeof(talp_region_list_t));
         int nelems;
-        shmem_talp__get_regionlist(region_list, &nelems, max_procs, implicit_region_name);
+        shmem_talp__get_regionlist(region_list, &nelems, max_procs, global_region_name);
 
         /* Allocate and initialize node summary structure */
         node_summary_size = sizeof(node_record_t) + sizeof(process_in_node_record_t) * nelems;
@@ -1162,6 +1162,7 @@ static void talp_record_process_summary(const subprocess_descriptor_t *spd,
     process_record_t process_record_send = {
         .rank = _mpi_rank,
         .pid = spd->id,
+        .node_id = _node_id,
         .monitor = *monitor,
     };
 
@@ -1231,17 +1232,18 @@ static void talp_record_process_summary(const subprocess_descriptor_t *spd,
     /* MPI struct type: process_record_t */
     MPI_Datatype mpi_process_record_type;
     {
-        int count = 6;
-        int blocklengths[] = {1, 1, HOST_NAME_MAX,
+        int count = 7;
+        int blocklengths[] = {1, 1, 1, HOST_NAME_MAX,
             TALP_OUTPUT_CPUSET_MAX, TALP_OUTPUT_CPUSET_MAX, 1};
         MPI_Aint displacements[] = {
             offsetof(process_record_t, rank),
             offsetof(process_record_t, pid),
+            offsetof(process_record_t, node_id),
             offsetof(process_record_t, hostname),
             offsetof(process_record_t, cpuset),
             offsetof(process_record_t, cpuset_quoted),
             offsetof(process_record_t, monitor)};
-        MPI_Datatype types[] = {MPI_INT, mpi_pid_type, MPI_CHAR, MPI_CHAR,
+        MPI_Datatype types[] = {MPI_INT, mpi_pid_type, MPI_INT, MPI_CHAR, MPI_CHAR,
             MPI_CHAR, mpi_dlb_monitor_type};
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);
@@ -1569,7 +1571,7 @@ static void talp_record_pop_summary(const subprocess_descriptor_t *spd,
     if (_mpi_rank == 0) {
         if (base_metrics.elapsed_time > 0) {
 
-            /* Only the implicit region records the resources */
+            /* Only the global region records the resources */
             if (monitor == talp_info->monitor) {
                 talp_output_record_resources(base_metrics.num_cpus,
                         base_metrics.num_nodes, base_metrics.num_mpi_ranks);
@@ -1677,7 +1679,7 @@ static void talp_register_common_mpi_regions(const subprocess_descriptor_t *spd)
 /*    TALP MPI functions                                                         */
 /*********************************************************************************/
 
-/* Start implicit monitoring region (if not already started) */
+/* Start global monitoring region (if not already started) */
 void talp_mpi_init(const subprocess_descriptor_t *spd) {
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_init");
 
@@ -1694,7 +1696,7 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
     if (talp_info) {
         talp_info->flags.have_mpi = true;
 
-        /* Start implicit region (no-op if already started) */
+        /* Start global region (no-op if already started) */
         monitoring_region_start(spd, talp_info->monitor);
 
         /* Add MPI_Init statistic and set useful state */
@@ -1704,7 +1706,7 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
     }
 }
 
-/* Stop implicit monitoring region and gather APP data if needed  */
+/* Stop global monitoring region and gather APP data if needed  */
 void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_finalize");
     talp_info_t *talp_info = spd->talp_info;
@@ -1713,7 +1715,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         talp_sample_t *sample = talp_get_thread_sample(spd);
         DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
 
-        /* Stop implicit region */
+        /* Stop global region */
         monitoring_region_stop(spd, talp_info->monitor);
 
         monitor_data_t *monitor_data = talp_info->monitor->_data;
@@ -1837,12 +1839,12 @@ void talp_openmp_init(pid_t pid, const options_t* options) {
         monitor_data_t *monitor_data = talp_info->monitor->_data;
         talp_info->flags.have_openmp = true;
 
-        /* Fix up number of CPUs for the implicit region */
+        /* Fix up number of CPUs for the global region */
         float cpus = CPU_COUNT(&spd->process_mask);
         talp_info->monitor->avg_cpus = cpus;
         shmem_talp__set_avg_cpus(monitor_data->node_shared_id, cpus);
 
-        /* Start implicit region (no-op if already started) */
+        /* Start global region (no-op if already started) */
         monitoring_region_start(spd, talp_info->monitor);
 
         /* Set useful state */
@@ -2085,7 +2087,7 @@ void talp_openmp_task_switch(void) {
 int talp_query_pop_node_metrics(const char *name, dlb_node_metrics_t *node_metrics) {
 
     if (name == NULL) {
-        name = implicit_region_name;
+        name = global_region_name;
     }
 
     int error = DLB_SUCCESS;
@@ -2164,8 +2166,8 @@ int talp_query_pop_node_metrics(const char *name, dlb_node_metrics_t *node_metri
 /*********************************************************************************/
 
 /* Perform MPI collective calls and compute the current POP metrics for the
- * specified monitor. If monitor is NULL, the implicit implicit monitoring region
- * is assumed.
+ * specified monitor. If monitor is NULL, the global monitoring region is
+ * assumed.
  * Pre-conditions:
  *  - the given monitor must have been registered in all MPI ranks
  *  - pop_metrics is an allocated structure

@@ -97,10 +97,10 @@ typedef enum LewiAffinity {
 
 typedef enum TalpSummaryType {
     SUMMARY_NONE        = 0,
-    SUMMARY_ALL         = 0xFFFF,
+    SUMMARY_ALL         = 0xFFF9, // SUMMARY_POP_RAW and SUMMARY_NODE excluded
     SUMMARY_POP_METRICS = 1 << 0,
     SUMMARY_POP_RAW     = 1 << 1, // DEPRECATED
-    SUMMARY_NODE        = 1 << 2,
+    SUMMARY_NODE        = 1 << 2, // DEPRECATED
     SUMMARY_PROCESS     = 1 << 3,
 } talp_summary_t;
 

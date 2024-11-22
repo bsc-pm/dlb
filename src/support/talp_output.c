@@ -167,7 +167,7 @@ static void pop_metrics_to_json(FILE *out_file) {
 
     if (pop_metrics_records != NULL) {
         fprintf(out_file,
-                    "  \"popMetrics\": {\n");
+                    "  \"Application\": {\n");
 
         for (GSList *node = pop_metrics_records;
                 node != NULL;
@@ -257,7 +257,7 @@ static void pop_metrics_to_xml(FILE *out_file) {
         dlb_pop_metrics_t *record = node->data;
 
         fprintf(out_file,
-                "  <popMetrics>\n"
+                "  <Application>\n"
                 "    <name>%s</name>\n"
                 "    <numCpus>%d</numCpus>\n"
                 "    <numMpiRanks>%d</numMpiRanks>\n"
@@ -290,7 +290,7 @@ static void pop_metrics_to_xml(FILE *out_file) {
                 "    <ompLoadBalance>%.2f</ompLoadBalance>\n"
                 "    <ompSchedulingEfficiency>%.2f</ompSchedulingEfficiency>\n"
                 "    <ompSerializationEfficiency>%.2f</ompSerializationEfficiency>\n"
-                "  </popMetrics>\n",
+                "  </Application>\n",
                 record->name,
                 record->num_cpus,
                 record->num_mpi_ranks,
@@ -827,15 +827,16 @@ static GSList *region_records = NULL;
 void talp_output_record_process(const char *region_name,
         const process_record_t *process_record, int num_mpi_ranks) {
 
-     region_record_t *region_record = NULL;
+    region_record_t *region_record = NULL;
 
     /* Find region or allocate new one */
     for (GSList *node = region_records;
             node != NULL;
             node = node->next) {
 
-        region_record = node->data;
-        if (strcmp(region_record->name, region_name) == 0) {
+        region_record_t *record = node->data;
+        if (strcmp(record->name, region_name) == 0) {
+            region_record = record;
             break;
         }
     }
@@ -922,7 +923,7 @@ static void process_to_json(FILE *out_file) {
     }
 
     fprintf(out_file,
-                "  \"region\": [\n");
+                "  \"Process\": {\n");
 
     for (GSList *node = region_records;
             node != NULL;
@@ -931,9 +932,7 @@ static void process_to_json(FILE *out_file) {
         region_record_t *region_record = node->data;
 
         fprintf(out_file,
-                "    {\n"
-                "      \"name\": \"%s\",\n"
-                "      \"process\": [\n",
+                "    \"%s\": [\n",
                 region_record->name);
 
         for (int i = 0; i < region_record->num_mpi_ranks; ++i) {
@@ -941,29 +940,31 @@ static void process_to_json(FILE *out_file) {
             process_record_t *process_record = &region_record->process_records[i];
 
             fprintf(out_file,
-                "        {\n"
-                "          \"rank\": %d,\n"
-                "          \"pid\": %d,\n"
-                "          \"hostname\": \"%s\",\n"
-                "          \"cpuset\": %s,\n"
-                "          \"numCpus\": %d,\n"
-                "          \"avgCpus\": %.1f,\n"
-                "          \"cycles\": %"PRId64",\n"
-                "          \"instructions\": %"PRId64",\n"
-                "          \"numMeasurements\": %d,\n"
-                "          \"numResets\": %d,\n"
-                "          \"numMpiCalls\": %"PRId64",\n"
-                "          \"numOmpParallels\": %"PRId64",\n"
-                "          \"numOmpTasks\": %"PRId64",\n"
-                "          \"elapsedTime\": %"PRId64",\n"
-                "          \"usefulTime\": %"PRId64",\n"
-                "          \"mpiTime\": %"PRId64",\n"
-                "          \"ompLoadImbalanceTime\": %"PRId64",\n"
-                "          \"ompSchedulingTime\": %"PRId64",\n"
-                "          \"ompSerializationTime\": %"PRId64"\n"
-                "        }%s\n",
+                "      {\n"
+                "        \"rank\": %d,\n"
+                "        \"pid\": %d,\n"
+                "        \"nodeId\": %d,\n"
+                "        \"hostname\": \"%s\",\n"
+                "        \"cpuset\": %s,\n"
+                "        \"numCpus\": %d,\n"
+                "        \"avgCpus\": %.1f,\n"
+                "        \"cycles\": %"PRId64",\n"
+                "        \"instructions\": %"PRId64",\n"
+                "        \"numMeasurements\": %d,\n"
+                "        \"numResets\": %d,\n"
+                "        \"numMpiCalls\": %"PRId64",\n"
+                "        \"numOmpParallels\": %"PRId64",\n"
+                "        \"numOmpTasks\": %"PRId64",\n"
+                "        \"elapsedTime\": %"PRId64",\n"
+                "        \"usefulTime\": %"PRId64",\n"
+                "        \"mpiTime\": %"PRId64",\n"
+                "        \"ompLoadImbalanceTime\": %"PRId64",\n"
+                "        \"ompSchedulingTime\": %"PRId64",\n"
+                "        \"ompSerializationTime\": %"PRId64"\n"
+                "      }%s\n",
                 process_record->rank,
                 process_record->pid,
+                process_record->node_id,
                 process_record->hostname,
                 process_record->cpuset_quoted,
                 process_record->monitor.num_cpus,
@@ -984,12 +985,11 @@ static void process_to_json(FILE *out_file) {
                 i + 1 < region_record->num_mpi_ranks ? "," : "");
         }
         fprintf(out_file,
-                "      ]\n"
-                "    }%s\n",
+                "    ]%s\n",
                 node->next != NULL ? "," : "");
     }
     fprintf(out_file,
-                "  ]");         /* no eol */
+                "  }");         /* no eol */
 }
 
 static void process_to_xml(FILE *out_file) {
@@ -1001,7 +1001,7 @@ static void process_to_xml(FILE *out_file) {
         region_record_t *region_record = node->data;
 
         fprintf(out_file,
-                "  <region>\n"
+                "  <Process>\n"
                 "    <name>%s</name>\n",
                 region_record->name);
 
@@ -1013,6 +1013,7 @@ static void process_to_xml(FILE *out_file) {
                 "    <process>\n"
                 "      <rank>%d</rank>\n"
                 "      <pid>%d</pid>\n"
+                "      <nodeId>%d</nodeId>\n"
                 "      <hostname>%s</hostname>\n"
                 "      <cpuset>%s</cpuset>\n"
                 "      <numCpus>%d</numCpus>\n"
@@ -1033,6 +1034,7 @@ static void process_to_xml(FILE *out_file) {
                 "    </process>\n",
                 process_record->rank,
                 process_record->pid,
+                process_record->node_id,
                 process_record->hostname,
                 process_record->cpuset_quoted,
                 process_record->monitor.num_cpus,
@@ -1052,7 +1054,7 @@ static void process_to_xml(FILE *out_file) {
                 process_record->monitor.omp_serialization_time);
         }
         fprintf(out_file,
-                "  </region>\n");
+                "  </Process>\n");
     }
 }
 
@@ -1066,6 +1068,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                 "Region,"
                 "Rank,"
                 "PID,"
+                "NodeId,"
                 "Hostname,"
                 "CpuSet,"
                 "NumCpus,"
@@ -1099,6 +1102,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%s,"           /* Region */
                     "%d,"           /* Rank */
                     "%d,"           /* PID */
+                    "%d,"           /* NodeId */
                     "%s,"           /* Hostname */
                     "%s,"           /* CpuSet */
                     "%d"            /* NumCpus */
@@ -1119,6 +1123,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     region_record->name,
                     process_record->rank,
                     process_record->pid,
+                    process_record->node_id,
                     process_record->hostname,
                     process_record->cpuset_quoted,
                     process_record->monitor.num_cpus,
@@ -1346,7 +1351,7 @@ static void xml_footer(FILE *out_file) {
 /*********************************************************************************/
 
 static bool check_coefficient(float coeffiecient) {
-    return 0.0f <= coeffiecient && coeffiecient >= 1.0;
+    return 0.0f <= coeffiecient && coeffiecient <= 1.0;
 }
 
 static void warn_negative_counters(void) {
@@ -1390,16 +1395,16 @@ static void sanitize_records(void) {
             warn_negative_counters();
         }
 
-        if (check_coefficient(record->parallel_efficiency)
-                && check_coefficient(record->mpi_parallel_efficiency)
-                && check_coefficient(record->mpi_communication_efficiency)
-                && check_coefficient(record->mpi_load_balance)
-                && check_coefficient(record->mpi_load_balance_in)
-                && check_coefficient(record->mpi_load_balance_out)
-                && check_coefficient(record->omp_parallel_efficiency)
-                && check_coefficient(record->omp_load_balance)
-                && check_coefficient(record->omp_scheduling_efficiency)
-                && check_coefficient(record->omp_serialization_efficiency)) {
+        if (!check_coefficient(record->parallel_efficiency)
+                || !check_coefficient(record->mpi_parallel_efficiency)
+                || !check_coefficient(record->mpi_communication_efficiency)
+                || !check_coefficient(record->mpi_load_balance)
+                || !check_coefficient(record->mpi_load_balance_in)
+                || !check_coefficient(record->mpi_load_balance_out)
+                || !check_coefficient(record->omp_parallel_efficiency)
+                || !check_coefficient(record->omp_load_balance)
+                || !check_coefficient(record->omp_scheduling_efficiency)
+                || !check_coefficient(record->omp_serialization_efficiency)) {
             warn_wrong_coefficient();
         }
     }

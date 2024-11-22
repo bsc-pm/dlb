@@ -89,13 +89,13 @@ int main(int argc, char *argv[]) {
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;
-    dlb_monitor_t *implicit_monitor = talp_info->monitor;
-    assert( !monitoring_region_is_started(implicit_monitor) );
+    dlb_monitor_t *global_monitor = talp_info->monitor;
+    assert( !monitoring_region_is_started(global_monitor) );
 
     /* OpenMP Init */
     talp_openmp_init(spd.id, &spd.options);
     talp_openmp_thread_begin();
-    assert( monitoring_region_is_started(implicit_monitor) );
+    assert( monitoring_region_is_started(global_monitor) );
 
     /* Parallel region of 1 thread */
     {
@@ -121,13 +121,13 @@ int main(int argc, char *argv[]) {
         talp_openmp_parallel_end(&parallel_data);
 
         assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
-        assert( implicit_monitor->num_omp_parallels == 1 );
-        assert( implicit_monitor->num_omp_tasks == 1 );
-        assert( implicit_monitor->useful_time > 0 );
-        assert( implicit_monitor->mpi_time == 0 );
-        assert( implicit_monitor->omp_load_imbalance_time == 0 );
-        assert( implicit_monitor->omp_scheduling_time > 0 );
-        assert( implicit_monitor->omp_serialization_time == 0 );
+        assert( global_monitor->num_omp_parallels == 1 );
+        assert( global_monitor->num_omp_tasks == 1 );
+        assert( global_monitor->useful_time > 0 );
+        assert( global_monitor->mpi_time == 0 );
+        assert( global_monitor->omp_load_imbalance_time == 0 );
+        assert( global_monitor->omp_scheduling_time > 0 );
+        assert( global_monitor->omp_serialization_time == 0 );
     }
 
     /* Parallel region of 2 threads */
@@ -170,20 +170,20 @@ int main(int argc, char *argv[]) {
 
         assert( monitoring_region_stop(&spd, monitor) == DLB_SUCCESS );
         assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
-        assert( implicit_monitor->num_omp_parallels == 2 );
+        assert( global_monitor->num_omp_parallels == 2 );
         assert( monitor->num_omp_parallels == 1 );
         assert( monitor->omp_scheduling_time > 0 );
         assert( monitor->omp_serialization_time > 0 );
 
         /* The first parallel of 1 thread did not have any LB time, so both
          * monitors should have only the values of the seccond parallel */
-        assert( monitor->omp_load_imbalance_time == implicit_monitor->omp_load_imbalance_time );
+        assert( monitor->omp_load_imbalance_time == global_monitor->omp_load_imbalance_time );
 
-        /* Since the second thread was created when the implicit and the user
+        /* Since the second thread was created when the global and the user
          * monitor were started, its time is added as OpenMP serialization to
-         * both. The time added to the implicit monitor is greater because it
+         * both. The time added to the global monitor is greater because it
          * was started before. */
-        assert( monitor->omp_serialization_time < implicit_monitor->omp_serialization_time );
+        assert( monitor->omp_serialization_time < global_monitor->omp_serialization_time );
     }
 
     talp_finalize(&spd);

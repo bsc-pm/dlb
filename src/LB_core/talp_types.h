@@ -94,14 +94,14 @@ typedef struct talp_macrosample_t {
 typedef struct talp_info_t {
     struct {
         bool have_shmem:1;          /* whether to record data in shmem */
-        bool have_minimal_shmem:1;  /* whether to create a shmem for the implicit region */
+        bool have_minimal_shmem:1;  /* whether to create a shmem for the global region */
         bool external_profiler:1;   /* whether to update shmem on every sample */
         bool papi:1;                /* whether to collect PAPI counters */
         bool have_mpi:1;            /* whether TALP regions have MPI events */
         bool have_openmp:1;         /* whether TALP regions have OpenMP events */
     } flags;
     int             ncpus;          /* Number of process CPUs (also num samples) */
-    dlb_monitor_t   *monitor;       /* Convenience pointer to the implicit region */
+    dlb_monitor_t   *monitor;       /* Convenience pointer to the global region */
     GTree           *regions;       /* Tree of monitoring regions */
     GSList          *open_regions;  /* List of open regions */
     pthread_mutex_t regions_mutex;  /* Mutex to protect regions allocation/iteration */

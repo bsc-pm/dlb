@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;
-    dlb_monitor_t *implicit_monitor = talp_info->monitor;
+    dlb_monitor_t *global_monitor = talp_info->monitor;
 
     /* Register custom monitoring region */
     dlb_monitor_t *monitor = monitoring_region_register(&spd, "Test monitor");
@@ -69,28 +69,28 @@ int main(int argc, char *argv[]) {
     /* Test MPI + nested user defined region */
     {
         /* TALP initial values */
-        assert( implicit_monitor->mpi_time == 0 );
-        assert( implicit_monitor->useful_time == 0 );
-        assert( monitoring_region_get_implicit_region(&spd) == implicit_monitor );
+        assert( global_monitor->mpi_time == 0 );
+        assert( global_monitor->useful_time == 0 );
+        assert( monitoring_region_get_global_region(&spd) == global_monitor );
 
-        /* Start implicit monitor */
+        /* Start global monitor */
         talp_mpi_init(&spd);
 
         /* Start and Stop custom monitoring region */
         monitoring_region_start(&spd, monitor);
         monitoring_region_stop(&spd, monitor);
 
-        /* Stop implicit monitor */
+        /* Stop global monitor */
         talp_mpi_finalize(&spd);
 
-        /* Test implicit monitor values are correct and greater than custom monitor */
-        assert( implicit_monitor->mpi_time == 0 );
-        assert( implicit_monitor->useful_time > 0 );
-        assert( implicit_monitor->useful_time > monitor->useful_time );
-        assert( implicit_monitor->elapsed_time > monitor->elapsed_time );
+        /* Test global monitor values are correct and greater than custom monitor */
+        assert( global_monitor->mpi_time == 0 );
+        assert( global_monitor->useful_time > 0 );
+        assert( global_monitor->useful_time > monitor->useful_time );
+        assert( global_monitor->elapsed_time > monitor->elapsed_time );
         if (talp_info->flags.papi) {
-            assert( implicit_monitor->instructions > monitor->instructions );
-            assert( implicit_monitor->cycles > monitor->cycles );
+            assert( global_monitor->instructions > monitor->instructions );
+            assert( global_monitor->cycles > monitor->cycles );
         }
 
         /* Test custom monitor values */
@@ -107,32 +107,32 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /* Test that reset/start/stop/report may also be invoked with the implicit DLB_IMPLICIT_REGION */
+    /* Test that reset/start/stop/report may also be invoked with the global DLB_GLOBAL_REGION */
     {
-        /* Reset implicit monitoring region */
-        assert( monitoring_region_reset(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
-        assert( !monitoring_region_is_started(implicit_monitor) );
-        assert( implicit_monitor->elapsed_time == 0 );
-        assert( implicit_monitor->num_measurements == 0 );
+        /* Reset global monitoring region */
+        assert( monitoring_region_reset(&spd, DLB_GLOBAL_REGION) == DLB_SUCCESS );
+        assert( !monitoring_region_is_started(global_monitor) );
+        assert( global_monitor->elapsed_time == 0 );
+        assert( global_monitor->num_measurements == 0 );
 
-        /* Start implicit monitor */
+        /* Start global monitor */
         talp_mpi_init(&spd);
 
-        /* Stop implicit monitoring region */
-        assert( monitoring_region_stop(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
-        assert( !monitoring_region_is_started(implicit_monitor) );
-        assert( implicit_monitor->elapsed_time > 0 );
-        assert( implicit_monitor->num_measurements == 1 );
+        /* Stop global monitoring region */
+        assert( monitoring_region_stop(&spd, DLB_GLOBAL_REGION) == DLB_SUCCESS );
+        assert( !monitoring_region_is_started(global_monitor) );
+        assert( global_monitor->elapsed_time > 0 );
+        assert( global_monitor->num_measurements == 1 );
 
-        /* Start implicit monitoring region */
-        assert( monitoring_region_start(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
-        assert( monitoring_region_is_started(implicit_monitor) );
+        /* Start global monitoring region */
+        assert( monitoring_region_start(&spd, DLB_GLOBAL_REGION) == DLB_SUCCESS );
+        assert( monitoring_region_is_started(global_monitor) );
 
-        /* Stop implicit monitor */
+        /* Stop global monitor */
         talp_mpi_finalize(&spd);
 
-        /* Report implicit region */
-        assert( monitoring_region_report(&spd, DLB_IMPLICIT_REGION) == DLB_SUCCESS );
+        /* Report global region */
+        assert( monitoring_region_report(&spd, DLB_GLOBAL_REGION) == DLB_SUCCESS );
     }
 
     /* Test number of measurements */
@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
         dlb_monitor_t *monitor8 = monitoring_region_register(&spd, long_name);
         assert( monitor7 == monitor8 );
         monitoring_region_report(&spd, monitor7);
-        monitoring_region_report(&spd, implicit_monitor);
+        monitoring_region_report(&spd, global_monitor);
     }
 
     /* Test internal monitor */
@@ -314,28 +314,28 @@ int main(int argc, char *argv[]) {
     /* Test function not compatble without MPI support */
     {
         dlb_pop_metrics_t pop_metrics;
-        assert( talp_collect_pop_metrics(&spd, implicit_monitor, &pop_metrics) == DLB_ERR_NOCOMP );
+        assert( talp_collect_pop_metrics(&spd, global_monitor, &pop_metrics) == DLB_ERR_NOCOMP );
     }
 
     talp_finalize(&spd);
 
-    /* Test --talp-region-select with implicit region, and finalize with open regions  */
+    /* Test --talp-region-select with global region, and finalize with open regions  */
     {
-        strcpy(spd.options.talp_region_select, "region1,application");
+        strcpy(spd.options.talp_region_select, "region1,global");
         talp_init(&spd);
-        implicit_monitor = monitoring_region_get_implicit_region(&spd);
-        assert( monitoring_region_start(&spd, implicit_monitor) == DLB_SUCCESS );
-        assert( monitoring_region_is_started(implicit_monitor) );
+        global_monitor = monitoring_region_get_global_region(&spd);
+        assert( monitoring_region_start(&spd, global_monitor) == DLB_SUCCESS );
+        assert( monitoring_region_is_started(global_monitor) );
         talp_finalize(&spd);
     }
 
-    /* Test --talp-region-select without implicit region */
+    /* Test --talp-region-select without global region */
     {
         strcpy(spd.options.talp_region_select, "region1");
         talp_init(&spd);
-        implicit_monitor = monitoring_region_get_implicit_region(&spd);
-        assert( monitoring_region_start(&spd, implicit_monitor) == DLB_NOUPDT );
-        assert( !monitoring_region_is_started(implicit_monitor) );
+        global_monitor = monitoring_region_get_global_region(&spd);
+        assert( monitoring_region_start(&spd, global_monitor) == DLB_NOUPDT );
+        assert( !monitoring_region_is_started(global_monitor) );
         talp_finalize(&spd);
     }
 

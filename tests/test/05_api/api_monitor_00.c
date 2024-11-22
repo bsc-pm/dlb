@@ -100,18 +100,18 @@ int main(int argc, char **argv) {
         talp_out_of_sync_call(thread_spd, is_blocking_collective);
         talp_mpi_finalize(thread_spd);
 
-        /* Implicit monitor should still be reachable */
-        const dlb_monitor_t *implicit_monitor = DLB_MonitoringRegionGetImplicit();
-        assert( implicit_monitor != NULL );
-        assert( implicit_monitor->num_measurements == 1 );
-        assert( implicit_monitor->num_mpi_calls == 3 );
-        assert( implicit_monitor->mpi_time > 0 );
-        assert( implicit_monitor->useful_time > 0 );
+        /* Global monitor should still be reachable */
+        const dlb_monitor_t *global_monitor = DLB_MonitoringRegionGetGlobal();
+        assert( global_monitor != NULL );
+        assert( global_monitor->num_measurements == 1 );
+        assert( global_monitor->num_mpi_calls == 3 );
+        assert( global_monitor->mpi_time > 0 );
+        assert( global_monitor->useful_time > 0 );
 
-        /* A region named "Application" (case-insensitive) is equivalent to the implicit region */
-        assert( DLB_MonitoringRegionRegister("Application") == implicit_monitor );
-        assert( DLB_MonitoringRegionRegister("application") == implicit_monitor );
-        assert( DLB_MonitoringRegionRegister("APPLICATION") == implicit_monitor );
+        /* A region named "Global" (case-insensitive) is equivalent to the global region */
+        assert( DLB_MonitoringRegionRegister("Global") == global_monitor );
+        assert( DLB_MonitoringRegionRegister("global") == global_monitor );
+        assert( DLB_MonitoringRegionRegister("GLOBAL") == global_monitor );
 
         /* Custom monitor should still be reachable too */
         assert( DLB_MonitoringRegionStop(custom_monitor) == DLB_SUCCESS );
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
         assert( custom_monitor->num_mpi_calls == 3 );
         assert( custom_monitor->mpi_time > 0 );
         assert( custom_monitor->useful_time > 0 );
-        assert( custom_monitor->elapsed_time > implicit_monitor->elapsed_time );
+        assert( custom_monitor->elapsed_time > global_monitor->elapsed_time );
 
         assert( DLB_Finalize() == DLB_SUCCESS );
     }
