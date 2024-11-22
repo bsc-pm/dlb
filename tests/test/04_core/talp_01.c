@@ -38,7 +38,7 @@
 #include <string.h>
 #include <assert.h>
 
-/* Test Implicit Monitoring Regions with/without LeWI */
+/* Test Global Monitoring Regions with/without LeWI */
 
 enum { USLEEP_TIME = 100000 };
 
@@ -60,20 +60,20 @@ int main(int argc, char *argv[]) {
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;
-    dlb_monitor_t *implicit_monitor = talp_info->monitor;
+    dlb_monitor_t *global_monitor = talp_info->monitor;
 
     /* Disable external profiler for the following tests */
     talp_info->flags.external_profiler = false;
 
-    /* Start implicit monitoring region */
+    /* Start global monitoring region */
     talp_mpi_init(&spd);
-    assert( implicit_monitor->num_measurements == 0 );
-    assert( implicit_monitor->num_resets == 0 );
-    assert( implicit_monitor->start_time != 0 );
-    assert( implicit_monitor->stop_time == 0 );
-    assert( implicit_monitor->elapsed_time == 0 );
-    assert( implicit_monitor->mpi_time == 0 );
-    assert( implicit_monitor->useful_time == 0 );
+    assert( global_monitor->num_measurements == 0 );
+    assert( global_monitor->num_resets == 0 );
+    assert( global_monitor->start_time != 0 );
+    assert( global_monitor->stop_time == 0 );
+    assert( global_monitor->elapsed_time == 0 );
+    assert( global_monitor->mpi_time == 0 );
+    assert( global_monitor->useful_time == 0 );
     assert( talp_info->samples[0]->timers.useful == 0 );
     assert( talp_info->samples[0]->timers.not_useful_mpi == 0 );
     assert( talp_info->samples[0]->state == useful );
@@ -108,8 +108,8 @@ int main(int argc, char *argv[]) {
 
     /* Update regions */
     assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
-    assert( implicit_monitor->mpi_time > 0 );
-    assert( implicit_monitor->useful_time > 0 );
+    assert( global_monitor->mpi_time > 0 );
+    assert( global_monitor->useful_time > 0 );
 
     /* Checking that the shmem has not been updated (--talp-external-profiler=no) */
     int64_t mpi_time = -1;
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
     assert( mpi_time == 0 );
     assert( useful_time == 0 );
 
-    /* Enable --talp-external-profiler and test that the implicit region is updated */
+    /* Enable --talp-external-profiler and test that the global region is updated */
     mpi_time = -1;
     useful_time = -1;
     talp_info->flags.external_profiler = true;
@@ -138,21 +138,21 @@ int main(int argc, char *argv[]) {
 
     /* Finalize MPI */
     talp_mpi_finalize(&spd);
-    assert( implicit_monitor->num_measurements == 1 );
-    assert( implicit_monitor->num_resets == 0 );
-    assert( implicit_monitor->start_time != 0 );
-    assert( implicit_monitor->stop_time != 0 );
-    assert( implicit_monitor->elapsed_time
-            == implicit_monitor->stop_time - implicit_monitor->start_time );
-    assert( implicit_monitor->mpi_time != 0 );
-    assert( implicit_monitor->useful_time != 0 );
+    assert( global_monitor->num_measurements == 1 );
+    assert( global_monitor->num_resets == 0 );
+    assert( global_monitor->start_time != 0 );
+    assert( global_monitor->stop_time != 0 );
+    assert( global_monitor->elapsed_time
+            == global_monitor->stop_time - global_monitor->start_time );
+    assert( global_monitor->mpi_time != 0 );
+    assert( global_monitor->useful_time != 0 );
 
     /* Checking that the shmem has now been updated */
     mpi_time = -1;
     useful_time = -1;
     assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
-    assert( mpi_time == implicit_monitor->mpi_time  );
-    assert( useful_time == implicit_monitor->useful_time );
+    assert( mpi_time == global_monitor->mpi_time  );
+    assert( useful_time == global_monitor->useful_time );
 
     spd.options.talp_summary |= SUMMARY_NODE;
     spd.options.talp_summary |= SUMMARY_PROCESS;

@@ -447,11 +447,11 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"special values 'all', to enable all TALP regions, and 'none'\n"
                           OFFSET"to disable them all. An empty value is equivalent to 'all'.\n"
                           OFFSET"Additionally, a comma separated list of region names may be\n"
-                          OFFSET"specified to enable only these regions. The implicit monitoring\n"
-                          OFFSET"region may be specified with the special token 'application'.\n"
+                          OFFSET"specified to enable only these regions. The global monitoring\n"
+                          OFFSET"region may be specified with the special token 'global'.\n"
                           OFFSET"Note that names with spaces are not supported.\n"
                           OFFSET"e.g.: --talp-region-select=none\n"
-                          OFFSET"      --talp-region-select=application,region3",
+                          OFFSET"      --talp-region-select=global,region3",
         .offset         = offsetof(options_t, talp_region_select),
         .type           = OPT_STR_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL

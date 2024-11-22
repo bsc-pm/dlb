@@ -272,11 +272,11 @@ TALP option flags
     Select TALP regions to enable. The option accepts the special values
     ``all``, to enable all TALP regions, and ``none`` to disable them all. An
     empty value is equivalent to ``all``. Additionally, a comma separated list
-    of region names may be specified to enable only these regions. The implicit
-    monitoring region may be specified with the special token ``application``.
+    of region names may be specified to enable only these regions. The global
+    monitoring region may be specified with the special token ``global``.
     Note that names with spaces are not supported.
     e.g.: ``--talp-region-select=none``,
-    ``--talp-region-select=application,region3``
+    ``--talp-region-select=global,region3``
 
 --talp-regions-per-proc=<int>
     Number of TALP regions per process to allocate in the shared memory.

@@ -23,8 +23,9 @@
 #include <time.h>
 #include <stdint.h>
 
-#define DLB_MPI_REGION NULL          /* deprecated in favor of DLB_IMPLICIT_REGION */
-#define DLB_IMPLICIT_REGION NULL
+#define DLB_MPI_REGION NULL         /* deprecated in favor of DLB_GLOBAL_REGION */
+#define DLB_IMPLICIT_REGION NULL    /* deprecated in favor of DLB_GLOBAL_REGION */
+#define DLB_GLOBAL_REGION NULL
 #define DLB_LAST_OPEN_REGION (void*)1
 
 enum { DLB_MONITOR_NAME_MAX = 128 };
@@ -340,35 +341,38 @@ int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metr
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
-/*! \brief Get the pointer of the implicit application-wide Monitoring Region
+/*! \brief Get the pointer of the global application-wide Monitoring Region
  *  \return monitor handle to be used on queries, or NULL if TALP is not enabled
  */
-dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void);
+dlb_monitor_t* DLB_MonitoringRegionGetGlobal(void);
+
+dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void)
+    __attribute__((deprecated("DLB_MonitoringRegionGetGlobal")));
 
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
-    __attribute__((deprecated("DLB_MonitoringRegionGetImplicit")));
+    __attribute__((deprecated("DLB_MonitoringRegionGetGlobal")));
 
 /*! \brief Register a new Monitoring Region, or obtain the associated pointer by name
  *  \param[in] name Name to identify the region
  *  \return monitor handle to be used on subsequent calls, or NULL if TALP is not enabled
  *
  *  This function registers a new monitoring region or obtains the pointer to
- *  an already created region with the same name. The name "Application" is a
+ *  an already created region with the same name. The name "Global" is a
  *  special reserved name (case-insensitive); invoking this function with this name is
- *  equivalent as invoking DLB_MonitoringRegionGetImplicit(). Otherwise, the region
+ *  equivalent as invoking DLB_MonitoringRegionGetGlobal(). Otherwise, the region
  *  name is treated case-sensitive.
  */
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
 
 /*! \brief Reset monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, or DLB_IMPLICIT_REGION
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_GLOBAL_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
 /*! \brief Start (or unpause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, or DLB_IMPLICIT_REGION
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_GLOBAL_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  *  \return DLB_ERR_PERM if this thread cannot start the monitoring region
@@ -383,7 +387,7 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 
 /*! \brief Stop (or pause) monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, DLB_IMPLICIT_REGION,
+ *  \param[in] handle Monitoring handle that identifies the region, DLB_GLOBAL_REGION,
  *                    or DLB_LAST_OPEN_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
@@ -393,7 +397,7 @@ int DLB_MonitoringRegionStart(dlb_monitor_t *handle);
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle);
 
 /*! \brief Print a report to stderr of the monitoring region
- *  \param[in] handle Monitoring handle that identifies the region, or DLB_IMPLICIT_REGION
+ *  \param[in] handle Monitoring handle that identifies the region, or DLB_GLOBAL_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
  */
@@ -411,7 +415,7 @@ int DLB_MonitoringRegionsUpdate(void);
 
 /*! \brief Perform an MPI collective communication to collect POP metrics.
  *  \param[in] monitor Monitoring handle that identifies the region,
- *                     or DLB_IMPLICIT_REGION macro (NULL) if implicit application-wide region
+ *                     or DLB_GLOBAL_REGION macro (NULL) if global application-wide region
  *  \param[out] pop_metrics Allocated structure where the collected metrics will be stored
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
@@ -421,7 +425,7 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
 
 /*! \brief Perform a node collective communication to collect TALP node metrics.
  *  \param[in] monitor Monitoring handle that identifies the region,
- *                     or DLB_IMPLICIT_REGION macro (NULL) if implicit application-wide region
+ *                     or DLB_GLOBAL_REGION macro (NULL) if global application-wide region
  *  \param[out] node_metrics Allocated structure where the collected metrics will be stored
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled

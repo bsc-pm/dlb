@@ -34,9 +34,9 @@ typedef struct SubProcessDescriptor subprocess_descriptor_t;
 typedef struct omptool_parallel_data_t omptool_parallel_data_t;
 
 /* Monitoring regions */
-struct dlb_monitor_t* monitoring_region_get_implicit_region(
+struct dlb_monitor_t* monitoring_region_get_global_region(
         const subprocess_descriptor_t *spd);
-const char* monitoring_region_get_implicit_region_name(void);
+const char* monitoring_region_get_global_region_name(void);
 struct dlb_monitor_t* monitoring_region_register(
         const subprocess_descriptor_t *spd, const char* name);
 int monitoring_region_reset(const subprocess_descriptor_t *spd,
