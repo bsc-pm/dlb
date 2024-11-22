@@ -1353,7 +1353,7 @@ static void xml_footer(FILE *out_file) {
 /*********************************************************************************/
 
 static bool check_coefficient(float coeffiecient) {
-    return 0.0f <= coeffiecient && coeffiecient >= 1.0;
+    return 0.0f <= coeffiecient && coeffiecient <= 1.0;
 }
 
 static void warn_negative_counters(void) {
@@ -1397,16 +1397,16 @@ static void sanitize_records(void) {
             warn_negative_counters();
         }
 
-        if (check_coefficient(record->parallel_efficiency)
-                && check_coefficient(record->mpi_parallel_efficiency)
-                && check_coefficient(record->mpi_communication_efficiency)
-                && check_coefficient(record->mpi_load_balance)
-                && check_coefficient(record->mpi_load_balance_in)
-                && check_coefficient(record->mpi_load_balance_out)
-                && check_coefficient(record->omp_parallel_efficiency)
-                && check_coefficient(record->omp_load_balance)
-                && check_coefficient(record->omp_scheduling_efficiency)
-                && check_coefficient(record->omp_serialization_efficiency)) {
+        if (!check_coefficient(record->parallel_efficiency)
+                || !check_coefficient(record->mpi_parallel_efficiency)
+                || !check_coefficient(record->mpi_communication_efficiency)
+                || !check_coefficient(record->mpi_load_balance)
+                || !check_coefficient(record->mpi_load_balance_in)
+                || !check_coefficient(record->mpi_load_balance_out)
+                || !check_coefficient(record->omp_parallel_efficiency)
+                || !check_coefficient(record->omp_load_balance)
+                || !check_coefficient(record->omp_scheduling_efficiency)
+                || !check_coefficient(record->omp_serialization_efficiency)) {
             warn_wrong_coefficient();
         }
     }
