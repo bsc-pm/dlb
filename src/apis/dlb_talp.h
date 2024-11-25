@@ -23,9 +23,10 @@
 #include <time.h>
 #include <stdint.h>
 
+#define DLB_GLOBAL_REGION_NAME "Global"
+#define DLB_GLOBAL_REGION NULL
 #define DLB_MPI_REGION NULL         /* deprecated in favor of DLB_GLOBAL_REGION */
 #define DLB_IMPLICIT_REGION NULL    /* deprecated in favor of DLB_GLOBAL_REGION */
-#define DLB_GLOBAL_REGION NULL
 #define DLB_LAST_OPEN_REGION (void*)1
 
 enum { DLB_MONITOR_NAME_MAX = 128 };

@@ -69,7 +69,7 @@ static MPI_Datatype mpi_int64_type;
 static __thread int EventSet = PAPI_NULL;
 #endif
 
-const char *global_region_name = "Global";
+const char *global_region_name = DLB_GLOBAL_REGION_NAME;
 
 
 /*********************************************************************************/

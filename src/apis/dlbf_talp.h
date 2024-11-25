@@ -38,9 +38,10 @@
         integer(kind=c_int64_t) :: omp_serialization_time
         type(c_ptr)             :: data_
        end type
+       character(len=*), parameter :: DLB_GLOBAL_REGION_NAME = "Global"
+       type(c_ptr), parameter   :: DLB_GLOBAL_REGION = c_null_ptr
        type(c_ptr), parameter   :: DLB_MPI_REGION = c_null_ptr      !! deprecated
        type(c_ptr), parameter   :: DLB_IMPLICIT_REGION = c_null_ptr !! deprecated
-       type(c_ptr), parameter   :: DLB_GLOBAL_REGION = c_null_ptr
        type(c_ptr), parameter   :: DLB_LAST_OPEN_REGION = transfer(1_8, c_null_ptr)
 
        interface

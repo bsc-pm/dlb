@@ -109,6 +109,7 @@ int main(int argc, char **argv) {
         assert( global_monitor->useful_time > 0 );
 
         /* A region named "Global" (case-insensitive) is equivalent to the global region */
+        assert( DLB_MonitoringRegionRegister(DLB_GLOBAL_REGION_NAME) == global_monitor );
         assert( DLB_MonitoringRegionRegister("Global") == global_monitor );
         assert( DLB_MonitoringRegionRegister("global") == global_monitor );
         assert( DLB_MonitoringRegionRegister("GLOBAL") == global_monitor );
