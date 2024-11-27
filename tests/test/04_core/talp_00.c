@@ -66,6 +66,12 @@ int main(int argc, char *argv[]) {
     dlb_monitor_t *monitor = monitoring_region_register(&spd, "Test monitor");
     assert( monitor != NULL );
 
+    /* Check for forbidden names */
+    assert( monitoring_region_register(&spd, "ALL") == NULL );
+    assert( monitoring_region_register(&spd, "all") == NULL );
+    assert( monitoring_region_register(&spd, "none") == NULL );
+    assert( monitoring_region_register(&spd, "None") == NULL );
+
     /* Test MPI + nested user defined region */
     {
         /* TALP initial values */
