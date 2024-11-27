@@ -1,6 +1,8 @@
 
 .. highlight:: bash
 
+.. _dlb-installation:
+
 *******************
 How to install DLB
 *******************

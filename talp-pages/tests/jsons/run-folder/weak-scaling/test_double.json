@@ -1,0 +1,43 @@
+{
+    "dlbVersion": "3.5",
+    "dlbGitVersion": "v3.4-82-g0ba8a47",
+    "timestamp": "2024-09-02T14:11:24",
+    "resources": {
+      "numCpus": 8 ,
+      "numNodes": 1 ,
+      "numMpiRanks": 4
+    },
+    "Application": {
+      "Global": {
+        "numCpus": 4,
+        "numMpiRanks": 4,
+        "numNodes": 1,
+        "avgCpus": 4.00,
+        "cycles": 51817855.00,
+        "instructions": 5240503.00,
+        "numMpiCalls": 96,
+        "elapsedTime": 24002805067,
+        "usefulTime": 24514719683,
+        "mpiTime": 14890886120,
+        "ompLoadImbalanceTime": 0,
+        "ompSchedulingTime": 0,
+        "ompSerializationTime": 0,
+        "usefulNomrdApp": 12257359842,
+        "mpiNormdApp": 7445443060,
+        "maxUsefulNormdProc": 10002241160,
+        "maxUsefulNormdNode": 6257359841,
+        "mpiNormdOfMaxUseful": 559576,
+        "parallelEfficiency": 1,
+        "mpiParallelEfficiency": 1,
+        "mpiCommunicationEfficiency": 1,
+        "mpiLoadBalance": 1,
+        "mpiLoadBalanceIn": 1,
+        "mpiLoadBalanceOut": 1,
+        "ompParallelEfficiency": 1,
+        "ompLoadBalance": 1,
+        "ompSchedulingEfficiency": 1,
+        "ompSerializationEfficiency": 1
+        }
+    }
+}
+  

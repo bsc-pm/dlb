@@ -1,10 +1,32 @@
-image: bscpm/citools
+stages:
+  - build
+  - test
+  - coverage
 
 cache:
   untracked: true
   key: "$CI_PIPELINE_ID"
 
+
+
+talp-pages:test&lint:
+    stage: test
+    image: $DOCKER_IMAGE
+    before_script:
+      - pip install poetry
+    script:
+      - cd talp-pages
+      - poetry install
+      - poetry run tox
+    parallel:
+      matrix:
+        - DOCKER_IMAGE: ["python:3.9-slim","python:3.10-slim","python:3.11-slim","python:3.12-slim"]
+
+
+# DLB
+
 build:
+  image: bscpm/citools
   stage: build
   script:
     - ./bootstrap
@@ -12,7 +34,8 @@ build:
     - make
 
 coverage:
-  stage: test
+  image: bscpm/citools
+  stage: coverage
   before_script:
     # Re-build in case stage is executed by another runner
     - >
