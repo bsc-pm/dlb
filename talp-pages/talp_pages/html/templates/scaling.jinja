@@ -1,0 +1,55 @@
+{% extends "base.html.jinja" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <div class="container-fluid py-5">
+      <h2 class="display-5 fw-bold">Talp Scaling Tables</h2>
+      <p class="col-md-8">
+      Below you find the scaling analysis for the executions. For each resource configuration the newest available run per folder is picked. 
+      The tables below show a <b>{{scaling_mode}}</b> analysis.
+
+      <ul>
+        {% for region in regions %}
+        <li><a href="#{{region.name}}">{{region.name}}</a></li>
+        {% endfor %}
+      </ul>
+      </p>
+    </div>
+  </div>
+</div>
+<div class="container-fluid mt-3">
+  {% for region in regions %}
+  <div class="row py-2">
+    <h3 class="mx-4" id="{{region.name}}">Region: <span class="font-monospace">{{region.name}}</span></h3>
+    <div class="col-md-12">
+      {{ region.figure }}
+      <div class="mx-4">
+        <h4>Raw-data used to generate the above table:</h4>
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th scope="col">Ressource Configuration</th>
+              <th scope="col">JSON File</th>
+              <th scope="col">Timestamp</th>
+              <th scope="col">Metadata</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for configuration in configurations[region.name] %}
+            <tr>
+              <th scope="row">{{configuration.label}}</th>
+              <td>{{configuration.json_file}}</td>
+              <td>{{configuration.timestamp}}</td>
+              <td>{{configuration.metadata}}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <hr>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

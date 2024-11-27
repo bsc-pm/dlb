@@ -1,0 +1,92 @@
+[tool.poetry]
+name = "talp-pages"
+version = "3.5.0"
+description = "Command line tools to generate performance reports using the TALP module of DLB"
+authors = ["Valentin Seitz <valentin.seitz@bsc.es>"]
+maintainers = ["Valentin Seitz <valentin.seitz@bsc.es>"]
+readme = "README.md"
+license = "GPL-3.0-only"
+keywords = ["HPC", "Performance Analysis","Profiling","Continuous Performance Analysis"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: System :: Distributed Computing"
+]
+
+homepage = "https://pm.bsc.es/gitlab/dlb/dlb/"
+repository= "https://pm.bsc.es/gitlab/dlb/dlb/"
+
+
+include = [
+    "talp_pages/html/templates/*.jinja"
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+python-gitlab = "^4.4.0"
+jinja2 = "^3.1.4"
+pandas = "^2.2.2"
+plotly = "*"
+kaleido = "0.2.1"
+tqdm = "*"
+
+[tool.poetry.group.dev.dependencies]  
+pytest-sugar = "*"  
+pytest-cov = "*"  
+black = "*"  
+tox = "*"
+ruff = "*"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.1"
+coverage = "^7.6.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["talp_pages"]
+branch = true
+command_line = "-m pytest tests"
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.poetry.scripts]
+talp = 'talp_pages.talp:main'
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# Ruff tool config 
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = false
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"

@@ -1,0 +1,54 @@
+{% extends "base.html.jinja" %}
+
+
+{% block content %}
+  <div class="px-4 py-5 text-center">
+    <h1 class="display-5 fw-bold text-body-emphasis">TALP-Pages Reports</h1>
+    <div class="col-lg-6 mx-auto">
+      <p class="lead mb-4">
+        Welcome to TALP-Pages.
+      </p>
+    </div>
+  </div>
+
+  <div class="container px-4" id="availableSites">
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+      {% for path, pages in sites_dict.items() %}
+        <div class="col">
+          <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Available reports for folder: <span class="font-monospace">{{path}}</span></h5>
+            {% set timestamp,git_commit = pages.latest_change %}
+            <h6 class="card-subtitle mb-2 text-body-secondary">Last updated at: {{timestamp}} <span class="font-monospace">@{{git_commit}}</span></h6>
+            <hr>
+            <p class="card-text">
+            <h6 class="mb-2">Available evolution plots</h6>
+            {% for ressource_config, time_series_site in zip(pages.ressource_configurations,pages.time_series_sites) %}
+              <a type="button" class="btn btn-secondary mx-1 my-1" href="{{path}}/{{time_series_site.file_name}}">
+                  <i class="bi {{time_series_site.icon}}"></i> {{ressource_config}}
+              </a>
+            {% endfor %}
+            <br>
+            <br>
+            <h6 class="mb-2">Scaling Analysis Table</h6>
+            <a type="button" class="btn btn-secondary mx-1 my-1" href="{{path}}/{{pages.scaling_result_site.file_name}}">
+                <i class="bi {{pages.scaling_result_site.icon}}"></i> Scaling Table
+            </a>
+            <br>
+            <br>
+            <h6 class="card-subtitle"></i> Available bagdes using region: <span class="font-monospace">{{pages.region_for_badge}}</span> </h6>
+
+            {% for ressource_config, badge in zip(pages.ressource_configurations,pages.badges) %}
+              <a type="button" class="btn btn-sm btn-secondary mx-1 my-1" href="{{path}}/{{badge.file_name}}">
+                <i class="bi bi-trophy"></i> {{ressource_config}} 
+              </a>
+            {% endfor %}   
+            </p>
+          </div>
+        </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
