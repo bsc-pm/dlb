@@ -209,6 +209,13 @@ const char* monitoring_region_get_global_region_name(void) {
 dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
         const char* name) {
 
+    /* Forbidden names */
+    if (name != NULL
+            && (strncasecmp("all", name, DLB_MONITOR_NAME_MAX-1) == 0
+                || strncasecmp("none", name, DLB_MONITOR_NAME_MAX-1) == 0)) {
+        return NULL;
+    }
+
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info == NULL) return NULL;
 
