@@ -50,7 +50,7 @@ PANDOC_verbose_ = $(PANDOC_verbose_@AM_DEFAULT_V@)
 PANDOC_verbose_0 = @echo "  PANDOC  " $@;
 endif
 
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/apis -I$(top_builddir)/src
 AM_CFLAGS = $(AC_CFLAGS)
 AM_FCFLAGS = $(AC_FCFLAGS)
 AM_LDFLAGS = $(AC_LDFLAGS) -avoid-version
@@ -1092,6 +1092,7 @@ EXTRA_DIST += \
 	scripts/bets \
 	scripts/dlb.spec \
 	scripts/git-version-gen \
+	scripts/parse_version.py \
 	scripts/pygen.py \
 	scripts/viewer/dlb_cpu_usage.in \
 	scripts/viewer/dlb_viewer.py.in \

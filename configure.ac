@@ -56,6 +56,23 @@ AS_IF([test -e "$srcdir/.git"], [
 ])
 AC_DEFINE_UNQUOTED([DLB_VERSION_STRING], ["$dlb_version_string"], [dlb version string, and possibly branch])
 
+# We need Python for the version parser
+AM_PATH_PYTHON
+
+# Major, minor, and patch numbers go to config.h
+DLB_VERSION_MAJOR=$($PYTHON "$srcdir/scripts/parse_version.py" major $VERSION)
+AC_DEFINE_UNQUOTED([DLB_VERSION_MAJOR], [$DLB_VERSION_MAJOR], [dlb major version])
+
+DLB_VERSION_MINOR=$($PYTHON "$srcdir/scripts/parse_version.py" minor $VERSION)
+AC_DEFINE_UNQUOTED([DLB_VERSION_MINOR], [$DLB_VERSION_MINOR], [dlb minor version])
+
+DLB_VERSION_PATCH=$($PYTHON "$srcdir/scripts/parse_version.py" patch $VERSION)
+AC_DEFINE_UNQUOTED([DLB_VERSION_PATCH], [$DLB_VERSION_PATCH], [dlb patch version])
+
+# Version hexadecimal number go to dlb.h
+DLB_VERSION_HEXA=$($PYTHON "$srcdir/scripts/parse_version.py" hexa $VERSION)
+AC_SUBST([DLB_VERSION_HEXA])
+
 # branch is needed for internal CI pipelines
 DLB_GIT_BRANCH="$dlb_git_branch"
 AC_SUBST([DLB_GIT_BRANCH])
@@ -325,7 +342,6 @@ AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 ################################################################################
 
 # Check for Python
-AM_PATH_PYTHON
 AX_COMPARE_VERSION([$PYTHON_VERSION], [ge], [2.7], [lit=yes], [lit=no])
 AM_CONDITIONAL([LIT_SUPPORT], [test "x$lit" = xyes])
 
@@ -419,6 +435,7 @@ AC_CONFIG_FILES([
     doc/doxygen/Doxyfile_man3
     doc/user_guide/source/conf.py
     doc/user_guide/source/index.rst
+    src/apis/dlb.h
 ])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
 AC_CONFIG_FILES([tests/gens/fortran-generator], [chmod +x tests/gens/fortran-generator])

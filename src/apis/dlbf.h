@@ -341,6 +341,15 @@
             logical(kind=c_bool) :: thread_is_observer
         end function dlb_setobserverrole
 
+        function dlb_getversion(major, minor, patch) result (ierr)  &
+     &          bind(c, name='DLB_GetVersion')
+            use iso_c_binding
+            integer(kind=c_int) :: ierr
+            integer(kind=c_int), intent(out) :: major
+            integer(kind=c_int), intent(out) :: minor
+            integer(kind=c_int), intent(out) :: patch
+        end function dlb_getversion
+
       end interface
 
 ! -*- fortran -*-  vim: set ft=fortran:
