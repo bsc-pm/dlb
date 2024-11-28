@@ -87,8 +87,8 @@ Here are a few restrictions for naming monitoring regions:
 - The name "Global" (case-insensitive) is reserved and cannot be used for any
   user-defined region. If the user attempts to register a region with this
   name, a pointer to the global region will be returned.
-- The names "all" and "none" (case-insensitive) are reserved and cannot be
-  used. Attempting to register a region with these names will result in an
+- The name "all" (case-insensitive) is reserved and cannot be
+  used. Attempting to register a region with this name will result in an
   error.
 - For user-defined regions, the name is case-sensitive, can contain up to
   128 characters, and may include spaces (though spaces must be avoided when
@@ -220,14 +220,26 @@ TALP option flags
 
 
 --talp-region-select=<string>
-    Select TALP regions to enable. The option accepts the special values
-    ``all``, to enable all TALP regions, and ``none`` to disable them all. An
-    empty value is equivalent to ``all``. Additionally, a comma-separated list
-    of region names can be specified to enable only those regions. The global
-    monitoring region may be specified with the special token ``global``.
-    Note that when using this feature, regions must not have spaces in their names.
-    e.g.: ``--talp-region-select=none``,
-    ``--talp-region-select=global,region3``
+    Select TALP regions to enable. This option follows the format:
+    ``--talp-region-select=[(include|exclude):]<region-list>``
+
+    The modifiers ``include:`` and ``exclude:`` are optional, but only one
+    modifier can be used at a time. If neither is specified, ``include:`` is
+    assumed by default.
+
+    The ``<region-list>`` can be a comma-separared list of regions or a special
+    token ``all`` to refer to all regions. The global monitoring region may be
+    specified with the special token ``global``. If the modifier ``include:``
+    is used, only the listed regions will be enabled. If ``exclude:`` is used,
+    all regions will be enabled except for the ones specified.
+
+    Note that when using this feature, listed regions must not have spaces in
+    their names.
+
+    e.g.: ``--talp-region-select=all`` (default),
+    ``--talp-region-select=exclude:all``,
+    ``--talp-region-select=include:global,region3``,
+    ``--talp-region-select=exclude:region4``.
 
 --talp-regions-per-proc=<int>
     Number of TALP regions per process to allocate in the shared memory.
