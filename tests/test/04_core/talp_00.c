@@ -69,8 +69,6 @@ int main(int argc, char *argv[]) {
     /* Check for forbidden names */
     assert( monitoring_region_register(&spd, "ALL") == NULL );
     assert( monitoring_region_register(&spd, "all") == NULL );
-    assert( monitoring_region_register(&spd, "none") == NULL );
-    assert( monitoring_region_register(&spd, "None") == NULL );
 
     /* Test MPI + nested user defined region */
     {
@@ -224,7 +222,7 @@ int main(int argc, char *argv[]) {
 
     /* Test --talp-region-select */
     {
-        strcpy(spd.options.talp_region_select, "none");
+        strcpy(spd.options.talp_region_select, "exclude:all");
         dlb_monitor_t *monitor1 = monitoring_region_register(&spd, "disabled_monitor");
         assert( monitoring_region_start(&spd, monitor1) == DLB_NOUPDT );
         assert( monitoring_region_stop(&spd, monitor1) == DLB_NOUPDT );
@@ -250,17 +248,50 @@ int main(int argc, char *argv[]) {
         assert( monitoring_region_stop(&spd, monitor5) == DLB_SUCCESS );
         assert( monitor5->num_measurements == 1 );
 
-        strcpy(spd.options.talp_region_select, "");
+        strcpy(spd.options.talp_region_select, "exclude:monitor7,monitor8");
         dlb_monitor_t *monitor6 = monitoring_region_register(&spd, "monitor6");
         assert( monitoring_region_start(&spd, monitor6) == DLB_SUCCESS );
         assert( monitoring_region_stop(&spd, monitor6) == DLB_SUCCESS );
         assert( monitor6->num_measurements == 1 );
+        dlb_monitor_t *monitor7 = monitoring_region_register(&spd, "monitor7");
+        assert( monitoring_region_start(&spd, monitor7) == DLB_NOUPDT );
+        assert( monitoring_region_stop(&spd, monitor7) == DLB_NOUPDT );
+        assert( monitor7->num_measurements == 0 );
+        dlb_monitor_t *monitor8 = monitoring_region_register(&spd, "monitor8");
+        assert( monitoring_region_start(&spd, monitor8) == DLB_NOUPDT );
+        assert( monitoring_region_stop(&spd, monitor8) == DLB_NOUPDT );
+        assert( monitor8->num_measurements == 0 );
+
+        strcpy(spd.options.talp_region_select, "");
+        dlb_monitor_t *monitor9 = monitoring_region_register(&spd, "monitor9");
+        assert( monitoring_region_start(&spd, monitor9) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor9) == DLB_SUCCESS );
+        assert( monitor9->num_measurements == 1 );
 
         strcpy(spd.options.talp_region_select, "all");
-        dlb_monitor_t *monitor7 = monitoring_region_register(&spd, "monitor7");
-        assert( monitoring_region_start(&spd, monitor7) == DLB_SUCCESS );
-        assert( monitoring_region_stop(&spd, monitor7) == DLB_SUCCESS );
-        assert( monitor7->num_measurements == 1 );
+        dlb_monitor_t *monitor10 = monitoring_region_register(&spd, "monitor10");
+        assert( monitoring_region_start(&spd, monitor10) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor10) == DLB_SUCCESS );
+        assert( monitor10->num_measurements == 1 );
+
+        strcpy(spd.options.talp_region_select, "include:all");
+        dlb_monitor_t *monitor11 = monitoring_region_register(&spd, "monitor11");
+        assert( monitoring_region_start(&spd, monitor11) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor11) == DLB_SUCCESS );
+        assert( monitor11->num_measurements == 1 );
+
+        strcpy(spd.options.talp_region_select, "include:monitor13");
+        dlb_monitor_t *monitor12 = monitoring_region_register(&spd, "monitor12");
+        assert( monitoring_region_start(&spd, monitor12) == DLB_NOUPDT );
+        assert( monitoring_region_stop(&spd, monitor12) == DLB_NOUPDT );
+        assert( monitor12->num_measurements == 0 );
+        dlb_monitor_t *monitor13 = monitoring_region_register(&spd, "monitor13");
+        assert( monitoring_region_start(&spd, monitor13) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, monitor13) == DLB_SUCCESS );
+        assert( monitor13->num_measurements == 1 );
+
+        // Reset talp_region_select for the following tests
+        strcpy(spd.options.talp_region_select, "");
     }
 
     /* Test creation of N regions */

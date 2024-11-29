@@ -111,18 +111,31 @@ static int get_new_anonymous_id(void) {
     return DLB_ATOMIC_ADD_FETCH_RLX(&id, 1);
 }
 
-/* Return true if the region is to be enabled */
+/* Return true if the region is to be enabled.
+ * region_select format:
+ *  --talp-region-select=[(include|exclude):]<region-list>
+ */
 static bool parse_region_select(const char *region_select, const char *region_name) {
+
     /* Default case, all regions enabled */
     if (region_select == NULL
-            || region_select[0] == '\0'
-            || strcmp(region_select, "all") == 0) {
+            || region_select[0] == '\0') {
         return true;
     }
 
-    /* Special case, all regions disabled */
-    if (strcmp(region_select, "none") == 0) {
-        return false;
+    /* Select inclusion or exclusion mode,
+     * and advance pointer */
+    bool in_inclusion_mode = true;
+    if (strncmp(region_select, "exclude:", strlen("exclude:")) == 0) {
+       in_inclusion_mode = false;
+       region_select += strlen("exclude:");
+    } else if (strncmp(region_select, "include:", strlen("include:"))  == 0) {
+       region_select += strlen("include:");
+    }
+
+    /* If "[(include|exclude):]all" */
+    if (strcmp(region_select, "all") == 0) {
+        return in_inclusion_mode;
     }
 
     /* Break region_select into tokens and find region_name */
@@ -150,7 +163,8 @@ static bool parse_region_select(const char *region_select, const char *region_na
         token = strtok_r(NULL, ",", &saveptr);
     }
     free(region_select_copy);
-    return found_in_select;
+
+    return in_inclusion_mode ? found_in_select : !found_in_select;
 }
 
 static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const
@@ -211,8 +225,7 @@ dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
 
     /* Forbidden names */
     if (name != NULL
-            && (strncasecmp("all", name, DLB_MONITOR_NAME_MAX-1) == 0
-                || strncasecmp("none", name, DLB_MONITOR_NAME_MAX-1) == 0)) {
+            && strncasecmp("all", name, DLB_MONITOR_NAME_MAX-1) == 0) {
         return NULL;
     }
 
