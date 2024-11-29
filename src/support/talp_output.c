@@ -1211,9 +1211,8 @@ static void process_finalize(void) {
 /*    TALP Common                                                                */
 /*********************************************************************************/
 typedef struct TALPCommonRecord {
+    char *dlb_version;      // Version X.Y.Z[-#-hash]
     char *time_of_creation; // ISO 8601 string
-    char *dlb_major_version; // Major.Minor DLB version used
-    char *dlb_git_description; // GIT description output
 } talp_common_record_t;
 static talp_common_record_t common_record;
 
@@ -1221,19 +1220,16 @@ static void talp_output_record_common(void) {
     /* Initialize structure */
     time_t now = time(NULL);
     common_record = (const talp_common_record_t) {
+        .dlb_version = PACKAGE_VERSION,
         .time_of_creation = get_iso_8601_string(localtime(&now)),
-        .dlb_major_version = PACKAGE_VERSION,
-        .dlb_git_description = DLB_GIT_DESCRIPTION,
     };
 }
 
 static void common_to_json(FILE *out_file) {
     fprintf(out_file,
                     "  \"dlbVersion\": \"%s\",\n"
-                    "  \"dlbGitVersion\": \"%s\",\n"
                     "  \"timestamp\": \"%s\",\n",
-                common_record.dlb_major_version,
-                common_record.dlb_git_description,
+                common_record.dlb_version,
                 common_record.time_of_creation);
 }
 
@@ -1241,10 +1237,8 @@ static void common_to_xml(FILE *out_file) {
 
     fprintf(out_file,
             "  <dlbVersion>%s</dlbVersion>\n"
-            "  <dlbGitVersion>%s</dlbGitVersion>\n"
             "  <timestamp>%s</timestamp>\n",
-            common_record.dlb_major_version,
-            common_record.dlb_git_description,
+            common_record.dlb_version,
             common_record.time_of_creation);
 }
 
@@ -1253,10 +1247,8 @@ static void common_to_txt(FILE *out_file) {
     fprintf(out_file,
             "################ TALP Common Data ################\n"
             "### DLB Version:                   %s\n"
-            "### DLB Git Version:               %s\n"
             "### Timestamp:                     %s\n",
-            common_record.dlb_major_version,
-            common_record.dlb_git_description,
+            common_record.dlb_version,
             common_record.time_of_creation);
 }
 

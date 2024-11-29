@@ -61,7 +61,7 @@ static char *created_shm_filename = NULL;
 static char *userdef_shm_filename = NULL;
 
 static void __attribute__((__noreturn__)) version(void) {
-    fprintf(stdout, "%s %s (%s)\n", PACKAGE, VERSION, DLB_BUILD_VERSION);
+    fprintf(stdout, "%s\n", DLB_VERSION_STRING);
     fprintf(stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS);
     exit(EXIT_SUCCESS);
 }

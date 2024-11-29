@@ -173,5 +173,12 @@ int main( int argc, char **argv ) {
     assert( DLB_Finalize() == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_NOUPDT );
 
+    // Test version
+    int major, minor, patch;
+    assert( DLB_GetVersion(&major, &minor, &patch) == DLB_SUCCESS );
+    assert( major == (DLB_VERSION >> 16 & 0xff) );
+    assert( minor == (DLB_VERSION >> 8  & 0xff) );
+    assert( patch == (DLB_VERSION       & 0xff) );
+
     return 0;
 }

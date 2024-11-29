@@ -50,7 +50,7 @@ PANDOC_verbose_ = $(PANDOC_verbose_@AM_DEFAULT_V@)
 PANDOC_verbose_0 = @echo "  PANDOC  " $@;
 endif
 
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/apis -I$(top_builddir)/src
 AM_CFLAGS = $(AC_CFLAGS)
 AM_FCFLAGS = $(AC_FCFLAGS)
 AM_LDFLAGS = $(AC_LDFLAGS) -avoid-version
@@ -1091,6 +1091,8 @@ LIT_EXTRA = scripts/lit/PKG-INFO \
 EXTRA_DIST += \
 	scripts/bets \
 	scripts/dlb.spec \
+	scripts/git-version-gen \
+	scripts/parse_version.py \
 	scripts/pygen.py \
 	scripts/viewer/dlb_cpu_usage.in \
 	scripts/viewer/dlb_viewer.py.in \
@@ -1180,6 +1182,14 @@ endif
 
 
 #################################################################################
+### other files                                                               ###
+#################################################################################
+EXTRA_DIST += meson.build \
+	      meson_options.txt \
+	      tests/meson.build \
+	      $(END)
+
+#################################################################################
 ### Hooks                                                                     ###
 #################################################################################
 
@@ -1224,12 +1234,17 @@ install-data-hook:
 dist-hook:
 	if [ -x "$(GIT)" ]; \
 	then \
-	    "$(GIT)" --git-dir=$(top_srcdir)/.git log --pretty=format:"[%h] %cd : %s (%an)" --date=short > $(distdir)/ChangeLog; \
-	    git_run_description=`"$(GIT)" --git-dir=$(top_srcdir)/.git describe | head -n 1`; \
-	    git_run_branch=`"$(GIT)" --git-dir=$(top_srcdir)/.git rev-parse --abbrev-ref HEAD | head -n 1`; \
-	    git_version="$${git_run_description} $${git_run_branch}"; \
-	    echo $${git_version} > ${distdir}/VERSION; \
-	elif [ -e $(top_srcdir)/VERSION ]; \
-	then \
-	    cp $(top_srcdir)/VERSION $(distdir)/VERSION; \
+	    "$(GIT)" --git-dir=$(top_srcdir)/.git log --pretty=format:"[%h] %cd : %s (%an)" --date=short \
+	        > $(distdir)/ChangeLog; \
+	    echo $(DLB_GIT_BRANCH) > $(distdir)/.tarball-git-branch; \
+	    echo $(VERSION) > $(distdir)/.tarball-version; \
+	else \
+	    if [ -e $(top_srcdir)/.tarball-git-branch ]; \
+	    then \
+	        cp $(top_srcdir)/.tarball-git-branch $(distdir)/.tarball-git-branch; \
+	    fi; \
+	    if [ -e $(top_srcdir)/.tarball-version ]; \
+	    then \
+	        cp $(top_srcdir)/.tarball-version $(distdir)/.tarball-version; \
+	    fi; \
 	fi

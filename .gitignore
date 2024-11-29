@@ -36,3 +36,5 @@ tags
 py-compile
 *.pyc
 build*/
+.tarball-git-branch
+.tarball-version

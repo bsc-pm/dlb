@@ -17,6 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "apis/dlb.h"
 
 #include "LB_core/node_barrier.h"
@@ -395,6 +399,13 @@ const char* DLB_Strerror(int errnum) {
 int DLB_SetObserverRole(bool thread_is_observer) {
     spd_enter_dlb(thread_spd);
     return set_observer_role(thread_is_observer);
+}
+
+int DLB_GetVersion(int *major, int *minor, int *patch) {
+    if (major) *major = DLB_VERSION_MAJOR;
+    if (minor) *minor = DLB_VERSION_MINOR;
+    if (patch) *patch = DLB_VERSION_PATCH;
+    return DLB_SUCCESS;
 }
 
 #pragma GCC visibility pop

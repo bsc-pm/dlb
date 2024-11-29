@@ -1,6 +1,8 @@
-project('DLB', 'c', 'fortran',
-  version : '3.5a',
+project('dlb', 'c', 'fortran',
+  version : run_command('scripts/git-version-gen', '.tarball-version',
+    check : true).stdout().strip(),
   license: ' LGPL-3.0-or-later',
+  meson_version : '>= 1.1.0',
   default_options : [
   ]
 )
@@ -74,27 +76,20 @@ endif
 ### Headers                                                                   ###
 #################################################################################
 
-headers = [
-  'src/apis/dlb.h',
-  'src/apis/dlb_sp.h',
-  'src/apis/dlb_stats.h',
-  'src/apis/dlb_drom.h',
-  'src/apis/dlb_types.h',
-  'src/apis/dlb_errors.h',
-  'src/apis/dlbf.h',
-  'src/apis/dlbf-errors.h',
-  'src/apis/dlb_talp.h',
-  'src/apis/dlbf_talp.h',
-]
+# dlb.h generation needs dlb_version_hexa
+prog_python = import('python').find_installation('python')
+dlb_version = meson.project_version()
+dlb_version_hexa = run_command(
+  prog_python, 'scripts/parse_version.py', 'hexa', dlb_version,
+  check : true).stdout()
 
-install_headers(headers)
-
+subdir('src/apis')
 
 #################################################################################
 ### DLB libraries                                                             ###
 #################################################################################
 
-common_includes = include_directories('src')
+common_includes = [ include_directories('src'), include_directories('src/apis') ]
 
 common_srcs = [
   'src/support/atomic.h',
@@ -413,33 +408,56 @@ subdir('tests')
 ### config.h                                                                  ###
 #################################################################################
 
+dlb_git_branch = ''
+project_name_lowercase = meson.project_name().to_lower()
+
+dlb_version = meson.project_version()
+dlb_version_string = project_name_lowercase + ' ' + dlb_version
+dlb_version_array = dlb_version.underscorify().split('_')
+dlb_version_major = dlb_version_array[0].to_int()
+dlb_version_minor = dlb_version_array[1].to_int()
+dlb_version_patch = dlb_version_array[2]
+
 git_program = find_program('git', required : false)
 if git_program.found()
-  git_describe_result = run_command([git_program, 'describe'], capture : true, check : true)
-  git_branch_result = run_command([git_program, 'rev-parse','--abbrev-ref', 'HEAD'], capture : true, check : true)
-  git_description = git_describe_result.stdout().strip()
-  git_branch = git_branch_result.stdout().strip()
-  build_version = git_description + ' ' + git_branch
-else
-  git_description = 'unknown revision'
-  git_branch = 'unknown branch'
-  build_version = 'unknown build version, as git was not available'
+  git_branch_result = run_command(
+      [git_program, 'rev-parse','--abbrev-ref', 'HEAD'], capture : true, check : false
+    )
+  if git_branch_result.returncode() == 0
+    dlb_git_branch = git_branch_result.stdout().strip()
+    dlb_version_string += ' (' + dlb_git_branch + ')'
+  endif
 endif
 
 conf_data = configuration_data()
 conf_data.set_quoted('VERSION', meson.project_version())
-conf_data.set_quoted('PACKAGE', meson.project_name())
+conf_data.set_quoted('PACKAGE', project_name_lowercase)
 conf_data.set_quoted('PACKAGE_BUGREPORT', 'dlb@bsc.es')
+conf_data.set_quoted('PACKAGE_NAME', meson.project_name())
 conf_data.set_quoted('PACKAGE_VERSION', meson.project_version())
-conf_data.set_quoted('DLB_BUILD_VERSION', build_version)
-conf_data.set_quoted('DLB_GIT_DESCRIPTION', git_description)
-conf_data.set_quoted('DLB_CONFIGURE_ARGS', 'not supported')
+conf_data.set_quoted('DLB_CONFIGURE_ARGS', 'meson setup ' + meson.build_options())
+conf_data.set_quoted('DLB_VERSION_STRING', dlb_version_string)
+conf_data.set('DLB_VERSION_MAJOR', dlb_version_major)
+conf_data.set('DLB_VERSION_MINOR', dlb_version_minor)
+conf_data.set('DLB_VERSION_PATCH', dlb_version_patch)
 conf_data.set('HAVE_EMMINTRIN_H', cc.has_header('emmintrin.h'))
 conf_data.set('HAVE_EXECINFO_H', cc.has_header('execinfo.h'))
 conf_data.set('HAVE_IMMINTRIN_H', cc.has_header('immintrin.h'))
 conf_data.set('HAVE_STDATOMIC_H', cc.has_header('stdatomic.h'))
 conf_data.set_quoted('MPI_LIBRARY_VERSION', mpi_library_version)
 config_h = configure_file( output : 'config.h', configuration : conf_data)
+
+
+#################################################################################
+### dist                                                                      ###
+#################################################################################
+
+# Generate .tarbal-git-branch and .tarball-version files on a 'meson dist' command
+meson.add_dist_script(
+  'scripts/meson-dist-gen.sh',
+  dlb_git_branch,
+  meson.project_version()
+)
 
 
 #################################################################################
