@@ -125,15 +125,15 @@ then
     # Remove the "g" in git describe's output string, to save a byte.
     v=`echo "$v" | sed 's/-g/-/'`;
 
-    # This substitution breaks semver if git describe returns a major.minor.patch version
-    # case $v in
-    #     *-rc*)
-    #         ;;
-    #     *)
-    #         # Change the first '-' to a '.', so version-comparing tools work properly.
-    #         v=`echo "$v" | sed 's/-/./'`;
-    #         ;;
-    # esac
+    # Replace the first (or second if -rc) '-' to '+' to delimit metadata
+    case $v in
+        *-rc*)
+            v=`echo "$v" | sed 's/-/+/2'`;
+            ;;
+        *)
+            v=`echo "$v" | sed 's/-/+/'`;
+            ;;
+    esac
 
     v_from_git=1
 else
