@@ -624,7 +624,7 @@ dist_paravercfgs_DATA = $(paraver_cfgs)
 barrierexamples_files = \
 	doc/examples/barrier/app.c \
 	doc/examples/barrier/extrae.xml \
-	doc/examples/barrier/README \
+	doc/examples/barrier/README.md \
 	doc/examples/barrier/run.sh \
 	$(END)
 
@@ -635,6 +635,22 @@ barrierexamples_files_nodist = \
 barrierexamplesdir = $(docdir)/examples/barrier
 dist_barrierexamples_DATA = $(barrierexamples_files)
 nodist_barrierexamples_DATA = $(barrierexamples_files_nodist)
+
+### Named Barrier ###
+namedbarrierexamples_files = \
+	doc/examples/named_barrier/README.md \
+	doc/examples/named_barrier/run.sh \
+	doc/examples/named_barrier/test_first.c \
+	doc/examples/named_barrier/test_second.c \
+	$(END)
+
+namedbarrierexamples_files_nodist = \
+	doc/examples/named_barrier/Makefile \
+	$(END)
+
+namedbarrierexamplesdir = $(docdir)/examples/named_barrier
+dist_namedbarrierexamples_DATA = $(namedbarrierexamples_files)
+nodist_namedbarrierexamples_DATA = $(namedbarrierexamples_files_nodist)
 
 ### CMAKE project ###
 cmakeexamples_files = \
@@ -1193,6 +1209,7 @@ install-data-hook:
 	chmod +x $(DESTDIR)$(mpiompexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompomptexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(mpiompssexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(namedbarrierexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(omptexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(roleshiftexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(statsexamplesdir)/run.sh

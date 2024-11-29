@@ -384,6 +384,7 @@ AC_CONFIG_FILES([
     doc/examples/mpi+omp_roleshift/Makefile
     doc/examples/mpi+ompss/run.sh
     doc/examples/mpi+ompss/Makefile
+    doc/examples/named_barrier/Makefile
     doc/examples/ompt/Makefile
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
@@ -411,12 +412,14 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/api.rst:doc/user_guide/source/api.rst
     doc/user_guide/source/citing_dlb.rst:doc/user_guide/source/citing_dlb.rst
     doc/user_guide/source/contents.rst:doc/user_guide/source/contents.rst
+    doc/user_guide/source/dlb_barrier.rst:doc/user_guide/source/dlb_barrier.rst
     doc/user_guide/source/faq.rst:doc/user_guide/source/faq.rst
     doc/user_guide/source/installation.rst:doc/user_guide/source/installation.rst
     doc/user_guide/source/how_to_run.rst:doc/user_guide/source/how_to_run.rst
     doc/user_guide/source/how_to_run_lewi.rst:doc/user_guide/source/how_to_run_lewi.rst
     doc/user_guide/source/how_to_run_drom.rst:doc/user_guide/source/how_to_run_drom.rst
     doc/user_guide/source/how_to_run_talp.rst:doc/user_guide/source/how_to_run_talp.rst
+    doc/user_guide/source/talp_metrics.rst:doc/user_guide/source/talp_metrics.rst
     doc/user_guide/source/talp_pages.rst:doc/user_guide/source/talp_pages.rst
     doc/user_guide/source/overview.rst:doc/user_guide/source/overview.rst
     doc/user_guide/source/man_pages_appendix.rst:doc/user_guide/source/man_pages_appendix.rst
@@ -430,6 +433,7 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/images/hpc_app.png:doc/user_guide/source/images/hpc_app.png
     doc/user_guide/source/images/LeWI.png:doc/user_guide/source/images/LeWI.png
     doc/user_guide/source/images/talp.png:doc/user_guide/source/images/talp.png
+    doc/user_guide/source/images/talp-efficiency-models.drawio.svg:doc/user_guide/source/images/talp-efficiency-models.drawio.svg
     doc/user_guide/source/images/ld_preload.png:doc/user_guide/source/images/ld_preload.png
     doc/user_guide/source/_static/custom.css:doc/user_guide/source/_static/custom.css
 ])

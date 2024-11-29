@@ -32,7 +32,7 @@ import shlex
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
-    'sphinxmermaid',
+    'sphinxcontrib.mermaid',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -46,12 +46,12 @@ source_suffix = '.rst'
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
-# The master toctree document.
-master_doc = 'index'
+# The root toctree document.
+root_doc = 'index'
 
 # General information about the project.
 project = u'DLB'
-copyright = u'2015-2023, Barcelona Supercomputing Center'
+copyright = u'2015-2024, Barcelona Supercomputing Center'
 author = u'Marta Garcia and Victor Lopez'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -236,7 +236,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'DLBUserGuide.tex', u'DLB User Guide',
+  (root_doc, 'DLBUserGuide.tex', u'DLB User Guide',
    u'Barcelona Supercomputing Center', 'manual'),
 ]
 
@@ -256,8 +256,6 @@ latex_logo = 'images/dlb_logo.png'
 
 # Documents to append as an appendix to all manuals.
 latex_appendices = []
-if 'man_pages' in tags:
-    latex_appendices += ['man_pages_appendix']
 
 # If false, no module index is generated.
 #latex_domain_indices = True
@@ -268,7 +266,7 @@ if 'man_pages' in tags:
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'dlb', u'DLB Documentation',
+    (root_doc, 'dlb', u'DLB Documentation',
      [author], 1)
 ]
 
@@ -282,7 +280,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'DLB', u'DLB Documentation',
+  (root_doc, 'DLB', u'DLB Documentation',
    author, 'DLB', 'One line description of project.',
    'Miscellaneous'),
 ]

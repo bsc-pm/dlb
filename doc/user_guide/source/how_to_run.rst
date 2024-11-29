@@ -59,7 +59,7 @@ Examples
     # just satisfy the requirement of DLB symbols and avoid other dependences
     DLB_CPPFLAGS="-I<dlb_install_path>/include"
     DLB_LDLAGS="-L<dlb_install_path>/lib -ldlb -Wl,-rpath,<dlb_install_path>/lib"
-    mpicc ... -o <app> "$DLB_CPPFLAGS" "$DLB_LDFLAGS"
+    mpicc ... -o <app> $DLB_CPPFLAGS $DLB_LDFLAGS
 
     # Run as the examples above
     export DLB_ARGS="..."
