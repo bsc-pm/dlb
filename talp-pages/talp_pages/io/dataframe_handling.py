@@ -88,7 +88,7 @@ def __load_talp_json_3_5(json_input, json_path):
     df["IPC"] = df["instructions"] / df["cycles"]
     df["IPC"] = df["IPC"].fillna(np.inf)
 
-    if (len(invalid_cycles) > 0) or len(invalid_instructions) > 0:
+    if (sum(invalid_cycles) > 0) or sum(invalid_instructions) > 0:
         logging.warning(
             f"Invalid PAPI Counter values observed in {json_path}. Please check PAPI and DLB installations"
         )
@@ -127,7 +127,7 @@ def load_talp_json_df(json_path: Path) -> pd.DataFrame:
         run_json = json.load(file)
         df = None
         # First check version
-        if run_json[TALP_VERSION_KEY] in ["3.5", "3.5a"]:
+        if run_json[TALP_VERSION_KEY].startswith("3.5"):
             df = __load_talp_json_3_5(run_json, json_path)
         else:
             raise ValueError(

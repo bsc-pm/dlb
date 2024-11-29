@@ -26,6 +26,13 @@ def test_handle_wrong_dlb_version():
         _ = load_talp_json_df(json_path)
 
 
+def test_handle_new_dlb_version():
+    json_path = get_json_path("jsons/unit-tests/new_dlb_version.json")
+
+    df = load_talp_json_df(json_path)
+    assert df is not None
+
+
 def test_handle_no_runtime_stamp():
     json_path = get_json_path("jsons/unit-tests/no_timestamp.json")
 
