@@ -1,12 +1,6 @@
 stages:
   - build
   - test
-  - coverage
-
-cache:
-  untracked: true
-  key: "$CI_PIPELINE_ID"
-
 
 
 talp-pages:test&lint:
@@ -21,6 +15,10 @@ talp-pages:test&lint:
     parallel:
       matrix:
         - DOCKER_IMAGE: ["python:3.9-slim","python:3.10-slim","python:3.11-slim","python:3.12-slim"]
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "push"
+        changes:
+          - talp-pages/**/*
 
 
 # DLB
@@ -31,20 +29,30 @@ build:
   script:
     - ./bootstrap
     - ./configure --disable-instrumentation --disable-instrumentation-debug --enable-coverage
-    - make
+    - make -j$(nproc)
+  cache:
+    untracked: true
+    key: "$CI_PIPELINE_ID"
+  rules:
+    - when: always
 
 coverage:
   image: bscpm/citools
-  stage: coverage
+  stage: test
   before_script:
     # Re-build in case stage is executed by another runner
     - >
       if [ ! -f Makefile ] ; then
         ./bootstrap ;
         ./configure --disable-instrumentation --disable-instrumentation-debug --enable-coverage
-        make
+        make -j$(nproc)
       fi
   script:
     - make check
     - gcovr -r .
   coverage: '/TOTAL.*\s+(\d+\%)/'
+  cache:
+    untracked: true
+    key: "$CI_PIPELINE_ID"
+  rules:
+    - when: on_success
