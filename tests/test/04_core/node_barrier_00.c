@@ -55,11 +55,13 @@ int main(int argc, char *argv[]) {
     char options[64] = "--barrier --shm-key=";
     strcat(options, SHMEM_KEY);
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     subprocess_descriptor_t spd1 = {.id = 111};
     options_init(&spd1.options, options);
     subprocess_descriptor_t spd2 = {.id = 222};
     options_init(&spd2.options, options);
-    shmem_barrier__init(SHMEM_KEY);
+    shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
     bool lewi = false;
 
     /* Register barriers */
@@ -159,7 +161,7 @@ int main(int argc, char *argv[]) {
         node_barrier_finalize(&spd2);
     }
 
-    shmem_barrier__finalize(SHMEM_KEY);
+    shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
 
     return 0;
 }

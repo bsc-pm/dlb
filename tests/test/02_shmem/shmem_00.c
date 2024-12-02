@@ -33,7 +33,7 @@
 #include <pthread.h>
 #include <sys/wait.h>
 
-/* Fill node with processes, childs will join the shared memory and will test the lock mechanism */
+/* Fill node with processes, children will join the shared memory and will test the lock mechanism */
 
 void __gcov_flush() __attribute__((weak));
 

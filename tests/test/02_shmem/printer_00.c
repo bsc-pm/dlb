@@ -48,6 +48,7 @@
 
 int main(int argc, char *argv[]) {
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
     enum { SHMEM_TALP_SIZE_MULTIPLIER = 10 };
 
     /* System size */
@@ -84,9 +85,11 @@ int main(int argc, char *argv[]) {
     /* Initialize shared memories */
     assert( shmem_cpuinfo__init(p1_pid, 0, &p1_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-    shmem_barrier__init(SHMEM_KEY);
+    assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+    shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
     barrier_t *default_barrier = shmem_barrier__register("Barrier 0", 0);
     assert( default_barrier != NULL );
     barrier_t *barrier1 = shmem_barrier__register("Barrier 1", DLB_BARRIER_LEWI_OFF);
@@ -148,7 +151,8 @@ int main(int argc, char *argv[]) {
     cpu_set_t p3_mask;
     mu_parse_mask("63", &p3_mask);
     assert( shmem_cpuinfo__init(p3_pid, 0, &p3_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
     assert( shmem_cpuinfo__acquire_cpu(p3_pid, 19, &tasks) == DLB_NOTED );
     assert( tasks.count == 0 );
 
@@ -168,20 +172,23 @@ int main(int argc, char *argv[]) {
 
     /* Print */
     shmem_cpuinfo__print_info(NULL, 0, 0, true);
-    shmem_procinfo__print_info(NULL);
-    shmem_barrier__print_info(NULL);
+    shmem_procinfo__print_info(NULL, SHMEM_SIZE_MULTIPLIER);
+    shmem_barrier__print_info(NULL, SHMEM_SIZE_MULTIPLIER);
     shmem_talp__print_info(NULL, SHMEM_TALP_SIZE_MULTIPLIER);
 
     /* Finalize shared memories */
     assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p3_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+            == DLB_SUCCESS );
     assert( shmem_barrier__detach(default_barrier) == 0 );
     assert( shmem_barrier__detach(barrier1) == 0 );
-    shmem_barrier__finalize(SHMEM_KEY);
+    shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
     assert( shmem_talp__finalize(p1_pid) == DLB_SUCCESS );
     assert( shmem_talp__finalize(p2_pid) == DLB_SUCCESS );
 

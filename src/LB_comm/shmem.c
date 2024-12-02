@@ -50,7 +50,7 @@
 #include "support/mytime.h"
 #include "support/mask_utils.h"
 
-#define SHMEM_TIMEOUT_SECONDS 1
+#define SHMEM_TIMEOUT_SECONDS 10
 
 static bool shmem_consistency_check_pids(pid_t *pidlist, pid_t pid,
         void (*cleanup_fn)(void*,int), void *shdata) {

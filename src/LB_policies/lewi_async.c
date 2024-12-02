@@ -97,7 +97,8 @@ int lewi_async_Init(subprocess_descriptor_t *spd) {
     info0("Default cpus per process: %d", initial_ncpus);
 
     // Initialize shared memory
-    shmem_lewi_async__init(spd->id, initial_ncpus, spd->options.shm_key);
+    shmem_lewi_async__init(spd->id, initial_ncpus, spd->options.shm_key,
+            spd->options.shm_size_multiplier);
 
     return DLB_SUCCESS;
 }

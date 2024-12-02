@@ -35,6 +35,8 @@
 
 int main(int argc, char *argv[]) {
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     pid_t pid = 111;
     int system_size = mu_get_system_size();
     unsigned int new_ncpus;
@@ -57,7 +59,8 @@ int main(int argc, char *argv[]) {
             == DLB_ERR_NOSHMEM );
     shmem_lewi_async__remove_requests(pid);
 
-    shmem_lewi_async__init(pid, initial_ncpus, SHMEM_KEY);
+    assert( shmem_lewi_async__init(pid, initial_ncpus, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
     assert( shmem_lewi_async__exists() );
 
     /* Lend cpus */

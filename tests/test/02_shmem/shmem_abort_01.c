@@ -47,6 +47,9 @@ void __gcov_flush() __attribute__((weak));
 
 
 int main(int argc, char **argv) {
+
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     // Create a child process
     pid_t pid = fork();
     assert( pid >= 0 );
@@ -62,9 +65,9 @@ int main(int argc, char **argv) {
         spd_register(&spd1);
         assert( shmem_cpuinfo__init(spd1.id, 0, &spd1.process_mask, SHMEM_KEY, 0)
                 == DLB_SUCCESS );
-        assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, SHMEM_KEY)
-                == DLB_SUCCESS );
-        assert( shmem_async_init(spd1.id, NULL, &spd1.process_mask, SHMEM_KEY)
+        assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_async_init(spd1.id, NULL, &spd1.process_mask, SHMEM_KEY, 1)
                 == DLB_SUCCESS );
 
         /* spd2 */

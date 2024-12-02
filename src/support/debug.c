@@ -292,12 +292,14 @@ void print_backtrace(void) {
 #endif
 }
 
-static void clean_shmems(pid_t id, const char *shmem_key, int lewi_color) {
+static void clean_shmems(pid_t id, const char *shmem_key,
+        int shmem_size_multiplier, int lewi_color) {
+
     if (shmem_cpuinfo__exists()) {
         shmem_cpuinfo__finalize(id, shmem_key, lewi_color);
     }
     if (shmem_procinfo__exists()) {
-        shmem_procinfo__finalize(id, false, shmem_key);
+        shmem_procinfo__finalize(id, false, shmem_key, shmem_size_multiplier);
     }
     if (shmem_talp__exists()) {
         shmem_talp__finalize(id);
@@ -314,8 +316,9 @@ void dlb_clean(void) {
         while (*spd) {
             pid_t id = (*spd)->id;
             const char *shmem_key = (*spd)->options.shm_key;
+            int shmem_size_multiplier = (*spd)->options.shm_size_multiplier;
             int lewi_color = (*spd)->options.lewi_color;
-            clean_shmems(id, shmem_key, lewi_color);
+            clean_shmems(id, shmem_key, shmem_size_multiplier, lewi_color);
             ++spd;
         }
         free(spds);
@@ -323,11 +326,12 @@ void dlb_clean(void) {
         /* Then, try to finalize current pid */
         pid_t pid = thread_spd ? thread_spd->id : getpid();
         const char *shmem_key = thread_spd ? thread_spd->options.shm_key : NULL;
+        int shmem_size_multiplier = thread_spd ? thread_spd->options.shm_size_multiplier : 1;
         int lewi_color = thread_spd ? thread_spd->options.lewi_color : 0;
-        clean_shmems(pid, shmem_key, lewi_color);
+        clean_shmems(pid, shmem_key, shmem_size_multiplier, lewi_color);
 
         /* Finalize shared memories that do not support subprocesses */
-        shmem_barrier__finalize(shmem_key);
+        shmem_barrier__finalize(shmem_key, shmem_size_multiplier);
         finalize_comm();
 
         /* Destroy shared memories if they still exist */
@@ -347,9 +351,12 @@ void dlb_clean(void) {
 void warn_error(int error) {
     switch(error) {
         case DLB_ERR_NOMEM:
-            warning("DLB could not be initialized due to insufficient space in the"
-                    " shared memory. If you need to register a high amount of processes"
-                    " or believe that this is a bug, please contact us at " PACKAGE_BUGREPORT);
+            warning("DLB initialization failed due to insufficient space in shared memory."
+                    " This error may be caused by corrupted DLB shared memory. If that's the case,"
+                    " try running dlb_shm --delete and then attempt again. Alternatively, if you"
+                    " need to register a large number of processes, you can use the"
+                    " --shm-size-multiplier flag to increase the default shared memory size."
+                    " See dlb -hh for more info.");
             break;
         case DLB_ERR_PERM:
             if (thread_spd != NULL) {
@@ -364,7 +371,8 @@ void warn_error(int error) {
             if (shmem_procinfo__exists() && thread_spd != NULL) {
                 warning("This is the list of current registered processes and their"
                         " affinity mask:");
-                shmem_procinfo__print_info(thread_spd->options.shm_key);
+                shmem_procinfo__print_info(thread_spd->options.shm_key,
+                        thread_spd->options.shm_size_multiplier);
             }
             break;
         case DLB_ERR_NOCOMP:

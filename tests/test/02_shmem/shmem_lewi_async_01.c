@@ -35,6 +35,8 @@
 
 int main(int argc, char *argv[]) {
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     // This test needs at least room for 4 CPUs
     enum { SYS_SIZE = 4 };
     mu_init();
@@ -55,8 +57,10 @@ int main(int argc, char *argv[]) {
     lewi_request_t *requests = malloc(sizeof(lewi_request_t*)*max_requests);
 
     // Init
-    shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY);
-    shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY);
+    assert( shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+    assert( shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
     /*** Successful ping-pong ***/
     {
@@ -271,8 +275,10 @@ int main(int argc, char *argv[]) {
     /* Re-init and finalize with CPUs lent */
     {
         // Init
-        shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY);
+        assert( shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         // Process 2 lends 1 CPU
         new_ncpus = p2_initial_ncpus - 1;
@@ -301,8 +307,10 @@ int main(int argc, char *argv[]) {
     /* Re-init and finalize with CPUs acquired */
     {
         // Init
-        shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY);
+        assert( shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         // Process 2 lends 1 CPU
         new_ncpus = p2_initial_ncpus - 1;
@@ -332,8 +340,10 @@ int main(int argc, char *argv[]) {
     /* Re-init and finalize with pending requests */
     {
         // Init
-        shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY);
+        assert( shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         // Process 1 wants 2 CPUs
         assert( shmem_lewi_async__acquire_cpus(p1_pid, 2, &new_ncpus, requests,
@@ -355,8 +365,10 @@ int main(int argc, char *argv[]) {
     /* Re-init and finalize with acquired external CPUs */
     {
         // Init
-        shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY);
+        assert( shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         // Process 1 wants 2 CPUs
         assert( shmem_lewi_async__acquire_cpus(p1_pid, 2, &new_ncpus, requests,
@@ -396,10 +408,14 @@ int main(int argc, char *argv[]) {
         unsigned int p4_initial_ncpus = 16;
 
         // Init
-        shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p3_pid, p3_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p4_pid, p4_initial_ncpus, SHMEM_KEY);
+        assert( shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p3_pid, p3_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p4_pid, p4_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         // Process 3 lends all
         assert( shmem_lewi_async__lend_keep_cpus(p3_pid, 0, requests,
@@ -525,9 +541,12 @@ int main(int argc, char *argv[]) {
         unsigned int p3_initial_ncpus = 16;
 
         // Init
-        shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY);
-        shmem_lewi_async__init(p3_pid, p3_initial_ncpus, SHMEM_KEY);
+        assert( shmem_lewi_async__init(p1_pid, p1_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p2_pid, p2_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_lewi_async__init(p3_pid, p3_initial_ncpus, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         // Process 1 and 2 lend 2 CPUs each
         assert( shmem_lewi_async__lend_cpus(p1_pid, 2, &new_ncpus, requests,

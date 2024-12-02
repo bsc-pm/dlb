@@ -54,64 +54,102 @@ typedef struct barrier_t {
 } barrier_t;
 
 typedef struct {
-    barrier_t barriers[0];
+    bool initialized;
+    int max_barriers;   // capacity
+    int num_barriers;   // size, although detached may be counted
+    barrier_t barriers[];
 } shdata_t;
 
-enum { SHMEM_BARRIER_VERSION = 6 };
+enum { SHMEM_BARRIER_VERSION = 7 };
 enum { SHMEM_TIMEOUT_SECONDS = 1 };
 
-static int max_barriers;
+static int max_barriers = 0;
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
 static const char *shmem_name = "barrier";
 
 static void cleanup_shmem(void *shdata_ptr, int pid) {
-    shdata_t *shared_data = shdata_ptr;
 
-    int i;
-    for (i = 0; i < max_barriers; i++) {
+    bool shmem_empty = true;
+    shdata_t *shared_data = shdata_ptr;
+    int num_barriers = shared_data->num_barriers;
+    for (int i = 0; i < num_barriers; i++) {
         barrier_t *barrier = &shared_data->barriers[i];
         if (--barrier->participants == 0) {
             *barrier = (const barrier_t){};
+        } else {
+            shmem_empty = false;
         }
+    }
+
+    /* If there are no registered barriers, make sure shmem is reset */
+    if (shmem_empty) {
+        memset(shared_data, 0, shmem_barrier__size());
     }
 }
 
-void shmem_barrier__init(const char *shmem_key) {
+static void open_shmem(const char *shmem_key, int shmem_size_multiplier) {
+
+    max_barriers = mu_get_system_size() * shmem_size_multiplier;
+    shm_handler = shmem_init((void**)&shdata,
+            &(const shmem_props_t) {
+                .size = shmem_barrier__size(),
+                .name = shmem_name,
+                .key = shmem_key,
+                .version = SHMEM_BARRIER_VERSION,
+                .cleanup_fn = cleanup_shmem,
+            });
+}
+
+int shmem_barrier__init(const char *shmem_key, int shmem_size_multiplier) {
+
+    if (shm_handler != NULL) return DLB_ERR_NOMEM;
+
+    open_shmem(shmem_key, shmem_size_multiplier);
+
+    int error = DLB_SUCCESS;
+    shmem_lock(shm_handler);
+    {
+        // Initialize some values if this is the 1st process attached to the shmem
+        if (!shdata->initialized) {
+            shdata->initialized = true;
+            shdata->num_barriers = 0;
+            shdata->max_barriers = max_barriers;
+        } else {
+            if (shdata->max_barriers != max_barriers) {
+                error = DLB_ERR_INIT;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    if (error == DLB_ERR_INIT) {
+        warning("Cannot attach to Barrier shmem because existing size differ."
+                " Existing shmem size: %d, expected: %d."
+                " Check for DLB_ARGS consistency among processes or clean up shared memory.",
+                shdata->max_barriers, max_barriers);
+    }
+
+    if (error == DLB_SUCCESS) {
+        verbose(VB_BARRIER, "Barrier Module initialized.");
+    }
+
+    return error;
+}
+
+void shmem_barrier_ext__init(const char *shmem_key, int shmem_size_multiplier) {
+
     if (shm_handler != NULL) return;
 
-    max_barriers = mu_get_system_size();
-
-    shm_handler = shmem_init((void**)&shdata,
-            &(const shmem_props_t) {
-                .size = shmem_barrier__size(),
-                .name = shmem_name,
-                .key = shmem_key,
-                .version = SHMEM_BARRIER_VERSION,
-                .cleanup_fn = cleanup_shmem,
-            });
-
-    verbose(VB_BARRIER, "Barrier Module initialized.");
+    open_shmem(shmem_key, shmem_size_multiplier);
 }
 
-void shmem_barrier_ext__init(const char *shmem_key) {
-    max_barriers = mu_get_system_size();
-    shm_handler = shmem_init((void**)&shdata,
-            &(const shmem_props_t) {
-                .size = shmem_barrier__size(),
-                .name = shmem_name,
-                .key = shmem_key,
-                .version = SHMEM_BARRIER_VERSION,
-                .cleanup_fn = cleanup_shmem,
-            });
-}
-
-void shmem_barrier__finalize(const char *shmem_key) {
+void shmem_barrier__finalize(const char *shmem_key, int shmem_size_multiplier) {
     if (shm_handler == NULL) {
         /* barrier_finalize may be called to finalize existing process
          * even if the file descriptor is not opened. (DLB_PreInit + forc-exec case) */
         if (shmem_exists(shmem_name, shmem_key)) {
-            shmem_barrier_ext__init(shmem_key);
+            shmem_barrier_ext__init(shmem_key, shmem_size_multiplier);
         } else {
             return;
         }
@@ -137,10 +175,6 @@ int shmem_barrier_ext__finalize(void) {
     return DLB_SUCCESS;
 }
 
-int shmem_barrier__get_system_id(void) {
-    return max_barriers-1;
-}
-
 int shmem_barrier__get_max_barriers(void) {
     return max_barriers;
 }
@@ -151,19 +185,17 @@ barrier_t* shmem_barrier__find(const char *barrier_name) {
     if (shm_handler == NULL) return NULL;
     if (barrier_name == NULL) return NULL;
 
-    barrier_t *barrier = NULL;
-    int i;
-    for (i=0; i<max_barriers; ++i) {
+    int num_barriers = shdata->num_barriers;
+    for (int i = 0; i < num_barriers; ++i) {
         if (shdata->barriers[i].participants > 0
                 && shdata->barriers[i].flags.initialized
                 && strncmp(shdata->barriers[i].name, barrier_name,
                     BARRIER_NAME_MAX-1) == 0) {
-            barrier = &shdata->barriers[i];
-            break;
+            return &shdata->barriers[i];
         }
     }
 
-    return barrier;
+    return NULL;
 }
 
 /* Register and attach process to barrier.
@@ -185,8 +217,8 @@ barrier_t* shmem_barrier__register(const char *barrier_name, bool lewi) {
     {
         /* Find a new spot, or an already registered barrier */
         barrier_t *empty_spot = NULL;
-        int i;
-        for (i=0; i<max_barriers; ++i) {
+        int num_barriers = shdata->num_barriers;
+        for (int i = 0; i < num_barriers; ++i) {
             if (empty_spot == NULL
                     && shdata->barriers[i].participants == 0
                     && !shdata->barriers[i].flags.initialized) {
@@ -199,6 +231,12 @@ barrier_t* shmem_barrier__register(const char *barrier_name, bool lewi) {
                 barrier = &shdata->barriers[i];
                 break;
             }
+        }
+
+        /* if barrier is not found and no empty spot, get a new position */
+        if (num_barriers < max_barriers && empty_spot == NULL) {
+            empty_spot = &shdata->barriers[num_barriers];
+            ++shdata->num_barriers;
         }
 
         /* New barrier, lock first and initialize required fields */
@@ -366,6 +404,15 @@ int shmem_barrier__detach(barrier_t *barrier) {
                 pthread_barrier_destroy(&barrier->barrier);
                 pthread_rwlock_destroy(&barrier->rwlock);
                 *barrier = (const barrier_t){};
+
+                /* Try to compact barrier list */
+                for (int i = shdata->num_barriers - 1; i >= 0; --i) {
+                    if (shdata->barriers[i].flags.initialized) {
+                        --shdata->num_barriers;
+                    } else {
+                        break;
+                    }
+                }
             }
         } else if (timedwrlock_error == ETIMEDOUT || timedwrlock_error == EDEADLK) {
             shmem_unlock(shm_handler);
@@ -450,12 +497,12 @@ void shmem_barrier__barrier(barrier_t *barrier) {
     pthread_rwlock_unlock(&barrier->rwlock);
 }
 
-void shmem_barrier__print_info(const char *shmem_key) {
+void shmem_barrier__print_info(const char *shmem_key, int shmem_size_multiplier) {
 
     /* If the shmem is not opened, obtain a temporary fd */
     bool temporary_shmem = shm_handler == NULL;
     if (temporary_shmem) {
-        shmem_barrier_ext__init(shmem_key);
+        shmem_barrier_ext__init(shmem_key, shmem_size_multiplier);
     }
 
     /* Make a full copy of the shared memory */
@@ -479,8 +526,8 @@ void shmem_barrier__print_info(const char *shmem_key) {
     enum { MAX_LINE_LEN = 128 };
     char line[MAX_LINE_LEN];
 
-    int i;
-    for (i = 0; i < max_barriers; ++i) {
+    int num_barriers = shdata_copy->num_barriers;
+    for (int i = 0; i < num_barriers; ++i) {
         barrier_t *barrier = &shdata_copy->barriers[i];
         if (barrier->flags.initialized) {
 
@@ -510,5 +557,8 @@ int shmem_barrier__version(void) {
 }
 
 size_t shmem_barrier__size(void) {
-    return sizeof(shdata_t) + sizeof(barrier_t)*mu_get_system_size();
+    // max_barriers contains a value once shmem is initialized,
+    // otherwise return default size
+    return sizeof(shdata_t) + sizeof(barrier_t) * (
+            max_barriers > 0 ? max_barriers : mu_get_system_size());
 }

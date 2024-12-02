@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
     debug_init(&spd.options);
     assert( pm_callback_set(&spd.pm, dlb_callback_set_num_threads,
                 (dlb_callback_t)set_num_threads_callback, NULL) == DLB_SUCCESS);
-    assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask,
+                spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( lewi_async_Init(&spd) == DLB_SUCCESS );
 
     // Reclaim (this should not trigger a callback)

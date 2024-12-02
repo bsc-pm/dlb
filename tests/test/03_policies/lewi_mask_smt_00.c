@@ -95,8 +95,8 @@ int main(int argc, char *arg[]) {
     debug_init(&spd1.options);
     mu_parse_mask("0-7", &sp1_mask);
     memcpy(&spd1.process_mask, &sp1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, spd1.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, spd1.options.shm_key,
+                spd1.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(spd1.id, 0, &spd1.process_mask, spd1.options.shm_key,
                 spd1.options.lewi_color) == DLB_SUCCESS );
     assert( pm_callback_set(&spd1.pm, dlb_callback_enable_cpu,
@@ -111,8 +111,8 @@ int main(int argc, char *arg[]) {
     debug_init(&spd2.options);
     mu_parse_mask("8-15", &sp2_mask);
     memcpy(&spd2.process_mask, &sp2_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(spd2.id, 0, &spd2.process_mask, NULL, spd2.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_procinfo__init(spd2.id, 0, &spd2.process_mask, NULL, spd2.options.shm_key,
+                spd2.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(spd2.id, 0, &spd2.process_mask, spd2.options.shm_key,
                 spd2.options.lewi_color) == DLB_SUCCESS );
     assert( pm_callback_set(&spd2.pm, dlb_callback_enable_cpu,
@@ -125,10 +125,10 @@ int main(int argc, char *arg[]) {
     assert( spd1.options.mode == spd2.options.mode );
     mode = spd1.options.mode;
     if (mode == MODE_ASYNC) {
-        assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask, spd2.options.shm_key)
-                == DLB_SUCCESS );
-        assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask, spd1.options.shm_key)
-                == DLB_SUCCESS );
+        assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask,
+                    spd2.options.shm_key, spd2.options.shm_size_multiplier) == DLB_SUCCESS );
+        assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask,
+                spd1.options.shm_key, spd1.options.shm_size_multiplier) == DLB_SUCCESS );
     }
 
     // Get pointers to the shmem auxiliary cpu sets
@@ -244,7 +244,8 @@ int main(int argc, char *arg[]) {
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key, spd1.options.lewi_color)
             == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd1.id, false, spd1.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd1.id, false, spd1.options.shm_key,
+                spd1.options.shm_size_multiplier) == DLB_SUCCESS );
     if (mode == MODE_ASYNC) {
         assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
     }
@@ -253,7 +254,8 @@ int main(int argc, char *arg[]) {
     assert( lewi_mask_Finalize(&spd2) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(spd2.id, spd2.options.shm_key, spd2.options.lewi_color)
             == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd2.id, false, spd2.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd2.id, false, spd2.options.shm_key,
+                spd2.options.shm_size_multiplier) == DLB_SUCCESS );
     if (mode == MODE_ASYNC) {
         assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
     }

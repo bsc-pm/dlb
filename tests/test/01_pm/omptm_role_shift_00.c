@@ -126,8 +126,8 @@ int main (int argc, char *argv[]) {
     pid_t p2_pid = 222;
     assert( shmem_cpuinfo__init(p2_pid, 0, &p2_mask, thread_spd->options.shm_key,
                 thread_spd->options.lewi_color) == DLB_SUCCESS );
-    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, thread_spd->options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, thread_spd->options.shm_key,
+                thread_spd->options.shm_size_multiplier) == DLB_SUCCESS );
 
     // Setup dummy priority CPUs
     array_cpuid_t cpus_priority_array;
@@ -556,7 +556,8 @@ int main (int argc, char *argv[]) {
     omptm_role_shift__finalize();
     assert( shmem_cpuinfo__finalize(p2_pid, thread_spd->options.shm_key,
                 thread_spd->options.lewi_color) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p2_pid, false, thread_spd->options.shm_key) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, thread_spd->options.shm_key,
+                thread_spd->options.shm_size_multiplier) == DLB_SUCCESS );
 
     return 0;
 }

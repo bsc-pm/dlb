@@ -32,7 +32,8 @@ void shmem_lewi_async__remove_requests(pid_t pid);
 
 unsigned int shmem_lewi_async__get_num_requests(pid_t pid);
 
-void shmem_lewi_async__init(pid_t pid, unsigned int ncpus, const char *shmem_key);
+int shmem_lewi_async__init(pid_t pid, unsigned int ncpus,
+        const char *shmem_key, int shm_size_multiplier);
 
 void shmem_lewi_async__finalize(pid_t pid, unsigned int *new_ncpus,
         lewi_request_t *requests, unsigned int *nreqs, unsigned int maxreqs);
