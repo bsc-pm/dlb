@@ -26,9 +26,11 @@
 #include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "LB_core/talp_types.h"
+#include "LB_comm/shmem_talp.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/atomic.h"
+#include "support/mask_utils.h"
 #include "support/options.h"
 
 #include <sched.h>
@@ -44,7 +46,6 @@ enum { USLEEP_TIME = 1000 };
 int main(int argc, char *argv[]) {
 
     enum { NUM_MEASUREMENTS = 10 };
-    int i, j;
 
     int cpu = sched_getcpu();
     cpu_set_t process_mask;
@@ -141,7 +142,7 @@ int main(int argc, char *argv[]) {
 
     /* Test number of measurements */
     {
-        for (i=0; i<NUM_MEASUREMENTS; ++i) {
+        for (int i = 0; i < NUM_MEASUREMENTS; ++i) {
             monitoring_region_start(&spd, monitor);
             monitoring_region_stop(&spd, monitor);
         }
@@ -167,10 +168,10 @@ int main(int argc, char *argv[]) {
         dlb_monitor_t *monitor3 = monitoring_region_register(&spd, "Test nested 3");
         monitoring_region_start(&spd, monitor1);
         usleep(USLEEP_TIME);
-        for (i=0; i<NUM_MEASUREMENTS; ++i) {
+        for (int i = 0; i < NUM_MEASUREMENTS; ++i) {
             monitoring_region_start(&spd, monitor2);
             usleep(USLEEP_TIME);
-            for (j=0; j<NUM_MEASUREMENTS; ++j) {
+            for (int j = 0; j < NUM_MEASUREMENTS; ++j) {
                 monitoring_region_start(&spd, monitor3);
                 usleep(USLEEP_TIME);
                 monitoring_region_stop(&spd, monitor3);
@@ -298,7 +299,7 @@ int main(int argc, char *argv[]) {
     {
         enum { N = 1000 };
         char name[DLB_MONITOR_NAME_MAX];
-        for (i=0; i<N; ++i) {
+        for (int i = 0; i < N; ++i) {
             snprintf(name, DLB_MONITOR_NAME_MAX, "Loop Region %d", i);
             dlb_monitor_t *loop_monitor = monitoring_region_register(&spd, name);
             assert( loop_monitor != NULL );
@@ -364,6 +365,7 @@ int main(int argc, char *argv[]) {
         assert( monitoring_region_start(&spd, global_monitor) == DLB_SUCCESS );
         assert( monitoring_region_is_started(global_monitor) );
         talp_finalize(&spd);
+        strcpy(spd.options.talp_region_select, "");
     }
 
     /* Test --talp-region-select without global region */
@@ -374,6 +376,40 @@ int main(int argc, char *argv[]) {
         assert( monitoring_region_start(&spd, global_monitor) == DLB_NOUPDT );
         assert( !monitoring_region_is_started(global_monitor) );
         talp_finalize(&spd);
+        strcpy(spd.options.talp_region_select, "");
+    }
+
+    /* Test --shm-size-multiplier */
+    {
+        enum { KNOWN_NUM_REGIONS_PER_PROC = 100 };
+        char name[DLB_MONITOR_NAME_MAX];
+        spd.options.talp_external_profiler = true;
+        spd.options.talp_summary = SUMMARY_NONE;
+
+        /* Try multipliers 1, 2, and 3 */
+        for (int multiplier = 1; multiplier <= 3; ++multiplier) {
+            spd.options.shm_size_multiplier = multiplier;
+            talp_init(&spd);
+            int expected_max_regions = KNOWN_NUM_REGIONS_PER_PROC
+                * mu_get_system_size() * multiplier;
+            /* start at 1 because of global region */
+            for (int i = 1; i < expected_max_regions; ++i) {
+                snprintf(name, DLB_MONITOR_NAME_MAX, "Loop Region %d", i);
+                dlb_monitor_t *loop_monitor = monitoring_region_register(&spd, name);
+                assert( loop_monitor != NULL );
+                assert( strncmp(name, loop_monitor->name, DLB_MONITOR_NAME_MAX) == 0 );
+                assert( monitoring_region_start(&spd, loop_monitor) == DLB_SUCCESS );
+                assert( monitoring_region_stop(&spd, loop_monitor) == DLB_SUCCESS );
+                assert( shmem_talp__get_num_regions() == i+1 );
+            }
+
+            assert( shmem_talp__get_num_regions() == expected_max_regions );
+            snprintf(name, DLB_MONITOR_NAME_MAX,
+                    "Doesn't fit in shmem (multiplier: %d)", multiplier);
+            assert( monitoring_region_register(&spd, name) != NULL );
+            assert( shmem_talp__get_num_regions() == expected_max_regions );
+            talp_finalize(&spd);
+        }
     }
 
     return 0;

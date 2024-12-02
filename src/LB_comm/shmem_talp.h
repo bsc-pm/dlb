@@ -33,8 +33,8 @@ typedef struct talp_region_list_t {
 } talp_region_list_t;
 
 /* Init */
-int shmem_talp__init(const char *shmem_key, int regions_per_process);
-int shmem_talp_ext__init(const char *shmem_key, int regions_per_process);
+int shmem_talp__init(const char *shmem_key, int shmem_size_multiplier);
+int shmem_talp_ext__init(const char *shmem_key, int shmem_size_multiplier);
 
 /* Finalize */
 int shmem_talp__finalize(pid_t pid);
@@ -55,11 +55,12 @@ int shmem_talp__set_times(int region_id, int64_t mpi_time, int64_t useful_time);
 int shmem_talp__set_avg_cpus(int region_id, float avg_cpus);
 
 /* Misc */
-void shmem_talp__print_info(const char *shmem_key, int regions_per_process);
+void shmem_talp__print_info(const char *shmem_key, int shmem_size_multiplier);
 bool shmem_talp__exists(void);
 bool shmem_talp__initialized(void);
 int  shmem_talp__version(void);
 size_t shmem_talp__size(void);
 int shmem_talp__get_max_regions(void);
+int shmem_talp__get_num_regions(void);
 
 #endif /* SHMEM_TALP_H */

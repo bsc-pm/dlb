@@ -201,7 +201,7 @@ static void monitoring_region_initialize(dlb_monitor_t *monitor, int id, const
                     " processes due to lack of space in the TALP shared memory. Features like"
                     " node report or gathering data from external processes may not work for"
                     " this region. If needed, increase the TALP shared memory capacity using"
-                    " the flag --talp-regions-per-proc. Run dlb -hh for more info.",
+                    " the flag --shm-size-multiplier. Run dlb -hh for more info.",
                     monitor->name);
         } else if (err < DLB_SUCCESS) {
             fatal("Unknown error registering region %s, please report bug at %s",
@@ -610,13 +610,15 @@ void talp_init(subprocess_descriptor_t *spd) {
     spd->talp_info = talp_info;
 
     /* Initialize shared memory */
-    int regions_per_proc = talp_info->flags.have_shmem
-        ? spd->options.talp_regions_per_proc
-        : talp_info->flags.have_minimal_shmem
-            ? 1
-            : 0;
-    if (regions_per_proc > 0) {
-        shmem_talp__init(spd->options.shm_key, regions_per_proc);
+    if (talp_info->flags.have_shmem || talp_info->flags.have_minimal_shmem) {
+        /* If we only need a minimal shmem, its size will be the user-provided
+         * multiplier times 'system_size' (usually, 1 region per process)
+         * Otherwise, we multiply it by DEFAULT_REGIONS_PER_PROC.
+         */
+        enum { DEFAULT_REGIONS_PER_PROC = 100 };
+        int shmem_size_multiplier = spd->options.shm_size_multiplier
+            * (talp_info->flags.have_shmem ? DEFAULT_REGIONS_PER_PROC : 1);
+        shmem_talp__init(spd->options.shm_key, shmem_size_multiplier);
     }
 
     /* Initialize global region monitor

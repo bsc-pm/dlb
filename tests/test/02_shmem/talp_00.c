@@ -46,9 +46,9 @@ int main(int argc, char *argv[]) {
     assert( shmem_talp__get_times(0, NULL, NULL) == DLB_ERR_NOSHMEM );
     assert( shmem_talp__set_times(0, 0, 0) == DLB_ERR_NOSHMEM );
 
-    /* Initialize shared memories */
-    assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );    /* p1_pid and p2_pid */
-    assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );
+    /* Initialize shared memories for p1_pid and p2_pid */
+    assert( shmem_talp__init(SHMEM_KEY, KNOWN_DEFAULT_REGIONS_PER_PROC) == DLB_SUCCESS );
+    assert( shmem_talp__init(SHMEM_KEY, KNOWN_DEFAULT_REGIONS_PER_PROC) == DLB_SUCCESS );
     assert( shmem_talp__exists() );
 
     /* Register some TALP regions */

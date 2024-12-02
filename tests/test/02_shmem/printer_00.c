@@ -47,6 +47,9 @@
 #include "support/array_template.h"
 
 int main(int argc, char *argv[]) {
+
+    enum { SHMEM_TALP_SIZE_MULTIPLIER = 10 };
+
     /* System size */
     enum { SYS_SIZE = 64 };
     mu_init();
@@ -88,8 +91,9 @@ int main(int argc, char *argv[]) {
     assert( default_barrier != NULL );
     barrier_t *barrier1 = shmem_barrier__register("Barrier 1", DLB_BARRIER_LEWI_OFF);
     assert( barrier1 != NULL );
-    assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );    /* p1_pid and p2_pid */
-    assert( shmem_talp__init(SHMEM_KEY, 0) == DLB_SUCCESS );
+    /* p1_pid and p2_pid */
+    assert( shmem_talp__init(SHMEM_KEY, SHMEM_TALP_SIZE_MULTIPLIER) == DLB_SUCCESS );
+    assert( shmem_talp__init(SHMEM_KEY, SHMEM_TALP_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
     /* Enable request queues */
     shmem_cpuinfo__enable_request_queues();
@@ -166,7 +170,7 @@ int main(int argc, char *argv[]) {
     shmem_cpuinfo__print_info(NULL, 0, 0, true);
     shmem_procinfo__print_info(NULL);
     shmem_barrier__print_info(NULL);
-    shmem_talp__print_info(NULL, 0);
+    shmem_talp__print_info(NULL, SHMEM_TALP_SIZE_MULTIPLIER);
 
     /* Finalize shared memories */
     assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0) == DLB_SUCCESS );

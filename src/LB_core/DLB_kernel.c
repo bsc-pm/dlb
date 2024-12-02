@@ -807,7 +807,7 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
             num_columns, print_flags);
     shmem_procinfo__print_info(spd->options.shm_key);
     shmem_barrier__print_info(spd->options.shm_key);
-    shmem_talp__print_info(spd->options.shm_key, 0);
+    shmem_talp__print_info(spd->options.shm_key, spd->options.shm_size_multiplier);
 
     if (!spd->dlb_initialized) {
         options_finalize(&spd->options);

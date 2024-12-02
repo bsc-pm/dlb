@@ -251,8 +251,7 @@ static void check_procinfo_version(void) {
 }
 
 static void check_talp_version(void) {
-    enum { KNOWN_TALP_VERSION = 3 };
-    enum { KNOWN_DEFAULT_REGIONS_PER_PROC = 100 };
+    enum { KNOWN_TALP_VERSION = 4 };
 
     struct DLB_ALIGN_CACHE TalpRegion {
         char name[DLB_MONITOR_NAME_MAX];
@@ -265,13 +264,14 @@ static void check_talp_version(void) {
     struct KnownTalpShdata {
         bool bool1;
         int int1;
+        int int2;
         struct TalpRegion talp_region[];
     };
 
     int version = shmem_talp__version();
     size_t size = shmem_talp__size();
     size_t known_size = sizeof(struct KnownTalpShdata)
-        + sizeof(struct TalpRegion)*mu_get_system_size()*KNOWN_DEFAULT_REGIONS_PER_PROC;
+        + sizeof(struct TalpRegion) * mu_get_system_size();
     fprintf(stderr, "shmem_talp version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_TALP_VERSION );

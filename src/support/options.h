@@ -57,6 +57,7 @@ typedef struct Options {
     int                 lewi_color;
     /* misc */
     char                shm_key[MAX_OPTION_LENGTH];
+    int                 shm_size_multiplier;
     pid_t               preinit_pid;
     debug_opts_t        debug_opts;
     omptm_version_t     omptm_version;

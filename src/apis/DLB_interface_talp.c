@@ -42,19 +42,22 @@ int DLB_TALP_Attach(void) {
     int lewi_color;
     char shm_key[MAX_OPTION_LENGTH];
     char *shm_key_ptr;
+    int shm_size_multiplier;
     spd_enter_dlb(thread_spd);
     if (!thread_spd->dlb_initialized) {
         set_observer_role(true);
-        options_parse_entry("--shm-key", shm_key);
         options_parse_entry("--lewi-color", &lewi_color);
+        options_parse_entry("--shm-key", shm_key);
+        options_parse_entry("--shm-size-multiplier", &shm_size_multiplier);
         shm_key_ptr = shm_key;
     } else {
         lewi_color = thread_spd->options.lewi_color;
         shm_key_ptr = thread_spd->options.shm_key;
+        shm_size_multiplier = thread_spd->options.shm_size_multiplier;
     }
     shmem_cpuinfo_ext__init(shm_key_ptr, lewi_color);
     shmem_procinfo_ext__init(shm_key_ptr);
-    shmem_talp_ext__init(shm_key_ptr, 0);
+    shmem_talp_ext__init(shm_key_ptr, shm_size_multiplier);
     return DLB_SUCCESS;
 }
 

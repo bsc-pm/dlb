@@ -34,7 +34,6 @@
 
 
 enum { NOBODY = 0 };
-enum { DEFAULT_REGIONS_PER_PROC = 100 };
 
 
 typedef struct DLB_ALIGN_CACHE talp_region_t {
@@ -47,15 +46,16 @@ typedef struct DLB_ALIGN_CACHE talp_region_t {
 
 typedef struct {
     bool initialized;
-    int max_regions;
+    int max_regions;    // capacity
+    int num_regions;    // size
     talp_region_t talp_region[];
 } shdata_t;
 
-enum { SHMEM_TALP_VERSION = 3 };
+enum { SHMEM_TALP_VERSION = 4 };
 
 static shmem_handler_t *shm_handler = NULL;
 static shdata_t *shdata = NULL;
-static int regions_per_proc_initialized = 0;
+static int max_regions = 0;
 static const char *shmem_name = "talp";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
@@ -67,11 +67,11 @@ static int subprocesses_attached = 0;
 
 /* This function may be called from shmem_init to cleanup pid */
 static void cleanup_shmem(void *shdata_ptr, int pid) {
+
     bool shmem_empty = true;
     shdata_t *shared_data = shdata_ptr;
-    int region_id;
-    int max_regions = shared_data->max_regions;
-    for (region_id = 0; region_id < max_regions; ++region_id) {
+    int num_regions = shared_data->num_regions;
+    for (int region_id = 0; region_id < num_regions; ++region_id) {
         talp_region_t *talp_region = &shared_data->talp_region[region_id];
         if (talp_region->pid == pid) {
             *talp_region = (const talp_region_t){};
@@ -80,16 +80,15 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
         }
     }
 
-    /* If there are no registered processes, make sure shmem is reset */
+    /* If there are no registered regions, make sure shmem is reset */
     if (shmem_empty) {
         memset(shared_data, 0, shmem_talp__size());
     }
 }
 
 static bool is_shmem_empty(void) {
-    int region_id;
-    int max_regions = shdata->max_regions;
-    for (region_id = 0; region_id < max_regions; ++region_id) {
+    int num_regions = shdata->num_regions;
+    for (int region_id = 0; region_id < num_regions; ++region_id) {
         if (shdata->talp_region[region_id].pid != NOBODY) {
             return false;
         }
@@ -97,14 +96,11 @@ static bool is_shmem_empty(void) {
     return true;
 }
 
-static void open_shmem(const char *shmem_key, int regions_per_process) {
+static void open_shmem(const char *shmem_key, int shmem_size_multiplier) {
     pthread_mutex_lock(&mutex);
     {
         if (shm_handler == NULL) {
-            // Use either requested or default value
-            regions_per_proc_initialized = regions_per_process ?
-                regions_per_process : DEFAULT_REGIONS_PER_PROC;
-
+            max_regions = mu_get_system_size() * shmem_size_multiplier;
             shm_handler = shmem_init((void**)&shdata,
                     &(const shmem_props_t) {
                         .size = shmem_talp__size(),
@@ -133,22 +129,21 @@ static void close_shmem(void) {
     pthread_mutex_unlock(&mutex);
 }
 
-int shmem_talp__init(const char *shmem_key, int regions_per_process) {
+int shmem_talp__init(const char *shmem_key, int shmem_size_multiplier) {
     int error = DLB_SUCCESS;
 
     // Shared memory creation
-    open_shmem(shmem_key, regions_per_process);
+    open_shmem(shmem_key, shmem_size_multiplier);
 
     shmem_lock(shm_handler);
     {
         // Initialize some values if this is the 1st process attached to the shmem
         if (!shdata->initialized) {
             shdata->initialized = true;
-            shdata->max_regions = mu_get_system_size() * (regions_per_process ?
-                    regions_per_process : DEFAULT_REGIONS_PER_PROC);
+            shdata->num_regions = 0;
+            shdata->max_regions = max_regions;
         } else {
-            if (regions_per_process != 0
-                    && shdata->max_regions != regions_per_process * mu_get_system_size()) {
+            if (shdata->max_regions != max_regions) {
                 error = DLB_ERR_INIT;
             }
         }
@@ -156,10 +151,10 @@ int shmem_talp__init(const char *shmem_key, int regions_per_process) {
     shmem_unlock(shm_handler);
 
     if (error == DLB_ERR_INIT) {
-        warning("Cannot initialize TALP shmem for %d regions per process, already"
-                " allocated for %d, accounting for %d processes. Check for DLB_ARGS"
-                " consistency among processes or clean up shared memory.",
-                regions_per_process, shdata->max_regions, mu_get_system_size());
+        warning("Cannot attach to TALP shmem because existing size differ."
+                " Existing shmem size: %d, expected: %d."
+                " Check for DLB_ARGS consistency among processes or clean up shared memory.",
+                shdata->max_regions, max_regions);
     }
 
     if (error < DLB_SUCCESS) {
@@ -171,9 +166,9 @@ int shmem_talp__init(const char *shmem_key, int regions_per_process) {
     return error;
 }
 
-int shmem_talp_ext__init(const char *shmem_key, int regions_per_process) {
+int shmem_talp_ext__init(const char *shmem_key, int shmem_size_multiplier) {
     // Shared memory creation
-    open_shmem(shmem_key, regions_per_process);
+    open_shmem(shmem_key, shmem_size_multiplier);
 
     // External processes don't need to initialize anything
 
@@ -190,9 +185,8 @@ int shmem_talp__finalize(pid_t pid) {
     // Remove all regions associated with pid
     shmem_lock(shm_handler);
     {
-        int region_id;
-        int max_regions = shdata->max_regions;
-        for (region_id = 0; region_id < max_regions; ++region_id) {
+        int num_regions = shdata->num_regions;
+        for (int region_id = 0; region_id < num_regions; ++region_id) {
             talp_region_t *talp_region = &shdata->talp_region[region_id];
             if (talp_region->pid == pid) {
                 *talp_region = (const talp_region_t){};
@@ -232,40 +226,36 @@ int shmem_talp__register(pid_t pid, float avg_cpus, const char *name, int *node_
     int error;
     shmem_lock(shm_handler);
     {
-        /* Iterate until region is found, find an empty spot in the same pass */
-        talp_region_t *empty_spot = NULL;
-        int found_id = -1;
+        /* Regions cannot be removed from shmem_talp.
+         * Search is linear, and append if not found. */
         int region_id;
-        int max_regions = shdata->max_regions;
-        for (region_id = 0; region_id < max_regions; ++region_id) {
+        int num_regions = shdata->num_regions;
+        for (region_id = 0; region_id < num_regions; ++region_id) {
             talp_region_t *talp_region = &shdata->talp_region[region_id];
-            if (empty_spot == NULL
-                    && talp_region->pid == NOBODY) {
-                /* First empty spot */
-                empty_spot = talp_region;
-                found_id = region_id;
-            }
-            else if (talp_region->pid == pid
+            if (talp_region->pid == pid
                     && strncmp(talp_region->name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
                 /* Region was already registered */
-                found_id = region_id;
                 break;
             }
         }
 
-        if (found_id == region_id) {
-            /* Already registered */
-            *node_shared_id = found_id;
+        if (region_id < num_regions) {
+            /* found */
+            *node_shared_id = region_id;
             error = DLB_NOUPDT;
-        } else if (region_id == max_regions && empty_spot != NULL) {
-            /* Register new region */
-            *empty_spot = (const talp_region_t) {.pid = pid, .avg_cpus = avg_cpus};
-            snprintf(empty_spot->name, DLB_MONITOR_NAME_MAX, "%s", name);
-            *node_shared_id = found_id;
-            error = DLB_SUCCESS;
         } else {
-            /* No mem left */
-            error = DLB_ERR_NOMEM;
+            if (num_regions < max_regions) {
+                /* Register new region (region_id points to empty spot) */
+                ++shdata->num_regions;
+                talp_region_t *empty_spot = &shdata->talp_region[region_id];
+                *empty_spot = (const talp_region_t) {.pid = pid, .avg_cpus = avg_cpus};
+                snprintf(empty_spot->name, DLB_MONITOR_NAME_MAX, "%s", name);
+                *node_shared_id = region_id;
+                error = DLB_SUCCESS;
+            } else {
+                /* No mem left */
+                error = DLB_ERR_NOMEM;
+            }
         }
     }
     shmem_unlock(shm_handler);
@@ -284,9 +274,8 @@ int shmem_talp__get_pidlist(pid_t *pidlist, int *nelems, int max_len) {
     *nelems = 0;
     shmem_lock(shm_handler);
     {
-        int region_id;
-        int max_regions = shdata->max_regions;
-        for (region_id = 0; region_id < max_regions && *nelems < max_len; ++region_id) {
+        int num_regions = shdata->num_regions;
+        for (int region_id = 0; region_id < num_regions && *nelems < max_len; ++region_id) {
             pid_t pid = shdata->talp_region[region_id].pid;
             if (pid != NOBODY) {
                 // pid is valid, check if already in pidlist
@@ -317,9 +306,8 @@ int shmem_talp__get_region(talp_region_list_t *region, pid_t pid, const char *na
     int error = DLB_ERR_NOPROC;
     shmem_lock(shm_handler);
     {
-        int region_id;
-        int max_regions = shdata->max_regions;
-        for (region_id = 0; region_id < max_regions; ++region_id) {
+        int num_regions = shdata->num_regions;
+        for (int region_id = 0; region_id < num_regions; ++region_id) {
             talp_region_t *talp_region = &shdata->talp_region[region_id];
             if (talp_region->pid == pid
                     && strncmp(talp_region->name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
@@ -348,9 +336,8 @@ int shmem_talp__get_regionlist(talp_region_list_t *region_list, int *nelems,
     *nelems = 0;
     shmem_lock(shm_handler);
     {
-        int region_id;
-        int max_regions = shdata->max_regions;
-        for (region_id = 0; region_id < max_regions && *nelems < max_len; ++region_id) {
+        int num_regions = shdata->num_regions;
+        for (int region_id = 0; region_id < num_regions && *nelems < max_len; ++region_id) {
             talp_region_t *talp_region = &shdata->talp_region[region_id];
             if (talp_region->pid != NOBODY
                     && strncmp(talp_region->name, name, DLB_MONITOR_NAME_MAX-1) == 0) {
@@ -374,7 +361,8 @@ int shmem_talp__get_regionlist(talp_region_list_t *region_list, int *nelems,
 
 int shmem_talp__get_times(int region_id, int64_t *mpi_time, int64_t *useful_time) {
     if (unlikely(shm_handler == NULL)) return DLB_ERR_NOSHMEM;
-    if (unlikely(region_id >= shdata->max_regions)) return DLB_ERR_NOMEM;
+    if (unlikely(region_id >= max_regions)) return DLB_ERR_NOMEM;
+    if (unlikely(region_id >= shdata->num_regions)) return DLB_ERR_NOENT;
     if (unlikely(region_id < 0)) return DLB_ERR_NOENT;
 
     talp_region_t *talp_region = &shdata->talp_region[region_id];
@@ -393,7 +381,8 @@ int shmem_talp__get_times(int region_id, int64_t *mpi_time, int64_t *useful_time
 
 int shmem_talp__set_times(int region_id, int64_t mpi_time, int64_t useful_time) {
     if (unlikely(shm_handler == NULL)) return DLB_ERR_NOSHMEM;
-    if (unlikely(region_id >= shdata->max_regions)) return DLB_ERR_NOMEM;
+    if (unlikely(region_id >= max_regions)) return DLB_ERR_NOMEM;
+    if (unlikely(region_id >= shdata->num_regions)) return DLB_ERR_NOENT;
     if (unlikely(region_id < 0)) return DLB_ERR_NOENT;
 
     talp_region_t *talp_region = &shdata->talp_region[region_id];
@@ -407,7 +396,8 @@ int shmem_talp__set_times(int region_id, int64_t mpi_time, int64_t useful_time) 
 
 int shmem_talp__set_avg_cpus(int region_id, float avg_cpus) {
     if (unlikely(shm_handler == NULL)) return DLB_ERR_NOSHMEM;
-    if (unlikely(region_id >= shdata->max_regions)) return DLB_ERR_NOMEM;
+    if (unlikely(region_id >= max_regions)) return DLB_ERR_NOMEM;
+    if (unlikely(region_id >= shdata->num_regions)) return DLB_ERR_NOENT;
     if (unlikely(region_id < 0)) return DLB_ERR_NOENT;
 
     talp_region_t *talp_region = &shdata->talp_region[region_id];
@@ -423,12 +413,12 @@ int shmem_talp__set_avg_cpus(int region_id, float avg_cpus) {
 /* Misc                                                                          */
 /*********************************************************************************/
 
-void shmem_talp__print_info(const char *shmem_key, int regions_per_process) {
+void shmem_talp__print_info(const char *shmem_key, int shmem_size_multiplier) {
 
     /* If the shmem is not opened, obtain a temporary fd */
     bool temporary_shmem = shm_handler == NULL;
     if (temporary_shmem) {
-        shmem_talp_ext__init(shmem_key, regions_per_process);
+        shmem_talp_ext__init(shmem_key, shmem_size_multiplier);
     }
 
     /* Make a full copy of the shared memory */
@@ -449,9 +439,8 @@ void shmem_talp__print_info(const char *shmem_key, int regions_per_process) {
     int max_name = 4;       /* 'Name' */
     int max_mpi = 8;        /* 'MPI time' */
     int max_useful = 11;    /* 'Useful time' */
-    int region_id;
-    int max_regions = shdata_copy->max_regions;
-    for (region_id = 0; region_id < max_regions; ++region_id) {
+    int num_regions = shdata_copy->num_regions;
+    for (int region_id = 0; region_id < num_regions; ++region_id) {
         talp_region_t *talp_region = &shdata_copy->talp_region[region_id];
         if (talp_region->pid != NOBODY) {
             int len;
@@ -478,7 +467,7 @@ void shmem_talp__print_info(const char *shmem_key, int regions_per_process) {
     enum { MAX_LINE_LEN = 512 };
     char line[MAX_LINE_LEN];
 
-    for (region_id = 0; region_id < max_regions; ++region_id) {
+    for (int region_id = 0; region_id < num_regions; ++region_id) {
         talp_region_t *talp_region = &shdata_copy->talp_region[region_id];
         if (talp_region->pid != NOBODY) {
 
@@ -526,12 +515,16 @@ int shmem_talp__version(void) {
 }
 
 size_t shmem_talp__size(void) {
-    int regions_per_process = regions_per_proc_initialized ?
-        regions_per_proc_initialized : DEFAULT_REGIONS_PER_PROC;
-    int num_regions = mu_get_system_size() * regions_per_process;
-    return sizeof(shdata_t) + sizeof(talp_region_t)*num_regions;
+    // max_regions contains a value once shmem is initialized,
+    // otherwise return default size
+    return sizeof(shdata_t) + sizeof(talp_region_t) * (
+            max_regions > 0 ? max_regions : mu_get_system_size());
 }
 
 int shmem_talp__get_max_regions(void) {
-    return shdata ? shdata->max_regions : 0;
+    return max_regions;
+}
+
+int shmem_talp__get_num_regions(void) {
+    return shdata->num_regions;
 }

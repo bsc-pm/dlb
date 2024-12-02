@@ -441,10 +441,11 @@ static const opts_dict_t options_dictionary[] = {
         .arg_name       = "--talp-regions-per-proc",
         .default_value  = "100",
         .description    = OFFSET"Number of TALP regions per process to allocate in the shared\n"
-                          OFFSET"memory.",
+                          OFFSET"memory.\n"
+                          OFFSET"Deprecated: use --shmem-size-multiplier instead.\n",
         .offset         = offsetof(options_t, talp_regions_per_proc),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED
     },
     {
         .var_name       = "LB_NULL",
@@ -507,6 +508,21 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"use different shared memories and they will not share resources.",
         .offset         = offsetof(options_t, shm_key),
         .type           = OPT_STR_T,
+        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+    }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--shm-size-multiplier",
+        .default_value  = "1",
+        .description    = OFFSET"DLB allocates its shared memory at the start of execution, with\n"
+                          OFFSET"its size based on the number of CPUs in the node. If you\n"
+                          OFFSET"encounter a DLB_ERR_NOMEM error, you can adjust the multiplier\n"
+                          OFFSET"to increase the shared memory size. As a reference, with the\n"
+                          OFFSET"default multiplier, the typical shared memory size on HPC\n"
+                          OFFSET"machines is under 10 megabytes, so keep that in mind if you\n"
+                          OFFSET"increase its size to allocate more running processes or TALP\n"
+                          OFFSET"regions.",
+        .offset         = offsetof(options_t, shm_size_multiplier),
+        .type           = OPT_INT_T,
         .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
     }, {
         .var_name       = "LB_PREINIT_PID",
