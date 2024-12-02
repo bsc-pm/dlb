@@ -11,7 +11,9 @@ The performance metrics reported by TALP are derived similarly as the `POP metri
 
 The figure below shows the hierarchy of metrics which categorises efficiency-losses into programming-model specific categories.
 
-.. image:: images/talp-efficiency-models.drawio.svg
+
+.. image:: images/talp-efficiency-models.*
+
 
 TALP is able to generate these metrics for :ref:`every region that is added.<talp-custom-regions>`
 

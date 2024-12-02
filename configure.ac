@@ -469,6 +469,7 @@ AC_CONFIG_LINKS([
     doc/user_guide/source/images/LeWI.png:doc/user_guide/source/images/LeWI.png
     doc/user_guide/source/images/talp.png:doc/user_guide/source/images/talp.png
     doc/user_guide/source/images/talp-efficiency-models.drawio.svg:doc/user_guide/source/images/talp-efficiency-models.drawio.svg
+    doc/user_guide/source/images/talp-efficiency-models.png:doc/user_guide/source/images/talp-efficiency-models.png
     doc/user_guide/source/images/ld_preload.png:doc/user_guide/source/images/ld_preload.png
     doc/user_guide/source/_static/custom.css:doc/user_guide/source/_static/custom.css
 ])
