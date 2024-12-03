@@ -3,9 +3,47 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased]
+## [3.5.0] 2024-12-03
 ### Added
- - Asynchronous support for classic LeWI
+- Asynchronous support for classic LeWI
+- Several SMT enhancements for LeWI policies
+- Allowed to override lewi classic/mask with `--lewi-affinity`
+- TALP POP metrics now includes experimental OpenMP hybrid metrics
+- TALP global region is now exposed in the API
+- TALP-Pages, a new tool for Continuous Performance Monitoring in static HTML pages
+- Add flag `--talp-region-select` to filter active regions
+- SLURM integration via `dlb_taskset`
+- CMake config for other projects to link with DLB
+- Several examples and documentation reworked
+- DLB version information can be accessed though the API
+
+### Changed
+- `--talp-summary` has been simplified and now `pop-metrics` also includes raw
+  metrics if using an output file, and `process` metrics now includes node
+  identifiers
+- TALP now only stores monitoring regions in shared memory if
+  `--talp-external-profiler` is set
+- TALP output structure has been reworked
+- TALP main region is now called "Global"
+
+### Fixed
+- LeWI mask now correctly supports threads blocked in MPI calls while pinned to
+  multiple CPUs
+- Add sanity checks for hardware counters in TALP
+- Print JSON and CSV files in the proper locale
+
+### Deprecated
+- `--talp-summary` values for `pop-raw` and `node` are deprecated
+- TALP output format XML is now deprecated
+- `--talp-regions-per-proc` flag is deprecated for a new experimental
+  `--shm-size-multiplier` flag
+- Several fields in `dlb_monitor_t` are now deprecated
+- Several fields in `dlb_pop_metrics_t` are now deprecated
+- `DLB_MonitoringRegionGetMPIRegion` deprecated in favor of
+  `DLB_MonitoringRegionGetGlobal`
+- `DLB_Stats_GetCpuStateIdle` functionality no longer provided
+- `DLB_Stats_GetCpuStateOwned` functionality no longer provided
+- `DLB_Stats_GetCpuStateGuested` functionality no longer provided
 
 ## [3.4.1] 2024-08-16
 ### Fixed
@@ -301,7 +339,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.4...HEAD
+[3.5.0]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.5.0
 [3.4.1]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.4.1
 [3.4]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.4
 [3.3.1]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.3.1
