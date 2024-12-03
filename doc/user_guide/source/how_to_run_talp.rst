@@ -241,6 +241,3 @@ TALP option flags
     ``--talp-region-select=include:global,region3``,
     ``--talp-region-select=exclude:region4``.
 
---talp-regions-per-proc=<int>
-    Number of TALP regions per process to allocate in the shared memory.
-
