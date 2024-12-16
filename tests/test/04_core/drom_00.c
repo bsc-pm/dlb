@@ -43,6 +43,8 @@
 
 int main(int argc, char *argv[]) {
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     enum { SYS_SIZE = 4 };
     mu_testing_set_sys_size(SYS_SIZE);
 
@@ -83,7 +85,7 @@ int main(int argc, char *argv[]) {
     {
         /* DLB_DROM_Attach: */
         assert( shmem_cpuinfo_ext__init(SHMEM_KEY, 0)  == DLB_SUCCESS );
-        assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         /* DLB_DROM_PreInit: */
         assert( shmem_procinfo_ext__preinit(spd.id, &process_mask, 0) == DLB_SUCCESS );

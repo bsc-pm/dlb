@@ -84,7 +84,7 @@ static void check_shmem_sync_version(void) {
 }
 
 static void check_async_version(void) {
-    enum { KNOWN_ASYNC_VERSION = 4 };
+    enum { KNOWN_ASYNC_VERSION = 5 };
     enum { KNOWN_QUEUE_SIZE = 100 };
     struct KnownMessage {
         enum {ENUM1} enum1;
@@ -93,7 +93,7 @@ static void check_async_version(void) {
         cpu_set_t cpu_set;
     };
     enum KnownStatus { status1, status2, status3 };
-    struct KnownAsyncShdata {
+    struct KnownHelper {
         /* Queue attributes */
         struct KnownMessage message[KNOWN_QUEUE_SIZE];
         unsigned int uint1;
@@ -109,10 +109,17 @@ static void check_async_version(void) {
         bool bool1;
         enum KnownStatus status;
     };
+    struct KnownAsyncShdata {
+        bool bool1;
+        int int1;
+        int int2;
+        struct KnownHelper helpers[];
+    };
 
     int version = shmem_async__version();
     size_t size = shmem_async__size();
-    size_t known_size = sizeof(struct KnownAsyncShdata) * mu_get_system_size();
+    size_t known_size = sizeof(struct KnownAsyncShdata)
+        + sizeof(struct KnownHelper) * mu_get_system_size();
     fprintf(stderr, "shmem_async version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_ASYNC_VERSION );
@@ -120,13 +127,13 @@ static void check_async_version(void) {
 }
 
 static void check_barrier_version(void) {
-    enum { KNOWN_BARRIER_VERSION = 6 };
+    enum { KNOWN_BARRIER_VERSION = 7 };
     enum { KNOWN_BARRIER_NAME_MAX = 32 };
     struct KnownBarrierFlags {
         bool flag1:1;
         bool flag2:1;
     };
-    struct KnownBarrierShdata {
+    struct KnownBarrier {
         char char1[KNOWN_BARRIER_NAME_MAX];
         struct KnownBarrierFlags flags;
         unsigned int int2;
@@ -135,10 +142,17 @@ static void check_barrier_version(void) {
         pthread_barrier_t barrier;
         pthread_rwlock_t rwlock;
     };
+    struct KnownBarrierShdata {
+        bool bool1;
+        int int1;
+        int int2;
+        struct KnownBarrier barriers[];
+    };
 
     int version = shmem_barrier__version();
     size_t size = shmem_barrier__size();
-    size_t known_size = sizeof(struct KnownBarrierShdata) * mu_get_system_size();
+    size_t known_size = sizeof(struct KnownBarrierShdata)
+        + sizeof(struct KnownBarrier) * mu_get_system_size();
     fprintf(stderr, "shmem_barrier version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_BARRIER_VERSION );
@@ -174,7 +188,7 @@ static void check_cpuinfo_version(void) {
     int version = shmem_cpuinfo__version();
     size_t size = shmem_cpuinfo__size();
     size_t known_size = sizeof(struct KnownCpuinfoShdata)
-        + sizeof(struct KnownCpuinfo)*mu_get_system_size();
+        + sizeof(struct KnownCpuinfo) * mu_get_system_size();
     fprintf(stderr, "shmem_cpuinfo version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_CPUINFO_VERSION );
@@ -182,7 +196,7 @@ static void check_cpuinfo_version(void) {
 }
 
 static void check_lewi_async_version(void) {
-    enum {KNOWN_LEWI_ASYNC_VERSION = 2 };
+    enum {KNOWN_LEWI_ASYNC_VERSION = 3 };
 
     struct DLB_ALIGN_CACHE KnownLewiProcess {
         pid_t pid;
@@ -191,16 +205,18 @@ static void check_lewi_async_version(void) {
     };
 
     struct KnownLewiAsyncShdata {
-        int int1;
-        int int2;
+        unsigned int uint1;
+        unsigned int uint2;
         queue_lewi_reqs_t reqs;
+        unsigned int uint3;
+        unsigned int uint4;
         struct KnownLewiProcess processes[];
     };
 
     int version = shmem_lewi_async__version();
     size_t size = shmem_lewi_async__size();
     size_t known_size = sizeof(struct KnownLewiAsyncShdata)
-        + sizeof(struct KnownLewiProcess)*mu_get_system_size();
+        + sizeof(struct KnownLewiProcess) * mu_get_system_size();
     fprintf(stderr, "shmem_lewi_async version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_LEWI_ASYNC_VERSION );
@@ -208,7 +224,7 @@ static void check_lewi_async_version(void) {
 }
 
 static void check_procinfo_version(void) {
-    enum { KNOWN_PROCINFO_VERSION = 9 };
+    enum { KNOWN_PROCINFO_VERSION = 10 };
 
     struct DLB_ALIGN_CACHE KnownProcinfo {
         pid_t pid;
@@ -237,13 +253,15 @@ static void check_procinfo_version(void) {
         struct KnownProcinfoFlags flags;
         struct timespec time;
         cpu_set_t mask1;
+        int int1;
+        int int2;
         struct KnownProcinfo info[];
     };
 
     int version = shmem_procinfo__version();
     size_t size = shmem_procinfo__size();
     size_t known_size = sizeof(struct KnownProcinfoShdata)
-        + sizeof(struct KnownProcinfo)*mu_get_system_size();
+        + sizeof(struct KnownProcinfo) * mu_get_system_size();
     fprintf(stderr, "shmem_procinfo version %d, size: %zu, known_size: %zu\n",
             version, size, known_size);
     assert( version == KNOWN_PROCINFO_VERSION );

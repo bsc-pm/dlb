@@ -61,7 +61,8 @@ int DLB_Finalize(void) {
          */
         shmem_procinfo__finalize(thread_spd->id,
                 thread_spd->options.debug_opts & DBG_RETURNSTOLEN,
-                thread_spd->options.shm_key);
+                thread_spd->options.shm_key,
+                thread_spd->options.shm_size_multiplier);
         return DLB_SUCCESS;
     }
     return DLB_NOUPDT;

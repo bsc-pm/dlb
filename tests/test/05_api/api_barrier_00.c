@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
             pid_t pid = fork();
             assert( pid >= 0 );
             if (pid == 0) {
-                // All childs initialize DLB, LeWI enabled for this test
+                // All children initialize DLB, LeWI enabled for this test
                 char options_plus_lewi[72];
                 snprintf(options_plus_lewi, 72, "--lewi %s", options);
                 assert( DLB_Init(0, 0, options_plus_lewi) == DLB_SUCCESS );
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
                 assert( DLB_Finalize() == DLB_SUCCESS );
                 shmem_finalize(handler, NULL);
 
-                // We need to call _exit so that childs don't call assert_shmem destructors,
+                // We need to call _exit so that children don't call assert_shmem destructors,
                 // but that prevents gcov reports, so we'll call it if defined
                 if (__gcov_flush) __gcov_flush();
                 _exit(EXIT_SUCCESS);
@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
             pid_t pid = fork();
             assert( pid >= 0 );
             if (pid == 0) {
-                // All childs initialize DLB
+                // All children initialize DLB
                 assert( DLB_Init(0, 0, options) == DLB_SUCCESS );
 
                 // Child 1 does DLB_BarrierDetach
@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
                 assert( DLB_Finalize() == DLB_SUCCESS );
                 shmem_finalize(handler, NULL);
 
-                // We need to call _exit so that childs don't call assert_shmem destructors,
+                // We need to call _exit so that children don't call assert_shmem destructors,
                 // but that prevents gcov reports, so we'll call it if defined
                 if (__gcov_flush) __gcov_flush();
                 _exit(EXIT_SUCCESS);

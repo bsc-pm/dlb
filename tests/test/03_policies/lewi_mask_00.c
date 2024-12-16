@@ -63,12 +63,12 @@ int main( int argc, char **argv ) {
     sched_getaffinity(0, sizeof(cpu_set_t), &spd.process_mask);
 
     // Initialize shmems and callbacks
-    assert( shmem_procinfo__init(spd.id, 0, &spd.process_mask, NULL, spd.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_procinfo__init(spd.id, 0, &spd.process_mask, NULL, spd.options.shm_key,
+                spd.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( shmem_cpuinfo__init(spd.id, 0, &spd.process_mask, spd.options.shm_key,
                 spd.options.lewi_color) == DLB_SUCCESS );
-    assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask, spd.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_async_init(spd.id, &spd.pm, &spd.process_mask,
+                spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( pm_callback_set(&spd.pm, dlb_callback_enable_cpu,
                 (dlb_callback_t)cb_enable_cpu, NULL) == DLB_SUCCESS );
     assert( pm_callback_set(&spd.pm, dlb_callback_disable_cpu,
@@ -101,7 +101,8 @@ int main( int argc, char **argv ) {
     // Finalize shmems
     assert( shmem_cpuinfo__finalize(spd.id, spd.options.shm_key, spd.options.lewi_color)
             == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(spd.id, false, spd.options.shm_key) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(spd.id, false, spd.options.shm_key,
+                spd.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( shmem_async_finalize(spd.id) == DLB_SUCCESS );
 
     return 0;

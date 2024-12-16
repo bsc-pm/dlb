@@ -49,6 +49,8 @@ struct data {
 
 int main(int argc, char **argv) {
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     /* Test multiple barriers with one process */
     {
         options_t options;
@@ -59,7 +61,7 @@ int main(int argc, char **argv) {
 
         printf("Testing multiple barriers with one process\n");
 
-        shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         int max_barriers = shmem_barrier__get_max_barriers();
         barrier_t *barrier0 = shmem_barrier__register("Barrier 0", DLB_BARRIER_LEWI_OFF);
         assert( barrier0 != NULL );
@@ -82,7 +84,7 @@ int main(int argc, char **argv) {
         }
 
         assert( shmem_barrier__detach(barrier0) == 0 );
-        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
     }
 
     /* Test multiple barriers with one process */
@@ -92,7 +94,7 @@ int main(int argc, char **argv) {
         debug_init(&options);
         spd_enter_dlb(NULL);
         thread_spd->id = getpid();
-        shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
 
         printf("Testing multiple barriers with one process\n");
         uint16_t max_barriers = (uint16_t)shmem_barrier__get_max_barriers();
@@ -116,7 +118,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
     }
 
     return EXIT_SUCCESS;

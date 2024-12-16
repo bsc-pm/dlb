@@ -55,6 +55,7 @@ tests = {
     'shmem_fail_01'       : {'should_fail': true},
     'shmem_lewi_async_00' : {},
     'shmem_lewi_async_01' : {},
+    'shmem_size_00'       : {},
     'shmem_talp_00'       : {'source' : 'talp_00.c'},
     'shmem_versions_00'   : {},
   },

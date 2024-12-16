@@ -42,6 +42,8 @@ void __gcov_flush() __attribute__((weak));
 
 int main(int argc, char *argv[]) {
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     pid_t pid;
     cpu_set_t process_mask;
     mu_parse_mask("0", &process_mask);
@@ -52,9 +54,10 @@ int main(int argc, char *argv[]) {
     if (pid == 0) {
         pid_t child_pid = getpid();
         assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
-        assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
-        shmem_barrier__init(SHMEM_KEY);
+        assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY, 1) == DLB_SUCCESS );
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         shmem_barrier__register("barrier", 0);
         ConfigShMem(1, 0, SHMEM_KEY);
 
@@ -70,9 +73,10 @@ int main(int argc, char *argv[]) {
     if (pid == 0) {
         pid_t child_pid = getpid();
         assert( shmem_cpuinfo__init(child_pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
-        assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY) == DLB_SUCCESS );
-        shmem_barrier__init(SHMEM_KEY);
+        assert( shmem_procinfo__init(child_pid, 0, &process_mask, NULL, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
+        assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY, 1) == DLB_SUCCESS );
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         barrier_t *barrier = shmem_barrier__register("barrier", 0);
         assert( barrier != NULL );
         ConfigShMem(1, 0, SHMEM_KEY);
@@ -81,10 +85,11 @@ int main(int argc, char *argv[]) {
         shmem_barrier__barrier(barrier);
 
         assert( shmem_cpuinfo__finalize(child_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
-        assert( shmem_procinfo__finalize(child_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(child_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
         assert( shmem_async_finalize(child_pid) == DLB_SUCCESS );
         assert( shmem_barrier__detach(barrier) == 0 );
-        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         finalize_comm();
 
         exit(EXIT_SUCCESS);

@@ -28,14 +28,15 @@
 
 /* Init / Register */
 int shmem_procinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_mask,
-        cpu_set_t *new_process_mask, const char *shmem_key);
+        cpu_set_t *new_process_mask, const char *shmem_key, int shmem_size_multiplier);
 int shmem_procinfo__init_with_cpu_sharing(pid_t pid, pid_t preinit_pid,
-        const cpu_set_t *process_mask, const char *shmem_key);
-int shmem_procinfo_ext__init(const char *shmem_key);
+        const cpu_set_t *process_mask, const char *shmem_key, int shmem_size_multiplier);
+int shmem_procinfo_ext__init(const char *shmem_key, int shmem_size_multiplier);
 int shmem_procinfo_ext__preinit(pid_t pid, const cpu_set_t *mask, dlb_drom_flags_t flags);
 
 /* Finalize / Unregister */
-int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_key);
+int shmem_procinfo__finalize(pid_t pid, bool return_stolen, const char *shmem_key,
+        int shmem_size_multiplier);
 int shmem_procinfo_ext__finalize(void);
 int shmem_procinfo_ext__postfinalize(pid_t pid, bool return_stolen);
 int shmem_procinfo_ext__recover_stolen_cpus(int pid);
@@ -63,7 +64,7 @@ int  shmem_procinfo__setcpuusage(pid_t pid, int index, double new_usage);
 int  shmem_procinfo__setcpuavgusage(pid_t pid, double new_avg_usage);
 
 /* Misc */
-void shmem_procinfo__print_info(const char *shmem_key);
+void shmem_procinfo__print_info(const char *shmem_key, int shmem_size_multiplier);
 bool shmem_procinfo__exists(void);
 int  shmem_procinfo__version(void);
 size_t shmem_procinfo__size(void);

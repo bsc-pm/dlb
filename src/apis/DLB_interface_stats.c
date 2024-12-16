@@ -34,7 +34,9 @@
 int DLB_Stats_Init(void) {
     char shm_key[MAX_OPTION_LENGTH];
     options_parse_entry("--shm-key", &shm_key);
-    shmem_procinfo_ext__init(shm_key);
+    int shm_size_multiplier;
+    options_parse_entry("--shm-size-multiplier", &shm_size_multiplier);
+    shmem_procinfo_ext__init(shm_key, shm_size_multiplier);
     return DLB_SUCCESS;
 }
 

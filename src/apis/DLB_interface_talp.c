@@ -56,7 +56,7 @@ int DLB_TALP_Attach(void) {
         shm_size_multiplier = thread_spd->options.shm_size_multiplier;
     }
     shmem_cpuinfo_ext__init(shm_key_ptr, lewi_color);
-    shmem_procinfo_ext__init(shm_key_ptr);
+    shmem_procinfo_ext__init(shm_key_ptr, shm_size_multiplier);
     shmem_talp_ext__init(shm_key_ptr, shm_size_multiplier);
     return DLB_SUCCESS;
 }

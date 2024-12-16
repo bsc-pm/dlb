@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     debug_init(&spd1.options);
     assert( pm_callback_set(&spd1.pm, dlb_callback_set_num_threads,
                 (dlb_callback_t)sp1_set_num_threads_callback, NULL) == DLB_SUCCESS );
-    assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask, spd1.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask,
+                spd1.options.shm_key, spd1.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( lewi_async_Init(&spd1) == DLB_SUCCESS );
 
     // sp2 Init
@@ -89,8 +89,8 @@ int main(int argc, char *argv[]) {
     mu_get_system_mask(&spd2.process_mask);
     assert( pm_callback_set(&spd2.pm, dlb_callback_set_num_threads,
                 (dlb_callback_t)sp2_set_num_threads_callback, NULL) == DLB_SUCCESS );
-    assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask, spd2.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_async_init(spd2.id, &spd2.pm, &spd2.process_mask,
+                spd2.options.shm_key, spd2.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( lewi_async_Init(&spd2) == DLB_SUCCESS );
 
     // sp3 Init
@@ -100,8 +100,8 @@ int main(int argc, char *argv[]) {
     mu_get_system_mask(&spd3.process_mask);
     assert( pm_callback_set(&spd3.pm, dlb_callback_set_num_threads,
                 (dlb_callback_t)sp3_set_num_threads_callback, NULL) == DLB_SUCCESS );
-    assert( shmem_async_init(spd3.id, &spd3.pm, &spd3.process_mask, spd3.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_async_init(spd3.id, &spd3.pm, &spd3.process_mask,
+                spd3.options.shm_key, spd3.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( lewi_async_Init(&spd3) == DLB_SUCCESS );
 
     // sp4 Init
@@ -111,8 +111,8 @@ int main(int argc, char *argv[]) {
     mu_get_system_mask(&spd4.process_mask);
     assert( pm_callback_set(&spd4.pm, dlb_callback_set_num_threads,
                 (dlb_callback_t)sp4_set_num_threads_callback, NULL) == DLB_SUCCESS );
-    assert( shmem_async_init(spd4.id, &spd4.pm, &spd4.process_mask, spd4.options.shm_key)
-            == DLB_SUCCESS );
+    assert( shmem_async_init(spd4.id, &spd4.pm, &spd4.process_mask,
+                spd4.options.shm_key, spd4.options.shm_size_multiplier) == DLB_SUCCESS );
     assert( lewi_async_Init(&spd4) == DLB_SUCCESS );
 
     /* Test requests */

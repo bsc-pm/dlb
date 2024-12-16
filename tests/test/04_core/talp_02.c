@@ -134,8 +134,8 @@ int main(int argc, char *argv[]) {
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
         assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
-                NULL, spd.options.shm_key) == DLB_SUCCESS );
-        shmem_barrier__init(spd.options.shm_key);
+                NULL, spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
+        shmem_barrier__init(spd.options.shm_key, spd.options.shm_size_multiplier);
         node_barrier_init(&spd);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
@@ -174,9 +174,9 @@ int main(int argc, char *argv[]) {
         talp_mpi_finalize(&spd);
         talp_finalize(&spd);
         node_barrier_finalize(&spd);
-        shmem_barrier__finalize(spd.options.shm_key);
-        assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
-                == DLB_SUCCESS );
+        shmem_barrier__finalize(spd.options.shm_key, spd.options.shm_size_multiplier);
+        assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false,
+                    spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
     }
 
     /* Single thread + observer thread */
@@ -186,8 +186,8 @@ int main(int argc, char *argv[]) {
         options_init(&spd.options, options);
         mu_parse_mask("0", &spd.process_mask);
         assert( shmem_procinfo__init(spd.id, /* preinit_pid */ 0, &spd.process_mask,
-                NULL, spd.options.shm_key) == DLB_SUCCESS );
-        shmem_barrier__init(spd.options.shm_key);
+                NULL, spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
+        shmem_barrier__init(spd.options.shm_key, spd.options.shm_size_multiplier);
         node_barrier_init(&spd);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
@@ -219,9 +219,9 @@ int main(int argc, char *argv[]) {
         talp_mpi_finalize(&spd);
         talp_finalize(&spd);
         node_barrier_finalize(&spd);
-        shmem_barrier__finalize(spd.options.shm_key);
-        assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false, spd.options.shm_key)
-                == DLB_SUCCESS );
+        shmem_barrier__finalize(spd.options.shm_key, spd.options.shm_size_multiplier);
+        assert( shmem_procinfo__finalize(spd.id, /* return_stolen */ false,
+                    spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
     }
 
     return 0;

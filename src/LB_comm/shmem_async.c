@@ -80,10 +80,13 @@ typedef struct {
 
 
 typedef struct {
+    bool initialized;
+    int max_helpers;    // capacity
+    int num_helpers;    // size
     helper_t helpers[0];
 } shdata_t;
 
-enum { SHMEM_ASYNC_VERSION = 4 };
+enum { SHMEM_ASYNC_VERSION = 5 };
 
 static int max_helpers = 0;
 static shdata_t *shdata = NULL;
@@ -93,8 +96,8 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
 
 static helper_t* get_helper(pid_t pid) {
-    int h;
-    for (h = 0; shdata && h < max_helpers; ++h) {
+    int num_helpers = shdata ? shdata->num_helpers : 0;
+    for (int h = 0; shdata && h < num_helpers; ++h) {
         if (shdata->helpers[h].pid == pid) {
             return &shdata->helpers[h];
         }
@@ -220,15 +223,16 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
 }
 
 int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *process_mask,
-        const char *shmem_key) {
-    int error = DLB_ERR_UNKNOWN;
+        const char *shmem_key, int shmem_size_multiplier) {
+
+    int error = DLB_SUCCESS;
     verbose(VB_ASYNC, "Creating helper thread");
 
     // Shared memory creation
     pthread_mutex_lock(&mutex);
     {
         if (shm_handler == NULL) {
-            max_helpers = mu_get_system_size();
+            max_helpers = mu_get_system_size() * shmem_size_multiplier;
             shm_handler = shmem_init((void**)&shdata,
                     &(const shmem_props_t) {
                         .size = shmem_async__size(),
@@ -248,8 +252,17 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *proce
     // Lock shmem to register new subprocess
     shmem_lock(shm_handler);
     {
-        int h;
-        for (h = 0; h < max_helpers; ++h) {
+        if (!shdata->initialized) {
+            shdata->initialized = true;
+            shdata->num_helpers = 0;
+            shdata->max_helpers = max_helpers;
+        } else {
+            if (shdata->max_helpers != max_helpers) {
+                error = DLB_ERR_INIT;
+            }
+        }
+
+        for (int h = 0; h < max_helpers && !error; ++h) {
             // Register helper
             if (shdata->helpers[h].pid == NOBODY) {
                 helper = &shdata->helpers[h];
@@ -279,16 +292,29 @@ int shmem_async_init(pid_t pid, const pm_interface_t *pm, const cpu_set_t *proce
                 memcpy(&helper->mask, process_mask, sizeof(cpu_set_t));
                 pthread_create(&helper->pth, NULL, thread_start, (void*)helper);
 
-                error = DLB_SUCCESS;
+                ++shdata->num_helpers;
                 break;
             }
         }
     }
     shmem_unlock(shm_handler);
 
-    if (helper == NULL) {
+    if (helper == NULL && error == DLB_SUCCESS) {
         error = DLB_ERR_NOMEM;
         warn_error(DLB_ERR_NOMEM);
+    }
+
+    if (error == DLB_ERR_INIT) {
+        warning("Cannot attach to shmem_async because existing size differ."
+                " Existing shmem size: %d, expected: %d."
+                " Check for DLB_ARGS consistency among processes or clean up shared memory.",
+                shdata->max_helpers, max_helpers);
+    }
+
+    if (error < DLB_SUCCESS) {
+        shmem_finalize(shm_handler, NULL);
+        shm_handler = NULL;
+        shdata = NULL;
     }
 
     return error;
@@ -382,7 +408,10 @@ int shmem_async__version(void) {
     return SHMEM_ASYNC_VERSION;
 }
 size_t shmem_async__size(void) {
-    return sizeof(shdata_t) + sizeof(helper_t)*mu_get_system_size();
+    // max_helpers contains a value once shmem is initialized,
+    // otherwise return default size
+    return sizeof(shdata_t) + sizeof(helper_t) * (
+            max_helpers > 0 ? max_helpers : mu_get_system_size());
 }
 
 /* Only for testing purposes. Block current thread until helper thread

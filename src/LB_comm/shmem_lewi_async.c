@@ -42,19 +42,20 @@ typedef struct lewi_async_shdata {
     unsigned int        idle_cpus;
     unsigned int        attached_nprocs;
     queue_lewi_reqs_t   requests;       /* queue of requests */
-    unsigned int        proc_list_head;
+    unsigned int        max_processes;  /* list capacity */
+    unsigned int        proc_list_head; /* list upper-bound */
     lewi_process_t      processes[];    /* per-process lewi data */
 } lewi_async_shdata_t;
 
 enum { NOBODY = 0 };
-enum { SHMEM_LEWI_ASYNC_VERSION = 2 };
+enum { SHMEM_LEWI_ASYNC_VERSION = 3 };
 
 static lewi_async_shdata_t *shdata = NULL;
 static shmem_handler_t *shm_handler = NULL;
 static const char *shmem_name = "lewi_async";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int subprocesses_attached = 0;
-static int max_processes;
+static unsigned int max_processes = 0;
 static lewi_process_t *my_process = NULL;
 
 
@@ -76,6 +77,18 @@ static void cleanup_shmem(void *shdata_ptr, int pid) {
 
 static bool is_shmem_empty(void) {
     return shdata && shdata->attached_nprocs == 0;
+}
+
+static void close_shmem(void) {
+    pthread_mutex_lock(&mutex);
+    {
+        if (--subprocesses_attached == 0) {
+            shmem_finalize(shm_handler, is_shmem_empty);
+            shm_handler = NULL;
+            shdata = NULL;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
 }
 
 static lewi_process_t* get_process(pid_t pid) {
@@ -105,7 +118,10 @@ int shmem_lewi_async__version(void) {
 }
 
 size_t shmem_lewi_async__size(void) {
-    return sizeof(lewi_async_shdata_t) + sizeof(lewi_process_t)*mu_get_system_size();
+    // max_processes contains a value once shmem is initialized,
+    // otherwise return default size
+    return sizeof(lewi_async_shdata_t) + sizeof(lewi_process_t) * (
+            max_processes > 0 ? max_processes : (unsigned)mu_get_system_size());
 }
 
 
@@ -141,10 +157,11 @@ unsigned int shmem_lewi_async__get_num_requests(pid_t pid) {
 /*  Init                                                                         */
 /*********************************************************************************/
 
-static void open_shmem(const char *shmem_key) {
+static void open_shmem(const char *shmem_key, int shmem_size_multiplier) {
     pthread_mutex_lock(&mutex);
     {
         if (shm_handler == NULL) {
+            max_processes = mu_get_system_size() * shmem_size_multiplier;
             shm_handler = shmem_init((void**)&shdata,
                     &(const shmem_props_t) {
                         .size = shmem_lewi_async__size(),
@@ -154,7 +171,6 @@ static void open_shmem(const char *shmem_key) {
                         .cleanup_fn = cleanup_shmem,
                     });
             subprocesses_attached = 1;
-            max_processes = mu_get_system_size();
         } else {
             ++subprocesses_attached;
         }
@@ -162,42 +178,74 @@ static void open_shmem(const char *shmem_key) {
     pthread_mutex_unlock(&mutex);
 }
 
-void shmem_lewi_async__init(pid_t pid, unsigned int ncpus, const char *shmem_key) {
+int shmem_lewi_async__init(pid_t pid, unsigned int ncpus,
+        const char *shmem_key, int shmem_size_multiplier) {
+
+    int error = DLB_SUCCESS;
+
     verbose(VB_SHMEM, "Initializing LeWI_async shared memory");
 
     // Shared memory creation
-    open_shmem(shmem_key);
+    open_shmem(shmem_key, shmem_size_multiplier);
 
     shmem_lock(shm_handler);
     {
         if (++shdata->attached_nprocs == 1) {
             // first attached process, initialize common structures
+            shdata->max_processes = max_processes;
             shdata->idle_cpus = 0;
             queue_lewi_reqs_init(&shdata->requests);
-        }
-
-        // Iterate the processes array to find a free spot
-        lewi_process_t *process = NULL;
-        for (int p = 0; p < max_processes; ++p) {
-            if (shdata->processes[p].pid == NOBODY) {
-                process = &shdata->processes[p];
-                /* save the highest upper bound to iterate faster */
-                shdata->proc_list_head = max_int(shdata->proc_list_head, p+1);
-                break;
+        } else {
+            if (shdata->max_processes != max_processes) {
+                error = DLB_ERR_INIT;
             }
         }
 
-        // Assign this process initial data
-        if (process != NULL) {
-            *process = (const lewi_process_t) {
-                .pid = pid,
-                .initial_ncpus = ncpus,
-                .current_ncpus = ncpus,
-            };
-            my_process = process;
+        if (error == DLB_SUCCESS) {
+            // Iterate the processes array to find a free spot
+            lewi_process_t *process = NULL;
+            for (unsigned int p = 0; p < max_processes; ++p) {
+                if (shdata->processes[p].pid == NOBODY) {
+                    process = &shdata->processes[p];
+                    /* save the highest upper bound to iterate faster */
+                    shdata->proc_list_head = max_int(shdata->proc_list_head, p+1);
+                    break;
+                }
+            }
+
+            // Assign this process initial data
+            if (process != NULL) {
+                *process = (const lewi_process_t) {
+                    .pid = pid,
+                    .initial_ncpus = ncpus,
+                    .current_ncpus = ncpus,
+                };
+                my_process = process;
+            } else {
+                error = DLB_ERR_NOMEM;
+            }
+        }
+
+        if (error < DLB_SUCCESS) {
+            --shdata->attached_nprocs;
         }
     }
     shmem_unlock(shm_handler);
+
+    if (error == DLB_ERR_INIT) {
+         warning("Cannot attach to LeWI async shmem because existing size differ."
+                 " Existing shmem size: %d, expected: %d."
+                 " Check for DLB_ARGS consistency among processes or clean up shared memory.",
+                 shdata->max_processes, max_processes);
+    }
+
+    if (error < DLB_SUCCESS) {
+        // The shared memory contents are untouched, but the counter needs to
+        // be decremented, and the shared memory deleted if needed
+        close_shmem();
+    }
+
+    return error;
 }
 
 
@@ -255,18 +303,6 @@ static int reset_process(lewi_process_t *process, lewi_request_t *requests,
     }
 
     return error;
-}
-
-static void close_shmem(void) {
-    pthread_mutex_lock(&mutex);
-    {
-        if (--subprocesses_attached == 0) {
-            shmem_finalize(shm_handler, is_shmem_empty);
-            shm_handler = NULL;
-            shdata = NULL;
-        }
-    }
-    pthread_mutex_unlock(&mutex);
 }
 
 void shmem_lewi_async__finalize(pid_t pid, unsigned int *new_ncpus,

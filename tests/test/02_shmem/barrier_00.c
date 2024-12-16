@@ -55,6 +55,8 @@ void* barrier_fn(void *arg) {
 
 int main(int argc, char **argv) {
 
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     const char *barrier_name = "barrier";
     bool lewi = false;
 
@@ -67,13 +69,13 @@ int main(int argc, char **argv) {
         thread_spd->id = getpid();
 
         printf("Testing barrier with one process\n");
-        shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         assert( shmem_barrier__register(NULL, lewi) == NULL );
         assert( shmem_barrier__find(NULL) == NULL );
         barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
         assert( barrier != NULL );
         shmem_barrier__barrier(barrier);
-        shmem_barrier__print_info(SHMEM_KEY);
+        shmem_barrier__print_info(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         assert( shmem_barrier__attach(barrier) == 2 );
         assert( shmem_barrier__attach(barrier) == 3 );
         assert( shmem_barrier__detach(barrier) == 2 );
@@ -89,7 +91,7 @@ int main(int argc, char **argv) {
         pthread_join(thread2, NULL);
         assert( shmem_barrier__detach(barrier) == 1 );
 
-        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
     }
 
     /* Test that multiple initialize or finalize does not cause errors */
@@ -101,21 +103,21 @@ int main(int argc, char **argv) {
         thread_spd->id = getpid();
 
         printf("Testing multiple init/finalize\n");
-        shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
         assert( barrier != NULL );
         barrier_t *barrier_copy = shmem_barrier__find(barrier_name);
         assert( barrier == barrier_copy);
         assert( shmem_barrier__attach(barrier) == 2 );
-        shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         assert( shmem_barrier__attach(barrier) == 3 );
         assert( shmem_barrier__exists() );
         assert( shmem_barrier__detach(barrier) == 2 );
-        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         assert( !shmem_barrier__exists() );
         assert( shmem_barrier__detach(barrier) == DLB_ERR_NOSHMEM );
-        shmem_barrier__finalize(SHMEM_KEY);
-        shmem_barrier__init(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
+        shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         barrier = shmem_barrier__register(barrier_name, lewi);
         assert( barrier != NULL );
         assert( shmem_barrier__exists() );
@@ -124,9 +126,9 @@ int main(int argc, char **argv) {
         assert( shmem_barrier__attach(barrier) == DLB_ERR_PERM );
         shmem_barrier__barrier(barrier); /* no effect */
         assert( shmem_barrier__find(NULL) == NULL );
-        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         assert( shmem_barrier__detach(barrier) == DLB_ERR_NOSHMEM );
-        shmem_barrier__finalize(SHMEM_KEY);
+        shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         assert( shmem_barrier__detach(NULL) == DLB_ERR_UNKNOWN );
         assert( !shmem_barrier__exists() );
         assert( shmem_barrier__find(NULL) == NULL );
@@ -159,13 +161,13 @@ int main(int argc, char **argv) {
             pid_t pid = fork();
             assert( pid >= 0 );
             if (pid == 0) {
-                // All childs initialize DLB
+                // All children initialize DLB
                 options_t options;
                 options_init(&options, NULL);
                 debug_init(&options);
                 spd_enter_dlb(NULL);
                 thread_spd->id = getpid();
-                shmem_barrier__init(SHMEM_KEY);
+                shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
                 barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
                 assert( barrier != NULL );
 
@@ -188,15 +190,15 @@ int main(int argc, char **argv) {
 
                 // Only one process prints shmem info
                 if (child == 1) {
-                    shmem_barrier__print_info(SHMEM_KEY);
+                    shmem_barrier__print_info(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
                 }
 
                 // Finalize both shared memories
                 assert( shmem_barrier__detach(barrier) >= 0 );
-                shmem_barrier__finalize(SHMEM_KEY);
+                shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
                 shmem_finalize(handler, NULL);
 
-                // We need to call _exit so that childs don't call assert_shmem destructors,
+                // We need to call _exit so that children don't call assert_shmem destructors,
                 // but that prevents gcov reports, so we'll call it if defined
                 if (__gcov_flush) __gcov_flush();
                 _exit(EXIT_SUCCESS);
@@ -247,13 +249,13 @@ int main(int argc, char **argv) {
             pid_t pid = fork();
             assert( pid >= 0 );
             if (pid == 0) {
-                // All childs initialize DLB
+                // All children initialize DLB
                 options_t options;
                 options_init(&options, NULL);
                 debug_init(&options);
                 spd_enter_dlb(NULL);
                 thread_spd->id = getpid();
-                shmem_barrier__init(SHMEM_KEY);
+                shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
                 barrier_t *barrier = shmem_barrier__register(barrier_name, lewi);
                 assert( barrier != NULL );
 
@@ -281,17 +283,17 @@ int main(int argc, char **argv) {
 
                 // Only one process prints shmem info
                 if (child == 2) {
-                    shmem_barrier__print_info(SHMEM_KEY);
+                    shmem_barrier__print_info(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
                 }
 
                 // Finalize both shared memories
                 if (child != 1) {
                     assert( shmem_barrier__detach(barrier) >= 0 );
                 }
-                shmem_barrier__finalize(SHMEM_KEY);
+                shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
                 shmem_finalize(handler, NULL);
 
-                // We need to call _exit so that childs don't call assert_shmem destructors,
+                // We need to call _exit so that children don't call assert_shmem destructors,
                 // but that prevents gcov reports, so we'll call it if defined
                 if (__gcov_flush) __gcov_flush();
                 _exit(EXIT_SUCCESS);

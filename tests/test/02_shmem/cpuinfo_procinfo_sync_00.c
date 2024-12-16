@@ -49,6 +49,9 @@ struct data {
 };
 
 int main( int argc, char **argv ) {
+
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     // This test needs at least room for 4 CPUs
     enum { SYS_SIZE = 4 };
     mu_init();
@@ -85,13 +88,14 @@ int main( int argc, char **argv ) {
 
         /* Parent initilizes sub-process */
         if (new_pid > 0) {
-            assert( shmem_procinfo__init(pid, 0, &mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_procinfo__init(pid, 0, &mask, NULL, SHMEM_KEY,
+                        SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
             assert( shmem_cpuinfo__init(pid, 0, &mask, SHMEM_KEY, 0) == DLB_SUCCESS );
         }
 
         /* Child initilizes external */
         if (new_pid == 0) {
-            assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+            assert( shmem_procinfo_ext__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
         }
 
         /* Both processes synchronize */
@@ -160,7 +164,8 @@ int main( int argc, char **argv ) {
 
     /* Finalize sub-process */
     assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+            == DLB_SUCCESS );
 
     return 0;
 }

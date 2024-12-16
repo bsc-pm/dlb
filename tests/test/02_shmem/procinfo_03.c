@@ -70,6 +70,9 @@ static void* poll_drom(void *arg) {
 }
 
 int main( int argc, char **argv ) {
+
+    enum { SHMEM_SIZE_MULTIPLIER = 1 };
+
     // This test needs at least room for 4 CPUs
     enum { SYS_SIZE = 4 };
     mu_init();
@@ -82,16 +85,18 @@ int main( int argc, char **argv ) {
     pid_t p1_pid = 111;
     cpu_set_t p1_mask;
     memcpy(&p1_mask, &original_p1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p1_pid, 0, &p1_mask, NULL, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
     // Initialize sub-process 2
     pid_t p2_pid = 222;
     cpu_set_t p2_mask;
     memcpy(&p2_mask, &original_p2_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__init(p2_pid, 0, &p2_mask, NULL, SHMEM_KEY,
+                SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
     // Initialize external
-    assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
     // Sub-process 3
     pid_t p3_pid = 333;
@@ -229,8 +234,10 @@ int main( int argc, char **argv ) {
     }
 
     // Finalize sub-processes
-    assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-    assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p1_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+            == DLB_SUCCESS );
+    assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+            == DLB_SUCCESS );
 
     // Partial CPU inheritance: [0-3] -> [1-3],[0] -> [2-3],[0],[1]
     {
@@ -243,7 +250,8 @@ int main( int argc, char **argv ) {
 
         // p2 inherits CPU 0
         mu_parse_mask("0", &p2_mask);
-        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_NOTED );
         assert( CPU_EQUAL(&p2_mask, &mask) );
 
         // p1 still owns CPUs [1-3]
@@ -253,7 +261,8 @@ int main( int argc, char **argv ) {
 
         // p3 inherits CPU 1
         mu_parse_mask("1", &p3_mask);
-        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_NOTED );
         assert( CPU_EQUAL(&p3_mask, &mask) );
 
         // p1 still owns CPUs [2-3]
@@ -265,8 +274,10 @@ int main( int argc, char **argv ) {
         assert( shmem_procinfo_ext__postfinalize(p1_pid, false) == DLB_SUCCESS );
 
         // finalize
-        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
     }
 
     // Inheritance + expansion: [0-2] -> [0-3]
@@ -279,14 +290,16 @@ int main( int argc, char **argv ) {
 
         // p2 wants to register [0-3]
         mu_parse_mask("0-3", &p2_mask);
-        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_NOTED );
         assert( CPU_EQUAL(&p2_mask, &mask) );
 
         // p1 is not registered anymore
         assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
 
         // finalize
-        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
     }
 
     // Inheritance + expansion: [0-2],[3] -> [0-3] (ERROR)
@@ -299,17 +312,20 @@ int main( int argc, char **argv ) {
 
         // p3 registers CPU [3]
         mu_parse_mask("3", &p3_mask);
-        assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__init(p3_pid, 0, &p3_mask, NULL, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
 
         // p2 wants to register [0-3], ERROR
         mu_parse_mask("0-3", &p2_mask);
-        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_ERR_PERM );
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_ERR_PERM );
 
         // CPUs [0-2] have not been successfully inherited, clean up
         assert( shmem_procinfo_ext__postfinalize(p1_pid, false) == DLB_SUCCESS );
 
         // finalize
-        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
     }
 
     // Partial inheritance + expansion: [0,2] -> [2],[0-1] -> [0-1],[2-3]
@@ -322,20 +338,24 @@ int main( int argc, char **argv ) {
 
         // p2 wants to register [0-1]
         mu_parse_mask("0-1", &p2_mask);
-        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_NOTED );
         assert( CPU_EQUAL(&p2_mask, &mask) );
 
         // p3 wants to register [2-3]
         mu_parse_mask("2-3", &p3_mask);
-        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_NOTED );
         assert( CPU_EQUAL(&p3_mask, &mask) );
 
         // p1 is not registered anymore
         assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
 
         // finalize
-        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
     }
 
     // Inheritance beyond the initial mask: [0] -> [0] -> [0], [1]
@@ -348,12 +368,14 @@ int main( int argc, char **argv ) {
 
         // p2 wants to register [0]
         mu_parse_mask("0", &p2_mask);
-        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_NOTED );
         assert( CPU_EQUAL(&p2_mask, &mask) );
 
         // p3 wants to register [1]  (with p1_pid as preinit!)
         mu_parse_mask("1", &p3_mask);
-        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__init(p3_pid, p1_pid, &p3_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_SUCCESS );
         /* mask is only updated if DLB_NOTED */
 
         // check that only p2 and p3 are registered
@@ -364,8 +386,10 @@ int main( int argc, char **argv ) {
         assert( CPU_EQUAL(&p3_mask, &mask) );
 
         // finalize
-        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
-        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p3_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
     }
 
     // Inheritance with an empty mask
@@ -378,11 +402,13 @@ int main( int argc, char **argv ) {
 
         // p2 wants to register with an empty mask
         CPU_ZERO(&p2_mask);
-        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY) == DLB_NOTED );
+        assert( shmem_procinfo__init(p2_pid, p1_pid, &p2_mask, &mask, SHMEM_KEY,
+                    SHMEM_SIZE_MULTIPLIER) == DLB_NOTED );
         assert( CPU_EQUAL(&p1_mask, &mask) );
 
         // finalize
-        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
+                == DLB_SUCCESS );
     }
 
     // Finalize external
