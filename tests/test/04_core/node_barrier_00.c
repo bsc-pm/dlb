@@ -72,7 +72,8 @@ int main(int argc, char *argv[]) {
         assert( node_barrier_attach(&spd1, NULL) == DLB_ERR_PERM );
 
         int i;
-        char barrier_name[16];
+        enum { BARRIER_MAX_LEN = 32 };
+        char barrier_name[BARRIER_MAX_LEN];
         uint16_t max_barriers = (uint16_t)shmem_barrier__get_max_barriers();
         uint16_t max_named_barriers = max_barriers - 1;
         assert( max_barriers > 0 );
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]) {
             assert( node_barrier(&spd1, barriers[0]) == DLB_NOUPDT );
 
             for (i=0; i<max_named_barriers; ++i) {
-                snprintf(barrier_name, 16, "Barrier %d", i);
+                snprintf(barrier_name, BARRIER_MAX_LEN, "Barrier %d", i);
                 barriers[i] = node_barrier_register(&spd1, barrier_name, lewi);
                 assert( barriers[i] != NULL );
                 barrier_t *named_barrier_copy = node_barrier_register(&spd1, barrier_name, lewi);
@@ -112,7 +113,7 @@ int main(int argc, char *argv[]) {
         assert( shmem_barrier__find(NULL) == NULL );
         assert( shmem_barrier__find("default") == NULL );
         for (i=0; i<max_barriers; ++i) {
-            snprintf(barrier_name, 16, "Barrier %d", i);
+            snprintf(barrier_name, BARRIER_MAX_LEN, "Barrier %d", i);
             assert( shmem_barrier__find(barrier_name) == NULL );
         }
     }

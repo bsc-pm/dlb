@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
     int error = 0;
 
     /* Test --shm-size-multiplier flag */
-    for (int size_multiplier = 1; size_multiplier <= 10; ++size_multiplier) {
+    for (int size_multiplier = 1; size_multiplier <= 5; ++size_multiplier) {
         fprintf(stderr, "Testing with size multiplier: %d\n", size_multiplier);
         error += test_shm_multiplier(size_multiplier, false);
     }

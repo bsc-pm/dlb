@@ -386,8 +386,21 @@ int main(int argc, char *argv[]) {
         spd.options.talp_external_profiler = true;
         spd.options.talp_summary = SUMMARY_NONE;
 
-        /* Try multipliers 1, 2, and 3 */
-        for (int multiplier = 1; multiplier <= 3; ++multiplier) {
+        /* Choose multipliers based on the size of the current node.
+         * This test can significantly increase execution time on big nodes.
+         * The following numbers are chosen somewhat arbitrarily:
+         */
+        int initial_multiplier, final_multiplier;
+        if (mu_get_system_size() < 64 ) {
+            initial_multiplier = 1;
+            final_multiplier = 3;
+        } else {
+            initial_multiplier = 2;
+            final_multiplier = 2;
+        }
+
+        /* Try multipliers */
+        for (int multiplier = initial_multiplier; multiplier <= final_multiplier; ++multiplier) {
             spd.options.shm_size_multiplier = multiplier;
             talp_init(&spd);
             int expected_max_regions = KNOWN_NUM_REGIONS_PER_PROC
