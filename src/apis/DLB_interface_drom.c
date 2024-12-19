@@ -87,6 +87,12 @@ int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t 
     return error;
 }
 
+int DLB_DROM_SetProcessMaskStr(int pid, const char *mask, dlb_drom_flags_t flags) {
+    cpu_set_t _mask;
+    mu_parse_mask(mask, &_mask);
+    return DLB_DROM_SetProcessMask(pid, &_mask, flags);
+}
+
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
         char ***next_environ) {
     /* Set up DROM args */

@@ -15,11 +15,12 @@ headers = [
   'dlb_sp.h',
   'dlb_stats.h',
   'dlb_drom.h',
+  'dlb_talp.h',
   'dlb_types.h',
   'dlb_errors.h',
   'dlbf.h',
   'dlbf-errors.h',
-  'dlb_talp.h',
+  'dlbf_drom.h',
   'dlbf_talp.h',
 ]
 
