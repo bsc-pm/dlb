@@ -108,6 +108,21 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
+/*! \brief Set the process mask of the given PID
+ *  \param[in] pid Target Process ID to apply a new process mask, or 0 if current process
+ *  \param[in] mask Process mask to set
+ *  \param[in] flags DROM options
+ *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
+ *  \return DLB_ERR_PDIRTY if target pid already has a pending operation
+ *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
+ *  \return DLB_ERR_PERM if the provided mask could not be stolen
+ *
+ *  This function is equivalent to DLB_DROM_SetProcessMask, only that it
+ *  accepts the input mask as a const char pointer type.
+ */
+int DLB_DROM_SetProcessMaskStr(int pid, const char *mask, dlb_drom_flags_t flags);
+
 /*! \brief Make room in the system for a new process with the given mask
  *  \param[in] pid Process ID that gets the reservation
  *  \param[in] mask Process mask to register

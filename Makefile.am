@@ -81,11 +81,12 @@ installheaders =                     \
 	src/apis/dlb_sp.h            \
 	src/apis/dlb_stats.h         \
 	src/apis/dlb_drom.h          \
+	src/apis/dlb_talp.h          \
 	src/apis/dlb_types.h         \
 	src/apis/dlb_errors.h        \
 	src/apis/dlbf.h              \
 	src/apis/dlbf-errors.h       \
-	src/apis/dlb_talp.h          \
+	src/apis/dlbf_drom.h         \
 	src/apis/dlbf_talp.h         \
 	$(END)
 
