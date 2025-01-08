@@ -20,6 +20,9 @@ In general, the following steps are required to run DLB with your application:
 3. Run you application as you would normally do.
 
 If you want to use the :ref:`API <api>` you might need to link with DLB.
+
+.. _cmake-info:
+
 Starting with version 3.5, we provide a CMake Config file to make it easier to
 use DLB in CMake based projects:
 
