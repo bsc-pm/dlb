@@ -281,5 +281,25 @@ int main(int argc, char *argv[]) {
         mu_finalize();
     }
 
+    /* Empty node */
+    {
+        warning("===== Empty node ===== ");
+
+        enum { SYS_SIZE = 144 };
+        enum { NUM_CORES = 4 };
+        enum { NUM_NODES = 2 };
+        cpu_set_t core_masks[NUM_CORES];
+        cpu_set_t node_masks[NUM_NODES];
+        mu_parse_mask("0-143", &system_mask);
+        mu_parse_mask("28-31,140-143", &node_masks[0]);
+        mu_parse_mask("", &node_masks[1]);
+        mu_parse_mask("28,140", &core_masks[0]);
+        mu_parse_mask("29,141", &core_masks[1]);
+        mu_parse_mask("30,142", &core_masks[2]);
+        mu_parse_mask("31,143", &core_masks[3]);
+
+        mu_testing_set_sys_masks(&system_mask, core_masks, NUM_CORES, node_masks, NUM_NODES);
+    }
+
     return 0;
 }

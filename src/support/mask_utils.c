@@ -234,48 +234,26 @@ static int parse_hwloc(void) {
     sys.num_cores = hwloc_get_nbobjs_by_type(topology, core);
     sys.core_masks_by_coreid = calloc(sys.num_cores, sizeof(mu_cpuset_t));
     sys.core_masks_by_cpuid = calloc(sys.num_cpus, sizeof(mu_cpuset_t*));
-    unsigned int num_valid_cores = 0;
     for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
         hwloc_obj_t obj = hwloc_get_obj_by_type(topology, core, core_id);
-        if (!hwloc_bitmap_iszero(obj->cpuset)) {
-            ++num_valid_cores;
-            mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
-            mu_cpuset_from_hwloc_bitmap(core_cpuset, obj->cpuset, topology);
-            for (int cpuid = core_cpuset->first_cpuid;
-                    cpuid >= 0;
-                    cpuid = hwloc_bitmap_next(obj->cpuset, cpuid)) {
-                /* Save reference to another array indexed by cpuid */
-                sys.core_masks_by_cpuid[cpuid] = core_cpuset;
-            }
+        mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        mu_cpuset_from_hwloc_bitmap(core_cpuset, obj->cpuset, topology);
+        for (int cpuid = core_cpuset->first_cpuid;
+                cpuid >= 0;
+                cpuid = hwloc_bitmap_next(obj->cpuset, cpuid)) {
+            /* Save reference to another array indexed by cpuid */
+            sys.core_masks_by_cpuid[cpuid] = core_cpuset;
         }
-    }
-
-    fatal_cond(!num_valid_cores, "HWLOC could not find Core affinity masks");
-
-    if (sys.num_cores != num_valid_cores) {
-        verbose(VB_AFFINITY, "HWLOC found %d cores but only %d with a valid mask",
-                sys.num_cores, num_valid_cores);
     }
 
     /*** NUMA Nodes ***/
     hwloc_obj_type_t node = HWLOC_OBJ_NODE;
     sys.num_nodes = hwloc_get_nbobjs_by_type(topology, node);
     sys.node_masks = calloc(sys.num_cores, sizeof(mu_cpuset_t));
-    unsigned int num_valid_nodes = 0;
     for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
         hwloc_obj_t obj = hwloc_get_obj_by_type(topology, node, node_id);
-        if (!hwloc_bitmap_iszero(obj->cpuset)) {
-            ++num_valid_nodes;
-            mu_cpuset_from_hwloc_bitmap(&sys.node_masks[node_id],
-                    obj->cpuset, topology);
-        }
-    }
-
-    fatal_cond(!num_valid_nodes, "HWLOC could not find Node affinity masks");
-
-    if (sys.num_nodes != num_valid_nodes) {
-        verbose(VB_AFFINITY, "HWLOC found %d nodes but only %d with a valid mask",
-                sys.num_nodes, num_valid_nodes);
+        mu_cpuset_from_hwloc_bitmap(&sys.node_masks[node_id],
+                obj->cpuset, topology);
     }
 
     hwloc_topology_destroy(topology);
@@ -975,13 +953,15 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if (!str) return;
 
     size_t str_len = strnlen(str, CPU_SETSIZE+1);
-    if ( str_len == 0 || str_len > CPU_SETSIZE) return;
+    if (str_len > CPU_SETSIZE) return;
+
+    CPU_ZERO( mask );
+    if (str_len == 0) return;
 
     regex_t regex_bitmask;
     regex_t regex_hexmask;
     regex_t regex_range;
     regex_t old_regex_bitmask;
-    CPU_ZERO( mask );
 
     /* Compile regular expressions */
     if ( regcomp(&regex_bitmask, "^0[bB][0-1]+$", REG_EXTENDED|REG_NOSUB) ) {
