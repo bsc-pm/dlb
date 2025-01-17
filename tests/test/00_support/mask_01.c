@@ -134,6 +134,11 @@ int main(int argc, char *argv[]) {
     mu_parse_mask(str, &mask);
     assert( CPU_COUNT(&mask) == 0 );
 
+    /* mu_parse empty mask */
+    CPU_SET(1, &mask);
+    mu_parse_mask("", &mask);
+    assert( CPU_COUNT(&mask) == 0 );
+
     /* mu_parse_to_slurm_format */
     mu_parse_mask("0-1,4,7,31,63,127-129", &mask);
     char *out_str = mu_parse_to_slurm_format(&mask);
