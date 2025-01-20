@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -353,4 +353,297 @@ void queue_pids_pop(queue_pids_t *queue, pid_t *pid) {
         queue->tail = (queue->tail + 1) % QUEUE_PIDS_SIZE;
     }
 }
+/*********************************************************************************/
+
+/*** queue_t *********************************************************************/
+
+typedef struct queue_t {
+    void * queue;
+    bool queue_is_internal;
+
+    queue_allocator_t allocator;
+
+    size_t element_size;
+
+    unsigned int elements;
+    unsigned int capacity;
+
+    unsigned int head;
+    unsigned int tail;
+} queue_t;
+
+queue_t* queue__init(size_t element_size, unsigned int capacity, void *ptr,
+                     queue_allocator_t allocator) {
+
+    // When the container is managed by the user (ptr != NULL) we can not use the 
+    // QUEUE_ALLOC_REALLOC because we would corrupt the users pointer. Hence the queue
+    // init fails returning NULL.
+    if (allocator == QUEUE_ALLOC_REALLOC && ptr != NULL) {
+        return NULL;
+    }
+
+    queue_t * queue = malloc(sizeof(queue_t));
+
+    *queue = (const queue_t) {
+        .queue = ptr == NULL ? malloc(capacity * element_size) : ptr,
+        .queue_is_internal = ptr == NULL,
+        .allocator = allocator,
+        .element_size = element_size,
+        .elements = 0,
+        .capacity = capacity,
+        .head = 0,
+        .tail = 0,
+    };
+
+    return queue;
+}
+
+void queue__destroy(queue_t *queue) {
+    if (queue->queue_is_internal) {
+        free(queue->queue);
+    }
+    free(queue);
+}
+
+unsigned int queue__get_size(const queue_t *queue) {
+    return queue->elements;
+}
+
+unsigned int queue__get_capacity(const queue_t *queue) {
+    return queue->capacity;
+}
+
+bool queue__is_empty(const queue_t *queue) {
+    return queue->elements == 0;
+}
+
+bool queue__is_at_capacity(const queue_t *queue) {
+    return queue->elements == queue->capacity;
+}
+
+static void * queue__get_element_ptr(queue_t *queue, unsigned int idx) {
+    return queue->queue + (queue->element_size * idx);
+}
+
+int queue__take_head(queue_t *queue, void * poped) {
+    if (queue->elements == 0) {
+        return DLB_NOUPDT;
+    }
+
+    queue->elements--;
+
+    // Move head back
+    if (queue->head == 0) queue->head = queue->capacity;
+    queue->head--;
+
+    // Fetch data from queue
+    void * head = queue__get_element_ptr(queue, queue->head);
+    if (poped != NULL) {
+        memcpy(poped, head, queue->element_size);
+    }
+
+    return DLB_SUCCESS;
+}
+
+int queue__take_tail(queue_t *queue, void * poped) {
+    if (queue->elements == 0) {
+        return DLB_NOUPDT;
+    }
+
+    queue->elements--;
+
+    // Fetch data form queue
+    void * tail = queue__get_element_ptr(queue, queue->tail);
+    if (poped != NULL) {
+        memcpy(poped, tail, queue->element_size);
+    }
+
+    // Move tail forward
+    queue->tail++;
+    if (queue->tail >= queue->capacity) queue->tail = 0;
+
+    return DLB_SUCCESS;
+}
+
+int queue__peek_head(queue_t *queue, void **value_ptr) {
+    if (queue->elements == 0) {
+        return DLB_NOUPDT;
+    }
+
+    // Move head back
+    unsigned int peek_head = queue->head;
+    if (peek_head == 0) peek_head = queue->elements;
+    peek_head--;
+
+    // Fetch pointer to queue storage
+    *value_ptr = queue__get_element_ptr(queue, peek_head);
+
+    return DLB_SUCCESS;
+}
+
+int queue__peek_tail(queue_t *queue, void **value_ptr) {
+    if (queue->elements == 0) {
+        return DLB_NOUPDT;
+    }
+
+    // Fetch pointer to queue storage
+    *value_ptr = queue__get_element_ptr(queue, queue->tail);
+
+    return DLB_SUCCESS;
+}
+
+static void queue__realloc(queue_t *queue) {
+
+    unsigned int new_capacity = queue->capacity == 0 ? 1 : queue->capacity * 2;
+    void *new_queue = malloc(new_capacity * queue->element_size);
+    void *old_queue = queue->queue;
+
+    //ensure(queue->elements != 0 && queue->elements == queue->capacity, "");
+
+    // If the data is in order in the storage then we just make one memcpy.
+    if (queue->tail == 0 && queue->head == 0 && queue->elements == queue->capacity) {
+        memcpy(new_queue, old_queue, queue->elements * queue->element_size);
+    }
+    // Otherwise first we copy from head to capacyty and then from 0 to tail.
+    else {
+        unsigned int n_elements_first_copy = (queue->tail >= queue->head ?
+            queue->capacity : queue->head) - queue->tail;
+
+        memcpy(
+            new_queue,
+            old_queue + queue->tail * queue->element_size,
+            n_elements_first_copy * queue->element_size
+        );
+
+        memcpy(
+            new_queue + (queue->capacity - queue->tail) * queue->element_size,
+            old_queue,
+            queue->head * queue->element_size
+        );
+    }
+
+    queue->queue = new_queue;
+    queue->tail  = 0;
+    queue->head  = queue->elements;
+    queue->capacity = new_capacity;
+
+    free(old_queue);
+}
+
+static bool queue__check_capacity(queue_t *queue) {
+    if (queue__is_at_capacity(queue)) {
+        switch (queue->allocator) {
+        case QUEUE_ALLOC_FIXED:
+            return false;
+        case QUEUE_ALLOC_REALLOC:
+            queue__realloc(queue);
+            break;
+        case QUEUE_ALLOC_OVERWRITE:
+            break;
+        default: return false;
+        }
+    }
+
+    return true;
+}
+
+void * queue__push_head(queue_t *queue, const void * new) {
+
+    if (! queue__check_capacity(queue)) return NULL;
+
+    void * head = queue__get_element_ptr(queue, queue->head);
+    memcpy(head, new, queue->element_size);
+
+    unsigned int old_head = queue->head;
+
+    // Move head forward
+    queue->head++;
+    if (queue->head >= queue->capacity) {
+        queue->head = 0;
+    }
+
+    queue->elements++;
+
+    return queue__get_element_ptr(queue, old_head);
+}
+
+void * queue__push_tail(queue_t *queue, const void * new) {
+
+    if (! queue__check_capacity(queue)) return NULL;
+
+    // Move tail back
+    if (queue->tail == 0) queue->tail = queue->capacity;
+    queue->tail--;
+
+    queue->elements++;
+
+    void * tail = queue__get_element_ptr(queue, queue->tail);
+    memcpy(tail, new, queue->element_size);
+
+    return queue__get_element_ptr(queue, queue->tail);
+}
+
+/*********************************************************************************/
+
+/*** queue_t generic functions for iterators *************************************/
+
+typedef struct queue_iter_t {
+    void* (*next)(void*);
+} queue_iter_t;
+
+void queue_iter__foreach(void *iter, void (*fn)(void*, void*), void* args) {
+    queue_iter_t *it = iter;
+    void * i = NULL;
+    while ( (i = it->next(iter)) != NULL) {
+        fn(args, i);
+    }
+}
+
+void* queue_iter__get_nth(void *iter, unsigned int n) {
+    queue_iter_t *it = iter;
+    void * i = NULL;
+
+    unsigned int count = 0;
+    while ( (i = it->next(iter)) != NULL) {
+        if (count == n) {
+            return i;
+        }
+
+        count++;
+    }
+
+    return NULL;
+}
+
+/*** queue_iter_head2tail_t implementation ***************************************/
+
+static void * queue_iter_head2tail__next(void *iter) {
+    queue_iter_head2tail_t *it = iter;
+
+    if (it->done || it->queue->elements == 0) {
+        return NULL;
+    }
+
+    if (it->curr <= 0) {
+        it->curr = queue__get_capacity(it->queue);
+    }
+    it->curr--;
+
+    if (it->curr == it->tail) {
+        it->done = true;
+    }
+
+    return queue__get_element_ptr(it->queue, it->curr);
+}
+
+queue_iter_head2tail_t queue__into_head2tail_iter(queue_t * queue) {
+    return (queue_iter_head2tail_t) {
+        .next = queue_iter_head2tail__next,
+        .queue = queue,
+        .done = false,
+        .curr = queue->head,
+        .tail = queue->tail,
+    };
+}
+
 /*********************************************************************************/

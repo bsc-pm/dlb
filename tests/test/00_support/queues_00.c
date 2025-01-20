@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2023 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -25,6 +25,7 @@
 #include "support/mask_utils.h"
 #include "apis/dlb_errors.h"
 
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
@@ -33,6 +34,36 @@
  *  - Queue sizes are actually QUEUE_*_SIZE - 1 because head != tail
  *  - push operations allow pid == 0 but it may cause confusion with enum NOBODY
  */
+
+typedef struct aux_struct_t {
+    int a;
+    int b;
+} aux_struct_t;
+
+#define GENERIC_QUEUE_SIZE 10
+
+struct fold_weighted_sum_accum_t {
+    unsigned int step;
+    unsigned int sum;
+};
+
+void fold_weighted_sum(void *accum, void *curr) {
+    struct fold_weighted_sum_accum_t* a = accum;
+    a->sum += ((aux_struct_t*)curr)->a * a->step;
+    a->step--;
+}
+
+struct fold_check_all_int_accum_t {
+    int reference;
+    bool all_check;
+};
+
+void fold_check_all(void *accum, void *curr) {
+    struct fold_check_all_int_accum_t* a = accum;
+    if (a->all_check) {
+        a->all_check = a->reference == *((int*) curr);
+    }
+}
 
 int main(int argc, char *argv[]) {
     unsigned int i;
@@ -366,5 +397,388 @@ int main(int argc, char *argv[]) {
         assert( queue_pids_size(&queue) == 0 );
     }
 
+    /* queue_t with alloc */
+    {
+        queue_t *queue = queue__init(sizeof(aux_struct_t), GENERIC_QUEUE_SIZE,
+                                     NULL, QUEUE_ALLOC_OVERWRITE);
+
+        /* Fill queue */
+        unsigned int queue_capacity = queue__get_capacity(queue);
+        for (i=0; i<queue_capacity; i++) {
+            assert(queue__get_size(queue) == i);
+            assert(queue__get_capacity(queue) == GENERIC_QUEUE_SIZE);
+
+            aux_struct_t element = {
+                .a = i,
+                .b = queue_capacity - i,
+            };
+
+            queue__push_head(queue, &element);
+        }
+
+        for (i=queue_capacity; i>0; i--) {
+            assert(queue__get_size(queue) == i);
+            assert(queue__get_capacity(queue) == GENERIC_QUEUE_SIZE);
+
+            aux_struct_t read_element;
+            aux_struct_t reff_element = {
+                .a = i - 1,
+                .b = queue_capacity - i + 1,
+            };
+
+            assert( queue__take_head(queue, &read_element) == DLB_SUCCESS );
+            assert( 
+                read_element.a == reff_element.a &&
+                read_element.b == reff_element.b
+            );
+        }
+
+        aux_struct_t dummy;
+        assert( queue__take_head(queue, &dummy) == DLB_NOUPDT );
+
+        queue__destroy(queue);
+    }
+
+    /* queue_t with external storage */
+    {
+        aux_struct_t storage[GENERIC_QUEUE_SIZE];
+        queue_t *queue = queue__init(sizeof(aux_struct_t), GENERIC_QUEUE_SIZE, storage, QUEUE_ALLOC_REALLOC);
+
+        // QUEUEU_ALLOC_REALLOC is incompatible with an external storage.
+        assert(queue == NULL);
+    }
+    {
+        aux_struct_t storage[GENERIC_QUEUE_SIZE];
+
+        queue_t *queue = queue__init(sizeof(int), GENERIC_QUEUE_SIZE, storage, QUEUE_ALLOC_FIXED);
+
+        // Assert that the queue is empty at the begining
+        assert(queue__is_empty(queue));
+
+        int element = 42;
+        int element_taken;
+
+        // Assert that the queue is not empty after some data is added
+        assert(queue__push_head(queue, &element) != NULL);
+        assert(!queue__is_empty(queue));
+
+        // Assert that the queue is empty once the data is taken from the head
+        assert(queue__take_head(queue, &element_taken) == DLB_SUCCESS);
+        assert(queue__is_empty(queue));
+        assert(element == element_taken);
+
+        // Assert that the queue is empty once the data is taken from the tail
+        assert(queue__push_head(queue, &element) != NULL);
+        assert(!queue__is_empty(queue));
+
+        assert(queue__take_tail(queue, &element_taken) == DLB_SUCCESS);
+        assert(queue__is_empty(queue));
+        assert(element == element_taken);
+
+        // Check that when we take data into a NULL pointer, data is removed from the queue.
+        assert(queue__push_head(queue, &element) != NULL);
+        assert(queue__take_head(queue, NULL) == DLB_SUCCESS);
+        assert(queue__is_empty(queue));
+
+        assert(queue__push_head(queue, &element) != NULL);
+        assert(queue__take_tail(queue, NULL) == DLB_SUCCESS);
+        assert(queue__is_empty(queue));
+
+        // Check that when queue is full no more data can be pushed
+        assert(queue__is_empty(queue));
+        for (i = 0; i < GENERIC_QUEUE_SIZE; i++) {
+            assert(queue__push_head(queue, &element) != NULL);
+        }
+        assert(queue__is_at_capacity(queue));
+        assert(queue__push_head(queue, &element) == NULL);
+        assert(queue__push_tail(queue, &element) == NULL);
+
+    }
+    {
+        aux_struct_t storage[GENERIC_QUEUE_SIZE];
+
+        queue_t *queue = queue__init(sizeof(aux_struct_t), GENERIC_QUEUE_SIZE, storage, QUEUE_ALLOC_FIXED);
+
+        /* Fill queue */
+        unsigned int queue_capacity = queue__get_capacity(queue);
+        queue_capacity -= 1;
+        queue_capacity /= 2;
+
+        for (i=0; i<queue_capacity; i++) {
+            assert(queue__get_size(queue) == i*2);
+            assert(queue__get_capacity(queue) == GENERIC_QUEUE_SIZE);
+
+            aux_struct_t element = {
+                .a = i,
+                .b = queue_capacity - i,
+            };
+
+            queue__push_head(queue, &element);
+            queue__push_tail(queue, &element);
+        }
+
+        for (i=queue_capacity; i>0; i--) {
+            assert(queue__get_size(queue) == i*2);
+            assert(queue__get_capacity(queue) == GENERIC_QUEUE_SIZE);
+
+            aux_struct_t *peek_element_head, *peek_element_tail;
+
+            aux_struct_t take_element_head, take_element_tail;
+            aux_struct_t reff_element = {
+                .a = i - 1,
+                .b = queue_capacity - i + 1,
+            };
+
+            assert( queue__peek_head(queue, (void**) &peek_element_head) == DLB_SUCCESS );
+            assert( 
+                peek_element_head->a == reff_element.a &&
+                peek_element_head->b == reff_element.b
+            );
+
+            assert( queue__peek_tail(queue, (void**) &peek_element_tail) == DLB_SUCCESS );
+            assert( 
+                peek_element_tail->a == reff_element.a &&
+                peek_element_tail->b == reff_element.b
+            );
+
+            assert( queue__take_head(queue, &take_element_head) == DLB_SUCCESS );
+            assert( 
+                take_element_head.a == reff_element.a &&
+                take_element_head.b == reff_element.b
+            );
+
+            assert( queue__take_tail(queue, &take_element_tail) == DLB_SUCCESS );
+            assert( 
+                take_element_tail.a == reff_element.a &&
+                take_element_tail.b == reff_element.b
+            );
+        }
+
+        aux_struct_t dummy;
+        aux_struct_t *dummy_ptr;
+        assert( queue__peek_head(queue, (void**) &dummy_ptr) == DLB_NOUPDT );
+        assert( queue__take_head(queue, &dummy) == DLB_NOUPDT );
+        assert( queue__peek_tail(queue, (void**) &dummy_ptr) == DLB_NOUPDT );
+        assert( queue__take_tail(queue, &dummy) == DLB_NOUPDT );
+
+        /*
+         * Check full queue when the allocator is QUEUE_ALLOC_FIXED.
+         */
+        queue_capacity = queue__get_capacity(queue);
+        {
+            aux_struct_t element = {
+                .a = i,
+                .b = queue_capacity - i,
+            };
+
+            aux_struct_t *elem = queue__push_tail(queue, &element);
+            assert(elem != NULL);
+        }
+        for (i=1; i<queue_capacity; i++) {
+            assert(queue__get_capacity(queue) == GENERIC_QUEUE_SIZE);
+
+            aux_struct_t element = {
+                .a = i,
+                .b = queue_capacity - i,
+            };
+
+            aux_struct_t *elem = queue__push_head(queue, &element);
+            assert(elem != NULL);
+        }
+        {
+            aux_struct_t element = {
+                .a = i,
+                .b = queue_capacity - i,
+            };
+
+            aux_struct_t *elem = queue__push_tail(queue, &element);
+            assert(elem == NULL);
+        }
+
+        queue__destroy(queue);
+    }
+
+    /* queue_t realloc and iterators */
+    {
+
+        queue_t *queue = queue__init(sizeof(aux_struct_t), 0,
+                                     NULL, QUEUE_ALLOC_REALLOC);
+
+        /* Fill queue */
+        unsigned int queue_capacity = GENERIC_QUEUE_SIZE;
+
+        for (i=0; i<queue_capacity; i++) {
+            assert(queue__get_size(queue) == i);
+
+            aux_struct_t element = {
+                .a = i,
+                .b = queue_capacity - i,
+            };
+
+            queue__push_head(queue, &element);
+        }
+
+        {
+            queue_iter_head2tail_t iter = queue__into_head2tail_iter(queue);
+            struct aux_struct_t * got = queue_iter__get_nth(&iter, 3);
+            assert(got->a == 6);
+        }
+
+        {
+            queue_iter_head2tail_t iter = queue__into_head2tail_iter(queue);
+            struct fold_weighted_sum_accum_t sum = {
+                .step = queue__get_size(queue),
+                .sum = 0,
+            };
+            queue_iter__foreach(&iter, fold_weighted_sum, &sum);
+            assert(sum.sum == 330);
+            assert(sum.step == 0);
+        }
+
+        queue__destroy(queue);
+    }
+    // Test pushing from the begining and end to make sure unordered reallocation works
+    {
+
+        queue_t *queue = queue__init(sizeof(int), 0,
+                                     NULL, QUEUE_ALLOC_REALLOC);
+
+        /* Fill queue */
+        unsigned int queue_capacity = GENERIC_QUEUE_SIZE/2;
+
+        for (i=0; i <= queue_capacity; i++) {
+            int element = queue_capacity - i;
+            queue__push_tail(queue, &element);
+        }
+
+        for (i=1; i<queue_capacity; i++) {
+            int element = queue_capacity + i;
+            queue__push_head(queue, &element);
+        }
+
+        int check_array[GENERIC_QUEUE_SIZE];
+        for (i=0; i<GENERIC_QUEUE_SIZE; i++) {
+            check_array[i] = GENERIC_QUEUE_SIZE - i - 1;
+        }
+
+        {
+            for (i = 0; i < GENERIC_QUEUE_SIZE; i++) {
+                queue_iter_head2tail_t iter = queue__into_head2tail_iter(queue);
+                int* got = queue_iter__get_nth(&iter, i);
+                assert(*got == check_array[i]);
+            }
+
+            // Check getting value past boud from iterator
+            queue_iter_head2tail_t iter = queue__into_head2tail_iter(queue);
+            int* got = queue_iter__get_nth(&iter, queue__get_size(queue)+42);
+            assert(got == NULL);
+        }
+
+        queue__destroy(queue);
+    }
+    {
+
+        queue_t *queue = queue__init(sizeof(int), 0,
+                                     NULL, QUEUE_ALLOC_REALLOC);
+
+        /* Fill queue */
+        unsigned int queue_capacity = GENERIC_QUEUE_SIZE/2;
+
+        for (i=0; i <= queue_capacity; i++) {
+            int element = queue_capacity - i;
+            queue__push_tail(queue, &element);
+        }
+
+        for (i=1; i<queue_capacity; i++) {
+            int element = queue_capacity + i;
+            queue__push_head(queue, &element);
+        }
+
+        int check_array[GENERIC_QUEUE_SIZE];
+        for (i=0; i<GENERIC_QUEUE_SIZE; i++) {
+            check_array[i] = GENERIC_QUEUE_SIZE - i - 1;
+        }
+
+        {
+            for (i = 0; i < GENERIC_QUEUE_SIZE; i++) {
+                queue_iter_head2tail_t iter = queue__into_head2tail_iter(queue);
+                int* got = queue_iter__get_nth(&iter, i);
+                assert(*got == check_array[i]);
+            }
+        }
+
+        queue__destroy(queue);
+    }
+    /* Check the circular buffere feature */
+    {
+
+        queue_t *queue = queue__init(sizeof(int), 2,
+                                     NULL, QUEUE_ALLOC_OVERWRITE);
+
+        int element = 42;
+        queue__push_head(queue, &element);
+        queue__push_head(queue, &element);
+
+        int* element_peeked;
+        queue__peek_head(queue, (void*) &element_peeked);
+        assert(element == *element_peeked);
+
+        queue__peek_tail(queue, (void*) &element_peeked);
+        assert(element == *element_peeked);
+
+        element = 4242;
+        queue__push_head(queue, &element);
+        queue__push_head(queue, &element);
+
+        queue_iter_head2tail_t iter = queue__into_head2tail_iter(queue);
+
+        struct fold_check_all_int_accum_t check_all = {
+            .reference = element,
+            .all_check = true,
+        };
+
+        queue_iter__foreach(&iter, fold_check_all, &check_all);
+        assert(check_all.all_check);
+    }
+
+    /* queue_t realloc with head & tail != 0 */
+    {
+
+        queue_t *queue = queue__init(sizeof(aux_struct_t), 20,
+                                     NULL, QUEUE_ALLOC_OVERWRITE);
+
+        /* Fill queue */
+        unsigned int queue_capacity = GENERIC_QUEUE_SIZE;
+
+        for (i=0; i<queue_capacity; i++) {
+            assert(queue__get_size(queue) == i);
+
+            aux_struct_t element = {
+                .a = i,
+                .b = queue_capacity - i,
+            };
+
+            if (i % 2) queue__push_head(queue, &element);
+            else       queue__push_tail(queue, &element);
+        }
+
+        for (i=queue_capacity; i>0; i--) {
+            aux_struct_t take_element; 
+            aux_struct_t reff_element = {
+                .a = i - 1,
+                .b = queue_capacity - i + 1,
+            };
+
+            if ((i-1) % 2) queue__take_head(queue, &take_element);
+            else       queue__take_tail(queue, &take_element);
+
+            assert( 
+                take_element.a == reff_element.a &&
+                take_element.b == reff_element.b
+            );
+        }
+
+        queue__destroy(queue);
+    }
     return 0;
 }
