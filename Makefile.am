@@ -944,6 +944,13 @@ endif
 
 doc: html pdf
 
+doc-check: doc-linkcheck
+
+doc-linkcheck: $(sphinx_manpages_files)
+	$(SPHINXBUILD) -b linkcheck $(SPHINX_FLAGS) $(SPHINX_SRC_DIR) doc/user_guide/linkcheck
+	@echo
+	@echo "Linkcheck finished. The linkcheck logs are in doc/user_guide/linkcheck"
+
 html-local: $(sphinx_manpages_files)
 	$(SPHINXBUILD) -b html $(SPHINX_FLAGS) $(SPHINX_SRC_DIR) doc/user_guide/html
 	@echo
@@ -971,6 +978,8 @@ html-local: nodoc
 install-html-local: nodoc
 pdf-local: nodoc
 install-pdf-local: nodoc
+doc-linkcheck: nodoc
+doc-check: nodoc
 endif
 
 #********************************************************************************
