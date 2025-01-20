@@ -133,7 +133,7 @@ static void pop_metrics_print(void) {
                 info("### Parallel efficiency:                      %1.2f",
                         record->parallel_efficiency);
             }
-            if (record->mpi_parallel_efficiency > 0.0f) {
+            if (record->num_mpi_calls > 0) {
                 info("### MPI Parallel efficiency:                  %1.2f",
                         record->mpi_parallel_efficiency);
                 info("###   - MPI Communication efficiency:         %1.2f",
@@ -145,7 +145,7 @@ static void pop_metrics_print(void) {
                 info("###       - MPI Load Balance out:             %1.2f",
                         record->mpi_load_balance_out);
             }
-            if (record->omp_parallel_efficiency > 0.0f) {
+            if (record->num_omp_parallels + record->num_omp_tasks > 0) {
                 info("### OpenMP Parallel efficiency:               %1.2f",
                         record->omp_parallel_efficiency);
                 info("###   - OpenMP Load Balance:                  %1.2f",
