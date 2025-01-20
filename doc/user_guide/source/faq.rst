@@ -29,9 +29,9 @@ How to decide which DLB library to link with or to preload?
 
 Linking with DLB is only necessary if the application uses the DLB API. In this
 case, we recommend linking with the ``libdlb.so`` dynamic library, even if it's
-an MPI application. 
-If your project uses CMake already, you can check out how to :ref:`link with DLB using CMake <cmake-info>`.
-::
+an MPI application.
+If your project uses CMake already, you can check out how to :ref:`link with DLB using CMake <cmake-info>`::
+
     DLB_PREFIX="<path-to-DLB-installation>"
 
     # Manually specifying compile and link flags
