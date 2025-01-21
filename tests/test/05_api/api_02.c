@@ -30,6 +30,7 @@
 
 #include <assert.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -39,6 +40,7 @@
 void __gcov_flush() __attribute__((weak));
 
 struct data {
+    bool initialized;
     pthread_barrier_t barrier;
 };
 
@@ -49,6 +51,21 @@ static shmem_handler_t* open_shmem(void **shdata) {
                 .name = "test",
                 .key = SHMEM_KEY,
             });
+}
+
+void init_shmem(shmem_handler_t *handler, struct data *shdata, int barrier_size) {
+    shmem_lock(handler);
+    {
+        if (!shdata->initialized) {
+            pthread_barrierattr_t attr;
+            assert( pthread_barrierattr_init(&attr) == 0 );
+            assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
+            assert( pthread_barrier_init(&shdata->barrier, &attr, barrier_size) == 0 );
+            assert( pthread_barrierattr_destroy(&attr) == 0 );
+            shdata->initialized = true;
+        }
+    }
+    shmem_unlock(handler);
 }
 
 
@@ -64,33 +81,50 @@ static void cb_disable_cpu(int cpuid, void *arg) {
 
 int main(int argc, char *argv[]) {
 
+    /* This test needs at least 4 real CPUs */
+    cpu_set_t parent_process_mask;
+    assert( sched_getaffinity(0, sizeof(cpu_set_t), &parent_process_mask) == 0 );
+    if (CPU_COUNT(&parent_process_mask) < 4 ) {
+        return 0;
+    }
+
+    /* Set up masks for child processes:
+     *  Children 0 and 2: [0,1] or first two valid CPUs
+     *  Children 1 and 3: [2,3] or second two valid CPUs
+     */
+    cpu_set_t child_0_2_mask, child_1_3_mask;
+    CPU_ZERO(&child_0_2_mask);
+    CPU_ZERO(&child_1_3_mask);
+    int cpuid = mu_get_first_cpu(&parent_process_mask);
+    CPU_SET(cpuid, &child_0_2_mask); // [0]
+    cpuid = mu_get_next_cpu(&parent_process_mask, cpuid);
+    CPU_SET(cpuid, &child_0_2_mask); // [1]
+    cpuid = mu_get_next_cpu(&parent_process_mask, cpuid);
+    CPU_SET(cpuid, &child_1_3_mask); // [2]
+    cpuid = mu_get_next_cpu(&parent_process_mask, cpuid);
+    CPU_SET(cpuid, &child_1_3_mask); // [3]
+
     /* Test 4 processes, 2 CPUs each, in a 4 CPU system (oversubscription) */
     {
         enum { NUM_PROCS = 4 };
         struct data *shdata;
         shmem_handler_t *handler;
 
-        // Parent process creates shmem and initializes barrier
-        handler = open_shmem((void**)&shdata);
-        pthread_barrierattr_t attr;
-        assert( pthread_barrierattr_init(&attr) == 0 );
-        assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
-        assert( pthread_barrier_init(&shdata->barrier, &attr, NUM_PROCS) == 0 );
-        assert( pthread_barrierattr_destroy(&attr) == 0 );
-
         // Create 4 children
-        int child_num;
-        for (child_num=0; child_num<NUM_PROCS; ++child_num) {
-            if (fork() == 0) {
-                // Force a 4 CPU system
-                enum { SYS_SIZE = 4 };
-                mu_init();
-                mu_testing_set_sys_size(SYS_SIZE);
+        for (int child_num = 0; child_num < NUM_PROCS; ++child_num) {
+            pid_t pid = fork();
+            assert( pid >= 0 );
+            if (pid == 0) {
 
                 // Initialize DLB
                 //  0: [0,1] and 1: [2,3], --lewi-color=1
                 //  2: [0,1] and 3: [2,3], --lewi-color=2
-                mu_parse_mask(child_num % 2 == 0 ? "0,1" : "2,3", &process_mask);
+                memcpy(&process_mask,
+                        child_num % 2 == 0 ? &child_0_2_mask : &child_1_3_mask,
+                        sizeof(cpu_set_t));
+
+                pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &process_mask);
+
                 char options[64];
                 snprintf(options, 64, "--lewi --lewi-color=%1d --shm-key=%s",
                         child_num < 2 ? 1 : 2, SHMEM_KEY);
@@ -100,7 +134,9 @@ int main(int argc, char *argv[]) {
                 assert( DLB_CallbackSet(dlb_callback_disable_cpu,
                             (dlb_callback_t)cb_disable_cpu, NULL) == DLB_SUCCESS);
 
-                // Barrier
+                // Initialize 'test' shmem and perform a barrier
+                handler = open_shmem((void**)&shdata);
+                init_shmem(handler, shdata, NUM_PROCS);
                 int error = pthread_barrier_wait(&shdata->barrier);
                 assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
@@ -118,8 +154,8 @@ int main(int argc, char *argv[]) {
                 if (child_num == 1) {
                     assert( DLB_Borrow() == DLB_SUCCESS );
                     assert( CPU_COUNT(&process_mask) == 4 );
-                    assert( CPU_ISSET(0, &process_mask)
-                            && CPU_ISSET(1, &process_mask) );
+                    assert( mu_is_subset(&child_0_2_mask, &process_mask) );
+                    assert( mu_is_subset(&child_1_3_mask, &process_mask) );
                 }
 
                 // Barrier
@@ -129,13 +165,11 @@ int main(int argc, char *argv[]) {
                 // Children 2 and 3 are not affected, they still have their own mask
                 if (child_num == 2) {
                     assert( CPU_COUNT(&process_mask) == 2 );
-                    assert( CPU_ISSET(0, &process_mask)
-                            && CPU_ISSET(1, &process_mask) );
+                    assert( mu_is_subset(&child_0_2_mask, &process_mask) );
                 }
                 if (child_num == 3) {
                     assert( CPU_COUNT(&process_mask) == 2 );
-                    assert( CPU_ISSET(2, &process_mask)
-                            && CPU_ISSET(3, &process_mask) );
+                    assert( mu_is_subset(&child_1_3_mask, &process_mask) );
                 }
 
                 // All 4 processes may invoke the same barrier
@@ -170,10 +204,6 @@ int main(int argc, char *argv[]) {
                 exit(EXIT_FAILURE);
             }
         }
-
-        // Parent process finalizes barrier shmem
-        assert( pthread_barrier_destroy(&shdata->barrier) == 0 );
-        shmem_finalize(handler, NULL);
     }
 
     return 0;
