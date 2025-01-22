@@ -20,7 +20,7 @@ AC_DEFUN([AX_PAPI],
                 user_papi_libdir="$with_papi/lib"
                 user_papi_lib_flags="-L$with_papi/lib -Wl,-rpath,$with_papi/lib"
             ])
-	    AS_IF([test -d "$with_papi/lib64"], [
+            AS_IF([test -d "$with_papi/lib64"], [
                 user_papi_libdir="$with_papi/lib64"
                 user_papi_lib_flags="-L$with_papi/lib64 -Wl,-rpath,$with_papi/lib64"
             ])
@@ -28,7 +28,7 @@ AC_DEFUN([AX_PAPI],
         ])
 
         ### PAPI INCLUDES ###
-        AX_VAR_PUSHVALUE([CPPFLAGS], [$user_papi_inc_flags])
+        AX_VAR_PUSHVALUE([CPPFLAGS], [$CPPFLAGS $user_papi_inc_flags])
         AC_CHECK_HEADERS([papi.h], [
             PAPI_CPPFLAGS="$user_papi_inc_flags"
         ] , [
@@ -41,7 +41,7 @@ AC_DEFUN([AX_PAPI],
     AS_IF([test "x$with_papi" != xno], [
         ### PAPI LIBS ###
         AX_VAR_PUSHVALUE([LIBS], [""])
-        AX_VAR_PUSHVALUE([LDFLAGS], [$user_papi_lib_flags])
+        AX_VAR_PUSHVALUE([LDFLAGS], [$LDFLAGS $user_papi_lib_flags])
         AC_SEARCH_LIBS([PAPI_library_init], [papi], [
             PAPI_LDFLAGS="$user_papi_lib_flags $LIBS"
             PAPI_LIBDIR="$user_papi_libdir"

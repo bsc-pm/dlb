@@ -288,7 +288,7 @@ AC_DEFUN([AX_CHECK_MPI_CPPFLAGS],
             AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$mpicc_showme_compile"])
             AX_VAR_POPVALUE([CPPFLAGS])
         ])
-	# Generic flag
+        # Generic flag
         AS_IF([test "x$ac_cv_header_mpi_h" != xyes], [
             AS_IF([mpicc_show_c=$($$1 -show -c 2>&AS_MESSAGE_LOG_FD)], [
                 mpicc_show_c=$(echo $mpicc_show_c | tr -s ' ' | cut -d' ' -f3-)
@@ -311,7 +311,7 @@ AC_DEFUN([AX_CHECK_MPI_CPPFLAGS],
     ])
     # If MPICC wrapper did not succeed, try user custom flags
     AS_IF([test "x$ac_cv_header_mpi_h" != xyes], [
-        AX_VAR_PUSHVALUE([CPPFLAGS], [$2])
+        AX_VAR_PUSHVALUE([CPPFLAGS], [$CPPFLAGS $2])
         AS_UNSET([ac_cv_header_mpi_h])
         AC_CHECK_HEADERS([mpi.h], [MPI_CPPFLAGS="$2"])
         AX_VAR_POPVALUE([CPPFLAGS])
@@ -371,7 +371,7 @@ AC_DEFUN([AX_CHECK_MPI_LDFLAGS],
                 AX_VAR_POPVALUE([LIBS])
             ])
         ])
-	# Generic flag
+        # Generic flag
         AS_IF([test "x$ac_cv_search_MPI_Init" = x || test "x$ac_cv_search_MPI_Init" = xno], [
             AS_IF([mpicc_show=$($$1 -show 2>&AS_MESSAGE_LOG_FD)], [
                 mpicc_show=$(echo $mpicc_show | tr -s ' ' | cut -d' ' -f2-)
@@ -399,7 +399,7 @@ AC_DEFUN([AX_CHECK_MPI_LDFLAGS],
     # If MPICC wrapper did not succeed, try user custom flags
     AS_IF([test "x$ac_cv_search_MPI_Init" = x || test "x$ac_cv_search_MPI_Init" = xno], [
         AX_VAR_PUSHVALUE([LIBS], [""])
-        AX_VAR_PUSHVALUE([LDFLAGS], [$2])
+        AX_VAR_PUSHVALUE([LDFLAGS], [$LDFLAGS $2])
         AS_IF([test x"$cross_compiling" = xyes ], [LDFLAGS="$LDFLAGS -Wl,-z,undefs"], [])
         AS_UNSET([ac_cv_search_MPI_Init])
         AC_SEARCH_LIBS([MPI_Init], [mpi mpich], [MPI_LDFLAGS="$LDFLAGS $LIBS"])

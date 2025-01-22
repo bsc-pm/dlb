@@ -23,7 +23,7 @@ AC_DEFUN([AX_HWLOC],
         ])
 
         ### HWLOC INCLUDES ###
-        AX_VAR_PUSHVALUE([CPPFLAGS], [$user_hwloc_inc_flags])
+        AX_VAR_PUSHVALUE([CPPFLAGS], [$CPPFLAGS $user_hwloc_inc_flags])
         AC_CHECK_HEADERS([hwloc.h], [
             HWLOC_CPPFLAGS="$user_hwloc_inc_flags"
         ] , [
@@ -36,7 +36,7 @@ AC_DEFUN([AX_HWLOC],
     AS_IF([test "x$with_hwloc" != xno], [
         ### HWLOC LIBS ###
         AX_VAR_PUSHVALUE([LIBS], [""])
-        AX_VAR_PUSHVALUE([LDFLAGS], [$user_hwloc_lib_flags])
+        AX_VAR_PUSHVALUE([LDFLAGS], [$LDFLAGS $user_hwloc_lib_flags])
         AC_SEARCH_LIBS([hwloc_topology_init], [hwloc], [
             HWLOC_LDFLAGS="$user_hwloc_lib_flags $LIBS"
             HWLOC_LIBDIR="$user_hwloc_libdir"
