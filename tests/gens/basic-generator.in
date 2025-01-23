@@ -9,17 +9,18 @@ BLDDIR="@abs_top_builddir@"
 @HAVE_PAPI_TRUE@ PAPI_CPPFLAGS="@PAPI_CPPFLAGS@ -DPAPI_LIB"
 CPPFLAGS="-DHAVE_CONFIG_H -I$BLDDIR \
             -I$SRCDIR/tests/test -I$SRCDIR/src -I$SRCDIR/src/apis \
-            -I$SRCDIR/src/LB_core -I$BLDDIR/src $HWLOC_CPPFLAGS $PAPI_CPPFLAGS"
+            -I$SRCDIR/src/LB_core -I$BLDDIR/src \
+            $HWLOC_CPPFLAGS $PAPI_CPPFLAGS @CPPFLAGS@"
 PERFO_CPPFLAGS="$CPPFLAGS @PERFO_CPPFLAGS@"
 DEBUG_CPPFLAGS="$CPPFLAGS @DEBUG_CPPFLAGS@"
 
-PERFO_CFLAGS="@PERFO_CFLAGS@ @AC_CFLAGS@ -include perish.h"
-DEBUG_CFLAGS="@DEBUG_CFLAGS@ @AC_CFLAGS@ -include perish.h"
+PERFO_CFLAGS="@PERFO_CFLAGS@ @AC_CFLAGS@ @CFLAGS@ -include perish.h"
+DEBUG_CFLAGS="@DEBUG_CFLAGS@ @AC_CFLAGS@ @CFLAGS@ -include perish.h"
 
 @HAVE_HWLOC_TRUE@ HWLOC_LDFLAGS="@HWLOC_LDFLAGS@ -Wl,-rpath,@HWLOC_LIBDIR@ -Wl,-enable-new-dtags"
 @HAVE_PAPI_TRUE@ PAPI_LDFLAGS="@PAPI_LDFLAGS@ -Wl,-rpath,@PAPI_LIBDIR@ -Wl,-enable-new-dtags"
-PERFO_LDFLAGS="$BLDDIR/.libs/libdlb.a $HWLOC_LDFLAGS $PAPI_LDFLAGS -lrt -ldl @AC_LDFLAGS@"
-DEBUG_LDFLAGS="$BLDDIR/.libs/libdlb_dbg.a $HWLOC_LDFLAGS $PAPI_LDFLAGS -lrt -ldl @AC_LDFLAGS@"
+PERFO_LDFLAGS="$BLDDIR/.libs/libdlb.a $HWLOC_LDFLAGS $PAPI_LDFLAGS -lrt -ldl @AC_LDFLAGS@ @LDFLAGS@"
+DEBUG_LDFLAGS="$BLDDIR/.libs/libdlb_dbg.a $HWLOC_LDFLAGS $PAPI_LDFLAGS -lrt -ldl @AC_LDFLAGS@ @LDFLAGS@"
 
 cat << EOF
 compile_versions="$VERSIONS"
@@ -32,5 +33,5 @@ test_CFLAGS_debug="$DEBUG_CFLAGS"
 test_LDFLAGS_performance="$PERFO_LDFLAGS"
 test_LDFLAGS_debug="$DEBUG_LDFLAGS"
 
-$($SRCDIR/tests/gens/config.py "$@")
+$(@PYTHON@ $SRCDIR/tests/gens/config.py "$@")
 EOF
