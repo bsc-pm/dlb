@@ -360,11 +360,34 @@ AX_HWLOC
 AX_PAPI
 
 # check for SPHINX
-AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
+AC_ARG_ENABLE([sphinx-doc],
+              AS_HELP_STRING([--disable-sphinx-doc], [disable sphinx-doc detection]),
+    [], dnl Implicit: enable_sphinx_doc=$enableval
+    [enable_sphinx_doc=yes]
+)
+AS_IF([test "x$enable_sphinx_doc" = xyes], [
+    AC_CHECK_PROG([sphinx], [sphinx-build], [yes])
+], [
+    AC_MSG_CHECKING([for sphinx-build])
+    AC_MSG_RESULT([skipped])
+    sphinx=no
+])
 AM_CONDITIONAL([HAVE_SPHINX], [test "x$sphinx" = xyes])
 
+
 # check for Doxygen
-AC_CHECK_PROG([doxygen], [doxygen], [yes])
+AC_ARG_ENABLE([doxygen],
+              AS_HELP_STRING([--disable-doxygen], [disable doxygen detection]),
+    [], dnl Implicit: enable_doxygen=$enableval
+    [enable_doxygen=yes]
+)
+AS_IF([test "x$enable_doxygen" = xyes], [
+    AC_CHECK_PROG([doxygen], [doxygen], [yes])
+], [
+    AC_MSG_CHECKING([for doxygen])
+    AC_MSG_RESULT([skipped])
+    doxygen=no
+])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$doxygen" = xyes])
 AM_COND_IF([HAVE_DOXYGEN], [
     # Doxygen < '1.8.16' had some bugs with underline HTML tags:
@@ -377,8 +400,20 @@ AM_COND_IF([HAVE_DOXYGEN], [
 ])
 AC_SUBST([DOXYGEN_ALIASES])
 
+
 # check for Pandoc
-AC_CHECK_PROG([pandoc], [pandoc], [yes])
+AC_ARG_ENABLE([pandoc],
+              AS_HELP_STRING([--disable-pandoc], [disable pandoc detection]),
+    [], dnl Implicit: enable_pandoc=$enableval
+    [enable_pandoc=yes]
+)
+AS_IF([test "x$enable_pandoc" = xyes], [
+    AC_CHECK_PROG([pandoc], [pandoc], [yes])
+], [
+    AC_MSG_CHECKING([for pandoc])
+    AC_MSG_RESULT([skipped])
+    pandoc=no
+])
 AS_IF([test "x$pandoc" = xyes], [
     AC_MSG_CHECKING([whether pandoc supports the required formats])
     AS_IF([! pandoc --from=man --to=rst /dev/null > /dev/null 2>&1], [
@@ -388,6 +423,7 @@ AS_IF([test "x$pandoc" = xyes], [
 ])
 AM_CONDITIONAL([HAVE_PANDOC], [test "x$pandoc" = xyes])
 
+
 # Check if Sphinx will include man pages
 AM_CONDITIONAL([SPHINX_HAS_MANPAGES], [test "x$pandoc" = xyes && test "x$doxygen" = xyes])
 AM_COND_IF([SPHINX_HAS_MANPAGES], [
@@ -396,6 +432,7 @@ AM_COND_IF([SPHINX_HAS_MANPAGES], [
     SPHINX_HAS_MANPAGES=".. "
 ])
 AC_SUBST([SPHINX_HAS_MANPAGES])
+
 
 AC_CONFIG_HEADERS([config.h])
 
