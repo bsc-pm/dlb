@@ -149,7 +149,7 @@ static void init_system_masks(const cpu_set_t *sys_mask,
         mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
         mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_masks[core_id]);
         for (int cpuid = core_cpuset->first_cpuid;
-                cpuid >= 0;
+                cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
                 cpuid = mu_get_next_cpu(core_cpuset->set, cpuid)) {
             /* Save reference to another array indexed by cpuid */
             sys.core_masks_by_cpuid[cpuid] = core_cpuset;
@@ -239,7 +239,7 @@ static int parse_hwloc(void) {
         mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
         mu_cpuset_from_hwloc_bitmap(core_cpuset, obj->cpuset, topology);
         for (int cpuid = core_cpuset->first_cpuid;
-                cpuid >= 0;
+                cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
                 cpuid = hwloc_bitmap_next(obj->cpuset, cpuid)) {
             /* Save reference to another array indexed by cpuid */
             sys.core_masks_by_cpuid[cpuid] = core_cpuset;
@@ -249,7 +249,7 @@ static int parse_hwloc(void) {
     /*** NUMA Nodes ***/
     hwloc_obj_type_t node = HWLOC_OBJ_NODE;
     sys.num_nodes = hwloc_get_nbobjs_by_type(topology, node);
-    sys.node_masks = calloc(sys.num_cores, sizeof(mu_cpuset_t));
+    sys.node_masks = calloc(sys.num_nodes, sizeof(mu_cpuset_t));
     for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
         hwloc_obj_t obj = hwloc_get_obj_by_type(topology, node, node_id);
         mu_cpuset_from_hwloc_bitmap(&sys.node_masks[node_id],
@@ -442,7 +442,7 @@ static void print_sys_info(void) {
     }
 
     for (int cpuid = sys.sys_mask.first_cpuid;
-            cpuid >= 0;
+            cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
             cpuid = mu_get_next_cpu(sys.sys_mask.set, cpuid)) {
         const mu_cpuset_t *core_cpuset = sys.core_masks_by_cpuid[cpuid];
         if (core_cpuset && core_cpuset->set) {

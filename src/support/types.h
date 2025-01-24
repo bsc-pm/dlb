@@ -28,11 +28,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#if NCPUS_AT_CONFIGURE_TIME > 256
+#if NCPUS_AT_CONFIGURE_TIME > 255
 typedef uint8_t cpuid_t;
+enum { DLB_CPUID_INVALID = UINT8_MAX };
 #define PRICPUID PRIu8
 #else
 typedef uint16_t cpuid_t;
+enum { DLB_CPUID_INVALID = UINT16_MAX };
 #define PRICPUID PRIu16
 #endif
 

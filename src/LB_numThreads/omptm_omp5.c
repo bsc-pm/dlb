@@ -83,7 +83,7 @@ static void compute_cpu_bindings(void) {
         int num_added_cpus = 0;
         const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
         for(int cpuid_in_core = core_mask->first_cpuid;
-                cpuid_in_core >= 0;
+                cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
                 cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
 
             /* Add CPU id as potentially available */

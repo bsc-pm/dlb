@@ -134,7 +134,7 @@ static bool core_is_eligible(pid_t pid, int cpuid) {
     if (shdata->flags.hw_has_smt) {
         const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
         for (int cpuid_in_core = core_mask->first_cpuid;
-                cpuid_in_core >= 0;
+                cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
                 cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
             const cpuinfo_t *cpuinfo = &shdata->node_info[cpuid_in_core];
             if ((cpuinfo->guest != pid && cpuinfo->guest != NOBODY)
@@ -160,7 +160,7 @@ static bool core_is_occupied(pid_t owner, int cpuid) {
     if (shdata->flags.hw_has_smt) {
         const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
         for (int cpuid_in_core = core_mask->first_cpuid;
-                cpuid_in_core >= 0;
+                cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
                 cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
             pid_t guest = shdata->node_info[cpuid_in_core].guest;
             if (guest != NOBODY
@@ -634,7 +634,7 @@ static void lend_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks)
             // the rest of CPUs in the core. Iterate the rest of cpus now:
             const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
             for (int cpuid_in_core = core_mask->first_cpuid;
-                    cpuid_in_core >= 0;
+                    cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
                     cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
                 if (cpuid_in_core != cpuid) {
                     cpuinfo_t *cpuinfo_in_core = &shdata->node_info[cpuid_in_core];
@@ -808,7 +808,7 @@ static int reclaim_core(pid_t pid, cpuid_t core_id,
 
     const mu_cpuset_t *core_mask = mu_get_core_mask_by_coreid(core_id);
     for (int cpuid_in_core = core_mask->first_cpuid;
-            cpuid_in_core >= 0;
+            cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
             cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
         int local_error = reclaim_cpu(pid, cpuid_in_core, tasks);
         if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
@@ -887,7 +887,7 @@ int shmem_cpuinfo__reclaim_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restr
                 && shdata->flags.hw_has_smt) {
             const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
             for (int cpuid_in_core = core_mask->first_cpuid;
-                    cpuid_in_core >= 0;
+                    cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
                     cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
                 if (cpuid_in_core != cpuid) {
                     const cpuinfo_t *cpuinfo = &shdata->node_info[cpuid_in_core];
@@ -1114,7 +1114,7 @@ static int acquire_core(pid_t pid, cpuid_t core_id,
 
     const mu_cpuset_t *core_mask = mu_get_core_mask_by_coreid(core_id);
     for (int cpuid_in_core = core_mask->first_cpuid;
-            cpuid_in_core >= 0;
+            cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
             cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
         int local_error = acquire_cpu(pid, cpuid_in_core, tasks);
         if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
@@ -1428,7 +1428,7 @@ static int borrow_core(pid_t pid, cpuid_t core_id, array_cpuinfo_task_t *restric
 
     const mu_cpuset_t *core_mask = mu_get_core_mask_by_coreid(core_id);
     for (int cpuid_in_core = core_mask->first_cpuid;
-            cpuid_in_core >= 0;
+            cpuid_in_core >= 0 && cpuid_in_core != DLB_CPUID_INVALID;
             cpuid_in_core = mu_get_next_cpu(core_mask->set, cpuid_in_core)) {
         if (borrow_cpu(pid, cpuid_in_core, tasks) == DLB_SUCCESS) {
             /* successfully borrowed, continue */
