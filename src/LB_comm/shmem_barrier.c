@@ -24,13 +24,13 @@
 #include "LB_comm/shmem_barrier.h"
 
 #include "LB_core/DLB_kernel.h"
-#include "LB_core/DLB_talp.h"
 #include "LB_comm/shmem.h"
 #include "apis/dlb_errors.h"
 #include "support/atomic.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
+#include "talp/talp.h"
 
 #include <errno.h>
 #include <pthread.h>

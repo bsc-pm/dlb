@@ -22,7 +22,7 @@
 </testinfo>*/
 
 #include "apis/dlb_talp.h"
-#include "support/talp_output.h"
+#include "talp/talp_output.h"
 
 #include <ftw.h>
 #include <stdio.h>

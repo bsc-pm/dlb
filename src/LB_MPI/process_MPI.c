@@ -33,7 +33,7 @@
 #include "support/options.h"
 #include "support/debug.h"
 #include "support/types.h"
-#include "LB_core/DLB_talp.h"
+#include "talp/talp_mpi.h"
 #include <mpi.h>
 #include <unistd.h>
 #include <limits.h>
@@ -54,6 +54,8 @@ static mpi_set_t lewi_mpi_calls = MPISET_ALL;
 static MPI_Comm mpi_comm_world;         /* DLB's own MPI_COMM_WORLD */
 static MPI_Comm mpi_comm_node;          /* MPI Communicator specific to the node */
 static MPI_Comm mpi_comm_internode;     /* MPI Communicator with 1 representative per node */
+
+static MPI_Datatype mpi_int64_type;     /* MPI datatype representing int64_t */
 
 void before_init(void) {
 #if MPI_VERSION >= 3 && defined(MPI_LIBRARY_VERSION)
@@ -85,6 +87,13 @@ static void get_mpi_info(void) {
     PMPI_Comm_dup(MPI_COMM_WORLD, &mpi_comm_world);
     PMPI_Comm_rank(mpi_comm_world, &_mpi_rank);
     PMPI_Comm_size(mpi_comm_world, &_mpi_size);
+
+    /* Initialize MPI type */
+#if MPI_VERSION >= 3
+    mpi_int64_type = MPI_INT64_T;
+#else
+    PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
+#endif
 
 #if MPI_VERSION >= 3
     /* Node communicator, obtain also local id and number of MPIs in this node */
@@ -284,6 +293,10 @@ MPI_Comm getNodeComm(void) {
 
 MPI_Comm getInterNodeComm(void) {
     return mpi_comm_internode;
+}
+
+MPI_Datatype get_mpi_int64_type(void) {
+    return mpi_int64_type;
 }
 
 #endif /* MPI_LIB */

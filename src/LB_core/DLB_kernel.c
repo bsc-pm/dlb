@@ -23,7 +23,6 @@
 
 #include "LB_core/DLB_kernel.h"
 
-#include "LB_core/DLB_talp.h"
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "LB_numThreads/numThreads.h"
@@ -40,6 +39,8 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+#include "talp/talp.h"
+#include "talp/talp_mpi.h"
 #ifdef MPI_LIB
 #include "LB_MPI/process_MPI.h"
 #endif

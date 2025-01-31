@@ -17,32 +17,48 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef PROCESS_MPI_H
-#define PROCESS_MPI_H
+#ifndef DLB_CORE_TALP_H
+#define DLB_CORE_TALP_H
 
-#include "LB_MPI/MPI_calls_coded.h"
+#include "apis/dlb_talp.h"
+#include "support/atomic.h"
+#include "talp/talp_types.h"
 
-#include <unistd.h>
-#include <mpi.h>
+#include <pthread.h>
+#include <sched.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-extern int _mpi_rank;         /* MPI rank */
-extern int _mpi_size;         /* MPI size */
-extern int _node_id;          /* Node ID */
-extern int _num_nodes;        /* Number of nodes */
-extern int _process_id;       /* Process ID per node */
-extern int _mpis_per_node;    /* Numer of MPI processes per node */
+enum { TALP_NO_TIMESTAMP = 0 };
 
-void before_init(void);
-void after_init(void);
-void before_mpi(mpi_call_t mpi_call);
-void after_mpi(mpi_call_t mpi_call);
-void before_finalize(void);
-void after_finalize(void);
-int  is_mpi_ready(void);
-void process_MPI__finalize(void);
-MPI_Comm getWorldComm(void);
-MPI_Comm getNodeComm(void);
-MPI_Comm getInterNodeComm(void);
-MPI_Datatype get_mpi_int64_type(void);
+typedef struct SubProcessDescriptor subprocess_descriptor_t;
 
-#endif //PROCESS_MPI_H
+
+/* TALP init / finalize */
+int  talp_init_papi_counters(void);
+void talp_init(subprocess_descriptor_t *spd);
+void talp_finalize(subprocess_descriptor_t *spd);
+
+
+/* TALP samples */
+talp_sample_t*
+     talp_get_thread_sample(const subprocess_descriptor_t *spd);
+void talp_set_sample_state(talp_sample_t *sample, enum talp_sample_state state, bool papi);
+void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp);
+int  talp_flush_samples_to_regions(const subprocess_descriptor_t *spd);
+void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
+        talp_sample_t **samples, unsigned int nelems);
+
+
+/* TALP collect functions for 3rd party programs */
+int talp_query_pop_node_metrics(const char *name, struct dlb_node_metrics_t *node_metrics);
+
+
+/* TALP collect functions for 1st party programs */
+int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
+        struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);
+int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
+        struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
+
+
+#endif

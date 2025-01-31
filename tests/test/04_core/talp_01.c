@@ -23,15 +23,17 @@
 
 #include "unique_shmem.h"
 
-#include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
-#include "LB_core/talp_types.h"
 #include "LB_comm/shmem_talp.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/atomic.h"
 #include "support/mytime.h"
+#include "talp/regions.h"
+#include "talp/talp.h"
+#include "talp/talp_mpi.h"
+#include "talp/talp_types.h"
 
 #include <sched.h>
 #include <stdint.h>
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]) {
     assert( talp_info->samples[0]->state == useful );
 
     /* Update regions */
-    assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
+    assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
     assert( global_monitor->mpi_time > 0 );
     assert( global_monitor->useful_time > 0 );
 
@@ -130,11 +132,11 @@ int main(int argc, char *argv[]) {
     assert( useful_time > 0 );
 
     /* Create a custom monitoring region */
-    dlb_monitor_t *monitor = monitoring_region_register(&spd, "Test");
-    monitoring_region_start(&spd, monitor);
+    dlb_monitor_t *monitor = region_register(&spd, "Test");
+    region_start(&spd, monitor);
     talp_into_sync_call(&spd, /* is_blocking_collective */ false);
     talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
-    monitoring_region_stop(&spd, monitor);
+    region_stop(&spd, monitor);
 
     /* Finalize MPI */
     talp_mpi_finalize(&spd);

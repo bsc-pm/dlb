@@ -25,7 +25,6 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
 #include <unistd.h>
 
 typedef struct process_in_node_record_t {

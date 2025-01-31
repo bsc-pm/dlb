@@ -23,17 +23,19 @@
 
 #include "unique_shmem.h"
 
-#include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
-#include "LB_core/talp_types.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
 #include "support/atomic.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
+#include "talp/regions.h"
+#include "talp/talp.h"
+#include "talp/talp_mpi.h"
+#include "talp/talp_types.h"
 
 #include <float.h>
 #include <pthread.h>
@@ -90,7 +92,7 @@ static void* observer_func(void *arg) {
     set_observer_role(true);
 
     /* Get global region */
-    const dlb_monitor_t *global_monitor = monitoring_region_get_global_region(spd);
+    const dlb_monitor_t *global_monitor = region_get_global(spd);
     assert( global_monitor != NULL );
     int num_measurements = global_monitor->num_measurements;
 
@@ -100,9 +102,9 @@ static void* observer_func(void *arg) {
     assert( num_measurements == global_monitor->num_measurements );
 
     /* An observer may not start/stop/update regions */
-    assert( monitoring_region_start(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
-    assert( monitoring_region_stop(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
-    assert( monitoring_regions_force_update(spd) == DLB_ERR_PERM );
+    assert( region_start(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
+    assert( region_stop(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
+    assert( talp_flush_samples_to_regions(spd) == DLB_ERR_PERM );
 
     /* Get MPI metrics */
     dlb_node_metrics_t node_metrics;
@@ -150,7 +152,7 @@ int main(int argc, char *argv[]) {
 
         /* Stop global monitoring region so that we can collect its metrics twice
          * with the same values */
-        assert( monitoring_region_stop(&spd, global_monitor) == DLB_SUCCESS );
+        assert( region_stop(&spd, global_monitor) == DLB_SUCCESS );
 
         /* Get MPI metrics */
         dlb_node_metrics_t node_metrics1;
@@ -159,16 +161,16 @@ int main(int argc, char *argv[]) {
                 == DLB_SUCCESS );
         assert( talp_collect_pop_node_metrics(&spd, global_monitor, &node_metrics2)
                 == DLB_SUCCESS );
-        assert( !monitoring_region_is_started(global_monitor) );
+        assert( !region_is_started(global_monitor) );
         assert( cmp_node_metrics(&node_metrics1, &node_metrics2) == 0 );
         print_node_metrics(&node_metrics1);
 
         /* User defined region */
         dlb_node_metrics_t node_metrics3;
-        dlb_monitor_t *monitor = monitoring_region_register(&spd, NULL);
-        assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
+        dlb_monitor_t *monitor = region_register(&spd, NULL);
+        assert( region_start(&spd, monitor) == DLB_SUCCESS );
         assert( talp_collect_pop_node_metrics(&spd, monitor, &node_metrics3) == DLB_SUCCESS );
-        assert( monitoring_region_is_started(monitor) );
+        assert( region_is_started(monitor) );
 
         /* Finalize */
         talp_mpi_finalize(&spd);
@@ -201,7 +203,7 @@ int main(int argc, char *argv[]) {
         talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
 
         /* Observer threads cannot force-update regions, do it before */
-        assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
+        assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
 
         /* Observer thread is created here */
         pthread_t observer_pthread;

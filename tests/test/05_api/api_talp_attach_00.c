@@ -27,8 +27,8 @@
 #include "apis/dlb_talp.h"
 #include "support/env.h"
 #include "support/mask_utils.h"
+#include "talp/talp_mpi.h"
 #include "LB_comm/shmem.h"
-#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 
 #include <float.h>

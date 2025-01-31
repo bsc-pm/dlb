@@ -30,14 +30,14 @@
 #include "LB_numThreads/omptm_omp5.h"
 #include "LB_numThreads/omptm_free_agents.h"
 #include "LB_numThreads/omptm_role_shift.h"
-#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "apis/dlb.h"
+#include "apis/dlb_errors.h"
 #include "support/debug.h"
 #include "support/dlb_common.h"
 #include "support/mask_utils.h"
 #include "support/tracing.h"
-#include "apis/dlb_errors.h"
+#include "talp/talp_openmp.h"
 
 #include <inttypes.h>
 #include <unistd.h>
