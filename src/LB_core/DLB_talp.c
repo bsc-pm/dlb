@@ -1158,9 +1158,10 @@ static void talp_record_node_summary(const subprocess_descriptor_t *spd) {
         if (_mpi_rank == 0) {
             for (int node_id = 0; node_id < _num_nodes; ++node_id) {
                 verbose(VB_TALP, "Node summary: recording node %d", node_id);
-                node_summary = recvbuf + node_summary_size*node_id;
-                ensure( node_id == node_summary->node_id, "Node id error in %s", __func__ );
-                talp_output_record_node(node_summary);
+                node_record_t *node_record = (node_record_t*)(
+                        (unsigned char *)recvbuf + node_summary_size * node_id);
+                ensure( node_id == node_record->node_id, "Node id error in %s", __func__ );
+                talp_output_record_node(node_record);
             }
             free(recvbuf);
         }

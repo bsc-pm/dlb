@@ -422,7 +422,7 @@ bool queue__is_at_capacity(const queue_t *queue) {
 }
 
 static void * queue__get_element_ptr(queue_t *queue, unsigned int idx) {
-    return queue->queue + (queue->element_size * idx);
+    return (unsigned char *)queue->queue + (queue->element_size * idx);
 }
 
 int queue__take_head(queue_t *queue, void * poped) {
@@ -511,12 +511,12 @@ static void queue__realloc(queue_t *queue) {
 
         memcpy(
             new_queue,
-            old_queue + queue->tail * queue->element_size,
+            (unsigned char *)old_queue + queue->tail * queue->element_size,
             n_elements_first_copy * queue->element_size
         );
 
         memcpy(
-            new_queue + (queue->capacity - queue->tail) * queue->element_size,
+            (unsigned char *)new_queue + (queue->capacity - queue->tail) * queue->element_size,
             old_queue,
             queue->head * queue->element_size
         );

@@ -29,7 +29,7 @@
 
 /* Atomic operations */
 
-#if defined(HAVE_STDATOMIC_H) && !defined(__INTEL_COMPILER)
+#if defined(HAVE_STDATOMIC_H) && !(defined(__INTEL_COMPILER) || defined(__NVCOMPILER))
 #include <stdatomic.h>
 
 #define DLB_ATOMIC_ADD(ptr, val)            atomic_fetch_add(ptr, val)

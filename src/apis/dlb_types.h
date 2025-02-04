@@ -32,6 +32,7 @@ enum { DLB_MAX_CPUS = 0x7fff };
 
 // DROM flags
 typedef enum dlb_drom_flags_e {
+    DLB_DROM_FLAGS_NONE = 0,
     DLB_STEAL_CPUS      = 1 << 0,
     DLB_RETURN_STOLEN   = 1 << 1,
     DLB_SYNC_QUERY      = 1 << 2,
