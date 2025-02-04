@@ -88,7 +88,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"API to lend and borrow resources.",
         .offset         = offsetof(options_t, lewi),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_DROM",
         .arg_name       = "--drom",
@@ -98,7 +98,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"change its own process mask.",
         .offset         = offsetof(options_t, drom),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_TALP",
         .arg_name       = "--talp",
@@ -108,7 +108,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"metrics at run time.",
         .offset         = offsetof(options_t, talp),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     },{
         .var_name       = "LB_BARRIER",
         .arg_name       = "--barrier",
@@ -117,7 +117,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"intra-node barriers.",
         .offset         = offsetof(options_t, barrier),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--ompt",
@@ -128,7 +128,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"mask changes or some LeWI features if enabled.",
         .offset         = offsetof(options_t, ompt),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_MODE",
         .arg_name       = "--mode",
@@ -139,7 +139,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"application when resources become available.",
         .offset         = offsetof(options_t, mode),
         .type           = OPT_MODE_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     // verbose
     {
@@ -150,7 +150,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"WARNING and PANIC messages.",
         .offset         = offsetof(options_t, quiet),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--silent",
@@ -158,7 +158,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Suppress all output from DLB, even error messages.",
         .offset         = offsetof(options_t, silent),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_VERBOSE",
         .arg_name       = "--verbose",
@@ -167,7 +167,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"components may be selected.",
         .offset         = offsetof(options_t, verbose),
         .type           = OPT_VB_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_VERBOSE_FORMAT",
         .arg_name       = "--verbose-format",
@@ -177,7 +177,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"shown in the possible values.",
         .offset         = offsetof(options_t, verbose_fmt),
         .type           = OPT_VBFMT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     // instrument
     {
@@ -190,7 +190,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"calls, DLB modes, etc.",
         .offset         = offsetof(options_t, instrument),
         .type           = OPT_INST_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--instrument-counters",
@@ -200,7 +200,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"This may significantly increase the size of the tracefile.",
         .offset         = offsetof(options_t, instrument_counters),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--instrument-extrae-nthreads",
@@ -210,7 +210,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"thread.",
         .offset         = offsetof(options_t, instrument_extrae_nthreads),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     },
     // LeWI
     {
@@ -222,7 +222,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"This flag replaces the option --lewi-mpi, although negated.",
         .offset         = offsetof(options_t, lewi_keep_cpu_on_blocking_call),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-respect-cpuset",
@@ -232,7 +232,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"for any process to borrow.",
         .offset         = offsetof(options_t, lewi_respect_cpuset),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-respect-mask",
@@ -240,7 +240,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Deprecated in favor of --lewi-respect-cpuset.\n",
         .offset         = offsetof(options_t, lewi_respect_cpuset),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL | OPT_DEPRECATED
+        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_DEPRECATED)
     }, {
         /* This is a deprecated option that overlaps with --lewi-keep-one-cpu.
          * It must be defined afterwards so that the default value of the
@@ -255,7 +255,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"If you want to keep this CPU, use --lewi-keep-one-cpu instead.",
         .offset         = offsetof(options_t, lewi_keep_cpu_on_blocking_call),
         .type           = OPT_NEG_BOOL_T,
-        .flags          = OPT_OPTIONAL | OPT_DEPRECATED
+        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_DEPRECATED)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-mpi-calls",
@@ -265,7 +265,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"If set to other values, only those types will trigger LeWI.",
         .offset         = offsetof(options_t, lewi_mpi_calls),
         .type           = OPT_MPISET_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-barrier",
@@ -276,7 +276,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"--lewi-barrier-select.",
         .offset         = offsetof(options_t, lewi_barrier),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL | OPT_READONLY
+        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_READONLY)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-barrier-select",
@@ -288,7 +288,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"e.g.: --lewi-barrier-select=default,barrier3",
         .offset         = offsetof(options_t, lewi_barrier_select),
         .type           = OPT_STR_T,
-        .flags          = OPT_OPTIONAL | OPT_READONLY | OPT_ADVANCED
+        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_READONLY | OPT_ADVANCED)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-affinity",
@@ -311,7 +311,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"node has been lent to DLB.",
         .offset         = offsetof(options_t, lewi_affinity),
         .type           = OPT_LEWI_AFF_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-ompt",
@@ -329,7 +329,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"Multiple flags can be selected at the same time.",
         .offset         = offsetof(options_t, lewi_ompt),
         .type           = OPT_OMPTOPTS_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-greedy",
@@ -337,7 +337,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Greedy option for LeWI policy.",
         .offset         = offsetof(options_t, lewi_greedy),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-warmup",
@@ -345,7 +345,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Create as many threads as necessary during the process startup.",
         .offset         = offsetof(options_t, lewi_warmup),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-max-parallelism",
@@ -353,7 +353,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Set the maximum level of parallelism for the LeWI algorithm.",
         .offset         = offsetof(options_t, lewi_max_parallelism),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-color",
@@ -363,7 +363,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"will only share resources with other processes of the same color.",
         .offset         = offsetof(options_t, lewi_color),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     // talp
     {
@@ -373,7 +373,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Select whether to measure OpenMP metrics. (Experimental)",
         .offset         = offsetof(options_t, talp_openmp),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     {
         .var_name       = "LB_NULL",
@@ -382,7 +382,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Select whether to collect PAPI counters.",
         .offset         = offsetof(options_t, talp_papi),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     {
         .var_name       = "LB_TALP_SUMM",
@@ -405,7 +405,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"be derived from the 'process' report.",
         .offset         = offsetof(options_t, talp_summary),
         .type           = OPT_TLPSUM_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     {
         .var_name       = "LB_NULL",
@@ -422,7 +422,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"the next release.",
         .offset         = offsetof(options_t, talp_output_file),
         .type           = OPT_PTR_PATH_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     {
         /* In the future, consider using an interval update timer instead of a boolean */
@@ -434,7 +434,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"the application.",
         .offset         = offsetof(options_t, talp_external_profiler),
         .type           = OPT_BOOL_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     {
         .var_name       = "LB_NULL",
@@ -445,7 +445,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"Deprecated: use --shmem-size-multiplier instead.\n",
         .offset         = offsetof(options_t, talp_regions_per_proc),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED)
     },
     {
         .var_name       = "LB_NULL",
@@ -474,7 +474,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"      --talp-region-select=exclude:region4",
         .offset         = offsetof(options_t, talp_region_select),
         .type           = OPT_STR_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     {
         .var_name       = "LB_NULL",
@@ -484,7 +484,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"Select which version of POP metrics to compute.",
         .offset         = offsetof(options_t, talp_model),
         .type           = OPT_TLPMOD_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     },
     // barrier
     {
@@ -495,7 +495,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"processes to avoid unwanted synchronization.",
         .offset         = offsetof(options_t, barrier_id),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     },
     // misc
     {
@@ -508,7 +508,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"use different shared memories and they will not share resources.",
         .offset         = offsetof(options_t, shm_key),
         .type           = OPT_STR_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--shm-size-multiplier",
@@ -523,7 +523,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"regions.",
         .offset         = offsetof(options_t, shm_size_multiplier),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     }, {
         .var_name       = "LB_PREINIT_PID",
         .arg_name       = "--preinit-pid",
@@ -531,7 +531,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Process ID that pre-initializes the DLB process for DROM.",
         .offset         = offsetof(options_t, preinit_pid),
         .type           = OPT_INT_T,
-        .flags          = OPT_READONLY | OPT_OPTIONAL | OPT_HIDDEN
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_HIDDEN)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--ompt-thread-manager",
@@ -539,7 +539,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"OMPT Thread Manager version.",
         .offset         = offsetof(options_t, omptm_version),
         .type           = OPT_OMPTM_T,
-        .flags          = OPT_OPTIONAL
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
         .var_name       = "LB_DEBUG_OPTS",
         .arg_name       = "--debug-opts",
@@ -547,7 +547,7 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Debug options.",
         .offset         = offsetof(options_t, debug_opts),
         .type           = OPT_DBG_T,
-        .flags          = OPT_OPTIONAL | OPT_ADVANCED
+        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_ADVANCED)
     }
 };
 #undef OFFSET

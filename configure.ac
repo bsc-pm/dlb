@@ -158,6 +158,9 @@ AX_CHECK_COMPILE_FLAG([-we10148], [CFLAGS="${CFLAGS} -we10148"])
 AX_VAR_PUSHVALUE([FCOMP_UNRECOGNIZED_OPTION], [error])
 export FCOMP_UNRECOGNIZED_OPTION
 
+AX_CHECK_COMPILE_FLAG([--diag_suppress branch_past_initialization],
+                      [AC_CFLAGS="${AC_CFLAGS} --diag_suppress branch_past_initialization"])
+
 AX_CHECK_COMPILE_FLAG([-pthread], [AC_CFLAGS="${AC_CFLAGS} -pthread"])
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [AC_CFLAGS="${AC_CFLAGS} -fvisibility=hidden"])
 AX_CHECK_COMPILE_FLAG([-Wno-unused-result], [AC_CFLAGS="${AC_CFLAGS} -Wno-unused-result"])

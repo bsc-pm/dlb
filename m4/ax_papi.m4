@@ -1,6 +1,6 @@
 
-# AX_HWLOC
-# --------
+# AX_PAPI
+# -------
 AC_DEFUN([AX_PAPI],
 [
     AC_MSG_CHECKING([for PAPI])

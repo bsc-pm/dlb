@@ -42,7 +42,8 @@
 #include "support/array_template.h"
 
 void omp_set_num_threads(int nthreads) __attribute__((weak));
-static void (*set_num_threads_fn)(int) = NULL;
+typedef void (*set_num_threads_fn_t)(int);
+static set_num_threads_fn_t set_num_threads_fn = NULL;
 
 
 /*********************************************************************************/
@@ -263,7 +264,7 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
             handle = dlopen("libgomp.so", RTLD_LAZY | RTLD_GLOBAL);
         }
         if (handle != NULL)  {
-            set_num_threads_fn = dlsym(handle, "omp_set_num_threads");
+            set_num_threads_fn = (set_num_threads_fn_t)dlsym(handle, "omp_set_num_threads");
         }
         fatal_cond(set_num_threads_fn == NULL, "omp_set_num_threads cannot be found");
     }
@@ -298,7 +299,7 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
         }
 
         /* Get process mask */
-        shmem_procinfo__getprocessmask(pid, &process_mask, 0);
+        shmem_procinfo__getprocessmask(pid, &process_mask, DLB_DROM_FLAGS_NONE);
         memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
         verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
 

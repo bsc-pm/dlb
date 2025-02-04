@@ -175,8 +175,8 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
 
 static void set_affinity(pid_t pid, const cpu_set_t *new_mask, bool borrow, bool free_slurm) {
     DLB_DROM_Attach();
-    dlb_drom_flags_t flags = borrow ? DLB_RETURN_STOLEN : 0;
-    flags = free_slurm ? flags | DLB_FREE_CPUS_SLURM : flags;
+    dlb_drom_flags_t flags = borrow ? DLB_RETURN_STOLEN : DLB_DROM_FLAGS_NONE;
+    flags = free_slurm ? (dlb_drom_flags_t)(flags | DLB_FREE_CPUS_SLURM) : flags;
     int error = DLB_DROM_SetProcessMask(pid, new_mask, flags);
     dlb_check(error, pid, __FUNCTION__);
     DLB_DROM_Detach();
@@ -193,7 +193,8 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
     } else if (pid == 0) {
         pid = getpid();
         DLB_DROM_Attach();
-        dlb_drom_flags_t flags = DLB_STEAL_CPUS | (borrow ? DLB_RETURN_STOLEN : 0);
+        dlb_drom_flags_t flags = (dlb_drom_flags_t)(
+                DLB_STEAL_CPUS | (borrow ? DLB_RETURN_STOLEN : DLB_DROM_FLAGS_NONE));
         int error = DLB_DROM_PreInit(pid, new_mask, flags, NULL);
         dlb_check(error, pid, __FUNCTION__);
         DLB_DROM_Detach();
@@ -203,7 +204,8 @@ static void execute(char **argv, const cpu_set_t *new_mask, bool borrow) {
     } else {
         wait(NULL);
         DLB_DROM_Attach();
-        int error = DLB_DROM_PostFinalize(pid, borrow);
+        dlb_drom_flags_t flags = borrow ? DLB_RETURN_STOLEN : DLB_DROM_FLAGS_NONE;
+        int error = DLB_DROM_PostFinalize(pid, flags);
         if (error != DLB_SUCCESS && error != DLB_ERR_NOPROC) {
             // DLB_ERR_NOPROC must be ignored here
             dlb_check(error, pid, __FUNCTION__);
@@ -217,9 +219,9 @@ static void remove_affinity_of_one(pid_t pid, const cpu_set_t *cpus_to_remove, b
 
     // Get current PID's mask
     cpu_set_t pid_mask;
-    error = DLB_DROM_GetProcessMask(pid, &pid_mask, 0);
+    error = DLB_DROM_GetProcessMask(pid, &pid_mask, DLB_DROM_FLAGS_NONE);
     dlb_check(error, pid, __FUNCTION__);
-    dlb_drom_flags_t flags = free_slurm ? DLB_FREE_CPUS_SLURM : 0;
+    dlb_drom_flags_t flags = free_slurm ? DLB_FREE_CPUS_SLURM : DLB_DROM_FLAGS_NONE;
 
     // Remove cpus from the PID's mask
     bool mask_dirty = false;
@@ -287,7 +289,7 @@ static void show_affinity(pid_t pid, int list_columns, dlb_printshmem_flags_t pr
     if (pid) {
         // Show CPU affinity of given PID
         cpu_set_t mask;
-        int error = DLB_DROM_GetProcessMask(pid, &mask, 0);
+        int error = DLB_DROM_GetProcessMask(pid, &mask, DLB_DROM_FLAGS_NONE);
         dlb_check(error, pid, __FUNCTION__);
         fprintf(stdout, "PID %d's current affinity CPU list: %s\n", pid, mu_to_str(&mask));
     } else {

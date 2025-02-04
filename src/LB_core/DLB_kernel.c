@@ -268,8 +268,8 @@ int PreInitialize(subprocess_descriptor_t *spd, const cpu_set_t *mask,
     int error = DLB_SUCCESS;
     error = error ? error : shmem_cpuinfo_ext__init(spd->options.shm_key, spd->options.lewi_color);
     error = error ? error : shmem_procinfo_ext__init(spd->options.shm_key);
-    error = error ? error : shmem_procinfo_ext__preinit(spd->id, mask, 0);
-    error = error ? error : shmem_cpuinfo_ext__preinit(spd->id, mask, 0);
+    error = error ? error : shmem_procinfo_ext__preinit(spd->id, mask, DLB_DROM_FLAGS_NONE);
+    error = error ? error : shmem_cpuinfo_ext__preinit(spd->id, mask, DLB_DROM_FLAGS_NONE);
     // Close shmems even if there was an error
     int cpuinfo_finalize_err = shmem_cpuinfo_ext__finalize();
     error = error ? error : cpuinfo_finalize_err;

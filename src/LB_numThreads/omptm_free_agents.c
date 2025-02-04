@@ -378,7 +378,7 @@ void omptm_free_agents__init(pid_t process_id, const options_t *options) {
     omptool_opts = options->lewi_ompt;
     pid = process_id;
     num_free_agents = __kmp_get_num_free_agent_threads();
-    shmem_procinfo__getprocessmask(pid, &process_mask, 0);
+    shmem_procinfo__getprocessmask(pid, &process_mask, DLB_DROM_FLAGS_NONE);
     verbose(VB_OMPT, "Process mask: %s", mu_to_str(&process_mask));
 
     // omp_get_max_threads cannot be called here, try using the env. var.
