@@ -9,6 +9,9 @@ from talp_pages.io.dataframe_handling import get_dfs
 from dataclasses import dataclass
 from datetime import datetime
 
+# Slighlty hacky workaround, but works for now to disable ugly warning
+pd.options.mode.chained_assignment = None  # default='warn'
+
 
 @dataclass
 class ScalingAnalysisArguments:
