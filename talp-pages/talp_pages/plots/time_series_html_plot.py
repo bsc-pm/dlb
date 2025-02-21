@@ -207,6 +207,7 @@ class TimeSeriesHtmlPlot:
 
         # Elapsed time
         metric = "elapsedTime"
+        plots_done = 1
         for region in regions:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region], True),
@@ -217,33 +218,36 @@ class TimeSeriesHtmlPlot:
 
         # IPC
         metric = "IPC"
+        plots_done += 1
         for region in regions:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region]),
                 col=1,
                 row=2,
             )
-        fig["layout"]["yaxis2"]["title"] = "IPC"
+        fig["layout"][f"yaxis{plots_done}"]["title"] = "IPC"
 
         # instructions
         metric = "instructions"
+        plots_done += 1
         for region in regions:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region]),
                 col=3,
                 row=2,
             )
-        fig["layout"]["yaxis3"]["title"] = "# instructions"
+        fig["layout"][f"yaxis{plots_done}"]["title"] = "# instructions"
 
         # frequency
         metric = "frequency"
+        plots_done += 1
         for region in regions:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region]),
                 col=5,
                 row=2,
             )
-        fig["layout"]["yaxis4"]["title"] = "GHz"
+        fig["layout"][f"yaxis{plots_done}"]["title"] = "GHz"
 
         if (
             execution_mode == ExecutionMode.HYBRID
@@ -252,14 +256,15 @@ class TimeSeriesHtmlPlot:
         ):
             # Parallel Effiency
             metric = "parallelEfficiency"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
                     row=3,
                 )
-            fig["layout"]["yaxis5"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis5=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
         if (
             execution_mode == ExecutionMode.HYBRID
@@ -267,34 +272,37 @@ class TimeSeriesHtmlPlot:
         ):
             # communicationEfficiency
             metric = "mpiParallelEfficiency"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
                     row=4,
                 )
-            fig["layout"]["yaxis6"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis6=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
             metric = "mpiCommunicationEfficiency"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
                     row=5,
                 )
-            fig["layout"]["yaxis7"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis7=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
             metric = "mpiLoadBalance"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=4,
                     row=5,
                 )
-            fig["layout"]["yaxis8"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis8=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
         if (
             execution_mode == ExecutionMode.OPENMP
@@ -302,44 +310,48 @@ class TimeSeriesHtmlPlot:
         ):
             #'ompSchedulingEfficiency','ompLoadBalance','ompSerializationEfficiency',
             metric = "ompParallelEfficiency"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
-                    row=6,
+                    row=6 if execution_mode == ExecutionMode.HYBRID else 4,
                 )
-            fig["layout"]["yaxis9"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis9=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
             metric = "ompSchedulingEfficiency"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
-                    row=7,
+                    row=7 if execution_mode == ExecutionMode.HYBRID else 5,
                 )
-            fig["layout"]["yaxis10"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis10=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
             metric = "ompLoadBalance"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=3,
-                    row=7,
+                    row=7 if execution_mode == ExecutionMode.HYBRID else 5,
                 )
-            fig["layout"]["yaxis11"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis11=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
             metric = "ompSerializationEfficiency"
+            plots_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=5,
-                    row=7,
+                    row=7 if execution_mode == ExecutionMode.HYBRID else 5,
                 )
-            fig["layout"]["yaxis12"]["title"] = "Efficiency [0-1]"
-            fig.update_layout(yaxis12=dict(range=[0, 1]))
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
         fig.update_traces(mode="markers+lines")
         return fig
