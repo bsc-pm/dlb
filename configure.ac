@@ -470,7 +470,7 @@ AC_CONFIG_FILES([
     doc/doxygen/Doxyfile
     doc/doxygen/Doxyfile_man1
     doc/doxygen/Doxyfile_man3
-    doc/user_guide/source/conf.py
+    doc/user_guide/source/dlb_version.py
     doc/user_guide/source/index.rst
     src/apis/dlb.h
 ])
