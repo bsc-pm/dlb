@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
             cpuid = mu_get_next_cpu(&full_mask, cpuid)) {
         sum += cpuid;
     }
-    assert( sum == 1023*(1023+1)/2 );
+    assert( sum == max_cpuid*(max_cpuid+1)/2 );
 
     /* mu_get_next_unset */
     assert( mu_get_next_unset(&mask0, -2) == -1 );
