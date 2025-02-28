@@ -857,6 +857,7 @@ nodist_userscripts_DATA = $(userscripts_files_nodist)
 # User Guide
 #********************************************************************************
 sphinx_files = \
+	doc/user_guide/source/conf.py \
 	doc/user_guide/source/dlb_version.py \
 	doc/user_guide/source/advance_usage.rst \
 	doc/user_guide/source/api.rst \
