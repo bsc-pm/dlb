@@ -17,7 +17,7 @@ import os
 import shlex
 
 #import the autotools generated version
-
+sys.path.insert(0, os.path.abspath('.'))
 from dlb_version import DLB_VERSION
 
 # If extensions (or modules to document with autodoc) are in another directory,
