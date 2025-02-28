@@ -300,6 +300,15 @@ static int parse_int_from_file(const char *filename) {
     return value;
 }
 
+static int cmp_mu_cpuset(const void *a, const void *b) {
+    const mu_cpuset_t *set_a = a;
+    const mu_cpuset_t *set_b = b;
+
+    if (set_a->count == 0) return 1;
+    if (set_b->count == 0) return -1;
+    return set_a->first_cpuid - set_b->first_cpuid;
+}
+
 #define PATH_SYSTEM_MASK "/sys/devices/system/cpu/present"
 #define PATH_SYSTEM_CPUS "/sys/devices/system/cpu"
 #define PATH_SYSTEM_NODE "/sys/devices/system/node"
@@ -314,11 +323,21 @@ static void parse_system_files(void) {
     mu_cpuset_from_glibc_sched_affinity(&sys.sys_mask, &system_mask);
 
     /*** Cores ***/
-    // note that we are probably overallocating because we don't knwow the
-    // number of cores yet
-    sys.core_masks_by_coreid = calloc(sys.num_cpus, sizeof(mu_cpuset_t));
+
+    /* This array contains references to core_masks. It is initialized to 0
+     * to account for possible missing CPU ids */
     sys.core_masks_by_cpuid = calloc(sys.num_cpus, sizeof(mu_cpuset_t*));
+
+    /* The number of cores is not known beforehand, and the number indicates
+     * the capacity to hold the last core id, rather than the valid cores */
     int num_cores = 0;
+
+    /* Only if core_id info is not reliable */
+    bool core_masks_array_needs_reordering = false;
+
+    cpu_set_t empty_mask;
+    CPU_ZERO(&empty_mask);
+
     DIR *dir = opendir(PATH_SYSTEM_CPUS);
     if (dir) {
         struct dirent *d;
@@ -327,61 +346,111 @@ static void parse_system_files(void) {
                     && strncmp(d->d_name, "cpu", 3) == 0
                     && isdigit(d->d_name[3]) ) {
 
+                enum { SYSPATH_MAX = 64 };
+                char filename[SYSPATH_MAX];
+
                 /* Get CPU id */
                 int cpu_id = strtol(d->d_name+3, NULL, 10);
-                fatal_cond(cpu_id < 0 || cpu_id > 1024, "Error parsing cpu_id");
+                fatal_cond(cpu_id < 0, "Error parsing cpu_id");
+
+                /* Get core id */
+                snprintf(filename, SYSPATH_MAX, PATH_SYSTEM_CPUS
+                        "/%.8s/topology/core_id", d->d_name);
+                int core_id = parse_int_from_file(filename);
 
                 /* Get core CPUs list */
                 cpu_set_t core_mask;
                 CPU_ZERO(&core_mask);
-                char filename[64];
-                snprintf(filename, 64, PATH_SYSTEM_CPUS
+                snprintf(filename, SYSPATH_MAX, PATH_SYSTEM_CPUS
                         "/%.8s/topology/thread_siblings_list", d->d_name);
                 parse_mask_from_file(filename, &core_mask);
 
-                /* Get core id, in some architectures this value may not be reliable */
-                snprintf(filename, 64, PATH_SYSTEM_CPUS "/%.8s/topology/core_id",
-                        d->d_name);
-                int core_id = parse_int_from_file(filename);
+                /* Reallocate core_masks_by_coreid as needed */
+                if (core_id >= num_cores) {
+                    /* Realloc, saving prev_num_cores  */
+                    int prev_num_cores = num_cores;
+                    num_cores = core_id + 1;
+                    void *p = realloc(sys.core_masks_by_coreid,
+                            num_cores * sizeof(mu_cpuset_t));
+                    fatal_cond(!p, "realloc failed in %s", __func__);
+                    sys.core_masks_by_coreid = p;
 
-                /* Try to respect parsed core_id */
-                if (core_id >= 0 && core_id < 1024) {
-                    mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
-                    if (core_cpuset->set == NULL) {
-                        /* Save core mask */
-                        mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_mask);
-                        ++num_cores;
-                    } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core_cpuset->set, &core_mask)) {
-                        /* Core mask already saved */
-                    } else {
-                        /* Current core mask differ */
-                        core_id = -1;
+                    /* Everytime we reallocate, we need to initialize
+                     * [prev_size..new_size] with empty elements */
+                    for (int i = prev_num_cores; i < num_cores; ++i) {
+                        mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[i];
+                        mu_cpuset_from_glibc_sched_affinity(core_cpuset, &empty_mask);
                     }
                 }
 
-                /* core_id has not been reliable, find an empty spot or same core */
-                for (unsigned int i = 0; i < sys.num_cpus && core_id == -1; ++i) {
-                    mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[i];
-                    if (core_cpuset->set == NULL) {
-                        /* Save core mask */
-                        mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_mask);
-                        ++num_cores;
-                        core_id = i;
-                    } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core_cpuset->set, &core_mask)) {
-                        /* Core mask already saved */
-                        core_id = i;
+                /* Save core mask */
+                mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+                if (core_cpuset->count == 0) {
+                    /* Save core mask */
+                    mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_mask);
+                } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core_cpuset->set, &core_mask)) {
+                    /* Core mask already saved */
+                } else {
+                    /* If we get here it means that different masks have same
+                     * core_id, so we cannot trust its value to index masks.
+                     * Use whatever core_id to save the mask and then reorder array
+                     * with virtual core_ids */
+
+                    /* Find first unused core_id and whether this mask is also
+                     * present with another core id */
+                    int new_coreid = -1;
+                    bool already_present = false;
+                    for (int c = 0; c < num_cores; ++c) {
+                        core_cpuset = &sys.core_masks_by_coreid[c];
+                        if (core_cpuset->count == 0) {
+                            new_coreid = c;
+                        } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core_cpuset->set, &core_mask)) {
+                            already_present = true;
+                            break;
+                        }
                     }
+
+                    /* Break again if the core mask has already been registered */
+                    if (already_present) {
+                        break;
+                    }
+
+                    /* Relloacate if we didn't find en empty spot nor the same mask */
+                    if (new_coreid == -1) {
+                        new_coreid = num_cores++;
+                        void *p = realloc(sys.core_masks_by_coreid,
+                                num_cores * sizeof(mu_cpuset_t));
+                        fatal_cond(!p, "realloc failed in %s", __func__);
+                        sys.core_masks_by_coreid = p;
+                    }
+
+                    /* Finally save core mask */
+                    core_cpuset = &sys.core_masks_by_coreid[new_coreid];
+                    mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_mask);
+
+                    /* Set boolean to do post-processing */
+                    core_masks_array_needs_reordering = true;
                 }
-
-                fatal_cond(core_id == -1, "Could not obtain core id for CPU %d", cpu_id);
-
-                /* Add core mask reference to array indexed by CPU id */
-                sys.core_masks_by_cpuid[cpu_id] = &sys.core_masks_by_coreid[core_id];
             }
         }
         closedir(dir);
     }
     sys.num_cores = num_cores;
+
+    /* Only if replacing core_id by virtual core id */
+    if (core_masks_array_needs_reordering) {
+        qsort(sys.core_masks_by_coreid, num_cores, sizeof(mu_cpuset_t), cmp_mu_cpuset);
+    }
+
+    /* Add core mask references to array indexed by CPU id */
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        for (int cpuid = core_cpuset->first_cpuid;
+                cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
+                cpuid = mu_get_next_cpu(core_cpuset->set, cpuid)) {
+            sys.core_masks_by_cpuid[cpuid] = core_cpuset;
+        }
+    }
 
     /*** NUMA Nodes ***/
     int num_nodes = 0;
@@ -437,15 +506,18 @@ static void print_sys_info(void) {
     }
 
     for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
-        verbose(VB_AFFINITY, "Core %d mask: %s",
-                core_id, mu_to_str(sys.core_masks_by_coreid[core_id].set));
+        const mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        if (core_cpuset->count > 0) {
+            verbose(VB_AFFINITY, "Core %d mask: %s",
+                    core_id, mu_to_str(core_cpuset->set));
+        }
     }
 
     for (int cpuid = sys.sys_mask.first_cpuid;
             cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
             cpuid = mu_get_next_cpu(sys.sys_mask.set, cpuid)) {
         const mu_cpuset_t *core_cpuset = sys.core_masks_by_cpuid[cpuid];
-        if (core_cpuset && core_cpuset->set) {
+        if (core_cpuset && core_cpuset->count > 0) {
             verbose(VB_AFFINITY, "CPU %d core mask: %s",
                     cpuid, mu_to_str(core_cpuset->set));
         }
@@ -525,7 +597,16 @@ bool mu_system_has_smt(void) {
 
 int mu_get_num_cores(void) {
     if (unlikely(!mu_initialized)) mu_init();
-    return sys.num_cores;
+
+    /* Not likely, but sys.num_cores may not be the number of valid cores */
+    int num_cores = 0;
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        if (sys.core_masks_by_coreid[core_id].count > 0) {
+            ++num_cores;
+        }
+    }
+
+    return num_cores;
 }
 
 int mu_get_core_id(int cpuid) {
