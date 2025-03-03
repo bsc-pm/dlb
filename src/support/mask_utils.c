@@ -24,6 +24,7 @@
 #include "support/mask_utils.h"
 
 #include "support/debug.h"
+#include "support/dlb_common.h"
 
 #ifdef HWLOC_LIB
 #include <hwloc.h>
@@ -979,7 +980,7 @@ int mu_get_next_unset(const cpu_set_t *mask, int prev) {
 // mu_to_str and mu_parse_mask functions are used by DLB utilities
 // We export their dynamic symbols to avoid code duplication,
 // although they do not belong to the public API
-#pragma GCC visibility push(default)
+DLB_EXPORT_SYMBOL
 const char* mu_to_str( const cpu_set_t *mask ) {
 
     static __thread char buffer[CPU_SETSIZE*4];
@@ -1030,6 +1031,7 @@ static void parse_64_bits_mask(cpu_set_t *mask, unsigned int offset, const char 
     }
 }
 
+DLB_EXPORT_SYMBOL
 void mu_parse_mask( const char *str, cpu_set_t *mask ) {
     if (!str) return;
 
@@ -1170,7 +1172,6 @@ void mu_parse_mask( const char *str, cpu_set_t *mask ) {
         warning( "Parsed mask \"%s\" does not seem to be a valid mask\n", str );
     }
 }
-#pragma GCC visibility pop
 
 /* Equivalent to mu_to_str, but generate quoted string in str up to namelen-1 bytes */
 void mu_get_quoted_mask(const cpu_set_t *mask, char *str, size_t namelen) {

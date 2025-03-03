@@ -92,8 +92,9 @@ subdir('src/apis')
 common_includes = [ include_directories('src'), include_directories('src/apis') ]
 
 common_srcs = [
-  'src/support/atomic.h',
   'src/support/array_template.h',
+  'src/support/atomic.h',
+  'src/support/dlb_common.h',
   'src/support/env.c',
   'src/support/env.h',
   'src/support/error.c',

@@ -36,6 +36,7 @@
 #define OMPT_MULTIPLEX_H
 
 #include "LB_numThreads/omp-tools.h"
+#include "support/dlb_common.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -1149,7 +1150,7 @@ static ompt_start_tool_result_t *
 ompt_multiplex_own_start_tool(unsigned int omp_version,
                               const char *runtime_version);
 
-#pragma GCC visibility push(default)
+DLB_EXPORT_SYMBOL
 ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
                                           const char *runtime_version) {
   setup_verbose_init();
@@ -1236,7 +1237,6 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
     return ompt_multiplex_client_fns;
   return &ompt_start_tool_result;
 }
-#pragma GCC visibility pop
 #ifdef __cplusplus
 }
 #endif

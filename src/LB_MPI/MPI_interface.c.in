@@ -29,26 +29,25 @@
 #include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/spd.h"
 #include "support/debug.h"
+#include "support/dlb_common.h"
 
 #include <mpi.h>
 
 
-#pragma GCC visibility push(default)
-
 #pragma pygen start
+DLB_EXPORT_SYMBOL
 void DLB_{MPI_NAME}_enter({C_PARAMS}) {{
     spd_enter_dlb(thread_spd);
     verbose(VB_MPI_API, ">> {MPI_NAME}...............");
     {BEFORE_FUNC};
 }}
 
+DLB_EXPORT_SYMBOL
 void DLB_{MPI_NAME}_leave(void) {{
     verbose(VB_MPI_API, "<< {MPI_NAME}...............");
     {AFTER_FUNC};
 }}
 
 #pragma pygen end
-
-#pragma GCC visibility pop
 
 #endif /* MPI_LIB */

@@ -180,6 +180,7 @@ COMMON_SRCS = \
 	$(installheaders)                       \
 	src/support/array_template.h            \
 	src/support/atomic.h                    \
+	src/support/dlb_common.h                \
 	src/support/env.c                       \
 	src/support/env.h                       \
 	src/support/error.c                     \

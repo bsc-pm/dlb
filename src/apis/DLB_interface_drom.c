@@ -26,10 +26,11 @@
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "apis/dlb_errors.h"
-#include "support/options.h"
 #include "support/debug.h"
+#include "support/dlb_common.h"
 #include "support/env.h"
 #include "support/mask_utils.h"
+#include "support/options.h"
 
 #include <sched.h>
 #include <stdio.h>
@@ -37,8 +38,7 @@
 #include <string.h>
 
 
-#pragma GCC visibility push(default)
-
+DLB_EXPORT_SYMBOL
 int DLB_DROM_Attach(void) {
     char shm_key[MAX_OPTION_LENGTH];
     options_parse_entry("--shm-key", &shm_key);
@@ -51,21 +51,25 @@ int DLB_DROM_Attach(void) {
     return DLB_SUCCESS;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_Detach(void) {
     int error = shmem_cpuinfo_ext__finalize();
     error = error ? error : shmem_procinfo_ext__finalize();
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_GetNumCpus(int *ncpus) {
     *ncpus = mu_get_system_size();
     return DLB_SUCCESS;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len) {
     return shmem_procinfo__getpidlist(pidlist, nelems, max_len);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
     int error = shmem_procinfo__getprocessmask(pid, mask, flags);
     if (error == DLB_ERR_NOSHMEM) {
@@ -76,6 +80,7 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags) {
     spd_enter_dlb(thread_spd);
     int error = drom_setprocessmask(pid, mask, flags);
@@ -87,12 +92,14 @@ int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t 
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_SetProcessMaskStr(int pid, const char *mask, dlb_drom_flags_t flags) {
     cpu_set_t _mask;
     mu_parse_mask(mask, &_mask);
     return DLB_DROM_SetProcessMask(pid, &_mask, flags);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
         char ***next_environ) {
     /* Set up DROM args */
@@ -115,14 +122,14 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_PostFinalize(int pid, dlb_drom_flags_t flags) {
     int error = shmem_procinfo_ext__postfinalize(pid, flags & DLB_RETURN_STOLEN);
     error = error ? error : shmem_cpuinfo_ext__postfinalize(pid);
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_DROM_RecoverStolenCpus(int pid) {
     return shmem_procinfo_ext__recover_stolen_cpus(pid);
 }
-
-#pragma GCC visibility pop
