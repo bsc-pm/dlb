@@ -28,16 +28,16 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_talp.h"
-#include "support/debug.h"
+#include "support/dlb_common.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 
-#pragma GCC visibility push(default)
 
 /*********************************************************************************/
 /*    TALP                                                                       */
 /*********************************************************************************/
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_Attach(void) {
     int lewi_color;
     char shm_key[MAX_OPTION_LENGTH];
@@ -61,6 +61,7 @@ int DLB_TALP_Attach(void) {
     return DLB_SUCCESS;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_Detach(void) {
     int error = shmem_cpuinfo_ext__finalize();
     error = error ? error : shmem_procinfo_ext__finalize();
@@ -68,15 +69,18 @@ int DLB_TALP_Detach(void) {
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_GetNumCPUs(int *ncpus) {
     *ncpus = mu_get_system_size();
     return DLB_SUCCESS;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_GetPidList(int *pidlist, int *nelems, int max_len) {
     return shmem_procinfo__getpidlist(pidlist, nelems, max_len);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
 
     int error;
@@ -106,6 +110,7 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
         int *nelems, int max_len) {
 
@@ -140,6 +145,7 @@ int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metrics) {
     if (shmem_talp__initialized()) {
         /* Only if a worker process started with --talp-external-profiler */
@@ -154,6 +160,7 @@ int DLB_TALP_QueryPOPNodeMetrics(const char *name, dlb_node_metrics_t *node_metr
 /*    TALP Monitoring Regions                                                    */
 /*********************************************************************************/
 
+DLB_EXPORT_SYMBOL
 dlb_monitor_t* DLB_MonitoringRegionGetGlobal(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -162,12 +169,15 @@ dlb_monitor_t* DLB_MonitoringRegionGetGlobal(void) {
     return monitoring_region_get_global_region(thread_spd);
 }
 
+DLB_EXPORT_SYMBOL
 dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void)
     __attribute__((alias("DLB_MonitoringRegionGetGlobal")));
 
+DLB_EXPORT_SYMBOL
 const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
     __attribute__((alias("DLB_MonitoringRegionGetGlobal")));
 
+DLB_EXPORT_SYMBOL
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -176,6 +186,7 @@ dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     return monitoring_region_register(thread_spd, name);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -184,6 +195,7 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
     return monitoring_region_reset(thread_spd, handle);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -192,6 +204,7 @@ int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
     return monitoring_region_start(thread_spd, handle);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -200,6 +213,7 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
     return monitoring_region_stop(thread_spd, handle);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -208,6 +222,7 @@ int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
     return monitoring_region_report(thread_spd, handle);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_MonitoringRegionsUpdate(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -216,6 +231,7 @@ int DLB_MonitoringRegionsUpdate(void) {
     return monitoring_regions_force_update(thread_spd);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -224,6 +240,7 @@ int DLB_TALP_CollectPOPMetrics(dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_me
     return talp_collect_pop_metrics(thread_spd, monitor, pop_metrics);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->talp_info)) {
@@ -235,5 +252,6 @@ int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *n
     return talp_collect_pop_node_metrics(thread_spd, monitor, node_metrics);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics)
     __attribute__((alias("DLB_TALP_CollectPOPNodeMetrics")));

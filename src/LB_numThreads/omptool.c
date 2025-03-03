@@ -34,6 +34,7 @@
 #include "LB_core/spd.h"
 #include "apis/dlb.h"
 #include "support/debug.h"
+#include "support/dlb_common.h"
 #include "support/mask_utils.h"
 #include "support/tracing.h"
 #include "apis/dlb_errors.h"
@@ -728,7 +729,9 @@ static void omptool_finalize(ompt_data_t *tool_data) {
 }
 
 
-#pragma GCC visibility push(default)
+#ifndef OMPT_MULTIPLEX_H
+DLB_EXPORT_SYMBOL
+#endif
 ompt_start_tool_result_t* ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
     openmp_runtime_version = runtime_version;
     static ompt_start_tool_result_t tool = {
@@ -738,4 +741,3 @@ ompt_start_tool_result_t* ompt_start_tool(unsigned int omp_version, const char *
     };
     return &tool;
 }
-#pragma GCC visibility pop

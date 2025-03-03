@@ -22,6 +22,7 @@
 #include "LB_core/spd.h"
 #include "LB_core/DLB_kernel.h"
 #include "support/atomic.h"
+#include "support/dlb_common.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,10 +35,9 @@ static int get_atomic_spid(void) {
 }
 
 
-#pragma GCC visibility push(default)
-
 /* Status */
 
+DLB_EXPORT_SYMBOL
 dlb_handler_t DLB_Init_sp(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
     subprocess_descriptor_t *spd = malloc(sizeof(subprocess_descriptor_t));
     spd->dlb_initialized = true;
@@ -52,6 +52,7 @@ dlb_handler_t DLB_Init_sp(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_a
     return spd;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_Finalize_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     int error = Finish(handler);
@@ -60,21 +61,25 @@ int DLB_Finalize_sp(dlb_handler_t handler) {
     return error;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_Enable_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return set_lewi_enabled(handler, true);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_Disable_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return set_lewi_enabled(handler, false);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_SetMaxParallelism_sp(dlb_handler_t handler, int max) {
     spd_enter_dlb(handler);
     return set_max_parallelism(handler, max);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_UnsetMaxParallelism_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return unset_max_parallelism(handler);
@@ -83,6 +88,7 @@ int DLB_UnsetMaxParallelism_sp(dlb_handler_t handler) {
 
 /* Callbacks */
 
+DLB_EXPORT_SYMBOL
 int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which,
         dlb_callback_t callback, void *arg) {
     spd_enter_dlb(handler);
@@ -90,6 +96,7 @@ int DLB_CallbackSet_sp(dlb_handler_t handler, dlb_callbacks_t which,
     return pm_callback_set(pm, which, callback, arg);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which,
         dlb_callback_t *callback, void **arg) {
     spd_enter_dlb(handler);
@@ -100,21 +107,25 @@ int DLB_CallbackGet_sp(dlb_handler_t handler, dlb_callbacks_t which,
 
 /* Lend */
 
+DLB_EXPORT_SYMBOL
 int DLB_Lend_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return lend(handler);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_LendCpu_sp(dlb_handler_t handler, int cpuid) {
     spd_enter_dlb(handler);
     return lend_cpu(handler, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_LendCpus_sp(dlb_handler_t handler, int ncpus) {
     spd_enter_dlb(handler);
     return lend_cpus(handler, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_LendCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return lend_cpu_mask(handler, mask);
@@ -123,21 +134,25 @@ int DLB_LendCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
 
 /* Reclaim */
 
+DLB_EXPORT_SYMBOL
 int DLB_Reclaim_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return reclaim(handler);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReclaimCpu_sp(dlb_handler_t handler, int cpuid) {
     spd_enter_dlb(handler);
     return reclaim_cpu(handler, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReclaimCpus_sp(dlb_handler_t handler, int ncpus) {
     spd_enter_dlb(handler);
     return reclaim_cpus(handler, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return reclaim_cpu_mask(handler, mask);
@@ -146,21 +161,25 @@ int DLB_ReclaimCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
 
 /* Acquire */
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpu_sp(dlb_handler_t handler, int cpuid) {
     spd_enter_dlb(handler);
     return acquire_cpu(handler, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpus_sp(dlb_handler_t handler, int ncpus) {
     spd_enter_dlb(handler);
     return acquire_cpus(handler, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return acquire_cpu_mask(handler, mask);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpusInMask_sp(dlb_handler_t handler, int ncpus, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return acquire_cpus_in_mask(handler, ncpus, mask);
@@ -169,26 +188,31 @@ int DLB_AcquireCpusInMask_sp(dlb_handler_t handler, int ncpus, const_dlb_cpu_set
 
 /* Borrow */
 
+DLB_EXPORT_SYMBOL
 int DLB_Borrow_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return borrow(handler);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpu_sp(dlb_handler_t handler, int cpuid) {
     spd_enter_dlb(handler);
     return borrow_cpu(handler, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpus_sp(dlb_handler_t handler, int ncpus) {
     spd_enter_dlb(handler);
     return borrow_cpus(handler, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return borrow_cpu_mask(handler, mask);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpusInMask_sp(dlb_handler_t handler, int ncpus, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return borrow_cpus_in_mask(handler, ncpus, mask);
@@ -197,16 +221,19 @@ int DLB_BorrowCpusInMask_sp(dlb_handler_t handler, int ncpus, const_dlb_cpu_set_
 
 /* Return */
 
+DLB_EXPORT_SYMBOL
 int DLB_Return_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return return_all(handler);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReturnCpu_sp(dlb_handler_t handler, int cpuid) {
     spd_enter_dlb(handler);
     return return_cpu(handler, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return return_cpu_mask(handler, mask);
@@ -215,11 +242,13 @@ int DLB_ReturnCpuMask_sp(dlb_handler_t handler, const_dlb_cpu_set_t mask) {
 
 /* DROM Responsive */
 
+DLB_EXPORT_SYMBOL
 int DLB_PollDROM_sp(dlb_handler_t handler, int *ncpus, dlb_cpu_set_t mask) {
     spd_enter_dlb(handler);
     return poll_drom(handler, ncpus, mask);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_PollDROM_Update_sp(dlb_handler_t handler) {
     spd_enter_dlb(handler);
     return poll_drom_update(handler);
@@ -228,28 +257,30 @@ int DLB_PollDROM_Update_sp(dlb_handler_t handler) {
 
 /* Misc */
 
+DLB_EXPORT_SYMBOL
 int DLB_CheckCpuAvailability_sp(dlb_handler_t handler, int cpuid) {
     spd_enter_dlb(handler);
     return check_cpu_availability(handler, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_SetVariable_sp(dlb_handler_t handler, const char *variable, const char *value) {
     spd_enter_dlb(handler);
     options_t *options = &((subprocess_descriptor_t*)handler)->options;
     return options_set_variable(options, variable, value);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_GetVariable_sp(dlb_handler_t handler, const char *variable, char *value) {
     spd_enter_dlb(handler);
     const options_t *options = &((subprocess_descriptor_t*)handler)->options;
     return options_get_variable(options, variable, value);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_PrintVariables_sp(dlb_handler_t handler, int print_extended) {
     spd_enter_dlb(handler);
     const options_t *options = &((subprocess_descriptor_t*)handler)->options;
     options_print_variables(options, print_extended);
     return DLB_SUCCESS;
 }
-
-#pragma GCC visibility pop

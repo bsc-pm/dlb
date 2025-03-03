@@ -29,7 +29,7 @@
 #include "LB_comm/shmem_procinfo.h"
 #include "support/env.h"
 #include "support/error.h"
-#include "support/debug.h"
+#include "support/dlb_common.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -37,10 +37,9 @@
 #include <stdio.h>
 
 
-#pragma GCC visibility push(default)
-
 /* Status */
 
+DLB_EXPORT_SYMBOL
 int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
     spd_enter_dlb(thread_spd);
     if (__sync_bool_compare_and_swap(&thread_spd->dlb_initialized, false, true) ) {
@@ -50,6 +49,7 @@ int DLB_Init(int ncpus, const_dlb_cpu_set_t mask, const char *dlb_args) {
     }
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_Finalize(void) {
     spd_enter_dlb(thread_spd);
     if (__sync_bool_compare_and_swap(&thread_spd->dlb_initialized, true, false) ) {
@@ -67,6 +67,7 @@ int DLB_Finalize(void) {
     return DLB_NOUPDT;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ) {
     spd_enter_dlb(thread_spd);
     if (!thread_spd->dlb_initialized
@@ -84,6 +85,7 @@ int DLB_PreInit(const_dlb_cpu_set_t mask, char ***next_environ) {
     }
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_Enable(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -92,6 +94,7 @@ int DLB_Enable(void) {
     return set_lewi_enabled(thread_spd, true);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_Disable(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -100,6 +103,7 @@ int DLB_Disable(void) {
     return set_lewi_enabled(thread_spd, false);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_SetMaxParallelism(int max) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -108,6 +112,7 @@ int DLB_SetMaxParallelism(int max) {
     return set_max_parallelism(thread_spd, max);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_UnsetMaxParallelism(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -119,11 +124,13 @@ int DLB_UnsetMaxParallelism(void) {
 
 /* Callbacks */
 
+DLB_EXPORT_SYMBOL
 int DLB_CallbackSet(dlb_callbacks_t which, dlb_callback_t callback, void *arg) {
     spd_enter_dlb(thread_spd);
     return pm_callback_set(&thread_spd->pm, which, callback, arg);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg) {
     spd_enter_dlb(thread_spd);
     return pm_callback_get(&thread_spd->pm, which, callback, arg);
@@ -132,6 +139,7 @@ int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg)
 
 /* Lend */
 
+DLB_EXPORT_SYMBOL
 int DLB_Lend(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -140,6 +148,7 @@ int DLB_Lend(void) {
     return lend(thread_spd);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_LendCpu(int cpuid) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -148,6 +157,7 @@ int DLB_LendCpu(int cpuid) {
     return lend_cpu(thread_spd, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_LendCpus(int ncpus) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -156,6 +166,7 @@ int DLB_LendCpus(int ncpus) {
     return lend_cpus(thread_spd, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_LendCpuMask(const_dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -167,6 +178,7 @@ int DLB_LendCpuMask(const_dlb_cpu_set_t mask) {
 
 /* Reclaim */
 
+DLB_EXPORT_SYMBOL
 int DLB_Reclaim(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -175,6 +187,7 @@ int DLB_Reclaim(void) {
     return reclaim(thread_spd);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReclaimCpu(int cpuid) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -183,6 +196,7 @@ int DLB_ReclaimCpu(int cpuid) {
     return reclaim_cpu(thread_spd, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReclaimCpus(int ncpus) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -191,6 +205,7 @@ int DLB_ReclaimCpus(int ncpus) {
     return reclaim_cpus(thread_spd, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -202,6 +217,7 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask) {
 
 /* Acquire */
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpu(int cpuid) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -210,6 +226,7 @@ int DLB_AcquireCpu(int cpuid) {
     return acquire_cpu(thread_spd, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpus(int ncpus) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -218,6 +235,7 @@ int DLB_AcquireCpus(int ncpus) {
     return acquire_cpus(thread_spd, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -226,6 +244,7 @@ int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask) {
     return acquire_cpu_mask(thread_spd, mask);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_AcquireCpusInMask(int ncpus, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -237,6 +256,7 @@ int DLB_AcquireCpusInMask(int ncpus, const_dlb_cpu_set_t mask) {
 
 /* Borrow */
 
+DLB_EXPORT_SYMBOL
 int DLB_Borrow(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -245,6 +265,7 @@ int DLB_Borrow(void) {
     return borrow(thread_spd);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpu(int cpuid) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -253,6 +274,7 @@ int DLB_BorrowCpu(int cpuid) {
     return borrow_cpu(thread_spd, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpus(int ncpus) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -261,6 +283,7 @@ int DLB_BorrowCpus(int ncpus) {
     return borrow_cpus(thread_spd, ncpus);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -269,6 +292,7 @@ int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask) {
     return borrow_cpu_mask(thread_spd, mask);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BorrowCpusInMask(int ncpus, const_dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -280,6 +304,7 @@ int DLB_BorrowCpusInMask(int ncpus, const_dlb_cpu_set_t mask) {
 
 /* Return */
 
+DLB_EXPORT_SYMBOL
 int DLB_Return(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -288,6 +313,7 @@ int DLB_Return(void) {
     return return_all(thread_spd);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReturnCpu(int cpuid) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -296,6 +322,7 @@ int DLB_ReturnCpu(int cpuid) {
     return return_cpu(thread_spd, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -307,6 +334,7 @@ int DLB_ReturnCpuMask(const_dlb_cpu_set_t mask) {
 
 /* DROM Responsive */
 
+DLB_EXPORT_SYMBOL
 int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -315,6 +343,7 @@ int DLB_PollDROM(int *ncpus, dlb_cpu_set_t mask) {
     return poll_drom(thread_spd, ncpus, mask);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_PollDROM_Update(void) {
     spd_enter_dlb(thread_spd);
     if (unlikely(!thread_spd->dlb_initialized)) {
@@ -326,86 +355,100 @@ int DLB_PollDROM_Update(void) {
 
 /* Misc */
 
+DLB_EXPORT_SYMBOL
 int DLB_CheckCpuAvailability(int cpuid) {
     spd_enter_dlb(thread_spd);
     return check_cpu_availability(thread_spd, cpuid);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_Barrier(void) {
     spd_enter_dlb(thread_spd);
     return node_barrier(thread_spd, NULL);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BarrierAttach(void) {
     spd_enter_dlb(thread_spd);
     return node_barrier_attach(thread_spd, NULL);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BarrierDetach(void) {
     spd_enter_dlb(thread_spd);
     return node_barrier_detach(thread_spd, NULL);
 }
 
+DLB_EXPORT_SYMBOL
 dlb_barrier_t* DLB_BarrierNamedRegister(const char *barrier_name,
         dlb_barrier_flags_t flags) {
     spd_enter_dlb(thread_spd);
     return (dlb_barrier_t*)node_barrier_register(thread_spd, barrier_name, flags);
 }
 
+DLB_EXPORT_SYMBOL
 dlb_barrier_t* DLB_BarrierNamedGet(const char *barrier_name,
         dlb_barrier_flags_t flags)
     __attribute__((alias("DLB_BarrierNamedRegister")));
 
+DLB_EXPORT_SYMBOL
 int DLB_BarrierNamed(dlb_barrier_t *barrier) {
     spd_enter_dlb(thread_spd);
     return node_barrier(thread_spd, (barrier_t*)barrier);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BarrierNamedAttach(dlb_barrier_t *barrier) {
     spd_enter_dlb(thread_spd);
     return node_barrier_attach(thread_spd, (barrier_t*)barrier);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_BarrierNamedDetach(dlb_barrier_t *barrier) {
     spd_enter_dlb(thread_spd);
     return node_barrier_detach(thread_spd, (barrier_t*)barrier);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_SetVariable(const char *variable, const char *value) {
     spd_enter_dlb(thread_spd);
     return options_set_variable(&thread_spd->options, variable, value);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_GetVariable(const char *variable, char *value) {
     spd_enter_dlb(thread_spd);
     return options_get_variable(&thread_spd->options, variable, value);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_PrintVariables(int print_extended) {
     spd_enter_dlb(thread_spd);
     options_print_variables(&thread_spd->options, print_extended);
     return DLB_SUCCESS;
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_PrintShmem(int num_columns, dlb_printshmem_flags_t print_flags) {
     spd_enter_dlb(thread_spd);
     return print_shmem(thread_spd, num_columns, print_flags);
 }
 
+DLB_EXPORT_SYMBOL
 const char* DLB_Strerror(int errnum) {
     return error_get_str(errnum);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_SetObserverRole(bool thread_is_observer) {
     spd_enter_dlb(thread_spd);
     return set_observer_role(thread_is_observer);
 }
 
+DLB_EXPORT_SYMBOL
 int DLB_GetVersion(int *major, int *minor, int *patch) {
     if (major) *major = DLB_VERSION_MAJOR;
     if (minor) *minor = DLB_VERSION_MINOR;
     if (patch) *patch = DLB_VERSION_PATCH;
     return DLB_SUCCESS;
 }
-
-#pragma GCC visibility pop

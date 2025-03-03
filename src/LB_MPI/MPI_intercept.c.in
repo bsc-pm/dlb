@@ -25,14 +25,14 @@
 
 #include "LB_MPI/MPI_interface.h"
 #include "support/debug.h"
+#include "support/dlb_common.h"
 
 #include <mpi.h>
 #include <stdio.h>
 
 
-#pragma GCC visibility push(default)
-
 #pragma pygen start
+DLB_EXPORT_SYMBOL
 int {MPI_NAME}({C_PARAMS}) {{
     verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
     DLB_{MPI_NAME}_enter({C_ARG_LIST});
@@ -43,7 +43,5 @@ int {MPI_NAME}({C_PARAMS}) {{
 }}
 
 #pragma pygen end
-
-#pragma GCC visibility pop
 
 #endif /* MPI_LIB */

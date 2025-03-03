@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,33 +17,22 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "apis/dlb.h"
-#include "support/debug.h"
-#include "support/dlb_common.h"
-
-#define DLB_API_F_ALIAS( NameF, Params) \
-    DLB_EXPORT_SYMBOL void NameF##_ Params __attribute__((alias(#NameF))); \
-    DLB_EXPORT_SYMBOL void NameF##__ Params __attribute__((alias(#NameF)))
+#ifndef DLB_COMMON_H
+#define DLB_COMMON_H
 
 
-#ifdef MPI_LIB
-#include <mpi.h>
-#include "LB_MPI/process_MPI.h"
-void mpi_barrier_(MPI_Comm *, int *) __attribute__((weak));
+#define likely(expr)   __builtin_expect(!!(expr), 1)
+#define unlikely(expr) __builtin_expect(!!(expr), 0)
 
-DLB_EXPORT_SYMBOL
-void dlb_mpi_node_barrier(void)  {
-    if (is_mpi_ready()) {
-        int ierror;
-        MPI_Comm mpi_comm_node = getNodeComm();
-        if (mpi_barrier_) {
-            mpi_barrier_(&mpi_comm_node, &ierror);
-        } else {
-            warning("MPI_Barrier symbol could not be found. Please report a ticket.");
-        }
-    }
-}
+
+#if !defined(__INTEL_COMPILER) && ((defined(__GNUC__) && __GNUC__ >= 7) || (defined(__clang__) && __clang_major__ >= 11))
+#define DLB_FALLTHROUGH __attribute__((__fallthrough__))
 #else
-DLB_EXPORT_SYMBOL void dlb_mpi_node_barrier(void)  {}
+#define DLB_FALLTHROUGH ((void)0)
 #endif
-DLB_API_F_ALIAS(dlb_mpi_node_barrier, (void));
+
+
+#define DLB_EXPORT_SYMBOL __attribute__((visibility ("default")))
+
+
+#endif /* DLB_COMMON_H */

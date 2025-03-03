@@ -20,8 +20,9 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#include "support/types.h"
+#include "support/dlb_common.h"
 #include "support/options.h"
+#include "support/types.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -49,9 +50,6 @@ void printbuffer_destroy(print_buffer_t *buffer);
 void printbuffer_append(print_buffer_t *buffer, const char *line);
 
 extern verbose_opts_t   vb_opts;
-
-#define likely(expr)   __builtin_expect(!!(expr), 1)
-#define unlikely(expr) __builtin_expect(!!(expr), 0)
 
 #define fatal_cond(cond, ...) \
     do { \
@@ -109,11 +107,5 @@ extern verbose_opts_t   vb_opts;
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-
-#if !defined(__INTEL_COMPILER) && ((defined(__GNUC__) && __GNUC__ >= 7) || (defined(__clang__) && __clang_major__ >= 11))
-#define DLB_FALLTHROUGH __attribute__((__fallthrough__))
-#else
-#define DLB_FALLTHROUGH ((void)0)
-#endif
 
 #endif /* DEBUG_H */
