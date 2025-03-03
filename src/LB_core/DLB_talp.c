@@ -513,6 +513,7 @@ static void monitoring_regions_update_nested(const subprocess_descriptor_t *spd,
 /*********************************************************************************/
 
 /* Executed once */
+static inline int init_papi(void) __attribute__((unused));
 static inline int init_papi(void) {
 #ifdef PAPI_LIB
     ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
