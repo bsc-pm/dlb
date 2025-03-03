@@ -12,7 +12,7 @@ class ExecutionMode(Enum):
     HYBRID = "Hybrid MPI+OpenMP"
 
 
-TALP_PAGES_VERSION = "3.5.0"
+TALP_PAGES_VERSION = "3.5.1"
 TALP_METRIC_TO_NAME_MAP = {
     "globalEfficiency": "Global Effiency",
     "globalEfficiencyBySpeedup": "Global Effiency from Speedup",
