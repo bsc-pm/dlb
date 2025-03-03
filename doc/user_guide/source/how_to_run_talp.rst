@@ -25,18 +25,98 @@ If you already have some executions of your application using TALP, you might wa
 Reporting POP metrics at the end of the execution
 =================================================
 
-After :ref:`installing DLB <dlb-installation>` you can simply run::
+After :ref:`installing DLB <dlb-installation>` you can use TALP depending on the used programming models to report metrics at the end of the execution.
+
+
+.. note::
+    Note that the flags shown below are the minimum requirements for TALP to report metrics at the end of the execution.
+    You can also use ``--talp-output-file`` to generate CSV or JSON formatted files. 
+    More info in the options section :ref:`below <talp_options>`.
+
+
+MPI-only executions
+----------------------
+To gather and report the MPI-based performance metrics, you can run your application with ``libdlb_mpi`` pre-loaded and activate TALP by setting the ``DLB_ARGS``:
+
+.. code-block:: bash
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
     export DLB_ARGS="--talp"
     mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
-Or::
-
-    mpirun <options> "$DLB_PREFIX/share/doc/dlb/scripts/talp.sh" ./foo
-
 You will get a report similar to this on ``stderr`` at the end of the execution::
+
+    DLB[<hostname>:<pid>]: ############### Monitoring Region POP Metrics ###############
+    DLB[<hostname>:<pid>]: ### Name:                                     Global
+    DLB[<hostname>:<pid>]: ### Elapsed Time:                             5 s
+    DLB[<hostname>:<pid>]: ### Average IPC:                              0.23
+    DLB[<hostname>:<pid>]: ### Parallel efficiency:                      0.40
+    DLB[<hostname>:<pid>]: ### MPI Parallel efficiency:                  0.67
+    DLB[<hostname>:<pid>]: ###   - MPI Communication efficiency:         0.83
+    DLB[<hostname>:<pid>]: ###   - MPI Load Balance:                     0.80
+    DLB[<hostname>:<pid>]: ###       - MPI Load Balance in:              0.80
+    DLB[<hostname>:<pid>]: ###       - MPI Load Balance out:             1.00
+
+
+OpenMP-only executions
+-----------------------
+As TALP relies on the OMPT interface to inspect runtime behavior of OpenMP, the runtime implementation needs to support this.
+Below you can find a table of currently supported runtimes and the respective compilers.
+
+
+.. _talp_supported_compilers:
+
+.. list-table::
+   :widths: 50 50
+   :header-rows: 1
+
+   * - Compiler / Runtime
+     - Support for TALP OpenMP metrics
+   * - LLVM-compilers like ``clang,clang++``
+     - support with version ``>=8.0.0``
+   * - Intel Classic-compilers ``icc,icpc``   
+     - support with version ``>=19.0.1``
+   * - Intel LLVM-compilers ``icx,icpx``   
+     - supported
+   * - GNU compilers ``gcc,g++,gfortran``   
+     - not supported
+   * - Cray compilers  
+     - supported with a patch to DLB
+
+
+If you are using any supported compiler in the table above to build your application, you can execute your application like this to gather OpenMP performance metrics with TALP:
+
+.. code-block:: bash
+
+    DLB_PREFIX="<path-to-DLB-installation>"
+
+    export DLB_ARGS="--talp --ompt --talp-openmp" 
+    # "--ompt" enables the OMPT tool in DLB
+    # "--talp-openmp" enables collection of OpenMP metrics
+    mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
+
+
+Hybrid (OpenMP+MPI) executions
+--------------------------------
+For hybrid applications, TALP also needs a OpenMP runtime with OMPT support. 
+Please make sure that you use a :ref:`supported compiler <talp_supported_compilers>` to build your application.
+
+The ``DLB_ARGS`` to configure TALP for hybrid applications are the same as for OpenMP ones, but this time ``libdlb_mpi.so`` is preloaded instead:
+
+.. code-block:: bash
+
+    DLB_PREFIX="<path-to-DLB-installation>"
+
+    export DLB_ARGS="--talp --ompt --talp-openmp" 
+    # "--ompt" enables the OMPT tool in DLB
+    # "--talp-openmp" enables collection of OpenMP metrics
+    mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
+
+
+After your program has finished you will get a report similar to this on ``stderr`` at the end of the execution:
+
+.. code-block:: bash
 
     DLB[<hostname>:<pid>]: ############### Monitoring Region POP Metrics ###############
     DLB[<hostname>:<pid>]: ### Name:                                     Global
@@ -52,10 +132,6 @@ You will get a report similar to this on ``stderr`` at the end of the execution:
     DLB[<hostname>:<pid>]: ###   - OpenMP Load Balance:                  0.80
     DLB[<hostname>:<pid>]: ###   - OpenMP Scheduling efficiency:         1.00
     DLB[<hostname>:<pid>]: ###   - OpenMP Serialization efficiency:      0.75
-
-
-You can also use ``--talp-output-file`` to generate CSV or JSON formatted files. More info in the options section :ref:`below <talp_options>`.
-
 
 
 .. _talp-custom-regions:
