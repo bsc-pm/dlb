@@ -857,6 +857,7 @@ nodist_userscripts_DATA = $(userscripts_files_nodist)
 #********************************************************************************
 sphinx_files = \
 	doc/user_guide/source/conf.py \
+	doc/user_guide/source/dlb_version.py \
 	doc/user_guide/source/advance_usage.rst \
 	doc/user_guide/source/api.rst \
 	doc/user_guide/source/contents.rst \
@@ -899,10 +900,8 @@ CLEANFILES += $(sphinx_manpages_files)
 if HAVE_SPHINX
 SPHINXBUILD = sphinx-build
 SPHINX_SRC_DIR = doc/user_guide/source/
-SPHINX_FLAGS = -D version=$(VERSION) -D release=$(VERSION)
 
 if SPHINX_HAS_MANPAGES
-SPHINX_FLAGS += -t man_pages
 PANDOC = pandoc
 PANDOC_FLAGS = --from=man --to=rst --shift-heading-level-by=3
 
@@ -943,8 +942,10 @@ endif
 
 doc: html pdf
 
+sphinx-manpages: $(sphinx_manpages_files)
+
 html-local: $(sphinx_manpages_files)
-	$(SPHINXBUILD) -b html $(SPHINX_FLAGS) $(SPHINX_SRC_DIR) doc/user_guide/html
+	$(SPHINXBUILD) -b html $(SPHINX_SRC_DIR) doc/user_guide/html
 	@echo
 	@echo "Build finished. The HTML pages are in doc/user_guide/html"
 
@@ -953,7 +954,7 @@ install-html-local: html-local
 	cp -R doc/user_guide/html $(docdir)
 
 pdf-local: $(sphinx_manpages_files)
-	$(SPHINXBUILD) -b latex $(SPHINX_FLAGS) $(SPHINX_SRC_DIR) doc/user_guide/pdf
+	$(SPHINXBUILD) -b latex $(SPHINX_SRC_DIR) doc/user_guide/pdf
 	@echo "Running LaTeX files through pdflatex..."
 	$(MAKE) -C doc/user_guide/pdf all-pdf
 	@echo "pdflatex finished; the PDF files are in doc/user_guide/pdf"
@@ -970,6 +971,7 @@ html-local: nodoc
 install-html-local: nodoc
 pdf-local: nodoc
 install-pdf-local: nodoc
+sphinx-manpages: nodoc
 endif
 
 #********************************************************************************

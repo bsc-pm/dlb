@@ -1,7 +1,9 @@
-# Read the Docs configuration file for DLB
-# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
-
 version: 2
+
+formats: [pdf,htmlzip]
+
+sphinx:
+  configuration: doc/user_guide/source/conf.py
 
 build:
   os: ubuntu-22.04
@@ -12,18 +14,12 @@ build:
     - autoconf
     - libtool
   jobs:
+    post_checkout:
+      - git fetch --unshallow || true
     pre_build:
     - ./bootstrap
     - ./configure
-    post_build:
-    - mkdir -p $READTHEDOCS_OUTPUT/html/ && mkdir -p $READTHEDOCS_OUTPUT/pdf/
-    - rm -rf $READTHEDOCS_OUTPUT/html/* && rm -rf $READTHEDOCS_OUTPUT/pdf/*
-    - make doxygen
-    - make html
-    - mv doc/user_guide/html/* $READTHEDOCS_OUTPUT/html
-    - make pdf
-    - mv doc/user_guide/pdf/DLBUserGuide.pdf $READTHEDOCS_OUTPUT/pdf
-
+    - make sphinx-manpages
 python:
    install:
    - requirements: doc/user_guide/requirements.txt
