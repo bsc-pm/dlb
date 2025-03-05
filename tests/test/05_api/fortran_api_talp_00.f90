@@ -35,6 +35,21 @@ program test
     err = DLB_Init(0, C_NULL_PTR, c_char_"--talp"//C_NULL_CHAR)
     if (err /= DLB_SUCCESS) call abort
 
+    ! initialize global region with 1 measurement
+    dlb_handle_1 = DLB_MonitoringRegionGetGlobal()
+    err = DLB_MonitoringRegionStart(dlb_handle_1)
+    if (err /= DLB_SUCCESS) call abort
+    err = DLB_MonitoringRegionStop(dlb_handle_1)
+    if (err /= DLB_SUCCESS) call abort
+    call c_f_pointer(dlb_handle_1, dlb_monitor)
+    if (dlb_monitor%num_measurements /= 1) call abort
+
+    ! check that DLB_GLOBAL_REGION and DLB_GLOBAL_REGION_INT identify the global region
+    err = DLB_MonitoringRegionStart(DLB_GLOBAL_REGION)
+    err = DLB_MonitoringRegionStop(transfer(DLB_GLOBAL_REGION_INT, c_null_ptr))
+    if (dlb_monitor%num_measurements /= 2) call abort
+
+    ! register custom regions
     dlb_handle_1 = DLB_MonitoringRegionRegister(c_char_"region 1"//C_NULL_CHAR)
     if (.not. c_associated(dlb_handle_1)) call abort
     dlb_handle_2 = DLB_MonitoringRegionRegister(c_char_"region 2"//C_NULL_CHAR)
@@ -56,8 +71,10 @@ program test
         ! nested anonymous monitoring region
         err = DLB_MonitoringRegionStart(dlb_handle_3)
         if (err /= DLB_SUCCESS) call abort
-        err = DLB_MonitoringRegionStop(dlb_handle_3)
+        err = DLB_MonitoringRegionStop(transfer(DLB_LAST_OPEN_REGION_INT, c_null_ptr))
         if (err /= DLB_SUCCESS) call abort
+        err = DLB_MonitoringRegionStop(dlb_handle_3)
+        if (err /= DLB_NOUPDT) call abort
 
         ! end monitoring region
         err = DLB_MonitoringRegionStop(dlb_handle_1)

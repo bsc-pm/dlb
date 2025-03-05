@@ -168,7 +168,7 @@ Here are a few restrictions for naming monitoring regions:
   error.
 - For user-defined regions, the name is case-sensitive, can contain up to
   128 characters, and may include spaces (though spaces must be avoided when
-  using certain flags, as explained explained :ref:`below<talp_options>`).
+  using the flag ``--talp-region-select``, as explained explained :ref:`below<talp_options>`).
 
 Basic usage examples for C and Fortran:
 
@@ -241,6 +241,61 @@ For Fortran codes, the struct can be accessed as in this example:
     print *, dlb_monitor%num_measurements
     print *, dlb_monitor%elapsed_time
 
+
+Special values for monitoring regions
+-------------------------------------
+
+The special values ``DLB_GLOBAL_REGION`` and ``DLB_LAST_OPEN_REGION`` can be
+used in any TALP function to refer to these contexts without needing to pass
+the region handle explicitly:
+
+.. code-block:: c++
+
+    // Helper class to create a region for the current scope
+    struct Profiler {
+        Profiler(const std::string& name) {
+            dlb_monitor_t *monitor = DLB_MonitoringRegionRegister(name.c_str());
+            DLB_MonitoringRegionStart(monitor);
+        }
+
+        ~Profiler() {
+            DLB_MonitoringRegionStop(DLB_LAST_OPEN_REGION);
+        }
+    };
+
+    void foo() {
+        // Everything in this scope is recorded as "Region 1"
+        {
+            Profiler p("Region 1");
+            ...
+        }
+
+        // Everything in this scope is recorded as "Region 2"
+        {
+            Profiler p("Region 2");
+            ...
+        }
+
+        // Print current Global region metrics
+        DLB_MonitoringRegionReport(DLB_GLOBAL_REGION);
+    }
+
+In Fortran, ``DLB_GLOBAL_REGION`` is defined as ``type(c_ptr)`` and can be
+used similarly to how it's used in C. Additionally, ``DLB_GLOBAL_REGION_INT`` and
+``DLB_LAST_OPEN_REGION_INT`` are defined as ``integer(kind=c_intptr_t)`` and must
+be converted to ``type(c_ptr))`` using the F90 intrinsic procedure ``transfer``:
+
+.. code-block:: fortran
+
+    ! Print current Global region metrics
+    err = DLB_MonitoringRegionReport(DLB_GLOBAL_REGION)
+
+    ! Equivalent, using integer(c_intptr_t)
+    err = DLB_MonitoringRegionReport(transfer(DLB_GLOBAL_REGION_INT, c_null_ptr))
+
+    ! Start region and stop
+    err = DLB_MonitoringRegionStart(dlb_handle)
+    err = DLB_MonitoringRegionStop(transfer(DLB_LAST_OPEN_REGION_INT, c_null_ptr))
 
 Enabling Hardware Counters
 ==========================

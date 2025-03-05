@@ -224,8 +224,9 @@ dlb_monitor_t* monitoring_region_register(const subprocess_descriptor_t *spd,
         const char* name) {
 
     /* Forbidden names */
-    if (name != NULL
-            && strncasecmp("all", name, DLB_MONITOR_NAME_MAX-1) == 0) {
+    if (name == DLB_LAST_OPEN_REGION
+            || (name != NULL
+                && strncasecmp("all", name, DLB_MONITOR_NAME_MAX-1) == 0)) {
         return NULL;
     }
 

@@ -42,7 +42,8 @@
        type(c_ptr), parameter   :: DLB_GLOBAL_REGION = c_null_ptr
        type(c_ptr), parameter   :: DLB_MPI_REGION = c_null_ptr      !! deprecated
        type(c_ptr), parameter   :: DLB_IMPLICIT_REGION = c_null_ptr !! deprecated
-       type(c_ptr), parameter   :: DLB_LAST_OPEN_REGION = transfer(1_8, c_null_ptr)
+       integer(c_intptr_t), parameter :: DLB_GLOBAL_REGION_INT = 0
+       integer(c_intptr_t), parameter :: DLB_LAST_OPEN_REGION_INT = 1
 
        interface
         function dlb_talp_attach() result(ierr)                         &
