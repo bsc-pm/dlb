@@ -70,6 +70,27 @@ int main(int argc, char *argv[]) {
     /* Check for forbidden names */
     assert( monitoring_region_register(&spd, "ALL") == NULL );
     assert( monitoring_region_register(&spd, "all") == NULL );
+    assert( monitoring_region_register(&spd, DLB_LAST_OPEN_REGION) == NULL );
+
+    /* Check that registering "global_region_name" or DLB_GLOBAL_REGION_NAME is
+     * allowed and that it does not reset the region */
+    {
+        /* Force num_measurements = 1 */
+        assert( monitoring_region_start(&spd, global_monitor) == DLB_SUCCESS );
+        assert( monitoring_region_stop(&spd, global_monitor) == DLB_SUCCESS );
+        assert( global_monitor->num_measurements == 1 );
+
+        dlb_monitor_t *another_global_1 = monitoring_region_register(&spd,
+                monitoring_region_get_global_region_name());
+        dlb_monitor_t *another_global_2 = monitoring_region_register(&spd,
+                DLB_GLOBAL_REGION_NAME);
+        assert( another_global_1 == global_monitor);
+        assert( another_global_2 == global_monitor);
+        assert( global_monitor->num_measurements == 1 );
+
+        /* Reset region for subsequent tests */
+        assert( monitoring_region_reset(&spd, global_monitor) == DLB_SUCCESS );
+    }
 
     /* Test MPI + nested user defined region */
     {
