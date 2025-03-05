@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_talp__set_times(region_id3, 0, 4242) == DLB_SUCCESS );
 
     /* Print */
-    shmem_cpuinfo__print_info(NULL, 0, 0, true);
+    shmem_cpuinfo__print_info(NULL, 0, 0, DLB_COLOR_AUTO);
     shmem_procinfo__print_info(NULL, SHMEM_SIZE_MULTIPLIER);
     shmem_barrier__print_info(NULL, SHMEM_SIZE_MULTIPLIER);
     shmem_talp__print_info(NULL, SHMEM_TALP_SIZE_MULTIPLIER);

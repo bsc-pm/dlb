@@ -75,6 +75,8 @@ int main(int argc, char **argv) {
     cpu_set_t process_mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
 
+    dlb_drom_flags_t no_flags = DLB_DROM_FLAGS_NONE;
+
     /* Tests with an empty mask */
     {
         /* Save a copy of DLB_ARGS for further tests, since DROM_Attach adds the pre-init flag */
@@ -96,13 +98,13 @@ int main(int argc, char **argv) {
 
         /* Process mask is still empty */
         cpu_set_t mask;
-        assert( DLB_DROM_GetProcessMask(pid, &mask, 0) == DLB_SUCCESS );
+        assert( DLB_DROM_GetProcessMask(pid, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_COUNT(&mask) == 0 );
 
         /* Simulate set process mask from an external process */
-        assert( DLB_DROM_SetProcessMask(pid, &process_mask, 0) == DLB_SUCCESS );
+        assert( DLB_DROM_SetProcessMask(pid, &process_mask, no_flags) == DLB_SUCCESS );
         assert( DLB_PollDROM(NULL, &mask) == DLB_NOUPDT );  /* own process, already applied */
-        assert( DLB_DROM_GetProcessMask(pid, &mask, 0) == DLB_SUCCESS );
+        assert( DLB_DROM_GetProcessMask(pid, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &process_mask) );
 
         assert( DLB_Finalize() == DLB_SUCCESS );
@@ -119,7 +121,7 @@ int main(int argc, char **argv) {
 
         /* Get mask */
         cpu_set_t mask;
-        assert( DLB_DROM_GetProcessMask(0, &mask, 0) == DLB_SUCCESS );
+        assert( DLB_DROM_GetProcessMask(0, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &process_mask) );
 
         /* Set a new mask with 1 less CPU */
@@ -130,10 +132,10 @@ int main(int argc, char **argv) {
                 break;
             }
         }
-        assert( DLB_DROM_SetProcessMask(0, &mask, 0) == DLB_SUCCESS );
+        assert( DLB_DROM_SetProcessMask(0, &mask, no_flags) == DLB_SUCCESS );
         cpu_set_t new_mask;
         assert( DLB_PollDROM(NULL, &new_mask) == DLB_NOUPDT );
-        assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_SUCCESS );
+        assert( DLB_DROM_GetProcessMask(0, &new_mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &new_mask) );
         assert( CPU_COUNT(&new_mask) + 1 == CPU_COUNT(&process_mask) );
 
@@ -189,10 +191,10 @@ int main(int argc, char **argv) {
             /* Parent process sets mask */
             if (pid > 0) {
                 /* Set mask and update with poll drom */
-                assert( DLB_DROM_SetProcessMask(pid, &new_mask1, 0) == DLB_SUCCESS );
+                assert( DLB_DROM_SetProcessMask(pid, &new_mask1, no_flags) == DLB_SUCCESS );
 
                 /* A second update is not yet allowed */
-                assert( DLB_DROM_SetProcessMask(pid, &new_mask1, 0) == DLB_ERR_PDIRTY );
+                assert( DLB_DROM_SetProcessMask(pid, &new_mask1, no_flags) == DLB_ERR_PDIRTY );
             }
 
             /* Both processes synchronize */
@@ -270,8 +272,8 @@ int main(int argc, char **argv) {
         mu_testing_set_sys_size(SYS_SIZE);
 
         /* Test that error is NOPROC instead of NOSHMEM */
-        assert( DLB_DROM_GetProcessMask(0, &mask, 0) == DLB_ERR_NOPROC );
-        assert( DLB_DROM_SetProcessMask(0, &mask, 0) == DLB_ERR_NOPROC );
+        assert( DLB_DROM_GetProcessMask(0, &mask, no_flags) == DLB_ERR_NOPROC );
+        assert( DLB_DROM_SetProcessMask(0, &mask, no_flags) == DLB_ERR_NOPROC );
 
         /* Fork process */
         pid = fork();
@@ -307,7 +309,7 @@ int main(int argc, char **argv) {
             if (pid != 0) {
                 cpu_set_t child_mask, expected_child_mask;
                 mu_parse_mask("0-3", &expected_child_mask);
-                assert( DLB_DROM_GetProcessMask(pid, &child_mask, 0) == DLB_SUCCESS );
+                assert( DLB_DROM_GetProcessMask(pid, &child_mask, no_flags) == DLB_SUCCESS );
                 assert( CPU_EQUAL(&child_mask, &expected_child_mask) );
             }
 
@@ -315,7 +317,7 @@ int main(int argc, char **argv) {
             if (pid != 0) {
                 cpu_set_t new_mask;
                 mu_parse_mask("0-2", &new_mask);
-                assert( DLB_DROM_SetProcessMask(pid, &new_mask, 0) == DLB_SUCCESS );
+                assert( DLB_DROM_SetProcessMask(pid, &new_mask, no_flags) == DLB_SUCCESS );
             }
 
             /* Both processes synchronize */
@@ -326,7 +328,7 @@ int main(int argc, char **argv) {
             if (pid == 0) {
                 cpu_set_t new_mask, expected_new_mask;
                 mu_parse_mask("0-2", &expected_new_mask);
-                assert( DLB_DROM_GetProcessMask(0, &new_mask, 0) == DLB_NOTED );
+                assert( DLB_DROM_GetProcessMask(0, &new_mask, no_flags) == DLB_NOTED );
                 assert( CPU_EQUAL(&new_mask, &expected_new_mask) );
             }
 
@@ -371,7 +373,7 @@ int main(int argc, char **argv) {
         /* Parent process preinitializes */
         mu_parse_mask("0-3", &mask);
         assert( DLB_DROM_Attach() == DLB_SUCCESS );
-        assert( DLB_DROM_PreInit(pid, &mask, 0, NULL) == DLB_SUCCESS );
+        assert( DLB_DROM_PreInit(pid, &mask, no_flags, NULL) == DLB_SUCCESS );
 
         /* Fork processes */
         pid_t child_pid[SYS_SIZE];
@@ -449,7 +451,8 @@ int main(int argc, char **argv) {
             cpu_set_t child_mask, expected_child_mask;
             CPU_ZERO(&expected_child_mask);
             CPU_SET(i, &expected_child_mask);
-            assert( DLB_DROM_GetProcessMask(child_pid[i], &child_mask, 0) == DLB_SUCCESS );
+            assert( DLB_DROM_GetProcessMask(child_pid[i], &child_mask, no_flags)
+                    == DLB_SUCCESS );
             assert( CPU_EQUAL(&child_mask, &expected_child_mask) );
         }
 

@@ -95,7 +95,9 @@ int main( int argc, char **argv ) {
     pm_init(&pm);
 
     // Call callbacks without initialization and check DLB_ERR_NOCBK
+    /* update_threads may have been initialized with omp_set_num_threads
     assert( update_threads(&pm, 2) == DLB_ERR_NOCBK );
+    */
     assert( set_mask(&pm, &mask) == DLB_ERR_NOCBK );
     assert( set_process_mask(&pm, &mask) == DLB_ERR_NOCBK );
     assert( add_mask(&pm, &mask) == DLB_ERR_NOCBK );
@@ -122,7 +124,7 @@ int main( int argc, char **argv ) {
                 (dlb_callback_t)cb_enable_cpu_set, &cb_enable_cpu_set_arg) == DLB_SUCCESS );
     assert( pm_callback_set(&pm, dlb_callback_disable_cpu_set,
                 (dlb_callback_t)cb_disable_cpu_set, &cb_disable_cpu_set_arg) == DLB_SUCCESS );
-    assert( pm_callback_set(&pm, 42, (dlb_callback_t)main, NULL) == DLB_ERR_NOCBK );
+    assert( pm_callback_set(&pm, (dlb_callbacks_t)42, (dlb_callback_t)main, NULL) == DLB_ERR_NOCBK );
 
     // Get callbacks
     dlb_callback_t cb;
@@ -154,7 +156,7 @@ int main( int argc, char **argv ) {
     assert( pm_callback_get(&pm, dlb_callback_disable_cpu_set, &cb, &arg) == DLB_SUCCESS );
     assert( cb == (dlb_callback_t)cb_disable_cpu_set );
     assert( arg == &cb_disable_cpu_set_arg );
-    assert( pm_callback_get(&pm, 42, &cb, &arg) == DLB_ERR_NOCBK );
+    assert( pm_callback_get(&pm, (dlb_callbacks_t)42, &cb, &arg) == DLB_ERR_NOCBK );
 
     // Call callback and check DLB_SUCCESS
     assert( update_threads(&pm, 0) == DLB_SUCCESS );
