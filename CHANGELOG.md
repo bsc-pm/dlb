@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.5.1] 2025-03-05
+### Added
+- Add `--disable-sphinx-doc`, `--disable-doxygen`, and `--disable-pandoc`
+  to `configure` script to disable the automatic detection of each tool
+
+### Fixed
+- Fixed several bugs with CPU affinity masks detection and parsing
+- POP metrics conditional printing improved for MPI/OpenMP detection
+- Fix some compilation errors with `clang-19`, `nvc`, and `nvfortran`
+- Improved documentation in user guide
+- Several other minor fixes
+
 ## [3.5.0] 2024-12-03
 ### Added
 - Asynchronous support for classic LeWI
@@ -339,6 +351,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[3.5.1]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.5.0
 [3.4.1]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.4.1
 [3.4]: https://github.com/bsc-pm/dlb/compare/v3.3...v3.4
