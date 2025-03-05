@@ -86,8 +86,10 @@ int main(int argc, char *argv[]) {
         assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
         /* DLB_DROM_PreInit: */
-        assert( shmem_procinfo_ext__preinit(spd.id, &process_mask, 0) == DLB_SUCCESS );
-        assert( shmem_cpuinfo_ext__preinit(spd.id, &process_mask, 0)  == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(spd.id, &process_mask, DLB_DROM_FLAGS_NONE)
+                == DLB_SUCCESS );
+        assert( shmem_cpuinfo_ext__preinit(spd.id, &process_mask, DLB_DROM_FLAGS_NONE)
+                == DLB_SUCCESS );
 
         /* [Childs] DLB_Init: */
         assert( Initialize(&child0_spd, child0_spd.id, 0, &child0_mask, children_options)

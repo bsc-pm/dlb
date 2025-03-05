@@ -111,7 +111,7 @@ int main( int argc, char **argv ) {
     // Change CPU ownership
     {
         if (num_cpus >= 4) {
-            dlb_drom_flags_t flags = 0;
+            dlb_drom_flags_t flags = DLB_DROM_FLAGS_NONE;
             cpu_set_t p1_mask, p2_mask, mask;
             mu_parse_mask("0-1", &p1_mask);
             mu_parse_mask("2-3", &p2_mask);
@@ -230,7 +230,7 @@ int main( int argc, char **argv ) {
 
             // test setting same mask as future
             {
-                flags = 0;
+                flags = DLB_DROM_FLAGS_NONE;
 
                 // subprocess 1 steals one CPU from suprocess 2
                 mu_parse_mask("0-1,3", &mask);
@@ -280,7 +280,7 @@ int main( int argc, char **argv ) {
         assert( shmem_procinfo__init_with_cpu_sharing(111, 0, &process_mask, SHMEM_KEY)
                 == DLB_SUCCESS );
 
-        dlb_drom_flags_t flags = 0;
+        dlb_drom_flags_t flags = DLB_DROM_FLAGS_NONE;
         cpu_set_t mask;
         mu_parse_mask("0", &mask);
         assert( shmem_procinfo__setprocessmask(111, &mask, flags, NULL) == DLB_ERR_NOCOMP );

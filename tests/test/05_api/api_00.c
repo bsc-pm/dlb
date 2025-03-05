@@ -116,7 +116,7 @@ int main( int argc, char **argv ) {
     char value[32];
     assert( DLB_GetVariable("--drom", value) == DLB_SUCCESS );
     assert( DLB_PrintVariables(0) == DLB_SUCCESS );
-    assert( DLB_PrintShmem(0, 0) == DLB_SUCCESS );
+    assert( DLB_PrintShmem(0, DLB_COLOR_AUTO) == DLB_SUCCESS );
     assert( DLB_Strerror(0) != NULL );
 
     assert( DLB_Finalize() == DLB_SUCCESS );

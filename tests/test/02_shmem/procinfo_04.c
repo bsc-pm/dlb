@@ -52,6 +52,8 @@ int main( int argc, char **argv ) {
     const cpu_set_t original_p1_mask = { .__bits = {0xf} }; /* [1111] */
     const cpu_set_t original_p2_mask = { .__bits = {0xc} }; /* [1100] */
 
+    dlb_drom_flags_t no_flags = DLB_DROM_FLAGS_NONE;
+
     // Initialize external
     assert( shmem_procinfo_ext__init(SHMEM_KEY) == DLB_SUCCESS );
 
@@ -59,7 +61,7 @@ int main( int argc, char **argv ) {
     pid_t p1_preinit_pid = 11;
     cpu_set_t p1_mask;
     memcpy(&p1_mask, &original_p1_mask, sizeof(cpu_set_t));
-    assert( shmem_procinfo_ext__preinit(p1_preinit_pid, &p1_mask, 0) == DLB_SUCCESS );
+    assert( shmem_procinfo_ext__preinit(p1_preinit_pid, &p1_mask, no_flags) == DLB_SUCCESS );
 
     // Pre-Initialize sub-process 2
     pid_t p2_preinit_pid = 22;
@@ -88,7 +90,7 @@ int main( int argc, char **argv ) {
     // Assign all CPUs to sub-process 2
     cpu_set_t new_p2_mask;
     CPU_OR(&new_p2_mask, &original_p1_mask, &original_p2_mask);
-    assert( shmem_procinfo__setprocessmask(p2_pid, &new_p2_mask, 0, NULL) == DLB_SUCCESS );
+    assert( shmem_procinfo__setprocessmask(p2_pid, &new_p2_mask, no_flags, NULL) == DLB_SUCCESS );
 
     // Sub-process 2 polls
     int ncpus = 0;

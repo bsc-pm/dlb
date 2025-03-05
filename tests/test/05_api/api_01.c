@@ -73,7 +73,8 @@ int main(int argc, char **argv) {
 
         /* Check current mask */
         assert( DLB_DROM_Attach() == DLB_SUCCESS );
-        assert( DLB_DROM_GetProcessMask(getpid(), &process_mask, 0) == DLB_SUCCESS );
+        assert( DLB_DROM_GetProcessMask(getpid(), &process_mask, DLB_DROM_FLAGS_NONE)
+                == DLB_SUCCESS );
         assert( DLB_DROM_Detach() == DLB_SUCCESS );
         assert( CPU_EQUAL(&process_mask, &current_mask) );
 

@@ -281,7 +281,8 @@ int main( int argc, char **argv ) {
     {
         pid_t preinit_pid = pid+1;
         assert( shmem_cpuinfo_ext__init(SHMEM_KEY, 0) == DLB_SUCCESS );
-        assert( shmem_cpuinfo_ext__preinit(preinit_pid, &process_mask, 0) == DLB_SUCCESS );
+        assert( shmem_cpuinfo_ext__preinit(preinit_pid, &process_mask, DLB_DROM_FLAGS_NONE)
+                == DLB_SUCCESS );
         assert( shmem_cpuinfo_ext__finalize() == DLB_SUCCESS );
 
         assert( shmem_cpuinfo__init(pid, preinit_pid, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
@@ -307,7 +308,7 @@ int main( int argc, char **argv ) {
     {
         CPU_ZERO(&process_mask);
         assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
-        shmem_cpuinfo__print_info(SHMEM_KEY, 0, 0, true);
+        shmem_cpuinfo__print_info(SHMEM_KEY, 0, 0, DLB_COLOR_AUTO);
         assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 

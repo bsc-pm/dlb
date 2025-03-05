@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
         assert( b == false && flags == (FLAG0|FLAG1) );
 
         /* clear_bit */
-        flags = FLAG0|FLAG1;
+        flags = (flags_t)(FLAG0|FLAG1);
         b = clear_bit(_flags, FLAG1);
         assert( b == true && flags == FLAG0 );
         b = clear_bit(_flags, FLAG1);
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
         assert( b == false && flags == FLAG1 );
 
         /* cas_bit with n bits */
-        flags = FLAG0|FLAG1;
+        flags = (flags_t)(FLAG0|FLAG1);
         b = cas_bit(_flags, FLAG1, FLAG2);
         assert( b == true && flags == (FLAG0|FLAG2) );
         b = cas_bit(_flags, FLAG1, FLAG3);

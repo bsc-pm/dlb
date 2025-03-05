@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
                 | VB_STATS | VB_DROM | VB_ASYNC));
     assert( strcmp(verbose_opts_tostr(VB_CLEAR), "no") == 0 );
     assert( strcmp(verbose_opts_tostr(VB_ALL), "all") == 0 );
-    assert( strcmp(verbose_opts_tostr(VB_API|VB_SHMEM), "api:shmem") == 0 );
+    assert( strcmp(verbose_opts_tostr((verbose_opts_t)(VB_API|VB_SHMEM)), "api:shmem") == 0 );
     assert(  equivalent_verbose_opts("api:shmem", "shmem:api") );
     assert( !equivalent_verbose_opts("api:shmem", "shmem") );
     assert( !equivalent_verbose_opts("drom:async", "drom_async") );
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
     assert( strcmp(verbose_fmt_tostr(VBF_CLEAR), "") == 0 );
     assert( strcmp(verbose_fmt_tostr(VBF_NODE), "node") == 0 );
     assert( strcmp(verbose_fmt_tostr(VBF_MPINODE), "mpinode") == 0 );
-    assert( strcmp(verbose_fmt_tostr(VBF_NODE|VBF_MPINODE), "node:mpinode") == 0 );
+    assert( strcmp(verbose_fmt_tostr((verbose_fmt_t)(VBF_NODE|VBF_MPINODE)), "node:mpinode") == 0 );
     assert(  equivalent_verbose_fmt("node:thread", "thread:node") );
     assert( !equivalent_verbose_fmt("node:thread", "thread") );
     assert( !equivalent_verbose_fmt("node:thread", "node_thread") );
@@ -106,7 +106,8 @@ int main(int argc, char *argv[]) {
 
     assert(strcmp(instrument_items_tostr(INST_NONE), "none") == 0);
     assert(strcmp(instrument_items_tostr(INST_ALL), "all") == 0);
-    assert(strcmp(instrument_items_tostr(INST_LEWI|INST_DROM), "lewi:drom") == 0);
+    assert(strcmp(instrument_items_tostr((instrument_items_t)(INST_LEWI|INST_DROM)),
+                "lewi:drom") == 0);
     assert(  equivalent_instrument_items("all", "thread:node:all") );
     assert( !equivalent_instrument_items("talp", "barrier") );
     assert( !equivalent_instrument_items("all", "callbacks") );
@@ -129,7 +130,7 @@ int main(int argc, char *argv[]) {
 
     policy_t pol;
     err = parse_policy("", &pol);                   assert(err);
-    printf("Policy: %s\n", policy_tostr(42));
+    printf("Policy: %s\n", policy_tostr((policy_t)42));
     err = parse_policy("null", &pol);               assert(err);
     printf("Policy: %s\n", policy_tostr(pol));
     err = parse_policy("no", &pol);                 assert(!err && pol==POLICY_NONE);

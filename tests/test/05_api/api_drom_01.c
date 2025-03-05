@@ -77,7 +77,7 @@ static void test_fork(const cpu_set_t *mask, char ***env) {
     }
 
     assert( DLB_DROM_Attach()                                   == DLB_SUCCESS );
-    assert( DLB_DROM_PostFinalize(pid, 0)                       == DLB_SUCCESS );
+    assert( DLB_DROM_PostFinalize(pid, DLB_DROM_FLAGS_NONE)     == DLB_SUCCESS );
     assert( DLB_DROM_Detach()                                   == DLB_SUCCESS );
 }
 

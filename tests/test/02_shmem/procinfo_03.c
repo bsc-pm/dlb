@@ -97,9 +97,11 @@ int main( int argc, char **argv ) {
     pid_t p3_pid = 333;
     cpu_set_t p3_mask = { .__bits = {0x6}}; /* [0110] */
 
+    dlb_drom_flags_t no_flags = DLB_DROM_FLAGS_NONE;
+
     // no stealing
     {
-        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_mask, 0) == DLB_ERR_PERM );
+        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_mask, no_flags) == DLB_ERR_PERM );
     }
 
     // stealing
@@ -150,8 +152,8 @@ int main( int argc, char **argv ) {
 
     // synchronous
     {
-        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_mask, DLB_STEAL_CPUS | DLB_SYNC_QUERY)
-                == DLB_ERR_TIMEOUT );
+        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_mask,
+                    (dlb_drom_flags_t)(DLB_STEAL_CPUS | DLB_SYNC_QUERY)) == DLB_ERR_TIMEOUT );
     }
 
     // synchronous while p1 and p2 are polling
@@ -169,8 +171,8 @@ int main( int argc, char **argv ) {
         pthread_barrier_wait(&barrier);
 
         // preinitialize and check masks
-        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_mask, DLB_STEAL_CPUS | DLB_SYNC_QUERY)
-                == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(p3_pid, &p3_mask,
+                    (dlb_drom_flags_t)(DLB_STEAL_CPUS | DLB_SYNC_QUERY)) == DLB_SUCCESS );
         assert( CPU_COUNT(&p1_mask) == 1 && CPU_ISSET(0, &p1_mask) );
         assert( CPU_COUNT(&p2_mask) == 1 && CPU_ISSET(3, &p2_mask) );
         assert( CPU_COUNT(&p3_mask) == 2 && CPU_ISSET(1, &p3_mask) && CPU_ISSET(2, &p3_mask) );
@@ -207,11 +209,11 @@ int main( int argc, char **argv ) {
 
         // preinitialize and check masks
         assert( shmem_procinfo_ext__preinit(p3_pid, &p3_new_mask,
-                    DLB_STEAL_CPUS | DLB_SYNC_QUERY) == DLB_SUCCESS );
+                    (dlb_drom_flags_t)(DLB_STEAL_CPUS | DLB_SYNC_QUERY)) == DLB_SUCCESS );
         assert( CPU_COUNT(&p1_mask) == 0 );
         assert( CPU_COUNT(&p2_mask) == 0 );
         cpu_set_t mask;
-        assert( shmem_procinfo__getprocessmask(p3_pid, &mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo__getprocessmask(p3_pid, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &p3_new_mask) );
 
         if (pthread_tryjoin_np(thread1, NULL) != 0
@@ -239,7 +241,7 @@ int main( int argc, char **argv ) {
 
         // parent process (p1) pre-initializes full mask
         mu_parse_mask("0-3", &p1_mask);
-        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, no_flags) == DLB_SUCCESS );
 
         // p2 inherits CPU 0
         mu_parse_mask("0", &p2_mask);
@@ -248,7 +250,7 @@ int main( int argc, char **argv ) {
 
         // p1 still owns CPUs [1-3]
         mu_parse_mask("1-3", &expected_mask);
-        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &expected_mask) );
 
         // p3 inherits CPU 1
@@ -258,7 +260,7 @@ int main( int argc, char **argv ) {
 
         // p1 still owns CPUs [2-3]
         mu_parse_mask("2-3", &expected_mask);
-        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&mask, &expected_mask) );
 
         // CPUs [2-3] are still not inherited, clean up is necessary
@@ -275,7 +277,7 @@ int main( int argc, char **argv ) {
 
         // parent process (p1) pre-initializes [0-2]
         mu_parse_mask("0-2", &p1_mask);
-        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, no_flags) == DLB_SUCCESS );
 
         // p2 wants to register [0-3]
         mu_parse_mask("0-3", &p2_mask);
@@ -283,7 +285,7 @@ int main( int argc, char **argv ) {
         assert( CPU_EQUAL(&p2_mask, &mask) );
 
         // p1 is not registered anymore
-        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, no_flags) == DLB_ERR_NOPROC );
 
         // finalize
         assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
@@ -295,7 +297,7 @@ int main( int argc, char **argv ) {
 
         // parent process (p1) pre-initializes [0-2]
         mu_parse_mask("0-2", &p1_mask);
-        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, no_flags) == DLB_SUCCESS );
 
         // p3 registers CPU [3]
         mu_parse_mask("3", &p3_mask);
@@ -318,7 +320,7 @@ int main( int argc, char **argv ) {
 
         // parent process (p1) pre-initializes [0,2]
         mu_parse_mask("0,2", &p1_mask);
-        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, no_flags) == DLB_SUCCESS );
 
         // p2 wants to register [0-1]
         mu_parse_mask("0-1", &p2_mask);
@@ -331,7 +333,7 @@ int main( int argc, char **argv ) {
         assert( CPU_EQUAL(&p3_mask, &mask) );
 
         // p1 is not registered anymore
-        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, no_flags) == DLB_ERR_NOPROC );
 
         // finalize
         assert( shmem_procinfo__finalize(p2_pid, false, SHMEM_KEY) == DLB_SUCCESS );
@@ -344,7 +346,7 @@ int main( int argc, char **argv ) {
 
         // parent process (p1) pre-initializes [0]
         mu_parse_mask("0", &p1_mask);
-        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, no_flags) == DLB_SUCCESS );
 
         // p2 wants to register [0]
         mu_parse_mask("0", &p2_mask);
@@ -357,10 +359,10 @@ int main( int argc, char **argv ) {
         /* mask is only updated if DLB_NOTED */
 
         // check that only p2 and p3 are registered
-        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, 0) == DLB_ERR_NOPROC );
-        assert( shmem_procinfo__getprocessmask(p2_pid, &mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo__getprocessmask(p1_pid, &mask, no_flags) == DLB_ERR_NOPROC );
+        assert( shmem_procinfo__getprocessmask(p2_pid, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&p2_mask, &mask) );
-        assert( shmem_procinfo__getprocessmask(p3_pid, &mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo__getprocessmask(p3_pid, &mask, no_flags) == DLB_SUCCESS );
         assert( CPU_EQUAL(&p3_mask, &mask) );
 
         // finalize
@@ -374,7 +376,7 @@ int main( int argc, char **argv ) {
 
         // parent process (p1) pre-initializes [0]
         mu_parse_mask("0", &p1_mask);
-        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, 0) == DLB_SUCCESS );
+        assert( shmem_procinfo_ext__preinit(p1_pid, &p1_mask, no_flags) == DLB_SUCCESS );
 
         // p2 wants to register with an empty mask
         CPU_ZERO(&p2_mask);
