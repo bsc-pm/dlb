@@ -21,14 +21,14 @@
 #include <config.h>
 #endif
 
-#include "support/talp_output.h"
+#include "talp/talp_output.h"
 
 #include "apis/dlb_talp.h"
-#include "LB_core/DLB_talp.h"
 #include "support/debug.h"
 #include "support/gslist.h"
 #include "support/mytime.h"
-#include "support/perf_metrics.h"
+#include "talp/talp.h"
+#include "talp/perf_metrics.h"
 
 #include <errno.h>
 #include <stdio.h>

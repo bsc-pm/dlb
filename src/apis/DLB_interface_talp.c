@@ -23,7 +23,6 @@
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
-#include "LB_core/DLB_talp.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
@@ -31,6 +30,8 @@
 #include "support/dlb_common.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
+#include "talp/regions.h"
+#include "talp/talp.h"
 
 
 /*********************************************************************************/
@@ -87,7 +88,7 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
 
     if (pid == 0 || (thread_spd && thread_spd->id == pid)) {
         /* Same process */
-        const dlb_monitor_t *monitor = monitoring_region_get_global_region(thread_spd);
+        const dlb_monitor_t *monitor = region_get_global(thread_spd);
         if (monitor != NULL) {
             *mpi_time = nsecs_to_secs(monitor->mpi_time);
             *useful_time = nsecs_to_secs(monitor->useful_time);
@@ -98,8 +99,7 @@ int DLB_TALP_GetTimes(int pid, double *mpi_time, double *useful_time) {
     } else {
         /* Different process, fetch from shared memory */
         talp_region_list_t region;
-        error = shmem_talp__get_region(&region, pid,
-                monitoring_region_get_global_region_name());
+        error = shmem_talp__get_region(&region, pid, region_get_global_name());
 
         if (error == DLB_SUCCESS) {
             *mpi_time = nsecs_to_secs(region.mpi_time);
@@ -123,7 +123,7 @@ int DLB_TALP_GetNodeTimes(const char *name, dlb_node_times_t *node_times_list,
             max_len = shmem_max_regions;
         }
         if (name == DLB_GLOBAL_REGION) {
-            name = monitoring_region_get_global_region_name();
+            name = region_get_global_name();
         }
         talp_region_list_t *region_list = malloc(sizeof(talp_region_list_t)*max_len);
         error = shmem_talp__get_regionlist(region_list, nelems, max_len, name);
@@ -166,7 +166,7 @@ dlb_monitor_t* DLB_MonitoringRegionGetGlobal(void) {
     if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
-    return monitoring_region_get_global_region(thread_spd);
+    return region_get_global(thread_spd);
 }
 
 DLB_EXPORT_SYMBOL
@@ -183,7 +183,7 @@ dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
     if (unlikely(!thread_spd->talp_info)) {
         return NULL;
     }
-    return monitoring_region_register(thread_spd, name);
+    return region_register(thread_spd, name);
 }
 
 DLB_EXPORT_SYMBOL
@@ -192,7 +192,7 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle){
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_reset(thread_spd, handle);
+    return region_reset(thread_spd, handle);
 }
 
 DLB_EXPORT_SYMBOL
@@ -201,7 +201,7 @@ int DLB_MonitoringRegionStart(dlb_monitor_t *handle){
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_start(thread_spd, handle);
+    return region_start(thread_spd, handle);
 }
 
 DLB_EXPORT_SYMBOL
@@ -210,7 +210,7 @@ int DLB_MonitoringRegionStop(dlb_monitor_t *handle){
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_stop(thread_spd, handle);
+    return region_stop(thread_spd, handle);
 }
 
 DLB_EXPORT_SYMBOL
@@ -219,7 +219,7 @@ int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_region_report(thread_spd, handle);
+    return region_report(thread_spd, handle);
 }
 
 DLB_EXPORT_SYMBOL
@@ -228,7 +228,7 @@ int DLB_MonitoringRegionsUpdate(void) {
     if (unlikely(!thread_spd->talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return monitoring_regions_force_update(thread_spd);
+    return talp_flush_samples_to_regions(thread_spd);
 }
 
 DLB_EXPORT_SYMBOL

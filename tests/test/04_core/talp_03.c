@@ -23,12 +23,14 @@
 
 #include "unique_shmem.h"
 
-#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
-#include "LB_core/talp_types.h"
 #include "LB_numThreads/omptool.h"
 #include "apis/dlb_errors.h"
 #include "support/options.h"
+#include "talp/regions.h"
+#include "talp/talp.h"
+#include "talp/talp_openmp.h"
+#include "talp/talp_types.h"
 
 #include <sched.h>
 #include <pthread.h>
@@ -90,12 +92,12 @@ int main(int argc, char *argv[]) {
 
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *global_monitor = talp_info->monitor;
-    assert( !monitoring_region_is_started(global_monitor) );
+    assert( !region_is_started(global_monitor) );
 
     /* OpenMP Init */
     talp_openmp_init(spd.id, &spd.options);
     talp_openmp_thread_begin();
-    assert( monitoring_region_is_started(global_monitor) );
+    assert( region_is_started(global_monitor) );
 
     /* Parallel region of 1 thread */
     {
@@ -120,7 +122,7 @@ int main(int argc, char *argv[]) {
         /* End parallel */
         talp_openmp_parallel_end(&parallel_data);
 
-        assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
+        assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
         assert( global_monitor->num_omp_parallels == 1 );
         assert( global_monitor->num_omp_tasks == 1 );
         assert( global_monitor->useful_time > 0 );
@@ -132,9 +134,9 @@ int main(int argc, char *argv[]) {
 
     /* Parallel region of 2 threads */
     {
-        dlb_monitor_t *monitor = monitoring_region_register(&spd, "Parallel 2");
+        dlb_monitor_t *monitor = region_register(&spd, "Parallel 2");
         assert( monitor != NULL );
-        assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
+        assert( region_start(&spd, monitor) == DLB_SUCCESS );
 
         /* Create parallel region */
         omptool_parallel_data_t parallel_data = {
@@ -168,8 +170,8 @@ int main(int argc, char *argv[]) {
         pthread_join(worker_thread, NULL);
         talp_openmp_parallel_end(&parallel_data);
 
-        assert( monitoring_region_stop(&spd, monitor) == DLB_SUCCESS );
-        assert( monitoring_regions_force_update(&spd) == DLB_SUCCESS );
+        assert( region_stop(&spd, monitor) == DLB_SUCCESS );
+        assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
         assert( global_monitor->num_omp_parallels == 2 );
         assert( monitor->num_omp_parallels == 1 );
         assert( monitor->omp_scheduling_time > 0 );

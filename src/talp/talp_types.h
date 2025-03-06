@@ -20,9 +20,12 @@
 #ifndef TALP_TYPES_H
 #define TALP_TYPES_H
 
+#include "apis/dlb_types.h"
 #include "support/atomic.h"
 #include "support/gtree.h"
 #include "support/gslist.h"
+
+#include <pthread.h>
 
 /* The structs below are only for private DLB_talp.c use, but they are defined
  * in this header for testing purposes. */

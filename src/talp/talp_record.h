@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,32 +17,25 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef PROCESS_MPI_H
-#define PROCESS_MPI_H
+#ifndef TALP_RECORD_H
+#define TALP_RECORD_H
 
-#include "LB_MPI/MPI_calls_coded.h"
+typedef struct dlb_monitor_t dlb_monitor_t;
+typedef struct SubProcessDescriptor subprocess_descriptor_t;
 
-#include <unistd.h>
-#include <mpi.h>
+void talp_record_monitor(const subprocess_descriptor_t *spd,
+        const dlb_monitor_t *monitor);
 
-extern int _mpi_rank;         /* MPI rank */
-extern int _mpi_size;         /* MPI size */
-extern int _node_id;          /* Node ID */
-extern int _num_nodes;        /* Number of nodes */
-extern int _process_id;       /* Process ID per node */
-extern int _mpis_per_node;    /* Numer of MPI processes per node */
+#if MPI_LIB
 
-void before_init(void);
-void after_init(void);
-void before_mpi(mpi_call_t mpi_call);
-void after_mpi(mpi_call_t mpi_call);
-void before_finalize(void);
-void after_finalize(void);
-int  is_mpi_ready(void);
-void process_MPI__finalize(void);
-MPI_Comm getWorldComm(void);
-MPI_Comm getNodeComm(void);
-MPI_Comm getInterNodeComm(void);
-MPI_Datatype get_mpi_int64_type(void);
+void talp_record_node_summary(const subprocess_descriptor_t *spd);
 
-#endif //PROCESS_MPI_H
+void talp_record_process_summary(const subprocess_descriptor_t *spd,
+        const dlb_monitor_t *monitor);
+
+void talp_record_pop_summary(const subprocess_descriptor_t *spd,
+        const dlb_monitor_t *monitor);
+
+#endif
+
+#endif /* TALP_RECORD_H */

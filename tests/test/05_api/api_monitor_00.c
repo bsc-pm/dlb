@@ -23,11 +23,11 @@
 
 #include "unique_shmem.h"
 
-#include "LB_core/DLB_talp.h"
 #include "LB_core/spd.h"
 #include "apis/dlb.h"
 #include "apis/dlb_talp.h"
 #include "support/mytime.h"
+#include "talp/talp_mpi.h"
 
 #include <sched.h>
 #include <unistd.h>

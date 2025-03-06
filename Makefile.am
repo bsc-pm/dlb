@@ -196,15 +196,17 @@ COMMON_SRCS = \
 	src/support/mytime.h                    \
 	src/support/options.c                   \
 	src/support/options.h                   \
-	src/support/perf_metrics.h              \
 	src/support/queue_template.h            \
 	src/support/queues.c                    \
 	src/support/queues.h                    \
 	src/support/small_array.h               \
-	src/support/talp_output.c               \
-	src/support/talp_output.h               \
 	src/support/types.c                     \
 	src/support/types.h                     \
+	src/talp/talp_openmp.c                  \
+	src/talp/talp_openmp.h                  \
+	src/talp/talp_output.c                  \
+	src/talp/talp_output.h                  \
+	src/talp/talp_types.h                   \
 	src/LB_comm/shmem.c                     \
 	src/LB_comm/shmem.h                     \
 	src/LB_comm/shmem_async.c               \
@@ -217,7 +219,6 @@ COMMON_SRCS = \
 	src/LB_core/lb_funcs.h                  \
 	src/LB_core/spd.c                       \
 	src/LB_core/spd.h                       \
-	src/LB_core/talp_types.h                \
 	src/LB_numThreads/omp-tools.h           \
 	src/LB_numThreads/ompt-multiplex.h      \
 	src/apis/DLB_interface.c                \
@@ -250,6 +251,16 @@ SRCS = \
 	src/support/debug.h                     \
 	src/support/tracing.c                   \
 	src/support/tracing.h                   \
+	src/talp/perf_metrics.c                 \
+	src/talp/perf_metrics.h                 \
+	src/talp/regions.c                      \
+	src/talp/regions.h                      \
+	src/talp/talp.c                         \
+	src/talp/talp.h                         \
+	src/talp/talp_mpi.c                     \
+	src/talp/talp_mpi.h                     \
+	src/talp/talp_record.c                  \
+	src/talp/talp_record.h                  \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
 	src/LB_numThreads/omptm_omp5.c          \
@@ -276,8 +287,6 @@ SRCS = \
 	src/LB_policies/lewi_mask.h             \
 	src/LB_core/DLB_kernel.c                \
 	src/LB_core/DLB_kernel.h                \
-	src/LB_core/DLB_talp.c                  \
-	src/LB_core/DLB_talp.h                  \
 	src/LB_core/node_barrier.c              \
 	src/LB_core/node_barrier.h              \
 	$(END)
