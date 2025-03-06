@@ -125,35 +125,39 @@ static void pop_metrics_print(void) {
             info("############### Monitoring Region POP Metrics ###############");
             info("### Name:                                     %s", record->name);
             info("### Elapsed Time:                             %s", elapsed_time_str);
-            if (avg_ipc > 0.0f) {
-                info("### Average IPC:                              %1.2f", avg_ipc);
-            }
             if (record->mpi_parallel_efficiency > 0.0f &&
                     record->omp_parallel_efficiency > 0.0f) {
                 info("### Parallel efficiency:                      %1.2f",
                         record->parallel_efficiency);
             }
             if (record->num_mpi_calls > 0) {
-                info("### MPI Parallel efficiency:                  %1.2f",
+                info("###  - MPI Parallel efficiency:               %1.2f",
                         record->mpi_parallel_efficiency);
-                info("###   - MPI Communication efficiency:         %1.2f",
+                info("###     - Communication efficiency:           %1.2f",
                         record->mpi_communication_efficiency);
-                info("###   - MPI Load Balance:                     %1.2f",
+                info("###     - Load Balance:                       %1.2f",
                         record->mpi_load_balance);
-                info("###       - MPI Load Balance in:              %1.2f",
+                info("###        - In:                              %1.2f",
                         record->mpi_load_balance_in);
-                info("###       - MPI Load Balance out:             %1.2f",
+                info("###        - Out:                             %1.2f",
                         record->mpi_load_balance_out);
             }
             if (record->num_omp_parallels + record->num_omp_tasks > 0) {
-                info("### OpenMP Parallel efficiency:               %1.2f",
+                info("###  - OpenMP Parallel efficiency:            %1.2f",
                         record->omp_parallel_efficiency);
-                info("###   - OpenMP Load Balance:                  %1.2f",
+                info("###     - Load Balance:                       %1.2f",
                         record->omp_load_balance);
-                info("###   - OpenMP Scheduling efficiency:         %1.2f",
+                info("###     - Scheduling efficiency:              %1.2f",
                         record->omp_scheduling_efficiency);
-                info("###   - OpenMP Serialization efficiency:      %1.2f",
+                info("###     - Serialization efficiency:           %1.2f",
                         record->omp_serialization_efficiency);
+            }
+            if (avg_ipc > 0.0f) {
+                float avg_freq = record->cycles / record->useful_time;
+                info("### Computational metrics:");
+                info("###  - Average useful IPC:                    %1.2f", avg_ipc);
+                info("###  - Average useful frequency:              %1.2f GHz", avg_freq);
+                info("###  - Number of instructions:                %1.2E", record->instructions);
             }
         } else {
             info("############### Monitoring Region POP Metrics ###############");

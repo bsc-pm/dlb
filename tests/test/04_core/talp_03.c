@@ -188,6 +188,9 @@ int main(int argc, char *argv[]) {
         assert( monitor->omp_serialization_time < global_monitor->omp_serialization_time );
     }
 
+    /* Fake num MPI calls to force printing all metrics */
+    global_monitor->num_mpi_calls = 1;
+
     talp_finalize(&spd);
     talp_openmp_thread_end();
     talp_openmp_finalize();
