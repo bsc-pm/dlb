@@ -1,5 +1,8 @@
 # Dynamic Load Balancing Library
 
+[![docs](https://readthedocs.org/projects/dlb-docs/badge/?version=latest)](https://dlb-docs.readthedocs.io/en/latest/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15000657.svg)](https://doi.org/10.5281/zenodo.15000657)
+
 [DLB][] is a dynamic library designed to speed up HPC hybrid applications (i.e.,
 two levels of parallelism) by improving the load balance of the outer level of
 parallelism (e.g., MPI) by dynamically redistributing the computational
@@ -22,6 +25,14 @@ OpenMP).
 TALP (Tracking Application Live Performance) is the module used to gather
 performance data from the application. The data can be obtained during
 the execution or as a report at the end.
+
+
+## Branching Strategy
+
+Please note that the `main` branch is used as the development branch for this
+project. It may contain experimental features and is not guaranteed to be
+stable. For stable releases, please refer to the tagged versions in the
+repository.
 
 
 ## Installation
