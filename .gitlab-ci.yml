@@ -48,7 +48,7 @@ coverage:
         make -j$(nproc)
       fi
   script:
-    - make check
+    - make check DLB_EXTRA_TESTS=1
     - gcovr -r .
   coverage: '/TOTAL.*\s+(\d+\%)/'
   cache:

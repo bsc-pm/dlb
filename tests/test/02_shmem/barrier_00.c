@@ -21,6 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "extra_tests.h"
 #include "unique_shmem.h"
 
 #include "LB_comm/shmem_barrier.h"
@@ -133,6 +134,7 @@ int main(int argc, char **argv) {
     }
 
     /* Test barrier with N processes */
+    if (DLB_EXTRA_TESTS)
     {
         printf("Testing barrier with N processes\n");
         int ncpus;
@@ -222,6 +224,7 @@ int main(int argc, char **argv) {
     }
 
     /* Test barrier with N processes where 1 of them detaches from the barrier */
+    if (DLB_EXTRA_TESTS)
     {
         int ncpus;
         struct data *shdata;

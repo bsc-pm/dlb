@@ -113,6 +113,10 @@ test_includes = [
 
 initial_env = environment()
 
+if (get_option('extra_tests'))
+  initial_env.set('DLB_EXTRA_TESTS', '1')
+endif
+
 foreach suite, suite_tests : tests
   foreach test_name, test_args : suite_tests
     test_file = test_args.get('source', test_name + '.c')

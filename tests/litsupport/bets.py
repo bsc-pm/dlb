@@ -29,6 +29,10 @@ class BetsTest(lit.formats.FileBasedTest):
         tempFile = tempfile.NamedTemporaryFile(mode="wb+")
         cmd = [test.config.bets, "-nocolor", "-o", tempFile.name, sourcePath]
 
+        dlb_extra_tests = os.getenv('DLB_EXTRA_TESTS')
+        if dlb_extra_tests:
+            test.config.environment["DLB_EXTRA_TESTS"] = dlb_extra_tests
+
         result_log = ""
         try:
             out, err, exitCode = lit.util.executeCommand(

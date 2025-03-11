@@ -21,6 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "extra_tests.h"
 #include "unique_shmem.h"
 
 #include "LB_core/DLB_talp.h"
@@ -401,6 +402,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Test --shm-size-multiplier */
+    if (DLB_EXTRA_TESTS)
     {
         enum { KNOWN_NUM_REGIONS_PER_PROC = 100 };
         char name[DLB_MONITOR_NAME_MAX];
