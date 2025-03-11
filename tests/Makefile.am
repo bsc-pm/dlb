@@ -35,9 +35,11 @@ check-local:
 endif
 
 lit-check:
+	@echo "  Tip: export DLB_EXTRA_TESTS=1 to enable all tests"
 	@echo "  Tip: Use LIT_FLAGS to limit the number of threads:"
 	@echo "       make check LIT_FLAGS=\"-j N\""
 	$(LIT) $(srcdir)/test/$(TEST)*
 
 bets-check:
+	@echo "  Tip: export DLB_EXTRA_TESTS=1 to enable all tests"
 	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) $(srcdir)/test/$(TEST)*

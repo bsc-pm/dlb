@@ -4,3 +4,5 @@ option('hwloc', type : 'feature', value : 'auto',
   description : 'Build libraries with HWLOC support')
 option('papi', type : 'feature', value : 'auto',
   description : 'Build libraries with PAPI support')
+option('extra_tests', type : 'boolean', value : false,
+  description : 'Enable extra tests')

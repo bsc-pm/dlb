@@ -23,6 +23,7 @@
 
 // Test eachs of shared memory capacity with default size and --shm-size-multiplier
 
+#include "extra_tests.h"
 #include "unique_shmem.h"
 
 #include "LB_comm/shmem.h"
@@ -206,15 +207,20 @@ int main(int argc, char *argv[]) {
 
     int error = 0;
 
-    /* Test --shm-size-multiplier flag */
-    for (int size_multiplier = 1; size_multiplier <= 5; ++size_multiplier) {
-        fprintf(stderr, "Testing with size multiplier: %d\n", size_multiplier);
-        error += test_shm_multiplier(size_multiplier, false);
-    }
+    /* The following tests may create a lot of child processes in large
+     * systems. Avoid unless option is specified. */
+    if (DLB_EXTRA_TESTS) {
 
-    /* Test error when different values of --shm-size-multiplier */
-    fprintf(stderr, "Testing with different size multiplier\n");
-    error += test_shm_multiplier(3, true);
+        /* Test --shm-size-multiplier flag */
+        for (int size_multiplier = 1; size_multiplier <= 5; ++size_multiplier) {
+            fprintf(stderr, "Testing with size multiplier: %d\n", size_multiplier);
+            error += test_shm_multiplier(size_multiplier, false);
+        }
+
+        /* Test error when different values of --shm-size-multiplier */
+        fprintf(stderr, "Testing with different size multiplier\n");
+        error += test_shm_multiplier(3, true);
+    }
 
     return error;
 }

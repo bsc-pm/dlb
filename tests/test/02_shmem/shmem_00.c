@@ -21,6 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "extra_tests.h"
 #include "unique_shmem.h"
 
 #include "LB_comm/shmem.h"
@@ -43,6 +44,13 @@ struct data {
 };
 
 int main(int argc, char **argv) {
+
+    /* To avoid too many forks on large systems, reduce the system size
+     * unless DLB_EXTRA_TESTS is specified. */
+    if (!DLB_EXTRA_TESTS) {
+        mu_testing_set_sys_size(4);
+    }
+
     int ncpus;
     struct data *shdata;
     shmem_handler_t *handler;
