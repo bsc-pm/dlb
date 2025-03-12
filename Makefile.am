@@ -570,6 +570,15 @@ dlb_tester_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS) $(OPENMP_CFLAGS)
 dlb_tester_LDADD = libdlb.la
 endif
 
+if MPI_LIB
+bin_PROGRAMS += dlb_mpi
+dlb_mpi_SOURCES = src/utils/dlb_mpi.c
+dlb_mpi_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
+dlb_mpi_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+dlb_mpi_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
+dlb_mpi_LDADD = libdlb.la
+endif
+
 
 #********************************************************************************
 # cmake
