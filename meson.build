@@ -350,6 +350,24 @@ foreach bin : binaries
 endforeach
 
 
+if mpi_dep.found()
+
+  mpi_binaries = [
+    'dlb_mpi',
+  ]
+
+  foreach bin : mpi_binaries
+    executable(bin, 'src/utils/' + bin + '.c',
+      include_directories : common_includes,
+      link_with : libdlb,
+      dependencies : [common_deps, mpi_dep],
+      install : true,
+      install_rpath : '$ORIGIN/../' + get_option('libdir'),
+    )
+  endforeach
+endif
+
+
 #################################################################################
 ### Data                                                                      ###
 #################################################################################
