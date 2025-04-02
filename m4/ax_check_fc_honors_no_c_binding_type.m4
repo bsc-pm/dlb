@@ -11,7 +11,7 @@ subroutine foo(bar)
     type, bind(c) :: dtype
         integer :: a
     end type dtype
-    tyoe(dtype) :: bar
+    type(dtype) :: bar
 end subroutine
     ]]),
     [
