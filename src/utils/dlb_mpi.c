@@ -79,7 +79,7 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
-static void __attribute__((__noreturn__)) print_affinity(void) {
+static void print_affinity(void) {
     char hostname[HOST_NAME_MAX];
     gethostname(hostname, HOST_NAME_MAX);
 
@@ -91,8 +91,6 @@ static void __attribute__((__noreturn__)) print_affinity(void) {
 
     printf("DLB[%s:%d]: Rank: %d, process affinity: %s\n",
             hostname, getpid(), mpi_rank, mu_to_str(&process_mask));
-
-    exit(EXIT_SUCCESS);
 }
 
 
