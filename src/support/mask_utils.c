@@ -176,25 +176,25 @@ static void init_system(unsigned int num_cpus, unsigned int num_cores,
     /*** System ***/
     cpu_set_t sys_mask;
     CPU_ZERO(&sys_mask);
-    for (cpuid_t cpuid = 0; cpuid < num_cpus; ++cpuid) {
+    for (unsigned int cpuid = 0; cpuid < num_cpus; ++cpuid) {
         CPU_SET(cpuid, &sys_mask);
     }
 
     /*** Cores ***/
-    cpuid_t cpus_per_core = num_cpus / num_cores;
+    unsigned int cpus_per_core = num_cpus / num_cores;
     cpu_set_t *core_masks = calloc(num_cores, sizeof(cpu_set_t));
-    for (cpuid_t core_id = 0; core_id < num_cores; ++core_id) {
-        for (cpuid_t cpuid = core_id * cpus_per_core;
+    for (unsigned int core_id = 0; core_id < num_cores; ++core_id) {
+        for (unsigned int cpuid = core_id * cpus_per_core;
                 cpuid < (core_id+1) * cpus_per_core; ++cpuid) {
             CPU_SET(cpuid, &core_masks[core_id]);
         }
     }
 
     /*** NUMA Nodes ***/
-    cpuid_t cpus_per_node = num_cpus / num_nodes;
+    unsigned int cpus_per_node = num_cpus / num_nodes;
     cpu_set_t *node_masks = calloc(num_nodes, sizeof(cpu_set_t));
-    for (cpuid_t node_id = 0; node_id < num_nodes; ++node_id) {
-        for (cpuid_t cpuid = node_id * cpus_per_node;
+    for (unsigned int node_id = 0; node_id < num_nodes; ++node_id) {
+        for (unsigned int cpuid = node_id * cpus_per_node;
                 cpuid < (node_id+1) * cpus_per_node; ++cpuid) {
             CPU_SET(cpuid, &node_masks[node_id]);
         }

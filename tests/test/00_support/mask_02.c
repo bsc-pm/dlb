@@ -301,5 +301,11 @@ int main(int argc, char *argv[]) {
         mu_testing_set_sys_masks(&system_mask, core_masks, NUM_CORES, node_masks, NUM_NODES);
     }
 
+    /* Exactly 256 CPUs */
+    {
+        warning("===== 256 CPUs node ===== ");
+        mu_testing_set_sys_size(256);
+    }
+
     return 0;
 }
