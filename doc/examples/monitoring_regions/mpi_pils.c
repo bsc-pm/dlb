@@ -328,7 +328,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef DLB_REGIONS
     if (mpi_rank == 0) {
-        printf("accumulated_MPI_time: %" PRId64" ns\n", monitor->accumulated_MPI_time);
+        printf("mpi_time: %" PRId64" ns\n", monitor->mpi_time);
     }
 #endif
 
