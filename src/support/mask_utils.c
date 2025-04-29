@@ -402,18 +402,20 @@ static void parse_system_files(void) {
                     int new_coreid = -1;
                     bool already_present = false;
                     for (int c = 0; c < num_cores; ++c) {
-                        core_cpuset = &sys.core_masks_by_coreid[c];
-                        if (core_cpuset->count == 0) {
-                            new_coreid = c;
-                        } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core_cpuset->set, &core_mask)) {
+                        mu_cpuset_t *core = &sys.core_masks_by_coreid[c];
+                        if (core->count == 0) {
+                            if (new_coreid == -1) {
+                                new_coreid = c;
+                            }
+                        } else if (CPU_EQUAL_S(mu_cpuset_alloc_size, core->set, &core_mask)) {
                             already_present = true;
                             break;
                         }
                     }
 
-                    /* Break again if the core mask has already been registered */
+                    /* Continue to next CPU if the core mask has already been registered */
                     if (already_present) {
-                        break;
+                        continue;
                     }
 
                     /* Relloacate if we didn't find en empty spot nor the same mask */
@@ -426,8 +428,8 @@ static void parse_system_files(void) {
                     }
 
                     /* Finally save core mask */
-                    core_cpuset = &sys.core_masks_by_coreid[new_coreid];
-                    mu_cpuset_from_glibc_sched_affinity(core_cpuset, &core_mask);
+                    mu_cpuset_t *new_core = &sys.core_masks_by_coreid[new_coreid];
+                    mu_cpuset_from_glibc_sched_affinity(new_core, &core_mask);
 
                     /* Set boolean to do post-processing */
                     core_masks_array_needs_reordering = true;
