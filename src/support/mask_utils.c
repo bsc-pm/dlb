@@ -516,6 +516,7 @@ static void print_sys_info(void) {
         }
     }
 
+#if DEBUG_VERSION
     for (int cpuid = sys.sys_mask.first_cpuid;
             cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
             cpuid = mu_get_next_cpu(sys.sys_mask.set, cpuid)) {
@@ -525,6 +526,7 @@ static void print_sys_info(void) {
                     cpuid, mu_to_str(core_cpuset->set));
         }
     }
+#endif
 }
 
 
