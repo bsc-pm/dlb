@@ -113,6 +113,8 @@ static void omptool_callback__thread_begin(
 
     spd_enter_dlb(thread_spd);
 
+    verbose(VB_OMPT, "native-thread-begin event");
+
     if (talp_funcs.thread_begin) {
         talp_funcs.thread_begin(thread_type);
     }
@@ -123,6 +125,9 @@ static void omptool_callback__thread_begin(
 
 static void omptool_callback__thread_end(
         ompt_data_t *thread_data) {
+
+    verbose(VB_OMPT, "native-thread-end event");
+
     if (talp_funcs.thread_end) {
         talp_funcs.thread_end();
     }
@@ -162,6 +167,13 @@ static void omptool_callback__parallel_begin(
         omptool_parallel_data->requested_parallelism = requested_parallelism;
         parallel_data->ptr = omptool_parallel_data;
 
+        if (omptool_parallel_data->level == 1) {
+            verbose(VB_OMPT, "parallel-begin event");
+        } else {
+            verbose(VB_OMPT, "parallel-begin event: nesting level %u",
+                    omptool_parallel_data->level);
+        }
+
         /* Finally, invoke TALP or OMPTM if needed */
         if (talp_funcs.parallel_begin) {
             talp_funcs.parallel_begin(omptool_parallel_data);
@@ -181,6 +193,13 @@ static void omptool_callback__parallel_end(
         const void *codeptr_ra) {
     if (flags & ompt_parallel_team) {
         omptool_parallel_data_t *omptool_parallel_data = parallel_data->ptr;
+
+        if (omptool_parallel_data->level == 1) {
+            verbose(VB_OMPT, "parallel-end event");
+        } else {
+            verbose(VB_OMPT, "parallel-end event: nesting level %u",
+                    omptool_parallel_data->level);
+        }
 
         if (talp_funcs.parallel_end) {
             talp_funcs.parallel_end(omptool_parallel_data);
@@ -207,6 +226,8 @@ static void omptool_callback__task_create(
         /* Pass nesting level */
         new_task_data->value = encountering_task_data->value;
 
+        verbose(VB_OMPT, "task-create event");
+
         if (talp_funcs.task_create) {
             talp_funcs.task_create();
         }
@@ -221,20 +242,29 @@ static void omptool_callback__task_schedule(
         ompt_task_status_t prior_task_status,
         ompt_data_t *next_task_data) {
     if (prior_task_status == ompt_task_complete) {
+
+        verbose(VB_OMPT, "task-schedule event: task complete");
+
         if (talp_funcs.task_complete) {
             talp_funcs.task_complete();
         }
         if (omptm_funcs.task_complete) {
             omptm_funcs.task_complete();
         }
+
         instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+
     } else if (prior_task_status == ompt_task_switch) {
+
+        verbose(VB_OMPT, "task-schedule event: task switch");
+
         if (talp_funcs.task_switch) {
             talp_funcs.task_switch();
         }
         if (omptm_funcs.task_switch) {
             omptm_funcs.task_switch();
         }
+
         instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     }
 }
@@ -246,35 +276,79 @@ static void omptool_callback__implicit_task(
         unsigned int actual_parallelism,
         unsigned int index,
         int flags) {
-    if (endpoint == ompt_scope_begin
-            && parallel_data != NULL
-            && parallel_data->ptr != NULL
-            && flags & ompt_task_implicit) {
 
-        omptool_parallel_data_t *omptool_parallel_data = parallel_data->ptr;
-        if (index == 0) {
-            omptool_parallel_data->actual_parallelism = actual_parallelism;
+    if (flags & ompt_task_implicit) {
+        if (endpoint == ompt_scope_begin
+                && parallel_data != NULL
+                && parallel_data->ptr != NULL) {
+
+            omptool_parallel_data_t *omptool_parallel_data = parallel_data->ptr;
+            if (index == 0) {
+                omptool_parallel_data->actual_parallelism = actual_parallelism;
+            }
+
+            /* Pass nesting level to implicit task */
+            task_data->value = omptool_parallel_data->level;
+
+            verbose(VB_OMPT, "implicit-task-begin event: into parallel function");
+
+            if (talp_funcs.into_parallel_function) {
+                talp_funcs.into_parallel_function(omptool_parallel_data, index);
+            }
+            if (omptm_funcs.into_parallel_function) {
+                omptm_funcs.into_parallel_function(omptool_parallel_data, index);
+            }
+
+            instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
         }
-
-        /* Pass nesting level to implicit task */
-        task_data->value = omptool_parallel_data->level;
-
-        if (talp_funcs.into_parallel_function) {
-            talp_funcs.into_parallel_function(omptool_parallel_data, index);
+        else if (endpoint == ompt_scope_end) {
+            verbose(VB_OMPT, "implicit-task-end event");
         }
-        if (omptm_funcs.into_parallel_function) {
-            omptm_funcs.into_parallel_function(omptool_parallel_data, index);
+    }
+    else if (flags & ompt_task_initial) {
+        if (endpoint == ompt_scope_begin) {
+            verbose(VB_OMPT, "initial-task-begin event");
+        } else if (endpoint == ompt_scope_end) {
+            verbose(VB_OMPT, "initial-task-end event");
         }
+    }
+}
 
-        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
+
+static inline void into_parallel_implicit_barrier(omptool_parallel_data_t *data) {
+    if (talp_funcs.into_parallel_implicit_barrier) {
+        talp_funcs.into_parallel_implicit_barrier(data);
+    }
+    if (omptm_funcs.into_parallel_implicit_barrier) {
+        omptm_funcs.into_parallel_implicit_barrier(data);
+    }
+
+    instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+}
+
+static inline void into_parallel_sync(omptool_parallel_data_t *data) {
+    if (talp_funcs.into_parallel_sync) {
+        talp_funcs.into_parallel_sync(data);
+    }
+    if (omptm_funcs.into_parallel_sync) {
+        omptm_funcs.into_parallel_sync(data);
+    }
+}
+
+static inline void outof_parallel_sync(omptool_parallel_data_t *data) {
+    if (talp_funcs.outof_parallel_sync) {
+        talp_funcs.outof_parallel_sync(data);
+    }
+    if (omptm_funcs.outof_parallel_sync) {
+        omptm_funcs.outof_parallel_sync(data);
     }
 }
 
 /* Warning: at the time of writing (Sep 2023), LLVM upstream still uses the
  * deprecated kind ompt_sync_region_barrier_implicit for the
- * sync-region-implicit-parallel event, so we cannot yet remove the deprecated
+ * implicit-parallel-begin event, so we cannot yet remove the deprecated
  * enum. This enum value is used also for implicit barriers in a **single**
- * region, but we can still identify the implicit barrier of a parallel
+ * region, but we can still identify the implicit barrier of a parallel region
  * comparing the codeptr_ra, which will be NULL for all team-worker threads,
  * and equal to the codeptr_ra from parallel_begin for the primary thread.
  */
@@ -290,67 +364,109 @@ static void omptool_callback__sync_region(
             case ompt_sync_region_barrier_implicit:
                 /* deprecated enum, includes implicit barriers from parallel,
                  * single, workshare, etc. */
-                if (endpoint == ompt_scope_begin
-                        && (codeptr_ra == NULL
-                            || codeptr_ra == data->codeptr_ra)) {
-                    /* barrier of implicit parallel only if codeptr_ra is NULL
+                if (codeptr_ra == NULL || codeptr_ra == data->codeptr_ra) {
+
+                    /* implicit barrier in parallel region only if codeptr_ra is NULL
                      * or equal to parallel region's */
-                    if (talp_funcs.into_parallel_implicit_barrier) {
-                        talp_funcs.into_parallel_implicit_barrier(data);
+
+                    if (endpoint == ompt_scope_begin) {
+                        verbose(VB_OMPT, "implicit-barrier-begin event: "
+                                "end of parallel function (deprecated enum)");
+                        into_parallel_implicit_barrier(data);
                     }
-                    if (omptm_funcs.into_parallel_implicit_barrier) {
-                        omptm_funcs.into_parallel_implicit_barrier(data);
+                    else if (endpoint == ompt_scope_end) {
+                        verbose(VB_OMPT, "implicit-barrier-end event: "
+                                "end of parallel function (deprecated enum)");
                     }
-                    instrument_event(BINDINGS_EVENT, 0, EVENT_END);
-                } else if (endpoint == ompt_scope_begin) {
-                    if (talp_funcs.into_parallel_sync) {
-                        talp_funcs.into_parallel_sync(data);
-                    }
-                    if (omptm_funcs.into_parallel_sync) {
-                        omptm_funcs.into_parallel_sync(data);
-                    }
-                } else if (endpoint == ompt_scope_end) {
-                    if (talp_funcs.outof_parallel_sync) {
-                        talp_funcs.outof_parallel_sync(data);
-                    }
-                    if (omptm_funcs.outof_parallel_sync) {
-                        omptm_funcs.outof_parallel_sync(data);
+
+                } else {
+
+                    /* other implicit barriers */
+
+                    if (endpoint == ompt_scope_begin) {
+                        verbose(VB_OMPT, "implicit-barrier-begin event: sync region");
+                        into_parallel_sync(data);
+                    } else if (endpoint == ompt_scope_end) {
+                        verbose(VB_OMPT, "implicit-barrier-end event: sync region");
+                        outof_parallel_sync(data);
                     }
                 }
                 break;
+
             case ompt_sync_region_barrier_explicit:
-                DLB_FALLTHROUGH;
+                if (endpoint == ompt_scope_begin) {
+                    verbose(VB_OMPT, "explicit-barrier-begin event");
+                    into_parallel_sync(data);
+                } else if (endpoint == ompt_scope_end) {
+                    verbose(VB_OMPT, "explicit-barrier-end event");
+                    outof_parallel_sync(data);
+                }
+                break;
+
+            case ompt_sync_region_barrier_implementation:
+                verbose(VB_OMPT, "Implementation-Specific Barrier event");
+                if (endpoint == ompt_scope_begin) {
+                    into_parallel_sync(data);
+                } else if (endpoint == ompt_scope_end) {
+                    outof_parallel_sync(data);
+                }
+                break;
+
             case ompt_sync_region_taskwait:
-                DLB_FALLTHROUGH;
+                if (endpoint == ompt_scope_begin) {
+                    verbose(VB_OMPT, "taskwait-begin event");
+                    into_parallel_sync(data);
+                } else if (endpoint == ompt_scope_end) {
+                    verbose(VB_OMPT, "taskwait-end event");
+                    outof_parallel_sync(data);
+                }
+                break;
+
             case ompt_sync_region_taskgroup:
                 if (endpoint == ompt_scope_begin) {
-                    if (talp_funcs.into_parallel_sync) {
-                        talp_funcs.into_parallel_sync(data);
-                    }
-                    if (omptm_funcs.into_parallel_sync) {
-                        omptm_funcs.into_parallel_sync(data);
-                    }
+                    verbose(VB_OMPT, "taskgroup-begin event");
+                    into_parallel_sync(data);
                 } else if (endpoint == ompt_scope_end) {
-                    if (talp_funcs.outof_parallel_sync) {
-                        talp_funcs.outof_parallel_sync(data);
-                    }
-                    if (omptm_funcs.outof_parallel_sync) {
-                        omptm_funcs.outof_parallel_sync(data);
-                    }
+                    verbose(VB_OMPT, "taskgroup-end event");
+                    outof_parallel_sync(data);
                 }
                 break;
-            case ompt_sync_region_barrier_implicit_parallel:
-                /* new enum in OMP 5.1 not yet implemented in any known runtime */
+
+            case ompt_sync_region_barrier_implicit_workshare:
                 if (endpoint == ompt_scope_begin) {
-                    if (talp_funcs.into_parallel_implicit_barrier) {
-                        talp_funcs.into_parallel_implicit_barrier(data);
-                    }
-                    if (omptm_funcs.into_parallel_implicit_barrier) {
-                        omptm_funcs.into_parallel_implicit_barrier(data);
-                    }
-                    instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+                    verbose(VB_OMPT, "implicit-barrier-begin event: workshare");
+                    into_parallel_sync(data);
+                } else if (endpoint == ompt_scope_end) {
+                    verbose(VB_OMPT, "implicit-barrier-end event: workshare");
+                    outof_parallel_sync(data);
                 }
                 break;
+
+            case ompt_sync_region_barrier_teams:
+                if (endpoint == ompt_scope_begin) {
+                    verbose(VB_OMPT, "implicit-barrier-begin event: teams");
+                    into_parallel_sync(data);
+                } else if (endpoint == ompt_scope_end) {
+                    verbose(VB_OMPT, "implicit-barrier-end event: teams");
+                    outof_parallel_sync(data);
+                }
+                break;
+
+            case ompt_sync_region_reduction:
+                /* For now we don't do anything with reductions */
+                break;
+
+            case ompt_sync_region_barrier_implicit_parallel:
+                /* new enum in OMP 5.1 */
+                if (endpoint == ompt_scope_begin) {
+                    verbose(VB_OMPT, "implicit-barrier-begin event: end of parallel function");
+                    into_parallel_implicit_barrier(data);
+                }
+                else if (endpoint == ompt_scope_end) {
+                    verbose(VB_OMPT, "implicit-barrier-end event: end of parallel function");
+                }
+                break;
+
             default:
                 break;
         }
@@ -398,6 +514,8 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
                 .task_complete      = talp_openmp_task_complete,
                 .task_switch        = talp_openmp_task_switch,
             };
+        } else {
+            talp_funcs = (const omptool_event_funcs_t) {};
         }
 
         /* omptm_funcs */
@@ -461,6 +579,8 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
                 .task_complete      = omptm_role_shift__task_complete,
                 .task_switch        = omptm_role_shift__task_switch,
             };
+        } else {
+            omptm_funcs = (const omptool_event_funcs_t) {};
         }
     }
 
