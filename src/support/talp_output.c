@@ -899,7 +899,7 @@ static void process_print(void) {
             if (process_record->monitor.omp_load_imbalance_time > 0
                     || process_record->monitor.omp_scheduling_time > 0
                     || process_record->monitor.omp_serialization_time > 0) {
-                info("### Not useful OMP Load Imbalance:              %"PRId64" ns",
+                info("### Not useful OMP Load Imbalance:            %"PRId64" ns",
                         process_record->monitor.omp_load_imbalance_time);
                 info("### Not useful OMP Scheduling:                %"PRId64" ns",
                         process_record->monitor.omp_scheduling_time);
