@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.5.2] 2025-05-02
+### Added
+- Add `dlb_mpi` binary to display CPU affinity and MPI rank
+- Add more verbose messages for OMPT events
+- Add implicit-task-end OMPT event to add consistency to Cray OpenMP
+
+### Fixed
+- Fixed several errors with CPU topology parsing
+- Removed deprecated options and struct members in examples
+
 ## [3.5.1] 2025-03-05
 ### Added
 - Add `--disable-sphinx-doc`, `--disable-doxygen`, and `--disable-pandoc`
@@ -351,6 +361,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[3.5.2]: https://github.com/bsc-pm/dlb/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.5.0
 [3.4.1]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.4.1
