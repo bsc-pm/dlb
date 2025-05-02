@@ -483,6 +483,7 @@ AC_CONFIG_FILES([tests/gens/mpi-generator], [chmod +x tests/gens/mpi-generator])
 
 # Some user guide files are generated, link the rest if necessary to the build dir
 AC_CONFIG_LINKS([
+    doc/user_guide/source/conf.py:doc/user_guide/source/conf.py
     doc/user_guide/source/advance_usage.rst:doc/user_guide/source/advance_usage.rst
     doc/user_guide/source/api.rst:doc/user_guide/source/api.rst
     doc/user_guide/source/citing_dlb.rst:doc/user_guide/source/citing_dlb.rst
