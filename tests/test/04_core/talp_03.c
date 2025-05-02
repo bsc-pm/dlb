@@ -68,6 +68,7 @@ static void* parallel_func(void *arg) {
     talp_openmp_into_parallel_implicit_barrier(parallel_data);
 
     if (index != 0) {
+        talp_openmp_outof_parallel_function();
         talp_openmp_thread_end();
     }
 

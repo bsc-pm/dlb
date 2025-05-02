@@ -34,6 +34,7 @@ void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data);
 void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data);
 void talp_openmp_into_parallel_function(
         omptool_parallel_data_t *parallel_data, unsigned int index);
+void talp_openmp_outof_parallel_function(void);
 void talp_openmp_into_parallel_implicit_barrier(
         omptool_parallel_data_t *parallel_data);
 void talp_openmp_into_parallel_sync(omptool_parallel_data_t *parallel_data);

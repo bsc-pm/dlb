@@ -80,6 +80,7 @@ typedef struct omptool_event_funcs_t {
     void (*parallel_begin)(omptool_parallel_data_t*);
     void (*parallel_end)(omptool_parallel_data_t*);
     void (*into_parallel_function)(omptool_parallel_data_t*, unsigned);
+    void (*outof_parallel_function)(void);
     void (*into_parallel_implicit_barrier)(omptool_parallel_data_t*);
     void (*into_parallel_sync)(omptool_parallel_data_t*);
     void (*outof_parallel_sync)(omptool_parallel_data_t*);
