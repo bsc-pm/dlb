@@ -74,15 +74,15 @@ Below you can find a table of currently supported runtimes and the respective co
    * - Compiler / Runtime
      - Support for TALP OpenMP metrics
    * - LLVM-compilers like ``clang,clang++``
-     - support with version ``>=8.0.0``
-   * - Intel Classic-compilers ``icc,icpc``   
-     - support with version ``>=19.0.1``
-   * - Intel LLVM-compilers ``icx,icpx``   
+     - supported with version ``>=8.0.0``
+   * - Intel Classic-compilers ``icc,icpc``
+     - supported with version ``>=19.0.1``
+   * - Intel LLVM-compilers ``icx,icpx``
      - supported
-   * - GNU compilers ``gcc,g++,gfortran``   
-     - not supported
-   * - Cray compilers  
-     - supported with a patch to DLB
+   * - GNU compilers ``gcc,g++,gfortran``
+     - not supported (see note below)
+   * - Cray clang compilers ``craycc,crayc++``
+     - supported with version ``>=17.0.0``
 
 
 If you are using any supported compiler in the table above to build your application, you can execute your application like this to gather OpenMP performance metrics with TALP:
@@ -95,6 +95,20 @@ If you are using any supported compiler in the table above to build your applica
     # "--ompt" enables the OMPT tool in DLB
     # "--talp-openmp" enables collection of OpenMP metrics
     mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
+
+.. note::
+   Since LLVM's OpenMP runtime supports the GOMP interface, you can compile and
+   link applications with GCC and explicitly link against the LLVM OpenMP
+   runtime using:
+
+     ``gcc your_app.c -L<llvm_openmp_lib_dir> -Wl,-rpath,<llvm_openmp_lib_dir> -lomp``
+
+   This allows you to use the LLVM OpenMP runtime even when compiling with GCC.
+
+
+.. note::
+   The compilers listed here are relevant only for their default OpenMP runtimes.
+   This does not refer to the compiler used to build the DLB library.
 
 
 Hybrid (OpenMP+MPI) executions
