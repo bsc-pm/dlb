@@ -2025,6 +2025,19 @@ void talp_openmp_into_parallel_function(
     }
 }
 
+void talp_openmp_outof_parallel_function(void) {
+    const subprocess_descriptor_t *spd = thread_spd;
+    talp_info_t *talp_info = spd->talp_info;
+    if (talp_info) {
+        /* Update thread sample with the last microsample */
+        talp_sample_t *sample = talp_get_thread_sample(spd);
+        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+
+        /* Update state */
+        talp_set_sample_state(sample, not_useful_omp_out, talp_info->flags.papi);
+    }
+}
+
 void talp_openmp_into_parallel_implicit_barrier(omptool_parallel_data_t *parallel_data) {
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t *talp_info = spd->talp_info;

@@ -212,6 +212,8 @@ static void omptool_callback__parallel_end(
         if (omptool_parallel_data->level > 1) {
             free(parallel_data->ptr);
         }
+
+        instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
     }
 }
 
@@ -302,7 +304,35 @@ static void omptool_callback__implicit_task(
             instrument_event(BINDINGS_EVENT, sched_getcpu()+1, EVENT_BEGIN);
         }
         else if (endpoint == ompt_scope_end) {
+            /* Note: parallel_data is NULL */
+
             verbose(VB_OMPT, "implicit-task-end event");
+
+            if (index == 0) {
+                /* The primary thread state is already controlled in the parallel-end event */
+            } else {
+                /* This event is emitted differently across OpenMP implementations.
+                 *
+                 * In LLVM (tested with earlier versions until 19), team-worker threads are
+                 * typically suspended during the implicit barrier at the end of a parallel
+                 * region, and this event is not triggered until they resume at the start of
+                 * the next parallel region.
+                 *
+                 * Cray PE (testing with versions 8.3 - 8.5, based on LLVM 17) invokes this
+                 * event for each team-worker thread, but sometimes after the primary thread
+                 * has already triggered the parallel-end event. This can introduce race
+                 * conditions that cause the timing metrics to be attributed to different states,
+                 * potentially leading to inconsistent efficiency results.
+                 */
+                if (talp_funcs.outof_parallel_function) {
+                    talp_funcs.outof_parallel_function();
+                }
+                if (omptm_funcs.outof_parallel_function) {
+                    omptm_funcs.outof_parallel_function();
+                }
+
+                instrument_event(BINDINGS_EVENT, 0, EVENT_END);
+            }
         }
     }
     else if (flags & ompt_task_initial) {
@@ -344,11 +374,11 @@ static inline void outof_parallel_sync(omptool_parallel_data_t *data) {
     }
 }
 
-/* Warning: at the time of writing (Sep 2023), LLVM upstream still uses the
- * deprecated kind ompt_sync_region_barrier_implicit for the
- * implicit-parallel-begin event, so we cannot yet remove the deprecated
- * enum. This enum value is used also for implicit barriers in a **single**
- * region, but we can still identify the implicit barrier of a parallel region
+/* Warning: Newer LLVM versions already use the new
+ * `ompt_sync_region_barrier_implicit_parallel` enum, but older versions and
+ * Cray runtimes still use the deprecated `ompt_sync_region_barrier_implicit`.
+ * This enum value is also used for implicit barriers in a **single** region,
+ * but we can still identify the implicit barrier of a parallel region
  * comparing the codeptr_ra, which will be NULL for all team-worker threads,
  * and equal to the codeptr_ra from parallel_begin for the primary thread.
  */
@@ -365,6 +395,9 @@ static void omptool_callback__sync_region(
                 /* deprecated enum, includes implicit barriers from parallel,
                  * single, workshare, etc. */
                 if (codeptr_ra == NULL || codeptr_ra == data->codeptr_ra) {
+
+                    /* Note: Cray OpenMP still uses this enum, but apparently
+                     * only for parallel region with no tasks */
 
                     /* implicit barrier in parallel region only if codeptr_ra is NULL
                      * or equal to parallel region's */
@@ -506,6 +539,8 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
                 .parallel_end       = talp_openmp_parallel_end,
                 .into_parallel_function
                                     = talp_openmp_into_parallel_function,
+                .outof_parallel_function
+                                    = talp_openmp_outof_parallel_function,
                 .into_parallel_implicit_barrier
                                     = talp_openmp_into_parallel_implicit_barrier,
                 .into_parallel_sync = talp_openmp_into_parallel_sync,
@@ -533,6 +568,7 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
                 .parallel_end       = omptm_omp5__parallel_end,
                 .into_parallel_function
                                     = omptm_omp5__into_parallel_function,
+                .outof_parallel_function = NULL,
                 .into_parallel_implicit_barrier
                                     = omptm_omp5__into_parallel_implicit_barrier,
                 .task_create        = NULL,
@@ -554,6 +590,7 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
                 .parallel_end       = omptm_free_agents__parallel_end,
                 .into_parallel_function
                                     = omptm_free_agents__into_parallel_function,
+                .outof_parallel_function = NULL,
                 .into_parallel_implicit_barrier = NULL,
                 .task_create        = omptm_free_agents__task_create,
                 .task_complete      = omptm_free_agents__task_complete,
@@ -574,6 +611,7 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
                 .parallel_begin     = omptm_role_shift__parallel_begin,
                 .parallel_end       = omptm_role_shift__parallel_end,
                 .into_parallel_function = NULL,
+                .outof_parallel_function = NULL,
                 .into_parallel_implicit_barrier = NULL,
                 .task_create        = omptm_role_shift__task_create,
                 .task_complete      = omptm_role_shift__task_complete,
