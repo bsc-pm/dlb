@@ -2031,10 +2031,10 @@ void talp_openmp_outof_parallel_function(void) {
     if (talp_info) {
         /* Update thread sample with the last microsample */
         talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(sample, talp_info->flags.papi, NO_TIMESTAMP);
 
         /* Update state */
-        talp_set_sample_state(sample, not_useful_omp_out, talp_info->flags.papi);
+        set_sample_state(sample, not_useful_omp_out, talp_info->flags.papi);
     }
 }
 
