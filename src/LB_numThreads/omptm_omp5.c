@@ -274,6 +274,10 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
     omptool_opts = options->lewi_ompt;
     pid = process_id;
     hwthreads_per_core = mu_get_system_hwthreads_per_core();
+
+    array_cpuid_t_init(&cpu_bindings, mu_get_system_size());
+    compute_cpu_bindings();
+
     if (lewi || drom) {
         int err;
         err = DLB_CallbackSet(dlb_callback_enable_cpu, (dlb_callback_t)cb_enable_cpu, NULL);
@@ -325,14 +329,12 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
         verbose(VB_OMPT, "hwthreads per core: %d, omp threads per core: %d",
                 hwthreads_per_core, num_omp_threads_per_core);
 
-        array_cpuid_t_init(&cpu_bindings, 8);
-        compute_cpu_bindings();
-
         omptm_omp5__lend();
     }
 }
 
 void omptm_omp5__finalize(void) {
+    array_cpuid_t_destroy(&cpu_bindings);
 }
 
 

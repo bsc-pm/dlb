@@ -25,6 +25,7 @@
 
 #include "LB_numThreads/omptm_omp5.h"
 #include "LB_numThreads/numThreads.h"
+#include "LB_numThreads/omptool.h"
 #include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_sp.h"
@@ -147,6 +148,20 @@ int main (int argc, char *argv[]) {
     /* Finalize */
     assert( DLB_Finalize_sp(spd1) == DLB_SUCCESS );
     assert( DLB_Finalize_sp(spd2) == DLB_SUCCESS );
+
+    /* Test --ompt-thread-manager=omp5 without --lewi/--drom */
+    {
+        spd1 = DLB_Init_sp(0, &p1_mask, options);
+        spd1->options.lewi = false;
+        omptm_omp5__init(p1_pid, &spd1->options);
+        omptool_parallel_data_t parallel_data = {.level = 1};
+        omptm_omp5__parallel_begin(&parallel_data);
+        omptm_omp5__into_parallel_function(&parallel_data, 0);
+        omptm_omp5__into_parallel_implicit_barrier(&parallel_data);
+        omptm_omp5__parallel_end(&parallel_data);
+        omptm_omp5__finalize();
+        assert( DLB_Finalize_sp(spd1) == DLB_SUCCESS );
+    }
 
     return 0;
 }
