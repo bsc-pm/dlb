@@ -1,0 +1,48 @@
+# vim: set syntax=python:
+easyblock = 'ConfigureMake'
+
+name = 'dlb'
+version = '3.5.2'
+
+description = """
+DLB is a dynamic library designed to speed up HPC hybrid applications (i.e.,
+two levels of parallelism) by improving the load balance of the outer level of
+parallelism (e.g., MPI) by dynamically redistributing the computational
+resources at the inner level of parallelism (e.g., OpenMP). at run time.
+"""
+homepage = 'https://pm.bsc.es/dlb/'
+docurls = ['https://pm.bsc.es/ftp/dlb/doc/user-guide/']
+
+toolchain = {'name': 'cpeCray', 'version': '24.03'}
+toolchainopts = {'pic': True, 'usempi': True}
+
+builddependencies = [
+    ('buildtools-python', '%(toolchain_version)s', '-systemPython', True),
+]
+
+dependencies = [
+    ('papi', EXTERNAL_MODULE),
+]
+
+sources = [SOURCELOWER_TAR_GZ]
+source_urls = ['https://pm.bsc.es/ftp/dlb/releases']
+
+patches = ['https://pm.bsc.es/ftp/dlb/releases/patches/dlb-3.5.2-fix-ompt-example.patch']
+
+checksums = ['ec81284f77aa07c1589a91f75ed1c88501beb6c8340f5bcad603c210f5c446d4',
+            '8f0e47d6549ef86d9ae87c964767dcbdf26e6c5921646c65df95a4b6a605b22d']
+
+configopts = '--with-mpi --with-papi --enable-c-mpi-library'
+
+sanity_check_paths = {
+    'files': [
+        'bin/dlb',
+        'lib/libdlb.a', 'lib/libdlb.%s' % SHLIB_EXT,
+        'lib64/libdlb.%s' % SHLIB_EXT
+    ],
+    'dirs': ['include'],
+}
+
+sanity_check_commands = ['dlb --help']
+
+moduleclass = 'lib'
