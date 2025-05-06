@@ -20,6 +20,7 @@
 #ifndef TALP_OPENMP_H
 #define TALP_OPENMP_H
 
+#include "LB_numThreads/omp-tools.h"
 #include <sys/types.h>
 
 typedef struct Options options_t;
@@ -28,7 +29,7 @@ typedef struct omptool_parallel_data_t omptool_parallel_data_t;
 /* TALP OpenMP functions */
 void talp_openmp_init(pid_t, const options_t*);
 void talp_openmp_finalize(void);
-void talp_openmp_thread_begin();
+void talp_openmp_thread_begin(ompt_thread_t thread_type);
 void talp_openmp_thread_end(void);
 void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data);
 void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data);

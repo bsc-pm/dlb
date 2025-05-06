@@ -100,7 +100,7 @@ void talp_openmp_finalize(void) {
     }
 }
 
-void talp_openmp_thread_begin() {
+void talp_openmp_thread_begin(ompt_thread_t thread_type) {
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {

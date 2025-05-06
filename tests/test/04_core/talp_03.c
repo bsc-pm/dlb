@@ -25,6 +25,7 @@
 
 #include "LB_core/spd.h"
 #include "LB_numThreads/omptool.h"
+#include "LB_numThreads/omp-tools.h"
 #include "apis/dlb_errors.h"
 #include "support/options.h"
 #include "talp/regions.h"
@@ -55,7 +56,7 @@ static void* parallel_func(void *arg) {
 
     if (index != 0) {
         spd_enter_dlb(spd);
-        talp_openmp_thread_begin();
+        talp_openmp_thread_begin(ompt_thread_worker);
     }
 
     talp_openmp_into_parallel_function(parallel_data, index);
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]) {
 
     /* OpenMP Init */
     talp_openmp_init(spd.id, &spd.options);
-    talp_openmp_thread_begin();
+    talp_openmp_thread_begin(ompt_thread_initial);
     assert( region_is_started(global_monitor) );
 
     /* Parallel region of 1 thread */
