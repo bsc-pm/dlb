@@ -275,6 +275,15 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
     pid = process_id;
     hwthreads_per_core = mu_get_system_hwthreads_per_core();
 
+    /* Get process mask */
+    int have_procinfo = shmem_procinfo__getprocessmask(pid, &process_mask, DLB_DROM_FLAGS_NONE);
+    if (have_procinfo != DLB_SUCCESS) {
+        mu_get_system_mask(&process_mask);
+    }
+    memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
+    verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
+
+    /* initialize cpu_bindings based on active_mask */
     array_cpuid_t_init(&cpu_bindings, mu_get_system_size());
     compute_cpu_bindings();
 
@@ -302,11 +311,6 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
             warning("DLB_CallbackSet set_process_mask: %s", DLB_Strerror(err));
         }
 
-        /* Get process mask */
-        shmem_procinfo__getprocessmask(pid, &process_mask, DLB_DROM_FLAGS_NONE);
-        memcpy(&active_mask, &process_mask, sizeof(cpu_set_t));
-        verbose(VB_OMPT, "Initial mask set to: %s", mu_to_str(&process_mask));
-
         /* Update number of cores in process mask */
         cpu_set_t core_set;
         mu_get_cores_subset_of_cpuset(&core_set, &process_mask);
@@ -320,7 +324,7 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
             num_omp_threads_per_core = 1;
         } else if (openmp_places == OPENMP_PLACE_THREADS) {
             num_omp_threads_per_core = hwthreads_per_core;
-        } else if ( num_initial_omp_threads > 0) {
+        } else if ( num_initial_omp_threads > 0 && num_cores_in_process_mask > 0) {
             num_omp_threads_per_core = max_int(
                 1, num_initial_omp_threads / num_cores_in_process_mask);
         } else {
