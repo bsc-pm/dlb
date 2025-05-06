@@ -28,10 +28,10 @@ dependencies = [
 sources = [SOURCELOWER_TAR_GZ]
 source_urls = ['https://pm.bsc.es/ftp/dlb/releases']
 
-patches = ['https://pm.bsc.es/ftp/dlb/releases/patches/dlb-3.5.2-fix-ompt-example.patch']
+patches = ['https://pm.bsc.es/ftp/dlb/releases/patches/dlb-3.5.2-fix-omptm-omp5-init.patch']
 
 checksums = ['ec81284f77aa07c1589a91f75ed1c88501beb6c8340f5bcad603c210f5c446d4',
-            '8f0e47d6549ef86d9ae87c964767dcbdf26e6c5921646c65df95a4b6a605b22d']
+            'a61b83f6fb4f3274b828dd80d905e59cb7db419bc7848f19a98727eab739a26b']
 
 configopts = '--with-mpi --with-hwloc --with-papi --enable-c-mpi-library'
 
