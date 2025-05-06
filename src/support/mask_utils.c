@@ -592,6 +592,8 @@ void mu_get_system_mask(cpu_set_t *mask) {
 
 int mu_get_system_hwthreads_per_core(void) {
     if (unlikely(!mu_initialized)) mu_init();
+    fatal_cond(sys.core_masks_by_coreid[0].count == 0,
+            "Number of hardware threads per core is 0. Please report bug at " PACKAGE_BUGREPORT);
     return sys.core_masks_by_coreid[0].count;
 }
 

@@ -102,10 +102,12 @@ static void compute_cpu_bindings(void) {
 
 static void set_num_threads_from_active_mask(void) {
     if (num_omp_threads_per_core == hwthreads_per_core) {
+        /* Equivalent to OMP_PLACES=threads, enable one thread per CPU in the active mask */
         set_num_threads_fn(CPU_COUNT(&active_mask));
     } else {
+        /* Obtain first the number of available cores, then apply multiplier. */
         cpu_set_t active_core_set;
-        mu_get_cores_subset_of_cpuset(&active_core_set, &active_mask);
+        mu_get_cores_intersecting_with_cpuset(&active_core_set, &active_mask);
         int num_active_cores = CPU_COUNT(&active_core_set) / hwthreads_per_core;
         set_num_threads_fn(num_active_cores * num_omp_threads_per_core);
     }
