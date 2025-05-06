@@ -153,12 +153,24 @@ int main (int argc, char *argv[]) {
     {
         spd1 = DLB_Init_sp(0, &p1_mask, options);
         spd1->options.lewi = false;
-        omptm_omp5__init(p1_pid, &spd1->options);
+        omptm_omp5__init(spd1->id, &spd1->options);
         omptool_parallel_data_t parallel_data = {.level = 1};
         omptm_omp5__parallel_begin(&parallel_data);
         omptm_omp5__into_parallel_function(&parallel_data, 0);
         omptm_omp5__into_parallel_implicit_barrier(&parallel_data);
         omptm_omp5__parallel_end(&parallel_data);
+        omptm_omp5__finalize();
+        assert( DLB_Finalize_sp(spd1) == DLB_SUCCESS );
+    }
+
+    /* Test --ompt-thread-manager=omp5 with an empty mask */
+    {
+        setenv("OMP_NUM_THREADS", "2", 1);
+        unsetenv("OMP_PLACES");
+        cpu_set_t empty_mask;
+        CPU_ZERO(&empty_mask);
+        spd1 = DLB_Init_sp(0, &empty_mask, options);
+        omptm_omp5__init(spd1->id, &spd1->options);
         omptm_omp5__finalize();
         assert( DLB_Finalize_sp(spd1) == DLB_SUCCESS );
     }
