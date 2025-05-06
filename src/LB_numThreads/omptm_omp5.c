@@ -335,7 +335,13 @@ void omptm_omp5__init(pid_t process_id, const options_t *options) {
         verbose(VB_OMPT, "hwthreads per core: %d, omp threads per core: %d",
                 hwthreads_per_core, num_omp_threads_per_core);
 
-        omptm_omp5__lend();
+        /* If --lewi-ompt=lend (non-default) we lend from the beginning,
+         * otherwise we update the number of threads to the current active mask */
+        if (lewi && omptool_opts & OMPTOOL_OPTS_LEND) {
+            omptm_omp5__lend();
+        } else {
+            set_num_threads_from_active_mask();
+        }
     }
 }
 
