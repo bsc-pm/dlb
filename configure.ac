@@ -352,6 +352,12 @@ AM_CONDITIONAL([LIT_SUPPORT], [test "x$lit" = xyes])
 AC_OPENMP
 AM_CONDITIONAL([HAVE_OPENMP], [test -n "$OPENMP_CFLAGS" || test "x$ac_cv_prog_c_openmp" = "xnone needed"])
 
+# Fix OpenMP flag for icx
+AS_IF([echo "$CC $OPENMP_CFLAGS" | grep -q "icx.*-fopenmp"], [
+    AC_MSG_NOTICE([icx with -fopenmp detected, using -qopenmp instead])
+    OPENMP_CFLAGS="-qopenmp"
+])
+
 # check for MPI
 AC_ARG_VAR([MPICC], [MPI C compiler wrapper])
 AX_MPI
