@@ -397,6 +397,11 @@ void omptm_omp5__parallel_end(omptool_parallel_data_t *parallel_data) {
 }
 
 static inline int get_thread_binding(int index) {
+    if (unlikely(cpu_bindings.count == 0)) {
+        /* On a regular execution, cpu_bindings *should* have some valid entries,
+         * but we still need to support scenarios with 0 CPUs in the active mask. */
+        return -1;
+    }
     return cpu_bindings.items[index % cpu_bindings.count];
 }
 
