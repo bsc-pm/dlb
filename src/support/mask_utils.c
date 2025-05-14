@@ -740,9 +740,9 @@ int mu_get_cpu_next_core(const cpu_set_t *mask, int prev_cpu) {
 
 /* Return the number of complete cores in the mask.
  * e.g.:
- *  node0: [0-1]
- *  node1: [2-3]
- *  node2: [4-5]
+ *  core0: [0-1]
+ *  core1: [2-3]
+ *  core2: [4-5]
  *  cpuset: [0-4]
  *  returns 2
  */
@@ -760,7 +760,31 @@ int mu_count_cores(const cpu_set_t *mask) {
     return cores_count;
 }
 
-/* Return the id of the last complete core in the mask if any, otherwise return 1.
+/* Return the number of complete cores in the mask.
+ * e.g.:
+ *  core0: [0-1]
+ *  core1: [2-3]
+ *  core2: [4-5]
+ *  cpuset: [0-4]
+ *  returns 3
+ */
+int mu_count_cores_intersecting_with_cpuset(const cpu_set_t *mask) {
+
+    int cores_count = 0;
+
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        const mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        cpu_set_t intxn;
+        CPU_AND_S(mu_cpuset_alloc_size, &intxn, core_cpuset->set, mask);
+        if (CPU_COUNT_S(mu_cpuset_alloc_size, &intxn) > 0) {
+            cores_count++;
+        }
+    }
+
+    return cores_count;
+}
+
+/* Return the id of the last complete core in the mask if any, otherwise return -1.
  * e.g.:
  *  core0: [0-1]
  *  core1: [2-3]

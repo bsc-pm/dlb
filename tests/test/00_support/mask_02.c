@@ -108,12 +108,16 @@ int main(int argc, char *argv[]) {
         cpu_set_t mask;
         mu_parse_mask("0-3", &mask);
         assert( mu_count_cores(&mask) == 2 );  // [0,1] [2,3] are counted
+        assert( mu_count_cores_intersecting_with_cpuset(&mask) == 2 );
 
         mu_parse_mask("0,1,5,6,10,11", &mask);
         assert( mu_count_cores(&mask) == 2 );  // [0,1] [10,11] are counted
+        assert( mu_count_cores_intersecting_with_cpuset(&mask) == 4 ); // [0,1] [4,5] [5,6] [10,11]
+                                                                       // are counted
 
         mu_parse_mask("0-31", &mask);
         assert( mu_count_cores(&mask) == SYS_NCORES ); // all are counted
+        assert( mu_count_cores_intersecting_with_cpuset(&mask) == SYS_NCORES ); // all are counted
         assert( mu_get_last_coreid(&mask) == SYS_NCORES-1 );
 
         int last_cpu;
@@ -240,13 +244,17 @@ int main(int argc, char *argv[]) {
 
         cpu_set_t mask;
         mu_parse_mask("0,1,4,5", &mask);
-        assert( mu_count_cores(&mask) == 2 );
+        assert( mu_count_cores(&mask) == 2 ); // [0,4] [1,5] are counted
+        assert( mu_count_cores_intersecting_with_cpuset(&mask) == 2 ); // [0,4] [1,5] are counted
 
         mu_parse_mask("0,1,2,3,4,5", &mask);
         assert( mu_count_cores(&mask) == 2 );  // [0,4] [1,5] are counted
+        assert( mu_count_cores_intersecting_with_cpuset(&mask) == 4 ); // [0,4] [1,5] [2,6] [3,7]
+                                                                       // are counted
 
         mu_parse_mask("0-7", &mask);
         assert( mu_count_cores(&mask) == NUM_CORES ); // all are counted
+        assert( mu_count_cores_intersecting_with_cpuset(&mask) == NUM_CORES ); // all are counted
         assert( mu_get_last_coreid(&mask) == NUM_CORES-1 );
 
         int last_cpu;

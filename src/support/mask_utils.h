@@ -48,6 +48,7 @@ void mu_get_cores_intersecting_with_cpuset(cpu_set_t *core_set, const cpu_set_t 
 void mu_get_cores_subset_of_cpuset(cpu_set_t *core_set, const cpu_set_t *cpuset);
 int  mu_get_cpu_next_core(const cpu_set_t *mask, int prev_cpu);
 int  mu_count_cores(const cpu_set_t *mask);
+int  mu_count_cores_intersecting_with_cpuset(const cpu_set_t *mask);
 int  mu_get_last_coreid(const cpu_set_t *mask);
 int  mu_take_last_coreid(cpu_set_t *mask);
 void mu_unset_core(cpu_set_t *mask, int coreid);
