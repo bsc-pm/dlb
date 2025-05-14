@@ -269,15 +269,30 @@ int region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
         monitor = talp_info->monitor;
     }
 
+    monitor_data_t *monitor_data = monitor->_data;
+
+    /* Close region if started */
+    if (monitor_data->flags.started) {
+
+        talp_info_t *talp_info = spd->talp_info;
+
+        pthread_mutex_lock(&talp_info->regions_mutex);
+        {
+            monitor_data->flags.started = false;
+            talp_info->open_regions = g_slist_remove(talp_info->open_regions, monitor);
+        }
+        pthread_mutex_unlock(&talp_info->regions_mutex);
+
+        verbose(VB_TALP, "Stopping region %s", monitor->name);
+        instrument_event(MONITOR_REGION, monitor_data->id, EVENT_END);
+    }
+
     /* Reset everything except these fields: */
     *monitor = (const dlb_monitor_t) {
         .name = monitor->name,
         .num_resets = monitor->num_resets + 1,
         ._data = monitor->_data,
     };
-
-    monitor_data_t *monitor_data = monitor->_data;
-    monitor_data->flags.started = false;
 
     return DLB_SUCCESS;
 }

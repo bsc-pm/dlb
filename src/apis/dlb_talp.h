@@ -369,6 +369,9 @@ dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name);
  *  \param[in] handle Monitoring handle that identifies the region, or DLB_GLOBAL_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
+ *
+ *  Reset all values of the monitoring region except num_resets, which is incremented.
+ *  If the region is open, discard all intermediate values and close it.
  */
 int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
 
