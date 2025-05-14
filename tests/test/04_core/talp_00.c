@@ -183,6 +183,17 @@ int main(int argc, char *argv[]) {
         assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
     }
 
+    /* Test reset with open region */
+    {
+        assert( talp_info->open_regions == NULL );
+        assert( monitoring_region_start(&spd, monitor) == DLB_SUCCESS );
+        assert( talp_info->open_regions &&
+                talp_info->open_regions->data == monitor );
+        assert( monitoring_region_reset(&spd, monitor) == DLB_SUCCESS );
+        assert( talp_info->open_regions == NULL );
+        assert( monitoring_region_stop(&spd, monitor) == DLB_NOUPDT );
+    }
+
     /* Test nested regions */
     {
         dlb_monitor_t *monitor1 = monitoring_region_register(&spd, "Test nested 1");
