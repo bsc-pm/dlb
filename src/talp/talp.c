@@ -178,13 +178,25 @@ int talp_init_papi_counters(void) {
     return 0;
 }
 
-static inline void reset_papi_counters(void) {
+static inline void update_last_read_papi_counters(talp_sample_t* sample) {
 #ifdef PAPI_LIB
     ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
             "Error invoking %s when PAPI has been disabled", __FUNCTION__);
-
-    int error = PAPI_reset(EventSet);
-    if (error != PAPI_OK) verbose(VB_TALP, "Error resetting counters");
+    
+    if(sample->state == useful) {
+        // Similar to the old logic, we "reset" the PAPI counters here.
+        // But instead of calling PAPI_Reset we just store the current value,
+        // such that we can subtract the value later when updating the sample.
+        long long papi_values[2];
+        int error = PAPI_read(EventSet, papi_values);
+        if (error != PAPI_OK) {
+            verbose(VB_TALP, "Error reading PAPI counters: %d, %s", error, PAPI_strerror(error));
+        }
+        
+        /* Update sample */
+        sample->last_read_counters.cycles = papi_values[0];
+        sample->last_read_counters.instructions = papi_values[1];
+    }
 #endif
 }
 
@@ -386,8 +398,8 @@ talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd) {
 void talp_set_sample_state(talp_sample_t *sample, enum talp_sample_state state,
         bool papi) {
     sample->state = state;
-    if (papi && state == useful) {
-        reset_papi_counters();
+    if (papi) {
+        update_last_read_papi_counters(sample);
     }
     instrument_event(MONITOR_STATE,
             state == disabled ? MONITOR_STATE_DISABLED
@@ -438,18 +450,22 @@ void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp) {
                 if (error != PAPI_OK) {
                     verbose(VB_TALP, "stop return code: %d, %s", error, PAPI_strerror(error));
                 }
+                // Compute the difference from the last value read
+                const long long useful_cycles = papi_values[0] - sample->last_read_counters.cycles;
+                const long long useful_instructions = papi_values[1] - sample->last_read_counters.instructions;
 
                 /* Atomically add papi_values to sample structure */
-                DLB_ATOMIC_ADD_RLX(&sample->counters.cycles, papi_values[0]);
-                DLB_ATOMIC_ADD_RLX(&sample->counters.instructions, papi_values[1]);
+                DLB_ATOMIC_ADD_RLX(&sample->counters.cycles, useful_cycles);
+                DLB_ATOMIC_ADD_RLX(&sample->counters.instructions, useful_instructions);
 
 #ifdef INSTRUMENTATION_VERSION
                 unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
                 instrument_nevent(2, events, papi_values);
 #endif
 
-                /* Counters are reset here and each time the sample is set to useful */
-                reset_papi_counters();
+                /* Counters are updated here and every time the sample is set to useful */
+                sample->last_read_counters.cycles = papi_values[0];
+                sample->last_read_counters.instructions = papi_values[1];
             }
             else {
 #ifdef INSTRUMENTATION_VERSION
