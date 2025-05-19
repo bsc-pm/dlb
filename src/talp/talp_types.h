@@ -52,6 +52,12 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         atomic_int_least64_t cycles;
         atomic_int_least64_t instructions;
     } counters;
+    // The last_read counters contain the PAPI_Read values from the beginning of the last useful state.
+    // This enables to compute the difference without the need to call PAPI_Reset()
+    struct {
+        atomic_int_least64_t cycles;
+        atomic_int_least64_t instructions;
+    } last_read_counters;
 #endif
     struct {
         atomic_int_least64_t num_mpi_calls;
