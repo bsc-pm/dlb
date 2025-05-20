@@ -167,7 +167,7 @@ int update_threads(const pm_interface_t *pm, int threads) {
 
     add_event(THREADS_USED_EVENT, threads);
 
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_set_num_threads, EVENT_BEGIN);
     pm->dlb_callback_set_num_threads_ptr(threads, pm->dlb_callback_set_num_threads_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -177,7 +177,7 @@ int set_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_set_active_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_set_active_mask, EVENT_BEGIN);
     pm->dlb_callback_set_active_mask_ptr(cpu_set, pm->dlb_callback_set_active_mask_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -187,7 +187,7 @@ int set_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_set_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_set_process_mask, EVENT_BEGIN);
     pm->dlb_callback_set_process_mask_ptr(cpu_set, pm->dlb_callback_set_process_mask_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -200,7 +200,7 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
             for (int cpuid = mu_get_first_cpu(cpu_set);
                     cpuid >= 0;
                     cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
-                instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+                instrument_event(CALLBACK_EVENT, dlb_callback_enable_cpu, EVENT_BEGIN);
                 pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
                 instrument_event(CALLBACK_EVENT, 0, EVENT_END);
             }
@@ -208,7 +208,7 @@ int add_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
         }
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_add_active_mask, EVENT_BEGIN);
     pm->dlb_callback_add_active_mask_ptr(cpu_set, pm->dlb_callback_add_active_mask_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -218,7 +218,7 @@ int add_process_mask(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
     if (pm->dlb_callback_add_process_mask_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_add_process_mask, EVENT_BEGIN);
     pm->dlb_callback_add_process_mask_ptr(cpu_set, pm->dlb_callback_add_process_mask_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -237,7 +237,7 @@ int enable_cpu(const pm_interface_t *pm, int cpuid) {
     if (pm->dlb_callback_enable_cpu_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_enable_cpu, EVENT_BEGIN);
     pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -250,7 +250,7 @@ int enable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
             for (int cpuid = mu_get_first_cpu(cpu_set);
                     cpuid >= 0;
                     cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
-                instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+                instrument_event(CALLBACK_EVENT, dlb_callback_enable_cpu, EVENT_BEGIN);
                 pm->dlb_callback_enable_cpu_ptr(cpuid, pm->dlb_callback_enable_cpu_arg);
                 instrument_event(CALLBACK_EVENT, 0, EVENT_END);
             }
@@ -258,7 +258,7 @@ int enable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
         }
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_enable_cpu_set, EVENT_BEGIN);
     pm->dlb_callback_enable_cpu_set_ptr(cpu_set, pm->dlb_callback_enable_cpu_set_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -277,7 +277,7 @@ int disable_cpu(const pm_interface_t *pm, int cpuid) {
     if (pm->dlb_callback_disable_cpu_ptr == NULL) {
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_disable_cpu, EVENT_BEGIN);
     pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;
@@ -290,7 +290,7 @@ int disable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
             for (int cpuid = mu_get_first_cpu(cpu_set);
                     cpuid >= 0;
                     cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
-                instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+                instrument_event(CALLBACK_EVENT, dlb_callback_disable_cpu, EVENT_BEGIN);
                 pm->dlb_callback_disable_cpu_ptr(cpuid, pm->dlb_callback_disable_cpu_arg);
                 instrument_event(CALLBACK_EVENT, 0, EVENT_END);
             }
@@ -298,7 +298,7 @@ int disable_cpu_set(const pm_interface_t *pm, const cpu_set_t *cpu_set) {
         }
         return DLB_ERR_NOCBK;
     }
-    instrument_event(CALLBACK_EVENT, 1, EVENT_BEGIN);
+    instrument_event(CALLBACK_EVENT, dlb_callback_disable_cpu_set, EVENT_BEGIN);
     pm->dlb_callback_disable_cpu_set_ptr(cpu_set, pm->dlb_callback_disable_cpu_set_arg);
     instrument_event(CALLBACK_EVENT, 0, EVENT_END);
     return DLB_SUCCESS;

@@ -250,95 +250,106 @@ void init_tracing(const options_t *options) {
 
         unsigned type;
         int n_values;
-        long long values[]= {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+        int zero_values = 0;
+        /* Note: RUNTIME_EVENT currently holds the maximum number of events. */
+        long long values[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
 
-        //THREADS_USED_EVENT
-        type=THREADS_USED_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB Used threads", &n_values, NULL, NULL);
+        #define CHECK_VALUE_DESCRIPTIONS(type, desc) \
+            static_ensure( \
+                    sizeof(desc) / sizeof(desc[0]) <= sizeof(values) / sizeof(values[0]), \
+                    "values array contents does match " type " descriptions");
 
-        //LOOP_STATE
-        type=LOOP_STATE;
-        n_values=6;
-         char * value_loop[6] = { "NO_LOOP", "IN_LOOP", "NEW_ITERATION","NEW_LOOP","END_NEW_LOOP","END_LOOP"};
-        Extrae_define_event_type(&type, "Dynais State", &n_values, values, value_loop);
+        // THREADS_USED_EVENT
+        type = THREADS_USED_EVENT;
+        Extrae_define_event_type(&type, "DLB Used threads", &zero_values, NULL, NULL);
 
-        //MONITOR_REGION
-        type=MONITOR_REGION;
-        n_values=0;
-        Extrae_define_event_type(&type, get_event_name(type), &n_values, NULL, NULL);
-
-        //MONITOR_STATE
-        type=MONITOR_STATE;
-        n_values=5;
-        char *monitor_state_desc[] = {"Disabled", "Useful", "Not useful MPI", "Not useful OMP in",
-            "Not useful OMP out"};
-        Extrae_define_event_type(&type, "DLB Region state", &n_values, values, monitor_state_desc);
-
-        //MONITOR_CYCLES
-        type=MONITOR_CYCLES;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB Region cycles", &n_values, NULL, NULL);
-
-        //MONITOR_INSTR
-        type=MONITOR_INSTR;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB Region instructions", &n_values, NULL, NULL);
-
-
-        //RUNTIME_EVENT
-        type=RUNTIME_EVENT;
-        char* value_desc[]= {"User code", "Init", "Into MPI call", "Out of MPI call", "Lend",
+        // RUNTIME_EVENT
+        type = RUNTIME_EVENT;
+        char* value_desc[] = {"User code", "Init", "Into MPI call", "Out of MPI call", "Lend",
             "Reclaim", "Acquire", "Borrow", "Return", "Reset DLB", "Barrier", "PollDROM",
             "Finalize", "Set Max Parallelism"};
         n_values = sizeof(value_desc) / sizeof(value_desc[0]);
         Extrae_define_event_type(&type, "DLB Runtime call", &n_values, values, value_desc);
 
-        //IDLE_CPUS_EVENT
-        type=IDLE_CPUS_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB Idle cpus", &n_values, NULL, NULL);
+        CHECK_VALUE_DESCRIPTIONS("RUNTIME_EVENT", value_desc);
 
-        //GIVE_CPUS_EVENT
-        type=GIVE_CPUS_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB Give Number of CPUs", &n_values, NULL, NULL);
+        // IDLE_CPUS_EVENT
+        type = IDLE_CPUS_EVENT;
+        Extrae_define_event_type(&type, "DLB Idle cpus", &zero_values, NULL, NULL);
 
-        //WANT_CPUS_EVENT
-        type=WANT_CPUS_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB Want Number of CPUs", &n_values, NULL, NULL);
+        // GIVE_CPUS_EVENT
+        type = GIVE_CPUS_EVENT;
+        Extrae_define_event_type(&type, "DLB Give Number of CPUs", &zero_values, NULL, NULL);
 
-        //MAX_PAR_EVENT
-        type=MAX_PAR_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB Max parallelism", &n_values, NULL, NULL);
+        // WANT_CPUS_EVENT
+        type = WANT_CPUS_EVENT;
+        Extrae_define_event_type(&type, "DLB Want Number of CPUs", &zero_values, NULL, NULL);
 
-        //ITERATION_EVENT
-        type=ITERATION_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB num iteration detected", &n_values, NULL, NULL);
+        // MAX_PAR_EVENT
+        type = MAX_PAR_EVENT;
+        Extrae_define_event_type(&type, "DLB Max parallelism", &zero_values, NULL, NULL);
 
-        //DLB_MODE_EVENT
-        type=DLB_MODE_EVENT;
-        n_values=4;
-        char* value_desc2[4]= {"not ready", "Enabled", "Disabled", "Single"};
-        Extrae_define_event_type(&type, "DLB mode", &n_values, values, value_desc2);
+        // ITERATION_EVENT
+        type = ITERATION_EVENT;
+        Extrae_define_event_type(&type, "DLB num iteration detected", &zero_values, NULL, NULL);
 
-        //REBIND_EVENT
-        type=REBIND_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB thread rebind in OMPT", &n_values, NULL, NULL);
+        // DLB_MODE_EVENT
+        type = DLB_MODE_EVENT;
+        char *mode_desc[] = {"not ready", "Enabled", "Disabled", "Single"};
+        n_values = sizeof(mode_desc) / sizeof(mode_desc[0]);
+        Extrae_define_event_type(&type, "DLB mode", &n_values, values, mode_desc);
 
-        //BINDINGS_EVENT
-        type=BINDINGS_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB thread binding in OMPT", &n_values, NULL, NULL);
+        CHECK_VALUE_DESCRIPTIONS("DLB_MODE_EVENT", mode_desc);
 
-        //CALLBACK_EVENT
-        type=CALLBACK_EVENT;
-        n_values=0;
-        Extrae_define_event_type(&type, "DLB callback", &n_values, NULL, NULL);
+        // REBIND_EVENT
+        type = REBIND_EVENT;
+        Extrae_define_event_type(&type, "DLB thread rebind in OMPT", &zero_values, NULL, NULL);
+
+        // BINDINGS_EVENT
+        type = BINDINGS_EVENT;
+        Extrae_define_event_type(&type, "DLB thread binding in OMPT", &zero_values, NULL, NULL);
+
+        // CALLBACK_EVENT
+        type = CALLBACK_EVENT;
+        char *callbacks_desc[] = {"outside callback", "set_num_threads", "set_active_mask",
+            "set_process_mask", "add_active_mask", "add_process_mask", "enable_cpu",
+            "disable_cpu", "enable_cpu_set", "disable_cpu_set"};
+        n_values = sizeof(callbacks_desc) / sizeof(callbacks_desc[0]);
+        Extrae_define_event_type(&type, "DLB callback", &n_values, values, callbacks_desc);
+
+        CHECK_VALUE_DESCRIPTIONS("CALLBACK_EVENT", callbacks_desc);
+
+        // LOOP_STATE
+        type = LOOP_STATE;
+        char *loop_desc[] = {"NO_LOOP", "IN_LOOP",
+             "NEW_ITERATION","NEW_LOOP","END_NEW_LOOP","END_LOOP"};
+        n_values = sizeof(loop_desc) / sizeof(loop_desc[0]);
+        Extrae_define_event_type(&type, "Dynais State", &n_values, values, loop_desc);
+
+        CHECK_VALUE_DESCRIPTIONS("LOOP_STATE", loop_desc);
+
+        // MONITOR_REGION
+        type = MONITOR_REGION;
+        Extrae_define_event_type(&type, get_event_name(type), &zero_values, NULL, NULL);
+
+        // MONITOR_STATE
+        type = MONITOR_STATE;
+        char *monitor_state_desc[] = {"Disabled", "Useful", "Not useful MPI", "Not useful OMP in",
+            "Not useful OMP out"};
+        n_values = sizeof(monitor_state_desc) / sizeof(monitor_state_desc[0]);
+        Extrae_define_event_type(&type, "DLB Region state", &n_values, values, monitor_state_desc);
+
+        CHECK_VALUE_DESCRIPTIONS("MONITOR_STATE", monitor_state_desc);
+
+        // MONITOR_CYCLES
+        type = MONITOR_CYCLES;
+        Extrae_define_event_type(&type, "DLB Region cycles", &zero_values, NULL, NULL);
+
+        // MONITOR_INSTR
+        type = MONITOR_INSTR;
+        Extrae_define_event_type(&type, "DLB Region instructions", &zero_values, NULL, NULL);
+
+        #undef CHECK_VALUE_DESCRIPTIONS
 
         verbose(VB_INSTR, "Instrumentation successfully initialized");
     } else {
