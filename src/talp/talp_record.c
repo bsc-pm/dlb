@@ -330,9 +330,12 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
         PMPI_Type_create_resized(tmp_type, 0, sizeof(dlb_monitor_t), &mpi_dlb_monitor_type);
         PMPI_Type_commit(&mpi_dlb_monitor_type);
 
-        static_ensure(sizeof(blocklengths)/sizeof(blocklengths[0]) == count);
-        static_ensure(sizeof(displacements)/sizeof(displacements[0]) == count);
-        static_ensure(sizeof(types)/sizeof(types[0]) == count);
+        static_ensure(sizeof(blocklengths)/sizeof(blocklengths[0]) == count,
+                "blocklengths size mismatch");
+        static_ensure(sizeof(displacements)/sizeof(displacements[0]) == count,
+                "displacements size mismatch");
+        static_ensure(sizeof(types)/sizeof(types[0]) == count,
+                "types size mismatch");
     }
 
     /* MPI struct type: process_record_t */

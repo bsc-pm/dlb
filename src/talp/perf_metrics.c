@@ -395,9 +395,12 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
                 &mpi_app_reduction_type);
         PMPI_Type_commit(&mpi_app_reduction_type);
 
-        static_ensure(sizeof(blocklengths)/sizeof(blocklengths[0]) == count);
-        static_ensure(sizeof(displacements)/sizeof(displacements[0]) == count);
-        static_ensure(sizeof(types)/sizeof(types[0]) == count);
+        static_ensure(sizeof(blocklengths)/sizeof(blocklengths[0]) == count,
+                "blocklengths size mismatch");
+        static_ensure(sizeof(displacements)/sizeof(displacements[0]) == count,
+                "displacements size mismatch");
+        static_ensure(sizeof(types)/sizeof(types[0]) == count,
+                "types size mismatch");
     }
 
     /* Define MPI operation */

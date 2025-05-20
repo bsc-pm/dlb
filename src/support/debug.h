@@ -24,6 +24,7 @@
 #include "support/options.h"
 #include "support/types.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -87,10 +88,17 @@ extern verbose_opts_t   vb_opts;
         if (likely(cond)) ; else { fatal(__VA_ARGS__); } \
     } while(0)
 
-#define static_ensure(cond, ...) \
-    do { \
-        enum { assert_static__ = 1/(cond) };\
-    } while (0)
+
+#if __STDC_VERSION__ >= 202311L
+    #define static_ensure(cond, msg) static_assert(cond, msg)
+#elif __STDC_VERSION__ >= 201112L
+    #define static_ensure(cond, msg) _Static_assert(cond, msg)
+#else
+    #define static_ensure(cond, msg) \
+        do { \
+            enum { assert_static__ = 1 / (!!(cond)) }; \
+        } while (0)
+#endif
 
 #else
 #define debug_warning(...)       do { (void)0; } while(0)
