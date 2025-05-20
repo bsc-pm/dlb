@@ -75,7 +75,10 @@ int DLB_DROM_GetPidList(int *pidlist, int *nelems, int max_len);
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
  *
- *  Accepted flags for this function:\n
+ *  Accepted flags for this function:
+ *
+ *      DLB_DROM_FLAGS_NONE: No special behavior.
+ *
  *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
  *                      operations, the caller process gets blocked until the target
  *                      process resolves them, or the query times out.
@@ -92,19 +95,22 @@ int DLB_DROM_GetProcessMask(int pid, dlb_cpu_set_t mask, dlb_drom_flags_t flags)
  *  \return DLB_ERR_TIMEOUT if the query is synchronous and times out
  *  \return DLB_ERR_PERM if the provided mask could not be stolen
  *
- *  Accepted flags for this function:\n
- *      DLB_SYNC_QUERY: Synchronous query. If the target process has any pending
- *                      operations, the caller process gets blocked until the target
- *                      process resolves them, or the query times out.\n
- *      DLB_SYNC_NOW:   -- DEPRECATED, ENABLED BY DEFAULT unless DLB_NO_SYNC is used --
- *                      If the target pid is 0, or self pid, and the new mask
- *                      can be immediate applied, force mask synchronization.
- *                      This operation automatically forces the synchronization
- *                      with the set_process_mask callback. It has the
- *                      equivalent behaviour as invoking DLB_PollDROM_Update()
- *                      after a successful operation.\n
- *      DLB_NO_SYNC:    Only if the target is the current process, disable automatic
- *                      mask synchronization
+ *  Accepted flags for this function:
+ *
+ *      DLB_DROM_FLAGS_NONE: Default behavior.
+ *          - If the target is a different process: no special behavior.
+ *          - If the target is the current process and the mask can be applied immediately:
+ *              forces synchronization using the set_process_mask callback.
+ *              This is functionally equivalent to calling DLB_PollDROM_Update() after a
+ *              successful operation.
+ *
+ *      DLB_SYNC_QUERY: Perform a synchronous query.
+ *          - If the target process has any pending operations, the caller is blocked until
+ *          those operations are resolved or the query times out.
+ *
+ *      DLB_SYNC_NOW: -- DEPRECATED --
+ *
+ *      DLB_NO_SYNC: Avoid mask synchronization even if target is current process.
  */
 int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags);
 
@@ -120,13 +126,18 @@ int DLB_DROM_SetProcessMask(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t 
  *  \return DLB_ERR_PERM if the provided mask overlaps with an existing registered
  *                      process and stealing option is not set
  *
- *  Accepted flags for this function:\n
+ *  Accepted flags for this function:
+ *
+ *      DLB_DROM_FLAGS_NONE: No special behavior.
+ *
  *      DLB_STEAL_CPUS:     Steal CPU ownership if necessary. If any CPU in mask is already
  *                          registered in the system, steal the ownership from their
- *                          original process.\n
+ *                          original process.
+ *
  *      DLB_RETURN_STOLEN:  Return stolen CPUs when this process finalizes. If any CPU
  *                          was stolen during the preinitialization, try to return those
- *                          CPUs to their owners if they still exist.\n
+ *                          CPUs to their owners if they still exist.
+ *
  *      DLB_SYNC_QUERY:     Synchronous query. If the preinitialization needs to steal
  *                          some CPU, the stealing operation is synchronous and thus will
  *                          wait until the target process can release its CPU instead of
@@ -151,7 +162,10 @@ int DLB_DROM_PreInit(int pid, const_dlb_cpu_set_t mask, dlb_drom_flags_t flags,
  *  \return DLB_ERR_NOSHMEM if cannot find shared memory
  *  \return DLB_ERR_NOPROC if target pid is not registered in the DLB system
  *
- *  Accepted flags for this function:\n
+ *  Accepted flags for this function:
+ *
+ *      DLB_DROM_FLAGS_NONE: No special behavior.
+ *
  *      DLB_RETURN_STOLEN:  Return stolen CPUs when this process finalizes. If any CPU
  *                          was stolen during the preinitialization, try to return those
  *                          CPUs to their owners if they still exist.
