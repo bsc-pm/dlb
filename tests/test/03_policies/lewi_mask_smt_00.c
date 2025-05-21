@@ -240,6 +240,33 @@ int main(int argc, char *arg[]) {
         assert( lewi_mask_AcquireCpus(&spd1, DLB_DELETE_REQUESTS) == DLB_SUCCESS );
     }
 
+    /* Test blocking calls */
+    {
+        // Subprocesses 1 enters into a blocking call
+        assert( CPU_COUNT(&sp1_mask) == 8 );
+        assert( lewi_mask_IntoBlockingCall(&spd1) == DLB_SUCCESS );
+
+        // No callback is invoked when entering a blocking call
+        assert( CPU_COUNT(&sp1_mask) == 8 );
+
+        // Subprocess 1 lends all
+        assert( lewi_mask_LendCpuMask(&spd1, &sp1_mask) == DLB_SUCCESS );
+        CPU_ZERO(&sp1_mask);
+
+        // Subprocess 1 exits the blocking call
+        if (mode == MODE_POLLING) {
+            assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_SUCCESS );
+        } else if (mode == MODE_ASYNC) {
+            assert( lewi_mask_OutOfBlockingCall(&spd1) == DLB_NOTED );
+            wait_for_async_completion();
+        }
+        assert( CPU_COUNT(&sp1_mask) == 8 );
+
+        // Subprocess 1 reclaims all
+        assert( lewi_mask_Reclaim(&spd1) == DLB_NOUPDT );
+        assert( CPU_COUNT(&sp1_mask) == 8 );
+    }
+
     // Finalize subprocess 1
     assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key, spd1.options.lewi_color)
