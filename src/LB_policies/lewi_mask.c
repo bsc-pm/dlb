@@ -227,17 +227,23 @@ static void resolve_cpuinfo_tasks(const subprocess_descriptor_t *restrict spd,
             const cpuinfo_task_t *task = &tasks->items[i];
             if (task->pid == spd->id) {
                 if (task->action == ENABLE_CPU) {
+                    verbose(VB_MICROLB, "Enabling CPU %d", task->cpuid);
                     enable_cpu(&spd->pm, task->cpuid);
                 }
                 else if (task->action == DISABLE_CPU) {
+                    verbose(VB_MICROLB, "Disabling CPU %d", task->cpuid);
                     disable_cpu(&spd->pm, task->cpuid);
                 }
             }
             else if (spd->options.mode == MODE_ASYNC) {
                 if (task->action == ENABLE_CPU) {
+                    verbose(VB_MICROLB, "Requesting process %d to enable CPU %d",
+                            task->pid, task->cpuid);
                     shmem_async_enable_cpu(task->pid, task->cpuid);
                 }
                 else if (task->action == DISABLE_CPU) {
+                    verbose(VB_MICROLB, "Requesting process %d to disable CPU %d",
+                            task->pid, task->cpuid);
                     shmem_async_disable_cpu(task->pid, task->cpuid);
                     shmem_cpuinfo__return_async_cpu(task->pid, task->cpuid);
                 }
@@ -260,17 +266,23 @@ static void resolve_cpuinfo_tasks(const subprocess_descriptor_t *restrict spd,
             const cpuinfo_task_t *task = &tasks->items[i];
             if (task->pid == spd->id) {
                 if (CPU_COUNT(&cpus_to_enable) > 0) {
+                    verbose(VB_MICROLB, "Enabling CPUs %s", mu_to_str(&cpus_to_enable));
                     enable_cpu_set(&spd->pm, &cpus_to_enable);
                 }
                 if (CPU_COUNT(&cpus_to_disable) > 0) {
+                    verbose(VB_MICROLB, "Disabling CPUs %s", mu_to_str(&cpus_to_disable));
                     disable_cpu_set(&spd->pm, &cpus_to_disable);
                 }
             }
             else if (spd->options.mode == MODE_ASYNC) {
                 if (CPU_COUNT(&cpus_to_enable) > 0) {
+                    verbose(VB_MICROLB, "Requesting process %d to enable CPUs %s",
+                            task->pid, mu_to_str(&cpus_to_enable));
                     shmem_async_enable_cpu_set(task->pid, &cpus_to_enable);
                 }
                 if (CPU_COUNT(&cpus_to_disable) > 0) {
+                    verbose(VB_MICROLB, "Requesting process %d to disable CPUs %s",
+                            task->pid, mu_to_str(&cpus_to_disable));
                     shmem_async_disable_cpu_set(task->pid, &cpus_to_disable);
                     shmem_cpuinfo__return_async_cpu_mask(task->pid, &cpus_to_disable);
                 }
@@ -461,29 +473,15 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
             array_cpuid_t *cpu_subset = get_cpu_subset(spd);
             cpu_array_from_cpuset(cpu_subset, &owned_cpus);
 
-            /* Acquire CPUs, but do not call any enable CPU callback */
+            /* Acquire CPUs */
             array_cpuinfo_task_t *tasks = get_tasks(spd);
             error = shmem_cpuinfo__acquire_from_cpu_subset(spd->id, cpu_subset, tasks);
 
-            /* Once CPUs are acquired from the shmem, we don't need to call
-             * any ENABLE callback because they weren't disabled in IntoBlockingCall.
-             * Only if asynchronous mode, keep DISABLE tasks, otherwise remove all. */
-            if (error == DLB_NOTED
-                    && spd->options.mode == MODE_ASYNC) {
-                for (size_t i = 0, i_write = 0; i < tasks->count; ++i) {
-                    const cpuinfo_task_t *task = &tasks->items[i];
-                    if (task->action == DISABLE_CPU) {
-                        if (i != i_write) {
-                            tasks->items[i_write] = tasks->items[i];
-                        }
-                        ++i_write;
-                    }
-                }
-                /* Async: resolve only DISABLE tasks */
+            /* Resolve tasks: Even if callbacks weren't called during IntoBlockingCall,
+             * other LeWI actions may have been called after it so we cannot ignore
+             * pending actions */
+            if (error == DLB_SUCCESS || error == DLB_NOTED) {
                 resolve_cpuinfo_tasks(spd, tasks);
-            } else {
-                /* Polling: clear tasks */
-                array_cpuinfo_task_t_clear(tasks);
             }
         }
 
