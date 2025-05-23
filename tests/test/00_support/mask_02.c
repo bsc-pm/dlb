@@ -103,6 +103,12 @@ int main(int argc, char *argv[]) {
         assert( mu_get_cpu_next_core(&system_mask, 30) == -1 );
         assert( mu_get_cpu_next_core(&system_mask, 31) == -1 );
         assert( mu_get_cpu_next_core(&system_mask, 32) == -1 );
+        assert( mu_get_core_id(-1) == -1 );
+        assert( mu_get_core_id(0) == 0 );
+        assert( mu_get_core_id(31) == 15 );
+        assert( mu_get_core_id(32) == -1 );
+        assert( mu_get_core_mask(0) != NULL);
+        assert( mu_get_core_mask(32) == NULL);
 
         /* Test core mask functions */
         cpu_set_t mask;
@@ -163,6 +169,9 @@ int main(int argc, char *argv[]) {
         assert( mu_system_has_smt() == true );
         assert( mu_get_system_hwthreads_per_core() == 2 );
         assert( mu_get_core_id(0) == -1 );
+        assert( mu_get_core_id(5) == 0 );
+        assert( mu_get_core_id(12) == 3 );
+        assert( mu_get_core_id(13) == -1 );
 
         /* Test functions that operate on NUMA nodes */
         cpu_set_t affinity_mask;

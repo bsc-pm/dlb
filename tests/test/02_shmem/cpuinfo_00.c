@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 /* array_cpuid_t */
@@ -309,6 +310,40 @@ int main( int argc, char **argv ) {
         CPU_ZERO(&process_mask);
         assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
         shmem_cpuinfo__print_info(SHMEM_KEY, 0, 0, DLB_COLOR_AUTO);
+        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
+    }
+
+    /* Test with masks with more bits than system size */
+    {
+        enum { SYS_SIZE = 4 };
+        mu_testing_set_sys_size(SYS_SIZE);
+        mu_parse_mask("0-3", &process_mask);
+
+        // Trying with a process mask with way more CPUs than system:
+        cpu_set_t faulty_mask;
+        memset(&faulty_mask, 0xFF, sizeof(cpu_set_t));
+        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+        free_cpus = shmem_cpuinfo_testing__get_free_cpu_set();
+        occupied_cores = shmem_cpuinfo_testing__get_occupied_core_set();
+
+        // Lend mask
+        assert( shmem_cpuinfo__lend_cpu_mask(pid, &faulty_mask, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
+        assert( CPU_EQUAL(free_cpus, &process_mask) );
+        assert( CPU_COUNT(occupied_cores) == 0 );
+
+        // Reclaim mask
+        assert( shmem_cpuinfo__reclaim_cpu_mask(pid, &faulty_mask, &tasks) >= 0 );
+        assert( tasks.count == SYS_SIZE );
+        for (int i = 0; i < SYS_SIZE; ++i) {
+            assert( tasks.items[i].pid == pid
+                    && tasks.items[i].cpuid == i
+                    && tasks.items[i].action == ENABLE_CPU );
+        }
+        array_cpuinfo_task_t_clear(&tasks);
+        assert( CPU_COUNT(free_cpus) == 0 );
+        assert( CPU_COUNT(occupied_cores) == 0 );
+
         assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 

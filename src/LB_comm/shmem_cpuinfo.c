@@ -131,6 +131,10 @@ static void update_shmem_timestamp(void) {
 /* A core is eligible if all the CPUs in the core are not guested, or guested
  * by the process, and none of them are reclaimed */
 static bool core_is_eligible(pid_t pid, int cpuid) {
+
+    ensure(cpuid < node_size, "cpuid %d greater than node_size %d in %s",
+            cpuid, node_size, __func__);
+
     if (shdata->flags.hw_has_smt) {
         const mu_cpuset_t *core_mask = mu_get_core_mask(cpuid);
         for (int cpuid_in_core = core_mask->first_cpuid;
@@ -155,6 +159,10 @@ static bool core_is_eligible(pid_t pid, int cpuid) {
  * process that is not the owner. The owner is provided as parameter since
  * this function may be called during the core registration */
 static bool core_is_occupied(pid_t owner, int cpuid) {
+
+    ensure(cpuid < node_size, "cpuid %d greater than node_size %d in %s",
+            cpuid, node_size, __func__);
+
     if (owner == NOBODY) return false;
 
     if (shdata->flags.hw_has_smt) {
@@ -176,7 +184,12 @@ static bool core_is_occupied(pid_t owner, int cpuid) {
     }
 }
 
+/* A CPU is occupied if it's guested by some process that is not the owner. */
 static bool cpu_is_occupied(pid_t owner, int cpuid) {
+
+    ensure(cpuid < node_size, "cpuid %d greater than node_size %d in %s",
+            cpuid, node_size, __func__);
+
     pid_t guest = shdata->node_info[cpuid].guest;
     return guest != NOBODY
         && owner != NOBODY
@@ -185,6 +198,10 @@ static bool cpu_is_occupied(pid_t owner, int cpuid) {
 
 /* Assuming that only cpuid has changed its state, update occupied_cores accordingly */
 static void update_occupied_cores(pid_t owner, int cpuid) {
+
+    ensure(cpuid < node_size, "cpuid %d greater than node_size %d in %s",
+            cpuid, node_size, __func__);
+
     if (shdata->flags.hw_has_smt) {
         if (cpu_is_occupied(owner, cpuid)) {
             if (!CPU_ISSET(cpuid, &shdata->occupied_cores)) {
@@ -396,7 +413,7 @@ static int register_process(pid_t pid, pid_t preinit_pid, const cpu_set_t *mask,
     if (!steal) {
         // Check first that my mask is not already owned
         for (int cpuid = mu_get_first_cpu(mask);
-                cpuid >= 0;
+                cpuid >= 0 && cpuid < node_size;
                 cpuid = mu_get_next_cpu(mask, cpuid)) {
 
             pid_t owner = shdata->node_info[cpuid].owner;
@@ -412,7 +429,7 @@ static int register_process(pid_t pid, pid_t preinit_pid, const cpu_set_t *mask,
 
     // Register mask
     for (int cpuid = mu_get_first_cpu(mask);
-            cpuid >= 0;
+            cpuid >= 0 && cpuid < node_size;
             cpuid = mu_get_next_cpu(mask, cpuid)) {
 
         cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
@@ -720,7 +737,7 @@ int shmem_cpuinfo__lend_cpu_mask(pid_t pid, const cpu_set_t *restrict mask,
     shmem_lock(shm_handler);
     {
         for (int cpuid = mu_get_first_cpu(mask);
-                cpuid >= 0;
+                cpuid >= 0 && cpuid < node_size;
                 cpuid = mu_get_next_cpu(mask, cpuid)) {
             lend_cpu(pid, cpuid, tasks);
 
@@ -1503,7 +1520,7 @@ static int borrow_cpus_in_cpu_set_t(pid_t pid,
      * try to skip those ones) */
     int prev_core_id = -1;
     for (int cpuid = mu_get_first_cpu(cpu_set);
-            cpuid >= 0 && _ncpus > 0;
+            cpuid >= 0 && cpuid < node_size &&_ncpus > 0;
             cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
 
         if (hw_has_smt) {
@@ -1783,7 +1800,7 @@ void shmem_cpuinfo__return_async_cpu_mask(pid_t pid, const cpu_set_t *mask) {
     shmem_lock(shm_handler);
     {
         for (int cpuid = mu_get_first_cpu(mask);
-                cpuid >= 0;
+                cpuid >= 0 && cpuid < node_size;
                 cpuid = mu_get_next_cpu(mask, cpuid)) {
 
             shmem_cpuinfo__return_async(pid, cpuid);
@@ -1989,7 +2006,7 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *restrict proces
                 // The CPU was already owned, no update needed
             }
 
-        } else {
+        } else if (cpuid < node_size) {
             // The CPU should not be mine
             if (cpuinfo->owner == pid) {
                 // Previusly owned: Release CPU ownership
