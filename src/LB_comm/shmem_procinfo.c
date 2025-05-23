@@ -225,13 +225,13 @@ static int register_mask(pinfo_t *new_owner, const cpu_set_t *mask) {
     verbose(VB_DROM, "Process %d registering mask %s", new_owner->pid, mu_to_str(mask));
     int error = DLB_SUCCESS;
     if (mu_is_subset(mask, &shdata->free_mask)) {
-        mu_substract(&shdata->free_mask, &shdata->free_mask, mask);
+        mu_subtract(&shdata->free_mask, &shdata->free_mask, mask);
         CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
-        mu_substract(&new_owner->stolen_cpus, &new_owner->stolen_cpus, mask);
+        mu_subtract(&new_owner->stolen_cpus, &new_owner->stolen_cpus, mask);
         new_owner->dirty = true;
     } else {
         cpu_set_t wrong_cpus;
-        mu_substract(&wrong_cpus, mask, &shdata->free_mask);
+        mu_subtract(&wrong_cpus, mask, &shdata->free_mask);
         verbose(VB_SHMEM, "Error registering CPUs: %s, already belong to other processes",
                 mu_to_str(&wrong_cpus));
         error = DLB_ERR_PERM;
@@ -369,7 +369,7 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
                     pinfo_t new_process;
                     cpu_set_t new_cpus;
                     CPU_ZERO(&new_cpus);
-                    mu_substract(&new_cpus, process_mask, preinit_mask);
+                    mu_subtract(&new_cpus, process_mask, preinit_mask);
                     int register_error = register_mask(&new_process, &new_cpus);
                     if (register_error == DLB_SUCCESS) {
                         // Inherit and merge CPUs
@@ -400,9 +400,9 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
                     memcpy(&process->current_process_mask, &inherited_cpus, sizeof(cpu_set_t));
                     memcpy(&process->future_process_mask, &inherited_cpus, sizeof(cpu_set_t));
                     /* Remove inherited CPUs from preregistered process */
-                    mu_substract(&preinit_process->current_process_mask,
+                    mu_subtract(&preinit_process->current_process_mask,
                             &preinit_process->current_process_mask, &inherited_cpus);
-                    mu_substract(&preinit_process->future_process_mask,
+                    mu_subtract(&preinit_process->future_process_mask,
                             &preinit_process->future_process_mask, &inherited_cpus);
                 }
             }
@@ -419,7 +419,7 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
                     pinfo_t new_process;
                     cpu_set_t new_cpus;
                     CPU_ZERO(&new_cpus);
-                    mu_substract(&new_cpus, process_mask, preinit_mask);
+                    mu_subtract(&new_cpus, process_mask, preinit_mask);
                     int register_error = register_mask(&new_process, &new_cpus);
                     if (register_error == DLB_SUCCESS) {
                         /* Initialize new spot with the mask provided */
@@ -429,9 +429,9 @@ static int shmem_procinfo__init_(pid_t pid, pid_t preinit_pid, const cpu_set_t *
                         memcpy(&process->current_process_mask, process_mask, sizeof(cpu_set_t));
                         memcpy(&process->future_process_mask, process_mask, sizeof(cpu_set_t));
                         /* Remove inherited CPUs from preregistered process */
-                        mu_substract(&preinit_process->current_process_mask,
+                        mu_subtract(&preinit_process->current_process_mask,
                                 &preinit_process->current_process_mask, process_mask);
-                        mu_substract(&preinit_process->future_process_mask,
+                        mu_subtract(&preinit_process->future_process_mask,
                                 &preinit_process->future_process_mask, process_mask);
                     } else {
                         error = DLB_ERR_PERM;
@@ -629,7 +629,7 @@ static int unregister_mask(pinfo_t *owner, const cpu_set_t *mask, bool return_st
     } else {
         // Add mask to free_mask and remove them from owner
         CPU_OR(&shdata->free_mask, &shdata->free_mask, mask);
-        mu_substract(&owner->future_process_mask, &owner->future_process_mask, mask);
+        mu_subtract(&owner->future_process_mask, &owner->future_process_mask, mask);
         owner->dirty = true;
     }
     return DLB_SUCCESS;
@@ -753,7 +753,7 @@ int shmem_procinfo_ext__recover_stolen_cpus(int pid) {
             CPU_AND(&recovered_cpus, &process->stolen_cpus, &shdata->free_mask);
             error = register_mask(process, &recovered_cpus);
             if (error == DLB_SUCCESS) {
-                mu_substract(&process->stolen_cpus, &process->stolen_cpus, &recovered_cpus);
+                mu_subtract(&process->stolen_cpus, &process->stolen_cpus, &recovered_cpus);
             }
         }
     }
@@ -1441,13 +1441,13 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
                     // Steal target_cpus from victim
                     if (!dry_run) {
                         victim->dirty = true;
-                        mu_substract(&victim->future_process_mask,
+                        mu_subtract(&victim->future_process_mask,
                                 &victim->current_process_mask, &target_cpus);
                         CPU_OR(&victim->stolen_cpus, &victim->stolen_cpus, &target_cpus);
                         verbose(VB_DROM, "CPUs %s have been removed from process %d",
                                 mu_to_str(mask), victim->pid);
                     }
-                    mu_substract(&cpus_left_to_steal, &cpus_left_to_steal, &target_cpus);
+                    mu_subtract(&cpus_left_to_steal, &cpus_left_to_steal, &target_cpus);
                     if (CPU_COUNT(&cpus_left_to_steal) == 0)
                         break;
                 } else {
@@ -1513,7 +1513,7 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
     if (!error && !dry_run) {
         /* Assign stolen CPUs to the new owner */
         CPU_OR(&new_owner->future_process_mask, &new_owner->future_process_mask, mask);
-        mu_substract(&new_owner->stolen_cpus, &new_owner->stolen_cpus, mask);
+        mu_subtract(&new_owner->stolen_cpus, &new_owner->stolen_cpus, mask);
         new_owner->dirty = true;
     }
 
@@ -1530,7 +1530,7 @@ static int steal_mask(pinfo_t* new_owner, const cpu_set_t *mask, bool sync, bool
                     // if more than one contains that CPU as stolen
                     CPU_OR(&victim->future_process_mask, &victim->future_process_mask,
                             &cpus_to_return);
-                    mu_substract(&victim->stolen_cpus, &victim->stolen_cpus, &cpus_to_return);
+                    mu_subtract(&victim->stolen_cpus, &victim->stolen_cpus, &cpus_to_return);
                     victim->dirty = !CPU_EQUAL(
                             &victim->current_process_mask, &victim->future_process_mask);
                 }

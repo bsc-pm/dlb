@@ -93,17 +93,17 @@ int main(int argc, char *argv[]) {
     assert(  mu_intersects(&mask2, &mask1) );
     assert(  mu_intersects(&mask2, &mask2) );
 
-    /* mu_substract */
+    /* mu_subtract */
     cpu_set_t result;
-    mu_substract(&result, &mask1, &mask0);
+    mu_subtract(&result, &mask1, &mask0);
     assert( CPU_COUNT(&result) == 2 &&
             CPU_ISSET(0, &result) && CPU_ISSET(1, &result) );
-    mu_substract(&result, &mask1, &mask2);
+    mu_subtract(&result, &mask1, &mask2);
     assert( CPU_COUNT(&result) == 0 );
-    mu_substract(&result, &mask2, &mask1);
+    mu_subtract(&result, &mask2, &mask1);
     assert( CPU_COUNT(&result) == 2 &&
             CPU_ISSET(2, &result) && CPU_ISSET(3, &result) );
-    mu_substract(&result, &mask1, &mask1);
+    mu_subtract(&result, &mask1, &mask1);
     assert( CPU_COUNT(&result) == 0 );
 
     /* mu_and, mu_or, mu_count */

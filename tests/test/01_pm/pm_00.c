@@ -84,7 +84,7 @@ static void cb_enable_cpu_set(const cpu_set_t *cpu_set, void *arg) {
 static object_t cb_disable_cpu_set_arg = { .n = 9 };
 static void cb_disable_cpu_set(const cpu_set_t *cpu_set, void *arg) {
     assert( ((object_t*)arg)->n == cb_disable_cpu_set_arg.n );
-    mu_substract(&process_mask, &process_mask, cpu_set);
+    mu_subtract(&process_mask, &process_mask, cpu_set);
 }
 
 int main( int argc, char **argv ) {

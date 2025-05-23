@@ -321,8 +321,8 @@ static int get_free_agent_binding(int thread_id) {
      */
 
     cpu_set_t available_process_cpus;
-    mu_substract(&available_process_cpus, &process_mask, &primary_thread_mask);
-    mu_substract(&available_process_cpus, &available_process_cpus, &worker_threads_mask);
+    mu_subtract(&available_process_cpus, &process_mask, &primary_thread_mask);
+    mu_subtract(&available_process_cpus, &available_process_cpus, &worker_threads_mask);
     int num_free_agents_in_available_cpus = mu_count(&available_process_cpus);
     if (thread_id < num_free_agents_in_available_cpus) {
         /* Simpler scenario: the default workers mask plus primary does not cover

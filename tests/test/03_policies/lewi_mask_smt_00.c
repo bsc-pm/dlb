@@ -175,7 +175,7 @@ int main(int argc, char *arg[]) {
         // Subprocess 2 lends again and acquires a CPU (the entire core is acquired)
         cpu_set_t cpus_to_lend;
         mu_parse_mask("0-3", &cpus_to_lend);
-        mu_substract(&sp2_mask, &sp2_mask, &cpus_to_lend);
+        mu_subtract(&sp2_mask, &sp2_mask, &cpus_to_lend);
         assert( lewi_mask_LendCpuMask(&spd2, &cpus_to_lend) == DLB_SUCCESS );
         assert_expected("8-15", &sp2_mask);
         assert_expected("0-3", free_cpus);
@@ -217,7 +217,7 @@ int main(int argc, char *arg[]) {
         // Subprocess 2 lends core [12-15]
         cpu_set_t cpus_to_lend;
         mu_parse_mask("12-15", &cpus_to_lend);
-        mu_substract(&sp2_mask, &sp2_mask, &cpus_to_lend);
+        mu_subtract(&sp2_mask, &sp2_mask, &cpus_to_lend);
         assert( lewi_mask_LendCpuMask(&spd2, &cpus_to_lend) == DLB_SUCCESS );
 
         wait_for_async_completion();

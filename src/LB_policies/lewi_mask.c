@@ -415,7 +415,7 @@ static inline void get_mask_for_blocking_call(
         /* Remove the first core */
         int first_cpuid = mu_get_first_cpu(cpu_set);
         const mu_cpuset_t *first_core = mu_get_core_mask(first_cpuid);
-        mu_substract(cpu_set, cpu_set, first_core->set);
+        mu_subtract(cpu_set, cpu_set, first_core->set);
     }
 }
 
@@ -460,7 +460,7 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
         /* Clear cpu_set from in_mpi_cpus */
         fatal_cond(!mu_is_subset(&lewi_info->in_mpi_cpus, &cpu_set),
                 "Some CPU in %s is not into blocking call", mu_to_str(&cpu_set));
-        mu_substract(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
+        mu_subtract(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
 #endif
         verbose(VB_MICROLB, "Out of blocking call, acquiring %s", mu_to_str(&cpu_set));
 
@@ -488,7 +488,7 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
         /* If there are ONLY non-owned CPUs to reclaim:
          * (if some owned CPU was already reclaimed, we forget about non-owned) */
         cpu_set_t non_owned_cpus;
-        mu_substract(&non_owned_cpus, &cpu_set, &spd->process_mask);
+        mu_subtract(&non_owned_cpus, &cpu_set, &spd->process_mask);
         if (mu_count(&non_owned_cpus) > 0
                 && mu_count(&owned_cpus) == 0) {
 
@@ -555,7 +555,7 @@ int lewi_mask_LendCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t *m
 
         /* Clear possible pending reclaimed CPUs */
         lewi_info_t *lewi_info = spd->lewi_info;
-        mu_substract(&lewi_info->pending_reclaimed_cpus,
+        mu_subtract(&lewi_info->pending_reclaimed_cpus,
                 &lewi_info->pending_reclaimed_cpus, mask);
     }
     return error;
@@ -774,7 +774,7 @@ int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t 
                 cpuid = mu_get_next_cpu(&cpus_to_return, cpuid)) {
             disable_cpu(&spd->pm, cpuid);
         }
-        mu_substract(&lewi_info->pending_reclaimed_cpus,
+        mu_subtract(&lewi_info->pending_reclaimed_cpus,
                 &lewi_info->pending_reclaimed_cpus, &cpus_to_return);
         error = DLB_SUCCESS;
     }
