@@ -66,7 +66,7 @@ bool mu_is_proper_subset(const cpu_set_t *subset, const cpu_set_t *superset);
 bool mu_is_proper_superset(const cpu_set_t *superset, const cpu_set_t *subset);
 bool mu_intersects(const cpu_set_t *mask1, const cpu_set_t *mask2);
 int  mu_count(const cpu_set_t *mask);
-void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend);
+void mu_subtract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *subtrahend);
 int  mu_get_single_cpu(const cpu_set_t *mask);
 int  mu_get_first_cpu(const cpu_set_t *mask);
 int  mu_get_last_cpu(const cpu_set_t *mask);

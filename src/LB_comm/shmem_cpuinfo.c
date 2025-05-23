@@ -220,7 +220,7 @@ static void update_occupied_cores(pid_t owner, int cpuid) {
                 if (core_is_occupied(owner, cpuid)) {
                     mu_or(&shdata->occupied_cores, &shdata->occupied_cores, core_mask);
                 } else {
-                    mu_substract(&shdata->occupied_cores, &shdata->occupied_cores, core_mask);
+                    mu_subtract(&shdata->occupied_cores, &shdata->occupied_cores, core_mask);
                 }
             }
         }
@@ -314,7 +314,7 @@ static void deregister_cpu(cpuinfo_t *cpuinfo, int pid) {
         }
         /* Clear all CPUs in core from the occupied */
         const cpu_set_t *core_mask = mu_get_core_mask(cpuinfo->id)->set;
-        mu_substract(&shdata->occupied_cores, &shdata->occupied_cores, core_mask);
+        mu_subtract(&shdata->occupied_cores, &shdata->occupied_cores, core_mask);
     } else {
         // Free external CPUs that I may be using
         if (cpuinfo->guest == pid) {

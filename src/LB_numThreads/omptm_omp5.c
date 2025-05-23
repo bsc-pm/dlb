@@ -132,7 +132,7 @@ static void cb_disable_cpu(int cpuid, void *arg) {
 }
 
 static void cb_disable_cpu_set(const cpu_set_t *cpu_set, void *arg) {
-    mu_substract(&active_mask, &active_mask, cpu_set);
+    mu_subtract(&active_mask, &active_mask, cpu_set);
     set_num_threads_from_active_mask();
     compute_cpu_bindings();
 }

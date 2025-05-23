@@ -819,7 +819,7 @@ void mu_set_core(cpu_set_t *mask, int coreid){
  *  updated cpuset: [0-1,4-5]
  */
 void mu_unset_core(cpu_set_t *mask, int coreid){
-    mu_substract(mask, mask, sys.core_masks_by_coreid[coreid].set);
+    mu_subtract(mask, mask, sys.core_masks_by_coreid[coreid].set);
 }
 
 /* Basic mask utils functions that do not need to read system's topology,
@@ -889,10 +889,10 @@ int mu_count(const cpu_set_t *mask) {
     return CPU_COUNT_S(mu_cpuset_alloc_size, mask);
 }
 
-/* Return the minuend after substracting the bits in substrahend */
-void mu_substract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *substrahend) {
+/* Return the minuend after subtracting the bits in subtrahend */
+void mu_subtract(cpu_set_t *result, const cpu_set_t *minuend, const cpu_set_t *subtrahend) {
     cpu_set_t xor;
-    CPU_XOR_S(mu_cpuset_alloc_size, &xor, minuend, substrahend);
+    CPU_XOR_S(mu_cpuset_alloc_size, &xor, minuend, subtrahend);
     CPU_AND_S(mu_cpuset_alloc_size, result, minuend, &xor);
 }
 

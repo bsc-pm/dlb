@@ -81,7 +81,7 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__init(p1_pid, p1_preinit_pid, NULL, &p1_mask, SHMEM_KEY) == DLB_NOTED );
     cpu_set_t p1_mask_after;
     /* P1 needs to readjust its mask: [1111] - [1100] = [0011] */
-    mu_substract(&p1_mask_after, &original_p1_mask, &original_p2_mask);
+    mu_subtract(&p1_mask_after, &original_p1_mask, &original_p2_mask);
     assert( CPU_EQUAL_S(MASK_SIZE, &p1_mask_after, &p1_mask) );
 
     // Finalize sub-process 1
