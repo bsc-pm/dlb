@@ -618,7 +618,7 @@ int mu_get_num_cores(void) {
 
 int mu_get_core_id(int cpuid) {
 
-    if (cpuid < 0 || (unsigned)cpuid > sys.num_cpus) return -1;
+    if (cpuid < 0 || (unsigned)cpuid >= sys.num_cpus) return -1;
 
     for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
         if (CPU_ISSET_S(cpuid, mu_cpuset_alloc_size,
@@ -632,14 +632,14 @@ int mu_get_core_id(int cpuid) {
 
 const mu_cpuset_t* mu_get_core_mask(int cpuid) {
 
-    if (cpuid < 0 || (unsigned)cpuid > sys.num_cpus) return NULL;
+    if (cpuid < 0 || (unsigned)cpuid >= sys.num_cpus) return NULL;
 
     return sys.core_masks_by_cpuid[cpuid];
 }
 
 const mu_cpuset_t* mu_get_core_mask_by_coreid(int core_id) {
 
-    if (core_id < 0 || (unsigned)core_id > sys.num_cores) return NULL;
+    if (core_id < 0 || (unsigned)core_id >= sys.num_cores) return NULL;
 
     return &sys.core_masks_by_coreid[core_id];
 }
@@ -732,7 +732,7 @@ int mu_get_cpu_next_core(const cpu_set_t *mask, int prev_cpu) {
         next_core = mu_get_core_id(next_cpu);
     }
 
-    return next_cpu;
+    return (next_cpu == -1 || (unsigned)next_cpu >= sys.num_cpus) ? -1 : next_cpu;
 }
 
 /* We define as "complete" those cores that all the CPUs defined by
