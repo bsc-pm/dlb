@@ -88,7 +88,7 @@ We define :math:`T^{I_{lb}}_{i}` to be the average thread time spent by process 
 OpenMP metrics
 --------------
 
-Let :math:`\mathrm{OMP}_\mathrm{Serial}` (*OpenMP Serial Efficiency*) represent the time lost
+Let :math:`\mathrm{OMP}_\mathrm{Serial}` (*OpenMP Serialization Efficiency*) represent the time lost
 because OpenMP was not running a parallel region.
 
 .. math::
@@ -103,7 +103,7 @@ among its threads.
 .. math::
     \mathrm{OMP}_\mathrm{LB} = (T - T^{I_\mathrm{serial}} - T^{I_{lb}}) / (T - T^{I_\mathrm{serial}})
 
-Let :math:`\mathrm{OMP}_\mathrm{Sched}` (*OpenMP Scheduling*) represent the time lost in idle
+Let :math:`\mathrm{OMP}_\mathrm{Sched}` (*OpenMP Scheduling Efficiency*) represent the time lost in idle
 OpenMP threads within a parallel region not caused by load imbalance.
 
 .. math::
