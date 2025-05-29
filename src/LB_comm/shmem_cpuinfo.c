@@ -67,7 +67,7 @@ typedef struct {
 
 
 /* NOTE on default values:
- * The shared memory will be initializated to 0 when created,
+ * The shared memory will be initialized to 0 when created,
  * thus all default values should represent 0
  * A CPU, by default, is DISABLED and owned by NOBODY
  */
@@ -249,7 +249,7 @@ static pid_t find_new_guest(cpuinfo_t *cpuinfo) {
             }
         }
 
-        /* If CPU did noy have requests, pop global queue */
+        /* If CPU did not have requests, pop global queue */
         if (new_guest == NOBODY) {
             for (lewi_mask_request_t *it =
                     queue_lewi_mask_request_t_front(&shdata->lewi_mask_requests);
@@ -448,16 +448,13 @@ int shmem_cpuinfo__init(pid_t pid, pid_t preinit_pid, const cpu_set_t *process_m
         const char *shmem_key, int shmem_color) {
     int error = DLB_SUCCESS;
 
-    // Update post_mortem preference
-    if (thread_spd && thread_spd->options.debug_opts & DBG_LPOSTMORTEM) {
-        cpu_is_public_post_mortem = true;
-    }
+    // Determine if CPU should be public in post-mortem mode
+    cpu_is_public_post_mortem = thread_spd &&
+        (thread_spd->options.debug_opts & DBG_LPOSTMORTEM
+         || !thread_spd->options.lewi_respect_cpuset);
 
-    // Respect cpuset
-    if (thread_spd && !thread_spd->options.lewi_respect_cpuset) {
-        respect_cpuset = false;
-        cpu_is_public_post_mortem = true;
-    }
+    // Determine whether to respect the cpuset
+    respect_cpuset = !(thread_spd && !thread_spd->options.lewi_respect_cpuset);
 
     // Shared memory creation
     open_shmem(shmem_key, shmem_color);
@@ -1309,6 +1306,9 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
         for (unsigned int i = 0; i < cpus_priority_array->count; ++i) {
             cpuid_t cpuid = cpus_priority_array->items[i];
             const cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+
+            if (cpuinfo->state == CPU_DISABLED) continue;
+
             if (cpuinfo->owner == pid) {
                 if (cpuinfo->guest == NOBODY) {
                     array_cpuid_t_push(&owned_idle, cpuid);
@@ -1321,24 +1321,30 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
         }
 
         /* Acquire first owned CPUs that are IDLE */
-        int local_error = acquire_cpus_in_array_cpuid_t(pid, &owned_idle, &ncpus, tasks);
-        if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
-            /* Update error code if needed */
-            if (error != DLB_NOTED) error = local_error;
+        if (array_cpuid_t_count(&owned_idle) > 0) {
+            int local_error = acquire_cpus_in_array_cpuid_t(pid, &owned_idle, &ncpus, tasks);
+            if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
+                /* Update error code if needed */
+                if (error != DLB_NOTED) error = local_error;
+            }
         }
 
         /* Acquire the rest of owned CPUs */
-        local_error = acquire_cpus_in_array_cpuid_t(pid, &owned_non_idle, &ncpus, tasks);
-        if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
-            /* Update error code if needed */
-            if (error != DLB_NOTED) error = local_error;
+        if (array_cpuid_t_count(&owned_non_idle) > 0) {
+            int local_error = acquire_cpus_in_array_cpuid_t(pid, &owned_non_idle, &ncpus, tasks);
+            if (local_error == DLB_SUCCESS || local_error == DLB_NOTED) {
+                /* Update error code if needed */
+                if (error != DLB_NOTED) error = local_error;
+            }
         }
 
         /* Borrow non-owned CPUs */
-        local_error = borrow_cpus_in_array_cpuid_t(pid, &non_owned, &ncpus, tasks);
-        if (local_error == DLB_SUCCESS) {
-            /* Update error code if needed */
-            if (error != DLB_NOTED) error = local_error;
+        if (array_cpuid_t_count(&non_owned) > 0) {
+            int local_error = borrow_cpus_in_array_cpuid_t(pid, &non_owned, &ncpus, tasks);
+            if (local_error == DLB_SUCCESS) {
+                /* Update error code if needed */
+                if (error != DLB_NOTED) error = local_error;
+            }
         }
 
         /* Add global petition for remaining CPUs if needed */
@@ -2009,7 +2015,7 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *restrict proces
         } else if (cpuid < node_size) {
             // The CPU should not be mine
             if (cpuinfo->owner == pid) {
-                // Previusly owned: Release CPU ownership
+                // Previously owned: Release CPU ownership
                 cpuinfo->owner = NOBODY;
                 cpuinfo->state = CPU_DISABLED;
                 if (cpuinfo->guest == pid ) {
@@ -2336,13 +2342,13 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int shmem_color, int colum
         printbuffer_append(&buffer, line);
     }
 
-    /* Cpu requests */
+    /* CPU requests */
     bool any_cpu_request = false;
     for (cpuid=0; cpuid<node_size && !any_cpu_request; ++cpuid) {
         any_cpu_request = queue_pid_t_size(&shdata_copy->node_info[cpuid].requests) > 0;
     }
     if (any_cpu_request) {
-        snprintf(line, MAX_LINE_LEN, "\n  Cpu requests (<cpuid>: <spids>):");
+        snprintf(line, MAX_LINE_LEN, "\n  CPU requests (<cpuid>: <spids>):");
         printbuffer_append(&buffer, line);
         for (cpuid=0; cpuid<node_size; ++cpuid) {
             queue_pid_t *requests = &shdata_copy->node_info[cpuid].requests;
