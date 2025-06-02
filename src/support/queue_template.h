@@ -32,6 +32,7 @@
 
 #include "support/debug.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -56,22 +57,23 @@
 #define QUEUE_NAME QUEUE_COMB1(QUEUE_COMB1(queue,_), QUEUE_T)
 #define QUEUE_PREFIX QUEUE_COMB1(QUEUE_NAME, _)
 
-#define QUEUE_init    QUEUE_IMPL(init)
-#define QUEUE_clear   QUEUE_IMPL(clear)
-#define QUEUE_size    QUEUE_IMPL(size)
-#define QUEUE_empty   QUEUE_IMPL(empty)
-#define QUEUE_front   QUEUE_IMPL(front)
-#define QUEUE_back    QUEUE_IMPL(back)
-#define QUEUE_next    QUEUE_IMPL(next)
-#define QUEUE_enqueue QUEUE_IMPL(enqueue)
-#define QUEUE_dequeue QUEUE_IMPL(dequeue)
-#define QUEUE_delete  QUEUE_IMPL(delete)
-#define QUEUE_remove  QUEUE_IMPL(remove)
-#define QUEUE_replace QUEUE_IMPL(replace)
-#define QUEUE_search  QUEUE_IMPL(search)
+#define QUEUE_init      QUEUE_IMPL(init)
+#define QUEUE_clear     QUEUE_IMPL(clear)
+#define QUEUE_size      QUEUE_IMPL(size)
+#define QUEUE_empty     QUEUE_IMPL(empty)
+#define QUEUE_has_space QUEUE_IMPL(has_space)
+#define QUEUE_front     QUEUE_IMPL(front)
+#define QUEUE_back      QUEUE_IMPL(back)
+#define QUEUE_next      QUEUE_IMPL(next)
+#define QUEUE_enqueue   QUEUE_IMPL(enqueue)
+#define QUEUE_dequeue   QUEUE_IMPL(dequeue)
+#define QUEUE_delete    QUEUE_IMPL(delete)
+#define QUEUE_remove    QUEUE_IMPL(remove)
+#define QUEUE_replace   QUEUE_IMPL(replace)
+#define QUEUE_search    QUEUE_IMPL(search)
 
-/* Qeue template:
- * - items is actually QUEUE_SIZE + 1 because we don't save rear, but next.  FIXME
+/* Queue template:
+ * - the actual capacity is QUEUE_SIZE - 1 because we don't save rear, but next.  FIXME
  *   (it simplifies some functions a little bit)
  * - 'front' points to the first element
  * - 'next' points to the next spot where to push
@@ -109,6 +111,10 @@ static inline size_t QUEUE_size(const QUEUE_NAME *queue) {
 
 static inline bool QUEUE_empty(const QUEUE_NAME *queue) {
     return queue->front == queue->next;
+}
+
+static inline bool QUEUE_has_space(const QUEUE_NAME *queue) {
+    return (queue->next + 1) % QUEUE_SIZE != queue->front;
 }
 
 
@@ -268,6 +274,7 @@ static inline QUEUE_T* QUEUE_search(QUEUE_NAME *queue, QUEUE_KEY_T key) {
 #undef QUEUE_clear
 #undef QUEUE_size
 #undef QUEUE_empty
+#undef QUEUE_has_space
 #undef QUEUE_front
 #undef QUEUE_back
 #undef QUEUE_next

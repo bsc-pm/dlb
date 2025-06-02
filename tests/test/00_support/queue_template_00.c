@@ -51,13 +51,22 @@ int main(int argc, char *argv[]) {
         queue_int_init(&queue);
         assert( queue_int_size(&queue) == 0 );
         assert( queue_int_empty(&queue) == true );
+        assert( queue_int_has_space(&queue) == true );
         assert( queue_int_front(&queue) == NULL );
         assert( queue_int_back(&queue) == NULL );
+
+        /* fill and clear */
+        for (int i = 0; i < 9; ++i) {
+            assert( queue_int_has_space(&queue) == true );
+            queue_int_enqueue(&queue, i);
+            assert( queue_int_empty(&queue) == false );
+        }
+        assert( queue_int_has_space(&queue) == false );
+        queue_int_clear(&queue);
 
         /* enqueue 42 */
         queue_int_enqueue(&queue, 42);
         assert( queue_int_size(&queue) == 1 );
-        assert( queue_int_empty(&queue) == false );
         assert( *(int*)queue_int_front(&queue) == 42 );
         assert( *(int*)queue_int_back(&queue) == 42 );
 
