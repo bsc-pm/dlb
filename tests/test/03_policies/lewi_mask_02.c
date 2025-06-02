@@ -21,7 +21,6 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
-#include "assert_loop.h"
 #include "unique_shmem.h"
 
 #include "apis/dlb_errors.h"
@@ -47,6 +46,11 @@ static subprocess_descriptor_t spd1;
 static subprocess_descriptor_t spd2;
 static cpu_set_t sp1_mask;
 static cpu_set_t sp2_mask;
+
+static void wait_for_async_completion(const subprocess_descriptor_t *spd) {
+    shmem_async_wait_for_completion(spd->id);
+    __sync_synchronize();
+}
 
 /* Subprocess 1 callbacks */
 static void sp1_cb_enable_cpu(int cpuid, void *arg) {
@@ -150,14 +154,16 @@ int main( int argc, char **argv ) {
 
         // Subprocess 2 wants to acquire CPU 1
         assert( lewi_mask_AcquireCpu(&spd2, 1) == DLB_SUCCESS );
-        assert_loop( CPU_ISSET(1, &sp2_mask) );
+        wait_for_async_completion(&spd2);
+        assert( CPU_ISSET(1, &sp2_mask) );
 
         // Subprocess 1 reclaims CPU 1 and finalizes immediately
         finalize_subprocess(&spd1);
 
-        // Subprocess 2 gets CPU 1 removed and cannot acquire it anymore
-        assert_loop( !CPU_ISSET(1, &sp2_mask) );
-        assert( lewi_mask_AcquireCpu(&spd2, 1) == DLB_ERR_PERM );
+        // Subprocess 2 gets CPU 1 removed and can only add new request
+        wait_for_async_completion(&spd2);
+        assert( !CPU_ISSET(1, &sp2_mask) );
+        assert( lewi_mask_AcquireCpu(&spd2, 1) == DLB_NOTED );
 
         // Subprocess 2 finalizes
         finalize_subprocess(&spd2);

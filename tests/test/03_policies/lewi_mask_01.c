@@ -655,11 +655,19 @@ int main( int argc, char **argv ) {
         CPU_CLR(3, &sp2_mask);
         assert( lewi_mask_LendCpu(&spd2, 3) == DLB_SUCCESS );
 
-        // Subprocess 2 acquires everything (Mask operations does not return DLB_ERR_PERM anymore)
-        assert( lewi_mask_AcquireCpuMask(&spd2, &sys_mask ) == DLB_SUCCESS );
+        // Subprocess 2 acquires everything
+        // - Mask operations will return DLB_SUCCESS in polling mode, ignoring disabled CPUs.
+        // - In async mode, they return DLB_NOTED because disabled CPUs are added as requests.
+        err = lewi_mask_AcquireCpuMask(&spd2, &sys_mask);
+        if (mode == MODE_POLLING) assert( err == DLB_SUCCESS );
+        if (mode == MODE_ASYNC) assert( err == DLB_NOTED );
 
-        // Subprocess 2 acquires CPU 0 (CPU operations must return DLB_ERR_PERM)
-        assert( lewi_mask_AcquireCpu(&spd2, 0 ) == DLB_ERR_PERM );
+        // Subprocess 2 acquires CPU 0
+        // - In polling mode, acquiring a disabled CPU must return DLB_ERR_PERM.
+        // - In async mode, a request will be added.
+        err = lewi_mask_AcquireCpu(&spd2, 0);
+        if (mode == MODE_POLLING) assert( err == DLB_ERR_PERM );
+        if (mode == MODE_ASYNC) assert( err == DLB_NOTED );
 
         // Subprocess 2 should have its own CPUs
         assert( CPU_COUNT(&sp2_mask) == 2

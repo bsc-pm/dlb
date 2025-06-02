@@ -446,8 +446,158 @@ int main( int argc, char **argv ) {
         }
 
         // P2 finalizes
+        assert( shmem_cpuinfo__deregister(p2_pid, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
+        assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
+    }
+
+    /* Test asynchronous acquire ncpus with disabled CPUs */
+    if (async) {
+
+        // Reset cpu priority
+        array_cpuid_t_clear(&cpus_priority_array);
+        for (int i=0; i<SYS_SIZE; ++i) array_cpuid_t_push(&cpus_priority_array, i);
+
+        // Set up fake spd with default options
+        subprocess_descriptor_t spd = {};
+        spd.options.lewi_respect_cpuset = true;
+        spd.options.debug_opts = DBG_CLEAR;
+        spd_enter_dlb(&spd);
+
+        // Initialize P1 with an empty mask
+        cpu_set_t p1_empty_mask;
+        CPU_ZERO(&p1_empty_mask);
+        assert( shmem_cpuinfo__init(p1_pid, 0, &p1_empty_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+        shmem_cpuinfo__enable_request_queues();
+
+        // P1 asks for all CPUs
+        requested_ncpus = DLB_MAX_CPUS;
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, &requested_ncpus,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
+                    last_borrow, &tasks) == DLB_NOTED );
+        assert( tasks.count == 0 );
+        assert( requested_ncpus == DLB_MAX_CPUS );
+
+        // P2 initializes
+        cpu_set_t p2_full_mask;
+        mu_get_system_mask(&p2_full_mask);
+        assert( shmem_cpuinfo__init(p2_pid, 0, &p2_full_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+
+        // P2 lends CPU 3
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+
+        // P2 reclaims CPU 3
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, &tasks) == DLB_NOTED );
+        assert( tasks.count == 2 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == DISABLE_CPU );
+        assert( tasks.items[1].pid == p2_pid
+                && tasks.items[1].cpuid == 3
+                && tasks.items[1].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+
+        // P1 returns
+        shmem_cpuinfo__return_async_cpu(p1_pid, 3);
+
+        // P2 lends again CPU 3
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+
+        // Finalize
         assert( shmem_cpuinfo__deregister(p1_pid, &tasks) == DLB_SUCCESS );
         assert( tasks.count == 0 );
+        assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__deregister(p2_pid, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+        assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
+    }
+
+    /* Test asynchronous acquire mask with disabled CPUs */
+    if (async) {
+
+        // Reset cpu priority
+        array_cpuid_t_clear(&cpus_priority_array);
+        for (int i=0; i<SYS_SIZE; ++i) array_cpuid_t_push(&cpus_priority_array, i);
+
+        // Set up fake spd with default options
+        subprocess_descriptor_t spd = {};
+        spd.options.lewi_respect_cpuset = true;
+        spd.options.debug_opts = DBG_CLEAR;
+        spd_enter_dlb(&spd);
+
+        // Initialize P1 with an empty mask
+        cpu_set_t p1_empty_mask;
+        CPU_ZERO(&p1_empty_mask);
+        assert( shmem_cpuinfo__init(p1_pid, 0, &p1_empty_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+        shmem_cpuinfo__enable_request_queues();
+
+        // P1 asks for all CPUs (passing NULL as requested_ncpus and having all CPUs in
+        // cpus_priority_array is equivalent for asking for a full mask)
+        assert( shmem_cpuinfo__acquire_ncpus_from_cpu_subset(p1_pid, NULL /* requested_ncpus */,
+                    &cpus_priority_array, LEWI_AFFINITY_AUTO, 0 /* max_parallelism */,
+                    last_borrow, &tasks) == DLB_NOTED );
+        assert( tasks.count == 0 );
+        assert( requested_ncpus == DLB_MAX_CPUS );
+
+        // P2 initializes
+        cpu_set_t p2_full_mask;
+        mu_get_system_mask(&p2_full_mask);
+        assert( shmem_cpuinfo__init(p2_pid, 0, &p2_full_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+
+        // P2 lends CPU 3
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+
+        // P2 reclaims CPU 3
+        assert( shmem_cpuinfo__reclaim_all(p2_pid, &tasks) == DLB_NOTED );
+        assert( tasks.count == 2 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == DISABLE_CPU );
+        assert( tasks.items[1].pid == p2_pid
+                && tasks.items[1].cpuid == 3
+                && tasks.items[1].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+
+        // P1 returns
+        shmem_cpuinfo__return_async_cpu(p1_pid, 3);
+
+        // P2 lends again CPU 3
+        assert( shmem_cpuinfo__lend_cpu(p2_pid, 3, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p1_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
+
+        // Finalize
+        assert( shmem_cpuinfo__deregister(p1_pid, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 0 );
+        assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__deregister(p2_pid, &tasks) == DLB_SUCCESS );
+        assert( tasks.count == 1 );
+        assert( tasks.items[0].pid == p2_pid
+                && tasks.items[0].cpuid == 3
+                && tasks.items[0].action == ENABLE_CPU );
+        array_cpuinfo_task_t_clear(&tasks);
         assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 

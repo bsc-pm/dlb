@@ -288,9 +288,6 @@ static void register_cpu(cpuinfo_t *cpuinfo, int pid, int preinit_pid) {
 
     /* Add or remove CPUs in core to the occupied cores set */
     update_occupied_cores(pid, cpuinfo->id);
-
-    /* Clear requests queue */
-    queue_pid_t_clear(&cpuinfo->requests);
 }
 
 static void deregister_cpu(cpuinfo_t *cpuinfo, int pid) {
@@ -1099,20 +1096,18 @@ static int acquire_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict task
         CPU_CLR(cpuid, &shdata->free_cpus);
 
         error = DLB_SUCCESS;
-    } else if (cpuinfo->state != CPU_DISABLED) {
-        // CPU is busy, or lent to another process
-        if (shdata->flags.queues_enabled) {
-            /* Queue petition */
-            if (queue_pid_t_enqueue(&cpuinfo->requests, pid) == 0) {
-                error = DLB_NOTED;
-            } else {
-                error = DLB_ERR_REQST;
-            }
+    } else if (shdata->flags.queues_enabled) {
+        // CPU is not available, add request (async mode)
+        if (queue_pid_t_enqueue(&cpuinfo->requests, pid) == 0) {
+            error = DLB_NOTED;
         } else {
-            error = DLB_NOUPDT;
+            error = DLB_ERR_REQST;
         }
+    } else if (cpuinfo->state != CPU_DISABLED) {
+        // CPU is busy, or lent to another process (polling mode)
+        error = DLB_NOUPDT;
     } else {
-        // CPU is disabled
+        // CPU is disabled (polling mode)
         error = DLB_ERR_PERM;
     }
 
@@ -1347,42 +1342,64 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
             }
         }
 
-        /* Add global petition for remaining CPUs if needed */
-        if (shdata->flags.queues_enabled
-                && requested_ncpus
-                && ncpus > 0) {
-            /* Construct a mask of allowed CPUs */
-            lewi_mask_request_t request = {
-                .pid = pid,
-                .howmany = ncpus,
-            };
-            CPU_ZERO(&request.allowed);
-            for (unsigned int i=0; i<cpus_priority_array->count; ++i) {
-                cpuid_t cpuid = cpus_priority_array->items[i];
-                CPU_SET(cpuid, &request.allowed);
-            }
+        /* Add petition if asynchronous mode */
+        if (shdata->flags.queues_enabled) {
 
-            /* Enqueue request */
-            verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
-            lewi_mask_request_t *it;
-            for (it = queue_lewi_mask_request_t_front(&shdata->lewi_mask_requests);
-                    it != NULL;
-                    it = queue_lewi_mask_request_t_next(&shdata->lewi_mask_requests, it)) {
-                if (it->pid == pid
-                        && CPU_EQUAL(&request.allowed, &it->allowed)) {
-                    /* update entry */
-                    it->howmany += request.howmany;
-                    error = DLB_NOTED;
-                    break;
+            /* Add a global petition if a number of CPUs was requested and not fully allocated */
+            if (requested_ncpus) {
+                if (ncpus > 0) {
+                    /* Construct a mask of allowed CPUs */
+                    lewi_mask_request_t request = {
+                        .pid = pid,
+                        .howmany = ncpus,
+                    };
+                    CPU_ZERO(&request.allowed);
+                    for (unsigned int i=0; i<cpus_priority_array->count; ++i) {
+                        cpuid_t cpuid = cpus_priority_array->items[i];
+                        CPU_SET(cpuid, &request.allowed);
+                    }
+
+                    /* Enqueue request */
+                    verbose(VB_SHMEM, "Requesting %d CPUs more after acquiring", ncpus);
+                    lewi_mask_request_t *it;
+                    for (it = queue_lewi_mask_request_t_front(&shdata->lewi_mask_requests);
+                            it != NULL;
+                            it = queue_lewi_mask_request_t_next(&shdata->lewi_mask_requests, it)) {
+                        if (it->pid == pid
+                                && CPU_EQUAL(&request.allowed, &it->allowed)) {
+                            /* update entry */
+                            it->howmany += request.howmany;
+                            error = DLB_NOTED;
+                            break;
+                        }
+                    }
+                    if (it == NULL) {
+                        /* or add new entry */
+                        if (queue_lewi_mask_request_t_enqueue(
+                                    &shdata->lewi_mask_requests, request) == 0) {
+                            error = DLB_NOTED;
+                        } else {
+                            error = DLB_ERR_REQST;
+                        }
+                    }
                 }
             }
-            if (it == NULL) {
-                /* or add new entry */
-                if (queue_lewi_mask_request_t_enqueue(
-                            &shdata->lewi_mask_requests, request) == 0) {
-                    error = DLB_NOTED;
-                } else {
-                    error = DLB_ERR_REQST;
+
+            /* Otherwise, add petitions to all CPUs that are either non-owned or disabled */
+            else {
+                for (unsigned int i = 0; i < cpus_priority_array->count; ++i) {
+                    cpuid_t cpuid = cpus_priority_array->items[i];
+                    cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+
+                    if (cpuinfo->state == CPU_DISABLED
+                            || (cpuinfo->owner != pid
+                                && cpuinfo->guest != pid)) {
+                        if (queue_pid_t_search(&cpuinfo->requests, pid) == NULL
+                                && queue_pid_t_has_space(&cpuinfo->requests)) {
+                            queue_pid_t_enqueue(&cpuinfo->requests, pid);
+                            error = DLB_NOTED;
+                        }
+                    }
                 }
             }
         }
