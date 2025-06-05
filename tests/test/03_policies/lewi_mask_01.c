@@ -30,6 +30,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_numThreads/numThreads.h"
+#include "support/atomic.h"
 #include "support/mask_utils.h"
 #include "support/debug.h"
 
@@ -45,22 +46,27 @@ static subprocess_descriptor_t spd2;
 static cpu_set_t sp1_mask;
 static cpu_set_t sp2_mask;
 static interaction_mode_t mode;
+static atomic_int num_callbacks = 0;
 
 /* Subprocess 1 callbacks */
 static void sp1_cb_enable_cpu(int cpuid, void *arg) {
+    DLB_ATOMIC_ADD_RLX(&num_callbacks, 1);
     CPU_SET(cpuid, &sp1_mask);
 }
 
 static void sp1_cb_disable_cpu(int cpuid, void *arg) {
+    DLB_ATOMIC_ADD_RLX(&num_callbacks, 1);
     CPU_CLR(cpuid, &sp1_mask);
 }
 
 /* Subprocess 2 callbacks */
 static void sp2_cb_enable_cpu(int cpuid, void *arg) {
+    DLB_ATOMIC_ADD_RLX(&num_callbacks, 1);
     CPU_SET(cpuid, &sp2_mask);
 }
 
 static void sp2_cb_disable_cpu(int cpuid, void *arg) {
+    DLB_ATOMIC_ADD_RLX(&num_callbacks, 1);
     CPU_CLR(cpuid, &sp2_mask);
 }
 
@@ -68,6 +74,13 @@ static void wait_for_async_completion(void) {
     if (mode == MODE_ASYNC) {
         shmem_async_wait_for_completion(spd1.id);
         shmem_async_wait_for_completion(spd2.id);
+        __sync_synchronize();
+    }
+}
+
+static void wait_for_async_completion_sp(const subprocess_descriptor_t *spd) {
+    if (mode == MODE_ASYNC) {
+        shmem_async_wait_for_completion(spd->id);
         __sync_synchronize();
     }
 }
@@ -649,7 +662,7 @@ int main( int argc, char **argv ) {
         assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
     }
 
-    /* Tests with unregistered CPUs */
+    /* Test acquiring unregistered CPUs */
     {
         // Subprocess 2 lends CPU 3
         CPU_CLR(3, &sp2_mask);
@@ -693,6 +706,47 @@ int main( int argc, char **argv ) {
                 spd2.options.shm_size_multiplier) == DLB_SUCCESS );
     if (mode == MODE_ASYNC) {
         assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
+    }
+
+    /* Tests lending unregistered CPUs */
+    {
+        // Init with empty mask
+        CPU_ZERO(&spd1.process_mask);
+        assert( shmem_procinfo__init(spd1.id, 0, &spd1.process_mask, NULL, spd1.options.shm_key,
+                    spd1.options.shm_size_multiplier) == DLB_SUCCESS);
+        assert( shmem_cpuinfo__init(spd1.id, 0, &spd1.process_mask, spd1.options.shm_key,
+                    spd1.options.lewi_color) == DLB_SUCCESS);
+        assert( lewi_mask_Init(&spd1) == DLB_SUCCESS );
+        if (mode == MODE_ASYNC) {
+            assert( shmem_async_init(spd1.id, &spd1.pm, &spd1.process_mask,
+                        spd1.options.shm_key, spd1.options.shm_size_multiplier) == DLB_SUCCESS );
+        }
+
+        // Lend mask
+        DLB_ATOMIC_ST(&num_callbacks, 0);
+        lewi_mask_Lend(&spd1);
+        wait_for_async_completion_sp(&spd1);
+        assert( DLB_ATOMIC_LD(&num_callbacks) == 0 );
+
+        // IntoBlockingCall
+        lewi_mask_IntoBlockingCall(&spd1);
+        wait_for_async_completion_sp(&spd1);
+        assert( DLB_ATOMIC_LD(&num_callbacks) == 0 );
+
+        // OutOfBlockingCall
+        lewi_mask_OutOfBlockingCall(&spd1);
+        wait_for_async_completion_sp(&spd1);
+        assert( DLB_ATOMIC_LD(&num_callbacks) == 0 );
+
+        // Finalize
+        assert( lewi_mask_Finalize(&spd1) == DLB_SUCCESS );
+        assert( shmem_cpuinfo__finalize(spd1.id, spd1.options.shm_key, spd1.options.lewi_color)
+                == DLB_SUCCESS );
+        assert( shmem_procinfo__finalize(spd1.id, false, spd1.options.shm_key,
+                    spd1.options.shm_size_multiplier) == DLB_SUCCESS );
+        if (mode == MODE_ASYNC) {
+            assert( shmem_async_finalize(spd1.id) == DLB_SUCCESS );
+        }
     }
 
     return 0;

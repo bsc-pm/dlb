@@ -107,6 +107,7 @@ int shmem_cpuinfo__get_thread_binding(pid_t pid, int thread_num);
 int shmem_cpuinfo__get_nth_non_owned_cpu(pid_t pid, int nth_cpu);
 int shmem_cpuinfo__get_number_of_non_owned_cpus(pid_t pid);
 int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpu);
+int shmem_cpuinfo__is_cpu_enabled(int cpuid);
 bool shmem_cpuinfo__exists(void);
 void shmem_cpuinfo__enable_request_queues(void);
 void shmem_cpuinfo__remove_requests(pid_t pid);

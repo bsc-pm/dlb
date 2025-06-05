@@ -347,6 +347,30 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 
+    /* Tests with disabled CPUs */
+    {
+        enum { SYS_SIZE = 4 };
+        mu_testing_set_sys_size(SYS_SIZE);
+        CPU_ZERO(&process_mask);
+
+        // Init with empty mask
+        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
+        free_cpus = shmem_cpuinfo_testing__get_free_cpu_set();
+        occupied_cores = shmem_cpuinfo_testing__get_occupied_core_set();
+        assert( CPU_COUNT(free_cpus) == 0 );
+        assert( CPU_COUNT(occupied_cores) == 0 );
+
+        // Lend system mask
+        cpu_set_t system_mask;
+        mu_get_system_mask(&system_mask);
+        shmem_cpuinfo__lend_cpu_mask(pid, &system_mask, &tasks);
+        assert( tasks.count == 0 );
+        assert( CPU_COUNT(free_cpus) == 0 );
+        assert( CPU_COUNT(occupied_cores) == 0 );
+
+        assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
+    }
+
     free(new_guests);
     free(victims);
     array_cpuid_t_destroy(&cpus_priority_array);

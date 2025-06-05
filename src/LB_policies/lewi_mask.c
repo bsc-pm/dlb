@@ -78,7 +78,7 @@ static inline void cpu_array_and(array_cpuid_t *result,
 static inline void cpu_array_from_cpuset(array_cpuid_t *result,
         const cpu_set_t *cpu_set) {
     for (int cpuid = mu_get_first_cpu(cpu_set);
-            cpuid >= 0;
+            cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
             cpuid = mu_get_next_cpu(cpu_set, cpuid)) {
         array_cpuid_t_push(result, cpuid);
     }
@@ -104,7 +104,7 @@ static void lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
     cpu_set_t system_mask;
     mu_get_system_mask(&system_mask);
     for (int cpuid = mu_get_first_cpu(&system_mask);
-            cpuid >= 0;
+            cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
             cpuid = mu_get_next_cpu(&system_mask, cpuid)) {
         if (CPU_ISSET(cpuid, process_mask)) {
             array_cpuid_t_push(cpus_priority_array, cpuid);
@@ -421,21 +421,30 @@ static inline void get_mask_for_blocking_call(
 
 /* Lend the CPUs of the thread encountering the blocking call */
 int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
-    int error = DLB_NOUPDT;
+
+    lewi_info_t *lewi_info = spd->lewi_info;
 
     /* Obtain affinity mask to lend */
     cpu_set_t cpu_set;
     get_mask_for_blocking_call(&cpu_set,
             spd->options.lewi_keep_cpu_on_blocking_call);
 
-    if (mu_count(&cpu_set) > 0) {
+    if (unlikely(mu_intersects(&lewi_info->in_mpi_cpus, &cpu_set))) {
 #ifdef DEBUG_VERSION
-        /* Add cpu_set to in_mpi_cpus */
-        lewi_info_t *lewi_info = spd->lewi_info;
-        fatal_cond(mu_intersects(&lewi_info->in_mpi_cpus, &cpu_set),
-                    "Some CPU in %s already into blocking call", mu_to_str(&cpu_set));
-        mu_or(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
+        fatal("Some CPU in %s already into blocking call", mu_to_str(&cpu_set));
+#else
+        /* This scenario is not expected to occur; if it does, simply ignore. */
+        return DLB_NOUPDT;
 #endif
+    }
+
+    int error = DLB_NOUPDT;
+
+    if (mu_count(&cpu_set) > 0) {
+
+        /* Add cpu_set to in_mpi_cpus */
+        mu_or(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
+
         verbose(VB_MICROLB, "In blocking call, lending %s", mu_to_str(&cpu_set));
 
         /* Finally, lend mask */
@@ -447,21 +456,29 @@ int lewi_mask_IntoBlockingCall(const subprocess_descriptor_t *spd) {
 /* Reclaim the CPUs that were lent when encountering the blocking call.
  * The thread must have not change its affinity mask since then. */
 int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
-    int error = DLB_NOUPDT;
 
-    /* Obtain affinity mask to reclaim */
+    int error = DLB_NOUPDT;
+    lewi_info_t *lewi_info = spd->lewi_info;
+
+    /* Obtain affinity mask to lend */
     cpu_set_t cpu_set;
     get_mask_for_blocking_call(&cpu_set,
             spd->options.lewi_keep_cpu_on_blocking_call);
 
-    if (mu_count(&cpu_set) > 0) {
-        lewi_info_t *lewi_info = spd->lewi_info;
+    if (unlikely(!mu_is_subset(&lewi_info->in_mpi_cpus, &cpu_set))) {
 #ifdef DEBUG_VERSION
-        /* Clear cpu_set from in_mpi_cpus */
-        fatal_cond(!mu_is_subset(&lewi_info->in_mpi_cpus, &cpu_set),
-                "Some CPU in %s is not into blocking call", mu_to_str(&cpu_set));
-        mu_subtract(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
+        fatal("Some CPU in %s is not into blocking call", mu_to_str(&cpu_set));
+#else
+        /* This scenario is not expected to occur; if it does, simply ignore. */
+        return DLB_NOUPDT;
 #endif
+    }
+
+    if (mu_count(&lewi_info->in_mpi_cpus) > 0) {
+
+        /* Clear cpu_set from in_mpi_cpus */
+        mu_subtract(&lewi_info->in_mpi_cpus, &lewi_info->in_mpi_cpus, &cpu_set);
+
         verbose(VB_MICROLB, "Out of blocking call, acquiring %s", mu_to_str(&cpu_set));
 
         /* If there are owned CPUs to reclaim: */
@@ -492,6 +509,15 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
         if (mu_count(&non_owned_cpus) > 0
                 && mu_count(&owned_cpus) == 0) {
 
+            /* Remove CPUs that are disabled in the shmem */
+            for (int cpuid = mu_get_first_cpu(&non_owned_cpus);
+                    cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
+                    cpuid = mu_get_next_cpu(&non_owned_cpus, cpuid)) {
+                if (!shmem_cpuinfo__is_cpu_enabled(cpuid)) {
+                    CPU_CLR(cpuid, &non_owned_cpus);
+                }
+            }
+
             /* Construct a CPU array from non_owned_cpus */
             array_cpuid_t *cpu_subset = get_cpu_subset(spd);
             cpu_array_from_cpuset(cpu_subset, &non_owned_cpus);
@@ -500,6 +526,7 @@ int lewi_mask_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
             array_cpuinfo_task_t *tasks = get_tasks(spd);
             error = shmem_cpuinfo__borrow_from_cpu_subset(spd->id, cpu_subset, tasks);
 
+            /* A non-success error means that not all CPUs could be borrowed */
             if (error != DLB_SUCCESS) {
                 /* Annotate the CPU as pending to bypass the shared memory for the next query */
                 mu_or(&lewi_info->pending_reclaimed_cpus, &lewi_info->pending_reclaimed_cpus,
@@ -725,7 +752,7 @@ int lewi_mask_Return(const subprocess_descriptor_t *spd) {
         do {
             disable_cpu(&spd->pm, cpuid);
             cpuid = mu_get_next_cpu(&lewi_info->pending_reclaimed_cpus, cpuid);
-        } while (cpuid >= 0);
+        } while (cpuid >= 0 && cpuid != DLB_CPUID_INVALID);
         CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
         error = DLB_SUCCESS;
     }
@@ -770,7 +797,8 @@ int lewi_mask_ReturnCpuMask(const subprocess_descriptor_t *spd, const cpu_set_t 
     if (CPU_COUNT(&lewi_info->pending_reclaimed_cpus) > 0) {
         cpu_set_t cpus_to_return;
         CPU_AND(&cpus_to_return, &lewi_info->pending_reclaimed_cpus, mask);
-        for (int cpuid = mu_get_first_cpu(&cpus_to_return); cpuid >= 0;
+        for (int cpuid = mu_get_first_cpu(&cpus_to_return);
+                cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
                 cpuid = mu_get_next_cpu(&cpus_to_return, cpuid)) {
             disable_cpu(&spd->pm, cpuid);
         }
@@ -806,7 +834,7 @@ int lewi_mask_UpdateOwnership(const subprocess_descriptor_t *spd,
         do {
             disable_cpu(&spd->pm, cpuid);
             cpuid = mu_get_next_cpu(&lewi_info->pending_reclaimed_cpus, cpuid);
-        } while (cpuid >= 0);
+        } while (cpuid >= 0 && cpuid != DLB_CPUID_INVALID);
         CPU_ZERO(&lewi_info->pending_reclaimed_cpus);
     }
 

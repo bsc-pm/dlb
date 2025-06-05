@@ -614,6 +614,8 @@ int shmem_cpuinfo_ext__postfinalize(pid_t pid) {
 static void lend_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks) {
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
 
+    if (unlikely(cpuinfo->state == CPU_DISABLED)) return;
+
     if (cpuinfo->owner == pid) {
         // If the CPU is owned by the process, just change the state
         cpuinfo->state = CPU_LENT;
@@ -1420,8 +1422,10 @@ int shmem_cpuinfo__acquire_ncpus_from_cpu_subset(
 
 static int borrow_cpu(pid_t pid, int cpuid, array_cpuinfo_task_t *restrict tasks) {
 
-    int error = DLB_NOUPDT;
     cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+    if (unlikely(cpuinfo->state == CPU_DISABLED)) return DLB_ERR_PERM;
+
+    int error = DLB_NOUPDT;
 
     if (cpuinfo->guest == NOBODY
             && core_is_eligible(pid, cpuid)) {
@@ -2178,6 +2182,11 @@ int shmem_cpuinfo__check_cpu_availability(pid_t pid, int cpuid) {
     }
 
     return error;
+}
+
+int shmem_cpuinfo__is_cpu_enabled(int cpuid) {
+    cpuinfo_t *cpuinfo = &shdata->node_info[cpuid];
+    return cpuinfo->state != CPU_DISABLED;
 }
 
 bool shmem_cpuinfo__exists(void) {
