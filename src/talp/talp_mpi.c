@@ -233,7 +233,7 @@ void talp_into_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_co
     if (talp_info) {
         /* Update sample */
         talp_sample_t *sample = talp_get_thread_sample(spd);
-        update_sample_on_sync_call(spd, talp_info, sample, is_blocking_collective);
+        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
 
         /* Into Sync call -> not_useful_mpi */
         talp_set_sample_state(sample, not_useful_mpi, talp_info->flags.papi);
@@ -246,7 +246,7 @@ void talp_out_of_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_
 
     const talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
-        /* Update sample */
+        /* Update sample (and maybe flush) */
         talp_sample_t *sample = talp_get_thread_sample(spd);
         DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
         update_sample_on_sync_call(spd, talp_info, sample, is_blocking_collective);
