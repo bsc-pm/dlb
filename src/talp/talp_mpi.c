@@ -146,9 +146,21 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_finalize");
     talp_info_t *talp_info = spd->talp_info;
     if (talp_info) {
-        /* Add MPI_Finalize */
+
+#ifdef MPI_LIB
+        /* We also need to measure the waiting time of an MPI_Finalize.
+         * For this, we call an MPI_Barrier and the appropriate TALP functions.
+         * The num_mpi_calls variable is also incremented inside those. */
+        talp_into_sync_call(spd, /* is_blocking_collective */ true);
+        PMPI_Barrier(getWorldComm());
+        talp_out_of_sync_call(spd, /* is_blocking_collective */ true);
+#else
+        /* Add MPI_Finalize to the number of MPI calls.
+         * Even though talp_mpi_finalize should never be called if no MPI_LIB,
+         * we keep this case for testing purposes. */
         talp_sample_t *sample = talp_get_thread_sample(spd);
         DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
+#endif
 
         /* Stop global region */
         region_stop(spd, talp_info->monitor);
