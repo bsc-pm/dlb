@@ -365,6 +365,7 @@ void instrument_finalize(void) {
         g_tree_foreach(event_tree, extrae_add_definitions, NULL);
     }
     g_tree_destroy(event_tree);
+    event_tree = NULL;
 }
 
 void instrument_print_flags(void) {
