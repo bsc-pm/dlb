@@ -261,6 +261,10 @@ void before_finalize(void) {
     if (mpi_ready) {
         mpi_ready = 0;
         talp_mpi_finalize(thread_spd);
+
+        /* Extrae will likely be finalized after this call.
+         * Finalize the module now to prevent any further Extrae calls. */
+        instrument_finalize();
     }
     if (init_from_mpi) {
         init_from_mpi = 0;
