@@ -103,6 +103,7 @@ tests = {
     'fortran_api_barrier_00' : {'source' : 'fortran_api_barrier_00.f90'},
     'fortran_api_drom_00' : {'source' : 'fortran_api_drom_00.f90'},
     'fortran_api_talp_00' : {'source' : 'fortran_api_talp_00.f90'},
+    'fortran_api_talp_01' : {'source' : 'fortran_api_talp_01.F90'},
   },
 }
 

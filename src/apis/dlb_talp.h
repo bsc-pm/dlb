@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -39,18 +39,10 @@ typedef struct dlb_monitor_t {
     int         num_cpus;
     /*! Average of CPUs assigned to the process during the region execution */
     float       avg_cpus;
-    union {
     /*! Number of measured cycles*/
     int64_t     cycles;
-    int64_t     accumulated_cycles
-        __attribute__((deprecated("Use cycles instead")));
-    };
-    union {
     /*! Number of measured instructions */
     int64_t     instructions;
-    int64_t     accumulated_instructions
-        __attribute__((deprecated("Use instructions instead")));
-    };
     /*! Number of times that the region has been started and stopped */
     int         num_measurements;
     /*! Number of times that the region has been reset */
@@ -65,24 +57,12 @@ typedef struct dlb_monitor_t {
     int64_t     start_time;
     /*! Absolute time (in nanoseconds) of the last time the region was stopped */
     int64_t     stop_time;
-    union {
     /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
     int64_t     elapsed_time;
-    int64_t     elapsed_computation_time
-        __attribute__((deprecated("No longer represented")));
-    };
-    union {
     /*! Time (in nanoseconds) of the accumulated CPU time of useful computation inside the region */
     int64_t     useful_time;
-    int64_t     accumulated_computation_time
-        __attribute__((deprecated("Use useful_time instead")));
-    };
-    union {
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in MPI inside the region */
     int64_t     mpi_time;
-    int64_t     accumulated_MPI_time
-        __attribute__((deprecated("Use mpi_time instead")));
-    };
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent due to load
      * imbalance in OpenMP parallel regions */
     int64_t     omp_load_imbalance_time;
@@ -100,20 +80,12 @@ typedef struct dlb_monitor_t {
 typedef struct dlb_pop_metrics_t {
     /*! Name of the monitor */
     char        name[DLB_MONITOR_NAME_MAX];
-    union {
     /*! Total number of CPUs used by the processes that have used the region */
     int         num_cpus;
-    int         total_cpus
-        __attribute__((deprecated("Use num_cpus instead")));
-    };
     /*! Total number of mpi processes that have used the region */
     int         num_mpi_ranks;
-    union {
     /*! Total number of nodes used by the processes that have used the region */
     int         num_nodes;
-    int         total_nodes
-        __attribute__((deprecated("Use num_nodes instead")));
-    };
     /*! Total average of CPUs used in the region. Only meaningful if LeWI enabled. */
     float       avg_cpus;
     /*! Total number of CPU cycles elapsed in that region during useful time */
@@ -128,20 +100,10 @@ typedef struct dlb_pop_metrics_t {
     int64_t     num_omp_parallels;
     /*! Number of encountered OpenMP tasks combined among all processes */
     int64_t     num_omp_tasks;
-    union {
     /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
     int64_t     elapsed_time;
-    int64_t     elapsed_useful
-        __attribute__((deprecated("No longer represented")));
-    int64_t     node_sum_useful
-        __attribute__((deprecated("No longer represented")));
-    };
-    union {
     /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in the application */
     int64_t     useful_time;
-    int64_t     app_sum_useful
-        __attribute__((deprecated("Use useful_time instead")));
-    };
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in MPI */
     int64_t     mpi_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent due to load
@@ -167,30 +129,14 @@ typedef struct dlb_pop_metrics_t {
     float       parallel_efficiency;
     /*! Efficiency number of the impact in the MPI parallelization */
     float       mpi_parallel_efficiency;
-    union {
     /*! Efficiency lost due to MPI transfer and serialization */
     float       mpi_communication_efficiency;
-    float       communication_efficiency
-        __attribute__((deprecated("Use mpi_communication_efficiency instead")));
-    };
-    union {
     /*! Efficiency of the MPI Load Balance */
     float       mpi_load_balance;
-    float       lb
-        __attribute__((deprecated("Use mpi_load_balance instead")));
-    };
-    union {
     /*! Intra-node MPI Load Balance coefficient */
     float       mpi_load_balance_in;
-    float       lb_in
-        __attribute__((deprecated("Use mpi_load_balance_in instead")));
-    };
-    union {
     /*! Inter-node MPI Load Balance coefficient */
     float       mpi_load_balance_out;
-    float       lb_out
-        __attribute__((deprecated("Use mpi_load_balance_out instead")));
-    };
     /*! Efficiency number of the impact in the OpenMP parallelization */
     float       omp_parallel_efficiency;
     /*! Efficiency of the OpenMP Load Balance inside parallel regions */

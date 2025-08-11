@@ -217,7 +217,7 @@ libdlb_instr = library(
 
 # Static library only used for testing
 libdlb_test = static_library(
-  'dlb_test', sources,
+  'dlb_test', [sources, 'src/talp/talp_check_layout.c'],
   include_directories : common_includes,
   link_with: libdlb_common,
   dependencies : common_deps,

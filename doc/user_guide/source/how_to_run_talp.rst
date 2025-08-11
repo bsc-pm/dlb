@@ -242,7 +242,7 @@ For Fortran codes, the struct can be accessed as in this example:
     include 'dlbf_talp.h'
     type(c_ptr) :: dlb_handle
     type(dlb_monitor_t), pointer :: dlb_monitor
-    integer :: ierr
+    integer :: err
     character(16), pointer :: monitor_name
     ...
     dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
@@ -310,6 +310,68 @@ be converted to ``type(c_ptr))`` using the F90 intrinsic procedure ``transfer``:
     ! Start region and stop
     err = DLB_MonitoringRegionStart(dlb_handle)
     err = DLB_MonitoringRegionStop(transfer(DLB_LAST_OPEN_REGION_INT, c_null_ptr))
+
+
+Computing POP metrics for a region at run time
+-----------------------------------------------
+
+POP metrics can be obtained at any point by calling a collective DLB function
+that gathers data from all processes. The call accepts a ``dlb_monitor_t`` to
+specify a region, or ``DLB_GLOBAL_REGION`` for the implicit global region. The
+returned struct contains both intermediate values and final efficiency ratios,
+the latter shown below:
+
+.. code-block:: c
+
+    typedef struct dlb_pop_metrics_t {
+        ...
+        float parallel_efficiency;
+        float mpi_parallel_efficiency;
+        float mpi_communication_efficiency;
+        float mpi_load_balance;
+        float mpi_load_balance_in;
+        float mpi_load_balance_out;
+        float omp_parallel_efficiency;
+        float omp_load_balance;
+        float omp_scheduling_efficiency;
+        float omp_serialization_efficiency;
+    } dlb_pop_metrics_t;
+
+Example in C:
+
+.. code-block:: c
+
+    #include <dlb_talp.h>
+    ...
+    dlb_monitor_t *monitor = DLB_MonitoringRegionRegister("Region 1");
+    // The monitor is then used to start and stop the region.
+    ...
+    dlb_pop_metrics_t pop_metrics;
+    // This call performs an MPI synchronization across all processes.
+    int err = DLB_TALP_CollectPOPMetrics(monitor, &pop_metrics);
+    printf("%1.2f\n", pop_metrics.parallel_efficiency);
+    printf("%1.2f\n", pop_metrics.mpi_communication_efficiency);
+    ...
+
+Example in Fortran:
+
+.. code-block:: fortran
+
+    use iso_c_binding
+    implicit none
+    include 'dlbf_talp.h'
+    type(c_ptr) :: dlb_handle
+    type(dlb_pop_metrics_t) :: pop_metrics
+    integer :: err
+    ...
+    dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
+    ! The dlb_handle is then used to start and stop the region.
+    ...
+    ! This call performs an MPI synchronization across all processes.
+    err = DLB_TALP_CollectPOPMetrics(dlb_handle, pop_metrics)
+    print *, pop_metrics%parallel_efficiency
+    print *, pop_metrics%mpi_communication_efficiency
+
 
 Enabling Hardware Counters
 ==========================
