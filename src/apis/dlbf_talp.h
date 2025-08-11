@@ -209,6 +209,7 @@
                 result (ierr) bind(c, name='DLB_TALP_CollectPOPNodeMetrics')
             use iso_c_binding
             import :: dlb_node_metrics_t
+            integer(kind=c_int) :: ierr
             type(c_ptr), value, intent(in) :: monitor
             type(dlb_node_metrics_t), intent(out) :: node_metrics
         end function dlb_talp_collectpopnodemetrics
