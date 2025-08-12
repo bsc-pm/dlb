@@ -129,7 +129,8 @@ foreach suite, suite_tests : tests
       link_whole: libdlb_test,
       dependencies : common_deps,
       build_by_default: false,
-      install : false
+      install : false,
+      fortran_args : ['-ffree-line-length-none']
     )
 
     test_env = initial_env
