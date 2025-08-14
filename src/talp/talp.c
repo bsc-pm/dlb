@@ -110,10 +110,10 @@ static void update_regions_with_macrosample(const subprocess_descriptor_t *spd,
 
 
 /*********************************************************************************/
-/*    Init / Finalize                                                            */
+/*    PAPI counters                                                              */
 /*********************************************************************************/
 
-/* Executed once */
+/* Called once in the main thread */
 static inline int init_papi(void) __attribute__((unused));
 static inline int init_papi(void) {
 #ifdef PAPI_LIB
@@ -137,7 +137,7 @@ static inline int init_papi(void) {
     return 0;
 }
 
-/* Executed once per thread */
+/* Called once per thread */
 int talp_init_papi_counters(void) {
 #ifdef PAPI_LIB
     ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
@@ -200,6 +200,63 @@ static inline void update_last_read_papi_counters(talp_sample_t* sample) {
 #endif
 }
 
+/* Called once in the main thread */
+static inline void fini_papi(void) __attribute__((unused));
+static inline void fini_papi(void) {
+#ifdef PAPI_LIB
+    ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
+            "Error invoking %s when PAPI has been disabled", __FUNCTION__);
+
+    PAPI_shutdown();
+#endif
+}
+
+/* Called once per thread */
+void talp_fini_papi_counters(void) {
+#ifdef PAPI_LIB
+    ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
+            "Error invoking %s when PAPI has been disabled", __FUNCTION__);
+
+    int error;
+
+    if (EventSet != PAPI_NULL) {
+        // Stop counters (ignore if already stopped)
+        error = PAPI_stop(EventSet, NULL);
+        if (error != PAPI_OK && error != PAPI_ENOTRUN) {
+            warning("PAPI Error stopping counters. %d: %s",
+                    error, PAPI_strerror(error));
+        }
+
+        // Cleanup and destroy the EventSet
+        error = PAPI_cleanup_eventset(EventSet);
+        if (error != PAPI_OK) {
+            warning("PAPI Error cleaning eventset. %d: %s",
+                    error, PAPI_strerror(error));
+        }
+
+        error = PAPI_destroy_eventset(&EventSet);
+        if (error != PAPI_OK) {
+            warning("PAPI Error destroying eventset. %d: %s",
+                    error, PAPI_strerror(error));
+        }
+
+        EventSet = PAPI_NULL;
+    }
+
+    // Unregister this thread from PAPI
+    error = PAPI_unregister_thread();
+    if (error != PAPI_OK) {
+        warning("PAPI Error unregistering thread. %d: %s",
+                error, PAPI_strerror(error));
+    }
+#endif
+}
+
+
+/*********************************************************************************/
+/*    Init / Finalize                                                            */
+/*********************************************************************************/
+
 void talp_init(subprocess_descriptor_t *spd) {
     ensure(!spd->talp_info, "TALP already initialized");
     ensure(!thread_is_observer, "An observer thread cannot call talp_init");
@@ -244,12 +301,29 @@ void talp_init(subprocess_descriptor_t *spd) {
     /* Initialize and start running PAPI */
     if (talp_info->flags.papi) {
 #ifdef PAPI_LIB
+        int papi_local_fail = 0;
+        int papi_global_fail = 0;
+
         if (init_papi() != 0 || talp_init_papi_counters() != 0) {
-            warning("PAPI initialization has failed, disabling option.");
+            papi_local_fail = 1;
+        }
+
+#ifdef MPI_LIB
+        PMPI_Allreduce(&papi_local_fail, &papi_global_fail, 1, MPI_INT, MPI_MAX, getWorldComm());
+#endif
+
+        if (papi_global_fail && !papi_local_fail) {
+            /* Un-initialize */
+            talp_fini_papi_counters();
+            fini_papi();
+        }
+
+        if (papi_global_fail || papi_local_fail) {
+            warning0("PAPI initialization has failed, disabling option.");
             talp_info->flags.papi = false;
         }
 #else
-        warning("DLB has not been configured with PAPI support, disabling option.");
+        warning0("DLB has not been configured with PAPI support, disabling option.");
         talp_info->flags.papi = false;
 #endif
     }
@@ -299,7 +373,7 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 
 #ifdef PAPI_LIB
     if (talp_info->flags.papi) {
-        PAPI_shutdown();
+        fini_papi();
     }
 #endif
 

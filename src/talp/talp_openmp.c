@@ -131,6 +131,11 @@ void talp_openmp_thread_end(void) {
 
         /* Update state */
         talp_set_sample_state(sample, disabled, talp_info->flags.papi);
+
+        /* Finalize PAPI per-thread state */
+        if (talp_info->flags.papi) {
+            talp_fini_papi_counters();
+        }
     }
 }
 

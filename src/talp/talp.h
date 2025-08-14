@@ -34,8 +34,11 @@ enum { TALP_NO_TIMESTAMP = 0 };
 typedef struct SubProcessDescriptor subprocess_descriptor_t;
 
 
-/* TALP init / finalize */
+/* PAPI counters */
 int  talp_init_papi_counters(void);
+void talp_fini_papi_counters(void);
+
+/* TALP init / finalize */
 void talp_init(subprocess_descriptor_t *spd);
 void talp_finalize(subprocess_descriptor_t *spd);
 
