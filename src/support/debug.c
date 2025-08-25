@@ -229,6 +229,7 @@ void info0(const char *fmt, ...) {
 #endif
 }
 
+/* Ignores --quiet and --silent, used for explicit prints like variable listing */
 void info0_force_print(const char *fmt, ...) {
 #ifdef MPI_LIB
     if (_mpi_rank <= 0) {
@@ -242,17 +243,13 @@ void info0_force_print(const char *fmt, ...) {
 #endif
 }
 
-#undef verbose
-void verbose(verbose_opts_t flag, const char *fmt, ...) {
+static void vverbose(verbose_opts_t flag, const char *fmt, va_list list) {
+
     /* Parse verbose options if verbose() was invoked before init */
     if (unlikely(vb_opts == VB_UNDEF)) {
         options_parse_entry("--verbose", &vb_opts);
     }
 
-    if (quiet) return;
-
-    va_list list;
-    va_start(list, fmt);
     if      (vb_opts & flag & VB_API)     { vprint(stderr, "DLB API", fmt, list); }
     else if (vb_opts & flag & VB_MICROLB) { vprint(stderr, "DLB MICROLB", fmt, list); }
     else if (vb_opts & flag & VB_SHMEM)   { vprint(stderr, "DLB SHMEM", fmt, list); }
@@ -266,7 +263,31 @@ void verbose(verbose_opts_t flag, const char *fmt, ...) {
     else if (vb_opts & flag & VB_BARRIER) { vprint(stderr, "DLB BARRIER", fmt, list); }
     else if (vb_opts & flag & VB_TALP)    { vprint(stderr, "DLB TALP", fmt, list); }
     else if (vb_opts & flag & VB_INSTR)   { vprint(stderr, "DLB INSTRUMENT", fmt, list); }
+}
+
+#undef verbose
+void verbose(verbose_opts_t flag, const char *fmt, ...) {
+
+    if (quiet) return;
+
+    va_list list;
+    va_start(list, fmt);
+    vverbose(flag, fmt, list);
     va_end(list);
+}
+
+#undef verbose0
+void verbose0(verbose_opts_t flag, const char *fmt, ...) {
+#ifdef MPI_LIB
+    if (_mpi_rank <= 0) {
+#endif
+        va_list list;
+        va_start(list, fmt);
+        vverbose(flag, fmt, list);
+        va_end(list);
+#ifdef MPI_LIB
+    }
+#endif
 }
 
 void print_backtrace(void) {
@@ -389,36 +410,55 @@ void warn_error(int error) {
 enum { INITIAL_BUFFER_SIZE = 1024 };
 
 void printbuffer_init(print_buffer_t *buffer) {
-    buffer->size = INITIAL_BUFFER_SIZE;
     buffer->addr = malloc(INITIAL_BUFFER_SIZE*sizeof(char));
-    buffer->offset = buffer->addr;
+    buffer->size = INITIAL_BUFFER_SIZE;
+    buffer->len = 0;
     buffer->addr[0] = '\0';
 }
 
 void printbuffer_destroy(print_buffer_t *buffer) {
     free(buffer->addr);
     buffer->addr = NULL;
-    buffer->offset = NULL;
     buffer->size = 0;
+    buffer->len = 0;
 }
 
-void printbuffer_append(print_buffer_t *buffer, const char *line) {
+static void printbuffer_append_internal(print_buffer_t *buffer, const char *line, bool newline) {
+
+    size_t line_len = strlen(line) + (newline ? 1 : 0) + 1; /* + '\0' */
+    size_t buffer_len = buffer->len;
+
     /* Realloc buffer if needed */
-    size_t line_len = strlen(line) + 2; /* + '\n\0' */
-    size_t buffer_len = strlen(buffer->addr);
     if (buffer_len + line_len > buffer->size) {
-        buffer->size *= 2;
-        void *p = realloc(buffer->addr, buffer->size*sizeof(char));
-        if (p) {
-            buffer->addr = p;
-            buffer->offset = buffer->addr + buffer_len;
-        } else {
+        size_t new_size = buffer->size * 2;
+        while (buffer_len + line_len > new_size) {
+            new_size *= 2;
+        }
+
+        void *p = realloc(buffer->addr, new_size*sizeof(char));
+        if (!p) {
             fatal("realloc failed");
         }
+
+        buffer->addr = p;
+        buffer->size = new_size;
     }
 
     /* Append line to buffer */
-    buffer->offset += sprintf(buffer->offset, "%s\n", line);
-    buffer_len = buffer->offset - buffer->addr;
-    ensure(strlen(buffer->addr) == buffer_len, "buffer len is not correctly computed");
+    int written = snprintf(buffer->addr + buffer_len, buffer->size - buffer_len,
+            "%s%s", line, newline ? "\n" : "");
+
+    if (written < 0) {
+        fatal("snprintf failed");
+    }
+
+    buffer->len = buffer_len + written;
+}
+
+void printbuffer_append(print_buffer_t *buffer, const char *line) {
+    printbuffer_append_internal(buffer, line, true);
+}
+
+void printbuffer_append_no_newline(print_buffer_t *buffer, const char *text) {
+    printbuffer_append_internal(buffer, text, false);
 }

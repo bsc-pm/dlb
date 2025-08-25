@@ -499,36 +499,6 @@ static void parse_system_files(void) {
     }
 }
 
-static void print_sys_info(void) {
-
-    verbose(VB_AFFINITY, "System mask: %s", mu_to_str(sys.sys_mask.set));
-
-    for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
-        verbose(VB_AFFINITY, "Node %d mask: %s",
-                node_id, mu_to_str(sys.node_masks[node_id].set));
-    }
-
-    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
-        const mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
-        if (core_cpuset->count > 0) {
-            verbose(VB_AFFINITY, "Core %d mask: %s",
-                    core_id, mu_to_str(core_cpuset->set));
-        }
-    }
-
-#if DEBUG_VERSION
-    for (int cpuid = sys.sys_mask.first_cpuid;
-            cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
-            cpuid = mu_get_next_cpu(sys.sys_mask.set, cpuid)) {
-        const mu_cpuset_t *core_cpuset = sys.core_masks_by_cpuid[cpuid];
-        if (core_cpuset && core_cpuset->count > 0) {
-            verbose(VB_AFFINITY, "CPU %d core mask: %s",
-                    cpuid, mu_to_str(core_cpuset->set));
-        }
-    }
-#endif
-}
-
 
 /*********************************************************************************/
 /*    Mask utils public functions                                                */
@@ -552,7 +522,6 @@ void mu_init( void ) {
 
         mu_initialized = true;
 #endif
-        print_sys_info();
     }
 }
 
@@ -600,6 +569,72 @@ int mu_get_system_hwthreads_per_core(void) {
     fatal_cond(sys.core_masks_by_coreid[0].count == 0,
             "Number of hardware threads per core is 0. Please report bug at " PACKAGE_BUGREPORT);
     return sys.core_masks_by_coreid[0].count;
+}
+
+int  mu_get_system_num_nodes(void) {
+    return sys.num_nodes;
+}
+
+int  mu_get_system_cores_per_node(void) {
+    return mu_count_cores(sys.node_masks[0].set);
+}
+
+void mu_get_system_description(print_buffer_t *buffer) {
+
+    #define TAB "    "
+
+    /* Should be enough to hold up a list of > 1024 CPUs */
+    enum { LINE_BUFFER_SIZE = 8096 };
+    char line[LINE_BUFFER_SIZE];
+    char *l;
+
+    printbuffer_init(buffer);
+
+    // CPUs: N (C cores x T threads)
+    l = line;
+    l += sprintf(line, TAB"CPUs: %d", mu_get_system_size());
+    if (mu_system_has_smt()) {
+        sprintf(l, " (%d cores x %d threads)",
+                mu_get_num_cores(), mu_get_system_hwthreads_per_core());
+    } else {
+        sprintf(l, " (%d cores)", mu_get_num_cores());
+    }
+    printbuffer_append(buffer, line);
+
+    // NUMA nodes: N (C cores per NUMA node)
+    l = line;
+    l += sprintf(line, TAB"NUMA nodes: %d", mu_get_system_num_nodes());
+    if (sys.num_nodes > 1) {
+        sprintf(l, " (%d cores per NUMA node)", mu_get_system_cores_per_node());
+    }
+    printbuffer_append(buffer, line);
+
+    // System mask
+    printbuffer_append_no_newline(buffer, TAB"System mask: ");
+    printbuffer_append(buffer, mu_to_str(sys.sys_mask.set));
+
+    // NUMA node masks
+    printbuffer_append_no_newline(buffer, TAB"NUMA node masks: ");
+    for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
+        printbuffer_append_no_newline(buffer, mu_to_str(sys.node_masks[node_id].set));
+        if (node_id + 1 < sys.num_nodes) {
+            printbuffer_append_no_newline(buffer, ", ");
+        }
+    }
+    printbuffer_append(buffer, "");
+
+    // Core masks
+    printbuffer_append_no_newline(buffer, TAB"Core masks: ");
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        const mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        if (core_cpuset->count > 0) {
+            printbuffer_append_no_newline(buffer, mu_to_str(core_cpuset->set));
+            if (core_id + 1 < sys.num_cores) {
+                printbuffer_append_no_newline(buffer, ", ");
+            }
+        }
+    }
+    printbuffer_append(buffer, "");
 }
 
 bool mu_system_has_smt(void) {
@@ -1418,6 +1453,34 @@ int mu_cmp_cpuids_by_affinity(const void *cpuid1, const void *cpuid2, void *affi
 /*********************************************************************************/
 /*    Mask utils testing functions                                               */
 /*********************************************************************************/
+
+static void print_sys_info(void) {
+
+    verbose(VB_AFFINITY, "System mask: %s", mu_to_str(sys.sys_mask.set));
+
+    for (unsigned int node_id = 0; node_id < sys.num_nodes; ++node_id) {
+        verbose(VB_AFFINITY, "Node %d mask: %s",
+                node_id, mu_to_str(sys.node_masks[node_id].set));
+    }
+
+    for (unsigned int core_id = 0; core_id < sys.num_cores; ++core_id) {
+        const mu_cpuset_t *core_cpuset = &sys.core_masks_by_coreid[core_id];
+        if (core_cpuset->count > 0) {
+            verbose(VB_AFFINITY, "Core %d mask: %s",
+                    core_id, mu_to_str(core_cpuset->set));
+        }
+    }
+
+    for (int cpuid = sys.sys_mask.first_cpuid;
+            cpuid >= 0 && cpuid != DLB_CPUID_INVALID;
+            cpuid = mu_get_next_cpu(sys.sys_mask.set, cpuid)) {
+        const mu_cpuset_t *core_cpuset = sys.core_masks_by_cpuid[cpuid];
+        if (core_cpuset && core_cpuset->count > 0) {
+            verbose(VB_AFFINITY, "CPU %d core mask: %s",
+                    cpuid, mu_to_str(core_cpuset->set));
+        }
+    }
+}
 
 bool mu_testing_is_initialized(void) {
     return mu_initialized;

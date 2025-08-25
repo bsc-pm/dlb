@@ -42,6 +42,8 @@ int main(int argc, char *argv[]) {
     cpu_set_t zero_mask;
     CPU_ZERO(&zero_mask);
 
+    print_buffer_t buffer;
+
     /* Default, usually hwloc */
     {
         warning("===== Default init ======");
@@ -49,6 +51,11 @@ int main(int argc, char *argv[]) {
         // check it's safe to call init and finalize twice
         mu_init();
         mu_init();
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
+
         mu_finalize();
         mu_finalize();
     }
@@ -58,6 +65,11 @@ int main(int argc, char *argv[]) {
         warning("===== No hwloc init =====");
 
         mu_testing_init_nohwloc();
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
+
         mu_finalize();
     }
 
@@ -67,6 +79,11 @@ int main(int argc, char *argv[]) {
         warning("===== Size %d ===== ", SYS_SIZE);
 
         mu_testing_set_sys_size(SYS_SIZE);
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
+
         assert( mu_get_system_size() == SYS_SIZE );
         mu_get_system_mask(&system_mask);
         assert( CPU_COUNT(&system_mask) == SYS_SIZE
@@ -74,11 +91,14 @@ int main(int argc, char *argv[]) {
                 && mu_get_last_cpu(&system_mask) == SYS_SIZE - 1 );
         assert( mu_system_has_smt() == false );
         assert( mu_get_system_hwthreads_per_core() == 1 );
+        assert( mu_get_system_num_nodes() == 1 );
+        assert( mu_get_system_cores_per_node() == SYS_SIZE );
         assert( mu_get_cpu_next_core(&system_mask, -2) == -1 );
         assert( mu_get_cpu_next_core(&system_mask, -1) == 0 );
         assert( mu_get_cpu_next_core(&system_mask, 0) == 1 );
         assert( mu_get_cpu_next_core(&system_mask, 68) == 69 );
         assert( mu_get_cpu_next_core(&system_mask, 69) == -1 );
+
         mu_finalize();
     }
 
@@ -91,6 +111,11 @@ int main(int argc, char *argv[]) {
                 SYS_NCPUS, SYS_NCORES, SYS_NNODES);
 
         mu_testing_set_sys(SYS_NCPUS, SYS_NCORES, SYS_NNODES);
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
+
         assert( mu_get_system_size() == SYS_NCPUS );
         mu_get_system_mask(&system_mask);
         assert( CPU_COUNT(&system_mask) == SYS_NCPUS
@@ -98,6 +123,8 @@ int main(int argc, char *argv[]) {
                 && mu_get_last_cpu(&system_mask) == SYS_NCPUS - 1 );
         assert( mu_system_has_smt() == true );
         assert( mu_get_system_hwthreads_per_core() == 2 );
+        assert( mu_get_system_num_nodes() == SYS_NNODES );
+        assert( mu_get_system_cores_per_node() == SYS_NCORES / SYS_NNODES );
         assert( mu_get_cpu_next_core(&system_mask, 0) == 2 );
         assert( mu_get_cpu_next_core(&system_mask, 29) == 30 );
         assert( mu_get_cpu_next_core(&system_mask, 30) == -1 );
@@ -169,9 +196,16 @@ int main(int argc, char *argv[]) {
         warning("===== Heterogeneous arch ===== ");
 
         mu_testing_set_sys_masks(&system_mask, core_masks, NUM_CORES, node_masks, NUM_NODES);
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
+
         assert( mu_get_system_size() == 13 );
         assert( mu_system_has_smt() == true );
         assert( mu_get_system_hwthreads_per_core() == 2 );
+        assert( mu_get_system_num_nodes() == NUM_NODES );
+        assert( mu_get_system_cores_per_node() == 3 ); // accounts for node 0 only ([5-10])
         assert( mu_get_core_id(0) == -1 );
         assert( mu_get_core_id(5) == 0 );
         assert( mu_get_core_id(12) == 3 );
@@ -236,9 +270,16 @@ int main(int argc, char *argv[]) {
         warning("===== Round-robin arch ===== ");
 
         mu_testing_set_sys_masks(&system_mask, core_masks, NUM_CORES, node_masks, NUM_NODES);
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
+
         assert( mu_get_system_size() == SYS_SIZE );
         assert( mu_system_has_smt() == true );
         assert( mu_get_system_hwthreads_per_core() == 2 );
+        assert( mu_get_system_num_nodes() == NUM_NODES );
+        assert( mu_get_system_cores_per_node() == NUM_CORES / NUM_NODES );
         for (int i = 0; i < SYS_SIZE; ++i) {
             int core_id = i % 4;
             const mu_cpuset_t *core_mask = mu_get_core_mask(i);
@@ -316,12 +357,20 @@ int main(int argc, char *argv[]) {
         mu_parse_mask("31,143", &core_masks[3]);
 
         mu_testing_set_sys_masks(&system_mask, core_masks, NUM_CORES, node_masks, NUM_NODES);
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
     }
 
     /* Exactly 256 CPUs */
     {
         warning("===== 256 CPUs node ===== ");
         mu_testing_set_sys_size(256);
+
+        mu_get_system_description(&buffer);
+        warning("System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
     }
 
     return 0;

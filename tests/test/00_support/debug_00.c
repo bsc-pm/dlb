@@ -25,6 +25,8 @@
 #include "support/env.h"
 #include "support/options.h"
 
+#include <string.h>
+
 int main( int argc, char **argv ) {
 
     /* verbose function may be invoked before DLB_Init */
@@ -33,7 +35,7 @@ int main( int argc, char **argv ) {
     verbose(VB_TALP, "This one should not");
 
     options_t options;
-    options_init(&options, "--verbose-format=node:pid:thread");
+    options_init(&options, "--verbose-format=node:thread");
     debug_init(&options);
     info("hello test %s", "!!");
 
@@ -46,6 +48,51 @@ int main( int argc, char **argv ) {
     info("hello test %s", "!!");
 
     print_backtrace();
+
+    /*** printbuffer ***/
+    print_buffer_t b;
+
+    /* init */
+    printbuffer_init(&b);
+    assert( b.addr != NULL );
+    assert( b.size > 0 );
+    assert( b.len == 0 );
+    assert( strcmp(b.addr, "") == 0 );
+    printbuffer_destroy(&b);
+
+    /* append */
+    printbuffer_init(&b);
+    printbuffer_append(&b, "hello");
+    assert( strcmp(b.addr, "hello\n") == 0 );
+    printbuffer_append(&b, "world");
+    assert( strcmp(b.addr, "hello\nworld\n") == 0 );
+    printbuffer_destroy(&b);
+
+    /* append_no_newline */
+    printbuffer_init(&b);
+    printbuffer_append_no_newline(&b, "hello");
+    assert( strcmp(b.addr, "hello") == 0 );
+    printbuffer_append_no_newline(&b, "world");
+    assert( strcmp(b.addr, "helloworld") == 0 );
+    printbuffer_destroy(&b);
+
+    /* growth */
+    char large[5000];
+    memset(large, 'A', sizeof(large) - 1);
+    large[sizeof(large) - 1] = '\0';
+    printbuffer_init(&b);
+    printbuffer_append(&b, large);
+    assert( strlen(b.addr) == strlen(large) + 1 ); // + '\n'
+    assert( b.size >= strlen(b.addr) + 1 );
+    printbuffer_destroy(&b);
+
+    /* destroy */
+    printbuffer_init(&b);
+    printbuffer_append(&b, "test");
+    printbuffer_destroy(&b);
+    assert( b.addr == NULL );
+    assert( b.size == 0 );
+    assert( b.len == 0 );
 
     return 0;
 }

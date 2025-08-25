@@ -191,15 +191,22 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         options_print_lewi_flags(&spd->options);
     }
     instrument_print_flags();
-    verbose(VB_API, "Enabled verbose mode for DLB API");
-    verbose(VB_MPI_API, "Enabled verbose mode for MPI API");
-    verbose(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
-    verbose(VB_SHMEM, "Enabled verbose mode for Shared Memory");
-    verbose(VB_DROM, "Enabled verbose mode for DROM");
-    verbose(VB_STATS, "Enabled verbose mode for STATS");
-    verbose(VB_MICROLB, "Enabled verbose mode for microLB policies");
-    verbose(VB_ASYNC, "Enabled verbose mode for Asynchronous thread");
-    verbose(VB_OMPT, "Enabled verbose mode for OMPT experimental features");
+    verbose0(VB_API, "Enabled verbose mode for DLB API");
+    verbose0(VB_MPI_API, "Enabled verbose mode for MPI API");
+    verbose0(VB_MPI_INT, "Enabled verbose mode for MPI Interception");
+    verbose0(VB_SHMEM, "Enabled verbose mode for Shared Memory");
+    verbose0(VB_DROM, "Enabled verbose mode for DROM");
+    verbose0(VB_STATS, "Enabled verbose mode for STATS");
+    verbose0(VB_MICROLB, "Enabled verbose mode for microLB policies");
+    verbose0(VB_ASYNC, "Enabled verbose mode for Asynchronous thread");
+    verbose0(VB_OMPT, "Enabled verbose mode for OMPT experimental features");
+
+    if (spd->options.verbose & VB_AFFINITY) {
+        print_buffer_t buffer;
+        mu_get_system_description(&buffer);
+        verbose0(VB_AFFINITY, "System affinity\n%s", buffer.addr);
+        printbuffer_destroy(&buffer);
+    }
 
     // Print number of cpus or mask
     if (mask_is_needed) {

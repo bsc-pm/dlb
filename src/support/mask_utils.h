@@ -20,6 +20,7 @@
 #ifndef MASK_UTILS_H
 #define MASK_UTILS_H
 
+#include "support/debug.h"
 #include "support/types.h"
 #include <sched.h>
 
@@ -37,6 +38,9 @@ void mu_finalize(void);
 int  mu_get_system_size(void);
 void mu_get_system_mask(cpu_set_t *mask);
 int  mu_get_system_hwthreads_per_core(void);
+int  mu_get_system_num_nodes(void);
+int  mu_get_system_cores_per_node(void);
+void mu_get_system_description(print_buffer_t *buffer);
 bool mu_system_has_smt(void);
 int  mu_get_num_cores(void);
 int  mu_get_core_id(int cpuid);

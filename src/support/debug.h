@@ -30,8 +30,8 @@
 
 typedef struct print_buffer {
     char *addr;
-    char *offset;
     size_t size;
+    size_t len;
 } print_buffer_t;
 
 void debug_init(const options_t *options);
@@ -43,12 +43,14 @@ void info(const char *fmt, ...)     __attribute__ ((format (printf, 1, 2)));
 void info0(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
 void info0_force_print(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
 void verbose(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
+void verbose0(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
 void print_backtrace(void);
 void dlb_clean(void);
 void warn_error(int error);
 void printbuffer_init(print_buffer_t *buffer);
 void printbuffer_destroy(print_buffer_t *buffer);
 void printbuffer_append(print_buffer_t *buffer, const char *line);
+void printbuffer_append_no_newline(print_buffer_t *buffer, const char *text);
 
 extern verbose_opts_t   vb_opts;
 
@@ -71,6 +73,11 @@ extern verbose_opts_t   vb_opts;
 #define verbose(flag, ...) \
     do { \
         if (unlikely(vb_opts != VB_CLEAR)) { verbose(flag, __VA_ARGS__); } \
+    } while(0)
+
+#define verbose0(flag, ...) \
+    do { \
+        if (unlikely(vb_opts != VB_CLEAR)) { verbose0(flag, __VA_ARGS__); } \
     } while(0)
 
 
