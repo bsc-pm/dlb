@@ -64,6 +64,34 @@ static int count_lines(const char *filename) {
     }
     return lines;
 }
+
+static void cat_file(const char *filename) {
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        perror("fopen");
+        return;
+    }
+
+    fprintf(stderr, "--- File %s\n", filename);
+
+    char buffer[4096];
+    size_t n;
+    while ((n = fread(buffer, 1, sizeof(buffer), f)) > 0) {
+        // print to stderr so that the output is not cluttered with dlb messages
+        if (fwrite(buffer, 1, n, stderr) != n) {
+            perror("fwrite");
+            break;
+        }
+    }
+
+    if (ferror(f)) {
+        perror("fread");
+    }
+
+    fprintf(stderr, "---\n");
+    fclose(f);
+}
+
 static void record_metrics(void) {
     /* Initialize structure */
     dlb_pop_metrics_t metrics = {
@@ -155,6 +183,7 @@ int main(int argc, char *argv[]) {
     record_metrics();
     talp_output_finalize(json_filename);
     error += access(json_filename, F_OK);
+    if (!error) cat_file(json_filename);
     free(json_filename);
 
     /* XML */
@@ -163,19 +192,25 @@ int main(int argc, char *argv[]) {
     record_metrics();
     talp_output_finalize(xml_filename);
     error += access(xml_filename, F_OK);
+    if (!error) cat_file(xml_filename);
     free(xml_filename);
 
     /* CSV */
     char *csv_filename, *csv1, *csv2, *csv3;
+    // single file
     asprintf(&csv_filename, "%s/talp.csv", tmpdir);
     dlb_pop_metrics_t metrics_1 = { .name = "Region 1" };
     talp_output_record_pop_metrics(&metrics_1);
     talp_output_finalize(csv_filename);
     error += access(csv_filename, F_OK);
+    if (!error) cat_file(csv_filename);
+    // test append: 2 - > 3 lines
     dlb_pop_metrics_t metrics_2 = { .name = "Region 2" };
     talp_output_record_pop_metrics(&metrics_2);
     talp_output_finalize(csv_filename);
     error += count_lines(csv_filename) - 3;  // test append, count_lines should return 3
+    if (!error) cat_file(csv_filename);
+    // multiple files
     asprintf(&csv1, "%s/talp-pop.csv", tmpdir);
     asprintf(&csv2, "%s/talp-node.csv", tmpdir);
     asprintf(&csv3, "%s/talp-process.csv", tmpdir);
@@ -184,6 +219,9 @@ int main(int argc, char *argv[]) {
     error += access(csv1, F_OK);
     error += access(csv2, F_OK);
     error += access(csv3, F_OK);
+    if (!error) cat_file(csv1);
+    if (!error) cat_file(csv2);
+    if (!error) cat_file(csv3);
     free(csv_filename);
     free(csv1);
     free(csv2);
@@ -200,6 +238,35 @@ int main(int argc, char *argv[]) {
     /* No file */
     record_metrics();
     talp_output_finalize(NULL);
+
+    /* Output to /dev/null */
+    record_metrics();
+    talp_output_finalize("/dev/null");
+
+    /* Output to a directory that it does not exist */
+    char *subdir_filename;
+    asprintf(&subdir_filename, "%s/subdir/talp.json", tmpdir);
+    record_metrics();
+    talp_output_finalize(subdir_filename);
+    error += access(subdir_filename, F_OK);
+    if (!error) cat_file(subdir_filename);
+    free(subdir_filename);
+
+    /* Output to an existing file that cannot be written to
+     * (e.g., a directory or a file without writing permissions) */
+    record_metrics();
+    fprintf(stdout, "--- Fallback metrics in txt format:\n");
+    talp_output_finalize(tmpdir);
+    fflush(stdout);
+
+    /* Output to a directory that cannot be created */
+    char *wrong_subdir;
+    asprintf(&wrong_subdir, "/subdir/talp.json");
+    record_metrics();
+    fprintf(stdout, "--- Fallback metrics in json format:\n");
+    talp_output_finalize(wrong_subdir);
+    fflush(stdout);
+    free(wrong_subdir);
 
     return error;
 }

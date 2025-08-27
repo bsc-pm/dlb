@@ -31,12 +31,15 @@
 #include "talp/perf_metrics.h"
 
 #include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <libgen.h>
 #include <limits.h>
 #include <locale.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 
 static float sanitized_ipc(float instructions, float cycles) {
@@ -45,6 +48,35 @@ static float sanitized_ipc(float instructions, float cycles) {
     } else {
         return 0.0f;
     }
+}
+
+static const char* make_header(const char *title) {
+    int width = 62;
+    static char buf[80];
+    int title_len = strlen(title);
+
+    if (width >= (int)sizeof(buf)) {
+        width = sizeof(buf) - 1; // prevent overflow
+    }
+
+    if (title_len + 2 > width) {
+        // Title too long: just return title
+        snprintf(buf, sizeof(buf), "%s", title);
+        return buf;
+    }
+
+    int hashes = width - title_len - 2;
+    int left = hashes / 2;
+    int right = hashes - left;
+
+    memset(buf, '#', left);
+    buf[left] = ' ';
+    memcpy(buf + left + 1, title, title_len);
+    buf[left + 1 + title_len] = ' ';
+    memset(buf + left + 1 + title_len + 1, '#', right);
+    buf[width] = '\0';
+
+    return buf;
 }
 
 
@@ -58,7 +90,7 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
     char elapsed_time_str[16];
     ns_to_human(elapsed_time_str, 16, monitor->elapsed_time);
 
-    info("################# Monitoring Region Summary #################");
+    info("%s", make_header("Monitoring Region Summary"));
     info("### Name:                                     %s", monitor->name);
     info("### Elapsed Time:                             %s", elapsed_time_str);
     info("### Useful time:                              %"PRId64" ns",
@@ -122,7 +154,7 @@ static void pop_metrics_print(void) {
             float avg_ipc = sanitized_ipc(record->instructions, record->cycles);
             char elapsed_time_str[16];
             ns_to_human(elapsed_time_str, 16, record->elapsed_time);
-            info("############### Monitoring Region POP Metrics ###############");
+            info("%s", make_header("Monitoring Region POP Metrics"));
             info("### Name:                                     %s", record->name);
             info("### Elapsed Time:                             %s", elapsed_time_str);
             if (record->mpi_parallel_efficiency > 0.0f &&
@@ -160,7 +192,7 @@ static void pop_metrics_print(void) {
                 info("###  - Number of instructions:                %1.2E", record->instructions);
             }
         } else {
-            info("############### Monitoring Region POP Metrics ###############");
+            info("%s", make_header("Monitoring Region POP Metrics"));
             info("### Name:                                     %s", record->name);
             info("###                        No data                        ###");
         }
@@ -341,7 +373,7 @@ static void pop_metrics_to_txt(FILE *out_file) {
 
         if (record->elapsed_time > 0) {
             fprintf(out_file,
-                    "############### Monitoring Region POP Metrics ###############\n"
+                    "%s\n"
                     "### Name:                                      %s\n"
                     "### Number of CPUs:                            %d\n"
                     "### Number of MPI processes:                   %d\n"
@@ -375,6 +407,7 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "###   - OpenMP Load Balance:                   %.2f\n"
                     "###   - OpenMP Scheduling efficiency:          %.2f\n"
                     "###   - OpenMP Serialization efficiency:       %.2f\n",
+                    make_header("Monitoring Region POP Metrics"),
                     record->name,
                     record->num_cpus,
                     record->num_mpi_ranks,
@@ -410,9 +443,10 @@ static void pop_metrics_to_txt(FILE *out_file) {
                 );
         } else {
             fprintf(out_file,
-                    "############### Monitoring Region POP Metrics ###############\n"
+                    "%s\n"
                     "### Name:                                     %s\n"
                     "###                        No data                        ###\n",
+                    make_header("Monitoring Region POP Metrics"),
                     record->name);
         }
     }
@@ -879,7 +913,7 @@ static void process_print(void) {
 
             process_record_t *process_record = &region_record->process_records[i];
 
-            info("################# Monitoring Region Summary ##################");
+            info("%s", make_header("Monitoring Region Summary"));
             info("### Name:                                     %s",
                     region_record->name);
             info("### Process:                                  %d (%s)",
@@ -1109,7 +1143,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%d,"           /* NodeId */
                     "%s,"           /* Hostname */
                     "%s,"           /* CpuSet */
-                    "%d"            /* NumCpus */
+                    "%d,"           /* NumCpus */
                     "%.1f,"         /* AvgCpus */
                     "%"PRId64","    /* Cycles */
                     "%"PRId64","    /* Instructions */
@@ -1123,7 +1157,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%"PRId64","    /* MPITime */
                     "%"PRId64","    /* OMPLoadImbalance */
                     "%"PRId64","    /* OMPSchedulingTime */
-                    "%"PRId64",",   /* OMPSerializationTime */
+                    "%"PRId64"\n",  /* OMPSerializationTime */
                     region_record->name,
                     process_record->rank,
                     process_record->pid,
@@ -1167,7 +1201,7 @@ static void process_to_txt(FILE *out_file) {
                 : 0.0f;
 
             fprintf(out_file,
-                    "################# Monitoring Region Summary ##################\n"
+                    "%s\n"
                     "### Name:                                     %s\n"
                     "### Process:                                  %d (%s)\n"
                     "### Rank:                                     %d\n"
@@ -1179,6 +1213,7 @@ static void process_to_txt(FILE *out_file) {
                     "### Not useful OMP Scheduling:                %"PRId64" ns\n"
                     "### Not useful OMP Serialization:             %"PRId64" ns\n"
                     "### IPC:                                      %.2f\n",
+                    make_header("Monitoring Region Summary"),
                     region_record->name,
                     process_record->pid, process_record->hostname,
                     process_record->rank,
@@ -1249,9 +1284,10 @@ static void common_to_xml(FILE *out_file) {
 static void common_to_txt(FILE *out_file) {
 
     fprintf(out_file,
-            "################ TALP Common Data ################\n"
+            "%s\n"
             "### DLB Version:                   %s\n"
             "### Timestamp:                     %s\n",
+            make_header("TALP Common Data"),
             common_record.dlb_version,
             common_record.time_of_creation);
 }
@@ -1310,10 +1346,11 @@ static void resources_to_xml(FILE *out_file) {
 static void resources_to_txt(FILE *out_file) {
 
     fprintf(out_file,
-            "################# TALP Resources #################\n"
+            "%s\n"
             "### Number of CPUs:                %u\n"
             "### Number of Nodes:               %u\n"
             "### Number of MPI processes:       %u\n",
+            make_header("TALP Resources"),
             resources_record.num_cpus,
             resources_record.num_nodes,
             resources_record.num_mpi_ranks);
@@ -1340,6 +1377,77 @@ static void xml_header(FILE *out_file) {
 static void xml_footer(FILE *out_file) {
     fprintf(out_file, "</root>\n");
 }
+
+
+/*********************************************************************************/
+/*    Output directory/file logic                                                */
+/*********************************************************************************/
+
+// Helper: recursively create directories (mkdir -p equivalent)
+static int mkdir_p(const char *path, mode_t mode) {
+    char tmp[PATH_MAX];
+    char *p = NULL;
+
+    snprintf(tmp, sizeof(tmp), "%s", path);
+    size_t len = strlen(tmp);
+    if (len == 0) return -1;
+    if (tmp[len - 1] == '/') {
+        tmp[len - 1] = '\0';
+    }
+
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            if (mkdir(tmp, mode) != 0 && errno != EEXIST) {
+                return -1;
+            }
+            *p = '/';
+        }
+    }
+
+    if (mkdir(tmp, mode) != 0 && errno != EEXIST) {
+        return -1;
+    }
+
+    return 0;
+}
+
+// open file for appending or writing, creating dirs as needed
+static FILE *open_file_with_dirs(const char *filename, bool *append) {
+    if (access(filename, F_OK) == 0) {
+        FILE *f;
+        if (append) {
+            *append = true;
+            f = fopen(filename, "a");
+        } else {
+            f = fopen(filename, "w");
+        }
+        if (!f) {
+            warning("Cannot open existing file %s: %s", filename, strerror(errno));
+        }
+        return f;
+    } else {
+        // Ensure parent directories exist
+        char pathbuf[PATH_MAX];
+        snprintf(pathbuf, sizeof(pathbuf), "%s", filename);
+        char *dir = dirname(pathbuf);
+
+        if (mkdir_p(dir, 0755) != 0) {
+            warning("Cannot create directory %s: %s", dir, strerror(errno));
+            return NULL;
+        }
+
+        if (append) {
+            *append = false;
+        }
+        FILE *f = fopen(filename, "w");
+        if (!f) {
+            warning("Cannot create file %s: %s", filename, strerror(errno));
+        }
+        return f;
+    }
+}
+
 
 
 /*********************************************************************************/
@@ -1503,20 +1611,14 @@ void talp_output_finalize(const char *output_file) {
                 size_t pop_file_len = filename_useful_len + strlen(pop_ext) + 1;
                 char *pop_filename = malloc(sizeof(char)*pop_file_len);
                 sprintf(pop_filename, "%.*s%s", filename_useful_len, output_file, pop_ext);
-                FILE *pop_file;
                 bool append_to_csv;
-                if (access(pop_filename, F_OK) == 0) {
-                    pop_file = fopen(pop_filename, "a");
-                    append_to_csv = true;
-                } else {
-                    pop_file = fopen(pop_filename, "w");
-                    append_to_csv = false;
-                }
-                if (pop_file == NULL) {
-                    warning("Cannot open file %s: %s", pop_filename, strerror(errno));
-                } else {
+                FILE *pop_file = open_file_with_dirs(pop_filename, &append_to_csv);
+                if (pop_file) {
                     pop_metrics_to_csv(pop_file, append_to_csv);
                     fclose(pop_file);
+                } else {
+                    warning("Writing metrics to stdout instead:");
+                    pop_metrics_to_csv(stdout, /* append: */ false);
                 }
             }
 
@@ -1526,20 +1628,14 @@ void talp_output_finalize(const char *output_file) {
                 size_t node_file_len = filename_useful_len + strlen(node_ext) + 1;
                 char *node_filename = malloc(sizeof(char)*node_file_len);
                 sprintf(node_filename, "%.*s%s", filename_useful_len, output_file, node_ext);
-                FILE *node_file;
                 bool append_to_csv;
-                if (access(node_filename, F_OK) == 0) {
-                    node_file = fopen(node_filename, "a");
-                    append_to_csv = true;
-                } else {
-                    node_file = fopen(node_filename, "w");
-                    append_to_csv = false;
-                }
-                if (node_file == NULL) {
-                    warning("Cannot open file %s: %s", node_filename, strerror(errno));
-                } else {
+                FILE *node_file = open_file_with_dirs(node_filename, &append_to_csv);
+                if (node_file) {
                     node_to_csv(node_file, append_to_csv);
                     fclose(node_file);
+                } else {
+                    warning("Writing metrics to stdout instead:");
+                    node_to_csv(stdout, /* append: */ false);
                 }
             }
 
@@ -1549,20 +1645,14 @@ void talp_output_finalize(const char *output_file) {
                 size_t process_file_len = filename_useful_len + strlen(process_ext) + 1;
                 char *process_filename = malloc(sizeof(char)*process_file_len);
                 sprintf(process_filename, "%.*s%s", filename_useful_len, output_file, process_ext);
-                FILE *process_file;
                 bool append_to_csv;
-                if (access(process_filename, F_OK) == 0) {
-                    process_file = fopen(process_filename, "a");
-                    append_to_csv = true;
-                } else {
-                    process_file = fopen(process_filename, "w");
-                    append_to_csv = false;
-                }
-                if (process_file == NULL) {
-                    warning("Cannot open file %s: %s", process_filename, strerror(errno));
-                } else {
+                FILE *process_file = open_file_with_dirs(process_filename, &append_to_csv);
+                if (process_file) {
                     process_to_csv(process_file, append_to_csv);
                     fclose(process_file);
+                } else {
+                    warning("Writing metrics to stdout instead:");
+                    process_to_csv(stdout, /* append: */ false);
                 }
             }
         }
@@ -1570,54 +1660,51 @@ void talp_output_finalize(const char *output_file) {
         /* Write to file */
         else {
             /* Open file */
-            FILE *out_file;
             bool append_to_csv;
-            if (extension == EXT_CSV
-                    && access(output_file, F_OK) == 0) {
-                /* Specific case where new entries are appended to existing csv */
-                out_file = fopen(output_file, "a");
-                append_to_csv = true;
-            } else {
-                out_file = fopen(output_file, "w");
+            FILE *out_file = open_file_with_dirs(output_file,
+                    extension == EXT_CSV ? &append_to_csv : NULL);
+            if (!out_file) {
+                warning("Writing metrics to stdout instead:");
+                out_file = stdout;
                 append_to_csv = false;
             }
-            if (out_file == NULL) {
-                warning("Cannot open file %s: %s", output_file, strerror(errno));
-            } else {
-                /* Write records to file */
-                switch(extension) {
-                    case EXT_JSON:
-                        json_header(out_file);
-                        common_to_json(out_file);
-                        resources_to_json(out_file);
-                        pop_metrics_to_json(out_file);
-                        node_to_json(out_file);
-                        process_to_json(out_file);
-                        json_footer(out_file);
-                        break;
-                    case EXT_XML:
-                        xml_header(out_file);
-                        common_to_xml(out_file);
-                        resources_to_xml(out_file);
-                        pop_metrics_to_xml(out_file);
-                        node_to_xml(out_file);
-                        process_to_xml(out_file);
-                        xml_footer(out_file);
-                        break;
-                    case EXT_CSV:
-                        pop_metrics_to_csv(out_file, append_to_csv);
-                        node_to_csv(out_file, append_to_csv);
-                        process_to_csv(out_file, append_to_csv);
-                        break;
-                    case EXT_TXT:
-                        common_to_txt(out_file);
-                        resources_to_txt(out_file);
-                        pop_metrics_to_txt(out_file);
-                        node_to_txt(out_file);
-                        process_to_txt(out_file);
-                        break;
-                }
-                /* Close file */
+
+            /* Write records to file */
+            switch(extension) {
+                case EXT_JSON:
+                    json_header(out_file);
+                    common_to_json(out_file);
+                    resources_to_json(out_file);
+                    pop_metrics_to_json(out_file);
+                    node_to_json(out_file);
+                    process_to_json(out_file);
+                    json_footer(out_file);
+                    break;
+                case EXT_XML:
+                    xml_header(out_file);
+                    common_to_xml(out_file);
+                    resources_to_xml(out_file);
+                    pop_metrics_to_xml(out_file);
+                    node_to_xml(out_file);
+                    process_to_xml(out_file);
+                    xml_footer(out_file);
+                    break;
+                case EXT_CSV:
+                    pop_metrics_to_csv(out_file, append_to_csv);
+                    node_to_csv(out_file, append_to_csv);
+                    process_to_csv(out_file, append_to_csv);
+                    break;
+                case EXT_TXT:
+                    common_to_txt(out_file);
+                    resources_to_txt(out_file);
+                    pop_metrics_to_txt(out_file);
+                    node_to_txt(out_file);
+                    process_to_txt(out_file);
+                    break;
+            }
+
+            /* Close file */
+            if (out_file != stdout) {
                 fclose(out_file);
             }
         }
