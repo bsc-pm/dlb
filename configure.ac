@@ -344,9 +344,9 @@ AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 # Configure external libraries and programs
 ################################################################################
 
-# Check for Python
-AX_COMPARE_VERSION([$PYTHON_VERSION], [ge], [2.7], [lit=yes], [lit=no])
-AM_CONDITIONAL([LIT_SUPPORT], [test "x$lit" = xyes])
+# Check for Python versions
+AX_COMPARE_VERSION([$PYTHON_VERSION], [ge], [2.7], [have_py27=yes], [have_py27=no])
+AM_CONDITIONAL([HAVE_PYTHON27], [test "x$have_py27" = xyes])
 
 # check for OpenMP availability
 AC_OPENMP
