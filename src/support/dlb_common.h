@@ -20,6 +20,10 @@
 #ifndef DLB_COMMON_H
 #define DLB_COMMON_H
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 
 #define likely(expr)   __builtin_expect(!!(expr), 1)
 #define unlikely(expr) __builtin_expect(!!(expr), 0)
@@ -33,6 +37,15 @@
 
 
 #define DLB_EXPORT_SYMBOL __attribute__((visibility ("default")))
+
+
+#ifdef HAVE_ALIAS_ATTRIBUTE
+#   define DLB_ALIAS(ret_type, name, decl_args, call_args, target) \
+        ret_type name decl_args __attribute__((alias(#target)));
+#else
+#   define DLB_ALIAS(ret_type, name, decl_args, call_args, target) \
+        ret_type name decl_args { return target call_args; }
+#endif
 
 
 #endif /* DLB_COMMON_H */

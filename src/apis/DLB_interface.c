@@ -388,9 +388,10 @@ dlb_barrier_t* DLB_BarrierNamedRegister(const char *barrier_name,
 }
 
 DLB_EXPORT_SYMBOL
-dlb_barrier_t* DLB_BarrierNamedGet(const char *barrier_name,
-        dlb_barrier_flags_t flags)
-    __attribute__((alias("DLB_BarrierNamedRegister")));
+DLB_ALIAS(dlb_barrier_t*, DLB_BarrierNamedGet, \
+        (const char *barrier_name, dlb_barrier_flags_t flags), \
+        (barrier_name, flags), \
+        DLB_BarrierNamedRegister)
 
 DLB_EXPORT_SYMBOL
 int DLB_BarrierNamed(dlb_barrier_t *barrier) {

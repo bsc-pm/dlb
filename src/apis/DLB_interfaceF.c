@@ -17,14 +17,7 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "apis/dlb.h"
-#include "support/debug.h"
 #include "support/dlb_common.h"
-
-#define DLB_API_F_ALIAS( NameF, Params) \
-    DLB_EXPORT_SYMBOL void NameF##_ Params __attribute__((alias(#NameF))); \
-    DLB_EXPORT_SYMBOL void NameF##__ Params __attribute__((alias(#NameF)))
-
 
 #ifdef MPI_LIB
 #include <mpi.h>
@@ -44,6 +37,12 @@ void dlb_mpi_node_barrier(void)  {
     }
 }
 #else
-DLB_EXPORT_SYMBOL void dlb_mpi_node_barrier(void)  {}
+DLB_EXPORT_SYMBOL
+void dlb_mpi_node_barrier(void) {}
 #endif
-DLB_API_F_ALIAS(dlb_mpi_node_barrier, (void));
+
+DLB_EXPORT_SYMBOL
+DLB_ALIAS(void, dlb_mpi_node_barrier_, (void), (), dlb_mpi_node_barrier)
+
+DLB_EXPORT_SYMBOL
+DLB_ALIAS(void, dlb_mpi_node_barrier__, (void), (), dlb_mpi_node_barrier)
