@@ -170,12 +170,12 @@ dlb_monitor_t* DLB_MonitoringRegionGetGlobal(void) {
 }
 
 DLB_EXPORT_SYMBOL
-dlb_monitor_t* DLB_MonitoringRegionGetImplicit(void)
-    __attribute__((alias("DLB_MonitoringRegionGetGlobal")));
+DLB_ALIAS(dlb_monitor_t*, DLB_MonitoringRegionGetImplicit, (void), (), \
+        DLB_MonitoringRegionGetGlobal)
 
 DLB_EXPORT_SYMBOL
-const dlb_monitor_t* DLB_MonitoringRegionGetMPIRegion(void)
-    __attribute__((alias("DLB_MonitoringRegionGetGlobal")));
+DLB_ALIAS(const dlb_monitor_t*, DLB_MonitoringRegionGetMPIRegion, (void), (), \
+        DLB_MonitoringRegionGetGlobal)
 
 DLB_EXPORT_SYMBOL
 dlb_monitor_t* DLB_MonitoringRegionRegister(const char *name){
@@ -253,5 +253,7 @@ int DLB_TALP_CollectPOPNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *n
 }
 
 DLB_EXPORT_SYMBOL
-int DLB_TALP_CollectNodeMetrics(dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics)
-    __attribute__((alias("DLB_TALP_CollectPOPNodeMetrics")));
+DLB_ALIAS(int, DLB_TALP_CollectNodeMetrics, \
+        (dlb_monitor_t *monitor, dlb_node_metrics_t *node_metrics), \
+        (monitor, node_metrics), \
+        DLB_TALP_CollectPOPNodeMetrics)

@@ -190,6 +190,9 @@ export FCOMP_UNRECOGNIZED_OPTION
 # restore CFLAGS
 AX_VAR_POPVALUE([CFLAGS])
 
+# check for __attribute__((alias)) support
+AX_CHECK_ATTRIBUTE_ALIAS
+
 ##### Fortran Compiler checks #####
 AC_PROG_FC
 

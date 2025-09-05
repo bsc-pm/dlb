@@ -44,8 +44,12 @@ void {MPI_LCASE}({F_PARAMS}) {{
     DLB_{MPI_NAME}_F_leave();
     verbose(VB_MPI_INT, "<< {MPI_NAME}...............");
 }}
-DLB_EXPORT_SYMBOL void {MPI_LCASE}_ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
-DLB_EXPORT_SYMBOL void {MPI_LCASE}__ ({F_PARAMS}) __attribute__((alias("{MPI_LCASE}")));
+
+DLB_EXPORT_SYMBOL
+DLB_ALIAS(void, {MPI_LCASE}_, ({F_PARAMS}), ({F_ARG_LIST}), {MPI_LCASE})
+
+DLB_EXPORT_SYMBOL
+DLB_ALIAS(void, {MPI_LCASE}__, ({F_PARAMS}), ({F_ARG_LIST}), {MPI_LCASE});
 
 #pragma pygen end
 
