@@ -1,551 +1,563 @@
 #!/usr/bin/env python
 
-import sys
-import getopt
+# -----------------------------------------------------------------------------
+# NOTE:
+#   This file is intentionally restricted to Python 2.7-compatible syntax.
+#   The goal is to keep the minimum supported version at Python >= 2.7.
+# -----------------------------------------------------------------------------
+
+import argparse
 import json
+import logging
+import os
 import re
+import shlex
+import shutil
+import subprocess
+import tempfile
 import textwrap
+from collections import defaultdict
 
-class MPIFile:
-    _filename = None
-    _mpi_calls = None
 
-    def __init__(self, inputfile, outputfile, mpi_calls):
-        self._in_filename = inputfile
-        self._out_filename = outputfile
-        self._mpi_calls = mpi_calls
+logging.basicConfig(
+    level=logging.WARNING,  # set minimum level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+
+class MPICall:
+
+    _SEPARATOR = ', '
+    _EMPTY_SEPARATOR = ''
+
+    def __init__(self, mpi_call, bindings, mpi_std):
+        self.mpi_name = bindings["name"]
+        self.mpi_basename = bindings["base_name"]
+        self.pmpi_name = bindings["pmpi_name"]
+        self.embiggened = bindings["embiggened"]
+        self.c_params = bindings["c_params"]
+        self.c_args = bindings["c_args"]
+        self.fc_params = bindings["fc_params"]
+        self.fc_args = bindings["fc_args"]
+        self.f08_par_list = bindings["f08_par_list"]
+        self.f08_use_stmts = bindings["f08_use_stmts"]
+        self.f08_par_decl = bindings["f08_par_decl"]
+        self.f08_args = bindings["f08_args"]
+        self.f08_cshim_use_stmts = bindings["f08_cshim_use_stmts"]
+        self.f08_cshim_local_vars = bindings["f08_cshim_local_vars"]
+        self.f08_cshim_precall_stmts = bindings["f08_cshim_precall_stmts"]
+        self.f08_cshim_args = bindings["f08_cshim_args"]
+        self.f08_cshim_postcall_stmts = bindings["f08_cshim_postcall_stmts"]
+        self.f08_cshim_iface_par_list = bindings["f08_cshim_iface_par_list"]
+        self.f08_cshim_iface_use_stmts = bindings["f08_cshim_iface_use_stmts"]
+        self.f08_cshim_iface_par_decl = bindings["f08_cshim_iface_par_decl"]
+        self.cshim_cdesc_params = bindings["cshim_cdesc_params"]
+
+        # Fix const parameters if needed
+        drop_const_vars = mpi_call.get('mpi2_drop_const') if mpi_std < 3 else None
+        if drop_const_vars:
+            self.c_params = self._drop_const_modifier(self.c_params, drop_const_vars)
+            self.fc_params = self._drop_const_modifier(self.fc_params, drop_const_vars)
+
+        # Parse tags
+        tags = mpi_call.get('tags')
+        if not tags:
+            self.tags = 'MPI_SEMANTIC_UNKNOWN'
+        else:
+            self.tags = ' | '.join(
+                    'MPI_SEMANTIC_' + tag.strip().upper()
+                    for tag in tags.split(',')
+                    )
+
+    @property
+    def mpi_lcase(self):
+        return self.mpi_name.lower()
+
+    @property
+    def mpi_ucase(self):
+        return self.mpi_name.upper()
+
+    @property
+    def mpi_keyname(self):
+        return self.mpi_name[4:]
+
+    @property
+    def has_assumed_rank_argument(self):
+        return 'CHOICE_BUFFER_TYPE' in self.f08_par_decl
+
+    @property
+    def f08_args_separator(self):
+        return self._SEPARATOR if self.f08_args else self._EMPTY_SEPARATOR
+
+    def _drop_const_modifier(self, signature, variables):
+        # Split the signature into parameters
+        parameter_list = signature.split(self._SEPARATOR)
+
+        # Process each parameter
+        for index, parameter in enumerate(parameter_list):
+            for var in variables:
+                if var in parameter:
+                    # If the variable matches, remove 'const' from it
+                    parameter_list[index] = parameter.replace('const ', '')
+
+        # Join the parameter list back into a single string
+        return self._SEPARATOR.join(parameter_list)
+
+
+class MPIDatabase:
+    def __init__(self, mpi_metadata_json, mpi_bindings, mpi_std, lib_name,
+                 lib_version):
+
+        self._mpi_calls = []
+
+        # mpi_bindings needs to be indexed multiple times by "base_name",
+        # construct a dictionary based on that key
+        bindings_index = defaultdict(list)
+        for bindings in mpi_bindings:
+            bindings_index[bindings["base_name"]].append(bindings)
+
+        # Iterate mpi_calls in mpi_metadata, and save a list of MPICall objects
+        for item in mpi_metadata_json:
+            # Input data may contain strings containing section information
+            if not isinstance(item, dict):
+                continue
+
+            # Discard disabled mpi calls
+            if item.get('disabled'):
+                continue
+
+            # Discard mpi calls newer than mpi_std
+            since_value = item.get('since')
+            if since_value:
+                since_version = re.findall(r'\d+\.?\d*', since_value)
+                if (since_version and float(since_version[0]) > mpi_std):
+                    continue
+
+            # Discard mpi calls broken in this MPI library
+            broken_in_dict = item.get('broken_in')
+            if broken_in_dict:
+                mpi_call_is_broken = False
+                broken_versions = broken_in_dict.get(lib_name, [])
+                for version in broken_versions:
+                    if re.match(version, lib_version):
+                        mpi_call_is_broken = True
+                        continue
+                if mpi_call_is_broken:
+                    continue
+
+            # Append each function (if any) associated with the current MPI call name
+            mpi_call_name = item['name']
+            bindings_list = bindings_index.get(mpi_call_name, [])
+            for bindings in bindings_list:
+
+                # Discard embiggened mpi calls if MPI < 4
+                if mpi_std < 4 and bindings['embiggened']:
+                    continue
+
+                # Append new object to list
+                self._mpi_calls.append(MPICall(item, bindings, mpi_std))
+
+    def iterate(self):
+        """
+        Public method to iterate over items in the database.
+        """
+        for mpi_call in self._mpi_calls:
+            yield mpi_call
+
+    def define_mpi_f08_symbols(self, f08_symbols):
+        """
+        Define in the database the provided list of MPI f08 symbols.
+
+        Parameters:
+        f08_symbols (List[str]): A list of MPI F08 symbols to define.
+        """
+        if f08_symbols is None:
+            f08_symbols = []
+
+        for mpi_call in self._mpi_calls:
+            # For f08 symbols we need a regex to not match also f08ts symbols
+            mpi_call_symbol_f08 = mpi_call.mpi_lcase + '_f08'
+            pattern = re.compile(r'^' + re.escape(mpi_call_symbol_f08) + r'(_+)?$')
+            mpi_call.define_f08 = (
+                'define' if any(pattern.match(symbol) for symbol in f08_symbols)
+                else 'undef'
+            )
+
+            # For f08ts symbols a regular substring check is enough
+            mpi_call_symbol_f08ts = mpi_call.mpi_lcase + '_f08ts'
+            mpi_call.define_f08ts = (
+                'define' if any(mpi_call_symbol_f08ts in symbol for symbol in f08_symbols)
+                else 'undef'
+            )
+
+
+class PygenParser():
+    """
+    Parse input_file and write to output_file, replacing the pygen code blocks with
+    the attributes from mpi_calls
+    """
+
+    _FORTRAN_MAX_LINE_LENGTH = 100
+    _RE_EXTRA_BLANK_LINES = re.compile(r'((?:[ \t]*\n){2,})')
+
+
+    def __init__(self, input_file, output_file, mpi_calls):
+
+        self.input_file = input_file
+        self.output_file = output_file
+        self.mpi_calls = mpi_calls
 
         # Pragma strings depending on file extension
-        extensions = self._in_filename.split('.')
+        extensions = input_file.split('.')
         if extensions[-2] in ['c', 'h'] and extensions[-1] == 'in':
-            self._pragma_start = '#pragma pygen start'
-            self._pragma_end = '#pragma pygen end'
+            self.pragma_start = '#pragma pygen start'
+            self.pragma_end = '#pragma pygen end'
+            self.is_fortran = False
         elif extensions[-2].lower() == 'f90' and extensions[-1] == 'in':
-            self._pragma_start = '!PYGEN$ start'
-            self._pragma_end = '!PYGEN$ end'
+            self.pragma_start = '!$PYGEN start'
+            self.pragma_end = '!$PYGEN end'
+            self.is_fortran = True
         else:
-             raise ValueError('Input file extension must be .{c,h,f90,F90}.in.')
+            raise ValueError('Input file extension must be .{c,h,f90,F90}.in.')
 
-    def parse(self):
-        with open(self._in_filename, 'r') as in_f:
-            with open(self._out_filename, 'w+') as out_f:
+
+    def run(self):
+        """
+        Parse file in place, replacing the tokens with the collected MPI data
+        """
+        with open(self.input_file, 'r') as in_f:
+            with open(self.output_file, 'w+') as out_f:
                 pragma_scope = False
                 pragma_block = ''
-                condition = 'True'
+                condition = None
+                exclude = None
                 for line in in_f:
                     if pragma_scope:
-                        if line.lstrip().startswith(self._pragma_end):
+                        if line.lstrip().startswith(self.pragma_end):
                             pragma_scope = False
-                            parsed = self._parse_block(pragma_block, condition)
+                            parsed = self._parse_block(pragma_block, condition, exclude)
                             out_f.write(parsed)
                         else:
                             pragma_block += line
                     else:
-                        if line.lstrip().startswith(self._pragma_start):
+                        if line.lstrip().startswith(self.pragma_start):
                             pragma_scope = True
                             pragma_block = ''
                             condition = self._parse_condition(line)
+                            exclude = self._parse_exclude(line)
                         elif line != '':
                             out_f.write(line)
 
+
+    def _fortran_wrap(self, code_block):
+        """
+        Wrap the Fortran block up to _FORTRAN_MAX_LINE_LENGTH characters wide.
+        Line continuation character (&) is added when needed.
+        """
+        output = ''
+        for line in code_block.splitlines():
+
+            # Remove trailing whitespaces if some placeholder was replaced with an
+            # empty string
+            line = line.rstrip()
+
+            if len(line) > self._FORTRAN_MAX_LINE_LENGTH:
+                # align with current indent + 8
+                indent = ' ' * (len(line) - len(line.lstrip()) + 8)
+
+                wrapped_lines = textwrap.wrap(line, width=self._FORTRAN_MAX_LINE_LENGTH-2,
+                                                subsequent_indent=indent,
+                                                break_long_words=False,
+                                                break_on_hyphens=False)
+
+                # Since we're wrapping to width=_FORTRAN_MAX_LINE_LENGTH-2
+                # characters to account for ' &', and the input block may also
+                # contain a '&' symbol at the end of the line, we might end up with
+                # a block like this:
+                #                                                   variable) &
+                #                                                   &
+                #                                               BIND(...
+                # We can remove the line, but we also need to append a '&' to the
+                # previous line, as it may now be the last one, and the ' &\n'.join
+                # operation won't add the '&'.
+                filtered_lines = []
+                for current_line in wrapped_lines:
+                    if current_line.strip() == '&':
+                        # This line is just '&', append symbol to last one if not already
+                        if filtered_lines and not filtered_lines[-1].endswith('&'):
+                            filtered_lines[-1] += ' &'
+                    else:
+                        # Append as is
+                        filtered_lines.append(current_line)
+
+                # join lines
+                output += ' &\n'.join(filtered_lines) + '\n'
+            else:
+                # Fortran line fits in _FORTRAN_MAX_LINE_LENGTH characters
+                output += line + '\n'
+
+        return output
+
+
+    def _parse_block(self, code_block, condition, exclude):
+        """
+        Parse the code_block and replace the format fields with values in database
+        """
+        def _should_include_mpi_call(mpi_call, condition, re_exclude):
+            if condition and not eval(condition):
+                return False
+
+            if re_exclude:
+                m = re_exclude.match(mpi_call.mpi_name)
+                if m and m.group(0) == mpi_call.mpi_name:
+                    return False
+
+            return True
+
+        parsed = ''
+
+        # Find all format fields in the input string
+        fields_needed = re.findall(r'\{(.*?)\}', code_block)
+
+        # Compile regex to exclude some procedures
+        re_exclude = re.compile(exclude, re.IGNORECASE) if exclude else None
+
+        for mpi_call in self.mpi_calls.iterate():
+            if _should_include_mpi_call(mpi_call, condition, re_exclude):
+
+                # Extract only the necessary fields
+                mpi_call_data = {field: getattr(mpi_call, field.lower()) for field in fields_needed}
+
+                # Format
+                parsed_func = code_block.format(**mpi_call_data)
+
+                if self.is_fortran:
+                    # Wrap lines of the parsed function
+                    parsed_func = self._fortran_wrap(parsed_func)
+
+                # Remove one or more consecutive newlines with single \n
+                parsed_func = self._RE_EXTRA_BLANK_LINES.sub('\n\n', parsed_func)
+
+                # Add to output
+                parsed += parsed_func
+
+        return parsed
+
+
     def _parse_condition(self, line):
         try:
-            match = re.match(self._pragma_start + r" where\((?P<condition>.*)\)", line)
-            condition_str = match.group('condition')
+            # Parse condition string
+            pattern = r'where\s*\((?P<condition>.*?)\)'
+            match = re.search(pattern, line)
+            condition_str = match.group('condition').strip()
 
-            # Type: "string" in key
-            match = re.match(r'(?P<string>"[A-Za-z0-9_\./\\-]+") in (?P<key>[A-Za-z0-9_]+)',
-                             condition_str)
+            # Type: {not ,} mpi_calls.attribute
+            pattern = r'(?P<not>not)?\s*mpi_call\.(?P<attribute>.*)'
+            match = re.match(pattern, condition_str)
             if match:
-                return '{string} in func[\'{key}\']'.format(
-                            string = match.group('string'),
-                            key = match.group('key'))
-
-            # Type: "string" not in key
-            match = re.match(r'(?P<string>"[A-Za-z0-9_\./\\-]+") not in (?P<key>[A-Za-z0-9_]+)',
-                             condition_str)
-            if match:
-                return '{string} not in func[\'{key}\']'.format(
-                            string = match.group('string'),
-                            key = match.group('key'))
-
-            # Type: "bool" evaluation
-            match = re.match(r'not (?P<key>[A-Za-z0-9_]+)', condition_str)
-            if match:
-                return 'not func[\'{key}\']'.format(key = match.group('key'))
+                not_string = match.group('not') or ''
+                attribute = match.group('attribute')
+                return not_string + ' mpi_call.' + attribute
 
         except AttributeError:
             # If some regexp fail, just ignore everything else and return
             pass
 
-        return 'True'
-
-    def _parse_block(self, block, condition):
-        if not isinstance(condition, str) or not condition:
-            condition = 'True'
-
-        parsed = ''
-        gen_mpi_calls = (x for x in self._mpi_calls if isinstance(x, dict) and not x.get('disabled'))
-        for func in gen_mpi_calls:
-            if eval(condition):
-                try:
-                    parsed += block.format(
-                        MPI_NAME = func['name'],
-                        MPI_LCASE = func['name'].lower(),
-                        C_PARAMS = func['cpar'],
-                        F_PARAMS = func['fpar'],
-                        C_ARG_LIST = func['c_args'],
-                        F_ARG_LIST = func['f_args'],
-                        F08_PAR_DECL = func['f08_par_decl'],
-                        F08_PAR_LIST = func['f08_par_list'],
-                        F_C_PAR_DECL = func['f_c_par_decl'],
-                        F_C_PAR_LIST = func['f_c_par_list'],
-                        F08_PRECALL_STMTS = func['f08_precall_stmts'],
-                        F08_TO_C_ARG_LIST = func['f08_to_c_arg_list'],
-                        TAGS = func['tags'],
-                        MPI_KEYNAME = func['name'][4:],
-                        BEFORE_FUNC = func['before'],
-                        AFTER_FUNC = func['after']
-                        )
-                except KeyError:
-                    print("Parse block failed at function " + func['name'])
-                    raise
-        return parsed
+        return None
 
 
-""" Return true is the provided variable is a Fortran derived type
-"""
-def variable_is_derived_type(variable, f08par):
-    for line in f08par.split(';'):
-        if variable in re.split(r'\W+', line):
-            return 'type(mpi_' in line.lower()
-    return False
-
-
-""" Return true is the provided variable is a Fortran assumed size array
-"""
-def variable_is_assumed_size_array(variable, f08par):
-    for line in f08par.split(';'):
-        if variable in re.split(r'\W+', line):
-            return '{0}(*)'.format(variable) in line
-    return False
-
-
-""" Return true is the provided variable is a Fortran procedure type
-"""
-def variable_is_procedure_type(variable, f08par):
-    for line in f08par.split(';'):
-        if variable in re.split(r'\W+', line):
-            return 'procedure' in line.lower()
-    return False
-
-
-""" Return the number of Fortran variables in the line
-    e.g., given:
-        CHARACTER(*), INTENT(IN) :: var1, var2(a,b,*)
-    It will return 2
-"""
-def count_num_fortran_variables(line):
-    # Remove type declaration
-    variables = re.split('::', line)[1]
-    # Remove parenthesis
-    variables = re.sub(r'\(.+\)', '', variables)
-    # Return number of elements
-    return len(variables.split(','))
-
-
-""" Return the Fortran parameter list given a C parameter list
-    e.g., from:
-        void *buffer, int size, MPI_Status array[]
-    to:
-        void *buffer, MPI_Fint *size, MPI_Fint *array; MPI_Fint *ierror
-"""
-def enrich_fpar(cpar):
-    match_var_type = re.compile(r'(.+)\b\w+(\[\d*\])*\Z')
-    match_var_name = re.compile(r'(\w+)(\[\d*\])*\Z')
-    fpar = []
-    char_pars = []
-    for par in cpar.split(','):
-        var_type = match_var_type.search(par).group(1)
-        var_name = match_var_name.search(par).group(1)
-        if 'void' in var_type:
-            fpar.append(par.strip())
-        elif 'char' in var_type:
-            char_pars.append(var_name)
-            fpar.append(par.strip())
-        else:
-            const = 'const ' if 'const' in var_type else ''
-            fpar.append('{0}MPI_Fint *{1}'.format(const, var_name))
-
-    fpar.append('MPI_Fint *ierror')
-
-    for chars in char_pars:
-        fpar.append('int {0}_len'.format(chars))
-
-    return ', '.join(fpar)
-
-
-""" Return the Fortran08 parameter declaration block based on the provided string
-    e.g., from:
-        TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror
-    to:
-        TYPE, BIND(c) :: MPI_Comm
-            INTEGER :: MPI_VAL
-        END TYPE MPI_Comm
-        TYPE(MPI_Comm), INTENT(IN) :: comm
-        INTEGER, OPTIONAL, INTENT(OUT) :: ierror
-"""
-def enrich_f08_par_decl(f08par):
-    newline = '\n    '
-    decl_block = ''
-
-    # Add C_PTR dependency if this routine has C_PTR parameters
-    if 'type(c_ptr)' in f08par.lower():
-        decl_block += 'use, intrinsic :: ISO_C_BINDING, only : C_PTR' + newline
-
-    # Add C_FUNPTR and c_funloc dependencies if this routine has PROCEDURE parameters
-    if 'procedure' in f08par.lower():
-        decl_block += 'use, intrinsic :: ISO_C_BINDING, only : C_FUNPTR, c_funloc' + newline
-
-    decl_block += 'IMPLICIT NONE'
-
-    # Add PROCEDURE interfaces if needed
-    procedures = set(re.findall(r'procedure\((\w+)\)', f08par, re.IGNORECASE))
-    for procedure in procedures:
-        decl_block += newline
-        decl_block += 'interface' + newline
-        decl_block += '    subroutine {0}() BIND(c)'.format(procedure) + newline
-        decl_block += '    end subroutine {0}'.format(procedure) +newline
-        decl_block += 'end interface'
-
-    # Add type declarations if needed
-    types = set(re.findall(r'type\((mpi_\w+)\)', f08par, re.IGNORECASE))
-    for mpi_type in types:
-        decl_block += newline
-        decl_block += 'TYPE, BIND(c) :: {0}'.format(mpi_type) + newline
-        decl_block += '    INTEGER :: MPI_VAL' + newline
-        decl_block += 'END TYPE {0}'.format(mpi_type)
-
-    # Iterate parameter list
-    procedure_var_names = []
-    for line in f08par.split(';'):
-        # Keep track of variables of procedure type
-        if 'procedure' in line.lower():
-            var_names = line.split('::')[-1].strip()
-            procedure_var_names.extend(var_names.split(','))
-        # Add parameters
-        decl_block += newline
-        decl_block += line.strip()
-
-    # Add function pointers for each procedure
-    for procedure_var_name in procedure_var_names:
-        decl_block += newline
-        decl_block += 'TYPE(C_FUNPTR) :: cfunptr_{0}'.format(procedure_var_name)
-
-    return decl_block
-
-
-""" Return the Fortran parameter declaration block of the C interface, based on the string
-    provided in 'f08par'.
-    e.g., from:
-        TYPE(MPI_Comm), INTENT(IN) :: comm; INTEGER, OPTIONAL, INTENT(OUT) :: ierror
-    to:
-        INTEGER, INTENT(IN) :: comm
-        INTEGER, INTENT(OUT) :: ierror
-
-    If CHARACTER(LEN=*) is found, it replaces with CHARACTER(KIND=C_CHAR), DIMENSION(*)
-    and adds an integer at the end of the parameter declaration. The variables names are
-    obtained from 'f_args'.
-    PROCEDURE types are changed to TYPE(c_funptr), VALUE.
-"""
-def enrich_f_c_par_decl(f08par, f_args):
-    decl_block = ''
-    newline = '\n            '
-    num_char_parameters = 0
-
-    # Add C_CHAR dependency if needed
-    if 'character' in f08par.lower():
-        decl_block += 'use, intrinsic :: ISO_C_BINDING, only : C_CHAR' + newline
-
-    # Add C_PTR dependency if needed
-    if 'type(c_ptr)' in f08par.lower():
-        decl_block += 'use, intrinsic :: ISO_C_BINDING, only : C_PTR' + newline
-
-    # Add C_FUNPTR dependency if needed
-    if 'procedure' in f08par.lower():
-        decl_block += 'use, intrinsic :: ISO_C_BINDING, only : C_FUNPTR' + newline
-
-    decl_block += 'IMPLICIT NONE'
-
-    # Python <2.7 re.sub does not accept a flags parameter, use a re object:
-    match_asynchronous = re.compile(r', ASYNCHRONOUS', flags=re.IGNORECASE)
-    match_character    = re.compile(r'CHARACTER\(LEN=[\*\w]+\)', flags=re.IGNORECASE)
-    match_procedure    = re.compile(r'PROCEDURE\(\w+\)', flags=re.IGNORECASE)
-    match_derived_type = re.compile(r'type\(MPI_\w+\)', flags=re.IGNORECASE)
-    match_optional     = re.compile(r',\s*OPTIONAL', flags=re.IGNORECASE)
-
-    # Iterate parameter list
-    for line in f08par.split(';'):
-        decl_block += newline
-        line = match_asynchronous.sub('', line)
-        if 'character' in line.lower():
-            num_char_parameters += count_num_fortran_variables(line)
-            decl = line.strip()
-            decl = match_character.sub('CHARACTER(KIND=C_CHAR), DIMENSION(*)', decl)
-            decl_block += decl
-        elif 'procedure' in line.lower():
-            decl = line.strip()
-            decl = match_procedure.sub('TYPE(C_FUNPTR), VALUE', decl)
-            decl_block += decl
-        else:
-            decl = line.strip()
-            decl = match_derived_type.sub('INTEGER', decl)
-            decl = match_optional.sub('', decl)
-            decl_block += decl
-
-    # Add as many 'len_var' parameters as needed
-    if num_char_parameters > 0:
-        # Obtain a list with the last 'num_char_parameters' elements.
-        len_var_names = f_args.split(',')[-num_char_parameters:]
-        for len_var in len_var_names:
-            decl_block += newline + 'INTEGER, VALUE, INTENT(IN) :: {0}'.format(len_var.strip())
-
-    return decl_block
-
-
-""" Return Fortran statements for before calling the C interface.
-    For now, only needed for PROCEDURE types
-"""
-def enrich_f08_precall_stmts(f08par):
-    decl_block = ''
-    newline = '\n    '
-
-    # Obtain all variables of PROCEDURE type
-    procedure_var_names = []
-    for line in f08par.split(';'):
-        if 'procedure' in line.lower():
-            var_names = line.split('::')[-1].strip()
-            procedure_var_names.extend(var_names.split(','))
-
-    # Add c_funloc calls
-    for procedure_var_name in procedure_var_names:
-        decl_block += 'cfunptr_{0} = c_funloc({0})'.format(procedure_var_name) + newline
-
-    return decl_block
-
-""" Return the Fortran 2008 argument list to call the C interface
-    e.g., from 'fpar':
-        char *str, MPI_Fint *comm, MPI_Fint *ierror, int str_len
-    to:
-        str, comm%MPI_VAL, c_ierror, len(str)
-
-    If a parameter is an assumed size array of a derived type, the argument will
-    be transformed to `var_name(1:1)%MPI_VAL. Some older Fortran compilers complain
-    otherwise.
-    Parameters of PROCEDURE type will use the local variable cfunptr_{par_name}
-"""
-def enrich_f08_to_c_arg_list(fpar, f08par, name):
-    match_var_type = re.compile(r'(.+)\b\w+(\[\d*\])*\Z')
-    match_var_name = re.compile(r'(\w+)(\[\d*\])*\Z')
-    ierror_encountered = False
-    args = []
-    char_args = []
-    for arg in fpar.split(','):
+    def _parse_exclude(self, line):
         try:
-            var_type = match_var_type.search(arg).group(1)
-            var_name = match_var_name.search(arg).group(1)
-            if variable_is_derived_type(var_name, f08par):
-                if variable_is_assumed_size_array(var_name, f08par):
-                    args.append('{0}(1:1)%MPI_VAL'.format(var_name))
-                else:
-                    args.append('{0}%MPI_VAL'.format(var_name))
-            elif variable_is_procedure_type(var_name, f08par):
-                args.append('cfunptr_{0}'.format(var_name))
-            elif 'char' in var_type:
-                args.append(var_name)
-                char_args.append(var_name)
-            elif var_name == 'ierror':
-                args.append('c_ierror')
-                ierror_encountered = True
-            elif ierror_encountered and 'int' in var_type:
-                # Once ierror is encountered, only integers
-                # for char length should follow
-                args.append("len({0})".format(char_args.pop(0)))
-            else:
-                args.append(var_name)
+            # Parse exclude string
+            pattern = r'exclude\s*\((?P<exclude_str>.*)\)'
+            match = re.search(pattern, line)
+            exclude_str = match.group('exclude_str').strip()
+
+            return exclude_str
+
         except AttributeError:
-            print('Error parsing function ' + name)
-            raise
-        except IndexError:
-            print('Error parsing function ' + name)
-            print(fpar)
-            print(f08par)
-            raise
-    initial_column = 10 + len(name)
-    indent = ' ' * initial_column
-    wrapped_lines = textwrap.wrap(', '.join(args), width=80,
-                                    initial_indent=indent,
-                                    subsequent_indent=indent)
-    return ' &\n'.join(wrapped_lines).strip()
-
-
-""" Enrich the mpi_calls json dictionary by adding new keys for each NPI that
-    can be derived from the other keys.
-"""
-def enrich(mpi_calls, mpi_std, lib_version):
-    # Parse library version, for now we only found broken functions in Open MPI
-    match = re.match(r"Open MPI v(\d\.\d+\.\d).*", lib_version)
-    if match:
-        library_name = "Open MPI"
-        library_version = match.group(1)
-
-    match_var_name = re.compile(r'(\w+)(\[\d*\])*\Z')
-    match_assumed_type = re.compile(r'TYPE\(\*\), DIMENSION\(..\)', flags=re.IGNORECASE)
-
-    gen_mpi_calls = (x for x in mpi_calls if isinstance(x, dict) and not x.get('disabled'))
-    for func in gen_mpi_calls:
-        # Check minimum version, disable otherwise
-        if func.get('since'):
-            since_version = re.findall(r'\d+\.?\d*', func['since'])
-            if since_version and float(since_version[0]) > mpi_std:
-                func['disabled'] = True
-                continue
-
-        # Check whether the function is broken in the given library version
-        try:
-            for broken_version in func['broken_in'][library_name]:
-                if re.match(broken_version, library_version):
-                    func['disabled'] = True
-                    continue
-        except (KeyError, UnboundLocalError):
+            # If some regexp fail, just ignore everything else and return
             pass
 
-        # Transform MPI3_CONST to const only if version >= 3
-        if mpi_std >= 3:
-            func['cpar'] = re.sub(r'MPI3_CONST', 'const', func['cpar'])
-            if func.get('fpar'):
-                func['fpar'] = re.sub(r'MPI3_CONST', 'const', func['fpar'])
-        else:
-            func['cpar'] = re.sub(r'MPI3_CONST', '', func['cpar'])
-            if func.get('fpar'):
-                func['fpar'] = re.sub(r'MPI3_CONST', '', func['fpar'])
-
-        # C: Parse arg list: "int argc, char *argv[]" -> "argc, argv"
-        c_args = []
-        if func['cpar'] != 'void':
-            for arg in func['cpar'].split(','):
-                try:
-                    c_args.append(match_var_name.search(arg).group(1))
-                except AttributeError:
-                    print('Error parsing function :')
-                    print(func)
-                    print(arg)
-                    raise
-        func['c_args'] = ', '.join(c_args)
-
-        # Fortran: Generate a parameter list if not provided
-        if not func.get('fpar'):
-            func['fpar'] = enrich_fpar(func['cpar'])
-
-        # Fortran: Parse arg list: "MPI_Fint *comm, MPI_Fint *ierror" -> "comm, ierror"
-        f_args = []
-        if func.get('fpar'):
-            for arg in func['fpar'].split(','):
-                try:
-                    f_args.append(match_var_name.search(arg).group(1))
-                except AttributeError:
-                    print('Error parsing function ' + func['name'])
-                    raise
-        func['f_args'] = ', '.join(f_args)
-
-        # Fortran 2008 parameter list, same as previous list but arguments after ierror are removed
-        f08_par_list = re.sub(r'ierror.*', 'ierror', func['f_args'])
-
-        # Fortran: truncated parameter list for subroutine definition (16 + MPI name)
-        initial_column = 16 + len(func['name'])
-        indent = ' ' * initial_column
-        wrapped_lines = textwrap.wrap(f08_par_list, width=80,
-                                      initial_indent=indent,
-                                      subsequent_indent=indent)
-        func['f08_par_list'] = ' &\n'.join(wrapped_lines).strip()
-
-        # Fortran: truncated parameter list for interface declaration (20 + MPI name)
-        initial_column = 20 + len(func['name'])
-        indent = ' ' * initial_column
-        wrapped_lines = textwrap.wrap(func['f_args'], width=80,
-                                      initial_indent=indent,
-                                      subsequent_indent=indent)
-        func['f_c_par_list'] = ' &\n'.join(wrapped_lines).strip()
-
-        # Replace TYPE(*), DIMENSION(..) in f08par to macro FORTRAN_IGNORE_TYPE which will be
-        # resolved at configure time depending on what the Fortran compiler accepts
-        func['f08par'] = match_assumed_type.sub('FORTRAN_IGNORE_TYPE', func['f08par'])
-
-        # other F08 enrichment:
-        func['f08_par_decl'] = enrich_f08_par_decl(func['f08par'])
-        func['f_c_par_decl'] = enrich_f_c_par_decl(func['f08par'], func['f_args'])
-        func['f08_precall_stmts'] = enrich_f08_precall_stmts(func['f08par'])
-        func['f08_to_c_arg_list'] = enrich_f08_to_c_arg_list(
-            func['fpar'], func['f08par'], func['name'])
-
-        # Set tag _Unknown if not defined
-        func.setdefault('tags', '_Unknown')
-        if func['tags'] == '':
-            func['tags'] = '_Unknown'
-
-        # Set before and after funtions
-        if func['name'] in ('MPI_Init', 'MPI_Init_thread'):
-            func['before'] = 'before_init()'
-            func['after'] = 'after_init()'
-        elif func['name'] == 'MPI_Finalize':
-            func['before'] = 'before_finalize()'
-            func['after'] = 'after_finalize()'
-        else:
-            func['before'] = 'before_mpi({0})'.format(func['name'].replace('MPI_', ''))
-            func['after'] = 'after_mpi({0})'.format(func['name'].replace('MPI_', ''))
+        return None
 
 
-def main(argv):
-    inputfile = ''
-    outputfile = ''
-    jsonfile = ''
-    mpistd = sys.maxsize
-    libversion = ''
-    usage = ' -i <inputfile> -o <outputfile> -j <jsonfile> [-s <mpistd>] [-l <libversion>]'
-    try:
-        opts, args = getopt.getopt(argv[1:],'hi:o:j:s:l:',['ifile=','ofile=','json=', 'std=', 'lib='])
-    except getopt.GetoptError:
-        print(argv[0] + usage)
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print(argv[0] + usage)
-            sys.exit()
-        elif opt in ('-i', '--ifile'):
-            inputfile = arg
-        elif opt in ('-o', '--ofile'):
-            outputfile = arg
-        elif opt in ('-j', '--json'):
-            jsonfile = arg
-        elif opt in ('-s', '--std'):
-            mpistd = float(arg)
-        elif opt in ('-l', '--lib'):
-            libversion = arg
+def parse_library_version(library_desc):
+    """
+    Parse the library description, typically returned from MPI_Get_library_version,
+    into a pair consisting of the library name and its version.
 
-    if not inputfile or not outputfile or not jsonfile:
-        print(argv[0] + usage)
-        sys.exit()
+    Parameters:
+    library_desc (str): The input library description.
 
-    # Read JSON file
-    with open(jsonfile, 'r') as json_data:
-        mpi_calls = json.load(json_data)['mpi_calls']
+    Returns:
+    tuple[str, str]: A tuple where the first element is the library name
+                     and the second element is the library version.
+    """
 
-    # Enrich dictionary by adding derived keys
-    enrich(mpi_calls, mpistd, libversion)
+    # Ensure library_desc is a lowercase string
+    library_desc = library_desc.lower().strip() if library_desc else ''
 
-    # Parse input file
-    mpi_intercept_c = MPIFile(inputfile, outputfile, mpi_calls)
-    mpi_intercept_c.parse()
+    # Define regex patterns for known implementations
+    patterns = {
+        'Open MPI': r'open mpi v(\d+\.\d+\.\d+)',
+        'MPICH': r'mpich version:\s*(\d+\.\d+\.\d+)',
+        'Intel MPI': r'intel\(r\) mpi library\s+(\d+\.\d+)',
+    }
+
+    for name, pattern in patterns.items():
+        match = re.search(pattern, library_desc)
+        if match:
+            return name, match.group(1)
+
+    # If no match found, return empty strings
+    return '', ''
+
+
+def find_mpi_f08_symbols_(mpi_fortran_wrapper):
+    """
+    Return a list of Fortran MPI f08 symbols found in the libraries
+
+    Parameters:
+    mpi_fortran_wrapper (str): MPI Fortran wrapper binary or path to search MPI libraries
+
+    Return:
+    list of Fortran MPI f08 symbols found
+    """
+    def _get_linked_libraries(mpi_fortran_wrapper):
+        """Compile dummy MPI program with mpif90, run ldd, parse linked libs.
+        Returns [] if compilation fails."""
+
+        DUMMY_F90 = r"""
+            program main
+                use mpi_f08
+                call MPI_Init()
+                call MPI_Finalize()
+            end program main
+        """
+        tmpdir = tempfile.mkdtemp()
+        f90_file = os.path.join(tmpdir, "test.f90")
+        exe_file = os.path.join(tmpdir, "a.out")
+
+        try:
+            # Write dummy program
+            with open(f90_file, "w") as f:
+                f.write(DUMMY_F90)
+
+            devnull = open(os.devnull, "wb")
+            try:
+                # Compile with mpif90
+                subprocess.check_call([mpi_fortran_wrapper, f90_file, "-o", exe_file],
+                                      stdout=devnull,
+                                      stderr=devnull)
+            except Exception:
+                # Compilation failed, return empty result
+                return []
+
+            finally:
+                devnull.close()
+
+            # Run ldd on the binary
+            out = subprocess.check_output(["ldd", exe_file],
+                                          universal_newlines=True)
+
+            # Parse "libfoo.so => /path/to/libfoo.so"
+            libs = []
+            for line in out.splitlines():
+                parts = line.strip().split("=>")
+                if len(parts) == 2:
+                    _, pathpart = parts
+                    path = pathpart.strip().split()[0]
+                    if os.path.isabs(path):
+                        libs.append(os.path.realpath(path))
+
+            logging.debug("Linked libraries found: %s", libs)
+            return libs
+
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def _get_symbols(library_path):
+        try:
+            output = subprocess.check_output(['nm', '-D', library_path]).decode()
+            symbols = []
+            for line in output.splitlines():
+                parts = line.split()
+                if parts:  # Ensure there are parts to avoid IndexError
+                    symbols.append(parts[-1])  # Get the last part (the symbol name)
+            return symbols
+        except subprocess.CalledProcessError:
+            return []
+
+    libraries = _get_linked_libraries(mpi_fortran_wrapper)
+
+    mpi_f08_symbols = []
+    match_f08_symbol = re.compile("f08", re.IGNORECASE)
+
+    for lib in libraries:
+        symbols = _get_symbols(lib)
+        mpi_f08_symbols.extend(
+            [symbol for symbol in symbols if match_f08_symbol.search(symbol)]
+        )
+
+    return mpi_f08_symbols
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input-file', help='input file')
+    parser.add_argument('-o', '--output-file', help='output file')
+    parser.add_argument('-b', '--mpi-calls-bindings', help='JSON database with MPI calls bindings')
+    parser.add_argument('-m', '--mpi-calls-metadata', help='JSON database with MPI calls metadata')
+    parser.add_argument('-s', '--mpi-standard', type=float, default=5.0,
+                        help='MPI-standard version (default: %(default)s)')
+    parser.add_argument('-l', '--library-version', help='MPI implementation version')
+    parser.add_argument('-f', '--mpi-fortran-wrapper', help='MPI Fortran wrapper for parsing MPI symbols')
+    args = parser.parse_args()
+
+    load_json_triggered = any([args.mpi_calls_bindings, args.mpi_calls_metadata])
+    if load_json_triggered:
+        if not args.mpi_calls_bindings or not args.mpi_calls_metadata:
+            parser.error(
+                    'If any --mpi-calls-bindings or --mpi-calls-metadata is given,'
+                    ' then both are required')
+
+    parse_triggered = any([args.input_file, args.output_file])
+    if parse_triggered:
+        if not args.input_file or not args.output_file:
+            parser.error(
+                    'If any --input-file or --output-file is given, then both are required')
+        if not load_json_triggered:
+            parser.error(
+                    'If any --input-file or --output-file is given,'
+                    ' then --mpi-calls-bindings and --mpi-calls-metadata are also required.')
+
+    mpi_calls = None
+
+    # Read JSON files
+    if load_json_triggered:
+        with open(args.mpi_calls_bindings, 'r') as file:
+            mpi_bindings_json = json.load(file)['mpi_calls']
+        with open(args.mpi_calls_metadata, 'r') as file:
+            mpi_metadata_json = json.load(file)['mpi_calls']
+
+        # Parse library_version
+        lib_name, lib_version = parse_library_version(args.library_version)
+
+        # Construct Database based on input
+        mpi_calls = MPIDatabase(mpi_metadata_json, mpi_bindings_json,
+                                args.mpi_standard, lib_name, lib_version)
+
+        # If provided, add 'define' fields for each symbol found
+        if args.mpi_fortran_wrapper:
+            f08_symbols = find_mpi_f08_symbols_(args.mpi_fortran_wrapper)
+            logging.debug("symbols from wrapper: " + str(len(f08_symbols)))
+            mpi_calls.define_mpi_f08_symbols(f08_symbols)
+
+    # Parse input -> output
+    if parse_triggered:
+        pygen_parser = PygenParser(args.input_file, args.output_file, mpi_calls)
+        pygen_parser.run()
+
 
 if __name__ == '__main__':
-   main(sys.argv)
+    main()

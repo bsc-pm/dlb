@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,36 +17,28 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#ifndef HANDLE_MPI_H
+#define HANDLE_MPI_H
 
-#ifdef MPI_LIB
+#include "mpi/mpi_calls_coded.h"
 
-#include "LB_MPI/MPI_interfaceF.h"
-
-#include "LB_MPI/process_MPI.h"
-#include "LB_MPI/MPI_calls_coded.h"
-#include "LB_core/spd.h"
-#include "support/debug.h"
-#include "support/dlb_common.h"
-
+#include <unistd.h>
 #include <mpi.h>
 
-#pragma pygen start
-DLB_EXPORT_SYMBOL
-void DLB_{MPI_NAME}_F_enter({F_PARAMS}) {{
-    spd_enter_dlb(thread_spd);
-    verbose(VB_MPI_API, ">> {MPI_NAME}...............");
-    {BEFORE_FUNC};
-}}
+extern int _mpi_rank;         /* MPI rank */
+extern int _mpi_size;         /* MPI size */
+extern int _node_id;          /* Node ID */
+extern int _num_nodes;        /* Number of nodes */
+extern int _process_id;       /* Process ID per node */
+extern int _mpis_per_node;    /* Numer of MPI processes per node */
 
-DLB_EXPORT_SYMBOL
-void DLB_{MPI_NAME}_F_leave(void) {{
-    verbose(VB_MPI_API, "<< {MPI_NAME}...............");
-    {AFTER_FUNC};
-}}
+void before_mpi(mpi_call_t mpi_call);
+void after_mpi(mpi_call_t mpi_call);
+int  is_mpi_ready(void);
+void finalize_mpi_core(void);
+MPI_Comm getWorldComm(void);
+MPI_Comm getNodeComm(void);
+MPI_Comm getInterNodeComm(void);
+MPI_Datatype get_mpi_int64_type(void);
 
-#pragma pygen end
-
-#endif /* MPI_LIB */
+#endif /* HANDLE_MPI_H */

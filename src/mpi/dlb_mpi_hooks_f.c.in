@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,32 +17,36 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "support/dlb_common.h"
-
-#ifdef MPI_LIB
-#include <mpi.h>
-#include "mpi/mpi_core.h"
-void mpi_barrier_(MPI_Comm *, int *) __attribute__((weak));
-
-DLB_EXPORT_SYMBOL
-void dlb_mpi_node_barrier(void)  {
-    if (is_mpi_ready()) {
-        int ierror;
-        MPI_Comm mpi_comm_node = getNodeComm();
-        if (mpi_barrier_) {
-            mpi_barrier_(&mpi_comm_node, &ierror);
-        } else {
-            warning("MPI_Barrier symbol could not be found. Please report a ticket.");
-        }
-    }
-}
-#else
-DLB_EXPORT_SYMBOL
-void dlb_mpi_node_barrier(void) {}
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
+#ifdef MPI_LIB
+
+#include "mpi/dlb_mpi_hooks_f.h"
+
+#include "LB_core/spd.h"
+#include "mpi/mpi_calls_coded.h"
+#include "mpi/mpi_core.h"
+#include "support/debug.h"
+#include "support/dlb_common.h"
+
+#include <mpi.h>
+
+#pragma pygen start where (not mpi_call.embiggened)
 DLB_EXPORT_SYMBOL
-DLB_ALIAS(void, dlb_mpi_node_barrier_, (void), (), dlb_mpi_node_barrier)
+void DLB_{MPI_NAME}_F_enter({FC_PARAMS}) {{
+    spd_enter_dlb(thread_spd);
+    verbose(VB_MPI_API, ">> {MPI_NAME}");
+    before_mpi({MPI_KEYNAME});
+}}
 
 DLB_EXPORT_SYMBOL
-DLB_ALIAS(void, dlb_mpi_node_barrier__, (void), (), dlb_mpi_node_barrier)
+void DLB_{MPI_NAME}_F_leave(void) {{
+    verbose(VB_MPI_API, "<< {MPI_NAME}");
+    after_mpi({MPI_KEYNAME});
+}}
+
+#pragma pygen end
+
+#endif /* MPI_LIB */

@@ -1,0 +1,1752 @@
+{
+    "mpi_calls": [
+        "### MPI 4-1. A.3.1  Point-to-Point Communication Functions ###",
+        {
+            "name": "MPI_Bsend",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, blocking, send"
+        },
+        {
+            "name": "MPI_Bsend_init",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, persistent, send"
+        },
+        {
+            "name": "MPI_Buffer_attach"
+        },
+        {
+            "name": "MPI_Buffer_detach"
+        },
+        {
+            "name": "MPI_Buffer_flush",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Buffer_iflush",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Cancel",
+            "tags": "p2p_comm, local, persistent"
+        },
+        {
+            "name": "MPI_Comm_attach_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Comm_detach_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Comm_flush_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Comm_iflush_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Get_count",
+            "mpi2_drop_const": ["status"]
+        },
+        {
+            "name": "MPI_Ibsend",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, non_blocking, send"
+        },
+        {
+            "name": "MPI_Improbe",
+            "since": "MPI-3.0",
+            "tags": "p2p_comm, non_local, test"
+        },
+        {
+            "name": "MPI_Imrecv",
+            "since": "MPI-3.0",
+            "tags": "p2p_comm, local, non_blocking, recv"
+        },
+        {
+            "name": "MPI_Iprobe",
+            "tags": "p2p_comm, local, test"
+        },
+        {
+            "name": "MPI_Irecv",
+            "tags": "p2p_comm, local, non_blocking, recv"
+        },
+        {
+            "name": "MPI_Irsend",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, non_blocking, send"
+        },
+        {
+            "name": "MPI_Isend",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, non_blocking, send"
+        },
+        {
+            "name": "MPI_Isendrecv",
+            "since": "MPI-4.0",
+            "tags": "p2p_comm, local, non_blocking, send, recv"
+        },
+        {
+            "name": "MPI_Isendrecv_replace",
+            "since": "MPI-4.0",
+            "tags": "p2p_comm, local, non_blocking, send, recv"
+        },
+        {
+            "name": "MPI_Issend",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, non_blocking, send"
+        },
+        {
+            "name": "MPI_Mprobe",
+            "since": "MPI-3.0",
+            "tags": "p2p_comm, non_local, blocking, test"
+        },
+        {
+            "name": "MPI_Mrecv",
+            "since": "MPI-3.0",
+            "tags": "p2p_comm, local, blocking, recv"
+        },
+        {
+            "name": "MPI_Probe",
+            "tags": "p2p_comm, non_local, test"
+        },
+        {
+            "name": "MPI_Recv",
+            "tags": "p2p_comm, non_local, blocking, recv"
+        },
+        {
+            "name": "MPI_Recv_init",
+            "tags": "p2p_comm, local, persistent, recv"
+        },
+        {
+            "name": "MPI_Request_free"
+        },
+        {
+            "name": "MPI_Request_get_status"
+        },
+        {
+            "name": "MPI_Request_get_status_all",
+            "since": "MPI-4.1",
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in_comment": "signature broken, missing const modifier"
+        },
+        {
+            "name": "MPI_Request_get_status_any",
+            "since": "MPI-4.1",
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in_comment": "signature broken, missing const modifier"
+        },
+        {
+            "name": "MPI_Request_get_status_some",
+            "since": "MPI-4.1",
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in_comment": "signature broken, missing const modifier"
+        },
+        {
+            "name": "MPI_Rsend",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, blocking, send"
+        },
+        {
+            "name": "MPI_Rsend_init",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, persistent, send"
+        },
+        {
+            "name": "MPI_Send",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, non_local, blocking, send"
+        },
+        {
+            "name": "MPI_Send_init",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, persistent, send"
+        },
+        {
+            "name": "MPI_Sendrecv",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "p2p_comm, non_local, blocking, send, recv"
+        },
+        {
+            "name": "MPI_Sendrecv_replace",
+            "tags": "p2p_comm, non_local, blocking, send, recv"
+        },
+        {
+            "name": "MPI_Session_attach_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Session_detach_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Session_flush_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Session_iflush_buffer",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Ssend",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, non_local, blocking, send"
+        },
+        {
+            "name": "MPI_Ssend_init",
+            "mpi2_drop_const": ["buf"],
+            "tags": "p2p_comm, local, persistent, send"
+        },
+        {
+            "name": "MPI_Start",
+            "tags": "p2p_comm, local, persistent"
+        },
+        {
+            "name": "MPI_Startall",
+            "tags": "p2p_comm, local, persistent"
+        },
+        {
+            "name": "MPI_Status_get_error",
+            "since": "MPI-4.1",
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in_comment": "signature broken, missing const modifier"
+        },
+        {
+            "name": "MPI_Status_get_source",
+            "since": "MPI-4.1",
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in_comment": "signature broken, missing const modifier"
+        },
+        {
+            "name": "MPI_Status_get_tag",
+            "since": "MPI-4.1",
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in_comment": "signature broken, missing const modifier"
+        },
+        {
+            "name": "MPI_Test",
+            "tags": "p2p_comm, test"
+        },
+        {
+            "name": "MPI_Test_cancelled",
+            "mpi2_drop_const": ["status"]
+        },
+        {
+            "name": "MPI_Testall",
+            "tags": "p2p_comm, test"
+        },
+        {
+            "name": "MPI_Testany",
+            "tags": "p2p_comm, test"
+        },
+        {
+            "name": "MPI_Testsome",
+            "tags": "p2p_comm, test"
+        },
+        {
+            "name": "MPI_Wait",
+            "tags": "p2p_comm, wait"
+        },
+        {
+            "name": "MPI_Waitall",
+            "tags": "p2p_comm, wait"
+        },
+        {
+            "name": "MPI_Waitany",
+            "tags": "p2p_comm, wait"
+        },
+        {
+            "name": "MPI_Waitsome",
+            "tags": "p2p_comm, wait"
+        },
+        "### MPI 4-1. A.3.2  Partitioned Communication Functions ###",
+        {
+            "name": "MPI_Parrived",
+            "since": "MPI-4.0",
+            "tags": "part_p2p_comm, local, persistent_part"
+        },
+        {
+            "name": "MPI_Pready",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Pready_list",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Pready_range",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Precv_init",
+            "since": "MPI-4.0",
+            "tags": "part_p2p_comm, local, persistent_part, recv"
+        },
+        {
+            "name": "MPI_Psend_init",
+            "since": "MPI-4.0",
+            "tags": "part_p2p_comm, local, persistent_part, send"
+        },
+        "### MPI 4-1. A.3.3  Datatypes Functions ###",
+        {
+            "name": "MPI_Aint_add",
+            "since": "MPI-3.1",
+            "disabled": true
+        },
+        {
+            "name": "MPI_Aint_diff",
+            "since": "MPI-3.1",
+            "disabled": true
+        },
+        {
+            "name": "MPI_Get_address"
+        },
+        {
+            "name": "MPI_Get_elements"
+        },
+        {
+            "name": "MPI_Get_elements_x",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Pack"
+        },
+        {
+            "name": "MPI_Pack_external"
+        },
+        {
+            "name": "MPI_Pack_external_size"
+        },
+        {
+            "name": "MPI_Pack_size"
+        },
+        {
+            "name": "MPI_Type_commit"
+        },
+        {
+            "name": "MPI_Type_contiguous"
+        },
+        {
+            "name": "MPI_Type_create_darray"
+        },
+        {
+            "name": "MPI_Type_create_hindexed"
+        },
+        {
+            "name": "MPI_Type_create_hindexed_block",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Type_create_hvector"
+        },
+        {
+            "name": "MPI_Type_create_indexed_block"
+        },
+        {
+            "name": "MPI_Type_create_resized"
+        },
+        {
+            "name": "MPI_Type_create_struct"
+        },
+        {
+            "name": "MPI_Type_create_subarray"
+        },
+        {
+            "name": "MPI_Type_dup"
+        },
+        {
+            "name": "MPI_Type_free"
+        },
+        {
+            "name": "MPI_Type_get_contents"
+        },
+        {
+            "name": "MPI_Type_get_envelope"
+        },
+        {
+            "name": "MPI_Type_get_extent"
+        },
+        {
+            "name": "MPI_Type_get_extent_x",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Type_get_true_extent"
+        },
+        {
+            "name": "MPI_Type_get_true_extent_x",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Type_indexed"
+        },
+        {
+            "name": "MPI_Type_size"
+        },
+        {
+            "name": "MPI_Type_size_x",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Type_vector"
+        },
+        {
+            "name": "MPI_Unpack"
+        },
+        {
+            "name": "MPI_Unpack_external"
+        },
+        "### MPI 4-1. A.3.4  Collective Communication Functions ###",
+        {
+            "name": "MPI_Allgather",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Allgather_init",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Allgatherv",
+            "mpi2_drop_const": ["sendbuf", "recvcounts", "displs"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Allgatherv_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Allreduce",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, reduce"
+        },
+        {
+            "name": "MPI_Allreduce_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, reduce"
+        },
+        {
+            "name": "MPI_Alltoall",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Alltoall_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Alltoallv",
+            "mpi2_drop_const": ["sendbuf", "sendcounts", "sdispls", "recvcounts", "rdispls"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Alltoallv_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Alltoallw",
+            "mpi2_drop_const": ["sendbuf", "sendcounts", "sdispls", "sendtypes", "recvcounts", "rdispls", "recvtypes"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Alltoallw_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Barrier",
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, barrier"
+        },
+        {
+            "name": "MPI_Barrier_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, barrier"
+        },
+        {
+            "name": "MPI_Bcast",
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, bcast"
+        },
+        {
+            "name": "MPI_Bcast_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, bcast"
+        },
+        {
+            "name": "MPI_Exscan",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, scan"
+        },
+        {
+            "name": "MPI_Exscan_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, scan"
+        },
+        {
+            "name": "MPI_Gather",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Gather_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Gatherv",
+            "mpi2_drop_const": ["sendbuf", "recvcounts", "displs"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Gatherv_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Iallgather",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, gather"
+        },
+        {
+            "name": "MPI_Iallgatherv",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, gather"
+        },
+        {
+            "name": "MPI_Iallreduce",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, reduce"
+        },
+        {
+            "name": "MPI_Ialltoall",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, alltoall"
+        },
+        {
+            "name": "MPI_Ialltoallv",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, alltoall"
+        },
+        {
+            "name": "MPI_Ialltoallw",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, alltoall"
+        },
+        {
+            "name": "MPI_Ibarrier",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, barrier"
+        },
+        {
+            "name": "MPI_Ibcast",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, bcast"
+        },
+        {
+            "name": "MPI_Iexscan",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, scan"
+        },
+        {
+            "name": "MPI_Igather",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, gather"
+        },
+        {
+            "name": "MPI_Igatherv",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, gather"
+        },
+        {
+            "name": "MPI_Ireduce",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, reduce"
+        },
+        {
+            "name": "MPI_Ireduce_scatter",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, reduce"
+        },
+        {
+            "name": "MPI_Ireduce_scatter_block",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, reduce"
+        },
+        {
+            "name": "MPI_Iscan",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, scan"
+        },
+        {
+            "name": "MPI_Iscatter",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, scatter"
+        },
+        {
+            "name": "MPI_Iscatterv",
+            "since": "MPI-3.0",
+            "tags": "collective_comm, local, non_blocking, collective, scatter"
+        },
+        {
+            "name": "MPI_Op_commutative",
+            "since": "MPI-2.2"
+        },
+        {
+            "name": "MPI_Op_create"
+        },
+        {
+            "name": "MPI_Op_free",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Reduce",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, reduce"
+        },
+        {
+            "name": "MPI_Reduce_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, reduce"
+        },
+        {
+            "name": "MPI_Reduce_local",
+            "mpi2_drop_const": ["inbuf"],
+            "since": "MPI-2.2"
+        },
+        {
+            "name": "MPI_Reduce_scatter",
+            "mpi2_drop_const": ["sendbuf", "recvcounts"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, reduce, scatter"
+        },
+        {
+            "name": "MPI_Reduce_scatter_block",
+            "mpi2_drop_const": ["sendbuf"],
+            "since": "MPI-2.2",
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, reduce, scatter"
+        },
+        {
+            "name": "MPI_Reduce_scatter_block_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, reduce"
+        },
+        {
+            "name": "MPI_Reduce_scatter_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, scatter"
+        },
+        {
+            "name": "MPI_Scan",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, scan"
+        },
+        {
+            "name": "MPI_Scan_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, scan"
+        },
+        {
+            "name": "MPI_Scatter",
+            "mpi2_drop_const": ["sendbuf"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, scatter"
+        },
+        {
+            "name": "MPI_Scatter_init",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Scatterv",
+            "mpi2_drop_const": ["sendbuf", "sendcounts", "displs"],
+            "tags": "collective_comm, non_local, blocking, collective, maybe_blocking_sync, scatter"
+        },
+        {
+            "name": "MPI_Scatterv_init",
+            "since": "MPI-4.0",
+            "tags": "collective_comm, non_local, persistent, collective, maybe_blocking_sync, scatter"
+        },
+        {
+            "name": "MPI_Type_get_value_index",
+            "since": "MPI-4.1"
+        },
+        "### MPI 4-1. A.3.5  Groups, Contexts, Communicators, and Caching Functions ###",
+        {
+            "name": "MPI_COMM_DUP_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_COMM_NULL_COPY_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_COMM_NULL_DELETE_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_Comm_compare",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_create",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_create_from_group",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Comm_create_group",
+            "since": "MPI-3.0",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_create_keyval",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_delete_attr",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_dup",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_dup_with_info",
+            "since": "MPI-3.0",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_free",
+            "tags": "non_local, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_free_keyval",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_get_attr",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_get_info",
+            "since": "MPI-3.0",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_get_name",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_group",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_idup",
+            "since": "MPI-3.0",
+            "tags": "local, non_blocking, collective, comm"
+        },
+        {
+            "name": "MPI_Comm_idup_with_info",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Comm_rank",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_remote_group",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_remote_size",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_set_attr",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_set_info",
+            "since": "MPI-3.0",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_set_name",
+            "mpi2_drop_const": ["comm_name"],
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_size",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Comm_split",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_split_type",
+            "since": "MPI-3.0",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_test_inter",
+            "tags": "comm"
+        },
+        {
+            "name": "MPI_Group_compare"
+        },
+        {
+            "name": "MPI_Group_difference"
+        },
+        {
+            "name": "MPI_Group_excl",
+            "mpi2_drop_const": ["ranks"]
+        },
+        {
+            "name": "MPI_Group_free"
+        },
+        {
+            "name": "MPI_Group_from_session_pset",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Group_incl",
+            "mpi2_drop_const": ["ranks"]
+        },
+        {
+            "name": "MPI_Group_intersection"
+        },
+        {
+            "name": "MPI_Group_range_excl"
+        },
+        {
+            "name": "MPI_Group_range_incl"
+        },
+        {
+            "name": "MPI_Group_rank"
+        },
+        {
+            "name": "MPI_Group_size"
+        },
+        {
+            "name": "MPI_Group_translate_ranks",
+            "mpi2_drop_const": ["ranks1"]
+        },
+        {
+            "name": "MPI_Group_union"
+        },
+        {
+            "name": "MPI_Intercomm_create",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Intercomm_create_from_groups",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Intercomm_merge",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_TYPE_DUP_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_TYPE_NULL_COPY_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_TYPE_NULL_DELETE_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_Type_create_keyval"
+        },
+        {
+            "name": "MPI_Type_delete_attr"
+        },
+        {
+            "name": "MPI_Type_free_keyval"
+        },
+        {
+            "name": "MPI_Type_get_attr"
+        },
+        {
+            "name": "MPI_Type_get_name"
+        },
+        {
+            "name": "MPI_Type_set_attr"
+        },
+        {
+            "name": "MPI_Type_set_name",
+            "mpi2_drop_const": ["type_name"]
+        },
+        {
+            "name": "MPI_WIN_DUP_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_WIN_NULL_COPY_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_WIN_NULL_DELETE_FN",
+            "disabled": true
+        },
+        {
+            "name": "MPI_Win_create_keyval"
+        },
+        {
+            "name": "MPI_Win_delete_attr"
+        },
+        {
+            "name": "MPI_Win_free_keyval"
+        },
+        {
+            "name": "MPI_Win_get_attr"
+        },
+        {
+            "name": "MPI_Win_get_name"
+        },
+        {
+            "name": "MPI_Win_set_attr"
+        },
+        {
+            "name": "MPI_Win_set_name",
+            "mpi2_drop_const": ["win_name"]
+        },
+        "### MPI 4-1. A.3.6  Process Topologies Functions ###",
+        {
+            "name": "MPI_Cart_coords"
+        },
+        {
+            "name": "MPI_Cart_create",
+            "mpi2_drop_const": ["dims", "periods"],
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Cart_get"
+        },
+        {
+            "name": "MPI_Cart_map",
+            "mpi2_drop_const": ["dims", "periods"]
+        },
+        {
+            "name": "MPI_Cart_rank",
+            "mpi2_drop_const": ["coords"]
+        },
+        {
+            "name": "MPI_Cart_shift"
+        },
+        {
+            "name": "MPI_Cart_sub",
+            "mpi2_drop_const": ["remain_dims"],
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Cartdim_get"
+        },
+        {
+            "name": "MPI_Dims_create"
+        },
+        {
+            "name": "MPI_Dist_graph_create",
+            "mpi2_drop_const": ["sources", "degrees", "destinations", "weights"],
+            "since": "MPI-2.2",
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Dist_graph_create_adjacent",
+            "mpi2_drop_const": ["sources", "sourceweights", "destinations", "destweights"],
+            "since": "MPI-2.2",
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Dist_graph_neighbors",
+            "since": "MPI-2.2"
+        },
+        {
+            "name": "MPI_Dist_graph_neighbors_count",
+            "since": "MPI-2.2"
+        },
+        {
+            "name": "MPI_Graph_create",
+            "mpi2_drop_const": ["index", "edges"],
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Graph_get"
+        },
+        {
+            "name": "MPI_Graph_map",
+            "mpi2_drop_const": ["index", "edges"]
+        },
+        {
+            "name": "MPI_Graph_neighbors"
+        },
+        {
+            "name": "MPI_Graph_neighbors_count"
+        },
+        {
+            "name": "MPI_Graphdims_get"
+        },
+        {
+            "name": "MPI_Ineighbor_allgather",
+            "since": "MPI-3.0",
+            "tags": "topologies, local, non_blocking, collective, gather"
+        },
+        {
+            "name": "MPI_Ineighbor_allgatherv",
+            "since": "MPI-3.0",
+            "tags": "topologies, local, non_blocking, collective, gather"
+        },
+        {
+            "name": "MPI_Ineighbor_alltoall",
+            "since": "MPI-3.0",
+            "tags": "topologies, local, non_blocking, collective, alltoall"
+        },
+        {
+            "name": "MPI_Ineighbor_alltoallv",
+            "since": "MPI-3.0",
+            "tags": "topologies, local, non_blocking, collective, alltoall"
+        },
+        {
+            "name": "MPI_Ineighbor_alltoallw",
+            "since": "MPI-3.0",
+            "tags": "topologies, local, non_blocking, collective, alltoall"
+        },
+        {
+            "name": "MPI_Neighbor_allgather",
+            "since": "MPI-3.0",
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Neighbor_allgather_init",
+            "since": "MPI-4.0",
+            "tags": "topologies, non_local, persistent, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Neighbor_allgatherv",
+            "since": "MPI-3.0",
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Neighbor_allgatherv_init",
+            "since": "MPI-4.0",
+            "tags": "topologies, non_local, persistent, collective, maybe_blocking_sync, gather"
+        },
+        {
+            "name": "MPI_Neighbor_alltoall",
+            "since": "MPI-3.0",
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Neighbor_alltoall_init",
+            "since": "MPI-4.0",
+            "tags": "topologies, non_local, persistent, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Neighbor_alltoallv",
+            "since": "MPI-3.0",
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Neighbor_alltoallv_init",
+            "since": "MPI-4.0",
+            "tags": "topologies, non_local, persistent, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Neighbor_alltoallw",
+            "since": "MPI-3.0",
+            "tags": "topologies, non_local, blocking, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Neighbor_alltoallw_init",
+            "since": "MPI-4.0",
+            "tags": "topologies, non_local, persistent, collective, maybe_blocking_sync, alltoall"
+        },
+        {
+            "name": "MPI_Topo_test"
+        },
+        "### MPI 4-1. A.3.7  MPI Environmental Management Functions ###",
+        {
+            "name": "MPI_Wtick",
+            "disabled": true
+        },
+        {
+            "name": "MPI_Wtime",
+            "disabled": true
+        },
+        {
+            "name": "MPI_Add_error_class"
+        },
+        {
+            "name": "MPI_Add_error_code"
+        },
+        {
+            "name": "MPI_Add_error_string"
+        },
+        {
+            "name": "MPI_Alloc_mem"
+        },
+        {
+            "name": "MPI_Comm_call_errhandler"
+        },
+        {
+            "name": "MPI_Comm_create_errhandler"
+        },
+        {
+            "name": "MPI_Comm_get_errhandler"
+        },
+        {
+            "name": "MPI_Comm_set_errhandler"
+        },
+        {
+            "name": "MPI_Errhandler_free"
+        },
+        {
+            "name": "MPI_Error_class"
+        },
+        {
+            "name": "MPI_Error_string"
+        },
+        {
+            "name": "MPI_File_call_errhandler"
+        },
+        {
+            "name": "MPI_File_create_errhandler"
+        },
+        {
+            "name": "MPI_File_get_errhandler"
+        },
+        {
+            "name": "MPI_File_set_errhandler"
+        },
+        {
+            "name": "MPI_Free_mem"
+        },
+        {
+            "name": "MPI_Get_hw_resource_info",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Get_library_version",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Get_processor_name"
+        },
+        {
+            "name": "MPI_Get_version"
+        },
+        {
+            "name": "MPI_Remove_error_class",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Remove_error_code",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Remove_error_string",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Session_call_errhandler",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Session_create_errhandler",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Session_get_errhandler",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Session_set_errhandler",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Win_call_errhandler"
+        },
+        {
+            "name": "MPI_Win_create_errhandler"
+        },
+        {
+            "name": "MPI_Win_get_errhandler"
+        },
+        {
+            "name": "MPI_Win_set_errhandler"
+        },
+        "### MPI 4-1. A.3.8   Info Object Functions ###",
+        {
+            "name": "MPI_Info_create"
+        },
+        {
+            "name": "MPI_Info_create_env",
+            "since": "MPI-4.0",
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in_comment": "signature broken in 4.0"
+        },
+        {
+            "name": "MPI_Info_delete"
+        },
+        {
+            "name": "MPI_Info_dup"
+        },
+        {
+            "name": "MPI_Info_free"
+        },
+        {
+            "name": "MPI_Info_get"
+        },
+        {
+            "name": "MPI_Info_get_nkeys"
+        },
+        {
+            "name": "MPI_Info_get_nthkey"
+        },
+        {
+            "name": "MPI_Info_get_valuelen"
+        },
+        {
+            "name": "MPI_Info_get_string",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Info_set"
+        },
+        "### MPI 4-1. A.3.9   Process Creation and Management Functions ###",
+        {
+            "name": "MPI_Abort"
+        },
+        {
+            "name": "MPI_Close_port",
+            "mpi2_drop_const": ["port_name"]
+        },
+        {
+            "name": "MPI_Comm_accept",
+            "mpi2_drop_const": ["port_name"],
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Comm_connect",
+            "mpi2_drop_const": ["port_name"],
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Comm_disconnect",
+            "tags": "non_local, blocking, collective, maybe_blocking_sync, comm"
+        },
+        {
+            "name": "MPI_Comm_get_parent"
+        },
+        {
+            "name": "MPI_Comm_join"
+        },
+        {
+            "name": "MPI_Comm_spawn",
+            "mpi2_drop_const": ["command"],
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync, spawn"
+        },
+        {
+            "name": "MPI_Comm_spawn_multiple",
+            "mpi2_drop_const": ["array_of_maxprocs", "array_of_info"],
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync, spawn"
+        },
+        {
+            "name": "MPI_Finalize",
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync, finalize"
+        },
+        {
+            "name": "MPI_Finalized"
+        },
+        {
+            "name": "MPI_Init",
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync, init"
+        },
+        {
+            "name": "MPI_Init_thread",
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync, init"
+        },
+        {
+            "name": "MPI_Initialized"
+        },
+        {
+            "name": "MPI_Is_thread_main"
+        },
+        {
+            "name": "MPI_Lookup_name",
+            "mpi2_drop_const": ["service_name"]
+        },
+        {
+            "name": "MPI_Open_port"
+        },
+        {
+            "name": "MPI_Publish_name",
+            "mpi2_drop_const": ["service_name", "port_name"]
+        },
+        {
+            "name": "MPI_Query_thread"
+        },
+        {
+            "name": "MPI_Session_finalize",
+            "since": "MPI-4.0",
+            "tags": "proc_management, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_Session_get_info",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Session_get_nth_pset",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Session_get_num_psets",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Session_get_pset_info",
+            "since": "MPI-4.0"
+        },
+        {
+            "name": "MPI_Session_init",
+            "since": "MPI-4.0",
+            "tags": "proc_management, local"
+        },
+        {
+            "name": "MPI_Unpublish_name",
+            "mpi2_drop_const": ["service_name", "port_name"]
+        },
+        "### MPI 4-1. A.3.10   One-Sided Communications Functions ###",
+        {
+            "name": "MPI_Accumulate",
+            "mpi2_drop_const": ["origin_addr"]
+        },
+        {
+            "name": "MPI_Compare_and_swap",
+            "since": "MPI-3.0",
+            "broken_in": {"Open MPI": ["1.7.\\d", "1.8.\\d", "1.10.0"]},
+            "broken_in_comment": "See Open MPI 1.10.1 changelog: Add missing 'const' attributes to MPI_COMPARE_AND_SWAP, MPI_FETCH_AND_OP, MPI_RACCUMULATE, and MPI_WIN_DETACH prototypes."
+        },
+        {
+            "name": "MPI_Fetch_and_op",
+            "since": "MPI-3.0",
+            "broken_in": {"Open MPI": ["1.7.\\d", "1.8.\\d", "1.10.0"]},
+            "broken_in_comment": "See Open MPI 1.10.1 changelog: Add missing 'const' attributes to MPI_COMPARE_AND_SWAP, MPI_FETCH_AND_OP, MPI_RACCUMULATE, and MPI_WIN_DETACH prototypes."
+        },
+        {
+            "name": "MPI_Get"
+        },
+        {
+            "name": "MPI_Get_accumulate",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Put",
+            "mpi2_drop_const": ["origin_addr"]
+        },
+        {
+            "name": "MPI_Raccumulate",
+            "since": "MPI-3.0",
+            "broken_in": {"Open MPI": ["1.7.\\d", "1.8.\\d", "1.10.0"]},
+            "broken_in_comment": "See Open MPI 1.10.1 changelog: Add missing 'const' attributes to MPI_COMPARE_AND_SWAP, MPI_FETCH_AND_OP, MPI_RACCUMULATE, and MPI_WIN_DETACH prototypes."
+        },
+        {
+            "name": "MPI_Rget",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Rget_accumulate",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Rput",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_allocate",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_allocate_shared",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_attach",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_complete"
+        },
+        {
+            "name": "MPI_Win_create"
+        },
+        {
+            "name": "MPI_Win_create_dynamic",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_detach",
+            "since": "MPI-3.0",
+            "broken_in": {"Open MPI": ["1.7.\\d", "1.8.\\d", "1.10.0"]},
+            "broken_in_comment": "See Open MPI 1.10.1 changelog: Add missing 'const' attributes to MPI_COMPARE_AND_SWAP, MPI_FETCH_AND_OP, MPI_RACCUMULATE, and MPI_WIN_DETACH prototypes."
+        },
+        {
+            "name": "MPI_Win_fence"
+        },
+        {
+            "name": "MPI_Win_flush",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_flush_all",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_flush_local",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_flush_local_all",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_free"
+        },
+        {
+            "name": "MPI_Win_get_group"
+        },
+        {
+            "name": "MPI_Win_get_info",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_lock"
+        },
+        {
+            "name": "MPI_Win_lock_all",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_post"
+        },
+        {
+            "name": "MPI_Win_set_info",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_shared_query",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_start"
+        },
+        {
+            "name": "MPI_Win_sync",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_test"
+        },
+        {
+            "name": "MPI_Win_unlock"
+        },
+        {
+            "name": "MPI_Win_unlock_all",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Win_wait"
+        },
+        "### MPI 4-1. A.3.11  External Interfaces Functions ###",
+        {
+            "name": "MPI_Grequest_complete"
+        },
+        {
+            "name": "MPI_Grequest_start"
+        },
+        {
+            "name": "MPI_Status_set_cancelled",
+            "since": "MPI-4.0",
+            "broken_in_comment": "MPI-4.0 changes its signature, thus it's kind of broken now in MPI-3"
+        },
+        {
+            "name": "MPI_Status_set_elements"
+        },
+        {
+            "name": "MPI_Status_set_elements_x",
+            "since": "MPI-3.0"
+        },
+        {
+            "name": "MPI_Status_set_error",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Status_set_source",
+            "since": "MPI-4.1"
+        },
+        {
+            "name": "MPI_Status_set_tag",
+            "since": "MPI-4.1"
+        },
+        "### MPI 4-1. A.3.12  I/O Functions ###",
+        {
+            "name": "MPI_CONVERSION_FN_NULL",
+            "disabled": true
+        },
+        {
+            "name": "MPI_File_close",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_delete",
+            "mpi2_drop_const": ["filename"],
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_get_amode",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_atomicity",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_byte_offset",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_group",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_info",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_position",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_position_shared",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_size",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_type_extent",
+            "tags": "io"
+        },
+        {
+            "name": "MPI_File_get_view",
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_iread",
+            "tags": "io, local, non_blocking"
+        },
+        {
+            "name": "MPI_File_iread_all",
+            "since": "MPI-3.1",
+            "tags": "io, local, non_blocking, collective"
+        },
+        {
+            "name": "MPI_File_iread_at",
+            "tags": "io, local, non_blocking"
+        },
+        {
+            "name": "MPI_File_iread_at_all",
+            "since": "MPI-3.1",
+            "tags": "io, local, non_blocking, collective"
+        },
+        {
+            "name": "MPI_File_iread_shared",
+            "tags": "io, local, non_blocking"
+        },
+        {
+            "name": "MPI_File_iwrite",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, local, non_blocking"
+        },
+        {
+            "name": "MPI_File_iwrite_all",
+            "since": "MPI-3.1",
+            "tags": "io, local, non_blocking, collective"
+        },
+        {
+            "name": "MPI_File_iwrite_at",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, local, non_blocking"
+        },
+        {
+            "name": "MPI_File_iwrite_at_all",
+            "since": "MPI-3.1",
+            "tags": "io, local, non_blocking, collective"
+        },
+        {
+            "name": "MPI_File_iwrite_shared",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, local, non_blocking"
+        },
+        {
+            "name": "MPI_File_open",
+            "mpi2_drop_const": ["filename"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_preallocate",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read",
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_read_all",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_all_begin",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_all_end",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_at",
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_read_at_all",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_at_all_begin",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_at_all_end",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_ordered",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_ordered_begin",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_ordered_end",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_read_shared",
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_seek",
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_seek_shared",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_set_atomicity",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_set_info",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_set_size",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_set_view",
+            "mpi2_drop_const": ["datarep"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_sync",
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_write_all",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_all_begin",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_all_end",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_at",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_File_write_at_all",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_at_all_begin",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_at_all_end",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_ordered",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_ordered_begin",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_ordered_end",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, non_local, blocking, collective, maybe_blocking_sync"
+        },
+        {
+            "name": "MPI_File_write_shared",
+            "mpi2_drop_const": ["buf"],
+            "tags": "io, local, blocking"
+        },
+        {
+            "name": "MPI_Register_datarep",
+            "mpi2_drop_const": ["datarep"]
+        },
+        "### MPI 4-1. A.3.13  Language Bindings Functions (not implemented) ###",
+        "### MPI 4-1. A.3.14  Tools / Profiling Interface Functions (not implemented) ###",
+        "### MPI 4-1. A.3.15  Tools / MPI Tool Information Interface Functions (not implemented) ###"
+    ]
+}

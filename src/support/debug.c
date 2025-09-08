@@ -36,7 +36,7 @@
 #include "LB_core/spd.h"
 
 #ifdef MPI_LIB
-#include "LB_MPI/process_MPI.h"
+#include "mpi/mpi_core.h"
 #endif
 
 #include <sys/types.h>

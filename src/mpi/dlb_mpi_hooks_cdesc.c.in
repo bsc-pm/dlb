@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,32 +17,45 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef PROCESS_MPI_H
-#define PROCESS_MPI_H
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-#include "LB_MPI/MPI_calls_coded.h"
+#ifdef MPI_LIB
 
-#include <unistd.h>
+#include "LB_core/spd.h"
+#include "mpi/mpi_calls_coded.h"
+#include "mpi/mpi_core.h"
+#include "support/debug.h"
+#include "support/dlb_common.h"
 #include <mpi.h>
 
-extern int _mpi_rank;         /* MPI rank */
-extern int _mpi_size;         /* MPI size */
-extern int _node_id;          /* Node ID */
-extern int _num_nodes;        /* Number of nodes */
-extern int _process_id;       /* Process ID per node */
-extern int _mpis_per_node;    /* Numer of MPI processes per node */
+#ifdef HAVE_ISO_FORTRAN_BINDING_H
+#include <ISO_Fortran_binding.h>
+#else
+#error "Configuration error: this file should not be compiled without ISO_Fortran_binding.h (check Makefile.am)"
+#endif
 
-void before_init(void);
-void after_init(void);
-void before_mpi(mpi_call_t mpi_call);
-void after_mpi(mpi_call_t mpi_call);
-void before_finalize(void);
-void after_finalize(void);
-int  is_mpi_ready(void);
-void process_MPI__finalize(void);
-MPI_Comm getWorldComm(void);
-MPI_Comm getNodeComm(void);
-MPI_Comm getInterNodeComm(void);
-MPI_Datatype get_mpi_int64_type(void);
+// Older MPI implementations may partially support f08ts bindings but
+// not define MPI_F08_status. Since we don't use the parameter or need
+// conversion, we can safely ignore its type.
+#ifndef HAVE_MPI_F08_STATUS_TYPE
+typedef struct MPI_F08_status MPI_F08_status;
+#endif
 
-#endif //PROCESS_MPI_H
+#pragma pygen start where(mpi_call.has_assumed_rank_argument)
+DLB_EXPORT_SYMBOL
+void DLB_{MPI_NAME}_cdesc_enter({CSHIM_CDESC_PARAMS}) {{
+    spd_enter_dlb(thread_spd);
+    verbose(VB_MPI_API, ">> {MPI_NAME}");
+    before_mpi({MPI_KEYNAME});
+}}
+
+DLB_EXPORT_SYMBOL
+void DLB_{MPI_NAME}_cdesc_leave() {{
+    verbose(VB_MPI_API, "<< {MPI_NAME}");
+    after_mpi({MPI_KEYNAME});
+}}
+
+#pragma pygen end
+#endif /* MPI_LIB */

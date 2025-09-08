@@ -23,7 +23,7 @@
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
 #ifdef MPI_LIB
-#include "LB_MPI/process_MPI.h"
+#include "mpi/mpi_core.h"
 #endif
 
 #include <stddef.h>

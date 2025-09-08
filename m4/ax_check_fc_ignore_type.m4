@@ -1,39 +1,44 @@
 
-dnl For now, we only need a type to pass from Fortran 2008 routines to
-dnl the MPI_interceptF.c functions, which we declare also as Fortran
-dnl interfaces. NO_ARG_CHECK attributes are not needed, just check for
-dnl assumed types (TYPE(*)), or REAL types; and assumed-rank entity
-dnl (DIMENSION(..) or assumed-size array (DIMENSION(*))
+# AX_CHECK_FC_ASSUMED_RANK
+# ------------------------
+AC_DEFUN([AX_CHECK_FC_ASSUMED_RANK],
+[
+    # Assumed-type + assumed-rank entity
+    AX_CHECK_FC_BUFFER_TYPE_([TYPE(*), DIMENSION(..)])
+
+    AS_IF([test x"$ax_check_fc_buffer_type" != x], [
+        ax_check_fc_assumed_rank=yes
+        AC_DEFINE([FORTRAN_SUPPORTS_ASSUMED_RANK], [1],
+                [Whether Fortran supports assumed-rank, i.e. DIMENSION(..)])
+    ])
+
+])
 
 # AX_CHECK_FC_IGNORE_TYPE
 # -----------------------
 AC_DEFUN([AX_CHECK_FC_IGNORE_TYPE],
 [
-    # Assumed-type + assumed-rank entity
-    AX_CHECK_FC_IGNORE_TYPE_([TYPE(*), DIMENSION(..)])
-
     # Assumed type + assumed-size array
-    AS_IF([test x"$fc_ignore_type" = x], [
-        AX_CHECK_FC_IGNORE_TYPE_([TYPE(*), DIMENSION(*)])
-    ])
+    AX_CHECK_FC_BUFFER_TYPE_([TYPE(*), DIMENSION(*)])
 
     # REAL + assumed-size array
-    AS_IF([test x"$fc_ignore_type" = x], [
-        AX_CHECK_FC_IGNORE_TYPE_([REAL, DIMENSION(*)])
+    AS_IF([test x"$ax_check_fc_buffer_type" = x], [
+        AX_CHECK_FC_BUFFER_TYPE_([REAL, DIMENSION(*)])
     ])
 
-    AS_IF([test x"$fc_ignore_type" != x], [
-        AC_DEFINE_UNQUOTED([FORTRAN_IGNORE_TYPE], [$fc_ignore_type],
+    AS_IF([test x"$ax_check_fc_buffer_type" != x], [
+        ax_check_fc_ignore_type=yes
+        AC_DEFINE_UNQUOTED([FORTRAN_IGNORE_TYPE], [$ax_check_fc_buffer_type],
             [Fortran (void*)-like parameter type])
     ])
 ])
 
-# AX_CHECK_FC_IGNORE_TYPE_([TYPE])
+# AX_CHECK_FC_BUFFER_TYPE_([TYPE])
 # --------------------------------
-AC_DEFUN([AX_CHECK_FC_IGNORE_TYPE_],
+AC_DEFUN([AX_CHECK_FC_BUFFER_TYPE_],
 [
     AC_LANG_PUSH([Fortran])
-    AC_MSG_CHECKING([for Fortran compiler support of $1])
+    AC_MSG_CHECKING([Fortran compiler support for $1])
     AC_COMPILE_IFELSE(AC_LANG_SOURCE([[!
 subroutine conftest(buffer,n)
     implicit none
@@ -52,7 +57,7 @@ end subroutine
     ]]),
     [
         msg=yes
-        fc_ignore_type="$1"
+        ax_check_fc_buffer_type="$1"
     ],
     [
         msg=no
