@@ -238,27 +238,20 @@ AC_DEFUN([AX_MPI],
         )
         AC_MSG_RESULT([$enable_fortran_mpi_library])
 
-        ### MPI Fortran 08 bindings ###
-        AC_MSG_CHECKING([whether to enable Fortran 2008 MPI interface])
-        AC_ARG_ENABLE([f08-mpi-interface],
-            AS_HELP_STRING([--disable-f08-mpi-interface], [disable Fortran 2008 MPI interface]),
-            [], dnl Implicit: enable_f08_interface=$enableval
-            [enable_f08_interface=yes]
+        ### MPI Fortran 2008 bindings ###
+        mpi_f08=no
+        AC_MSG_CHECKING([whether MPI Fortran 2008 bindings are requested])
+        AC_ARG_ENABLE([mpi-f08-bindings],
+            AS_HELP_STRING([--disable-mpi-f08-bindings], [disable MPI Fortran 2008 bindings]),
+            [], dnl Implicit: enable_mpi_f08_bindings=$enableval
+            [enable_mpi_f08_bindings=yes]
         )
-        AC_MSG_RESULT([$enable_f08_interface])
-        AC_MSG_CHECKING([whether to compile Fortran 2008 MPI interface])
-        AS_IF([test x"$FC" != x \
-                && test x"$enable_f08_interface" = xyes \
-                && test x"$mpi3" = xyes \
-                && test x"$mpi_offset_kind" != x \
-                && test x"$mpi_address_kind" != x \
-                && test x"$mpi_count_kind" != x \
-                && test x"$fc_ignore_type" != x], [
-            mpi_f08=yes
-        ], [
-            mpi_f08=no
+        AC_MSG_RESULT([$enable_mpi_f08_bindings])
+        AS_IF([test x"$enable_mpi_f08_bindings" = xyes], [
+            AC_MSG_CHECKING([whether MPI Fortran 2008 bindings are supported])
+            # WARNING: MPI Fortran 2008 support for dlb 3.5 has been dropped
+            AC_MSG_RESULT([$mpi_f08])
         ])
-        AC_MSG_RESULT([$mpi_f08])
     ])
 
     AC_SUBST([MPICC])
