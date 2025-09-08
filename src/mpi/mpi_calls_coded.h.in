@@ -1,0 +1,84 @@
+/*********************************************************************************/
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*                                                                               */
+/*  This file is part of the DLB library.                                        */
+/*                                                                               */
+/*  DLB is free software: you can redistribute it and/or modify                  */
+/*  it under the terms of the GNU Lesser General Public License as published by  */
+/*  the Free Software Foundation, either version 3 of the License, or            */
+/*  (at your option) any later version.                                          */
+/*                                                                               */
+/*  DLB is distributed in the hope that it will be useful,                       */
+/*  but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*  GNU Lesser General Public License for more details.                          */
+/*                                                                               */
+/*  You should have received a copy of the GNU Lesser General Public License     */
+/*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
+/*********************************************************************************/
+
+#ifndef MPI_CALLS_CODED_H
+#define MPI_CALLS_CODED_H
+
+#include <stdbool.h>
+
+typedef enum mpi_call_semantics_t {
+    MPI_SEMANTIC_UNKNOWN             = 0,
+    /* By chapter */
+    MPI_SEMANTIC_P2P_COMM            = 1 << 0,
+    MPI_SEMANTIC_PART_P2P_COMM       = 1 << 1,
+    MPI_SEMANTIC_COLLECTIVE_COMM     = 1 << 2,
+    MPI_SEMANTIC_TOPOLOGIES          = 1 << 3,
+    MPI_SEMANTIC_PROC_MANAGEMENT     = 1 << 4,
+    MPI_SEMANTIC_IO                  = 1 << 5,
+    /* Whether they can complete locally */
+    MPI_SEMANTIC_LOCAL               = 1 << 6,
+    MPI_SEMANTIC_NON_LOCAL           = 1 << 7,
+    /* Operation type */
+    MPI_SEMANTIC_BLOCKING            = 1 << 8,
+    MPI_SEMANTIC_NON_BLOCKING        = 1 << 9,
+    MPI_SEMANTIC_PERSISTENT          = 1 << 10,
+    MPI_SEMANTIC_PERSISTENT_PART     = 1 << 11,
+    /* If collective, what type of synchronization */
+    MPI_SEMANTIC_COLLECTIVE          = 1 << 12,
+    MPI_SEMANTIC_BLOCKING_SYNC       = 1 << 13,     /* complete-synchronization */
+    MPI_SEMANTIC_MAYBE_BLOCKING_SYNC = 1 << 14,     /* the implementation is permitted, not required */
+    MPI_SEMANTIC_S_C_SYNC            = 1 << 15,     /* start-complete-synchronization */
+    MPI_SEMANTIC_MAYBE_S_C_SYNC      = 1 << 16,     /* the implementation is permitted, not required */
+    /* By operation */
+    MPI_SEMANTIC_SEND                = 1 << 17,
+    MPI_SEMANTIC_RECV                = 1 << 18,
+    MPI_SEMANTIC_WAIT                = 1 << 19,
+    MPI_SEMANTIC_TEST                = 1 << 20,
+    MPI_SEMANTIC_BCAST               = 1 << 21,
+    MPI_SEMANTIC_BARRIER             = 1 << 22,
+    MPI_SEMANTIC_GATHER              = 1 << 23,
+    MPI_SEMANTIC_SCATTER             = 1 << 24,
+    MPI_SEMANTIC_ALLTOALL            = 1 << 25,
+    MPI_SEMANTIC_REDUCE              = 1 << 26,
+    MPI_SEMANTIC_SCAN                = 1 << 27,
+    MPI_SEMANTIC_COMM                = 1 << 28,
+    MPI_SEMANTIC_INIT                = 1 << 29,
+    MPI_SEMANTIC_FINALIZE            = 1 << 30,
+    MPI_SEMANTIC_SPAWN               = 1 << 31,
+} mpi_call_semantics_t;
+
+typedef enum mpi_call_t {
+    Unknown = 0,
+#pragma pygen start
+    {MPI_KEYNAME} = {TAGS},
+#pragma pygen end
+    Not_implemented
+} mpi_call_t;
+
+extern const char* mpi_call_names[];
+
+static inline bool is_mpi_blocking(mpi_call_t mpi_call) {
+    return !!(mpi_call & MPI_SEMANTIC_BLOCKING);
+}
+
+static inline bool is_mpi_collective(mpi_call_t mpi_call) {
+    return !!(mpi_call & MPI_SEMANTIC_COLLECTIVE);
+}
+
+#endif /* MPI_CALLS_CODED_H */

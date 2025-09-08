@@ -12,7 +12,7 @@ Build requirements
 
 * A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC or IA64)
 * C compiler
-* Python 2.4 or higher (Python 3 recommended)
+* Python 2.7 or higher (Python 3 recommended)
 
 
 Installation steps

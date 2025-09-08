@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,17 +23,18 @@
 
 #ifdef MPI_LIB
 
-#include "LB_MPI/process_MPI.h"
+#include "mpi/mpi_core.h"
 
-#include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
 #include "apis/dlb.h"
-#include "support/tracing.h"
-#include "support/options.h"
+#include "mpi/mpi_calls_coded.h"
 #include "support/debug.h"
+#include "support/options.h"
+#include "support/tracing.h"
 #include "support/types.h"
 #include "talp/talp_mpi.h"
+
 #include <mpi.h>
 #include <unistd.h>
 #include <limits.h>
@@ -57,7 +58,7 @@ static MPI_Comm mpi_comm_internode;     /* MPI Communicator with 1 representativ
 
 static MPI_Datatype mpi_int64_type;     /* MPI datatype representing int64_t */
 
-void before_init(void) {
+static void before_init(void) {
 #if MPI_VERSION >= 3 && defined(MPI_LIBRARY_VERSION)
     /* If MPI-3, compare the library version with the MPI detected at configure time
      * (only if --debug-opts=warn-mpi-version) */
@@ -196,7 +197,7 @@ static void get_mpi_info(void) {
 #endif
 }
 
-void after_init(void) {
+static void after_init(void) {
     /* Fill MPI global variables */
     get_mpi_info();
 
@@ -213,8 +214,36 @@ void after_init(void) {
     mpi_ready = 1;
 }
 
+static void before_finalize(void) {
+    if (mpi_ready) {
+        mpi_ready = 0;
+        talp_mpi_finalize(thread_spd);
+
+    }
+    if (init_from_mpi) {
+        init_from_mpi = 0;
+        DLB_Finalize();
+    } else {
+        /* Extrae will likely be finalized after this call.
+         * Even if DLB is not yet finalized, finalize the module now to prevent
+         * any further Extrae calls. */
+        instrument_finalize();
+    }
+}
+
+static void after_finalize(void) {}
+
 void before_mpi(mpi_call_t mpi_call) {
-    if(mpi_ready) {
+
+    if (mpi_call & MPI_SEMANTIC_INIT) {
+        before_init();
+    }
+
+    else if (mpi_call & MPI_SEMANTIC_FINALIZE) {
+        before_finalize();
+    }
+
+    else if(mpi_ready) {
         instrument_event(RUNTIME_EVENT, EVENT_INTO_MPI, EVENT_BEGIN);
 
         bool is_blocking = is_mpi_blocking(mpi_call);
@@ -235,7 +264,16 @@ void before_mpi(mpi_call_t mpi_call) {
 }
 
 void after_mpi(mpi_call_t mpi_call) {
-    if (mpi_ready) {
+
+    if (mpi_call & MPI_SEMANTIC_INIT) {
+        after_init();
+    }
+
+    else if (mpi_call & MPI_SEMANTIC_FINALIZE) {
+        after_finalize();
+    }
+
+    else if (mpi_ready) {
         instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_BEGIN);
 
         bool is_blocking = is_mpi_blocking(mpi_call);
@@ -252,36 +290,18 @@ void after_mpi(mpi_call_t mpi_call) {
         out_of_sync_call(flags);
 
         instrument_event(RUNTIME_EVENT, EVENT_OUTOF_MPI, EVENT_END);
-    }
-    // Poll DROM and update mask if necessary
-    DLB_PollDROM_Update();
-}
 
-void before_finalize(void) {
-    if (mpi_ready) {
-        mpi_ready = 0;
-        talp_mpi_finalize(thread_spd);
-
-    }
-    if (init_from_mpi) {
-        init_from_mpi = 0;
-        DLB_Finalize();
-    } else {
-        /* Extrae will likely be finalized after this call.
-         * Even if DLB is not yet finalized, finalize the module now to prevent
-         * any further Extrae calls. */
-        instrument_finalize();
+        // Poll DROM and update mask if necessary
+        DLB_PollDROM_Update();
     }
 }
-
-void after_finalize(void) {}
 
 int is_mpi_ready(void) {
     return mpi_ready;
 }
 
 /* Finalize MPI variables and other modules in case DLB_Finalize is called preemptively */
-void process_MPI__finalize(void) {
+void finalize_mpi_core(void) {
     if (mpi_ready) {
         mpi_ready = 0;
         init_from_mpi = 0;

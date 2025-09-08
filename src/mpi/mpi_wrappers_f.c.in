@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,24 +23,33 @@
 
 #ifdef MPI_LIB
 
-#include "LB_MPI/MPI_interface.h"
+#include "mpi/dlb_mpi_hooks_f.h"
 #include "support/debug.h"
 #include "support/dlb_common.h"
 
 #include <mpi.h>
-#include <stdio.h>
 
+// pmpi headers
+#pragma pygen start where (not mpi_call.embiggened)
+void p{MPI_LCASE}({FC_PARAMS}) __attribute__((weak));
+#pragma pygen end
 
-#pragma pygen start
+// mpi intercept
+#pragma pygen start where (not mpi_call.embiggened)
 DLB_EXPORT_SYMBOL
-int {MPI_NAME}({C_PARAMS}) {{
-    verbose(VB_MPI_INT, ">> {MPI_NAME}...............");
-    DLB_{MPI_NAME}_enter({C_ARG_LIST});
-    int res = P{MPI_NAME}({C_ARG_LIST});
-    DLB_{MPI_NAME}_leave();
-    verbose(VB_MPI_INT, "<< {MPI_NAME}...............");
-    return res;
+void {MPI_LCASE}({FC_PARAMS}) {{
+    verbose(VB_MPI_INT, ">> {MPI_NAME}");
+    DLB_{MPI_NAME}_F_enter({FC_ARGS});
+    p{MPI_LCASE}({FC_ARGS});
+    DLB_{MPI_NAME}_F_leave();
+    verbose(VB_MPI_INT, "<< {MPI_NAME}");
 }}
+
+DLB_EXPORT_SYMBOL
+DLB_ALIAS(void, {MPI_LCASE}_, ({FC_PARAMS}), ({FC_ARGS}), {MPI_LCASE})
+
+DLB_EXPORT_SYMBOL
+DLB_ALIAS(void, {MPI_LCASE}__, ({FC_PARAMS}), ({FC_ARGS}), {MPI_LCASE});
 
 #pragma pygen end
 

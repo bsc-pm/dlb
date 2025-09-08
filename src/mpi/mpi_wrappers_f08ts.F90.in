@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------!
-!  Copyright 2009-2022 Barcelona Supercomputing Center                          !
+!  Copyright 2009-2025 Barcelona Supercomputing Center                          !
 !                                                                               !
 !  This file is part of the DLB library.                                        !
 !                                                                               !
@@ -21,41 +21,52 @@
 #include <config.h>
 #endif
 
-! These macros may be defined at configure time.
-! If they are not, use some generic values:
-#ifndef FORTRAN_IGNORE_TYPE
-#   define FORTRAN_IGNORE_TYPE  TYPE(*), DIMENSION(*)
-#endif
-#ifndef MPI_OFFSET_KIND
-#   define MPI_OFFSET_KIND      8
-#endif
-#ifndef MPI_ADDRESS_KIND
-#   define MPI_ADDRESS_KIND     8
-#endif
-#ifndef MPI_COUNT_KIND
-#   define MPI_COUNT_KIND       8
-#endif
-#ifndef MPI_MAX_OBJECT_NAME
-#   define MPI_MAX_OBJECT_NAME  63
-#endif
-#ifndef MPI_MAX_PORT_NAME
-#   define MPI_MAX_PORT_NAME    1023
-#endif
+#if defined(MPI_LIB) && defined(FORTRAN_SUPPORTS_ASSUMED_RANK)
 
-!PYGEN$ start
-subroutine {MPI_NAME}_f08({F08_PAR_LIST})
+#include "mpi/config_mpi.h"
+
+#define CHOICE_BUFFER_TYPE TYPE(*), DIMENSION(..)
+
+!$PYGEN start where(mpi_call.has_assumed_rank_argument)
+#ifdef HAVE_{MPI_UCASE}_F08TS
+subroutine {MPI_NAME}_f08ts({F08_PAR_LIST})
+    use :: mpi_f08, only: {PMPI_NAME}
+    {F08_USE_STMTS}
+    {F08_CSHIM_USE_STMTS}
+
+    implicit none
     {F08_PAR_DECL}
-    INTEGER :: c_ierror
+
+    {F08_CSHIM_LOCAL_VARS}
+    integer :: f08_ierror
+
     interface
-        subroutine {MPI_LCASE}({F_C_PAR_LIST}) &
-                BIND(c, name="{MPI_LCASE}")
-            {F_C_PAR_DECL}
-        end subroutine {MPI_LCASE}
+        subroutine DLB_{MPI_NAME}_cdesc_enter({F08_CSHIM_IFACE_PAR_LIST}) &
+                bind(c, name="DLB_{MPI_NAME}_cdesc_enter")
+            {F08_CSHIM_IFACE_USE_STMTS}
+            implicit none
+            {F08_CSHIM_IFACE_PAR_DECL}
+        end subroutine DLB_{MPI_NAME}_cdesc_enter
+
+        subroutine DLB_{MPI_NAME}_cdesc_leave() &
+                bind(c, name="DLB_{MPI_NAME}_cdesc_leave")
+            implicit none
+        end subroutine DLB_{MPI_NAME}_cdesc_leave
     end interface
 
-    {F08_PRECALL_STMTS}call {MPI_LCASE}({F08_TO_C_ARG_LIST})
-    if (present(ierror)) ierror = c_ierror
+    {F08_CSHIM_PRECALL_STMTS}
 
-end subroutine {MPI_NAME}_f08
+    call DLB_{MPI_NAME}_cdesc_enter({F08_CSHIM_ARGS})
 
-!PYGEN$ end
+    call {PMPI_NAME}({F08_ARGS}{F08_ARGS_SEPARATOR}f08_ierror)
+
+    if (present(ierror)) ierror = f08_ierror
+
+    call DLB_{MPI_NAME}_cdesc_leave()
+
+end subroutine {MPI_NAME}_f08ts
+#endif
+
+!$PYGEN end
+
+#endif /* MPI_LIB && FORTRAN_SUPPORTS_ASSUMED_RANK */

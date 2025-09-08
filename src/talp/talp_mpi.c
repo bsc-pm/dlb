@@ -31,7 +31,7 @@
 #include "talp/talp_record.h"
 #include "talp/talp_types.h"
 #ifdef MPI_LIB
-#include "LB_MPI/process_MPI.h"
+#include "mpi/mpi_core.h"
 #endif
 
 #include <stdio.h>

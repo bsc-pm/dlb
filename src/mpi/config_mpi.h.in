@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,18 +17,13 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef MPI_INTERFACE_H
-#define MPI_INTERFACE_H
-
-#include <mpi.h>
-
+#ifndef CONFIG_MPI_H
+#define CONFIG_MPI_H
 
 #pragma pygen start
-void DLB_{MPI_NAME}_enter({C_PARAMS});
-void DLB_{MPI_NAME}_leave(void);
+#{DEFINE_F08} HAVE_{MPI_UCASE}_F08
+#{DEFINE_F08TS} HAVE_{MPI_UCASE}_F08TS
 
 #pragma pygen end
 
-void DLB_MPI_node_barrier(void);
-
-#endif //MPI_INTERFACE_H
+#endif /* CONFIG_MPI_H */

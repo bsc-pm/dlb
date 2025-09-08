@@ -1,0 +1,80 @@
+!-------------------------------------------------------------------------------!
+!  Copyright 2009-2025 Barcelona Supercomputing Center                          !
+!                                                                               !
+!  This file is part of the DLB library.                                        !
+!                                                                               !
+!  DLB is free software: you can redistribute it and/or modify                  !
+!  it under the terms of the GNU Lesser General Public License as published by  !
+!  the Free Software Foundation, either version 3 of the License, or            !
+!  (at your option) any later version.                                          !
+!                                                                               !
+!  DLB is distributed in the hope that it will be useful,                       !
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of               !
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                !
+!  GNU Lesser General Public License for more details.                          !
+!                                                                               !
+!  You should have received a copy of the GNU Lesser General Public License     !
+!  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                !
+!-------------------------------------------------------------------------------!
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#ifdef MPI_LIB
+
+#include "mpi/config_mpi.h"
+
+
+#if defined(FORTRAN_SUPPORTS_ASSUMED_RANK) && defined(MPI_SUBARRAYS_SUPPORTED)
+#    define CHOICE_BUFFER_TYPE TYPE(*), DIMENSION(..)
+#elif defined(FORTRAN_IGNORE_TYPE)
+#   define CHOICE_BUFFER_TYPE FORTRAN_IGNORE_TYPE
+#else
+#   define CHOICE_BUFFER_TYPE TYPE(*), DIMENSION(*)
+#endif
+
+
+!$PYGEN start exclude(mpi_init(_thread)?|mpi_comm_spawn.*)
+#ifdef HAVE_{MPI_UCASE}_F08
+subroutine {MPI_NAME}_f08({F08_PAR_LIST})
+    use :: mpi_f08, only: {PMPI_NAME}
+    {F08_USE_STMTS}
+    {F08_CSHIM_USE_STMTS}
+
+    implicit none
+    {F08_PAR_DECL}
+
+    {F08_CSHIM_LOCAL_VARS}
+    integer :: f08_ierror
+
+    interface
+        subroutine DLB_{MPI_NAME}_enter({F08_CSHIM_IFACE_PAR_LIST}) &
+                bind(c, name="DLB_{MPI_NAME}_enter")
+            {F08_CSHIM_IFACE_USE_STMTS}
+            implicit none
+            {F08_CSHIM_IFACE_PAR_DECL}
+        end subroutine DLB_{MPI_NAME}_enter
+
+        subroutine DLB_{MPI_NAME}_leave() &
+                bind(c, name="DLB_{MPI_NAME}_leave")
+            implicit none
+        end subroutine DLB_{MPI_NAME}_leave
+    end interface
+
+    {F08_CSHIM_PRECALL_STMTS}
+
+    call DLB_{MPI_NAME}_enter({F08_CSHIM_ARGS})
+
+    call {PMPI_NAME}({F08_ARGS}{F08_ARGS_SEPARATOR}f08_ierror)
+
+    if (present(ierror)) ierror = f08_ierror
+
+    call DLB_{MPI_NAME}_leave()
+
+end subroutine {MPI_NAME}_f08
+#endif
+
+!$PYGEN end
+
+#endif /* MPI_LIB */

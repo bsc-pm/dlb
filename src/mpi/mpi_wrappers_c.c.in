@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,24 +17,31 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef MPI_INTERFACEF_H
-#define MPI_INTERFACEF_H
-
-#include <mpi.h>
-
-#ifdef __cplusplus
-extern "C"
-{
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
+#ifdef MPI_LIB
+
+#include "mpi/dlb_mpi_hooks_c.h"
+#include "support/debug.h"
+#include "support/dlb_common.h"
+
+#include <mpi.h>
+#include <stdio.h>
+
+
 #pragma pygen start
-void DLB_{MPI_NAME}_F_enter({F_PARAMS});
-void DLB_{MPI_NAME}_F_leave(void);
+DLB_EXPORT_SYMBOL
+int {MPI_NAME}({C_PARAMS}) {{
+    verbose(VB_MPI_INT, ">> {MPI_NAME}");
+    DLB_{MPI_NAME}_enter({C_ARGS});
+    int res = P{MPI_NAME}({C_ARGS});
+    DLB_{MPI_NAME}_leave();
+    verbose(VB_MPI_INT, "<< {MPI_NAME}");
+    return res;
+}}
 
 #pragma pygen end
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif //MPI_INTERFACEF_H
+#endif /* MPI_LIB */

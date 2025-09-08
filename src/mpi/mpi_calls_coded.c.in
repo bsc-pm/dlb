@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,52 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef MPI_CALLS_CODED_H
-#define MPI_CALLS_CODED_H
-
-#include <stdbool.h>
-
-enum type_mpi_call {
-    _Unknown=0,
-    _Send=1,
-    _Receive=2,
-    _Barrier=3,
-    _Wait=4,
-    _Bcast=5,
-    _All2All=6,
-    _Gather=7,
-    _Scatter=8,
-    _Scan=9,
-    _Reduce=10,
-    _SendRecv=11,
-    _Test=12,
-    _Comm=13,
-    _IO=14,
-//Last 16 bits: 000000zx yyyyyyyy
-// z : Collective
-// x : Blocking - No blocking
-// y : type mpi call [0-15]
-    _Blocking   = 1 << 16,
-    _Collective = 1 << 17,
-};
-
-typedef enum mpi_call_t {
-    Unknown = 0,
+const char* mpi_call_names[] = {
+    "Unknown MPI call",
 #pragma pygen start
-    {MPI_KEYNAME} = {TAGS},
+    "{MPI_NAME}",
 #pragma pygen end
-    Not_implemented
-} mpi_call_t;
-
-extern const char* mpi_call_names[];
-
-static inline bool is_mpi_blocking(mpi_call_t mpi_call) {
-    return !!(mpi_call & _Blocking);
-}
-
-static inline bool is_mpi_collective(mpi_call_t mpi_call) {
-    return !!(mpi_call & _Collective);
-}
-
-#endif //MPI_CALLS_CODED_H
-
+    "Not implemented MPI call"
+};

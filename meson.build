@@ -23,7 +23,6 @@ common_deps = [m_dep, rt_dep, dl_dep, thread_dep, hwloc_dep, papi_dep]
 mpi_dep = dependency('mpi', language : 'c', required : get_option('mpi'))
 mpif_dep = dependency('mpi', language : 'fortran', required : get_option('mpi'))
 
-
 ### CFLAGS
 
 add_project_arguments('-DHAVE_CONFIG_H', language : 'c')
@@ -232,26 +231,27 @@ libdlb_test = static_library(
 
 if mpi_dep.found()
   mpi_cpp_flags = '-DMPI_LIB'
+  mpi_f08_bindings = get_option('mpi_f08_bindings')
 
+  ### Obtain MPI standard version ###
   check_mpi_version = '''
     #include <mpi.h>
     #include <stdio.h>
-    #include <stdlib.h>
     int main(int argc, char *argv[])
     {
         printf("%d.%d", MPI_VERSION, MPI_SUBVERSION);
-        return EXIT_SUCCESS;
+        return 0;
     }
-    '''
+  '''
   runresult = cc.run(check_mpi_version,
     dependencies : mpi_dep,
   )
   mpi_version = runresult.stdout()
 
+  ### Obtain MPI library version ###
   check_mpi_library_version = '''
     #include <mpi.h>
     #include <stdio.h>
-    #include <stdlib.h>
     int main(int argc, char *argv[])
     {
         char version[MPI_MAX_LIBRARY_VERSION_STRING];
@@ -260,54 +260,103 @@ if mpi_dep.found()
         char *newline = strchr(version, '\n');
         if (newline) *newline = '\0';
         printf("%s", version);
-        return EXIT_SUCCESS;
+        return 0;
     }
-    '''
+  '''
   runresult = cc.run(check_mpi_library_version,
     dependencies : mpi_dep,
   )
   mpi_library_version = runresult.stdout()
 
+  # Define generator for regular MPI files
   prog_python = import('python').find_installation('python')
-  gen = generator(prog_python,
+  gen_mpi_calls = generator(prog_python,
     output : '@BASENAME@',
     arguments : [
       '@SOURCE_DIR@/scripts/pygen.py',
-      '--ifile', '@INPUT@', '--ofile', '@OUTPUT@',
-      '--json', '@SOURCE_DIR@/src/LB_MPI/mpicalls.json',
-      '--std', mpi_version,
-      '--lib', mpi_library_version,
+      '--input-file', '@INPUT@',
+      '--output-file', '@OUTPUT@',
+      '--mpi-calls-bindings', '@SOURCE_DIR@/src/mpi/mpi_calls_bindings.json',
+      '--mpi-calls-metadata', '@SOURCE_DIR@/src/mpi/mpi_calls_metadata.json',
+      '--mpi-standard', mpi_version,
+      '--library-version', mpi_library_version,
     ]
   )
 
-  mpi_common_sources = [
-    'src/LB_MPI/process_MPI.c',
-    'src/LB_MPI/process_MPI.h',
+  # Define generator for config_mpi.h, which needs the MPI Fortran wrapper
+  # to find available MPI F08 symbols
+  mpifc = find_program('mpifort', 'mpif90', required : true)
+  gen_mpi_symbols = generator(prog_python,
+    output : '@BASENAME@',
+    arguments : [
+      '@SOURCE_DIR@/scripts/pygen.py',
+      '--input-file', '@INPUT@',
+      '--output-file', '@OUTPUT@',
+      '--mpi-calls-bindings', '@SOURCE_DIR@/src/mpi/mpi_calls_bindings.json',
+      '--mpi-calls-metadata', '@SOURCE_DIR@/src/mpi/mpi_calls_metadata.json',
+      '--mpi-standard', mpi_version,
+      '--library-version', mpi_library_version,
+      '--mpi-fortran-wrapper', mpifc.full_path(),
+    ]
+  )
+
+  # mpi_sources will contain all common sources for libdlb_mpi and libdlb_mpi_instr
+  mpi_sources = sources + [
+    'src/mpi/mpi_core.c',
+    'src/mpi/mpi_core.h',
+    'src/support/mod_string.f90',
   ]
 
-  mpi_gen_sources = gen.process(
-    'src/LB_MPI/MPI_calls_coded.c.in',
-    'src/LB_MPI/MPI_calls_coded.h.in',
-    'src/LB_MPI/MPI_interceptF08.F90.in',
-    'src/LB_MPI/MPI_interface.c.in',
-    'src/LB_MPI/MPI_interface.h.in',
-    'src/LB_MPI/MPI_interfaceF.c.in',
-    'src/LB_MPI/MPI_interfaceF.h.in',
+  mpi_sources += gen_mpi_calls.process(
+    'src/mpi/dlb_mpi_hooks_c.c.in',
+    'src/mpi/dlb_mpi_hooks_c.h.in',
+    'src/mpi/dlb_mpi_hooks_f.c.in',
+    'src/mpi/dlb_mpi_hooks_f.h.in',
+    'src/mpi/mpi_calls_coded.c.in',
+    'src/mpi/mpi_calls_coded.h.in',
     preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
   )
 
-  mpi_gen_intercept_sources = gen.process(
-    'src/LB_MPI/MPI_intercept.c.in',
-    'src/LB_MPI/MPI_interceptF.c.in',
+  if mpi_f08_bindings.enabled()
+    mpi_sources += gen_mpi_calls.process(
+      'src/mpi/dlb_mpi_hooks_cdesc.c.in',
+      preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
+    )
+  endif
+
+  # mpi_wrappers_sources contains all wrappers to intercept MPI, so only for libdlb_mpi
+  # (start with empty list to force GeneratedList -> array conversion)
+  mpi_wrappers_sources = []
+  mpi_wrappers_sources += gen_mpi_calls.process(
+    'src/mpi/mpi_wrappers_c.c.in',
+    'src/mpi/mpi_wrappers_f.c.in',
     preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
   )
 
-  mpi_sources = [sources, mpi_common_sources, mpi_gen_sources]
+  if mpi_f08_bindings.enabled()
+    mpi_wrappers_sources += [
+      'src/mpi/mpi_wrappers_f08_init.F90',
+      'src/mpi/mpi_wrappers_f08_comm_spawn.F90',
+    ]
+
+    mpi_wrappers_sources += gen_mpi_calls.process(
+      'src/mpi/mpi_wrappers_f08.F90.in',
+      'src/mpi/mpi_wrappers_f08ts.F90.in',
+      preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
+    )
+
+    mpi_wrappers_sources += gen_mpi_symbols.process(
+      'src/mpi/config_mpi.h.in',
+      preserve_path_from : '@0@/src'.format(meson.current_source_dir()),
+    )
+  endif
+
 
   libdlb_mpi = library(
-    'dlb_mpi', [mpi_sources, mpi_gen_intercept_sources],
+    'dlb_mpi', mpi_sources + mpi_wrappers_sources,
     include_directories : common_includes,
     c_args : mpi_cpp_flags,
+    fortran_args : mpi_cpp_flags,
     link_whole: libdlb_common,
     dependencies : [common_deps, mpi_dep, mpif_dep],
     gnu_symbol_visibility : 'hidden',
@@ -318,6 +367,7 @@ if mpi_dep.found()
     'dlb_mpi_instr', mpi_sources,
     include_directories : common_includes,
     c_args : [mpi_cpp_flags, instr_cpp_flags],
+    fortran_args : [mpi_cpp_flags, instr_cpp_flags],
     link_whole: libdlb_common,
     dependencies : [common_deps, mpi_dep, mpif_dep],
     gnu_symbol_visibility : 'hidden',
@@ -472,6 +522,9 @@ conf_data.set('HAVE_EMMINTRIN_H', cc.has_header('emmintrin.h'))
 conf_data.set('HAVE_EXECINFO_H', cc.has_header('execinfo.h'))
 conf_data.set('HAVE_IMMINTRIN_H', cc.has_header('immintrin.h'))
 conf_data.set('HAVE_STDATOMIC_H', cc.has_header('stdatomic.h'))
+conf_data.set('HAVE_ISO_FORTRAN_BINDING_H', cc.has_header('ISO_Fortran_binding.h'))
+conf_data.set('HAVE_MPI_F08_STATUS_TYPE', cc.has_type('MPI_F08_status',
+  prefix: '#include <mpi.h>', dependencies: mpi_dep))
 conf_data.set_quoted('MPI_LIBRARY_VERSION', mpi_library_version)
 config_h = configure_file( output : 'config.h', configuration : conf_data)
 

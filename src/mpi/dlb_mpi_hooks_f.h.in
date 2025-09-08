@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,10 +17,24 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-const char* mpi_call_names[] = {
-    "Unknown MPI call",
-#pragma pygen start
-    "{MPI_NAME}",
+#ifndef DLB_MPI_HOOKS_F_H
+#define DLB_MPI_HOOKS_F_H
+
+#include <mpi.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#pragma pygen start where (not mpi_call.embiggened)
+void DLB_{MPI_NAME}_F_enter({FC_PARAMS});
+void DLB_{MPI_NAME}_F_leave(void);
+
 #pragma pygen end
-    "Not implemented MPI call"
-};
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* DLB_MPI_HOOKS_F_H */

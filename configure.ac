@@ -231,8 +231,10 @@ AS_IF([test "x$FC" = x], [
 
     AC_LANG_POP([Fortran])
 
+    # Check for assumed-rank entity (DIMENSION(..))
+    AX_CHECK_FC_ASSUMED_RANK
+
     # Check for assumed-type support (TYPE(*)), or defer to REAL
-    # and for assumed-rank entity (DIMENSION(..)), or defer to assumed-size arrays
     AX_CHECK_FC_IGNORE_TYPE
 ])
 AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
@@ -363,6 +365,7 @@ AS_IF([echo "$CC $OPENMP_CFLAGS" | grep -q "icx.*-fopenmp"], [
 
 # check for MPI
 AC_ARG_VAR([MPICC], [MPI C compiler wrapper])
+AC_ARG_VAR([MPIFC], [MPI Fortran compiler wrapper])
 AX_MPI
 
 # check for HWLOC

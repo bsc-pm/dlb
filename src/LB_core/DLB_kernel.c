@@ -42,7 +42,7 @@
 #include "talp/talp.h"
 #include "talp/talp_mpi.h"
 #ifdef MPI_LIB
-#include "LB_MPI/process_MPI.h"
+#include "mpi/mpi_core.h"
 #endif
 
 #include <limits.h>
@@ -215,7 +215,7 @@ int Finish(subprocess_descriptor_t *spd) {
 #if MPI_LIB
     /* If DLB_Finalize is called preemptively, we need to finalize also the MPI
      * module */
-    process_MPI__finalize();
+    finalize_mpi_core();
 #endif
 
     spd->lewi_enabled = false;

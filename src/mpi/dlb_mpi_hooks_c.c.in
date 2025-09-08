@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,29 +23,28 @@
 
 #ifdef MPI_LIB
 
-#include "LB_MPI/MPI_interface.h"
+#include "mpi/dlb_mpi_hooks_c.h"
 
-#include "LB_MPI/process_MPI.h"
-#include "LB_MPI/MPI_calls_coded.h"
 #include "LB_core/spd.h"
+#include "mpi/mpi_calls_coded.h"
+#include "mpi/mpi_core.h"
 #include "support/debug.h"
 #include "support/dlb_common.h"
 
 #include <mpi.h>
 
-
 #pragma pygen start
 DLB_EXPORT_SYMBOL
 void DLB_{MPI_NAME}_enter({C_PARAMS}) {{
     spd_enter_dlb(thread_spd);
-    verbose(VB_MPI_API, ">> {MPI_NAME}...............");
-    {BEFORE_FUNC};
+    verbose(VB_MPI_API, ">> {MPI_NAME}");
+    before_mpi({MPI_KEYNAME});
 }}
 
 DLB_EXPORT_SYMBOL
 void DLB_{MPI_NAME}_leave(void) {{
-    verbose(VB_MPI_API, "<< {MPI_NAME}...............");
-    {AFTER_FUNC};
+    verbose(VB_MPI_API, "<< {MPI_NAME}");
+    after_mpi({MPI_KEYNAME});
 }}
 
 #pragma pygen end
