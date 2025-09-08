@@ -3,6 +3,25 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.5.3] 2025-09-08
+### Added
+- Added documentation for `DLB_DROM_FLAGS_NONE` argument
+- Other minor documentation corrections
+
+### Changed
+- Remove MPI Fortran 2008 bindings check at configure time; bindings remain
+  disabled pending new interception method
+
+### Fixed
+- Fixed compilation error with GCC 15
+- Fixed errors in the OpenMP thread manager during initialization
+- Fixed some OpenMP thread manager logic for SMT systems
+- Fixed bug in `DLB_MonitoringRegionReset`; region was not being removed from
+  an internal list of open regions
+- Stop instrumentation after `MPI_Finalize` to avoid unwanted interactions with
+  external libraries
+
+
 ## [3.5.2] 2025-05-02
 ### Added
 - Add `dlb_mpi` binary to display CPU affinity and MPI rank
