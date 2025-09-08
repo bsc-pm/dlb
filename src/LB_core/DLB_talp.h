@@ -22,6 +22,7 @@
 
 #include "apis/dlb_talp.h"
 #include "support/atomic.h"
+#include "LB_numThreads/omp-tools.h"
 
 #include <pthread.h>
 #include <sched.h>
@@ -67,7 +68,7 @@ void talp_out_of_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_
 /* TALP OpenMP functions */
 void talp_openmp_init(pid_t, const options_t*);
 void talp_openmp_finalize(void);
-void talp_openmp_thread_begin();
+void talp_openmp_thread_begin(ompt_thread_t thread_type);
 void talp_openmp_thread_end(void);
 void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data);
 void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data);
