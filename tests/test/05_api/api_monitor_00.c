@@ -120,7 +120,8 @@ int main(int argc, char **argv) {
         assert( custom_monitor->num_mpi_calls == 3 );
         assert( custom_monitor->mpi_time > 0 );
         assert( custom_monitor->useful_time > 0 );
-        assert( custom_monitor->elapsed_time > global_monitor->elapsed_time );
+        assert( custom_monitor->elapsed_time > 0 );
+        assert( custom_monitor->elapsed_time < global_monitor->elapsed_time );
 
         assert( DLB_Finalize() == DLB_SUCCESS );
     }

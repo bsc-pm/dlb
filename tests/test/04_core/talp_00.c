@@ -66,6 +66,11 @@ int main(int argc, char *argv[]) {
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *global_monitor = talp_info->monitor;
 
+    /* Check that global monitor was started during talp_init and reset it
+     * for the following tests */
+    assert( region_stop(&spd, global_monitor) == DLB_SUCCESS );
+    assert( region_reset(&spd, global_monitor) == DLB_SUCCESS );
+
     /* Register custom monitoring region */
     dlb_monitor_t *monitor = region_register(&spd, "Test monitor");
     assert( monitor != NULL );
@@ -397,7 +402,7 @@ int main(int argc, char *argv[]) {
         strcpy(spd.options.talp_region_select, "region1,global");
         talp_init(&spd);
         global_monitor = region_get_global(&spd);
-        assert( region_start(&spd, global_monitor) == DLB_SUCCESS );
+        assert( region_start(&spd, global_monitor) == DLB_NOUPDT );
         assert( region_is_started(global_monitor) );
         talp_finalize(&spd);
         strcpy(spd.options.talp_region_select, "");

@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *global_monitor = talp_info->monitor;
-    assert( !region_is_started(global_monitor) );
+    assert( region_is_started(global_monitor) );
 
     /* OpenMP Init */
     talp_openmp_init(spd.id, &spd.options);

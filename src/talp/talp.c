@@ -327,6 +327,9 @@ void talp_init(subprocess_descriptor_t *spd) {
         talp_info->flags.papi = false;
 #endif
     }
+
+    /* Start global region */
+    region_start(spd, talp_info->monitor);
 }
 
 void talp_finalize(subprocess_descriptor_t *spd) {

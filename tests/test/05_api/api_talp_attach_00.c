@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
         // Check thread is NOT an observer and GetTimes are correct
         double mpi_time, useful_time;
         assert( DLB_Init(0, 0, NULL) == DLB_SUCCESS );
-        assert( DLB_MonitoringRegionStart(DLB_MPI_REGION) == DLB_SUCCESS );
-        assert( DLB_MonitoringRegionStop(DLB_MPI_REGION) == DLB_SUCCESS );
+        assert( DLB_MonitoringRegionStart(DLB_GLOBAL_REGION) == DLB_NOUPDT );
+        assert( DLB_MonitoringRegionStop(DLB_GLOBAL_REGION) == DLB_SUCCESS );
         assert( DLB_TALP_Attach() == DLB_SUCCESS );
         assert( !thread_is_observer );
         assert( DLB_TALP_GetTimes(0, &mpi_time, &useful_time) == DLB_SUCCESS );
@@ -129,8 +129,8 @@ int main(int argc, char *argv[]) {
         dlb_node_metrics_t node_metrics;
         assert( DLB_Init(0, 0, NULL) == DLB_SUCCESS );
         assert( DLB_TALP_Attach() == DLB_SUCCESS );
-        assert( DLB_TALP_GetNodeTimes(DLB_MPI_REGION, &node_times, NULL, 1) == DLB_ERR_NOSHMEM );
-        assert( DLB_TALP_QueryPOPNodeMetrics(DLB_MPI_REGION, &node_metrics) == DLB_ERR_NOSHMEM );
+        assert( DLB_TALP_GetNodeTimes(DLB_GLOBAL_REGION, &node_times, NULL, 1) == DLB_ERR_NOSHMEM );
+        assert( DLB_TALP_QueryPOPNodeMetrics(DLB_GLOBAL_REGION, &node_metrics) == DLB_ERR_NOSHMEM );
         assert( DLB_TALP_Detach() == DLB_SUCCESS );
         assert( DLB_Finalize() == DLB_SUCCESS );
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
         dlb_setenv("DLB_ARGS", dlb_args_copy, NULL, ENV_OVERWRITE_ALWAYS);
         free(dlb_args_copy);
 
-        // Check thread may be an oberver again
+        // Check thread may be an observer again
         assert( DLB_TALP_Attach() == DLB_SUCCESS );
         assert( thread_is_observer );
         assert( DLB_TALP_Detach() == DLB_SUCCESS );

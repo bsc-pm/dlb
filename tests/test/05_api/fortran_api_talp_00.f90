@@ -38,7 +38,7 @@ program test
     ! initialize global region with 1 measurement
     dlb_handle_1 = DLB_MonitoringRegionGetGlobal()
     err = DLB_MonitoringRegionStart(dlb_handle_1)
-    if (err /= DLB_SUCCESS) call abort
+    if (err /= DLB_NOUPDT) call abort
     err = DLB_MonitoringRegionStop(dlb_handle_1)
     if (err /= DLB_SUCCESS) call abort
     call c_f_pointer(dlb_handle_1, dlb_monitor)
