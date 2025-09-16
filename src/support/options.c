@@ -541,6 +541,16 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_OMPTM_T,
         .flags          = (option_flags_t)(OPT_OPTIONAL)
     }, {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--plugin",
+        .default_value  = "",
+        .description    = OFFSET"Select plugin to enable.\n"
+                          OFFSET"For now, only 'cupti' and 'rocprofilerv2'.\n"
+                          OFFSET"(Experimental)",
+        .offset         = offsetof(options_t, plugins),
+        .type           = OPT_STR_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
+    }, {
         .var_name       = "LB_DEBUG_OPTS",
         .arg_name       = "--debug-opts",
         .default_value  = "",

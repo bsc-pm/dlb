@@ -36,6 +36,7 @@
         integer(kind=c_int64_t) :: num_mpi_calls
         integer(kind=c_int64_t) :: num_omp_parallels
         integer(kind=c_int64_t) :: num_omp_tasks
+        integer(kind=c_int64_t) :: num_gpu_runtime_calls
         integer(kind=c_int64_t) :: start_time
         integer(kind=c_int64_t) :: stop_time
         integer(kind=c_int64_t) :: elapsed_time
@@ -44,6 +45,7 @@
         integer(kind=c_int64_t) :: omp_load_imbalance_time
         integer(kind=c_int64_t) :: omp_scheduling_time
         integer(kind=c_int64_t) :: omp_serialization_time
+        integer(kind=c_int64_t) :: gpu_runtime_time
         type(c_ptr)             :: data_
        end type
 

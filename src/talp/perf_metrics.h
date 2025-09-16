@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -61,6 +61,7 @@ typedef struct pop_base_metrics_t {
     int     num_mpi_ranks;
     int     num_nodes;
     float   avg_cpus;
+    int     num_gpus;
     /* Hardware counters */
     double  cycles;
     double  instructions;
@@ -69,20 +70,29 @@ typedef struct pop_base_metrics_t {
     int64_t num_mpi_calls;
     int64_t num_omp_parallels;
     int64_t num_omp_tasks;
-    /* Sum of times among all processes */
+    int64_t num_gpu_runtime_calls;
+    /* Sum of Host times among all processes */
     int64_t elapsed_time;
     int64_t useful_time;
     int64_t mpi_time;
     int64_t omp_load_imbalance_time;
     int64_t omp_scheduling_time;
     int64_t omp_serialization_time;
-    /* Normalized times by the number of assigned CPUs */
-    double  useful_normd_app;        /* Useful time normalized by num. CPUs at application level */
-    double  mpi_normd_app;           /* MPI time normalized by num. CPUs at application level */
-    double  max_useful_normd_proc;   /* Max value of useful times normalized at process level */
-    double  max_useful_normd_node;   /* Max value of useful times normalized at node level */
-    double  mpi_normd_of_max_useful; /* MPI time normalized at process level of the process with
-                                        the max useful time */
+    int64_t gpu_runtime_time;
+    /* Normalized Host times by the number of assigned CPUs */
+    /*! MPI time normalized at process level of the process with less MPI
+     *  i.e.: min(normalize_proc(mpi_times[])) */
+    double  min_mpi_normd_proc;
+    /*! MPI time normalized at node level of the node with less MPI
+     *  i.e.: min(normalize_node(mpi_times[])) */
+    double  min_mpi_normd_node;
+    /* Sum of Device times among all processes */
+    int64_t gpu_useful_time;
+    int64_t gpu_communication_time;
+    int64_t gpu_inactive_time;
+    /* Device Max Times */
+    int64_t max_gpu_useful_time;
+    int64_t max_gpu_active_time;
 } pop_base_metrics_t;
 
 

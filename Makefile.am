@@ -200,6 +200,9 @@ src/mpi/config_mpi.h: $(top_srcdir)/src/mpi/config_mpi.h.in $(MPICALLS_DB)
 # These sources do not depend on any MPI nor instrumentation version, only debug
 COMMON_SRCS = \
 	$(installheaders)                       \
+	src/plugins/plugin.h                    \
+	src/plugins/plugin_manager.c            \
+	src/plugins/plugin_manager.h            \
 	src/support/array_template.h            \
 	src/support/atomic.h                    \
 	src/support/dlb_common.h                \
@@ -224,6 +227,8 @@ COMMON_SRCS = \
 	src/support/small_array.h               \
 	src/support/types.c                     \
 	src/support/types.h                     \
+	src/talp/talp_gpu.c                     \
+	src/talp/talp_gpu.h                     \
 	src/talp/talp_openmp.c                  \
 	src/talp/talp_openmp.h                  \
 	src/talp/talp_output.c                  \
@@ -608,6 +613,42 @@ endif #MPIF_LIB
 endif #MPI_LIB
 
 #********************************************************************************
+# libdlb_cupti.so
+#********************************************************************************
+if CUPTI_PLUGIN
+CUPTI_SRCS = \
+	src/plugins/cupti_plugin.c      \
+	src/plugins/gpu_record_utils.c  \
+	src/plugins/gpu_record_utils.h  \
+	src/plugins/plugin_verbose.h    \
+	$(END)
+
+lib_LTLIBRARIES += libdlb_cupti.la
+libdlb_cupti_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(CUDA_CPPFLAGS)
+libdlb_cupti_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_cupti_la_LDFLAGS = $(AM_LDFLAGS) $(CUDA_LDFLAGS)
+libdlb_cupti_la_SOURCES = $(CUPTI_SRCS)
+endif #CUPTI_PLUGIN
+
+#********************************************************************************
+# libdlb_rocprofilerv2.so
+#********************************************************************************
+if ROCM_PLUGIN
+ROCPROFILERV2_SRCS = \
+	src/plugins/rocprofilerv2_plugin.c      \
+	src/plugins/gpu_record_utils.c          \
+	src/plugins/gpu_record_utils.h          \
+	src/plugins/plugin_verbose.h            \
+	$(END)
+
+lib_LTLIBRARIES += libdlb_rocprofilerv2.la
+libdlb_rocprofilerv2_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(ROCM_CPPFLAGS)
+libdlb_rocprofilerv2_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_rocprofilerv2_la_LDFLAGS = $(AM_LDFLAGS) $(ROCM_LDFLAGS)
+libdlb_rocprofilerv2_la_SOURCES = $(ROCPROFILERV2_SRCS)
+endif #ROCM_PLUGIN
+
+#********************************************************************************
 # Support binaries
 #********************************************************************************
 bin_sources = \
@@ -970,6 +1011,7 @@ EXTRA_DIST += $(sphinx_files)
 # Generated reST files from man pages
 sphinx_manpages_files = \
 	doc/user_guide/source/dlb.rst \
+	doc/user_guide/source/dlb_mpi.rst \
 	doc/user_guide/source/dlb_run.rst \
 	doc/user_guide/source/dlb_shm.rst \
 	doc/user_guide/source/dlb_taskset.rst \
@@ -993,6 +1035,9 @@ PANDOC_FLAGS = --from=man --to=rst --shift-heading-level-by=3
 
 doc/user_guide/source/dlb.rst: $(man1_builddir)/dlb.1
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb' $(PANDOC_FLAGS) -o $@ $<
+
+doc/user_guide/source/dlb_mpi.rst: $(man1_builddir)/dlb_mpi.1
+	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_mpi' $(PANDOC_FLAGS) -o $@ $<
 
 doc/user_guide/source/dlb_run.rst: $(man1_builddir)/dlb_run.1
 	$(PANDOC_verbose)$(PANDOC) --title-prefix='dlb_run' $(PANDOC_FLAGS) -o $@ $<
@@ -1094,6 +1139,7 @@ man3_builddir = $(builddir)/doc/doxygen/man/man3
 
 dist_man_MANS = \
 	$(man1_builddir)/dlb.1 \
+	$(man1_builddir)/dlb_mpi.1 \
 	$(man1_builddir)/dlb_run.1 \
 	$(man1_builddir)/dlb_shm.1 \
 	$(man1_builddir)/dlb_taskset.1 \
@@ -1117,6 +1163,7 @@ $(man3_builddir)/doxy.stamp: $(installheaders)
 	@touch $(man3_builddir)/doxy.stamp
 
 $(man1_builddir)/dlb.1: $(man1_builddir)/doxy.stamp
+$(man1_builddir)/dlb_mpi.1: $(man1_builddir)/doxy.stamp
 $(man1_builddir)/dlb_run.1: $(man1_builddir)/doxy.stamp
 $(man1_builddir)/dlb_shm.1: $(man1_builddir)/doxy.stamp
 $(man1_builddir)/dlb_taskset.1: $(man1_builddir)/doxy.stamp

@@ -53,6 +53,8 @@ typedef struct dlb_monitor_t {
     int64_t     num_omp_parallels;
     /*! Number of measured OpenMP explicit tasks */
     int64_t     num_omp_tasks;
+    /*! Number of measured GPU Runtime calls */
+    int64_t     num_gpu_runtime_calls;
     /*! Absolute time (in nanoseconds) of the last time the region was started */
     int64_t     start_time;
     /*! Absolute time (in nanoseconds) of the last time the region was stopped */
@@ -72,6 +74,15 @@ typedef struct dlb_monitor_t {
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent outside
      * OpenMP parallel regions */
     int64_t     omp_serialization_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in GPU calls inside
+     * the region */
+    int64_t     gpu_runtime_time;
+    /*! TBD */
+    int64_t     gpu_useful_time;
+    /*! TBD */
+    int64_t     gpu_communication_time;
+    /*! TBD */
+    int64_t     gpu_inactive_time;
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;
@@ -88,6 +99,8 @@ typedef struct dlb_pop_metrics_t {
     int         num_nodes;
     /*! Total average of CPUs used in the region. Only meaningful if LeWI enabled. */
     float       avg_cpus;
+    /*! TBD */
+    int         num_gpus;
     /*! Total number of CPU cycles elapsed in that region during useful time */
     double      cycles;
     /*! Total number of instructions executed during useful time */
@@ -100,6 +113,10 @@ typedef struct dlb_pop_metrics_t {
     int64_t     num_omp_parallels;
     /*! Number of encountered OpenMP tasks combined among all processes */
     int64_t     num_omp_tasks;
+    /*! Number of executed GPU calls combined among all processes */
+    int64_t     num_gpu_calls;
+    /*! Number of executed GPU Runtime calls combined among all processes */
+    int64_t     num_gpu_runtime_calls;
     /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */
     int64_t     elapsed_time;
     /*! Time (in nanoseconds) of the accumulated CPU time of useful computation in the application */
@@ -115,16 +132,22 @@ typedef struct dlb_pop_metrics_t {
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent outside
      * OpenMP parallel regions */
     int64_t     omp_serialization_time;
-    /*! Useful time normalized to the number of resources in the application */
-    double      useful_normd_app;
-    /*! MPI time normalized to the number of resources in the application */
-    double      mpi_normd_app;
-    /*! Max value of useful times normalized at process level */
-    double      max_useful_normd_proc;
-    /*! Max value of useful times normalized at node level */
-    double      max_useful_normd_node;
-    /*! MPI time normalized at process level of the process with the max useful time */
-    double      mpi_normd_of_max_useful;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in GPU calls */
+    int64_t     gpu_runtime_time;
+    /*! MPI time normalized at process level of the process with less MPI */
+    double      min_mpi_normd_proc;
+    /*! MPI time normalized at node level of the node with less MPI */
+    double      min_mpi_normd_node;
+    /* TBD */
+    int64_t     gpu_useful_time;
+    /* TBD */
+    int64_t     gpu_communication_time;
+    /* TBD: remove? */
+    int64_t     gpu_inactive_time;
+    /* TBD */
+    int64_t     max_gpu_useful_time;
+    /* TBD */
+    int64_t     max_gpu_active_time;
     /*! Efficiency number [0.0 - 1.0] of the impact in the application's parallelization */
     float       parallel_efficiency;
     /*! Efficiency number of the impact in the MPI parallelization */
@@ -145,6 +168,16 @@ typedef struct dlb_pop_metrics_t {
     float       omp_scheduling_efficiency;
     /*! Efficiency lost due to OpenMP threads outside of parallel regions */
     float       omp_serialization_efficiency;
+    /*! Efficiency of the Host offloading to the Device */
+    float       device_offload_efficiency;
+    /*! TBD */
+    float       gpu_parallel_efficiency;
+    /*! TBD */
+    float       gpu_load_balance;
+    /*! TBD */
+    float       gpu_communication_efficiency;
+    /*! TBD */
+    float       gpu_orchestration_efficiency;
 } dlb_pop_metrics_t;
 
 /*! Node metrics (of one monitor) collected asynchronously from the shared memory */

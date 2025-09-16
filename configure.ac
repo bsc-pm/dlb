@@ -374,6 +374,12 @@ AX_HWLOC
 # check for PAPI
 AX_PAPI
 
+# check for CUDA
+AX_CUDA
+
+# check for ROCm
+AX_ROCM
+
 # check for SPHINX
 AC_ARG_ENABLE([sphinx-doc],
               AS_HELP_STRING([--disable-sphinx-doc], [disable sphinx-doc detection]),
@@ -596,4 +602,24 @@ AS_IF([test "x$with_papi" = xno], [
     AS_ECHO(["yes
   PAPI_CPPFLAGS: $PAPI_CPPFLAGS
   PAPI_LDFLAGS:  $PAPI_LDFLAGS"])
+])
+
+AS_ECHO_N(["
+* CUDA: "])
+AS_IF([test "x$with_cuda" = xno], [
+    AS_ECHO(["no"])
+], [
+    AS_ECHO(["yes
+  CUDA_CPPFLAGS: $CUDA_CPPFLAGS
+  CUDA_LDFLAGS:  $CUDA_LDFLAGS"])
+])
+
+AS_ECHO_N(["
+* ROCm: "])
+AS_IF([test "x$with_rocm" = xno], [
+    AS_ECHO(["no"])
+], [
+    AS_ECHO(["yes
+  ROCM_CPPFLAGS: $ROCM_CPPFLAGS
+  ROCM_LDFLAGS:  $ROCM_LDFLAGS"])
 ])

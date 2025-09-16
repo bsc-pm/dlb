@@ -19,7 +19,7 @@
 
 /*! \page dlb DLB utility command.
  *  \section synopsis SYNOPSIS
- *      <B>dlb</B> {--affinity | --help [--help] | --version}
+ *      <B>dlb</B> {--affinity | --gpu-affinity [--uuid] | --help [--help] | --version}
  *  \section description DESCRIPTION
  *      Utility command to display all DLB options, print DLB version, or check
  *      process affinity.
@@ -27,6 +27,12 @@
  *      <DL>
  *          <DT>-a, --affinity</DT>
  *          <DD>Print process affinity.</DD>
+ *
+ *          <DT>-g, --gpu-affinity</DT>
+ *          <DD>Print process and GPU affinity.</DD>
+ *
+ *          <DT>-u, --uuid</DT>
+ *          <DD>Show full UUID with GPU affinity.</DD>
  *
  *          <DT>-h, --help</DT>
  *          <DD>Print DLB variables and current value. Use the option twice
@@ -77,6 +83,7 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     fprintf(out, (
                 "usage:\n"
                 "\t%1$s --affinity\n"
+                "\t%1$s --gpu-affinity [--uuid]\n"
                 "\t%1$s --help\n"
                 "\t%1$s --version\n"
                 "\n"
@@ -87,6 +94,8 @@ static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) 
     fputs((
                 "Options:\n"
                 "  -a, --affinity           print process affinity\n"
+                "  -g, --gpu-affinity       print process and GPU affinity\n"
+                "  -u, --uuid               show full UUID with GPU affinity\n"
                 "  -h, --help               print DLB variables and current value\n"
                 "                           (twice `-hh` for extended)\n"
                 "  -v, --version            print version info\n"
@@ -107,15 +116,28 @@ static void __attribute__((__noreturn__)) print_variables(int print_extended) {
     exit(EXIT_SUCCESS);
 }
 
-static void __attribute__((__noreturn__)) print_affinity(void) {
+static void __attribute__((__noreturn__)) print_affinity(bool do_gpu_affinity, bool full_uuid) {
     char hostname[HOST_NAME_MAX];
     gethostname(hostname, HOST_NAME_MAX);
 
     cpu_set_t process_mask;
     sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
 
-    printf("DLB[%s:%d]: Process affinity: %s\n",
-            hostname, getpid(), mu_to_str(&process_mask));
+    char buffer[4096];
+    if (do_gpu_affinity) {
+        int error = DLB_GetGPUAffinity(buffer, sizeof(buffer), full_uuid);
+        if (error != DLB_SUCCESS) {
+            do_gpu_affinity = false;
+        }
+    }
+
+    if (do_gpu_affinity) {
+        printf("DLB[%s:%d]: Process affinity: %s, gpu: %s\n",
+                hostname, getpid(), mu_to_str(&process_mask), buffer);
+    } else {
+        printf("DLB[%s:%d]: Process affinity: %s\n",
+                hostname, getpid(), mu_to_str(&process_mask));
+    }
 
     exit(EXIT_SUCCESS);
 }
@@ -124,24 +146,35 @@ static void __attribute__((__noreturn__)) print_affinity(void) {
 int main(int argc, char *argv[]) {
 
     bool do_affinity = false;
+    bool do_gpu_affinity = false;
     bool do_print = false;
     bool print_extended = false;
+    bool full_uuid = false;
 
     int opt;
     extern char *optarg;
     extern int optind;
     struct option long_options[] = {
-        {"affinity",    no_argument,    NULL, 'a'},
-        {"help",        no_argument,    NULL, 'h'},
-        {"help-extra",  no_argument,    NULL, 'x'}, /* kept for compatibility */
-        {"version",     no_argument,    NULL, 'v'},
-        {0,             0,              NULL, 0 }
+        {"affinity",     no_argument,    NULL, 'a'},
+        {"gpu-affinity", no_argument,    NULL, 'g'},
+        {"uuid",         no_argument,    NULL, 'u'},
+        {"help",         no_argument,    NULL, 'h'},
+        {"help-extra",   no_argument,    NULL, 'x'}, /* kept for compatibility */
+        {"version",      no_argument,    NULL, 'v'},
+        {0,              0,              NULL,  0 }
     };
 
-    while ((opt = getopt_long(argc, argv, "ahxv", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "aguhxv", long_options, NULL)) != -1) {
         switch (opt) {
             case 'a':
                 do_affinity = true;
+                break;
+            case 'g':
+                do_affinity = true;
+                do_gpu_affinity = true;
+                break;
+            case 'u':
+                full_uuid = true;
                 break;
             case 'h':
                 if (do_print) {
@@ -164,7 +197,7 @@ int main(int argc, char *argv[]) {
     if (do_print) {
         print_variables(print_extended);
     } else if (do_affinity) {
-        print_affinity();
+        print_affinity(do_gpu_affinity, full_uuid);
     } else {
         usage(argv[0], stderr);
     }

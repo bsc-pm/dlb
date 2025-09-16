@@ -22,6 +22,7 @@ papi_dep = dependency('papi', required : get_option('papi'))
 common_deps = [m_dep, rt_dep, dl_dep, thread_dep, hwloc_dep, papi_dep]
 mpi_dep = dependency('mpi', language : 'c', required : get_option('mpi'))
 mpif_dep = dependency('mpi', language : 'fortran', required : get_option('mpi'))
+cuda_dep = dependency('cuda', modules: ['cupti'], required : get_option('cuda'))
 
 ### CFLAGS
 
@@ -91,6 +92,8 @@ subdir('src/apis')
 common_includes = [ include_directories('src'), include_directories('src/apis') ]
 
 common_srcs = [
+  'src/plugins/plugin_manager.c',
+  'src/plugins/plugin_manager.h',
   'src/support/array_template.h',
   'src/support/atomic.h',
   'src/support/dlb_common.h',
@@ -115,6 +118,8 @@ common_srcs = [
   'src/support/small_array.h',
   'src/support/types.c',
   'src/support/types.h',
+  'src/talp/talp_gpu.c',
+  'src/talp/talp_gpu.h',
   'src/talp/talp_openmp.c',
   'src/talp/talp_openmp.h',
   'src/talp/talp_output.c',
@@ -377,6 +382,20 @@ else
   mpi_library_version = ''
 endif
 
+
+#################################################################################
+### DLB Plugin libraries                                                      ###
+#################################################################################
+
+if cuda_dep.found()
+  libdlb_cupti = shared_module(
+    'dlb_cupti', 'src/plugins/cupti_plugin.c',
+    include_directories : common_includes,
+    dependencies : cuda_dep,
+    gnu_symbol_visibility : 'hidden',
+    install : true,
+  )
+endif
 
 #################################################################################
 ### Binaries                                                                  ###

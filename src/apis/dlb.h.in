@@ -23,6 +23,7 @@
 #include "dlb_types.h"
 #include "dlb_errors.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 /* DLB Version:
  *  major version: DLB_VERSION >> 16 & 0xff
@@ -655,6 +656,9 @@ int DLB_SetObserverRole(bool thread_is_observer);
  *  \return DLB_SUCCESS on success
  */
 int DLB_GetVersion(int *major, int *minor, int *patch);
+
+
+int DLB_GetGPUAffinity(char *buffer, size_t buffer_size, bool full_uuid);
 
 int DLB_AutoSizerStart(void) __attribute__((deprecated));
 int DLB_AutoSizerEnd(void) __attribute__((deprecated));

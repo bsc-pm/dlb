@@ -11,6 +11,12 @@ Man pages
 
     \newpage
 
+.. include:: dlb_mpi.rst
+
+.. raw:: latex
+
+    \newpage
+
 .. include:: dlb_run.rst
 
 .. raw:: latex

@@ -137,9 +137,21 @@ control through OMPT.
 4. **Example 4:** Get a TALP summary report at the end of an execution
 
     ```bash
-    export DLB_ARGS="--talp --talp-summary=pop-metrics"
-    PRELOAD=<DLB_PREFIX>/lib/libdlb_mpi.so
-    mpirun <opts> env LD_PRELOAD="$PRELOAD" ./app
+    export DLB_ARGS="--talp"
+    preload="<DLB_PREFIX>/lib/libdlb_mpi.so"
+    mpirun <opts> env LD_PRELOAD="$preload" ./app
+    ```
+
+5. **Example 5:** Get a TALP summary report of a GPU application
+
+    ```bash
+    # Optinal, only required if application is not MPI
+    # otherwise, preload libdlb_mpi.so as usual
+    export DLB_AUTO_INIT=1
+
+    export DLB_ARGS="--talp --plugin=cupti"
+    preload="<DLB_PREFIX>/lib/libdlb.so"
+    env LD_PRELOAD="$preload" ./app
     ```
 
 

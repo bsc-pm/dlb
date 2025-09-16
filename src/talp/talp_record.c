@@ -70,29 +70,36 @@ void talp_record_monitor(const subprocess_descriptor_t *spd,
         if (monitor->elapsed_time > 0) {
             verbose(VB_TALP, "TALP summary: recording region %s", monitor->name);
 
+            bool have_gpus = (monitor->gpu_useful_time + monitor->gpu_communication_time > 0);
+
             talp_info_t *talp_info = spd->talp_info;
             const pop_base_metrics_t base_metrics = {
                 .num_cpus                = monitor->num_cpus,
                 .num_mpi_ranks           = 0,
                 .num_nodes               = 1,
                 .avg_cpus                = monitor->avg_cpus,
+                .num_gpus                = have_gpus ? 1 : 0,
                 .cycles                  = (double)monitor->cycles,
                 .instructions            = (double)monitor->instructions,
                 .num_measurements        = monitor->num_measurements,
                 .num_mpi_calls           = monitor->num_mpi_calls,
                 .num_omp_parallels       = monitor->num_omp_parallels,
                 .num_omp_tasks           = monitor->num_omp_tasks,
+                .num_gpu_runtime_calls   = monitor->num_gpu_runtime_calls,
                 .elapsed_time            = monitor->elapsed_time,
                 .useful_time             = monitor->useful_time,
                 .mpi_time                = monitor->mpi_time,
                 .omp_load_imbalance_time = monitor->omp_load_imbalance_time,
                 .omp_scheduling_time     = monitor->omp_scheduling_time,
                 .omp_serialization_time  = monitor->omp_serialization_time,
-                .useful_normd_app        = (double)monitor->useful_time / monitor->num_cpus,
-                .mpi_normd_app           = (double)monitor->mpi_time / monitor->num_cpus,
-                .max_useful_normd_proc   = (double)monitor->useful_time / monitor->num_cpus,
-                .max_useful_normd_node   = (double)monitor->useful_time / monitor->num_cpus,
-                .mpi_normd_of_max_useful = (double)monitor->mpi_time / monitor->num_cpus,
+                .gpu_runtime_time        = monitor->gpu_runtime_time,
+                .min_mpi_normd_proc      = (double)monitor->mpi_time / monitor->num_cpus,
+                .min_mpi_normd_node      = (double)monitor->mpi_time / monitor->num_cpus,
+                .gpu_useful_time         = monitor->gpu_useful_time,
+                .gpu_communication_time  = monitor->gpu_communication_time,
+                .gpu_inactive_time       = monitor->gpu_inactive_time,
+                .max_gpu_useful_time     = monitor->gpu_useful_time,
+                .max_gpu_active_time     = monitor->gpu_useful_time + monitor->gpu_communication_time,
             };
 
             dlb_pop_metrics_t pop_metrics;
@@ -298,33 +305,65 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
     /* MPI struct type: dlb_monitor_t */
     MPI_Datatype mpi_dlb_monitor_type;
     {
-        enum {count = 19};
-        int blocklengths[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        int blocklengths[] = {
+            1, 1, 1,                /* Name + Resources: num_cpus, avg_cpus */
+            1, 1,                   /* Hardware counters: cycles, instructions */
+            1, 1, 1, 1, 1, 1,       /* Statistics: num_* */
+            1, 1,                   /* Monitor Start and Stop times */
+            1, 1, 1, 1, 1, 1, 1,    /* Host Times */
+            1, 1, 1,                /* Device Times */
+            1};                     /* _data */
+
+        enum {count = sizeof(blocklengths) / sizeof(blocklengths[0])};
+
         MPI_Aint displacements[] = {
             offsetof(dlb_monitor_t, name),
+            /* Resources */
             offsetof(dlb_monitor_t, num_cpus),
             offsetof(dlb_monitor_t, avg_cpus),
+            /* Hardware counters */
             offsetof(dlb_monitor_t, cycles),
             offsetof(dlb_monitor_t, instructions),
+            /* Statistics */
             offsetof(dlb_monitor_t, num_measurements),
             offsetof(dlb_monitor_t, num_resets),
             offsetof(dlb_monitor_t, num_mpi_calls),
             offsetof(dlb_monitor_t, num_omp_parallels),
             offsetof(dlb_monitor_t, num_omp_tasks),
+            offsetof(dlb_monitor_t, num_gpu_runtime_calls),
+            /* Monitor Start and Stop times */
             offsetof(dlb_monitor_t, start_time),
             offsetof(dlb_monitor_t, stop_time),
+            /* Host Times */
             offsetof(dlb_monitor_t, elapsed_time),
             offsetof(dlb_monitor_t, useful_time),
             offsetof(dlb_monitor_t, mpi_time),
             offsetof(dlb_monitor_t, omp_load_imbalance_time),
             offsetof(dlb_monitor_t, omp_scheduling_time),
             offsetof(dlb_monitor_t, omp_serialization_time),
+            offsetof(dlb_monitor_t, gpu_runtime_time),
+            /* Device Times */
+            offsetof(dlb_monitor_t, gpu_useful_time),
+            offsetof(dlb_monitor_t, gpu_communication_time),
+            offsetof(dlb_monitor_t, gpu_inactive_time),
+            /* _data */
             offsetof(dlb_monitor_t, _data)};
-        MPI_Datatype types[] = {address_type, MPI_INT, MPI_FLOAT,
-            mpi_int64_type, mpi_int64_type, MPI_INT, MPI_INT, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type, mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type, mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type, address_type};
+
+        MPI_Datatype types[] = {
+            address_type, MPI_INT, MPI_FLOAT,   /* Name + Resources: num_cpus, avg_cpus */
+            mpi_int64_type, mpi_int64_type,     /* Hardware counters: cycles, instructions */
+            MPI_INT, MPI_INT,
+            mpi_int64_type, mpi_int64_type,
+            mpi_int64_type, mpi_int64_type,     /* Statistics: num_* */
+            mpi_int64_type, mpi_int64_type,     /* Monitor Start and Stop times */
+            mpi_int64_type, mpi_int64_type,
+            mpi_int64_type, mpi_int64_type,
+            mpi_int64_type, mpi_int64_type,
+            mpi_int64_type,                     /* Host Times */
+            mpi_int64_type, mpi_int64_type,
+            mpi_int64_type,                     /* Device Times */
+            address_type};                      /* _data */
+
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);
         PMPI_Type_create_resized(tmp_type, 0, sizeof(dlb_monitor_t), &mpi_dlb_monitor_type);

@@ -32,10 +32,27 @@
 #include "support/dlb_common.h"
 
 #include <unistd.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
+
+/* Auto-init */
+static void dlb_auto_finalize(void) {
+    DLB_Finalize();
+}
+
+__attribute__((constructor))
+static void dlb_auto_init(void) {
+    const char *dlb_auto_init_env_var = getenv("DLB_AUTO_INIT");
+    if (dlb_auto_init_env_var != NULL && dlb_auto_init_env_var[0] == '1') {
+        if (DLB_Init(0, 0, 0) == DLB_SUCCESS) {
+            // Finalize DLB before other destructors are invoked
+            atexit(dlb_auto_finalize);
+        }
+    }
+}
 
 /* Status */
 
@@ -453,4 +470,10 @@ int DLB_GetVersion(int *major, int *minor, int *patch) {
     if (minor) *minor = DLB_VERSION_MINOR;
     if (patch) *patch = DLB_VERSION_PATCH;
     return DLB_SUCCESS;
+}
+
+DLB_EXPORT_SYMBOL
+int DLB_GetGPUAffinity(char *buffer, size_t buffer_size, bool full_uuid) {
+    spd_enter_dlb(thread_spd);
+    return get_gpu_affinity(buffer, buffer_size, full_uuid);
 }

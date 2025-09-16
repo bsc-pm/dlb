@@ -150,6 +150,20 @@ static inline int max_int(int a, int b) { return a > b ? a : b; }
 static inline int64_t min_int64(int64_t a, int64_t b) { return a < b ? a : b; }
 static inline int64_t max_int64(int64_t a, int64_t b) { return a > b ? a : b; }
 static inline unsigned int min_uint(unsigned int a, unsigned int b) { return a < b ? a : b; }
+static inline double min_double(double a, double b) { return a < b ? a : b; }
+static inline double max_double(double a, double b) { return a > b ? a : b; }
+
+static inline double min_double_non_zero(double a, double b) {
+    if (a == 0.0 && b == 0.0) {
+        return 0.0;
+    } else if (a == 0.0) {
+        return b;
+    } else if (b == 0.0) {
+        return a;
+    } else {
+        return min_double(a, b);
+    }
+}
 
 int  parse_bool(const char *str, bool *value);
 bool equivalent_bool(const char *str1, const char *str2);
