@@ -82,6 +82,8 @@ module talp_check_layout
 #include THIS_FILE
 #define FIELD num_omp_tasks
 #include THIS_FILE
+#define FIELD num_gpu_runtime_calls
+#include THIS_FILE
 #define FIELD start_time
 #include THIS_FILE
 #define FIELD stop_time
@@ -97,6 +99,14 @@ module talp_check_layout
 #define FIELD omp_scheduling_time
 #include THIS_FILE
 #define FIELD omp_serialization_time
+#include THIS_FILE
+#define FIELD gpu_runtime_time
+#include THIS_FILE
+#define FIELD gpu_useful_time
+#include THIS_FILE
+#define FIELD gpu_communication_time
+#include THIS_FILE
+#define FIELD gpu_inactive_time
 #include THIS_FILE
 #undef STRUCT_NAME
 #undef FUNCTION_INTERFACE
@@ -118,6 +128,8 @@ module talp_check_layout
 #include THIS_FILE
 #define FIELD avg_cpus
 #include THIS_FILE
+#define FIELD num_gpus
+#include THIS_FILE
 #define FIELD cycles
 #include THIS_FILE
 #define FIELD instructions
@@ -129,6 +141,8 @@ module talp_check_layout
 #define FIELD num_omp_parallels
 #include THIS_FILE
 #define FIELD num_omp_tasks
+#include THIS_FILE
+#define FIELD num_gpu_runtime_calls
 #include THIS_FILE
 #define FIELD elapsed_time
 #include THIS_FILE
@@ -142,15 +156,21 @@ module talp_check_layout
 #include THIS_FILE
 #define FIELD omp_serialization_time
 #include THIS_FILE
-#define FIELD useful_normd_app
+#define FIELD gpu_runtime_time
 #include THIS_FILE
-#define FIELD mpi_normd_app
+#define FIELD min_mpi_normd_proc
 #include THIS_FILE
-#define FIELD max_useful_normd_proc
+#define FIELD min_mpi_normd_node
 #include THIS_FILE
-#define FIELD max_useful_normd_node
+#define FIELD gpu_useful_time
 #include THIS_FILE
-#define FIELD mpi_normd_of_max_useful
+#define FIELD gpu_communication_time
+#include THIS_FILE
+#define FIELD gpu_inactive_time
+#include THIS_FILE
+#define FIELD max_gpu_useful_time
+#include THIS_FILE
+#define FIELD max_gpu_active_time
 #include THIS_FILE
 #define FIELD parallel_efficiency
 #include THIS_FILE
@@ -171,6 +191,16 @@ module talp_check_layout
 #define FIELD omp_scheduling_efficiency
 #include THIS_FILE
 #define FIELD omp_serialization_efficiency
+#include THIS_FILE
+#define FIELD device_offload_efficiency
+#include THIS_FILE
+#define FIELD gpu_parallel_efficiency
+#include THIS_FILE
+#define FIELD gpu_load_balance
+#include THIS_FILE
+#define FIELD gpu_communication_efficiency
+#include THIS_FILE
+#define FIELD gpu_orchestration_efficiency
 #include THIS_FILE
 #undef STRUCT_NAME
 #undef FUNCTION_INTERFACE
@@ -236,6 +266,7 @@ subroutine check_dlb_monitor_layout
     integer(c_size_t) :: c_offset_num_mpi_calls,           loc_num_mpi_calls
     integer(c_size_t) :: c_offset_num_omp_parallels,       loc_num_omp_parallels
     integer(c_size_t) :: c_offset_num_omp_tasks,           loc_num_omp_tasks
+    integer(c_size_t) :: c_offset_num_gpu_runtime_calls,   loc_num_gpu_runtime_calls
     integer(c_size_t) :: c_offset_start_time,              loc_start_time
     integer(c_size_t) :: c_offset_stop_time,               loc_stop_time
     integer(c_size_t) :: c_offset_elapsed_time,            loc_elapsed_time
@@ -244,6 +275,10 @@ subroutine check_dlb_monitor_layout
     integer(c_size_t) :: c_offset_omp_load_imbalance_time, loc_omp_load_imbalance_time
     integer(c_size_t) :: c_offset_omp_scheduling_time,     loc_omp_scheduling_time
     integer(c_size_t) :: c_offset_omp_serialization_time,  loc_omp_serialization_time
+    integer(c_size_t) :: c_offset_gpu_runtime_time,        loc_gpu_runtime_time
+    integer(c_size_t) :: c_offset_gpu_useful_time,         loc_gpu_useful_time
+    integer(c_size_t) :: c_offset_gpu_communication_time,  loc_gpu_communication_time
+    integer(c_size_t) :: c_offset_gpu_inactive_time,       loc_gpu_inactive_time
 
     ! struct size
     monitor_size = sizeof_dlb_monitor_t()
@@ -276,6 +311,8 @@ subroutine check_dlb_monitor_layout
 #include THIS_FILE
 #define FIELD num_omp_tasks
 #include THIS_FILE
+#define FIELD num_gpu_runtime_calls
+#include THIS_FILE
 #define FIELD start_time
 #include THIS_FILE
 #define FIELD stop_time
@@ -291,6 +328,14 @@ subroutine check_dlb_monitor_layout
 #define FIELD omp_scheduling_time
 #include THIS_FILE
 #define FIELD omp_serialization_time
+#include THIS_FILE
+#define FIELD gpu_runtime_time
+#include THIS_FILE
+#define FIELD gpu_useful_time
+#include THIS_FILE
+#define FIELD gpu_communication_time
+#include THIS_FILE
+#define FIELD gpu_inactive_time
 #include THIS_FILE
 #undef STRUCT_NAME
 #undef STRUCT_VAR
@@ -312,23 +357,28 @@ subroutine check_dlb_pop_metrics_layout
     integer(c_size_t) :: c_offset_num_mpi_ranks,                loc_num_mpi_ranks
     integer(c_size_t) :: c_offset_num_nodes,                    loc_num_nodes
     integer(c_size_t) :: c_offset_avg_cpus,                     loc_avg_cpus
+    integer(c_size_t) :: c_offset_num_gpus,                     loc_num_gpus
     integer(c_size_t) :: c_offset_cycles,                       loc_cycles
     integer(c_size_t) :: c_offset_instructions,                 loc_instructions
     integer(c_size_t) :: c_offset_num_measurements,             loc_num_measurements
     integer(c_size_t) :: c_offset_num_mpi_calls,                loc_num_mpi_calls
     integer(c_size_t) :: c_offset_num_omp_parallels,            loc_num_omp_parallels
     integer(c_size_t) :: c_offset_num_omp_tasks,                loc_num_omp_tasks
+    integer(c_size_t) :: c_offset_num_gpu_runtime_calls,        loc_num_gpu_runtime_calls
     integer(c_size_t) :: c_offset_elapsed_time,                 loc_elapsed_time
     integer(c_size_t) :: c_offset_useful_time,                  loc_useful_time
     integer(c_size_t) :: c_offset_mpi_time,                     loc_mpi_time
     integer(c_size_t) :: c_offset_omp_load_imbalance_time,      loc_omp_load_imbalance_time
     integer(c_size_t) :: c_offset_omp_scheduling_time,          loc_omp_scheduling_time
     integer(c_size_t) :: c_offset_omp_serialization_time,       loc_omp_serialization_time
-    integer(c_size_t) :: c_offset_useful_normd_app,             loc_useful_normd_app
-    integer(c_size_t) :: c_offset_mpi_normd_app,                loc_mpi_normd_app
-    integer(c_size_t) :: c_offset_max_useful_normd_proc,        loc_max_useful_normd_proc
-    integer(c_size_t) :: c_offset_max_useful_normd_node,        loc_max_useful_normd_node
-    integer(c_size_t) :: c_offset_mpi_normd_of_max_useful,      loc_mpi_normd_of_max_useful
+    integer(c_size_t) :: c_offset_gpu_runtime_time,             loc_gpu_runtime_time
+    integer(c_size_t) :: c_offset_min_mpi_normd_proc,           loc_min_mpi_normd_proc
+    integer(c_size_t) :: c_offset_min_mpi_normd_node,           loc_min_mpi_normd_node
+    integer(c_size_t) :: c_offset_gpu_useful_time,              loc_gpu_useful_time
+    integer(c_size_t) :: c_offset_gpu_communication_time,       loc_gpu_communication_time
+    integer(c_size_t) :: c_offset_gpu_inactive_time,            loc_gpu_inactive_time
+    integer(c_size_t) :: c_offset_max_gpu_useful_time,          loc_max_gpu_useful_time
+    integer(c_size_t) :: c_offset_max_gpu_active_time,          loc_max_gpu_active_time
     integer(c_size_t) :: c_offset_parallel_efficiency,          loc_parallel_efficiency
     integer(c_size_t) :: c_offset_mpi_parallel_efficiency,      loc_mpi_parallel_efficiency
     integer(c_size_t) :: c_offset_mpi_communication_efficiency, loc_mpi_communication_efficiency
@@ -339,6 +389,11 @@ subroutine check_dlb_pop_metrics_layout
     integer(c_size_t) :: c_offset_omp_load_balance,             loc_omp_load_balance
     integer(c_size_t) :: c_offset_omp_scheduling_efficiency,    loc_omp_scheduling_efficiency
     integer(c_size_t) :: c_offset_omp_serialization_efficiency, loc_omp_serialization_efficiency
+    integer(c_size_t) :: c_offset_device_offload_efficiency,    loc_device_offload_efficiency
+    integer(c_size_t) :: c_offset_gpu_parallel_efficiency,      loc_gpu_parallel_efficiency
+    integer(c_size_t) :: c_offset_gpu_load_balance,             loc_gpu_load_balance
+    integer(c_size_t) :: c_offset_gpu_communication_efficiency, loc_gpu_communication_efficiency
+    integer(c_size_t) :: c_offset_gpu_orchestration_efficiency, loc_gpu_orchestration_efficiency
 
     ! struct size
     pop_metrics_size = sizeof_dlb_pop_metrics_t()
@@ -363,6 +418,8 @@ subroutine check_dlb_pop_metrics_layout
 #include THIS_FILE
 #define FIELD avg_cpus
 #include THIS_FILE
+#define FIELD num_gpus
+#include THIS_FILE
 #define FIELD cycles
 #include THIS_FILE
 #define FIELD instructions
@@ -374,6 +431,8 @@ subroutine check_dlb_pop_metrics_layout
 #define FIELD num_omp_parallels
 #include THIS_FILE
 #define FIELD num_omp_tasks
+#include THIS_FILE
+#define FIELD num_gpu_runtime_calls
 #include THIS_FILE
 #define FIELD elapsed_time
 #include THIS_FILE
@@ -387,15 +446,21 @@ subroutine check_dlb_pop_metrics_layout
 #include THIS_FILE
 #define FIELD omp_serialization_time
 #include THIS_FILE
-#define FIELD useful_normd_app
+#define FIELD gpu_runtime_time
 #include THIS_FILE
-#define FIELD mpi_normd_app
+#define FIELD min_mpi_normd_proc
 #include THIS_FILE
-#define FIELD max_useful_normd_proc
+#define FIELD min_mpi_normd_node
 #include THIS_FILE
-#define FIELD max_useful_normd_node
+#define FIELD gpu_useful_time
 #include THIS_FILE
-#define FIELD mpi_normd_of_max_useful
+#define FIELD gpu_communication_time
+#include THIS_FILE
+#define FIELD gpu_inactive_time
+#include THIS_FILE
+#define FIELD max_gpu_useful_time
+#include THIS_FILE
+#define FIELD max_gpu_active_time
 #include THIS_FILE
 #define FIELD parallel_efficiency
 #include THIS_FILE
@@ -416,6 +481,16 @@ subroutine check_dlb_pop_metrics_layout
 #define FIELD omp_scheduling_efficiency
 #include THIS_FILE
 #define FIELD omp_serialization_efficiency
+#include THIS_FILE
+#define FIELD device_offload_efficiency
+#include THIS_FILE
+#define FIELD gpu_parallel_efficiency
+#include THIS_FILE
+#define FIELD gpu_load_balance
+#include THIS_FILE
+#define FIELD gpu_communication_efficiency
+#include THIS_FILE
+#define FIELD gpu_orchestration_efficiency
 #include THIS_FILE
 #undef STRUCT_NAME
 #undef STRUCT_VAR

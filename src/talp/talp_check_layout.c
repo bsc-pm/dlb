@@ -39,6 +39,7 @@ size_t sizeof_dlb_monitor_t(void) {
     EXPAND(num_mpi_calls)           \
     EXPAND(num_omp_parallels)       \
     EXPAND(num_omp_tasks)           \
+    EXPAND(num_gpu_runtime_calls)   \
     EXPAND(start_time)              \
     EXPAND(stop_time)               \
     EXPAND(elapsed_time)            \
@@ -47,6 +48,10 @@ size_t sizeof_dlb_monitor_t(void) {
     EXPAND(omp_load_imbalance_time) \
     EXPAND(omp_scheduling_time)     \
     EXPAND(omp_serialization_time)  \
+    EXPAND(gpu_runtime_time)        \
+    EXPAND(gpu_useful_time)         \
+    EXPAND(gpu_communication_time)  \
+    EXPAND(gpu_inactive_time)       \
     EXPAND(_data)
 
 #define EXPAND(field)                           \
@@ -69,23 +74,28 @@ size_t sizeof_dlb_pop_metrics_t(void) {
     EXPAND(num_mpi_ranks)                \
     EXPAND(num_nodes)                    \
     EXPAND(avg_cpus)                     \
+    EXPAND(num_gpus)                     \
     EXPAND(cycles)                       \
     EXPAND(instructions)                 \
     EXPAND(num_measurements)             \
     EXPAND(num_mpi_calls)                \
     EXPAND(num_omp_parallels)            \
     EXPAND(num_omp_tasks)                \
+    EXPAND(num_gpu_runtime_calls)        \
     EXPAND(elapsed_time)                 \
     EXPAND(useful_time)                  \
     EXPAND(mpi_time)                     \
     EXPAND(omp_load_imbalance_time)      \
     EXPAND(omp_scheduling_time)          \
     EXPAND(omp_serialization_time)       \
-    EXPAND(useful_normd_app)             \
-    EXPAND(mpi_normd_app)                \
-    EXPAND(max_useful_normd_proc)        \
-    EXPAND(max_useful_normd_node)        \
-    EXPAND(mpi_normd_of_max_useful)      \
+    EXPAND(gpu_runtime_time)             \
+    EXPAND(min_mpi_normd_proc)           \
+    EXPAND(min_mpi_normd_node)           \
+    EXPAND(gpu_useful_time)              \
+    EXPAND(gpu_communication_time)       \
+    EXPAND(gpu_inactive_time)            \
+    EXPAND(max_gpu_useful_time)          \
+    EXPAND(max_gpu_active_time)          \
     EXPAND(parallel_efficiency)          \
     EXPAND(mpi_parallel_efficiency)      \
     EXPAND(mpi_communication_efficiency) \
@@ -95,7 +105,13 @@ size_t sizeof_dlb_pop_metrics_t(void) {
     EXPAND(omp_parallel_efficiency)      \
     EXPAND(omp_load_balance)             \
     EXPAND(omp_scheduling_efficiency)    \
-    EXPAND(omp_serialization_efficiency)
+    EXPAND(omp_serialization_efficiency) \
+    EXPAND(device_offload_efficiency)    \
+    EXPAND(gpu_parallel_efficiency)      \
+    EXPAND(gpu_load_balance)             \
+    EXPAND(gpu_communication_efficiency) \
+    EXPAND(gpu_orchestration_efficiency)
+
 
 #define EXPAND(field)                               \
 size_t offset_dlb_pop_metrics_t_##field(void) {     \

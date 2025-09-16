@@ -113,8 +113,6 @@ typedef struct dlb_pop_metrics_t {
     int64_t     num_omp_parallels;
     /*! Number of encountered OpenMP tasks combined among all processes */
     int64_t     num_omp_tasks;
-    /*! Number of executed GPU calls combined among all processes */
-    int64_t     num_gpu_calls;
     /*! Number of executed GPU Runtime calls combined among all processes */
     int64_t     num_gpu_runtime_calls;
     /*! Time (in nanoseconds) of the accumulated elapsed time inside the region */

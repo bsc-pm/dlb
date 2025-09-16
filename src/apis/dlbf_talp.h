@@ -46,6 +46,9 @@
         integer(kind=c_int64_t) :: omp_scheduling_time
         integer(kind=c_int64_t) :: omp_serialization_time
         integer(kind=c_int64_t) :: gpu_runtime_time
+        integer(kind=c_int64_t) :: gpu_useful_time
+        integer(kind=c_int64_t) :: gpu_communication_time
+        integer(kind=c_int64_t) :: gpu_inactive_time
         type(c_ptr)             :: data_
        end type
 
@@ -55,23 +58,28 @@
         integer(kind=c_int)     :: num_mpi_ranks
         integer(kind=c_int)     :: num_nodes
         real(kind=c_float)      :: avg_cpus
+        integer(kind=c_int)     :: num_gpus
         real(kind=c_double)     :: cycles
         real(kind=c_double)     :: instructions
         integer(kind=c_int64_t) :: num_measurements
         integer(kind=c_int64_t) :: num_mpi_calls
         integer(kind=c_int64_t) :: num_omp_parallels
         integer(kind=c_int64_t) :: num_omp_tasks
+        integer(kind=c_int64_t) :: num_gpu_runtime_calls
         integer(kind=c_int64_t) :: elapsed_time
         integer(kind=c_int64_t) :: useful_time
         integer(kind=c_int64_t) :: mpi_time
         integer(kind=c_int64_t) :: omp_load_imbalance_time
         integer(kind=c_int64_t) :: omp_scheduling_time
         integer(kind=c_int64_t) :: omp_serialization_time
-        real(kind=c_double)     :: useful_normd_app
-        real(kind=c_double)     :: mpi_normd_app
-        real(kind=c_double)     :: max_useful_normd_proc
-        real(kind=c_double)     :: max_useful_normd_node
-        real(kind=c_double)     :: mpi_normd_of_max_useful
+        integer(kind=c_int64_t) :: gpu_runtime_time
+        real(kind=c_double)     :: min_mpi_normd_proc
+        real(kind=c_double)     :: min_mpi_normd_node
+        integer(kind=c_int64_t) :: gpu_useful_time
+        integer(kind=c_int64_t) :: gpu_communication_time
+        integer(kind=c_int64_t) :: gpu_inactive_time
+        integer(kind=c_int64_t) :: max_gpu_useful_time
+        integer(kind=c_int64_t) :: max_gpu_active_time
         real(kind=c_float)      :: parallel_efficiency
         real(kind=c_float)      :: mpi_parallel_efficiency
         real(kind=c_float)      :: mpi_communication_efficiency
@@ -82,6 +90,11 @@
         real(kind=c_float)      :: omp_load_balance
         real(kind=c_float)      :: omp_scheduling_efficiency
         real(kind=c_float)      :: omp_serialization_efficiency
+        real(kind=c_float)      :: device_offload_efficiency
+        real(kind=c_float)      :: gpu_parallel_efficiency
+        real(kind=c_float)      :: gpu_load_balance
+        real(kind=c_float)      :: gpu_communication_efficiency
+        real(kind=c_float)      :: gpu_orchestration_efficiency
        end type
 
        type, bind(c) :: dlb_node_metrics_t
