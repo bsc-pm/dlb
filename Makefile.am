@@ -402,6 +402,9 @@ MPI_WRAPPERS_NODIST += \
 	$(END)
 endif
 
+# explicit Fortran dependecy
+src/mpi/libdlb_mpi_la-mpi_wrappers_f08_comm_spawn.lo: src/support/libdlb_mpi_la-mod_string.lo
+
 lib_LTLIBRARIES += libdlb_mpi.la
 libdlb_mpi_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
@@ -560,6 +563,9 @@ MPIF_WRAPPERS_NODIST += \
 	src/mpi/mpi_wrappers_f08ts.F90  \
 	$(END)
 endif
+
+# explicit Fortran dependecy
+src/mpi/libdlb_mpif_la-mpi_wrappers_f08_comm_spawn.lo: src/support/libdlb_mpif_la-mod_string.lo
 
 lib_LTLIBRARIES += libdlb_mpif.la
 libdlb_mpif_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
