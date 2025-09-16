@@ -121,7 +121,8 @@ int main(int argc, char **argv) {
         assert( custom_monitor->mpi_time > 0 );
         assert( custom_monitor->useful_time > 0 );
         assert( custom_monitor->elapsed_time > 0 );
-        assert( custom_monitor->elapsed_time < global_monitor->elapsed_time );
+        // they should not be equal, but just to avoid the clocktime giving the same time twice
+        assert( custom_monitor->elapsed_time <= global_monitor->elapsed_time );
 
         assert( DLB_Finalize() == DLB_SUCCESS );
     }
