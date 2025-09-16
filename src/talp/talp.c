@@ -404,6 +404,11 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 
 static __thread talp_sample_t* _tls_sample = NULL;
 
+/* Quick test, without locking and without generating a new sample */
+static inline bool is_talp_sample_mine(const talp_sample_t *sample) {
+    return sample != NULL && sample == _tls_sample;
+}
+
 static void talp_dealloc_samples(const subprocess_descriptor_t *spd) {
     /* This only nullifies the current thread pointer, but this function is
      * only really important when TALP is finalized and then initialized again
@@ -519,7 +524,7 @@ void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp) {
 #ifdef PAPI_LIB
     if (papi) {
         /* Only read counters if we are updating this thread's sample */
-        if (sample == talp_get_thread_sample(thread_spd)) {
+        if (is_talp_sample_mine(sample)) {
             if (sample->state == useful) {
                 /* Read */
                 long long papi_values[2];

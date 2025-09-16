@@ -33,14 +33,57 @@
 #include <string.h>
 
 
+static void* test_observer_thread(void* arg) {
+    assert( DLB_SetObserverRole(true) == DLB_SUCCESS );
+
+    assert( DLB_MonitoringRegionStart(DLB_GLOBAL_REGION) == DLB_ERR_PERM );
+    assert( DLB_MonitoringRegionStop(DLB_GLOBAL_REGION) == DLB_ERR_PERM );
+
+    return NULL;
+}
+
+static void* test_worker_thread(void* arg) {
+
+    dlb_monitor_t *region1 = arg;
+    assert( DLB_MonitoringRegionStart(region1) == DLB_SUCCESS );
+    assert( DLB_MonitoringRegionStop(region1) == DLB_SUCCESS );
+
+    return NULL;
+}
+
+
 int main(int argc, char *argv[]) {
-    char options[32] = "--talp --shm-key=";
+    char options[64] = "--talp --talp-papi --shm-key=";
     strcat(options, SHMEM_KEY);
 
     assert( DLB_Init(0, 0, options) == DLB_SUCCESS );
     dlb_monitor_t *global_region = DLB_MonitoringRegionGetGlobal();
     assert( global_region != NULL );
     assert( region_is_started(global_region) );
+
+    /* Test that an observer thread cannot manage regions */
+    {
+        pthread_t thread;
+        assert( pthread_create(&thread, NULL, test_observer_thread, NULL) == 0 );
+        assert( pthread_join(thread, NULL) == 0 );
+    }
+
+    /* Test that a new thread could start a region created by another thread
+     * (note that this messes with the PAPI hardware counters and is somewhat
+     * not really supported) */
+    {
+        dlb_monitor_t *region1 = DLB_MonitoringRegionRegister("Region 1");
+        assert( !region_is_started(region1) );
+        assert( region1->num_measurements == 0 );
+
+        pthread_t thread;
+        assert( pthread_create(&thread, NULL, test_worker_thread, region1) == 0 );
+        assert( pthread_join(thread, NULL) == 0 );
+
+        assert( !region_is_started(region1) );
+        assert( region1->num_measurements == 1 );
+        assert( region1->useful_time > 0 );
+    }
 
     assert( DLB_Finalize() == DLB_SUCCESS );
     return 0;
