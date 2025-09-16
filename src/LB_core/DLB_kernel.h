@@ -91,5 +91,6 @@ int check_cpu_availability(const subprocess_descriptor_t *spd, int cpuid);
 int print_shmem(subprocess_descriptor_t *spd, int num_columns,
         dlb_printshmem_flags_t print_flags);
 int set_observer_role(bool is_observer);
+int get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid);
 
 #endif //DLB_KERNEL_H

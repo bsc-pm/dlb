@@ -190,8 +190,14 @@ int main(int argc, char *argv[]) {
         assert( monitor->omp_serialization_time < global_monitor->omp_serialization_time );
     }
 
-    /* Fake num MPI calls to force printing all metrics */
+    /* Fake num MPI/GPU calls to force printing all metrics */
     global_monitor->num_mpi_calls = 1;
+    global_monitor->num_gpu_runtime_calls = 1;
+
+    /* Fake some device times */
+    global_monitor->gpu_useful_time = 4;
+    global_monitor->gpu_communication_time = 2;
+    global_monitor->gpu_inactive_time = 6;
 
     talp_finalize(&spd);
     talp_openmp_thread_end();

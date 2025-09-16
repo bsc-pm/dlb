@@ -1,10 +1,12 @@
 option('mpi', type : 'feature', value : 'disabled',
   description : 'Build additional libraries with MPI support')
+option('mpi_f08_bindings', type : 'feature', value : 'disabled',
+  description : 'Enable MPI F08 bingins')
 option('hwloc', type : 'feature', value : 'auto',
   description : 'Build libraries with HWLOC support')
 option('papi', type : 'feature', value : 'auto',
   description : 'Build libraries with PAPI support')
-option('mpi_f08_bindings', type : 'feature', value : 'disabled',
-  description : 'Enable MPI F08 bingins')
+option('cuda', type : 'feature', value : 'auto',
+  description : 'Build plugin library for CUPTI instrumentation')
 option('extra_tests', type : 'boolean', value : false,
   description : 'Enable extra tests')

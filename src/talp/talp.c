@@ -39,6 +39,7 @@
 #include "support/mask_utils.h"
 #include "talp/perf_metrics.h"
 #include "talp/regions.h"
+#include "talp/talp_gpu.h"
 #include "talp/talp_output.h"
 #include "talp/talp_record.h"
 #include "talp/talp_types.h"
@@ -86,6 +87,13 @@ static void update_regions_with_macrosample(const subprocess_descriptor_t *spd,
             monitor->omp_load_imbalance_time += macrosample->timers.not_useful_omp_in_lb;
             monitor->omp_scheduling_time += macrosample->timers.not_useful_omp_in_sched;
             monitor->omp_serialization_time += macrosample->timers.not_useful_omp_out;
+            monitor->gpu_runtime_time += macrosample->timers.not_useful_gpu;
+
+            /* GPU Timers */
+            monitor->gpu_useful_time += macrosample->gpu_timers.useful;
+            monitor->gpu_communication_time += macrosample->gpu_timers.communication;
+            monitor->gpu_inactive_time += macrosample->gpu_timers.inactive;
+
 #ifdef PAPI_LIB
             /* Counters */
             monitor->cycles += macrosample->counters.cycles;
@@ -95,6 +103,7 @@ static void update_regions_with_macrosample(const subprocess_descriptor_t *spd,
             monitor->num_mpi_calls += macrosample->stats.num_mpi_calls;
             monitor->num_omp_parallels += macrosample->stats.num_omp_parallels;
             monitor->num_omp_tasks += macrosample->stats.num_omp_tasks;
+            monitor->num_gpu_runtime_calls += macrosample->stats.num_gpu_runtime_calls;
 
             /* Update shared memory only if requested */
             if (talp_info->flags.external_profiler) {
@@ -489,6 +498,7 @@ void talp_set_sample_state(talp_sample_t *sample, enum talp_sample_state state,
             : state == not_useful_mpi ? MONITOR_STATE_NOT_USEFUL_MPI
             : state == not_useful_omp_in ? MONITOR_STATE_NOT_USEFUL_OMP_IN
             : state == not_useful_omp_out ? MONITOR_STATE_NOT_USEFUL_OMP_OUT
+            : state == not_useful_gpu ? MONITOR_STATE_NOT_USEFUL_GPU
             : 0,
             EVENT_BEGIN);
 }
@@ -518,6 +528,9 @@ void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp) {
             break;
         case not_useful_omp_out:
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_out, microsample_duration);
+            break;
+        case not_useful_gpu:
+            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_gpu, microsample_duration);
             break;
     }
 
@@ -559,7 +572,7 @@ void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp) {
             }
         }
     }
-#endif
+#endif /* PAPI_LIB */
 }
 
 /* Flush and aggregate a single sample into a macrosample */
@@ -577,6 +590,8 @@ static inline void flush_sample_to_macrosample(talp_sample_t *sample,
     ensure(DLB_ATOMIC_LD_RLX(&sample->timers.not_useful_omp_in) == 0,
                 "Inconsistency in TALP sample metric not_useful_omp_in."
                 " Please, report bug at " PACKAGE_BUGREPORT);
+    macrosample->timers.not_useful_gpu +=
+        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_gpu, 0);
 
 #ifdef PAPI_LIB
     /* Counters */
@@ -593,6 +608,20 @@ static inline void flush_sample_to_macrosample(talp_sample_t *sample,
         DLB_ATOMIC_EXCH_RLX(&sample->stats.num_omp_parallels, 0);
     macrosample->stats.num_omp_tasks +=
         DLB_ATOMIC_EXCH_RLX(&sample->stats.num_omp_tasks, 0);
+    macrosample->stats.num_gpu_runtime_calls +=
+        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_gpu_runtime_calls, 0);
+}
+
+/* Flush values from gpu_sample to macrosample */
+void flush_gpu_sample_to_macrosample(talp_gpu_sample_t *gpu_sample,
+        talp_macrosample_t *macrosample) {
+
+    macrosample->gpu_timers.useful        = gpu_sample->timers.useful;
+    macrosample->gpu_timers.communication = gpu_sample->timers.communication;
+    macrosample->gpu_timers.inactive      = gpu_sample->timers.inactive;
+
+    /* Reset */
+    *gpu_sample = (const talp_gpu_sample_t){0};
 }
 
 /* Accumulate values from samples of all threads and update regions */
@@ -618,6 +647,13 @@ int talp_flush_samples_to_regions(const subprocess_descriptor_t *spd) {
         }
     }
     pthread_mutex_unlock(&talp_info->samples_mutex);
+
+    if (talp_info->flags.have_gpu) {
+        /* gpu_sample data is filled asynchronously, first we need to synchronize
+         * and wait for the measurements to be read, then flush it */
+        talp_gpu_sync_measurements();
+        flush_gpu_sample_to_macrosample(&talp_info->gpu_sample, &macrosample);
+    }
 
     /* Update all started regions */
     update_regions_with_macrosample(spd, &macrosample, num_cpus);

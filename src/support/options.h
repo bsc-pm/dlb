@@ -73,6 +73,8 @@ typedef struct Options {
     talp_model_t        talp_model;
     /* barrier */
     int                 barrier_id;
+    /* plugins */
+    char                plugins[MAX_OPTION_LENGTH];
 } options_t;
 
 void options_init(options_t *options, const char *dlb_args);

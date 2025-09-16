@@ -66,6 +66,7 @@ typedef enum InstrumentRegionState {
     MONITOR_STATE_NOT_USEFUL_MPI = 2,
     MONITOR_STATE_NOT_USEFUL_OMP_IN = 3,
     MONITOR_STATE_NOT_USEFUL_OMP_OUT = 4,
+    MONITOR_STATE_NOT_USEFUL_GPU = 5,
 } instrument_region_state_t;
 
 typedef enum InstrumentAction {

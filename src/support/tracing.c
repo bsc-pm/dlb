@@ -335,7 +335,7 @@ void init_tracing(const options_t *options) {
         // MONITOR_STATE
         type = MONITOR_STATE;
         char *monitor_state_desc[] = {"Disabled", "Useful", "Not useful MPI", "Not useful OMP in",
-            "Not useful OMP out"};
+            "Not useful OMP out", "Not useful GPU"};
         n_values = sizeof(monitor_state_desc) / sizeof(monitor_state_desc[0]);
         Extrae_define_event_type(&type, "DLB Region state", &n_values, values, monitor_state_desc);
 

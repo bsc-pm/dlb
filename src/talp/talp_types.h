@@ -46,6 +46,7 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         atomic_int_least64_t not_useful_mpi;
         atomic_int_least64_t not_useful_omp_in;
         atomic_int_least64_t not_useful_omp_out;
+        atomic_int_least64_t not_useful_gpu;
     } timers;
 #if PAPI_LIB
     struct {
@@ -63,6 +64,7 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         atomic_int_least64_t num_mpi_calls;
         atomic_int_least64_t num_omp_parallels;
         atomic_int_least64_t num_omp_tasks;
+        atomic_int_least64_t num_gpu_runtime_calls;
     } stats;
     int64_t last_updated_timestamp;
     enum talp_sample_state {
@@ -71,8 +73,18 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         not_useful_mpi,
         not_useful_omp_in,
         not_useful_omp_out,
+        not_useful_gpu,
     } state;
 } talp_sample_t;
+
+/* Sample for each GPU device */
+typedef struct talp_gpu_sample_t {
+    struct {
+        int64_t useful;
+        int64_t communication;
+        int64_t inactive;
+    } timers;
+} talp_gpu_sample_t;
 
 /* The macrosample is a temporary aggregation of all metrics in samples of all,
  * or a subset of, threads. It is only constructed when samples are flushed and
@@ -85,7 +97,13 @@ typedef struct talp_macrosample_t {
         int64_t not_useful_omp_in_lb;
         int64_t not_useful_omp_in_sched;
         int64_t not_useful_omp_out;
+        int64_t not_useful_gpu;
     } timers;
+    struct {
+        int64_t useful;
+        int64_t communication;
+        int64_t inactive;
+    } gpu_timers;
 #ifdef PAPI_LIB
     struct {
         int64_t cycles;
@@ -96,6 +114,7 @@ typedef struct talp_macrosample_t {
         int64_t num_mpi_calls;
         int64_t num_omp_parallels;
         int64_t num_omp_tasks;
+        int64_t num_gpu_runtime_calls;
     } stats;
 } talp_macrosample_t;
 
@@ -108,6 +127,7 @@ typedef struct talp_info_t {
         bool papi:1;                /* whether to collect PAPI counters */
         bool have_mpi:1;            /* whether TALP regions have MPI events */
         bool have_openmp:1;         /* whether TALP regions have OpenMP events */
+        bool have_gpu:1;            /* whether TALP regions have GPU events */
     } flags;
     int             ncpus;          /* Number of process CPUs (also num samples) */
     dlb_monitor_t   *monitor;       /* Convenience pointer to the global region */
@@ -117,6 +137,7 @@ typedef struct talp_info_t {
     talp_sample_t   **samples;      /* Per-thread ongoing sample,
                                        added to all monitors when finished */
     pthread_mutex_t samples_mutex;  /* Mutex to protect samples allocation/iteration */
+    talp_gpu_sample_t gpu_sample;   /* Per-GPU sample (for now only 1 supported) */
 } talp_info_t;
 
 /* Private data per monitor */
