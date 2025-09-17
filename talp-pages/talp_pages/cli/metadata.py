@@ -8,6 +8,7 @@ from typing import Union
 from talp_pages.io.run_folders import get_run_folders
 import json
 from datetime import datetime
+import subprocess
 
 
 def add_arguments(parser: argparse.ArgumentParser):
@@ -37,6 +38,7 @@ def add_arguments(parser: argparse.ArgumentParser):
         dest="git_timestamp",
         help="Timestamp (in ISO 8601 format) of git commit to put into the metadata",
     )
+
     parser.add_argument(
         "--is-merge-request",
         action=argparse.BooleanOptionalAction,
@@ -81,7 +83,9 @@ class Metadata:
         return {
             "gitCommit": self.git_commit,
             "gitBranch": self.git_branch,
-            "gitTimestamp": self.git_timestamp.replace(tzinfo=None).isoformat(),
+            "gitTimestamp": self.git_timestamp.replace(tzinfo=None).isoformat()
+            if self.git_timestamp
+            else None,
             "defaultGitBranch": self.default_git_branch,
             "isMergeRequest": self.is_merge_request,
         }
@@ -118,9 +122,12 @@ def get_metadata(args: Union[argparse.Namespace, None]) -> Metadata:
             metadata.is_merge_request = args.is_merge_request
             set_from_cli = True
 
+        if args.git_timestamp:
+            metadata.git_timestamp = parse_date(args.git_timestamp)
+
     if set_from_cli:
         logging.info(
-            "User specified command line arguments, so we dont autodetect the metadata"
+            "User specified command line arguments, so we don't autodetect the metadata"
         )
         return metadata
     # gitlab Merge request
@@ -149,9 +156,13 @@ def get_metadata(args: Union[argparse.Namespace, None]) -> Metadata:
         metadata.git_branch = os.environ.get(
             "CI_COMMIT_BRANCH", UNKNOWN_METADATA.git_branch
         )
-        metadata.git_timestamp = parse_date(
-            os.environ.get("CI_COMMIT_TIMESTAMP", UNKNOWN_METADATA.git_timestamp)
+        # Because github does not export the same information we have to do something slightly ugly
+        timestamp_result = subprocess.run(
+            ["git", "show", "-s", "--format=%cI", metadata.git_commit],
+            capture_output=True,
+            text=True,
         )
+        metadata.git_timestamp = parse_date(timestamp_result.stdout.strip())
         metadata.is_merge_request = False
         logging.info("Auto detected Metadata from GITLAB normal pipeline")
         return metadata

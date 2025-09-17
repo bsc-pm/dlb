@@ -1,6 +1,10 @@
 # Changelog
 All important changes to this python project will be documented in this file. 
 
+## 3.5.2
+
+- Feature: Adding download-github functionality to enable GitHub Actions
+
 ## 3.5.1
 
 - Bugfix: Enable the generation of OpenMP only scaling tables
