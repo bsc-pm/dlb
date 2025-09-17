@@ -3,6 +3,25 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.6.0-beta1]
+### Added
+- Initial support for GPU TALP metrics (includes NVIDIA and AMD support)
+- Added a new and more robust support for MPI Fortran 2008 bindings
+- New binary `dlb_mpi` to check affinity in MPI environments
+- Flags `--gpu-affinity` and `--uuid` for `dlb` and `dlb_mpi` to show
+  GPU visibility
+- New instrumentation events for OMPT callbacks
+- New API `DLB_DROM_SetProcessMaskStr` to set masks using a human-readable input
+
+### Changed
+- `--talp-output-file` now creates missing directories if able
+
+### Fixed
+- Fixed TALP Global region not being started if no MPI or OpenMP
+- Replace PAPI reset calls with regular reads to improve performance
+- Add several PAPI init checks
+- Fixed several LeWI features in async mode
+
 ## [3.5.3] 2025-09-08
 ### Added
 - Added documentation for `DLB_DROM_FLAGS_NONE` argument
@@ -20,7 +39,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   an internal list of open regions
 - Stop instrumentation after `MPI_Finalize` to avoid unwanted interactions with
   external libraries
-
 
 ## [3.5.2] 2025-05-02
 ### Added
@@ -380,6 +398,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[3.6.0-beta1]: https://github.com/bsc-pm/dlb/compare/v3.5...HEAD
+[3.5.3]: https://github.com/bsc-pm/dlb/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/bsc-pm/dlb/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/bsc-pm/dlb/compare/v3.4...v3.5.0
