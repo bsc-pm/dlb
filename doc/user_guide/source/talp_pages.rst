@@ -83,17 +83,37 @@ If you just did a scaling experiment with the code you're trying to analyze, you
 
 
 
-I want to use TALP-Pages in GitLab CI
-==========================================
+I want to use TALP-Pages in my CI/CD framework
+===============================================
 
-In order to use TALP-Pages in a `GitLab CI <https://docs.gitlab.com/ee/ci/>`_ environment the following how-to-guide assumes the following prerequisites:
+We currently provide example implementations for `GitLab CI <https://docs.gitlab.com/ee/ci/>`_ and for `GitHub Actions. <https://github.com/features/actions>`_
 
-- The machine you want to run your application on has some way to interface with a `GitLab runner <https://docs.gitlab.com/ee/ci/runners/index.html>`_. (Don't worry if you don't have `Jacamar <https://gitlab.com/ecp-ci/jacamar-ci>`_. Normally no sudo rights are required to run the gitlab-runner on the login node.)
+There are some prerequisites your application needs to fulfill, that are independent of the CI framework used:
+
 - The machine you want to run your code in has a ``DLB`` :ref:`installation<dlb-installation>`. Optimally with ``PAPI`` support. 
-- Your GitLab instance has the `GitLab Pages <https://docs.gitlab.com/ee/user/project/pages/>`_ feature activated
-- Optionally already have some coarse-grain code annotations in place. 
 - Your code is using MPI or OpenMP or both and is primarily running on CPUs.
 - Your code is written in C/C++ or Fortran
+- Optionally already have some coarse-grain code annotations in place. 
+
+
+GitLab 
+--------
+
+In order to use TALP-Pages in a `GitLab CI <https://docs.gitlab.com/ee/ci/>`_ environment you should fullfill some additional requirements:
+
+- The machine you want to run your application on has some way to interface with a `GitLab runner <https://docs.gitlab.com/ee/ci/runners/index.html>`_. (Don't worry if you don't have `Jacamar <https://gitlab.com/ecp-ci/jacamar-ci>`_. Normally no sudo rights are required to run the gitlab-runner on the login node.)
+- Your GitLab instance has the `GitLab Pages <https://docs.gitlab.com/ee/user/project/pages/>`_ feature activated
+
+For an example workflow you can have a look at our `repository <https://pm.bsc.es/gitlab/dlb/talp-pages-example>`_
+
+
+GitHub 
+--------
+
+In order to use TALP-Pages in a `GitHub Actions. <https://github.com/features/actions>`_ environment you should fulfill some additional requirements:
+
+- The machine you want to run your application on has some way to interface with a `self hosted GitHub runner <https://docs.github.com/en/actions/concepts/runners/self-hosted-runners>`_. Normally no sudo rights are required to run the GitHub runner.
+- Note, that the available GitHub runners don't provide access to hardware counters, so we recommend using a self-hosted runner.
 
 For an example workflow you can have a look at our `repository <https://pm.bsc.es/gitlab/dlb/talp-pages-example>`_
 

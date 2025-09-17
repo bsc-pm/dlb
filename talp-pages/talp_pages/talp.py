@@ -5,6 +5,7 @@ import argparse
 import talp_pages.cli.ci_report as ci_report
 import talp_pages.cli.metadata as metadata
 import talp_pages.cli.download_gitlab as download_gitlab
+import talp_pages.cli.download_github as download_github
 from talp_pages.common import TALP_PAGES_VERSION
 
 
@@ -24,10 +25,14 @@ def main():
     download_gitlab_parser = subparsers.add_parser(
         "download-gitlab", help="Download GitLab Artifacts"
     )
+    download_github_parser = subparsers.add_parser(
+        "download-github", help="Download GitHub Artifacts"
+    )
 
     ci_report.add_arguments(ci_report_parser)
     metadata.add_arguments(metadata_parser)
     download_gitlab.add_arguments(download_gitlab_parser)
+    download_github.add_arguments(download_github_parser)
 
     args = parser.parse_args()
 
@@ -39,6 +44,8 @@ def main():
         metadata.main(args)
     elif args.features == "download-gitlab":
         download_gitlab.main(args)
+    elif args.features == "download-github":
+        download_github.main(args)
     else:
         parser.print_help()
 
