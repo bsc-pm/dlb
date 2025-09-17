@@ -145,7 +145,7 @@ control through OMPT.
 5. **Example 5:** Get a TALP summary report of a GPU application
 
     ```bash
-    # Optinal, only required if application is not MPI
+    # Optional, only required if application is not MPI
     # otherwise, preload libdlb_mpi.so as usual
     export DLB_AUTO_INIT=1
 
