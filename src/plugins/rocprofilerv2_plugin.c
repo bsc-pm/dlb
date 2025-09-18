@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define CHECK_ROCPROFILER(call)                                                 \
     do {                                                                        \
@@ -75,6 +76,8 @@ static void HIP_API_callback(rocprofiler_record_tracer_t tracer_record,
         } else if (tracer_record.phase == ROCPROFILER_PHASE_EXIT) {
             talp_gpu_out_of_runtime_api();
         }
+    } else {
+        PLUGIN_PRINT("unknown HIP callback from domain: %d\n", tracer_record.domain);
     }
 }
 
@@ -88,6 +91,9 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
     /* Intermediate buffers for computing time */
     int num_kernel_records = 0;
     gpu_record_t kernel_records_buffer[INTERMEDIATE_BUFFER_SIZE];
+
+    int num_memory_records = 0;
+    gpu_record_t memory_records_buffer[INTERMEDIATE_BUFFER_SIZE];
 
     while (begin < end) {
         if (!begin) break;
@@ -109,8 +115,80 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
 
                 break;
             }
+            case ROCPROFILER_TRACER_RECORD: {
+                const rocprofiler_record_tracer_t* tracer_record =
+                    (const rocprofiler_record_tracer_t*)begin;
+
+                /*************************************************************
+                 * Memory operation classification
+                 *
+                 * Currently, the only reliable way we've found to distinguish
+                 * memory operations from other HIP operations is by checking
+                 * the string returned by rocprofiler_query_tracer_operation_name.
+                 *
+                 * That function can return many operation names. We separate
+                 * them into "memory" and "non-memory", but for our purposes
+                 * we only track a subset of memory operations. The selection
+                 * is somewhat arbitrary, we focus mainly on copy-like operations
+                 * that are typically costly. We may revisit this list in the
+                 * future if we observe cases where additional operations need
+                 * to be included or excluded.
+                 *
+                 * Memory operations considered (tracked):
+                 *   - CopyDeviceToHost
+                 *   - CopyHostToDevice
+                 *   - CopyDeviceToDevice
+                 *   - CopyDeviceToHost2D
+                 *   - CopyHostToDevice2D
+                 *   - CopyDeviceToDevice2D
+                 *   - CopyImage
+                 *   - CopyImageToBuffer
+                 *   - CopyBufferToImage
+                 *   - MigrateMemObjects
+                 *   - SvmMemcpy
+                 *
+                 * Memory operations ignored (not tracked):
+                 *   - FillBuffer / MapBuffer
+                 *   - MapImage
+                 *   - UnmapMemObject
+                 *   - SvmMemFill / SvmMap / SvmUnmap
+                 *
+                 * Non-memory operations (all ignored):
+                 *   - KernelExecution
+                 *   - NativeKernel
+                 *   - Task
+                 *   - Marker / InternalMarker
+                 *   - Barrier / StreamWait / StreamWrite
+                 *   - User
+                 *************************************************************/
+
+                /* Check whether this record is a memory operation that we want to track */
+                const char* operation_name = NULL;
+                rocprofiler_status_t status = rocprofiler_query_tracer_operation_name(
+                        tracer_record->domain, tracer_record->operation_id, &operation_name);
+                if (status == ROCPROFILER_STATUS_SUCCESS
+                        && operation_name != NULL
+                        && (strncmp(operation_name, "Copy", 4) == 0
+                            || strcmp(operation_name, "MigrateMemObjects") == 0
+                            || strcmp(operation_name, "SvmMemcpy") == 0)
+                   ) {
+
+                    uint64_t memory_start = tracer_record->timestamps.begin.value;
+                    uint64_t memory_end = tracer_record->timestamps.end.value;
+
+                    memory_records_buffer[num_memory_records++] = (gpu_record_t){
+                        .start = memory_start,
+                        .end = memory_end,
+                    };
+
+                    PLUGIN_PRINT("%s: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            operation_name,
+                            memory_start, memory_end, memory_end - memory_start);
+                }
+                break;
+            }
             default:
-                PLUGIN_PRINT("unknown record\n");
+                PLUGIN_PRINT("unknown record with kind=%d\n", begin->kind);
         }
         rocprofiler_next_record(begin, &begin, session_id, buffer_id);
     }
@@ -122,7 +200,15 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
     atomic_fetch_add_explicit(&computation_time, kernel_time, memory_order_relaxed);
 
     /* Compute memory records duration */
-    // TODO
+    int new_num_memory_records = gpu_record_clean_and_merge(
+            memory_records_buffer, num_memory_records);
+    uint64_t memory_time = gpu_record_get_memory_exclusive_duration(
+            memory_records_buffer, new_num_memory_records,
+            kernel_records_buffer, new_num_kernel_records);
+    atomic_fetch_add_explicit(&communication_time, memory_time, memory_order_relaxed);
+
+    PLUGIN_PRINT("computed sample, computation: %"PRIu64", communication: %"PRIu64"\n",
+            kernel_time, memory_time);
 }
 
 
@@ -158,8 +244,8 @@ static int rocprofilerv2_plugin_init(plugin_info_t *info) {
 
     CHECK_ROCPROFILER(rocprofiler_create_session(ROCPROFILER_NONE_REPLAY_MODE, &_session_id));
 
-    /* Create buffer. It's passed to both HIP API Filter and Kernel Tracing Filter
-     * but it's actually only used for the latter */
+    /* Create buffer. It will be only used for asynchronous operations, for now:
+     * API filter for HIP operations and Kernel Tracing Filter */
     CHECK_ROCPROFILER(rocprofiler_create_buffer(_session_id, buffer_callback,
                 ROCPROFILER_BUFFER_SIZE, &_buffer_id));
 
@@ -167,6 +253,7 @@ static int rocprofilerv2_plugin_init(plugin_info_t *info) {
     rocprofiler_filter_id_t api_tracing_filter_id;
     rocprofiler_tracer_activity_domain_t apis_requested[] = {
         ACTIVITY_DOMAIN_HIP_API,
+        ACTIVITY_DOMAIN_HIP_OPS,
     };
     enum { num_apis_requested = sizeof(apis_requested) / sizeof(apis_requested[0]) };
     CHECK_ROCPROFILER(rocprofiler_create_filter(
