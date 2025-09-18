@@ -29,10 +29,10 @@ the execution or as a report at the end.
 
 ## Branching Strategy
 
-Please note that the `main` branch is used as the development branch for this
-project. It may contain experimental features and is not guaranteed to be
-stable. For stable releases, please refer to the tagged versions in the
-repository.
+The `main` branch serves as the integration branch for new features. All changes
+merged into `main` have passed CI and review, but the branch evolves continuously
+and may not represent a stable release. For stable, maintained releases, please
+refer to the `dlb-*` branches or the [Releases][releases] page.
 
 
 ## Installation
@@ -56,7 +56,7 @@ repository.
                 ```bash
                 git clone https://pm.bsc.es/gitlab/dlb/dlb.git
                 ```
-        * Or download from [GitHub releases][]
+        * Or download from [GitHub releases][releases]
         * Bootstrap autotools:
 
             ```bash
@@ -185,7 +185,7 @@ at dlb@bsc.es.
 
 [DLB]: https://pm.bsc.es/dlb
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
-[GitHub releases]: https://github.com/bsc-pm/dlb/releases
+[releases]: https://github.com/bsc-pm/dlb/releases
 [DLB User Guide]: https://pm.bsc.es/ftp/dlb/doc/user-guide/index.html
 [pub1_doi]: http://dx.doi.org/10.1016/j.jpdc.2014.05.004
 [pub1_bib]: https://pm.bsc.es/ftp/dlb/doc/LeWI_JPDC14.bib
