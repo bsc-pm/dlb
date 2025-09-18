@@ -271,7 +271,7 @@ static void pop_metrics_to_json(FILE *out_file) {
                     "      \"numMpiCalls\": %"PRId64",\n"
                     "      \"numOmpParallels\": %"PRId64",\n"
                     "      \"numOmpTasks\": %"PRId64",\n"
-                    "      \"numGpuCalls\": %"PRId64",\n"
+                    "      \"numGpuRuntimeCalls\": %"PRId64",\n"
                     "      \"elapsedTime\": %"PRId64",\n"
                     "      \"usefulTime\": %"PRId64",\n"
                     "      \"mpiTime\": %"PRId64",\n"
@@ -530,7 +530,7 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
                 "numMpiCalls,"
                 "numOmpParallels,"
                 "numOmpTasks,"
-                "numGpuCalls,"
+                "numGpuRuntimeCalls,"
                 "elapsedTime,"
                 "usefulTime,"
                 "mpiTime,"
@@ -576,7 +576,7 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
                 "%"PRId64"," /* numMpiCalls */
                 "%"PRId64"," /* numOmpParallels */
                 "%"PRId64"," /* numOmpTasks */
-                "%"PRId64"," /* numGpuCalls */
+                "%"PRId64"," /* numGpuRuntimeCalls */
                 "%"PRId64"," /* elapsedTime */
                 "%"PRId64"," /* usefulTime */
                 "%"PRId64"," /* mpiTime */
@@ -1065,7 +1065,7 @@ static void process_to_json(FILE *out_file) {
                 "        \"numMpiCalls\": %"PRId64",\n"
                 "        \"numOmpParallels\": %"PRId64",\n"
                 "        \"numOmpTasks\": %"PRId64",\n"
-                "        \"numGpuCalls\": %"PRId64",\n"
+                "        \"numGpuRuntimeCalls\": %"PRId64",\n"
                 "        \"elapsedTime\": %"PRId64",\n"
                 "        \"usefulTime\": %"PRId64",\n"
                 "        \"mpiTime\": %"PRId64",\n"
