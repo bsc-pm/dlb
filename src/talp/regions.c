@@ -411,7 +411,8 @@ int region_report(const subprocess_descriptor_t *spd, const dlb_monitor_t *monit
     bool have_papi = false;
 #endif
     talp_output_print_monitoring_region(monitor, mu_to_str(&spd->process_mask),
-            talp_info->flags.have_mpi, talp_info->flags.have_openmp, have_papi);
+            talp_info->flags.have_mpi, talp_info->flags.have_openmp,
+            talp_info->flags.have_gpu, have_papi);
 
     return DLB_SUCCESS;
 }

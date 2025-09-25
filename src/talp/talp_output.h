@@ -55,11 +55,12 @@ typedef struct process_record_t {
 } process_record_t;
 
 void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
-        const char *cpuset_str, bool have_mpi, bool have_openmp, bool have_papi);
+        const char *cpuset_str, bool have_mpi, bool have_openmp, bool have_gpu,
+        bool have_papi);
 
 void talp_output_record_pop_metrics(const dlb_pop_metrics_t *metrics);
 
-void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks);
+void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks, int num_gpus);
 
 void talp_output_record_node(const node_record_t *node_record);
 

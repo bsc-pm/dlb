@@ -87,7 +87,8 @@ static const char* make_header(const char *title) {
 /*********************************************************************************/
 
 void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
-        const char *cpuset_str, bool have_mpi, bool have_openmp, bool have_papi) {
+        const char *cpuset_str, bool have_mpi, bool have_openmp, bool have_gpu,
+        bool have_papi) {
 
     char elapsed_time_str[16];
     ns_to_human(elapsed_time_str, 16, monitor->elapsed_time);
@@ -109,6 +110,14 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
         info("### Not useful OMP Serialization:             %"PRId64" ns",
                 monitor->omp_serialization_time);
     }
+    if (have_gpu) {
+        info("### Not useful GPU runtime:                   %"PRId64" ns",
+                monitor->gpu_runtime_time);
+        info("### Device useful time:                       %"PRId64" ns",
+                monitor->gpu_useful_time);
+        info("### Device communication time:                %"PRId64" ns",
+                monitor->gpu_communication_time);
+    }
     info("### CpuSet:                                   %s", cpuset_str);
     if (have_papi) {
         float ipc = sanitized_ipc(monitor->instructions, monitor->cycles);
@@ -123,6 +132,10 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
                 monitor->num_omp_parallels);
         info("### Number of OpenMP tasks:                   %"PRId64,
                 monitor->num_omp_tasks);
+    }
+    if (have_gpu) {
+        info("### Number of GPU runtime calls:              %"PRId64,
+                monitor->num_gpu_runtime_calls);
     }
 }
 
@@ -438,24 +451,30 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "### Number of MPI processes:                   %d\n"
                     "### Number of nodes:                           %d\n"
                     "### Average CPUs:                              %.1f\n"
+                    "### Number of GPUs:                            %d\n"
                     "### Cycles:                                    %.0f\n"
                     "### Instructions:                              %.0f\n"
                     "### Number of measurements:                    %"PRId64"\n"
                     "### Number of MPI calls:                       %"PRId64"\n"
                     "### Number of OpenMP parallel regions:         %"PRId64"\n"
                     "### Number of OpenMP explicit tasks:           %"PRId64"\n"
-                    "### Number of GPU calls:                       %"PRId64"\n"
+                    "### Number of GPU runtime calls:               %"PRId64"\n"
                     "### Elapsed Time (ns):                         %"PRId64"\n"
                     "### Useful Time (ns):                          %"PRId64"\n"
                     "### MPI Time (ns):                             %"PRId64"\n"
                     "### OpenMP Load Imbalance Time (ns):           %"PRId64"\n"
                     "### OpenMP Scheduling Time (ns):               %"PRId64"\n"
                     "### OpenMP Serialization Time (ns):            %"PRId64"\n"
-                    "### GPU Time (ns):                             %"PRId64"\n"
+                    "### GPU Runtime Time (ns):                     %"PRId64"\n"
                     "### MPI time normalized at process level of\n"
                     "###     the process with the max non-MPI time: %.0f\n"
                     "### MPI time normalized at node level of\n"
                     "###     the process with the max non-MPI time: %.0f\n"
+                    "### Device useful time:                        %"PRId64"\n"
+                    "### Device communication time:                 %"PRId64"\n"
+                    "### Device max useful time:                    %"PRId64"\n"
+                    "### Device max active time:                    %"PRId64"\n"
+                    "### --- Host metrics ---\n"
                     "### Parallel efficiency:                       %.2f\n"
                     "### MPI Parallel efficiency:                   %.2f\n"
                     "###   - MPI Communication efficiency:          %.2f\n"
@@ -466,13 +485,19 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "###   - OpenMP Load Balance:                   %.2f\n"
                     "###   - OpenMP Scheduling efficiency:          %.2f\n"
                     "###   - OpenMP Serialization efficiency:       %.2f\n"
-                    "### Device Offload efficiency:                 %.2f\n",
+                    "### Device Offload efficiency:                 %.2f\n"
+                    "### --- Device metrics ---\n"
+                    "### Device Parallel efficiency:                %.2f\n"
+                    "###   - Device Load Balance:                   %.2f\n"
+                    "###   - Device Communication efficiency:       %.2f\n"
+                    "###   - Device Orchestration efficiency:       %.2f\n",
                     make_header("Monitoring Region POP Metrics"),
                     record->name,
                     record->num_cpus,
                     record->num_mpi_ranks,
                     record->num_nodes,
                     record->avg_cpus,
+                    record->num_gpus,
                     record->cycles,
                     record->instructions,
                     record->num_measurements,
@@ -489,6 +514,10 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     record->gpu_runtime_time,
                     record->min_mpi_normd_proc,
                     record->min_mpi_normd_node,
+                    record->gpu_useful_time,
+                    record->gpu_communication_time,
+                    record->max_gpu_useful_time,
+                    record->max_gpu_active_time,
                     record->parallel_efficiency,
                     record->mpi_parallel_efficiency,
                     record->mpi_communication_efficiency,
@@ -499,7 +528,11 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     record->omp_load_balance,
                     record->omp_scheduling_efficiency,
                     record->omp_serialization_efficiency,
-                    record->device_offload_efficiency
+                    record->device_offload_efficiency,
+                    record->gpu_parallel_efficiency,
+                    record->gpu_load_balance,
+                    record->gpu_communication_efficiency,
+                    record->gpu_orchestration_efficiency
                 );
         } else {
             fprintf(out_file,
@@ -1012,6 +1045,14 @@ static void process_print(void) {
                 info("### Not useful OMP Serialization:             %"PRId64" ns",
                         process_record->monitor.omp_serialization_time);
             }
+            if (process_record->monitor.gpu_runtime_time > 0) {
+                info("### Not useful GPU runtime:                   %"PRId64" ns",
+                        process_record->monitor.gpu_runtime_time);
+                info("### Device useful time:                       %"PRId64" ns",
+                        process_record->monitor.gpu_useful_time);
+                info("### Device communication time:                %"PRId64" ns",
+                        process_record->monitor.gpu_communication_time);
+            }
             if (process_record->monitor.instructions > 0
                     && process_record->monitor.cycles > 0) {
                 info("### IPC :                                     %.2f",
@@ -1072,7 +1113,9 @@ static void process_to_json(FILE *out_file) {
                 "        \"ompLoadImbalanceTime\": %"PRId64",\n"
                 "        \"ompSchedulingTime\": %"PRId64",\n"
                 "        \"ompSerializationTime\": %"PRId64",\n"
-                "        \"gpuRuntimeTime\": %"PRId64"\n"
+                "        \"gpuRuntimeTime\": %"PRId64",\n"
+                "        \"gpuUsefulTime\": %"PRId64",\n"
+                "        \"gpuCommunicationTime\": %"PRId64"\n"
                 "      }%s\n",
                 process_record->rank,
                 process_record->pid,
@@ -1096,6 +1139,8 @@ static void process_to_json(FILE *out_file) {
                 process_record->monitor.omp_scheduling_time,
                 process_record->monitor.omp_serialization_time,
                 process_record->monitor.gpu_runtime_time,
+                process_record->monitor.gpu_useful_time,
+                process_record->monitor.gpu_communication_time,
                 i + 1 < region_record->num_mpi_ranks ? "," : "");
         }
         fprintf(out_file,
@@ -1201,7 +1246,9 @@ static void process_to_csv(FILE *out_file, bool append) {
                 "OMPLoadImbalance,"
                 "OMPSchedulingTime,"
                 "OMPSerializationTime,"
-                "GPURuntimeTime\n");
+                "GPURuntimeTime,"
+                "GPUUsefulTime,"
+                "GPUCommunicationTime\n");
     }
 
     for (GSList *node = region_records;
@@ -1237,7 +1284,9 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%"PRId64","    /* OMPLoadImbalance */
                     "%"PRId64","    /* OMPSchedulingTime */
                     "%"PRId64","    /* OMPSerializationTime */
-                    "%"PRId64"\n",  /* GPURuntimeTime */
+                    "%"PRId64","    /* GPURuntimeTime */
+                    "%"PRId64","    /* GPUUsefulTime */
+                    "%"PRId64"\n",  /* GPUCommunicationTime */
                     region_record->name,
                     process_record->rank,
                     process_record->pid,
@@ -1260,7 +1309,9 @@ static void process_to_csv(FILE *out_file, bool append) {
                     process_record->monitor.omp_load_imbalance_time,
                     process_record->monitor.omp_scheduling_time,
                     process_record->monitor.omp_serialization_time,
-                    process_record->monitor.gpu_runtime_time);
+                    process_record->monitor.gpu_runtime_time,
+                    process_record->monitor.gpu_useful_time,
+                    process_record->monitor.gpu_communication_time);
         }
     }
 }
@@ -1294,7 +1345,9 @@ static void process_to_txt(FILE *out_file) {
                     "### Not useful OMP Load Imbalance:            %"PRId64" ns\n"
                     "### Not useful OMP Scheduling:                %"PRId64" ns\n"
                     "### Not useful OMP Serialization:             %"PRId64" ns\n"
-                    "### Not useful GPU:                           %"PRId64" ns\n"
+                    "### Not useful GPU runtime:                   %"PRId64" ns\n"
+                    "### Device useful time:                       %"PRId64" ns\n"
+                    "### Device communication time:                %"PRId64" ns\n"
                     "### IPC:                                      %.2f\n",
                     make_header("Monitoring Region Summary"),
                     region_record->name,
@@ -1308,6 +1361,8 @@ static void process_to_txt(FILE *out_file) {
                     process_record->monitor.omp_scheduling_time,
                     process_record->monitor.omp_serialization_time,
                     process_record->monitor.gpu_runtime_time,
+                    process_record->monitor.gpu_useful_time,
+                    process_record->monitor.gpu_communication_time,
                     ipc);
         }
     }
@@ -1390,15 +1445,18 @@ typedef struct TALPResourcesRecord {
     unsigned int num_cpus;
     unsigned int num_nodes;
     unsigned int num_mpi_ranks;
+    unsigned int num_gpus;
 } talp_resources_record_t;
 static talp_resources_record_t resources_record;
 
-void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks) {
+void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks,
+        int num_gpus) {
 
     resources_record = (const talp_resources_record_t) {
         .num_cpus = (unsigned int) num_cpus,
         .num_nodes = (unsigned int) num_nodes,
-        .num_mpi_ranks = (unsigned int) num_mpi_ranks
+        .num_mpi_ranks = (unsigned int) num_mpi_ranks,
+        .num_gpus = (unsigned int) num_gpus,
     };
 }
 
@@ -1407,11 +1465,13 @@ static void resources_to_json(FILE *out_file) {
                     "  \"resources\": {\n"
                     "    \"numCpus\": %u,\n"
                     "    \"numNodes\": %u,\n"
-                    "    \"numMpiRanks\": %u\n"
+                    "    \"numMpiRanks\": %u,\n"
+                    "    \"numGpus\": %u\n"
                     "  },\n",
                 resources_record.num_cpus,
                 resources_record.num_nodes,
-                resources_record.num_mpi_ranks);
+                resources_record.num_mpi_ranks,
+                resources_record.num_gpus);
 }
 
 static void resources_to_xml(FILE *out_file) {
@@ -1433,11 +1493,13 @@ static void resources_to_txt(FILE *out_file) {
             "%s\n"
             "### Number of CPUs:                %u\n"
             "### Number of Nodes:               %u\n"
-            "### Number of MPI processes:       %u\n",
+            "### Number of MPI processes:       %u\n"
+            "### Number of GPUs:                %u\n",
             make_header("TALP Resources"),
             resources_record.num_cpus,
             resources_record.num_nodes,
-            resources_record.num_mpi_ranks);
+            resources_record.num_mpi_ranks,
+            resources_record.num_gpus);
 }
 
 

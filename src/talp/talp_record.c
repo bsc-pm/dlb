@@ -108,7 +108,7 @@ void talp_record_monitor(const subprocess_descriptor_t *spd,
 
             if(monitor == talp_info->monitor) {
                 talp_output_record_resources(monitor->num_cpus,
-                        /* num_nodes */ 1, /* num_ranks */ 0);
+                        /* num_nodes */ 1, /* num_ranks */ 0, base_metrics.num_gpus);
             }
 
         } else {
@@ -449,7 +449,8 @@ void talp_record_pop_summary(const subprocess_descriptor_t *spd,
             /* Only the global region records the resources */
             if (monitor == talp_info->monitor) {
                 talp_output_record_resources(base_metrics.num_cpus,
-                        base_metrics.num_nodes, base_metrics.num_mpi_ranks);
+                        base_metrics.num_nodes, base_metrics.num_mpi_ranks,
+                        base_metrics.num_gpus);
             }
 
             /* Construct pop_metrics out of base metrics */

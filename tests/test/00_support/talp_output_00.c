@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "apis/dlb_talp.h"
+#include "support/mask_utils.h"
 #include "talp/talp_output.h"
 
 #include <ftw.h>
@@ -264,6 +265,36 @@ int main(int argc, char *argv[]) {
     talp_output_finalize(wrong_subdir);
     fflush(stdout);
     free(wrong_subdir);
+
+    /* Report single region */
+    cpu_set_t system_mask;
+    mu_get_system_mask(&system_mask);
+    dlb_monitor_t monitor = {
+        .name                    = "Region 1",
+        .num_cpus                = 1,
+        .cycles                  = 1e9,
+        .instructions            = 2e9,
+        .num_measurements        = 1,
+        .num_mpi_calls           = 5,
+        .num_omp_parallels       = 2,
+        .num_omp_tasks           = 7,
+        .num_gpu_runtime_calls   = 42,
+        .start_time              = 1e9,
+        .stop_time               = 2e9,
+        .elapsed_time            = 1e9,
+        .useful_time             = 4e8,
+        .mpi_time                = 2e8,
+        .omp_load_imbalance_time = 1e8,
+        .omp_scheduling_time     = 1e8,
+        .omp_serialization_time  = 1e8,
+        .gpu_runtime_time        = 1e8,
+        .gpu_useful_time         = 2e8,
+        .gpu_communication_time  = 2e8,
+    };
+
+    talp_output_print_monitoring_region(&monitor, mu_to_str(&system_mask),
+            /* have_mpi */ true, /* have_openmp */ true,
+            /* have_gpu */ true, /* have_papi */ true);
 
     return error;
 }
