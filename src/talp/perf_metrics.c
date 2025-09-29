@@ -556,7 +556,7 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
 
     /* Define MPI operation */
     MPI_Op app_reduction_op;
-    MPI_Op_create(mpi_reduction_fn, true, &app_reduction_op);
+    PMPI_Op_create(mpi_reduction_fn, true, &app_reduction_op);
 
     /* MPI reduction */
     if (!all_to_all) {
