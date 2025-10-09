@@ -78,6 +78,11 @@ int main(int argc, char **argv) {
         assert( DLB_Barrier()                       == DLB_SUCCESS );
         assert( DLB_PrintShmem(0, DLB_COLOR_AUTO)   == DLB_SUCCESS );
         assert( DLB_Finalize()                      == DLB_SUCCESS );
+
+        // other calls after finalize
+        assert( DLB_Barrier()                       == DLB_ERR_NOCOMP );
+        assert( DLB_BarrierAttach()                 == DLB_ERR_NOCOMP );
+        assert( DLB_BarrierDetach()                 == DLB_ERR_NOCOMP );
     }
 
     /* Test that multiple attach or detach does not cause errors */
