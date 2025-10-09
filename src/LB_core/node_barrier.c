@@ -165,11 +165,11 @@ barrier_t* node_barrier_register(subprocess_descriptor_t *spd,
     if (barrier_name == NULL) return NULL;
 
     barrier_t *barrier = NULL;
-    if (spd->options.barrier) {
+    barrier_info_t *barrier_info = spd->barrier_info;
+    if (barrier_info) {
         /* The register function cannot know whether the calling process is a new
         * participant or just a query for the pointer. If we have at least one
         * registered named barrier, we need to check the shared memory first. */
-        barrier_info_t *barrier_info = spd->barrier_info;
         if (barrier_info->barrier_list[0] != NULL) {
             barrier = shmem_barrier__find(barrier_name);
             if (barrier != NULL) {
@@ -219,9 +219,9 @@ barrier_t* node_barrier_register(subprocess_descriptor_t *spd,
 
 int node_barrier(const subprocess_descriptor_t *spd, barrier_t *barrier) {
     int error;
-    if (spd->options.barrier) {
+    barrier_info_t *barrier_info = spd->barrier_info;
+    if (barrier_info) {
         /* Check whether barrier is valid */
-        barrier_info_t *barrier_info = spd->barrier_info;
         if (barrier == NULL) {
             /* If barrier is not provided we only need to check the reserved
              * position in barrier_list */
@@ -271,8 +271,8 @@ int node_barrier(const subprocess_descriptor_t *spd, barrier_t *barrier) {
 
 int node_barrier_attach(subprocess_descriptor_t *spd, barrier_t *barrier) {
     int error;
-    if (spd->options.barrier) {
-        barrier_info_t *barrier_info = spd->barrier_info;
+    barrier_info_t *barrier_info = spd->barrier_info;
+    if (barrier_info) {
         if (barrier == NULL) {
             if (barrier_info->default_barrier == NULL) {
                 /* Register default barrier again */
@@ -329,8 +329,8 @@ int node_barrier_attach(subprocess_descriptor_t *spd, barrier_t *barrier) {
 
 int node_barrier_detach(subprocess_descriptor_t *spd, barrier_t *barrier) {
     int error;
-    if (spd->options.barrier) {
-        barrier_info_t *barrier_info = spd->barrier_info;
+    barrier_info_t *barrier_info = spd->barrier_info;
+    if (barrier_info) {
         if (barrier == NULL) {
             if (barrier_info->default_barrier != NULL) {
                 /* Detach default barrier */
