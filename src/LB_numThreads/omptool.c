@@ -43,6 +43,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/syscall.h>
 
 
 static omptool_callback_funcs_t omptool_funcs = {0};
@@ -789,6 +790,7 @@ static void unset_ompt_callbacks(void) {
 /*********************************************************************************/
 
 static bool dlb_initialized_through_ompt = false;
+static bool omptool_initialized = false;
 static const char *openmp_runtime_version;
 
 static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_num,
@@ -855,6 +857,9 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
         if (!err) {
             omptool__init(thread_spd->id, &options);
             options_finalize(&options);
+            /* we save the thread ID that initialized OMPT */
+            tool_data->value = syscall(SYS_gettid);
+            omptool_initialized = true;
             return 1;
         }
 
@@ -872,18 +877,27 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
 }
 
 static void omptool_finalize(ompt_data_t *tool_data) {
-    verbose(VB_OMPT, "Finalizing OMPT module");
 
-    /* Finalize DLB if needed */
-    if (dlb_initialized_through_ompt) {
-        DLB_Finalize();
+    /* Protect finalization against forks and other double calls */
+    if (tool_data->value == (uint64_t)syscall(SYS_gettid)
+            && omptool_initialized) {
+
+        verbose(VB_OMPT, "Finalizing OMPT module");
+
+        /* Finalize DLB if needed */
+        if (dlb_initialized_through_ompt) {
+            DLB_Finalize();
+        }
+
+        /* Disable OMPT callbacks */
+        unset_ompt_callbacks();
+
+        /* Finalize modules */
+        omptool__finalize();
+
+        omptool_initialized = false;
+        dlb_initialized_through_ompt = false;
     }
-
-    /* Disable OMPT callbacks */
-    unset_ompt_callbacks();
-
-    /* Finalize modules */
-    omptool__finalize();
 }
 
 

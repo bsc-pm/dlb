@@ -31,7 +31,8 @@
 /* Sub-process Descriptor */
 
 typedef struct SubProcessDescriptor {
-    pid_t id;
+    pid_t id;   // sub-proces id, used everywhere to identify spd
+    pid_t pid;  // real pid for fork-safety purposes
     bool dlb_initialized;
     bool dlb_preinitialized;
     bool lewi_enabled;

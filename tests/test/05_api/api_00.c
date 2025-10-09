@@ -26,10 +26,11 @@
 #include "apis/dlb.h"
 #include "support/mask_utils.h"
 
+#include <assert.h>
 #include <sched.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
-#include <assert.h>
 
 static cpu_set_t process_mask;
 
@@ -172,6 +173,22 @@ int main( int argc, char **argv ) {
     assert( DLB_Init(0, &process_mask, options3) == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_NOUPDT );
+
+    // Test that forked process cannot finalize DLB
+    assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
+    pid_t pid = fork();
+    assert( pid >= 0 );
+    if (pid == 0) {
+        if (DLB_Finalize() == DLB_NOUPDT) {
+            _exit(0);
+        } else {
+            fprintf(stderr, "ERROR: Child process received unexpected return from DLB_Finalize\n");
+            _exit(1);
+        }
+    }
+    int status;
+    waitpid(pid, &status, 0);
+    assert( DLB_Finalize() == DLB_SUCCESS );
 
     // Test version
     int major, minor, patch;

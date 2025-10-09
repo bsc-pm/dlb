@@ -69,6 +69,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialize common modules (spd->id and instrumentation module ASAP)
     *spd = (const subprocess_descriptor_t) {
         .id = id,
+        .pid =  getpid(),
         .dlb_initialized = spd->dlb_initialized,
         .dlb_preinitialized = spd->dlb_preinitialized,
     };
@@ -213,6 +214,12 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 }
 
 int Finish(subprocess_descriptor_t *spd) {
+
+    /* Protect finalization if spd does not match with current process */
+    if (spd->pid != getpid()) {
+        return DLB_NOUPDT;
+    }
+
     int error = DLB_SUCCESS;
     instrument_event(RUNTIME_EVENT, EVENT_FINALIZE, EVENT_BEGIN);
 

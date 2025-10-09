@@ -246,6 +246,7 @@ static void* lookup_fn (const char *interface_function_name) {
 
 static void test_omptool_events(ompt_start_tool_result_t *tool_result,
         bool talp, bool omptm) {
+    ompt_data_t tool_data = {};
     ompt_data_t thread_data = {};
     ompt_data_t parallel_data_l1 = {};
     ompt_data_t parallel_data_l2 = {};
@@ -259,7 +260,7 @@ static void test_omptool_events(ompt_start_tool_result_t *tool_result,
 
     // init
     reset_event_checkpoints();
-    tool_result->initialize((ompt_function_lookup_t)lookup_fn, 0, NULL);
+    tool_result->initialize((ompt_function_lookup_t)lookup_fn, 0, &tool_data);
     assert( talp_event.init  == talp );
     assert( omptm_event.init == omptm );
     assert( callbacks.thread_begin != NULL );
@@ -391,7 +392,7 @@ static void test_omptool_events(ompt_start_tool_result_t *tool_result,
     assert( omptm_event.task_switch == omptm );
 
     // finalize
-    tool_result->finalize(NULL);
+    tool_result->finalize(&tool_data);
     assert( callbacks.thread_begin == NULL );
     assert( callbacks.thread_end == NULL );
     assert( callbacks.thread_role_shift == NULL );
@@ -461,9 +462,10 @@ int main (int argc, char *argv[]) {
     assert( tool_result->finalize );
 
     /* Initialize OMPT tool w/o callbacks (assuming  --ompt-thread-manager=none)*/
-    tool_result->initialize((ompt_function_lookup_t)lookup_fn, 0, NULL);
+    ompt_data_t tool_data = {};
+    tool_result->initialize((ompt_function_lookup_t)lookup_fn, 0, &tool_data);
     assert( callbacks.thread_begin == NULL );
-    tool_result->finalize(NULL);
+    tool_result->finalize(&tool_data);
 
     /* Initialize OMPT tool with only OMPTM callbacks */
     dlb_setenv("DLB_ARGS", dlb_args, NULL, ENV_OVERWRITE_ALWAYS);
