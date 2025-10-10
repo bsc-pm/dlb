@@ -19,6 +19,8 @@
 
 #include "plugins/gpu_record_utils.h"
 
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /* Compare function for qsort */
@@ -28,27 +30,85 @@ static int compare_records(const void *a, const void *b) {
     return (ra->start > rb->start) - (ra->start < rb->start);
 }
 
-/* Sort and merge in place */
-int gpu_record_clean_and_merge(gpu_record_t *records, int num_records) {
 
-    if (num_records <= 0) return 0;
+/* Ensure space for 1 more element */
+static inline void ensure_capacity(gpu_records_buffer_t* buf) {
+    enum { MAX_EVENTS = 64 * 1024 * 1024 }; // 64M events = 1GB
+    if (buf->size >= buf->capacity) {
+        if (buf->capacity >= MAX_EVENTS) {
+            fprintf(stderr, "Too many events (> %llu), aborting\n",
+                    (unsigned long long)MAX_EVENTS);
+            exit(1);
+        }
 
-    // Step 1: Filter out invalid records in-place
-    int valid_count = 0;
-    for (int i = 0; i < num_records; ++i) {
-        if (records[i].end <= records[i].start)
-            continue; // skip invalid
-        records[valid_count++] = records[i];
+        size_t new_cap = buf->capacity * 2;
+        if (new_cap > MAX_EVENTS) new_cap = MAX_EVENTS;
+
+        gpu_record_t* new_data = realloc(buf->data, new_cap * sizeof(gpu_record_t));
+        if (!new_data) {
+            fprintf(stderr, "realloc failed\n");
+            exit(1);
+        }
+        buf->data = new_data;
+        buf->capacity = new_cap;
     }
+}
 
-    if (valid_count <= 1) return valid_count;
 
-    // Step 2: Sort valid records by start time
-    qsort(records, (size_t)valid_count, sizeof(gpu_record_t), compare_records);
+static inline bool is_valid_record(uint64_t start, uint64_t end) {
+    return start < end;
+}
 
-    // Step 3: Merge overlapping records in-place
-    int new_i = 0;
-    for (int i = 1; i < valid_count; ++i) {
+
+void gpu_record_init_buffer(gpu_records_buffer_t *buf, size_t initial_capacity) {
+    buf->data = malloc(initial_capacity * sizeof(gpu_record_t));
+    if (!buf->data) {
+        fprintf(stderr, "malloc failed\n");
+        exit(1);
+    }
+    buf->size = 0;
+    buf->capacity = initial_capacity;
+}
+
+
+void gpu_record_free_buffer(gpu_records_buffer_t *buf) {
+    free(buf->data);
+    buf->data = NULL;
+    buf->size = 0;
+    buf->capacity = 0;
+}
+
+
+void gpu_record_clear_buffer(gpu_records_buffer_t *buf) {
+    buf->size = 0;
+}
+
+
+/* Add one record */
+void gpu_record_append_event(gpu_records_buffer_t* buf, uint64_t start, uint64_t end) {
+    ensure_capacity(buf);
+    if (is_valid_record(start, end)) {
+        buf->data[buf->size].start = start;
+        buf->data[buf->size].end   = end;
+        buf->size++;
+    }
+}
+
+
+/* Sort and merge in place (record flattening) */
+void gpu_record_flatten(gpu_records_buffer_t *buf) {
+
+    size_t num_records = buf->size;
+    gpu_record_t *records = buf->data;
+
+    if (num_records == 0) return;
+
+    // Sort records by start time
+    qsort(records, num_records, sizeof(gpu_record_t), compare_records);
+
+    // Merge overlapping records in-place
+    size_t new_i = 0;
+    for (size_t i = 1; i < num_records; ++i) {
         if (records[new_i].end >= records[i].start) {
             // Overlapping
             if (records[i].end > records[new_i].end) {
@@ -62,25 +122,37 @@ int gpu_record_clean_and_merge(gpu_record_t *records, int num_records) {
         }
     }
 
-    return new_i + 1;
+    // Update new size
+    buf->size = new_i + 1;
 }
 
-/* Compute total duration of records. PRE: records is sorted and merged. */
-uint64_t gpu_record_get_duration(const gpu_record_t *records, int num_records) {
+/* Compute total duration of records. PRE: records are sorted and merged. */
+uint64_t gpu_record_get_duration(const gpu_records_buffer_t *buf) {
+
     uint64_t total = 0;
-    for (int i = 0; i < num_records; ++i) {
+    size_t num_records = buf->size;
+    gpu_record_t *records = buf->data;
+
+    for (size_t i = 0; i < num_records; ++i) {
         total += records[i].end - records[i].start;
     }
+
     return total;
 }
 
 /* Compute exclusive duration in memory records */
 uint64_t gpu_record_get_memory_exclusive_duration(
-        const gpu_record_t *mem_records, int mem_count,
-        const gpu_record_t *kernel_records, int kernel_count) {
+        const gpu_records_buffer_t *mem_buf,
+        const gpu_records_buffer_t *kernel_buf) {
 
-    int m_i = 0, k_i = 0;
+    size_t m_i = 0, k_i = 0;
     uint64_t total_exclusive = 0;
+
+    const gpu_record_t *mem_records = mem_buf->data;
+    size_t mem_count = mem_buf->size;
+
+    const gpu_record_t *kernel_records = kernel_buf->data;
+    size_t kernel_count = kernel_buf->size;
 
     while (m_i < mem_count) {
         uint64_t mem_start = mem_records[m_i].start;

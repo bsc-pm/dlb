@@ -30,6 +30,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+
+/*********************************************************************************/
+/*  ROCm profiling                                                               */
+/*********************************************************************************/
+
 
 #define CHECK_ROCPROFILER(call)                                                 \
     do {                                                                        \
@@ -56,24 +63,30 @@
   } while (0)
 
 
-#define ROCPROFILER_BUFFER_SIZE (2 * 1024 * 1024)   // 2MB
-#define INTERMEDIATE_BUFFER_SIZE (16 * 1024)        // * 16 bytes/element =  ~256 KB
-
+/* --- ROCm state -------------------------------------------------------------- */
 
 static bool rocprofilerv2_plugin_enabled = false;
-static atomic_uint_least64_t computation_time = 0;
-static atomic_uint_least64_t communication_time = 0;
 static rocprofiler_session_id_t _session_id;
 static rocprofiler_buffer_id_t _buffer_id;
+
+
+/* ---Host runtime events ------------------------------------------------------ */
 
 /* Callback for the HIP API called by the host */
 static void HIP_API_callback(rocprofiler_record_tracer_t tracer_record,
         rocprofiler_session_id_t session_id) {
 
     if (tracer_record.domain == ACTIVITY_DOMAIN_HIP_API) {
+        const char* function_name = NULL;
+        if (plugin_is_verbose()) {
+            CHECK_WARN_ROCPROFILER(rocprofiler_query_tracer_operation_name(
+                        tracer_record.domain, tracer_record.operation_id, &function_name));
+        }
         if (tracer_record.phase == ROCPROFILER_PHASE_ENTER) {
+            PLUGIN_PRINT(" >> %s\n", function_name);
             talp_gpu_into_runtime_api();
         } else if (tracer_record.phase == ROCPROFILER_PHASE_EXIT) {
+            PLUGIN_PRINT(" << %s\n", function_name);
             talp_gpu_out_of_runtime_api();
         }
     } else {
@@ -81,19 +94,39 @@ static void HIP_API_callback(rocprofiler_record_tracer_t tracer_record,
     }
 }
 
-/* Called by ROCPROFILER when buffer needs to be flushed. Updates current
- * computation_time and communication_time*/
+
+/* --- Local buffers management ------------------------------------------------ */
+
+/* Local buffers for storing kernel and memory records.
+ * Both records need to be kept in memory because events from the GPU profiling
+ * library may arrive out-of-order across different buffer flushes.  These
+ * buffers are flattened and processed only when computing durations for the
+ * sample. */
+static gpu_records_buffer_t kernel_buffer = {};
+static gpu_records_buffer_t memory_buffer = {};
+
+/* After flushing the buffers, advance safe_timestamp so that any future records
+ * with start times earlier than this are ignored. */
+static uint64_t safe_timestamp = 0;
+
+
+static int64_t get_timestamp(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec * 1000000000LL + t.tv_nsec;
+}
+
+
+/* Called by ROCPROFILER when a buffer needs to be flushed.
+ * The callback receives a contiguous range of activity records [begin, end].
+ * We copy only the minimal information we need (start and end timestamps)
+ * into our own buffers for later processing.
+ * This callback is invoked serially per buffer. Since we only define one
+ * session and one buffer, the function does not need to be thread-safe. */
 static void buffer_callback(const rocprofiler_record_header_t* begin,
                      const rocprofiler_record_header_t* end,
                      rocprofiler_session_id_t session_id,
                      rocprofiler_buffer_id_t buffer_id) {
-
-    /* Intermediate buffers for computing time */
-    int num_kernel_records = 0;
-    gpu_record_t kernel_records_buffer[INTERMEDIATE_BUFFER_SIZE];
-
-    int num_memory_records = 0;
-    gpu_record_t memory_records_buffer[INTERMEDIATE_BUFFER_SIZE];
 
     while (begin < end) {
         if (!begin) break;
@@ -105,13 +138,14 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
                 uint64_t kernel_start = profiler_record->timestamps.begin.value;
                 uint64_t kernel_end = profiler_record->timestamps.end.value;
 
-                kernel_records_buffer[num_kernel_records++] = (gpu_record_t){
-                    .start = kernel_start,
-                    .end = kernel_end,
-                };
+                if (kernel_start >= safe_timestamp
+                        && kernel_end > safe_timestamp) {
 
-                PLUGIN_PRINT("KERNEL: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        kernel_start, kernel_end, kernel_end - kernel_start);
+                    gpu_record_append_event(&kernel_buffer, kernel_start, kernel_end);
+
+                    PLUGIN_PRINT("KERNEL: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            kernel_start, kernel_end, kernel_end - kernel_start);
+                }
 
                 break;
             }
@@ -176,14 +210,15 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
                     uint64_t memory_start = tracer_record->timestamps.begin.value;
                     uint64_t memory_end = tracer_record->timestamps.end.value;
 
-                    memory_records_buffer[num_memory_records++] = (gpu_record_t){
-                        .start = memory_start,
-                        .end = memory_end,
-                    };
+                    if (memory_start >= safe_timestamp
+                            && memory_end > safe_timestamp) {
 
-                    PLUGIN_PRINT("%s: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                            operation_name,
-                            memory_start, memory_end, memory_end - memory_start);
+                        gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+
+                        PLUGIN_PRINT("%s: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                                operation_name,
+                                memory_start, memory_end, memory_end - memory_start);
+                    }
                 }
                 break;
             }
@@ -192,26 +227,12 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
         }
         rocprofiler_next_record(begin, &begin, session_id, buffer_id);
     }
-
-    /* Compute kernel records duration */
-    int new_num_kernel_records = gpu_record_clean_and_merge(
-            kernel_records_buffer, num_kernel_records);
-    uint64_t kernel_time = gpu_record_get_duration(kernel_records_buffer, new_num_kernel_records);
-    atomic_fetch_add_explicit(&computation_time, kernel_time, memory_order_relaxed);
-
-    /* Compute memory records duration */
-    int new_num_memory_records = gpu_record_clean_and_merge(
-            memory_records_buffer, num_memory_records);
-    uint64_t memory_time = gpu_record_get_memory_exclusive_duration(
-            memory_records_buffer, new_num_memory_records,
-            kernel_records_buffer, new_num_kernel_records);
-    atomic_fetch_add_explicit(&communication_time, memory_time, memory_order_relaxed);
-
-    PLUGIN_PRINT("computed sample, computation: %"PRIu64", communication: %"PRIu64"\n",
-            kernel_time, memory_time);
 }
 
 
+/* --- Plugin functions  ------------------------------------------------------- */
+
+/* Function called externally by TALP to force flushing buffers */
 static void rocprofilerv2_plugin_update_sample(void) {
 
     /* Flush buffer */
@@ -220,17 +241,26 @@ static void rocprofilerv2_plugin_update_sample(void) {
         CHECK_WARN_ROCPROFILER(rocprofiler_flush_data(_session_id, _buffer_id));
     }
 
-    /* Flush timers for next sample */
-    uint64_t gpu_useful_time = atomic_exchange_explicit(
-            &computation_time, 0, memory_order_acquire);
-    uint64_t gpu_communication_time = atomic_exchange_explicit(
-            &communication_time, 0, memory_order_acquire);
+    /* Update safe timestamp. All future records prior to this will be ignored */
+    safe_timestamp = get_timestamp();
 
-    if (gpu_useful_time > 0 || gpu_communication_time > 0) {
+    /* Compute kernel records duration */
+    gpu_record_flatten(&kernel_buffer);
+    uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
+
+    /* Compute memory records duration */
+    gpu_record_flatten(&memory_buffer);
+    uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
+
+    /* Clear buffers */
+    gpu_record_clear_buffer(&kernel_buffer);
+    gpu_record_clear_buffer(&memory_buffer);
+
+    if (kernel_time > 0 || memory_time > 0) {
         /* Pack values to send to TALP */
         talp_gpu_measurements_t measurements = {
-            .useful_time = gpu_useful_time,
-            .communication_time = gpu_communication_time,
+            .useful_time = kernel_time,
+            .communication_time = memory_time,
         };
 
         /* Call TALP */
@@ -240,12 +270,21 @@ static void rocprofilerv2_plugin_update_sample(void) {
 
 static int rocprofilerv2_plugin_init(plugin_info_t *info) {
 
+    /* Allocate local buffers */
+    enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
+    gpu_record_init_buffer(&kernel_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+    gpu_record_init_buffer(&memory_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+
+    /* Set initial safe timestamp. All records prior to this will be ignored */
+    safe_timestamp = get_timestamp();
+
     CHECK_ROCPROFILER(rocprofiler_initialize());
 
     CHECK_ROCPROFILER(rocprofiler_create_session(ROCPROFILER_NONE_REPLAY_MODE, &_session_id));
 
     /* Create buffer. It will be only used for asynchronous operations, for now:
      * API filter for HIP operations and Kernel Tracing Filter */
+    enum { ROCPROFILER_BUFFER_SIZE = 2 * 1024 * 1024 }; // 2MB
     CHECK_ROCPROFILER(rocprofiler_create_buffer(_session_id, buffer_callback,
                 ROCPROFILER_BUFFER_SIZE, &_buffer_id));
 
@@ -300,14 +339,21 @@ static int rocprofilerv2_plugin_init(plugin_info_t *info) {
 
 static int rocprofilerv2_plugin_finalize(void) {
 
+    PLUGIN_PRINT("rocprofilerv2_plugin_finalize\n");
+
     if (rocprofilerv2_plugin_enabled) {
 
-        /* Finalize TALP GPU first to compute unflushed records */
+        /* Finalize TALP GPU first to compute unflushed records.
+         * (rocprofilerv2_plugin_update_sample will be called here) */
         talp_gpu_finalize();
 
         CHECK_WARN_ROCPROFILER(rocprofiler_terminate_session(_session_id));
         CHECK_WARN_ROCPROFILER(rocprofiler_destroy_session(_session_id));
         CHECK_WARN_ROCPROFILER(rocprofiler_finalize());
+
+        /* Free local buffers */
+        gpu_record_free_buffer(&kernel_buffer);
+        gpu_record_free_buffer(&memory_buffer);
 
         rocprofilerv2_plugin_enabled = false;
     }

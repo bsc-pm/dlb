@@ -28,10 +28,21 @@ typedef struct {
     uint64_t end;
 } gpu_record_t;
 
-int gpu_record_clean_and_merge(gpu_record_t *records, int num_records);
-uint64_t gpu_record_get_duration(const gpu_record_t *records, int num_records);
-uint64_t gpu_record_get_memory_exclusive_duration(
-        const gpu_record_t *mem_records, int mem_count,
-        const gpu_record_t *kernel_records, int kernel_count);
+typedef struct {
+    gpu_record_t *data;
+    size_t size;
+    size_t capacity;
+} gpu_records_buffer_t;
 
-#endif /*GPU_RECORD_UTILS_H  */
+
+void gpu_record_init_buffer(gpu_records_buffer_t *buf, size_t initial_capacity);
+void gpu_record_free_buffer(gpu_records_buffer_t *buf);
+void gpu_record_clear_buffer(gpu_records_buffer_t *buf);
+void gpu_record_append_event(gpu_records_buffer_t* buf, uint64_t start, uint64_t end);
+void gpu_record_flatten(gpu_records_buffer_t *buf);
+uint64_t gpu_record_get_duration(const gpu_records_buffer_t *buf);
+uint64_t gpu_record_get_memory_exclusive_duration(
+        const gpu_records_buffer_t *mem_buf,
+        const gpu_records_buffer_t *kernel_buf);
+
+#endif /* GPU_RECORD_UTILS_H */

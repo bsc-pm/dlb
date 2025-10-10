@@ -30,6 +30,7 @@
 #include <cupti.h>
 #include <dlfcn.h>
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -216,9 +217,35 @@ static void try_finalize_openacc_hooks(void) {}
     } while (0)
 
 
-#define CUPTI_BUFFER_SIZE (2 * 1024 * 1024)     // 2MB
-#define INTERMEDIATE_BUFFER_SIZE (16 * 1024)    // * 16 bytes/element =  ~256 KB
+/* --- CUPTI state ------------------------------------------------------------- */
 
+static bool cupti_plugin_enabled = false;
+static CUpti_SubscriberHandle subscriber;
+
+
+/* ---Host runtime events ------------------------------------------------------ */
+
+/* CUDA API Runtime calls */
+static void CUPTIAPI GetEventValueCallback(
+    void *pUserData,
+    CUpti_CallbackDomain domain,
+    CUpti_CallbackId callbackId,
+    const CUpti_CallbackData *pCallbackInfo)
+{
+    if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
+        if (pCallbackInfo->callbackSite == CUPTI_API_ENTER) {
+            PLUGIN_PRINT(" >> %s\n", pCallbackInfo->functionName);
+            talp_gpu_into_runtime_api();
+        }
+        if (pCallbackInfo->callbackSite == CUPTI_API_EXIT) {
+            PLUGIN_PRINT(" << %s\n", pCallbackInfo->functionName);
+            talp_gpu_out_of_runtime_api();
+        }
+    }
+}
+
+
+/* --- CUDA activities to profile ---------------------------------------------- */
 
 #if CUPTI_API_VERSION < 18
 #  error "CUDA Toolkit 11.8 minimum required"
@@ -248,12 +275,6 @@ typedef CUpti_ActivityMemset4 ACTIVITY_MEMSET_TYPE;
 
 typedef CUpti_ActivityMemcpyPtoP4 ACTIVITY_MEMCPY2_TYPE;
 
-
-static bool cupti_plugin_enabled = false;
-static atomic_uint_least64_t computation_time = 0;
-static atomic_uint_least64_t communication_time = 0;
-static CUpti_SubscriberHandle subscriber;
-
 static CUpti_ActivityKind activity_kinds[] = {
     CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL,
     // reports separate records for memory allocation and release operations, but no duration
@@ -272,164 +293,121 @@ static CUpti_ActivityKind activity_kinds[] = {
     /* CUPTI_ACTIVITY_KIND_PC_SAMPLING_RECORD_INFO, */
 };
 
-/* CUDA API Runtime calls */
-static void CUPTIAPI GetEventValueCallback(
-    void *pUserData,
-    CUpti_CallbackDomain domain,
-    CUpti_CallbackId callbackId,
-    const CUpti_CallbackData *pCallbackInfo)
-{
-    if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
-        if (pCallbackInfo->callbackSite == CUPTI_API_ENTER) {
-            PLUGIN_PRINT(" >> %s\n", pCallbackInfo->functionName);
-            talp_gpu_into_runtime_api();
-        }
-        if (pCallbackInfo->callbackSite == CUPTI_API_EXIT) {
-            PLUGIN_PRINT(" << %s\n", pCallbackInfo->functionName);
-            talp_gpu_out_of_runtime_api();
-        }
-    }
+
+/* --- Local buffers management ------------------------------------------------ */
+
+/* Local buffers for storing kernel and memory records.
+ * Both records need to be kept in memory because events from the GPU profiling
+ * library may arrive out-of-order across different buffer flushes.  These
+ * buffers are flattened and processed only when computing durations for the
+ * sample. */
+static gpu_records_buffer_t kernel_buffer = {};
+static gpu_records_buffer_t memory_buffer = {};
+
+/* After flushing the buffers, advance safe_timestamp so that any future records
+ * with start times earlier than this are ignored. */
+static uint64_t safe_timestamp = 0;
+
+
+static int64_t get_timestamp(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec * 1000000000LL + t.tv_nsec;
 }
 
 
-static void CUPTIAPI bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords)
-{
-    // TODO: pre-allocate a pool of buffers and provide them to CUPTI
-
-    void *raw_buffer = NULL;
-
-    // Allocate aligned memory
-    enum { ALIGNMENT = 64 };
-    if (posix_memalign(&raw_buffer, ALIGNMENT, CUPTI_BUFFER_SIZE) != 0) {
-        fprintf(stderr, "Failed to allocate aligned buffer\n");
-        *buffer = NULL;
-        *size = 0;
-        return;
-    }
-
-    *buffer = (uint8_t*)raw_buffer;
-    *size = CUPTI_BUFFER_SIZE;
-    *maxNumRecords = 0;
-}
-
-static void CUPTIAPI bufferCompleted(
-    CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize)
-{
-    /* Intermediate buffers for computing time */
-    int num_kernel_records = 0;
-    gpu_record_t kernel_records_buffer[INTERMEDIATE_BUFFER_SIZE];
-
-    int num_memory_records = 0;
-    gpu_record_t memory_records_buffer[INTERMEDIATE_BUFFER_SIZE];
+/* Copy relevant information (e.g., start and end timestamps) into our
+ * own kernel and memory buffers */
+static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
 
     CUpti_Activity *record = NULL;
-    CUptiResult status = cuptiActivityGetNextRecord(buffer, validSize, &record);
+    CUptiResult status = cuptiActivityGetNextRecord(buffer, valid_size, &record);
     while (status == CUPTI_SUCCESS) {
         switch (record->kind) {
             case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL: {
-
-                if (num_kernel_records >= INTERMEDIATE_BUFFER_SIZE) {
-                    fprintf(stderr, "INTERMEDIATE_BUFFER_SIZE reached");
-                    break;
-                }
 
                 ACTIVITY_KERNEL_TYPE *kernel_record = (ACTIVITY_KERNEL_TYPE *)record;
 
                 uint64_t kernel_start = kernel_record->start;
                 uint64_t kernel_end = kernel_record->end;
 
-                kernel_records_buffer[num_kernel_records++] = (gpu_record_t){
-                    .start = kernel_start,
-                    .end = kernel_end,
-                };
+                if (kernel_start >= safe_timestamp
+                        && kernel_end > safe_timestamp) {
 
-                PLUGIN_PRINT("KERNEL: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        kernel_start, kernel_end, kernel_end - kernel_start);
+                    gpu_record_append_event(&kernel_buffer, kernel_start, kernel_end);
+
+                    PLUGIN_PRINT("KERNEL: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            kernel_start, kernel_end, kernel_end - kernel_start);
+                }
 
                 break;
             }
             case CUPTI_ACTIVITY_KIND_MEMORY2: {
                 ACTIVITY_MEMORY2_TYPE *memory_record = (ACTIVITY_MEMORY2_TYPE *)record;
 
-                if (num_memory_records >= INTERMEDIATE_BUFFER_SIZE) {
-                    fprintf(stderr, "INTERMEDIATE_BUFFER_SIZE reached");
-                    break;
-                }
-
                 // CUPTI_ACTIVITY_KIND_MEMORY2 operations do not provide a duration
                 uint64_t memory_start = memory_record->timestamp;
                 uint64_t memory_end = memory_record->timestamp;
 
-                memory_records_buffer[num_memory_records++] = (gpu_record_t){
-                    .start = memory_start,
-                    .end = memory_end,
-                };
+                if (memory_start >= safe_timestamp
+                        && memory_end > safe_timestamp) {
 
-                PLUGIN_PRINT("MEMORY2: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        memory_start, memory_end, memory_end - memory_start);
+                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+
+                    PLUGIN_PRINT("MEMORY2: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            memory_start, memory_end, memory_end - memory_start);
+                }
 
                 break;
             }
             case CUPTI_ACTIVITY_KIND_MEMSET: {
                 ACTIVITY_MEMSET_TYPE *memory_record = (ACTIVITY_MEMSET_TYPE *)record;
 
-                if (num_memory_records >= INTERMEDIATE_BUFFER_SIZE) {
-                    fprintf(stderr, "INTERMEDIATE_BUFFER_SIZE reached");
-                    break;
-                }
-
                 uint64_t memory_start = memory_record->start;
                 uint64_t memory_end = memory_record->end;
 
-                memory_records_buffer[num_memory_records++] = (gpu_record_t){
-                    .start = memory_start,
-                    .end = memory_end,
-                };
+                if (memory_start >= safe_timestamp
+                        && memory_end > safe_timestamp) {
 
-                PLUGIN_PRINT("MEMSET: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        memory_start, memory_end, memory_end - memory_start);
+                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+
+                    PLUGIN_PRINT("MEMSET: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            memory_start, memory_end, memory_end - memory_start);
+                }
 
                 break;
             }
             case CUPTI_ACTIVITY_KIND_MEMCPY: {
                 ACTIVITY_MEMCPY_TYPE *memory_record = (ACTIVITY_MEMCPY_TYPE *)record;
 
-                if (num_memory_records >= INTERMEDIATE_BUFFER_SIZE) {
-                    fprintf(stderr, "INTERMEDIATE_BUFFER_SIZE reached");
-                    break;
-                }
-
                 uint64_t memory_start = memory_record->start;
                 uint64_t memory_end = memory_record->end;
 
-                memory_records_buffer[num_memory_records++] = (gpu_record_t){
-                    .start = memory_start,
-                    .end = memory_end,
-                };
+                if (memory_start >= safe_timestamp
+                        && memory_end > safe_timestamp) {
 
-                PLUGIN_PRINT("MEMCPY: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        memory_start, memory_end, memory_end - memory_start);
+                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+
+                    PLUGIN_PRINT("MEMCPY: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            memory_start, memory_end, memory_end - memory_start);
+                }
 
                 break;
             }
             case CUPTI_ACTIVITY_KIND_MEMCPY2: {
                 ACTIVITY_MEMCPY2_TYPE *memory_record = (ACTIVITY_MEMCPY2_TYPE *)record;
 
-                if (num_memory_records >= INTERMEDIATE_BUFFER_SIZE) {
-                    fprintf(stderr, "INTERMEDIATE_BUFFER_SIZE reached");
-                    break;
-                }
-
                 uint64_t memory_start = memory_record->start;
                 uint64_t memory_end = memory_record->end;
 
-                memory_records_buffer[num_memory_records++] = (gpu_record_t){
-                    .start = memory_start,
-                    .end = memory_end,
-                };
+                if (memory_start >= safe_timestamp
+                        && memory_end > safe_timestamp) {
 
-                PLUGIN_PRINT("MEMCPY2: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        memory_start, memory_end, memory_end - memory_start);
+                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+
+                    PLUGIN_PRINT("MEMCPY2: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            memory_start, memory_end, memory_end - memory_start);
+                }
 
                 break;
             }
@@ -438,28 +416,168 @@ static void CUPTIAPI bufferCompleted(
                 break;
         }
 
-        status = cuptiActivityGetNextRecord(buffer, validSize, &record);
+        status = cuptiActivityGetNextRecord(buffer, valid_size, &record);
+    }
+}
+
+
+/* --- CUPTI buffers management ------------------------------------------------ */
+
+/* These are the buffers that are provided to CUPTI and are returned to us
+ * when needed (buffer is full or explicitly flushed).
+ * The buffer_pool is allocated at initialization time and is composed
+ * of NUM_BUFFERS of BUFFER_SIZE each. (now 4 MB * 16 = 64 MB)
+ *
+ * anffd */
+
+typedef enum { BUF_FREE = 0, BUF_IN_USE, BUF_READY } buffer_state_t;
+
+typedef struct {
+    uint8_t *ptr;
+    size_t valid_size;
+    buffer_state_t state;
+} buffer_entry_t;
+
+enum { NUM_BUFFERS = 16 };
+enum { BUFFER_SIZE = 4 * 1024 * 1024 };
+static buffer_entry_t buffer_pool[NUM_BUFFERS];
+static pthread_mutex_t buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void init_buffer_pool(void) {
+
+    enum { ALIGNMENT = 64 };
+    void *big_block = NULL;
+
+    /* Allocate a contiguos block of memory */
+    if (posix_memalign(&big_block, ALIGNMENT, BUFFER_SIZE * NUM_BUFFERS) != 0) {
+        fprintf(stderr, "Failed to allocate buffer pool\n");
+        exit(1);
     }
 
-    free(buffer);
+    pthread_mutex_lock(&buffer_mutex);
 
-    /* Compute kernel records duration */
-    int new_num_kernel_records = gpu_record_clean_and_merge(
-            kernel_records_buffer, num_kernel_records);
-    uint64_t kernel_time = gpu_record_get_duration(kernel_records_buffer, new_num_kernel_records);
-    atomic_fetch_add_explicit(&computation_time, kernel_time, memory_order_relaxed);
+    /* Distribute the big block into NUM_BUFFERS buffers */
+    for (int i = 0; i < NUM_BUFFERS; ++i) {
+        buffer_pool[i].ptr = (uint8_t*)big_block + i * BUFFER_SIZE;
+        buffer_pool[i].valid_size = 0;
+        buffer_pool[i].state = BUF_FREE;
+    }
 
-    /* Compute memory records duration */
-    int new_num_memory_records = gpu_record_clean_and_merge(
-            memory_records_buffer, num_memory_records);
-    uint64_t memory_time = gpu_record_get_memory_exclusive_duration(
-            memory_records_buffer, new_num_memory_records,
-            kernel_records_buffer, new_num_kernel_records);
-    atomic_fetch_add_explicit(&communication_time, memory_time, memory_order_relaxed);
-
-    PLUGIN_PRINT("computed sample, computation: %"PRIu64", communication: %"PRIu64"\n",
-            kernel_time, memory_time);
+    pthread_mutex_unlock(&buffer_mutex);
 }
+
+static void finalize_buffer_pool(void) {
+
+    pthread_mutex_lock(&buffer_mutex);
+
+    /* Check state correctness */
+    for (int i = 0; i < NUM_BUFFERS; ++i) {
+        if (buffer_pool[i].state != BUF_FREE) {
+            fprintf(stderr, "Buffer %d in state %s while finalizing buffer pool\n",
+                    i, buffer_pool[i].state == BUF_IN_USE ? "IN_USE" : "READY");
+            exit(1);
+        }
+    }
+
+    /* Free and set to 0 */
+    free(buffer_pool[0].ptr);
+    memset(buffer_pool, 0, sizeof(buffer_entry_t) * NUM_BUFFERS);
+
+    pthread_mutex_unlock(&buffer_mutex);
+}
+
+/* Called when sample is finished */
+static void process_ready_buffers(void) {
+
+    pthread_mutex_lock(&buffer_mutex);
+
+    for (int i = 0; i < NUM_BUFFERS; i++) {
+
+        if (buffer_pool[i].state == BUF_READY) {
+            process_buffer_records(buffer_pool[i].ptr, buffer_pool[i].valid_size);
+            buffer_pool[i].state = BUF_FREE;
+            buffer_pool[i].valid_size = 0;
+        }
+
+    }
+
+    pthread_mutex_unlock(&buffer_mutex);
+}
+
+
+/* --- CUPTI asynchronous callbacks -------------------------------------------- */
+
+/* Provide CUPTI with a buffer from the pool for writing activity records */
+static void CUPTIAPI bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords) {
+
+    pthread_mutex_lock(&buffer_mutex);
+
+    /* Look for a FREE buffer */
+    int i;
+    for (i = 0; i < NUM_BUFFERS; ++i) {
+        if (buffer_pool[i].state == BUF_FREE) {
+            buffer_pool[i].state = BUF_IN_USE;
+            break;
+        }
+    }
+
+    if (i == NUM_BUFFERS) {
+        /* No free buffer, look for a READY buffer and process it */
+        for (i = 0; i < NUM_BUFFERS; ++i) {
+            if (buffer_pool[i].state == BUF_READY) {
+                process_buffer_records(buffer_pool[i].ptr, buffer_pool[i].valid_size);
+                buffer_pool[i].state = BUF_IN_USE;
+                buffer_pool[i].valid_size = 0;
+                break;
+            }
+        }
+    }
+
+    pthread_mutex_unlock(&buffer_mutex);
+
+    if (i < NUM_BUFFERS) {
+        /* Return buffer */
+        *buffer = buffer_pool[i].ptr;
+        *size = BUFFER_SIZE;
+        *maxNumRecords = 0;
+    } else {
+        /* No available buffers, error */
+        fprintf(stderr, "ERROR: All CUPTI buffers in use\n");
+        *buffer = NULL;
+        *size = 0;
+        *maxNumRecords = 0;
+    }
+}
+
+/* Called by CUPTI when an activity buffer is full or needs to be flushed.
+ * The callback may be invoked concurrently by multiple CUPTI worker threads,
+ * so we just mark the buffer as READY for later processing to keep the
+ * callback fast and avoid blocking CUPTI.*/
+static void CUPTIAPI bufferCompleted(
+    CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t valid_size)
+{
+    pthread_mutex_lock(&buffer_mutex);
+
+    for (int i = 0; i < NUM_BUFFERS; ++i) {
+        if (buffer_pool[i].ptr == buffer) {
+            if (buffer_pool[i].state != BUF_IN_USE) {
+                fprintf(stderr, "ERROR: CUPTI buffer %d is completed with wrong state %s\n",
+                        i, buffer_pool[i].state == BUF_FREE ? "FREE" : "READY");
+            }
+
+            /* Buffer found, mark as ready */
+            buffer_pool[i].state = BUF_READY;
+            buffer_pool[i].valid_size = valid_size;
+
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(&buffer_mutex);
+}
+
+
+/* --- Plugin functions  ------------------------------------------------------- */
 
 /* Function called externally by TALP to force flushing buffers */
 static void cupti_plugin_update_sample(void) {
@@ -471,17 +589,29 @@ static void cupti_plugin_update_sample(void) {
         cuptiActivityFlushAll(0);
     }
 
-    /* Flush timers for next sample */
-    uint64_t gpu_useful_time = atomic_exchange_explicit(
-            &computation_time, 0, memory_order_acquire);
-    uint64_t gpu_communication_time = atomic_exchange_explicit(
-            &communication_time, 0, memory_order_acquire);
+    /* Extract records from ready buffers into our own kernel and memory buffers */
+    process_ready_buffers();
 
-    if (gpu_useful_time > 0 || gpu_communication_time > 0) {
+    /* Update safe timestamp. All future records prior to this will be ignored */
+    safe_timestamp = get_timestamp();
+
+    /* Compute kernel records duration */
+    gpu_record_flatten(&kernel_buffer);
+    uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
+
+    /* Compute memory records duration */
+    gpu_record_flatten(&memory_buffer);
+    uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
+
+    /* Clear buffers */
+    gpu_record_clear_buffer(&kernel_buffer);
+    gpu_record_clear_buffer(&memory_buffer);
+
+    if (kernel_time > 0 || memory_time > 0) {
         /* Pack values to send to TALP */
         talp_gpu_measurements_t measurements = {
-            .useful_time = gpu_useful_time,
-            .communication_time = gpu_communication_time,
+            .useful_time = kernel_time,
+            .communication_time = memory_time,
         };
 
         /* Call TALP */
@@ -490,6 +620,17 @@ static void cupti_plugin_update_sample(void) {
 }
 
 static int cupti_plugin_init(plugin_info_t *info) {
+
+    /* Allocate buffer pool for CUPTI records */
+    init_buffer_pool();
+
+    /* Allocate local buffers */
+    enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
+    gpu_record_init_buffer(&kernel_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+    gpu_record_init_buffer(&memory_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+
+    /* Set initial safe timestamp. All records prior to this will be ignored */
+    safe_timestamp = get_timestamp();
 
     /* Subscribe */
     CHECK_CUPTI(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)GetEventValueCallback, NULL));
@@ -521,7 +662,8 @@ static int cupti_plugin_init(plugin_info_t *info) {
 static int cupti_plugin_finalize(void) {
 
     if (cupti_plugin_enabled) {
-        /* Finalize TALP GPU first to compute unflushed records */
+        /* Finalize TALP GPU first to compute unflushed records.
+         * (cupti_plugin_update_sample will be called here) */
         talp_gpu_finalize();
 
         CHECK_CUPTI(cuptiUnsubscribe(subscriber));
@@ -534,6 +676,13 @@ static int cupti_plugin_finalize(void) {
         /* Explicitly flush and free internal buffers and CUDA events
            before MPI_Finalize / library unload */
         CHECK_CUPTI(cuptiFinalize());
+
+        /* Free local buffers */
+        gpu_record_free_buffer(&kernel_buffer);
+        gpu_record_free_buffer(&memory_buffer);
+
+        /* Free buffer pool */
+        finalize_buffer_pool();
 
         cupti_plugin_enabled = false;
     }
