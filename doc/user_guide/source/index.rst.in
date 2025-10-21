@@ -9,7 +9,7 @@ Welcome to the DLB documentation!
 
 DLB is a collection of tools targeting HPC applications. 
 Its main goal is to help with the dynamic load balancing of hybrid codes, which use a nested parallelism model e.g MPI + OpenMP.
-DLB provides components to **modify ressources at runtime**, as well as a profiler to **gather performance metrics**. 
+DLB provides components to **modify resources at runtime**, as well as a profiler to **gather performance metrics**. 
 
 .. note::
    If you are new here, consider having a look at the :ref:`overview` first.
