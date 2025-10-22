@@ -130,8 +130,47 @@ static inline int init_papi(void) {
             "Error invoking %s when PAPI has been disabled", __FUNCTION__);
 
     /* Library init */
-    if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
-        warning("PAPI Library versions differ");
+    int retval = PAPI_library_init(PAPI_VER_CURRENT);
+    if(retval != PAPI_VER_CURRENT || retval == PAPI_EINVAL){
+        // PAPI init failed because of a version mismatch
+        // Maybe we can rectify the situation by cheating a bit.
+        // Lets first check if the major version is the same
+        int loaded_lib_version = PAPI_get_opt(PAPI_LIB_VERSION, NULL);
+        if(PAPI_VERSION_MAJOR(PAPI_VER_CURRENT) == PAPI_VERSION_MAJOR(loaded_lib_version)){
+            warning("The PAPI version loaded at runtime differs from the one DLB was compiled with. Expected version %d.%d.%d but got %d.%d.%d. Continuing on best effort.",
+                PAPI_VERSION_MAJOR(PAPI_VER_CURRENT),
+                PAPI_VERSION_MINOR(PAPI_VER_CURRENT),
+                PAPI_VERSION_REVISION(PAPI_VER_CURRENT),
+                PAPI_VERSION_MAJOR(loaded_lib_version),
+                PAPI_VERSION_MINOR(loaded_lib_version),
+                PAPI_VERSION_REVISION(loaded_lib_version));
+            // retval here can only be loaded_lib_version or negative. We assume loaded_lib_version and check for other failures below
+            retval = PAPI_library_init(loaded_lib_version);
+        }
+        else{
+            // we have a different major version. we fail.
+            warning("The PAPI version loaded at runtime differs greatly from the one DLB was compiled with. Expected version%d.%d.%d but got %d.%d.%d.",
+                    PAPI_VERSION_MAJOR(PAPI_VER_CURRENT),
+                    PAPI_VERSION_MINOR(PAPI_VER_CURRENT),
+                    PAPI_VERSION_REVISION(PAPI_VER_CURRENT),
+                    PAPI_VERSION_MAJOR(loaded_lib_version),
+                    PAPI_VERSION_MINOR(loaded_lib_version),
+                    PAPI_VERSION_REVISION(loaded_lib_version));
+            return -1;
+        }
+    }
+    
+    if(retval < 0 || PAPI_is_initialized() == PAPI_NOT_INITED){
+        // so we failed, we can maybe get some info why:
+        if(retval == PAPI_ENOMEM){
+            warning("PAPI initialization failed: Insufficient memory to complete the operation.");
+        }
+        if(retval == PAPI_ECMP){
+            warning("PAPI initialization failed: This component does not support the underlying hardware.");
+        }
+        if(retval == PAPI_ESYS){
+            warning("PAPI initialization failed: A system or C library call failed inside PAPI.");
+        }
         return -1;
     }
 
