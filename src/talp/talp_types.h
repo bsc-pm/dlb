@@ -27,9 +27,6 @@
 
 #include <pthread.h>
 
-/* The structs below are only for private DLB_talp.c use, but they are defined
- * in this header for testing purposes. */
-
 /* The sample contains the temporary per-thread accumulated values of all the
  * measured metrics. Once the sample is flushed, a macrosample is created using
  * samples from all* threads. The sample starts and ends on each one of the
