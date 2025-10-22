@@ -1,0 +1,738 @@
+import os
+from ctypes import byref, c_int, c_void_p, c_char_p, POINTER, CDLL, create_string_buffer
+from pathlib import Path
+
+#################################################################################
+### DLB core API                                                              ###
+#################################################################################
+
+DLB_MPI   = os.getenv('DLB_MPI', '0') == '1'
+DLB_DEBUG = os.getenv('DLB_DEBUG', '0') == '1'
+
+### DLB library handle
+
+def _load_library():
+    """Load and return the DLB shared library handle."""
+    dlb_lib_dir = Path(os.getenv("DLB_LIB_DIR", "@prefix@/lib"))
+
+    if DLB_MPI:
+        lib_name = "libdlb_mpi_dbg.so" if DLB_DEBUG else "libdlb_mpi.so"
+    else:
+        lib_name = "libdlb_dbg.so" if DLB_DEBUG else "libdlb.so"
+
+    dlb_lib = dlb_lib_dir / lib_name
+    if not dlb_lib.is_file():
+        raise FileNotFoundError(f"DLB library cannot be found at {dlb_lib}")
+    return CDLL(str(dlb_lib))
+
+dlb = _load_library()
+
+### Mask utils
+
+SIZEOF_CPU_SET_T = @SIZEOF_CPU_SET_T@
+
+def DLB_ParseMask(mask_str):
+    dlb.mu_parse_mask.argtypes = [c_char_p, dlb_cpu_set_t]
+    dlb.mu_parse_mask.restype = None
+    mask = create_string_buffer(SIZEOF_CPU_SET_T)
+    dlb.mu_parse_mask(mask_str.encode(), byref(mask))
+    return byref(mask)
+
+def DLB_ParseMaskToStr(mask):
+    dlb.mu_to_str.argtypes = [dlb_cpu_set_t]
+    dlb.mu_to_str.restype = c_char_p
+    return (dlb.mu_to_str(byref(mask))).decode()
+
+### Status
+
+def DLB_Init(ncpus, mask, dlb_args):
+    dlb.DLB_Init.argtypes = [c_int, const_dlb_cpu_set_t, c_char_p]
+    dlb.DLB_Init.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_Init(ncpus, mask, dlb_args.encode() if dlb_args else None)
+    check_dlb_error(err)
+
+def DLB_Finalize():
+    dlb.DLB_Finalize.argtypes = []
+    dlb.DLB_Finalize.restype = c_int
+    err = dlb.DLB_Finalize()
+    check_dlb_error(err)
+
+def DLB_PreInit(mask, next_environ):
+    dlb.DLB_PreInit.argtypes = [const_dlb_cpu_set_t, POINTER(POINTER(c_char_p))]
+    dlb.DLB_PreInit.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_PreInit(mask, next_environ)
+    check_dlb_error(err)
+    return next_environ[0]
+
+def DLB_Enable():
+    dlb.DLB_Enable.argtypes = []
+    dlb.DLB_Enable.restype = c_int
+    err = dlb.DLB_Enable()
+    check_dlb_error(err)
+
+def DLB_Disable():
+    dlb.DLB_Disable.argtypes = []
+    dlb.DLB_Disable.restype = c_int
+    err = dlb.DLB_Disable()
+    check_dlb_error(err)
+
+def DLB_SetMaxParallelism(max):
+    dlb.DLB_SetMaxParallelism.argtypes = [c_int]
+    dlb.DLB_SetMaxParallelism.restype = c_int
+    err = dlb.DLB_SetMaxParallelism(max)
+    check_dlb_error(err)
+
+def DLB_UnsetMaxParallelism():
+    dlb.DLB_UnsetMaxParallelism.argtypes = []
+    dlb.DLB_UnsetMaxParallelism.restype = c_int
+    err = dlb.DLB_UnsetMaxParallelism()
+    check_dlb_error(err)
+
+### Lend
+
+def DLB_Lend():
+    dlb.DLB_Lend.argtypes = []
+    dlb.DLB_Lend.restype = c_int
+    err = dlb.DLB_Lend()
+    check_dlb_error(err)
+
+def DLB_LendCpu(cpuid):
+    dlb.DLB_LendCpu.argtypes = [c_int]
+    dlb.DLB_LendCpu.restype = c_int
+    err = dlb.DLB_LendCpu(cpuid)
+    check_dlb_error(err)
+
+def DLB_LendCpus(ncpus):
+    dlb.DLB_LendCpus.argtypes = [c_int]
+    dlb.DLB_LendCpus.restype = c_int
+    err = dlb.DLB_LendCpus(ncpus)
+    check_dlb_error(err)
+
+def DLB_LendCpuMask(mask):
+    dlb.DLB_LendCpuMask.argtypes = [const_dlb_cpu_set_t]
+    dlb.DLB_LendCpuMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_LendCpuMask(mask)
+    check_dlb_error(err)
+
+### Reclaim
+
+def DLB_Reclaim():
+    dlb.DLB_Reclaim.argtypes = []
+    dlb.DLB_Reclaim.restype = c_int
+    err = dlb.DLB_Reclaim()
+    check_dlb_error(err)
+
+def DLB_ReclaimCpu(cpuid):
+    dlb.DLB_ReclaimCpu.argtypes = [c_int]
+    dlb.DLB_ReclaimCpu.restype = c_int
+    err = dlb.DLB_ReclaimCpu(cpuid)
+    check_dlb_error(err)
+
+def DLB_ReclaimCpus(ncpus):
+    dlb.DLB_ReclaimCpus.argtypes = [c_int]
+    dlb.DLB_ReclaimCpus.restype = c_int
+    err = dlb.DLB_ReclaimCpus(ncpus)
+    check_dlb_error(err)
+
+def DLB_ReclaimCpuMask(mask):
+    dlb.DLB_ReclaimCpuMask.argtypes = [const_dlb_cpu_set_t]
+    dlb.DLB_ReclaimCpuMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_ReclaimCpuMask(mask)
+    check_dlb_error(err)
+
+### Acquire
+
+def DLB_AcquireCpu(cpuid):
+    dlb.DLB_AcquireCpu.argtypes = [c_int]
+    dlb.DLB_AcquireCpu.restype = c_int
+    err = dlb.DLB_AcquireCpu(cpuid)
+    check_dlb_error(err)
+
+def DLB_AcquireCpus(ncpus):
+    dlb.DLB_AcquireCpus.argtypes = [c_int]
+    dlb.DLB_AcquireCpus.restype = c_int
+    err = dlb.DLB_AcquireCpus(ncpus)
+    check_dlb_error(err)
+
+def DLB_AcquireCpuMask(mask):
+    dlb.DLB_AcquireCpuMask.argtypes = [const_dlb_cpu_set_t]
+    dlb.DLB_AcquireCpuMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_AcquireCpuMask(mask)
+    check_dlb_error(err)
+
+def DLB_AcquireCpusInMask(ncpus, mask):
+    dlb.DLB_AcquireCpusInMask.argtypes = [c_int, const_dlb_cpu_set_t]
+    dlb.DLB_AcquireCpusInMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_AcquireCpusInMask(ncpus, mask)
+    check_dlb_error(err)
+
+### Borrow
+
+def DLB_Borrow():
+    dlb.DLB_Borrow.argtypes = []
+    dlb.DLB_Borrow.restype = c_int
+    err = dlb.DLB_Borrow()
+    check_dlb_error(err)
+
+def DLB_BorrowCpu(cpuid):
+    dlb.DLB_BorrowCpu.argtypes = [c_int]
+    dlb.DLB_BorrowCpu.restype = c_int
+    err = dlb.DLB_BorrowCpu(cpuid)
+    check_dlb_error(err)
+
+def DLB_BorrowCpus(ncpus):
+    dlb.DLB_BorrowCpus.argtypes = [c_int]
+    dlb.DLB_BorrowCpus.restype = c_int
+    err = dlb.DLB_BorrowCpus(ncpus)
+    check_dlb_error(err)
+
+def DLB_BorrowCpuMask(mask):
+    dlb.DLB_BorrowCpuMask.argtypes = [const_dlb_cpu_set_t]
+    dlb.DLB_BorrowCpuMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_BorrowCpuMask(mask)
+    check_dlb_error(err)
+
+def DLB_BorrowCpusInMask(ncpus, mask):
+    dlb.DLB_BorrowCpusInMask.argtypes = [c_int, const_dlb_cpu_set_t]
+    dlb.DLB_BorrowCpusInMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_BorrowCpusInMask(ncpus, mask)
+    check_dlb_error(err)
+
+### Return
+
+def DLB_Return():
+    dlb.DLB_Return.argtypes = []
+    dlb.DLB_Return.restype = c_int
+    err = dlb.DLB_Return()
+    check_dlb_error(err)
+
+def DLB_ReturnCpu(cpuid):
+    dlb.DLB_ReturnCpu.argtypes = [c_int]
+    dlb.DLB_ReturnCpu.restype = c_int
+    err = dlb.DLB_ReturnCpu(cpuid)
+    check_dlb_error(err)
+
+def DLB_ReturnCpuMask(mask):
+    dlb.DLB_ReturnCpuMask.argtypes = [const_dlb_cpu_set_t]
+    dlb.DLB_ReturnCpuMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_ReturnCpuMask(mask)
+    check_dlb_error(err)
+
+# DROM Responsive
+
+def DLB_PollDROM():
+    ncpus = c_int()
+    mask = create_string_buffer(SIZEOF_CPU_SET_T)
+    dlb.DLB_PollDROM.argtypes = [POINTER(c_int), dlb_cpu_set_t]
+    dlb.DLB_PollDROM.restype = c_int
+    err = dlb.DLB_PollDROM(byref(ncpus), byref(mask))
+    check_dlb_error(err)
+    return ncpus.value, mask
+
+def DLB_PollDROM_Update():
+    dlb.DLB_PollDROM_Update.argtypes = []
+    dlb.DLB_PollDROM_Update.restype = c_int
+    err = dlb.DLB_PollDROM_Update()
+    check_dlb_error(err)
+
+### Misc
+
+def DLB_CheckCpuAvailability(cpuid):
+    dlb.DLB_CheckCpuAvailability.argtypes = [c_int]
+    dlb.DLB_CheckCpuAvailability.restype = c_int
+    err = dlb.DLB_CheckCpuAvailability(cpuid)
+    check_dlb_error(err)
+
+def DLB_Barrier():
+    dlb.DLB_Barrier.argtypes = []
+    dlb.DLB_Barrier.restype = c_int
+    err = dlb.DLB_Barrier()
+    check_dlb_error(err)
+
+def DLB_BarrierAttach():
+    dlb.DLB_BarrierAttach.argtypes = []
+    dlb.DLB_BarrierAttach.restype = c_int
+    ret = dlb.DLB_BarrierAttach()
+    check_dlb_error(ret, allow_positive=True)
+    return ret
+
+def DLB_BarrierDetach():
+    dlb.DLB_BarrierDetach.argtypes = []
+    dlb.DLB_BarrierDetach.restype = c_int
+    ret = dlb.DLB_BarrierDetach()
+    check_dlb_error(ret, allow_positive=True)
+    return ret
+
+def DLB_BarrierNamedRegister(barrier_name, flags):
+    dlb.DLB_BarrierNamedRegister.argtypes = [c_char_p, dlb_barrier_flags_t]
+    dlb.DLB_BarrierNamedRegister.restype = POINTER(dlb_barrier_t)
+    barrier = dlb.DLB_BarrierNamedRegister(barrier_name.encode(), flags)
+    return barrier
+
+def DLB_BarrierNamedGet(barrier_name, flags):
+    dlb.DLB_BarrierNamedGet.argtypes = [c_char_p, dlb_barrier_flags_t]
+    dlb.DLB_BarrierNamedGet.restype = POINTER(dlb_barrier_t)
+    barrier = dlb.DLB_BarrierNamedGet(barrier_name.encode(), flags)
+    return barrier
+
+def DLB_BarrierNamed(barrier):
+    dlb.DLB_BarrierNamed.argtypes = [POINTER(dlb_barrier_t)]
+    dlb.DLB_BarrierNamed.restype = c_int
+    err = dlb.DLB_BarrierNamed(barrier)
+    check_dlb_error(err)
+
+def DLB_BarrierNamedAttach(barrier):
+    dlb.DLB_BarrierNamedAttach.argtypes = [POINTER(dlb_barrier_t)]
+    dlb.DLB_BarrierNamedAttach.restype = c_int
+    ret = dlb.DLB_BarrierNamedAttach(barrier)
+    check_dlb_error(ret, allow_positive=True)
+    return ret
+
+def DLB_BarrierNamedDetach(barrier):
+    dlb.DLB_BarrierNamedDetach.argtypes = [POINTER(dlb_barrier_t)]
+    dlb.DLB_BarrierNamedDetach.restype = c_int
+    ret = dlb.DLB_BarrierNamedDetach(barrier)
+    check_dlb_error(ret, allow_positive=True)
+    return ret
+
+def DLB_SetVariable(variable, value):
+    dlb.DLB_SetVariable.argtypes = [c_char_p, c_char_p]
+    dlb.DLB_SetVariable.restype = c_int
+    err = dlb.DLB_SetVariable(variable.encode(), value.encode())
+    check_dlb_error(err)
+
+def DLB_GetVariable(variable):
+    dlb.DLB_GetVariable.argtypes = [c_char_p, c_char_p]
+    dlb.DLB_GetVariable.restype = c_int
+    buf = create_string_buffer(64)
+    err = dlb.DLB_GetVariable(variable.encode(), buf)
+    if err == 0:
+        return buf.value.decode()
+    else:
+        raise Exception(DLB_Strerror(err).decode())
+
+def DLB_PrintVariables(print_extended):
+    dlb.DLB_PrintVariables.argtypes = [c_int]
+    dlb.DLB_PrintVariables.restype = c_int
+    err = dlb.DLB_PrintVariables(print_extended)
+    check_dlb_error(err)
+
+def DLB_PrintShmem(num_columns, print_flags):
+    dlb.DLB_PrintShmem.argtypes = [c_int, dlb_printshmem_flags_t]
+    dlb.DLB_PrintShmem.restype = c_int
+    err = dlb.DLB_PrintShmem(num_columns, print_flags)
+    check_dlb_error(err)
+
+def DLB_Strerror(errnum):
+    dlb.DLB_Strerror.argtypes = [c_int]
+    dlb.DLB_Strerror.restype = c_char_p
+    return dlb.DLB_Strerror(errnum)
+
+def DLB_SetObserverRole(thread_is_observer):
+    dlb.DLB_SetObserverRole.argtypes = [c_int]
+    dlb.DLB_SetObserverRole.restype = c_int
+    err = dlb.DLB_SetObserverRole(int(thread_is_observer))
+    check_dlb_error(err)
+
+def DLB_GetVersion():
+    major = c_int()
+    minor = c_int()
+    patch = c_int()
+    dlb.DLB_GetVersion.argtypes = [POINTER(c_int), POINTER(c_int), POINTER(c_int)]
+    dlb.DLB_GetVersion.restype = c_int
+    err = dlb.DLB_GetVersion(byref(major), byref(minor), byref(patch))
+    check_dlb_error(err)
+    return major.value, minor.value, patch.value
+
+### DROM
+
+def DLB_DROM_Attach():
+    dlb.DLB_DROM_Attach.argtypes = []
+    dlb.DLB_DROM_Attach.restype = c_int
+    err = dlb.DLB_DROM_Attach()
+    check_dlb_error(err)
+
+def DLB_DROM_Detach():
+    dlb.DLB_DROM_Detach.argtypes = []
+    dlb.DLB_DROM_Detach.restype = c_int
+    err = dlb.DLB_DROM_Detach()
+    check_dlb_error(err)
+
+def DLB_DROM_GetNumCpus():
+    ncpus = c_int()
+    dlb.DLB_DROM_GetNumCpus.argtypes = [POINTER(c_int)]
+    dlb.DLB_DROM_GetNumCpus.restype = c_int
+    err = dlb.DLB_DROM_GetNumCpus(byref(ncpus))
+    check_dlb_error(err)
+    return ncpus.value
+
+def DLB_DROM_GetPidList(max_len):
+    pidlist = (c_int * max_len)()
+    nelems = c_int()
+    dlb.DLB_DROM_GetPidList.argtypes = [POINTER(c_int), POINTER(c_int), c_int]
+    dlb.DLB_DROM_GetPidList.restype = c_int
+    err = dlb.DROM_GetPidList(pidlist, byref(nelems), max_len)
+    check_dlb_error(err)
+    return [pidlist[i] for i in range(nelems.value)]
+
+def DLB_DROM_GetProcessMask(pid, flags):
+    mask = create_string_buffer(SIZEOF_CPU_SET_T)
+    dlb.DLB_DROM_GetProcessMask.argtypes = [c_int, dlb_cpu_set_t, dlb_drom_flags_t]
+    dlb.DLB_DROM_GetProcessMask.restype = c_int
+    err = dlb.DLB_DROM_GetProcessMask(pid, byref(mask), flags)
+    check_dlb_error(err)
+    return DLB_ParseMaskToStr(mask).strip("[]")
+
+def DLB_DROM_SetProcessMask(pid, mask, flags):
+    dlb.DLB_DROM_SetProcessMask.argtypes = [c_int, const_dlb_cpu_set_t, dlb_drom_flags_t]
+    dlb.DLB_DROM_SetProcessMask.restype = c_int
+    if isinstance(mask, str):
+        mask = DLB_ParseMask(mask)
+    err = dlb.DLB_DROM_SetProcessMask(pid, mask, flags)
+    check_dlb_error(err)
+
+def DLB_DROM_SetProcessMaskStr(pid, mask_str, flags):
+    dlb.DLB_DROM_SetProcessMaskStr.argtypes = [c_int, c_char_p, dlb_drom_flags_t]
+    dlb.DLB_DROM_SetProcessMaskStr.restype = c_int
+    err = dlb.DLB_DROM_SetProcessMaskStr(pid, mask_str.encode(), flags)
+    check_dlb_error(err)
+
+def DLB_DROM_PreInit(pid, mask, flags, next_environ):
+    dlb.DLB_DROM_PreInit.argtypes = [c_int, const_dlb_cpu_set_t, dlb_drom_flags_t, POINTER(POINTER(c_char_p))]
+    dlb.DLB_DROM_PreInit.restype = c_int
+    err = dlb.DLB_DROM_PreInit(pid, mask, flags, next_environ)
+    check_dlb_error(err)
+    return next_environ[0]
+
+def DLB_DROM_PostFinalize(pid, flags):
+    dlb.DLB_DROM_PostFinalize.argtypes = [c_int, dlb_drom_flags_t]
+    dlb.DLB_DROM_PostFinalize.restype = c_int
+    err = dlb.DLB_DROM_PostFinalize(pid, flags)
+    check_dlb_error(err)
+
+def DLB_DROM_RecoverStolenCpus(pid):
+    dlb.DLB_DROM_RecoverStolenCpus.argtypes = [c_int]
+    dlb.DLB_DROM_RecoverStolenCpus.restype = c_int
+    err = dlb.DLB_DROM_RecoverStolenCpus(pid)
+    check_dlb_error(err)
+
+### TALP
+
+def DLB_TALP_Attach():
+    dlb.DLB_TALP_Attach.argtypes = []
+    dlb.DLB_TALP_Attach.restype = c_int
+    err = dlb.DLB_TALP_Attach()
+    check_dlb_error(err)
+
+def DLB_TALP_Detach():
+    dlb.DLB_TALP_Detach.argtypes = []
+    dlb.DLB_TALP_Detach.restype = c_int
+    err = dlb.DLB_TALP_Detach()
+    check_dlb_error(err)
+
+def DLB_TALP_GetNumCPUs():
+    ncpus = c_int()
+    dlb.DLB_TALP_GetNumCPUs.argtypes = [POINTER(c_int)]
+    dlb.DLB_TALP_GetNumCPUs.restype = c_int
+    err = dlb.DLB_TALP_GetNumCPUs(byref(ncpus))
+    check_dlb_error(err)
+    return ncpus.value
+
+def DLB_TALP_GetPidList(max_len):
+    pidlist = (c_int * max_len)()
+    nelems = c_int()
+    dlb.DLB_TALP_GetPidList.argtypes = [POINTER(c_int), POINTER(c_int), c_int]
+    dlb.DLB_TALP_GetPidList.restype = c_int
+    err = dlb.DLB_TALP_GetPidList(pidlist, byref(nelems), max_len)
+    check_dlb_error(err)
+    return [pidlist[i] for i in range(nelems.value)]
+
+def DLB_TALP_GetTimes(pid):
+    mpi_time = c_double()
+    useful_time = c_double()
+    dlb.DLB_TALP_GetTimes.argtypes = [c_int, POINTER(c_double), POINTER(c_double)]
+    dlb.DLB_TALP_GetTimes.restype = c_int
+    err = dlb.DLB_TALP_GetTimes(pid, byref(mpi_time), byref(useful_time))
+    check_dlb_error(err)
+    return mpi_time.value, useful_time.value
+
+def DLB_TALP_GetNodeTimes(name, max_len):
+    node_times_list = (dlb_node_times_t * max_len)()
+    nelems = c_int()
+    dlb.DLB_TALP_GetNodeTimes.argtypes = [c_char_p, POINTER(dlb_node_times_t), POINTER(c_int), c_int]
+    dlb.DLB_TALP_GetNodeTimes.restype = c_int
+    err = dlb.DLB_TALP_GetNodeTimes(name.encode() if name else None, node_times_list, byref(nelems), max_len)
+    check_dlb_error(err)
+    return [node_times_list[i] for i in range(nelems.value)]
+
+def DLB_TALP_QueryPOPNodeMetrics(name):
+    node_metrics = dlb_node_metrics_t()
+    dlb.DLB_TALP_QueryPOPNodeMetrics.argtypes = [c_char_p, POINTER(dlb_node_metrics_t)]
+    dlb.DLB_TALP_QueryPOPNodeMetrics.restype = c_int
+    err = dlb.DLB_TALP_QueryPOPNodeMetrics(name.encode() if name else None, byref(node_metrics))
+    check_dlb_error(err)
+    return node_metrics
+
+### TALP Monitoring Regions
+
+def DLB_MonitoringRegionGetGlobal():
+    dlb.DLB_MonitoringRegionGetGlobal.argtypes = []
+    dlb.DLB_MonitoringRegionGetGlobal.restype = POINTER(dlb_monitor_t)
+    return dlb.DLB_MonitoringRegionGetGlobal()
+
+def DLB_MonitoringRegionGetImplicit():
+    dlb.DLB_MonitoringRegionGetImplicit.argtypes = []
+    dlb.DLB_MonitoringRegionGetImplicit.restype = POINTER(dlb_monitor_t)
+    return dlb.DLB_MonitoringRegionGetImplicit()
+
+def DLB_MonitoringRegionGetMPIRegion():
+    dlb.DLB_MonitoringRegionGetMPIRegion.argtypes = []
+    dlb.DLB_MonitoringRegionGetMPIRegion.restype = POINTER(dlb_monitor_t)
+    return dlb.DLB_MonitoringRegionGetMPIRegion()
+
+def DLB_MonitoringRegionRegister(name):
+    dlb.DLB_MonitoringRegionRegister.argtypes = [c_char_p]
+    dlb.DLB_MonitoringRegionRegister.restype = POINTER(dlb_monitor_t)
+    return dlb.DLB_MonitoringRegionRegister(name.encode() if name else None)
+
+def DLB_MonitoringRegionReset(handle):
+    dlb.DLB_MonitoringRegionReset.argtypes = [POINTER(dlb_monitor_t)]
+    dlb.DLB_MonitoringRegionReset.restype = c_int
+    err = dlb.DLB_MonitoringRegionReset(handle)
+    check_dlb_error(err)
+
+def DLB_MonitoringRegionStart(handle):
+    dlb.DLB_MonitoringRegionStart.argtypes = [POINTER(dlb_monitor_t)]
+    dlb.DLB_MonitoringRegionStart.restype = c_int
+    err = dlb.DLB_MonitoringRegionStart(handle)
+    check_dlb_error(err)
+
+def DLB_MonitoringRegionStop(handle):
+    dlb.DLB_MonitoringRegionStop.argtypes = [c_void_p]
+    dlb.DLB_MonitoringRegionStop.restype = c_int
+    err = dlb.DLB_MonitoringRegionStop(handle)
+    check_dlb_error(err)
+
+def DLB_MonitoringRegionReport(handle):
+    dlb.DLB_MonitoringRegionReport.argtypes = [POINTER(dlb_monitor_t)]
+    dlb.DLB_MonitoringRegionReport.restype = c_int
+    err = dlb.DLB_MonitoringRegionReport(handle)
+    check_dlb_error(err)
+
+def DLB_MonitoringRegionsUpdate():
+    dlb.DLB_MonitoringRegionsUpdate.argtypes = []
+    dlb.DLB_MonitoringRegionsUpdate.restype = c_int
+    err = dlb.DLB_MonitoringRegionsUpdate()
+    check_dlb_error(err)
+
+def DLB_TALP_CollectPOPMetrics(monitor):
+    pop_metrics = dlb_pop_metrics_t()
+    dlb.DLB_TALP_CollectPOPMetrics.argtypes = [POINTER(dlb_monitor_t), POINTER(dlb_pop_metrics_t)]
+    dlb.DLB_TALP_CollectPOPMetrics.restype = c_int
+    err = dlb.DLB_TALP_CollectPOPMetrics(monitor, byref(pop_metrics))
+    check_dlb_error(err)
+    return pop_metrics
+
+def DLB_TALP_CollectPOPNodeMetrics(monitor):
+    node_metrics = dlb_node_metrics_t()
+    dlb.DLB_TALP_CollectPOPNodeMetrics.argtypes = [POINTER(dlb_monitor_t), POINTER(dlb_node_metrics_t)]
+    dlb.DLB_TALP_CollectPOPNodeMetrics.restype = c_int
+    err = dlb.DLB_TALP_CollectPOPNodeMetrics(monitor, byref(node_metrics))
+    check_dlb_error(err)
+    return node_metrics
+
+def DLB_TALP_CollectNodeMetrics(monitor):
+    node_metrics = dlb_node_metrics_t()
+    dlb.DLB_TALP_CollectNodeMetrics.argtypes = [POINTER(dlb_monitor_t), POINTER(dlb_node_metrics_t)]
+    dlb.DLB_TALP_CollectNodeMetrics.restype = c_int
+    err = dlb.DLB_TALP_CollectNodeMetrics(monitor, byref(node_metrics))
+    check_dlb_error(err)
+    return node_metrics
+
+
+#################################################################################
+### DLB errors                                                                ###
+#################################################################################
+
+import warnings
+
+class DLBError(Exception): pass
+class DLBWarning(Warning): pass
+
+def custom_warning_format(message, category, filename, lineno, file=None, line=None):
+    print(f"{category.__name__}: {message}")
+
+warnings.showwarning = custom_warning_format
+
+dlb.DLB_Strerror.argtypes = [c_int]
+dlb.DLB_Strerror.restype = c_char_p
+
+def check_dlb_error(ret_code: int, allow_positive: bool = False) -> None:
+    if ret_code == 0:
+        return
+    elif ret_code > 0:
+        if not allow_positive:
+            warnings.warn(dlb.DLB_Strerror(ret_code).decode(), DLBWarning)
+    elif ret_code == -3:
+        warnings.warn(dlb.DLB_Strerror(ret_code).decode(), DLBWarning)
+    elif ret_code < 0:
+        raise DLBError(dlb.DLB_Strerror(ret_code).decode())
+
+
+#################################################################################
+### DLB types                                                                 ###
+#################################################################################
+
+from ctypes import CFUNCTYPE, Structure, c_int64, c_float, c_double, c_char
+
+# Opaque types
+dlb_barrier_t = c_void_p
+dlb_handler_t = c_void_p
+dlb_cpu_set_t = c_void_p
+const_dlb_cpu_set_t = c_void_p
+
+# LeWI enums
+DLB_DELETE_REQUESTS = 0
+DLB_MAX_CPUS = 0x7fff
+
+# DROM flags
+dlb_drom_flags_t = c_int
+DLB_DROM_FLAGS_NONE    = 0
+DLB_STEAL_CPUS         = 1 << 0
+DLB_RETURN_STOLEN      = 1 << 1
+DLB_SYNC_QUERY         = 1 << 2
+DLB_SYNC_NOW           = 1 << 3
+DLB_NO_SYNC            = 1 << 4
+DLB_FREE_CPUS_SLURM    = 1 << 5
+
+# PrintShmem flags
+dlb_printshmem_flags_t = c_int
+DLB_COLOR_AUTO   = 1
+DLB_COLOR_ALWAYS = 2
+
+# Barrier flags
+dlb_barrier_flags_t = c_int
+DLB_BARRIER_LEWI_OFF      = 0
+DLB_BARRIER_LEWI_ON       = 1 << 0
+DLB_BARRIER_LEWI_RUNTIME  = 1 << 1
+
+### DLB TALP types
+
+DLB_GLOBAL_REGION_NAME = "Global"
+DLB_GLOBAL_REGION = c_void_p(0)
+DLB_LAST_OPEN_REGION = c_void_p(1)
+
+DLB_MONITOR_NAME_MAX = 128
+
+class dlb_monitor_t(Structure):
+    _fields_ = [
+        ("name", c_char_p),
+        ("num_cpus", c_int),
+        ("avg_cpus", c_float),
+        ("cycles", c_int64),
+        ("instructions", c_int64),
+        ("num_measurements", c_int),
+        ("num_resets", c_int),
+        ("num_mpi_calls", c_int64),
+        ("num_omp_parallels", c_int64),
+        ("num_omp_tasks", c_int64),
+        ("num_gpu_runtime_calls", c_int64),
+        ("start_time", c_int64),
+        ("stop_time", c_int64),
+        ("elapsed_time", c_int64),
+        ("useful_time", c_int64),
+        ("mpi_time", c_int64),
+        ("omp_load_imbalance_time", c_int64),
+        ("omp_scheduling_time", c_int64),
+        ("omp_serialization_time", c_int64),
+        ("gpu_runtime_time", c_int64),
+        ("gpu_useful_time", c_int64),
+        ("gpu_communication_time", c_int64),
+        ("gpu_inactive_time", c_int64),
+        ("_data", c_void_p),
+    ]
+
+class dlb_pop_metrics_t(Structure):
+    _fields_ = [
+        ("name", c_char * DLB_MONITOR_NAME_MAX),
+        ("num_cpus", c_int),
+        ("num_mpi_ranks", c_int),
+        ("num_nodes", c_int),
+        ("avg_cpus", c_float),
+        ("num_gpus", c_int),
+        ("cycles", c_double),
+        ("instructions", c_double),
+        ("num_measurements", c_int64),
+        ("num_mpi_calls", c_int64),
+        ("num_omp_parallels", c_int64),
+        ("num_omp_tasks", c_int64),
+        ("num_gpu_runtime_calls", c_int64),
+        ("elapsed_time", c_int64),
+        ("useful_time", c_int64),
+        ("mpi_time", c_int64),
+        ("omp_load_imbalance_time", c_int64),
+        ("omp_scheduling_time", c_int64),
+        ("omp_serialization_time", c_int64),
+        ("gpu_runtime_time", c_int64),
+        ("min_mpi_normd_proc", c_double),
+        ("min_mpi_normd_node", c_double),
+        ("gpu_useful_time", c_int64),
+        ("gpu_communication_time", c_int64),
+        ("gpu_inactive_time", c_int64),
+        ("max_gpu_useful_time", c_int64),
+        ("max_gpu_active_time", c_int64),
+        ("parallel_efficiency", c_float),
+        ("mpi_parallel_efficiency", c_float),
+        ("mpi_communication_efficiency", c_float),
+        ("mpi_load_balance", c_float),
+        ("mpi_load_balance_in", c_float),
+        ("mpi_load_balance_out", c_float),
+        ("omp_parallel_efficiency", c_float),
+        ("omp_load_balance", c_float),
+        ("omp_scheduling_efficiency", c_float),
+        ("omp_serialization_efficiency", c_float),
+        ("device_offload_efficiency", c_float),
+        ("gpu_parallel_efficiency", c_float),
+        ("gpu_load_balance", c_float),
+        ("gpu_communication_efficiency", c_float),
+        ("gpu_orchestration_efficiency", c_float),
+    ]
+
+class dlb_node_metrics_t(Structure):
+    _fields_ = [
+        ("name", c_char * DLB_MONITOR_NAME_MAX),
+        ("node_id", c_int),
+        ("processes_per_node", c_int),
+        ("total_useful_time", c_int64),
+        ("total_mpi_time", c_int64),
+        ("max_useful_time", c_int64),
+        ("max_mpi_time", c_int64),
+        ("parallel_efficiency", c_float),
+        ("communication_efficiency", c_float),
+        ("load_balance", c_float),
+    ]
+
+class dlb_node_times_t(Structure):
+    _fields_ = [
+        ("pid", c_int),
+        ("mpi_time", c_int64),
+        ("useful_time", c_int64),
+    ]

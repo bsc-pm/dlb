@@ -1,0 +1,7 @@
+#!/bin/bash
+
+DLB_HOME=@prefix@
+
+export PYTHONPATH="${DLB_HOME}/lib/python@PYTHON_VERSION@/site-packages:${PYTHONPATH}"
+
+@PYTHON@ talp_01.py

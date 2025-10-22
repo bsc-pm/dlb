@@ -183,6 +183,10 @@ AC_CHECK_HEADERS([execinfo.h])
 AC_CHECK_HEADERS([immintrin.h])
 AC_CHECK_HEADERS([emmintrin.h])
 
+# Check cpu_set_t size
+AC_CHECK_SIZEOF([cpu_set_t], [], [#include <sched.h>])
+AC_SUBST([SIZEOF_CPU_SET_T], [$ac_cv_sizeof_cpu_set_t])
+
 # restore fccpx environment variable
 AX_VAR_POPVALUE([FCOMP_UNRECOGNIZED_OPTION])
 export FCOMP_UNRECOGNIZED_OPTION
@@ -352,6 +356,8 @@ AC_SUBST([INSTR_DEBUG_CPPFLAGS])
 # Check for Python versions
 AX_COMPARE_VERSION([$PYTHON_VERSION], [ge], [2.7], [have_py27=yes], [have_py27=no])
 AM_CONDITIONAL([HAVE_PYTHON27], [test "x$have_py27" = xyes])
+AX_COMPARE_VERSION([$PYTHON_VERSION], [ge], [3.6], [have_py36=yes], [have_py36=no])
+AM_CONDITIONAL([HAVE_PYTHON36], [test "x$have_py36" = xyes])
 
 # check for OpenMP availability
 AC_OPENMP
@@ -478,6 +484,8 @@ AC_CONFIG_FILES([
     doc/examples/mpi+ompss/Makefile
     doc/examples/named_barrier/Makefile
     doc/examples/ompt/Makefile
+    doc/examples/python/run_drom_01.sh
+    doc/examples/python/run_talp_01.sh
     doc/examples/statistics/run.sh
     doc/examples/statistics/Makefile
     doc/examples/talp/run.sh
@@ -494,6 +502,7 @@ AC_CONFIG_FILES([
     doc/user_guide/source/dlb_version.py
     doc/user_guide/source/index.rst
     src/apis/dlb.h
+    src/apis/python_bindings/dlb.py
 ])
 AC_CONFIG_FILES([tests/gens/basic-generator], [chmod +x tests/gens/basic-generator])
 AC_CONFIG_FILES([tests/gens/fortran-generator], [chmod +x tests/gens/fortran-generator])

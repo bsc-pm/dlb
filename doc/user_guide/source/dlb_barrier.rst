@@ -128,3 +128,17 @@ We also provide a Fortran API for the DLB Barrier::
     dlb_named_barrier = DLB_BarrierNamedRegister(&
             c_char_"named_barrier"//C_NULL_CHAR, DLB_BARRIER_LEWI_OFF)
     ierr = DLB_BarrierNamed(dlb_named_barrier)
+
+And for the Python API:
+
+.. code-block:: python
+
+    import dlb
+    ...
+    # Call regular barrier function
+    dlb.DLB_Barrier()
+    ...
+    # Register and call named barrier
+    handle = dlb.DLB_BarrierNamedRegister("named_barrier", dlb.DLB_BARRIER_LEWI_OFF)
+    dlb.DLB_BarrierNamed(handle)
+

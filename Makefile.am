@@ -961,6 +961,23 @@ regionsexamplesdir = $(docdir)/examples/monitoring_regions
 dist_regionsexamples_DATA = $(regionsexamples_files)
 nodist_regionsexamples_DATA = $(regionsexamples_files_nodist)
 
+### Python ###
+pythonexamples_files = \
+    doc/examples/python/README \
+    doc/examples/python/drom_01.py \
+    doc/examples/python/talp_01.py \
+    $(END)
+
+pythonexamples_files_nodist = \
+    doc/examples/python/run_drom_01.sh \
+    doc/examples/python/run_talp_01.sh \
+    $(END)
+
+pythonexamplesdir = $(docdir)/examples/Python
+dist_pythonexamples_DATA = $(pythonexamples_files)
+nodist_pythonexamples_DATA = $(pythonexamples_files_nodist)
+
+
 #********************************************************************************
 # User scripts
 #********************************************************************************
@@ -1189,13 +1206,21 @@ clean-doc:
 #################################################################################
 ### scripts                                                                   ###
 #################################################################################
+python_PYTHON =
+nodist_python_PYTHON =
+
 if ENABLE_VIEWER_SCRIPTS
-python_PYTHON = scripts/viewer/dlb_wrapper.py \
+python_PYTHON += scripts/viewer/dlb_wrapper.py \
 		scripts/viewer/progressmeter.py
 
-nodist_python_PYTHON = scripts/viewer/dlb_viewer.py
+nodist_python_PYTHON += scripts/viewer/dlb_viewer.py
 
 nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage
+endif
+
+if HAVE_PYTHON36
+nodist_python_PYTHON += src/apis/python_bindings/dlb.py \
+		src/apis/python_bindings/dlb_mpi.py
 endif
 
 DEBIAN_EXTRA = scripts/debian/compat \
@@ -1366,8 +1391,9 @@ install-data-hook:
 	chmod +x $(DESTDIR)$(omptexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(roleshiftexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(statsexamplesdir)/run.sh
-	chmod +x $(DESTDIR)$(talpexamplesdir)/run.sh
 	chmod +x $(DESTDIR)$(regionsexamplesdir)/run.sh
+	chmod +x $(DESTDIR)$(pythonexamplesdir)/run_drom_01.sh
+	chmod +x $(DESTDIR)$(pythonexamplesdir)/run_talp_01.sh
 	chmod +x $(DESTDIR)$(userscriptsdir)/lewi_omp.sh
 	chmod +x $(DESTDIR)$(userscriptsdir)/lewi_omp_trace.sh
 	chmod +x $(DESTDIR)$(userscriptsdir)/lewi_ompss.sh

@@ -1,0 +1,18 @@
+README
+======
+
+This directory contains Python examples for DLB using DROM and TALP.
+
+Examples
+--------
+* `drom_example.py`: change process CPU masks dynamically with DROM.
+* `talp_01.py`: monitor global and custom regions with TALP.
+
+Execution
+---------
+* Edit the scripts 'run_drom_01.sh' and 'run_talp_01.sh'
+    * Check that the variables detected at configure time are correct
+
+* Run the scripts 'run_drom_01.sh' or 'run_talp_01.sh'
+* Review the results
+
