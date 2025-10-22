@@ -1219,8 +1219,8 @@ nodist_bin_SCRIPTS = scripts/viewer/dlb_cpu_usage
 endif
 
 if HAVE_PYTHON36
-nodist_python_PYTHON += src/apis/python_bindings/dlb.py \
-		src/apis/python_bindings/dlb_mpi.py
+python_PYTHON += src/apis/python_bindings/dlb_mpi.py
+nodist_python_PYTHON += src/apis/python_bindings/dlb.py
 endif
 
 DEBIAN_EXTRA = scripts/debian/compat \
@@ -1327,7 +1327,10 @@ EXTRA_DIST += tests/test \
 	      tests/gens/config.py \
 	      tests/lit.site.cfg \
 	      tests/litsupport/__init__.py \
-	      tests/litsupport/bets.py
+	      tests/litsupport/bets.py \
+	      tests/litsupport/mixed.py \
+	      tests/litsupport/unittest.py \
+	      $(END)
 CLEANFILES += tests/test.log tests/test.log.xml
 
 if ENABLE_COVERAGE
