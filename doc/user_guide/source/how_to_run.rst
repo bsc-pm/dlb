@@ -13,7 +13,7 @@ In general, the following steps are required to run DLB with your application:
    to any other flavour such as MPI, debug or instrumentation.
 
 2. Configure the environment variable ``DLB_ARGS`` with the desired DLB options.
-   Typically, you will want to set at least ``--lewi``, ``--drom``, ``-talp```,
+   Typically, you will want to set at least ``--lewi``, ``--drom``, ``-talp``,
    or any combination of them. Execute ``dlb --help`` for a list of options.
    You can also use the :ref:`scripts` provided in the installation.
 
@@ -76,3 +76,15 @@ Examples
     # Run as the examples above
     export DLB_ARGS="..."
     mpirun ... env LD_PRELOAD=<dlb_install_path>/lib/libdlb_mpi.so <app> <args>
+
+5. Python program that requires the usage of the DLB API::
+
+    PY_MAJOR=$(python3 -c "import sys; print(sys.version_info[0])")
+    PY_MINOR=$(python3 -c "import sys; print(sys.version_info[1])")
+    export PYTHONPATH="<dlb_install_path>/lib/python${PY_MAJOR}.${PY_MINOR}/site-packages:${PYTHONPATH}"
+
+    # Run the application
+    python3 <app.py> <args>
+
+    # Run with debug enabled
+    DLB_DEBUG=1 python3 <app.py> <args>

@@ -105,6 +105,10 @@ tests = {
     'fortran_api_drom_00' : {'source' : 'fortran_api_drom_00.f90'},
     'fortran_api_talp_00' : {'source' : 'fortran_api_talp_00.f90'},
     'fortran_api_talp_01' : {'source' : 'fortran_api_talp_01.F90'},
+    'python_api_00'       : {'source' : 'python_api_00.py'},
+    'python_api_barrier_00'  : {'source' : 'python_api_barrier_00.py'},
+    'python_api_drom_00'  : {'source' : 'python_api_drom_00.py'},
+    'python_api_talp_00'  : {'source' : 'python_api_talp_00.py'},
   },
 }
 
@@ -121,26 +125,42 @@ if (get_option('extra_tests'))
   initial_env.set('DLB_EXTRA_TESTS', '1')
 endif
 
+prog_python = import('python').find_installation('python')
+dlb_build_root = meson.project_build_root()
+dlb_bindings_dir = dlb_build_root / 'src/apis/python_bindings'
+initial_env.set('PYTHONPATH', dlb_bindings_dir)
+initial_env.set('DLB_LIB_DIR', dlb_build_root)
+
 foreach suite, suite_tests : tests
-  foreach test_name, test_args : suite_tests
-    test_file = test_args.get('source', test_name + '.c')
-    test_path = 'test/' + suite + '/' + test_file
-    exe = executable(test_name, test_path,
-      include_directories : test_includes,
-      link_whole: libdlb_test,
-      dependencies : common_deps,
-      build_by_default: false,
-      install : false,
-      fortran_args : ['-ffree-line-length-none']
-    )
+  foreach test_name, test_props : suite_tests
+    test_file = test_props.get('source', test_name + '.c')
+    test_path = 'test' / suite / test_file
+
+    is_python = test_file.endswith('.py')
+    if is_python
+      test_program = prog_python
+      test_args = [meson.current_source_dir() / test_path]
+    else
+      test_program = executable(test_name, test_path,
+        include_directories : test_includes,
+        link_whole: libdlb_test,
+        dependencies : common_deps,
+        build_by_default: false,
+        install : false,
+        fortran_args : ['-ffree-line-length-none']
+      )
+      test_args = []
+    endif
 
     test_env = initial_env
-    if (test_args.has_key('dlb_args'))
-      test_env.append('DLB_ARGS', test_args.get('dlb_args'), separator: ' ')
+    if (test_props.has_key('dlb_args'))
+      test_env.append('DLB_ARGS', test_props.get('dlb_args'), separator: ' ')
     endif
-    test(test_name, exe,
+
+    test(test_name, test_program,
       env : test_env,
-      should_fail : test_args.get('should_fail', false),
+      args : test_args,
+      should_fail : test_props.get('should_fail', false),
       suite : suite,
     )
   endforeach

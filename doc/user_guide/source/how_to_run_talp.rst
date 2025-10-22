@@ -33,6 +33,7 @@ After :ref:`installing DLB <dlb-installation>` you can use TALP depending on the
     You can also use ``--talp-output-file`` to generate CSV or JSON formatted files. 
     More info in the options section :ref:`below <talp_options>`.
 
+.. _mpi-only_executions:
 
 MPI-only executions
 ----------------------
@@ -184,7 +185,7 @@ Here are a few restrictions for naming monitoring regions:
   128 characters, and may include spaces (though spaces must be avoided when
   using the flag ``--talp-region-select``, as explained explained :ref:`below<talp_options>`).
 
-Basic usage examples for C and Fortran:
+Basic usage examples for C:
 
 .. code-block:: c
 
@@ -200,6 +201,8 @@ Basic usage examples for C and Fortran:
         /* Pause region */
         DLB_MonitoringRegionStop(monitor);
     }
+
+Basic usage for Fortran:
 
 .. code-block:: fortran
 
@@ -218,6 +221,21 @@ Basic usage examples for C and Fortran:
         ! Pause region
         err = DLB_MonitoringRegionStop(dlb_handle)
     enddo
+
+And for Python:
+
+.. code-block:: python
+
+    import dlb
+    ...
+    monitor = dlb.DLB_MonitoringRegionRegister("Region 1")
+    ...
+    for ... :
+        # Resume region
+        dlb.DLB_MonitoringRegionStart(monitor)
+        ...
+        # Pause region
+        dlb.DLB_MonitoringRegionStop(monitor)
 
 For each defined monitoring region, including the global region, TALP will
 print or write a summary at the end of the execution.
@@ -254,6 +272,24 @@ For Fortran codes, the struct can be accessed as in this example:
     print *, monitor_name
     print *, dlb_monitor%num_measurements
     print *, dlb_monitor%elapsed_time
+
+
+And for Python codes:
+
+.. code-block:: python
+
+    import dlb
+
+    dlb_handle = dlb.DLB_MonitoringRegionRegister("Region 1")
+
+    dlb.DLB_MonitoringRegionStart(dlb_handle)
+    dlb.DLB_MonitoringRegionStop(dlb_handle)
+
+    monitor = dlb_handle.contents
+
+    print(monitor.name.decode())
+    print(monitor.num_measurements)
+    print(monitor.elapsed_time)
 
 
 Special values for monitoring regions
@@ -310,6 +346,19 @@ be converted to ``type(c_ptr))`` using the F90 intrinsic procedure ``transfer``:
     ! Start region and stop
     err = DLB_MonitoringRegionStart(dlb_handle)
     err = DLB_MonitoringRegionStop(transfer(DLB_LAST_OPEN_REGION_INT, c_null_ptr))
+
+In Python, values ``DLB_GLOBAL_REGION`` and ``DLB_LAST_OPEN_REGION`` are used the same way as in C codes, without needing to pass the region handle explicitly:
+
+.. code-block:: python
+
+    import dlb
+
+    # Print current Global region metrics
+    dlb.DLB_MonitoringRegionReport(dlb.DLB_GLOBAL_REGION)
+
+    # Start region and stop
+    dlb.DLB_MonitoringRegionStart(dlb_handle)
+    dlb.DLB_MonitoringRegionStop(dlb.DLB_LAST_OPEN_REGION)
 
 
 Computing POP metrics for a region at run time
@@ -371,6 +420,22 @@ Example in Fortran:
     err = DLB_TALP_CollectPOPMetrics(dlb_handle, pop_metrics)
     print *, pop_metrics%parallel_efficiency
     print *, pop_metrics%mpi_communication_efficiency
+
+For Python MPI programs, the ``dlb_mpi`` module must be used instead of the base ``dlb`` module. These calls also require running with the :ref:`DLB MPI library preloaded <mpi-only_executions>`.
+
+
+.. code-block:: python
+
+    import dlb_mpi
+    ...
+    dlb_handle = dlb_mpi.DLB_MonitoringRegionRegister("Region 1")
+    # The dlb_handle is then used to start and stop the region.
+    ...
+    # This call performs an MPI synchronization across all processes.
+    pop_metrics = dlb_mpi.DLB_TALP_CollectPOPMetrics(dlb_handle)
+
+    print(f"Parallel efficiency: {pop_metrics.parallel_efficiency:.2f}")
+    print(f"MPI communication efficiency: {pop_metrics.mpi_communication_efficiency:.2f}")
 
 
 Enabling Hardware Counters

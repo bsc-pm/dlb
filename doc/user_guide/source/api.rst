@@ -4,7 +4,7 @@
 Public API
 **********
 
-DLB offers a public interface for C, C++ and Fortran. The DLB API can be divided into:
+DLB offers a public interface for C, C++, Fortran and Python. The DLB API can be divided into:
 
 .. glossary::
 
