@@ -579,7 +579,7 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
 
 
 #if MPI_LIB
-/* Construct a base metrics struct out of a monitor  */
+/* Construct a base metrics struct out of a monitor reduced via MPI */
 void perf_metrics__reduce_monitor_into_base_metrics(pop_base_metrics_t *base_metrics,
         const dlb_monitor_t *monitor, bool all_to_all) {
 
@@ -628,6 +628,43 @@ void perf_metrics__reduce_monitor_into_base_metrics(pop_base_metrics_t *base_met
     };
 }
 #endif
+
+
+/* Construct a base metrics struct out of a single monitor */
+void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metrics,
+        const dlb_monitor_t *monitor) {
+
+    bool have_gpus = (monitor->gpu_useful_time + monitor->gpu_communication_time > 0);
+
+    *base_metrics = (const pop_base_metrics_t){
+        .num_cpus                = monitor->num_cpus,
+        .num_mpi_ranks           = 0,
+        .num_nodes               = 1,
+        .avg_cpus                = monitor->avg_cpus,
+        .num_gpus                = have_gpus ? 1 : 0,
+        .cycles                  = (double)monitor->cycles,
+        .instructions            = (double)monitor->instructions,
+        .num_measurements        = monitor->num_measurements,
+        .num_mpi_calls           = monitor->num_mpi_calls,
+        .num_omp_parallels       = monitor->num_omp_parallels,
+        .num_omp_tasks           = monitor->num_omp_tasks,
+        .num_gpu_runtime_calls   = monitor->num_gpu_runtime_calls,
+        .elapsed_time            = monitor->elapsed_time,
+        .useful_time             = monitor->useful_time,
+        .mpi_time                = monitor->mpi_time,
+        .omp_load_imbalance_time = monitor->omp_load_imbalance_time,
+        .omp_scheduling_time     = monitor->omp_scheduling_time,
+        .omp_serialization_time  = monitor->omp_serialization_time,
+        .gpu_runtime_time        = monitor->gpu_runtime_time,
+        .min_mpi_normd_proc      = (double)monitor->mpi_time / monitor->num_cpus,
+        .min_mpi_normd_node      = (double)monitor->mpi_time / monitor->num_cpus,
+        .gpu_useful_time         = monitor->gpu_useful_time,
+        .gpu_communication_time  = monitor->gpu_communication_time,
+        .gpu_inactive_time       = monitor->gpu_inactive_time,
+        .max_gpu_useful_time     = monitor->gpu_useful_time,
+        .max_gpu_active_time     = monitor->gpu_useful_time + monitor->gpu_communication_time,
+    };
+}
 
 /* Compute POP metrics out of a base metrics struct */
 void perf_metrics__base_to_pop_metrics(const char *monitor_name,

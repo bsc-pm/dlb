@@ -101,6 +101,9 @@ void perf_metrics__reduce_monitor_into_base_metrics(pop_base_metrics_t *base_met
         const dlb_monitor_t *monitor, bool all_to_all);
 #endif
 
+void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metrics,
+        const dlb_monitor_t *monitor);
+
 void perf_metrics__base_to_pop_metrics(const char *monitor_name,
         const pop_base_metrics_t *base_metrics, dlb_pop_metrics_t *pop_metrics);
 

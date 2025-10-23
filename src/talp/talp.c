@@ -744,7 +744,7 @@ void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
 /*    TALP collect functions for 3rd party programs:                             */
 /*      - It's also safe to call it from a 1st party program                     */
 /*      - Requires --talp-external-profiler set up in application                */
-/*      - Des not need to synchronize with application                           */
+/*      - Does not need to synchronize with application                           */
 /*********************************************************************************/
 
 /* Function that may be called from a third-party process to compute
@@ -829,16 +829,14 @@ int talp_query_pop_node_metrics(const char *name, dlb_node_metrics_t *node_metri
 /*      - Requires synchronization (MPI or node barrier) among all processes     */
 /*********************************************************************************/
 
-/* Perform MPI collective calls and compute the current POP metrics for the
- * specified monitor. If monitor is NULL, the global monitoring region is
- * assumed.
+/* Compute the current POP metrics for the specified monitor. If monitor is NULL,
+ * the global monitoring region is assumed.
  * Pre-conditions:
- *  - the given monitor must have been registered in all MPI ranks
+ *  - if MPI, the given monitor must have been registered in all MPI ranks
  *  - pop_metrics is an allocated structure
  */
 int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
         dlb_monitor_t *monitor, dlb_pop_metrics_t *pop_metrics) {
-#ifdef MPI_LIB
     talp_info_t *talp_info = spd->talp_info;
     if (monitor == NULL) {
         monitor = talp_info->monitor;
@@ -847,9 +845,14 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     /* Stop monitor so that metrics are updated */
     bool resume_region = region_stop(spd, monitor) == DLB_SUCCESS;
 
-    /* Reduce monitor among all MPI ranks and everbody collects (all-to-all) */
     pop_base_metrics_t base_metrics;
+#ifdef MPI_LIB
+    /* Reduce monitor among all MPI ranks and everbody collects (all-to-all) */
     perf_metrics__reduce_monitor_into_base_metrics(&base_metrics, monitor, true);
+#else
+    /* Construct base metrics using only the monitor from this process */
+    perf_metrics__local_monitor_into_base_metrics(&base_metrics, monitor);
+#endif
 
     /* Construct output pop_metrics out of base metrics */
     perf_metrics__base_to_pop_metrics(monitor->name, &base_metrics, pop_metrics);
@@ -860,9 +863,6 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     }
 
     return DLB_SUCCESS;
-#else
-    return DLB_ERR_NOCOMP;
-#endif
 }
 
 /* Node-collective function to compute node_metrics for a given region */
