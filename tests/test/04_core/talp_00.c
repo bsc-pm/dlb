@@ -389,10 +389,18 @@ int main(int argc, char *argv[]) {
         assert( first->num_measurements == 2 );
     }
 
-    /* Test function not compatble without MPI support */
+    /* Test Collect POP metrics */
     {
         dlb_pop_metrics_t pop_metrics;
-        assert( talp_collect_pop_metrics(&spd, global_monitor, &pop_metrics) == DLB_ERR_NOCOMP );
+        assert( talp_collect_pop_metrics(&spd, global_monitor, &pop_metrics) == DLB_SUCCESS );
+        assert( strcmp(pop_metrics.name, DLB_GLOBAL_REGION_NAME) == 0 );
+        assert( pop_metrics.elapsed_time > 0 );
+
+        dlb_node_metrics_t node_metrics;
+        assert( talp_collect_pop_node_metrics(&spd, global_monitor, &node_metrics)
+                == DLB_SUCCESS );
+        assert( strcmp(node_metrics.name, DLB_GLOBAL_REGION_NAME) == 0 );
+        assert( node_metrics.total_useful_time > 0 );
     }
 
     talp_finalize(&spd);
