@@ -76,7 +76,7 @@ static bool parse_lewi_barrier(const char *barrier_name, bool lewi_barrier,
         bool found_in_select = false;
         char *barrier_select_copy = malloc(sizeof(char)*(len+1));
         strcpy(barrier_select_copy, lewi_barrier_select);
-        char *saveptr;
+        char *saveptr = NULL;
         char *token = strtok_r(barrier_select_copy, ",", &saveptr);
         while (token) {
             if (strcmp(token, barrier_name) == 0) {

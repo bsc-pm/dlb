@@ -94,7 +94,7 @@ static bool parse_region_select(const char *region_select, const char *region_na
     size_t len = strlen(region_select);
     char *region_select_copy = malloc(sizeof(char)*(len+1));
     strcpy(region_select_copy, region_select);
-    char *saveptr;
+    char *saveptr = NULL;
     char *token = strtok_r(region_select_copy, ",", &saveptr);
     while (token) {
         /* Region name is found */

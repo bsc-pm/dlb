@@ -790,7 +790,7 @@ static void parse_dlb_args(char *dlb_args, const char *arg_name, char* arg_value
 
         if (strchr(token, '=')) {
             /* Option is of the form --argument=value */
-            char *end_equal;
+            char *end_equal = NULL;
             char *argument = strtok_r(token, "=", &end_equal);
             if (strcmp(argument, arg_name) == 0) {
                 /* Obtain value */
