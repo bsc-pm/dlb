@@ -1,6 +1,10 @@
 # Changelog
 All important changes to this python project will be documented in this file. 
 
+## 3.5.3
+
+- Bugfix: Specify encoding to also work on windows operating systems
+
 ## 3.5.2
 
 - Feature: Adding download-github functionality to enable GitHub Actions
