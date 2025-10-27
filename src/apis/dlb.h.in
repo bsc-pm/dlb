@@ -101,6 +101,7 @@ int DLB_Disable(void);
  *  \param[in] max max number of CPUs
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *
  *  Used to delimit sections of the code that the developer knows that only a
  *  maximum number of CPUs can benefit the execution. If a process reaches its
@@ -114,6 +115,7 @@ int DLB_SetMaxParallelism(int max);
 /*! \brief Unset the maximum number of resources to be used by the calling process.
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *
  *  Unset the maximum number of CPUs previously assigned to this process.
  *  Subsequent calls to borrow will not be delimited by this parameter.
@@ -159,6 +161,7 @@ int DLB_CallbackGet(dlb_callbacks_t which, dlb_callback_t *callback, void **arg)
 /*! \brief Lend all the current CPUs
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
@@ -171,6 +174,7 @@ int DLB_Lend(void);
  *  \param[in] cpuid CPU id to lend
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
@@ -184,6 +188,7 @@ int DLB_LendCpu(int cpuid);
  *  \param[in] ncpus number of CPUs to lend
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
@@ -196,6 +201,7 @@ int DLB_LendCpus(int ncpus);
  *  \param[in] mask CPU mask to lend
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Lend CPUs of the process to the system. A lent CPU may be assigned to other
@@ -214,6 +220,7 @@ int DLB_LendCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Reclaim CPUs that were previously lent. The CPUs must originally belong to
@@ -227,6 +234,7 @@ int DLB_Reclaim(void);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *
@@ -241,6 +249,7 @@ int DLB_ReclaimCpu(int cpuid);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Reclaim CPUs that were previously lent. The CPUs must originally belong to
@@ -254,6 +263,7 @@ int DLB_ReclaimCpus(int ncpus);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if there is no CPUs to reclaim
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be reclaimed
  *
@@ -273,6 +283,7 @@ int DLB_ReclaimCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if the CPU is already acquired
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
  *  \return DLB_ERR_REQST if there are too many requests for this resource
@@ -289,6 +300,7 @@ int DLB_AcquireCpu(int cpuid);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if cannot acquire any CPU
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_REQST if there are too many requests for this resource
  *
@@ -308,6 +320,7 @@ int DLB_AcquireCpus(int ncpus);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if cannot acquire any CPU
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
  *  \return DLB_ERR_REQST if there are too many requests for these resources
@@ -325,6 +338,7 @@ int DLB_AcquireCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_NOTED if the petition cannot be immediately fulfilled
  *  \return DLB_NOUPDT if cannot acquire any CPU
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be acquired
  *  \return DLB_ERR_REQST if there are too many requests for these resources
@@ -344,6 +358,7 @@ int DLB_AcquireCpusInMask(int ncpus, const_dlb_cpu_set_t mask);
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if cannot borrow any resources
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Borrow CPUs from the system only if they are idle. No other action is done
@@ -356,6 +371,7 @@ int DLB_Borrow(void);
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if CPU cannot borrowed
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Borrow CPUs from the system only if they are idle. No other action is done
@@ -368,6 +384,7 @@ int DLB_BorrowCpu(int cpuid);
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if cannot borrow any resources
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Borrow CPUs from the system only if they are idle. No other action is done
@@ -380,6 +397,7 @@ int DLB_BorrowCpus(int ncpus);
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if cannot borrow any resources
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Borrow CPUs from the system only if they are idle. No other action is done
@@ -393,6 +411,7 @@ int DLB_BorrowCpuMask(const_dlb_cpu_set_t mask);
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if cannot borrow any resources
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *
  *  Borrow CPUs from the system only if they are idle. No other action is done
@@ -408,6 +427,7 @@ int DLB_BorrowCpusInMask(int ncpus, const_dlb_cpu_set_t mask);
  *  \return DLB_SUCCESS on success
  *  \return DLB_NOUPDT if no need to return
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be returned
  *  \return DLB_ERR_NOCOMP if the mode asynchronous is enabled
@@ -424,6 +444,7 @@ int DLB_Return(void);
  *  \param[in] cpuid CPU to return
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be returned
  *
@@ -438,6 +459,8 @@ int DLB_ReturnCpu(int cpuid);
 /*! \brief Return a set of CPUs if some of them have been reclaimed
  *  \param[in] mask CPU set to return
  *  \return DLB_SUCCESS on success
+ *  \return DLB_ERR_NOINIT if DLB is not initialized
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  *  \return DLB_ERR_PERM if the resources cannot be returned
  *
@@ -488,6 +511,7 @@ int DLB_PollDROM_Update(void);
  *  \return DLB_SUCCESS if the CPU is available
  *  \return DLB_NOTED if the CPU is owned but still guested by other process
  *  \return DLB_NOUPDT if the CPU is owned but still not reclaimed
+ *  \return DLB_ERR_NOLEWI if --lewi is not enabled
  *  \return DLB_ERR_PERM if the CPU cannot be acquired or has been disabled
  *  \return DLB_ERR_DISBLD if DLB is disabled
  */
