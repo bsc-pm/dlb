@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "talp-pages"
-version = "3.5.2"
+version = "3.5.3"
 description = "Command line tools to generate performance reports using the TALP module of DLB"
 authors = ["Valentin Seitz <valentin.seitz@bsc.es>"]
 maintainers = ["Valentin Seitz <valentin.seitz@bsc.es>"]

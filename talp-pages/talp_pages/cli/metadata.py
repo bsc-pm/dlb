@@ -230,6 +230,6 @@ def main(parsed_args):
                 logging.debug(f"Start processing file {json_file_path}")
                 talp_json = json.load(file)
                 add_metadata(metadata, talp_json)
-            with open(json_file_path, "w") as file:
+            with open(json_file_path, "w", encoding="utf-8") as file:
                 file.write(json.dumps(talp_json, indent=4))
                 logging.debug(f"Done processing file {json_file_path}")
