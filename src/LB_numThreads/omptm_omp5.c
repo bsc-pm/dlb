@@ -431,6 +431,30 @@ void omptm_omp5__into_parallel_implicit_barrier(omptool_parallel_data_t *paralle
 
 
 /*********************************************************************************/
+/*  Vtable for handling omptool events                                           */
+/*********************************************************************************/
+
+const omptool_event_funcs_t omptm_omp5_events_vtable = {
+    .init                           = omptm_omp5__init,
+    .finalize                       = omptm_omp5__finalize,
+    .into_mpi                       = omptm_omp5__IntoBlockingCall,
+    .outof_mpi                      = omptm_omp5__OutOfBlockingCall,
+    .lend_from_api                  = omptm_omp5__lend_from_api,
+    .thread_begin                   = NULL,
+    .thread_end                     = NULL,
+    .thread_role_shift              = NULL,
+    .parallel_begin                 = omptm_omp5__parallel_begin,
+    .parallel_end                   = omptm_omp5__parallel_end,
+    .into_parallel_function         = omptm_omp5__into_parallel_function,
+    .outof_parallel_function        = NULL,
+    .into_parallel_implicit_barrier = omptm_omp5__into_parallel_implicit_barrier,
+    .task_create                    = NULL,
+    .task_complete                  = NULL,
+    .task_switch                    = NULL,
+};
+
+
+/*********************************************************************************/
 /*    Functions for testing purposes                                             */
 /*********************************************************************************/
 

@@ -32,7 +32,6 @@
 
 extern __thread bool thread_is_observer;
 
-
 /* Update all open nested regions (so, excluding the innermost) and add the
  * time since its start time until the sample last timestamp (which is the time
  * that has yet not been added to the regions) as omp_serialization_time */
@@ -331,3 +330,29 @@ void talp_openmp_task_switch(void) {
         talp_set_sample_state(sample, useful, talp_info->flags.papi);
     }
 }
+
+
+/*********************************************************************************/
+/*  Vtable for handling omptool events                                           */
+/*********************************************************************************/
+
+const omptool_event_funcs_t talp_events_vtable = (const omptool_event_funcs_t) {
+    .init                           = talp_openmp_init,
+    .finalize                       = talp_openmp_finalize,
+    .into_mpi                       = NULL,
+    .outof_mpi                      = NULL,
+    .lend_from_api                  = NULL,
+    .thread_begin                   = talp_openmp_thread_begin,
+    .thread_end                     = talp_openmp_thread_end,
+    .thread_role_shift              = NULL,
+    .parallel_begin                 = talp_openmp_parallel_begin,
+    .parallel_end                   = talp_openmp_parallel_end,
+    .into_parallel_function         = talp_openmp_into_parallel_function,
+    .outof_parallel_function        = talp_openmp_outof_parallel_function,
+    .into_parallel_implicit_barrier = talp_openmp_into_parallel_implicit_barrier,
+    .into_parallel_sync             = talp_openmp_into_parallel_sync,
+    .outof_parallel_sync            = talp_openmp_outof_parallel_sync,
+    .task_create                    = talp_openmp_task_create,
+    .task_complete                  = talp_openmp_task_complete,
+    .task_switch                    = talp_openmp_task_switch,
+};

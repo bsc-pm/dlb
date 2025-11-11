@@ -21,6 +21,7 @@
 #define OMPTM_FREE_AGENTS_H
 
 #include "LB_numThreads/omp-tools.h"
+#include "LB_numThreads/omptool.h"
 #include "support/options.h"
 
 typedef struct omptool_parallel_data_t omptool_parallel_data_t;
@@ -39,6 +40,7 @@ void omptm_free_agents__task_create(void);
 void omptm_free_agents__task_complete(void);
 void omptm_free_agents__task_switch(void);
 
+extern const omptool_event_funcs_t omptm_free_agents_events_vtable;
 
 /* Functions for testing purposes */
 void omptm_free_agents_testing__set_worker_binding(int cpuid);

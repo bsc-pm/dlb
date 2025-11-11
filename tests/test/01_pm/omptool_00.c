@@ -406,7 +406,6 @@ static void test_omptool_events(ompt_start_tool_result_t *tool_result,
 
 int main (int argc, char *argv[]) {
 
-    omptool_event_funcs_t empty_funcs = {0};
     omptool_event_funcs_t talp_test_funcs = {
         .init = talp_event_init,
         .finalize = talp_event_finalize,
@@ -441,6 +440,7 @@ int main (int argc, char *argv[]) {
         .task_complete = omptm_event_task_complete,
         .task_switch = omptm_event_task_switch,
     };
+    omptool_testing__setup_event_fn_ptrs(&talp_test_funcs, &omptm_test_funcs);
 
     /* Options */
     char options[64] = "--ompt --shm-key=";
@@ -461,26 +461,22 @@ int main (int argc, char *argv[]) {
     assert( tool_result->initialize );
     assert( tool_result->finalize );
 
-    /* Initialize OMPT tool w/o callbacks (assuming --ompt-thread-manager=none) */
-    omptool_testing__setup_event_fn_ptrs(&empty_funcs, &empty_funcs);
+    /* Initialize OMPT tool w/o callbacks */
     test_omptool_events(tool_result, /* talp: */ false, /* omptm: */ false);
 
     /* Initialize OMPT tool with only OMPTM callbacks */
     dlb_setenv("DLB_ARGS", dlb_args, NULL, ENV_OVERWRITE_ALWAYS);
-    dlb_setenv("DLB_ARGS", "--ompt-thread-manager=omp5", NULL, ENV_APPEND);
-    omptool_testing__setup_event_fn_ptrs(&empty_funcs, &omptm_test_funcs);
+    dlb_setenv("DLB_ARGS", "--lewi", NULL, ENV_APPEND);
     test_omptool_events(tool_result, /* talp: */ false, /* omptm: */ true);
 
     /* Initialize OMPT tool with only TALP callbacks */
     dlb_setenv("DLB_ARGS", dlb_args, NULL, ENV_OVERWRITE_ALWAYS);
     dlb_setenv("DLB_ARGS", "--talp-openmp", NULL, ENV_APPEND);
-    omptool_testing__setup_event_fn_ptrs(&talp_test_funcs, &empty_funcs);
     test_omptool_events(tool_result, /* talp: */ true, /* omptm: */ false);
 
     /* Initialize OMPT tool with both callbacks */
     dlb_setenv("DLB_ARGS", dlb_args, NULL, ENV_OVERWRITE_ALWAYS);
-    dlb_setenv("DLB_ARGS", "--ompt-thread-manager=omp5 --talp-openmp", NULL, ENV_APPEND);
-    omptool_testing__setup_event_fn_ptrs(&talp_test_funcs, &omptm_test_funcs);
+    dlb_setenv("DLB_ARGS", "--lewi --talp-openmp", NULL, ENV_APPEND);
     test_omptool_events(tool_result, /* talp: */ true, /* omptm: */ true);
 
     return 0;

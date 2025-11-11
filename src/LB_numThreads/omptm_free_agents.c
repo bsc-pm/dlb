@@ -703,6 +703,30 @@ void omptm_free_agents__task_switch(void) {
 
 
 /*********************************************************************************/
+/*  Vtable for handling omptool events                                           */
+/*********************************************************************************/
+
+const omptool_event_funcs_t omptm_free_agents_events_vtable = (const omptool_event_funcs_t) {
+    .init                           = omptm_free_agents__init,
+    .finalize                       = omptm_free_agents__finalize,
+    .into_mpi                       = omptm_free_agents__IntoBlockingCall,
+    .outof_mpi                      = omptm_free_agents__OutOfBlockingCall,
+    .lend_from_api                  = NULL,
+    .thread_begin                   = omptm_free_agents__thread_begin,
+    .thread_end                     = NULL,
+    .thread_role_shift              = NULL,
+    .parallel_begin                 = omptm_free_agents__parallel_begin,
+    .parallel_end                   = omptm_free_agents__parallel_end,
+    .into_parallel_function         = omptm_free_agents__into_parallel_function,
+    .outof_parallel_function        = NULL,
+    .into_parallel_implicit_barrier = NULL,
+    .task_create                    = omptm_free_agents__task_create,
+    .task_complete                  = omptm_free_agents__task_complete,
+    .task_switch                    = omptm_free_agents__task_switch,
+};
+
+
+/*********************************************************************************/
 /*    Functions for testing purposes                                             */
 /*********************************************************************************/
 

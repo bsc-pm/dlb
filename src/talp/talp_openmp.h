@@ -21,6 +21,7 @@
 #define TALP_OPENMP_H
 
 #include "LB_numThreads/omp-tools.h"
+#include "LB_numThreads/omptool.h"
 #include <sys/types.h>
 
 typedef struct Options options_t;
@@ -43,5 +44,7 @@ void talp_openmp_outof_parallel_sync(omptool_parallel_data_t *parallel_data);
 void talp_openmp_task_create(void);
 void talp_openmp_task_complete(void);
 void talp_openmp_task_switch(void);
+
+extern const omptool_event_funcs_t talp_events_vtable;
 
 #endif /* TALP_OPENMP_H */
