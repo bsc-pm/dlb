@@ -461,11 +461,9 @@ int main (int argc, char *argv[]) {
     assert( tool_result->initialize );
     assert( tool_result->finalize );
 
-    /* Initialize OMPT tool w/o callbacks (assuming  --ompt-thread-manager=none)*/
-    ompt_data_t tool_data = {};
-    tool_result->initialize((ompt_function_lookup_t)lookup_fn, 0, &tool_data);
-    assert( callbacks.thread_begin == NULL );
-    tool_result->finalize(&tool_data);
+    /* Initialize OMPT tool w/o callbacks (assuming --ompt-thread-manager=none) */
+    omptool_testing__setup_event_fn_ptrs(&empty_funcs, &empty_funcs);
+    test_omptool_events(tool_result, /* talp: */ false, /* omptm: */ false);
 
     /* Initialize OMPT tool with only OMPTM callbacks */
     dlb_setenv("DLB_ARGS", dlb_args, NULL, ENV_OVERWRITE_ALWAYS);

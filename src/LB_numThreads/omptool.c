@@ -623,20 +623,19 @@ static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
         }
     }
 
-    omptool_funcs = (const omptool_callback_funcs_t) {};
-
-    /* The following callbacks use thread_data, task_data, or parallel_data and need
-     * to be centralized, whether we use only one module or both */
-    if (talp_openmp || omptm_version != OMPTM_NONE) {
-        omptool_funcs.thread_begin      = omptool_callback__thread_begin;
-        omptool_funcs.thread_end        = omptool_callback__thread_end;
-        omptool_funcs.parallel_begin    = omptool_callback__parallel_begin;
-        omptool_funcs.parallel_end      = omptool_callback__parallel_end;
-        omptool_funcs.task_create       = omptool_callback__task_create;
-        omptool_funcs.task_schedule     = omptool_callback__task_schedule;
-        omptool_funcs.implicit_task     = omptool_callback__implicit_task;
-        omptool_funcs.sync_region       = omptool_callback__sync_region;
-    }
+    /* The following callbacks are centralized and always registered, even if both
+     * omptm and talp are disabled. It is deciced this way to allow event tracing and
+     * debugging events entry via verbose messages. */
+    omptool_funcs = (const omptool_callback_funcs_t) {
+        .thread_begin      = omptool_callback__thread_begin,
+        .thread_end        = omptool_callback__thread_end,
+        .parallel_begin    = omptool_callback__parallel_begin,
+        .parallel_end      = omptool_callback__parallel_end,
+        .task_create       = omptool_callback__task_create,
+        .task_schedule     = omptool_callback__task_schedule,
+        .implicit_task     = omptool_callback__implicit_task,
+        .sync_region       = omptool_callback__sync_region,
+    };
 
     /* The following function is a custom callback and it's only used in the
      * experimental role-shift thread manager */
