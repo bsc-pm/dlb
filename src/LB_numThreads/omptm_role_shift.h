@@ -21,6 +21,7 @@
 #define OMPTM_ROLE_SHIFT_H
 
 #include "LB_numThreads/omp-tools.h"
+#include "LB_numThreads/omptool.h"
 #include "support/options.h"
 
 typedef struct omptool_parallel_data_t omptool_parallel_data_t;
@@ -43,6 +44,7 @@ void omptm_role_shift__task_create(void);
 void omptm_role_shift__task_complete(void);
 void omptm_role_shift__task_switch(void);
 
+extern const omptool_event_funcs_t omptm_role_shift_events_vtable;
 
 /* Functions for testing purposes */
 int  omptm_role_shift_testing__get_num_free_agents(void);

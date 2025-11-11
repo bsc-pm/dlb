@@ -426,6 +426,30 @@ void omptm_role_shift__task_switch(void) {
 
 
 /*********************************************************************************/
+/*  Vtable for handling omptool events                                           */
+/*********************************************************************************/
+
+const omptool_event_funcs_t omptm_role_shift_events_vtable = (const omptool_event_funcs_t) {
+    .init                           = omptm_role_shift__init,
+    .finalize                       = omptm_role_shift__finalize,
+    .into_mpi                       = omptm_role_shift__IntoBlockingCall,
+    .outof_mpi                      = omptm_role_shift__OutOfBlockingCall,
+    .lend_from_api                  = NULL,
+    .thread_begin                   = omptm_role_shift__thread_begin,
+    .thread_end                     = NULL,
+    .thread_role_shift              = omptm_role_shift__thread_role_shift,
+    .parallel_begin                 = omptm_role_shift__parallel_begin,
+    .parallel_end                   = omptm_role_shift__parallel_end,
+    .into_parallel_function         = NULL,
+    .outof_parallel_function        = NULL,
+    .into_parallel_implicit_barrier = NULL,
+    .task_create                    = omptm_role_shift__task_create,
+    .task_complete                  = omptm_role_shift__task_complete,
+    .task_switch                    = omptm_role_shift__task_switch,
+};
+
+
+/*********************************************************************************/
 /*    Functions for testing purposes                                             */
 /*********************************************************************************/
 

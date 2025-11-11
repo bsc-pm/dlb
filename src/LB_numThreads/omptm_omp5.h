@@ -21,6 +21,7 @@
 #define OMPTM_OMP5_H
 
 #include "LB_numThreads/omp-tools.h"
+#include "LB_numThreads/omptool.h"
 #include "support/options.h"
 
 typedef struct omptool_parallel_data_t omptool_parallel_data_t;
@@ -37,6 +38,8 @@ void omptm_omp5__into_parallel_function(
         omptool_parallel_data_t *parallel_data, unsigned int index);
 void omptm_omp5__into_parallel_implicit_barrier(
         omptool_parallel_data_t *parallel_data);
+
+extern const omptool_event_funcs_t omptm_omp5_events_vtable;
 
 /* Functions for testing purposes */
 typedef struct array_cpuid_t array_cpuid_t;

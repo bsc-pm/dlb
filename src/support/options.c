@@ -535,7 +535,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--ompt-thread-manager",
-        .default_value  = "none",
+        .default_value  = "omp5",
         .description    = OFFSET"OMPT Thread Manager version.",
         .offset         = offsetof(options_t, omptm_version),
         .type           = OPT_OMPTM_T,

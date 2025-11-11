@@ -512,115 +512,59 @@ static void omptool_callback__sync_region(
 /*  Function pointers setup                                                      */
 /*********************************************************************************/
 
-/* For testing purposes only, predefine function pointers */
-static bool test_funcs_init = false;
+/* For testing purposes only, override function pointers */
+static const omptool_event_funcs_t *test_talp_funcs = NULL;
+static const omptool_event_funcs_t *test_omptm_funcs = NULL;
 void omptool_testing__setup_event_fn_ptrs(
-        const omptool_event_funcs_t *talp_test_funcs,
-        const omptool_event_funcs_t *omptm_test_funcs) {
-    test_funcs_init = true;
-    talp_funcs = *talp_test_funcs;
-    omptm_funcs = *omptm_test_funcs;
+        const omptool_event_funcs_t *talp_fns,
+        const omptool_event_funcs_t *omptm_fns) {
+    test_talp_funcs = talp_fns;
+    test_omptm_funcs = omptm_fns;
 }
 
 static void setup_omp_fn_ptrs(omptm_version_t omptm_version, bool talp_openmp) {
-    if (!test_funcs_init) {
-        /* talp_funcs */
-        if (talp_openmp) {
-            verbose(VB_OMPT, "Enabling OMPT support for TALP");
-            talp_funcs = (const omptool_event_funcs_t) {
-                .init               = talp_openmp_init,
-                .finalize           = talp_openmp_finalize,
-                .into_mpi           = NULL,
-                .outof_mpi          = NULL,
-                .lend_from_api      = NULL,
-                .thread_begin       = talp_openmp_thread_begin,
-                .thread_end         = talp_openmp_thread_end,
-                .thread_role_shift  = NULL,
-                .parallel_begin     = talp_openmp_parallel_begin,
-                .parallel_end       = talp_openmp_parallel_end,
-                .into_parallel_function
-                                    = talp_openmp_into_parallel_function,
-                .outof_parallel_function
-                                    = talp_openmp_outof_parallel_function,
-                .into_parallel_implicit_barrier
-                                    = talp_openmp_into_parallel_implicit_barrier,
-                .into_parallel_sync = talp_openmp_into_parallel_sync,
-                .outof_parallel_sync = talp_openmp_outof_parallel_sync,
-                .task_create        = talp_openmp_task_create,
-                .task_complete      = talp_openmp_task_complete,
-                .task_switch        = talp_openmp_task_switch,
-            };
-        } else {
-            talp_funcs = (const omptool_event_funcs_t) {};
-        }
 
-        /* omptm_funcs */
-        if (omptm_version == OMPTM_OMP5) {
-            omptm_funcs = (const omptool_event_funcs_t) {
-                .init               = omptm_omp5__init,
-                .finalize           = omptm_omp5__finalize,
-                .into_mpi           = omptm_omp5__IntoBlockingCall,
-                .outof_mpi          = omptm_omp5__OutOfBlockingCall,
-                .lend_from_api      = omptm_omp5__lend_from_api,
-                .thread_begin       = NULL,
-                .thread_end         = NULL,
-                .thread_role_shift  = NULL,
-                .parallel_begin     = omptm_omp5__parallel_begin,
-                .parallel_end       = omptm_omp5__parallel_end,
-                .into_parallel_function
-                                    = omptm_omp5__into_parallel_function,
-                .outof_parallel_function = NULL,
-                .into_parallel_implicit_barrier
-                                    = omptm_omp5__into_parallel_implicit_barrier,
-                .task_create        = NULL,
-                .task_complete      = NULL,
-                .task_switch        = NULL,
-            };
-        } else if (omptm_version == OMPTM_FREE_AGENTS) {
-            verbose(VB_OMPT, "Enabling experimental support with free agent threads");
-            omptm_funcs = (const omptool_event_funcs_t) {
-                .init               = omptm_free_agents__init,
-                .finalize           = omptm_free_agents__finalize,
-                .into_mpi           = omptm_free_agents__IntoBlockingCall,
-                .outof_mpi          = omptm_free_agents__OutOfBlockingCall,
-                .lend_from_api      = NULL,
-                .thread_begin       = omptm_free_agents__thread_begin,
-                .thread_end         = NULL,
-                .thread_role_shift  = NULL,
-                .parallel_begin     = omptm_free_agents__parallel_begin,
-                .parallel_end       = omptm_free_agents__parallel_end,
-                .into_parallel_function
-                                    = omptm_free_agents__into_parallel_function,
-                .outof_parallel_function = NULL,
-                .into_parallel_implicit_barrier = NULL,
-                .task_create        = omptm_free_agents__task_create,
-                .task_complete      = omptm_free_agents__task_complete,
-                .task_switch        = omptm_free_agents__task_switch,
-            };
-        }
-        else if (omptm_version == OMPTM_ROLE_SHIFT) {
-            verbose(VB_OMPT, "Enabling experimental support with role shift threads");
-            omptm_funcs = (const omptool_event_funcs_t) {
-                .init               = omptm_role_shift__init,
-                .finalize           = omptm_role_shift__finalize,
-                .into_mpi           = omptm_role_shift__IntoBlockingCall,
-                .outof_mpi          = omptm_role_shift__OutOfBlockingCall,
-                .lend_from_api      = NULL,
-                .thread_begin       = omptm_role_shift__thread_begin,
-                .thread_end         = NULL,
-                .thread_role_shift  = omptm_role_shift__thread_role_shift,
-                .parallel_begin     = omptm_role_shift__parallel_begin,
-                .parallel_end       = omptm_role_shift__parallel_end,
-                .into_parallel_function = NULL,
-                .outof_parallel_function = NULL,
-                .into_parallel_implicit_barrier = NULL,
-                .task_create        = omptm_role_shift__task_create,
-                .task_complete      = omptm_role_shift__task_complete,
-                .task_switch        = omptm_role_shift__task_switch,
-            };
+    /* talp_funcs */
+    if (talp_openmp) {
+        verbose(VB_OMPT, "Enabling OMPT support for TALP");
+        if (test_talp_funcs) {
+            talp_funcs = *test_talp_funcs;
         } else {
-            omptm_funcs = (const omptool_event_funcs_t) {};
+            talp_funcs = talp_events_vtable;
         }
+    } else {
+        talp_funcs = (const omptool_event_funcs_t) {};
+    }
+
+    /* omptm_funcs */
+    switch(omptm_version) {
+        case OMPTM_NONE:
+            omptm_funcs = (const omptool_event_funcs_t) {};
+            break;
+        case OMPTM_OMP5:
+            verbose(VB_OMPT, "Enabling OMPT support for OpenMP 5.0");
+            if (test_omptm_funcs) {
+                omptm_funcs = *test_omptm_funcs;
+            } else {
+                omptm_funcs = omptm_omp5_events_vtable;
+            }
+            break;
+        case OMPTM_FREE_AGENTS:
+            verbose(VB_OMPT, "Enabling experimental support with free agent threads");
+            if (test_omptm_funcs) {
+                omptm_funcs = *test_omptm_funcs;
+            } else {
+                omptm_funcs = omptm_free_agents_events_vtable;
+            }
+            break;
+        case OMPTM_ROLE_SHIFT:
+            verbose(VB_OMPT, "Enabling experimental support with role shift threads");
+            if (test_omptm_funcs) {
+                omptm_funcs = *test_omptm_funcs;
+            } else {
+                omptm_funcs = omptm_role_shift_events_vtable;
+            }
+            break;
     }
 
     /* The following callbacks are centralized and always registered, even if both
@@ -815,6 +759,12 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
 
     /* Enable OMPT only if requested */
     if (options.ompt) {
+
+        /* Disable --ompt-thread-manager if no LeWI or DROM */
+        if (!(options.lewi || options.drom)) {
+            options.omptm_version = OMPTM_NONE;
+        }
+
         /* Emit warning if OMP_WAIT_POLICY is not "passive" */
         if (options.lewi &&
                 options.omptm_version == OMPTM_OMP5 &&
