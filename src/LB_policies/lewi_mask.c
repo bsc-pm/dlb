@@ -24,7 +24,6 @@
 #include "LB_comm/shmem_async.h"
 #include "apis/dlb_errors.h"
 #include "support/debug.h"
-#include "support/gslist.h"
 #include "support/mask_utils.h"
 #include "support/small_array.h"
 #include "support/types.h"
@@ -55,8 +54,6 @@ typedef struct LeWI_mask_info {
     array_cpuid_t cpus_priority_array;
     cpu_set_t pending_reclaimed_cpus;       /* CPUs that become reclaimed after an MPI */
     cpu_set_t in_mpi_cpus;                  /* CPUs inside an MPI call */
-    GSList *cpuid_arrays;                   /* thread-private pointers to free at finalize */
-    GSList *cpuinfo_task_arrays;            /* thread-private pointers to free at finalize */
     pthread_mutex_t mutex;                  /* Mutex to protect lewi_info */
 } lewi_info_t;
 
@@ -146,53 +143,75 @@ static void lewi_mask_UpdateOwnershipInfo(const subprocess_descriptor_t *spd,
 /*********************************************************************************/
 
 /* Array of eligible CPUs. Usually a subset of the CPUs priority array. */
-static __thread array_cpuid_t _cpu_subset = {};
+static __thread array_cpuid_t *_cpu_subset = NULL;
+
+static pthread_key_t cpu_subset_key;
+static pthread_once_t cpu_subset_once = PTHREAD_ONCE_INIT;
+
+static void cpu_subset_destructor(void *p) {
+    ensure(p == _cpu_subset, "pthread key does not match _cpu_subset");
+    array_cpuid_t_destroy(_cpu_subset);
+    free(_cpu_subset);
+    _cpu_subset = NULL;
+}
+
+static void make_cpu_subset_key(void) {
+    /* Associate key with destructor, all worker threads will call it on pthread_exit */
+    pthread_key_create(&cpu_subset_key, cpu_subset_destructor);
+}
 
 static inline array_cpuid_t* get_cpu_subset(const subprocess_descriptor_t *spd) {
     /* Thread already has an allocated array, return it */
-    if (likely(_cpu_subset.items != NULL)) {
-        array_cpuid_t_clear(&_cpu_subset);
-        return &_cpu_subset;
+    if (likely(_cpu_subset != NULL)) {
+        array_cpuid_t_clear(_cpu_subset);
+        return _cpu_subset;
     }
 
     /* Otherwise, allocate */
-    array_cpuid_t_init(&_cpu_subset, node_size);
+    _cpu_subset = malloc(sizeof(array_cpuid_t));
+    array_cpuid_t_init(_cpu_subset, node_size);
 
-    /* Add pointer to lewi_info to deallocate later */
-    lewi_info_t *lewi_info = spd->lewi_info;
-    pthread_mutex_lock(&lewi_info->mutex);
-    {
-        lewi_info->cpuid_arrays =
-            g_slist_prepend(lewi_info->cpuid_arrays, &_cpu_subset);
-    }
-    pthread_mutex_unlock(&lewi_info->mutex);
+    /* Associate pointer to key to clean up array on thread destruction */
+    pthread_once(&cpu_subset_once, make_cpu_subset_key);
+    pthread_setspecific(cpu_subset_key, _cpu_subset);
 
-    return &_cpu_subset;
+    return _cpu_subset;
 }
 
 /* Array of cpuinfo tasks. For enabling or disabling CPUs. */
-static __thread array_cpuinfo_task_t _tasks = {};
+static __thread array_cpuinfo_task_t *_tasks = NULL;
+
+static pthread_key_t tasks_key;
+static pthread_once_t tasks_once = PTHREAD_ONCE_INIT;
+
+static void tasks_destructor(void *p) {
+    ensure(p == _tasks, "pthread key does not match _tasks");
+    array_cpuinfo_task_t_destroy(_tasks);
+    free(_tasks);
+    _tasks = NULL;
+}
+
+static void make_tasks_key(void) {
+    /* Associate key with destructor, all worker threads will call it on pthread_exit */
+    pthread_key_create(&tasks_key, tasks_destructor);
+}
 
 static inline array_cpuinfo_task_t* get_tasks(const subprocess_descriptor_t *spd) {
     /* Thread already has an allocated array, return it */
-    if (likely(_tasks.items != NULL)) {
-        array_cpuinfo_task_t_clear(&_tasks);
-        return &_tasks;
+    if (likely(_tasks != NULL)) {
+        array_cpuinfo_task_t_clear(_tasks);
+        return _tasks;
     }
 
     /* Otherwise, allocate */
-    array_cpuinfo_task_t_init(&_tasks, node_size*2);
+    _tasks = malloc(sizeof(array_cpuinfo_task_t));
+    array_cpuinfo_task_t_init(_tasks, node_size*2);
 
-    /* Add pointer to lewi_info to deallocate later */
-    lewi_info_t *lewi_info = spd->lewi_info;
-    pthread_mutex_lock(&lewi_info->mutex);
-    {
-        lewi_info->cpuinfo_task_arrays =
-            g_slist_prepend(lewi_info->cpuinfo_task_arrays, &_tasks);
-    }
-    pthread_mutex_unlock(&lewi_info->mutex);
+    /* Associate pointer to key to clean up structure on thread destruction */
+    pthread_once(&tasks_once, make_tasks_key);
+    pthread_setspecific(tasks_key, _tasks);
 
-    return &_tasks;
+    return _tasks;
 }
 
 
@@ -328,30 +347,12 @@ int lewi_mask_Finalize(subprocess_descriptor_t *spd) {
         resolve_cpuinfo_tasks(spd, tasks);
     }
 
-    /* Deallocate thread private arrays */
-    lewi_info_t *lewi_info = spd->lewi_info;
-    pthread_mutex_lock(&lewi_info->mutex);
-    {
-        for (GSList *node = lewi_info->cpuid_arrays;
-                node != NULL;
-                node = node->next) {
-            array_cpuid_t *array = node->data;
-            array_cpuid_t_destroy(array);
-        }
-        g_slist_free(lewi_info->cpuid_arrays);
-
-        for (GSList *node = lewi_info->cpuinfo_task_arrays;
-                node != NULL;
-                node = node->next) {
-            array_cpuid_t *array = node->data;
-            array_cpuid_t_destroy(array);
-        }
-        g_slist_free(lewi_info->cpuinfo_task_arrays);
-    }
-    pthread_mutex_unlock(&lewi_info->mutex);
-
+    /* Deallocate main thread arrays (worker threads do it on thread_exit) */
+    if (_cpu_subset != NULL) cpu_subset_destructor(_cpu_subset);
+    if (_tasks != NULL) tasks_destructor(_tasks);
 
     /* Deallocate private structure */
+    lewi_info_t *lewi_info = spd->lewi_info;
     array_cpuid_t_destroy(&lewi_info->cpus_priority_array);
     free(lewi_info);
     lewi_info = NULL;
