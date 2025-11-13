@@ -458,16 +458,27 @@ static inline bool is_talp_sample_mine(const talp_sample_t *sample) {
 }
 
 static void talp_dealloc_samples(const subprocess_descriptor_t *spd) {
-    /* This only nullifies the current thread pointer, but this function is
-     * only really important when TALP is finalized and then initialized again
-     */
+
+    /* Warning about _tls_sample in worker threads:
+     * worker threads do not currently deallocate their sample.
+     * In some cases, it might happen that a worker thread exits without
+     * the main thread reducing its sample, so in these cases the sample
+     * needs to outlive the thread.
+     * The main thread could deallocate it at this point, but then the
+     * TLS variable would be broken if TALP is reinitialized again.
+     * For now we will keep it like this and will revisit if needed. */
+
+    /* Deallocate main thread sample */
+    free(_tls_sample);
     _tls_sample = NULL;
 
+    /* Deallocate samples list */
     talp_info_t *talp_info = spd->talp_info;
     pthread_mutex_lock(&talp_info->samples_mutex);
     {
         free(talp_info->samples);
         talp_info->samples = NULL;
+        talp_info->ncpus = 0;
     }
     pthread_mutex_unlock(&talp_info->samples_mutex);
 }
