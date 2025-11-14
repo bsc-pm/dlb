@@ -1,0 +1,34 @@
+# What is a CITATION.cff file?
+# See https://citation-file-format.github.io/
+
+cff-version: 1.2.0
+title: DLB
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Marta
+    family-names: Garcia-Gasulla
+    orcid: 'https://orcid.org/0000-0003-3682-9905'
+  - given-names: Victor
+    family-names: Lopez
+    orcid: 'https://orcid.org/0000-0002-3113-9166'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.15000657
+repository-code: 'https://gitlab.pm.bsc.es/dlb/dlb'
+url: 'https://pm.bsc.es/dlb'
+abstract: >-
+  DLB is a dynamic library designed to speed up and analyze
+  HPC hybrid applications (i.e., two levels of parallelism)
+  by improving the load balance of the outer level of
+  parallelism (e.g., MPI) by dynamically redistributing the
+  computational resources at the inner level of parallelism
+  (e.g., OpenMP). at run time and additionally provides
+  efficiency metrics.
+keywords:
+  - Performance Measurment
+  - Dynamic Load Balancing
+  - High Performance Computing
+license: LGPL-3.0-only
