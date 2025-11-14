@@ -175,5 +175,7 @@ int main (int argc, char *argv[]) {
         assert( DLB_Finalize_sp(spd1) == DLB_SUCCESS );
     }
 
+    mu_finalize();
+
     return 0;
 }

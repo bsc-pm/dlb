@@ -169,5 +169,7 @@ int main( int argc, char **argv ) {
         finalize_subprocess(&spd2);
     }
 
+    mu_finalize();
+
     return 0;
 }

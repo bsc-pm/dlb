@@ -147,5 +147,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_cpuinfo__finalize(p1_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     assert( shmem_cpuinfo__finalize(p2_pid, SHMEM_KEY, 0) == DLB_SUCCESS );
 
+    mu_finalize();
+
     return 0;
 }

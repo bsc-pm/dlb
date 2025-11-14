@@ -488,5 +488,7 @@ int main (int argc, char *argv[]) {
     assert( shmem_procinfo__finalize(p2_pid, false, thread_spd->options.shm_key,
                 thread_spd->options.shm_size_multiplier) == DLB_SUCCESS );
 
+    mu_finalize();
+
     return 0;
 }

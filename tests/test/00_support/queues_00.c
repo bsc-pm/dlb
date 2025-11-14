@@ -780,5 +780,8 @@ int main(int argc, char *argv[]) {
 
         queue__destroy(queue);
     }
+
+    mu_finalize();
+
     return 0;
 }

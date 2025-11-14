@@ -375,5 +375,7 @@ int main( int argc, char **argv ) {
     free(victims);
     array_cpuid_t_destroy(&cpus_priority_array);
 
+    mu_finalize();
+
     return 0;
 }

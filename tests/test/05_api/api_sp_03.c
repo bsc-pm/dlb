@@ -119,5 +119,7 @@ int main(int argc, char *argv[]) {
         assert( DLB_Finalize_sp(handlers[i]) == DLB_SUCCESS );
     }
 
+    mu_finalize();
+
     return 0;
 }

@@ -419,5 +419,7 @@ int main( int argc, char **argv ) {
     assert( DLB_Finalize_sp(handler1) == DLB_SUCCESS );
     assert( DLB_Finalize_sp(handler2) == DLB_SUCCESS );
 
+    mu_finalize();
+
     return 0;
 }

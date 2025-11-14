@@ -344,5 +344,7 @@ int main(int argc, char *argv[]) {
     assert( DLB_Finalize_sp(sp3_handler) == DLB_SUCCESS );
     assert( DLB_Finalize_sp(sp4_handler) == DLB_SUCCESS );
 
+    mu_finalize();
+
     return 0;
 }

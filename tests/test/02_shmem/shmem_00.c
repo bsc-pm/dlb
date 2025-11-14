@@ -190,5 +190,8 @@ int main(int argc, char **argv) {
     while(wait(&wstatus) > 0) {
         if (!WIFEXITED(wstatus)) return -1;
     }
+
+    mu_finalize();
+
     return 0;
 }

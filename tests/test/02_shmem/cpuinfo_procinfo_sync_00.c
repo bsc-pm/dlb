@@ -167,5 +167,7 @@ int main( int argc, char **argv ) {
     assert( shmem_procinfo__finalize(pid, false, SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)
             == DLB_SUCCESS );
 
+    mu_finalize();
+
     return 0;
 }

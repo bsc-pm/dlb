@@ -566,11 +566,16 @@ void mu_finalize( void ) {
     for (unsigned int i = 0; i < sys.num_nodes; ++i) {
         CPU_FREE(sys.node_masks[i].set);
     }
+    free(sys.node_masks);
 
     /* Cores per core id */
     for (unsigned int i = 0; i < sys.num_cores; ++i) {
         CPU_FREE(sys.core_masks_by_coreid[i].set);
     }
+    free(sys.core_masks_by_coreid);
+
+    /* Cores per CPU id (just references) */
+    free(sys.core_masks_by_cpuid);
 
     sys = (const mu_system_loc_t) {};
     mu_initialized = false;

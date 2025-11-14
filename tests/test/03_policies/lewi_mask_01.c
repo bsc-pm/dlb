@@ -749,5 +749,7 @@ int main( int argc, char **argv ) {
         }
     }
 
+    mu_finalize();
+
     return 0;
 }

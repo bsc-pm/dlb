@@ -110,5 +110,7 @@ int main( int argc, char **argv ) {
                     SHMEM_KEY, SHMEM_SIZE_MULTIPLIER)                   == DLB_SUCCESS );
     }
 
+    mu_finalize();
+
     return 0;
 }

@@ -486,5 +486,7 @@ int main(int argc, char **argv) {
         assert( DLB_DROM_Detach() == DLB_SUCCESS );
     }
 
+    mu_finalize();
+
     return 0;
 }

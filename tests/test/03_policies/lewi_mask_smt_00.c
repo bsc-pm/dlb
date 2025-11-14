@@ -287,5 +287,7 @@ int main(int argc, char *arg[]) {
         assert( shmem_async_finalize(spd2.id) == DLB_SUCCESS );
     }
 
+    mu_finalize();
+
     return 0;
 }

@@ -350,5 +350,7 @@ int main(int argc, char *argv[]) {
     assert( lewi_async_Finalize(&spd4) == DLB_SUCCESS );
     assert( shmem_async_finalize(spd4.id) == DLB_SUCCESS );
 
+    mu_finalize();
+
     return 0;
 }

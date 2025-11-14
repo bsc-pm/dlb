@@ -118,5 +118,7 @@ int main(int argc, char *argv[]) {
         assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
     }
 
+    mu_finalize();
+
     return 0;
 }

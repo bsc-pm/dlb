@@ -226,5 +226,7 @@ int main(int argc, char *argv[]) {
                     spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
     }
 
+    mu_finalize();
+
     return 0;
 }

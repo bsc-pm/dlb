@@ -197,5 +197,7 @@ int main( int argc, char **argv ) {
     assert( minor == (DLB_VERSION >> 8  & 0xff) );
     assert( patch == (DLB_VERSION       & 0xff) );
 
+    mu_finalize();
+
     return 0;
 }

@@ -634,5 +634,7 @@ int main(int argc, char *argv[]) {
         assert( nreqs == 0 );
     }
 
+    mu_finalize();
+
     return 0;
 }

@@ -104,5 +104,7 @@ int main(int argc, char **argv) {
     assert( waitpid(pid, &wstatus, 0) > 0 );
     assert( WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGABRT );
 
+    mu_finalize();
+
     return 0;
 }

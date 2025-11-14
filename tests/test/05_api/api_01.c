@@ -341,5 +341,7 @@ int main(int argc, char **argv) {
         shmem_finalize(handler, NULL);
     }
 
+    mu_finalize();
+
     return 0;
 }

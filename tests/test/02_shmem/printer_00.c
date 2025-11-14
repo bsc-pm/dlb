@@ -192,5 +192,7 @@ int main(int argc, char *argv[]) {
     assert( shmem_talp__finalize(p1_pid) == DLB_SUCCESS );
     assert( shmem_talp__finalize(p2_pid) == DLB_SUCCESS );
 
+    mu_finalize();
+
     return 0;
 }
