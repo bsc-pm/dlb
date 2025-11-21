@@ -248,26 +248,26 @@ AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
 # Configure library versions
 ################################################################################
 
-AC_MSG_CHECKING([whether to compile the debug version])
+AC_MSG_CHECKING([whether to compile the debug variant library])
 AC_ARG_ENABLE([debug],
-    AS_HELP_STRING([--disable-debug], [do not compile debug version library]),
+    AS_HELP_STRING([--disable-debug], [do not compile debug variant library]),
     [], dnl Implicit: enable_debug=$enableval
     [enable_debug=yes]
 )
 AC_MSG_RESULT([$enable_debug])
 
-AC_MSG_CHECKING([whether to compile the instrumentation version])
+AC_MSG_CHECKING([whether to compile the instrumentation variant library])
 AC_ARG_ENABLE([instrumentation],
-    AS_HELP_STRING([--disable-instrumentation], [do not compile instrumentation version library]),
+    AS_HELP_STRING([--disable-instrumentation], [do not compile instrumentation variant library]),
    [], dnl Implicit: enable_instrumentation=$enableval
    [enable_instrumentation=yes]
 )
 AC_MSG_RESULT([$enable_instrumentation])
 
-AC_MSG_CHECKING([whether to compile the instrumentation-debug version])
+AC_MSG_CHECKING([whether to compile the instrumentation-debug variant library])
 AC_ARG_ENABLE([instrumentation-debug],
    AS_HELP_STRING([--disable-instrumentation-debug],
-                  [do not compile instrumentation debug version library]),
+                  [do not compile instrumentation debug variant library]),
    [], dnl Implicit: enable_instrumentation_debug=$enableval
    [enable_instrumentation_debug=yes]
 )
@@ -571,15 +571,24 @@ summary_title="$PACKAGE_STRING configuration summary"
 summary_title_len="${#summary_title}"
 summary_title_underline="$(printf '%*s' "$summary_title_len" | tr ' ' '=')"
 
+# Generate variant strings
+AS_IF([test "x$enable_debug" = xyes],
+      [debug_variant="yes (installed as libdlb_dbg.so)"], [debug_variant=no])
+AS_IF([test "x$enable_instrumentation" = xyes],
+      [instr_variant="yes (installed as libdlb_instr.so)"], [instr_variant=no])
+AS_IF([test "x$enable_instrumentation_debug" = xyes],
+      [instr_debug_variant="yes (installed as libdlb_instr_dbg.so)"], [instr_debug_variant=no])
+
 # Summary
 AS_ECHO(["
 $summary_title
 $summary_title_underline
 
 Installation prefix       : $prefix
-Debug version             : $enable_debug
-Instrumentation version   : $enable_instrumentation
-Instr + debug version     : $enable_instrumentation_debug
+Main library              : yes
+Debug variant             : $debug_variant
+Instrumentation variant   : $instr_variant
+Instr + debug variant     : $instr_debug_variant
 External libraries:"])
 
 AS_ECHO_N(["
@@ -588,9 +597,9 @@ AS_IF([test "x$with_mpi" = xno], [
     AS_ECHO(["no"])
 ], [
     AS_ECHO(["yes
-  F08 bindings:   $mpi_f08
-  MPI_CPPFLAGS:   $MPI_CPPFLAGS
-  MPI_LDFLAGS:    $MPI_LDFLAGS"])
+  F08 bindings:       $mpi_f08
+  MPI_CPPFLAGS:       $MPI_CPPFLAGS
+  MPI_LDFLAGS:        $MPI_LDFLAGS"])
 ])
 
 AS_ECHO_N(["
@@ -599,8 +608,8 @@ AS_IF([test "x$with_hwloc" = xno], [
     AS_ECHO(["no"])
 ], [
     AS_ECHO(["yes
-  HWLOC_CPPFLAGS: $HWLOC_CPPFLAGS
-  HWLOC_LDFLAGS:  $HWLOC_LDFLAGS"])
+  HWLOC_CPPFLAGS:     $HWLOC_CPPFLAGS
+  HWLOC_LDFLAGS:      $HWLOC_LDFLAGS"])
 ])
 
 AS_ECHO_N(["
@@ -609,8 +618,8 @@ AS_IF([test "x$with_papi" = xno], [
     AS_ECHO(["no"])
 ], [
     AS_ECHO(["yes
-  PAPI_CPPFLAGS: $PAPI_CPPFLAGS
-  PAPI_LDFLAGS:  $PAPI_LDFLAGS"])
+  PAPI_CPPFLAGS:      $PAPI_CPPFLAGS
+  PAPI_LDFLAGS:       $PAPI_LDFLAGS"])
 ])
 
 AS_ECHO_N(["
@@ -619,8 +628,8 @@ AS_IF([test "x$with_cuda" = xno], [
     AS_ECHO(["no"])
 ], [
     AS_ECHO(["yes
-  CUDA_CPPFLAGS: $CUDA_CPPFLAGS
-  CUDA_LDFLAGS:  $CUDA_LDFLAGS"])
+  CUDA_CPPFLAGS:      $CUDA_CPPFLAGS
+  CUDA_LDFLAGS:       $CUDA_LDFLAGS"])
 ])
 
 AS_ECHO_N(["
@@ -629,6 +638,7 @@ AS_IF([test "x$with_rocm" = xno], [
     AS_ECHO(["no"])
 ], [
     AS_ECHO(["yes
-  ROCM_CPPFLAGS: $ROCM_CPPFLAGS
-  ROCM_LDFLAGS:  $ROCM_LDFLAGS"])
+  ROCM_CPPFLAGS:      $ROCM_CPPFLAGS
+  ROCM_LDFLAGS (v2):  $ROCM_ROCPROFV2_LDFLAGS
+  ROCM_LDFLAGS (sdk): $ROCM_ROCPROFSDK_LDFLAGS"])
 ])

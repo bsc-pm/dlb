@@ -33,4 +33,6 @@ void unload_plugins(const char *plugin_list);
 
 void plugin_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid);
 
+void* plugin_get_symbol_from_plugin(const char *symbol, const char *plugin_name);
+
 #endif /* PLUGIN_MANAGER_H */

@@ -18,7 +18,7 @@
 /*********************************************************************************/
 
 #include "plugins/plugin.h"
-#include "plugins/plugin_verbose.h"
+#include "plugins/plugin_utils.h"
 #include "plugins/gpu_record_utils.h"
 #include "support/dlb_common.h"
 #include "talp/talp_gpu.h"
@@ -30,11 +30,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 
 /*********************************************************************************/
-/*  ROCm profiling                                                               */
+/*  ROCm profiling (rocprofilerv2)                                               */
 /*********************************************************************************/
 
 
@@ -70,7 +69,7 @@ static rocprofiler_session_id_t _session_id;
 static rocprofiler_buffer_id_t _buffer_id;
 
 
-/* ---Host runtime events ------------------------------------------------------ */
+/* --- Host runtime events ----------------------------------------------------- */
 
 /* Callback for the HIP API called by the host */
 static void HIP_API_callback(rocprofiler_record_tracer_t tracer_record,
@@ -108,13 +107,6 @@ static gpu_records_buffer_t memory_buffer = {};
 /* After flushing the buffers, advance safe_timestamp so that any future records
  * with start times earlier than this are ignored. */
 static uint64_t safe_timestamp = 0;
-
-
-static int64_t get_timestamp(void) {
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_sec * 1000000000LL + t.tv_nsec;
-}
 
 
 /* Called by ROCPROFILER when a buffer needs to be flushed.
@@ -230,7 +222,7 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
 }
 
 
-/* --- Plugin functions  ------------------------------------------------------- */
+/* --- Plugin functions -------------------------------------------------------- */
 
 /* Function called externally by TALP to force flushing buffers */
 static void rocprofilerv2_plugin_update_sample(void) {

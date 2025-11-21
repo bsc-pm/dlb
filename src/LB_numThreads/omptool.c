@@ -815,6 +815,7 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
         /* Otherwise, finalize DLB if init succeeded */
         if (dlb_initialized_through_ompt) {
             DLB_Finalize();
+            dlb_initialized_through_ompt = false;
         }
 
         warning("DLB could not register itself as OpenMP tool");
