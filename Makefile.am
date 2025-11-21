@@ -256,6 +256,12 @@ COMMON_SRCS = \
 	src/apis/DLB_interface_talp.c           \
 	$(END)
 
+# If rocprofiler-sdk plugin is enabled, we need to add the configure symbol
+# to the main library, since it cannot be part of the plugin.
+if ROCM_ROCPROFSDK_PLUGIN
+COMMON_SRCS += src/plugins/rocprofiler_sdk_configure.c
+endif
+
 noinst_LTLIBRARIES += libdlb_common.la
 libdlb_common_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_common_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
@@ -620,7 +626,7 @@ CUPTI_SRCS = \
 	src/plugins/cupti_plugin.c      \
 	src/plugins/gpu_record_utils.c  \
 	src/plugins/gpu_record_utils.h  \
-	src/plugins/plugin_verbose.h    \
+	src/plugins/plugin_utils.h      \
 	$(END)
 
 lib_LTLIBRARIES += libdlb_cupti.la
@@ -633,20 +639,38 @@ endif #CUPTI_PLUGIN
 #********************************************************************************
 # libdlb_rocprofilerv2.so
 #********************************************************************************
-if ROCM_PLUGIN
+if ROCM_ROCPROFV2_PLUGIN
 ROCPROFILERV2_SRCS = \
 	src/plugins/rocprofilerv2_plugin.c      \
 	src/plugins/gpu_record_utils.c          \
 	src/plugins/gpu_record_utils.h          \
-	src/plugins/plugin_verbose.h            \
+	src/plugins/plugin_utils.h              \
 	$(END)
 
 lib_LTLIBRARIES += libdlb_rocprofilerv2.la
 libdlb_rocprofilerv2_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(ROCM_CPPFLAGS)
 libdlb_rocprofilerv2_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
-libdlb_rocprofilerv2_la_LDFLAGS = $(AM_LDFLAGS) $(ROCM_LDFLAGS)
+libdlb_rocprofilerv2_la_LDFLAGS = $(AM_LDFLAGS) $(ROCM_ROCPROFV2_LDFLAGS)
 libdlb_rocprofilerv2_la_SOURCES = $(ROCPROFILERV2_SRCS)
-endif #ROCM_PLUGIN
+endif #ROCM_ROCPROFV2_PLUGIN
+
+#********************************************************************************
+# libdlb_rocprofiler-sdk.so
+#********************************************************************************
+if ROCM_ROCPROFSDK_PLUGIN
+ROCPROFILER_SDK_SRCS = \
+	src/plugins/rocprofiler_sdk_plugin.c    \
+	src/plugins/gpu_record_utils.c          \
+	src/plugins/gpu_record_utils.h          \
+	src/plugins/plugin_utils.h              \
+	$(END)
+
+lib_LTLIBRARIES += libdlb_rocprofiler-sdk.la
+libdlb_rocprofiler_sdk_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(ROCM_CPPFLAGS)
+libdlb_rocprofiler_sdk_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_rocprofiler_sdk_la_LDFLAGS = $(AM_LDFLAGS) $(ROCM_ROCPROFSDK_LDFLAGS)
+libdlb_rocprofiler_sdk_la_SOURCES = $(ROCPROFILER_SDK_SRCS)
+endif #ROCM_ROCPROFSDK_PLUGIN
 
 #********************************************************************************
 # Support binaries

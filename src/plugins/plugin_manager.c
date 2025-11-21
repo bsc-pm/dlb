@@ -215,3 +215,22 @@ void plugin_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid) {
         plugin->api->get_affinity(buffer, buffer_size, full_uuid);
     }
 }
+
+void* plugin_get_symbol_from_plugin(const char *symbol, const char *plugin_name) {
+
+    void *symbol_addr = NULL;
+
+    for (GSList *node = loaded_plugins;
+            node != NULL;
+            node = node->next) {
+
+        plugin_t *plugin = node->data;
+        if (strcmp(plugin->info.name, plugin_name) == 0) {
+            /* found plugin, look for symbol */
+            symbol_addr = dlsym(plugin->handle, "rocprofiler_configure");
+            break;
+        }
+    }
+
+    return symbol_addr;
+}

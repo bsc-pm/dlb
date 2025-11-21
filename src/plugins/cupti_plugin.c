@@ -22,7 +22,7 @@
 #endif
 
 #include "plugins/plugin.h"
-#include "plugins/plugin_verbose.h"
+#include "plugins/plugin_utils.h"
 #include "plugins/gpu_record_utils.h"
 #include "support/dlb_common.h"
 #include "talp/talp_gpu.h"
@@ -38,7 +38,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 
 
@@ -223,7 +222,7 @@ static bool cupti_plugin_enabled = false;
 static CUpti_SubscriberHandle subscriber;
 
 
-/* ---Host runtime events ------------------------------------------------------ */
+/* --- Host runtime events ----------------------------------------------------- */
 
 /* CUDA API Runtime calls */
 static void CUPTIAPI GetEventValueCallback(
@@ -307,13 +306,6 @@ static gpu_records_buffer_t memory_buffer = {};
 /* After flushing the buffers, advance safe_timestamp so that any future records
  * with start times earlier than this are ignored. */
 static uint64_t safe_timestamp = 0;
-
-
-static int64_t get_timestamp(void) {
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_sec * 1000000000LL + t.tv_nsec;
-}
 
 
 /* Copy relevant information (e.g., start and end timestamps) into our

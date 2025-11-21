@@ -17,11 +17,21 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef PLUGIN_VERBOSE_H
-#define PLUGIN_VERBOSE_H
+#ifndef PLUGIN_UTILS_H
+#define PLUGIN_UTILS_H
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
+
+static inline int64_t get_timestamp(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec * 1000000000LL + t.tv_nsec;
+}
+
 
 static inline int plugin_is_verbose() {
     static int initialized = 0;
@@ -41,5 +51,5 @@ static inline int plugin_is_verbose() {
     do { if (plugin_is_verbose()) fprintf(stderr, "[DLB PLUGIN] " fmt, ##__VA_ARGS__); } while (0)
 
 
-#endif /* PLUGIN_VERBOSE_H */
+#endif /* PLUGIN_UTILS_H */
 
