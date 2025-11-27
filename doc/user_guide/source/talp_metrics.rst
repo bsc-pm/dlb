@@ -2,10 +2,26 @@
 .. highlight:: bash
 .. _talp_metrics:
 
-******************************************************
+************************
 TALP Performance metrics
-******************************************************
+************************
 
+TALP can collect metrics from both the host (CPUs) and GPUs. These metrics
+provide insight into how computational resources are utilized, where
+bottlenecks occur, and how different programming models (MPI, OpenMP, CUDA,
+HIP, etc.) interact.
+
+For clarity, the metrics are divided into two categories:
+
+- **Host-only metrics:** capture performance for CPU-only executions,
+  including MPI, OpenMP, or hybrid MPI+OpenMP applications.
+
+- **Hybrid CPU+GPU metrics:** capture performance for executions that involve
+  both the host and GPU runtimes. This includes CUDA, HIP, and combinations
+  with MPI or OpenMP.
+
+Host-only metrics
+=================
 
 The performance metrics reported by TALP are derived similarly as the `POP metrics <https://pop-coe.eu/node/69>`_.
 
@@ -15,7 +31,7 @@ The figure below shows the hierarchy of metrics which categorises efficiency-los
 .. image:: images/talp-efficiency-models.*
 
 
-TALP is able to generate these metrics for :ref:`every region that is added.<talp-custom-regions>`
+TALP is able to generate these metrics for :ref:`every region that is added<talp-custom-regions>`.
 
 Below, we will briefly explain how the metrics are computed.
 
@@ -25,9 +41,6 @@ OpenMP threads, and that all OpenMP threads execute the same parallel regions.
 .. note::
     TALP is actually able to handle applications where these conditions don't hold, but we chose to keep the derivations as clear as possible.
 
-
-How the metrics are computed 
-==============================
 
 First we introduce some common notion which we use to classify the execution time. 
 Let :math:`N` be the number of MPI processes, :math:`M` be the number of OpenMP threads per process and :math:`P:` the number of parallel regions of each thread.
@@ -155,3 +168,25 @@ On the MPI side, reducing the time of the communication would also reduce the ti
 Despite both programming models might be at fault, the current formulation of the hybrid model classifies this situation under the OpenMP metrics.
 
 There is an ongoing work to incorporate interactions between MPI and OpenMP to the hybrid efficiencies model.
+
+Host and GPU metrics
+====================
+
+To obtain hybrid CPU+GPU metrics, DLB must be used with one of the available GPU plugins.
+See :ref:`talp_nvidia` and :ref:`talp_amd` for more information.
+
+The figures below show the hierarchies of metrics for hybrid executions, now
+split to distinguish between host and GPU domains, while still categorizing
+efficiency losses according to the relevant programming models.
+
+.. image:: images/talp-efficiency-models-host.*
+   :scale: 70%
+   :align: center
+
+.. raw:: html
+
+   <br><br>
+
+.. image:: images/talp-efficiency-models-device.*
+   :scale: 70%
+   :align: center

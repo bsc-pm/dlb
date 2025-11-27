@@ -413,8 +413,10 @@ static const opts_dict_t options_dictionary[] = {
         .default_value  = "",
         .description    = OFFSET"Write extended TALP metrics to a file. If this option is\n"
                           OFFSET"omitted, the output is printed to stderr.\n"
-                          OFFSET"The accepted formats are JSON and CSV, which are selected\n"
-                          OFFSET"using the file extensions *.json and *.csv, respectively.\n"
+                          OFFSET"The accepted formats are JSON and CSV, selected based on the\n"
+                          OFFSET"file extensions *.json and *.csv, respectively. JSON files\n"
+                          OFFSET"will be overwritten if they already exist, while CSV files\n"
+                          OFFSET"will be appended as new rows.\n"
                           OFFSET"Any other file extension will result in plain text output.\n"
                           OFFSET"\n"
                           OFFSET"Deprecated formats:\n"
@@ -458,7 +460,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"one modifier can be used at a time. If neither is specified,\n"
                           OFFSET"'include:' is assumed by default.\n"
                           OFFSET"\n"
-                          OFFSET"The '<region-list>' can be a comma-separared list of regions\n"
+                          OFFSET"The '<region-list>' can be a comma-separated list of regions\n"
                           OFFSET"or a special token 'all' to refer to all regions. The global\n"
                           OFFSET"monitoring region may be specified with the special token\n"
                           OFFSET"'global'. If the modifier 'include:' is used, only the listed\n"
@@ -545,7 +547,7 @@ static const opts_dict_t options_dictionary[] = {
         .arg_name       = "--plugin",
         .default_value  = "",
         .description    = OFFSET"Select plugin to enable.\n"
-                          OFFSET"For now, only 'cupti' and 'rocprofilerv2'.\n"
+                          OFFSET"For now, only 'cupti', 'rocprofiler-sdk', and 'rocprofilerv2'.\n"
                           OFFSET"(Experimental)",
         .offset         = offsetof(options_t, plugins),
         .type           = OPT_STR_T,

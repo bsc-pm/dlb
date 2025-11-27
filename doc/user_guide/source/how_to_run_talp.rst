@@ -6,19 +6,22 @@
 TALP for monitoring the Programming Model efficiencies
 ******************************************************
 
-TALP is a low-overhead profiling tool used to collect performance metrics of MPI and OpenMP
-applications (OpenMP metrics are still experimental).
+TALP is a low-overhead profiling tool for collecting performance metrics from applications
+using MPI, OpenMP, OpenACC, CUDA, and HIP. Support for some of these programming models is
+still experimental.
 
-These metrics can either be queried at runtime through an :ref:`API <talp-api>` or :ref:`reported at the end of the exection.<talp_report_at_the_end>`
-You can get insight into the performance of different regions inside your code using :ref:`user-defined regions.<talp-custom-regions>`
+These metrics can be :ref:`reported at the end of the execution<talp_report_at_the_end>`
+or queried at runtime through the :ref:`API <talp-api>`, which allows users to
+define :ref:`user-defined regions<talp-custom-regions>` and gain detailed insight into
+the performance of specific parts of the code.
 
 An in-depth explanation of the metrics computed by TALP can be found :ref:`here <talp_metrics>`.
 
 :ref:`Here <talp_options>` you can get an overview of the different runtime options available when using TALP.
 
-A good way to get started is to just run your application and let TALP :ref:`report the metrics at the end of the execution.<talp_report_at_the_end>`
+A good way to get started is to just run your application and let TALP :ref:`report the metrics at the end of the execution<talp_report_at_the_end>`.
 
-If you already have some executions of your application using TALP, you might wanna check out :ref:`TALP-Pages <talp_pages>` which can generate some plots using your JSON files.
+If you already have some executions of your application using TALP, you might want to check out :ref:`TALP-Pages <talp_pages>` which can generate some plots using your JSON files.
 
 .. _talp_report_at_the_end:
 
@@ -36,7 +39,7 @@ After :ref:`installing DLB <dlb-installation>` you can use TALP depending on the
 .. _mpi-only_executions:
 
 MPI-only executions
-----------------------
+-------------------
 To gather and report the MPI-based performance metrics, you can run your application with ``libdlb_mpi`` pre-loaded and activate TALP by setting the ``DLB_ARGS``:
 
 .. code-block:: bash
@@ -61,7 +64,7 @@ You will get a report similar to this on ``stderr`` at the end of the execution:
 
 
 OpenMP-only executions
------------------------
+----------------------
 As TALP relies on the OMPT interface to inspect runtime behavior of OpenMP, the runtime implementation needs to support this.
 Below you can find a table of currently supported runtimes and the respective compilers.
 
@@ -113,8 +116,8 @@ If you are using any supported compiler in the table above to build your applica
 
 
 Hybrid (OpenMP+MPI) executions
---------------------------------
-For hybrid applications, TALP also needs a OpenMP runtime with OMPT support. 
+------------------------------
+For hybrid applications, TALP also needs an OpenMP runtime with OMPT support.
 Please make sure that you use a :ref:`supported compiler <talp_supported_compilers>` to build your application.
 
 The ``DLB_ARGS`` to configure TALP for hybrid applications are the same as for OpenMP ones, but this time ``libdlb_mpi.so`` is preloaded instead:
@@ -123,7 +126,7 @@ The ``DLB_ARGS`` to configure TALP for hybrid applications are the same as for O
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
-    export DLB_ARGS="--talp --ompt --talp-openmp" 
+    export DLB_ARGS="--talp --ompt --talp-openmp"
     # "--ompt" enables the OMPT tool in DLB
     # "--talp-openmp" enables collection of OpenMP metrics
     mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
@@ -148,6 +151,91 @@ After your program has finished you will get a report similar to this on ``stder
     DLB[<hostname>:<pid>]: ###   - OpenMP Scheduling efficiency:         1.00
     DLB[<hostname>:<pid>]: ###   - OpenMP Serialization efficiency:      0.75
 
+.. _talp_nvidia:
+
+NVIDIA GPU executions
+---------------------
+For GPU applications running on NVIDIA devices, DLB must be previously be configured with
+``--with-cuda`` (see :ref:`dlb-configure-flags`) so that it can locate the appropriate CUDA
+and CUPTI libraries.
+
+Usage is similar to the previous examples. The CUPTI plugin must be loaded explicitly
+with ``--plugin=cupti``. Additionally, if the application is not an MPI program,
+DLB may need to be auto-initialized with a special environment variable:
+
+.. code-block:: bash
+
+    # Pure GPU execution, DLB needs to be auto-intialized
+    export DLB_AUTO_INIT=1
+    export DLB_ARGS="--talp --plugin=cupti"
+    LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
+
+.. code-block:: bash
+
+    # Hybrid MPI+GPU execution, preload libdlb_mpi.so as usual, DLB_AUTO_INIT not needed
+    export DLB_ARGS="--talp --plugin=cupti"
+    mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
+
+A hybrid MPI+GPU execution will result in an output similar to this::
+
+    DLB[<hostname>:<pid>]: ############### Monitoring Region POP Metrics ################
+    DLB[<hostname>:<pid>]: ### Name:                                     Global
+    DLB[<hostname>:<pid>]: ### Elapsed Time:                             10.16 s
+    DLB[<hostname>:<pid>]: ### Host
+    DLB[<hostname>:<pid>]: ### ----
+    DLB[<hostname>:<pid>]: ### Parallel efficiency:                      0.99
+    DLB[<hostname>:<pid>]: ###  - MPI Parallel efficiency:               1.00
+    DLB[<hostname>:<pid>]: ###     - Communication efficiency:           1.00
+    DLB[<hostname>:<pid>]: ###     - Load Balance:                       1.00
+    DLB[<hostname>:<pid>]: ###        - In:                              1.00
+    DLB[<hostname>:<pid>]: ###        - Out:                             1.00
+    DLB[<hostname>:<pid>]: ###  - Device Offload efficiency:             0.99
+    DLB[<hostname>:<pid>]: ###
+    DLB[<hostname>:<pid>]: ### NVIDIA Device
+    DLB[<hostname>:<pid>]: ### -------------
+    DLB[<hostname>:<pid>]: ### Parallel efficiency:                      0.50
+    DLB[<hostname>:<pid>]: ###  - Load Balance:                          1.00
+    DLB[<hostname>:<pid>]: ###  - Communication efficiency:              1.00
+    DLB[<hostname>:<pid>]: ###  - Orchestration efficiency:              0.50
+
+
+.. _talp_amd:
+
+AMD GPU executions
+------------------
+
+For GPU applications running on AMD devices, DLB must be previously configured with
+``--with-rocm`` (see :ref:`dlb-configure-flags`) so that it can locate the appropriate
+ROCm libraries.
+
+The usage is very similar to the NVIDIA case, but there are two possible
+CUPTI-equivalent DLB plugins depending on the ROCm version:
+
+- ``rocprofilerv2``: uses ROCm's deprecated ``librocprofilerv2``. While functional
+  in some cases, it may fail to obtain metrics for reasons that are not fully understood.
+
+- ``rocprofiler-sdk``: uses the officially supported ``librocprofiler-sdk``,
+  available starting with ROCm 6.2 and the recommended method
+  for collecting performance metrics on AMD GPUs.
+
+In the examples below, we show the usage of the ``rocprofiler-sdk`` DLB plugin,
+which is implemented a bit differently and doesn't need any automatic
+initialization in case of non-MPI applications:
+
+.. code-block:: bash
+
+    # Pure GPU execution
+    export DLB_ARGS="--talp --plugin=rocprofiler-sdk"
+    LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
+
+.. code-block:: bash
+
+    # Hybrid MPI+GPU execution
+    export DLB_ARGS="--talp --plugin=rocprofiler-sdk"
+    mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
+
+Hybrid MPI+GPU executions on AMD devices produce output comparable to the
+NVIDIA example shown above. A separate example is omitted for brevity.
 
 .. _talp-custom-regions:
 
@@ -482,8 +570,10 @@ TALP option flags
 --talp-output-file=<path>
     Write extended TALP metrics to a file. If this option is omitted, the output is
     printed to stderr.
-    The accepted formats are JSON and CSV, which are selected using the file
-    extensions ``*.json`` and ``*.csv``, respectively. Any other file
+
+    The accepted formats are JSON and CSV, selected based on the file extensions
+    ``*.json`` and ``*.csv``, respectively. JSON files will be overwritten if they
+    already exist, while CSV files will be appended as new rows. Any other file
     extension will result in plain text output.
 
     **Deprecated formats:**
@@ -499,7 +589,7 @@ TALP option flags
     modifier can be used at a time. If neither is specified, ``include:`` is
     assumed by default.
 
-    The ``<region-list>`` can be a comma-separared list of regions or a special
+    The ``<region-list>`` can be a comma-separated list of regions or a special
     token ``all`` to refer to all regions. The global monitoring region may be
     specified with the special token ``global``. If the modifier ``include:``
     is used, only the listed regions will be enabled. If ``exclude:`` is used,
@@ -513,3 +603,8 @@ TALP option flags
     ``--talp-region-select=include:global,region3``,
     ``--talp-region-select=exclude:region4``.
 
+--plugin=<string>
+    Select plugin to enable.
+
+    For now, only ``cupti``, ``rocprofiler-sdk``, and ``rocprofilerv2``.
+    (Experimental)

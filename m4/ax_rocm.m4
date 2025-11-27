@@ -5,7 +5,7 @@ AC_DEFUN([AX_ROCM],
 [
     AC_MSG_CHECKING([for ROCm])
     AC_ARG_WITH([rocm],
-        AS_HELP_STRING([--with-rocm@<:@=DIR@:>@], [add ROCm support]),
+        AS_HELP_STRING([--with-rocm@<:@=DIR@:>@], [add ROCm support (requires rocprofilerv2 or rocprofiler-sdk)]),
         [], dnl Implicit: with_rocm=$enableval
         [with_rocm=check]
     )

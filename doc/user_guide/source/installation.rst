@@ -10,9 +10,9 @@ How to install DLB
 Build requirements
 ==================
 
-* A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC or IA64)
+* A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC, IA64, or RISC-V)
 * C compiler
-* Python 2.7 or higher (Python 3 recommended)
+* Python 2.7 or higher (Python 3 recommended; required for some optional components)
 
 
 Installation steps
@@ -20,8 +20,8 @@ Installation steps
 
 #. Get the latest DLB *tarball* from https://pm.bsc.es/dlb-downloads::
 
-    tar xzf dlb-x.y.tar.gz
-    cd dlb-x.y/
+    tar xzf dlb-x.y.z.tar.gz
+    cd dlb-x.y.z/
 
 #. Configure it, with optionally some of the :ref:`DLB configure flags<dlb-configure-flags>`::
 
@@ -29,7 +29,7 @@ Installation steps
 
 #. Build and install::
 
-    make
+    make [-j N]
     make install
 
 Other installation methods
@@ -67,26 +67,26 @@ DLB configure flags
 Debug and Instrumentation versions
 ----------------------------------
 
-By default, the *autotools scripts* will configure and build four versions of
-the library, the combination of the performance and debug versions with the
-instrumentation option. The basic library (performance, no-instrumentation)
-cannot be disabled but the other three can be freely disabled using the
-following flags.
+By default, the *autotools scripts* will configure and build four variants of
+the library, the combination of the performance and debug variants with the
+instrumentation variant. The main library ``libdlb.so`` (performance,
+no-instrumentation) cannot be disabled but the other three can be freely
+disabled using the following flags.
 
 --disable-debug
-    Disable Debug library.
+    Disable Debug variant library; otherwise installed as ``libdlb_dbg.so``.
 --disable-instrumentation
-    Disable Instrumentation library.
+    Disable Instrumentation variant library; otherwise installed as ``libdlb_instr.so``.
 --disable-instrumentation-debug
-    Disable Instrumentation-Debug library.
+    Disable Instrumentation-Debug variant library; otherwise installed as ``libdlb_instr_dbg.so``.
 
 Optional dependencies
 ---------------------
 
-MPI allows DLB to automatically detect some patterns about the load balance of
-the application. When MPI support is detected, another set of libraries with
-prefix ``libdlb_mpi*`` are built; refer to :ref:`mpi-interception` for more
-details.
+MPI allows :ref:`LeWI<lewi>` to automatically detect some patterns about the load balance of
+the application, and :ref:`TALP<talp>` to gather MPI metrics. When MPI support is detected,
+another set of libraries with prefix ``libdlb_mpi*`` are built; refer to
+:ref:`mpi-interception` for more details.
 
 --with-mpi=<mpi_prefix>
     Specify where to find the MPI libraries and include files.
@@ -104,6 +104,18 @@ measure the IPC of the instrumented regions.
 --with-papi=<papi_prefix>
     Specify where to find the PAPI libraries.
 
+CUPTI libraries from CUDA allow TALP to obtain performance metrics from NVIDIA GPUs.
+
+--with-cuda=<cuda_prefix>
+    Specify where to find CUDA and CUPTI libraries.
+
+ROCm may provide support for rocprofilerv2 (now deprecated and only half
+functional with DLB) and for the rocprofiler-sdk (available starting with ROCm
+6.2; recommended). These libraries enable TALP to collect performance metrics from AMD GPUs.
+
+--with-rocm=<rocm_prefix>
+    Specify where to find ROCm profiling libraries.
+
 .. _dlb-mpi-confgure-flags:
 
 Additional MPI configure flags
@@ -115,14 +127,16 @@ suppose a problem. If needed, DLB can be configured to generate additional
 libraries with only either C or Fortran MPI symbols.
 
 --enable-c-mpi-library
-    Compile also a DLB MPI library specific for C
+    Compile also a DLB MPI library specific for C, installed as ``libdlb_mpic.so``.
 --enable-fortran-mpi-library
-    Compile also a DLB MPI library specific for Fortran
+    Compile also a DLB MPI library specific for Fortran, installed as ``libdlb_mpif.so``.
 
-DLB will compile by default the Fortran 2008 MPI interface if a suitable
-Fortran compiler is found. This interface is needed to intercept such
-F08 MPI calls. However, if the compilation failed for some reason, the
-interface compilation may be disabled.
+DLB will compile by default the MPI Fortran 2008 MPI bindings if a suitable
+Fortran compiler is found and the MPI library supports them. These bindings
+are needed to intercept such MPI F08 calls. However, if the compilation failed
+for some reason, the bindings may be explicitly disabled.
 
---disable-f08-mpi-interface
-    Disable Fortran 2008 MPI interface
+--disable-f08-mpi-bindings
+    Disable MPI Fortran 2008 bindings
+--disable-mpi-f08ts-bindings
+    Disable MPI Fortran 2008 + TS 29113 bindings
