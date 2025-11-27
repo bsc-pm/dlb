@@ -25,10 +25,16 @@ program test
     use iso_c_binding
     implicit none
     include 'dlbf.h'
+    include 'dlbf_drom.h'
     integer, parameter :: N = 100
+    integer :: num_cpus
     integer :: err
     type(c_ptr) :: dlb_barrier_1, dlb_barrier_2
-    ! character(9), pointer :: barrier_name
+
+    ! Skip test on systems with fewer than 3 CPUs (3 max barriers)
+    err = dlb_drom_getnumcpus(num_cpus)
+    if (err /= DLB_SUCCESS) call abort
+    if (num_cpus < 3) stop
 
     err = DLB_Init(0, C_NULL_PTR, c_char_"--barrier"//C_NULL_CHAR)
     if (err /= DLB_SUCCESS) call abort
@@ -40,22 +46,22 @@ program test
         c_char_"barrier 2"//C_NULL_CHAR, DLB_BARRIER_LEWI_ON)
     if (.not. c_associated(dlb_barrier_2)) call abort
 
-    err = DLB_BarrierNamedAttach(dlb_barrier_2);
+    err = DLB_BarrierNamedAttach(dlb_barrier_2)
     if (err /= DLB_ERR_PERM) call abort
 
-    err = DLB_BarrierNamed(dlb_barrier_2);
+    err = DLB_BarrierNamed(dlb_barrier_2)
     if (err /= DLB_SUCCESS) call abort
 
-    err = DLB_Printshmem(0, DLB_COLOR_AUTO);
+    err = DLB_Printshmem(0, DLB_COLOR_AUTO)
     if (err /= DLB_SUCCESS) call abort
 
     err = DLB_BarrierNamedDetach(dlb_barrier_1)
     if (err /= DLB_SUCCESS) call abort
 
-    err = DLB_BarrierNamed(dlb_barrier_1);
+    err = DLB_BarrierNamed(dlb_barrier_1)
     if (err /= DLB_NOUPDT) call abort
 
-    err = DLB_Printshmem(0, DLB_COLOR_AUTO);
+    err = DLB_Printshmem(0, DLB_COLOR_AUTO)
     if (err /= DLB_SUCCESS) call abort
 
     err = DLB_Finalize()

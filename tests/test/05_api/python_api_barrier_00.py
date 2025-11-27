@@ -6,6 +6,10 @@ from ctypes import POINTER
 class TestPythonBarrier(TestBase):
 
     def test(self):
+        # Skip test on systems with less than 3 CPUs (3 max barriers)
+        if dlb.DLB_DROM_GetNumCpus() < 3:
+            return
+
         dlb.DLB_Init(0, "0-5", "--barrier --shm-key=" + self.__class__.SHM_KEY)
 
         barrier1 = dlb.DLB_BarrierNamedRegister("barrier 1", dlb.DLB_BARRIER_LEWI_OFF)

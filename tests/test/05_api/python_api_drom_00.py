@@ -6,6 +6,10 @@ import dlb
 class TestPythonDROM(TestBase):
 
     def test(self):
+        # Skip test on systems with less than 5 CPUs
+        if dlb.DLB_DROM_GetNumCpus() < 5:
+            return
+
         pid = os.getpid()
 
         dlb.DLB_Init(0, "", "--drom --shm-key=" + self.__class__.SHM_KEY)

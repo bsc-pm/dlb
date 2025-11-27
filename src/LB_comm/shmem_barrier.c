@@ -179,6 +179,26 @@ int shmem_barrier__get_max_barriers(void) {
     return max_barriers;
 }
 
+// Basically for testing purposes, num_barriers is not decremented if a barrier
+// in the middle is detached, so we count the number of initialized barriers.
+int shmem_barrier__get_num_barriers(void) {
+    if (shdata == NULL) return -1;
+
+    int real_num_barriers = 0;
+    shmem_lock(shm_handler);
+    {
+        int num_barriers = shdata->num_barriers;
+        for (int i = 0; i < num_barriers; ++i) {
+            if (shdata->barriers[i].flags.initialized) {
+                ++real_num_barriers;
+            }
+        }
+    }
+    shmem_unlock(shm_handler);
+
+    return real_num_barriers;
+}
+
 /* Given a barrier_name, find whether the barrier is registered in the shared
  * memory. Note that this function is not thread-safe */
 barrier_t* shmem_barrier__find(const char *barrier_name) {
@@ -233,8 +253,8 @@ barrier_t* shmem_barrier__register(const char *barrier_name, bool lewi) {
             }
         }
 
-        /* if barrier is not found and no empty spot, get a new position */
-        if (num_barriers < max_barriers && empty_spot == NULL) {
+        /* If barrier nor empty_spot are found, try to get a new position from the end */
+        if (barrier == NULL && empty_spot == NULL && num_barriers < max_barriers) {
             empty_spot = &shdata->barriers[num_barriers];
             ++shdata->num_barriers;
         }
@@ -407,7 +427,7 @@ int shmem_barrier__detach(barrier_t *barrier) {
 
                 /* Try to compact barrier list */
                 for (int i = shdata->num_barriers - 1; i >= 0; --i) {
-                    if (shdata->barriers[i].flags.initialized) {
+                    if (!shdata->barriers[i].flags.initialized) {
                         --shdata->num_barriers;
                     } else {
                         break;

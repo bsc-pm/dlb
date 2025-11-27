@@ -148,6 +148,7 @@ static void test_sort_by_affinity_in_topology(int topology, const int *expected,
 int main(int argc, char *argv[]) {
 
     mu_init();
+    mu_testing_set_sys_size(SYS_SIZE);
 
     /***** Process mask tests *****/
     cpu_set_t process_mask;

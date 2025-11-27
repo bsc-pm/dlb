@@ -30,6 +30,7 @@ typedef struct barrier_t barrier_t;
 int  shmem_barrier__init(const char *shmem_key, int shmem_size_multiplier);
 void shmem_barrier__finalize(const char *shmem_key, int shmem_size_multiplier);
 int  shmem_barrier__get_max_barriers(void);
+int  shmem_barrier__get_num_barriers(void);
 barrier_t* shmem_barrier__find(const char *barrier_name);
 barrier_t* shmem_barrier__register(const char *barrier_name, bool lewi);
 int  shmem_barrier__attach(barrier_t *barrier);

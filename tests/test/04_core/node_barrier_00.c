@@ -70,12 +70,12 @@ int main(int argc, char *argv[]) {
         node_barrier_init(&spd1);
         assert( node_barrier(&spd1, NULL) == DLB_SUCCESS );
         assert( node_barrier_attach(&spd1, NULL) == DLB_ERR_PERM );
+        assert( shmem_barrier__get_num_barriers() == 1 );
 
-        int i;
         enum { BARRIER_MAX_LEN = 32 };
         char barrier_name[BARRIER_MAX_LEN];
-        uint16_t max_barriers = (uint16_t)shmem_barrier__get_max_barriers();
-        uint16_t max_named_barriers = max_barriers - 1;
+        int max_barriers = shmem_barrier__get_max_barriers();
+        int max_named_barriers = max_barriers - 1;
         assert( max_barriers > 0 );
 
         if (max_named_barriers > 0) {
@@ -85,8 +85,10 @@ int main(int argc, char *argv[]) {
             sprintf(barrier_name, "Barrier 0");
             barriers[0] = node_barrier_register(&spd1, barrier_name, lewi);
             assert( barriers[0] != NULL );
+            assert( shmem_barrier__get_num_barriers() == 2 );
             barrier_t *barrier_copy = node_barrier_register(&spd1, barrier_name, lewi);
             assert( barriers[0] == barrier_copy );
+            assert( shmem_barrier__get_num_barriers() == 2 );
             // make sure two registers don't increase participants
             assert( node_barrier(&spd1, barriers[0]) == DLB_SUCCESS );
 
@@ -95,9 +97,10 @@ int main(int argc, char *argv[]) {
             assert( node_barrier_attach(&spd1, barriers[0]) == DLB_ERR_PERM );
             assert( node_barrier_detach(&spd1, barriers[0]) == 0 );
             assert( node_barrier_detach(&spd1, barriers[0]) == DLB_ERR_PERM );
+            assert( shmem_barrier__get_num_barriers() == 1 );
             assert( node_barrier(&spd1, barriers[0]) == DLB_NOUPDT );
 
-            for (i=0; i<max_named_barriers; ++i) {
+            for (int i = 0; i < max_named_barriers; ++i) {
                 snprintf(barrier_name, BARRIER_MAX_LEN, "Barrier %d", i);
                 barriers[i] = node_barrier_register(&spd1, barrier_name, lewi);
                 assert( barriers[i] != NULL );
@@ -112,7 +115,7 @@ int main(int argc, char *argv[]) {
         /* Make sure node_barrier_finalize removes all barriers from shared memory */
         assert( shmem_barrier__find(NULL) == NULL );
         assert( shmem_barrier__find("default") == NULL );
-        for (i=0; i<max_barriers; ++i) {
+        for (int i = 0; i < max_barriers; ++i) {
             snprintf(barrier_name, BARRIER_MAX_LEN, "Barrier %d", i);
             assert( shmem_barrier__find(barrier_name) == NULL );
         }
@@ -123,40 +126,54 @@ int main(int argc, char *argv[]) {
         node_barrier_init(&spd1);
         node_barrier_init(&spd2);
 
-        /* Two subprocesses register a named barrier */
-        const char *test_barrier_name = "Test barrier";
-        barrier_t *barrier_spd1 = node_barrier_register(&spd1, test_barrier_name, lewi);
-        barrier_t *barrier_spd2 = node_barrier_register(&spd2, test_barrier_name, lewi);
-        assert( node_barrier_detach(&spd1, barrier_spd1) == 1 );
-        assert( node_barrier_attach(&spd1, barrier_spd1) == 2 );
-        assert( node_barrier_detach(&spd2, barrier_spd2) == 1 );
-        assert( node_barrier_attach(&spd2, barrier_spd2) == 2 );
+        int max_barriers = shmem_barrier__get_max_barriers();
+        barrier_t *barrier_spd1 = NULL;
+        barrier_t *barrier_spd2 = NULL;
 
-        /* Perform a barrier with two threads of the same process*/
-        pthread_t thread1, thread2;
-        struct pthread_args pargs1 = {.spd = &spd1, .barrier = barrier_spd1 };
-        pthread_create(&thread1, NULL, barrier_fn, &pargs1);
-        struct pthread_args pargs2 = {.spd = &spd2, .barrier = barrier_spd2 };
-        pthread_create(&thread2, NULL, barrier_fn, &pargs2);
-        pthread_join(thread1, NULL);
-        pthread_join(thread2, NULL);
+        if (max_barriers >= 2) {
+            /* Two subprocesses register a named barrier */
+            const char *test_barrier_name = "Test barrier";
+            barrier_spd1 = node_barrier_register(&spd1, test_barrier_name, lewi);
+            assert( shmem_barrier__get_num_barriers() == 2 );
+            barrier_spd2 = node_barrier_register(&spd2, test_barrier_name, lewi);
+            assert( shmem_barrier__get_num_barriers() == 2 );
+            assert( node_barrier_detach(&spd1, barrier_spd1) == 1 );
+            assert( node_barrier_attach(&spd1, barrier_spd1) == 2 );
+            assert( node_barrier_detach(&spd2, barrier_spd2) == 1 );
+            assert( node_barrier_attach(&spd2, barrier_spd2) == 2 );
 
-        /* Another named barrier */
-        const char *test_barrier2_name = "Test barrier 2";
-        barrier_t *barrier2_spd1 = node_barrier_register(&spd1, test_barrier2_name, lewi);
-        assert( barrier2_spd1 != NULL );
-        barrier_t *barrier2_spd2 = node_barrier_register(&spd2, test_barrier2_name, lewi);
-        assert( barrier2_spd2 != NULL );
-        assert( node_barrier_detach(&spd1, barrier2_spd1) == 1 );
-        assert( node_barrier_attach(&spd1, barrier2_spd1) == 2 );
-        assert( node_barrier_detach(&spd1, barrier2_spd1) == 1 );
-        assert( node_barrier_detach(&spd2, barrier2_spd2) == 0 );
+            /* Perform a barrier with two threads of the same process*/
+            pthread_t thread1, thread2;
+            struct pthread_args pargs1 = {.spd = &spd1, .barrier = barrier_spd1 };
+            pthread_create(&thread1, NULL, barrier_fn, &pargs1);
+            struct pthread_args pargs2 = {.spd = &spd2, .barrier = barrier_spd2 };
+            pthread_create(&thread2, NULL, barrier_fn, &pargs2);
+            pthread_join(thread1, NULL);
+            pthread_join(thread2, NULL);
+        }
+
+        if (max_barriers >= 3) {
+            /* Another named barrier */
+            const char *test_barrier2_name = "Test barrier 2";
+            barrier_t *barrier2_spd1 = node_barrier_register(&spd1, test_barrier2_name, lewi);
+            assert( barrier2_spd1 != NULL );
+            assert( shmem_barrier__get_num_barriers() == 3 );
+            barrier_t *barrier2_spd2 = node_barrier_register(&spd2, test_barrier2_name, lewi);
+            assert( barrier2_spd2 != NULL );
+            assert( shmem_barrier__get_num_barriers() == 3 );
+            assert( node_barrier_detach(&spd1, barrier2_spd1) == 1 );
+            assert( node_barrier_attach(&spd1, barrier2_spd1) == 2 );
+            assert( node_barrier_detach(&spd1, barrier2_spd1) == 1 );
+            assert( node_barrier_detach(&spd2, barrier2_spd2) == 0 );
+        }
 
         /* node_barrier on detached barriers */
         assert( node_barrier_detach(&spd1, NULL) == 1 );
         assert( node_barrier(&spd1, NULL) == DLB_NOUPDT );
-        assert( node_barrier_detach(&spd1, barrier_spd1) == 1 );
-        assert( node_barrier(&spd1, barrier_spd1) == DLB_NOUPDT );
+        if (max_barriers >= 2) {
+            assert( node_barrier_detach(&spd1, barrier_spd1) == 1 );
+            assert( node_barrier(&spd1, barrier_spd1) == DLB_NOUPDT );
+        }
 
         node_barrier_finalize(&spd1);
         node_barrier_finalize(&spd2);

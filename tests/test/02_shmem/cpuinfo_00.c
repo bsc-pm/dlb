@@ -55,8 +55,6 @@ int main( int argc, char **argv ) {
     int mycpu = sched_getcpu();
     printf("mycpu: %d\n", mycpu);
     int system_size = mu_get_system_size();
-    pid_t *new_guests = malloc(sizeof(pid_t) * system_size);
-    pid_t *victims = malloc(sizeof(pid_t) * system_size);
     array_cpuinfo_task_t tasks;
     array_cpuinfo_task_t_init(&tasks, system_size);
     array_cpuid_t cpus_priority_array;
@@ -313,10 +311,16 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 
+    // The following tests use a fixed system size of 4. We don't need cpus_priority_array
+    // anymore, but we need to reallocate tasks in case previous system size is smaller.
+    array_cpuid_t_destroy(&cpus_priority_array);
+    array_cpuinfo_task_t_destroy(&tasks);
+    enum { SYS_SIZE = 4 };
+    mu_testing_set_sys_size(SYS_SIZE);
+    array_cpuinfo_task_t_init(&tasks, SYS_SIZE);
+
     /* Test with masks with more bits than system size */
     {
-        enum { SYS_SIZE = 4 };
-        mu_testing_set_sys_size(SYS_SIZE);
         mu_parse_mask("0-3", &process_mask);
 
         // Trying with a process mask with way more CPUs than system:
@@ -349,8 +353,6 @@ int main( int argc, char **argv ) {
 
     /* Tests with disabled CPUs */
     {
-        enum { SYS_SIZE = 4 };
-        mu_testing_set_sys_size(SYS_SIZE);
         CPU_ZERO(&process_mask);
 
         // Init with empty mask
@@ -371,9 +373,7 @@ int main( int argc, char **argv ) {
         assert( shmem_cpuinfo__finalize(pid, SHMEM_KEY, 0) == DLB_SUCCESS );
     }
 
-    free(new_guests);
-    free(victims);
-    array_cpuid_t_destroy(&cpus_priority_array);
+    array_cpuinfo_task_t_destroy(&tasks);
 
     mu_finalize();
 
