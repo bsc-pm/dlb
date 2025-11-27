@@ -11,6 +11,9 @@ Additionally, it provides some scripts to allow for an easy integration into CI/
 The main goal was to provide a set of scripts that enable teams to easily monitor their application's performance and quickly identify potential bottlenecks.
 
 
+.. note::
+    With the release of DLB 3.6.0 we also provide support for GPU runs in TALP-Pages.
+
 .. warning::
     Please, be aware that TALP-Pages is still an experimental feature that is introduced in the 3.5.0 release.
 

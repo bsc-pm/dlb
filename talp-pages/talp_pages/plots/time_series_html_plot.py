@@ -170,6 +170,213 @@ class TimeSeriesHtmlPlot:
             ]
             execution_mode = ExecutionMode.OPENMP
 
+        if ExecutionMode.HYBRIDGPU.value in self.df["executionMode"].to_numpy():
+            metrics = [
+                "elapsedTime",
+                "IPC",
+                "instructions",
+                "frequency",
+                "parallelEfficiency",
+                "mpiParallelEfficiency",
+                "mpiCommunicationEfficiency",
+                "mpiLoadBalance",
+                "ompParallelEfficiency",
+                "ompSchedulingEfficiency",
+                "ompLoadBalance",
+                "ompSerializationEfficiency",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+            ]
+            specs = [
+                [{"colspan": 6}, None, None, None, None, None],  # elapsedTime
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'IPC','instructions','frequency'
+                [{"colspan": 6}, None, None, None, None, None],  # parallelEfficiency
+                [{"colspan": 6}, None, None, None, None, None],  # mpiParallelEfficiency
+                [
+                    {"colspan": 3},
+                    None,
+                    None,
+                    {"colspan": 3},
+                    None,
+                    None,
+                ],  # 'mpiCommunicationEfficiency','mpiCommunicationEfficiency'
+                [{"colspan": 6}, None, None, None, None, None],  # ompParallelEfficiency
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'ompSchedulingEfficiency','ompLoadBalance','ompSerializationEfficiency'
+                [{"colspan": 6}, None, None, None, None, None],  # deviceOffloadEffiency
+                [{"colspan": 6}, None, None, None, None, None],  # gpuParallelEfficiency
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'gpuLoadBalance','gpuCommunicationEfficiency','gpuOrchestrationEfficiency'
+            ]
+            execution_mode = ExecutionMode.HYBRIDGPU
+
+        elif ExecutionMode.MPIGPU.value in self.df["executionMode"].to_numpy():
+            metrics = [
+                "elapsedTime",
+                "IPC",
+                "instructions",
+                "frequency",
+                "parallelEfficiency",
+                "mpiParallelEfficiency",
+                "mpiCommunicationEfficiency",
+                "mpiLoadBalance",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+            ]
+            specs = [
+                [{"colspan": 6}, None, None, None, None, None],  # elapsedTime
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'IPC','instructions','frequency'
+                [{"colspan": 6}, None, None, None, None, None],  # parallelEfficiency
+                [{"colspan": 6}, None, None, None, None, None],  # mpiParallelEfficiency
+                [
+                    {"colspan": 3},
+                    None,
+                    None,
+                    {"colspan": 3},
+                    None,
+                    None,
+                ],  # 'mpiCommunicationEfficiency','mpiCommunicationEfficiency'
+                [{"colspan": 6}, None, None, None, None, None],  # deviceOffloadEffiency
+                [{"colspan": 6}, None, None, None, None, None],  # gpuParallelEfficiency
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'gpuLoadBalance','gpuCommunicationEfficiency','gpuOrchestrationEfficiency'
+            ]
+            execution_mode = ExecutionMode.MPIGPU
+
+        elif ExecutionMode.OPENMPGPU.value in self.df["executionMode"].to_numpy():
+            metrics = [
+                "elapsedTime",
+                "IPC",
+                "instructions",
+                "frequency",
+                "parallelEfficiency",
+                "ompParallelEfficiency",
+                "ompSchedulingEfficiency",
+                "ompLoadBalance",
+                "ompSerializationEfficiency",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+            ]
+            specs = [
+                [{"colspan": 6}, None, None, None, None, None],  # elapsedTime
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'IPC','instructions','frequency'
+                [{"colspan": 6}, None, None, None, None, None],  # parallelEfficiency
+                [{"colspan": 6}, None, None, None, None, None],  # ompParallelEfficiency
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'ompSchedulingEfficiency','ompLoadBalance','ompSerializationEfficiency'
+                [{"colspan": 6}, None, None, None, None, None],  # deviceOffloadEffiency
+                [{"colspan": 6}, None, None, None, None, None],  # gpuParallelEfficiency
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'gpuLoadBalance','gpuCommunicationEfficiency','gpuOrchestrationEfficiency'
+            ]
+            execution_mode = ExecutionMode.OPENMPGPU
+
+        elif ExecutionMode.GPU.value in self.df["executionMode"].to_numpy():
+            metrics = [
+                "elapsedTime",
+                "IPC",
+                "instructions",
+                "frequency",
+                "parallelEfficiency",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+            ]
+            specs = [
+                [{"colspan": 6}, None, None, None, None, None],  # elapsedTime
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'IPC','instructions','frequency'
+                [{"colspan": 6}, None, None, None, None, None],  # parallelEfficiency
+                [{"colspan": 6}, None, None, None, None, None],  # ompParallelEfficiency
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'ompSchedulingEfficiency','ompLoadBalance','ompSerializationEfficiency'
+                [{"colspan": 6}, None, None, None, None, None],  # deviceOffloadEffiency
+                [{"colspan": 6}, None, None, None, None, None],  # gpuParallelEfficiency
+                [
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                    {"colspan": 2},
+                    None,
+                ],  # 'gpuLoadBalance','gpuCommunicationEfficiency','gpuOrchestrationEfficiency'
+            ]
+            execution_mode = ExecutionMode.GPU
+
         else:
             # Serial
             metrics = [
@@ -208,6 +415,7 @@ class TimeSeriesHtmlPlot:
         # Elapsed time
         metric = "elapsedTime"
         plots_done = 1
+        rows_done = 1
         for region in regions:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region], True),
@@ -219,11 +427,12 @@ class TimeSeriesHtmlPlot:
         # IPC
         metric = "IPC"
         plots_done += 1
+        rows_done += 1
         for region in regions:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region]),
                 col=1,
-                row=2,
+                row=rows_done,
             )
         fig["layout"][f"yaxis{plots_done}"]["title"] = "IPC"
 
@@ -234,7 +443,7 @@ class TimeSeriesHtmlPlot:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region]),
                 col=3,
-                row=2,
+                row=rows_done,
             )
         fig["layout"][f"yaxis{plots_done}"]["title"] = "# instructions"
 
@@ -245,50 +454,51 @@ class TimeSeriesHtmlPlot:
             fig.add_trace(
                 self.__get_scatter(region, metric, region_to_colors[region]),
                 col=5,
-                row=2,
+                row=rows_done,
             )
         fig["layout"][f"yaxis{plots_done}"]["title"] = "GHz"
 
-        if (
-            execution_mode == ExecutionMode.HYBRID
-            or execution_mode == ExecutionMode.MPI
-            or execution_mode == ExecutionMode.OPENMP
-        ):
+        if execution_mode is not ExecutionMode.SERIAL:
             # Parallel Effiency
             metric = "parallelEfficiency"
             plots_done += 1
+            rows_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
-                    row=3,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
         if (
             execution_mode == ExecutionMode.HYBRID
+            or execution_mode == ExecutionMode.HYBRIDGPU
             or execution_mode == ExecutionMode.MPI
+            or execution_mode == ExecutionMode.MPIGPU
         ):
             # communicationEfficiency
             metric = "mpiParallelEfficiency"
             plots_done += 1
+            rows_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
-                    row=4,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
             metric = "mpiCommunicationEfficiency"
             plots_done += 1
+            rows_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
-                    row=5,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
@@ -299,7 +509,7 @@ class TimeSeriesHtmlPlot:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=4,
-                    row=5,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
@@ -307,26 +517,30 @@ class TimeSeriesHtmlPlot:
         if (
             execution_mode == ExecutionMode.OPENMP
             or execution_mode == ExecutionMode.HYBRID
+            or execution_mode == ExecutionMode.HYBRIDGPU
+            or execution_mode == ExecutionMode.OPENMPGPU
         ):
             #'ompSchedulingEfficiency','ompLoadBalance','ompSerializationEfficiency',
             metric = "ompParallelEfficiency"
             plots_done += 1
+            rows_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
-                    row=6 if execution_mode == ExecutionMode.HYBRID else 4,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
 
             metric = "ompSchedulingEfficiency"
             plots_done += 1
+            rows_done += 1
             for region in regions:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=1,
-                    row=7 if execution_mode == ExecutionMode.HYBRID else 5,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
@@ -337,7 +551,7 @@ class TimeSeriesHtmlPlot:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=3,
-                    row=7 if execution_mode == ExecutionMode.HYBRID else 5,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
@@ -348,7 +562,67 @@ class TimeSeriesHtmlPlot:
                 fig.add_trace(
                     self.__get_scatter(region, metric, region_to_colors[region]),
                     col=5,
-                    row=7 if execution_mode == ExecutionMode.HYBRID else 5,
+                    row=rows_done,
+                )
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
+
+        if execution_mode.has_gpus():
+            #'ompSchedulingEfficiency','ompLoadBalance','ompSerializationEfficiency',
+            metric = "deviceOffloadEfficiency"
+            plots_done += 1
+            rows_done += 1
+            for region in regions:
+                fig.add_trace(
+                    self.__get_scatter(region, metric, region_to_colors[region]),
+                    col=1,
+                    row=rows_done,
+                )
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
+
+            metric = "gpuParallelEfficiency"
+            plots_done += 1
+            rows_done += 1
+            for region in regions:
+                fig.add_trace(
+                    self.__get_scatter(region, metric, region_to_colors[region]),
+                    col=1,
+                    row=rows_done,
+                )
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
+
+            metric = "gpuLoadBalance"
+            plots_done += 1
+            rows_done += 1
+            for region in regions:
+                fig.add_trace(
+                    self.__get_scatter(region, metric, region_to_colors[region]),
+                    col=1,
+                    row=rows_done,
+                )
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
+
+            metric = "gpuCommunicationEfficiency"
+            plots_done += 1
+            for region in regions:
+                fig.add_trace(
+                    self.__get_scatter(region, metric, region_to_colors[region]),
+                    col=3,
+                    row=rows_done,
+                )
+            fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
+            fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})
+
+            metric = "gpuOrchestrationEfficiency"
+            plots_done += 1
+            for region in regions:
+                fig.add_trace(
+                    self.__get_scatter(region, metric, region_to_colors[region]),
+                    col=5,
+                    row=rows_done,
                 )
             fig["layout"][f"yaxis{plots_done}"]["title"] = "Efficiency [0-1]"
             fig.update_layout(**{f"yaxis{plots_done}": dict(range=[0, 1])})

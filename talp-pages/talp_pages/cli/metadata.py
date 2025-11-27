@@ -83,9 +83,11 @@ class Metadata:
         return {
             "gitCommit": self.git_commit,
             "gitBranch": self.git_branch,
-            "gitTimestamp": self.git_timestamp.replace(tzinfo=None).isoformat()
-            if self.git_timestamp
-            else None,
+            "gitTimestamp": (
+                self.git_timestamp.replace(tzinfo=None).isoformat()
+                if self.git_timestamp
+                else None
+            ),
             "defaultGitBranch": self.default_git_branch,
             "isMergeRequest": self.is_merge_request,
         }
