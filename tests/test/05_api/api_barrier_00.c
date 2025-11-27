@@ -71,6 +71,8 @@ int main(int argc, char **argv) {
     char options[64] = "--barrier --shm-key=";
     strcat(options, SHMEM_KEY);
 
+    int system_size = mu_get_system_size();
+
     /* Test barrier with one process */
     {
         printf("Testing barrier with one process\n");
@@ -104,25 +106,22 @@ int main(int argc, char **argv) {
     }
 
     /* Test barrier with N processes */
-    if (DLB_EXTRA_TESTS)
+    if (DLB_EXTRA_TESTS && system_size > 1)
     {
         printf("Testing barrier with N processes\n");
-        int ncpus;
         struct data *shdata;
         shmem_handler_t *handler;
 
         // Master process creates shmem and initializes barrier
-        ncpus = mu_get_system_size();
         handler = open_shmem((void**)&shdata);
         pthread_barrierattr_t attr;
         assert( pthread_barrierattr_init(&attr) == 0 );
         assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
-        assert( pthread_barrier_init(&shdata->barrier, &attr, ncpus-1) == 0 );
+        assert( pthread_barrier_init(&shdata->barrier, &attr, system_size-1) == 0 );
         assert( pthread_barrierattr_destroy(&attr) == 0 );
 
         // Create a child process per CPU-1
-        int child;
-        for(child=1; child<ncpus; ++child) {
+        for(int child = 1; child < system_size; ++child) {
             pid_t pid = fork();
             assert( pid >= 0 );
             if (pid == 0) {
@@ -152,7 +151,10 @@ int main(int argc, char **argv) {
                 assert(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
 
                 // Check that the barriers have triggered the LeWI callbacks
-                assert( shdata->ntimes > 0 );
+                // (if only one participant (system_size = 2), the callback is not triggered)
+                if (system_size > 2) {
+                    assert( shdata->ntimes > 0 );
+                }
 
                 // Only one process prints shmem info
                 if (child == 1) {
@@ -189,25 +191,22 @@ int main(int argc, char **argv) {
     }
 
     /* Test barrier with N processes where 1 of them detaches from the barrier */
-    if (DLB_EXTRA_TESTS)
+    if (DLB_EXTRA_TESTS && system_size > 1)
     {
         printf("Testing barrier with N processes and one of them detaches\n");
-        int ncpus;
         struct data *shdata;
         shmem_handler_t *handler;
 
         // Master process creates shmem and initializes barrier
-        ncpus = mu_get_system_size();
         handler = open_shmem((void**)&shdata);
         pthread_barrierattr_t attr;
         assert( pthread_barrierattr_init(&attr) == 0 );
         assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
-        assert( pthread_barrier_init(&shdata->barrier, &attr, ncpus-1) == 0 );
+        assert( pthread_barrier_init(&shdata->barrier, &attr, system_size-1) == 0 );
         assert( pthread_barrierattr_destroy(&attr) == 0 );
 
         // Create a child process per CPU-1
-        int child;
-        for(child=1; child<ncpus; ++child) {
+        for(int child = 1; child < system_size; ++child) {
             pid_t pid = fork();
             assert( pid >= 0 );
             if (pid == 0) {

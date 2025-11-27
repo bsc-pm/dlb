@@ -45,18 +45,24 @@ struct data {
 
 int main(int argc, char **argv) {
 
-    /* To avoid too many forks on large systems, reduce the system size
-     * unless DLB_EXTRA_TESTS is specified. */
-    if (!DLB_EXTRA_TESTS) {
-        mu_testing_set_sys_size(4);
+    mu_init();
+    int system_size = mu_get_system_size();
+
+    /* Ensure the system size for this test is exactly 4 if necessary:
+     * - If the actual system size is smaller than 4, fake it by setting it to 4.
+     * - If the actual system size is larger than 4 and EXTRA_TESTS are disabled,
+     *   reduce it to 4 to avoid issues with too many forks on large systems.
+     */
+    enum { MINIMUM_SYS_SIZE = 4 };
+    if (system_size < MINIMUM_SYS_SIZE || (!DLB_EXTRA_TESTS && system_size > MINIMUM_SYS_SIZE)) {
+        system_size = MINIMUM_SYS_SIZE;
+        mu_testing_set_sys_size(MINIMUM_SYS_SIZE);
     }
 
-    int ncpus;
     struct data *shdata;
     shmem_handler_t *handler;
 
     // Master process creates shmem and initializes barrier
-    ncpus = mu_get_system_size();
     handler = shmem_init((void**)&shdata,
             &(const shmem_props_t) {
                 .size = sizeof(struct data),
@@ -71,13 +77,12 @@ int main(int argc, char **argv) {
     pthread_barrierattr_t attr;
     assert( pthread_barrierattr_init(&attr) == 0 );
     assert( pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) == 0 );
-    assert( pthread_barrier_init(&shdata->barrier, &attr, ncpus) == 0 );
+    assert( pthread_barrier_init(&shdata->barrier, &attr, system_size) == 0 );
     assert( pthread_barrierattr_destroy(&attr) == 0 );
-    shdata->foo = ncpus;
+    shdata->foo = system_size;
 
     // Create a child process per CPU-1
-    int child;
-    for(child=1; child<ncpus; ++child) {
+    for(int child = 1; child < system_size; ++child) {
         pid_t pid = fork();
         assert( pid >= 0 );
         if (pid == 0) {
@@ -107,7 +112,7 @@ int main(int argc, char **argv) {
             shdata->foo++;
             shmem_unlock_maintenance(handler);
             pthread_barrier_wait(&shdata->barrier);                             // Barrier 4
-            assert(shdata->foo == ncpus);
+            assert(shdata->foo == system_size);
             pthread_barrier_wait(&shdata->barrier);                             // Barrier 5
 
             // Test that shmem cannot be put in BUSY while in MAINTENANCE
