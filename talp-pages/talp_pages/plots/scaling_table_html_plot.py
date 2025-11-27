@@ -76,6 +76,87 @@ class ScalingTableHtmlPlot:
             ]
             abs_metrics = ["IPC", "frequency", "elapsedTime"]
 
+        elif ExecutionMode.HYBRIDGPU.value in self.result.execution_modes:
+            eff_metrics = [
+                "globalEfficiency",
+                "parallelEfficiency",
+                "mpiParallelEfficiency",
+                "mpiCommunicationEfficiency",
+                "mpiLoadBalance",
+                "mpiLoadBalanceIn",
+                "mpiLoadBalanceOut",
+                "ompParallelEfficiency",
+                "ompSchedulingEfficiency",
+                "ompLoadBalance",
+                "ompSerializationEfficiency",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+                "computationScalability",
+                "instructionScaling",
+                "ipcScaling",
+                "frequencyScaling",
+            ]
+            abs_metrics = ["IPC", "frequency", "elapsedTime"]
+
+        elif ExecutionMode.MPIGPU.value in self.result.execution_modes:
+            eff_metrics = [
+                "globalEfficiency",
+                "parallelEfficiency",
+                "mpiParallelEfficiency",
+                "mpiCommunicationEfficiency",
+                "mpiLoadBalance",
+                "mpiLoadBalanceIn",
+                "mpiLoadBalanceOut",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+                "computationScalability",
+                "instructionScaling",
+                "ipcScaling",
+                "frequencyScaling",
+            ]
+            abs_metrics = ["IPC", "frequency", "elapsedTime"]
+
+        elif ExecutionMode.OPENMPGPU.value in self.result.execution_modes:
+            eff_metrics = [
+                "globalEfficiency",
+                "parallelEfficiency",
+                "ompParallelEfficiency",
+                "ompSchedulingEfficiency",
+                "ompLoadBalance",
+                "ompSerializationEfficiency",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+                "computationScalability",
+                "instructionScaling",
+                "ipcScaling",
+                "frequencyScaling",
+            ]
+            abs_metrics = ["IPC", "frequency", "elapsedTime"]
+
+        elif ExecutionMode.GPU.value in self.result.execution_modes:
+            eff_metrics = [
+                "globalEfficiency",
+                "deviceOffloadEfficiency",
+                "gpuParallelEfficiency",
+                "gpuLoadBalance",
+                "gpuCommunicationEfficiency",
+                "gpuOrchestrationEfficiency",
+                "computationScalability",
+                "instructionScaling",
+                "ipcScaling",
+                "frequencyScaling",
+            ]
+            abs_metrics = ["IPC", "frequency", "elapsedTime"]
+
         metrics = eff_metrics + abs_metrics
 
         header = ["Metrics"]

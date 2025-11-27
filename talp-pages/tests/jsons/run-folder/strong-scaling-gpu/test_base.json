@@ -1,0 +1,52 @@
+{
+  "dlbVersion": "3.6.0+beta1-2-c045-dirty",
+  "timestamp": "2025-09-18T17:41:03",
+  "resources": {
+    "numCpus": 2,
+    "numNodes": 1,
+    "numMpiRanks": 0,
+    "numGpus": 2
+  },
+    "Application": {
+      "Global": {
+        "numCpus": 2,
+        "numMpiRanks": 2,
+        "numNodes": 1,
+        "numGpus": 2,
+        "avgCpus": 2.00,
+        "cycles": 21817855.00,
+        "instructions": 2240503.00,
+        "numMpiCalls": 48,
+        "elapsedTime": 10002805067,
+        "usefulTime": 12514719683,
+        "mpiTime": 0,
+        "ompLoadImbalanceTime": 0,
+        "ompSchedulingTime": 0,
+        "ompSerializationTime": 0,
+        "gpuRuntimeTime": 1466012373,
+        "minMpiNormdProc": 0,
+        "minMpiNormdNode": 0,
+        "gpuUsefulTime": 413959838,
+        "gpuCommunicationTime": 351761869,
+        "maxGpuUsefulTime": 413959838,
+        "maxGpuActiveTime": 765721707,
+        "parallelEfficiency": 0.77,
+        "mpiParallelEfficiency": 1.00,
+        "mpiCommunicationEfficiency": 1.00,
+        "mpiLoadBalance": 1.00,
+        "mpiLoadBalanceIn": 1.00,
+        "mpiLoadBalanceOut": 1.00,
+        "ompParallelEfficiency": 1.00,
+        "ompLoadBalance": 1.00,
+        "ompSchedulingEfficiency": 1.00,
+        "ompSerializationEfficiency": 1.00,
+        "deviceOffloadEfficiency": 1.00,
+        "gpuParallelEfficiency": 0.90,
+        "gpuLoadBalance": 0.80,
+        "gpuCommunicationEfficiency": 0.70,
+        "gpuOrchestrationEfficiency": 0.60
+      }
+    }
+    
+}
+  

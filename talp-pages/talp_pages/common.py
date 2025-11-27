@@ -10,9 +10,17 @@ class ExecutionMode(Enum):
     OPENMP = "OpenMP"
     MPI = "MPI"
     HYBRID = "Hybrid MPI+OpenMP"
+    GPU = "GPU"  # only a single gpu
+    MPIGPU = "MPI+GPU"  # MPI + GPU
+    OPENMPGPU = "OpenMP+GPU"  # OpenMP and GPU
+    HYBRIDGPU = "MPI+OpenMP+GPU"  # All
+
+    def has_gpus(self) -> bool:
+        return self.value.find("GPU") > 0
 
 
-TALP_PAGES_VERSION = "3.5.1"
+TALP_PAGES_VERSION = "3.6.0"
+
 TALP_METRIC_TO_NAME_MAP = {
     "globalEfficiency": "Global Effiency",
     "globalEfficiencyBySpeedup": "Global Effiency from Speedup",
@@ -32,6 +40,11 @@ TALP_METRIC_TO_NAME_MAP = {
     "ompLoadBalance": "OpenMP Load balance",
     "ompSchedulingEfficiency": "OpenMP Scheduling efficiency",
     "ompSerializationEfficiency": "OpenMP Serialization efficiency",
+    "deviceOffloadEfficiency": "Device Offload efficiency",
+    "gpuParallelEfficiency": "GPU Parallel efficiency",
+    "gpuLoadBalance": "GPU Load Balance",
+    "gpuCommunicationEfficiency": "GPU Communication efficiency",
+    "gpuOrchestrationEfficiency": "GPU Orchestration efficiency",
     "instructionScaling": "Instructions scaling",
     "ipcScaling": "IPC scaling",
     "frequencyScaling": "Frequency scaling",
@@ -63,6 +76,11 @@ TALP_METRIC_TO_NESTING_MAP = {
     "frequencyScaling": 2,
     "elapsedTime": 0,
     "speedup": 0,
+    "deviceOffloadEfficiency": 2,
+    "gpuParallelEfficiency": 2,
+    "gpuLoadBalance": 3,
+    "gpuCommunicationEfficiency": 3,
+    "gpuOrchestrationEfficiency": 3,
 }
 # Some keys
 TALP_IMPLICIT_REGION_NAME = "Global"

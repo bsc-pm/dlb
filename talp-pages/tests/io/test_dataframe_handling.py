@@ -1,22 +1,10 @@
 import pytest
 from talp_pages.io.dataframe_handling import load_talp_json_df, get_dfs
 from talp_pages.io.run_folders import get_run_folders
+from talp_pages.common import ExecutionMode
 from tests.helpers import get_json_path
 import json
 import pandas as pd
-
-
-JSON_LOAD_FIELDS = [
-    "runTimestamp",
-    "totalNumCpus",
-    "totalNumMpiRanks",
-    "dlbVersion",
-    "jsonFile",
-    "implicitRegionName",
-    "totalThreads",
-    "ressourceLabel",
-    "executionMode",
-]
 
 
 def test_handle_wrong_dlb_version():
@@ -31,6 +19,37 @@ def test_handle_version_3_5_1():
 
     df = load_talp_json_df(json_path)
     assert df is not None
+
+
+def test_handle_version_3_6_0():
+    json_path = get_json_path("jsons/unit-tests/dlb_3_6_0.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 1
+
+
+def test_handle_version_3_6_0_1_gpu_2_mpi():
+    json_path = get_json_path("jsons/unit-tests/dlb_1gpu_2mpi.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 1
+    assert df["executionMode"].to_numpy() == ExecutionMode.MPIGPU.value
+
+
+def test_handle_version_3_6_0_2_gpu_2_mpi():
+    json_path = get_json_path("jsons/unit-tests/dlb_2gpu_2mpi.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 2
+    assert df["executionMode"].to_numpy() == ExecutionMode.MPIGPU.value
+
+
+def test_handle_version_3_6_0_2_gpu_hybrid():
+    json_path = get_json_path("jsons/unit-tests/dlb_2gpu_hybrid.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 2
+    assert df["executionMode"].to_numpy() == ExecutionMode.HYBRIDGPU.value
 
 
 def test_handle_new_dlb_version():
@@ -104,7 +123,7 @@ def test_get_dfs():
     folder_path = get_json_path("jsons/run-folder")
     run_folders = get_run_folders(folder_path)
     dfs = get_dfs(run_folders, as_list=True)
-    assert len(dfs) == 2
+    assert len(dfs) == 3
 
     df = get_dfs(run_folders, as_list=False)
     assert isinstance(df, pd.DataFrame)
