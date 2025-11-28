@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [3.6.0-beta1]
+## [3.6.0] 2025-11-25
 ### Added
 - Initial support for GPU TALP metrics (includes NVIDIA and AMD support)
 - Added a new and more robust support for MPI Fortran 2008 bindings
@@ -12,9 +12,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
   GPU visibility
 - New instrumentation events for OMPT callbacks
 - New API `DLB_DROM_SetProcessMaskStr` to set masks using a human-readable input
+- New DLB Python bindings
 
 ### Changed
 - `--talp-output-file` now creates missing directories if able
+- `DLB_TALP_CollectPOPMetrics` can be called now from non-MPI apps
 
 ### Fixed
 - Fixed TALP Global region not being started if no MPI or OpenMP
@@ -398,7 +400,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[3.6.0-beta1]: https://github.com/bsc-pm/dlb/compare/v3.5...HEAD
+[3.6.0]: https://github.com/bsc-pm/dlb/compare/v3.5...HEAD
 [3.5.3]: https://github.com/bsc-pm/dlb/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/bsc-pm/dlb/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.5.1
