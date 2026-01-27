@@ -186,7 +186,7 @@ at dlb@bsc.es.
 [DLB]: https://pm.bsc.es/dlb
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
 [releases]: https://github.com/bsc-pm/dlb/releases
-[DLB User Guide]: https://pm.bsc.es/ftp/dlb/doc/user-guide/index.html
+[DLB User Guide]: https://dlb-docs.readthedocs.io/en/latest/
 [pub1_doi]: http://dx.doi.org/10.1016/j.jpdc.2014.05.004
 [pub1_bib]: https://pm.bsc.es/ftp/dlb/doc/LeWI_JPDC14.bib
 [pub1_pdf]: https://pm.bsc.es/ftp/dlb/doc/JPDC_2014.pdf
