@@ -178,9 +178,9 @@ static inline void perf_metrics__compute_hybrid_model_v1(
         .device_offload_efficiency = (float)sum_active_non_gpu / sum_active,
         .gpu_parallel_efficiency = sum_device_time == 0 ? 0
             : (float)gpu_useful_time / sum_device_time,
-        .gpu_load_balance = sum_device_time == 0 ? 0
+        .gpu_load_balance = max_gpu_useful_time * num_gpus == 0 ? 0
             : (float)gpu_useful_time / (max_gpu_useful_time * num_gpus),
-        .gpu_communication_efficiency = sum_device_time == 0 ? 0
+        .gpu_communication_efficiency = max_gpu_active_time == 0 ? 0
             : (float)max_gpu_useful_time / max_gpu_active_time,
         .gpu_orchestration_efficiency = sum_device_time == 0 ? 0
             : (float)max_gpu_active_time / elapsed_time,
@@ -254,9 +254,9 @@ static inline void perf_metrics__compute_hybrid_model_v2(
             / (useful_time + sum_omp_not_useful + gpu_runtime_time),
         .gpu_parallel_efficiency = sum_device_time == 0 ? 0
             : (float)gpu_useful_time / sum_device_time,
-        .gpu_load_balance = sum_device_time == 0 ? 0
+        .gpu_load_balance = max_gpu_useful_time * num_gpus == 0 ? 0
             : (float)gpu_useful_time / (max_gpu_useful_time * num_gpus),
-        .gpu_communication_efficiency = sum_device_time == 0 ? 0
+        .gpu_communication_efficiency = max_gpu_active_time == 0 ? 0
             : (float)max_gpu_useful_time / max_gpu_active_time,
         .gpu_orchestration_efficiency = sum_device_time == 0 ? 0
             : (float)max_gpu_active_time / elapsed_time,
