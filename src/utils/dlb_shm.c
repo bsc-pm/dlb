@@ -138,7 +138,7 @@ void list_shdata_item(const char* shm_suffix, int list_columns,
     // Look for any of the known DLB shared memory names
     const char* const dlb_shmems[] = { "cpuinfo_", "procinfo_", "barrier_" };
     enum { dlb_shmems_nelems = sizeof(dlb_shmems) / sizeof(dlb_shmems[0]) };
-    char *p = NULL;
+    const char *p = NULL;
     int i;
     for (i=0; i<dlb_shmems_nelems; ++i) {
         p = strstr(shm_suffix, dlb_shmems[i]);
