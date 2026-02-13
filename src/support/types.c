@@ -29,6 +29,9 @@
 
 #define LINE_BREAK "\n                                             "
 
+// option delimiter: flag options accept either : or , as delimiters
+static const char *delim = ":,";
+
 int parse_bool(const char *str, bool *value) {
     if (strcasecmp(str, "1")==0        ||
             strcasecmp(str, "yes")==0  ||
@@ -124,7 +127,7 @@ int parse_verbose_opts(const char *str, verbose_opts_t *value) {
     size_t len = strlen(str) + 1;
     char *str_copy = malloc(sizeof(char)*len);
     strcpy(str_copy, str);
-    char *token = strtok_r(str_copy, ":", &end_token);
+    char *token = strtok_r(str_copy, delim, &end_token);
     while (token) {
         int i;
         for (i=0; i<verbose_opts_nelems; ++i) {
@@ -136,7 +139,7 @@ int parse_verbose_opts(const char *str, verbose_opts_t *value) {
         if (i == verbose_opts_nelems) {
             warning("Unknown --verbose option: %s", token);
         }
-        token = strtok_r(NULL, ":", &end_token);
+        token = strtok_r(NULL, delim, &end_token);
     }
     free(str_copy);
 
@@ -197,7 +200,7 @@ int parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
     size_t len = strlen(str) + 1;
     char *str_copy = malloc(sizeof(char)*len);
     strcpy(str_copy, str);
-    char *token = strtok_r(str_copy, ":", &end_token);
+    char *token = strtok_r(str_copy, delim, &end_token);
     while (token) {
         int i;
         for (i=0; i<verbose_fmt_nelems; ++i) {
@@ -209,7 +212,7 @@ int parse_verbose_fmt(const char *str, verbose_fmt_t *value) {
         if (i == verbose_fmt_nelems) {
             warning("Unknown --verbose-format option: %s", token);
         }
-        token = strtok_r(NULL, ":", &end_token);
+        token = strtok_r(NULL, delim, &end_token);
     }
     free(str_copy);
 
@@ -274,7 +277,7 @@ int parse_instrument_items(const char *str, instrument_items_t *value) {
     size_t len = strlen(str) + 1;
     char *str_copy = malloc(sizeof(char)*len);
     strcpy(str_copy, str);
-    char *token = strtok_r(str_copy, ":", &end_token);
+    char *token = strtok_r(str_copy, delim, &end_token);
     while (token) {
         int i;
         for (i=0; i<instrument_items_nelems; ++i) {
@@ -286,7 +289,7 @@ int parse_instrument_items(const char *str, instrument_items_t *value) {
         if (i == instrument_items_nelems) {
             warning("Unknown --instrument option: %s", token);
         }
-        token = strtok_r(NULL, ":", &end_token);
+        token = strtok_r(NULL, delim, &end_token);
     }
     free(str_copy);
 
@@ -461,7 +464,7 @@ int parse_talp_summary(const char *str, talp_summary_t *value) {
     size_t len = strlen(str) + 1;
     char *str_copy = malloc(sizeof(char)*len);
     strcpy(str_copy, str);
-    char *token = strtok_r(str_copy, ":", &end_token);
+    char *token = strtok_r(str_copy, delim, &end_token);
     while (token) {
         int i;
         for (i=0; i<talp_summary_nelems; ++i) {
@@ -479,7 +482,7 @@ int parse_talp_summary(const char *str, talp_summary_t *value) {
         if (i == talp_summary_nelems) {
             warning("Unknown --talp-summary option: %s", token);
         }
-        token = strtok_r(NULL, ":", &end_token);
+        token = strtok_r(NULL, delim, &end_token);
     }
     free(str_copy);
 
@@ -706,7 +709,7 @@ int parse_omptool_opts(const char *str, omptool_opts_t *value) {
     size_t len = strlen(str) + 1;
     char *str_copy = malloc(sizeof(char)*len);
     strcpy(str_copy, str);
-    char *token = strtok_r(str_copy, ":", &end_token);
+    char *token = strtok_r(str_copy, delim, &end_token);
     while (token) {
         int i;
         for (i=0; i<omptool_opts_nelems; ++i) {
@@ -718,7 +721,7 @@ int parse_omptool_opts(const char *str, omptool_opts_t *value) {
         if (i == omptool_opts_nelems) {
             warning("Unknown --lewi-ompt option: %s", token);
         }
-        token = strtok_r(NULL, ":", &end_token);
+        token = strtok_r(NULL, delim, &end_token);
     }
     free(str_copy);
 

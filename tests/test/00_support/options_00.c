@@ -88,6 +88,12 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--lewi=no");
     assert(options_1.lewi == false);
 
+    // Check multi-value
+    options_init(&options_1, "--verbose=drom:ompt:api");
+    assert(options_1.verbose == (VB_DROM | VB_OMPT | VB_API));
+    options_init(&options_1, "--verbose=drom,ompt,api");
+    assert(options_1.verbose == (VB_DROM | VB_OMPT | VB_API));
+
     // Deprecated variables must be still assigned
     // But deprecated and unused variables must not fail, nor change any value
     memset(&options_1, 0, sizeof(options_t));
