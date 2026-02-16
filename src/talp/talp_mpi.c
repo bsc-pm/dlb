@@ -125,9 +125,11 @@ static void talp_register_common_mpi_regions(const subprocess_descriptor_t *spd)
 
 /* Start global monitoring region (if not already started) */
 void talp_mpi_init(const subprocess_descriptor_t *spd) {
+
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_init");
 
     talp_info_t *talp_info = spd->talp_info;
+
     if (talp_info) {
         talp_info->flags.have_mpi = true;
 
@@ -137,87 +139,89 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
         /* Add MPI_Init statistic and set useful state */
         talp_sample_t *sample = talp_get_thread_sample(spd);
         DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
-        talp_set_sample_state(sample, useful, talp_info->flags.papi);
+        talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
     }
 }
 
 /* Stop global monitoring region and gather APP data if needed  */
 void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
+
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_finalize");
+
     talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
+
+    if (talp_info == NULL || !talp_info->flags.have_mpi) return;
 
 #ifdef MPI_LIB
-        /* We also need to measure the waiting time of an MPI_Finalize.
-         * For this, we call an MPI_Barrier and the appropriate TALP functions.
-         * The num_mpi_calls variable is also incremented inside those. */
-        talp_into_sync_call(spd, /* is_blocking_collective */ true);
-        PMPI_Barrier(getWorldComm());
-        talp_out_of_sync_call(spd, /* is_blocking_collective */ true);
+    /* We also need to measure the waiting time of an MPI_Finalize.
+        * For this, we call an MPI_Barrier and the appropriate TALP functions.
+        * The num_mpi_calls variable is also incremented inside those. */
+    talp_into_sync_call(spd, /* is_blocking_collective */ true);
+    PMPI_Barrier(getWorldComm());
+    talp_out_of_sync_call(spd, /* is_blocking_collective */ true);
 #else
-        /* Add MPI_Finalize to the number of MPI calls.
-         * Even though talp_mpi_finalize should never be called if no MPI_LIB,
-         * we keep this case for testing purposes. */
-        talp_sample_t *sample = talp_get_thread_sample(spd);
-        DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
+    /* Add MPI_Finalize to the number of MPI calls.
+        * Even though talp_mpi_finalize should never be called if no MPI_LIB,
+        * we keep this case for testing purposes. */
+    talp_sample_t *sample = talp_get_thread_sample(spd);
+    DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
 #endif
 
-        /* Stop global region */
-        region_stop(spd, talp_info->monitor);
+    /* Stop global region */
+    region_stop(spd, talp_info->monitor);
 
-        monitor_data_t *monitor_data = talp_info->monitor->_data;
+    monitor_data_t *monitor_data = talp_info->monitor->_data;
 
-        /* Update shared memory values */
-        if (talp_info->flags.have_shmem || talp_info->flags.have_minimal_shmem) {
-            // TODO: is it needed? isn't it updated when stopped?
-            shmem_talp__set_times(monitor_data->node_shared_id,
-                    talp_info->monitor->mpi_time,
-                    talp_info->monitor->useful_time);
-        }
+    /* Update shared memory values */
+    if (talp_info->flags.have_shmem || talp_info->flags.have_minimal_shmem) {
+        // TODO: is it needed? isn't it updated when stopped?
+        shmem_talp__set_times(monitor_data->node_shared_id,
+                talp_info->monitor->mpi_time,
+                talp_info->monitor->useful_time);
+    }
 
 #ifdef MPI_LIB
-        /* If performing any kind of TALP summary, check that the number of processes
-         * registered in the shared memory matches with the number of MPI processes in the node.
-         * This check is needed to avoid deadlocks on finalize. */
-        if (spd->options.talp_summary) {
-            verbose(VB_TALP, "Gathering TALP metrics");
-            /* FIXME: use Named Barrier */
-            /* if (shmem_barrier__get_num_participants(spd->options.barrier_id) == _mpis_per_node) { */
+    /* If performing any kind of TALP summary, check that the number of processes
+        * registered in the shared memory matches with the number of MPI processes in the node.
+        * This check is needed to avoid deadlocks on finalize. */
+    if (spd->options.talp_summary) {
+        verbose(VB_TALP, "Gathering TALP metrics");
+        /* FIXME: use Named Barrier */
+        /* if (shmem_barrier__get_num_participants(spd->options.barrier_id) == _mpis_per_node) { */
 
-                /* Gather data among processes in the node if node summary is enabled */
-                if (spd->options.talp_summary & SUMMARY_NODE) {
-                    talp_record_node_summary(spd);
-                }
+            /* Gather data among processes in the node if node summary is enabled */
+            if (spd->options.talp_summary & SUMMARY_NODE) {
+                talp_record_node_summary(spd);
+            }
 
-                /* Gather data among MPIs if any of these summaries is enabled  */
-                if (spd->options.talp_summary
-                        & (SUMMARY_POP_METRICS | SUMMARY_PROCESS)) {
-                    /* Ensure everyone has the same monitoring regions */
-                    talp_register_common_mpi_regions(spd);
+            /* Gather data among MPIs if any of these summaries is enabled  */
+            if (spd->options.talp_summary
+                    & (SUMMARY_POP_METRICS | SUMMARY_PROCESS)) {
+                /* Ensure everyone has the same monitoring regions */
+                talp_register_common_mpi_regions(spd);
 
-                    /* Finally, reduce data */
-                    for (GTreeNode *node = g_tree_node_first(talp_info->regions);
-                            node != NULL;
-                            node = g_tree_node_next(node)) {
-                        const dlb_monitor_t *monitor = g_tree_node_value(node);
-                        if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
-                            talp_record_pop_summary(spd, monitor);
-                        }
-                        if (spd->options.talp_summary & SUMMARY_PROCESS) {
-                            talp_record_process_summary(spd, monitor);
-                        }
+                /* Finally, reduce data */
+                for (GTreeNode *node = g_tree_node_first(talp_info->regions);
+                        node != NULL;
+                        node = g_tree_node_next(node)) {
+                    const dlb_monitor_t *monitor = g_tree_node_value(node);
+                    if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
+                        talp_record_pop_summary(spd, monitor);
+                    }
+                    if (spd->options.talp_summary & SUMMARY_PROCESS) {
+                        talp_record_process_summary(spd, monitor);
                     }
                 }
+            }
 
-                /* Synchronize all processes in node before continuing with DLB finalization  */
-                node_barrier(spd, NULL);
-            /* } else { */
-            /*     warning("The number of MPI processes and processes registered in DLB differ." */
-            /*             " TALP will not print any summary."); */
-            /* } */
-        }
-#endif
+            /* Synchronize all processes in node before continuing with DLB finalization  */
+            node_barrier(spd, NULL);
+        /* } else { */
+        /*     warning("The number of MPI processes and processes registered in DLB differ." */
+        /*             " TALP will not print any summary."); */
+        /* } */
     }
+#endif
 }
 
 /* Decide whether to update the current sample (most likely and cheaper)
@@ -229,7 +233,7 @@ static inline void update_sample_on_sync_call(const subprocess_descriptor_t *spd
 
     if (!talp_info->flags.external_profiler || !is_blocking_collective) {
         /* Likely scenario, just update the sample */
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
     } else {
         /* If talp_info->flags.external_profiler && is_blocking_collective:
          * aggregate samples and update all monitoring regions */
@@ -238,32 +242,36 @@ static inline void update_sample_on_sync_call(const subprocess_descriptor_t *spd
 }
 
 void talp_into_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+
     /* Observer threads may call MPI functions, but TALP must ignore them */
     if (unlikely(thread_is_observer)) return;
 
     const talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        /* Update sample */
-        talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
 
-        /* Into Sync call -> not_useful_mpi */
-        talp_set_sample_state(sample, not_useful_mpi, talp_info->flags.papi);
-    }
+    if (talp_info == NULL || !talp_info->flags.have_mpi) return;
+
+    /* Update sample */
+    talp_sample_t *sample = talp_get_thread_sample(spd);
+    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+
+    /* Into Sync call -> not_useful_mpi */
+    talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_MPI);
 }
 
 void talp_out_of_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective) {
+
     /* Observer threads may call MPI functions, but TALP must ignore them */
     if (unlikely(thread_is_observer)) return;
 
     const talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        /* Update sample (and maybe flush) */
-        talp_sample_t *sample = talp_get_thread_sample(spd);
-        DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
-        update_sample_on_sync_call(spd, talp_info, sample, is_blocking_collective);
 
-        /* Out of Sync call -> useful */
-        talp_set_sample_state(sample, useful, talp_info->flags.papi);
-    }
+    if (talp_info == NULL || !talp_info->flags.have_mpi) return;
+
+    /* Update sample (and maybe flush) */
+    talp_sample_t *sample = talp_get_thread_sample(spd);
+    DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
+    update_sample_on_sync_call(spd, talp_info, sample, is_blocking_collective);
+
+    /* Out of Sync call -> useful */
+    talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
 }

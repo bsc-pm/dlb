@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,17 +17,45 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_GPU_H
-#define TALP_GPU_H
+#ifndef PLUGIN_UTILS_H
+#define PLUGIN_UTILS_H
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct gpu_measurements gpu_measurements_t;
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
-int  talp_gpu_init(const subprocess_descriptor_t *spd);
-void talp_gpu_finalize(void);
-void talp_gpu_enter_runtime(void);
-void talp_gpu_exit_runtime(void);
-void talp_gpu_submit(const gpu_measurements_t *measurements);
-void talp_gpu_collect(gpu_measurements_t *out);
 
-#endif /* TALP_GPU_H */
+static inline uint64_t get_timestamp(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &t);
+    return (uint64_t)t.tv_sec * 1000000000LL + (uint64_t)t.tv_nsec;
+}
+
+
+static inline int plugin_is_verbose() {
+    static int initialized = 0;
+    static int verbose = 0;
+
+    if (!initialized) {
+        const char *env = getenv("DLB_PLUGIN_VERBOSE");
+        if (env && (*env == '1' || *env == 'y' || *env == 'Y')) {
+            verbose = 1;
+        }
+        initialized = 1;
+    }
+    return verbose;
+}
+
+#define PLUGIN_PRINT(fmt, ...) \
+    do { if (plugin_is_verbose()) fprintf(stderr, "[DLB PLUGIN] " fmt, ##__VA_ARGS__); } while (0)
+
+#define PLUGIN_ERROR(fmt, ...) \
+    do { fprintf(stderr, "[DLB PLUGIN ERROR] " fmt, ##__VA_ARGS__); } while (0)
+
+#define PLUGIN_WARNING(fmt, ...) \
+    do { fprintf(stderr, "[DLB PLUGIN WARNING] " fmt, ##__VA_ARGS__); } while (0)
+
+
+#endif /* PLUGIN_UTILS_H */
+

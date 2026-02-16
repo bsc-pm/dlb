@@ -149,7 +149,7 @@ control through OMPT.
     # otherwise, preload libdlb_mpi.so as usual
     export DLB_AUTO_INIT=1
 
-    export DLB_ARGS="--talp --plugin=cupti"
+    export DLB_ARGS="--talp"
     preload="<DLB_PREFIX>/lib/libdlb.so"
     env LD_PRELOAD="$preload" ./app
     ```

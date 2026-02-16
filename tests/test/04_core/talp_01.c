@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
     assert( global_monitor->useful_time == 0 );
     assert( talp_info->samples[0]->timers.useful == 0 );
     assert( talp_info->samples[0]->timers.not_useful_mpi == 0 );
-    assert( talp_info->samples[0]->state == useful );
+    assert( talp_info->samples[0]->state == TALP_STATE_USEFUL );
     assert( talp_info->ncpus == 1 );
 
     /* We are getting timestamps before and after talp_into_sync_call / talp_out_of_sync_call
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
             && talp_info->samples[0]->last_updated_timestamp <= time_after );
     assert( talp_info->samples[0]->timers.useful > 0 );
     assert( talp_info->samples[0]->timers.not_useful_mpi == 0 );
-    assert( talp_info->samples[0]->state == not_useful_mpi );
+    assert( talp_info->samples[0]->state == TALP_STATE_NOT_USEFUL_MPI );
 
     /* Leaving MPI */
     time_before = get_time_in_ns();
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
             && talp_info->samples[0]->last_updated_timestamp <= time_after );
     assert( talp_info->samples[0]->timers.useful > 0 );
     assert( talp_info->samples[0]->timers.not_useful_mpi > 0 );
-    assert( talp_info->samples[0]->state == useful );
+    assert( talp_info->samples[0]->state == TALP_STATE_USEFUL );
 
     /* Update regions */
     assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );

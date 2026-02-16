@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,11 +17,10 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "plugins/plugin.h"
-#include "plugins/plugin_utils.h"
-#include "plugins/gpu_record_utils.h"
 #include "support/dlb_common.h"
-#include "talp/talp_gpu.h"
+#include "talp/backend.h"
+#include "talp/backends/backend_utils.h"
+#include "talp/backends/gpu_record_utils.h"
 
 #ifndef __HIP_PLATFORM_AMD__
 #define __HIP_PLATFORM_AMD__
@@ -35,6 +34,8 @@
 #include <stdint.h>
 
 
+static const core_api_t *dlb_core_api = NULL;
+
 /*********************************************************************************/
 /*  ROCm profiling (rocprofiler-sdk)                                             */
 /*********************************************************************************/
@@ -45,11 +46,11 @@
         rocprofiler_status_t _status = (call);                                  \
         if (_status != ROCPROFILER_STATUS_SUCCESS) {                            \
             const char *_error_string = rocprofiler_get_status_string(_status); \
-            fprintf(stderr,                                                     \
-                    "%s:%d: Error: Function %s failed with error (%d): %s.\n",  \
+            PLUGIN_ERROR(                                                       \
+                    "%s:%d: Function %s failed with error (%d): %s.\n",         \
                     __FILE__, __LINE__, #call, _status, _error_string);         \
                                                                                 \
-            return DLB_PLUGIN_ERROR;                                            \
+            return DLB_BACKEND_ERROR;                                           \
         }                                                                       \
   } while (0)
 
@@ -58,8 +59,8 @@
         rocprofiler_status_t _status = (call);                                  \
         if (_status != ROCPROFILER_STATUS_SUCCESS) {                            \
             const char *_error_string = rocprofiler_get_status_string(_status); \
-            fprintf(stderr,                                                     \
-                    "%s:%d: Warning: Function %s failed with error (%d): %s.\n",\
+            PLUGIN_WARNING(                                                     \
+                    "%s:%d: Function %s failed with error (%d): %s.\n",         \
                     __FILE__, __LINE__, #call, _status, _error_string);         \
         }                                                                       \
   } while (0)
@@ -68,10 +69,12 @@
 
 /* --- ROCm state -------------------------------------------------------------- */
 
-static bool rocprofiler_sdk_plugin_enabled = false;
+static bool rocprofiler_sdk_plugin_initialized = false;
+static bool rocprofiler_sdk_plugin_started = false;
 static rocprofiler_context_id_t _ctx = {0};
 static rocprofiler_buffer_id_t _buffer_id = {0};
-
+static rocprofiler_client_id_t *client_id = NULL;;
+static rocprofiler_client_finalize_t finalize_tool_fn = NULL;
 
 /* ---Host runtime events ------------------------------------------------------ */
 
@@ -79,6 +82,8 @@ void HIP_API_callback(
         rocprofiler_callback_tracing_record_t record,
         rocprofiler_user_data_t*              user_data,
         void*                                 callback_data) {
+
+
 
     const char* operation_name = NULL;
 
@@ -90,10 +95,10 @@ void HIP_API_callback(
 
     if (record.phase == ROCPROFILER_CALLBACK_PHASE_ENTER) {
         PLUGIN_PRINT(" >> %s\n", operation_name);
-        talp_gpu_into_runtime_api();
+        dlb_core_api->gpu.enter_runtime();
     } else if (record.phase == ROCPROFILER_CALLBACK_PHASE_EXIT) {
         PLUGIN_PRINT(" << %s\n", operation_name);
-        talp_gpu_out_of_runtime_api();
+        dlb_core_api->gpu.exit_runtime();
     }
 }
 
@@ -178,73 +183,121 @@ void async_events_callback(
 /* --- Plugin functions -------------------------------------------------------- */
 
 /* Function called externally by TALP to force flushing buffers */
-static void rocprofiler_sdk_plugin_update_sample(void) {
+static void rocprofiler_sdk_backend_flush(void) {
 
     /* Flush buffer */
-    if (rocprofiler_sdk_plugin_enabled) {
+    if (rocprofiler_sdk_plugin_started) {
         /* This is a blocking call, it does not return until all activity records
         * are returned using the registered callback. */
         CHECK_WARN_ROCPROFILER(rocprofiler_flush_buffer(_buffer_id));
     }
 
-    pthread_mutex_lock(&buffer_mutex);
+    if (rocprofiler_sdk_plugin_initialized) {
+        pthread_mutex_lock(&buffer_mutex);
 
-    /* Update safe timestamp. All future records prior to this will be ignored */
-    safe_timestamp = get_timestamp();
+        /* Update safe timestamp. All future records prior to this will be ignored */
+        safe_timestamp = get_timestamp();
 
-    /* Compute kernel records duration */
-    gpu_record_flatten(&kernel_buffer);
-    uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
+        /* Compute kernel records duration */
+        gpu_record_flatten(&kernel_buffer);
+        uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
 
-    /* Compute memory records duration */
-    gpu_record_flatten(&memory_buffer);
-    uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
+        /* Compute memory records duration */
+        gpu_record_flatten(&memory_buffer);
+        uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
 
-    /* Clear buffers */
-    gpu_record_clear_buffer(&kernel_buffer);
-    gpu_record_clear_buffer(&memory_buffer);
+        /* Clear buffers */
+        gpu_record_clear_buffer(&kernel_buffer);
+        gpu_record_clear_buffer(&memory_buffer);
 
-    pthread_mutex_unlock(&buffer_mutex);
+        pthread_mutex_unlock(&buffer_mutex);
 
-    if (kernel_time > 0 || memory_time > 0) {
-        /* Pack values to send to TALP */
-        talp_gpu_measurements_t measurements = {
-            .useful_time = kernel_time,
-            .communication_time = memory_time,
-        };
+        if (kernel_time > 0 || memory_time > 0) {
+            /* Pack values to send to TALP */
+            gpu_measurements_t measurements = {
+                .useful_time = kernel_time,
+                .communication_time = memory_time,
+            };
 
-        /* Call TALP */
-        talp_gpu_update_sample(measurements);
+            /* Call TALP */
+            dlb_core_api->gpu.submit_measurements(&measurements);
+        }
     }
 }
 
-/* Function called by DLB. We can't initialize rocprofiler yet. */
-static int rocprofiler_sdk_plugin_init(plugin_info_t *info) {
-    /* Return some useful information */
-    info->name = "rocprofiler-sdk";
-    info->version = 1;
-
-    return DLB_PLUGIN_SUCCESS;
+static int rocprofiler_sdk_backend_probe(void) {
+    return DLB_BACKEND_SUCCESS;
 }
 
-static int rocprofiler_sdk_plugin_finalize(void) {
+/* rocprofiler_sdk_backend_init and rocprofiler_sdk_backend_start are called
+ * during DLB_Init, which is enforced before calling the real rocprofiler_configure.
+ * We can't really start the profiling yet. */
+static int rocprofiler_sdk_backend_init(const core_api_t *core_api) {
 
-    if (rocprofiler_sdk_plugin_enabled) {
-        talp_gpu_finalize();
+    if (rocprofiler_sdk_plugin_initialized) return DLB_BACKEND_ERROR;
 
-        CHECK_WARN_ROCPROFILER(rocprofiler_stop_context(_ctx));
-
-        rocprofiler_sdk_plugin_enabled = false;
+    dlb_core_api = core_api;
+    if (dlb_core_api->abi_version != DLB_BACKEND_ABI_VERSION
+            || dlb_core_api->struct_size != sizeof(core_api_t)) {
+        return DLB_BACKEND_ERROR;
     }
 
-    return DLB_PLUGIN_SUCCESS;
+    /* Allocate local buffers */
+    enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
+    gpu_record_init_buffer(&kernel_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+    gpu_record_init_buffer(&memory_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+
+    rocprofiler_sdk_plugin_initialized = true;
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static int rocprofiler_sdk_backend_start(void) {
+    /* no-op, see above */
+    return DLB_BACKEND_SUCCESS;
+}
+
+static int rocprofiler_sdk_backend_stop(void) {
+
+    /* Trigger rocprofiler-sdk finalization */
+    if (finalize_tool_fn && client_id) {
+        finalize_tool_fn(*client_id);
+    }
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static int rocprofiler_sdk_backend_finalize(void) {
+
+    if (rocprofiler_sdk_plugin_initialized) {
+
+        /* Free local buffers */
+        gpu_record_free_buffer(&kernel_buffer);
+        gpu_record_free_buffer(&memory_buffer);
+
+        rocprofiler_sdk_plugin_initialized = false;
+    }
+
+    return DLB_BACKEND_SUCCESS;
 }
 
 DLB_EXPORT_SYMBOL
-plugin_api_t* DLB_Get_Plugin_API(void) {
-    static plugin_api_t api = {
-        .init = rocprofiler_sdk_plugin_init,
-        .finalize = rocprofiler_sdk_plugin_finalize,
+backend_api_t* DLB_Get_Backend_API(void) {
+    static backend_api_t api = {
+        .abi_version = DLB_BACKEND_ABI_VERSION,
+        .struct_size = sizeof(backend_api_t),
+        .name = "rocprofiler-sdk",
+        .capabilities = {
+            .gpu = true,
+            .gpu_amd = true,
+        },
+        .probe = rocprofiler_sdk_backend_probe,
+        .init = rocprofiler_sdk_backend_init,
+        .start = rocprofiler_sdk_backend_start,
+        .stop = rocprofiler_sdk_backend_stop,
+        .finalize = rocprofiler_sdk_backend_finalize,
+        .flush = rocprofiler_sdk_backend_flush,
+        .get_gpu_affinity = NULL,
     };
     return &api;
 }
@@ -252,12 +305,21 @@ plugin_api_t* DLB_Get_Plugin_API(void) {
 
 /* --- rocprofiler-sdk register interface -------------------------------------- */
 
-int tool_init(rocprofiler_client_finalize_t fini_func, void* tool_data) {
+enum { TOOL_REGISTER_SUCCESS = 0 };
+enum { TOOL_REGISTER_ERROR = -1 };
 
-    /* Allocate local buffers */
-    enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
-    gpu_record_init_buffer(&kernel_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
-    gpu_record_init_buffer(&memory_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+/* Called by rocprofiler-sdk. Plugin should have been initialized at this point. */
+static int tool_init(rocprofiler_client_finalize_t fini_func, void* tool_data) {
+
+    if (dlb_core_api == NULL
+            || !rocprofiler_sdk_plugin_initialized) {
+        PLUGIN_ERROR("rocprofiler-sdk tool_init function called without"
+                " DLB plugin properly initialized. GPU instrumentation cannot"
+                " continue. Please report bug.\n");
+        return TOOL_REGISTER_ERROR;
+    }
+
+    finalize_tool_fn = fini_func;
 
     /* Set initial safe timestamp. All records prior to this will be ignored */
     safe_timestamp = get_timestamp();
@@ -310,35 +372,50 @@ int tool_init(rocprofiler_client_finalize_t fini_func, void* tool_data) {
     CHECK_ROCPROFILER(rocprofiler_create_callback_thread(&callback_thread));
     CHECK_ROCPROFILER(rocprofiler_assign_callback_thread(_buffer_id, callback_thread));
 
-    /* context check */ 
+    /* context check */
     int valid_ctx = 0;
     CHECK_ROCPROFILER(rocprofiler_context_is_valid(_ctx, &valid_ctx));
     if (valid_ctx == 0) {
-        return -1;
+        PLUGIN_ERROR("rocprofiler-sdk tool_init function failed to create context."
+                " GPU instrumentation cannot continue. Please report bug.\n");
+        return TOOL_REGISTER_ERROR;
     }
 
     /* Start profiling */
     CHECK_ROCPROFILER(rocprofiler_start_context(_ctx));
 
-    /* Enable GPU component in TALP */
-    talp_gpu_init(rocprofiler_sdk_plugin_update_sample);
+    rocprofiler_sdk_plugin_started = true;
 
-    rocprofiler_sdk_plugin_enabled = true;
-
-    return 0;
+    return TOOL_REGISTER_SUCCESS;
 }
 
-void tool_fini(void* tool_data)
-{
-    rocprofiler_sdk_plugin_finalize();
+static void tool_fini(void* tool_data) {
+
+    if (rocprofiler_sdk_plugin_started) {
+
+        /* Flush now and send measurements to TALP */
+        rocprofiler_sdk_backend_flush();
+
+        /* Stop measurements (usually already stopped by rocprofiler-sdk finalization) */
+        int active_ctx = 0;
+        rocprofiler_status_t status = rocprofiler_context_is_active(_ctx, &active_ctx);
+        if (status == ROCPROFILER_STATUS_SUCCESS && active_ctx != 0) {
+            CHECK_WARN_ROCPROFILER(rocprofiler_stop_context(_ctx));
+        }
+
+        rocprofiler_sdk_plugin_started = false;
+    }
 }
 
-extern rocprofiler_tool_configure_result_t*
+DLB_EXPORT_SYMBOL
+rocprofiler_tool_configure_result_t*
 rocprofiler_configure(uint32_t                 version,
                       const char*              version_string,
                       uint32_t                 priority,
-                      rocprofiler_client_id_t* id)
-{
+                      rocprofiler_client_id_t* id) {
+
+    client_id = id;
+
     id->name = "DLB rocprofiler-sdk plugin";
 
     uint32_t major = version / 10000;

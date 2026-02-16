@@ -24,6 +24,7 @@
 #include "apis/dlb_talp.h"
 #include "support/mask_utils.h"
 #include "talp/talp_output.h"
+#include "talp/talp_types.h"
 
 #include <ftw.h>
 #include <stdio.h>
@@ -292,9 +293,13 @@ int main(int argc, char *argv[]) {
         .gpu_communication_time  = 2e8,
     };
 
-    talp_output_print_monitoring_region(&monitor, mu_to_str(&system_mask),
-            /* have_mpi */ true, /* have_openmp */ true,
-            /* have_gpu */ true, /* have_papi */ true);
+    talp_flags_t flags = {
+        .have_mpi = true,
+        .have_openmp = true,
+        .have_gpu = true,
+        .have_hwc = true,
+    };
+    talp_output_print_monitoring_region(&monitor, mu_to_str(&system_mask), flags);
 
     return error;
 }

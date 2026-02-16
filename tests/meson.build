@@ -110,6 +110,17 @@ tests = {
     'python_api_drom_00'  : {'source' : 'python_api_drom_00.py'},
     'python_api_talp_00'  : {'source' : 'python_api_talp_00.py'},
   },
+  '06_plugins' : {
+    'backend_manager_00'  : {'depends' : [libdlb_cupti_test,
+                                          libdlb_rocprofiler_sdk_test,
+                                          libdlb_papi_test]},
+    'backend_cupti_00'    : {'depends' : libdlb_cupti_test},
+    'backend_rocprofiler_sdk_00'
+                          : {'depends' : libdlb_rocprofiler_sdk_test},
+    'backend_papi_00'     : {'depends' : libdlb_papi_test},
+    'talp_gpu_00'         : {'depends' : libdlb_cupti_test},
+    'talp_hwc_00'         : {'depends' : libdlb_papi_test},
+  },
 }
 
 test_includes = [
@@ -157,11 +168,17 @@ foreach suite, suite_tests : tests
       test_env.append('DLB_ARGS', test_props.get('dlb_args'), separator: ' ')
     endif
 
+    plugin_dep = []
+    if (test_props.has_key('depends'))
+      plugin_dep = test_props.get('depends')
+    endif
+
     test(test_name, test_program,
       env : test_env,
       args : test_args,
       should_fail : test_props.get('should_fail', false),
       suite : suite,
+      depends : plugin_dep,
     )
   endforeach
 endforeach

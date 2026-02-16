@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 
         char value[16];
         assert( DLB_GetVariable("--talp", value) == DLB_SUCCESS );
-        assert( strcmp(value, "yes") == 0 );
+        assert( strcmp(value, "default") == 0 );
 
         dlb_monitor_t *monitor = DLB_MonitoringRegionRegister("Test monitor");
         assert( monitor != NULL );

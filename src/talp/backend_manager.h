@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,17 +17,25 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_GPU_H
-#define TALP_GPU_H
+#ifndef PLUGIN_MANAGER_H
+#define PLUGIN_MANAGER_H
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct gpu_measurements gpu_measurements_t;
+#include "backend.h"
+#include <stdbool.h>
+#include <stddef.h>
 
-int  talp_gpu_init(const subprocess_descriptor_t *spd);
-void talp_gpu_finalize(void);
-void talp_gpu_enter_runtime(void);
-void talp_gpu_exit_runtime(void);
-void talp_gpu_submit(const gpu_measurements_t *measurements);
-void talp_gpu_collect(gpu_measurements_t *out);
+extern const core_api_t core_api;
 
-#endif /* TALP_GPU_H */
+const backend_api_t*
+      talp_backend_manager_load_gpu_backend(const char *name);
+void  talp_backend_manager_unload_gpu_backend(void);
+
+const backend_api_t*
+      talp_backend_manager_load_hwc_backend(const char *name);
+void  talp_backend_manager_unload_hwc_backend(void);
+
+void* talp_backend_manager_get_symbol_from_plugin(const char *symbol, const char *plugin_name);
+int   talp_backend_manager_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid);
+
+
+#endif /* PLUGIN_MANAGER_H */

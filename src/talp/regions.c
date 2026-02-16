@@ -328,11 +328,11 @@ int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
         }
         pthread_mutex_unlock(&talp_info->regions_mutex);
 
-        /* Normally, the sample state will be 'useful' at this point, but on
-         * certain cases where neither talp_mpi_init nor talp_openmp_init have
-         * been called, this is necessary */
-        if (thread_sample->state != useful) {
-            talp_set_sample_state(thread_sample, useful, talp_info->flags.papi);
+        /* Normally, the sample state will be 'TALP_STATE_USEFUL' at this point,
+         * but on certain cases where neither talp_mpi_init nor talp_openmp_init
+         * have been called, this is necessary */
+        if (thread_sample->state != TALP_STATE_USEFUL) {
+            talp_set_sample_state(spd, thread_sample, TALP_STATE_USEFUL);
         }
 
         error = DLB_SUCCESS;
@@ -405,14 +405,8 @@ int region_report(const subprocess_descriptor_t *spd, const dlb_monitor_t *monit
         return DLB_NOUPDT;
     }
 
-#ifdef PAPI_LIB
-    bool have_papi = talp_info->flags.papi;
-#else
-    bool have_papi = false;
-#endif
     talp_output_print_monitoring_region(monitor, mu_to_str(&spd->process_mask),
-            talp_info->flags.have_mpi, talp_info->flags.have_openmp,
-            talp_info->flags.have_gpu, have_papi);
+            talp_info->flags);
 
     return DLB_SUCCESS;
 }

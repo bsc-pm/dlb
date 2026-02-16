@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -37,9 +37,11 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+#include "talp/backend.h"
 #include "talp/perf_metrics.h"
 #include "talp/regions.h"
 #include "talp/talp_gpu.h"
+#include "talp/talp_hwc.h"
 #include "talp/talp_output.h"
 #include "talp/talp_record.h"
 #include "talp/talp_types.h"
@@ -50,18 +52,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#ifdef PAPI_LIB
-#include <papi.h>
-#endif
-
 extern __thread bool thread_is_observer;
 
 static void talp_dealloc_samples(const subprocess_descriptor_t *spd);
-
-
-#if PAPI_LIB
-static __thread int EventSet = PAPI_NULL;
-#endif
 
 
 /* Update all open regions with the macrosample */
@@ -94,11 +87,10 @@ static void update_regions_with_macrosample(const subprocess_descriptor_t *spd,
             monitor->gpu_communication_time += macrosample->gpu_timers.communication;
             monitor->gpu_inactive_time += macrosample->gpu_timers.inactive;
 
-#ifdef PAPI_LIB
             /* Counters */
             monitor->cycles += macrosample->counters.cycles;
             monitor->instructions += macrosample->counters.instructions;
-#endif
+
             /* Stats */
             monitor->num_mpi_calls += macrosample->stats.num_mpi_calls;
             monitor->num_omp_parallels += macrosample->stats.num_omp_parallels;
@@ -117,188 +109,23 @@ static void update_regions_with_macrosample(const subprocess_descriptor_t *spd,
 }
 
 
+#ifdef MPI_LIB
+/* Returns the number of MPI processes that have HWC enabled */
+static int get_hwc_init_across_world(const subprocess_descriptor_t *spd) {
 
-/*********************************************************************************/
-/*    PAPI counters                                                              */
-/*********************************************************************************/
+    talp_info_t *talp_info = spd->talp_info;
 
-/* Called once in the main thread */
-static inline int init_papi(void) __attribute__((unused));
-static inline int init_papi(void) {
-#ifdef PAPI_LIB
-    ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
-            "Error invoking %s when PAPI has been disabled", __FUNCTION__);
+    // status = 1 means HWC are enabled
+    int hwc_local_status = talp_info->flags.have_hwc ? 1 : 0;
 
-    /* Library init */
-    int retval = PAPI_library_init(PAPI_VER_CURRENT);
-    if(retval != PAPI_VER_CURRENT || retval == PAPI_EINVAL){
-        // PAPI init failed because of a version mismatch
-        // Maybe we can rectify the situation by cheating a bit.
-        // Lets first check if the major version is the same
-        int loaded_lib_version = PAPI_get_opt(PAPI_LIB_VERSION, NULL);
-        if(PAPI_VERSION_MAJOR(PAPI_VER_CURRENT) == PAPI_VERSION_MAJOR(loaded_lib_version)){
-            warning("The PAPI version loaded at runtime differs from the one DLB was compiled with. Expected version %d.%d.%d but got %d.%d.%d. Continuing on best effort.",
-                PAPI_VERSION_MAJOR(PAPI_VER_CURRENT),
-                PAPI_VERSION_MINOR(PAPI_VER_CURRENT),
-                PAPI_VERSION_REVISION(PAPI_VER_CURRENT),
-                PAPI_VERSION_MAJOR(loaded_lib_version),
-                PAPI_VERSION_MINOR(loaded_lib_version),
-                PAPI_VERSION_REVISION(loaded_lib_version));
-            // retval here can only be loaded_lib_version or negative. We assume loaded_lib_version and check for other failures below
-            retval = PAPI_library_init(loaded_lib_version);
-        }
-        else{
-            // we have a different major version. we fail.
-            warning("The PAPI version loaded at runtime differs greatly from the one DLB was compiled with. Expected version%d.%d.%d but got %d.%d.%d.",
-                    PAPI_VERSION_MAJOR(PAPI_VER_CURRENT),
-                    PAPI_VERSION_MINOR(PAPI_VER_CURRENT),
-                    PAPI_VERSION_REVISION(PAPI_VER_CURRENT),
-                    PAPI_VERSION_MAJOR(loaded_lib_version),
-                    PAPI_VERSION_MINOR(loaded_lib_version),
-                    PAPI_VERSION_REVISION(loaded_lib_version));
-            return -1;
-        }
-    }
-    
-    if(retval < 0 || PAPI_is_initialized() == PAPI_NOT_INITED){
-        // so we failed, we can maybe get some info why:
-        if(retval == PAPI_ENOMEM){
-            warning("PAPI initialization failed: Insufficient memory to complete the operation.");
-        }
-        if(retval == PAPI_ECMP){
-            warning("PAPI initialization failed: This component does not support the underlying hardware.");
-        }
-        if(retval == PAPI_ESYS){
-            warning("PAPI initialization failed: A system or C library call failed inside PAPI.");
-        }
-        return -1;
-    }
+    int hwc_global_statuses = 0;
 
-    /* Activate thread tracing */
-    int error = PAPI_thread_init(pthread_self);
-    if (error != PAPI_OK) {
-        warning("PAPI Error during thread initialization. %d: %s",
-                error, PAPI_strerror(error));
-        return -1;
-    }
-#endif
-    return 0;
+    PMPI_Allreduce(&hwc_local_status, &hwc_global_statuses, 1,
+            MPI_INT, MPI_SUM, getWorldComm());
+
+    return hwc_global_statuses;
 }
-
-/* Called once per thread */
-int talp_init_papi_counters(void) {
-#ifdef PAPI_LIB
-    ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
-            "Error invoking %s when PAPI has been disabled", __FUNCTION__);
-
-    int error = PAPI_register_thread();
-    if (error != PAPI_OK) {
-        warning("PAPI Error during thread registration. %d: %s",
-                error, PAPI_strerror(error));
-        return -1;
-    }
-
-    /* Eventset creation */
-    EventSet = PAPI_NULL;
-    error = PAPI_create_eventset(&EventSet);
-    if (error != PAPI_OK) {
-        warning("PAPI Error during eventset creation. %d: %s",
-                error, PAPI_strerror(error));
-        return -1;
-    }
-
-    int Events[2] = {PAPI_TOT_CYC, PAPI_TOT_INS};
-    error = PAPI_add_events(EventSet, Events, 2);
-    if (error != PAPI_OK) {
-        warning("PAPI Error adding events. %d: %s",
-                error, PAPI_strerror(error));
-        return -1;
-    }
-
-    /* Start tracing  */
-    error = PAPI_start(EventSet);
-    if (error != PAPI_OK) {
-        warning("PAPI Error during tracing initialization: %d: %s",
-                error, PAPI_strerror(error));
-        return -1;
-    }
 #endif
-    return 0;
-}
-
-static inline void update_last_read_papi_counters(talp_sample_t* sample) {
-#ifdef PAPI_LIB
-    ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
-            "Error invoking %s when PAPI has been disabled", __FUNCTION__);
-    
-    if(sample->state == useful) {
-        // Similar to the old logic, we "reset" the PAPI counters here.
-        // But instead of calling PAPI_Reset we just store the current value,
-        // such that we can subtract the value later when updating the sample.
-        long long papi_values[2];
-        int error = PAPI_read(EventSet, papi_values);
-        if (error != PAPI_OK) {
-            verbose(VB_TALP, "Error reading PAPI counters: %d, %s", error, PAPI_strerror(error));
-        }
-        
-        /* Update sample */
-        sample->last_read_counters.cycles = papi_values[0];
-        sample->last_read_counters.instructions = papi_values[1];
-    }
-#endif
-}
-
-/* Called once in the main thread */
-static inline void fini_papi(void) __attribute__((unused));
-static inline void fini_papi(void) {
-#ifdef PAPI_LIB
-    ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
-            "Error invoking %s when PAPI has been disabled", __FUNCTION__);
-
-    PAPI_shutdown();
-#endif
-}
-
-/* Called once per thread */
-void talp_fini_papi_counters(void) {
-#ifdef PAPI_LIB
-    ensure( ((talp_info_t*)thread_spd->talp_info)->flags.papi,
-            "Error invoking %s when PAPI has been disabled", __FUNCTION__);
-
-    int error;
-
-    if (EventSet != PAPI_NULL) {
-        // Stop counters (ignore if already stopped)
-        error = PAPI_stop(EventSet, NULL);
-        if (error != PAPI_OK && error != PAPI_ENOTRUN) {
-            warning("PAPI Error stopping counters. %d: %s",
-                    error, PAPI_strerror(error));
-        }
-
-        // Cleanup and destroy the EventSet
-        error = PAPI_cleanup_eventset(EventSet);
-        if (error != PAPI_OK) {
-            warning("PAPI Error cleaning eventset. %d: %s",
-                    error, PAPI_strerror(error));
-        }
-
-        error = PAPI_destroy_eventset(&EventSet);
-        if (error != PAPI_OK) {
-            warning("PAPI Error destroying eventset. %d: %s",
-                    error, PAPI_strerror(error));
-        }
-
-        EventSet = PAPI_NULL;
-    }
-
-    // Unregister this thread from PAPI
-    error = PAPI_unregister_thread();
-    if (error != PAPI_OK) {
-        warning("PAPI Error unregistering thread. %d: %s",
-                error, PAPI_strerror(error));
-    }
-#endif
-}
 
 
 /*********************************************************************************/
@@ -306,16 +133,17 @@ void talp_fini_papi_counters(void) {
 /*********************************************************************************/
 
 void talp_init(subprocess_descriptor_t *spd) {
+
     ensure(!spd->talp_info, "TALP already initialized");
     ensure(!thread_is_observer, "An observer thread cannot call talp_init");
-    verbose(VB_TALP, "Initializing TALP module");
+    verbose(VB_TALP, "Initializing TALP module with worker mask: %s",
+            mu_to_str(&spd->process_mask));
 
     /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
     *talp_info = (const talp_info_t) {
         .flags = {
             .external_profiler = spd->options.talp_external_profiler,
-            .papi = spd->options.talp_papi,
             .have_shmem = spd->options.talp_external_profiler,
             .have_minimal_shmem = !spd->options.talp_external_profiler
                 && spd->options.talp_summary & SUMMARY_NODE,
@@ -340,41 +168,47 @@ void talp_init(subprocess_descriptor_t *spd) {
         shmem_talp__init(spd->options.shm_key, shmem_size_multiplier);
     }
 
+    /* Initialize TALP components */
+    if (spd->options.talp & (TALP_COMPONENT_DEFAULT | TALP_COMPONENT_GPU)) {
+        if (talp_gpu_init(spd) == DLB_SUCCESS) {
+            talp_info->flags.have_gpu = true;
+            verbose(VB_TALP, "GPU component enabled successfully");
+        } else {
+            if (spd->options.talp & TALP_COMPONENT_GPU) {
+                /* component was explicit and failed, warn user */
+                warning("TALP: Failed to load GPU component");
+            }
+        }
+    }
+    if (spd->options.talp & (TALP_COMPONENT_DEFAULT | TALP_COMPONENT_HWC)) {
+        if (talp_hwc_init(spd) == DLB_SUCCESS) {
+            talp_info->flags.have_hwc = true;
+            verbose(VB_TALP, "HWC component enabled successfully");
+        } else {
+            if (spd->options.talp & TALP_COMPONENT_HWC) {
+                /* component was explicit and failed, warn user */
+                warning("TALP: Failed to load HWC component");
+            }
+        }
+    }
+
+#ifdef MPI_LIB
+    /* Check HWC status across all process. Every process needs to do the check
+     * because it's a collective operation and some process may have been started
+     * without the appropriate flag. */
+    if (is_mpi_ready()) {
+        int num_procs_with_hwc = get_hwc_init_across_world(spd);
+        if (num_procs_with_hwc > 0 && num_procs_with_hwc < _mpi_size) {
+            warning0("Hardware Counters initialization has failed, disabling option.");
+            talp_hwc_finalize();
+            talp_info->flags.have_hwc = false;
+        }
+    }
+#endif
+
     /* Initialize global region monitor
      * (at this point we don't know how many CPUs, it will be fixed in talp_openmp_init) */
     talp_info->monitor = region_register(spd, region_get_global_name());
-
-    verbose(VB_TALP, "TALP module with workers mask: %s", mu_to_str(&spd->process_mask));
-
-    /* Initialize and start running PAPI */
-    if (talp_info->flags.papi) {
-#ifdef PAPI_LIB
-        int papi_local_fail = 0;
-        int papi_global_fail = 0;
-
-        if (init_papi() != 0 || talp_init_papi_counters() != 0) {
-            papi_local_fail = 1;
-        }
-
-#ifdef MPI_LIB
-        PMPI_Allreduce(&papi_local_fail, &papi_global_fail, 1, MPI_INT, MPI_MAX, getWorldComm());
-#endif
-
-        if (papi_global_fail && !papi_local_fail) {
-            /* Un-initialize */
-            talp_fini_papi_counters();
-            fini_papi();
-        }
-
-        if (papi_global_fail || papi_local_fail) {
-            warning0("PAPI initialization has failed, disabling option.");
-            talp_info->flags.papi = false;
-        }
-#else
-        warning0("DLB has not been configured with PAPI support, disabling option.");
-        talp_info->flags.papi = false;
-#endif
-    }
 
     /* Start global region */
     region_start(spd, talp_info->monitor);
@@ -386,17 +220,26 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     verbose(VB_TALP, "Finalizing TALP module");
 
     talp_info_t *talp_info = spd->talp_info;
+
+    /* Stop open regions
+     * (Note that region_stop need to acquire the regions_mutex
+     * lock, so we we need to iterate without it) */
+    while(talp_info->open_regions != NULL) {
+        dlb_monitor_t *monitor = talp_info->open_regions->data;
+        region_stop(spd, monitor);
+    }
+
+    /* Finalize TALP components */
+    if (talp_info->flags.have_gpu) {
+        talp_gpu_finalize();
+    }
+    if (talp_info->flags.have_hwc) {
+        talp_hwc_finalize();
+    }
+
     if (!talp_info->flags.have_mpi) {
         /* If we don't have MPI support, regions may be still running and
          * without being recorded to talp_output. Do that now. */
-
-        /* Stop open regions
-         * (Note that region_stop need to acquire the regions_mutex
-         * lock, so we we need to iterate without it) */
-        while(talp_info->open_regions != NULL) {
-            dlb_monitor_t *monitor = talp_info->open_regions->data;
-            region_stop(spd, monitor);
-        }
 
         pthread_mutex_lock(&talp_info->regions_mutex);
         {
@@ -421,12 +264,6 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     if (talp_info->flags.have_shmem || talp_info->flags.have_minimal_shmem) {
         shmem_talp__finalize(spd->id);
     }
-
-#ifdef PAPI_LIB
-    if (talp_info->flags.papi) {
-        fini_papi();
-    }
-#endif
 
     /* Deallocate monitoring regions and talp_info */
     pthread_mutex_lock(&talp_info->regions_mutex);
@@ -485,6 +322,7 @@ static void talp_dealloc_samples(const subprocess_descriptor_t *spd) {
 
 /* Get the TLS associated sample */
 talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd) {
+
     /* Thread already has an allocated sample, return it */
     if (likely(_tls_sample != NULL)) return _tls_sample;
 
@@ -524,37 +362,44 @@ talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd) {
         .last_updated_timestamp = last_updated_timestamp,
     };
 
-    talp_set_sample_state(_tls_sample, disabled, talp_info->flags.papi);
+    talp_set_sample_state(spd, _tls_sample, TALP_STATE_DISABLED);
 
 #ifdef INSTRUMENTATION_VERSION
     unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
-    long long papi_values[] = {0, 0};
-    instrument_nevent(2, events, papi_values);
+    long long hwc_values[] = {0, 0};
+    instrument_nevent(2, events, hwc_values);
 #endif
 
     return _tls_sample;
 }
 
 /* WARNING: this function may only be called when updating own thread's sample */
-void talp_set_sample_state(talp_sample_t *sample, enum talp_sample_state state,
-        bool papi) {
-    sample->state = state;
-    if (papi) {
-        update_last_read_papi_counters(sample);
+void talp_set_sample_state(const subprocess_descriptor_t *spd, talp_sample_t *sample,
+        talp_sample_state_t new_state) {
+
+    talp_info_t *talp_info = spd->talp_info;
+    if (talp_info->flags.have_hwc) {
+        talp_sample_state_t old = sample->state;
+        talp_hwc_on_state_change(old, new_state);
     }
+
+    sample->state = new_state;
+
     instrument_event(MONITOR_STATE,
-            state == disabled ? MONITOR_STATE_DISABLED
-            : state == useful ? MONITOR_STATE_USEFUL
-            : state == not_useful_mpi ? MONITOR_STATE_NOT_USEFUL_MPI
-            : state == not_useful_omp_in ? MONITOR_STATE_NOT_USEFUL_OMP_IN
-            : state == not_useful_omp_out ? MONITOR_STATE_NOT_USEFUL_OMP_OUT
-            : state == not_useful_gpu ? MONITOR_STATE_NOT_USEFUL_GPU
+            new_state == TALP_STATE_DISABLED ? MONITOR_STATE_DISABLED
+            : new_state == TALP_STATE_USEFUL ? MONITOR_STATE_USEFUL
+            : new_state == TALP_STATE_NOT_USEFUL_MPI ? MONITOR_STATE_NOT_USEFUL_MPI
+            : new_state == TALP_STATE_NOT_USEFUL_OMP_IN ? MONITOR_STATE_NOT_USEFUL_OMP_IN
+            : new_state == TALP_STATE_NOT_USEFUL_OMP_OUT ? MONITOR_STATE_NOT_USEFUL_OMP_OUT
+            : new_state == TALP_STATE_NOT_USEFUL_GPU ? MONITOR_STATE_NOT_USEFUL_GPU
             : 0,
             EVENT_BEGIN);
 }
 
 /* Compute new microsample (time since last update) and update sample values */
-void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp) {
+void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sample,
+        int64_t timestamp) {
+
     /* Observer threads ignore this function */
     if (unlikely(sample == NULL)) return;
 
@@ -565,64 +410,45 @@ void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp) {
 
     /* Update the appropriate sample timer */
     switch(sample->state) {
-        case disabled:
+        case TALP_STATE_DISABLED:
             break;
-        case useful:
+        case TALP_STATE_USEFUL:
             DLB_ATOMIC_ADD_RLX(&sample->timers.useful, microsample_duration);
             break;
-        case not_useful_mpi:
+        case TALP_STATE_NOT_USEFUL_MPI:
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_mpi, microsample_duration);
             break;
-        case not_useful_omp_in:
+        case TALP_STATE_NOT_USEFUL_OMP_IN:
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_in, microsample_duration);
             break;
-        case not_useful_omp_out:
+        case TALP_STATE_NOT_USEFUL_OMP_OUT:
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_out, microsample_duration);
             break;
-        case not_useful_gpu:
+        case TALP_STATE_NOT_USEFUL_GPU:
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_gpu, microsample_duration);
             break;
     }
 
-#ifdef PAPI_LIB
-    if (papi) {
+    talp_info_t *talp_info = spd->talp_info;
+    if (talp_info->flags.have_hwc) {
         /* Only read counters if we are updating this thread's sample */
         if (is_talp_sample_mine(sample)) {
-            if (sample->state == useful) {
-                /* Read */
-                long long papi_values[2];
-                int error = PAPI_read(EventSet, papi_values);
-                if (error != PAPI_OK) {
-                    verbose(VB_TALP, "stop return code: %d, %s", error, PAPI_strerror(error));
-                }
-                // Compute the difference from the last value read
-                const long long useful_cycles = papi_values[0] - sample->last_read_counters.cycles;
-                const long long useful_instructions = papi_values[1] - sample->last_read_counters.instructions;
-
-                /* Atomically add papi_values to sample structure */
-                DLB_ATOMIC_ADD_RLX(&sample->counters.cycles, useful_cycles);
-                DLB_ATOMIC_ADD_RLX(&sample->counters.instructions, useful_instructions);
+            hwc_measurements_t measurements;
+            if (talp_hwc_collect(&measurements)) {
+                /* Atomically add HWC values to sample structure */
+                DLB_ATOMIC_ADD_RLX(&sample->counters.cycles, measurements.cycles);
+                DLB_ATOMIC_ADD_RLX(&sample->counters.instructions, measurements.instructions);
+            }
 
 #ifdef INSTRUMENTATION_VERSION
-                unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
-                instrument_nevent(2, events, papi_values);
+            // It's safe to emit even if talp_hwc_collect returned false,
+            // struct is zero'ed in that case
+            unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
+            long long hwc_values[] = {measurements.cycles, measurements.instructions};
+            instrument_nevent(2, events, hwc_values);
 #endif
-
-                /* Counters are updated here and every time the sample is set to useful */
-                sample->last_read_counters.cycles = papi_values[0];
-                sample->last_read_counters.instructions = papi_values[1];
-            }
-            else {
-#ifdef INSTRUMENTATION_VERSION
-                /* Emit 0's to distinguish useful chunks in traces */
-                unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
-                long long papi_values[] = {0, 0};
-                instrument_nevent(2, events, papi_values);
-#endif
-            }
         }
     }
-#endif /* PAPI_LIB */
 }
 
 /* Flush and aggregate a single sample into a macrosample */
@@ -643,13 +469,11 @@ static inline void flush_sample_to_macrosample(talp_sample_t *sample,
     macrosample->timers.not_useful_gpu +=
         DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_gpu, 0);
 
-#ifdef PAPI_LIB
     /* Counters */
     macrosample->counters.cycles +=
         DLB_ATOMIC_EXCH_RLX(&sample->counters.cycles, 0);
     macrosample->counters.instructions +=
         DLB_ATOMIC_EXCH_RLX(&sample->counters.instructions, 0);
-#endif
 
     /* Stats */
     macrosample->stats.num_mpi_calls +=
@@ -660,18 +484,6 @@ static inline void flush_sample_to_macrosample(talp_sample_t *sample,
         DLB_ATOMIC_EXCH_RLX(&sample->stats.num_omp_tasks, 0);
     macrosample->stats.num_gpu_runtime_calls +=
         DLB_ATOMIC_EXCH_RLX(&sample->stats.num_gpu_runtime_calls, 0);
-}
-
-/* Flush values from gpu_sample to macrosample */
-void flush_gpu_sample_to_macrosample(talp_gpu_sample_t *gpu_sample,
-        talp_macrosample_t *macrosample) {
-
-    macrosample->gpu_timers.useful        = gpu_sample->timers.useful;
-    macrosample->gpu_timers.communication = gpu_sample->timers.communication;
-    macrosample->gpu_timers.inactive      = gpu_sample->timers.inactive;
-
-    /* Reset */
-    *gpu_sample = (const talp_gpu_sample_t){0};
 }
 
 /* Accumulate values from samples of all threads and update regions */
@@ -692,17 +504,19 @@ int talp_flush_samples_to_regions(const subprocess_descriptor_t *spd) {
         /* Force-update and aggregate all samples */
         int64_t timestamp = get_time_in_ns();
         for (int i = 0; i < num_cpus; ++i) {
-            talp_update_sample(talp_info->samples[i], talp_info->flags.papi, timestamp);
+            talp_update_sample(spd, talp_info->samples[i], timestamp);
             flush_sample_to_macrosample(talp_info->samples[i], &macrosample);
         }
     }
     pthread_mutex_unlock(&talp_info->samples_mutex);
 
     if (talp_info->flags.have_gpu) {
-        /* gpu_sample data is filled asynchronously, first we need to synchronize
-         * and wait for the measurements to be read, then flush it */
-        talp_gpu_sync_measurements();
-        flush_gpu_sample_to_macrosample(&talp_info->gpu_sample, &macrosample);
+        /* Collect GPU measuremnts up to this point and update macrosample */
+        gpu_measurements_t measurements;
+        talp_gpu_collect(&measurements);
+        macrosample.gpu_timers.useful        = measurements.useful_time;
+        macrosample.gpu_timers.communication = measurements.communication_time;
+        macrosample.gpu_timers.inactive      = measurements.inactive_time;
     }
 
     /* Update all started regions */
@@ -726,7 +540,7 @@ void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
         int64_t min_not_useful_omp_in = INT64_MAX;
         unsigned int i;
         for (i=0; i<nelems; ++i) {
-            talp_update_sample(samples[i], talp_info->flags.papi, timestamp);
+            talp_update_sample(spd, samples[i], timestamp);
             min_not_useful_omp_in = min_int64(min_not_useful_omp_in,
                     DLB_ATOMIC_LD_RLX(&samples[i]->timers.not_useful_omp_in));
         }

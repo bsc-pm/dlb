@@ -88,7 +88,8 @@ extern verbose_opts_t   vb_opts;
 #endif
 
 #ifdef DEBUG_VERSION
-#define debug_warning(...) warning(__VA_ARGS__)
+#define debug_warning(fmt, ...) \
+    warning("%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
 #define ensure(cond, ...) \
     do { \

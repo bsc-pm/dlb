@@ -18,11 +18,11 @@ rt_dep = cc.find_library('rt', required : true)
 dl_dep = cc.find_library('dl', required : true)
 thread_dep = dependency('threads')
 hwloc_dep = dependency('hwloc', required : get_option('hwloc'))
-papi_dep = dependency('papi', required : get_option('papi'))
-common_deps = [m_dep, rt_dep, dl_dep, thread_dep, hwloc_dep, papi_dep]
+common_deps = [m_dep, rt_dep, dl_dep, thread_dep, hwloc_dep]
 mpi_dep = dependency('mpi', language : 'c', required : get_option('mpi'))
 mpif_dep = dependency('mpi', language : 'fortran', required : get_option('mpi'))
 cuda_dep = dependency('cuda', modules: ['cupti'], required : get_option('cuda'))
+papi_dep = dependency('papi', required : get_option('papi'))
 
 ### CFLAGS
 
@@ -30,9 +30,6 @@ add_project_arguments('-DHAVE_CONFIG_H', language : 'c')
 add_project_arguments('-D_GNU_SOURCE', language : 'c')
 if hwloc_dep.found()
   add_project_arguments('-DHWLOC_LIB', language : 'c')
-endif
-if papi_dep.found()
-  add_project_arguments('-DPAPI_LIB', language : 'c')
 endif
 
 instr_cpp_flags = '-DINSTRUMENTATION_VERSION'
@@ -98,8 +95,6 @@ subdir('src/apis/python_bindings/')
 common_includes = [ include_directories('src'), include_directories('src/apis') ]
 
 common_srcs = [
-  'src/plugins/plugin_manager.c',
-  'src/plugins/plugin_manager.h',
   'src/support/array_template.h',
   'src/support/atomic.h',
   'src/support/dlb_common.h',
@@ -124,8 +119,13 @@ common_srcs = [
   'src/support/small_array.h',
   'src/support/types.c',
   'src/support/types.h',
+  'src/talp/backend.h',
+  'src/talp/backend_manager.c',
+  'src/talp/backend_manager.h',
   'src/talp/talp_gpu.c',
   'src/talp/talp_gpu.h',
+  'src/talp/talp_hwc.c',
+  'src/talp/talp_hwc.h',
   'src/talp/talp_openmp.c',
   'src/talp/talp_openmp.h',
   'src/talp/talp_output.c',
@@ -227,9 +227,9 @@ libdlb_instr = library(
 
 # Static library only used for testing
 libdlb_test = static_library(
-  'dlb_test', [sources, 'src/talp/talp_check_layout.c'],
+  'dlb_test', [common_srcs, sources, 'src/talp/talp_check_layout.c'],
   include_directories : common_includes,
-  link_with: libdlb_common,
+  c_args: ['-DDLB_TEST_LIB'],
   dependencies : common_deps,
   install : false,
   build_by_default : false,
@@ -393,15 +393,105 @@ endif
 ### DLB Plugin libraries                                                      ###
 #################################################################################
 
+# CUPTI
+
+cupti_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/cupti.c',
+  'src/talp/backends/gpu_record_utils.c',
+  'src/talp/backends/gpu_record_utils.h',
+]
+
 if cuda_dep.found()
   libdlb_cupti = shared_module(
-    'dlb_cupti', 'src/plugins/cupti_plugin.c',
+    'dlb_cupti', cupti_backend_sources,
     include_directories : common_includes,
     dependencies : cuda_dep,
     gnu_symbol_visibility : 'hidden',
     install : true,
   )
 endif
+
+# ROCPROFILER_SDK
+
+rocprofiler_sdk_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/rocprofiler_sdk.c',
+  'src/talp/backends/gpu_record_utils.c',
+  'src/talp/backends/gpu_record_utils.h',
+]
+
+# PAPI
+
+papi_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/papi.c',
+]
+
+if papi_dep.found()
+  libdlb_papi = shared_module(
+    'dlb_papi', papi_backend_sources,
+    include_directories : common_includes,
+    dependencies : papi_dep,
+    gnu_symbol_visibility : 'hidden',
+    install : true,
+  )
+endif
+
+### Stub libraries and testing plugins
+
+stub_includes = [ common_includes, include_directories('tests/stubs') ]
+
+libcupti_stub = shared_library(
+  'cupti_stub',
+  'tests/stubs/cupti_stub.c',
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_cupti_test = shared_module(
+  'dlb_cupti_test',
+  cupti_backend_sources,
+  include_directories : stub_includes,
+  link_with : libcupti_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+librocprofiler_sdk_stub = shared_library(
+  'rocprofiler-sdk_stub',
+  'tests/stubs/rocprofiler_sdk_stub.c',
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_rocprofiler_sdk_test = shared_module(
+  'dlb_rocprofiler-sdk_test',
+  rocprofiler_sdk_backend_sources,
+  include_directories : stub_includes,
+  link_with : librocprofiler_sdk_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+libpapi_stub = shared_library(
+  'papi_stub',
+  'tests/stubs/papi_stub.c',
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_papi_test = shared_module(
+  'dlb_papi_test',
+  papi_backend_sources,
+  include_directories : stub_includes,
+  link_with : libpapi_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
 
 #################################################################################
 ### Binaries                                                                  ###

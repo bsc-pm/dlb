@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -34,12 +34,12 @@
 #include "LB_comm/shmem_talp.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_talp.h"
-#include "plugins/plugin_manager.h"
 #include "support/debug.h"
 #include "support/mytime.h"
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+#include "talp/backend_manager.h"
 #include "talp/talp.h"
 #include "talp/talp_mpi.h"
 #ifdef MPI_LIB
@@ -181,9 +181,6 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         spd->talp_info = NULL;
     }
 
-    // Initialize plugins
-    load_plugins(spd->options.plugins);
-
     // Print initialization summary
     info0("%s %s", PACKAGE, VERSION);
     if (spd->lb_policy != POLICY_NONE) {
@@ -239,9 +236,6 @@ int Finish(subprocess_descriptor_t *spd) {
     spd->lewi_enabled = false;
 
     pm_finalize(&spd->pm);
-
-    // Finalize plugins
-    unload_plugins(spd->options.plugins);
 
     if (spd->options.talp) {
         talp_finalize(spd);
@@ -847,16 +841,5 @@ int set_observer_role(bool is_observer) {
 }
 
 int get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid) {
-    int error = DLB_SUCCESS;
-    if (load_plugin("cupti") == DLB_SUCCESS) {
-        plugin_get_gpu_affinity(buffer, buffer_size, full_uuid);
-        unload_plugin("cupti");
-    } else if (load_plugin("rocprofilerv2") == DLB_SUCCESS) {
-        plugin_get_gpu_affinity(buffer, buffer_size, full_uuid);
-        unload_plugin("rocprofilerv2");
-    } else {
-        error = DLB_ERR_UNKNOWN;
-    }
-
-    return error;
+    return talp_backend_manager_get_gpu_affinity(buffer, buffer_size, full_uuid);
 }

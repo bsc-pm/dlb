@@ -20,12 +20,22 @@
 #ifndef TALP_TYPES_H
 #define TALP_TYPES_H
 
+#include "apis/dlb_talp.h"
 #include "apis/dlb_types.h"
 #include "support/atomic.h"
 #include "support/gtree.h"
 #include "support/gslist.h"
 
 #include <pthread.h>
+
+typedef enum {
+    TALP_STATE_DISABLED,
+    TALP_STATE_USEFUL,
+    TALP_STATE_NOT_USEFUL_MPI,
+    TALP_STATE_NOT_USEFUL_OMP_IN,
+    TALP_STATE_NOT_USEFUL_OMP_OUT,
+    TALP_STATE_NOT_USEFUL_GPU,
+} talp_sample_state_t;
 
 /* The sample contains the temporary per-thread accumulated values of all the
  * measured metrics. Once the sample is flushed, a macrosample is created using
@@ -45,7 +55,6 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         atomic_int_least64_t not_useful_omp_out;
         atomic_int_least64_t not_useful_gpu;
     } timers;
-#if PAPI_LIB
     struct {
         atomic_int_least64_t cycles;
         atomic_int_least64_t instructions;
@@ -56,7 +65,6 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         atomic_int_least64_t cycles;
         atomic_int_least64_t instructions;
     } last_read_counters;
-#endif
     struct {
         atomic_int_least64_t num_mpi_calls;
         atomic_int_least64_t num_omp_parallels;
@@ -64,24 +72,8 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         atomic_int_least64_t num_gpu_runtime_calls;
     } stats;
     int64_t last_updated_timestamp;
-    enum talp_sample_state {
-        disabled,
-        useful,
-        not_useful_mpi,
-        not_useful_omp_in,
-        not_useful_omp_out,
-        not_useful_gpu,
-    } state;
+    talp_sample_state_t state;
 } talp_sample_t;
-
-/* Sample for each GPU device */
-typedef struct talp_gpu_sample_t {
-    struct {
-        int64_t useful;
-        int64_t communication;
-        int64_t inactive;
-    } timers;
-} talp_gpu_sample_t;
 
 /* The macrosample is a temporary aggregation of all metrics in samples of all,
  * or a subset of, threads. It is only constructed when samples are flushed and
@@ -101,12 +93,10 @@ typedef struct talp_macrosample_t {
         int64_t communication;
         int64_t inactive;
     } gpu_timers;
-#ifdef PAPI_LIB
     struct {
         int64_t cycles;
         int64_t instructions;
     } counters;
-#endif
     struct {
         int64_t num_mpi_calls;
         int64_t num_omp_parallels;
@@ -115,17 +105,20 @@ typedef struct talp_macrosample_t {
     } stats;
 } talp_macrosample_t;
 
-/* Talp info per spd */
+/* TALP flags for talp_info */
+typedef struct talp_flags_t {
+    bool have_shmem:1;          /* whether to record data in shmem */
+    bool have_minimal_shmem:1;  /* whether to create a shmem for the global region */
+    bool external_profiler:1;   /* whether to update shmem on every sample */
+    bool have_mpi:1;            /* whether TALP regions have MPI events */
+    bool have_openmp:1;         /* whether TALP regions have OpenMP events */
+    bool have_gpu:1;            /* whether TALP regions have GPU events */
+    bool have_hwc:1;            /* whether TALP regions have HWC events */
+} talp_flags_t;
+
+/* TALP info per spd */
 typedef struct talp_info_t {
-    struct {
-        bool have_shmem:1;          /* whether to record data in shmem */
-        bool have_minimal_shmem:1;  /* whether to create a shmem for the global region */
-        bool external_profiler:1;   /* whether to update shmem on every sample */
-        bool papi:1;                /* whether to collect PAPI counters */
-        bool have_mpi:1;            /* whether TALP regions have MPI events */
-        bool have_openmp:1;         /* whether TALP regions have OpenMP events */
-        bool have_gpu:1;            /* whether TALP regions have GPU events */
-    } flags;
+    talp_flags_t    flags;
     int             ncpus;          /* Number of process CPUs (also num samples) */
     dlb_monitor_t   *monitor;       /* Convenience pointer to the global region */
     GTree           *regions;       /* Tree of monitoring regions */
@@ -134,7 +127,6 @@ typedef struct talp_info_t {
     talp_sample_t   **samples;      /* Per-thread ongoing sample,
                                        added to all monitors when finished */
     pthread_mutex_t samples_mutex;  /* Mutex to protect samples allocation/iteration */
-    talp_gpu_sample_t gpu_sample;   /* Per-GPU sample (for now only 1 supported) */
 } talp_info_t;
 
 /* Private data per monitor */

@@ -57,12 +57,7 @@ AM_LDFLAGS = $(AC_LDFLAGS) -avoid-version
 
 if HAVE_HWLOC
 AM_CPPFLAGS += $(HWLOC_CPPFLAGS) -DHWLOC_LIB
-AM_LDFLAGS += $(HWLOC_LDFLAGS) $(HWLOC_LIBS)
-endif
-
-if HAVE_PAPI
-AM_CPPFLAGS += $(PAPI_CPPFLAGS) -DPAPI_LIB
-AM_LDFLAGS += $(PAPI_LDFLAGS) $(PAPI_LIBS)
+AM_LDFLAGS += $(HWLOC_LDFLAGS)
 endif
 
 if MPI_LIB
@@ -200,9 +195,6 @@ src/mpi/config_mpi.h: $(top_srcdir)/src/mpi/config_mpi.h.in $(MPICALLS_DB)
 # These sources do not depend on any MPI nor instrumentation version, only debug
 COMMON_SRCS = \
 	$(installheaders)                       \
-	src/plugins/plugin.h                    \
-	src/plugins/plugin_manager.c            \
-	src/plugins/plugin_manager.h            \
 	src/support/array_template.h            \
 	src/support/atomic.h                    \
 	src/support/dlb_common.h                \
@@ -227,8 +219,13 @@ COMMON_SRCS = \
 	src/support/small_array.h               \
 	src/support/types.c                     \
 	src/support/types.h                     \
+	src/talp/backend.h                      \
+	src/talp/backend_manager.c              \
+	src/talp/backend_manager.h              \
 	src/talp/talp_gpu.c                     \
 	src/talp/talp_gpu.h                     \
+	src/talp/talp_hwc.c                     \
+	src/talp/talp_hwc.h                     \
 	src/talp/talp_openmp.c                  \
 	src/talp/talp_openmp.h                  \
 	src/talp/talp_output.c                  \
@@ -259,7 +256,7 @@ COMMON_SRCS = \
 # If rocprofiler-sdk plugin is enabled, we need to add the configure symbol
 # to the main library, since it cannot be part of the plugin.
 if ROCM_ROCPROFSDK_PLUGIN
-COMMON_SRCS += src/plugins/rocprofiler_sdk_configure.c
+COMMON_SRCS += src/talp/rocprofiler_sdk_configure.c
 endif
 
 noinst_LTLIBRARIES += libdlb_common.la
@@ -623,10 +620,10 @@ endif #MPI_LIB
 #********************************************************************************
 if CUPTI_PLUGIN
 CUPTI_SRCS = \
-	src/plugins/cupti_plugin.c      \
-	src/plugins/gpu_record_utils.c  \
-	src/plugins/gpu_record_utils.h  \
-	src/plugins/plugin_utils.h      \
+	src/talp/backends/backend_utils.h     \
+	src/talp/backends/cupti.c             \
+	src/talp/backends/gpu_record_utils.c  \
+	src/talp/backends/gpu_record_utils.h  \
 	$(END)
 
 lib_LTLIBRARIES += libdlb_cupti.la
@@ -641,10 +638,10 @@ endif #CUPTI_PLUGIN
 #********************************************************************************
 if ROCM_ROCPROFV2_PLUGIN
 ROCPROFILERV2_SRCS = \
-	src/plugins/rocprofilerv2_plugin.c      \
-	src/plugins/gpu_record_utils.c          \
-	src/plugins/gpu_record_utils.h          \
-	src/plugins/plugin_utils.h              \
+	src/talp/backends/backend_utils.h     \
+	src/talp/backends/rocprofilerv2.c     \
+	src/talp/backends/gpu_record_utils.c  \
+	src/talp/backends/gpu_record_utils.h  \
 	$(END)
 
 lib_LTLIBRARIES += libdlb_rocprofilerv2.la
@@ -659,10 +656,10 @@ endif #ROCM_ROCPROFV2_PLUGIN
 #********************************************************************************
 if ROCM_ROCPROFSDK_PLUGIN
 ROCPROFILER_SDK_SRCS = \
-	src/plugins/rocprofiler_sdk_plugin.c    \
-	src/plugins/gpu_record_utils.c          \
-	src/plugins/gpu_record_utils.h          \
-	src/plugins/plugin_utils.h              \
+	src/talp/backends/backend_utils.h     \
+	src/talp/backends/rocprofiler_sdk.c   \
+	src/talp/backends/gpu_record_utils.c  \
+	src/talp/backends/gpu_record_utils.h  \
 	$(END)
 
 lib_LTLIBRARIES += libdlb_rocprofiler-sdk.la
@@ -671,6 +668,22 @@ libdlb_rocprofiler_sdk_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 libdlb_rocprofiler_sdk_la_LDFLAGS = $(AM_LDFLAGS) $(ROCM_ROCPROFSDK_LDFLAGS)
 libdlb_rocprofiler_sdk_la_SOURCES = $(ROCPROFILER_SDK_SRCS)
 endif #ROCM_ROCPROFSDK_PLUGIN
+
+#********************************************************************************
+# libdlb_papi.so
+#********************************************************************************
+if PAPI_PLUGIN
+PAPI_SRCS = \
+	src/talp/backends/backend_utils.h     \
+	src/talp/backends/papi.c              \
+	$(END)
+
+lib_LTLIBRARIES += libdlb_papi.la
+libdlb_papi_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(PAPI_CPPFLAGS)
+libdlb_papi_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_papi_la_LDFLAGS = $(AM_LDFLAGS) $(PAPI_LDFLAGS)
+libdlb_papi_la_SOURCES = $(PAPI_SRCS)
+endif #PAPI_PLUGIN
 
 #********************************************************************************
 # Support binaries

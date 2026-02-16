@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -62,19 +62,19 @@ typedef struct Options {
     debug_opts_t        debug_opts;
     omptm_version_t     omptm_version;
     /* talp */
-    bool                talp;
-    bool                talp_openmp;
-    bool                talp_papi;
+    talp_component_t    talp;
     bool                talp_external_profiler;
     talp_summary_t      talp_summary;
     char                *talp_output_file;
-    int                 talp_regions_per_proc;
     char                talp_region_select[MAX_OPTION_LENGTH];
+    char                talp_gpu_backend[MAX_OPTION_LENGTH];
     talp_model_t        talp_model;
     /* barrier */
     int                 barrier_id;
-    /* plugins */
-    char                plugins[MAX_OPTION_LENGTH];
+    /* deprecated, but still parsed, options */
+    bool                deprecated_talp_openmp;
+    bool                deprecated_talp_papi;
+    char                deprecated_plugins[MAX_OPTION_LENGTH];
 } options_t;
 
 void options_init(options_t *options, const char *dlb_args);

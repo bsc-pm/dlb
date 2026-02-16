@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -799,7 +799,8 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
         verbose(VB_OMPT, "Initializing OMPT module");
 
         /* Register OMPT callbacks */
-        err = set_ompt_callbacks(lookup, options.omptm_version, options.talp_openmp);
+        bool talp_openmp = options.talp & (TALP_COMPONENT_DEFAULT | TALP_COMPONENT_OPENMP);
+        err = set_ompt_callbacks(lookup, options.omptm_version, talp_openmp);
 
         /* If callbacks are successfully registered, initialize modules
          * and return a non-zero value to activate the tool */
@@ -819,6 +820,9 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
         }
 
         warning("DLB could not register itself as OpenMP tool");
+        if (options.talp & TALP_COMPONENT_OPENMP) {
+            warning("TALP: Failed to load OpenMP component");
+        }
     }
 
     options_finalize(&options);
