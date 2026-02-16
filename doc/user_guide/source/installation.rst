@@ -136,7 +136,7 @@ Fortran compiler is found and the MPI library supports them. These bindings
 are needed to intercept such MPI F08 calls. However, if the compilation failed
 for some reason, the bindings may be explicitly disabled.
 
---disable-f08-mpi-bindings
+--disable-mpi-f08-bindings
     Disable MPI Fortran 2008 bindings
 --disable-mpi-f08ts-bindings
     Disable MPI Fortran 2008 + TS 29113 bindings
