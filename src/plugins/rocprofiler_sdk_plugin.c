@@ -23,7 +23,9 @@
 #include "support/dlb_common.h"
 #include "talp/talp_gpu.h"
 
+#ifndef __HIP_PLATFORM_AMD__
 #define __HIP_PLATFORM_AMD__
+#endif
 #include <hip/hip_runtime_api.h>
 #include <rocprofiler-sdk/registration.h>
 #include <rocprofiler-sdk/rocprofiler.h>
