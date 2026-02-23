@@ -406,7 +406,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[3.6.0]: https://github.com/bsc-pm/dlb/compare/v3.5...HEAD
+[3.6.1]: https://github.com/bsc-pm/dlb/compare/v3.6.1...HEAD
+[3.6.0]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.6.0
 [3.5.3]: https://github.com/bsc-pm/dlb/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/bsc-pm/dlb/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.5.1
