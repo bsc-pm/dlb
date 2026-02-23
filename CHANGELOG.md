@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.6.1] 2026-02-23
+### Fixed
+- Fixed some incorrect GPU metrics when there is no GPU useful time
+- Fixed compiler errors
+- Fixed documentation typo
+
 ## [3.6.0] 2025-11-25
 ### Added
 - Initial support for GPU TALP metrics (includes NVIDIA and AMD support)
