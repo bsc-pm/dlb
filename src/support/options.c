@@ -439,17 +439,22 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--talp-output-file",
         .default_value  = "",
-        .description    = OFFSET"Write extended TALP metrics to a file. If this option is\n"
-                          OFFSET"omitted, the output is printed to stderr.\n"
-                          OFFSET"The accepted formats are JSON and CSV, selected based on the\n"
-                          OFFSET"file extensions *.json and *.csv, respectively. JSON files\n"
-                          OFFSET"will be overwritten if they already exist, while CSV files\n"
-                          OFFSET"will be appended as new rows.\n"
-                          OFFSET"Any other file extension will result in plain text output.\n"
+        .description    = OFFSET"Write extended TALP metrics to a file. If omitted, output is\n"
+                          OFFSET"written to stderr.\n"
                           OFFSET"\n"
-                          OFFSET"Deprecated formats:\n"
-                          OFFSET"The *.xml file extension is deprecated and will be removed in\n"
-                          OFFSET"the next release.",
+                          OFFSET"The output format is determined by the file extension:\n"
+                          OFFSET"    *.json   JSON (file is overwritten)\n"
+                          OFFSET"    *.csv    CSV  (rows are appended)\n"
+                          OFFSET"    other    Plain text\n"
+                          OFFSET"\n"
+                          OFFSET"The filename may contain replacement tokens:\n"
+                          OFFSET"    %h       Hostname\n"
+                          OFFSET"    %p       Process ID (PID)\n"
+                          OFFSET"    %j       Job ID from the environment (e.g., Slurm, Flux)\n"
+                          OFFSET"    %%       Literal '%'\n"
+                          OFFSET"\n"
+                          OFFSET"Deprecated:\n"
+                          OFFSET"    *.xml    XML output format",
         .offset         = offsetof(options_t, talp_output_file),
         .type           = OPT_PTR_PATH_T,
         .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)

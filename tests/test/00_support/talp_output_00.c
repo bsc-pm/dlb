@@ -197,6 +197,20 @@ int main(int argc, char *argv[]) {
     assert( num_lines_in_json + 4 == num_lines_in_json_w_process_info );
     free(json_filename);
 
+    /* JSON with template*/
+    char *json_template;
+    asprintf(&json_template, "%s/talp_%%h_%%p.json", tmpdir);
+    char *real_filename;
+    char hostname[HOST_NAME_MAX];
+    gethostname(hostname, HOST_NAME_MAX);
+    asprintf(&real_filename, "%s/talp_%s_%d.json", tmpdir, hostname, getpid());
+    record_metrics();
+    talp_output_finalize(json_template);
+    error += access(real_filename, F_OK);
+    if (!error) cat_file(real_filename);
+    free(json_template);
+    free(real_filename);
+
     /* XML */
     char *xml_filename;
     asprintf(&xml_filename, "%s/talp.xml", tmpdir);

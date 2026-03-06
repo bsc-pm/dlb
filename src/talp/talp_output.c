@@ -1711,6 +1711,120 @@ static void sanitize_records(void) {
     }
 }
 
+/* Detect job ID across schedulers */
+static const char *get_job_id(void) {
+
+    const char *vars[] = {
+        "SLURM_JOB_ID",
+        "SLURM_JOBID",
+        "FLUX_JOB_ID",
+        "PBS_JOBID",
+        "LSB_JOBID",
+        "JOB_ID",
+        NULL
+    };
+
+    for (int i = 0; vars[i]; i++) {
+        const char *v = getenv(vars[i]);
+        if (v && *v)
+            return v;
+    }
+
+    return NULL;
+}
+
+/* Expands output file, e.g.: talp_%p.json -> talp_123.json */
+static char *expand_output_filename(const char *template)
+{
+    if (strchr(template, '%') == NULL) return NULL;
+
+    char hostname[HOST_NAME_MAX];
+    gethostname(hostname, HOST_NAME_MAX);
+
+    pid_t pid = getpid();
+    char pid_buf[32];
+    snprintf(pid_buf, sizeof(pid_buf), "%d", pid);
+
+    const char *job = get_job_id();
+    const char *job_str = job ? job : "0";
+
+    size_t hst_len = strlen(hostname);
+    size_t pid_len = strlen(pid_buf);
+    size_t job_len = strlen(job_str);
+
+    /* Compute output length */
+
+    size_t out_len = 0;
+
+    for (size_t i = 0; template[i]; i++) {
+        if (template[i] == '%' && template[i+1]) {
+            switch (template[i+1]) {
+                case 'h':
+                    out_len += hst_len;
+                    i++;
+                    continue;
+                case 'p':
+                    out_len += pid_len;
+                    i++;
+                    continue;
+                case 'j':
+                    out_len += job_len;
+                    i++;
+                    continue;
+                case '%':
+                    out_len += 1;
+                    i++;
+                    continue;
+            }
+        }
+        out_len += 1;
+    }
+
+    if (out_len > PATH_MAX) return NULL;
+
+    /* Fill buffer */
+
+    char *output_filename = malloc(out_len + 1);
+    if (!output_filename) return NULL;
+
+    char *out = output_filename;
+
+    for (size_t i = 0; template[i]; ++i) {
+        if (template[i] == '%' && template[i+1]) {
+            switch (template[i+1]) {
+                case 'h':
+                    memcpy(out, hostname, hst_len);
+                    out += hst_len;
+                    ++i;
+                    continue;
+
+                case 'p':
+                    memcpy(out, pid_buf, pid_len);
+                    out += pid_len;
+                    ++i;
+                    continue;
+
+                case 'j':
+                    memcpy(out, job_str, job_len);
+                    out += job_len;
+                    ++i;
+                    continue;
+
+                case '%':
+                    *out++ = '%';
+                    ++i;
+                    continue;
+            }
+        }
+
+        *out++ = template[i];
+    }
+
+    *out = '\0';
+
+    return output_filename;
+}
+
 void talp_output_finalize(const char *output_file) {
 
     /* For efficiency, all records are prepended to their respective lists and
@@ -1742,6 +1856,12 @@ void talp_output_finalize(const char *output_file) {
         if (pop_metrics_records == NULL
                 && node_records == NULL
                 && region_records == NULL) return;
+
+        /* Convert output_file into a proper output file if the name is a template */
+        char *filename = expand_output_filename(output_file);
+        if (filename != NULL) {
+            output_file = filename;
+        }
 
         /* Check file extension */
         typedef enum Extension {
@@ -1880,6 +2000,11 @@ void talp_output_finalize(const char *output_file) {
             if (out_file != stdout) {
                 fclose(out_file);
             }
+        }
+
+        if (filename != NULL) {
+            free(filename);
+            filename = NULL;
         }
     }
 
