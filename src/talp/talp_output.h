@@ -61,19 +61,22 @@ typedef struct process_record_t {
     dlb_monitor_t monitor;
 } process_record_t;
 
+
+void talp_output_record_gpu_vendor(gpu_vendor_t vendor);
+
 void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
         const char *cpuset_str, talp_flags_t talp_flags);
 
 void talp_output_record_pop_metrics(const dlb_pop_metrics_t *metrics);
 
-void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks, int num_gpus);
-
-void talp_output_record_gpu_vendor(gpu_vendor_t vendor);
-
 void talp_output_record_node(const node_record_t *node_record);
 
 void talp_output_record_process(const char *monitor_name,
         const process_record_t *process_record, int num_mpi_ranks);
+
+void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks, int num_gpus);
+
+void talp_output_record_process_info(void);
 
 void talp_output_finalize(const char *output_file);
 
