@@ -182,18 +182,6 @@ int main(int argc, char *argv[]) {
     talp_output_finalize(json_filename);
     error += access(json_filename, F_OK);
     if (!error) cat_file(json_filename);
-    int num_lines_in_json = count_lines(json_filename);
-    free(json_filename);
-
-    /* JSON with processInfo */
-    asprintf(&json_filename, "%s/talp.json", tmpdir);
-    record_metrics();
-    talp_output_record_process_info();
-    talp_output_finalize(json_filename);
-    error += access(json_filename, F_OK);
-    if (!error) cat_file(json_filename);
-    int num_lines_in_json_w_process_info = count_lines(json_filename);
-    assert( num_lines_in_json + 4 == num_lines_in_json_w_process_info );
     free(json_filename);
 
     /* XML */

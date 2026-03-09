@@ -46,11 +46,6 @@
 /* For any given monitor, record metrics considering only this (sub-)process */
 void talp_record_monitor(const subprocess_descriptor_t *spd,
         const dlb_monitor_t *monitor) {
-
-    if (spd->options.talp_summary != SUMMARY_NONE) {
-        talp_output_record_process_info();
-    }
-
     if (spd->options.talp_summary & SUMMARY_PROCESS) {
         verbose(VB_TALP, "TALP process summary: recording region %s", monitor->name);
 
