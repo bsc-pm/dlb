@@ -1504,6 +1504,36 @@ static void resources_to_txt(FILE *out_file) {
 
 
 /*********************************************************************************/
+/*    TALP Process info                                                          */
+/*********************************************************************************/
+
+typedef struct talp_process_info_record_t {
+    char hostname[HOST_NAME_MAX];
+    pid_t pid;
+} talp_process_info_record_t;
+
+static talp_process_info_record_t process_info_record = {0};
+
+void talp_output_record_process_info(void) {
+
+    gethostname(process_info_record.hostname, HOST_NAME_MAX);
+    process_info_record.pid = getpid();
+}
+
+static void process_info_to_json(FILE *out_file) {
+
+    if (process_info_record.pid != 0) {
+        fprintf(out_file,
+                "  \"processInfo\": {\n"
+                "    \"hostname\": %s,\n"
+                "    \"pid\": %d\n"
+                "  },\n",
+                process_info_record.hostname,
+                process_info_record.pid);
+    }
+}
+
+/*********************************************************************************/
 /*    Helper functions                                                           */
 /*********************************************************************************/
 
@@ -1821,6 +1851,7 @@ void talp_output_finalize(const char *output_file) {
                     json_header(out_file);
                     common_to_json(out_file);
                     resources_to_json(out_file);
+                    process_info_to_json(out_file);
                     pop_metrics_to_json(out_file);
                     node_to_json(out_file);
                     process_to_json(out_file);
