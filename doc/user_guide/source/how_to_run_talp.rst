@@ -608,6 +608,10 @@ TALP option flags
         - ``%j``       Job ID from the environment (e.g., Slurm, Flux)
         - ``%%``       Literal '%'
 
+--talp-partial-output=<bool>
+    Write one profiling output file per process instead of a single
+    merged file. Only supported when the output format is JSON.
+
 --talp-region-select=<string>
     Select TALP regions to enable. This option follows the format:
     ``--talp-region-select=[(include|exclude):]<region-list>``

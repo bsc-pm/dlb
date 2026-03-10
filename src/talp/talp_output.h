@@ -78,6 +78,6 @@ void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks
 
 void talp_output_record_process_info(void);
 
-void talp_output_finalize(const char *output_file);
+void talp_output_finalize(const char *output_file, bool partial_output);
 
 #endif /* TALP_OUTPUT_H */

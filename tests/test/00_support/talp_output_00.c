@@ -169,6 +169,10 @@ static void record_metrics(void) {
 int main(int argc, char *argv[]) {
 
     int error = 0;
+    bool no_partial_output = false;
+    char hostname[HOST_NAME_MAX];
+    gethostname(hostname, HOST_NAME_MAX);
+    pid_t pid = getpid();
 
     /* Create temporary directory for TALP output files */
     const char *tmpdir_env = getenv("TMPDIR");
@@ -180,7 +184,7 @@ int main(int argc, char *argv[]) {
     char *json_filename;
     asprintf(&json_filename, "%s/talp.json", tmpdir);
     record_metrics();
-    talp_output_finalize(json_filename);
+    talp_output_finalize(json_filename, no_partial_output);
     error += access(json_filename, F_OK);
     if (!error) cat_file(json_filename);
     int num_lines_in_json = count_lines(json_filename);
@@ -190,7 +194,7 @@ int main(int argc, char *argv[]) {
     asprintf(&json_filename, "%s/talp.json", tmpdir);
     record_metrics();
     talp_output_record_process_info();
-    talp_output_finalize(json_filename);
+    talp_output_finalize(json_filename, no_partial_output);
     error += access(json_filename, F_OK);
     if (!error) cat_file(json_filename);
     int num_lines_in_json_w_process_info = count_lines(json_filename);
@@ -200,22 +204,31 @@ int main(int argc, char *argv[]) {
     /* JSON with template*/
     char *json_template;
     asprintf(&json_template, "%s/talp_%%h_%%p.json", tmpdir);
-    char *real_filename;
-    char hostname[HOST_NAME_MAX];
-    gethostname(hostname, HOST_NAME_MAX);
-    asprintf(&real_filename, "%s/talp_%s_%d.json", tmpdir, hostname, getpid());
     record_metrics();
-    talp_output_finalize(json_template);
+    talp_output_finalize(json_template, no_partial_output);
+    char *real_filename;
+    asprintf(&real_filename, "%s/talp_%s_%d.json", tmpdir, hostname, pid);
     error += access(real_filename, F_OK);
     if (!error) cat_file(real_filename);
     free(json_template);
+    free(real_filename);
+
+    /* JSON with partial output */
+    bool partial_output = true;
+    asprintf(&json_filename, "%s/talp.json", tmpdir);
+    record_metrics();
+    talp_output_finalize(json_filename, partial_output);
+    asprintf(&real_filename, "%s/talp_%s_%d.partial.json", tmpdir, hostname, pid);
+    error += access(real_filename, F_OK);
+    if (!error) cat_file(real_filename);
+    free(json_filename);
     free(real_filename);
 
     /* XML */
     char *xml_filename;
     asprintf(&xml_filename, "%s/talp.xml", tmpdir);
     record_metrics();
-    talp_output_finalize(xml_filename);
+    talp_output_finalize(xml_filename, no_partial_output);
     error += access(xml_filename, F_OK);
     if (!error) cat_file(xml_filename);
     free(xml_filename);
@@ -226,13 +239,13 @@ int main(int argc, char *argv[]) {
     asprintf(&csv_filename, "%s/talp.csv", tmpdir);
     dlb_pop_metrics_t metrics_1 = { .name = "Region 1" };
     talp_output_record_pop_metrics(&metrics_1);
-    talp_output_finalize(csv_filename);
+    talp_output_finalize(csv_filename, no_partial_output);
     error += access(csv_filename, F_OK);
     if (!error) cat_file(csv_filename);
     // test append: 2 - > 3 lines
     dlb_pop_metrics_t metrics_2 = { .name = "Region 2" };
     talp_output_record_pop_metrics(&metrics_2);
-    talp_output_finalize(csv_filename);
+    talp_output_finalize(csv_filename, no_partial_output);
     error += count_lines(csv_filename) - 3;  // test append, count_lines should return 3
     if (!error) cat_file(csv_filename);
     // multiple files
@@ -240,7 +253,7 @@ int main(int argc, char *argv[]) {
     asprintf(&csv2, "%s/talp-node.csv", tmpdir);
     asprintf(&csv3, "%s/talp-process.csv", tmpdir);
     record_metrics();
-    talp_output_finalize(csv_filename);
+    talp_output_finalize(csv_filename, no_partial_output);
     error += access(csv1, F_OK);
     error += access(csv2, F_OK);
     error += access(csv3, F_OK);
@@ -256,23 +269,23 @@ int main(int argc, char *argv[]) {
     char *txt_filename;
     asprintf(&txt_filename, "%s/talp.txt", tmpdir);
     record_metrics();
-    talp_output_finalize(txt_filename);
+    talp_output_finalize(txt_filename, no_partial_output);
     error += access(txt_filename, F_OK);
     free(txt_filename);
 
     /* No file */
     record_metrics();
-    talp_output_finalize(NULL);
+    talp_output_finalize(NULL, no_partial_output);
 
     /* Output to /dev/null */
     record_metrics();
-    talp_output_finalize("/dev/null");
+    talp_output_finalize("/dev/null", no_partial_output);
 
     /* Output to a directory that it does not exist */
     char *subdir_filename;
     asprintf(&subdir_filename, "%s/subdir/talp.json", tmpdir);
     record_metrics();
-    talp_output_finalize(subdir_filename);
+    talp_output_finalize(subdir_filename, no_partial_output);
     error += access(subdir_filename, F_OK);
     if (!error) cat_file(subdir_filename);
     free(subdir_filename);
@@ -281,7 +294,7 @@ int main(int argc, char *argv[]) {
      * (e.g., a directory or a file without writing permissions) */
     record_metrics();
     fprintf(stdout, "--- Fallback metrics in txt format:\n");
-    talp_output_finalize(tmpdir);
+    talp_output_finalize(tmpdir, no_partial_output);
     fflush(stdout);
 
     /* Output to a directory that cannot be created */
@@ -289,7 +302,7 @@ int main(int argc, char *argv[]) {
     asprintf(&wrong_subdir, "/subdir/talp.json");
     record_metrics();
     fprintf(stdout, "--- Fallback metrics in json format:\n");
-    talp_output_finalize(wrong_subdir);
+    talp_output_finalize(wrong_subdir, no_partial_output);
     fflush(stdout);
     free(wrong_subdir);
 

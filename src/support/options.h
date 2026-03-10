@@ -64,6 +64,7 @@ typedef struct Options {
     /* talp */
     talp_component_t    talp;
     bool                talp_external_profiler;
+    bool                talp_partial_output;
     talp_summary_t      talp_summary;
     char                *talp_output_file;
     char                talp_region_select[MAX_OPTION_LENGTH];

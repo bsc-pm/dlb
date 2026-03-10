@@ -237,9 +237,9 @@ void talp_finalize(subprocess_descriptor_t *spd) {
         talp_hwc_finalize();
     }
 
-    if (!talp_info->flags.have_mpi) {
-        /* If we don't have MPI support, regions may be still running and
-         * without being recorded to talp_output. Do that now. */
+    /* Per-process output (no MPI or requested by user) */
+    if (!talp_info->flags.have_mpi
+            || spd->options.talp_partial_output) {
 
         pthread_mutex_lock(&talp_info->regions_mutex);
         {
@@ -255,7 +255,7 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     }
 
     /* Print/write all collected summaries */
-    talp_output_finalize(spd->options.talp_output_file);
+    talp_output_finalize(spd->options.talp_output_file, spd->options.talp_partial_output);
 
     /* Deallocate samples structure */
     talp_dealloc_samples(spd);
