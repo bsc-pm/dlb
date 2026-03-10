@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,22 +17,34 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef PLUGIN_MANAGER_H
-#define PLUGIN_MANAGER_H
+#ifndef REGISTRATION_H
+#define REGISTRATION_H
 
-#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
-/* Un/load specific plugin or return error */
-int  load_plugin(const char *plugin_name);
-int  unload_plugin(const char *plugin_name);
+typedef struct rocprofiler_client_id_t
+{
+    const char*    name;
+    const uint32_t handle;
+} rocprofiler_client_id_t;
 
-/* Best effort for un/loading comma-separated list of plugins via --plugin=... */
-void load_plugins(const char *plugin_list);
-void unload_plugins(const char *plugin_list);
+typedef void (*rocprofiler_client_finalize_t)(rocprofiler_client_id_t);
 
-void plugin_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid);
+typedef int (*rocprofiler_tool_initialize_t)(rocprofiler_client_finalize_t finalize_func,
+                                             void*                         tool_data);
 
-void* plugin_get_symbol_from_plugin(const char *symbol, const char *plugin_name);
+typedef void (*rocprofiler_tool_finalize_t)(void* tool_data);
 
-#endif /* PLUGIN_MANAGER_H */
+typedef struct rocprofiler_tool_configure_result_t
+{
+    size_t                        size;
+    rocprofiler_tool_initialize_t initialize;
+    rocprofiler_tool_finalize_t   finalize;
+    void*                         tool_data;
+} rocprofiler_tool_configure_result_t;
+
+typedef rocprofiler_tool_configure_result_t*
+    (*rocprofiler_configure_fn)(uint32_t, const char*, uint32_t, rocprofiler_client_id_t*);
+
+#endif /* REGISTRATION_H */

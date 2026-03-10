@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,39 +17,21 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef PLUGIN_UTILS_H
-#define PLUGIN_UTILS_H
+#ifndef TALP_HWC_H
+#define TALP_HWC_H
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include "talp/talp_types.h"
+#include <stdbool.h>
 
+typedef struct SubProcessDescriptor subprocess_descriptor_t;
+typedef struct hwc_measurements hwc_measurements_t;
 
-static inline int64_t get_timestamp(void) {
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_sec * 1000000000LL + t.tv_nsec;
-}
+int  talp_hwc_init(const subprocess_descriptor_t *spd);
+int  talp_hwc_thread_init(void);
+void talp_hwc_finalize(void);
+void talp_hwc_thread_finalize(void);
+void talp_hwc_on_state_change(talp_sample_state_t old_state, talp_sample_state_t new_state);
+void talp_hwc_submit(const hwc_measurements_t *raw);
+bool talp_hwc_collect(hwc_measurements_t *out);
 
-
-static inline int plugin_is_verbose() {
-    static int initialized = 0;
-    static int verbose = 0;
-
-    if (!initialized) {
-        const char *env = getenv("DLB_PLUGIN_VERBOSE");
-        if (env && (*env == '1' || *env == 'y' || *env == 'Y')) {
-            verbose = 1;
-        }
-        initialized = 1;
-    }
-    return verbose;
-}
-
-#define PLUGIN_PRINT(fmt, ...) \
-    do { if (plugin_is_verbose()) fprintf(stderr, "[DLB PLUGIN] " fmt, ##__VA_ARGS__); } while (0)
-
-
-#endif /* PLUGIN_UTILS_H */
-
+#endif /* TALP_HWC_H */

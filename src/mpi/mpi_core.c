@@ -208,7 +208,10 @@ static void after_init(void) {
         debug_init(&thread_spd->options);
     }
 
-    talp_mpi_init(thread_spd);
+    if (thread_spd->options.talp & (TALP_COMPONENT_DEFAULT | TALP_COMPONENT_MPI)) {
+        talp_mpi_init(thread_spd);
+    }
+
     lewi_mpi_calls = thread_spd->options.lewi_mpi_calls;
 
     mpi_ready = 1;

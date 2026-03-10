@@ -95,10 +95,9 @@ If you are using any supported compiler in the table above to build your applica
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
-    export DLB_ARGS="--talp --ompt --talp-openmp" 
     # "--ompt" enables the OMPT tool in DLB
-    # "--talp-openmp" enables collection of OpenMP metrics
-    mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
+    export DLB_ARGS="--talp --ompt"
+    env LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
 
 .. note::
    Since LLVM's OpenMP runtime supports the GOMP interface, you can compile and
@@ -126,9 +125,8 @@ The ``DLB_ARGS`` to configure TALP for hybrid applications are the same as for O
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
-    export DLB_ARGS="--talp --ompt --talp-openmp"
     # "--ompt" enables the OMPT tool in DLB
-    # "--talp-openmp" enables collection of OpenMP metrics
+    export DLB_ARGS="--talp --ompt"
     mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 
@@ -159,21 +157,22 @@ For GPU applications running on NVIDIA devices, DLB must be previously be config
 ``--with-cuda`` (see :ref:`dlb-configure-flags`) so that it can locate the appropriate CUDA
 and CUPTI libraries.
 
-Usage is similar to the previous examples. The CUPTI plugin must be loaded explicitly
-with ``--plugin=cupti``. Additionally, if the application is not an MPI program,
+Usage is similar to the previous examples. Enable TALP with ``--talp`` and the
+CUPTI backend plugin will be automatically loaded if it was configured and built.
+Additionally, if the application is not an MPI program,
 DLB may need to be auto-initialized with a special environment variable:
 
 .. code-block:: bash
 
     # Pure GPU execution, DLB needs to be auto-intialized
     export DLB_AUTO_INIT=1
-    export DLB_ARGS="--talp --plugin=cupti"
+    export DLB_ARGS="--talp"
     LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
 
 .. code-block:: bash
 
     # Hybrid MPI+GPU execution, preload libdlb_mpi.so as usual, DLB_AUTO_INIT not needed
-    export DLB_ARGS="--talp --plugin=cupti"
+    export DLB_ARGS="--talp"
     mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 A hybrid MPI+GPU execution will result in an output similar to this::
@@ -208,30 +207,33 @@ For GPU applications running on AMD devices, DLB must be previously configured w
 ``--with-rocm`` (see :ref:`dlb-configure-flags`) so that it can locate the appropriate
 ROCm libraries.
 
-The usage is very similar to the NVIDIA case, but there are two possible
-CUPTI-equivalent DLB plugins depending on the ROCm version:
+Once DLB is built with ROCm support, GPU profiling backends are automatically
+detected and enabled at runtime when available. Therefore, users only need to
+enable TALP with ``--talp`` and DLB will attempt to load the appropriate backend.
 
-- ``rocprofilerv2``: uses ROCm's deprecated ``librocprofilerv2``. While functional
-  in some cases, it may fail to obtain metrics for reasons that are not fully understood.
+Internally, DLB may use one of two ROCm profiling interfaces depending on the
+ROCm version available on the system:
 
 - ``rocprofiler-sdk``: uses the officially supported ``librocprofiler-sdk``,
   available starting with ROCm 6.2 and the recommended method
   for collecting performance metrics on AMD GPUs.
 
-In the examples below, we show the usage of the ``rocprofiler-sdk`` DLB plugin,
-which is implemented a bit differently and doesn't need any automatic
-initialization in case of non-MPI applications:
+- ``rocprofilerv2``: uses ROCm's deprecated ``librocprofilerv2``. While still
+  supported by DLB for compatibility with older ROCm installations, it may fail
+  to obtain metrics in some cases.
+
+The appropriate backend is automatically selected at runtime.
 
 .. code-block:: bash
 
-    # Pure GPU execution
-    export DLB_ARGS="--talp --plugin=rocprofiler-sdk"
+    # Pure GPU execution (DLB_AUTO_INIT is not needed for ROCm >= 6.2)
+    export DLB_ARGS="--talp"
     LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
 
 .. code-block:: bash
 
     # Hybrid MPI+GPU execution
-    export DLB_ARGS="--talp --plugin=rocprofiler-sdk"
+    export DLB_ARGS="--talp"
     mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 Hybrid MPI+GPU executions on AMD devices produce output comparable to the
@@ -529,20 +531,44 @@ For Python MPI programs, the ``dlb_mpi`` module must be used instead of the base
 Enabling Hardware Counters
 ==========================
 
-:ref:`Configure<dlb-configure-flags>` DLB with ``--with-papi`` and add
-``--talp-papi`` to ``DLB_ARGS``. With PAPI enabled, TALP will also report the
-average IPC.
+:ref:`Configure<dlb-configure-flags>` DLB with ``--with-papi`` to enable support
+for hardware performance counters through PAPI. When PAPI is available and the
+system permits access to performance counters, TALP will also report the
+average IPC (Instructions Per Cycle).
 
 .. _talp_options:
 
 TALP option flags
 =================
 
---talp-openmp=<bool>
-    Select whether to measure OpenMP metrics. (Experimental)
+--talp=<none:default:mpi:openmp:gpu:hwc>
+    Enable the TALP (Tracking Application Live Performance) profiler.
 
---talp-papi=<bool>
-    Select whether to collect PAPI counters.
+    The option accepts a comma-separated list of profiling components:
+        - ``default``   Enable optional profiling for supported components
+        - ``mpi``       MPI activity
+        - ``openmp``    OpenMP activity
+        - ``gpu``       GPU activity
+        - ``hwc``       Hardware counters
+        - ``none``      Disable TALP
+
+    If the option is specified without value (i.e., ``--talp``), it is
+    equivalent to ``--talp=default``.
+
+    Expected usage is one of:
+        - ``--talp=none``
+        - ``--talp`` or ``--talp=default``
+        - ``--talp=<component>[,<component>...]``
+
+    Examples:
+        ``--talp``
+            Enable profiling for all available components (auto-detected).
+
+        ``--talp=gpu``
+            Enable GPU profiling.
+
+        ``--talp=mpi,openmp``
+            Enable profiling of MPI and OpenMP activity.
 
 --talp-summary=<none:all:pop-metrics:process>
     Report TALP metrics at the end of the execution. If ``--talp-output-file`` is not
@@ -602,9 +628,3 @@ TALP option flags
     ``--talp-region-select=exclude:all``,
     ``--talp-region-select=include:global,region3``,
     ``--talp-region-select=exclude:region4``.
-
---plugin=<string>
-    Select plugin to enable.
-
-    For now, only ``cupti``, ``rocprofiler-sdk``, and ``rocprofilerv2``.
-    (Experimental)

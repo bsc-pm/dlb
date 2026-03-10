@@ -111,6 +111,15 @@ typedef enum TalpModel {
     TALP_MODEL_HYBRID_V2,
 } talp_model_t;
 
+typedef enum TalpComponent {
+    TALP_COMPONENT_NONE    = 0,
+    TALP_COMPONENT_DEFAULT = 1 << 0,
+    TALP_COMPONENT_MPI     = 1 << 1,
+    TALP_COMPONENT_OPENMP  = 1 << 2,
+    TALP_COMPONENT_GPU     = 1 << 3,
+    TALP_COMPONENT_HWC     = 1 << 4,
+} talp_component_t;
+
 typedef enum PolicyType {
     POLICY_NONE,
     POLICY_LEWI,
@@ -221,6 +230,12 @@ int parse_talp_model(const char *str, talp_model_t *value);
 const char* talp_model_tostr(talp_model_t value);
 const char* get_talp_model_choices(void);
 bool equivalent_talp_model(const char *str1, const char *str2);
+
+/* talp_component_t */
+int parse_talp_component(const char *str, talp_component_t *value);
+const char* talp_component_tostr(talp_component_t value);
+const char* get_talp_component_choices(void);
+bool equivalent_talp_component(const char *str1, const char *str2);
 
 /* interaction_mode_t */
 int parse_mode(const char *str, interaction_mode_t *value);

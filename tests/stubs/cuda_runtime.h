@@ -17,17 +17,24 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_GPU_H
-#define TALP_GPU_H
+#ifndef CUDA_RUNTIME_H
+#define CUDA_RUNTIME_H
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct gpu_measurements gpu_measurements_t;
+typedef enum cudaError {
+    cudaSuccess = 0,
+    cudaErrorInvalidValue = 1
+} cudaError_t;
 
-int  talp_gpu_init(const subprocess_descriptor_t *spd);
-void talp_gpu_finalize(void);
-void talp_gpu_enter_runtime(void);
-void talp_gpu_exit_runtime(void);
-void talp_gpu_submit(const gpu_measurements_t *measurements);
-void talp_gpu_collect(gpu_measurements_t *out);
+typedef struct CUuuid_st {
+    char bytes[16];
+} CUuuid;
 
-#endif /* TALP_GPU_H */
+struct cudaDeviceProp {
+    CUuuid uuid;
+};
+
+cudaError_t cudaGetDevice(int* device);
+cudaError_t cudaGetDeviceCount(int* count);
+cudaError_t cudaGetDeviceProperties(struct cudaDeviceProp *prop, int device);
+
+#endif /* CUDA_RUNTIME_H */

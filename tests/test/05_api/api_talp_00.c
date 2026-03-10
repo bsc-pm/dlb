@@ -53,7 +53,7 @@ static void* test_worker_thread(void* arg) {
 
 
 int main(int argc, char *argv[]) {
-    char options[64] = "--talp --talp-papi --shm-key=";
+    char options[64] = "--talp=papi --shm-key=";
     strcat(options, SHMEM_KEY);
 
     assert( DLB_Init(0, 0, options) == DLB_SUCCESS );

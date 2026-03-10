@@ -20,10 +20,10 @@
 
 #include "LB_core/spd.h"
 #include "apis/dlb.h"
-#include "plugins/plugin_manager.h"
 #include "support/debug.h"
 #include "support/dlb_common.h"
 #include "support/options.h"
+#include "talp/backend_manager.h"
 
 #include <sched.h>
 #include <stdbool.h>
@@ -55,10 +55,10 @@ rocprofiler_tool_configure_result_t* rocprofiler_configure(uint32_t version,
 
     spd_enter_dlb(thread_spd);
 
-    /* Do something only if --plugin contans "rocprofiler-sdk" */
-    char plugins[MAX_OPTION_LENGTH];
-    options_parse_entry("--plugin", plugins);
-    if (strstr(plugins, "rocprofiler-sdk") != NULL) {
+    /* Do something only if GPU component is enabled in TALP */
+    talp_component_t talp;
+    options_parse_entry("--talp", &talp);
+    if (talp & (TALP_COMPONENT_DEFAULT | TALP_COMPONENT_GPU)) {
 
         // Init DLB
         cpu_set_t process_mask;
@@ -76,9 +76,12 @@ rocprofiler_tool_configure_result_t* rocprofiler_configure(uint32_t version,
         typedef rocprofiler_tool_configure_result_t*
             (*real_configure_fn_t)(uint32_t, const char*, uint32_t, rocprofiler_client_id_t*);
 
+        const char *rocprofiler_plugin_name = "rocprofiler-sdk";
+        const char *rocprofiler_symbol_name = "rocprofiler_configure";
+
         real_configure_fn_t real_rocprofiler_configure =
-            (real_configure_fn_t)plugin_get_symbol_from_plugin(
-                    "rocprofiler_configure", "rocprofiler-sdk");
+            (real_configure_fn_t)talp_backend_manager_get_symbol_from_plugin(
+                    rocprofiler_symbol_name, rocprofiler_plugin_name);
 
         // call real rocprofiler_configure
         if (real_rocprofiler_configure) {

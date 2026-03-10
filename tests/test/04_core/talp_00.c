@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     CPU_ZERO(&process_mask);
     CPU_SET(cpu, &process_mask);
 
-    char options[64] = "--talp --talp-papi --shm-key=";
+    char options[64] = "--talp=papi --shm-key=";
     strcat(options, SHMEM_KEY);
     subprocess_descriptor_t spd = {.id = 111};
     options_init(&spd.options, options);
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
         assert( global_monitor->useful_time > 0 );
         assert( global_monitor->useful_time > monitor->useful_time );
         assert( global_monitor->elapsed_time > monitor->elapsed_time );
-        if (talp_info->flags.papi) {
+        if (talp_info->flags.have_hwc) {
             assert( global_monitor->instructions > monitor->instructions );
             assert( global_monitor->cycles > monitor->cycles );
         }
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
         assert( monitor->num_resets == 1 );
         assert( monitor->mpi_time == 0 );
         assert( monitor->useful_time == 0 );
-        if (talp_info->flags.papi) {
+        if (talp_info->flags.have_hwc) {
             assert( monitor->instructions == 0 );
             assert( monitor->cycles == 0 );
         }

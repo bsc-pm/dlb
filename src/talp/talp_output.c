@@ -30,6 +30,7 @@
 #include "support/mytime.h"
 #include "support/options.h"
 #include "talp/talp.h"
+#include "talp/talp_types.h"
 #include "talp/perf_metrics.h"
 
 #include <errno.h>
@@ -83,12 +84,21 @@ static const char* make_header(const char *title) {
 
 
 /*********************************************************************************/
+/*    GPU vendor                                                                 */
+/*********************************************************************************/
+
+static gpu_vendor_t gpu_vendor = GPU_VENDOR_NONE;
+
+void talp_output_record_gpu_vendor(gpu_vendor_t vendor) {
+    gpu_vendor = vendor;
+}
+
+/*********************************************************************************/
 /*    Monitoring Region                                                          */
 /*********************************************************************************/
 
 void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
-        const char *cpuset_str, bool have_mpi, bool have_openmp, bool have_gpu,
-        bool have_papi) {
+        const char *cpuset_str, talp_flags_t talp_flags) {
 
     char elapsed_time_str[16];
     ns_to_human(elapsed_time_str, 16, monitor->elapsed_time);
@@ -98,11 +108,11 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
     info("### Elapsed Time:                             %s", elapsed_time_str);
     info("### Useful time:                              %"PRId64" ns",
             monitor->useful_time);
-    if (have_mpi) {
+    if (talp_flags.have_mpi) {
         info("### Not useful MPI:                           %"PRId64" ns",
                 monitor->mpi_time);
     }
-    if (have_openmp) {
+    if (talp_flags.have_openmp) {
         info("### Not useful OMP Load Balance:              %"PRId64" ns",
                 monitor->omp_load_imbalance_time);
         info("### Not useful OMP Scheduling:                %"PRId64" ns",
@@ -110,7 +120,7 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
         info("### Not useful OMP Serialization:             %"PRId64" ns",
                 monitor->omp_serialization_time);
     }
-    if (have_gpu) {
+    if (talp_flags.have_gpu) {
         info("### Not useful GPU runtime:                   %"PRId64" ns",
                 monitor->gpu_runtime_time);
         info("### Device useful time:                       %"PRId64" ns",
@@ -119,21 +129,21 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
                 monitor->gpu_communication_time);
     }
     info("### CpuSet:                                   %s", cpuset_str);
-    if (have_papi) {
+    if (talp_flags.have_hwc) {
         float ipc = sanitized_ipc(monitor->instructions, monitor->cycles);
         info("### IPC:                                      %.2f ", ipc);
     }
-    if (have_mpi) {
+    if (talp_flags.have_mpi) {
         info("### Number of MPI calls:                      %"PRId64,
                 monitor->num_mpi_calls);
     }
-    if (have_openmp) {
+    if (talp_flags.have_openmp) {
         info("### Number of OpenMP parallels:               %"PRId64,
                 monitor->num_omp_parallels);
         info("### Number of OpenMP tasks:                   %"PRId64,
                 monitor->num_omp_tasks);
     }
-    if (have_gpu) {
+    if (talp_flags.have_gpu) {
         info("### Number of GPU runtime calls:              %"PRId64,
                 monitor->num_gpu_runtime_calls);
     }
@@ -157,20 +167,6 @@ void talp_output_record_pop_metrics(const dlb_pop_metrics_t *metrics) {
 }
 
 static void pop_metrics_print(void) {
-
-    /* AMD or NVIDIA device? */
-    enum GPU_vendor {
-        NONE,
-        AMD,
-        NVIDIA,
-    };
-    enum GPU_vendor vendor = NONE;
-    if (thread_spd && strstr(thread_spd->options.plugins, "cupti") != NULL) {
-        vendor = NVIDIA;
-    }
-    if (thread_spd && strstr(thread_spd->options.plugins, "rocprofilerv2") != NULL) {
-        vendor = AMD;
-    }
 
     for (GSList *node = pop_metrics_records;
             node != NULL;
@@ -235,12 +231,12 @@ static void pop_metrics_print(void) {
             if (have_gpu_activity) {
                 info("###");
                 info("### %s Device",
-                        vendor == NVIDIA ? "NVIDIA"
-                        : vendor == AMD ? "AMD"
+                        gpu_vendor == GPU_VENDOR_NVIDIA ? "NVIDIA"
+                        : gpu_vendor == GPU_VENDOR_AMD ? "AMD"
                         : "GPU");
                 info("### %s-------",
-                        vendor == NVIDIA ? "------"
-                        : vendor == AMD ? "---"
+                        gpu_vendor == GPU_VENDOR_NVIDIA ? "------"
+                        : gpu_vendor == GPU_VENDOR_AMD ? "---"
                         : "---");
                 info("### Parallel efficiency:                      %1.2f",
                         record->gpu_parallel_efficiency);

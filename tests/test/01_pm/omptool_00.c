@@ -471,12 +471,12 @@ int main (int argc, char *argv[]) {
 
     /* Initialize OMPT tool with only TALP callbacks */
     dlb_setenv("DLB_ARGS", dlb_args, NULL, ENV_OVERWRITE_ALWAYS);
-    dlb_setenv("DLB_ARGS", "--talp-openmp", NULL, ENV_APPEND);
+    dlb_setenv("DLB_ARGS", "--talp", NULL, ENV_APPEND);
     test_omptool_events(tool_result, /* talp: */ true, /* omptm: */ false);
 
     /* Initialize OMPT tool with both callbacks */
     dlb_setenv("DLB_ARGS", dlb_args, NULL, ENV_OVERWRITE_ALWAYS);
-    dlb_setenv("DLB_ARGS", "--lewi --talp-openmp", NULL, ENV_APPEND);
+    dlb_setenv("DLB_ARGS", "--lewi --talp", NULL, ENV_APPEND);
     test_omptool_events(tool_result, /* talp: */ true, /* omptm: */ true);
 
     return 0;

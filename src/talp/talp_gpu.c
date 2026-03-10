@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -19,51 +19,82 @@
 
 #include "talp/talp_gpu.h"
 
+#include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
 #include "support/atomic.h"
+#include "support/debug.h"
 #include "support/dlb_common.h"
+#include "talp/backend.h"
+#include "talp/backend_manager.h"
 #include "talp/regions.h"
 #include "talp/talp.h"
+#include "talp/talp_output.h"
 #include "talp/talp_types.h"
 
-static trigger_update_func_t trigger_update_fn = NULL;
 
-/* Called when regions are stopped and we need to collect GPU measurements */
-void talp_gpu_sync_measurements(void) {
-    if (trigger_update_fn) trigger_update_fn();
+static const backend_api_t *gpu_backend_api = NULL;
+static gpu_measurements_t gpu_sample = {0};
+
+// Called from talp core
+int talp_gpu_init(const subprocess_descriptor_t *spd) {
+
+    gpu_backend_api = talp_backend_manager_load_gpu_backend(spd->options.talp_gpu_backend);
+    if (gpu_backend_api == NULL) {
+        debug_warning("GPU backend could not be loaded");
+        return DLB_ERR_UNKNOWN;
+    }
+
+    int error;
+
+    /* If GPU component is not explicitly set, probe plugin first */
+    if (!(spd->options.talp & TALP_COMPONENT_GPU)) {
+        error = gpu_backend_api->probe();
+        if (error == DLB_BACKEND_ERROR) {
+            debug_warning("HWC backend probe failed");
+            return DLB_ERR_UNKNOWN;
+        }
+    }
+
+    error = gpu_backend_api->init(&core_api);
+    if (error == DLB_BACKEND_ERROR) {
+        debug_warning("GPU backend could not be initialized");
+        return DLB_ERR_UNKNOWN;
+    }
+
+    error = gpu_backend_api->start();
+    if (error == DLB_BACKEND_ERROR) {
+        debug_warning("GPU backend could not be started");
+        gpu_backend_api->finalize();
+        return DLB_ERR_UNKNOWN;
+    }
+
+    if (gpu_backend_api->capabilities.gpu_amd) {
+        talp_output_record_gpu_vendor(GPU_VENDOR_AMD);
+    } else if (gpu_backend_api->capabilities.gpu_nvidia) {
+        talp_output_record_gpu_vendor(GPU_VENDOR_NVIDIA);
+    }
+
+    return DLB_SUCCESS;
 }
 
-/* The following symbols need to be public so that the GPU plugin can call us */
 
-DLB_EXPORT_SYMBOL
-void talp_gpu_init(trigger_update_func_t update_fn) {
+// Called from talp core
+void talp_gpu_finalize(void) {
 
-    spd_enter_dlb(thread_spd);
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        /* Set flag */
-        talp_info->flags.have_gpu = true;
+    if (gpu_backend_api != NULL) {
 
-        /* Set up callback function to read measurements */
-        trigger_update_fn = update_fn;
+        gpu_backend_api->stop();
+        gpu_backend_api->flush();
+        gpu_backend_api->finalize();
 
-        /* Start global region (no-op if already started) */
-        region_start(spd, talp_info->monitor);
-
-        /* Set useful state */
-        talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_set_sample_state(sample, useful, talp_info->flags.papi);
+        talp_backend_manager_unload_gpu_backend();
+        gpu_backend_api = NULL;
     }
 }
 
-DLB_EXPORT_SYMBOL
-void talp_gpu_finalize(void) {
-    talp_gpu_sync_measurements();
-}
 
-DLB_EXPORT_SYMBOL
-void talp_gpu_into_runtime_api(void) {
+// Called from GPU backend plugin: CPU enters GPU runtime
+void talp_gpu_enter_runtime(void) {
 
     spd_enter_dlb(thread_spd);
     const subprocess_descriptor_t *spd = thread_spd;
@@ -71,16 +102,17 @@ void talp_gpu_into_runtime_api(void) {
     if (talp_info) {
         /* Update sample */
         talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
         // or: talp_flush_samples_to_regions(spd);
 
         /* Into Sync call -> not_useful_gpu */
-        talp_set_sample_state(sample, not_useful_gpu, talp_info->flags.papi);
+        talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_GPU);
     }
 }
 
-DLB_EXPORT_SYMBOL
-void talp_gpu_out_of_runtime_api(void) {
+
+// Called from GPU backend plugin: CPU exits GPU runtime
+void talp_gpu_exit_runtime(void) {
 
     spd_enter_dlb(thread_spd);
     const subprocess_descriptor_t *spd = thread_spd;
@@ -89,23 +121,29 @@ void talp_gpu_out_of_runtime_api(void) {
         /* Update sample */
         talp_sample_t *sample = talp_get_thread_sample(spd);
         DLB_ATOMIC_ADD_RLX(&sample->stats.num_gpu_runtime_calls, 1);
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
         // or: talp_flush_samples_to_regions(spd);
 
         /* Out of Sync call -> useful */
-        talp_set_sample_state(sample, useful, talp_info->flags.papi);
+        talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
     }
 }
 
-DLB_EXPORT_SYMBOL
-void talp_gpu_update_sample(talp_gpu_measurements_t measurements) {
 
-    spd_enter_dlb(thread_spd);
-    const subprocess_descriptor_t *spd = thread_spd;
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info) {
-        talp_info->gpu_sample.timers.useful        += measurements.useful_time;
-        talp_info->gpu_sample.timers.communication += measurements.communication_time;
-        talp_info->gpu_sample.timers.inactive      += measurements.inactive_time;
-    }
+// Called from GPU backend plugin: flush GPU data
+void talp_gpu_submit(const gpu_measurements_t *measurements) {
+
+    gpu_sample.useful_time        += measurements->useful_time;
+    gpu_sample.communication_time += measurements->communication_time;
+    gpu_sample.inactive_time      += measurements->inactive_time;
+}
+
+// called from core
+void talp_gpu_collect(gpu_measurements_t *out) {
+
+    // flush GPU, may cause callback to talp_gpu_submit
+    gpu_backend_api->flush();
+
+    *out = gpu_sample;
+    gpu_sample = (const gpu_measurements_t){0};
 }

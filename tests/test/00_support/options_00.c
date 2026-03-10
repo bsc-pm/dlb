@@ -65,8 +65,8 @@ int main( int argc, char **argv ) {
     assert(options_1.lewi == true);
     assert(options_1.drom == true);
     assert(options_1.lewi_affinity == LEWI_AFFINITY_NEARBY_ONLY);
-    options_init(&options_1, "--talp");
-    assert(options_1.talp == true);
+    options_init(&options_1, "--drom");
+    assert(options_1.drom == true);
 
     // Check option overwrite
     options_init(&options_1, "--drom=1 --drom=0");
@@ -94,11 +94,38 @@ int main( int argc, char **argv ) {
     options_init(&options_1, "--verbose=drom,ompt,api");
     assert(options_1.verbose == (VB_DROM | VB_OMPT | VB_API));
 
-    // Deprecated variables must be still assigned
-    // But deprecated and unused variables must not fail, nor change any value
+    // Check TALP components
+    options_init(&options_1, "");
+    assert(options_1.talp == TALP_COMPONENT_NONE);
+    options_init(&options_1, "--talp=no");
+    assert(options_1.talp == TALP_COMPONENT_NONE);
+    options_init(&options_1, "--talp=none");
+    assert(options_1.talp == TALP_COMPONENT_NONE);
+    options_init(&options_1, "--talp");
+    assert(options_1.talp == TALP_COMPONENT_DEFAULT);
+    options_init(&options_1, "--talp=default");
+    assert(options_1.talp == TALP_COMPONENT_DEFAULT);
+    options_init(&options_1, "--talp=openmp");
+    assert(options_1.talp == TALP_COMPONENT_OPENMP);
+    options_init(&options_1, "--talp=openmp:gpu:hwc");
+    assert(options_1.talp == (TALP_COMPONENT_OPENMP|TALP_COMPONENT_HWC|TALP_COMPONENT_GPU));
+
+    // Test deprecated TALP variables that set non-deprecated fields
+    options_init(&options_1, "--talp-openmp");
+    assert(options_1.talp == TALP_COMPONENT_OPENMP);
+    options_init(&options_1, "--talp --talp-openmp");
+    assert(options_1.talp == (TALP_COMPONENT_DEFAULT|TALP_COMPONENT_OPENMP));
+    options_init(&options_1, "--talp-papi");
+    assert(options_1.talp == TALP_COMPONENT_HWC);
+    options_init(&options_1, "--plugin=cupti");
+    assert(options_1.talp == TALP_COMPONENT_GPU);
+    options_init(&options_1, "--talp-openmp --talp-papi --plugin=rocprofiler-sdk");
+    assert(options_1.talp == (TALP_COMPONENT_OPENMP|TALP_COMPONENT_HWC|TALP_COMPONENT_GPU));
+
+    // Deprecated and unused variables must not fail, nor change any value
     memset(&options_1, 0, sizeof(options_t));
     memset(&options_2, 0, sizeof(options_t));
-    options_init(&options_1, "--policy=lewi");
+    options_init(&options_1, "--lewi-mpi");
     options_init(&options_2, NULL);
     assert(memcmp(&options_1, &options_2, sizeof(options_t)) == 0);
 
@@ -129,12 +156,6 @@ int main( int argc, char **argv ) {
     error_unexisting_var = options_get_variable(&options_1, "FAKEVAR", value);
     assert(error_unexisting_var == DLB_ERR_NOENT);
     assert(strcasecmp(value, "") == 0);
-
-    // Test deprecated variable negated with an existing one
-    options_init(&options_1, "--lewi-mpi");
-    assert(options_1.lewi_keep_cpu_on_blocking_call == false);
-    options_init(&options_1, "--lewi-mpi=no");
-    assert(options_1.lewi_keep_cpu_on_blocking_call == true);
 
     // Print variables
     options_init(&options_1, "");

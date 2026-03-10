@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,11 +17,11 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "plugins/plugin.h"
-#include "plugins/plugin_utils.h"
-#include "plugins/gpu_record_utils.h"
 #include "support/dlb_common.h"
-#include "talp/talp_gpu.h"
+#include "talp/backend.h"
+#include "talp/backends/backend_utils.h"
+#include "talp/backends/gpu_record_utils.h"
+
 #include <inttypes.h>
 #include <rocprofiler/v2/rocprofiler.h>
 #include <stdatomic.h>
@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+static const core_api_t *dlb_core_api = NULL;
 
 /*********************************************************************************/
 /*  ROCm profiling (rocprofilerv2)                                               */
@@ -46,7 +48,7 @@
                     "%s:%d: Error: Function %s failed with error (%d): %s.\n",  \
                     __FILE__, __LINE__, #call, _status, _error_string);         \
                                                                                 \
-            return DLB_PLUGIN_ERROR;                                            \
+            return DLB_BACKEND_ERROR;                                           \
         }                                                                       \
   } while (0)
 
@@ -64,7 +66,8 @@
 
 /* --- ROCm state -------------------------------------------------------------- */
 
-static bool rocprofilerv2_plugin_enabled = false;
+static bool rocprofilerv2_plugin_initialized = false;
+static bool rocprofilerv2_plugin_started = false;
 static rocprofiler_session_id_t _session_id;
 static rocprofiler_buffer_id_t _buffer_id;
 
@@ -83,10 +86,10 @@ static void HIP_API_callback(rocprofiler_record_tracer_t tracer_record,
         }
         if (tracer_record.phase == ROCPROFILER_PHASE_ENTER) {
             PLUGIN_PRINT(" >> %s\n", function_name);
-            talp_gpu_into_runtime_api();
+            dlb_core_api->gpu.enter_runtime();
         } else if (tracer_record.phase == ROCPROFILER_PHASE_EXIT) {
             PLUGIN_PRINT(" << %s\n", function_name);
-            talp_gpu_out_of_runtime_api();
+            dlb_core_api->gpu.exit_runtime();
         }
     } else {
         PLUGIN_PRINT("unknown HIP callback from domain: %d\n", tracer_record.domain);
@@ -225,50 +228,59 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
 /* --- Plugin functions -------------------------------------------------------- */
 
 /* Function called externally by TALP to force flushing buffers */
-static void rocprofilerv2_plugin_update_sample(void) {
+static void rocprofilerv2_backend_flush(void) {
 
     /* Flush buffer */
-    if (rocprofilerv2_plugin_enabled) {
+    if (rocprofilerv2_plugin_started) {
         // TODO: is this a blocking function or do we need to sync with buffer_callback
         CHECK_WARN_ROCPROFILER(rocprofiler_flush_data(_session_id, _buffer_id));
     }
 
-    /* Update safe timestamp. All future records prior to this will be ignored */
-    safe_timestamp = get_timestamp();
+    if (rocprofilerv2_plugin_initialized) {
+        /* Update safe timestamp. All future records prior to this will be ignored */
+        safe_timestamp = get_timestamp();
 
-    /* Compute kernel records duration */
-    gpu_record_flatten(&kernel_buffer);
-    uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
+        /* Compute kernel records duration */
+        gpu_record_flatten(&kernel_buffer);
+        uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
 
-    /* Compute memory records duration */
-    gpu_record_flatten(&memory_buffer);
-    uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
+        /* Compute memory records duration */
+        gpu_record_flatten(&memory_buffer);
+        uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
 
-    /* Clear buffers */
-    gpu_record_clear_buffer(&kernel_buffer);
-    gpu_record_clear_buffer(&memory_buffer);
+        /* Clear buffers */
+        gpu_record_clear_buffer(&kernel_buffer);
+        gpu_record_clear_buffer(&memory_buffer);
 
-    if (kernel_time > 0 || memory_time > 0) {
-        /* Pack values to send to TALP */
-        talp_gpu_measurements_t measurements = {
-            .useful_time = kernel_time,
-            .communication_time = memory_time,
-        };
+        if (kernel_time > 0 || memory_time > 0) {
+            /* Pack values to send to TALP */
+            gpu_measurements_t measurements = {
+                .useful_time = kernel_time,
+                .communication_time = memory_time,
+            };
 
-        /* Call TALP */
-        talp_gpu_update_sample(measurements);
+            /* Call TALP */
+            dlb_core_api->gpu.submit_measurements(&measurements);
+        }
     }
 }
 
-static int rocprofilerv2_plugin_init(plugin_info_t *info) {
+static int rocprofilerv2_backend_probe(const core_api_t *core_api) {
+    return DLB_PLUGIN_SUCCESS;
+}
+
+static int rocprofilerv2_backend_init(const core_api_t *core_api) {
+
+    dlb_core_api = core_api;
+    if (dlb_core_api->abi_version != DLB_BACKEND_ABI_VERSION
+            || dlb_core_api->struct_size != sizeof(core_api_t)) {
+        return DLB_BACKEND_ERROR;
+    }
 
     /* Allocate local buffers */
     enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
     gpu_record_init_buffer(&kernel_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
     gpu_record_init_buffer(&memory_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
-
-    /* Set initial safe timestamp. All records prior to this will be ignored */
-    safe_timestamp = get_timestamp();
 
     CHECK_ROCPROFILER(rocprofiler_initialize());
 
@@ -314,32 +326,50 @@ static int rocprofilerv2_plugin_init(plugin_info_t *info) {
     CHECK_ROCPROFILER(rocprofiler_set_filter_buffer(
             _session_id, kernel_tracing_filter_id, _buffer_id));
 
-    /* Start profiling */
-    CHECK_ROCPROFILER(rocprofiler_start_session(_session_id));
+    rocprofilerv2_plugin_initialized = true;
 
-    /* Enable GPU component in TALP */
-    talp_gpu_init(rocprofilerv2_plugin_update_sample);
-
-    /* Return some useful information */
-    info->name = "rocprofilerv2";
-    info->version = 1;
-
-    rocprofilerv2_plugin_enabled = true;
-
-    return DLB_PLUGIN_SUCCESS;
+    return DLB_BACKEND_SUCCESS;
 }
 
-static int rocprofilerv2_plugin_finalize(void) {
+static int rocprofilerv2_backend_start(void) {
 
-    PLUGIN_PRINT("rocprofilerv2_plugin_finalize\n");
+    if (rocprofilerv2_plugin_initialized) {
 
-    if (rocprofilerv2_plugin_enabled) {
+        /* Set initial safe timestamp. All records prior to this will be ignored */
+        safe_timestamp = get_timestamp();
 
-        /* Finalize TALP GPU first to compute unflushed records.
-         * (rocprofilerv2_plugin_update_sample will be called here) */
-        talp_gpu_finalize();
+        /* Start profiling */
+        CHECK_ROCPROFILER(rocprofiler_start_session(_session_id));
 
+        rocprofilerv2_plugin_started = true;
+
+        return DLB_BACKEND_SUCCESS;
+    }
+
+    return DLB_BACKEND_ERROR;
+}
+
+static int rocprofilerv2_backend_stop(void) {
+
+    if (rocprofilerv2_plugin_started) {
+
+        /* Flush now and send measurements to TALP */
+        rocprofilerv2_backend_flush();
+
+        /* Stop session */
         CHECK_WARN_ROCPROFILER(rocprofiler_terminate_session(_session_id));
+
+        rocprofilerv2_plugin_started = false;
+    }
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static int rocprofilerv2_backend_finalize(void) {
+
+    if (rocprofilerv2_plugin_initialized) {
+
+        /* Finalize rocprofiler */
         CHECK_WARN_ROCPROFILER(rocprofiler_destroy_session(_session_id));
         CHECK_WARN_ROCPROFILER(rocprofiler_finalize());
 
@@ -347,18 +377,30 @@ static int rocprofilerv2_plugin_finalize(void) {
         gpu_record_free_buffer(&kernel_buffer);
         gpu_record_free_buffer(&memory_buffer);
 
-        rocprofilerv2_plugin_enabled = false;
+        rocprofilerv2_plugin_initialized = false;
     }
 
-    return DLB_PLUGIN_SUCCESS;
+    return DLB_BACKEND_SUCCESS;
 }
 
 
 DLB_EXPORT_SYMBOL
-plugin_api_t* DLB_Get_Plugin_API(void) {
-    static plugin_api_t api = {
-        .init = rocprofilerv2_plugin_init,
-        .finalize = rocprofilerv2_plugin_finalize,
+backend_api_t* DLB_Get_Backend_API(void) {
+    static backend_api_t api = {
+        .abi_version = DLB_BACKEND_ABI_VERSION,
+        .struct_size = sizeof(backend_api_t),
+        .name = "rocprofilerv2",
+        .capabilities = {
+            .gpu = true,
+            .gpu_amd = true,
+        },
+        .probe = rocprofilerv2_backend_probe,
+        .init = rocprofilerv2_backend_init,
+        .start = rocprofilerv2_backend_start,
+        .start = rocprofilerv2_backend_stop,
+        .finalize = rocprofilerv2_backend_finalize,
+        .flush = rocprofilerv2_backend_flush,
+        .get_gpu_affinity = NULL,
     };
     return &api;
 }

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -43,7 +43,7 @@ typedef enum OptionFlags {
     OPT_DEPRECATED = 1 << 2,
     OPT_ADVANCED   = 1 << 3,
     OPT_HIDDEN     = 1 << 4,
-    OPT_UNUSED     = 1 << 5
+    OPT_UNUSED     = 1 << 5,
 } option_flags_t;
 
 typedef enum OptionTypes {
@@ -63,6 +63,7 @@ typedef enum OptionTypes {
     OPT_OMPTOPTS_T, // omptool_opts_t
     OPT_TLPSUM_T,   // talp_summary_t
     OPT_TLPMOD_T,   // talp_model_t
+    OPT_TLPCOM_T,   // talp_component_t
     OPT_OMPTM_T     // omptm_version_t
 } option_type_t;
 
@@ -102,12 +103,37 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_TALP",
         .arg_name       = "--talp",
-        .default_value  = "no",
-        .description    = OFFSET"Enable the TALP (Tracking Application Live Performance)\n"
-                          OFFSET"module. Processes that enable this mode can obtain performance\n"
-                          OFFSET"metrics at run time.",
+        .default_value  = "none",
+        .description    = OFFSET"Enable the TALP (Tracking Application Live Performance) profiler.\n"
+                          OFFSET"\n"
+                          OFFSET"The option accepts a comma-separated list of profiling components:\n"
+                          OFFSET"    default   Enable profiling for all available components\n"
+                          OFFSET"    mpi       MPI activity\n"
+                          OFFSET"    openmp    OpenMP activity\n"
+                          OFFSET"    gpu       GPU activity\n"
+                          OFFSET"    hwc       Hardware counters\n"
+                          OFFSET"    none      Disable TALP\n"
+                          OFFSET"\n"
+                          OFFSET"If the option is specified without value (i.e., --talp), it is\n"
+                          OFFSET"equivalent to --talp=default.\n"
+                          OFFSET"\n"
+                          OFFSET"Expected usage is one of:\n"
+                          OFFSET"    --talp=none\n"
+                          OFFSET"    --talp or --talp=default\n"
+                          OFFSET"    --talp=<component>[,<component>...]\n"
+                          OFFSET"\n"
+                          OFFSET"Examples:\n"
+                          OFFSET"    --talp\n"
+                          OFFSET"        Enable profiling for all available components\n"
+                          OFFSET"        (auto-detected).\n"
+                          OFFSET"\n"
+                          OFFSET"    --talp=gpu\n"
+                          OFFSET"        Enable GPU profiling.\n"
+                          OFFSET"\n"
+                          OFFSET"    --talp=mpi,openmp\n"
+                          OFFSET"        Enable profiling of MPI and OpenMP activity.",
         .offset         = offsetof(options_t, talp),
-        .type           = OPT_BOOL_T,
+        .type           = OPT_TLPCOM_T,
         .flags          = (option_flags_t)(OPT_OPTIONAL)
     },{
         .var_name       = "LB_BARRIER",
@@ -238,9 +264,9 @@ static const opts_dict_t options_dictionary[] = {
         .arg_name       = "--lewi-respect-mask",
         .default_value  = "yes",
         .description    = OFFSET"Deprecated in favor of --lewi-respect-cpuset.\n",
-        .offset         = offsetof(options_t, lewi_respect_cpuset),
+        .offset         = SIZE_MAX,
         .type           = OPT_BOOL_T,
-        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_DEPRECATED)
+        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_DEPRECATED | OPT_UNUSED)
     }, {
         /* This is a deprecated option that overlaps with --lewi-keep-one-cpu.
          * It must be defined afterwards so that the default value of the
@@ -253,9 +279,9 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"If you want to lend a CPU when in a blocking call, you may safely\n"
                           OFFSET"remove this option.\n"
                           OFFSET"If you want to keep this CPU, use --lewi-keep-one-cpu instead.",
-        .offset         = offsetof(options_t, lewi_keep_cpu_on_blocking_call),
+        .offset         = SIZE_MAX,
         .type           = OPT_NEG_BOOL_T,
-        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_DEPRECATED)
+        .flags          = (option_flags_t)(OPT_OPTIONAL | OPT_DEPRECATED | OPT_UNUSED)
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--lewi-mpi-calls",
@@ -370,19 +396,21 @@ static const opts_dict_t options_dictionary[] = {
         .var_name       = "LB_NULL",
         .arg_name       = "--talp-openmp",
         .default_value  = "no",
-        .description    = OFFSET"Select whether to measure OpenMP metrics. (Experimental)",
-        .offset         = offsetof(options_t, talp_openmp),
+        .description    = OFFSET"Select whether to measure OpenMP metrics.\n"
+                          OFFSET"Deprecated: use --talp=openmp instead.",
+        .offset         = offsetof(options_t, deprecated_talp_openmp),
         .type           = OPT_BOOL_T,
-        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED)
     },
     {
         .var_name       = "LB_NULL",
         .arg_name       = "--talp-papi",
         .default_value  = "no",
-        .description    = OFFSET"Select whether to collect PAPI counters.",
-        .offset         = offsetof(options_t, talp_papi),
+        .description    = OFFSET"Select whether to collect PAPI counters.\n"
+                          OFFSET"Deprecated: use --talp=hwc instead.",
+        .offset         = offsetof(options_t, deprecated_talp_papi),
         .type           = OPT_BOOL_T,
-        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED)
     },
     {
         .var_name       = "LB_TALP_SUMM",
@@ -445,9 +473,9 @@ static const opts_dict_t options_dictionary[] = {
         .description    = OFFSET"Number of TALP regions per process to allocate in the shared\n"
                           OFFSET"memory.\n"
                           OFFSET"Deprecated: use --shmem-size-multiplier instead.\n",
-        .offset         = offsetof(options_t, talp_regions_per_proc),
+        .offset         = SIZE_MAX,
         .type           = OPT_INT_T,
-        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED)
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED | OPT_UNUSED)
     },
     {
         .var_name       = "LB_NULL",
@@ -477,6 +505,18 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, talp_region_select),
         .type           = OPT_STR_T,
         .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-gpu-backend",
+        .default_value  = "",
+        .description    = OFFSET"Specifies the GPU backend plugin used by TALP.\n"
+                          OFFSET"If unset (default), DLB automatically attempts to load a GPU\n"
+                          OFFSET"backend in the following order:\n"
+                          OFFSET"'cupti', 'rocprofiler-sdk', and 'rocprofilerv2'.",
+        .offset         = offsetof(options_t, talp_gpu_backend),
+        .type           = OPT_STR_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     },
     {
         .var_name       = "LB_NULL",
@@ -547,11 +587,11 @@ static const opts_dict_t options_dictionary[] = {
         .arg_name       = "--plugin",
         .default_value  = "",
         .description    = OFFSET"Select plugin to enable.\n"
-                          OFFSET"For now, only 'cupti', 'rocprofiler-sdk', and 'rocprofilerv2'.\n"
-                          OFFSET"(Experimental)",
-        .offset         = offsetof(options_t, plugins),
+                          OFFSET"Available options: 'cupti', 'rocprofiler-sdk', or 'rocprofilerv2'.\n"
+                          OFFSET"Deprecated: use --talp=gpu or --talp-gpu-backend.",
+        .offset         = offsetof(options_t, deprecated_plugins),
         .type           = OPT_STR_T,
-        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_DEPRECATED)
     }, {
         .var_name       = "LB_DEBUG_OPTS",
         .arg_name       = "--debug-opts",
@@ -626,6 +666,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_talp_summary(str_value, (talp_summary_t*)option);
         case OPT_TLPMOD_T:
             return parse_talp_model(str_value, (talp_model_t*)option);
+        case OPT_TLPCOM_T:
+            return parse_talp_component(str_value, (talp_component_t*)option);
         case OPT_OMPTM_T:
             return parse_omptm_version(str_value, (omptm_version_t*)option);
     }
@@ -668,6 +710,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return talp_summary_tostr(*(talp_summary_t*)option);
         case OPT_TLPMOD_T:
             return talp_model_tostr(*(talp_model_t*)option);
+        case OPT_TLPCOM_T:
+            return talp_component_tostr(*(talp_component_t*)option);
         case OPT_OMPTM_T:
             return omptm_version_tostr(*(omptm_version_t*)option);
     }
@@ -709,6 +753,8 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
             return equivalent_talp_summary(value1, value2);
         case OPT_TLPMOD_T:
             return equivalent_talp_model(value1, value2);
+        case OPT_TLPCOM_T:
+            return equivalent_talp_component(value1, value2);
         case OPT_OMPTM_T:
             return equivalent_omptm_version_opts(value1, value2);
     }
@@ -764,6 +810,9 @@ static void copy_value(option_type_t type, void *dest, const char *src) {
             break;
         case OPT_TLPMOD_T:
             memcpy(dest, src, sizeof(talp_model_t));
+            break;
+        case OPT_TLPCOM_T:
+            memcpy(dest, src, sizeof(talp_component_t));
             break;
         case OPT_OMPTM_T:
             memcpy(dest, src, sizeof(omptm_version_t));
@@ -928,6 +977,9 @@ void options_init(options_t *options, const char *dlb_args) {
             continue;
         }
 
+        /* Check offset is valid at this point */
+        ensure(entry->offset < sizeof(options_t), "Offset value in options directory not valid");
+
         /* Assign option = rhs, and nullify rhs if error */
         if (rhs) {
             int error = set_value(entry->type, (char*)options+entry->offset, rhs);
@@ -939,12 +991,29 @@ void options_init(options_t *options, const char *dlb_args) {
         }
 
         /* Set default value if needed */
-        if (!rhs && !(entry->flags & OPT_DEPRECATED)) {
+        if (rhs == NULL) {
             fatal_cond(!(entry->flags & OPT_OPTIONAL),
                     "Variable %s must be defined", entry->arg_name);
             int error = set_value(entry->type, (char*)options+entry->offset, entry->default_value);
             fatal_cond(error, "Internal error parsing default value %s=%s. Please, report bug at %s.",
                     entry->arg_name, entry->default_value, PACKAGE_BUGREPORT);
+        }
+    }
+
+    /* Temporarily support deprecated TALP options */
+    if (options->deprecated_talp_openmp) {
+        options->talp |= TALP_COMPONENT_OPENMP;
+    }
+    if (options->deprecated_talp_papi) {
+        options->talp |= TALP_COMPONENT_HWC;
+    }
+    if (options->deprecated_plugins[0] != '\0' &&
+            (strncmp(options->deprecated_plugins, "cupti", MAX_OPTION_LENGTH-1) == 0
+                || strncmp(options->deprecated_plugins, "rocprofiler-sdk", MAX_OPTION_LENGTH-1) == 0
+                || strncmp(options->deprecated_plugins, "rocprofilerv2", MAX_OPTION_LENGTH-1) == 0)) {
+        options->talp |= TALP_COMPONENT_GPU;
+        if (options->talp_gpu_backend[0] == '\0') {
+            strcpy(options->talp_gpu_backend, options->deprecated_plugins);
         }
     }
 
@@ -1203,6 +1272,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_TLPMOD_T:
                 b += snprintf(b, max_entry_len, "[%s]", get_talp_model_choices());
+                break;
+            case OPT_TLPCOM_T:
+                b += snprintf(b, max_entry_len, "{%s}", get_talp_component_choices());
                 break;
             case OPT_OMPTM_T:
                 b += snprintf(b, max_entry_len, "[%s]", get_omptm_version_choices());

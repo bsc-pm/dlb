@@ -172,7 +172,7 @@ There is an ongoing work to incorporate interactions between MPI and OpenMP to t
 Host and GPU metrics
 ====================
 
-To obtain hybrid CPU+GPU metrics, DLB must be used with one of the available GPU plugins.
+To obtain hybrid CPU+GPU metrics, DLB must be used with one of the available GPU backends.
 See :ref:`talp_nvidia` and :ref:`talp_amd` for more information.
 
 The figures below show the hierarchies of metrics for hybrid executions, now

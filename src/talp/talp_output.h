@@ -25,7 +25,14 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <unistd.h>
+
+typedef struct talp_flags_t talp_flags_t;
+
+typedef enum gpu_vendor {
+    GPU_VENDOR_NONE,
+    GPU_VENDOR_AMD,
+    GPU_VENDOR_NVIDIA,
+} gpu_vendor_t;
 
 typedef struct process_in_node_record_t {
     pid_t pid;
@@ -55,12 +62,13 @@ typedef struct process_record_t {
 } process_record_t;
 
 void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
-        const char *cpuset_str, bool have_mpi, bool have_openmp, bool have_gpu,
-        bool have_papi);
+        const char *cpuset_str, talp_flags_t talp_flags);
 
 void talp_output_record_pop_metrics(const dlb_pop_metrics_t *metrics);
 
 void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks, int num_gpus);
+
+void talp_output_record_gpu_vendor(gpu_vendor_t vendor);
 
 void talp_output_record_node(const node_record_t *node_record);
 

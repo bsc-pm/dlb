@@ -56,6 +56,6 @@ AC_DEFUN([AX_PAPI],
     AC_SUBST([PAPI_CPPFLAGS])
     AC_SUBST([PAPI_LDFLAGS])
     AC_SUBST([PAPI_LIBDIR])
-    AM_CONDITIONAL([HAVE_PAPI], [test "x$with_papi" != xno])
+    AM_CONDITIONAL([PAPI_PLUGIN], [test "x$with_papi" != xno])
 ])
 

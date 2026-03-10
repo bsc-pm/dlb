@@ -34,10 +34,6 @@ enum { TALP_NO_TIMESTAMP = 0 };
 typedef struct SubProcessDescriptor subprocess_descriptor_t;
 
 
-/* PAPI counters */
-int  talp_init_papi_counters(void);
-void talp_fini_papi_counters(void);
-
 /* TALP init / finalize */
 void talp_init(subprocess_descriptor_t *spd);
 void talp_finalize(subprocess_descriptor_t *spd);
@@ -46,8 +42,10 @@ void talp_finalize(subprocess_descriptor_t *spd);
 /* TALP samples */
 talp_sample_t*
      talp_get_thread_sample(const subprocess_descriptor_t *spd);
-void talp_set_sample_state(talp_sample_t *sample, enum talp_sample_state state, bool papi);
-void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp);
+void talp_set_sample_state(const subprocess_descriptor_t *spd,
+        talp_sample_t *sample, talp_sample_state_t new_state);
+void talp_update_sample(const subprocess_descriptor_t *spd,
+        talp_sample_t *sample, int64_t timestamp);
 int  talp_flush_samples_to_regions(const subprocess_descriptor_t *spd);
 void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
         talp_sample_t **samples, unsigned int nelems);

@@ -576,6 +576,103 @@ bool equivalent_talp_model(const char *str1, const char *str2) {
 }
 
 
+/* talp_component_t */
+static const talp_component_t talp_component_values[] = {
+    TALP_COMPONENT_NONE, TALP_COMPONENT_DEFAULT, TALP_COMPONENT_MPI, TALP_COMPONENT_OPENMP,
+        TALP_COMPONENT_GPU, TALP_COMPONENT_HWC };
+static const char* const talp_component_choices[] = {"none", "default", "mpi", "openmp", "gpu", "hwc"};
+static const char talp_component_choices_str[] = "none:default:mpi:openmp:gpu:hwc";
+enum { talp_component_nelems = sizeof(talp_component_values) / sizeof(talp_component_values[0]) };
+
+int parse_talp_component(const char *str, talp_component_t *value) {
+    /* particular case: '--talp/--talp=yes' is equivalent to --talp=default */
+    if (strcmp(str, "yes") == 0) {
+        *value = TALP_COMPONENT_DEFAULT;
+        return DLB_SUCCESS;
+    }
+
+    /* particular case: '--no-talp/--talp=no' is equivalent to --talp=none */
+    if (strcmp(str, "no") == 0
+            || strcmp(str, talp_component_choices[0]) == 0) {
+        *value = TALP_COMPONENT_NONE;
+        return DLB_SUCCESS;
+    }
+
+    *value = TALP_COMPONENT_NONE;
+
+    /* tokenize multiple options separated by ':' */
+    char *end_token = NULL;
+    size_t len = strlen(str) + 1;
+    char *str_copy = malloc(sizeof(char)*len);
+    strcpy(str_copy, str);
+    char *token = strtok_r(str_copy, delim, &end_token);
+    while (token) {
+        int i;
+        for (i=1; i<talp_component_nelems; ++i) {
+            if (strcmp(token, talp_component_choices[i]) == 0) {
+                *value |= talp_component_values[i];
+                break;
+            }
+
+            /* Support "easy-to-confuse" values */
+            if (strcmp(token, "cuda") == 0) {
+                *value |= TALP_COMPONENT_GPU;
+                break;
+            }
+            if (strcmp(token, "omp") == 0) {
+                *value |= TALP_COMPONENT_OPENMP;
+                break;
+            }
+            if (strcmp(token, "papi") == 0) {
+                *value |= TALP_COMPONENT_HWC;
+                break;
+            }
+        }
+        if (i == talp_component_nelems) {
+            warning("Unknown --talp option: %s", token);
+        }
+        token = strtok_r(NULL, delim, &end_token);
+    }
+    free(str_copy);
+
+    return DLB_SUCCESS;
+}
+
+const char* talp_component_tostr(talp_component_t value) {
+    // particular cases
+    if (value == TALP_COMPONENT_NONE) {
+        return "none";
+    }
+
+    static char str[sizeof(talp_component_choices_str)] = "";
+    char *p = str;
+    int i;
+    for (i=1; i<talp_component_nelems; ++i) {
+        if (value & talp_component_values[i]) {
+            if (p!=str) {
+                *p = ':';
+                ++p;
+                *p = '\0';
+            }
+            p += sprintf(p, "%s", talp_component_choices[i]);
+        }
+    }
+    return str;
+}
+
+const char* get_talp_component_choices(void) {
+    return talp_component_choices_str;
+}
+
+bool equivalent_talp_component(const char *str1, const char *str2) {
+    talp_component_t value1 = TALP_COMPONENT_MPI;
+    talp_component_t value2 = TALP_COMPONENT_OPENMP;
+    int err1 = parse_talp_component(str1, &value1);
+    int err2 = parse_talp_component(str2, &value2);
+    return err1 == DLB_SUCCESS && err2 == DLB_SUCCESS && value1 == value2;
+}
+
+
 /* policy_t: most of this stuff is depcrecated, only policy_tostr is still used */
 static const policy_t policy_values[] = {POLICY_NONE, POLICY_LEWI, POLICY_LEWI_ASYNC, POLICY_LEWI_MASK};
 static const char* const policy_choices[] = {"no", "LeWI", "LeWI_async", "LeWI_mask"};
