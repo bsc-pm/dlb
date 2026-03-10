@@ -594,18 +594,19 @@ TALP option flags
     if there is an external program monitoring the application.
 
 --talp-output-file=<path>
-    Write extended TALP metrics to a file. If this option is omitted, the output is
-    printed to stderr.
+    Write extended TALP metrics to a file. If omitted, output is
+    written to stderr.
 
-    The accepted formats are JSON and CSV, selected based on the file extensions
-    ``*.json`` and ``*.csv``, respectively. JSON files will be overwritten if they
-    already exist, while CSV files will be appended as new rows. Any other file
-    extension will result in plain text output.
+    The output format is determined by the file extension:
+        - ``*.json``   JSON (file is overwritten)
+        - ``*.csv``    CSV  (rows are appended)
+        - other    Plain text
 
-    **Deprecated formats:**
-
-    The ``*.xml`` file extension is deprecated and will be removed in the next release.
-
+    The filename may contain replacement tokens:
+        - ``%h``       Hostname
+        - ``%p``       Process ID (PID)
+        - ``%j``       Job ID from the environment (e.g., Slurm, Flux)
+        - ``%%``       Literal '%'
 
 --talp-region-select=<string>
     Select TALP regions to enable. This option follows the format:
