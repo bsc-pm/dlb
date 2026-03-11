@@ -30,6 +30,7 @@
 #include "support/env.h"
 #include "support/error.h"
 #include "support/dlb_common.h"
+#include "support/options.h"
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -442,8 +443,17 @@ int DLB_GetVariable(const char *variable, char *value) {
 
 DLB_EXPORT_SYMBOL
 int DLB_PrintVariables(int print_extended) {
+
     spd_enter_dlb(thread_spd);
-    options_print_variables(&thread_spd->options, print_extended);
+
+    if (thread_spd->dlb_initialized) {
+        /* DLB has been previously initialized, use current options */
+        options_print_variables(&thread_spd->options, print_extended);
+    } else {
+        /* Parse DLB_ARGS and/or print defaults */
+        print_dlb_variables(thread_spd, print_extended);
+    }
+
     return DLB_SUCCESS;
 }
 

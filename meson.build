@@ -504,8 +504,20 @@ binaries = [
   'dlb_taskset',
 ]
 
+dlb_util = [
+  'src/utils/dlb_util.c',
+  'src/utils/dlb_util.h',
+]
+
 foreach bin : binaries
-  executable(bin, 'src/utils/' + bin + '.c',
+  # only dlb needs dlb_util.c
+  bin_sources = ['src/utils/' + bin + '.c']
+  if bin == 'dlb'
+    bin_sources += dlb_util
+  endif
+
+  executable(bin,
+    bin_sources,
     include_directories : common_includes,
     link_with : libdlb,
     dependencies : common_deps,
@@ -522,8 +534,11 @@ if mpi_dep.found()
   ]
 
   foreach bin : mpi_binaries
-    executable(bin, 'src/utils/' + bin + '.c',
+    bin_sources = ['src/utils/' + bin + '.c'] + dlb_util
+    executable(bin,
+      bin_sources,
       include_directories : common_includes,
+      c_args : mpi_cpp_flags,
       link_with : libdlb,
       dependencies : [common_deps, mpi_dep],
       install : true,

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -19,7 +19,8 @@
 
 /*! \page dlb DLB utility command.
  *  \section synopsis SYNOPSIS
- *      <B>dlb</B> {--affinity | --gpu-affinity [--uuid] | --help [--help] | --version}
+ *      <B>dlb</B> {--affinity | --gpu-affinity [--uuid] | --test-init |
+ *                  --help [--help] | --version}
  *  \section description DESCRIPTION
  *      Utility command to display all DLB options, print DLB version, or check
  *      process affinity.
@@ -33,6 +34,9 @@
  *
  *          <DT>-u, --uuid</DT>
  *          <DD>Show full UUID with GPU affinity.</DD>
+ *
+ *          <DT>-i, --test-init</DT>
+ *          <DD>Test DLB initialization.</DD>
  *
  *          <DT>-h, --help</DT>
  *          <DD>Print DLB variables and current value. Use the option twice
@@ -48,159 +52,9 @@
  *      \ref dlb_taskset "dlb_taskset"(1)
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include "apis/dlb.h"
-#include "support/mask_utils.h"
-
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <getopt.h>
-#include <unistd.h>
-#include <limits.h>
-
-
-static void dlb_check(int error, const char *func) {
-    if (error) {
-        fprintf(stderr, "Operation %s did not succeed\n", func);
-        fprintf(stderr, "Return code %d (%s)\n", error, DLB_Strerror(error));
-        exit(EXIT_FAILURE);
-    }
-}
-
-static void __attribute__((__noreturn__)) version(void) {
-    fprintf(stdout, "%s\n", DLB_VERSION_STRING);
-    fprintf(stdout, "Configured with: %s\n", DLB_CONFIGURE_ARGS);
-    exit(EXIT_SUCCESS);
-}
-
-static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) {
-    fprintf(out, "DLB - Dynamic Load Balancing, version %s.\n", VERSION);
-    fprintf(out, (
-                "usage:\n"
-                "\t%1$s --affinity\n"
-                "\t%1$s --gpu-affinity [--uuid]\n"
-                "\t%1$s --help\n"
-                "\t%1$s --version\n"
-                "\n"
-                ), program);
-
-    fputs("DLB binary.\n\n", out);
-
-    fputs((
-                "Options:\n"
-                "  -a, --affinity           print process affinity\n"
-                "  -g, --gpu-affinity       print process and GPU affinity\n"
-                "  -u, --uuid               show full UUID with GPU affinity\n"
-                "  -h, --help               print DLB variables and current value\n"
-                "                           (twice `-hh` for extended)\n"
-                "  -v, --version            print version info\n"
-                ), out);
-
-    exit(out == stderr ? EXIT_FAILURE : EXIT_SUCCESS);
-}
-
-static void __attribute__((__noreturn__)) print_variables(int print_extended) {
-    int error = DLB_Init(0, NULL, NULL);
-    dlb_check(error, __FUNCTION__);
-    DLB_PrintVariables(print_extended);
-    if (!print_extended) {
-        fprintf(stdout, "Run dlb -hh for extended help\n");
-    }
-    error = DLB_Finalize();
-    dlb_check(error, __FUNCTION__);
-    exit(EXIT_SUCCESS);
-}
-
-static void __attribute__((__noreturn__)) print_affinity(bool do_gpu_affinity, bool full_uuid) {
-    char hostname[HOST_NAME_MAX];
-    gethostname(hostname, HOST_NAME_MAX);
-
-    cpu_set_t process_mask;
-    sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
-
-    char buffer[4096];
-    if (do_gpu_affinity) {
-        int error = DLB_GetGPUAffinity(buffer, sizeof(buffer), full_uuid);
-        if (error != DLB_SUCCESS) {
-            do_gpu_affinity = false;
-        }
-    }
-
-    if (do_gpu_affinity) {
-        printf("DLB[%s:%d]: Process affinity: %s, gpu: %s\n",
-                hostname, getpid(), mu_to_str(&process_mask), buffer);
-    } else {
-        printf("DLB[%s:%d]: Process affinity: %s\n",
-                hostname, getpid(), mu_to_str(&process_mask));
-    }
-
-    exit(EXIT_SUCCESS);
-}
-
+#include "utils/dlb_util.h"
 
 int main(int argc, char *argv[]) {
 
-    bool do_affinity = false;
-    bool do_gpu_affinity = false;
-    bool do_print = false;
-    bool print_extended = false;
-    bool full_uuid = false;
-
-    int opt;
-    extern char *optarg;
-    extern int optind;
-    struct option long_options[] = {
-        {"affinity",     no_argument,    NULL, 'a'},
-        {"gpu-affinity", no_argument,    NULL, 'g'},
-        {"uuid",         no_argument,    NULL, 'u'},
-        {"help",         no_argument,    NULL, 'h'},
-        {"help-extra",   no_argument,    NULL, 'x'}, /* kept for compatibility */
-        {"version",      no_argument,    NULL, 'v'},
-        {0,              0,              NULL,  0 }
-    };
-
-    while ((opt = getopt_long(argc, argv, "aguhxv", long_options, NULL)) != -1) {
-        switch (opt) {
-            case 'a':
-                do_affinity = true;
-                break;
-            case 'g':
-                do_affinity = true;
-                do_gpu_affinity = true;
-                break;
-            case 'u':
-                full_uuid = true;
-                break;
-            case 'h':
-                if (do_print) {
-                    print_extended = true;
-                }
-                do_print = true;
-                break;
-            case 'x':
-                do_print = true;
-                print_extended = true;
-                break;
-            case 'v':
-                version();
-                break;
-            default:
-                usage(argv[0], stderr);
-        }
-    }
-
-    if (do_print) {
-        print_variables(print_extended);
-    } else if (do_affinity) {
-        print_affinity(do_gpu_affinity, full_uuid);
-    } else {
-        usage(argv[0], stderr);
-    }
-
-    return EXIT_SUCCESS;
+    return dlb_util(argc, argv);
 }
