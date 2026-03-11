@@ -17,42 +17,9 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-/*! \page dlb_mpi DLB utility command for MPI environment.
- *  \section synopsis SYNOPSIS
- *      <B>dlb_mpi</B> {--affinity | --gpu-affinity [--uuid] | --test-init |
- *                      --help [--help] | --version}
- *  \section description DESCRIPTION
- *      Utility command to display process affinity with MPI rank.
- *
- *      <DL>
- *          <DT>-a, --affinity</DT>
- *          <DD>Print process affinity.</DD>
- *
- *          <DT>-g, --gpu-affinity</DT>
- *          <DD>Print process and GPU affinity.</DD>
- *
- *          <DT>-u, --uuid</DT>
- *          <DD>Show full UUID with GPU affinity.</DD>
- *
- *          <DT>-i, --test-init</DT>
- *          <DD>Test DLB initialization.</DD>
- *
- *          <DT>-h, --help</DT>
- *          <DD>Print DLB variables and current value. Use the option twice
- *          (e.g., -hh) for extended info.</DD>
- *
- *          <DT>-v, --version</DT>
- *          <DD>Print version info.</DD>
- *      </DL>
- *  \section author AUTHOR
- *      Barcelona Supercomputing Center (dlb@bsc.es)
- *  \section seealso SEE ALSO
- *      \ref dlb "dlb"(1)
- */
+#ifndef DLB_UTIL_H
+#define DLB_UTIL_H
 
-#include "utils/dlb_util.h"
+int dlb_util(int argc, char *argv[]);
 
-int main(int argc, char *argv[]) {
-
-    return dlb_util(argc, argv);
-}
+#endif /* DLB_UTIL_H */

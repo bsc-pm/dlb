@@ -694,9 +694,14 @@ bin_sources = \
 	src/utils/dlb_shm.c \
 	src/utils/dlb_taskset.c
 
+dlb_util_sources = \
+	src/utils/dlb_util.c \
+	src/utils/dlb_util.h \
+	$(END)
+
 bin_PROGRAMS = dlb dlb_run dlb_shm dlb_taskset
 
-dlb_SOURCES = src/utils/dlb.c
+dlb_SOURCES = src/utils/dlb.c $(dlb_util_sources)
 dlb_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_LDADD = libdlb.la
@@ -726,7 +731,7 @@ endif
 
 if MPI_LIB
 bin_PROGRAMS += dlb_mpi
-dlb_mpi_SOURCES = src/utils/dlb_mpi.c
+dlb_mpi_SOURCES = src/utils/dlb_mpi.c $(dlb_util_sources)
 dlb_mpi_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 dlb_mpi_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_mpi_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)

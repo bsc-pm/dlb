@@ -843,3 +843,19 @@ int set_observer_role(bool is_observer) {
 int get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid) {
     return talp_backend_manager_get_gpu_affinity(buffer, buffer_size, full_uuid);
 }
+
+void print_dlb_variables(subprocess_descriptor_t *spd, bool print_extended) {
+
+    options_t options;
+    options_init(&options, NULL);
+
+    /* dlb is not intialized, this step is needed to print the correct host:pid */
+    if (spd->id == 0) {
+        spd->id = getpid();
+    }
+    debug_init(&options);
+
+    options_print_variables(&options, print_extended);
+
+    options_finalize(&options);
+}
