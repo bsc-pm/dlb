@@ -460,6 +460,16 @@ static const opts_dict_t options_dictionary[] = {
         .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
     },
     {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-partial-output",
+        .default_value  = "no",
+        .description    = OFFSET"Write one profiling output file per process instead of a single\n"
+                          OFFSET"merged file. Only supported when the output format is JSON.",
+        .offset         = offsetof(options_t, talp_partial_output),
+        .type           = OPT_BOOL_T,
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
+    },
+    {
         /* In the future, consider using an interval update timer instead of a boolean */
         .var_name       = "LB_NULL",
         .arg_name       = "--talp-external-profiler",

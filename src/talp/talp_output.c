@@ -1711,6 +1711,32 @@ static void sanitize_records(void) {
     }
 }
 
+/* Return an allocated string: base + "_%h_%p.partial" + extension */
+static char *build_partial_template(const char *filename) {
+
+    const char *dot = strrchr(filename, '.');
+    size_t base_len = dot - filename;
+    const char *ext = dot;
+
+    ensure(dot != NULL, "expected filename with extension %s. Please report bug.", __func__);
+
+    size_t len =
+        base_len +
+        strlen("_%h_%p.partial") +
+        strlen(ext) +
+        1;
+
+    char *out = malloc(len);
+
+    snprintf(out, len,
+        "%.*s_%%h_%%p.partial%s",
+        (int)base_len,
+        filename,
+        ext);
+
+    return out;
+}
+
 /* Detect job ID across schedulers */
 static const char *get_job_id(void) {
 
@@ -1825,10 +1851,10 @@ static char *expand_output_filename(const char *template)
     return output_filename;
 }
 
-void talp_output_finalize(const char *output_file) {
+void talp_output_finalize(const char *output_file, bool partial_output) {
 
-    /* For efficiency, all records are prepended to their respective lists and
-     * reversed here */
+    /* For efficiency when adding records, they are prepended to their respective lists.
+     * Then, they are reversed here to print them in alphabetical order. */
     pop_metrics_records = g_slist_reverse(pop_metrics_records);
     node_records        = g_slist_reverse(node_records);
     region_records      = g_slist_reverse(region_records);
@@ -1857,12 +1883,6 @@ void talp_output_finalize(const char *output_file) {
                 && node_records == NULL
                 && region_records == NULL) return;
 
-        /* Convert output_file into a proper output file if the name is a template */
-        char *filename = expand_output_filename(output_file);
-        if (filename != NULL) {
-            output_file = filename;
-        }
-
         /* Check file extension */
         typedef enum Extension {
             EXT_JSON,
@@ -1887,6 +1907,32 @@ void talp_output_finalize(const char *output_file) {
             warning("Deprecated: The support for XML output is deprecated and"
                     " will be removed in the next release");
         }
+
+        /* Flag check */
+        if (extension != EXT_JSON && partial_output) {
+            warning("Option --talp-partial-output is only supported for JSON format."
+                    " Disabling option");
+            partial_output = false;
+        }
+
+        /* Obtain the real filename depending on whether output_file is a template,
+         * or the user requested partial output */
+        char *template = NULL;
+        char *filename = NULL;
+
+        if (partial_output) {
+            template = build_partial_template(output_file);
+        } else {
+            template = strdup(output_file);
+        }
+
+        filename = expand_output_filename(template);
+
+        if (filename != NULL) {
+            output_file = filename;
+        }
+
+        free(template);
 
         /* Specific case where output file needs to be split */
         if (extension == EXT_CSV

@@ -180,6 +180,10 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
                 talp_info->monitor->useful_time);
     }
 
+    /* If TALP partial output is enabled, metrics are not merged here.
+     * Output is written per process in talp_finalize() */
+    if (spd->options.talp_partial_output) return;
+
 #ifdef MPI_LIB
     /* If performing any kind of TALP summary, check that the number of processes
         * registered in the shared memory matches with the number of MPI processes in the node.
