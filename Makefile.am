@@ -60,7 +60,7 @@ AM_CPPFLAGS += $(HWLOC_CPPFLAGS) -DHWLOC_LIB
 AM_LDFLAGS += $(HWLOC_LDFLAGS)
 endif
 
-if MPI_LIB
+if HAVE_MPI
 AM_MPI_CPPFLAGS = $(MPI_CPPFLAGS) -DMPI_LIB
 AM_MPI_FCFLAGS = $(MPI_FCFLAGS) -DMPI_LIB
 AM_MPI_LDFLAGS = $(MPI_LDFLAGS)
@@ -89,7 +89,7 @@ installheaders =                     \
 
 dist_include_HEADERS = $(installheaders)
 
-if MPI_LIB
+if HAVE_MPI
 nodist_include_HEADERS =             \
 	src/mpi/dlb_mpi_hooks_c.h    \
 	src/mpi/dlb_mpi_hooks_f.h    \
@@ -139,7 +139,7 @@ CLEANFILES += \
 
 # Automake requires the built headers to be generated before any other rule,
 # so they need be in here even though MPI is not used
-if MPI_LIB
+if HAVE_MPI
 BUILT_SOURCES += \
 	src/mpi/config_mpi.h              \
 	src/mpi/dlb_mpi_hooks_c.h         \
@@ -358,7 +358,7 @@ endif
 #********************************************************************************
 # libdlb_mpi.so
 #********************************************************************************
-if MPI_LIB
+if BUILD_MPI_LIB
 MPI_SRCS = \
 	src/mpi/mpi_core.c           \
 	src/mpi/mpi_core.h           \
@@ -454,13 +454,12 @@ libdlb_mpi_instr_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_NODIST)
 libdlb_mpi_instr_dbg_la_LIBADD = libdlb_common_dbg.la
 endif
-endif #MPI_LIB
+endif #BUILD_MPI_LIB
 
 #********************************************************************************
 # libdlb_mpic.so
 #********************************************************************************
-if MPI_LIB
-if MPIC_LIB
+if BUILD_MPIC_LIB
 MPIC_SRCS = \
 	src/mpi/mpi_core.c           \
 	src/mpi/mpi_core.h           \
@@ -514,14 +513,12 @@ libdlb_mpic_instr_dbg_la_SOURCES = $(SRCS) $(MPIC_SRCS)
 nodist_libdlb_mpic_instr_dbg_la_SOURCES = $(MPIC_SRCS_NODIST)
 libdlb_mpic_instr_dbg_la_LIBADD = libdlb_common_dbg.la
 endif
-endif #MPIC_LIB
-endif #MPI_LIB
+endif #BUILD_MPIC_LIB
 
 #********************************************************************************
 # libdlb_mpif.so
 #********************************************************************************
-if MPI_LIB
-if MPIF_LIB
+if BUILD_MPIF_LIB
 MPIF_SRCS = \
 	src/mpi/mpi_core.c           \
 	src/mpi/mpi_core.h           \
@@ -612,8 +609,7 @@ libdlb_mpif_instr_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_NODIST)
 libdlb_mpif_instr_dbg_la_LIBADD = libdlb_common_dbg.la
 endif
-endif #MPIF_LIB
-endif #MPI_LIB
+endif #BUILD_MPIF_LIB
 
 #********************************************************************************
 # libdlb_cupti.so
@@ -729,7 +725,7 @@ dlb_tester_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS) $(OPENMP_CFLAGS)
 dlb_tester_LDADD = libdlb.la
 endif
 
-if MPI_LIB
+if HAVE_MPI
 bin_PROGRAMS += dlb_mpi
 dlb_mpi_SOURCES = src/utils/dlb_mpi.c $(dlb_util_sources)
 dlb_mpi_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
