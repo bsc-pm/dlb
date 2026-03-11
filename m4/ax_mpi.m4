@@ -255,10 +255,12 @@ AC_DEFUN([AX_MPI],
         AC_ARG_ENABLE([c-mpi-library],
             AS_HELP_STRING([--enable-c-mpi-library], [compile also a DLB MPI library specific for C]),
             [], dnl Implicit: enable_c_mpi_library=$enableval
-            [enable_c_mpi_library=no]
+            [AS_IF([test "x$FC" != x], [enable_c_mpi_library=no], [
+                enable_c_mpi_library="forced due to no Fortran compiler found"])
+            ]
         )
         AC_MSG_RESULT([$enable_c_mpi_library])
-        #
+
         ### Check for specific Fortran MPI library
         AC_MSG_CHECKING([whether to build libdlb_mpif.so, containing only Fortran MPI symbols])
         AC_ARG_ENABLE([fortran-mpi-library],
@@ -314,6 +316,11 @@ AC_DEFUN([AX_MPI],
         ])
     ])
 
+    # ouput variables for configure summary
+    AS_IF([test "x$with_mpi" != xno && test "x$FC" != x], [BUILD_MPI_LIB=yes])
+    AS_IF([test "x$enable_c_mpi_library" != xno], [BUILD_MPIC_LIB=yes])
+    AS_IF([test "x$enable_fortran_mpi_library" != xno], [BUILD_MPIF_LIB=yes])
+
     AC_SUBST([MPICC])
     AC_SUBST([MPIFC])
     AC_SUBST([MPIEXEC])
@@ -321,9 +328,10 @@ AC_DEFUN([AX_MPI],
     AC_SUBST([MPI_VERSION])
     AC_SUBST([MPI_LIBRARY_VERSION])
     AC_SUBST([MPI_F08_ENABLED], [$mpi_f08])
-    AM_CONDITIONAL([MPI_LIB], [test "x$with_mpi" != xno])
-    AM_CONDITIONAL([MPIC_LIB], [test "x$enable_c_mpi_library" != xno])
-    AM_CONDITIONAL([MPIF_LIB], [test "x$enable_fortran_mpi_library" != xno])
+    AM_CONDITIONAL([HAVE_MPI], [test "x$with_mpi" != xno])
+    AM_CONDITIONAL([BUILD_MPI_LIB], [test "x$BUILD_MPI_LIB" = xyes ])
+    AM_CONDITIONAL([BUILD_MPIC_LIB], [test "x$BUILD_MPIC_LIB" = xyes])
+    AM_CONDITIONAL([BUILD_MPIF_LIB], [test "x$BUILD_MPIF_LIB" = xyes])
     AM_CONDITIONAL([MPI_TESTS], [test "x$enable_mpi_tests" != xno])
     AM_CONDITIONAL([MPI_F08], [test x"$mpi_f08" = xyes])
     AM_CONDITIONAL([MPI_F08TS], [test x"$mpi_f08ts" = xyes])
