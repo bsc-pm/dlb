@@ -207,7 +207,7 @@ AC_FC_FREEFORM([:], [:])
 
 # Disable Fortran tests if FC is not found
 AS_IF([test "x$FC" = x], [
-    AC_MSG_WARN([Fortran compiler was not found, disabling Fortran tests.])
+    AC_MSG_WARN([Fortran compiler was not found, some MPI libraries will not be built.])
 ], [
     # use the Fortran compiler for the following checks
     AC_LANG_PUSH([Fortran])
@@ -576,11 +576,84 @@ summary_title_underline="$(printf '%*s' "$summary_title_len" | tr ' ' '=')"
 
 # Generate variant strings
 AS_IF([test "x$enable_debug" = xyes],
-      [debug_variant="yes (installed as libdlb_dbg.so)"], [debug_variant=no])
+      [debug_variant="yes (libdlb_dbg.so)"], [debug_variant=no])
 AS_IF([test "x$enable_instrumentation" = xyes],
-      [instr_variant="yes (installed as libdlb_instr.so)"], [instr_variant=no])
+      [instr_variant="yes (libdlb_instr.so)"], [instr_variant=no])
 AS_IF([test "x$enable_instrumentation_debug" = xyes],
-      [instr_debug_variant="yes (installed as libdlb_instr_dbg.so)"], [instr_debug_variant=no])
+      [instr_debug_variant="yes (libdlb_instr_dbg.so)"], [instr_debug_variant=no])
+
+AS_IF([test "x$BUILD_MPI_LIB" = xyes],
+      [mpi_lib_variant="yes (libdlb_mpi.so)"], [mpi_lib_variant=no])
+AS_IF([test "x$BUILD_MPIC_LIB" = xyes],
+      [mpic_lib_variant="yes (libdlb_mpic.so)"], [mpic_lib_variant=no])
+AS_IF([test "x$BUILD_MPIF_LIB" = xyes],
+      [mpif_lib_variant="yes (libdlb_mpif.so)"], [mpif_lib_variant=no])
+
+# MPI info
+AS_IF([test "x$with_mpi" != xno], [
+    mpi_info="
+F08 bindings              : $mpi_f08
+F08ts bindings            : $mpi_f08ts
+CPPFLAGS                  : $MPI_CPPFLAGS
+LDFLAGS                   : $MPI_LDFLAGS"
+], [
+    mpi_info=""
+])
+
+# Other dependences:
+
+AS_IF([test "x$with_papi" != xno], [
+    papi_plugin="yes (libdlb_papi.so)"
+    papi_info="
+  CPPFLAGS                : $PAPI_CPPFLAGS
+  LDFLAGS                 : $PAPI_LDFLAGS"
+], [
+    papi_plugin="no"
+    papi_info=""
+])
+
+AS_IF([test "x$with_cuda" != xno], [
+    cuda_plugin="yes (libdlb_cupti.so)"
+    cuda_info="
+  CPPFLAGS                : $CUDA_CPPFLAGS
+  LDFLAGS                 : $CUDA_LDFLAGS"
+], [
+    cuda_plugin="no"
+    cuda_info=""
+])
+
+AS_IF([test "x$with_rocm" != xno], [
+    AS_IF([test "x$rocm_rocprofsdk_plugin" = xyes && test "x$rocm_rocprofv2_plugin" = xyes], [
+        rocm_plugin="yes (libdlb_rocprofiler-sdk.so and libdlb_rocprofilerv2.so)"
+        rocm_info="
+  CPPFLAGS                : $ROCM_CPPFLAGS
+  LDFLAGS (sdk)           : $ROCM_ROCPROFSDK_LDFLAGS
+  LDFLAGS (v2)            : $ROCM_ROCPROFV2_LDFLAGS"
+    ], [test "x$rocm_rocprofsdk_plugin" = xyes], [
+        rocm_plugin="yes (libdlb_rocprofiler-sdk.so)"
+        rocm_info="
+  CPPFLAGS                : $ROCM_CPPFLAGS
+  LDFLAGS                 : $ROCM_ROCPROFSDK_LDFLAGS"
+    ], [test "x$rocm_rocprofv2_plugin" = xyes], [
+        rocm_plugin="yes (libdlb_rocprofilerv2.so)"
+        rocm_info="
+  CPPFLAGS                : $ROCM_CPPFLAGS
+  LDFLAGS                 : $ROCM_ROCPROFV2_LDFLAGS"
+    ])
+], [
+    rocm_plugin="no"
+    rocm_info=""
+])
+
+AS_IF([test "x$with_hwloc" != xno], [
+    hwloc_dep="yes"
+    hwloc_info="
+  CPPFLAGS                : $HWLOC_CPPFLAGS
+  LDFLAGS                 : $HWLOC_LDFLAGS"
+], [
+    hwloc_dep="no"
+    hwloc_info=""
+])
 
 # Summary
 AS_ECHO(["
@@ -588,60 +661,26 @@ $summary_title
 $summary_title_underline
 
 Installation prefix       : $prefix
-Main library              : yes
+
+Main libraries
+--------------
+Default                   : yes (libdlb.so)
 Debug variant             : $debug_variant
 Instrumentation variant   : $instr_variant
 Instr + debug variant     : $instr_debug_variant
-External libraries:"])
 
-AS_ECHO_N(["
-* MPI: "])
-AS_IF([test "x$with_mpi" = xno], [
-    AS_ECHO(["no"])
-], [
-    AS_ECHO(["yes
-  F08 bindings:       $mpi_f08
-  MPI_CPPFLAGS:       $MPI_CPPFLAGS
-  MPI_LDFLAGS:        $MPI_LDFLAGS"])
-])
+MPI variants
+------------
+C and Fortran MPI library : $mpi_lib_variant
+C MPI library             : $mpic_lib_variant
+Fortran MPI library       : $mpif_lib_variant$mpi_info
 
-AS_ECHO_N(["
-* HWLOC: "])
-AS_IF([test "x$with_hwloc" = xno], [
-    AS_ECHO(["no"])
-], [
-    AS_ECHO(["yes
-  HWLOC_CPPFLAGS:     $HWLOC_CPPFLAGS
-  HWLOC_LDFLAGS:      $HWLOC_LDFLAGS"])
-])
+Optional plugins
+----------------
+PAPI plugin               : $papi_plugin$papi_info
+CUDA plugin               : $cuda_plugin$cuda_info
+ROCm plugin               : $rocm_plugin$rocm_info
 
-AS_ECHO_N(["
-* PAPI: "])
-AS_IF([test "x$with_papi" = xno], [
-    AS_ECHO(["no"])
-], [
-    AS_ECHO(["yes
-  PAPI_CPPFLAGS:      $PAPI_CPPFLAGS
-  PAPI_LDFLAGS:       $PAPI_LDFLAGS"])
-])
-
-AS_ECHO_N(["
-* CUDA: "])
-AS_IF([test "x$with_cuda" = xno], [
-    AS_ECHO(["no"])
-], [
-    AS_ECHO(["yes
-  CUDA_CPPFLAGS:      $CUDA_CPPFLAGS
-  CUDA_LDFLAGS:       $CUDA_LDFLAGS"])
-])
-
-AS_ECHO_N(["
-* ROCm: "])
-AS_IF([test "x$with_rocm" = xno], [
-    AS_ECHO(["no"])
-], [
-    AS_ECHO(["yes
-  ROCM_CPPFLAGS:      $ROCM_CPPFLAGS
-  ROCM_LDFLAGS (v2):  $ROCM_ROCPROFV2_LDFLAGS
-  ROCM_LDFLAGS (sdk): $ROCM_ROCPROFSDK_LDFLAGS"])
-])
+Other libraries
+---------------
+HWLOC                     : $hwloc_dep$hwloc_info"])
