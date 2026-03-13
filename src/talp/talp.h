@@ -47,10 +47,12 @@ void talp_finalize(subprocess_descriptor_t *spd);
 talp_sample_t*
      talp_get_thread_sample(const subprocess_descriptor_t *spd);
 void talp_set_sample_state(talp_sample_t *sample, enum talp_sample_state state, bool papi);
-void talp_update_sample(talp_sample_t *sample, bool papi, int64_t timestamp);
+void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sample,
+        int64_t timestamp);
 int  talp_flush_samples_to_regions(const subprocess_descriptor_t *spd);
 void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
         talp_sample_t **samples, unsigned int nelems);
+void talp_set_main_sample_in_serial_mode(bool serial_mode);
 
 
 /* TALP collect functions for 3rd party programs */

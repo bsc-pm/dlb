@@ -229,7 +229,7 @@ static inline void update_sample_on_sync_call(const subprocess_descriptor_t *spd
 
     if (!talp_info->flags.external_profiler || !is_blocking_collective) {
         /* Likely scenario, just update the sample */
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
     } else {
         /* If talp_info->flags.external_profiler && is_blocking_collective:
          * aggregate samples and update all monitoring regions */
@@ -245,7 +245,7 @@ void talp_into_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_co
     if (talp_info) {
         /* Update sample */
         talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
 
         /* Into Sync call -> not_useful_mpi */
         talp_set_sample_state(sample, not_useful_mpi, talp_info->flags.papi);

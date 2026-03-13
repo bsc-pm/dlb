@@ -71,7 +71,7 @@ void talp_gpu_into_runtime_api(void) {
     if (talp_info) {
         /* Update sample */
         talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
         // or: talp_flush_samples_to_regions(spd);
 
         /* Into Sync call -> not_useful_gpu */
@@ -89,7 +89,7 @@ void talp_gpu_out_of_runtime_api(void) {
         /* Update sample */
         talp_sample_t *sample = talp_get_thread_sample(spd);
         DLB_ATOMIC_ADD_RLX(&sample->stats.num_gpu_runtime_calls, 1);
-        talp_update_sample(sample, talp_info->flags.papi, TALP_NO_TIMESTAMP);
+        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
         // or: talp_flush_samples_to_regions(spd);
 
         /* Out of Sync call -> useful */
