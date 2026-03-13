@@ -49,6 +49,7 @@ void talp_update_sample(const subprocess_descriptor_t *spd,
 int  talp_flush_samples_to_regions(const subprocess_descriptor_t *spd);
 void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
         talp_sample_t **samples, unsigned int nelems);
+void talp_set_main_sample_in_serial_mode(bool serial_mode);
 
 
 /* TALP collect functions for 3rd party programs */

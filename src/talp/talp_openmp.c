@@ -156,7 +156,9 @@ void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    if (parallel_data->level == 1) {
+    int parallel_level = parallel_data->level;
+
+    if (parallel_level == 1) {
         /* Resize samples of parallel 1 if needed */
         unsigned int requested_parallelism = parallel_data->requested_parallelism;
         if (requested_parallelism > parallel_samples_l1_capacity) {
@@ -170,7 +172,7 @@ void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data) {
         /* Assign local data */
         parallel_data->talp_parallel_data = parallel_samples_l1;
 
-    } else if (parallel_data->level > 1) {
+    } else if (parallel_level > 1) {
         /* Allocate parallel samples array */
         unsigned int requested_parallelism = parallel_data->requested_parallelism;
         void *ptr = malloc(sizeof(talp_sample_t*)*requested_parallelism);
@@ -183,6 +185,11 @@ void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data) {
     /* Update stats */
     talp_sample_t *sample = talp_get_thread_sample(spd);
     DLB_ATOMIC_ADD_RLX(&sample->stats.num_omp_parallels, 1);
+
+    /* Update main thread serial mode if this is the outermost parallel region */
+    if (parallel_level == 1) {
+        talp_set_main_sample_in_serial_mode(false);
+    }
 }
 
 void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data) {
@@ -196,13 +203,15 @@ void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data) {
     talp_sample_t *sample = talp_get_thread_sample(spd);
     talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
 
-    if (parallel_data->level == 1) {
+    int parallel_level = parallel_data->level;
+
+    if (parallel_level == 1) {
         /* Flush and aggregate all samples of the parallel region */
         talp_flush_sample_subset_to_regions(spd,
                 parallel_data->talp_parallel_data,
                 parallel_data->actual_parallelism);
 
-    } else if (parallel_data->level > 1) {
+    } else if (parallel_level > 1) {
         /* Flush and aggregate all samples of this parallel except this
             * thread's sample. The primary thread of a nested parallel region
             * will keep its samples until it finishes as non-primary
@@ -229,6 +238,11 @@ void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data) {
         if (worker_sample->state == TALP_STATE_NOT_USEFUL_OMP_IN) {
             worker_sample->state = TALP_STATE_NOT_USEFUL_OMP_OUT;
         }
+    }
+
+    /* Update main thread serial mode if this was the outermost parallel region */
+    if (parallel_level == 1) {
+        talp_set_main_sample_in_serial_mode(true);
     }
 }
 
