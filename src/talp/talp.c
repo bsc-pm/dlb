@@ -288,6 +288,8 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 /*********************************************************************************/
 
 static __thread talp_sample_t* _tls_sample = NULL;
+static __thread bool _is_main_sample = false;
+static __thread bool _is_main_sample_in_serial_mode = false;
 
 /* Quick test, without locking and without generating a new sample */
 static inline bool is_talp_sample_mine(const talp_sample_t *sample) {
@@ -341,6 +343,10 @@ talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd) {
             if (posix_memalign(&new_sample, DLB_CACHE_LINE, sizeof(talp_sample_t)) == 0) {
                 _tls_sample = new_sample;
                 talp_info->samples[ncpus-1] = new_sample;
+                if (ncpus == 1) {
+                    _is_main_sample = true;
+                    _is_main_sample_in_serial_mode = true;
+                }
             }
         }
     }
@@ -403,6 +409,8 @@ void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sampl
     /* Observer threads ignore this function */
     if (unlikely(sample == NULL)) return;
 
+    talp_info_t *talp_info = spd->talp_info;
+
     /* Compute duration and set new last_updated_timestamp */
     int64_t now = timestamp == TALP_NO_TIMESTAMP ? get_time_in_ns() : timestamp;
     int64_t microsample_duration = now - sample->last_updated_timestamp;
@@ -416,6 +424,10 @@ void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sampl
             DLB_ATOMIC_ADD_RLX(&sample->timers.useful, microsample_duration);
             break;
         case TALP_STATE_NOT_USEFUL_MPI:
+            if (_is_main_sample_in_serial_mode) {
+                int num_cpus = talp_info->ncpus;
+                microsample_duration *= num_cpus;
+            }
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_mpi, microsample_duration);
             break;
         case TALP_STATE_NOT_USEFUL_OMP_IN:
@@ -429,7 +441,6 @@ void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sampl
             break;
     }
 
-    talp_info_t *talp_info = spd->talp_info;
     if (talp_info->flags.have_hwc) {
         /* Only read counters if we are updating this thread's sample */
         if (is_talp_sample_mine(sample)) {
@@ -562,6 +573,18 @@ void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
 
     /* Update all started regions */
     update_regions_with_macrosample(spd, &macrosample, nelems);
+}
+
+/* Sets the TLS variable _is_main_sample_in_serial_mode. This function is
+ * called by the main thread when beginning or ending parallel region of level 1.
+ * FIXME: free agent threads may break this condition.
+ *
+ * Sets whether the main thread is running in serial mode. */
+void talp_set_main_sample_in_serial_mode(bool serial_mode) {
+
+    if (_is_main_sample) {
+        _is_main_sample_in_serial_mode = serial_mode;
+    }
 }
 
 
