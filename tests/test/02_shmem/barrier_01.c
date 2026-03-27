@@ -41,8 +41,6 @@
 
 /* Test node barrier */
 
-void __gcov_flush() __attribute__((weak));
-
 struct data {
     pthread_barrier_t barrier;
 };

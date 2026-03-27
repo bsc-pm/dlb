@@ -25,6 +25,7 @@
 
 #include "extra_tests.h"
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_async.h"
@@ -45,8 +46,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-
-void __gcov_flush() __attribute__((weak));
 
 struct data {
     pthread_barrier_t barrier;
@@ -155,10 +154,8 @@ int test_shm_multiplier(int size_multiplier, bool try_different_multiplier) {
             init_dlb_wait_and_finalize(&system_mask, &options);
 
             /* We need to call _exit so that children don't call assert_shmem
-             * destructors but that prevents gcov reports, so we'll call it if
-             * defined */
-            if (__gcov_flush) __gcov_flush();
-            _exit(EXIT_SUCCESS);
+             */
+            dlb_test__exit(EXIT_SUCCESS);
             break;
         }
     }

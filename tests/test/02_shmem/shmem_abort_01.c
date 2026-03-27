@@ -27,6 +27,7 @@
  */
 
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -42,9 +43,6 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/wait.h>
-
-void __gcov_flush() __attribute__((weak));
-
 
 int main(int argc, char **argv) {
 
@@ -94,7 +92,7 @@ int main(int argc, char **argv) {
         assert( shmem_cpuinfo__init(spd4.id, 0, &spd4.process_mask, SHMEM_KEY, 0)
                 == DLB_SUCCESS );
 
-        if (__gcov_flush) __gcov_flush();
+        dlb_test__gcov_dump();
 
         fatal("This fatal should clean shmems");
     }
