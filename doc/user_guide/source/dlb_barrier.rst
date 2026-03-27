@@ -50,7 +50,6 @@ processes in the node::
     // Requires DLB initialisation either via:
     //   - API: DLB_Init(...)
     //   - MPI interception: LD_PRELOAD=libdlb_mpi.so
-    //   - OMPT: use OMPT-capable OpenMP runtime and set DLB_ARGS+=" --ompt"
 
     // Block current process until all the other process in the node attached
     // to the DLB Barrier system reach the same barrier.

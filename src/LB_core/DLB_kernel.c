@@ -72,6 +72,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         .pid =  getpid(),
         .dlb_initialized = spd->dlb_initialized,
         .dlb_preinitialized = spd->dlb_preinitialized,
+        .dlb_initialized_via_ompt = spd->dlb_initialized_via_ompt,
     };
     options_init(&spd->options, lb_args);
     debug_init(&spd->options);
@@ -85,7 +86,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         !spd->options.lewi                                  ? POLICY_NONE :
         spd->options.lewi_affinity == LEWI_AFFINITY_NONE    ? POLICY_LEWI :
         spd->options.lewi_affinity != LEWI_AFFINITY_AUTO    ? POLICY_LEWI_MASK :
-        spd->options.ompt                                   ? POLICY_LEWI_MASK :
+        spd->dlb_initialized_via_ompt                       ? POLICY_LEWI_MASK :
         spd->options.preinit_pid                            ? POLICY_LEWI_MASK :
         mask                                                ? POLICY_LEWI_MASK :
                                                               POLICY_LEWI;

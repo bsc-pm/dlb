@@ -25,9 +25,6 @@ export DLB_ARGS="$DLB_ARGS --talp"
 # Any other for plain text.
 #export DLB_ARGS="$DLB_ARGS --talp-output-file=talp.json"
 
-# Enable TALP OpenMP
-#export DLB_ARGS="$DLB_ARGS --ompt"
-
 #################################################################################
 ### Run                                                                       ###
 #################################################################################

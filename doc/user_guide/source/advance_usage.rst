@@ -167,7 +167,7 @@ support are:
 Usage
 =====
 
-To enable OMPT support, DLB needs the option ``DLB_ARGS+=" --ompt"`` and the
+To enable OMPT support, the
 OpenMP runtime linked to the application must support this feature. If you are
 unsure of whether the OpenMP runtime you are using supports OMPT, you can run
 the example located in ``$DLB_PREFIX/share/doc/dlb/examples/OMPT``.
@@ -192,7 +192,6 @@ with the binary ``dlb_run``.
 Summary
 =======
 
-* Set flag ``--ompt`` to enable OMPT support
 * Set flag ``--drom`` if you want to enable the DROM module
 * Set flags ``--lewi`` and ``--lewi-ompt=...`` if you want to enable LeWI
 * Set ``OMP_WAIT_POLICY=passive``

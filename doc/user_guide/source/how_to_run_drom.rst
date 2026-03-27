@@ -43,7 +43,6 @@ these conditions applies:
     * The application's programming model is OmpSs and the runtime is
       properly configured with DLB.
     * The application's programming model is OpenMP and uses an OMPT-capable
-      OpenMP runtime. Thus, for now only LLVM-based OpenMP runtimes. This case
-      also requires setting ``DLB_ARGS+=" --ompt --ompt-thread-manager=omp5"``.
+      OpenMP runtime. Thus, for now only LLVM-based OpenMP runtimes.
     * The application is linked with DLB and uses ``DLB_PollDROM`` to poll
       for changes in the CPU affinity mask.

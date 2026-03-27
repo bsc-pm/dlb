@@ -107,21 +107,16 @@ callbacks for defined OpenMP events. If your OpenMP runtime supports it
 modify the number of threads at that time, without modifying the application
 source code.
 
-Note than DLB with OMPT support can manage the CPU pinning of each thread so
-each rank must run with an exclusive set of CPUs::
-
-    OMPI_CC=clang mpicc -fopenmp foo.c -o foo
-
-    export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:lend"
-    mpirun -n 2 --bind-to core dlb_run ./foo
-
-Since this example does not need to be linked with DLB, you will need to
-preload a DLB MPI library if you want MPI support::
+When running with OMPT support, DLB enables CPU affinity support by default.
+The application must ensure that each rank is pinned to an exclusive set ot CPUs::
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
-    export DLB_ARGS="--lewi --ompt --lewi-ompt=borrow:mpi"
-    mpirun -n 2 --bind-to core dlb_run env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
+    # use clang as native compiler to ensure OMPT compatibility
+    OMPI_CC=clang mpicc -fopenmp foo.c -o foo
+
+    export DLB_ARGS="--lewi"
+    mpirun -n 2 --bind-to core env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 DLB can be fine tuned with the option ``--lewi-ompt``, see section :ref:`ompt`
 for more details.

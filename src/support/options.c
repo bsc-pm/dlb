@@ -147,7 +147,7 @@ static const opts_dict_t options_dictionary[] = {
     }, {
         .var_name       = "LB_NULL",
         .arg_name       = "--ompt",
-        .default_value  = "no",
+        .default_value  = "yes",
         .description    = OFFSET"Enable OpenMP performance tool. If running with an OMPT capable\n"
                           OFFSET"runtime, DLB can register itself as OpenMP Tool and perform\n"
                           OFFSET"some tasks, like thread pinning reallocation when the process\n"

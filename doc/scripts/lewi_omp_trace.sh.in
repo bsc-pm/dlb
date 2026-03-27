@@ -27,9 +27,6 @@ export DLB_ARGS="$DLB_ARGS --lewi"
 # default: nearby-first
 #export DLB_ARGS="$DLB_ARGS --lewi-affinity=nearby-first"
 
-# Enable OMPT support
-export DLB_ARGS="$DLB_ARGS --ompt"
-
 # Enable verbose messages for OMPT.
 # Useful to check if the OpenMP runtime supports OMPT. If DLB does not print
 # a line with the detected OpenMP runtime, then OMPT is not supported.
