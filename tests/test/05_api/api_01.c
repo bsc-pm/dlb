@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include "apis/dlb.h"
 #include "apis/dlb_drom.h"
@@ -36,8 +37,6 @@
 #include <assert.h>
 #include <pthread.h>
 #include <sys/wait.h>
-
-void __gcov_flush() __attribute__((weak));
 
 /* Test DLB_PreInit */
 
@@ -163,8 +162,7 @@ int main(int argc, char **argv) {
         /* Both children finalize shared memory and exit */
         if (child1 || child2) {
             shmem_finalize(handler, NULL);
-            if (__gcov_flush) __gcov_flush();
-            _exit(EXIT_SUCCESS);
+            dlb_test__exit(EXIT_SUCCESS);
         }
 
         /* parent2 waits for its child, then finalizes shared memory and exits */
@@ -180,8 +178,7 @@ int main(int argc, char **argv) {
                 }
             }
             shmem_finalize(handler, NULL);
-            if (__gcov_flush) __gcov_flush();
-            _exit(EXIT_SUCCESS);
+            dlb_test__exit(EXIT_SUCCESS);
         }
 
         /* Wait for all child processes */
@@ -296,8 +293,7 @@ int main(int argc, char **argv) {
         /* Both children finalize shared memory and exit */
         if (child1 || child2) {
             shmem_finalize(handler, NULL);
-            if (__gcov_flush) __gcov_flush();
-            _exit(EXIT_SUCCESS);
+            dlb_test__exit(EXIT_SUCCESS);
         }
 
         /* parent2 waits for its child, then finalizes shared memory and exits */
@@ -313,8 +309,7 @@ int main(int argc, char **argv) {
                 }
             }
             shmem_finalize(handler, NULL);
-            if (__gcov_flush) __gcov_flush();
-            _exit(EXIT_SUCCESS);
+            dlb_test__exit(EXIT_SUCCESS);
         }
 
         /* Wait for all child processes */

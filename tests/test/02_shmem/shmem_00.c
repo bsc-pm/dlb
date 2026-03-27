@@ -23,6 +23,7 @@
 
 #include "extra_tests.h"
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include "LB_comm/shmem.h"
 #include "support/atomic.h"
@@ -35,8 +36,6 @@
 #include <sys/wait.h>
 
 /* Fill node with processes, children will join the shared memory and will test the lock mechanism */
-
-void __gcov_flush() __attribute__((weak));
 
 struct data {
     pthread_barrier_t barrier;
@@ -172,10 +171,8 @@ int main(int argc, char **argv) {
 
             shmem_finalize(handler, NULL);
 
-            // We need to call _exit so that children don't call assert_shmem destructors,
-            // but that prevents gcov reports, so we'll call it if defined
-            if (__gcov_flush) __gcov_flush();
-            _exit(EXIT_SUCCESS);
+            // We need to call _exit so that children don't call assert_shmem destructors
+            dlb_test__exit(EXIT_SUCCESS);
             break;
         }
     }
