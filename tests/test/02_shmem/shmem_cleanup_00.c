@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -37,8 +38,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-
-void __gcov_flush() __attribute__((weak));
 
 int main(int argc, char *argv[]) {
 
@@ -62,8 +61,7 @@ int main(int argc, char *argv[]) {
         ConfigShMem(1, 0, SHMEM_KEY);
 
         /* Invoke _exit so that call assert_shmem destructors are not called */
-        if (__gcov_flush) __gcov_flush();
-        _exit(EXIT_SUCCESS);
+        dlb_test__exit(EXIT_SUCCESS);
     }
     waitpid(pid, NULL, 0);
 

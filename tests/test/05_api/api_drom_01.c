@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include <apis/dlb_drom.h>
 
@@ -35,8 +36,6 @@
 
 /* Basic DROM init / pre / post / finalize and child checking the environment  */
 
-void __gcov_flush() __attribute__((weak));
-
 static void test_fork(const cpu_set_t *mask, char ***env) {
     pid_t pid = fork();
     assert( pid >= 0 );
@@ -46,7 +45,7 @@ static void test_fork(const cpu_set_t *mask, char ***env) {
         assert( DLB_DROM_PreInit(pid, mask, DLB_STEAL_CPUS, env)    == DLB_SUCCESS );
         assert( DLB_DROM_Detach()                                   == DLB_SUCCESS );
 
-        if (__gcov_flush) __gcov_flush();
+        dlb_test__gcov_dump();
 
         // Exec into a shell process to check if the environment is correctly modified
         const char *shell_command =

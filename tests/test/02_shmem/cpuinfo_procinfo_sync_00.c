@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_cpuinfo.h"
@@ -38,8 +39,6 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <assert.h>
-
-void __gcov_flush() __attribute__((weak));
 
 // Test synchronization between procinfo and cpuinfo when the ownership changes
 
@@ -136,8 +135,7 @@ int main( int argc, char **argv ) {
         /* Child finalizes and exits */
         if (new_pid == 0) {
             assert( shmem_procinfo_ext__finalize() == DLB_SUCCESS );
-            if (__gcov_flush) __gcov_flush();
-            _exit(EXIT_SUCCESS);
+            dlb_test__exit(EXIT_SUCCESS);
         }
     }
 

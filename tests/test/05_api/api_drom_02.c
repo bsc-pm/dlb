@@ -22,6 +22,7 @@
 </testinfo>*/
 
 #include "unique_shmem.h"
+#include "test_process.h"
 
 #include "apis/dlb.h"
 #include "apis/dlb_drom.h"
@@ -53,8 +54,6 @@ static shmem_handler_t* open_shmem(void **shdata) {
                 .key = SHMEM_KEY,
             });
 }
-
-void __gcov_flush() __attribute__((weak));
 
 void cb_set_process_mask(const cpu_set_t *mask, void *arg) {
     cpu_set_t *current_mask = arg;
@@ -247,8 +246,7 @@ int main(int argc, char **argv) {
             /* Child finalizes DLB and exits */
             if (pid == 0) {
                 assert( DLB_Finalize() == DLB_SUCCESS );
-                if (__gcov_flush) __gcov_flush();
-                _exit(EXIT_SUCCESS);
+                dlb_test__exit(EXIT_SUCCESS);
             }
         }
 
@@ -346,8 +344,7 @@ int main(int argc, char **argv) {
             /* Child finalizes DLB and exits */
             if (pid == 0) {
                 assert( DLB_Finalize() == DLB_SUCCESS );
-                if (__gcov_flush) __gcov_flush();
-                _exit(EXIT_SUCCESS);
+                dlb_test__exit(EXIT_SUCCESS);
             }
         }
 
@@ -420,8 +417,7 @@ int main(int argc, char **argv) {
 
                 /* Finalizes DLB and exit */
                 assert( DLB_Finalize() == DLB_SUCCESS );
-                if (__gcov_flush) __gcov_flush();
-                _exit(EXIT_SUCCESS);
+                dlb_test__exit(EXIT_SUCCESS);
             }
         }
 

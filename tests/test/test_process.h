@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,55 +17,25 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-/*<testinfo>
-    test_generator="gens/basic-generator"
-</testinfo>*/
+#ifndef TEST_PROCESS_H
+#define TEST_PROCESS_H
 
-/* Test that shared memories are cleaned when the process aborts.
- * The fork is necessary to call the assert_noshm in the destructor
- */
-
-#include "unique_shmem.h"
-#include "test_process.h"
-
-#include "LB_comm/shmem_cpuinfo.h"
-#include "LB_core/spd.h"
-#include "support/debug.h"
-#include "support/options.h"
-#include "apis/dlb_errors.h"
-
-#include <sched.h>
-#include <unistd.h>
 #include <assert.h>
-#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <sys/wait.h>
 
-int main(int argc, char **argv) {
-    // Create a child process
-    pid_t pid = fork();
-    assert( pid >= 0 );
-    if (pid == 0) {
-        cpu_set_t process_mask;
-        sched_getaffinity(0, sizeof(cpu_set_t), &process_mask);
+void __gcov_flush(void) __attribute__((weak));
+void __gcov_dump(void) __attribute__((weak));
 
-        // Initialize spd to include PID in the PANIC message
-        subprocess_descriptor_t spd;
-        spd_enter_dlb(&spd);
-        spd.id = getpid();
-        options_init(&spd.options, NULL);
-        debug_init(&spd.options);
-
-        // Create shared memory
-        assert( shmem_cpuinfo__init(pid, 0, &process_mask, SHMEM_KEY, 0) == DLB_SUCCESS );
-
-        dlb_test__gcov_dump();
-        fatal("This fatal should clean shmems");
-    }
-
-    // Wait child and end execution correctly in order to call destructors
-    int wstatus;
-    assert( waitpid(pid, &wstatus, 0) > 0 );
-    assert( WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGABRT );
-
-    return 0;
+static inline void dlb_test__gcov_dump(void) {
+    if      (__gcov_flush) __gcov_flush();
+    else if (__gcov_dump)  __gcov_dump();
 }
+
+static inline void dlb_test__exit(int error) {
+    dlb_test__gcov_dump();
+    _exit(error);
+}
+
+#endif /* TEST_PROCESS_H */
