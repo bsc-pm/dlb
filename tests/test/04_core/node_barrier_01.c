@@ -72,7 +72,8 @@ void test_barrier_lewi(const char *dlb_flags, const char *barrier_name,
     subprocess_descriptor_t spd1;
     subprocess_descriptor_t spd2;
     char options[128];
-    sprintf(options, "--barrier --lewi %s --shm-key=%s", dlb_flags, SHMEM_KEY);
+    sprintf(options, "--barrier --lewi-affinity=none --lewi %s --shm-key=%s",
+            dlb_flags, SHMEM_KEY);
 
     assert( Initialize(&spd1, 111, 0, NULL, options) == DLB_SUCCESS );
     assert( Initialize(&spd2, 222, 0, NULL, options) == DLB_SUCCESS );

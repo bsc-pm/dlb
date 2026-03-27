@@ -738,6 +738,9 @@ static const char *openmp_runtime_version;
 
 static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_num,
         ompt_data_t *tool_data) {
+
+    spd_enter_dlb(thread_spd);
+
     /* Parse options and get the required fields */
     options_t options;
     options_init(&options, NULL);
@@ -773,6 +776,9 @@ static int omptool_initialize(ompt_function_lookup_t lookup, int initial_device_
                     "value may be \"passive\", setting it explicitly is recommended "
                     "since it modifies other runtime related environment variables");
         }
+
+        /* Hint to infer LeWI mode */
+        thread_spd->dlb_initialized_via_ompt = true;
 
         int err = 0;
         if (options.preinit_pid == 0) {

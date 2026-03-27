@@ -35,6 +35,7 @@ typedef struct SubProcessDescriptor {
     pid_t pid;  // real pid for fork-safety purposes
     bool dlb_initialized;
     bool dlb_preinitialized;
+    bool dlb_initialized_via_ompt;
     bool lewi_enabled;
     cpu_set_t process_mask;
     cpu_set_t active_mask;

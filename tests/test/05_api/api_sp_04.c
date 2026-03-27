@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     mu_testing_set_sys_size(SYS_SIZE);
 
     // Options
-    char options[64] = "--lewi --mode=async --shm-key=";
+    char options[128] = "--lewi --lewi-affinity=none --mode=async --shm-key=";
     strcat(options, SHMEM_KEY);
 
     // sp1 Init

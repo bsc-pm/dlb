@@ -95,8 +95,7 @@ If you are using any supported compiler in the table above to build your applica
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
-    # "--ompt" enables the OMPT tool in DLB
-    export DLB_ARGS="--talp --ompt"
+    export DLB_ARGS="--talp"
     env LD_PRELOAD="$DLB_PREFIX/lib/libdlb.so" ./foo
 
 .. note::
@@ -125,8 +124,7 @@ The ``DLB_ARGS`` to configure TALP for hybrid applications are the same as for O
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
-    # "--ompt" enables the OMPT tool in DLB
-    export DLB_ARGS="--talp --ompt"
+    export DLB_ARGS="--talp"
     mpirun <options> env LD_PRELOAD="$DLB_PREFIX/lib/libdlb_mpi.so" ./foo
 
 
