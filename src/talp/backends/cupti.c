@@ -143,10 +143,12 @@ static void openacc_callback(acc_prof_info *info, acc_event_info *event, acc_api
 
 static void try_init_openacc_hooks(void) {
 
-    void (*real_acc_prof_register)(acc_event_t, acc_prof_callback, acc_register_t) = NULL;
+    typedef void (*fn_acc_prof_register_t)(acc_event_t, acc_prof_callback, acc_register_t);
+    fn_acc_prof_register_t real_acc_prof_register = NULL;
+
     void *handle = dlopen(NULL, RTLD_NOW);
     if (handle) {
-        real_acc_prof_register = dlsym(handle, "acc_prof_register");
+        real_acc_prof_register = (fn_acc_prof_register_t)dlsym(handle, "acc_prof_register");
     }
     if (real_acc_prof_register) {
         acc_prof_register(acc_ev_enter_data_start, openacc_callback, acc_reg);
@@ -160,10 +162,12 @@ static void try_init_openacc_hooks(void) {
 
 static void try_finalize_openacc_hooks(void) {
 
-    void (*real_acc_prof_unregister)(acc_event_t, acc_prof_callback, acc_register_t) = NULL;
+    typedef void (*fn_acc_prof_unregister_t)(acc_event_t, acc_prof_callback, acc_register_t);
+    fn_acc_prof_unregister_t real_acc_prof_unregister = NULL;
+
     void *handle = dlopen(NULL, RTLD_NOW);
     if (handle) {
-        real_acc_prof_unregister = dlsym(handle, "acc_prof_unregister");
+        real_acc_prof_unregister = (fn_acc_prof_unregister_t)dlsym(handle, "acc_prof_unregister");
     }
     if (real_acc_prof_unregister) {
         acc_prof_unregister(acc_ev_enter_data_start, openacc_callback, acc_reg);
