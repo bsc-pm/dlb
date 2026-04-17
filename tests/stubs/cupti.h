@@ -43,6 +43,7 @@ typedef enum {
 
 typedef enum {
     CUPTI_CB_DOMAIN_INVALID           = 0,
+    CUPTI_CB_DOMAIN_DRIVER_API        = 1,
     CUPTI_CB_DOMAIN_RUNTIME_API       = 2,
 } CUpti_CallbackDomain;
 

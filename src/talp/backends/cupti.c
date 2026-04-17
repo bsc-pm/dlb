@@ -228,6 +228,8 @@ static CUpti_SubscriberHandle subscriber;
 
 /* --- Host runtime events ----------------------------------------------------- */
 
+static CUpti_CallbackDomain tracing_domain = CUPTI_CB_DOMAIN_RUNTIME_API;
+
 /* CUDA API Runtime calls */
 static void CUPTIAPI GetEventValueCallback(
     void *pUserData,
@@ -235,7 +237,7 @@ static void CUPTIAPI GetEventValueCallback(
     CUpti_CallbackId callbackId,
     const CUpti_CallbackData *pCallbackInfo)
 {
-    if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
+    if (domain == tracing_domain) {
         if (pCallbackInfo->callbackSite == CUPTI_API_ENTER) {
             PLUGIN_PRINT(" >> %s\n", pCallbackInfo->functionName);
             dlb_core_api->gpu.enter_runtime();
@@ -662,7 +664,10 @@ static int cupti_backend_start(void) {
     CHECK_CUPTI(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)GetEventValueCallback, NULL));
 
     /* Enable RUNTIME API */
-    CHECK_CUPTI(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
+    tracing_domain = plugin_gpu_use_low_level_api()
+        ? CUPTI_CB_DOMAIN_DRIVER_API
+        : CUPTI_CB_DOMAIN_RUNTIME_API;  // default, high level API
+    CHECK_CUPTI(cuptiEnableDomain(1, subscriber, tracing_domain));
 
     /* Enable Activity kinds for Kernel and Memory Tracing */
     for (size_t i = 0; i < sizeof(activity_kinds)/sizeof(activity_kinds[0]); ++i) {

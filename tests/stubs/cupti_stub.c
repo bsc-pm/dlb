@@ -20,6 +20,7 @@
 #include "cuda_runtime.h"
 #include "cupti.h"
 
+#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 

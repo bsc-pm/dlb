@@ -20,6 +20,7 @@
 #ifndef PLUGIN_UTILS_H
 #define PLUGIN_UTILS_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,8 +33,17 @@ static inline uint64_t get_timestamp(void) {
     return (uint64_t)t.tv_sec * 1000000000LL + (uint64_t)t.tv_nsec;
 }
 
+static inline bool plugin_gpu_use_low_level_api(void) {
 
-static inline int plugin_is_verbose() {
+    const char *env = getenv("DLB_PLUGIN_GPU_USE_LOW_LEVEL_API");
+    if (env && (*env == '1' || *env == 'y' || *env == 'Y')) {
+        return true;
+    }
+
+    return false;
+}
+
+static inline int plugin_is_verbose(void) {
     static int initialized = 0;
     static int verbose = 0;
 
