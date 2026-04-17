@@ -101,11 +101,6 @@ typedef struct {
     uint64_t handle;
 } rocprofiler_callback_thread_t;
 
-typedef struct rocprofiler_client_id_t {
-    const char*    name;
-    const uint32_t handle;
-} rocprofiler_client_id_t;
-
 typedef int32_t rocprofiler_tracing_operation_t;
 
 typedef struct rocprofiler_callback_tracing_record_t

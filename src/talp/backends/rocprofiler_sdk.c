@@ -327,10 +327,14 @@ static int tool_init(rocprofiler_client_finalize_t fini_func, void* tool_data) {
     CHECK_ROCPROFILER(rocprofiler_create_context(&_ctx));
 
     /* HIP API via synchronous callback */
+    rocprofiler_callback_tracing_kind_t tracing_kind =
+        plugin_gpu_use_low_level_api()
+        ? ROCPROFILER_CALLBACK_TRACING_HSA_CORE_API
+        : ROCPROFILER_CALLBACK_TRACING_HIP_RUNTIME_API; // default, high level API
     CHECK_ROCPROFILER(
             rocprofiler_configure_callback_tracing_service(
                 _ctx,
-                ROCPROFILER_CALLBACK_TRACING_HIP_RUNTIME_API,
+                tracing_kind,
                 NULL,
                 0,
                 HIP_API_callback,
