@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.6.2] 2026-04-20
+### Fixed
+- TALP: Account for workers' non-useful time in MPI time
+- Disable libdlb_mpi.so compilation if no proper FC is found
+- Propagate C_INCLUDE_PATH to lit tests
+
 ## [3.6.1] 2026-02-23
 ### Fixed
 - Fixed some incorrect GPU metrics when there is no GPU useful time
@@ -406,7 +412,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
-[3.6.1]: https://github.com/bsc-pm/dlb/compare/v3.6.1...HEAD
+[3.6.2]: https://github.com/bsc-pm/dlb/compare/v3.6.1...v3.6.2
+[3.6.1]: https://github.com/bsc-pm/dlb/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.6.0
 [3.5.3]: https://github.com/bsc-pm/dlb/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/bsc-pm/dlb/compare/v3.5.1...v3.5.2
