@@ -335,11 +335,11 @@ bool equivalent_instrument_items(const char *str1, const char *str2) {
 
 /* debug_opts_t */
 static const debug_opts_t debug_opts_values[] =
-    {DBG_RETURNSTOLEN, DBG_WERROR, DBG_LPOSTMORTEM, DBG_WARNMPI};
+    {DBG_WALL, DBG_WERROR, DBG_WARNMPI, DBG_RETURNSTOLEN, DBG_LPOSTMORTEM};
 static const char* const debug_opts_choices[] =
-    {"return-stolen", "werror", "lend-post-mortem", "warn-mpi-version"};
+    {"wall", "werror", "warn-mpi-version", "return-stolen", "lend-post-mortem"};
 static const char debug_opts_choices_str[] =
-    "return-stolen:werror:lend-post-mortem:warn-mpi-version";
+    "wall:werror:warn-mpi-version:return-stolen:lend-post-mortem";
 enum { debug_opts_nelems = sizeof(debug_opts_values) / sizeof(debug_opts_values[0]) };
 
 int parse_debug_opts(const char *str, debug_opts_t *value) {

@@ -82,10 +82,11 @@ typedef enum InstrumentItems {
 
 typedef enum DebugOptions {
     DBG_CLEAR        = 0,
-    DBG_RETURNSTOLEN = 1 << 0,
+    DBG_WALL         = 1 << 0,
     DBG_WERROR       = 1 << 1,
-    DBG_LPOSTMORTEM  = 1 << 2,
-    DBG_WARNMPI      = 1 << 3,
+    DBG_WARNMPI      = 1 << 2,
+    DBG_RETURNSTOLEN = 1 << 3,
+    DBG_LPOSTMORTEM  = 1 << 4,
 } debug_opts_t;
 
 typedef enum LewiAffinity {

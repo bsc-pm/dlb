@@ -25,6 +25,7 @@
 
 #include "apis/dlb_errors.h"
 #include "support/options.h"
+#include "support/types.h"
 #include "support/mask_utils.h"
 #include "LB_comm/comm_lend_light.h"
 #include "LB_comm/shmem.h"
@@ -60,12 +61,14 @@ static verbose_fmt_t vb_fmt;
 static char fmt_str[VBFORMAT_LEN];
 static bool quiet = false;
 static bool silent = false;
+static bool wall = false;
 static bool werror = false;
 static pthread_mutex_t dlb_clean_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void debug_init(const options_t *options) {
     quiet = options->quiet;
     silent = options->silent;
+    wall = options->debug_opts & DBG_WALL;
     werror = options->debug_opts & DBG_WERROR;
     vb_opts = options->verbose;
     vb_fmt = options->verbose_fmt;
@@ -195,6 +198,30 @@ void warning0(const char *fmt, ...) {
 #ifdef MPI_LIB
     }
 #endif
+}
+
+void debug_warning_impl(const char *file, int line, const char *func, const char *fmt, ...) {
+
+    if (!wall) return;
+
+    /* Construct new fmt based on args */
+    enum { MAX_WARNING_LEN = 8096 };
+    const char *warning_fmt = "%s:%d:%s(): %s";
+    int newfmt_len = snprintf(NULL, 0, warning_fmt, file, line, func, fmt);
+    if (newfmt_len < 0) return;
+    newfmt_len = max_int(newfmt_len, MAX_WARNING_LEN - 1) + 1;
+
+    char *newfmt = malloc((size_t)newfmt_len);
+    if (newfmt == NULL) return;
+    snprintf(newfmt, newfmt_len, warning_fmt, file, line, func, fmt);
+
+    va_list list;
+    va_start(list, fmt);
+    if (!werror) vwarning(newfmt, list);
+    else vfatal(newfmt, list);
+    va_end(list);
+
+    free(newfmt);
 }
 
 static void vinfo(const char *fmt, va_list list) {

@@ -44,6 +44,8 @@ void info0(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
 void info0_force_print(const char *fmt, ...)    __attribute__ ((format (printf, 1, 2)));
 void verbose(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
 void verbose0(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
+void debug_warning_impl(const char *file, int line, const char *func, const char *fmt, ...)
+                                            __attribute__ ((format (printf, 4, 5)));
 void print_backtrace(void);
 void dlb_clean(void);
 void warn_error(int error);
@@ -80,6 +82,9 @@ extern verbose_opts_t   vb_opts;
         if (unlikely(vb_opts != VB_CLEAR)) { verbose0(flag, __VA_ARGS__); } \
     } while(0)
 
+#define debug_warning(fmt, ...) \
+    debug_warning_impl(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+
 
 #ifdef DEBUG_VERSION
 #define DLB_DEBUG(stmt) do { stmt; } while(0)
@@ -88,9 +93,6 @@ extern verbose_opts_t   vb_opts;
 #endif
 
 #ifdef DEBUG_VERSION
-#define debug_warning(fmt, ...) \
-    warning("%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
-
 #define ensure(cond, ...) \
     do { \
         if (likely(cond)) ; else { fatal(__VA_ARGS__); } \
@@ -109,7 +111,6 @@ extern verbose_opts_t   vb_opts;
 #endif
 
 #else
-#define debug_warning(...)       do { (void)0; } while(0)
 #define ensure(cond, ...)        do { (void)0; } while(0)
 #define static_ensure(cond, ...) do { (void)0; } while(0)
 #endif
