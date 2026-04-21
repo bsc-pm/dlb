@@ -102,7 +102,7 @@ There are some prerequisites your application needs to fulfill, that are indepen
 GitLab 
 --------
 
-In order to use TALP-Pages in a `GitLab CI <https://docs.gitlab.com/ee/ci/>`_ environment you should fullfill some additional requirements:
+In order to use TALP-Pages in a `GitLab CI <https://docs.gitlab.com/ee/ci/>`_ environment you should fulfill some additional requirements:
 
 - The machine you want to run your application on has some way to interface with a `GitLab runner <https://docs.gitlab.com/ee/ci/runners/index.html>`_. (Don't worry if you don't have `Jacamar <https://gitlab.com/ecp-ci/jacamar-ci>`_. Normally no sudo rights are required to run the gitlab-runner on the login node.)
 - Your GitLab instance has the `GitLab Pages <https://docs.gitlab.com/ee/user/project/pages/>`_ feature activated

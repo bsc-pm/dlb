@@ -52,14 +52,14 @@ DROM: Dynamic Resource Ownership Manager
 DROM offers an API to change the computational resources assigned to a process at run time. 
 This can be useful if the application detects that it cannot use these resources efficiently and
 decides to release some of them. 
-This component can be used by an external entity like a job scheduler or ressource manager to reallocate the ressource mitigating coarse-grain load imbalance.
+This component can be used by an external entity like a job scheduler or resource manager to reallocate the resource mitigating coarse-grain load imbalance.
 
 
 .. figure:: images/drom.png
   :width: 300pt
   :align: center
 
-  DROM moving CPU ressources between applications
+  DROM moving CPU resources between applications
 
 
 .. _talp_overview:
@@ -68,7 +68,7 @@ This component can be used by an external entity like a job scheduler or ressour
 TALP: Tracking Application Live Performance
 ===========================================
 
-TALP is another module included in DLB that allows to measure the parallel efficiency and other performane metrics. 
+TALP is another module included in DLB that allows to measure the parallel efficiency and other performance metrics.
 The data obtained by TALP is available at run time during the execution, or as a report at the end.
 
 .. figure:: images/talp.png

@@ -108,7 +108,7 @@ modify the number of threads at that time, without modifying the application
 source code.
 
 When running with OMPT support, DLB enables CPU affinity support by default.
-The application must ensure that each rank is pinned to an exclusive set ot CPUs::
+The application must ensure that each rank is pinned to an exclusive set of CPUs::
 
     DLB_PREFIX="<path-to-DLB-installation>"
 
