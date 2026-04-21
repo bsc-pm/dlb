@@ -3,6 +3,27 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.7.0] 2026-04-21
+### Added
+- New templates for file names in `--talp-output-file`.
+- New `--talp-partial-output` flag and `processInfo` entry in TALP json output
+  to manage per-process file output.
+- Added `,` as option value separator
+
+### Changed
+- Flag `--ompt` is now enabled by default.
+- New TALP defaults: `--talp` now enables all available components.
+- Removed PAPI dependency from the main library, moved to its own backend.
+
+### Fixed
+- Minor compilation errors
+- Several TALP calculations fixes
+
+### Deprecated
+- Flags `--talp-openmp`, `--talp-papi`, and `--plugin` are now deprecated.
+  Superseded by `--talp[=<components>]`, components being optional,
+  and `--talp-gpu-backend` only for fine-tuning and debugging.
+
 ## [3.6.2] 2026-04-20
 ### Fixed
 - TALP: Account for workers' non-useful time in MPI time
@@ -412,6 +433,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[3.7.0]: https://github.com/bsc-pm/dlb/compare/v3.6.0...v3.7.0
 [3.6.2]: https://github.com/bsc-pm/dlb/compare/v3.6.1...v3.6.2
 [3.6.1]: https://github.com/bsc-pm/dlb/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/bsc-pm/dlb/compare/v3.5.0...v3.6.0
