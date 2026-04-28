@@ -38,42 +38,53 @@ typedef enum {
 } talp_sample_state_t;
 
 /* The sample contains the temporary per-thread accumulated values of all the
- * measured metrics. Once the sample is flushed, a macrosample is created using
- * samples from all* threads. The sample starts and ends on each one of the
- * following scenarios:
+ * measured metrics. Main thread, during sequential code by contract, aggregates
+ * samples from all threads into macrosamples.
+ * The sample starts and ends on each one of the following scenarios:
  *  - MPI Init/Finalize
- *  - end of a parallel region
  *  - a region starts or stops
  *  - a request from the API
- *  (*): on nested parallelism, only threads from that parallel region are reduced
+ *
+ *  On OpenMP parallel regions, _lb and _sched need to be computed for that region
+ *  so the encountering thread will have the representative time of all participating
+ *  threads.
  */
 typedef struct DLB_ALIGN_CACHE talp_sample_t {
+    // Hot fields: thread-owned, frequently written
     struct {
-        atomic_int_least64_t useful;
-        atomic_int_least64_t not_useful_mpi;
-        atomic_int_least64_t not_useful_omp_during_mpi;
-        atomic_int_least64_t not_useful_omp_in;
-        atomic_int_least64_t not_useful_omp_out;
-        atomic_int_least64_t not_useful_gpu;
+        int64_t useful;
+        int64_t not_useful_mpi;
+        int64_t not_useful_omp_during_mpi;
+        int64_t not_useful_omp_in;
+        int64_t not_useful_omp_in_lb;
+        int64_t not_useful_omp_in_sched;
+        int64_t not_useful_omp_out;
+        int64_t not_useful_gpu;
     } timers;
     struct {
-        atomic_int_least64_t cycles;
-        atomic_int_least64_t instructions;
+        int64_t cycles;
+        int64_t instructions;
     } counters;
     struct {
-        atomic_int_least64_t num_mpi_calls;
-        atomic_int_least64_t num_omp_parallels;
-        atomic_int_least64_t num_omp_tasks;
-        atomic_int_least64_t num_gpu_runtime_calls;
+        int64_t num_mpi_calls;
+        int64_t num_omp_parallels;
+        int64_t num_omp_tasks;
+        int64_t num_gpu_runtime_calls;
     } stats;
-    int64_t last_updated_ts;
     talp_sample_state_t state;
+    int64_t last_updated_ts;                // timestamp of the last sample update
+    int64_t generation_ts;                  // timestamp of the start of the generation since the
+                                            // last update
+
+    // Cold fields: atomic variables read/written at parallel-end
+    struct DLB_ALIGN_CACHE {
+        atomic_int_least64_t last_parallel_end_ts;          // primary cross-thread writes
+    };
 } talp_sample_t;
 
 /* The macrosample is a temporary aggregation of all metrics in samples of all,
- * or a subset of, threads. It is only constructed when samples are flushed and
- * aggregated. The macrosample is then used to update all started monitoring
- * regions. */
+ * or a subset of, threads. It is only constructed when samples are aggregated.
+ * The macrosample is then used to update all started monitoring regions. */
 typedef struct talp_macrosample_t {
     struct {
         int64_t useful;
@@ -115,14 +126,16 @@ typedef struct talp_flags_t {
 
 /* Collection of samples and metadada needed for aggregation */
 typedef struct sample_registry_t {
-    talp_sample_t   **samples;         /* Array of per-thread samples */
-    int             num_samples;       /* Number of samples */
-    pthread_mutex_t mutex;             /* Protects samples */
+    talp_sample_t         **samples;             /* Array of per-thread samples */
+    int                   num_samples;           /* Number of samples */
+    pthread_mutex_t       mutex;                 /* Protects samples */
+    atomic_int_least64_t  current_generation_ts; /* Global aggregation generation timestamp */
 } sample_registry_t;
 
 /* TALP info per spd */
 typedef struct talp_info_t {
     talp_flags_t      flags;
+    int               ncpus;           /* Number of process CPUs (also num samples) */
     dlb_monitor_t     *monitor;        /* Convenience pointer to the global region */
     GTree             *regions;        /* Tree of monitoring regions */
     GSList            *open_regions;   /* List of open regions */

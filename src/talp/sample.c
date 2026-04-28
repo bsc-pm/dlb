@@ -36,7 +36,7 @@ extern __thread bool thread_is_known;
 
 static __thread talp_sample_t* _tls_sample = NULL;
 static __thread bool _is_main_sample = false;
-static __thread bool _is_main_sample_in_serial_mode = false;
+static __thread bool _is_main_sample_in_sequential_mode = false;
 
 static void set_state(const talp_info_t *talp_info,
         talp_sample_t *sample, talp_sample_state_t new_state);
@@ -85,24 +85,19 @@ void talp_sample_finalize(talp_info_t *talp_info) {
 /*    Sample getters & setters                                                   */
 /*********************************************************************************/
 
-bool talp_sample_is_main(void) {
-    return _is_main_sample;
+bool talp_sample_is_main_sequential(void) {
+    return _is_main_sample_in_sequential_mode;
 }
 
-/* Quick test, without locking and without generating a new sample */
-bool talp_sample_is_mine(const talp_sample_t *sample) {
-    return sample != NULL && sample == _tls_sample;
-}
-
-/* Sets the TLS variable _is_main_sample_in_serial_mode. This function is
+/* Sets the TLS variable _is_main_sample_in_sequential_mode. This function is
  * called by the main thread when beginning or ending parallel region of level 1.
  * FIXME: free agent threads may break this condition.
  *
  * Sets whether the main thread is running in serial mode. */
-void talp_sample_set_main_serial_mode(bool serial_mode) {
+void talp_sample_set_main_sequential(bool is_sequential) {
 
     if (_is_main_sample) {
-        _is_main_sample_in_serial_mode = serial_mode;
+        _is_main_sample_in_sequential_mode = is_sequential;
     }
 }
 
@@ -130,7 +125,7 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
                 registry->samples[num_samples-1] = new_sample;
                 if (num_samples == 1) {
                     _is_main_sample = true;
-                    _is_main_sample_in_serial_mode = true;
+                    _is_main_sample_in_sequential_mode = true;
                 }
             } else {
                 // error
@@ -147,8 +142,8 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
      * innermost open region, otherwise it is the current time */
     int64_t last_updated_ts;
     if (talp_info->open_regions) {
-        const dlb_monitor_t *monitor = talp_info->open_regions->data;
-        last_updated_ts = monitor->start_time;
+        const dlb_monitor_t *innermost_monitor = talp_info->open_regions->data;
+        last_updated_ts = innermost_monitor->start_time;
     } else {
         last_updated_ts = get_time_in_ns();
     }
@@ -166,18 +161,41 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
     return _tls_sample;
 }
 
+/* Reset sample metrics */
+static inline void reset_sample(talp_sample_t *sample) {
+    memset(&sample->timers,   0, sizeof(sample->timers));
+    memset(&sample->counters, 0, sizeof(sample->counters));
+    memset(&sample->stats,    0, sizeof(sample->stats));
+}
+
 
 /*********************************************************************************/
 /*    Sample update                                                              */
 /*********************************************************************************/
 
+static inline void ensure_generation(talp_sample_t *sample, int64_t current_generation_ts) {
+    if (unlikely(sample->generation_ts < current_generation_ts)) {
+        reset_sample(sample);
+        sample->generation_ts = current_generation_ts;
+        sample->last_updated_ts = current_generation_ts;
+    }
+}
+
 /* Compute new microsample (time since last update) and update sample values */
 void talp_sample_update(talp_info_t *talp_info) {
 
     talp_sample_t *sample = talp_sample_get(talp_info);
+    sample_registry_t *registry = &talp_info->sample_registry;
 
     /* Observer and unknown threads ignore this function */
     if (unlikely(sample == NULL)) return;
+
+    int64_t current_generation = DLB_ATOMIC_LD_RLX(&registry->current_generation_ts);
+
+    /* Generation helps us to identify whether this sample belongs to the
+     * current generation (i.e., region has yet to be updated) or if we need to
+     * reset it */
+    ensure_generation(sample, current_generation);
 
     /* Compute duration and set new last_updated_ts */
     int64_t now = get_time_in_ns();
@@ -189,34 +207,33 @@ void talp_sample_update(talp_info_t *talp_info) {
         case TALP_STATE_DISABLED:
             break;
         case TALP_STATE_USEFUL:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.useful, microsample_duration);
+            sample->timers.useful += microsample_duration;
             break;
         case TALP_STATE_NOT_USEFUL_MPI:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_mpi, microsample_duration);
-            if (_is_main_sample_in_serial_mode) {
+            sample->timers.not_useful_mpi += microsample_duration;
+            if (_is_main_sample_in_sequential_mode) {
                 // Add worker threads' time to special timer
                 int num_cpus = talp_info->sample_registry.num_samples;
-                DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_during_mpi,
-                        microsample_duration * (num_cpus-1));
+                sample->timers.not_useful_omp_during_mpi
+                    += microsample_duration * (num_cpus-1);
             }
             break;
         case TALP_STATE_NOT_USEFUL_OMP_IN:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_in, microsample_duration);
+            sample->timers.not_useful_omp_in += microsample_duration;
             break;
         case TALP_STATE_NOT_USEFUL_OMP_OUT:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_out, microsample_duration);
+            sample->timers.not_useful_omp_out += microsample_duration;
             break;
         case TALP_STATE_NOT_USEFUL_GPU:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_gpu, microsample_duration);
+            sample->timers.not_useful_gpu += microsample_duration;
             break;
     }
 
     if (talp_info->flags.have_hwc) {
         hwc_measurements_t measurements;
         if (talp_hwc_collect(&measurements)) {
-            /* Atomically add HWC values to sample structure */
-            DLB_ATOMIC_ADD_RLX(&sample->counters.cycles, measurements.cycles);
-            DLB_ATOMIC_ADD_RLX(&sample->counters.instructions, measurements.instructions);
+            sample->counters.cycles       += measurements.cycles;
+            sample->counters.instructions += measurements.instructions;
         }
 
 #ifdef INSTRUMENTATION_VERSION
@@ -228,38 +245,6 @@ void talp_sample_update(talp_info_t *talp_info) {
 #endif
     }
 }
-
-void talp_sample_update_foreign(talp_info_t *talp_info, talp_sample_t *sample, int64_t now) {
-
-    /* Observer and unknown threads ignore this function */
-    if (unlikely(sample == NULL)) return;
-
-    /* Compute duration and set new last_updated_ts */
-    int64_t microsample_duration = now - sample->last_updated_ts;
-    sample->last_updated_ts = now;
-
-    /* Update the appropriate sample timer */
-    switch(sample->state) {
-        case TALP_STATE_DISABLED:
-            break;
-        case TALP_STATE_USEFUL:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.useful, microsample_duration);
-            break;
-        case TALP_STATE_NOT_USEFUL_MPI:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_mpi, microsample_duration);
-            break;
-        case TALP_STATE_NOT_USEFUL_OMP_IN:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_in, microsample_duration);
-            break;
-        case TALP_STATE_NOT_USEFUL_OMP_OUT:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_out, microsample_duration);
-            break;
-        case TALP_STATE_NOT_USEFUL_GPU:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_gpu, microsample_duration);
-            break;
-    }
-}
-
 
 static void set_state(const talp_info_t *restrict talp_info,
         talp_sample_t *restrict sample, talp_sample_state_t new_state) {
@@ -293,114 +278,102 @@ void talp_sample_set_state(talp_info_t *talp_info, talp_sample_state_t new_state
 /*    Sample aggregation                                                         */
 /*********************************************************************************/
 
-/* Flush and aggregate a single sample into a macrosample */
-static inline void flush_sample_to_macrosample(talp_sample_t *restrict sample,
+/* Aggregate a single sample into a macrosample */
+static inline void aggregate_sample_to_macrosample(const talp_sample_t *restrict sample,
         talp_macrosample_t *restrict macrosample) {
 
     /* Timers */
-    macrosample->timers.useful +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.useful, 0);
-    macrosample->timers.not_useful_mpi +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_mpi, 0);
-    macrosample->timers.not_useful_omp_during_mpi +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_omp_during_mpi, 0);
-    macrosample->timers.not_useful_omp_out +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_omp_out, 0);
-    /* timers.not_useful_omp_in is not flushed here, make sure struct is empty */
-    ensure(DLB_ATOMIC_LD_RLX(&sample->timers.not_useful_omp_in) == 0,
-                "Inconsistency in TALP sample metric not_useful_omp_in."
-                " Please, report bug at " PACKAGE_BUGREPORT);
-    macrosample->timers.not_useful_gpu +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_gpu, 0);
+    macrosample->timers.useful                    += sample->timers.useful;
+    macrosample->timers.not_useful_mpi            += sample->timers.not_useful_mpi;
+    macrosample->timers.not_useful_omp_during_mpi += sample->timers.not_useful_omp_during_mpi;
+    macrosample->timers.not_useful_omp_in_lb      += sample->timers.not_useful_omp_in_lb;
+    macrosample->timers.not_useful_omp_in_sched   += sample->timers.not_useful_omp_in_sched;
+    macrosample->timers.not_useful_omp_out        += sample->timers.not_useful_omp_out;
+    macrosample->timers.not_useful_gpu            += sample->timers.not_useful_gpu;
 
     /* Counters */
-    macrosample->counters.cycles +=
-        DLB_ATOMIC_EXCH_RLX(&sample->counters.cycles, 0);
-    macrosample->counters.instructions +=
-        DLB_ATOMIC_EXCH_RLX(&sample->counters.instructions, 0);
+    macrosample->counters.cycles                  += sample->counters.cycles;
+    macrosample->counters.instructions            += sample->counters.instructions;
 
     /* Stats */
-    macrosample->stats.num_mpi_calls +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_mpi_calls, 0);
-    macrosample->stats.num_omp_parallels +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_omp_parallels, 0);
-    macrosample->stats.num_omp_tasks +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_omp_tasks, 0);
-    macrosample->stats.num_gpu_runtime_calls +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_gpu_runtime_calls, 0);
+    macrosample->stats.num_mpi_calls              += sample->stats.num_mpi_calls;
+    macrosample->stats.num_omp_parallels          += sample->stats.num_omp_parallels;
+    macrosample->stats.num_omp_tasks              += sample->stats.num_omp_tasks;
+    macrosample->stats.num_gpu_runtime_calls      += sample->stats.num_gpu_runtime_calls;
 }
 
 
-/* Aggregate all samples.
- * This function assumes that the current thread's sample was just updated. */
+/* Aggregate all samples. Don't update any. */
 void talp_sample_aggregate_all_to_macrosample(
         talp_info_t *restrict talp_info, talp_macrosample_t *restrict macrosample) {
 
+    /* Warning: observer threads can call this function although is prone to
+     * produce some race conditions while reading samples. Still, we cannot
+     * assume samples[0] is our sample */
+    talp_sample_t *my_sample = talp_sample_get(talp_info);
+
+    /* If this function is called by the main thread (expected),
+     * re-use the timestamp that was just set updating the sample. */
+    int64_t now = my_sample != NULL
+        ? my_sample->last_updated_ts
+        : get_time_in_ns();
+
     sample_registry_t *registry = &talp_info->sample_registry;
-    talp_sample_t *current_sample = talp_sample_get(talp_info);
-    int64_t now = current_sample->last_updated_ts;
+    int64_t current_generation_ts = DLB_ATOMIC_LD_RLX(&registry->current_generation_ts);
+    int64_t generation_duration = now - current_generation_ts;
 
     /* Accumulate samples from all threads */
     pthread_mutex_lock(&registry->mutex);
     {
         int num_samples = registry->num_samples;
+
         macrosample->num_cpus = num_samples;
 
-        /* Force-update and aggregate all samples */
+        /* Aggregate samples */
         for (int i = 0; i < num_samples; ++i) {
-            talp_sample_t *sample = registry->samples[i];
-            if (!talp_sample_is_mine(sample)) {
-                talp_sample_update_foreign(talp_info, sample, now);
+            const talp_sample_t *sample = registry->samples[i];
+
+            if (sample == my_sample) {
+                /* Our sample is just aggregated because we know it's updated */
+                aggregate_sample_to_macrosample(sample, macrosample);
+                continue;
             }
-            flush_sample_to_macrosample(sample, macrosample);
-        }
-    }
-    pthread_mutex_unlock(&registry->mutex);
-}
 
-/* Aggregate a subset of samples.
- * This function assumes that the current thread's sample was just updated.
- * OpenMP derived metrics are computed here and added to the main sample. */
-void talp_sample_aggregate_subset_to_macrosample(
-        talp_info_t *restrict talp_info,
-        talp_sample_t **restrict samples,
-        unsigned int nelems,
-        talp_macrosample_t *restrict macrosample) {
+            /* Note: By contract, we only aggregate samples in sequential code.
+             * So at this point, we only look for threads that are probably
+             * stopped after a parallel region.
+             * Since implicit-task-end event is not reliable, we use the
+             * last_parallel_end_ts set by the primary to compute the missing
+             * not-useful-omp-out here */
 
-    sample_registry_t *registry = &talp_info->sample_registry;
-    talp_sample_t *sample = talp_sample_get(talp_info);
-    int64_t now = sample->last_updated_ts;
+            if (likely(sample->state == TALP_STATE_NOT_USEFUL_OMP_IN
+                        || sample->state == TALP_STATE_NOT_USEFUL_OMP_OUT)) {
 
-    int64_t sched_timer = 0;
-    int64_t lb_timer = 0;
-
-    pthread_mutex_lock(&registry->mutex);
-    {
-        /* Iterate first to force-update all samples and compute the minimum
-         * not-useful-omp-in among them */
-        int64_t min_not_useful_omp_in = INT64_MAX;
-        for (unsigned int i = 0; i < nelems; ++i) {
-            talp_sample_t *worker_sample = samples[i];
-            if (!talp_sample_is_mine(worker_sample)) {
-                talp_sample_update_foreign(talp_info, worker_sample, now);
+                int64_t last_parallel_end_ts = DLB_ATOMIC_LD_RLX(&sample->last_parallel_end_ts);
+                macrosample->timers.not_useful_omp_out += min_int64(
+                        generation_duration,
+                        now - last_parallel_end_ts);
             }
-            min_not_useful_omp_in = min_int64(min_not_useful_omp_in,
-                    DLB_ATOMIC_LD_RLX(&worker_sample->timers.not_useful_omp_in));
-        }
 
-        /* Iterate again to accumulate Load Balance, and to aggregate sample */
-        sched_timer = min_not_useful_omp_in * nelems;
-        for (unsigned int i = 0; i < nelems; ++i) {
-            talp_sample_t *worker_sample = samples[i];
-            lb_timer += DLB_ATOMIC_EXCH_RLX(&worker_sample->timers.not_useful_omp_in, 0)
-                - min_not_useful_omp_in;
-            flush_sample_to_macrosample(worker_sample, macrosample);
+            if (sample->generation_ts < current_generation_ts) {
+                /* Sample not updated in the current generation.
+                 * Skip aggregation of any other timer.*/
+                continue;
+            }
+
+            /* Aggregate the values computed by the thread */
+            aggregate_sample_to_macrosample(sample, macrosample);
         }
     }
     pthread_mutex_unlock(&registry->mutex);
 
-    /* Update derived timers into macrosample */
-    macrosample->num_cpus = nelems;
-    macrosample->timers.not_useful_omp_in_lb = lb_timer;
-    macrosample->timers.not_useful_omp_in_sched = sched_timer;
+    /* Start generation for the next sample aggregation */
+    DLB_ATOMIC_ST_RLX(&registry->current_generation_ts, now);
+
+    /* If this function is called by the main thread (expected),
+     * reset sample and set the new generation time-stamp. */
+    if (my_sample != NULL) {
+        reset_sample(my_sample);
+        my_sample->generation_ts = now;
+    }
 }

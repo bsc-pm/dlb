@@ -32,6 +32,10 @@
 #include "support/small_array_template.h"
 
 
+#define SMALL_ARRAY_TYPE int64_t
+#include "support/small_array_template.h"
+
+
 #define SMALL_ARRAY_TYPE pid_t
 #include "support/small_array_template.h"
 

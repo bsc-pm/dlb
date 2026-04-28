@@ -23,7 +23,6 @@
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "apis/dlb_talp.h"
-#include "support/atomic.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
 #include "talp/regions.h"
@@ -141,7 +140,7 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
 
         /* Add MPI_Init statistic and set useful state */
         talp_sample_t *sample = talp_sample_get(talp_info);
-        DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
+        ++sample->stats.num_mpi_calls;
         talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
     }
 }
@@ -169,7 +168,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         * Even though talp_mpi_finalize should never be called if no MPI_LIB,
         * we keep this case for testing purposes. */
     talp_sample_t *sample = talp_sample_get(talp_info);
-    DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
+    ++sample->stats.num_mpi_calls;
 #endif
 
     /* Stop global region */
@@ -263,14 +262,14 @@ void talp_out_of_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t
 
     /* Add statistic */
     talp_sample_t *sample = talp_sample_get(talp_info);
-    DLB_ATOMIC_ADD_RLX(&sample->stats.num_mpi_calls, 1);
+    ++sample->stats.num_mpi_calls;
 
     /* Out of Sync call -> useful */
     talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
 
     /* Only when needed, update all regions */
     if (talp_info->flags.external_profiler
-            && talp_sample_is_main()
+            && talp_sample_is_main_sequential()
             && flags.is_blocking
             && flags.is_collective) {
         talp_aggregate_samples_to_regions(talp_info);
