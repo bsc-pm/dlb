@@ -360,7 +360,7 @@ void into_sync_call(sync_call_flags_t flags) {
         omptool__into_blocking_call();
     }
     if(spd->options.talp) {
-        talp_into_sync_call(spd, flags.is_blocking && flags.is_collective);
+        talp_into_sync_call(spd, flags);
     }
 }
 
@@ -376,7 +376,7 @@ void out_of_sync_call(sync_call_flags_t flags) {
         omptool__outof_blocking_call();
     }
     if(spd->options.talp) {
-        talp_out_of_sync_call(spd, flags.is_blocking && flags.is_collective);
+        talp_out_of_sync_call(spd, flags);
     }
 }
 

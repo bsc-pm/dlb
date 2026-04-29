@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2022 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -30,6 +30,7 @@
 #include "support/debug.h"
 #include "support/mask_utils.h"
 #include "support/mytime.h"
+#include "support/types.h"
 #include "talp/talp.h"
 
 #include <errno.h>

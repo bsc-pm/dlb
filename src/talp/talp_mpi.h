@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -20,14 +20,14 @@
 #ifndef TALP_MPI_H
 #define TALP_MPI_H
 
-#include <stdbool.h>
+#include "support/types.h"
 
 typedef struct SubProcessDescriptor subprocess_descriptor_t;
 
 /* TALP MPI functions */
 void talp_mpi_init(const subprocess_descriptor_t *spd);
 void talp_mpi_finalize(const subprocess_descriptor_t *spd);
-void talp_into_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective);
-void talp_out_of_sync_call(const subprocess_descriptor_t *spd, bool is_blocking_collective);
+void talp_into_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t flags);
+void talp_out_of_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t flags);
 
 #endif /* TALP_MPI_H */

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -154,6 +154,14 @@ typedef enum OMPTMVersion {
     OMPTM_FREE_AGENTS,
     OMPTM_ROLE_SHIFT
 } omptm_version_t;
+
+typedef struct sync_call_flags_t {
+    bool is_mpi:1;
+    bool is_blocking:1;
+    bool is_collective:1;
+    bool is_dlb_barrier:1;
+    bool do_lewi:1;
+} sync_call_flags_t;
 
 static inline int min_int(int a, int b) { return a < b ? a : b; }
 static inline int max_int(int a, int b) { return a > b ? a : b; }

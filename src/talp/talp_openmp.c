@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -25,6 +25,7 @@
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
 #include "talp/regions.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 #include "talp/talp_hwc.h"
 #include "talp/talp_types.h"
@@ -54,7 +55,7 @@ static void update_serialization_in_nested_regions(const subprocess_descriptor_t
 
             dlb_monitor_t *monitor = node->data;
             monitor->omp_serialization_time +=
-                sample->last_updated_timestamp - monitor->start_time;
+                sample->last_updated_ts - monitor->start_time;
         }
     }
     pthread_mutex_unlock(&talp_info->regions_mutex);
@@ -89,8 +90,7 @@ void talp_openmp_init(pid_t pid, const options_t* options) {
         region_start(spd, talp_info->monitor);
 
         /* Set useful state */
-        talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
+        talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
     }
 }
 
@@ -110,13 +110,13 @@ void talp_openmp_thread_begin(ompt_thread_t thread_type) {
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
     /* Initial thread is already in useful state, set omp_out for others */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
+    talp_sample_t *sample = talp_sample_get(talp_info);
     if (sample->state == TALP_STATE_DISABLED) {
         /* Not initial thread: */
         if (talp_info->flags.have_hwc) {
             talp_hwc_thread_init();
         }
-        talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_OMP_OUT);
+        talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_OMP_OUT);
 
         /* The initial time of the sample is set to match the start time of
             * the innermost open region, but other nested open regions need to
@@ -132,12 +132,11 @@ void talp_openmp_thread_end(void) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
     /* Update state */
-    talp_set_sample_state(spd, sample, TALP_STATE_DISABLED);
+    talp_sample_set_state(talp_info, TALP_STATE_DISABLED);
 
     /* Finalize PAPI per-thread state */
     if (talp_info->flags.have_hwc) {
@@ -183,12 +182,12 @@ void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data) {
     }
 
     /* Update stats */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
+    talp_sample_t *sample = talp_sample_get(talp_info);
     DLB_ATOMIC_ADD_RLX(&sample->stats.num_omp_parallels, 1);
 
     /* Update main thread serial mode if this is the outermost parallel region */
     if (parallel_level == 1) {
-        talp_set_main_sample_in_serial_mode(false);
+        talp_sample_set_main_serial_mode(false);
     }
 }
 
@@ -199,50 +198,49 @@ void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread */
+    talp_sample_update(talp_info);
 
     int parallel_level = parallel_data->level;
+    talp_sample_t **parallel_samples = parallel_data->talp_parallel_data;
+    unsigned int num_samples = parallel_data->actual_parallelism;
 
     if (parallel_level == 1) {
         /* Flush and aggregate all samples of the parallel region */
-        talp_flush_sample_subset_to_regions(spd,
-                parallel_data->talp_parallel_data,
-                parallel_data->actual_parallelism);
+        talp_aggregate_subset_to_regions(talp_info,
+                parallel_samples,
+                num_samples);
 
     } else if (parallel_level > 1) {
         /* Flush and aggregate all samples of this parallel except this
             * thread's sample. The primary thread of a nested parallel region
             * will keep its samples until it finishes as non-primary
             * team-worker or reaches the level 1 parallel region */
-        talp_sample_t **parallel_samples = parallel_data->talp_parallel_data;
-        talp_flush_sample_subset_to_regions(spd,
+        talp_aggregate_subset_to_regions(talp_info,
                 &parallel_samples[1],
-                parallel_data->actual_parallelism-1);
-
-        /* free local data */
-        free(parallel_data->talp_parallel_data);
-        parallel_data->talp_parallel_data = NULL;
+                num_samples - 1);
     }
-
-    /* Update current threads's state */
-    talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
 
     /* Update the state of the rest of team-worker threads
         * (note that talp_set_sample_state cannot be used here because we are
         * impersonating a worker thread) */
-    talp_sample_t **parallel_samples = parallel_data->talp_parallel_data;
-    for (unsigned int i = 1; i < parallel_data->actual_parallelism; ++i) {
+    for (unsigned int i = 1; i < num_samples; ++i) {
         talp_sample_t *worker_sample = parallel_samples[i];
         if (worker_sample->state == TALP_STATE_NOT_USEFUL_OMP_IN) {
             worker_sample->state = TALP_STATE_NOT_USEFUL_OMP_OUT;
         }
     }
 
-    /* Update main thread serial mode if this was the outermost parallel region */
+    /* Update current threads's state */
+    talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
+
     if (parallel_level == 1) {
-        talp_set_main_sample_in_serial_mode(true);
+        /* Update main thread serial mode if this was the outermost parallel region */
+        talp_sample_set_main_serial_mode(true);
+    } else {
+        /* free local data */
+        free(parallel_data->talp_parallel_data);
+        parallel_data->talp_parallel_data = NULL;
     }
 }
 
@@ -255,7 +253,7 @@ void talp_openmp_into_parallel_function(
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
     /* Assign thread sample as team-worker of this parallel */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
+    talp_sample_t *sample = talp_sample_get(talp_info);
     talp_sample_t **parallel_samples = parallel_data->talp_parallel_data;
     /* Probably optimized, but try to avoid invalidating
         * the cache line on reused parallel data */
@@ -263,11 +261,11 @@ void talp_openmp_into_parallel_function(
         parallel_samples[index] = sample;
     }
 
-    /* Update thread sample with the last microsample */
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
     /* Update state */
-    talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
+    talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
 }
 
 void talp_openmp_outof_parallel_function(void) {
@@ -276,13 +274,11 @@ void talp_openmp_outof_parallel_function(void) {
     talp_info_t *talp_info = spd->talp_info;
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
-
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
     /* Update state */
-    talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_OMP_OUT);
+    talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_OMP_OUT);
 }
 
 void talp_openmp_into_parallel_implicit_barrier(omptool_parallel_data_t *parallel_data) {
@@ -292,12 +288,11 @@ void talp_openmp_into_parallel_implicit_barrier(omptool_parallel_data_t *paralle
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
     /* Update state */
-    talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_OMP_IN);
+    talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_OMP_IN);
 }
 
 void talp_openmp_into_parallel_sync(omptool_parallel_data_t *parallel_data) {
@@ -307,12 +302,11 @@ void talp_openmp_into_parallel_sync(omptool_parallel_data_t *parallel_data) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
     /* Update state */
-    talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_OMP_IN);
+    talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_OMP_IN);
 }
 
 void talp_openmp_outof_parallel_sync(omptool_parallel_data_t *parallel_data) {
@@ -322,12 +316,11 @@ void talp_openmp_outof_parallel_sync(omptool_parallel_data_t *parallel_data) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
     /* Update state */
-    talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
+    talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
 }
 
 void talp_openmp_task_create(void) {
@@ -338,7 +331,7 @@ void talp_openmp_task_create(void) {
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
     /* Just update stats */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
+    talp_sample_t *sample = talp_sample_get(talp_info);
     DLB_ATOMIC_ADD_RLX(&sample->stats.num_omp_tasks, 1);
 }
 
@@ -349,12 +342,11 @@ void talp_openmp_task_complete(void) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
-    /* Update state (FIXME: tasks outside of parallels? */
-    talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_OMP_IN);
+    /* Update state (FIXME: tasks outside of parallels?) */
+    talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_OMP_IN);
 }
 
 void talp_openmp_task_switch(void) {
@@ -364,12 +356,11 @@ void talp_openmp_task_switch(void) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* Update thread sample with the last microsample */
-    talp_sample_t *sample = talp_get_thread_sample(spd);
-    talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
+    /* Update thread sample */
+    talp_sample_update(talp_info);
 
     /* Update state */
-    talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
+    talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
 }
 
 

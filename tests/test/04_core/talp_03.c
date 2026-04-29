@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -29,6 +29,7 @@
 #include "apis/dlb_errors.h"
 #include "support/options.h"
 #include "talp/regions.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 #include "talp/talp_openmp.h"
 #include "talp/talp_types.h"
@@ -124,7 +125,8 @@ int main(int argc, char *argv[]) {
         /* End parallel */
         talp_openmp_parallel_end(&parallel_data);
 
-        assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
+        talp_sample_update(talp_info);
+        assert( talp_aggregate_samples_to_regions(talp_info) == DLB_SUCCESS );
         assert( global_monitor->num_omp_parallels == 1 );
         assert( global_monitor->num_omp_tasks == 1 );
         assert( global_monitor->useful_time > 0 );
@@ -173,7 +175,8 @@ int main(int argc, char *argv[]) {
         talp_openmp_parallel_end(&parallel_data);
 
         assert( region_stop(&spd, monitor) == DLB_SUCCESS );
-        assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
+        talp_sample_update(talp_info);
+        assert( talp_aggregate_samples_to_regions(talp_info) == DLB_SUCCESS );
         assert( global_monitor->num_omp_parallels == 2 );
         assert( monitor->num_omp_parallels == 1 );
         assert( monitor->omp_scheduling_time > 0 );

@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -60,19 +60,13 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
         atomic_int_least64_t cycles;
         atomic_int_least64_t instructions;
     } counters;
-    // The last_read counters contain the PAPI_Read values from the beginning of the last useful state.
-    // This enables to compute the difference without the need to call PAPI_Reset()
-    struct {
-        atomic_int_least64_t cycles;
-        atomic_int_least64_t instructions;
-    } last_read_counters;
     struct {
         atomic_int_least64_t num_mpi_calls;
         atomic_int_least64_t num_omp_parallels;
         atomic_int_least64_t num_omp_tasks;
         atomic_int_least64_t num_gpu_runtime_calls;
     } stats;
-    int64_t last_updated_timestamp;
+    int64_t last_updated_ts;
     talp_sample_state_t state;
 } talp_sample_t;
 
@@ -105,6 +99,7 @@ typedef struct talp_macrosample_t {
         int64_t num_omp_tasks;
         int64_t num_gpu_runtime_calls;
     } stats;
+    int num_cpus;
 } talp_macrosample_t;
 
 /* TALP flags for talp_info */
@@ -118,17 +113,21 @@ typedef struct talp_flags_t {
     bool have_hwc:1;            /* whether TALP regions have HWC events */
 } talp_flags_t;
 
+/* Collection of samples and metadada needed for aggregation */
+typedef struct sample_registry_t {
+    talp_sample_t   **samples;         /* Array of per-thread samples */
+    int             num_samples;       /* Number of samples */
+    pthread_mutex_t mutex;             /* Protects samples */
+} sample_registry_t;
+
 /* TALP info per spd */
 typedef struct talp_info_t {
-    talp_flags_t    flags;
-    int             ncpus;          /* Number of process CPUs (also num samples) */
-    dlb_monitor_t   *monitor;       /* Convenience pointer to the global region */
-    GTree           *regions;       /* Tree of monitoring regions */
-    GSList          *open_regions;  /* List of open regions */
-    pthread_mutex_t regions_mutex;  /* Mutex to protect regions allocation/iteration */
-    talp_sample_t   **samples;      /* Per-thread ongoing sample,
-                                       added to all monitors when finished */
-    pthread_mutex_t samples_mutex;  /* Mutex to protect samples allocation/iteration */
+    talp_flags_t      flags;
+    dlb_monitor_t     *monitor;        /* Convenience pointer to the global region */
+    GTree             *regions;        /* Tree of monitoring regions */
+    GSList            *open_regions;   /* List of open regions */
+    pthread_mutex_t   regions_mutex;   /* Mutex to protect regions allocation/iteration */
+    sample_registry_t sample_registry; /* List of per-thread samples */
 } talp_info_t;
 
 /* Private data per monitor */

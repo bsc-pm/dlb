@@ -39,6 +39,7 @@
 #include "support/mask_utils.h"
 #include "talp/backend.h"
 #include "talp/perf_metrics.h"
+#include "talp/sample.h"
 #include "talp/regions.h"
 #include "talp/talp_gpu.h"
 #include "talp/talp_hwc.h"
@@ -53,61 +54,6 @@
 #include <pthread.h>
 
 extern __thread bool thread_is_observer;
-
-static void talp_dealloc_samples(const subprocess_descriptor_t *spd);
-
-
-/* Update all open regions with the macrosample */
-static void update_regions_with_macrosample(const subprocess_descriptor_t *spd,
-        const talp_macrosample_t *macrosample, int num_cpus) {
-    talp_info_t *talp_info = spd->talp_info;
-
-    /* Update all open regions */
-    pthread_mutex_lock(&talp_info->regions_mutex);
-    {
-        for (GSList *node = talp_info->open_regions;
-                node != NULL;
-                node = node->next) {
-            dlb_monitor_t *monitor = node->data;
-            monitor_data_t *monitor_data = monitor->_data;
-
-            /* Update number of CPUs if needed */
-            monitor->num_cpus = max_int(monitor->num_cpus, num_cpus);
-
-            /* Timers */
-            monitor->useful_time += macrosample->timers.useful;
-            monitor->mpi_time += macrosample->timers.not_useful_mpi;
-            monitor->mpi_worker_idle_time += macrosample->timers.not_useful_omp_during_mpi;
-            monitor->omp_load_imbalance_time += macrosample->timers.not_useful_omp_in_lb;
-            monitor->omp_scheduling_time += macrosample->timers.not_useful_omp_in_sched;
-            monitor->omp_serialization_time += macrosample->timers.not_useful_omp_out;
-            monitor->gpu_runtime_time += macrosample->timers.not_useful_gpu;
-
-            /* GPU Timers */
-            monitor->gpu_useful_time += macrosample->gpu_timers.useful;
-            monitor->gpu_communication_time += macrosample->gpu_timers.communication;
-            monitor->gpu_inactive_time += macrosample->gpu_timers.inactive;
-
-            /* Counters */
-            monitor->cycles += macrosample->counters.cycles;
-            monitor->instructions += macrosample->counters.instructions;
-
-            /* Stats */
-            monitor->num_mpi_calls += macrosample->stats.num_mpi_calls;
-            monitor->num_omp_parallels += macrosample->stats.num_omp_parallels;
-            monitor->num_omp_tasks += macrosample->stats.num_omp_tasks;
-            monitor->num_gpu_runtime_calls += macrosample->stats.num_gpu_runtime_calls;
-
-            /* Update shared memory only if requested */
-            if (talp_info->flags.external_profiler) {
-                shmem_talp__set_times(monitor_data->node_shared_id,
-                        monitor->mpi_time,
-                        monitor->useful_time);
-            }
-        }
-    }
-    pthread_mutex_unlock(&talp_info->regions_mutex);
-}
 
 
 #ifdef MPI_LIB
@@ -153,9 +99,11 @@ void talp_init(subprocess_descriptor_t *spd) {
                 (GCompareDataFunc)region_compare_by_name,
                 NULL, NULL, region_dealloc),
         .regions_mutex = PTHREAD_MUTEX_INITIALIZER,
-        .samples_mutex = PTHREAD_MUTEX_INITIALIZER,
     };
     spd->talp_info = talp_info;
+
+    /* Initialize sample structure */
+    talp_sample_init(talp_info);
 
     /* Initialize shared memory */
     if (talp_info->flags.have_shmem || talp_info->flags.have_minimal_shmem) {
@@ -259,7 +207,7 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     talp_output_finalize(spd->options.talp_output_file, spd->options.talp_partial_output);
 
     /* Deallocate samples structure */
-    talp_dealloc_samples(spd);
+    talp_sample_finalize(talp_info);
 
     /* Finalize shared memory */
     if (talp_info->flags.have_shmem || talp_info->flags.have_minimal_shmem) {
@@ -285,246 +233,69 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 
 
 /*********************************************************************************/
-/*    Sample functions                                                           */
+/*    Functions for sample aggregation to regions                                */
 /*********************************************************************************/
 
-static __thread talp_sample_t* _tls_sample = NULL;
-static __thread bool _is_main_sample = false;
-static __thread bool _is_main_sample_in_serial_mode = false;
+/* Update all open regions with the macrosample */
+static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
+        const talp_macrosample_t *restrict macrosample) {
 
-/* Quick test, without locking and without generating a new sample */
-static inline bool is_talp_sample_mine(const talp_sample_t *sample) {
-    return sample != NULL && sample == _tls_sample;
-}
-
-static void talp_dealloc_samples(const subprocess_descriptor_t *spd) {
-
-    /* Warning about _tls_sample in worker threads:
-     * worker threads do not currently deallocate their sample.
-     * In some cases, it might happen that a worker thread exits without
-     * the main thread reducing its sample, so in these cases the sample
-     * needs to outlive the thread.
-     * The main thread could deallocate it at this point, but then the
-     * TLS variable would be broken if TALP is reinitialized again.
-     * For now we will keep it like this and will revisit if needed. */
-
-    /* Deallocate main thread sample */
-    free(_tls_sample);
-    _tls_sample = NULL;
-
-    /* Deallocate samples list */
-    talp_info_t *talp_info = spd->talp_info;
-    pthread_mutex_lock(&talp_info->samples_mutex);
+    /* Update all open regions */
+    pthread_mutex_lock(&talp_info->regions_mutex);
     {
-        free(talp_info->samples);
-        talp_info->samples = NULL;
-        talp_info->ncpus = 0;
-    }
-    pthread_mutex_unlock(&talp_info->samples_mutex);
-}
+        for (GSList *node = talp_info->open_regions;
+                node != NULL;
+                node = node->next) {
+            dlb_monitor_t *monitor = node->data;
+            monitor_data_t *monitor_data = monitor->_data;
 
-/* Get the TLS associated sample */
-talp_sample_t* talp_get_thread_sample(const subprocess_descriptor_t *spd) {
+            /* Update number of CPUs if needed */
+            monitor->num_cpus = max_int(monitor->num_cpus, macrosample->num_cpus);
 
-    /* Thread already has an allocated sample, return it */
-    if (likely(_tls_sample != NULL)) return _tls_sample;
+            /* Timers */
+            monitor->useful_time += macrosample->timers.useful;
+            monitor->mpi_time += macrosample->timers.not_useful_mpi;
+            monitor->mpi_worker_idle_time += macrosample->timers.not_useful_omp_during_mpi;
+            monitor->omp_load_imbalance_time += macrosample->timers.not_useful_omp_in_lb;
+            monitor->omp_scheduling_time += macrosample->timers.not_useful_omp_in_sched;
+            monitor->omp_serialization_time += macrosample->timers.not_useful_omp_out;
+            monitor->gpu_runtime_time += macrosample->timers.not_useful_gpu;
 
-    /* Observer threads don't have a valid sample */
-    if (unlikely(thread_is_observer)) return NULL;
+            /* GPU Timers */
+            monitor->gpu_useful_time += macrosample->gpu_timers.useful;
+            monitor->gpu_communication_time += macrosample->gpu_timers.communication;
+            monitor->gpu_inactive_time += macrosample->gpu_timers.inactive;
 
-    /* Otherwise, allocate */
-    talp_info_t *talp_info = spd->talp_info;
-    pthread_mutex_lock(&talp_info->samples_mutex);
-    {
-        int ncpus = ++talp_info->ncpus;
-        void *samples = realloc(talp_info->samples, sizeof(talp_sample_t*)*ncpus);
-        if (samples) {
-            talp_info->samples = samples;
-            void *new_sample;
-            if (posix_memalign(&new_sample, DLB_CACHE_LINE, sizeof(talp_sample_t)) == 0) {
-                _tls_sample = new_sample;
-                talp_info->samples[ncpus-1] = new_sample;
-                if (ncpus == 1) {
-                    _is_main_sample = true;
-                    _is_main_sample_in_serial_mode = true;
-                }
+            /* Counters */
+            monitor->cycles += macrosample->counters.cycles;
+            monitor->instructions += macrosample->counters.instructions;
+
+            /* Stats */
+            monitor->num_mpi_calls += macrosample->stats.num_mpi_calls;
+            monitor->num_omp_parallels += macrosample->stats.num_omp_parallels;
+            monitor->num_omp_tasks += macrosample->stats.num_omp_tasks;
+            monitor->num_gpu_runtime_calls += macrosample->stats.num_gpu_runtime_calls;
+
+            /* Update shared memory only if requested */
+            if (talp_info->flags.external_profiler) {
+                shmem_talp__set_times(monitor_data->node_shared_id,
+                        monitor->mpi_time,
+                        monitor->useful_time);
             }
         }
     }
-    pthread_mutex_unlock(&talp_info->samples_mutex);
-
-    fatal_cond(_tls_sample == NULL, "TALP: could not allocate thread sample");
-
-    /* If a thread is created mid-region, its initial time is that of the
-     * innermost open region, otherwise it is the current time */
-    int64_t last_updated_timestamp;
-    if (talp_info->open_regions) {
-        const dlb_monitor_t *monitor = talp_info->open_regions->data;
-        last_updated_timestamp = monitor->start_time;
-    } else {
-        last_updated_timestamp = get_time_in_ns();
-    }
-
-    *_tls_sample = (const talp_sample_t) {
-        .last_updated_timestamp = last_updated_timestamp,
-    };
-
-    talp_set_sample_state(spd, _tls_sample, TALP_STATE_DISABLED);
-
-#ifdef INSTRUMENTATION_VERSION
-    unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
-    long long hwc_values[] = {0, 0};
-    instrument_nevent(2, events, hwc_values);
-#endif
-
-    return _tls_sample;
-}
-
-/* WARNING: this function may only be called when updating own thread's sample */
-void talp_set_sample_state(const subprocess_descriptor_t *spd, talp_sample_t *sample,
-        talp_sample_state_t new_state) {
-
-    talp_info_t *talp_info = spd->talp_info;
-    if (talp_info->flags.have_hwc) {
-        talp_sample_state_t old = sample->state;
-        talp_hwc_on_state_change(old, new_state);
-    }
-
-    sample->state = new_state;
-
-    instrument_event(MONITOR_STATE,
-            new_state == TALP_STATE_DISABLED ? MONITOR_STATE_DISABLED
-            : new_state == TALP_STATE_USEFUL ? MONITOR_STATE_USEFUL
-            : new_state == TALP_STATE_NOT_USEFUL_MPI ? MONITOR_STATE_NOT_USEFUL_MPI
-            : new_state == TALP_STATE_NOT_USEFUL_OMP_IN ? MONITOR_STATE_NOT_USEFUL_OMP_IN
-            : new_state == TALP_STATE_NOT_USEFUL_OMP_OUT ? MONITOR_STATE_NOT_USEFUL_OMP_OUT
-            : new_state == TALP_STATE_NOT_USEFUL_GPU ? MONITOR_STATE_NOT_USEFUL_GPU
-            : 0,
-            EVENT_BEGIN);
-}
-
-/* Compute new microsample (time since last update) and update sample values */
-void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sample,
-        int64_t timestamp) {
-
-    /* Observer threads ignore this function */
-    if (unlikely(sample == NULL)) return;
-
-    talp_info_t *talp_info = spd->talp_info;
-
-    /* Compute duration and set new last_updated_timestamp */
-    int64_t now = timestamp == TALP_NO_TIMESTAMP ? get_time_in_ns() : timestamp;
-    int64_t microsample_duration = now - sample->last_updated_timestamp;
-    sample->last_updated_timestamp = now;
-
-    /* Update the appropriate sample timer */
-    switch(sample->state) {
-        case TALP_STATE_DISABLED:
-            break;
-        case TALP_STATE_USEFUL:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.useful, microsample_duration);
-            break;
-        case TALP_STATE_NOT_USEFUL_MPI:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_mpi, microsample_duration);
-            if (_is_main_sample_in_serial_mode) {
-                // Add worker threads' time to special timer
-                int num_cpus = talp_info->ncpus;
-                DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_during_mpi,
-                        microsample_duration * (num_cpus-1));
-            }
-            break;
-        case TALP_STATE_NOT_USEFUL_OMP_IN:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_in, microsample_duration);
-            break;
-        case TALP_STATE_NOT_USEFUL_OMP_OUT:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_out, microsample_duration);
-            break;
-        case TALP_STATE_NOT_USEFUL_GPU:
-            DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_gpu, microsample_duration);
-            break;
-    }
-
-    if (talp_info->flags.have_hwc) {
-        /* Only read counters if we are updating this thread's sample */
-        if (is_talp_sample_mine(sample)) {
-            hwc_measurements_t measurements;
-            if (talp_hwc_collect(&measurements)) {
-                /* Atomically add HWC values to sample structure */
-                DLB_ATOMIC_ADD_RLX(&sample->counters.cycles, measurements.cycles);
-                DLB_ATOMIC_ADD_RLX(&sample->counters.instructions, measurements.instructions);
-            }
-
-#ifdef INSTRUMENTATION_VERSION
-            // It's safe to emit even if talp_hwc_collect returned false,
-            // struct is zero'ed in that case
-            unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
-            long long hwc_values[] = {measurements.cycles, measurements.instructions};
-            instrument_nevent(2, events, hwc_values);
-#endif
-        }
-    }
-}
-
-/* Flush and aggregate a single sample into a macrosample */
-static inline void flush_sample_to_macrosample(talp_sample_t *sample,
-        talp_macrosample_t *macrosample) {
-
-    /* Timers */
-    macrosample->timers.useful +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.useful, 0);
-    macrosample->timers.not_useful_mpi +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_mpi, 0);
-    macrosample->timers.not_useful_omp_during_mpi +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_omp_during_mpi, 0);
-    macrosample->timers.not_useful_omp_out +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_omp_out, 0);
-    /* timers.not_useful_omp_in is not flushed here, make sure struct is empty */
-    ensure(DLB_ATOMIC_LD_RLX(&sample->timers.not_useful_omp_in) == 0,
-                "Inconsistency in TALP sample metric not_useful_omp_in."
-                " Please, report bug at " PACKAGE_BUGREPORT);
-    macrosample->timers.not_useful_gpu +=
-        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_gpu, 0);
-
-    /* Counters */
-    macrosample->counters.cycles +=
-        DLB_ATOMIC_EXCH_RLX(&sample->counters.cycles, 0);
-    macrosample->counters.instructions +=
-        DLB_ATOMIC_EXCH_RLX(&sample->counters.instructions, 0);
-
-    /* Stats */
-    macrosample->stats.num_mpi_calls +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_mpi_calls, 0);
-    macrosample->stats.num_omp_parallels +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_omp_parallels, 0);
-    macrosample->stats.num_omp_tasks +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_omp_tasks, 0);
-    macrosample->stats.num_gpu_runtime_calls +=
-        DLB_ATOMIC_EXCH_RLX(&sample->stats.num_gpu_runtime_calls, 0);
+    pthread_mutex_unlock(&talp_info->regions_mutex);
 }
 
 /* Accumulate values from samples of all threads and update regions */
-int talp_flush_samples_to_regions(const subprocess_descriptor_t *spd) {
+int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
 
     /* Observer threads don't have a valid sample so they cannot start/stop regions */
     if (unlikely(thread_is_observer)) return DLB_ERR_PERM;
 
-    int num_cpus;
-    talp_info_t *talp_info = spd->talp_info;
-
     /* Accumulate samples from all threads */
-    talp_macrosample_t macrosample = (const talp_macrosample_t) {};
-    pthread_mutex_lock(&talp_info->samples_mutex);
-    {
-        num_cpus = talp_info->ncpus;
-
-        /* Force-update and aggregate all samples */
-        int64_t timestamp = get_time_in_ns();
-        for (int i = 0; i < num_cpus; ++i) {
-            talp_update_sample(spd, talp_info->samples[i], timestamp);
-            flush_sample_to_macrosample(talp_info->samples[i], &macrosample);
-        }
-    }
-    pthread_mutex_unlock(&talp_info->samples_mutex);
+    talp_macrosample_t macrosample = {0};
+    talp_sample_aggregate_all_to_macrosample(talp_info, &macrosample);
 
     if (talp_info->flags.have_gpu) {
         /* Collect GPU measuremnts up to this point and update macrosample */
@@ -536,60 +307,22 @@ int talp_flush_samples_to_regions(const subprocess_descriptor_t *spd) {
     }
 
     /* Update all started regions */
-    update_regions_with_macrosample(spd, &macrosample, num_cpus);
+    update_regions_with_macrosample(talp_info, &macrosample);
 
     return DLB_SUCCESS;
 }
 
 /* Accumulate samples from only a subset of samples of a parallel region.
  * Load Balance and Scheduling are computed here based on all samples. */
-void talp_flush_sample_subset_to_regions(const subprocess_descriptor_t *spd,
+void talp_aggregate_subset_to_regions(talp_info_t *talp_info,
         talp_sample_t **samples, unsigned int nelems) {
 
-    talp_info_t *talp_info = spd->talp_info;
-    talp_macrosample_t macrosample = (const talp_macrosample_t) {};
-    pthread_mutex_lock(&talp_info->samples_mutex);
-    {
-        /* Iterate first to force-update all samples and compute the minimum
-         * not-useful-omp-in among them */
-        int64_t timestamp = get_time_in_ns();
-        int64_t min_not_useful_omp_in = INT64_MAX;
-        unsigned int i;
-        for (i=0; i<nelems; ++i) {
-            talp_update_sample(spd, samples[i], timestamp);
-            min_not_useful_omp_in = min_int64(min_not_useful_omp_in,
-                    DLB_ATOMIC_LD_RLX(&samples[i]->timers.not_useful_omp_in));
-        }
-
-        /* Iterate again to accumulate Load Balance, and to aggregate sample */
-        int64_t sched_timer = min_not_useful_omp_in * nelems;
-        int64_t lb_timer = 0;
-        for (i=0; i<nelems; ++i) {
-            lb_timer += DLB_ATOMIC_EXCH_RLX(&samples[i]->timers.not_useful_omp_in, 0)
-                - min_not_useful_omp_in;
-            flush_sample_to_macrosample(samples[i], &macrosample);
-        }
-
-        /* Update derived timers into macrosample */
-        macrosample.timers.not_useful_omp_in_lb = lb_timer;
-        macrosample.timers.not_useful_omp_in_sched = sched_timer;
-    }
-    pthread_mutex_unlock(&talp_info->samples_mutex);
+    /* Accumulate samples from subset */
+    talp_macrosample_t macrosample = {0};
+    talp_sample_aggregate_subset_to_macrosample(talp_info, samples, nelems, &macrosample);
 
     /* Update all started regions */
-    update_regions_with_macrosample(spd, &macrosample, nelems);
-}
-
-/* Sets the TLS variable _is_main_sample_in_serial_mode. This function is
- * called by the main thread when beginning or ending parallel region of level 1.
- * FIXME: free agent threads may break this condition.
- *
- * Sets whether the main thread is running in serial mode. */
-void talp_set_main_sample_in_serial_mode(bool serial_mode) {
-
-    if (_is_main_sample) {
-        _is_main_sample_in_serial_mode = serial_mode;
-    }
+    update_regions_with_macrosample(talp_info, &macrosample);
 }
 
 
