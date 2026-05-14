@@ -187,8 +187,8 @@ at dlb@bsc.es.
 
 This project is licensed under the **GNU Lesser General Public License v3.0** (LGPLv3).
 
-The `COPYING.LESSER` file contains the LGPLv3 terms. Per the LGPLv3 specification,
-it is used in conjunction with the GPLv3 (`COPYING`), which it references and extends.
+See the `LICENSE` file for the full license text. The `COPYING` file contains
+the same text, following the GNU project convention.
 
 [DLB]: https://pm.bsc.es/dlb
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
