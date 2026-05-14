@@ -183,6 +183,13 @@ at Performance EngineeRing, Modelling, Analysis, and VisualizatiOn STrategy, Jun
 For questions, suggestions and bug reports, you can contact us via e-mail
 at dlb@bsc.es.
 
+## License
+
+This project is licensed under the **GNU Lesser General Public License v3.0** (LGPLv3).
+
+The `COPYING.LESSER` file contains the LGPLv3 terms. Per the LGPLv3 specification,
+it is used in conjunction with the GPLv3 (`COPYING`), which it references and extends.
+
 [DLB]: https://pm.bsc.es/dlb
 [DLB Downloads]: https://pm.bsc.es/dlb-downloads
 [releases]: https://github.com/bsc-pm/dlb/releases
