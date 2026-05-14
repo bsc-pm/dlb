@@ -77,6 +77,7 @@ static void update_regions_with_macrosample(const subprocess_descriptor_t *spd,
             /* Timers */
             monitor->useful_time += macrosample->timers.useful;
             monitor->mpi_time += macrosample->timers.not_useful_mpi;
+            monitor->mpi_worker_idle_time += macrosample->timers.not_useful_omp_during_mpi;
             monitor->omp_load_imbalance_time += macrosample->timers.not_useful_omp_in_lb;
             monitor->omp_scheduling_time += macrosample->timers.not_useful_omp_in_sched;
             monitor->omp_serialization_time += macrosample->timers.not_useful_omp_out;
@@ -424,11 +425,13 @@ void talp_update_sample(const subprocess_descriptor_t *spd, talp_sample_t *sampl
             DLB_ATOMIC_ADD_RLX(&sample->timers.useful, microsample_duration);
             break;
         case TALP_STATE_NOT_USEFUL_MPI:
-            if (_is_main_sample_in_serial_mode) {
-                int num_cpus = talp_info->ncpus;
-                microsample_duration *= num_cpus;
-            }
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_mpi, microsample_duration);
+            if (_is_main_sample_in_serial_mode) {
+                // Add worker threads' time to special timer
+                int num_cpus = talp_info->ncpus;
+                DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_during_mpi,
+                        microsample_duration * (num_cpus-1));
+            }
             break;
         case TALP_STATE_NOT_USEFUL_OMP_IN:
             DLB_ATOMIC_ADD_RLX(&sample->timers.not_useful_omp_in, microsample_duration);
@@ -471,6 +474,8 @@ static inline void flush_sample_to_macrosample(talp_sample_t *sample,
         DLB_ATOMIC_EXCH_RLX(&sample->timers.useful, 0);
     macrosample->timers.not_useful_mpi +=
         DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_mpi, 0);
+    macrosample->timers.not_useful_omp_during_mpi +=
+        DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_omp_during_mpi, 0);
     macrosample->timers.not_useful_omp_out +=
         DLB_ATOMIC_EXCH_RLX(&sample->timers.not_useful_omp_out, 0);
     /* timers.not_useful_omp_in is not flushed here, make sure struct is empty */

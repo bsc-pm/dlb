@@ -287,13 +287,14 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
             1, 1,                   /* Hardware counters: cycles, instructions */
             1, 1, 1, 1, 1, 1,       /* Statistics: num_* */
             1, 1,                   /* Monitor Start and Stop times */
-            1, 1, 1, 1, 1, 1, 1,    /* Host Times */
+            1, 1, 1, 1, 1, 1, 1, 1, /* Host Times */
             1, 1, 1,                /* Device Times */
             1};                     /* _data */
 
         enum {count = sizeof(blocklengths) / sizeof(blocklengths[0])};
 
         MPI_Aint displacements[] = {
+            /* Name */
             offsetof(dlb_monitor_t, name),
             /* Resources */
             offsetof(dlb_monitor_t, num_cpus),
@@ -315,6 +316,7 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
             offsetof(dlb_monitor_t, elapsed_time),
             offsetof(dlb_monitor_t, useful_time),
             offsetof(dlb_monitor_t, mpi_time),
+            offsetof(dlb_monitor_t, mpi_worker_idle_time),
             offsetof(dlb_monitor_t, omp_load_imbalance_time),
             offsetof(dlb_monitor_t, omp_scheduling_time),
             offsetof(dlb_monitor_t, omp_serialization_time),
@@ -327,19 +329,28 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
             offsetof(dlb_monitor_t, _data)};
 
         MPI_Datatype types[] = {
-            address_type, MPI_INT, MPI_FLOAT,   /* Name + Resources: num_cpus, avg_cpus */
-            mpi_int64_type, mpi_int64_type,     /* Hardware counters: cycles, instructions */
+            /* Name */
+            address_type,
+            /* Resources */
+            MPI_INT, MPI_FLOAT,
+            /* Hardware counters */
+            mpi_int64_type, mpi_int64_type,
+            /* Statistics */
             MPI_INT, MPI_INT,
             mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,     /* Statistics: num_* */
-            mpi_int64_type, mpi_int64_type,     /* Monitor Start and Stop times */
+            mpi_int64_type, mpi_int64_type,
+            /* Monitor Start and Stop times */
+            mpi_int64_type, mpi_int64_type,
+            /* Host Times */
             mpi_int64_type, mpi_int64_type,
             mpi_int64_type, mpi_int64_type,
             mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,                     /* Host Times */
             mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,                     /* Device Times */
-            address_type};                      /* _data */
+            /* Device Times */
+            mpi_int64_type, mpi_int64_type,
+            mpi_int64_type,
+            /* _data */
+            address_type};
 
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);

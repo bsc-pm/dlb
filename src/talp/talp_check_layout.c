@@ -45,6 +45,7 @@ size_t sizeof_dlb_monitor_t(void) {
     EXPAND(elapsed_time)            \
     EXPAND(useful_time)             \
     EXPAND(mpi_time)                \
+    EXPAND(mpi_worker_idle_time)    \
     EXPAND(omp_load_imbalance_time) \
     EXPAND(omp_scheduling_time)     \
     EXPAND(omp_serialization_time)  \
@@ -85,6 +86,7 @@ size_t sizeof_dlb_pop_metrics_t(void) {
     EXPAND(elapsed_time)                 \
     EXPAND(useful_time)                  \
     EXPAND(mpi_time)                     \
+    EXPAND(mpi_worker_idle_time)         \
     EXPAND(omp_load_imbalance_time)      \
     EXPAND(omp_scheduling_time)          \
     EXPAND(omp_serialization_time)       \

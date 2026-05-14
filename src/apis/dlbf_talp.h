@@ -42,6 +42,7 @@
         integer(kind=c_int64_t) :: elapsed_time
         integer(kind=c_int64_t) :: useful_time
         integer(kind=c_int64_t) :: mpi_time
+        integer(kind=c_int64_t) :: mpi_worker_idle_time
         integer(kind=c_int64_t) :: omp_load_imbalance_time
         integer(kind=c_int64_t) :: omp_scheduling_time
         integer(kind=c_int64_t) :: omp_serialization_time
@@ -69,6 +70,7 @@
         integer(kind=c_int64_t) :: elapsed_time
         integer(kind=c_int64_t) :: useful_time
         integer(kind=c_int64_t) :: mpi_time
+        integer(kind=c_int64_t) :: mpi_worker_idle_time
         integer(kind=c_int64_t) :: omp_load_imbalance_time
         integer(kind=c_int64_t) :: omp_scheduling_time
         integer(kind=c_int64_t) :: omp_serialization_time

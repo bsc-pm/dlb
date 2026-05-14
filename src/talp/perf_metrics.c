@@ -197,6 +197,7 @@ static inline void perf_metrics__compute_hybrid_model_v2(
     int64_t elapsed_time            = base_metrics->elapsed_time;
     int64_t useful_time             = base_metrics->useful_time;
     int64_t mpi_time                = base_metrics->mpi_time;
+    int64_t mpi_worker_idle_time    = base_metrics->mpi_worker_idle_time;
     int64_t omp_load_imbalance_time = base_metrics->omp_load_imbalance_time;
     int64_t omp_scheduling_time     = base_metrics->omp_scheduling_time;
     int64_t omp_serialization_time  = base_metrics->omp_serialization_time;
@@ -219,7 +220,7 @@ static inline void perf_metrics__compute_hybrid_model_v2(
         omp_serialization_time;
 
     /* MPI time normalized at application level */
-    double mpi_normd_app = (double)mpi_time / num_cpus;
+    double mpi_normd_app = (double)(mpi_time + mpi_worker_idle_time) / num_cpus;
 
     /* Non-MPI time normalized at application level */
     double non_mpi_normd_app = elapsed_time - mpi_normd_app;
@@ -274,6 +275,7 @@ typedef struct node_reduction_t {
     bool node_used;
     int cpus_node;
     int64_t mpi_time;
+    int64_t mpi_worker_idle_time;
 } node_reduction_t;
 
 /* Function called in the MPI node reduction */
@@ -288,6 +290,7 @@ static void mpi_node_reduction_fn(void *invec, void *inoutvec, int *len,
             inout[i].node_used = true;
             inout[i].cpus_node += in[i].cpus_node;
             inout[i].mpi_time += in[i].mpi_time;
+            inout[i].mpi_worker_idle_time += in[i].mpi_worker_idle_time;
         }
     }
 }
@@ -300,6 +303,7 @@ static void reduce_pop_metrics_node_reduction(node_reduction_t *node_reduction,
         .node_used = monitor->num_measurements > 0,
         .cpus_node = monitor->num_cpus,
         .mpi_time = monitor->mpi_time,
+        .mpi_worker_idle_time = monitor->mpi_worker_idle_time,
     };
 
     /* MPI type: int64_t */
@@ -308,13 +312,14 @@ static void reduce_pop_metrics_node_reduction(node_reduction_t *node_reduction,
     /* MPI struct type: node_reduction_t */
     MPI_Datatype mpi_node_reduction_type;
     {
-        int count = 3;
-        int blocklengths[] = {1, 1, 1};
+        int count = 4;
+        int blocklengths[] = {1, 1, 1, 1};
         MPI_Aint displacements[] = {
             offsetof(node_reduction_t, node_used),
             offsetof(node_reduction_t, cpus_node),
-            offsetof(node_reduction_t, mpi_time)};
-        MPI_Datatype types[] = {MPI_C_BOOL, MPI_INT, mpi_int64_type};
+            offsetof(node_reduction_t, mpi_time),
+            offsetof(node_reduction_t, mpi_worker_idle_time)};
+        MPI_Datatype types[] = {MPI_C_BOOL, MPI_INT, mpi_int64_type, mpi_int64_type};
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);
         PMPI_Type_create_resized(tmp_type, 0, sizeof(node_reduction_t),
@@ -358,6 +363,7 @@ typedef struct app_reduction_t {
     int64_t elapsed_time;
     int64_t useful_time;
     int64_t mpi_time;
+    int64_t mpi_worker_idle_time;
     int64_t omp_load_imbalance_time;
     int64_t omp_scheduling_time;
     int64_t omp_serialization_time;
@@ -400,6 +406,7 @@ static void mpi_reduction_fn(void *invec, void *inoutvec, int *len,
         inout[i].elapsed_time             = max_int64(inout[i].elapsed_time, in[i].elapsed_time);
         inout[i].useful_time             += in[i].useful_time;
         inout[i].mpi_time                += in[i].mpi_time;
+        inout[i].mpi_worker_idle_time    += in[i].mpi_worker_idle_time;
         inout[i].omp_load_imbalance_time += in[i].omp_load_imbalance_time;
         inout[i].omp_scheduling_time     += in[i].omp_scheduling_time;
         inout[i].omp_serialization_time  += in[i].omp_serialization_time;
@@ -430,10 +437,11 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
         bool all_to_all) {
 
     double min_mpi_normd_proc = monitor->num_cpus == 0 ? 0.0
-        : (double)monitor->mpi_time / monitor->num_cpus;
+        : (double)(monitor->mpi_time + monitor->mpi_worker_idle_time) / monitor->num_cpus;
     double min_mpi_normd_node = _process_id != 0 ? 0.0
         : node_reduction->cpus_node == 0 ? 0.0
-        : (double)node_reduction->mpi_time / node_reduction->cpus_node;
+        : (double)(node_reduction->mpi_time + node_reduction->mpi_worker_idle_time)
+                    / node_reduction->cpus_node;
 
     bool have_gpus = (monitor->gpu_useful_time + monitor->gpu_communication_time > 0);
 
@@ -456,6 +464,7 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
         .elapsed_time            = monitor->elapsed_time,
         .useful_time             = monitor->useful_time,
         .mpi_time                = monitor->mpi_time,
+        .mpi_worker_idle_time    = monitor->mpi_worker_idle_time,
         .omp_load_imbalance_time = monitor->omp_load_imbalance_time,
         .omp_scheduling_time     = monitor->omp_scheduling_time,
         .omp_serialization_time  = monitor->omp_serialization_time,
@@ -482,7 +491,7 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
             1, 1, 1, 1,             /* Resources */
             1, 1,                   /* Hardware Counters */
             1, 1, 1, 1, 1,          /* Statistics */
-            1, 1, 1, 1, 1, 1, 1,    /* Host Times */
+            1, 1, 1, 1, 1, 1, 1, 1, /* Host Times */
             1, 1,                   /* Host Normalized Times */
             1, 1, 1,                /* Device Times */
             1, 1};                  /* Device Max Times */
@@ -508,6 +517,7 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
             offsetof(app_reduction_t, elapsed_time),
             offsetof(app_reduction_t, useful_time),
             offsetof(app_reduction_t, mpi_time),
+            offsetof(app_reduction_t, mpi_worker_idle_time),
             offsetof(app_reduction_t, omp_load_imbalance_time),
             offsetof(app_reduction_t, omp_scheduling_time),
             offsetof(app_reduction_t, omp_serialization_time),
@@ -525,19 +535,26 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
         };
 
         MPI_Datatype types[] = {
-            MPI_INT, MPI_INT, MPI_FLOAT, MPI_INT,   /* Resources */
-            MPI_DOUBLE, MPI_DOUBLE,                 /* Hardware Counters */
+            /* Resources */
+            MPI_INT, MPI_INT, MPI_FLOAT, MPI_INT,
+            /* Hardware Counters */
+            MPI_DOUBLE, MPI_DOUBLE,
+            /* Statistics */
             mpi_int64_type, mpi_int64_type,
             mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,                         /* Statistics */
+            mpi_int64_type,
+            /* Host Times */
             mpi_int64_type, mpi_int64_type,
             mpi_int64_type, mpi_int64_type,
             mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,                         /* Host Times */
-            MPI_DOUBLE, MPI_DOUBLE,                 /* Host Normalized Times */
             mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,                         /* Device Times */
-            mpi_int64_type, mpi_int64_type,         /* Device Max Times */
+            /* Host Normalized Times */
+            MPI_DOUBLE, MPI_DOUBLE,
+            /* Device Times */
+            mpi_int64_type, mpi_int64_type,
+            mpi_int64_type,
+            /* Device Max Times */
+            mpi_int64_type, mpi_int64_type,
         };
 
         MPI_Datatype tmp_type;
@@ -614,6 +631,7 @@ void perf_metrics__reduce_monitor_into_base_metrics(pop_base_metrics_t *base_met
         .elapsed_time            = app_reduction.elapsed_time,
         .useful_time             = app_reduction.useful_time,
         .mpi_time                = app_reduction.mpi_time,
+        .mpi_worker_idle_time    = app_reduction.mpi_worker_idle_time,
         .omp_load_imbalance_time = app_reduction.omp_load_imbalance_time,
         .omp_scheduling_time     = app_reduction.omp_scheduling_time,
         .omp_serialization_time  = app_reduction.omp_serialization_time,
@@ -636,6 +654,9 @@ void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metr
 
     bool have_gpus = (monitor->gpu_useful_time + monitor->gpu_communication_time > 0);
 
+    double mpi_normd =
+        (double)(monitor->mpi_time + monitor->mpi_worker_idle_time) / monitor->num_cpus;
+
     *base_metrics = (const pop_base_metrics_t){
         .num_cpus                = monitor->num_cpus,
         .num_mpi_ranks           = 0,
@@ -652,12 +673,13 @@ void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metr
         .elapsed_time            = monitor->elapsed_time,
         .useful_time             = monitor->useful_time,
         .mpi_time                = monitor->mpi_time,
+        .mpi_worker_idle_time    = monitor->mpi_worker_idle_time,
         .omp_load_imbalance_time = monitor->omp_load_imbalance_time,
         .omp_scheduling_time     = monitor->omp_scheduling_time,
         .omp_serialization_time  = monitor->omp_serialization_time,
         .gpu_runtime_time        = monitor->gpu_runtime_time,
-        .min_mpi_normd_proc      = (double)monitor->mpi_time / monitor->num_cpus,
-        .min_mpi_normd_node      = (double)monitor->mpi_time / monitor->num_cpus,
+        .min_mpi_normd_proc      = mpi_normd,
+        .min_mpi_normd_node      = mpi_normd,
         .gpu_useful_time         = monitor->gpu_useful_time,
         .gpu_communication_time  = monitor->gpu_communication_time,
         .gpu_inactive_time       = monitor->gpu_inactive_time,
@@ -702,6 +724,7 @@ void perf_metrics__base_to_pop_metrics(const char *monitor_name,
         .elapsed_time                    = base_metrics->elapsed_time,
         .useful_time                     = base_metrics->useful_time,
         .mpi_time                        = base_metrics->mpi_time,
+        .mpi_worker_idle_time            = base_metrics->mpi_worker_idle_time,
         .omp_load_imbalance_time         = base_metrics->omp_load_imbalance_time,
         .omp_scheduling_time             = base_metrics->omp_scheduling_time,
         .omp_serialization_time          = base_metrics->omp_serialization_time,
