@@ -94,6 +94,8 @@ module talp_check_layout
 #include THIS_FILE
 #define FIELD mpi_time
 #include THIS_FILE
+#define FIELD mpi_worker_idle_time
+#include THIS_FILE
 #define FIELD omp_load_imbalance_time
 #include THIS_FILE
 #define FIELD omp_scheduling_time
@@ -149,6 +151,8 @@ module talp_check_layout
 #define FIELD useful_time
 #include THIS_FILE
 #define FIELD mpi_time
+#include THIS_FILE
+#define FIELD mpi_worker_idle_time
 #include THIS_FILE
 #define FIELD omp_load_imbalance_time
 #include THIS_FILE
@@ -272,6 +276,7 @@ subroutine check_dlb_monitor_layout
     integer(c_size_t) :: c_offset_elapsed_time,            loc_elapsed_time
     integer(c_size_t) :: c_offset_useful_time,             loc_useful_time
     integer(c_size_t) :: c_offset_mpi_time,                loc_mpi_time
+    integer(c_size_t) :: c_offset_mpi_worker_idle_time,    loc_mpi_worker_idle_time
     integer(c_size_t) :: c_offset_omp_load_imbalance_time, loc_omp_load_imbalance_time
     integer(c_size_t) :: c_offset_omp_scheduling_time,     loc_omp_scheduling_time
     integer(c_size_t) :: c_offset_omp_serialization_time,  loc_omp_serialization_time
@@ -323,6 +328,8 @@ subroutine check_dlb_monitor_layout
 #include THIS_FILE
 #define FIELD mpi_time
 #include THIS_FILE
+#define FIELD mpi_worker_idle_time
+#include THIS_FILE
 #define FIELD omp_load_imbalance_time
 #include THIS_FILE
 #define FIELD omp_scheduling_time
@@ -368,6 +375,7 @@ subroutine check_dlb_pop_metrics_layout
     integer(c_size_t) :: c_offset_elapsed_time,                 loc_elapsed_time
     integer(c_size_t) :: c_offset_useful_time,                  loc_useful_time
     integer(c_size_t) :: c_offset_mpi_time,                     loc_mpi_time
+    integer(c_size_t) :: c_offset_mpi_worker_idle_time,         loc_mpi_worker_idle_time
     integer(c_size_t) :: c_offset_omp_load_imbalance_time,      loc_omp_load_imbalance_time
     integer(c_size_t) :: c_offset_omp_scheduling_time,          loc_omp_scheduling_time
     integer(c_size_t) :: c_offset_omp_serialization_time,       loc_omp_serialization_time
@@ -439,6 +447,8 @@ subroutine check_dlb_pop_metrics_layout
 #define FIELD useful_time
 #include THIS_FILE
 #define FIELD mpi_time
+#include THIS_FILE
+#define FIELD mpi_worker_idle_time
 #include THIS_FILE
 #define FIELD omp_load_imbalance_time
 #include THIS_FILE

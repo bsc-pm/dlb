@@ -65,6 +65,9 @@ typedef struct dlb_monitor_t {
     int64_t     useful_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in MPI inside the region */
     int64_t     mpi_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent by worker threads
+     * outside parallel regions while the primary thread is inside MPI */
+    int64_t     mpi_worker_idle_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent due to load
      * imbalance in OpenMP parallel regions */
     int64_t     omp_load_imbalance_time;
@@ -121,6 +124,9 @@ typedef struct dlb_pop_metrics_t {
     int64_t     useful_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in MPI */
     int64_t     mpi_time;
+    /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent by worker threads
+     * outside parallel regions while the primary thread is inside MPI */
+    int64_t     mpi_worker_idle_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent due to load
      * imbalance in OpenMP parallel regions */
     int64_t     omp_load_imbalance_time;

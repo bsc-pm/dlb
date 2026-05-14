@@ -111,6 +111,10 @@ void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
     if (talp_flags.have_mpi) {
         info("### Not useful MPI:                           %"PRId64" ns",
                 monitor->mpi_time);
+        if (talp_flags.have_openmp) {
+            info("### Not useful MPI in worker threads:         %"PRId64" ns",
+                    monitor->mpi_worker_idle_time);
+        }
     }
     if (talp_flags.have_openmp) {
         info("### Not useful OMP Load Balance:              %"PRId64" ns",
@@ -284,6 +288,7 @@ static void pop_metrics_to_json(FILE *out_file) {
                     "      \"elapsedTime\": %"PRId64",\n"
                     "      \"usefulTime\": %"PRId64",\n"
                     "      \"mpiTime\": %"PRId64",\n"
+                    "      \"mpiWorkerIdleTime\": %"PRId64",\n"
                     "      \"ompLoadImbalanceTime\": %"PRId64",\n"
                     "      \"ompSchedulingTime\": %"PRId64",\n"
                     "      \"ompSerializationTime\": %"PRId64",\n"
@@ -326,6 +331,7 @@ static void pop_metrics_to_json(FILE *out_file) {
                     record->elapsed_time,
                     record->useful_time,
                     record->mpi_time,
+                    record->mpi_worker_idle_time,
                     record->omp_load_imbalance_time,
                     record->omp_scheduling_time,
                     record->omp_serialization_time,
@@ -563,6 +569,7 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
                 "elapsedTime,"
                 "usefulTime,"
                 "mpiTime,"
+                "mpiWorkerIdleTime,"
                 "ompLoadImbalanceTime,"
                 "ompSchedulingTime,"
                 "ompSerializationTime,"
@@ -609,6 +616,7 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
                 "%"PRId64"," /* elapsedTime */
                 "%"PRId64"," /* usefulTime */
                 "%"PRId64"," /* mpiTime */
+                "%"PRId64"," /* mpiWorkerIdleTime */
                 "%"PRId64"," /* ompLoadImbalanceTime */
                 "%"PRId64"," /* ompSchedulingTime */
                 "%"PRId64"," /* ompSerializationTime */
@@ -645,6 +653,7 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
                 record->elapsed_time,
                 record->useful_time,
                 record->mpi_time,
+                record->mpi_worker_idle_time,
                 record->omp_load_imbalance_time,
                 record->omp_scheduling_time,
                 record->omp_serialization_time,
@@ -1031,6 +1040,10 @@ static void process_print(void) {
                 info("### Not useful MPI:                           %"PRId64" ns",
                         process_record->monitor.mpi_time);
             }
+            if (process_record->monitor.mpi_worker_idle_time > 0) {
+                info("### Not useful MPI in worker threads:         %"PRId64" ns",
+                        process_record->monitor.mpi_worker_idle_time);
+            }
             if (process_record->monitor.omp_load_imbalance_time > 0
                     || process_record->monitor.omp_scheduling_time > 0
                     || process_record->monitor.omp_serialization_time > 0) {
@@ -1106,6 +1119,7 @@ static void process_to_json(FILE *out_file) {
                 "        \"elapsedTime\": %"PRId64",\n"
                 "        \"usefulTime\": %"PRId64",\n"
                 "        \"mpiTime\": %"PRId64",\n"
+                "        \"mpiWorkerIdleTime\": %"PRId64",\n"
                 "        \"ompLoadImbalanceTime\": %"PRId64",\n"
                 "        \"ompSchedulingTime\": %"PRId64",\n"
                 "        \"ompSerializationTime\": %"PRId64",\n"
@@ -1131,6 +1145,7 @@ static void process_to_json(FILE *out_file) {
                 process_record->monitor.elapsed_time,
                 process_record->monitor.useful_time,
                 process_record->monitor.mpi_time,
+                process_record->monitor.mpi_worker_idle_time,
                 process_record->monitor.omp_load_imbalance_time,
                 process_record->monitor.omp_scheduling_time,
                 process_record->monitor.omp_serialization_time,
@@ -1239,6 +1254,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                 "ElapsedTime,"
                 "UsefulTime,"
                 "MPITime,"
+                "MPIWorkerIdleTime,"
                 "OMPLoadImbalance,"
                 "OMPSchedulingTime,"
                 "OMPSerializationTime,"
@@ -1277,6 +1293,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%"PRId64","    /* ElapsedTime */
                     "%"PRId64","    /* UsefulTime */
                     "%"PRId64","    /* MPITime */
+                    "%"PRId64","    /* MPIWorkerIdleTime */
                     "%"PRId64","    /* OMPLoadImbalance */
                     "%"PRId64","    /* OMPSchedulingTime */
                     "%"PRId64","    /* OMPSerializationTime */
@@ -1302,6 +1319,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     process_record->monitor.elapsed_time,
                     process_record->monitor.useful_time,
                     process_record->monitor.mpi_time,
+                    process_record->monitor.mpi_worker_idle_time,
                     process_record->monitor.omp_load_imbalance_time,
                     process_record->monitor.omp_scheduling_time,
                     process_record->monitor.omp_serialization_time,
@@ -1338,6 +1356,7 @@ static void process_to_txt(FILE *out_file) {
                     "### Elapsed time:                             %"PRId64" ns\n"
                     "### Useful time:                              %"PRId64" ns\n"
                     "### Not useful MPI:                           %"PRId64" ns\n"
+                    "### Not useful MPI in worker threads:         %"PRId64" ns\n"
                     "### Not useful OMP Load Imbalance:            %"PRId64" ns\n"
                     "### Not useful OMP Scheduling:                %"PRId64" ns\n"
                     "### Not useful OMP Serialization:             %"PRId64" ns\n"
@@ -1353,6 +1372,7 @@ static void process_to_txt(FILE *out_file) {
                     process_record->monitor.elapsed_time,
                     process_record->monitor.useful_time,
                     process_record->monitor.mpi_time,
+                    process_record->monitor.mpi_worker_idle_time,
                     process_record->monitor.omp_load_imbalance_time,
                     process_record->monitor.omp_scheduling_time,
                     process_record->monitor.omp_serialization_time,

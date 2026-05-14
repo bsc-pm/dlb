@@ -51,6 +51,7 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
     struct {
         atomic_int_least64_t useful;
         atomic_int_least64_t not_useful_mpi;
+        atomic_int_least64_t not_useful_omp_during_mpi;
         atomic_int_least64_t not_useful_omp_in;
         atomic_int_least64_t not_useful_omp_out;
         atomic_int_least64_t not_useful_gpu;
@@ -83,6 +84,7 @@ typedef struct talp_macrosample_t {
     struct {
         int64_t useful;
         int64_t not_useful_mpi;
+        int64_t not_useful_omp_during_mpi;
         int64_t not_useful_omp_in_lb;
         int64_t not_useful_omp_in_sched;
         int64_t not_useful_omp_out;

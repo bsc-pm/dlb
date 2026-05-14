@@ -75,6 +75,7 @@ typedef struct pop_base_metrics_t {
     int64_t elapsed_time;
     int64_t useful_time;
     int64_t mpi_time;
+    int64_t mpi_worker_idle_time;
     int64_t omp_load_imbalance_time;
     int64_t omp_scheduling_time;
     int64_t omp_serialization_time;
