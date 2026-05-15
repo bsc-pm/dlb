@@ -478,10 +478,20 @@ static void parse_system_files(void) {
 
                 /* Save node mask */
                 if (CPU_COUNT(&node_mask) > 0) {
+                    int prev_num_nodes = num_nodes;
                     num_nodes = max_int(num_nodes, node_id + 1);
                     mu_cpuset_t *p = realloc(sys.node_masks, num_nodes*sizeof(mu_cpuset_t));
                     fatal_cond(!p, "realloc failed");
                     sys.node_masks = p;
+
+                    /* Everytime we reallocate, we need to initialize
+                     * [prev_size..new_size-1] with empty elements */
+                    for (int i = prev_num_nodes; i < node_id; ++i) {
+                        mu_cpuset_t *node_cpuset = &sys.node_masks[i];
+                        mu_cpuset_from_glibc_sched_affinity(node_cpuset, &empty_mask);
+                    }
+
+                    /* New value */
                     mu_cpuset_from_glibc_sched_affinity(&sys.node_masks[node_id], &node_mask);
                 }
             }

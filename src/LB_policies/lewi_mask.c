@@ -153,6 +153,7 @@ static void cpu_subset_destructor(void *p) {
     array_cpuid_t_destroy(_cpu_subset);
     free(_cpu_subset);
     _cpu_subset = NULL;
+    pthread_setspecific(cpu_subset_key, NULL);
 }
 
 static void make_cpu_subset_key(void) {
@@ -189,6 +190,7 @@ static void tasks_destructor(void *p) {
     array_cpuinfo_task_t_destroy(_tasks);
     free(_tasks);
     _tasks = NULL;
+    pthread_setspecific(tasks_key, NULL);
 }
 
 static void make_tasks_key(void) {

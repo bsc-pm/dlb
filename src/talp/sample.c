@@ -121,15 +121,20 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
         int num_samples = ++registry->num_samples;
         void *samples = realloc(registry->samples, sizeof(talp_sample_t*)*num_samples);
         if (samples) {
-            registry->samples = samples;
-            void *new_sample;
+            void *new_sample = NULL;
             if (posix_memalign(&new_sample, DLB_CACHE_LINE, sizeof(talp_sample_t)) == 0) {
                 _tls_sample = new_sample;
+                *_tls_sample = (talp_sample_t){0};
+                registry->samples = samples;
                 registry->samples[num_samples-1] = new_sample;
                 if (num_samples == 1) {
                     _is_main_sample = true;
                     _is_main_sample_in_serial_mode = true;
                 }
+            } else {
+                // error
+                free(new_sample);
+                _tls_sample = NULL;
             }
         }
     }
@@ -147,9 +152,7 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
         last_updated_ts = get_time_in_ns();
     }
 
-    *_tls_sample = (const talp_sample_t) {
-        .last_updated_ts = last_updated_ts,
-    };
+    _tls_sample->last_updated_ts = last_updated_ts;
 
     set_state(talp_info, _tls_sample, TALP_STATE_DISABLED);
 

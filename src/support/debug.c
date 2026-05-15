@@ -76,7 +76,8 @@ void debug_init(const options_t *options) {
     int i = 0;
     if ( vb_fmt & VBF_NODE ) {
         char hostname[VBFORMAT_LEN/2];
-        gethostname( hostname, VBFORMAT_LEN/2);
+        gethostname(hostname, sizeof(hostname));
+        hostname[sizeof(hostname)-1] = '\0';
         i += sprintf( &fmt_str[i], "%s:", hostname);
     }
 #ifdef MPI_LIB
