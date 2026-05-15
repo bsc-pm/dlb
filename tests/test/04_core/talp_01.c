@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -31,6 +31,7 @@
 #include "support/atomic.h"
 #include "support/mytime.h"
 #include "talp/regions.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 #include "talp/talp_mpi.h"
 #include "talp/talp_types.h"
@@ -62,6 +63,7 @@ int main(int argc, char *argv[]) {
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;
+    sample_registry_t *registry = &talp_info->sample_registry;
     dlb_monitor_t *global_monitor = talp_info->monitor;
 
     /* Disable external profiler for the following tests */
@@ -76,40 +78,44 @@ int main(int argc, char *argv[]) {
     assert( global_monitor->elapsed_time == 0 );
     assert( global_monitor->mpi_time == 0 );
     assert( global_monitor->useful_time == 0 );
-    assert( talp_info->samples[0]->timers.useful == 0 );
-    assert( talp_info->samples[0]->timers.not_useful_mpi == 0 );
-    assert( talp_info->samples[0]->state == TALP_STATE_USEFUL );
-    assert( talp_info->ncpus == 1 );
+    assert( registry->samples[0]->timers.useful == 0 );
+    assert( registry->samples[0]->timers.not_useful_mpi == 0 );
+    assert( registry->samples[0]->state == TALP_STATE_USEFUL );
+    assert( registry->num_samples == 1 );
 
     /* We are getting timestamps before and after talp_into_sync_call / talp_out_of_sync_call
-     * to check whether sample->last_updated_timestamp is updated. Equivalence
+     * to check whether sample->last_updated_ts is updated. Equivalence
      * is accepted because clock_gettime is allowed to return the same value on
      * successive calls. */
     int64_t time_before;
     int64_t time_after;
 
+    sync_call_flags_t no_blocking = { .is_blocking = false, .is_collective = false };
+    sync_call_flags_t blocking = { .is_blocking = true, .is_collective = true };
+
     /* Entering MPI, sample is updated, region not yet */
     time_before = get_time_in_ns();
-    talp_into_sync_call(&spd, /* is_blocking_collective */ false);
+    talp_into_sync_call(&spd, no_blocking);
     time_after = get_time_in_ns();
-    assert( talp_info->samples[0]->last_updated_timestamp >= time_before
-            && talp_info->samples[0]->last_updated_timestamp <= time_after );
-    assert( talp_info->samples[0]->timers.useful > 0 );
-    assert( talp_info->samples[0]->timers.not_useful_mpi == 0 );
-    assert( talp_info->samples[0]->state == TALP_STATE_NOT_USEFUL_MPI );
+    assert( registry->samples[0]->last_updated_ts >= time_before
+            && registry->samples[0]->last_updated_ts <= time_after );
+    assert( registry->samples[0]->timers.useful > 0 );
+    assert( registry->samples[0]->timers.not_useful_mpi == 0 );
+    assert( registry->samples[0]->state == TALP_STATE_NOT_USEFUL_MPI );
 
     /* Leaving MPI */
     time_before = get_time_in_ns();
-    talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
+    talp_out_of_sync_call(&spd, no_blocking);
     time_after = get_time_in_ns();
-    assert( talp_info->samples[0]->last_updated_timestamp >= time_before
-            && talp_info->samples[0]->last_updated_timestamp <= time_after );
-    assert( talp_info->samples[0]->timers.useful > 0 );
-    assert( talp_info->samples[0]->timers.not_useful_mpi > 0 );
-    assert( talp_info->samples[0]->state == TALP_STATE_USEFUL );
+    assert( registry->samples[0]->last_updated_ts >= time_before
+            && registry->samples[0]->last_updated_ts <= time_after );
+    assert( registry->samples[0]->timers.useful > 0 );
+    assert( registry->samples[0]->timers.not_useful_mpi > 0 );
+    assert( registry->samples[0]->state == TALP_STATE_USEFUL );
 
     /* Update regions */
-    assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
+    talp_sample_update(talp_info);
+    assert( talp_aggregate_samples_to_regions(talp_info) == DLB_SUCCESS );
     assert( global_monitor->mpi_time > 0 );
     assert( global_monitor->useful_time > 0 );
 
@@ -125,8 +131,8 @@ int main(int argc, char *argv[]) {
     mpi_time = -1;
     useful_time = -1;
     talp_info->flags.external_profiler = true;
-    talp_into_sync_call(&spd, /* is_blocking_collective */ true);
-    talp_out_of_sync_call(&spd, /* is_blocking_collective */ true);
+    talp_into_sync_call(&spd, blocking);
+    talp_out_of_sync_call(&spd, blocking);
     assert( shmem_talp__get_times(0, &mpi_time, &useful_time) == DLB_SUCCESS );
     assert( mpi_time > 0 );
     assert( useful_time > 0 );
@@ -134,8 +140,8 @@ int main(int argc, char *argv[]) {
     /* Create a custom monitoring region */
     dlb_monitor_t *monitor = region_register(&spd, "Test");
     region_start(&spd, monitor);
-    talp_into_sync_call(&spd, /* is_blocking_collective */ false);
-    talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
+    talp_into_sync_call(&spd, no_blocking);
+    talp_out_of_sync_call(&spd, no_blocking);
     region_stop(&spd, monitor);
 
     /* Finalize MPI */

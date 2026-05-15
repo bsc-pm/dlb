@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -31,6 +31,7 @@
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 #include "talp/regions.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 
 
@@ -225,10 +226,14 @@ int DLB_MonitoringRegionReport(const dlb_monitor_t *handle){
 DLB_EXPORT_SYMBOL
 int DLB_MonitoringRegionsUpdate(void) {
     spd_enter_dlb(thread_spd);
-    if (unlikely(!thread_spd->talp_info)) {
+
+    void *talp_info = thread_spd->talp_info;
+    if (unlikely(!talp_info)) {
         return DLB_ERR_NOTALP;
     }
-    return talp_flush_samples_to_regions(thread_spd);
+
+    talp_sample_update(talp_info);
+    return talp_aggregate_samples_to_regions(talp_info);
 }
 
 DLB_EXPORT_SYMBOL

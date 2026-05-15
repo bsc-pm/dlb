@@ -17,41 +17,29 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_H
-#define TALP_H
+#ifndef SAMPLE_H
+#define SAMPLE_H
 
-#include "apis/dlb_talp.h"
-#include "support/atomic.h"
 #include "talp/talp_types.h"
 
-#include <pthread.h>
-#include <sched.h>
-#include <stdbool.h>
-#include <stdint.h>
+void talp_sample_init(talp_info_t *talp_info);
+void talp_sample_finalize(talp_info_t *talp_info);
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
+bool talp_sample_is_main(void);
+bool talp_sample_is_mine(const talp_sample_t *sample);
+void talp_sample_set_main_serial_mode(bool serial_mode);
+talp_sample_t* talp_sample_get(talp_info_t *talp_info);
 
+void talp_sample_update(talp_info_t *talp_info);
+void talp_sample_update_foreign(talp_info_t *talp_info, talp_sample_t *sample, int64_t now);
+void talp_sample_set_state(talp_info_t *talp_info, talp_sample_state_t new_state);
 
-/* TALP init / finalize */
-void talp_init(subprocess_descriptor_t *spd);
-void talp_finalize(subprocess_descriptor_t *spd);
+void talp_sample_aggregate_all_to_macrosample(
+        talp_info_t *restrict talp_info, talp_macrosample_t *restrict macrosample);
+void talp_sample_aggregate_subset_to_macrosample(
+        talp_info_t *restrict talp_info,
+        talp_sample_t **restrict samples,
+        unsigned int nelems,
+        talp_macrosample_t *restrict macrosample);
 
-
-/* TALP samples aggregation */
-int talp_aggregate_samples_to_regions(talp_info_t *talp_info);
-void talp_aggregate_subset_to_regions(talp_info_t *talp_info,
-        talp_sample_t **samples, unsigned int nelems);
-
-
-/* TALP collect functions for 3rd party programs */
-int talp_query_pop_node_metrics(const char *name, struct dlb_node_metrics_t *node_metrics);
-
-
-/* TALP collect functions for 1st party programs */
-int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
-        struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);
-int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
-        struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
-
-
-#endif /* TALP_H */
+#endif /* SAMPLE_H */

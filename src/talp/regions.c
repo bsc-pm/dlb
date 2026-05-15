@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -31,6 +31,7 @@
 #include "support/gtree.h"
 #include "support/mask_utils.h"
 #include "support/tracing.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 #include "talp/talp_output.h"
 #include "talp/talp_types.h"
@@ -310,15 +311,19 @@ int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
 
     if (!monitor_data->flags.started && monitor_data->flags.enabled) {
+
+        /* Update this sample first */
+        talp_sample_update(talp_info);
+
         /* Gather samples from all threads and update regions */
-        talp_flush_samples_to_regions(spd);
+        talp_aggregate_samples_to_regions(talp_info);
 
         verbose(VB_TALP, "Starting region %s", monitor->name);
         instrument_event(MONITOR_REGION, monitor_data->id, EVENT_BEGIN);
 
         /* Thread sample was just updated, use timestamp as starting time */
-        talp_sample_t *thread_sample = talp_get_thread_sample(spd);
-        monitor->start_time = thread_sample->last_updated_timestamp;
+        talp_sample_t *thread_sample = talp_sample_get(talp_info);
+        monitor->start_time = thread_sample->last_updated_ts;
         monitor->stop_time = 0;
 
         pthread_mutex_lock(&talp_info->regions_mutex);
@@ -332,7 +337,7 @@ int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
          * but on certain cases where neither talp_mpi_init nor talp_openmp_init
          * have been called, this is necessary */
         if (thread_sample->state != TALP_STATE_USEFUL) {
-            talp_set_sample_state(spd, thread_sample, TALP_STATE_USEFUL);
+            talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
         }
 
         error = DLB_SUCCESS;
@@ -362,12 +367,16 @@ int region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
     monitor_data_t *monitor_data = monitor->_data;
 
     if (monitor_data->flags.started) {
+
+        /* Update this sample first */
+        talp_sample_update(talp_info);
+
         /* Gather samples from all threads and update regions */
-        talp_flush_samples_to_regions(spd);
+        talp_aggregate_samples_to_regions(talp_info);
 
         /* Stop timer */
-        talp_sample_t *thread_sample = talp_get_thread_sample(spd);
-        monitor->stop_time = thread_sample->last_updated_timestamp;
+        talp_sample_t *thread_sample = talp_sample_get(talp_info);
+        monitor->stop_time = thread_sample->last_updated_ts;
         monitor->elapsed_time += monitor->stop_time - monitor->start_time;
         ++(monitor->num_measurements);
 

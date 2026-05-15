@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -23,19 +23,13 @@
 #include "LB_core/spd.h"
 #include "apis/dlb_types.h"
 #include "support/options.h"
+#include "support/types.h"
 
 #include <sched.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
 
-typedef struct sync_call_flags_t {
-    bool is_mpi:1;
-    bool is_blocking:1;
-    bool is_collective:1;
-    bool is_dlb_barrier:1;
-    bool do_lewi:1;
-} sync_call_flags_t;
 
 /* Status */
 int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,

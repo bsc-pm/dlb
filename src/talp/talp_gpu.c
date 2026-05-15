@@ -27,6 +27,7 @@
 #include "talp/backend.h"
 #include "talp/backend_manager.h"
 #include "talp/regions.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 #include "talp/talp_output.h"
 #include "talp/talp_types.h"
@@ -97,16 +98,13 @@ void talp_gpu_finalize(void) {
 void talp_gpu_enter_runtime(void) {
 
     spd_enter_dlb(thread_spd);
-    const subprocess_descriptor_t *spd = thread_spd;
-    const talp_info_t *talp_info = spd->talp_info;
+    talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
         /* Update sample */
-        talp_sample_t *sample = talp_get_thread_sample(spd);
-        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
-        // or: talp_flush_samples_to_regions(spd);
+        talp_sample_update(talp_info);
 
         /* Into Sync call -> not_useful_gpu */
-        talp_set_sample_state(spd, sample, TALP_STATE_NOT_USEFUL_GPU);
+        talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_GPU);
     }
 }
 
@@ -115,17 +113,23 @@ void talp_gpu_enter_runtime(void) {
 void talp_gpu_exit_runtime(void) {
 
     spd_enter_dlb(thread_spd);
-    const subprocess_descriptor_t *spd = thread_spd;
-    const talp_info_t *talp_info = spd->talp_info;
+    talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
         /* Update sample */
-        talp_sample_t *sample = talp_get_thread_sample(spd);
+        talp_sample_update(talp_info);
+
+        /* Add statistic */
+        talp_sample_t *sample = talp_sample_get(talp_info);
         DLB_ATOMIC_ADD_RLX(&sample->stats.num_gpu_runtime_calls, 1);
-        talp_update_sample(spd, sample, TALP_NO_TIMESTAMP);
-        // or: talp_flush_samples_to_regions(spd);
 
         /* Out of Sync call -> useful */
-        talp_set_sample_state(spd, sample, TALP_STATE_USEFUL);
+        talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
+
+        /* Only when needed, update all regions */
+        if (talp_info->flags.external_profiler
+                && talp_sample_is_main()) {
+            talp_aggregate_samples_to_regions(talp_info);
+        }
     }
 }
 

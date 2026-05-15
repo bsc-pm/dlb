@@ -1,5 +1,5 @@
 #################################################################################
-#  Copyright 2009-2025 Barcelona Supercomputing Center                          #
+#  Copyright 2009-2026 Barcelona Supercomputing Center                          #
 #                                                                               #
 #  This file is part of the DLB library.                                        #
 #                                                                               #
@@ -285,6 +285,8 @@ SRCS = \
 	src/talp/perf_metrics.h                 \
 	src/talp/regions.c                      \
 	src/talp/regions.h                      \
+	src/talp/sample.c                       \
+	src/talp/sample.h                       \
 	src/talp/talp.c                         \
 	src/talp/talp.h                         \
 	src/talp/talp_mpi.c                     \

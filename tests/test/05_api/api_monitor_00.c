@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -106,11 +106,11 @@ int main(int argc, char **argv) {
         assert( region_is_started(custom_monitor) );
 
         /* Simulate MPI_Init + MPI_Barrier + MPI_Finalize */
-        bool is_blocking_collective = true;
+        sync_call_flags_t blocking = { .is_blocking = true, .is_collective = true };
         assert( DLB_Init(0, NULL, NULL) == DLB_ERR_INIT );
         talp_mpi_init(thread_spd);
-        talp_into_sync_call(thread_spd, is_blocking_collective);
-        talp_out_of_sync_call(thread_spd, is_blocking_collective);
+        talp_into_sync_call(thread_spd, blocking);
+        talp_out_of_sync_call(thread_spd, blocking);
         talp_mpi_finalize(thread_spd);
 
         /* Global monitor should have been updated and started again */

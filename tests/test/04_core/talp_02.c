@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -33,6 +33,7 @@
 #include "support/mask_utils.h"
 #include "support/mytime.h"
 #include "talp/regions.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 #include "talp/talp_mpi.h"
 #include "talp/talp_types.h"
@@ -97,14 +98,15 @@ static void* observer_func(void *arg) {
     int num_measurements = global_monitor->num_measurements;
 
     /* An observer may call MPI functions without affecting TALP */
-    talp_into_sync_call(spd, true);
-    talp_out_of_sync_call(spd, true);
+    sync_call_flags_t blocking = { .is_blocking = true, .is_collective = true };
+    talp_into_sync_call(spd, blocking);
+    talp_out_of_sync_call(spd, blocking);
     assert( num_measurements == global_monitor->num_measurements );
 
     /* An observer may not start/stop/update regions */
     assert( region_start(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
     assert( region_stop(spd, DLB_GLOBAL_REGION) == DLB_ERR_PERM );
-    assert( talp_flush_samples_to_regions(spd) == DLB_ERR_PERM );
+    assert( talp_aggregate_samples_to_regions(spd->talp_info) == DLB_ERR_PERM );
 
     /* Get MPI metrics */
     dlb_node_metrics_t node_metrics;
@@ -147,8 +149,9 @@ int main(int argc, char *argv[]) {
         talp_mpi_init(&spd);
 
         /* MPI call */
-        talp_into_sync_call(&spd, /* is_blocking_collective */ false);
-        talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
+        sync_call_flags_t no_blocking = { .is_blocking = false, .is_collective = false };
+        talp_into_sync_call(&spd, no_blocking);
+        talp_out_of_sync_call(&spd, no_blocking);
 
         /* Stop global monitoring region so that we can collect its metrics twice
          * with the same values */
@@ -199,11 +202,13 @@ int main(int argc, char *argv[]) {
         talp_mpi_init(&spd);
 
         /* MPI call */
-        talp_into_sync_call(&spd, /* is_blocking_collective */ false);
-        talp_out_of_sync_call(&spd, /* is_blocking_collective */ false);
+        sync_call_flags_t no_blocking = { .is_blocking = false, .is_collective = false };
+        talp_into_sync_call(&spd, no_blocking);
+        talp_out_of_sync_call(&spd, no_blocking);
 
         /* Observer threads cannot force-update regions, do it before */
-        assert( talp_flush_samples_to_regions(&spd) == DLB_SUCCESS );
+        talp_sample_update(talp_info);
+        assert( talp_aggregate_samples_to_regions(talp_info) == DLB_SUCCESS );
 
         /* Observer thread is created here */
         pthread_t observer_pthread;
@@ -211,11 +216,12 @@ int main(int argc, char *argv[]) {
         pthread_join(observer_pthread, NULL);
 
         /* MPI call (force update) */
-        talp_into_sync_call(&spd, /* is_blocking_collective */ true);
-        talp_out_of_sync_call(&spd, /* is_blocking_collective */ true);
+        sync_call_flags_t blocking = { .is_blocking = false, .is_collective = false };
+        talp_into_sync_call(&spd, blocking);
+        talp_out_of_sync_call(&spd, blocking);
 
         /* Upon gathering samples, only one thread sample has been reduced */
-        assert( talp_info->ncpus == 1 );
+        assert( talp_info->sample_registry.num_samples == 1 );
 
         /* Finalize */
         talp_mpi_finalize(&spd);

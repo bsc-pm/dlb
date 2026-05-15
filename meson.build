@@ -170,6 +170,8 @@ sources = [
   'src/talp/perf_metrics.h',
   'src/talp/regions.c',
   'src/talp/regions.h',
+  'src/talp/sample.c',
+  'src/talp/sample.h',
   'src/talp/talp.c',
   'src/talp/talp.h',
   'src/talp/talp_mpi.c',

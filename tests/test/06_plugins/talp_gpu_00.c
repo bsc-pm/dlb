@@ -28,6 +28,7 @@
 #include "apis/dlb_errors.h"
 #include "apis/dlb_talp.h"
 #include "talp/backend.h"
+#include "talp/sample.h"
 #include "talp/talp.h"
 #include "LB_core/spd.h"
 
@@ -49,7 +50,7 @@ int main(int argc, char *argv[]) {
     assert( global_monitor->num_measurements == 0 );
 
     /* Get thread sample */
-    const talp_sample_t* thread_sample = talp_get_thread_sample(&spd);
+    const talp_sample_t* thread_sample = talp_sample_get(talp_info);
     assert( thread_sample->stats.num_gpu_runtime_calls == 0 );
 
     assert( talp_gpu_init(&spd) == DLB_SUCCESS );
