@@ -15,6 +15,7 @@ tests = {
     'options_00'          : {},
     'queue_template_00'   : {},
     'queues_00'           : {},
+    'small_array_00'      : {},
     'talp_output_00'      : {},
     'types_00'            : {},
   },

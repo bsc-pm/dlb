@@ -17,36 +17,67 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef SMALL_ARRAY_H
-#define SMALL_ARRAY_H
+/*<testinfo>
+    test_generator="gens/basic-generator"
+</testinfo>*/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "support/small_array.h"
 
-#include "support/queues.h"
-#include "support/types.h"
+#include <stdio.h>
+#include <assert.h>
 
-
-#define SMALL_ARRAY_TYPE int
-#include "support/small_array_template.h"
-
-
-#define SMALL_ARRAY_TYPE pid_t
-#include "support/small_array_template.h"
+/* Returns 1 if the pointer lives inside the struct's inline buffer. */
+#define IS_INLINE(arr_var, struct_var) \
+    ((arr_var) == ((__##struct_var).buffer))
 
 
-#define SMALL_ARRAY_TYPE cpuid_t
-#include "support/small_array_template.h"
+static void test_int_inline(void)
+{
+    size_t N = SMALL_ARRAY_DEFAULT_SIZE / 2;
+    SMALL_ARRAY(int, arr, N);
 
+    assert(IS_INLINE(arr, arr) && "int: small array should use inline buffer");
+    assert(__arr.size == N);
 
-#define SMALL_ARRAY_TYPE lewi_request_t
-#include "support/small_array_template.h"
+    for (size_t i = 0; i < N; i++) arr[i] = (int)i * 3;
+    for (size_t i = 0; i < N; i++) assert(arr[i] == (int)i * 3);
+}
 
+static void test_int_heap(void)
+{
+    const size_t N = SMALL_ARRAY_DEFAULT_SIZE * 2;
+    SMALL_ARRAY(int, arr, N);
 
-#define SMALL_ARRAY(type, var_name, size) \
-    small_array_##type##_t __##var_name __attribute__ ((__cleanup__(small_array_##type##_free))); \
-    type *var_name = small_array_##type##_init(&__##var_name, size);
+    assert(!IS_INLINE(arr, arr) && "int: large array should heap-allocate");
+    assert(__arr.size == N);
 
+    for (size_t i = 0; i < N; i++) arr[i] = (int)i;
+    for (size_t i = 0; i < N; i++) assert(arr[i] == (int)i);
+}
 
-#endif /* SMALL_ARRAY_H */
+static void test_int_boundary(void)
+{
+    SMALL_ARRAY(int, arr, SMALL_ARRAY_DEFAULT_SIZE);
+    assert(IS_INLINE(arr, arr) && "int: boundary size should use inline buffer");
+}
+
+static void test_size_one(void)
+{
+    SMALL_ARRAY(int, arr, 1);
+    assert(IS_INLINE(arr, arr));
+    arr[0] = 42;
+    assert(arr[0] == 42);
+}
+
+int main(void) {
+
+    printf("SMALL_ARRAY_DEFAULT_SIZE = %d\n\n",
+           SMALL_ARRAY_DEFAULT_SIZE);
+
+    test_int_inline();
+    test_int_heap();
+    test_int_boundary();
+    test_size_one();
+
+    return 0;
+}

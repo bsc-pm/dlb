@@ -217,6 +217,7 @@ COMMON_SRCS = \
 	src/support/queues.c                    \
 	src/support/queues.h                    \
 	src/support/small_array.h               \
+	src/support/small_array_template.h      \
 	src/support/types.c                     \
 	src/support/types.h                     \
 	src/talp/backend.h                      \
