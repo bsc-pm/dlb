@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 extern __thread bool thread_is_observer;
+extern __thread bool thread_is_known;
 
 /* Update all open nested regions (so, excluding the innermost) and add the
  * time since its start time until the sample last timestamp (which is the time
@@ -108,6 +109,9 @@ void talp_openmp_thread_begin(ompt_thread_t thread_type) {
     talp_info_t *talp_info = spd->talp_info;
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
+
+    /* OpenMP threads are known threads */
+    thread_is_known = true;
 
     /* Initial thread is already in useful state, set omp_out for others */
     talp_sample_t *sample = talp_sample_get(talp_info);

@@ -32,6 +32,7 @@
 
 
 extern __thread bool thread_is_observer;
+extern __thread bool thread_is_known;
 
 static __thread talp_sample_t* _tls_sample = NULL;
 static __thread bool _is_main_sample = false;
@@ -111,8 +112,8 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
     /* Thread already has an allocated sample, return it */
     if (likely(_tls_sample != NULL)) return _tls_sample;
 
-    /* Observer threads don't have a valid sample */
-    if (unlikely(thread_is_observer)) return NULL;
+    /* Observer and unknown threads don't have a valid sample */
+    if (unlikely(thread_is_observer || !thread_is_known)) return NULL;
 
     /* Otherwise, allocate */
     sample_registry_t *registry = &talp_info->sample_registry;
@@ -175,7 +176,7 @@ void talp_sample_update(talp_info_t *talp_info) {
 
     talp_sample_t *sample = talp_sample_get(talp_info);
 
-    /* Observer threads ignore this function */
+    /* Observer and unknown threads ignore this function */
     if (unlikely(sample == NULL)) return;
 
     /* Compute duration and set new last_updated_ts */
@@ -230,7 +231,7 @@ void talp_sample_update(talp_info_t *talp_info) {
 
 void talp_sample_update_foreign(talp_info_t *talp_info, talp_sample_t *sample, int64_t now) {
 
-    /* Observer threads ignore this function */
+    /* Observer and unknown threads ignore this function */
     if (unlikely(sample == NULL)) return;
 
     /* Compute duration and set new last_updated_ts */

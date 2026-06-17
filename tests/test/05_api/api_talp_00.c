@@ -32,8 +32,10 @@
 #include <pthread.h>
 #include <string.h>
 
+extern __thread bool thread_is_known;
 
 static void* test_observer_thread(void* arg) {
+
     assert( DLB_SetObserverRole(true) == DLB_SUCCESS );
 
     assert( DLB_MonitoringRegionStart(DLB_GLOBAL_REGION) == DLB_ERR_PERM );
@@ -42,7 +44,17 @@ static void* test_observer_thread(void* arg) {
     return NULL;
 }
 
+static void* test_unknown_thread(void* arg) {
+
+    assert( DLB_MonitoringRegionStart(DLB_GLOBAL_REGION) == DLB_ERR_PERM );
+    assert( DLB_MonitoringRegionStop(DLB_GLOBAL_REGION) == DLB_ERR_PERM );
+
+    return NULL;
+}
+
 static void* test_worker_thread(void* arg) {
+
+    thread_is_known = true;
 
     dlb_monitor_t *region1 = arg;
     assert( DLB_MonitoringRegionStart(region1) == DLB_SUCCESS );
@@ -65,6 +77,13 @@ int main(int argc, char *argv[]) {
     {
         pthread_t thread;
         assert( pthread_create(&thread, NULL, test_observer_thread, NULL) == 0 );
+        assert( pthread_join(thread, NULL) == 0 );
+    }
+
+    /* Test that an unknown thread cannot manage them either */
+    {
+        pthread_t thread;
+        assert( pthread_create(&thread, NULL, test_unknown_thread, NULL) == 0 );
         assert( pthread_join(thread, NULL) == 0 );
     }
 
