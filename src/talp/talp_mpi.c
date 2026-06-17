@@ -39,6 +39,7 @@
 #include <string.h>
 
 extern __thread bool thread_is_observer;
+extern __thread bool thread_is_known;
 
 
 #ifdef MPI_LIB
@@ -128,6 +129,7 @@ static void talp_register_common_mpi_regions(const subprocess_descriptor_t *spd)
 void talp_mpi_init(const subprocess_descriptor_t *spd) {
 
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_init");
+    ensure(thread_is_known, "An unknown thread cannot call talp_mpi_init");
 
     talp_info_t *talp_info = spd->talp_info;
 
@@ -148,6 +150,7 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
 void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
 
     ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_finalize");
+    ensure(thread_is_known, "An unknown thread cannot call talp_mpi_finalize");
 
     talp_info_t *talp_info = spd->talp_info;
 
@@ -232,8 +235,8 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
 
 void talp_into_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t flags) {
 
-    /* Observer threads may call MPI functions, but TALP must ignore them */
-    if (unlikely(thread_is_observer)) return;
+    /* Observer and unknown threads may call MPI functions, but TALP must ignore them */
+    if (unlikely(thread_is_observer || !thread_is_known)) return;
 
     talp_info_t *talp_info = spd->talp_info;
 
@@ -248,8 +251,8 @@ void talp_into_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t f
 
 void talp_out_of_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t flags) {
 
-    /* Observer threads may call MPI functions, but TALP must ignore them */
-    if (unlikely(thread_is_observer)) return;
+    /* Observer and unknown threads may call MPI functions, but TALP must ignore them */
+    if (unlikely(thread_is_observer || !thread_is_known)) return;
 
     talp_info_t *talp_info = spd->talp_info;
 

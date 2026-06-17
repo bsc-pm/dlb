@@ -42,6 +42,7 @@
 #include <string.h>
 
 extern __thread bool thread_is_observer;
+extern __thread bool thread_is_known;
 
 
 /*********************************************************************************/
@@ -299,8 +300,8 @@ int region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
 }
 
 int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    /* Observer threads don't have a valid sample so they cannot start/stop regions */
-    if (unlikely(thread_is_observer)) return DLB_ERR_PERM;
+    /* Observer and unknown threads don't have a valid sample so they cannot start/stop regions */
+    if (unlikely(thread_is_observer || !thread_is_known)) return DLB_ERR_PERM;
 
     talp_info_t *talp_info = spd->talp_info;
     if (monitor == DLB_GLOBAL_REGION) {
@@ -349,8 +350,8 @@ int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
 }
 
 int region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
-    /* Observer threads don't have a valid sample so they cannot start/stop regions */
-    if (unlikely(thread_is_observer)) return DLB_ERR_PERM;
+    /* Observer and unknown threads don't have a valid sample so they cannot start/stop regions */
+    if (unlikely(thread_is_observer || !thread_is_known)) return DLB_ERR_PERM;
 
     talp_info_t *talp_info = spd->talp_info;
     if (monitor == DLB_GLOBAL_REGION) {

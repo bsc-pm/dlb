@@ -33,6 +33,9 @@
 #include "talp/talp_types.h"
 
 
+extern __thread bool thread_is_observer;
+extern __thread bool thread_is_known;
+
 static const backend_api_t *gpu_backend_api = NULL;
 static gpu_measurements_t gpu_sample = {0};
 
@@ -97,6 +100,9 @@ void talp_gpu_finalize(void) {
 // Called from GPU backend plugin: CPU enters GPU runtime
 void talp_gpu_enter_runtime(void) {
 
+    /* Observer and unknown threads may call GPU offload functions, but TALP must ignore them */
+    if (unlikely(thread_is_observer || !thread_is_known)) return;
+
     spd_enter_dlb(thread_spd);
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
@@ -111,6 +117,9 @@ void talp_gpu_enter_runtime(void) {
 
 // Called from GPU backend plugin: CPU exits GPU runtime
 void talp_gpu_exit_runtime(void) {
+
+    /* Observer and unknown threads may call GPU offload functions, but TALP must ignore them */
+    if (unlikely(thread_is_observer || !thread_is_known)) return;
 
     spd_enter_dlb(thread_spd);
     talp_info_t *talp_info = thread_spd->talp_info;
@@ -144,6 +153,9 @@ void talp_gpu_submit(const gpu_measurements_t *measurements) {
 
 // called from core
 void talp_gpu_collect(gpu_measurements_t *out) {
+
+    fatal_cond(thread_is_observer, "Observer thread collecting GPU metrics. Please report bug.");
+    fatal_cond(!thread_is_known, "Unknown thread collecting GPU metrics. Please report bug.");
 
     // flush GPU, may cause callback to talp_gpu_submit
     gpu_backend_api->flush();

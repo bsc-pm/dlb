@@ -55,6 +55,13 @@
 
 extern __thread bool thread_is_observer;
 
+/* In TALP, we don't want to measure any metrics from unknown threads that may
+ * call any MPI or Device offload function, since this may introduce errors
+ * with our sample aggregation logic.
+ * Main thread and OpenMP threads set this value to true;
+ */
+__thread bool thread_is_known = false;
+
 
 #ifdef MPI_LIB
 /* Returns the number of MPI processes that have HWC enabled */
@@ -85,6 +92,9 @@ void talp_init(subprocess_descriptor_t *spd) {
     ensure(!thread_is_observer, "An observer thread cannot call talp_init");
     verbose(VB_TALP, "Initializing TALP module with worker mask: %s",
             mu_to_str(&spd->process_mask));
+
+    /* This sould be main thread */
+    thread_is_known = true;
 
     /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
@@ -166,6 +176,7 @@ void talp_init(subprocess_descriptor_t *spd) {
 void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
     ensure(!thread_is_observer, "An observer thread cannot call talp_finalize");
+    ensure(thread_is_known, "An unknown thread cannot call talp_finalize");
     verbose(VB_TALP, "Finalizing TALP module");
 
     talp_info_t *talp_info = spd->talp_info;
@@ -290,8 +301,8 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
 /* Accumulate values from samples of all threads and update regions */
 int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
 
-    /* Observer threads don't have a valid sample so they cannot start/stop regions */
-    if (unlikely(thread_is_observer)) return DLB_ERR_PERM;
+    /* Observer and unknown threads can't aggregate samples */
+    if (unlikely(thread_is_observer || !thread_is_known)) return DLB_ERR_PERM;
 
     /* Accumulate samples from all threads */
     talp_macrosample_t macrosample = {0};
