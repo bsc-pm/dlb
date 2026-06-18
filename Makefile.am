@@ -160,32 +160,32 @@ SUFFIXES = .c.in .c .h.in .h .F90.in .F90
 
 .c.in.c:
 	$(PYGEN_verbose)$(MPI_GENERATOR) \
-		--input-file $< --output-file $@ \
-		--mpi-calls-bindings $(MPI_CALLS_BINDINGS) \
-		--mpi-calls-metadata $(MPI_CALLS_METADATA) \
+		--input-file "$<" --output-file "$@" \
+		--mpi-calls-bindings "$(MPI_CALLS_BINDINGS)" \
+		--mpi-calls-metadata "$(MPI_CALLS_METADATA)" \
 		$(pygen_opts)
 
 .h.in.h:
 	$(PYGEN_verbose)$(MPI_GENERATOR) \
-		--input-file $< --output-file $@ \
-		--mpi-calls-bindings $(MPI_CALLS_BINDINGS) \
-		--mpi-calls-metadata $(MPI_CALLS_METADATA) \
+		--input-file "$<" --output-file "$@" \
+		--mpi-calls-bindings "$(MPI_CALLS_BINDINGS)" \
+		--mpi-calls-metadata "$(MPI_CALLS_METADATA)" \
 		$(pygen_opts)
 
 .F90.in.F90:
 	$(PYGEN_verbose)$(MPI_GENERATOR) \
-		--input-file $< --output-file $@ \
-		--mpi-calls-bindings $(MPI_CALLS_BINDINGS) \
-		--mpi-calls-metadata $(MPI_CALLS_METADATA) \
+		--input-file "$<" --output-file "$@" \
+		--mpi-calls-bindings "$(MPI_CALLS_BINDINGS)" \
+		--mpi-calls-metadata "$(MPI_CALLS_METADATA)" \
 		$(pygen_opts)
 
 
 src/mpi/config_mpi.h: $(top_srcdir)/src/mpi/config_mpi.h.in $(MPICALLS_DB)
 	$(PYGEN_verbose)$(MPI_GENERATOR) \
-		--input-file $< --output-file $@ \
-		--mpi-calls-bindings $(MPI_CALLS_BINDINGS) \
-		--mpi-calls-metadata $(MPI_CALLS_METADATA) \
-		--mpi-fortran-wrapper $(MPIFC) \
+		--input-file "$<" --output-file "$@" \
+		--mpi-calls-bindings "$(MPI_CALLS_BINDINGS)" \
+		--mpi-calls-metadata "$(MPI_CALLS_METADATA)" \
+		--mpi-fortran-wrapper "$(MPIFC)" \
 		$(pygen_opts)
 
 

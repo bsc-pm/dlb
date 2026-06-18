@@ -326,7 +326,13 @@ class PygenParser():
             if _should_include_mpi_call(mpi_call, condition, re_exclude):
 
                 # Extract only the necessary fields
-                mpi_call_data = {field: getattr(mpi_call, field.lower()) for field in fields_needed}
+                try:
+                    mpi_call_data = {field: getattr(mpi_call, field.lower()) for field in fields_needed}
+                except AttributeError:
+                    # Attritute not found, usually f08 fields when fortran-wrapper is
+                    # not provided and template asks for it.
+                    # It's safe to skip the call.
+                    continue
 
                 # Format
                 parsed_func = code_block.format(**mpi_call_data)
