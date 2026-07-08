@@ -28,6 +28,10 @@
 
 #include <pthread.h>
 
+/*********************************************************************************/
+/*    TALP sample and macrosample                                                */
+/*********************************************************************************/
+
 typedef enum {
     TALP_STATE_DISABLED,
     TALP_STATE_USEFUL,
@@ -119,6 +123,11 @@ typedef struct talp_macrosample_t {
     int            num_samples;
 } talp_macrosample_t;
 
+
+/*********************************************************************************/
+/*    General TALP data                                                          */
+/*********************************************************************************/
+
 /* TALP flags for talp_info */
 typedef struct talp_flags_t {
     bool have_shmem:1;          /* whether to record data in shmem */
@@ -161,5 +170,178 @@ typedef struct monitor_data_t {
     cpu_set_t cpu_mask;                 /* CPUs this region has been observed on */
 } monitor_data_t;
 
+
+/*********************************************************************************/
+/*    POP base metrics                                                           */
+/*********************************************************************************/
+
+/* Internal struct to contain everything that's needed to actually construct a
+ * dlb_pop_metrics_t. Everything in here is coming directly from measurement,
+ * or computed in an MPI reduction. */
+#define FOR_POP_BASE_METRICS_FIELDS(DO) \
+    /* Resources */                                             \
+    DO(num_cpus,                    int,        MPI_INT)        \
+    DO(num_available_cpus,          int,        MPI_INT)        \
+    DO(num_omp_threads,             int,        MPI_INT)        \
+    DO(num_mpi_ranks,               int,        MPI_INT)        \
+    DO(num_nodes,                   int,        MPI_INT)        \
+    DO(avg_cpus,                    float,      MPI_FLOAT)      \
+    DO(num_gpus,                    int,        MPI_INT)        \
+    /* Hardware counters */                                     \
+    DO(cycles,                      double,     MPI_DOUBLE)     \
+    DO(instructions,                double,     MPI_DOUBLE)     \
+    /* Statistics */                                            \
+    DO(num_measurements,            int64_t,    mpi_int64_type) \
+    DO(num_mpi_calls,               int64_t,    mpi_int64_type) \
+    DO(num_omp_parallels,           int64_t,    mpi_int64_type) \
+    DO(num_omp_tasks,               int64_t,    mpi_int64_type) \
+    DO(num_gpu_runtime_calls,       int64_t,    mpi_int64_type) \
+    /* Sum of Host times among all processes */                 \
+    DO(elapsed_time,                int64_t,    mpi_int64_type) \
+    DO(useful_time,                 int64_t,    mpi_int64_type) \
+    DO(mpi_time,                    int64_t,    mpi_int64_type) \
+    DO(mpi_worker_idle_time,        int64_t,    mpi_int64_type) \
+    DO(omp_load_imbalance_time,     int64_t,    mpi_int64_type) \
+    DO(omp_scheduling_time,         int64_t,    mpi_int64_type) \
+    DO(omp_serialization_time,      int64_t,    mpi_int64_type) \
+    DO(gpu_runtime_time,            int64_t,    mpi_int64_type) \
+    /* Normalized Host times by the number of assigned CPUs */  \
+    DO(min_mpi_normd_proc,          double,     MPI_DOUBLE)     \
+    DO(min_mpi_normd_node,          double,     MPI_DOUBLE)     \
+    /* Sum of Device times among all processes */               \
+    DO(gpu_useful_time,             int64_t,    mpi_int64_type) \
+    DO(gpu_communication_time,      int64_t,    mpi_int64_type) \
+    DO(gpu_inactive_time,           int64_t,    mpi_int64_type) \
+    /* Device Max Times */                                      \
+    DO(max_gpu_useful_time,         int64_t,    mpi_int64_type) \
+    DO(max_gpu_active_time,         int64_t,    mpi_int64_type)
+
+typedef struct pop_base_metrics_t {
+    #define DEFINE_C_TYPES(name, c_type, mpi_type) c_type name;
+    FOR_POP_BASE_METRICS_FIELDS(DEFINE_C_TYPES)
+    #undef DEFINE_C_TYPES
+} pop_base_metrics_t;
+
+
+/*********************************************************************************/
+/*    Public TALP structs                                                        */
+/*********************************************************************************/
+
+/* The following lists correspond to public structs, and although those need to
+ * be defined in the headers, we'll use the macro internally when possible.
+ * They're also used for testing purposes to check that both definitions match.
+ * REMINDER: Always keep in sync with the public definitions.
+ */
+
+/* dlb_monitor_t: per-process region metrics */
+#define FOR_DLB_MONITOR_FIELDS(DO)                                  \
+    DO(name,                        const char*,    address_type)   \
+    DO(num_cpus,                    int,            MPI_INT)        \
+    DO(num_omp_threads,             int,            MPI_INT)        \
+    DO(avg_cpus,                    float,          MPI_FLOAT)      \
+    DO(cycles,                      int64_t,        mpi_int64_type) \
+    DO(instructions,                int64_t,        mpi_int64_type) \
+    DO(num_measurements,            int,            MPI_INT)        \
+    DO(num_resets,                  int,            MPI_INT)        \
+    DO(num_mpi_calls,               int64_t,        mpi_int64_type) \
+    DO(num_omp_parallels,           int64_t,        mpi_int64_type) \
+    DO(num_omp_tasks,               int64_t,        mpi_int64_type) \
+    DO(num_gpu_runtime_calls,       int64_t,        mpi_int64_type) \
+    DO(start_time,                  int64_t,        mpi_int64_type) \
+    DO(stop_time,                   int64_t,        mpi_int64_type) \
+    DO(elapsed_time,                int64_t,        mpi_int64_type) \
+    DO(useful_time,                 int64_t,        mpi_int64_type) \
+    DO(mpi_time,                    int64_t,        mpi_int64_type) \
+    DO(mpi_worker_idle_time,        int64_t,        mpi_int64_type) \
+    DO(omp_load_imbalance_time,     int64_t,        mpi_int64_type) \
+    DO(omp_scheduling_time,         int64_t,        mpi_int64_type) \
+    DO(omp_serialization_time,      int64_t,        mpi_int64_type) \
+    DO(gpu_runtime_time,            int64_t,        mpi_int64_type) \
+    DO(gpu_useful_time,             int64_t,        mpi_int64_type) \
+    DO(gpu_communication_time,      int64_t,        mpi_int64_type) \
+    DO(gpu_inactive_time,           int64_t,        mpi_int64_type) \
+    DO(_data,                       void*,          address_type)
+
+#define FOR_DLB_MONITOR_PRINTABLE_FIELDS(DO, DO_LAST)                                   \
+    DO(num_cpus,                    int,            numCpus,                "%d")       \
+    DO(num_omp_threads,             int,            numOmpThreads,          "%d")       \
+    DO(cycles,                      int64_t,        cycles,                 "%"PRId64)  \
+    DO(instructions,                int64_t,        instructions,           "%"PRId64)  \
+    DO(num_measurements,            int,            numMeasurements,        "%d")       \
+    DO(num_resets,                  int,            numResets,              "%d")       \
+    DO(num_mpi_calls,               int64_t,        numMpiCalls,            "%"PRId64)  \
+    DO(num_omp_parallels,           int64_t,        numOmpParallels,        "%"PRId64)  \
+    DO(num_omp_tasks,               int64_t,        numOmpTasks,            "%"PRId64)  \
+    DO(num_gpu_runtime_calls,       int64_t,        numGpuRuntimeCalls,     "%"PRId64)  \
+    DO(elapsed_time,                int64_t,        elapsedTime,            "%"PRId64)  \
+    DO(useful_time,                 int64_t,        usefulTime,             "%"PRId64)  \
+    DO(mpi_time,                    int64_t,        mpiTime,                "%"PRId64)  \
+    DO(mpi_worker_idle_time,        int64_t,        mpiWorkerIdleTime,      "%"PRId64)  \
+    DO(omp_load_imbalance_time,     int64_t,        ompLoadImbalanceTime,   "%"PRId64)  \
+    DO(omp_scheduling_time,         int64_t,        ompSchedulingTime,      "%"PRId64)  \
+    DO(omp_serialization_time,      int64_t,        ompSerializationTime,   "%"PRId64)  \
+    DO(gpu_runtime_time,            int64_t,        gpuRuntimeTime,         "%"PRId64)  \
+    DO(gpu_useful_time,             int64_t,        gpuUsefulTime,          "%"PRId64)  \
+    DO_LAST(gpu_communication_time, int64_t,        gpuCommunicationTime,   "%"PRId64)
+
+/* dlb_pop_metrics_t: per-app aggregated metrics */
+/* Note: char name[DLB_MONITOR_NAME_MAX] not included */
+#define FOR_DLB_POP_METRICS_FIELDS(DO, DO_LAST)                                             \
+    DO(num_cpus,                        int,        numCpus,                    "%d")       \
+    DO(num_omp_threads,                 int,        numOmpThreads,              "%d")       \
+    DO(num_mpi_ranks,                   int,        numMpiRanks,                "%d")       \
+    DO(num_nodes,                       int,        numNodes,                   "%d")       \
+    DO(avg_cpus,                        float,      avgCpus,                    "%.1f")     \
+    DO(num_gpus,                        int,        numGpus,                    "%d")       \
+    DO(cycles,                          double,     cycles,                     "%.0f")     \
+    DO(instructions,                    double,     instructions,               "%.0f")     \
+    DO(num_measurements,                int64_t,    numMeasurements,            "%"PRId64)  \
+    DO(num_mpi_calls,                   int64_t,    numMpiCalls,                "%"PRId64)  \
+    DO(num_omp_parallels,               int64_t,    numOmpParallels,            "%"PRId64)  \
+    DO(num_omp_tasks,                   int64_t,    numOmpTasks,                "%"PRId64)  \
+    DO(num_gpu_runtime_calls,           int64_t,    numGpuRuntimeCalls,         "%"PRId64)  \
+    DO(elapsed_time,                    int64_t,    elapsedTime,                "%"PRId64)  \
+    DO(useful_time,                     int64_t,    usefulTime,                 "%"PRId64)  \
+    DO(mpi_time,                        int64_t,    mpiTime,                    "%"PRId64)  \
+    DO(mpi_worker_idle_time,            int64_t,    mpiWorkerIdleTime,          "%"PRId64)  \
+    DO(omp_load_imbalance_time,         int64_t,    ompLoadImbalanceTime,       "%"PRId64)  \
+    DO(omp_scheduling_time,             int64_t,    ompSchedulingTime,          "%"PRId64)  \
+    DO(omp_serialization_time,          int64_t,    ompSerializationTime,       "%"PRId64)  \
+    DO(gpu_runtime_time,                int64_t,    gpuRuntimeTime,             "%"PRId64)  \
+    DO(min_mpi_normd_proc,              double,     minMpiNormdProc,            "%.0f")     \
+    DO(min_mpi_normd_node,              double,     minMpiNormdNode,            "%.0f")     \
+    DO(gpu_useful_time,                 int64_t,    gpuUsefulTime,              "%"PRId64)  \
+    DO(gpu_communication_time,          int64_t,    gpuCommunicationTime,       "%"PRId64)  \
+    DO(gpu_inactive_time,               int64_t,    gpuInactiveTime,            "%"PRId64)  \
+    DO(max_gpu_useful_time,             int64_t,    maxGpuUsefulTime,           "%"PRId64)  \
+    DO(max_gpu_active_time,             int64_t,    maxGpuActiveTime,           "%"PRId64)  \
+    DO(parallel_efficiency,             float,      parallelEfficiency,         "%.2f")     \
+    DO(mpi_parallel_efficiency,         float,      mpiParallelEfficiency,      "%.2f")     \
+    DO(mpi_communication_efficiency,    float,      mpiCommunicationEfficiency, "%.2f")     \
+    DO(mpi_load_balance,                float,      mpiLoadBalance,             "%.2f")     \
+    DO(mpi_load_balance_in,             float,      mpiLoadBalanceIn,           "%.2f")     \
+    DO(mpi_load_balance_out,            float,      mpiLoadBalanceOut,          "%.2f")     \
+    DO(omp_parallel_efficiency,         float,      ompParallelEfficiency,      "%.2f")     \
+    DO(omp_load_balance,                float,      ompLoadBalance,             "%.2f")     \
+    DO(omp_scheduling_efficiency,       float,      ompSchedulingEfficiency,    "%.2f")     \
+    DO(omp_serialization_efficiency,    float,      ompSerializationEfficiency, "%.2f")     \
+    DO(device_offload_efficiency,       float,      deviceOffloadEfficiency,    "%.2f")     \
+    DO(gpu_parallel_efficiency,         float,      gpuParallelEfficiency,      "%.2f")     \
+    DO(gpu_load_balance,                float,      gpuLoadBalance,             "%.2f")     \
+    DO(gpu_communication_efficiency,    float,      gpuCommunicationEfficiency, "%.2f")     \
+    DO_LAST(gpu_orchestration_efficiency, float,    gpuOrchestrationEfficiency, "%.2f")
+
+/* dlb_node_metrics_t: per-node aggregated metrics */
+/* Note: char name[DLB_MONITOR_NAME_MAX] not included */
+#define FOR_DLB_NODE_METRICS_FIELDS(DO)             \
+    DO(node_id,                         int)        \
+    DO(processes_per_node,              int)        \
+    DO(total_useful_time,               int64_t)    \
+    DO(total_mpi_time,                  int64_t)    \
+    DO(max_useful_time,                 int64_t)    \
+    DO(max_mpi_time,                    int64_t)    \
+    DO(parallel_efficiency,             float)      \
+    DO(communication_efficiency,        float)      \
+    DO(load_balance,                    float)
 
 #endif /* TALP_TYPES_H */

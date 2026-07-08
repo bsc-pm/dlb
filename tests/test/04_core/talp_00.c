@@ -43,6 +43,10 @@
 #include <stdint.h>
 #include <assert.h>
 
+int check_internal_dlb_monitor_t(void);
+int check_internal_dlb_pop_metrics_t(void);
+int check_internal_dlb_node_metrics_t(void);
+
 /* Test simple TALP & Monitoring Regions functionalities */
 
 enum { USLEEP_TIME = 1000 };
@@ -67,6 +71,13 @@ int main(int argc, char *argv[]) {
 
     talp_info_t *talp_info = spd.talp_info;
     dlb_monitor_t *global_monitor = talp_info->monitor;
+
+    /* Check internal and public structs are equivalent */
+#ifdef HAVE_TEST_LIB
+    assert( check_internal_dlb_monitor_t() == 0);
+    assert( check_internal_dlb_pop_metrics_t() == 0);
+    assert( check_internal_dlb_node_metrics_t() == 0);
+#endif
 
     /* Check that global monitor was started during talp_init and reset it
      * for the following tests */

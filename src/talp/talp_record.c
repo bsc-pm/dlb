@@ -287,87 +287,29 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
     MPI_Datatype mpi_dlb_monitor_type;
     {
         int blocklengths[] = {
-            1, 1, 1, 1,             /* Name + Resources: num_cpus, avg_cpus */
-            1, 1,                   /* Hardware counters: cycles, instructions */
-            1, 1, 1, 1, 1, 1,       /* Statistics: num_* */
-            1, 1,                   /* Monitor Start and Stop times */
-            1, 1, 1, 1, 1, 1, 1, 1, /* Host Times */
-            1, 1, 1,                /* Device Times */
-            1};                     /* _data */
-
-        enum {count = sizeof(blocklengths) / sizeof(blocklengths[0])};
+            #define FIELD_BLOCKLENGTH(name, c_type, mpi_type) 1,
+            FOR_DLB_MONITOR_FIELDS(FIELD_BLOCKLENGTH)
+            #undef FIELD_BLOCKLENGTH
+        };
 
         MPI_Aint displacements[] = {
-            /* Name */
-            offsetof(dlb_monitor_t, name),
-            /* Resources */
-            offsetof(dlb_monitor_t, num_cpus),
-            offsetof(dlb_monitor_t, num_omp_threads),
-            offsetof(dlb_monitor_t, avg_cpus),
-            /* Hardware counters */
-            offsetof(dlb_monitor_t, cycles),
-            offsetof(dlb_monitor_t, instructions),
-            /* Statistics */
-            offsetof(dlb_monitor_t, num_measurements),
-            offsetof(dlb_monitor_t, num_resets),
-            offsetof(dlb_monitor_t, num_mpi_calls),
-            offsetof(dlb_monitor_t, num_omp_parallels),
-            offsetof(dlb_monitor_t, num_omp_tasks),
-            offsetof(dlb_monitor_t, num_gpu_runtime_calls),
-            /* Monitor Start and Stop times */
-            offsetof(dlb_monitor_t, start_time),
-            offsetof(dlb_monitor_t, stop_time),
-            /* Host Times */
-            offsetof(dlb_monitor_t, elapsed_time),
-            offsetof(dlb_monitor_t, useful_time),
-            offsetof(dlb_monitor_t, mpi_time),
-            offsetof(dlb_monitor_t, mpi_worker_idle_time),
-            offsetof(dlb_monitor_t, omp_load_imbalance_time),
-            offsetof(dlb_monitor_t, omp_scheduling_time),
-            offsetof(dlb_monitor_t, omp_serialization_time),
-            offsetof(dlb_monitor_t, gpu_runtime_time),
-            /* Device Times */
-            offsetof(dlb_monitor_t, gpu_useful_time),
-            offsetof(dlb_monitor_t, gpu_communication_time),
-            offsetof(dlb_monitor_t, gpu_inactive_time),
-            /* _data */
-            offsetof(dlb_monitor_t, _data)};
+            #define FIELD_DISPLACEMENT(name, c_type, mpi_type) offsetof(dlb_monitor_t, name),
+            FOR_DLB_MONITOR_FIELDS(FIELD_DISPLACEMENT)
+            #undef FIELD_DISPLACEMENT
+        };
 
         MPI_Datatype types[] = {
-            /* Name */
-            address_type,
-            /* Resources */
-            MPI_INT, MPI_INT, MPI_FLOAT,
-            /* Hardware counters */
-            mpi_int64_type, mpi_int64_type,
-            /* Statistics */
-            MPI_INT, MPI_INT,
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            /* Monitor Start and Stop times */
-            mpi_int64_type, mpi_int64_type,
-            /* Host Times */
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            /* Device Times */
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,
-            /* _data */
-            address_type};
+            #define FIELD_MPI_TYPE(name, c_type, mpi_type) mpi_type,
+            FOR_DLB_MONITOR_FIELDS(FIELD_MPI_TYPE)
+            #undef FIELD_MPI_TYPE
+        };
+
+        enum {count = sizeof(blocklengths) / sizeof(blocklengths[0])};
 
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);
         PMPI_Type_create_resized(tmp_type, 0, sizeof(dlb_monitor_t), &mpi_dlb_monitor_type);
         PMPI_Type_commit(&mpi_dlb_monitor_type);
-
-        static_ensure(sizeof(blocklengths)/sizeof(blocklengths[0]) == count,
-                "blocklengths size mismatch");
-        static_ensure(sizeof(displacements)/sizeof(displacements[0]) == count,
-                "displacements size mismatch");
-        static_ensure(sizeof(types)/sizeof(types[0]) == count,
-                "types size mismatch");
     }
 
     /* MPI struct type: process_record_t */

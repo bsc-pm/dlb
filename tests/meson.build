@@ -1,4 +1,17 @@
 
+prog_python = import('python').find_installation('python')
+
+generated_fortran_api_talp_01 = custom_target(
+  'fortran_api_talp_01',
+  input : meson.project_source_root() / 'src/talp/talp_types.h',
+  output : 'fortran_api_talp_01.f90',
+  command : [
+    prog_python,
+    files(meson.project_source_root() / 'scripts/gen_fortran_talp_test.py'),
+    '-i', '@INPUT@',
+    '-o', '@OUTPUT@' ]
+)
+
 tests = {
   '00_support' : {
     'array_template_00'   : {},
@@ -105,7 +118,7 @@ tests = {
     'fortran_api_barrier_00' : {'source' : 'fortran_api_barrier_00.f90'},
     'fortran_api_drom_00' : {'source' : 'fortran_api_drom_00.f90'},
     'fortran_api_talp_00' : {'source' : 'fortran_api_talp_00.f90'},
-    'fortran_api_talp_01' : {'source' : 'fortran_api_talp_01.F90'},
+    'fortran_api_talp_01' : {'generated_source' : generated_fortran_api_talp_01},
     'python_api_00'       : {'source' : 'python_api_00.py'},
     'python_api_barrier_00'  : {'source' : 'python_api_barrier_00.py'},
     'python_api_drom_00'  : {'source' : 'python_api_drom_00.py'},
@@ -137,7 +150,6 @@ if (get_option('extra_tests'))
   initial_env.set('DLB_EXTRA_TESTS', '1')
 endif
 
-prog_python = import('python').find_installation('python')
 dlb_build_root = meson.project_build_root()
 dlb_bindings_dir = dlb_build_root / 'src/apis/python_bindings'
 initial_env.set('PYTHONPATH', dlb_bindings_dir)
@@ -145,20 +157,27 @@ initial_env.set('DLB_LIB_DIR', dlb_build_root)
 
 foreach suite, suite_tests : tests
   foreach test_name, test_props : suite_tests
-    test_file = test_props.get('source', test_name + '.c')
-    test_path = 'test' / suite / test_file
 
-    is_python = test_file.endswith('.py')
+    if test_props.has_key('generated_source')
+      is_python = false
+      src = test_props['generated_source']
+    else
+      test_file = test_props.get('source', test_name + '.c')
+      is_python = test_file.endswith('.py')
+      src = 'test' / suite / test_file
+    endif
+
     if is_python
       test_program = prog_python
-      test_args = [meson.current_source_dir() / test_path]
+      test_args = [meson.current_source_dir() / src]
     else
-      test_program = executable(test_name, test_path,
+      test_program = executable(test_name, src,
         include_directories : test_includes,
         link_whole: libdlb_test,
         dependencies : common_deps,
         build_by_default: false,
         install : false,
+        c_args : ['-DHAVE_TEST_LIB'],
         fortran_args : ['-ffree-line-length-none']
       )
       test_args = []
