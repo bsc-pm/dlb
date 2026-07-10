@@ -501,7 +501,7 @@ int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
     perf_metrics__reduce_monitor_into_base_metrics(&base_metrics, monitor, true);
 #else
     /* Construct base metrics using only the monitor from this process */
-    perf_metrics__local_monitor_into_base_metrics(&base_metrics, monitor);
+    perf_metrics__local_monitor_into_base_metrics(&base_metrics, monitor, talp_info->flags);
 #endif
 
     /* Construct output pop_metrics out of base metrics */

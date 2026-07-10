@@ -703,6 +703,15 @@ static GSList *region_records = NULL;
 void talp_output_record_process(const char *region_name,
         const process_record_t *process_record, int num_mpi_ranks) {
 
+    int rank = process_record->rank;
+    if (num_mpi_ranks < 1) {
+        /* special value to dissociate record->rank if the argument has a
+         * proper value but still we're only recording one element.
+         * (usually the case if --talp-partial-output) */
+        num_mpi_ranks = 1;
+        rank = 0;
+    }
+
     region_record_t *region_record = NULL;
 
     /* Find region or allocate new one */
@@ -734,7 +743,6 @@ void talp_output_record_process(const char *region_name,
     }
 
     /* Copy process_record */
-    int rank = process_record->rank;
     ensure(rank < num_mpi_ranks, "Wrong rank number in %s", __func__);
     memcpy(&region_record->process_records[rank], process_record, sizeof(process_record_t));
 }

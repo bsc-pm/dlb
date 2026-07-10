@@ -540,21 +540,28 @@ void perf_metrics__reduce_monitor_into_base_metrics(pop_base_metrics_t *base_met
 
 /* Construct a base metrics struct out of a single monitor */
 void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metrics,
-        const dlb_monitor_t *monitor) {
-
-    bool have_gpus = (monitor->gpu_useful_time + monitor->gpu_communication_time > 0);
+        const dlb_monitor_t *monitor, talp_flags_t talp_flags) {
 
     double mpi_normd =
         (double)(monitor->mpi_time + monitor->mpi_worker_idle_time) / monitor->num_cpus;
+
+    int num_mpi_ranks = 0;
+    int num_nodes = 1;
+#if MPI_LIB
+    if (talp_flags.have_mpi) {
+        num_mpi_ranks = _mpi_size;
+        num_nodes = _num_nodes;
+    }
+#endif
 
     *base_metrics = (const pop_base_metrics_t){
         .num_cpus                = monitor->num_cpus,
         .num_available_cpus      = mu_get_system_count(),
         .num_omp_threads         = monitor->num_omp_threads,
-        .num_mpi_ranks           = 0,
-        .num_nodes               = 1,
+        .num_mpi_ranks           = num_mpi_ranks,
+        .num_nodes               = num_nodes,
         .avg_cpus                = monitor->avg_cpus,
-        .num_gpus                = have_gpus ? 1 : 0,
+        .num_gpus                = talp_flags.have_gpu ? 1 : 0,
         .cycles                  = (double)monitor->cycles,
         .instructions            = (double)monitor->instructions,
         .num_measurements        = monitor->num_measurements,
