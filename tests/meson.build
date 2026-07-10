@@ -140,7 +140,7 @@ tests = {
 test_includes = [
   common_includes,
   include_directories('..'),          # parent subdir for <config.h>
-  include_directories('test'),        # helper test headers
+  include_directories('unit'),        # helper test headers
   include_directories('../src/apis'), # for fortran tests
 ]
 
@@ -164,7 +164,7 @@ foreach suite, suite_tests : tests
     else
       test_file = test_props.get('source', test_name + '.c')
       is_python = test_file.endswith('.py')
-      src = 'test' / suite / test_file
+      src = 'unit' / suite / test_file
     endif
 
     if is_python

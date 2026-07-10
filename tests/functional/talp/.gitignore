@@ -1,0 +1,7 @@
+__pycache__
+*.csv
+*.json
+hybrid/test_hybrid
+mpi/test_mpi
+omp/test_omp
+omp/test_omp_nested

@@ -143,6 +143,6 @@ int PAPI_get_opt(int option, void * ptr) {
     return PAPI_OK;
 }
 
-char *PAPI_strerror(int) {
+char *PAPI_strerror(int code) {
     return "PAPI stub strerror";
 }
