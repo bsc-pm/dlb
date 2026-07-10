@@ -323,19 +323,6 @@ int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
     return DLB_SUCCESS;
 }
 
-/* Accumulate samples from only a subset of samples of a parallel region.
- * Load Balance and Scheduling are computed here based on all samples. */
-void talp_aggregate_subset_to_regions(talp_info_t *talp_info,
-        talp_sample_t **samples, unsigned int nelems) {
-
-    /* Accumulate samples from subset */
-    talp_macrosample_t macrosample = {0};
-    talp_sample_aggregate_subset_to_macrosample(talp_info, samples, nelems, &macrosample);
-
-    /* Update all started regions */
-    update_regions_with_macrosample(talp_info, &macrosample);
-}
-
 
 /*********************************************************************************/
 /*    TALP collect functions for 3rd party programs:                             */

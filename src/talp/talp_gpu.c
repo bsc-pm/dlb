@@ -21,7 +21,6 @@
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
-#include "support/atomic.h"
 #include "support/debug.h"
 #include "support/dlb_common.h"
 #include "talp/backend.h"
@@ -129,14 +128,14 @@ void talp_gpu_exit_runtime(void) {
 
         /* Add statistic */
         talp_sample_t *sample = talp_sample_get(talp_info);
-        DLB_ATOMIC_ADD_RLX(&sample->stats.num_gpu_runtime_calls, 1);
+        ++sample->stats.num_gpu_runtime_calls;
 
         /* Out of Sync call -> useful */
         talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
 
         /* Only when needed, update all regions */
         if (talp_info->flags.external_profiler
-                && talp_sample_is_main()) {
+                && talp_sample_is_main_sequential()) {
             talp_aggregate_samples_to_regions(talp_info);
         }
     }

@@ -365,7 +365,8 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
  *  \return DLB_ERR_PERM if this thread cannot start the monitoring region
  *
  *  Notes on multi-threading:
- *    - It is not safe to start or stop regions in OpenMP worksharing constructs.
+ *    - It is only safe to start or stop regions from the primary thread during
+ *      sequential execution.
  *    - If a region is started and stopped before the application has reached
  *      maximum parallelism (e.g., before a parallel construct), the unused resources
  *      will not be taken into account. This can result in higher OpenMP efficiencies

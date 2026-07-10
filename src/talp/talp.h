@@ -39,8 +39,6 @@ void talp_finalize(subprocess_descriptor_t *spd);
 
 /* TALP samples aggregation */
 int talp_aggregate_samples_to_regions(talp_info_t *talp_info);
-void talp_aggregate_subset_to_regions(talp_info_t *talp_info,
-        talp_sample_t **samples, unsigned int nelems);
 
 
 /* TALP collect functions for 3rd party programs */

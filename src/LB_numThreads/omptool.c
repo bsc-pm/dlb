@@ -158,8 +158,15 @@ static void omptool_callback__parallel_begin(
             omptool_parallel_data = &omptool_parallel_data_level1;
         } else if (encountering_task_data->value > 0) {
             /* Allocate new data */
-            omptool_parallel_data = malloc(sizeof(omptool_parallel_data_t));
-            omptool_parallel_data->level = encountering_task_data->value + 1;
+            void *new_data = NULL;
+            if (posix_memalign(&new_data, DLB_CACHE_LINE, sizeof(omptool_parallel_data_t)) == 0) {
+                omptool_parallel_data = new_data;
+                *omptool_parallel_data = (omptool_parallel_data_t) {
+                    .level = encountering_task_data->value + 1,
+                };
+            } else {
+                fatal("Memory allocation error in %s", __func__);
+            }
         }
 
         ensure(omptool_parallel_data != NULL, "Unhandled case in %s",__func__);

@@ -25,21 +25,14 @@
 void talp_sample_init(talp_info_t *talp_info);
 void talp_sample_finalize(talp_info_t *talp_info);
 
-bool talp_sample_is_main(void);
-bool talp_sample_is_mine(const talp_sample_t *sample);
-void talp_sample_set_main_serial_mode(bool serial_mode);
+bool talp_sample_is_main_sequential(void);
+void talp_sample_set_main_sequential(bool is_sequential);
 talp_sample_t* talp_sample_get(talp_info_t *talp_info);
 
 void talp_sample_update(talp_info_t *talp_info);
-void talp_sample_update_foreign(talp_info_t *talp_info, talp_sample_t *sample, int64_t now);
 void talp_sample_set_state(talp_info_t *talp_info, talp_sample_state_t new_state);
 
 void talp_sample_aggregate_all_to_macrosample(
         talp_info_t *restrict talp_info, talp_macrosample_t *restrict macrosample);
-void talp_sample_aggregate_subset_to_macrosample(
-        talp_info_t *restrict talp_info,
-        talp_sample_t **restrict samples,
-        unsigned int nelems,
-        talp_macrosample_t *restrict macrosample);
 
 #endif /* SAMPLE_H */
