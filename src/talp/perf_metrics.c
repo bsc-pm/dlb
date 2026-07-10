@@ -353,50 +353,12 @@ static void reduce_pop_metrics_node_reduction(node_reduction_t *node_reduction,
 
 /** App reduction ***/
 
-/* Data type to reduce among processes in application */
-typedef struct app_reduction_t {
-    /* Resources */
-    int num_cpus;
-    int num_available_cpus;
-    int num_omp_threads;
-    int num_nodes;
-    float avg_cpus;
-    int num_gpus;
-    /* Hardware Counters */
-    double cycles;
-    double instructions;
-    /* Statistics */
-    int64_t num_measurements;
-    int64_t num_mpi_calls;
-    int64_t num_omp_parallels;
-    int64_t num_omp_tasks;
-    int64_t num_gpu_runtime_calls;
-    /* Host Times */
-    int64_t elapsed_time;
-    int64_t useful_time;
-    int64_t mpi_time;
-    int64_t mpi_worker_idle_time;
-    int64_t omp_load_imbalance_time;
-    int64_t omp_scheduling_time;
-    int64_t omp_serialization_time;
-    int64_t gpu_runtime_time;
-    /* Host Normalized Times */
-    double  min_mpi_normd_proc;
-    double  min_mpi_normd_node;
-    /* Device Times */
-    int64_t gpu_useful_time;
-    int64_t gpu_communication_time;
-    int64_t gpu_inactive_time;
-    /* Device Max Times */
-    int64_t max_gpu_useful_time;
-    int64_t max_gpu_active_time;
-} app_reduction_t;
-
 /* Function called in the MPI app reduction */
 static void mpi_reduction_fn(void *invec, void *inoutvec, int *len,
         MPI_Datatype *datatype) {
-    app_reduction_t *in = invec;
-    app_reduction_t *inout = inoutvec;
+
+    pop_base_metrics_t *in = invec;
+    pop_base_metrics_t *inout = inoutvec;
 
     int _len = *len;
     for (int i = 0; i < _len; ++i) {
@@ -404,6 +366,7 @@ static void mpi_reduction_fn(void *invec, void *inoutvec, int *len,
         inout[i].num_cpus                += in[i].num_cpus;
         inout[i].num_available_cpus      += in[i].num_available_cpus;
         inout[i].num_omp_threads         += in[i].num_omp_threads;
+        inout[i].num_mpi_ranks           += in[i].num_mpi_ranks;
         inout[i].num_nodes               += in[i].num_nodes;
         inout[i].avg_cpus                += in[i].avg_cpus;
         inout[i].num_gpus                += in[i].num_gpus;
@@ -446,7 +409,7 @@ static void mpi_reduction_fn(void *invec, void *inoutvec, int *len,
 }
 
 /* Function to perform the reduction at application level */
-static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
+static void reduce_pop_metrics_app_reduction(pop_base_metrics_t *base_metrics,
         const node_reduction_t *node_reduction, const dlb_monitor_t *monitor,
         bool all_to_all) {
 
@@ -459,12 +422,13 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
 
     bool have_gpus = (monitor->gpu_useful_time + monitor->gpu_communication_time > 0);
 
-    const app_reduction_t app_reduction_send = {
+    const pop_base_metrics_t app_reduction_send = {
         /* Resources */
         .num_cpus                = monitor->num_cpus,
         .num_available_cpus      = _process_id == 0 && node_reduction->node_used
                                     ? mu_get_system_count() : 0,
         .num_omp_threads         = monitor->num_omp_threads,
+        .num_mpi_ranks           = 1,
         .num_nodes               = _process_id == 0 && node_reduction->node_used ? 1 : 0,
         .avg_cpus                = monitor->avg_cpus,
         .num_gpus                = have_gpus ? 1 : 0,
@@ -504,91 +468,32 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
     /* MPI struct type: app_reduction_t */
     MPI_Datatype mpi_app_reduction_type;
     {
-        int blocklengths[] = {
-            1, 1, 1, 1, 1, 1,       /* Resources */
-            1, 1,                   /* Hardware Counters */
-            1, 1, 1, 1, 1,          /* Statistics */
-            1, 1, 1, 1, 1, 1, 1, 1, /* Host Times */
-            1, 1,                   /* Host Normalized Times */
-            1, 1, 1,                /* Device Times */
-            1, 1};                  /* Device Max Times */
 
-        enum {count = sizeof(blocklengths) / sizeof(blocklengths[0])};
+        int blocklengths[] = {
+            #define FIELD_BLOCKLENGTH(name, c_type, mpi_type) 1,
+            FOR_POP_BASE_METRICS_FIELDS(FIELD_BLOCKLENGTH)
+            #undef FIELD_BLOCKLENGTH
+        };
 
         MPI_Aint displacements[] = {
-            /* Resources */
-            offsetof(app_reduction_t, num_cpus),
-            offsetof(app_reduction_t, num_available_cpus),
-            offsetof(app_reduction_t, num_omp_threads),
-            offsetof(app_reduction_t, num_nodes),
-            offsetof(app_reduction_t, avg_cpus),
-            offsetof(app_reduction_t, num_gpus),
-            /* Hardware Counters */
-            offsetof(app_reduction_t, cycles),
-            offsetof(app_reduction_t, instructions),
-            /* Statistics */
-            offsetof(app_reduction_t, num_measurements),
-            offsetof(app_reduction_t, num_mpi_calls),
-            offsetof(app_reduction_t, num_omp_parallels),
-            offsetof(app_reduction_t, num_omp_tasks),
-            offsetof(app_reduction_t, num_gpu_runtime_calls),
-            /* Host Times */
-            offsetof(app_reduction_t, elapsed_time),
-            offsetof(app_reduction_t, useful_time),
-            offsetof(app_reduction_t, mpi_time),
-            offsetof(app_reduction_t, mpi_worker_idle_time),
-            offsetof(app_reduction_t, omp_load_imbalance_time),
-            offsetof(app_reduction_t, omp_scheduling_time),
-            offsetof(app_reduction_t, omp_serialization_time),
-            offsetof(app_reduction_t, gpu_runtime_time),
-            /* Normalized Times */
-            offsetof(app_reduction_t, min_mpi_normd_proc),
-            offsetof(app_reduction_t, min_mpi_normd_node),
-            /* Device Times */
-            offsetof(app_reduction_t, gpu_useful_time),
-            offsetof(app_reduction_t, gpu_communication_time),
-            offsetof(app_reduction_t, gpu_inactive_time),
-            /* Device Max Times */
-            offsetof(app_reduction_t, max_gpu_useful_time),
-            offsetof(app_reduction_t, max_gpu_active_time),
+            #define FIELD_DISPLACEMENT(name, c_type, mpi_type) offsetof(pop_base_metrics_t, name),
+            FOR_POP_BASE_METRICS_FIELDS(FIELD_DISPLACEMENT)
+            #undef FIELD_DISPLACEMENT
         };
 
         MPI_Datatype types[] = {
-            /* Resources */
-            MPI_INT, MPI_INT, MPI_INT,
-            MPI_INT, MPI_FLOAT, MPI_INT,
-            /* Hardware Counters */
-            MPI_DOUBLE, MPI_DOUBLE,
-            /* Statistics */
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,
-            /* Host Times */
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type, mpi_int64_type,
-            /* Host Normalized Times */
-            MPI_DOUBLE, MPI_DOUBLE,
-            /* Device Times */
-            mpi_int64_type, mpi_int64_type,
-            mpi_int64_type,
-            /* Device Max Times */
-            mpi_int64_type, mpi_int64_type,
+            #define FIELD_MPI_TYPE(name, c_type, mpi_type) mpi_type,
+            FOR_POP_BASE_METRICS_FIELDS(FIELD_MPI_TYPE)
+            #undef FIELD_MPI_TYPE
         };
+
+        enum {count = sizeof(blocklengths) / sizeof(blocklengths[0])};
 
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);
-        PMPI_Type_create_resized(tmp_type, 0, sizeof(app_reduction_t),
+        PMPI_Type_create_resized(tmp_type, 0, sizeof(pop_base_metrics_t),
                 &mpi_app_reduction_type);
         PMPI_Type_commit(&mpi_app_reduction_type);
-
-        static_ensure(sizeof(blocklengths)/sizeof(blocklengths[0]) == count,
-                "blocklengths size mismatch");
-        static_ensure(sizeof(displacements)/sizeof(displacements[0]) == count,
-                "displacements size mismatch");
-        static_ensure(sizeof(types)/sizeof(types[0]) == count,
-                "types size mismatch");
     }
 
     /* Define MPI operation */
@@ -597,11 +502,11 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
 
     /* MPI reduction */
     if (!all_to_all) {
-        PMPI_Reduce(&app_reduction_send, app_reduction, 1,
+        PMPI_Reduce(&app_reduction_send, base_metrics, 1,
                 mpi_app_reduction_type, app_reduction_op,
                 0, getWorldComm());
     } else {
-        PMPI_Allreduce(&app_reduction_send, app_reduction, 1,
+        PMPI_Allreduce(&app_reduction_send, base_metrics, 1,
                 mpi_app_reduction_type, app_reduction_op,
                 getWorldComm());
     }
@@ -626,46 +531,9 @@ void perf_metrics__reduce_monitor_into_base_metrics(pop_base_metrics_t *base_met
     reduce_pop_metrics_node_reduction(&node_reduction, monitor);
 
     /* With the node reduction, reduce again among all process */
-    app_reduction_t app_reduction = {0};
-    reduce_pop_metrics_app_reduction(&app_reduction, &node_reduction,
+    *base_metrics = (pop_base_metrics_t){0};
+    reduce_pop_metrics_app_reduction(base_metrics, &node_reduction,
             monitor, all_to_all);
-
-    /* Finally, fill output base_metrics... */
-
-    int num_mpi_ranks;
-    PMPI_Comm_size(getWorldComm(), &num_mpi_ranks);
-
-    *base_metrics = (const pop_base_metrics_t) {
-        .num_cpus                = app_reduction.num_cpus,
-        .num_available_cpus      = app_reduction.num_available_cpus,
-        .num_omp_threads         = app_reduction.num_omp_threads,
-        .num_mpi_ranks           = num_mpi_ranks,
-        .num_nodes               = app_reduction.num_nodes,
-        .avg_cpus                = app_reduction.avg_cpus,
-        .num_gpus                = app_reduction.num_gpus,
-        .cycles                  = app_reduction.cycles,
-        .instructions            = app_reduction.instructions,
-        .num_measurements        = app_reduction.num_measurements,
-        .num_mpi_calls           = app_reduction.num_mpi_calls,
-        .num_omp_parallels       = app_reduction.num_omp_parallels,
-        .num_omp_tasks           = app_reduction.num_omp_tasks,
-        .num_gpu_runtime_calls   = app_reduction.num_gpu_runtime_calls,
-        .elapsed_time            = app_reduction.elapsed_time,
-        .useful_time             = app_reduction.useful_time,
-        .mpi_time                = app_reduction.mpi_time,
-        .mpi_worker_idle_time    = app_reduction.mpi_worker_idle_time,
-        .omp_load_imbalance_time = app_reduction.omp_load_imbalance_time,
-        .omp_scheduling_time     = app_reduction.omp_scheduling_time,
-        .omp_serialization_time  = app_reduction.omp_serialization_time,
-        .gpu_runtime_time        = app_reduction.gpu_runtime_time,
-        .min_mpi_normd_proc      = app_reduction.min_mpi_normd_proc,
-        .min_mpi_normd_node      = app_reduction.min_mpi_normd_node,
-        .gpu_useful_time         = app_reduction.gpu_useful_time,
-        .gpu_communication_time  = app_reduction.gpu_communication_time,
-        .gpu_inactive_time       = app_reduction.gpu_inactive_time,
-        .max_gpu_useful_time     = app_reduction.max_gpu_useful_time,
-        .max_gpu_active_time     = app_reduction.max_gpu_active_time,
-    };
 }
 #endif
 

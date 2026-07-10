@@ -277,167 +277,23 @@ static void pop_metrics_to_json(FILE *out_file) {
 
             fprintf(out_file,
                     "    \"%s\": {\n"
-                    "      \"numCpus\": %d,\n"
-                    "      \"numOmpThreads\": %d,\n"
-                    "      \"numMpiRanks\": %d,\n"
-                    "      \"numNodes\": %d,\n"
-                    "      \"numGpus\": %d,\n"
-                    "      \"cycles\": %.0f,\n"
-                    "      \"instructions\": %.0f,\n"
-                    "      \"numMeasurements\": %"PRId64",\n"
-                    "      \"numMpiCalls\": %"PRId64",\n"
-                    "      \"numOmpParallels\": %"PRId64",\n"
-                    "      \"numOmpTasks\": %"PRId64",\n"
-                    "      \"numGpuRuntimeCalls\": %"PRId64",\n"
-                    "      \"elapsedTime\": %"PRId64",\n"
-                    "      \"usefulTime\": %"PRId64",\n"
-                    "      \"mpiTime\": %"PRId64",\n"
-                    "      \"mpiWorkerIdleTime\": %"PRId64",\n"
-                    "      \"ompLoadImbalanceTime\": %"PRId64",\n"
-                    "      \"ompSchedulingTime\": %"PRId64",\n"
-                    "      \"ompSerializationTime\": %"PRId64",\n"
-                    "      \"gpuRuntimeTime\": %"PRId64",\n"
-                    "      \"minMpiNormdProc\": %.0f,\n"
-                    "      \"minMpiNormdNode\": %.0f,\n"
-                    "      \"gpuUsefulTime\": %"PRId64",\n"
-                    "      \"gpuCommunicationTime\": %"PRId64",\n"
-                    "      \"maxGpuUsefulTime\": %"PRId64",\n"
-                    "      \"maxGpuActiveTime\": %"PRId64",\n"
-                    "      \"parallelEfficiency\": %.2f,\n"
-                    "      \"mpiParallelEfficiency\": %.2f,\n"
-                    "      \"mpiCommunicationEfficiency\": %.2f,\n"
-                    "      \"mpiLoadBalance\": %.2f,\n"
-                    "      \"mpiLoadBalanceIn\": %.2f,\n"
-                    "      \"mpiLoadBalanceOut\": %.2f,\n"
-                    "      \"ompParallelEfficiency\": %.2f,\n"
-                    "      \"ompLoadBalance\": %.2f,\n"
-                    "      \"ompSchedulingEfficiency\": %.2f,\n"
-                    "      \"ompSerializationEfficiency\": %.2f,\n"
-                    "      \"deviceOffloadEfficiency\": %.2f,\n"
-                    "      \"gpuParallelEfficiency\": %.2f,\n"
-                    "      \"gpuLoadBalance\": %.2f,\n"
-                    "      \"gpuCommunicationEfficiency\": %.2f,\n"
-                    "      \"gpuOrchestrationEfficiency\": %.2f\n"
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+                    "      \"" #json_name "\": " fmt ",\n"
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+                    "      \"" #json_name "\": " fmt "\n"
+                    FOR_DLB_POP_METRICS_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
                     "    }%s\n",
-                    record->name,
-                    record->num_cpus,
-                    record->num_omp_threads,
-                    record->num_mpi_ranks,
-                    record->num_nodes,
-                    record->num_gpus,
-                    record->cycles,
-                    record->instructions,
-                    record->num_measurements,
-                    record->num_mpi_calls,
-                    record->num_omp_parallels,
-                    record->num_omp_tasks,
-                    record->num_gpu_runtime_calls,
-                    record->elapsed_time,
-                    record->useful_time,
-                    record->mpi_time,
-                    record->mpi_worker_idle_time,
-                    record->omp_load_imbalance_time,
-                    record->omp_scheduling_time,
-                    record->omp_serialization_time,
-                    record->gpu_runtime_time,
-                    record->min_mpi_normd_proc,
-                    record->min_mpi_normd_node,
-                    record->gpu_useful_time,
-                    record->gpu_communication_time,
-                    record->max_gpu_useful_time,
-                    record->max_gpu_active_time,
-                    record->parallel_efficiency,
-                    record->mpi_parallel_efficiency,
-                    record->mpi_communication_efficiency,
-                    record->mpi_load_balance,
-                    record->mpi_load_balance_in,
-                    record->mpi_load_balance_out,
-                    record->omp_parallel_efficiency,
-                    record->omp_load_balance,
-                    record->omp_scheduling_efficiency,
-                    record->omp_serialization_efficiency,
-                    record->device_offload_efficiency,
-                    record->gpu_parallel_efficiency,
-                    record->gpu_load_balance,
-                    record->gpu_communication_efficiency,
-                    record->gpu_orchestration_efficiency,
-                    node->next != NULL ? "," : "");
+                    record->name
+#define PRINT_ARG(var_name, c_type, json_name, fmt) \
+                    , record->var_name
+                    FOR_DLB_POP_METRICS_FIELDS(PRINT_ARG, PRINT_ARG)
+#undef PRINT_ARG
+                    , node->next != NULL ? "," : "");
         }
         fprintf(out_file,
                     "  }");         /* no eol */
-    }
-}
-
-static void pop_metrics_to_xml(FILE *out_file) {
-
-    for (GSList *node = pop_metrics_records;
-            node != NULL;
-            node = node->next) {
-
-        dlb_pop_metrics_t *record = node->data;
-
-        fprintf(out_file,
-                "  <Application>\n"
-                "    <name>%s</name>\n"
-                "    <numCpus>%d</numCpus>\n"
-                "    <numMpiRanks>%d</numMpiRanks>\n"
-                "    <numNodes>%d</numNodes>\n"
-                "    <avgCpus>%.1f</avgCpus>\n"
-                "    <cycles>%.0f</cycles>\n"
-                "    <instructions>%.0f</instructions>\n"
-                "    <numMeasurements>%"PRId64"</numMeasurements>\n"
-                "    <numMpiCalls>%"PRId64"</numMpiCalls>\n"
-                "    <numOmpParallels>%"PRId64"</numOmpParallels>\n"
-                "    <numOmpTasks>%"PRId64"</numOmpTasks>\n"
-                "    <elapsedTime>%"PRId64"</elapsedTime>\n"
-                "    <usefulTime>%"PRId64"</usefulTime>\n"
-                "    <mpiTime>%"PRId64"</mpiTime>\n"
-                "    <ompLoadImbalanceTime>%"PRId64"</ompLoadImbalanceTime>\n"
-                "    <ompSchedulingTime>%"PRId64"</ompSchedulingTime>\n"
-                "    <ompSerializationTime>%"PRId64"</ompSerializationTime>\n"
-                "    <minMpiNormdProc>%.0f</minMpiNormdProc>\n"
-                "    <minMpiNormdNode>%.0f</minMpiNormdNode>\n"
-                "    <parallelEfficiency>%.2f</parallelEfficiency>\n"
-                "    <mpiParallelEfficiency>%.2f</mpiParallelEfficiency>\n"
-                "    <mpiCommunicationEfficiency>%.2f</mpiCommunicationEfficiency>\n"
-                "    <mpiLoadBalance>%.2f</mpiLoadBalance>\n"
-                "    <mpiLoadBalanceIn>%.2f</mpiLoadBalanceIn>\n"
-                "    <mpiLoadBalanceOut>%.2f</mpiLoadBalanceOut>\n"
-                "    <ompParallelEfficiency>%.2f</ompParallelEfficiency>\n"
-                "    <ompLoadBalance>%.2f</ompLoadBalance>\n"
-                "    <ompSchedulingEfficiency>%.2f</ompSchedulingEfficiency>\n"
-                "    <ompSerializationEfficiency>%.2f</ompSerializationEfficiency>\n"
-                "  </Application>\n",
-                record->name,
-                record->num_cpus,
-                record->num_mpi_ranks,
-                record->num_nodes,
-                record->avg_cpus,
-                record->cycles,
-                record->instructions,
-                record->num_measurements,
-                record->num_mpi_calls,
-                record->num_omp_parallels,
-                record->num_omp_tasks,
-                record->elapsed_time,
-                record->useful_time,
-                record->mpi_time,
-                record->omp_load_imbalance_time,
-                record->omp_scheduling_time,
-                record->omp_serialization_time,
-                record->min_mpi_normd_proc,
-                record->min_mpi_normd_node,
-                record->parallel_efficiency,
-                record->mpi_parallel_efficiency,
-                record->mpi_communication_efficiency,
-                record->mpi_load_balance,
-                record->mpi_load_balance_in,
-                record->mpi_load_balance_out,
-                record->omp_parallel_efficiency,
-                record->omp_load_balance,
-                record->omp_scheduling_efficiency,
-                record->omp_serialization_efficiency
-                );
     }
 }
 
@@ -559,42 +415,13 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
         /* Print header */
         fprintf(out_file,
                 "name,"
-                "numCpus,"
-                "numOmpThreads,"
-                "numMpiRanks,"
-                "numNodes,"
-                "cycles,"
-                "instructions,"
-                "numMeasurements,"
-                "numMpiCalls,"
-                "numOmpParallels,"
-                "numOmpTasks,"
-                "numGpuRuntimeCalls,"
-                "elapsedTime,"
-                "usefulTime,"
-                "mpiTime,"
-                "mpiWorkerIdleTime,"
-                "ompLoadImbalanceTime,"
-                "ompSchedulingTime,"
-                "ompSerializationTime,"
-                "gpuRuntimeTime,"
-                "minMpiNormdProc,"
-                "minMpiNormdNode,"
-                "parallelEfficiency,"
-                "mpiParallelEfficiency,"
-                "mpiCommunicationEfficiency,"
-                "mpiLoadBalance,"
-                "mpiLoadBalanceIn,"
-                "mpiLoadBalanceOut,"
-                "ompParallelEfficiency,"
-                "ompLoadBalance,"
-                "ompSchedulingEfficiency,"
-                "ompSerializationEfficiency,"
-                "deviceOffloadEfficiency,"
-                "gpuParallelEfficiency,"
-                "gpuLoadBalance,"
-                "gpuCommunicationEfficiency,"
-                "gpuOrchestrationEfficiency\n"
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+                #json_name ","
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+                #json_name "\n"
+                FOR_DLB_POP_METRICS_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
             );
     }
 
@@ -605,80 +432,19 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
         dlb_pop_metrics_t *record = node->data;
 
         fprintf(out_file,
-                "\"%s\","    /* name */
-                "%d,"        /* numCpus */
-                "%d,"        /* numOmpThreads */
-                "%d,"        /* numMpiRanks */
-                "%d,"        /* numNodes */
-                "%.0f,"      /* cycles */
-                "%.0f,"      /* instructions */
-                "%"PRId64"," /* numMeasurements */
-                "%"PRId64"," /* numMpiCalls */
-                "%"PRId64"," /* numOmpParallels */
-                "%"PRId64"," /* numOmpTasks */
-                "%"PRId64"," /* numGpuRuntimeCalls */
-                "%"PRId64"," /* elapsedTime */
-                "%"PRId64"," /* usefulTime */
-                "%"PRId64"," /* mpiTime */
-                "%"PRId64"," /* mpiWorkerIdleTime */
-                "%"PRId64"," /* ompLoadImbalanceTime */
-                "%"PRId64"," /* ompSchedulingTime */
-                "%"PRId64"," /* ompSerializationTime */
-                "%"PRId64"," /* gpuRuntimeTime */
-                "%.0f,"      /* minMpiNormdProc */
-                "%.0f,"      /* minMpiNormdNode */
-                "%.2f,"      /* parallelEfficiency */
-                "%.2f,"      /* mpiParallelEfficiency */
-                "%.2f,"      /* mpiCommunicationEfficiency */
-                "%.2f,"      /* mpiLoadBalance */
-                "%.2f,"      /* mpiLoadBalanceIn */
-                "%.2f,"      /* mpiLoadBalanceOut */
-                "%.2f,"      /* ompParallelEfficiency */
-                "%.2f,"      /* ompLoadBalance */
-                "%.2f,"      /* ompSchedulingEfficiency */
-                "%.2f,"      /* ompSerializationEfficiency */
-                "%.2f,"      /* deviceOffloadEfficiency */
-                "%.2f,"      /* gpuParallelEfficiency */
-                "%.2f,"      /* gpuLoadBalance */
-                "%.2f,"      /* gpuCommunicationEfficiency */
-                "%.2f\n",    /* gpuOrchestrationEfficiency */
-                record->name,
-                record->num_cpus,
-                record->num_omp_threads,
-                record->num_mpi_ranks,
-                record->num_nodes,
-                record->cycles,
-                record->instructions,
-                record->num_measurements,
-                record->num_mpi_calls,
-                record->num_omp_parallels,
-                record->num_omp_tasks,
-                record->num_gpu_runtime_calls,
-                record->elapsed_time,
-                record->useful_time,
-                record->mpi_time,
-                record->mpi_worker_idle_time,
-                record->omp_load_imbalance_time,
-                record->omp_scheduling_time,
-                record->omp_serialization_time,
-                record->gpu_runtime_time,
-                record->min_mpi_normd_proc,
-                record->min_mpi_normd_node,
-                record->parallel_efficiency,
-                record->mpi_parallel_efficiency,
-                record->mpi_communication_efficiency,
-                record->mpi_load_balance,
-                record->mpi_load_balance_in,
-                record->mpi_load_balance_out,
-                record->omp_parallel_efficiency,
-                record->omp_load_balance,
-                record->omp_scheduling_efficiency,
-                record->omp_serialization_efficiency,
-                record->device_offload_efficiency,
-                record->gpu_parallel_efficiency,
-                record->gpu_load_balance,
-                record->gpu_communication_efficiency,
-                record->gpu_orchestration_efficiency
+                "\"%s\","
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+                fmt ","
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+                fmt "\n"
+                FOR_DLB_POP_METRICS_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
+                , record->name
+#define PRINT_ARG(var_name, c_type, json_name, fmt) \
+                , record->var_name
+                FOR_DLB_POP_METRICS_FIELDS(PRINT_ARG, PRINT_ARG)
+#undef PRINT_ARG
             );
     }
 }
@@ -815,48 +581,6 @@ static void node_to_json(FILE *out_file) {
     }
     fprintf(out_file,
                 "  ]");         /* no eol */
-}
-
-static void node_to_xml(FILE *out_file) {
-
-    for (GSList *node = node_records;
-            node != NULL;
-            node = node->next) {
-
-        node_record_t *node_record = node->data;
-
-        fprintf(out_file,
-                "  <node>\n"
-                "    <id>%d</id>\n",
-                node_record->node_id);
-
-        for (int i = 0; i < node_record->nelems; ++i) {
-            fprintf(out_file,
-                "    <process>\n"
-                "      <id>%d</id>\n"
-                "      <usefulTime>%"PRId64"</usefulTime>\n"
-                "      <mpiTime>%"PRId64"</mpiTime>\n"
-                "    </process>\n",
-                node_record->processes[i].pid,
-                node_record->processes[i].useful_time,
-                node_record->processes[i].mpi_time);
-        }
-
-        fprintf(out_file,
-                "    <nodeAvg>\n"
-                "      <usefulTime>%"PRId64"</usefulTime>\n"
-                "      <mpiTime>%"PRId64"</mpiTime>\n"
-                "    </nodeAvg>\n"
-                "    <nodeMax>\n"
-                "      <usefulTime>%"PRId64"</usefulTime>\n"
-                "      <mpiTime>%"PRId64"</mpiTime>\n"
-                "    </nodeMax>\n"
-                "  </node>\n",
-                node_record->avg_useful_time,
-                node_record->avg_mpi_time,
-                node_record->max_useful_time,
-                node_record->max_mpi_time);
-    }
 }
 
 static void node_to_csv(FILE *out_file, bool append) {
@@ -1110,52 +834,23 @@ static void process_to_json(FILE *out_file) {
                 "        \"nodeId\": %d,\n"
                 "        \"hostname\": \"%s\",\n"
                 "        \"cpuset\": %s,\n"
-                "        \"numCpus\": %d,\n"
-                "        \"numOmpThreads\": %d,\n"
-                "        \"cycles\": %"PRId64",\n"
-                "        \"instructions\": %"PRId64",\n"
-                "        \"numMeasurements\": %d,\n"
-                "        \"numResets\": %d,\n"
-                "        \"numMpiCalls\": %"PRId64",\n"
-                "        \"numOmpParallels\": %"PRId64",\n"
-                "        \"numOmpTasks\": %"PRId64",\n"
-                "        \"numGpuRuntimeCalls\": %"PRId64",\n"
-                "        \"elapsedTime\": %"PRId64",\n"
-                "        \"usefulTime\": %"PRId64",\n"
-                "        \"mpiTime\": %"PRId64",\n"
-                "        \"mpiWorkerIdleTime\": %"PRId64",\n"
-                "        \"ompLoadImbalanceTime\": %"PRId64",\n"
-                "        \"ompSchedulingTime\": %"PRId64",\n"
-                "        \"ompSerializationTime\": %"PRId64",\n"
-                "        \"gpuRuntimeTime\": %"PRId64",\n"
-                "        \"gpuUsefulTime\": %"PRId64",\n"
-                "        \"gpuCommunicationTime\": %"PRId64"\n"
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+                "        \"" #json_name "\": " fmt ",\n"
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+                "        \"" #json_name "\": " fmt "\n"
+                FOR_DLB_MONITOR_PRINTABLE_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
                 "      }%s\n",
                 process_record->rank,
                 process_record->pid,
                 process_record->node_id,
                 process_record->hostname,
                 process_record->cpuset_quoted,
-                process_record->monitor.num_cpus,
-                process_record->monitor.num_omp_threads,
-                process_record->monitor.cycles,
-                process_record->monitor.instructions,
-                process_record->monitor.num_measurements,
-                process_record->monitor.num_resets,
-                process_record->monitor.num_mpi_calls,
-                process_record->monitor.num_omp_parallels,
-                process_record->monitor.num_omp_tasks,
-                process_record->monitor.num_gpu_runtime_calls,
-                process_record->monitor.elapsed_time,
-                process_record->monitor.useful_time,
-                process_record->monitor.mpi_time,
-                process_record->monitor.mpi_worker_idle_time,
-                process_record->monitor.omp_load_imbalance_time,
-                process_record->monitor.omp_scheduling_time,
-                process_record->monitor.omp_serialization_time,
-                process_record->monitor.gpu_runtime_time,
-                process_record->monitor.gpu_useful_time,
-                process_record->monitor.gpu_communication_time,
+#define PRINT_ARG(var_name, c_type, json_name, fmt) \
+                process_record->monitor.var_name,
+                FOR_DLB_MONITOR_PRINTABLE_FIELDS(PRINT_ARG, PRINT_ARG)
+#undef PRINT_ARG
                 i + 1 < region_record->num_mpi_ranks ? "," : "");
         }
         fprintf(out_file,
@@ -1164,72 +859,6 @@ static void process_to_json(FILE *out_file) {
     }
     fprintf(out_file,
                 "  }");         /* no eol */
-}
-
-static void process_to_xml(FILE *out_file) {
-
-    for (GSList *node = region_records;
-            node != NULL;
-            node = node->next) {
-
-        region_record_t *region_record = node->data;
-
-        fprintf(out_file,
-                "  <Process>\n"
-                "    <name>%s</name>\n",
-                region_record->name);
-
-        for (int i = 0; i < region_record->num_mpi_ranks; ++i) {
-
-            process_record_t *process_record = &region_record->process_records[i];
-
-            fprintf(out_file,
-                "    <process>\n"
-                "      <rank>%d</rank>\n"
-                "      <pid>%d</pid>\n"
-                "      <nodeId>%d</nodeId>\n"
-                "      <hostname>%s</hostname>\n"
-                "      <cpuset>%s</cpuset>\n"
-                "      <numCpus>%d</numCpus>\n"
-                "      <avgCpus>%.1f</avgCpus>\n"
-                "      <cycles>%"PRId64"</cycles>\n"
-                "      <instructions>%"PRId64"</instructions>\n"
-                "      <numMeasurements>%d</numMeasurements>\n"
-                "      <numResets>%d</numResets>\n"
-                "      <numMpiCalls>%"PRId64"</numMpiCalls>\n"
-                "      <numOmpParallels>%"PRId64"</numOmpParallels>\n"
-                "      <numOmpTasks>%"PRId64"</numOmpTasks>\n"
-                "      <elapsedTime>%"PRId64"</elapsedTime>\n"
-                "      <usefulTime>%"PRId64"</usefulTime>\n"
-                "      <mpiTime>%"PRId64"</mpiTime>\n"
-                "      <ompLoadImbalanceTime>%"PRId64"</ompLoadImbalanceTime>\n"
-                "      <ompSchedulingTime>%"PRId64"</ompSchedulingTime>\n"
-                "      <ompSerializationTime>%"PRId64"</ompSerializationTime>\n"
-                "    </process>\n",
-                process_record->rank,
-                process_record->pid,
-                process_record->node_id,
-                process_record->hostname,
-                process_record->cpuset_quoted,
-                process_record->monitor.num_cpus,
-                process_record->monitor.avg_cpus,
-                process_record->monitor.cycles,
-                process_record->monitor.instructions,
-                process_record->monitor.num_measurements,
-                process_record->monitor.num_resets,
-                process_record->monitor.num_mpi_calls,
-                process_record->monitor.num_omp_parallels,
-                process_record->monitor.num_omp_tasks,
-                process_record->monitor.elapsed_time,
-                process_record->monitor.useful_time,
-                process_record->monitor.mpi_time,
-                process_record->monitor.omp_load_imbalance_time,
-                process_record->monitor.omp_scheduling_time,
-                process_record->monitor.omp_serialization_time);
-        }
-        fprintf(out_file,
-                "  </Process>\n");
-    }
 }
 
 static void process_to_csv(FILE *out_file, bool append) {
@@ -1245,26 +874,14 @@ static void process_to_csv(FILE *out_file, bool append) {
                 "NodeId,"
                 "Hostname,"
                 "CpuSet,"
-                "NumCpus,"
-                "NumOmpThreads,"
-                "Cycles,"
-                "Instructions,"
-                "NumMeasurements,"
-                "NumResets,"
-                "NumMpiCalls,"
-                "NumOmpParallels,"
-                "NumOmpTasks,"
-                "NumGpuCalls,"
-                "ElapsedTime,"
-                "UsefulTime,"
-                "MPITime,"
-                "MPIWorkerIdleTime,"
-                "OMPLoadImbalance,"
-                "OMPSchedulingTime,"
-                "OMPSerializationTime,"
-                "GPURuntimeTime,"
-                "GPUUsefulTime,"
-                "GPUCommunicationTime\n");
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+                #json_name ","
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+                #json_name "\n"
+                FOR_DLB_MONITOR_PRINTABLE_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
+               );
     }
 
     for (GSList *node = region_records;
@@ -1284,52 +901,24 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%d,"           /* NodeId */
                     "%s,"           /* Hostname */
                     "%s,"           /* CpuSet */
-                    "%d,"           /* NumCpus */
-                    "%d,"           /* NumOmpThreads */
-                    "%"PRId64","    /* Cycles */
-                    "%"PRId64","    /* Instructions */
-                    "%d,"           /* NumMeasurements */
-                    "%d,"           /* NumResets */
-                    "%"PRId64","    /* NumMpiCalls */
-                    "%"PRId64","    /* NumOmpParallels */
-                    "%"PRId64","    /* NumOmpTasks */
-                    "%"PRId64","    /* NumGpuCalls */
-                    "%"PRId64","    /* ElapsedTime */
-                    "%"PRId64","    /* UsefulTime */
-                    "%"PRId64","    /* MPITime */
-                    "%"PRId64","    /* MPIWorkerIdleTime */
-                    "%"PRId64","    /* OMPLoadImbalance */
-                    "%"PRId64","    /* OMPSchedulingTime */
-                    "%"PRId64","    /* OMPSerializationTime */
-                    "%"PRId64","    /* GPURuntimeTime */
-                    "%"PRId64","    /* GPUUsefulTime */
-                    "%"PRId64"\n",  /* GPUCommunicationTime */
-                    region_record->name,
-                    process_record->rank,
-                    process_record->pid,
-                    process_record->node_id,
-                    process_record->hostname,
-                    process_record->cpuset_quoted,
-                    process_record->monitor.num_cpus,
-                    process_record->monitor.num_omp_threads,
-                    process_record->monitor.cycles,
-                    process_record->monitor.instructions,
-                    process_record->monitor.num_measurements,
-                    process_record->monitor.num_resets,
-                    process_record->monitor.num_mpi_calls,
-                    process_record->monitor.num_omp_parallels,
-                    process_record->monitor.num_omp_tasks,
-                    process_record->monitor.num_gpu_runtime_calls,
-                    process_record->monitor.elapsed_time,
-                    process_record->monitor.useful_time,
-                    process_record->monitor.mpi_time,
-                    process_record->monitor.mpi_worker_idle_time,
-                    process_record->monitor.omp_load_imbalance_time,
-                    process_record->monitor.omp_scheduling_time,
-                    process_record->monitor.omp_serialization_time,
-                    process_record->monitor.gpu_runtime_time,
-                    process_record->monitor.gpu_useful_time,
-                    process_record->monitor.gpu_communication_time);
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+                    fmt ","
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+                    fmt "\n"
+                    FOR_DLB_MONITOR_PRINTABLE_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
+                    , region_record->name
+                    , process_record->rank
+                    , process_record->pid
+                    , process_record->node_id
+                    , process_record->hostname
+                    , process_record->cpuset_quoted
+#define PRINT_ARG(var_name, c_type, json_name, fmt) \
+                    , process_record->monitor.var_name
+                    FOR_DLB_MONITOR_PRINTABLE_FIELDS(PRINT_ARG, PRINT_ARG)
+#undef PRINT_ARG
+                    );
         }
     }
 }
@@ -1431,15 +1020,6 @@ static void common_to_json(FILE *out_file) {
                 common_record.time_of_creation);
 }
 
-static void common_to_xml(FILE *out_file) {
-
-    fprintf(out_file,
-            "  <dlbVersion>%s</dlbVersion>\n"
-            "  <timestamp>%s</timestamp>\n",
-            common_record.dlb_version,
-            common_record.time_of_creation);
-}
-
 static void common_to_txt(FILE *out_file) {
 
     fprintf(out_file,
@@ -1496,19 +1076,6 @@ static void resources_to_json(FILE *out_file) {
                 resources_record.num_nodes,
                 resources_record.num_mpi_ranks,
                 resources_record.num_gpus);
-}
-
-static void resources_to_xml(FILE *out_file) {
-
-    fprintf(out_file,
-            "  <resources>\n"
-            "    <numCpus>%u</numCpus>\n"
-            "    <numNodes>%u</numNodes>\n"
-            "    <numMpiRanks>%u</numMpiRanks>\n"
-            "  </resources>",
-            resources_record.num_cpus,
-            resources_record.num_nodes,
-            resources_record.num_mpi_ranks);
 }
 
 static void resources_to_txt(FILE *out_file) {
@@ -1569,15 +1136,6 @@ static void json_header(FILE *out_file) {
 
 static void json_footer(FILE *out_file) {
     fprintf(out_file, "\n}\n");
-}
-
-static void xml_header(FILE *out_file) {
-    fprintf(out_file, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                      "<root>\n");
-}
-
-static void xml_footer(FILE *out_file) {
-    fprintf(out_file, "</root>\n");
 }
 
 
@@ -1934,8 +1492,7 @@ void talp_output_finalize(const char *output_file, bool partial_output) {
 
         /* Deprecation warning*/
         if(extension == EXT_XML){
-            warning("Deprecated: The support for XML output is deprecated and"
-                    " will be removed in the next release");
+            warning("Deprecated: The support for XML output is deprecated.");
         }
 
         /* Flag check */
@@ -2049,20 +1606,12 @@ void talp_output_finalize(const char *output_file, bool partial_output) {
                     process_to_json(out_file);
                     json_footer(out_file);
                     break;
-                case EXT_XML:
-                    xml_header(out_file);
-                    common_to_xml(out_file);
-                    resources_to_xml(out_file);
-                    pop_metrics_to_xml(out_file);
-                    node_to_xml(out_file);
-                    process_to_xml(out_file);
-                    xml_footer(out_file);
-                    break;
                 case EXT_CSV:
                     pop_metrics_to_csv(out_file, append_to_csv);
                     node_to_csv(out_file, append_to_csv);
                     process_to_csv(out_file, append_to_csv);
                     break;
+                case EXT_XML:
                 case EXT_TXT:
                     common_to_txt(out_file);
                     resources_to_txt(out_file);
