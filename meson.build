@@ -467,6 +467,7 @@ libdlb_cupti_test = shared_module(
 librocprofiler_sdk_stub = shared_library(
   'rocprofiler-sdk_stub',
   'tests/stubs/rocprofiler_sdk_stub.c',
+  dependencies : dl_dep,
   build_by_default: false,
   install : false,
 )

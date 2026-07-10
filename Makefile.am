@@ -1303,7 +1303,9 @@ LIT_EXTRA = scripts/lit/PKG-INFO \
 EXTRA_DIST += \
 	scripts/bets \
 	scripts/dlb.spec \
+	scripts/gen_fortran_talp_test.py \
 	scripts/git-version-gen \
+	scripts/meson-dist-gen.sh \
 	scripts/parse_version.py \
 	scripts/viewer/dlb_cpu_usage.in \
 	scripts/viewer/dlb_viewer.py.in \
@@ -1366,7 +1368,10 @@ clean-deb:
 #################################################################################
 ### tests                                                                     ###
 #################################################################################
-EXTRA_DIST += tests/test \
+EXTRA_DIST += src/talp/talp_check_layout.c \
+	      tests/unit \
+	      tests/functional \
+	      tests/stubs \
 	      tests/gens/config.py \
 	      tests/lit.site.cfg \
 	      tests/litsupport/__init__.py \
@@ -1400,6 +1405,8 @@ endif
 #################################################################################
 EXTRA_DIST += meson.build \
 	      meson_options.txt \
+	      src/apis/meson.build \
+	      src/apis/python_bindings/meson.build \
 	      tests/meson.build \
 	      $(END)
 
