@@ -27,6 +27,7 @@
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
 #include "support/gslist.h"
+#include "support/mask_utils.h"
 #include "support/mytime.h"
 #include "support/options.h"
 #include "talp/talp.h"
@@ -97,11 +98,14 @@ void talp_output_record_gpu_vendor(gpu_vendor_t vendor) {
 /*    Monitoring Region                                                          */
 /*********************************************************************************/
 
-void talp_output_print_monitoring_region(const dlb_monitor_t *monitor,
-        const char *cpuset_str, talp_flags_t talp_flags) {
+void talp_output_print_monitoring_region(
+        const dlb_monitor_t *monitor, talp_flags_t talp_flags) {
 
     char elapsed_time_str[16];
     ns_to_human(elapsed_time_str, 16, monitor->elapsed_time);
+
+    monitor_data_t *monitor_data = monitor->_data;
+    const char *cpuset_str = mu_to_str(&monitor_data->cpu_mask);
 
     info("%s", make_header("Monitoring Region Summary"));
     info("### Name:                                     %s", monitor->name);
@@ -274,9 +278,9 @@ static void pop_metrics_to_json(FILE *out_file) {
             fprintf(out_file,
                     "    \"%s\": {\n"
                     "      \"numCpus\": %d,\n"
+                    "      \"numOmpThreads\": %d,\n"
                     "      \"numMpiRanks\": %d,\n"
                     "      \"numNodes\": %d,\n"
-                    "      \"avgCpus\": %.1f,\n"
                     "      \"numGpus\": %d,\n"
                     "      \"cycles\": %.0f,\n"
                     "      \"instructions\": %.0f,\n"
@@ -317,9 +321,9 @@ static void pop_metrics_to_json(FILE *out_file) {
                     "    }%s\n",
                     record->name,
                     record->num_cpus,
+                    record->num_omp_threads,
                     record->num_mpi_ranks,
                     record->num_nodes,
-                    record->avg_cpus,
                     record->num_gpus,
                     record->cycles,
                     record->instructions,
@@ -450,9 +454,9 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "%s\n"
                     "### Name:                                      %s\n"
                     "### Number of CPUs:                            %d\n"
+                    "### Number of OpenMP threads:                  %d\n"
                     "### Number of MPI processes:                   %d\n"
                     "### Number of nodes:                           %d\n"
-                    "### Average CPUs:                              %.1f\n"
                     "### Number of GPUs:                            %d\n"
                     "### Cycles:                                    %.0f\n"
                     "### Instructions:                              %.0f\n"
@@ -496,9 +500,9 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     make_header("Monitoring Region POP Metrics"),
                     record->name,
                     record->num_cpus,
+                    record->num_omp_threads,
                     record->num_mpi_ranks,
                     record->num_nodes,
-                    record->avg_cpus,
                     record->num_gpus,
                     record->cycles,
                     record->instructions,
@@ -556,9 +560,9 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
         fprintf(out_file,
                 "name,"
                 "numCpus,"
+                "numOmpThreads,"
                 "numMpiRanks,"
                 "numNodes,"
-                "avgCpus,"
                 "cycles,"
                 "instructions,"
                 "numMeasurements,"
@@ -603,9 +607,9 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
         fprintf(out_file,
                 "\"%s\","    /* name */
                 "%d,"        /* numCpus */
+                "%d,"        /* numOmpThreads */
                 "%d,"        /* numMpiRanks */
                 "%d,"        /* numNodes */
-                "%.1f,"      /* avgCpus */
                 "%.0f,"      /* cycles */
                 "%.0f,"      /* instructions */
                 "%"PRId64"," /* numMeasurements */
@@ -640,9 +644,9 @@ static void pop_metrics_to_csv(FILE *out_file, bool append) {
                 "%.2f\n",    /* gpuOrchestrationEfficiency */
                 record->name,
                 record->num_cpus,
+                record->num_omp_threads,
                 record->num_mpi_ranks,
                 record->num_nodes,
-                record->avg_cpus,
                 record->cycles,
                 record->instructions,
                 record->num_measurements,
@@ -1107,7 +1111,7 @@ static void process_to_json(FILE *out_file) {
                 "        \"hostname\": \"%s\",\n"
                 "        \"cpuset\": %s,\n"
                 "        \"numCpus\": %d,\n"
-                "        \"avgCpus\": %.1f,\n"
+                "        \"numOmpThreads\": %d,\n"
                 "        \"cycles\": %"PRId64",\n"
                 "        \"instructions\": %"PRId64",\n"
                 "        \"numMeasurements\": %d,\n"
@@ -1133,7 +1137,7 @@ static void process_to_json(FILE *out_file) {
                 process_record->hostname,
                 process_record->cpuset_quoted,
                 process_record->monitor.num_cpus,
-                process_record->monitor.avg_cpus,
+                process_record->monitor.num_omp_threads,
                 process_record->monitor.cycles,
                 process_record->monitor.instructions,
                 process_record->monitor.num_measurements,
@@ -1242,7 +1246,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                 "Hostname,"
                 "CpuSet,"
                 "NumCpus,"
-                "AvgCpus,"
+                "NumOmpThreads,"
                 "Cycles,"
                 "Instructions,"
                 "NumMeasurements,"
@@ -1281,7 +1285,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     "%s,"           /* Hostname */
                     "%s,"           /* CpuSet */
                     "%d,"           /* NumCpus */
-                    "%.1f,"         /* AvgCpus */
+                    "%d,"           /* NumOmpThreads */
                     "%"PRId64","    /* Cycles */
                     "%"PRId64","    /* Instructions */
                     "%d,"           /* NumMeasurements */
@@ -1307,7 +1311,7 @@ static void process_to_csv(FILE *out_file, bool append) {
                     process_record->hostname,
                     process_record->cpuset_quoted,
                     process_record->monitor.num_cpus,
-                    process_record->monitor.avg_cpus,
+                    process_record->monitor.num_omp_threads,
                     process_record->monitor.cycles,
                     process_record->monitor.instructions,
                     process_record->monitor.num_measurements,
@@ -1459,17 +1463,19 @@ static void common_finalize(void) {
 /*********************************************************************************/
 typedef struct TALPResourcesRecord {
     unsigned int num_cpus;
+    unsigned int num_available_cpus;
     unsigned int num_nodes;
     unsigned int num_mpi_ranks;
     unsigned int num_gpus;
 } talp_resources_record_t;
 static talp_resources_record_t resources_record;
 
-void talp_output_record_resources(int num_cpus, int num_nodes, int num_mpi_ranks,
-        int num_gpus) {
+void talp_output_record_resources(int num_cpus, int num_available_cpus, int num_nodes,
+        int num_mpi_ranks, int num_gpus) {
 
     resources_record = (const talp_resources_record_t) {
         .num_cpus = (unsigned int) num_cpus,
+        .num_available_cpus = (unsigned int) num_available_cpus,
         .num_nodes = (unsigned int) num_nodes,
         .num_mpi_ranks = (unsigned int) num_mpi_ranks,
         .num_gpus = (unsigned int) num_gpus,
@@ -1480,11 +1486,13 @@ static void resources_to_json(FILE *out_file) {
     fprintf(out_file,
                     "  \"resources\": {\n"
                     "    \"numCpus\": %u,\n"
+                    "    \"numAvailableCpus\": %u,\n"
                     "    \"numNodes\": %u,\n"
                     "    \"numMpiRanks\": %u,\n"
                     "    \"numGpus\": %u\n"
                     "  },\n",
                 resources_record.num_cpus,
+                resources_record.num_available_cpus,
                 resources_record.num_nodes,
                 resources_record.num_mpi_ranks,
                 resources_record.num_gpus);
@@ -1508,11 +1516,13 @@ static void resources_to_txt(FILE *out_file) {
     fprintf(out_file,
             "%s\n"
             "### Number of CPUs:                %u\n"
+            "### Number of available CPUs:      %u\n"
             "### Number of Nodes:               %u\n"
             "### Number of MPI processes:       %u\n"
             "### Number of GPUs:                %u\n",
             make_header("TALP Resources"),
             resources_record.num_cpus,
+            resources_record.num_available_cpus,
             resources_record.num_nodes,
             resources_record.num_mpi_ranks,
             resources_record.num_gpus);

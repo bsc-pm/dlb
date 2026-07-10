@@ -58,6 +58,8 @@ void perf_metrics__infer_mpi_model(
 typedef struct pop_base_metrics_t {
     /* Resources */
     int     num_cpus;
+    int     num_available_cpus;
+    int     num_omp_threads;
     int     num_mpi_ranks;
     int     num_nodes;
     float   avg_cpus;

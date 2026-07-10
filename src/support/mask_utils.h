@@ -35,6 +35,7 @@ typedef struct mu_cpuset_t {
 /* System topology */
 void mu_init(void);
 void mu_finalize(void);
+int  mu_get_system_count(void);
 int  mu_get_system_size(void);
 void mu_get_system_mask(cpu_set_t *mask);
 int  mu_get_system_hwthreads_per_core(void);

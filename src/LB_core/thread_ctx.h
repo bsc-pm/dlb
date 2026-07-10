@@ -17,41 +17,52 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_H
-#define TALP_H
+#ifndef THREAD_CTX_H
+#define THREAD_CTX_H
 
-#include "apis/dlb_talp.h"
-#include "support/atomic.h"
-#include "talp/talp_types.h"
-
-#include <pthread.h>
-#include <sched.h>
 #include <stdbool.h>
-#include <stdint.h>
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
+typedef enum {
+    THREAD_ROLE_UNKNOWN = 0,     /* default; not yet classified         */
+    THREAD_ROLE_MAIN_SEQUENTIAL, /* set in DLB_init()                   */
+    THREAD_ROLE_MAIN_PARALLEL,   /* detected via OMPT parallel_begin    */
+    THREAD_ROLE_WORKER,          /* detected via OMPT thread_begin      */
+    THREAD_ROLE_OBSERVER,        /* calls the API but is never profiled */
+} thread_role_t;
 
+extern __thread thread_role_t thread_role;
 
-/* TALP init / finalize */
-void talp_init(subprocess_descriptor_t *spd);
-void talp_finalize(subprocess_descriptor_t *spd);
+static inline bool thread_is_main(void) {
+    return thread_role == THREAD_ROLE_MAIN_SEQUENTIAL ||
+           thread_role == THREAD_ROLE_MAIN_PARALLEL;
+}
 
+static inline bool thread_is_main_sequential(void) {
+    return thread_role == THREAD_ROLE_MAIN_SEQUENTIAL;
+}
 
-/* TALP samples aggregation */
-void talp_aggregate_sample_to_region(talp_info_t *talp_info,
-        dlb_monitor_t *monitor, const talp_sample_t *sample, int64_t elapsed);
-int talp_aggregate_samples_to_regions(talp_info_t *talp_info);
+static inline bool thread_is_parallel(void) {
+    return thread_role == THREAD_ROLE_MAIN_PARALLEL ||
+           thread_role == THREAD_ROLE_WORKER;
+}
 
+static inline bool thread_is_profiled(void) {
+    return thread_role == THREAD_ROLE_MAIN_SEQUENTIAL ||
+           thread_role == THREAD_ROLE_MAIN_PARALLEL   ||
+           thread_role == THREAD_ROLE_WORKER;
+}
 
-/* TALP collect functions for 3rd party programs */
-int talp_query_pop_node_metrics(const char *name, struct dlb_node_metrics_t *node_metrics);
+static inline bool thread_is_observer(void) {
+    return thread_role == THREAD_ROLE_OBSERVER;
+}
 
+typedef enum {
+    THREAD_MAIN_SEQUENTIAL,
+    THREAD_MAIN_PARALLEL,
+} thread_main_mode_t;
 
-/* TALP collect functions for 1st party programs */
-int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
-        struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);
-int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
-        struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
+void thread_ctx_set_main(thread_main_mode_t main_mode);
+void thread_ctx_set_worker(void);
+void thread_ctx_set_observer(bool is_observer);
 
-
-#endif /* TALP_H */
+#endif /* THREAD_CTX_H */

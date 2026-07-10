@@ -563,6 +563,11 @@ void mu_finalize( void ) {
     mu_cpuset_num_ulongs = CPU_ALLOC_SIZE(CPU_SETSIZE) / sizeof(unsigned long);
 }
 
+int mu_get_system_count( void ) {
+    if (unlikely(!mu_initialized)) mu_init();
+    return sys.sys_mask.count;
+}
+
 int mu_get_system_size( void ) {
     if (unlikely(!mu_initialized)) mu_init();
     return sys.sys_mask.last_cpuid + 1;

@@ -21,6 +21,7 @@
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "support/debug.h"
 #include "support/dlb_common.h"
 #include "talp/backend.h"
@@ -31,9 +32,6 @@
 #include "talp/talp_output.h"
 #include "talp/talp_types.h"
 
-
-extern __thread bool thread_is_observer;
-extern __thread bool thread_is_known;
 
 static const backend_api_t *gpu_backend_api = NULL;
 static gpu_measurements_t gpu_sample = {0};
@@ -100,9 +98,8 @@ void talp_gpu_finalize(void) {
 void talp_gpu_enter_runtime(void) {
 
     /* Observer and unknown threads may call GPU offload functions, but TALP must ignore them */
-    if (unlikely(thread_is_observer || !thread_is_known)) return;
+    if (unlikely(!thread_is_profiled())) return;
 
-    spd_enter_dlb(thread_spd);
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
         /* Update sample */
@@ -118,9 +115,8 @@ void talp_gpu_enter_runtime(void) {
 void talp_gpu_exit_runtime(void) {
 
     /* Observer and unknown threads may call GPU offload functions, but TALP must ignore them */
-    if (unlikely(thread_is_observer || !thread_is_known)) return;
+    if (unlikely(!thread_is_profiled())) return;
 
-    spd_enter_dlb(thread_spd);
     talp_info_t *talp_info = thread_spd->talp_info;
     if (talp_info) {
         /* Update sample */
@@ -135,7 +131,7 @@ void talp_gpu_exit_runtime(void) {
 
         /* Only when needed, update all regions */
         if (talp_info->flags.external_profiler
-                && talp_sample_is_main_sequential()) {
+                && thread_is_main_sequential()) {
             talp_aggregate_samples_to_regions(talp_info);
         }
     }
@@ -145,6 +141,8 @@ void talp_gpu_exit_runtime(void) {
 // Called from GPU backend plugin: flush GPU data
 void talp_gpu_submit(const gpu_measurements_t *measurements) {
 
+    ensure(thread_is_main(), "Non-main thread updating GPU measurements. Please report bug.");
+
     gpu_sample.useful_time        += measurements->useful_time;
     gpu_sample.communication_time += measurements->communication_time;
     gpu_sample.inactive_time      += measurements->inactive_time;
@@ -153,8 +151,7 @@ void talp_gpu_submit(const gpu_measurements_t *measurements) {
 // called from core
 void talp_gpu_collect(gpu_measurements_t *out) {
 
-    fatal_cond(thread_is_observer, "Observer thread collecting GPU metrics. Please report bug.");
-    fatal_cond(!thread_is_known, "Unknown thread collecting GPU metrics. Please report bug.");
+    ensure(thread_is_main(), "Non-main thread collecting GPU measurements. Please report bug.");
 
     // flush GPU, may cause callback to talp_gpu_submit
     gpu_backend_api->flush();

@@ -17,41 +17,48 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_H
-#define TALP_H
-
-#include "apis/dlb_talp.h"
-#include "support/atomic.h"
-#include "talp/talp_types.h"
-
-#include <pthread.h>
-#include <sched.h>
+#include "LB_core/thread_ctx.h"
+#include "support/debug.h"
 #include <stdbool.h>
-#include <stdint.h>
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
+__thread thread_role_t thread_role = THREAD_ROLE_UNKNOWN;
 
+void thread_ctx_set_main(thread_main_mode_t main_mode) {
 
-/* TALP init / finalize */
-void talp_init(subprocess_descriptor_t *spd);
-void talp_finalize(subprocess_descriptor_t *spd);
+    ensure(thread_role != THREAD_ROLE_WORKER,
+            "Wrong previous thread role in %s (%d). Please, report bug.",
+            __func__, thread_role);
 
+    thread_role =
+        main_mode == THREAD_MAIN_SEQUENTIAL ? THREAD_ROLE_MAIN_SEQUENTIAL
+        : main_mode == THREAD_MAIN_PARALLEL ? THREAD_ROLE_MAIN_PARALLEL
+        : THREAD_ROLE_UNKNOWN;
 
-/* TALP samples aggregation */
-void talp_aggregate_sample_to_region(talp_info_t *talp_info,
-        dlb_monitor_t *monitor, const talp_sample_t *sample, int64_t elapsed);
-int talp_aggregate_samples_to_regions(talp_info_t *talp_info);
+    ensure(thread_role != THREAD_ROLE_UNKNOWN,
+            "Unhandled thread main mode in %s. Please, report bug.",
+            __func__);
+}
 
+void thread_ctx_set_worker(void) {
 
-/* TALP collect functions for 3rd party programs */
-int talp_query_pop_node_metrics(const char *name, struct dlb_node_metrics_t *node_metrics);
+    ensure(thread_role == THREAD_ROLE_UNKNOWN,
+            "Wrong previous thread role in %s (%d). Please, report bug.",
+            __func__, thread_role);
 
+    thread_role = THREAD_ROLE_WORKER;
+}
 
-/* TALP collect functions for 1st party programs */
-int talp_collect_pop_metrics(const subprocess_descriptor_t *spd,
-        struct dlb_monitor_t *monitor, struct dlb_pop_metrics_t *pop_metrics);
-int talp_collect_pop_node_metrics(const subprocess_descriptor_t *spd,
-        struct dlb_monitor_t *monitor, struct dlb_node_metrics_t *node_metrics);
+void thread_ctx_set_observer(bool is_observer) {
 
+    static __thread thread_role_t previous_thread_role = THREAD_ROLE_UNKNOWN;
 
-#endif /* TALP_H */
+    if (is_observer
+            && thread_role != THREAD_ROLE_OBSERVER) {
+        previous_thread_role = thread_role;
+        thread_role = THREAD_ROLE_OBSERVER;
+    } else if (!is_observer
+            && thread_role == THREAD_ROLE_OBSERVER) {
+        thread_role = previous_thread_role;
+        previous_thread_role = THREAD_ROLE_UNKNOWN;
+    }
+}

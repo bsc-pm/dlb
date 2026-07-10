@@ -31,6 +31,7 @@ size_t sizeof_dlb_monitor_t(void) {
 #define DLB_MONITOR_FIELDS          \
     EXPAND(name)                    \
     EXPAND(num_cpus)                \
+    EXPAND(num_omp_threads)         \
     EXPAND(avg_cpus)                \
     EXPAND(cycles)                  \
     EXPAND(instructions)            \
@@ -72,6 +73,7 @@ size_t sizeof_dlb_pop_metrics_t(void) {
 #define DLB_POP_METRICS_FIELDS           \
     EXPAND(name)                         \
     EXPAND(num_cpus)                     \
+    EXPAND(num_omp_threads)              \
     EXPAND(num_mpi_ranks)                \
     EXPAND(num_nodes)                    \
     EXPAND(avg_cpus)                     \

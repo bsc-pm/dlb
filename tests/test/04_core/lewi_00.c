@@ -25,6 +25,7 @@
 
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_numThreads/numThreads.h"
 #include "apis/dlb_errors.h"
 #include "support/mask_utils.h"
@@ -49,7 +50,7 @@ static void cb_set_num_threads(int num_threads, void *arg) {
 
 static void* observer_func(void *arg) {
     /* Set up observer flag */
-    set_observer_role(true);
+    thread_ctx_set_observer(true);
 
     int prev_ntimes = ntimes;
     sync_call_flags_t flags = (const sync_call_flags_t) {

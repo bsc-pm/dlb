@@ -28,6 +28,7 @@
        type, bind(c) :: dlb_monitor_t
         type(c_ptr)             :: name_
         integer(kind=c_int)     :: num_cpus
+        integer(kind=c_int)     :: num_omp_threads
         real(kind=c_float)      :: avg_cpus
         integer(kind=c_int64_t) :: cycles
         integer(kind=c_int64_t) :: instructions
@@ -56,6 +57,7 @@
        type, bind(c) :: dlb_pop_metrics_t
         character(kind=c_char, len=1) :: name(DLB_MONITOR_NAME_MAX)
         integer(kind=c_int)     :: num_cpus
+        integer(kind=c_int)     :: num_omp_threads
         integer(kind=c_int)     :: num_mpi_ranks
         integer(kind=c_int)     :: num_nodes
         real(kind=c_float)      :: avg_cpus

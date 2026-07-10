@@ -19,6 +19,7 @@
 
 #include "talp/sample.h"
 
+#include "LB_core/thread_ctx.h"
 #include "support/debug.h"
 #include "support/dlb_common.h"
 #include "support/mytime.h"
@@ -31,14 +32,11 @@
 #include <string.h>
 
 
-extern __thread bool thread_is_observer;
-extern __thread bool thread_is_known;
-
 static __thread talp_sample_t* _tls_sample = NULL;
-static __thread bool _is_main_sample = false;
-static __thread bool _is_main_sample_in_sequential_mode = false;
 
-static void set_state(const talp_info_t *talp_info,
+static inline void record_cpuid(talp_sample_t *sample);
+
+static inline void set_state(const talp_info_t *talp_info,
         talp_sample_t *sample, talp_sample_state_t new_state);
 
 
@@ -85,22 +83,6 @@ void talp_sample_finalize(talp_info_t *talp_info) {
 /*    Sample getters & setters                                                   */
 /*********************************************************************************/
 
-bool talp_sample_is_main_sequential(void) {
-    return _is_main_sample_in_sequential_mode;
-}
-
-/* Sets the TLS variable _is_main_sample_in_sequential_mode. This function is
- * called by the main thread when beginning or ending parallel region of level 1.
- * FIXME: free agent threads may break this condition.
- *
- * Sets whether the main thread is running in serial mode. */
-void talp_sample_set_main_sequential(bool is_sequential) {
-
-    if (_is_main_sample) {
-        _is_main_sample_in_sequential_mode = is_sequential;
-    }
-}
-
 /* Get the TLS associated sample */
 talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
 
@@ -108,7 +90,7 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
     if (likely(_tls_sample != NULL)) return _tls_sample;
 
     /* Observer and unknown threads don't have a valid sample */
-    if (unlikely(thread_is_observer || !thread_is_known)) return NULL;
+    if (unlikely(!thread_is_profiled())) return NULL;
 
     /* Otherwise, allocate */
     sample_registry_t *registry = &talp_info->sample_registry;
@@ -123,10 +105,6 @@ talp_sample_t* talp_sample_get(talp_info_t *talp_info) {
                 *_tls_sample = (talp_sample_t){0};
                 registry->samples = samples;
                 registry->samples[num_samples-1] = new_sample;
-                if (num_samples == 1) {
-                    _is_main_sample = true;
-                    _is_main_sample_in_sequential_mode = true;
-                }
             } else {
                 // error
                 free(new_sample);
@@ -166,6 +144,8 @@ static inline void reset_sample(talp_sample_t *sample) {
     memset(&sample->timers,   0, sizeof(sample->timers));
     memset(&sample->counters, 0, sizeof(sample->counters));
     memset(&sample->stats,    0, sizeof(sample->stats));
+    CPU_ZERO(&sample->cpu_mask);
+    record_cpuid(sample);
 }
 
 
@@ -211,11 +191,12 @@ void talp_sample_update(talp_info_t *talp_info) {
             break;
         case TALP_STATE_NOT_USEFUL_MPI:
             sample->timers.not_useful_mpi += microsample_duration;
-            if (_is_main_sample_in_sequential_mode) {
-                // Add worker threads' time to special timer
-                int num_cpus = talp_info->sample_registry.num_samples;
+            if (thread_is_main_sequential()
+                    && talp_info->flags.have_openmp) {
+                // Add unused CPUs' time to special timer
+                int num_unused_cpus = talp_info->num_cpus - 1;
                 sample->timers.not_useful_omp_during_mpi
-                    += microsample_duration * (num_cpus-1);
+                    += microsample_duration * num_unused_cpus;
             }
             break;
         case TALP_STATE_NOT_USEFUL_OMP_IN:
@@ -246,7 +227,17 @@ void talp_sample_update(talp_info_t *talp_info) {
     }
 }
 
-static void set_state(const talp_info_t *restrict talp_info,
+static inline void record_cpuid(talp_sample_t *sample) {
+    int cpuid = sched_getcpu();
+    CPU_SET(cpuid, &sample->cpu_mask);
+}
+
+void talp_sample_record_cpuid(talp_info_t *talp_info) {
+    talp_sample_t *sample = talp_sample_get(talp_info);
+    record_cpuid(sample);
+}
+
+static inline void set_state(const talp_info_t *restrict talp_info,
         talp_sample_t *restrict sample, talp_sample_state_t new_state) {
 
     if (talp_info->flags.have_hwc) {
@@ -278,9 +269,45 @@ void talp_sample_set_state(talp_info_t *talp_info, talp_sample_state_t new_state
 /*    Sample aggregation                                                         */
 /*********************************************************************************/
 
+talp_sample_t talp_sample_delta(const talp_sample_t *end, const talp_sample_t *start) {
+    return (talp_sample_t) {
+        .timers = {
+            .useful                    = end->timers.useful
+                                        - start->timers.useful,
+            .not_useful_mpi            = end->timers.not_useful_mpi
+                                        - start->timers.not_useful_mpi,
+            .not_useful_omp_during_mpi = end->timers.not_useful_omp_during_mpi
+                                        - start->timers.not_useful_omp_during_mpi,
+            .not_useful_omp_in         = end->timers.not_useful_omp_in
+                                        - start->timers.not_useful_omp_in,
+            .not_useful_omp_in_lb      = end->timers.not_useful_omp_in_lb
+                                        - start->timers.not_useful_omp_in_lb,
+            .not_useful_omp_in_sched   = end->timers.not_useful_omp_in_sched
+                                        - start->timers.not_useful_omp_in_sched,
+            .not_useful_omp_out        = end->timers.not_useful_omp_out
+                                        - start->timers.not_useful_omp_out,
+            .not_useful_gpu            = end->timers.not_useful_gpu
+                                        - start->timers.not_useful_gpu,
+        },
+        .counters = {
+            .cycles       = end->counters.cycles       - start->counters.cycles,
+            .instructions = end->counters.instructions - start->counters.instructions,
+        },
+        .stats = {
+            .num_mpi_calls          = end->stats.num_mpi_calls         - start->stats.num_mpi_calls,
+            .num_omp_parallels      = end->stats.num_omp_parallels     - start->stats.num_omp_parallels,
+            .num_omp_tasks          = end->stats.num_omp_tasks         - start->stats.num_omp_tasks,
+            .num_gpu_runtime_calls  = end->stats.num_gpu_runtime_calls - start->stats.num_gpu_runtime_calls,
+        },
+    };
+}
+
+
 /* Aggregate a single sample into a macrosample */
 static inline void aggregate_sample_to_macrosample(const talp_sample_t *restrict sample,
         talp_macrosample_t *restrict macrosample) {
+
+    ensure(CPU_COUNT(&sample->cpu_mask)>0, "Updating macrosample with 0 CPUs. Please report.");
 
     /* Timers */
     macrosample->timers.useful                    += sample->timers.useful;
@@ -300,6 +327,9 @@ static inline void aggregate_sample_to_macrosample(const talp_sample_t *restrict
     macrosample->stats.num_omp_parallels          += sample->stats.num_omp_parallels;
     macrosample->stats.num_omp_tasks              += sample->stats.num_omp_tasks;
     macrosample->stats.num_gpu_runtime_calls      += sample->stats.num_gpu_runtime_calls;
+
+    /* CPU mask */
+    CPU_OR(&macrosample->cpu_mask, &macrosample->cpu_mask, &sample->cpu_mask);
 }
 
 
@@ -326,8 +356,7 @@ void talp_sample_aggregate_all_to_macrosample(
     pthread_mutex_lock(&registry->mutex);
     {
         int num_samples = registry->num_samples;
-
-        macrosample->num_cpus = num_samples;
+        macrosample->num_samples = num_samples;
 
         /* Aggregate samples */
         for (int i = 0; i < num_samples; ++i) {

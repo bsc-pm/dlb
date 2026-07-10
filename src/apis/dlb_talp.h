@@ -37,6 +37,8 @@ typedef struct dlb_monitor_t {
     const char  *name;
     /*! Number of active CPUs */
     int         num_cpus;
+    /*! Number of OpenMP threads that participate in the region */
+    int         num_omp_threads;
     /*! Average of CPUs assigned to the process during the region execution */
     float       avg_cpus;
     /*! Number of measured cycles*/
@@ -94,11 +96,13 @@ typedef struct dlb_monitor_t {
 typedef struct dlb_pop_metrics_t {
     /*! Name of the monitor */
     char        name[DLB_MONITOR_NAME_MAX];
-    /*! Total number of CPUs used by the processes that have used the region */
+    /*! Total number of CPUs across all processes that participate in the region */
     int         num_cpus;
-    /*! Total number of mpi processes that have used the region */
+    /*! Total number of OpenMP threads that participate in the region */
+    int         num_omp_threads;
+    /*! Total number of MPI processes that participate in the region */
     int         num_mpi_ranks;
-    /*! Total number of nodes used by the processes that have used the region */
+    /*! Total number of nodes used by the processes that participate in the region */
     int         num_nodes;
     /*! Total average of CPUs used in the region. Only meaningful if LeWI enabled. */
     float       avg_cpus;
@@ -362,6 +366,7 @@ int DLB_MonitoringRegionReset(dlb_monitor_t *handle);
  *  \param[in] handle Monitoring handle that identifies the region, or DLB_GLOBAL_REGION
  *  \return DLB_SUCCESS on success
  *  \return DLB_ERR_NOTALP if TALP is not enabled
+ *  \return DLB_ERR_NOENT if handle does not match a valid region
  *  \return DLB_ERR_PERM if this thread cannot start the monitoring region
  *
  *  Notes on multi-threading:

@@ -244,6 +244,8 @@ COMMON_SRCS = \
 	src/LB_core/lb_funcs.h                  \
 	src/LB_core/spd.c                       \
 	src/LB_core/spd.h                       \
+	src/LB_core/thread_ctx.c                \
+	src/LB_core/thread_ctx.h                \
 	src/LB_numThreads/omp-tools.h           \
 	src/LB_numThreads/ompt-multiplex.h      \
 	src/apis/DLB_interface.c                \
