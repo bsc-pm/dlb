@@ -22,9 +22,9 @@
 #include "LB_comm/shmem_talp.h"
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
-#include "support/mask_utils.h"
 #include "talp/regions.h"
 #include "talp/sample.h"
 #include "talp/talp.h"
@@ -36,9 +36,6 @@
 
 #include <stdio.h>
 #include <string.h>
-
-extern __thread bool thread_is_observer;
-extern __thread bool thread_is_known;
 
 
 #ifdef MPI_LIB
@@ -127,8 +124,7 @@ static void talp_register_common_mpi_regions(const subprocess_descriptor_t *spd)
 /* Start global monitoring region (if not already started) */
 void talp_mpi_init(const subprocess_descriptor_t *spd) {
 
-    ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_init");
-    ensure(thread_is_known, "An unknown thread cannot call talp_mpi_init");
+    ensure(thread_is_profiled(), "A non-profiled thread cannot call talp_mpi_init");
 
     talp_info_t *talp_info = spd->talp_info;
 
@@ -148,8 +144,7 @@ void talp_mpi_init(const subprocess_descriptor_t *spd) {
 /* Stop global monitoring region and gather APP data if needed  */
 void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
 
-    ensure(!thread_is_observer, "An observer thread cannot call talp_mpi_finalize");
-    ensure(thread_is_known, "An unknown thread cannot call talp_mpi_finalize");
+    ensure(thread_is_profiled(), "A non-profiled thread cannot call talp_mpi_finalize");
 
     talp_info_t *talp_info = spd->talp_info;
 
@@ -235,7 +230,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
 void talp_into_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t flags) {
 
     /* Observer and unknown threads may call MPI functions, but TALP must ignore them */
-    if (unlikely(thread_is_observer || !thread_is_known)) return;
+    if (unlikely(!thread_is_profiled())) return;
 
     talp_info_t *talp_info = spd->talp_info;
 
@@ -251,7 +246,7 @@ void talp_into_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t f
 void talp_out_of_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t flags) {
 
     /* Observer and unknown threads may call MPI functions, but TALP must ignore them */
-    if (unlikely(thread_is_observer || !thread_is_known)) return;
+    if (unlikely(!thread_is_profiled())) return;
 
     talp_info_t *talp_info = spd->talp_info;
 
@@ -269,7 +264,7 @@ void talp_out_of_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t
 
     /* Only when needed, update all regions */
     if (talp_info->flags.external_profiler
-            && talp_sample_is_main_sequential()
+            && thread_is_main_sequential()
             && flags.is_blocking
             && flags.is_collective) {
         talp_aggregate_samples_to_regions(talp_info);

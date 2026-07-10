@@ -31,6 +31,7 @@
 #include "talp/talp_mpi.h"
 #include "LB_comm/shmem.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 
 #include <float.h>
 #include <limits.h>
@@ -40,8 +41,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-
-extern __thread bool thread_is_observer;
 
 struct data {
     pthread_barrier_t barrier;
@@ -97,7 +96,7 @@ int main(int argc, char *argv[]) {
         assert( DLB_MonitoringRegionStart(DLB_GLOBAL_REGION) == DLB_NOUPDT );
         assert( DLB_MonitoringRegionStop(DLB_GLOBAL_REGION) == DLB_SUCCESS );
         assert( DLB_TALP_Attach() == DLB_SUCCESS );
-        assert( !thread_is_observer );
+        assert( !thread_is_observer() );
         assert( DLB_TALP_GetTimes(0, &mpi_time, &useful_time) == DLB_SUCCESS );
         assert( mpi_time < DBL_EPSILON );
         assert( useful_time > DBL_EPSILON );
@@ -139,7 +138,7 @@ int main(int argc, char *argv[]) {
 
         // Check thread may be an observer again
         assert( DLB_TALP_Attach() == DLB_SUCCESS );
-        assert( thread_is_observer );
+        assert( thread_is_observer() );
         assert( DLB_TALP_Detach() == DLB_SUCCESS );
     }
 

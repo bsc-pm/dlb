@@ -330,6 +330,7 @@ int main(int argc, char *argv[]) {
         .gpu_runtime_time        = 1e8,
         .gpu_useful_time         = 2e8,
         .gpu_communication_time  = 2e8,
+        ._data                   = calloc(1, sizeof(monitor_data_t)),
     };
 
     talp_flags_t flags = {
@@ -338,7 +339,8 @@ int main(int argc, char *argv[]) {
         .have_gpu = true,
         .have_hwc = true,
     };
-    talp_output_print_monitoring_region(&monitor, mu_to_str(&system_mask), flags);
+    talp_output_print_monitoring_region(&monitor, flags);
+    free(monitor._data);
 
     return error;
 }

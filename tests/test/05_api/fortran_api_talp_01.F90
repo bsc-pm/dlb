@@ -66,6 +66,8 @@ module talp_check_layout
 #define STRUCT_NAME dlb_monitor_t
 #define FIELD num_cpus
 #include THIS_FILE
+#define FIELD num_omp_threads
+#include THIS_FILE
 #define FIELD avg_cpus
 #include THIS_FILE
 #define FIELD cycles
@@ -123,6 +125,8 @@ module talp_check_layout
 #define FIELD name
 #include THIS_FILE
 #define FIELD num_cpus
+#include THIS_FILE
+#define FIELD num_omp_threads
 #include THIS_FILE
 #define FIELD num_mpi_ranks
 #include THIS_FILE
@@ -262,6 +266,7 @@ subroutine check_dlb_monitor_layout
     type(c_ptr) :: base
 
     integer(c_size_t) :: c_offset_num_cpus,                loc_num_cpus
+    integer(c_size_t) :: c_offset_num_omp_threads,         loc_num_omp_threads
     integer(c_size_t) :: c_offset_avg_cpus,                loc_avg_cpus
     integer(c_size_t) :: c_offset_cycles,                  loc_cycles
     integer(c_size_t) :: c_offset_instructions,            loc_instructions
@@ -299,6 +304,8 @@ subroutine check_dlb_monitor_layout
 #define STRUCT_NAME dlb_monitor_t
 #define STRUCT_VAR monitor
 #define FIELD num_cpus
+#include THIS_FILE
+#define FIELD num_omp_threads
 #include THIS_FILE
 #define FIELD avg_cpus
 #include THIS_FILE
@@ -361,6 +368,7 @@ subroutine check_dlb_pop_metrics_layout
 
     integer(c_size_t) :: c_offset_name,                         loc_name
     integer(c_size_t) :: c_offset_num_cpus,                     loc_num_cpus
+    integer(c_size_t) :: c_offset_num_omp_threads,              loc_num_omp_threads
     integer(c_size_t) :: c_offset_num_mpi_ranks,                loc_num_mpi_ranks
     integer(c_size_t) :: c_offset_num_nodes,                    loc_num_nodes
     integer(c_size_t) :: c_offset_avg_cpus,                     loc_avg_cpus
@@ -419,6 +427,8 @@ subroutine check_dlb_pop_metrics_layout
 #define FIELD name
 #include THIS_FILE
 #define FIELD num_cpus
+#include THIS_FILE
+#define FIELD num_omp_threads
 #include THIS_FILE
 #define FIELD num_mpi_ranks
 #include THIS_FILE

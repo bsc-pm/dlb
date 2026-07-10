@@ -25,6 +25,7 @@
 
 #include "LB_comm/shmem_talp.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
@@ -41,8 +42,106 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern __thread bool thread_is_observer;
-extern __thread bool thread_is_known;
+
+/*********************************************************************************/
+/*    Thread-local Monitoring Regions                                            */
+/*********************************************************************************/
+
+typedef struct {
+    dlb_monitor_t  *monitor;    /* global region record to flush into at close */
+    talp_sample_t   snapshot;   /* sample at open time; delta = close - snapshot */
+    int             cpuid;      /* single CPU that participates in this region */
+} local_region_entry_t;
+
+__thread GSList *local_regions = NULL;
+
+static int region_start_thread(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+
+    monitor_data_t *monitor_data = monitor->_data;
+    if (monitor_data->flags.started || !monitor_data->flags.enabled) {
+        return DLB_NOUPDT;
+    }
+
+    talp_info_t *talp_info = spd->talp_info;
+
+    /* Update this sample first */
+    talp_sample_update(talp_info);
+
+    verbose(VB_TALP, "Starting region %s", monitor->name);
+    instrument_event(MONITOR_REGION, monitor_data->id, EVENT_BEGIN);
+
+    const talp_sample_t *sample = talp_sample_get(spd->talp_info);
+
+    /* For thread-local regions we can't modify the sample, we just keep a snapshot */
+    local_region_entry_t *entry = malloc(sizeof(local_region_entry_t));
+    *entry = (local_region_entry_t) {
+        .monitor  = monitor,
+        .snapshot = {
+            .timers   = sample->timers,
+            .counters = sample->counters,
+            .stats    = sample->stats,
+        },
+        .cpuid = sched_getcpu(),
+    };
+
+    local_regions = g_slist_prepend(local_regions, entry);
+
+    return DLB_SUCCESS;
+}
+
+static int region_stop_thread(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+
+    local_region_entry_t *entry = NULL;
+
+    /* Get region entry if monitor is a special value */
+    if (monitor == DLB_LAST_OPEN_REGION) {
+        if (local_regions != NULL) {
+            entry = local_regions->data;
+            monitor = entry->monitor;
+        } else {
+            return DLB_ERR_NOENT;
+        }
+    }
+
+    /* Get region entry if monitor is an actual pointer */
+    for (GSList *node = local_regions;
+            node != NULL && entry == NULL;
+            node = node->next) {
+
+        local_region_entry_t *e = node->data;
+        if (e->monitor == monitor) {
+            entry = e;
+        }
+    }
+
+    if (entry == NULL) return DLB_NOUPDT;
+
+    talp_info_t *talp_info = spd->talp_info;
+
+    /* Update this sample first */
+    talp_sample_update(talp_info);
+
+    verbose(VB_TALP, "Stopping region %s", monitor->name);
+    instrument_event(MONITOR_REGION, ((monitor_data_t*)monitor->_data)->id, EVENT_END);
+
+    /* Compute delta since this region was started */
+    const talp_sample_t *sample = talp_sample_get(talp_info);
+    talp_sample_t delta = talp_sample_delta(sample, &entry->snapshot);
+    int64_t elapsed = sample->last_updated_ts - entry->snapshot.last_updated_ts;
+
+    /* We don't want the previous CPU mask in the sample because we were not able to
+     * reset it on local region start. Instead, we set the cpuid obtained at that point. */
+    CPU_ZERO(&delta.cpu_mask);
+    CPU_SET(entry->cpuid, &delta.cpu_mask);
+
+    /* Aggregate delta to region */
+    talp_aggregate_sample_to_region(talp_info, monitor, &delta, elapsed);
+
+    local_regions = g_slist_remove(local_regions, entry);
+    free(entry);
+
+    return DLB_SUCCESS;
+}
 
 
 /*********************************************************************************/
@@ -300,12 +399,24 @@ int region_reset(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
 }
 
 int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+
     /* Observer and unknown threads don't have a valid sample so they cannot start/stop regions */
-    if (unlikely(thread_is_observer || !thread_is_known)) return DLB_ERR_PERM;
+    if (unlikely(!thread_is_profiled())) return DLB_ERR_PERM;
+
+    /* Not compatible special value */
+    if (unlikely(monitor == DLB_LAST_OPEN_REGION)) return DLB_ERR_NOENT;
 
     talp_info_t *talp_info = spd->talp_info;
     if (monitor == DLB_GLOBAL_REGION) {
         monitor = talp_info->monitor;
+    }
+
+    /* Specific case: thread-local regions if thread is inside a parallel */
+    if (thread_is_parallel()) {
+        /* Thread-local regions cannot manage global region */
+        if (monitor == talp_info->monitor) return DLB_ERR_PERM;
+
+        return region_start_thread(spd, monitor);
     }
 
     int error;
@@ -334,13 +445,6 @@ int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
         }
         pthread_mutex_unlock(&talp_info->regions_mutex);
 
-        /* Normally, the sample state will be 'TALP_STATE_USEFUL' at this point,
-         * but on certain cases where neither talp_mpi_init nor talp_openmp_init
-         * have been called, this is necessary */
-        if (thread_sample->state != TALP_STATE_USEFUL) {
-            talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
-        }
-
         error = DLB_SUCCESS;
     } else {
         error = DLB_NOUPDT;
@@ -350,13 +454,24 @@ int region_start(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
 }
 
 int region_stop(const subprocess_descriptor_t *spd, dlb_monitor_t *monitor) {
+
     /* Observer and unknown threads don't have a valid sample so they cannot start/stop regions */
-    if (unlikely(thread_is_observer || !thread_is_known)) return DLB_ERR_PERM;
+    if (unlikely(!thread_is_profiled())) return DLB_ERR_PERM;
 
     talp_info_t *talp_info = spd->talp_info;
     if (monitor == DLB_GLOBAL_REGION) {
         monitor = talp_info->monitor;
-    } else if (monitor == DLB_LAST_OPEN_REGION) {
+    }
+
+    /* Specific case: thread-local regions if thread is inside a parallel */
+    if (thread_is_parallel()) {
+        /* Thread-local regions cannot manage global region */
+        if (monitor == talp_info->monitor) return DLB_ERR_PERM;
+
+        return region_stop_thread(spd, monitor);
+    }
+
+    if (monitor == DLB_LAST_OPEN_REGION) {
         if (talp_info->open_regions != NULL) {
             monitor = talp_info->open_regions->data;
         } else {
@@ -415,8 +530,7 @@ int region_report(const subprocess_descriptor_t *spd, const dlb_monitor_t *monit
         return DLB_NOUPDT;
     }
 
-    talp_output_print_monitoring_region(monitor, mu_to_str(&spd->process_mask),
-            talp_info->flags);
+    talp_output_print_monitoring_region(monitor, talp_info->flags);
 
     return DLB_SUCCESS;
 }

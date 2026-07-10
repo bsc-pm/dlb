@@ -26,6 +26,7 @@
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
@@ -90,7 +91,7 @@ static void* observer_func(void *arg) {
     spd_enter_dlb(spd);
 
     /* Set up observer flag */
-    set_observer_role(true);
+    thread_ctx_set_observer(true);
 
     /* Get global region */
     const dlb_monitor_t *global_monitor = region_get_global(spd);
@@ -141,6 +142,7 @@ int main(int argc, char *argv[]) {
                 NULL, spd.options.shm_key, spd.options.shm_size_multiplier) == DLB_SUCCESS );
         shmem_barrier__init(spd.options.shm_key, spd.options.shm_size_multiplier);
         node_barrier_init(&spd);
+        thread_ctx_set_main(THREAD_MAIN_SEQUENTIAL);
         talp_init(&spd);
         talp_info_t *talp_info = spd.talp_info;
         dlb_monitor_t *global_monitor = talp_info->monitor;

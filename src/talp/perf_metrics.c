@@ -22,6 +22,7 @@
 #include "LB_core/spd.h"
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
+#include "support/mask_utils.h"
 #ifdef MPI_LIB
 #include "mpi/mpi_core.h"
 #endif
@@ -336,6 +337,15 @@ static void reduce_pop_metrics_node_reduction(node_reduction_t *node_reduction,
             mpi_node_reduction_type, node_reduction_op,
             0, getNodeComm());
 
+    /* Check that we have not summed more CPUs that the node count */
+    int system_count = mu_get_system_count();
+    if (node_reduction->cpus_node > system_count) {
+        verbose(VB_TALP, "Warning: Number of CPUs after node reduction (%d) is greater"
+                " than the node CPU count (%d). Reverting value.",
+                node_reduction->cpus_node, system_count);
+        node_reduction->cpus_node = system_count;
+    }
+
     /* Free MPI types */
     PMPI_Type_free(&mpi_node_reduction_type);
     PMPI_Op_free(&node_reduction_op);
@@ -347,6 +357,8 @@ static void reduce_pop_metrics_node_reduction(node_reduction_t *node_reduction,
 typedef struct app_reduction_t {
     /* Resources */
     int num_cpus;
+    int num_available_cpus;
+    int num_omp_threads;
     int num_nodes;
     float avg_cpus;
     int num_gpus;
@@ -390,6 +402,8 @@ static void mpi_reduction_fn(void *invec, void *inoutvec, int *len,
     for (int i = 0; i < _len; ++i) {
         /* Resources */
         inout[i].num_cpus                += in[i].num_cpus;
+        inout[i].num_available_cpus      += in[i].num_available_cpus;
+        inout[i].num_omp_threads         += in[i].num_omp_threads;
         inout[i].num_nodes               += in[i].num_nodes;
         inout[i].avg_cpus                += in[i].avg_cpus;
         inout[i].num_gpus                += in[i].num_gpus;
@@ -448,6 +462,9 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
     const app_reduction_t app_reduction_send = {
         /* Resources */
         .num_cpus                = monitor->num_cpus,
+        .num_available_cpus      = _process_id == 0 && node_reduction->node_used
+                                    ? mu_get_system_count() : 0,
+        .num_omp_threads         = monitor->num_omp_threads,
         .num_nodes               = _process_id == 0 && node_reduction->node_used ? 1 : 0,
         .avg_cpus                = monitor->avg_cpus,
         .num_gpus                = have_gpus ? 1 : 0,
@@ -488,7 +505,7 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
     MPI_Datatype mpi_app_reduction_type;
     {
         int blocklengths[] = {
-            1, 1, 1, 1,             /* Resources */
+            1, 1, 1, 1, 1, 1,       /* Resources */
             1, 1,                   /* Hardware Counters */
             1, 1, 1, 1, 1,          /* Statistics */
             1, 1, 1, 1, 1, 1, 1, 1, /* Host Times */
@@ -501,6 +518,8 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
         MPI_Aint displacements[] = {
             /* Resources */
             offsetof(app_reduction_t, num_cpus),
+            offsetof(app_reduction_t, num_available_cpus),
+            offsetof(app_reduction_t, num_omp_threads),
             offsetof(app_reduction_t, num_nodes),
             offsetof(app_reduction_t, avg_cpus),
             offsetof(app_reduction_t, num_gpus),
@@ -536,7 +555,8 @@ static void reduce_pop_metrics_app_reduction(app_reduction_t *app_reduction,
 
         MPI_Datatype types[] = {
             /* Resources */
-            MPI_INT, MPI_INT, MPI_FLOAT, MPI_INT,
+            MPI_INT, MPI_INT, MPI_INT,
+            MPI_INT, MPI_FLOAT, MPI_INT,
             /* Hardware Counters */
             MPI_DOUBLE, MPI_DOUBLE,
             /* Statistics */
@@ -617,6 +637,8 @@ void perf_metrics__reduce_monitor_into_base_metrics(pop_base_metrics_t *base_met
 
     *base_metrics = (const pop_base_metrics_t) {
         .num_cpus                = app_reduction.num_cpus,
+        .num_available_cpus      = app_reduction.num_available_cpus,
+        .num_omp_threads         = app_reduction.num_omp_threads,
         .num_mpi_ranks           = num_mpi_ranks,
         .num_nodes               = app_reduction.num_nodes,
         .avg_cpus                = app_reduction.avg_cpus,
@@ -659,6 +681,8 @@ void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metr
 
     *base_metrics = (const pop_base_metrics_t){
         .num_cpus                = monitor->num_cpus,
+        .num_available_cpus      = mu_get_system_count(),
+        .num_omp_threads         = monitor->num_omp_threads,
         .num_mpi_ranks           = 0,
         .num_nodes               = 1,
         .avg_cpus                = monitor->avg_cpus,
@@ -710,6 +734,7 @@ void perf_metrics__base_to_pop_metrics(const char *monitor_name,
     /* Initialize structure */
     *pop_metrics = (const dlb_pop_metrics_t) {
         .num_cpus                        = base_metrics->num_cpus,
+        .num_omp_threads                 = base_metrics->num_omp_threads,
         .num_mpi_ranks                   = base_metrics->num_mpi_ranks,
         .num_nodes                       = base_metrics->num_nodes,
         .avg_cpus                        = base_metrics->avg_cpus,

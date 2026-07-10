@@ -22,6 +22,7 @@
 #include "LB_numThreads/omptool.h"
 #include "LB_comm/shmem_talp.h"
 #include "LB_core/DLB_kernel.h"
+#include "LB_core/thread_ctx.h"
 #include "apis/dlb_talp.h"
 #include "support/atomic.h"
 #include "support/debug.h"
@@ -34,8 +35,6 @@
 
 #include <unistd.h>
 
-extern __thread bool thread_is_observer;
-extern __thread bool thread_is_known;
 
 /* Update all open nested regions (so, excluding the innermost) and add the
  * time since its start time until the sample last timestamp (which is the time
@@ -118,7 +117,7 @@ static unsigned int parallel_samples_l1_capacity = 0;
 
 void talp_openmp_init(pid_t pid, const options_t* options) {
 
-    ensure(!thread_is_observer, "An observer thread cannot call talp_openmp_init");
+    ensure(!thread_is_observer(), "An observer thread cannot call talp_openmp_init");
 
     const subprocess_descriptor_t *spd = thread_spd;
     talp_info_t *talp_info = spd->talp_info;
@@ -128,9 +127,9 @@ void talp_openmp_init(pid_t pid, const options_t* options) {
         talp_info->flags.have_openmp = true;
 
         /* Fix up number of CPUs for the global region */
-        float cpus = CPU_COUNT(&spd->process_mask);
-        talp_info->monitor->avg_cpus = cpus;
-        shmem_talp__set_avg_cpus(monitor_data->node_shared_id, cpus);
+        float avg_cpus = CPU_COUNT(&spd->process_mask);
+        talp_info->monitor->avg_cpus = avg_cpus;
+        shmem_talp__set_avg_cpus(monitor_data->node_shared_id, avg_cpus);
 
         /* Start global region (no-op if already started) */
         region_start(spd, talp_info->monitor);
@@ -156,23 +155,26 @@ void talp_openmp_thread_begin(ompt_thread_t thread_type) {
 
     if (talp_info == NULL || !talp_info->flags.have_openmp) return;
 
-    /* OpenMP threads are known threads */
-    thread_is_known = true;
-
-    /* Initial thread is already in useful state, set omp_out for others */
+    /* Initial thread has already a valid sample, no-op here */
     talp_sample_t *sample = talp_sample_get(talp_info);
-    if (sample->state == TALP_STATE_DISABLED) {
-        /* Not initial thread: */
-        if (talp_info->flags.have_hwc) {
-            talp_hwc_thread_init();
-        }
-        talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_OMP_OUT);
+    if (sample != NULL) return;
 
-        /* The initial time of the sample is set to match the start time of
-            * the innermost open region, but other nested open regions need to
-            * be fixed */
-        update_serialization_in_nested_regions(spd, sample);
+    /* Worker thread: */
+    thread_ctx_set_worker();
+
+    /* Ask again, a new sample will be created now */
+    sample = talp_sample_get(talp_info);
+
+    if (talp_info->flags.have_hwc) {
+        talp_hwc_thread_init();
     }
+
+    talp_sample_set_state(talp_info, TALP_STATE_NOT_USEFUL_OMP_OUT);
+
+    /* The initial time of the sample is set to match the start time of
+        * the innermost open region, but other nested open regions need to
+        * be fixed */
+    update_serialization_in_nested_regions(spd, sample);
 }
 
 // native-thread-end event
@@ -243,7 +245,7 @@ void talp_openmp_parallel_begin(omptool_parallel_data_t *parallel_data) {
 
     /* Update main thread sequential mode if this is the outermost parallel region */
     if (parallel_level == 1) {
-        talp_sample_set_main_sequential(false);
+        thread_ctx_set_main(THREAD_MAIN_PARALLEL);
     }
 }
 
@@ -287,7 +289,7 @@ void talp_openmp_parallel_end(omptool_parallel_data_t *parallel_data) {
 
     if (parallel_data->level == 1) {
         /* Update main thread sequential mode if this was the outermost parallel region */
-        talp_sample_set_main_sequential(true);
+        thread_ctx_set_main(THREAD_MAIN_SEQUENTIAL);
     } else {
         /* Restore previously pushed not-useful-omp-in */
         sample->timers.not_useful_omp_in = talp_parallel_data->previous_not_useful_omp_in;
@@ -337,6 +339,9 @@ void talp_openmp_into_parallel_function(
 
     /* Update thread sample */
     talp_sample_update(talp_info);
+
+    /* Each thread records its CPU when beginning the parallel region */
+    talp_sample_record_cpuid(talp_info);
 
     /* Update state */
     talp_sample_set_state(talp_info, TALP_STATE_USEFUL);

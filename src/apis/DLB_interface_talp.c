@@ -23,6 +23,7 @@
 
 #include "apis/dlb_errors.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
@@ -47,7 +48,7 @@ int DLB_TALP_Attach(void) {
     int shm_size_multiplier;
     spd_enter_dlb(thread_spd);
     if (!thread_spd->dlb_initialized) {
-        set_observer_role(true);
+        thread_ctx_set_observer(true);
         options_parse_entry("--lewi-color", &lewi_color);
         options_parse_entry("--shm-key", shm_key);
         options_parse_entry("--shm-size-multiplier", &shm_size_multiplier);

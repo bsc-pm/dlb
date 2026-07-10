@@ -25,6 +25,7 @@
 
 #include "LB_core/DLB_kernel.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_comm/shmem_talp.h"
 #include "apis/dlb_talp.h"
 #include "apis/dlb_errors.h"
@@ -60,6 +61,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    thread_ctx_set_main(THREAD_MAIN_SEQUENTIAL);
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;

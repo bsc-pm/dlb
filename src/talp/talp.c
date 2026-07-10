@@ -25,6 +25,7 @@
 
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_comm/shmem_talp.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_talp.h"
@@ -53,15 +54,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-extern __thread bool thread_is_observer;
-
-/* In TALP, we don't want to measure any metrics from unknown threads that may
- * call any MPI or Device offload function, since this may introduce errors
- * with our sample aggregation logic.
- * Main thread and OpenMP threads set this value to true;
- */
-__thread bool thread_is_known = false;
-
 
 #ifdef MPI_LIB
 /* Returns the number of MPI processes that have HWC enabled */
@@ -89,12 +81,17 @@ static int get_hwc_init_across_world(const subprocess_descriptor_t *spd) {
 void talp_init(subprocess_descriptor_t *spd) {
 
     ensure(!spd->talp_info, "TALP already initialized");
-    ensure(!thread_is_observer, "An observer thread cannot call talp_init");
+    ensure(!thread_is_observer(), "An observer thread cannot call talp_init");
     verbose(VB_TALP, "Initializing TALP module with worker mask: %s",
             mu_to_str(&spd->process_mask));
 
-    /* This sould be main thread */
-    thread_is_known = true;
+    int num_cpus = CPU_COUNT(&spd->process_mask);
+    if (num_cpus == 0) {
+        /* Possibly due to testing or DLB_Init, query process mask: */
+        cpu_set_t process_mask;
+        sched_getaffinity(0, sizeof(process_mask), &process_mask);
+        num_cpus = CPU_COUNT(&process_mask);
+    }
 
     /* Initialize talp info */
     talp_info_t *talp_info = malloc(sizeof(talp_info_t));
@@ -105,15 +102,13 @@ void talp_init(subprocess_descriptor_t *spd) {
             .have_minimal_shmem = !spd->options.talp_external_profiler
                 && spd->options.talp_summary & SUMMARY_NODE,
         },
+        .num_cpus = num_cpus,
         .regions = g_tree_new_full(
                 (GCompareDataFunc)region_compare_by_name,
                 NULL, NULL, region_dealloc),
         .regions_mutex = PTHREAD_MUTEX_INITIALIZER,
     };
     spd->talp_info = talp_info;
-
-    /* Initialize sample structure */
-    talp_sample_init(talp_info);
 
     /* Initialize shared memory */
     if (talp_info->flags.have_shmem || talp_info->flags.have_minimal_shmem) {
@@ -165,6 +160,14 @@ void talp_init(subprocess_descriptor_t *spd) {
     }
 #endif
 
+    /* Initialize sample structure */
+    talp_sample_init(talp_info);
+
+    /* Create the main thread's sample */
+    (void)talp_sample_get(talp_info);
+    talp_sample_record_cpuid(talp_info);
+    talp_sample_set_state(talp_info, TALP_STATE_USEFUL);
+
     /* Initialize global region monitor
      * (at this point we don't know how many CPUs, it will be fixed in talp_openmp_init) */
     talp_info->monitor = region_register(spd, region_get_global_name());
@@ -175,8 +178,7 @@ void talp_init(subprocess_descriptor_t *spd) {
 
 void talp_finalize(subprocess_descriptor_t *spd) {
     ensure(spd->talp_info, "TALP is not initialized");
-    ensure(!thread_is_observer, "An observer thread cannot call talp_finalize");
-    ensure(thread_is_known, "An unknown thread cannot call talp_finalize");
+    ensure(thread_is_main(), "Only main thread can call talp_finalize");
     verbose(VB_TALP, "Finalizing TALP module");
 
     talp_info_t *talp_info = spd->talp_info;
@@ -247,6 +249,48 @@ void talp_finalize(subprocess_descriptor_t *spd) {
 /*    Functions for sample aggregation to regions                                */
 /*********************************************************************************/
 
+void talp_aggregate_sample_to_region(talp_info_t *talp_info,
+        dlb_monitor_t *monitor, const talp_sample_t *sample, int64_t elapsed) {
+
+    pthread_mutex_lock(&talp_info->regions_mutex);
+    {
+        monitor_data_t *monitor_data = monitor->_data;
+
+        /* CPU mask */
+        CPU_OR(&monitor_data->cpu_mask, &monitor_data->cpu_mask, &sample->cpu_mask);
+
+        /* Number of CPUs */
+        monitor->num_cpus = min_int(CPU_COUNT(&monitor_data->cpu_mask), talp_info->num_cpus);
+
+        /* Number of threads: we oversimplify here, and sometimes we may give
+         * a wrong number. The solution would be to keep track of thread ids
+         * that have participated. Not worth the effort. */
+        monitor->num_omp_threads = monitor->num_cpus;
+
+        /* Timers */
+        /* Note: not_useful_omp_{during_mpi,lb,sched} are purposely not reduced
+         * and the entire omp_in is attributed to omp_scheduling. */
+        monitor->useful_time            += sample->timers.useful;
+        monitor->mpi_time               += sample->timers.not_useful_mpi;
+        monitor->omp_scheduling_time    += sample->timers.not_useful_omp_in;
+        monitor->gpu_runtime_time       += sample->timers.not_useful_gpu;
+
+        /* Counters */
+        monitor->cycles                 += sample->counters.cycles;
+        monitor->instructions           += sample->counters.instructions;
+
+        /* Stats */
+        monitor->num_mpi_calls          += sample->stats.num_mpi_calls;
+        monitor->num_omp_parallels      += sample->stats.num_omp_parallels;
+        monitor->num_omp_tasks          += sample->stats.num_omp_tasks;
+        monitor->num_gpu_runtime_calls  += sample->stats.num_gpu_runtime_calls;
+
+        monitor->elapsed_time += elapsed;
+        ++(monitor->num_measurements);
+    }
+    pthread_mutex_unlock(&talp_info->regions_mutex);
+}
+
 /* Update all open regions with the macrosample */
 static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
         const talp_macrosample_t *restrict macrosample) {
@@ -260,32 +304,54 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             dlb_monitor_t *monitor = node->data;
             monitor_data_t *monitor_data = monitor->_data;
 
-            /* Update number of CPUs if needed */
-            monitor->num_cpus = max_int(monitor->num_cpus, macrosample->num_cpus);
+            /* CPU mask */
+            CPU_OR(&monitor_data->cpu_mask, &monitor_data->cpu_mask, &macrosample->cpu_mask);
+
+            /* Number of CPUs:
+             * - the CPU mask in macrosample may have more CPUs than the actual
+             *   number of threads, e.g.: when OMP_PLACES=cores or when the initial
+             *   thread is bound only after the first parallel region.
+             * -  */
+            int macrosample_num_cpus = min_int(
+                    CPU_COUNT(&macrosample->cpu_mask), macrosample->num_samples);
+            if (monitor->num_cpus < macrosample_num_cpus) {
+                monitor->num_cpus = macrosample_num_cpus;
+            }
+            ensure(monitor->num_cpus > 0, "Updating region with 0 CPUs. Please report.");
+
+            /* if (monitor == talp_info->monitor) { */
+            /*     warning("Macrosample CPUs: %s", mu_to_str(&macrosample->cpu_mask)); */
+            /*     warning("Region      CPUs: %s", mu_to_str(&monitor_data->cpu_mask)); */
+            /* } */
+
+            /* Number of threads */
+            if (monitor->num_omp_threads < macrosample->num_samples) {
+                monitor->num_omp_threads = macrosample->num_samples;
+            }
 
             /* Timers */
-            monitor->useful_time += macrosample->timers.useful;
-            monitor->mpi_time += macrosample->timers.not_useful_mpi;
-            monitor->mpi_worker_idle_time += macrosample->timers.not_useful_omp_during_mpi;
+            monitor->useful_time             += macrosample->timers.useful;
+            monitor->mpi_time                += macrosample->timers.not_useful_mpi;
+            monitor->mpi_worker_idle_time    += macrosample->timers.not_useful_omp_during_mpi;
             monitor->omp_load_imbalance_time += macrosample->timers.not_useful_omp_in_lb;
-            monitor->omp_scheduling_time += macrosample->timers.not_useful_omp_in_sched;
-            monitor->omp_serialization_time += macrosample->timers.not_useful_omp_out;
-            monitor->gpu_runtime_time += macrosample->timers.not_useful_gpu;
+            monitor->omp_scheduling_time     += macrosample->timers.not_useful_omp_in_sched;
+            monitor->omp_serialization_time  += macrosample->timers.not_useful_omp_out;
+            monitor->gpu_runtime_time        += macrosample->timers.not_useful_gpu;
 
             /* GPU Timers */
-            monitor->gpu_useful_time += macrosample->gpu_timers.useful;
-            monitor->gpu_communication_time += macrosample->gpu_timers.communication;
-            monitor->gpu_inactive_time += macrosample->gpu_timers.inactive;
+            monitor->gpu_useful_time         += macrosample->gpu_timers.useful;
+            monitor->gpu_communication_time  += macrosample->gpu_timers.communication;
+            monitor->gpu_inactive_time       += macrosample->gpu_timers.inactive;
 
             /* Counters */
-            monitor->cycles += macrosample->counters.cycles;
-            monitor->instructions += macrosample->counters.instructions;
+            monitor->cycles                  += macrosample->counters.cycles;
+            monitor->instructions            += macrosample->counters.instructions;
 
             /* Stats */
-            monitor->num_mpi_calls += macrosample->stats.num_mpi_calls;
-            monitor->num_omp_parallels += macrosample->stats.num_omp_parallels;
-            monitor->num_omp_tasks += macrosample->stats.num_omp_tasks;
-            monitor->num_gpu_runtime_calls += macrosample->stats.num_gpu_runtime_calls;
+            monitor->num_mpi_calls           += macrosample->stats.num_mpi_calls;
+            monitor->num_omp_parallels       += macrosample->stats.num_omp_parallels;
+            monitor->num_omp_tasks           += macrosample->stats.num_omp_tasks;
+            monitor->num_gpu_runtime_calls   += macrosample->stats.num_gpu_runtime_calls;
 
             /* Update shared memory only if requested */
             if (talp_info->flags.external_profiler) {
@@ -302,7 +368,7 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
 int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
 
     /* Observer and unknown threads can't aggregate samples */
-    if (unlikely(thread_is_observer || !thread_is_known)) return DLB_ERR_PERM;
+    if (unlikely(!thread_is_profiled())) return DLB_ERR_PERM;
 
     /* Accumulate samples from all threads */
     talp_macrosample_t macrosample = {0};

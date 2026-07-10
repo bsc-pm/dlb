@@ -60,12 +60,14 @@ void talp_record_monitor(const subprocess_descriptor_t *spd,
             .monitor = *monitor,
         };
 
+        monitor_data_t *monitor_data = monitor->_data;
+
         /* Fill hostname and CPU mask strings in process_record */
         gethostname(process_record.hostname, HOST_NAME_MAX);
         snprintf(process_record.cpuset, TALP_OUTPUT_CPUSET_MAX, "%s",
-                mu_to_str(&spd->process_mask));
-        mu_get_quoted_mask(&spd->process_mask, process_record.cpuset_quoted,
-            TALP_OUTPUT_CPUSET_MAX);
+                mu_to_str(&monitor_data->cpu_mask));
+        mu_get_quoted_mask(&monitor_data->cpu_mask,
+                process_record.cpuset_quoted, TALP_OUTPUT_CPUSET_MAX);
 
         /* Add record */
         talp_output_record_process(monitor->name, &process_record, 1);
@@ -84,7 +86,7 @@ void talp_record_monitor(const subprocess_descriptor_t *spd,
 
             talp_info_t *talp_info = spd->talp_info;
             if(monitor == talp_info->monitor) {
-                talp_output_record_resources(monitor->num_cpus,
+                talp_output_record_resources(monitor->num_cpus, mu_get_system_count(),
                         /* num_nodes */ 1, /* num_ranks */ 0, base_metrics.num_gpus);
             }
 
@@ -237,8 +239,10 @@ void talp_record_node_summary(const subprocess_descriptor_t *spd) {
 void talp_record_process_summary(const subprocess_descriptor_t *spd,
         const dlb_monitor_t *monitor) {
 
+    monitor_data_t *monitor_data = monitor->_data;
+
     /* Internal monitors will not be recorded */
-    if (((monitor_data_t*)monitor->_data)->flags.internal) {
+    if (monitor_data->flags.internal) {
         return;
     }
 
@@ -260,9 +264,9 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
     /* Fill hostname and CPU mask strings in process_record_send */
     gethostname(process_record_send.hostname, HOST_NAME_MAX);
     snprintf(process_record_send.cpuset, TALP_OUTPUT_CPUSET_MAX, "%s",
-            mu_to_str(&spd->process_mask));
-    mu_get_quoted_mask(&spd->process_mask, process_record_send.cpuset_quoted,
-            TALP_OUTPUT_CPUSET_MAX);
+            mu_to_str(&monitor_data->cpu_mask));
+    mu_get_quoted_mask(&monitor_data->cpu_mask,
+            process_record_send.cpuset_quoted, TALP_OUTPUT_CPUSET_MAX);
 
     /* MPI type: int64_t */
     MPI_Datatype mpi_int64_type = get_mpi_int64_type();
@@ -283,7 +287,7 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
     MPI_Datatype mpi_dlb_monitor_type;
     {
         int blocklengths[] = {
-            1, 1, 1,                /* Name + Resources: num_cpus, avg_cpus */
+            1, 1, 1, 1,             /* Name + Resources: num_cpus, avg_cpus */
             1, 1,                   /* Hardware counters: cycles, instructions */
             1, 1, 1, 1, 1, 1,       /* Statistics: num_* */
             1, 1,                   /* Monitor Start and Stop times */
@@ -298,6 +302,7 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
             offsetof(dlb_monitor_t, name),
             /* Resources */
             offsetof(dlb_monitor_t, num_cpus),
+            offsetof(dlb_monitor_t, num_omp_threads),
             offsetof(dlb_monitor_t, avg_cpus),
             /* Hardware counters */
             offsetof(dlb_monitor_t, cycles),
@@ -332,7 +337,7 @@ void talp_record_process_summary(const subprocess_descriptor_t *spd,
             /* Name */
             address_type,
             /* Resources */
-            MPI_INT, MPI_FLOAT,
+            MPI_INT, MPI_INT, MPI_FLOAT,
             /* Hardware counters */
             mpi_int64_type, mpi_int64_type,
             /* Statistics */
@@ -437,6 +442,7 @@ void talp_record_pop_summary(const subprocess_descriptor_t *spd,
             /* Only the global region records the resources */
             if (monitor == talp_info->monitor) {
                 talp_output_record_resources(base_metrics.num_cpus,
+                        base_metrics.num_available_cpus,
                         base_metrics.num_nodes, base_metrics.num_mpi_ranks,
                         base_metrics.num_gpus);
             }

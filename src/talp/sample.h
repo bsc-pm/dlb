@@ -25,12 +25,13 @@
 void talp_sample_init(talp_info_t *talp_info);
 void talp_sample_finalize(talp_info_t *talp_info);
 
-bool talp_sample_is_main_sequential(void);
-void talp_sample_set_main_sequential(bool is_sequential);
 talp_sample_t* talp_sample_get(talp_info_t *talp_info);
 
 void talp_sample_update(talp_info_t *talp_info);
+void talp_sample_record_cpuid(talp_info_t *talp_info);
 void talp_sample_set_state(talp_info_t *talp_info, talp_sample_state_t new_state);
+
+talp_sample_t talp_sample_delta(const talp_sample_t *end, const talp_sample_t *start);
 
 void talp_sample_aggregate_all_to_macrosample(
         talp_info_t *restrict talp_info, talp_macrosample_t *restrict macrosample);

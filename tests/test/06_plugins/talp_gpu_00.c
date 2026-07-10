@@ -31,6 +31,7 @@
 #include "talp/sample.h"
 #include "talp/talp.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -42,6 +43,7 @@ int main(int argc, char *argv[]) {
      * are initialized, then manage GPU component from here */
     subprocess_descriptor_t spd = {0};
     spd_enter_dlb(&spd);
+    thread_ctx_set_main(THREAD_MAIN_SEQUENTIAL);
     talp_init(&spd);
 
     /* Get global monitor */

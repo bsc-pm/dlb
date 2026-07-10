@@ -27,12 +27,14 @@
 #include "apis/dlb.h"
 #include "apis/dlb_talp.h"
 #include "talp/regions.h"
+#include "talp/sample.h"
+#include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 
 #include <assert.h>
 #include <pthread.h>
 #include <string.h>
 
-extern __thread bool thread_is_known;
 
 static void* test_observer_thread(void* arg) {
 
@@ -54,7 +56,10 @@ static void* test_unknown_thread(void* arg) {
 
 static void* test_worker_thread(void* arg) {
 
-    thread_is_known = true;
+    spd_enter_dlb(NULL);
+    thread_ctx_set_worker();
+    talp_sample_record_cpuid(thread_spd->talp_info);
+    talp_sample_set_state(thread_spd->talp_info, TALP_STATE_USEFUL);
 
     dlb_monitor_t *region1 = arg;
     assert( DLB_MonitoringRegionStart(region1) == DLB_SUCCESS );
@@ -87,9 +92,9 @@ int main(int argc, char *argv[]) {
         assert( pthread_join(thread, NULL) == 0 );
     }
 
-    /* Test that a new thread could start a region created by another thread
-     * (note that this messes with the PAPI hardware counters and is somewhat
-     * not really supported) */
+    /* Test that a new thread can start a region created by another thread.
+     * (note that it becomes a thread-local open region, then it's flushed
+     * to the process-wide region) */
     {
         dlb_monitor_t *region1 = DLB_MonitoringRegionRegister("Region 1");
         assert( !region_is_started(region1) );
@@ -100,6 +105,7 @@ int main(int argc, char *argv[]) {
         assert( pthread_join(thread, NULL) == 0 );
 
         assert( !region_is_started(region1) );
+        assert( region1->num_cpus == 1 );
         assert( region1->num_measurements == 1 );
         assert( region1->useful_time > 0 );
     }

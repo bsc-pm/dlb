@@ -25,6 +25,7 @@
 
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_core/DLB_kernel.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "support/env.h"
@@ -469,9 +470,10 @@ const char* DLB_Strerror(int errnum) {
 }
 
 DLB_EXPORT_SYMBOL
-int DLB_SetObserverRole(bool thread_is_observer) {
+int DLB_SetObserverRole(bool is_observer) {
     spd_enter_dlb(thread_spd);
-    return set_observer_role(thread_is_observer);
+    thread_ctx_set_observer(is_observer);
+    return DLB_SUCCESS;
 }
 
 DLB_EXPORT_SYMBOL

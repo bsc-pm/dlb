@@ -25,6 +25,7 @@
 
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_numThreads/numThreads.h"
 #include "LB_numThreads/omptool.h"
 #include "LB_comm/shmem_async.h"
@@ -51,11 +52,6 @@
 #include <string.h>
 
 
-/* By default all threads are participants.
- * A thread may change this value to avoid participating in LeWI and TALP metrics. */
-__thread bool thread_is_observer = false;
-
-
 /* Status */
 
 int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
@@ -63,8 +59,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
 
     int error = DLB_SUCCESS;
 
-    // Set it to false in case one thread is an observer but then Initializes DLB
-    thread_is_observer = false;
+    thread_ctx_set_main(THREAD_MAIN_SEQUENTIAL);
 
     // Initialize common modules (spd->id and instrumentation module ASAP)
     *spd = (const subprocess_descriptor_t) {
@@ -350,7 +345,7 @@ int unset_max_parallelism(subprocess_descriptor_t *spd) {
 
 void into_sync_call(sync_call_flags_t flags) {
     /* Observer threads do not trigger LeWI nor TALP on sync calls */
-    if (unlikely(thread_is_observer)) return;
+    if (unlikely(thread_is_observer())) return;
 
     const subprocess_descriptor_t *spd = thread_spd;
     if (unlikely(spd == NULL)) return;
@@ -366,7 +361,7 @@ void into_sync_call(sync_call_flags_t flags) {
 
 void out_of_sync_call(sync_call_flags_t flags) {
     /* Observer threads do not trigger LeWI nor TALP on MPI calls */
-    if (unlikely(thread_is_observer)) return;
+    if (unlikely(thread_is_observer())) return;
 
     const subprocess_descriptor_t *spd = thread_spd;
     if (unlikely(spd == NULL)) return;
@@ -833,11 +828,6 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
         options_finalize(&spd->options);
     }
 
-    return DLB_SUCCESS;
-}
-
-int set_observer_role(bool is_observer) {
-    thread_is_observer = is_observer;
     return DLB_SUCCESS;
 }
 

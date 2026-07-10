@@ -37,6 +37,47 @@ typedef enum {
     TALP_STATE_NOT_USEFUL_GPU,
 } talp_sample_state_t;
 
+typedef struct {
+    int64_t useful;
+    int64_t not_useful_mpi;
+    int64_t not_useful_omp_during_mpi;
+    int64_t not_useful_omp_in;
+    int64_t not_useful_omp_in_lb;
+    int64_t not_useful_omp_in_sched;
+    int64_t not_useful_omp_out;
+    int64_t not_useful_gpu;
+} sample_timers_t;
+
+/* same as sample_timers_t, but no not_useful_omp_in */
+typedef struct {
+    int64_t useful;
+    int64_t not_useful_mpi;
+    int64_t not_useful_omp_during_mpi;
+    int64_t not_useful_omp_in_lb;
+    int64_t not_useful_omp_in_sched;
+    int64_t not_useful_omp_out;
+    int64_t not_useful_gpu;
+} macro_timers_t;
+
+typedef struct {
+    int64_t useful;
+    int64_t communication;
+    int64_t inactive;
+} gpu_timers_t;
+
+typedef struct {
+    int64_t cycles;
+    int64_t instructions;
+} hw_counters_t;
+
+typedef struct {
+    int64_t num_mpi_calls;
+    int64_t num_omp_parallels;
+    int64_t num_omp_tasks;
+    int64_t num_gpu_runtime_calls;
+} event_stats_t;
+
+
 /* The sample contains the temporary per-thread accumulated values of all the
  * measured metrics. Main thread, during sequential code by contract, aggregates
  * samples from all threads into macrosamples.
@@ -51,30 +92,14 @@ typedef enum {
  */
 typedef struct DLB_ALIGN_CACHE talp_sample_t {
     // Hot fields: thread-owned, frequently written
-    struct {
-        int64_t useful;
-        int64_t not_useful_mpi;
-        int64_t not_useful_omp_during_mpi;
-        int64_t not_useful_omp_in;
-        int64_t not_useful_omp_in_lb;
-        int64_t not_useful_omp_in_sched;
-        int64_t not_useful_omp_out;
-        int64_t not_useful_gpu;
-    } timers;
-    struct {
-        int64_t cycles;
-        int64_t instructions;
-    } counters;
-    struct {
-        int64_t num_mpi_calls;
-        int64_t num_omp_parallels;
-        int64_t num_omp_tasks;
-        int64_t num_gpu_runtime_calls;
-    } stats;
+    sample_timers_t     timers;
+    hw_counters_t       counters;
+    event_stats_t       stats;
     talp_sample_state_t state;
-    int64_t last_updated_ts;                // timestamp of the last sample update
-    int64_t generation_ts;                  // timestamp of the start of the generation since the
+    int64_t             last_updated_ts;    // timestamp of the last sample update
+    int64_t             generation_ts;      // timestamp of the start of the generation since the
                                             // last update
+    cpu_set_t           cpu_mask;           // CPUs this sample has been observed on
 
     // Cold fields: atomic variables read/written at parallel-end
     struct DLB_ALIGN_CACHE {
@@ -86,31 +111,12 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
  * or a subset of, threads. It is only constructed when samples are aggregated.
  * The macrosample is then used to update all started monitoring regions. */
 typedef struct talp_macrosample_t {
-    struct {
-        int64_t useful;
-        int64_t not_useful_mpi;
-        int64_t not_useful_omp_during_mpi;
-        int64_t not_useful_omp_in_lb;
-        int64_t not_useful_omp_in_sched;
-        int64_t not_useful_omp_out;
-        int64_t not_useful_gpu;
-    } timers;
-    struct {
-        int64_t useful;
-        int64_t communication;
-        int64_t inactive;
-    } gpu_timers;
-    struct {
-        int64_t cycles;
-        int64_t instructions;
-    } counters;
-    struct {
-        int64_t num_mpi_calls;
-        int64_t num_omp_parallels;
-        int64_t num_omp_tasks;
-        int64_t num_gpu_runtime_calls;
-    } stats;
-    int num_cpus;
+    macro_timers_t timers;
+    gpu_timers_t   gpu_timers;
+    hw_counters_t  counters;
+    event_stats_t  stats;
+    cpu_set_t      cpu_mask;
+    int            num_samples;
 } talp_macrosample_t;
 
 /* TALP flags for talp_info */
@@ -135,7 +141,7 @@ typedef struct sample_registry_t {
 /* TALP info per spd */
 typedef struct talp_info_t {
     talp_flags_t      flags;
-    int               ncpus;           /* Number of process CPUs (also num samples) */
+    int               num_cpus;        /* Number of CPUs in the initial process mask */
     dlb_monitor_t     *monitor;        /* Convenience pointer to the global region */
     GTree             *regions;        /* Tree of monitoring regions */
     GSList            *open_regions;   /* List of open regions */
@@ -145,13 +151,14 @@ typedef struct talp_info_t {
 
 /* Private data per monitor */
 typedef struct monitor_data_t {
-    int             id;
-    int             node_shared_id;         /* id for allocating region in the shmem */
+    int id;
+    int node_shared_id;                 /* id for allocating region in the shmem */
     struct {
         bool started:1;
-        bool internal:1;                    /* internal regions are not reported */
+        bool internal:1;                /* internal regions are not reported */
         bool enabled:1;
     } flags;
+    cpu_set_t cpu_mask;                 /* CPUs this region has been observed on */
 } monitor_data_t;
 
 

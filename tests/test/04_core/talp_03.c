@@ -24,6 +24,7 @@
 #include "unique_shmem.h"
 
 #include "LB_core/spd.h"
+#include "LB_core/thread_ctx.h"
 #include "LB_numThreads/omptool.h"
 #include "LB_numThreads/omp-tools.h"
 #include "apis/dlb_errors.h"
@@ -91,6 +92,7 @@ int main(int argc, char *argv[]) {
 
     memcpy(&spd.process_mask, &process_mask, sizeof(cpu_set_t));
     spd_enter_dlb(&spd);
+    thread_ctx_set_main(THREAD_MAIN_SEQUENTIAL);
     talp_init(&spd);
 
     talp_info_t *talp_info = spd.talp_info;

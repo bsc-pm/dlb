@@ -646,6 +646,7 @@ class dlb_monitor_t(Structure):
     _fields_ = [
         ("name", c_char_p),
         ("num_cpus", c_int),
+        ("num_omp_threads", c_int),
         ("avg_cpus", c_float),
         ("cycles", c_int64),
         ("instructions", c_int64),
@@ -675,6 +676,7 @@ class dlb_pop_metrics_t(Structure):
     _fields_ = [
         ("name", c_char * DLB_MONITOR_NAME_MAX),
         ("num_cpus", c_int),
+        ("num_omp_threads", c_int),
         ("num_mpi_ranks", c_int),
         ("num_nodes", c_int),
         ("avg_cpus", c_float),
