@@ -95,6 +95,7 @@ static void cat_file(const char *filename) {
 }
 
 static void record_metrics(void) {
+
     /* Initialize structure */
     dlb_pop_metrics_t metrics = {
         .name                         = "Region 1",
@@ -124,7 +125,6 @@ static void record_metrics(void) {
         .omp_scheduling_efficiency    = 0.95f,
         .omp_serialization_efficiency = 0.95f,
     };
-
 
     talp_output_record_pop_metrics(&metrics);
 
@@ -160,6 +160,46 @@ static void record_metrics(void) {
             .elapsed_time = 100,
             .useful_time = 100,
             .mpi_time = 100,
+        },
+    };
+
+    talp_output_record_process("Region 1", &process_record, 1);
+}
+
+static void record_wrong_metrics(void) {
+
+    /* Initialize structure */
+    dlb_pop_metrics_t metrics = {
+        .name                         = "Region 1",
+        .num_cpus                     = 1,
+        .num_mpi_ranks                = 0,
+        .num_nodes                    = 1,
+        .avg_cpus                     = 1.0f,
+        .cycles                       = -100,
+        .instructions                 = -200,
+        .parallel_efficiency          = 1.24f,
+        .mpi_parallel_efficiency      = 1.25f,
+        .mpi_communication_efficiency = -1.0f,
+        .mpi_load_balance             = 1.25f,
+        .mpi_load_balance_in          = 1.5f,
+        .mpi_load_balance_out         = 1.5f,
+        .omp_parallel_efficiency      = 1.85f,
+        .omp_load_balance             = 1.95f,
+        .omp_scheduling_efficiency    = 1.95f,
+        .omp_serialization_efficiency = 1.95f,
+    };
+
+    talp_output_record_pop_metrics(&metrics);
+
+    const process_record_t process_record = {
+        .rank = 0,
+        .pid = 111,
+        .hostname = "hostname",
+        .cpuset = "[0-3]",
+        .cpuset_quoted = "\"0-3\"",
+        .monitor = {
+            .cycles = -1,
+            .instructions = -2,
         },
     };
 
@@ -223,15 +263,6 @@ int main(int argc, char *argv[]) {
     if (!error) cat_file(real_filename);
     free(json_filename);
     free(real_filename);
-
-    /* XML */
-    char *xml_filename;
-    asprintf(&xml_filename, "%s/talp.xml", tmpdir);
-    record_metrics();
-    talp_output_finalize(xml_filename, no_partial_output);
-    error += access(xml_filename, F_OK);
-    if (!error) cat_file(xml_filename);
-    free(xml_filename);
 
     /* CSV */
     char *csv_filename, *csv1, *csv2, *csv3;
@@ -307,8 +338,7 @@ int main(int argc, char *argv[]) {
     free(wrong_subdir);
 
     /* Report single region */
-    cpu_set_t system_mask;
-    mu_get_system_mask(&system_mask);
+    fprintf(stdout, "--- Single region:\n");
     dlb_monitor_t monitor = {
         .name                    = "Region 1",
         .num_cpus                = 1,
@@ -341,6 +371,13 @@ int main(int argc, char *argv[]) {
     };
     talp_output_print_monitoring_region(&monitor, flags);
     free(monitor._data);
+    fflush(stdout);
+
+    /* Sanity checks */
+    fprintf(stdout, "--- Wrong metrics:\n");
+    record_wrong_metrics();
+    talp_output_finalize(NULL, no_partial_output);
+    fflush(stdout);
 
     return error;
 }
