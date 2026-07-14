@@ -35,10 +35,12 @@
 #include "talp/perf_metrics.h"
 
 #include <errno.h>
+#include <float.h>
 #include <libgen.h>
 #include <limits.h>
 #include <locale.h>
 #include <pthread.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1222,68 +1224,105 @@ static FILE *open_file_with_dirs(const char *filename, bool *append) {
 /*    Finalize                                                                   */
 /*********************************************************************************/
 
-static bool check_coefficient(float coeffiecient) {
-    return 0.0f <= coeffiecient && coeffiecient <= 1.0;
-}
+static int warn_count = 0;
+enum { MAX_DETAILED_WARNINGS = 10 };
 
-static void warn_negative_counters(void) {
-    static bool warned_once = false;
-    if (!warned_once) {
-        warning("Some obtained PAPI counters contain negative values. Check your"
-                " installation or report the error to %s", PACKAGE_BUGREPORT);
-        warned_once = true;
+static void sanitize_counter(const char *value_name, double *value, const char *region_name) {
+
+    if (*value < 0) {
+        if (warn_count < MAX_DETAILED_WARNINGS) {
+            warning("Record '%s': counter '%s' had value '%f' (set to 0)",
+                    region_name, value_name, *value);
+        } else if (warn_count == MAX_DETAILED_WARNINGS) {
+            warning("Further coefficient warnings suppressed (already reported %d).",
+                    warn_count);
+        }
+        ++warn_count;
+        *value = 0.0;
     }
+
 }
 
-static void warn_wrong_coefficient(void) {
-    static bool warned_once = false;
-    if (!warned_once) {
-        warning("Some computed POP metric coefficient is not within the allowed"
-                " range [0.0, 1.0]. If you think this is an unexpected value,"
-                " please report the error to %s", PACKAGE_BUGREPORT);
-        warned_once = true;
+static void sanitize_coefficient(const char *value_name, float *value, const char *region_name) {
+
+    if (*value < -FLT_EPSILON || *value > 1.0f + FLT_EPSILON) {
+        if (warn_count < MAX_DETAILED_WARNINGS) {
+            warning("Record '%s': metric '%s' = %f is outside the allowed range"
+                    " [0.0, 1.0]. If you think this is unexpected, please report"
+                    " it to %s", region_name, value_name, *value, PACKAGE_BUGREPORT);
+        } else if (warn_count == MAX_DETAILED_WARNINGS) {
+            warning("Further coefficient warnings suppressed (already reported %d).",
+                    warn_count);
+        }
+        ++warn_count;
     }
 }
 
 static void sanitize_records(void) {
 
+    typedef struct {
+        const char *name;
+        size_t offset;
+    } field_t;
+
     /* pop_metrics_records:
      *  - instructions and cycles need to be >= 0
-     *  - computed efficiencyes need to be [0.0, 1.0]
+     *  - computed efficiencies need to be [0.0, 1.0]
      */
+
+    const field_t counters_fields[] = {
+        { "cycles",                       offsetof(dlb_pop_metrics_t, cycles) },
+        { "instructions",                 offsetof(dlb_pop_metrics_t, instructions) },
+    };
+    enum { COUNTERS_FIELDS_SIZE = sizeof(counters_fields)/sizeof(counters_fields[0]) };
+
+    const field_t coeff_fields[] = {
+        { "parallel_efficiency",          offsetof(dlb_pop_metrics_t, parallel_efficiency) },
+        { "mpi_parallel_efficiency",      offsetof(dlb_pop_metrics_t, mpi_parallel_efficiency) },
+        { "mpi_communication_efficiency", offsetof(dlb_pop_metrics_t, mpi_communication_efficiency) },
+        { "mpi_load_balance",             offsetof(dlb_pop_metrics_t, mpi_load_balance) },
+        { "mpi_load_balance_in",          offsetof(dlb_pop_metrics_t, mpi_load_balance_in) },
+        { "mpi_load_balance_out",         offsetof(dlb_pop_metrics_t, mpi_load_balance_out) },
+        { "omp_parallel_efficiency",      offsetof(dlb_pop_metrics_t, omp_parallel_efficiency) },
+        { "omp_load_balance",             offsetof(dlb_pop_metrics_t, omp_load_balance) },
+        { "omp_scheduling_efficiency",    offsetof(dlb_pop_metrics_t, omp_scheduling_efficiency) },
+        { "omp_serialization_efficiency", offsetof(dlb_pop_metrics_t, omp_serialization_efficiency) },
+        { "device_offload_efficiency",    offsetof(dlb_pop_metrics_t, device_offload_efficiency) },
+        { "gpu_parallel_efficiency",      offsetof(dlb_pop_metrics_t, gpu_parallel_efficiency) },
+        { "gpu_load_balance",             offsetof(dlb_pop_metrics_t, gpu_load_balance) },
+        { "gpu_communication_efficiency", offsetof(dlb_pop_metrics_t, gpu_communication_efficiency) },
+        { "gpu_orchestration_efficiency", offsetof(dlb_pop_metrics_t, gpu_orchestration_efficiency) },
+    };
+    enum { COEFF_FIELDS_SIZE = sizeof(coeff_fields)/sizeof(coeff_fields[0]) };
+
     for (GSList *node = pop_metrics_records;
             node != NULL;
             node = node->next) {
 
         dlb_pop_metrics_t *record = node->data;
 
-        if (record->cycles < 0) {
-            record->cycles = 0.0;
-            warn_negative_counters();
+        for (size_t i = 0; i < COUNTERS_FIELDS_SIZE; ++i) {
+            double *value = (double *)((char *)record + counters_fields[i].offset);
+            sanitize_counter(counters_fields[i].name, value, record->name);
         }
 
-        if (record->instructions < 0) {
-            record->instructions = 0.0;
-            warn_negative_counters();
-        }
-
-        if (!check_coefficient(record->parallel_efficiency)
-                || !check_coefficient(record->mpi_parallel_efficiency)
-                || !check_coefficient(record->mpi_communication_efficiency)
-                || !check_coefficient(record->mpi_load_balance)
-                || !check_coefficient(record->mpi_load_balance_in)
-                || !check_coefficient(record->mpi_load_balance_out)
-                || !check_coefficient(record->omp_parallel_efficiency)
-                || !check_coefficient(record->omp_load_balance)
-                || !check_coefficient(record->omp_scheduling_efficiency)
-                || !check_coefficient(record->omp_serialization_efficiency)) {
-            warn_wrong_coefficient();
+        for (size_t i = 0; i < COEFF_FIELDS_SIZE; ++i) {
+            float *value = (float *)((char *)record + coeff_fields[i].offset);
+            sanitize_coefficient(coeff_fields[i].name, value, record->name);
         }
     }
 
     /* node_records: nothing to sanitize for now */
 
     /* region_records: */
+
+    const field_t monitor_counters_fields[] = {
+        { "cycles",                       offsetof(dlb_monitor_t, cycles) },
+        { "instructions",                 offsetof(dlb_monitor_t, instructions) },
+    };
+    enum { MONITOR_COUNTERS_FIELDS_SIZE =
+        sizeof(monitor_counters_fields)/sizeof(monitor_counters_fields[0]) };
+
     for (GSList *node = region_records;
             node != NULL;
             node = node->next) {
@@ -1294,14 +1333,9 @@ static void sanitize_records(void) {
 
             dlb_monitor_t *monitor = &region_record->process_records[i].monitor;
 
-            if (monitor->cycles < 0) {
-                monitor->cycles = 0.0;
-                warn_negative_counters();
-            }
-
-            if (monitor->instructions < 0) {
-                monitor->instructions = 0.0;
-                warn_negative_counters();
+            for (size_t j = 0; j < MONITOR_COUNTERS_FIELDS_SIZE; ++j) {
+                double *value = (double *)((char *)monitor + monitor_counters_fields[j].offset);
+                sanitize_counter(counters_fields[i].name, value, monitor->name);
             }
         }
     }
