@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2025 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -40,12 +40,25 @@
 
 
 /*********************************************************************************/
-/*    TALP Record in serial (non-MPI) mode                                       */
+/*    TALP Record in serial mode (non-MPI / partial output)                      */
 /*********************************************************************************/
 
 /* For any given monitor, record metrics considering only this (sub-)process */
 void talp_record_monitor(const subprocess_descriptor_t *spd,
         const dlb_monitor_t *monitor) {
+
+    talp_info_t *talp_info = spd->talp_info;
+
+    int rank = 0;
+    int num_ranks = 0;
+    int num_nodes = 1;
+#if MPI_LIB
+    if (talp_info->flags.have_mpi) {
+        rank = _mpi_rank;
+        num_ranks = _mpi_size;
+        num_nodes = _num_nodes;
+    }
+#endif
 
     if (spd->options.talp_summary != SUMMARY_NONE) {
         talp_output_record_process_info();
@@ -55,7 +68,7 @@ void talp_record_monitor(const subprocess_descriptor_t *spd,
         verbose(VB_TALP, "TALP process summary: recording region %s", monitor->name);
 
         process_record_t process_record = {
-            .rank = 0,
+            .rank = rank,
             .pid = spd->id,
             .monitor = *monitor,
         };
@@ -70,7 +83,7 @@ void talp_record_monitor(const subprocess_descriptor_t *spd,
                 process_record.cpuset_quoted, TALP_OUTPUT_CPUSET_MAX);
 
         /* Add record */
-        talp_output_record_process(monitor->name, &process_record, 1);
+        talp_output_record_process(monitor->name, &process_record, -1);
     }
 
     if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
@@ -78,16 +91,15 @@ void talp_record_monitor(const subprocess_descriptor_t *spd,
             verbose(VB_TALP, "TALP summary: recording region %s", monitor->name);
 
             pop_base_metrics_t base_metrics;
-            perf_metrics__local_monitor_into_base_metrics(&base_metrics, monitor);
+            perf_metrics__local_monitor_into_base_metrics(&base_metrics, monitor, talp_info->flags);
 
             dlb_pop_metrics_t pop_metrics;
             perf_metrics__base_to_pop_metrics(monitor->name, &base_metrics, &pop_metrics);
             talp_output_record_pop_metrics(&pop_metrics);
 
-            talp_info_t *talp_info = spd->talp_info;
-            if(monitor == talp_info->monitor) {
+            if (monitor == talp_info->monitor) {
                 talp_output_record_resources(monitor->num_cpus, mu_get_system_count(),
-                        /* num_nodes */ 1, /* num_ranks */ 0, base_metrics.num_gpus);
+                        num_nodes, num_ranks, base_metrics.num_gpus);
             }
 
         } else {
