@@ -265,7 +265,7 @@ static void rocprofilerv2_backend_flush(void) {
     }
 }
 
-static int rocprofilerv2_backend_probe(const core_api_t *core_api) {
+static int rocprofilerv2_backend_probe(void) {
     return DLB_BACKEND_SUCCESS;
 }
 
@@ -397,7 +397,7 @@ backend_api_t* DLB_Get_Backend_API(void) {
         .probe = rocprofilerv2_backend_probe,
         .init = rocprofilerv2_backend_init,
         .start = rocprofilerv2_backend_start,
-        .start = rocprofilerv2_backend_stop,
+        .stop = rocprofilerv2_backend_stop,
         .finalize = rocprofilerv2_backend_finalize,
         .flush = rocprofilerv2_backend_flush,
         .get_gpu_affinity = NULL,
