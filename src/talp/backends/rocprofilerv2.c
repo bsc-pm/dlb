@@ -266,7 +266,7 @@ static void rocprofilerv2_backend_flush(void) {
 }
 
 static int rocprofilerv2_backend_probe(const core_api_t *core_api) {
-    return DLB_PLUGIN_SUCCESS;
+    return DLB_BACKEND_SUCCESS;
 }
 
 static int rocprofilerv2_backend_init(const core_api_t *core_api) {
