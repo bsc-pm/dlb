@@ -446,6 +446,20 @@ libdlb_mpi_la_SOURCES = $(SRCS) $(MPI_SRCS) $(MPI_WRAPPERS)
 nodist_libdlb_mpi_la_SOURCES = $(MPI_SRCS_NODIST) $(MPI_WRAPPERS_NODIST)
 libdlb_mpi_la_LIBADD = libdlb_common.la
 
+# Override Automake linker selection:
+# Force C link when no Fortran file is listed in SOURCES.
+if MPI_F08
+libdlb_mpi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                     $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_la_FCFLAGS) \
+                     $(FCFLAGS) $(libdlb_mpi_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                     $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpi_la_CFLAGS) \
+                     $(CFLAGS) $(libdlb_mpi_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_la_LINK = $(AM_V_CCLD)
+endif
+
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpi_dbg.la
 libdlb_mpi_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
@@ -455,7 +469,18 @@ libdlb_mpi_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS) $(MPI_WRAPPERS)
 nodist_libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS_NODIST) $(MPI_WRAPPERS_NODIST)
 libdlb_mpi_dbg_la_LIBADD = libdlb_common_dbg.la
-endif
+if MPI_F08
+libdlb_mpi_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                         $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_dbg_la_FCFLAGS) \
+                         $(FCFLAGS) $(libdlb_mpi_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_dbg_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpi_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                         $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpi_dbg_la_CFLAGS) \
+                         $(CFLAGS) $(libdlb_mpi_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_dbg_la_LINK = $(AM_V_CCLD)
+endif # MPI_F08
+endif # DEBUG_LIB
 
 if INSTRUMENTATION_LIB
 lib_LTLIBRARIES += libdlb_mpi_instr.la
@@ -466,7 +491,18 @@ libdlb_mpi_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_instr_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS_NODIST)
 libdlb_mpi_instr_la_LIBADD = libdlb_common.la
-endif
+if MPI_F08
+libdlb_mpi_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                           $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_instr_la_FCFLAGS) \
+                           $(FCFLAGS) $(libdlb_mpi_instr_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_instr_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpi_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                           $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpi_instr_la_CFLAGS) \
+                           $(CFLAGS) $(libdlb_mpi_instr_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_instr_la_LINK = $(AM_V_CCLD)
+endif # MPI_F08
+endif # INSTRUMENTATION_LIB
 
 if INSTRUMENTATION_DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpi_instr_dbg.la
@@ -477,8 +513,19 @@ libdlb_mpi_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_instr_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_NODIST)
 libdlb_mpi_instr_dbg_la_LIBADD = libdlb_common_dbg.la
-endif
-endif #BUILD_MPI_LIB
+if MPI_F08
+libdlb_mpi_instr_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                               $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_instr_dbg_la_FCFLAGS) \
+                               $(FCFLAGS) $(libdlb_mpi_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_instr_dbg_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpi_instr_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                               $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpi_instr_dbg_la_CFLAGS) \
+                               $(CFLAGS) $(libdlb_mpi_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpi_instr_dbg_la_LINK = $(AM_V_CCLD)
+endif # MPI_F08
+endif # INSTRUMENTATION_DEBUG_LIB
+endif # BUILD_MPI_LIB
 
 #********************************************************************************
 # libdlb_mpic.so
@@ -537,7 +584,7 @@ libdlb_mpic_instr_dbg_la_SOURCES = $(SRCS) $(MPIC_SRCS)
 nodist_libdlb_mpic_instr_dbg_la_SOURCES = $(MPIC_SRCS_NODIST)
 libdlb_mpic_instr_dbg_la_LIBADD = libdlb_common_dbg.la
 endif
-endif #BUILD_MPIC_LIB
+endif # BUILD_MPIC_LIB
 
 #********************************************************************************
 # libdlb_mpif.so
@@ -605,6 +652,20 @@ libdlb_mpif_la_SOURCES = $(SRCS) $(MPIF_SRCS) $(MPIF_WRAPPERS)
 nodist_libdlb_mpif_la_SOURCES = $(MPIF_SRCS_NODIST) $(MPIF_WRAPPERS_NODIST)
 libdlb_mpif_la_LIBADD = libdlb_common.la
 
+# Override Automake linker selection:
+# Force C link when no Fortran file is listed in SOURCES.
+if MPI_F08
+libdlb_mpif_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                      $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_la_FCFLAGS) \
+                      $(FCFLAGS) $(libdlb_mpif_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpif_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                      $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_la_CFLAGS) \
+                      $(CFLAGS) $(libdlb_mpif_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_la_LINK = $(AM_V_CCLD)
+endif
+
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpif_dbg.la
 libdlb_mpif_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
@@ -614,7 +675,18 @@ libdlb_mpif_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS) $(MPIF_WRAPPERS)
 nodist_libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS_NODIST) $(MPIF_WRAPPERS_NODIST)
 libdlb_mpif_dbg_la_LIBADD = libdlb_common_dbg.la
-endif
+if MPI_F08
+libdlb_mpif_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                          $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_dbg_la_FCFLAGS) \
+                          $(FCFLAGS) $(libdlb_mpif_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_dbg_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpif_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                          $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_dbg_la_CFLAGS) \
+                          $(CFLAGS) $(libdlb_mpif_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_dbg_la_LINK = $(AM_V_CCLD)
+endif # MPI_F08
+endif # DEBUG_LIB
 
 if INSTRUMENTATION_LIB
 lib_LTLIBRARIES += libdlb_mpif_instr.la
@@ -625,7 +697,18 @@ libdlb_mpif_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_instr_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS_NODIST)
 libdlb_mpif_instr_la_LIBADD = libdlb_common.la
-endif
+if MPI_F08
+libdlb_mpif_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                            $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_instr_la_FCFLAGS) \
+                            $(FCFLAGS) $(libdlb_mpif_instr_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_instr_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpif_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                            $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_instr_la_CFLAGS) \
+                            $(CFLAGS) $(libdlb_mpif_instr_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_instr_la_LINK = $(AM_V_CCLD)
+endif # MPI_F08
+endif # INSTRUMENTATION_LIB
 
 if INSTRUMENTATION_DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpif_instr_dbg.la
@@ -636,8 +719,21 @@ libdlb_mpif_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_instr_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_NODIST)
 libdlb_mpif_instr_dbg_la_LIBADD = libdlb_common_dbg.la
-endif
-endif #BUILD_MPIF_LIB
+if MPI_F08
+libdlb_mpif_instr_dbg_la_LINK = \
+        $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+        $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_instr_dbg_la_FCFLAGS) \
+        $(FCFLAGS) $(libdlb_mpif_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_instr_dbg_la_LINK = $(AM_V_FCLD)
+else
+libdlb_mpif_instr_dbg_la_LINK = \
+        $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+        $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_instr_dbg_la_CFLAGS) \
+        $(CFLAGS) $(libdlb_mpif_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_mpif_instr_dbg_la_LINK = $(AM_V_CCLD)
+endif # MPI_F08
+endif # INSTRUMENTATION_DEBUG_LIB
+endif # BUILD_MPIF_LIB
 
 #********************************************************************************
 # libdlb_cupti.so

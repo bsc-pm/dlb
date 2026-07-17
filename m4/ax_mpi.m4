@@ -255,9 +255,7 @@ AC_DEFUN([AX_MPI],
         AC_ARG_ENABLE([c-mpi-library],
             AS_HELP_STRING([--enable-c-mpi-library], [compile also a DLB MPI library specific for C]),
             [], dnl Implicit: enable_c_mpi_library=$enableval
-            [AS_IF([test "x$FC" != x], [enable_c_mpi_library=no], [
-                enable_c_mpi_library="forced due to no Fortran compiler found"])
-            ]
+            [enable_c_mpi_library=no]
         )
         AC_MSG_RESULT([$enable_c_mpi_library])
 
@@ -317,7 +315,7 @@ AC_DEFUN([AX_MPI],
     ])
 
     # ouput variables for configure summary
-    AS_IF([test "x$with_mpi" != xno && test "x$FC" != x], [BUILD_MPI_LIB=yes])
+    AS_IF([test "x$with_mpi" != xno], [BUILD_MPI_LIB=yes])
     AS_IF([test "x$enable_c_mpi_library" = xyes], [BUILD_MPIC_LIB=yes])
     AS_IF([test "x$enable_fortran_mpi_library" = xyes], [BUILD_MPIF_LIB=yes])
 

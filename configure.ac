@@ -206,9 +206,7 @@ AC_PROG_FC
 AC_FC_FREEFORM([:], [:])
 
 # Disable Fortran tests if FC is not found
-AS_IF([test "x$FC" = x], [
-    AC_MSG_WARN([Fortran compiler was not found, some MPI libraries will not be built.])
-], [
+AS_IF([test "x$FC" != x], [
     # use the Fortran compiler for the following checks
     AC_LANG_PUSH([Fortran])
 
