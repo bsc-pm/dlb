@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [Unreleased]
+### Added
+- New MNGO module (`--mngo`): uses TALP metrics to activate LeWI or to change
+  CPU ownership with DROM based on the parallel efficiency of each process.
+- New flags `--mngo-mode`, `--mngo-helper-thread-interval`,
+  `--mngo-lb-in-threshold`, and `--mngo-lb-out-threshold`.
+- New MNGO API in `dlb_mngo.h` (C) and `dlbf_mngo.h` (Fortran) to control the
+  manager and annotate regions.
+
 ## [3.7.0] 2026-04-21
 ### Added
 - New templates for file names in `--talp-output-file`.
@@ -433,6 +442,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Scheduling decisions based on HW locality
 - Binary `dlb`
 
+[Unreleased]: https://github.com/bsc-pm/dlb/compare/v3.7.0...HEAD
 [3.7.0]: https://github.com/bsc-pm/dlb/compare/v3.6.0...v3.7.0
 [3.6.2]: https://github.com/bsc-pm/dlb/compare/v3.6.1...v3.6.2
 [3.6.1]: https://github.com/bsc-pm/dlb/compare/v3.6.0...v3.6.1

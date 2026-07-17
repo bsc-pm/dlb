@@ -104,13 +104,13 @@ bool equivalent_int(const char *str1, const char *str2) {
 /* verbose_opts_t */
 static const verbose_opts_t verbose_opts_values[] =
     {VB_CLEAR, VB_ALL, VB_API, VB_MICROLB, VB_SHMEM, VB_MPI_API, VB_MPI_INT, VB_STATS,
-        VB_DROM, VB_ASYNC, VB_OMPT, VB_AFFINITY, VB_BARRIER, VB_TALP, VB_INSTR};
+        VB_DROM, VB_MNGO, VB_ASYNC, VB_OMPT, VB_AFFINITY, VB_BARRIER, VB_TALP, VB_INSTR};
 static const char* const verbose_opts_choices[] =
     {"no", "all", "api", "microlb", "shmem", "mpi_api", "mpi_intercept", "stats", "drom",
-        "async", "ompt", "affinity", "barrier", "talp", "instrument"};
+        "mngo", "async", "ompt", "affinity", "barrier", "talp", "instrument"};
 static const char verbose_opts_choices_str[] =
     "no:all:api:microlb:shmem:mpi_api:mpi_intercept:stats:"LINE_BREAK
-    "drom:async:ompt:affinity:barrier:talp:instrument";
+    "drom:mngo:async:ompt:affinity:barrier:talp:instrument";
 enum { verbose_opts_nelems = sizeof(verbose_opts_values) / sizeof(verbose_opts_values[0]) };
 
 int parse_verbose_opts(const char *str, verbose_opts_t *value) {
@@ -250,11 +250,11 @@ bool equivalent_verbose_fmt(const char *str1, const char *str2) {
 
 /* instrument_items_t */
 static const instrument_items_t instrument_items_values[] =
-    {INST_NONE, INST_ALL, INST_MPI, INST_LEWI, INST_DROM, INST_TALP, INST_BARR, INST_OMPT, INST_CPUS, INST_CBCK};
+    {INST_NONE, INST_ALL, INST_MPI, INST_LEWI, INST_DROM, INST_TALP, INST_MNGO, INST_BARR, INST_OMPT, INST_CPUS, INST_CBCK};
 static const char* const instrument_items_choices[] =
-    {"none", "all", "mpi", "lewi", "drom", "talp", "barrier", "ompt", "cpus", "callbacks"};
+    {"none", "all", "mpi", "lewi", "drom", "talp", "mngo", "barrier", "ompt", "cpus", "callbacks"};
 static const char instrument_items_choices_str[] =
-    "none:all:mpi:lewi:drom:talp:barrier:ompt:cpus:callbacks";
+    "none:all:mpi:lewi:drom:talp:mngo:barrier:ompt:cpus:callbacks";
 enum { instrument_items_nelems = sizeof(instrument_items_values) / sizeof(instrument_items_values[0]) };
 
 int parse_instrument_items(const char *str, instrument_items_t *value) {
@@ -535,6 +535,52 @@ bool equivalent_talp_summary(const char *str1, const char *str2) {
     return value1 == value2;
 }
 
+/* mngo_mode_t */
+static const mngo_mode_t mngo_mode_values[] =
+    {MNGO_HELPER_THREAD, MNGO_REGIONS};
+static const char* const mngo_mode_choices[] =
+    {"helper-thread", "regions"};
+static const char mngo_mode_choices_str[] =
+    "helper-thread, regions";
+enum { mngo_mode_nelems = sizeof(mngo_mode_values) / sizeof(mngo_mode_values[0]) };
+int parse_mngo_mode(const char *str, mngo_mode_t *option) {
+
+    int i;
+    for (i = 0; i < mngo_mode_nelems; i++) { 
+        if (strcmp(str, mngo_mode_choices[i]) == 0) {
+            *option = mngo_mode_values[i];
+            return DLB_SUCCESS;
+        }
+    }
+
+    return DLB_ERR_NOENT;
+}
+
+const char* mngo_mode_tostr(mngo_mode_t value) {
+    switch (value) {
+        case MNGO_HELPER_THREAD:
+            return "helper-thread";
+        case MNGO_REGIONS:
+            return "regions";
+        default:
+            return "helper-thread";
+    }
+}
+
+const char* get_mngo_mode_choices(void) {
+    return mngo_mode_choices_str;
+}
+
+bool equivalent_mngo_mode(const char *str1, const char *str2) {
+    mngo_mode_t value1, value2;
+    if (parse_mngo_mode(str1, &value1) != DLB_SUCCESS) {
+        return false;
+    }
+    if (parse_mngo_mode(str2, &value2) != DLB_SUCCESS) {
+        return false;
+    }
+    return value1 == value2;
+}
 
 /* talp_model_t */
 static const talp_model_t talp_model_values[] = {TALP_MODEL_HYBRID_V1, TALP_MODEL_HYBRID_V2};

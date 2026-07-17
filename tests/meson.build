@@ -96,6 +96,13 @@ tests = {
     'talp_01_lewi'        : {'source' : 'talp_01.c', 'dlb_args' : '--lewi'},
     'talp_02'             : {},
     'talp_03'             : {},
+    'mngo_00'             : {},
+    'mngo_regions_00'     : {},
+    'mngo_metrics_00'     : {},
+    'mngo_resources_00'   : {},
+    'mngo_drom_00'        : {},
+    'mngo_talp_00'        : {},
+    'mngo_balancer_00'    : {},
   },
   '05_api' : {
     'api_00'              : {},

@@ -25,6 +25,23 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+#define FORK(F) do { \
+    int pid_a = fork(); \
+    if (pid_a == 0) { \
+        F; \
+        dlb_test__exit(0); \
+    } \
+    \
+} while(0)
+
+#define WAITALL do { \
+    int wstatus; \
+    while(waitpid(0, &wstatus, 0) > -1) { \
+        assert(WIFEXITED(wstatus)); \
+        assert(WEXITSTATUS(wstatus) == EXIT_SUCCESS); \
+    } \
+} while(0)
+
 void __gcov_flush(void) __attribute__((weak));
 void __gcov_dump(void) __attribute__((weak));
 

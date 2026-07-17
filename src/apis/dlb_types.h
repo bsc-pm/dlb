@@ -25,6 +25,7 @@ typedef struct dlb_barrier_t dlb_barrier_t;
 typedef void* dlb_handler_t;
 typedef void* dlb_cpu_set_t;
 typedef const void* const_dlb_cpu_set_t;
+typedef struct dlb_mngo_region_t dlb_mngo_region_t;
 
 // LeWI enums
 enum { DLB_DELETE_REQUESTS = 0 };
@@ -40,6 +41,12 @@ typedef enum dlb_drom_flags_e {
     DLB_NO_SYNC         = 1 << 4,
     DLB_FREE_CPUS_SLURM = 1 << 5,
 } dlb_drom_flags_t;
+
+// MNGO flags
+typedef enum dlb_mngo_flags_e {
+    DLB_MNGO_LEWI = 1 << 0,
+    DLB_MNGO_DROM = 1 << 1,
+} dlb_mngo_flags_t;
 
 // PrintShmem flags
 typedef enum dlb_printshmem_flags_e {

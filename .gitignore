@@ -38,3 +38,4 @@ py-compile
 build*/
 .tarball-git-branch
 .tarball-version
+.cache/

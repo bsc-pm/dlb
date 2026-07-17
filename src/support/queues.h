@@ -127,7 +127,7 @@ queue_t* queue__init(size_t element_size, unsigned int capacity, void *ptr, queu
 void queue__destroy(queue_t *queue);
 
 /**
- * Returns the number of elements avaliable in the queue.
+ * Returns the number of elements available in the queue.
  *
  *  - queue: the queue where the operation is performed.
  */
@@ -203,9 +203,18 @@ int queue__peek_tail(queue_t *queue, void **value_ptr);
  *  - queue: the queue where the operation is performed.
  *  - new: the pointer to the value to push.
  *
- *  Returns NULL if the push fails.
+ *  Returns the pointer to the element or NULL if the push fails.
  */
 void * queue__push_head(queue_t *queue, const void * new);
+
+/** 
+ * Allocates an element in the queue on the head.
+ *
+ *  - queue: the queue where the operation is performed.
+ *
+ *  Returns the pointer to the element or NULL if the push fails.
+ */
+void * queue__emplace_head(queue_t *queue);
 
 /** 
  * Pushes the new value to the queue on the head, and overwrites the tail if
@@ -214,9 +223,18 @@ void * queue__push_head(queue_t *queue, const void * new);
  *  - queue: the queue where the operation is performed.
  *  - new: the pointer to the value to push.
  *
- *  Returns NULL if the push fails.
+ *  Returns the pointer to the element or NULL if the push fails.
  */
 void * queue__push_tail(queue_t *queue, const void * new);
+
+/** 
+ * Allocates an element in the queue on the tail.
+ *
+ *  - queue: the queue where the operation is performed.
+ *
+ *  Returns the pointer to the element or NULL if the push fails.
+ */
+void * queue__emplace_tail(queue_t *queue);
 
 /*** queue_t iterators ***********************************************************/
 
@@ -237,7 +255,7 @@ void queue_iter__foreach(void *iter, void (*fn)(void*, void*), void* args);
  *  - iter: the pointer to the iterator
  *  - n: the number of elements to skip before returning
  *
- * Returns NULL if not enough elements are avaliable.
+ * Returns NULL if not enough elements are available.
  */
 void* queue_iter__get_nth(void *iter, unsigned int n);
 

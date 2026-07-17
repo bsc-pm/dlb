@@ -211,6 +211,21 @@ void instrument_event(instrument_event_t type, long long value, instrument_actio
                 extrae_set_event(type, value);
             }
             break;
+        case MNGO_MANAGER:
+            if (instrument & INST_MNGO) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        case METRIC_PE:
+            if (instrument & INST_MNGO) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
+        case METRIC_LB:
+            if (instrument & INST_MNGO) {
+                extrae_set_event(type, action == EVENT_BEGIN ? value : 0);
+            }
+            break;
         case THREADS_USED_EVENT:
         case ITERATION_EVENT:
         case DLB_MODE_EVENT:
@@ -350,6 +365,27 @@ void init_tracing(const options_t *options) {
         Extrae_define_event_type(&type, "DLB Region instructions", &zero_values, NULL, NULL);
 
         #undef CHECK_VALUE_DESCRIPTIONS
+
+        //DLB_MNGO_EVENT
+        type=MNGO_MANAGER;
+        n_values=8;
+        long long values_mngo[]= {0, 1, 2, 3, 4, 5, 6, 7};
+        char *value_desc_mngo[8] = {
+            "Outside",           "Gathering metrics", "Decide",
+            "History update",    "Enable LeWI",       "Disable LeWI",
+            "Broadcast actions", "Read actions"};
+        Extrae_define_event_type(&type, "MNGO", &n_values, values_mngo, value_desc_mngo);
+
+        //DLB METRICS
+        n_values=0;
+
+        // Parallel Eff.
+        type=METRIC_PE;
+        Extrae_define_event_type(&type, "Parallel Efficiency", &n_values, NULL, NULL);
+
+        // Load Balance Eff.
+        type=METRIC_LB;
+        Extrae_define_event_type(&type, "Load Balance Efficiency", &n_values, NULL, NULL);
 
         verbose(VB_INSTR, "Instrumentation successfully initialized");
     } else {

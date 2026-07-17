@@ -85,6 +85,8 @@ installheaders =                     \
 	src/apis/dlbf-errors.h       \
 	src/apis/dlbf_drom.h         \
 	src/apis/dlbf_talp.h         \
+	src/apis/dlb_mngo.h          \
+	src/apis/dlbf_mngo.h         \
 	$(END)
 
 dist_include_HEADERS = $(installheaders)
@@ -232,6 +234,18 @@ COMMON_SRCS = \
 	src/talp/talp_output.c                  \
 	src/talp/talp_output.h                  \
 	src/talp/talp_types.h                   \
+	src/mngo/mngo_balancer.c                \
+	src/mngo/mngo_balancer.h                \
+	src/mngo/mngo_talp.c                    \
+	src/mngo/mngo_talp.h                    \
+	src/mngo/mngo_drom.c                    \
+	src/mngo/mngo_drom.h                    \
+	src/mngo/mngo_regions.c                 \
+	src/mngo/mngo_regions.h                 \
+	src/mngo/mngo_resources.c               \
+	src/mngo/mngo_resources.h               \
+	src/mngo/mngo_metrics.c                 \
+	src/mngo/mngo_metrics.h                 \
 	src/LB_comm/shmem.c                     \
 	src/LB_comm/shmem.h                     \
 	src/LB_comm/shmem_async.c               \
@@ -254,6 +268,7 @@ COMMON_SRCS = \
 	src/apis/DLB_interface_sp.c             \
 	src/apis/DLB_interface_stats.c          \
 	src/apis/DLB_interface_talp.c           \
+	src/apis/DLB_interface_mngo.c           \
 	$(END)
 
 # If rocprofiler-sdk plugin is enabled, we need to add the configure symbol
@@ -296,6 +311,8 @@ SRCS = \
 	src/talp/talp_mpi.h                     \
 	src/talp/talp_record.c                  \
 	src/talp/talp_record.h                  \
+	src/mngo/mngo.c							\
+	src/mngo/mngo.h							\
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
 	src/LB_numThreads/omptm_omp5.c          \
@@ -312,6 +329,8 @@ SRCS = \
 	src/LB_comm/shmem_cpuinfo.h             \
 	src/LB_comm/shmem_lewi_async.c          \
 	src/LB_comm/shmem_lewi_async.h          \
+	src/LB_comm/shmem_mngo.c                \
+	src/LB_comm/shmem_mngo.h                \
 	src/LB_comm/shmem_procinfo.c            \
 	src/LB_comm/shmem_procinfo.h            \
 	src/LB_policies/lewi.c                  \

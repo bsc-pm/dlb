@@ -46,6 +46,8 @@ void verbose(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (
 void verbose0(verbose_opts_t flag, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
 void debug_warning_impl(const char *file, int line, const char *func, const char *fmt, ...)
                                             __attribute__ ((format (printf, 4, 5)));
+bool verbose_check(verbose_opts_t flag);
+void todo0(const char *description, const char* file, int line, const char* func);
 void print_backtrace(void);
 void dlb_clean(void);
 void warn_error(int error);
@@ -85,6 +87,14 @@ extern verbose_opts_t   vb_opts;
 #define debug_warning(fmt, ...) \
     debug_warning_impl(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
 
+#ifdef DEBUG_VERSION
+#define todo(message) \
+    do { \
+        todo0(message, __FILE__, __LINE__, __func__); \
+    } while (0)
+#else
+#define todo(message) do { (void)0; } while (0)
+#endif
 
 #ifdef DEBUG_VERSION
 #define DLB_DEBUG(stmt) do { stmt; } while(0)

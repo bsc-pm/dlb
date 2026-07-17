@@ -31,6 +31,7 @@ typedef struct Options {
     /* general options */
     bool                lewi;
     bool                drom;
+    bool                mngo;
     bool                barrier;
     bool                ompt;
     interaction_mode_t  mode;
@@ -70,6 +71,11 @@ typedef struct Options {
     char                talp_region_select[MAX_OPTION_LENGTH];
     char                talp_gpu_backend[MAX_OPTION_LENGTH];
     talp_model_t        talp_model;
+    /* mngo */
+    int                 mngo_interval_time;
+    mngo_mode_t         mngo_mode;
+    int                 mngo_lb_in_threshold;
+    int                 mngo_lb_out_threshold;
     /* barrier */
     int                 barrier_id;
     /* deprecated, but still parsed, options */

@@ -33,6 +33,7 @@
 #include "LB_comm/shmem_cpuinfo.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_talp.h"
+#include "LB_comm/shmem_mngo.h"
 #include "apis/dlb_errors.h"
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
@@ -43,6 +44,7 @@
 #include "talp/backend_manager.h"
 #include "talp/talp.h"
 #include "talp/talp_mpi.h"
+#include "mngo/mngo.h"
 #ifdef MPI_LIB
 #include "mpi/mpi_core.h"
 #endif
@@ -82,6 +84,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         spd->options.lewi_affinity == LEWI_AFFINITY_NONE    ? POLICY_LEWI :
         spd->options.lewi_affinity != LEWI_AFFINITY_AUTO    ? POLICY_LEWI_MASK :
         spd->dlb_initialized_via_ompt                       ? POLICY_LEWI_MASK :
+        spd->options.mngo                                   ? POLICY_LEWI_MASK :
         spd->options.preinit_pid                            ? POLICY_LEWI_MASK :
         mask                                                ? POLICY_LEWI_MASK :
                                                               POLICY_LEWI;
@@ -169,6 +172,16 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     // Initialise LeWI
     error = spd->lb_funcs.init(spd);
     if (error != DLB_SUCCESS) return error;
+    spd->lewi_enabled = true;
+
+    /**
+     * If MNGO is enabled with LeWI support we want to start the execution with
+     * LeWI dormant.
+     */
+    if (spd->options.mngo && spd->options.lewi) {
+        spd->lewi_enabled = false;
+        spd->lb_funcs.disable(spd);
+    }
 
     // Initialize TALP
     if  (spd->options.talp) {
@@ -193,6 +206,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     verbose0(VB_MICROLB, "Enabled verbose mode for microLB policies");
     verbose0(VB_ASYNC, "Enabled verbose mode for Asynchronous thread");
     verbose0(VB_OMPT, "Enabled verbose mode for OMPT experimental features");
+    verbose(VB_MNGO, "Enabled verbose mode for MNGO");
 
     if (spd->options.verbose & VB_AFFINITY) {
         print_buffer_t buffer;
@@ -206,9 +220,10 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
         info("Process CPU affinity mask: %s", mu_to_str(&spd->process_mask));
     }
 
-    spd->lewi_enabled = true;
     instrument_event(RUNTIME_EVENT, EVENT_INIT, EVENT_END);
-    instrument_event(DLB_MODE_EVENT, EVENT_ENABLED, EVENT_BEGIN);
+    if (spd->lewi_enabled) {
+        instrument_event(DLB_MODE_EVENT, EVENT_ENABLED, EVENT_BEGIN);
+    }
 
     return error;
 }
@@ -823,6 +838,7 @@ int print_shmem(subprocess_descriptor_t *spd, int num_columns,
     shmem_procinfo__print_info(spd->options.shm_key, spd->options.shm_size_multiplier);
     shmem_barrier__print_info(spd->options.shm_key, spd->options.shm_size_multiplier);
     shmem_talp__print_info(spd->options.shm_key, spd->options.shm_size_multiplier);
+    shmem_mngo__print_info(spd->options.shm_key);
 
     if (!spd->dlb_initialized) {
         options_finalize(&spd->options);

@@ -422,7 +422,21 @@ bool queue__is_at_capacity(const queue_t *queue) {
 }
 
 static void * queue__get_element_ptr(queue_t *queue, unsigned int idx) {
-    return (unsigned char *)queue->queue + (queue->element_size * idx);
+    return ((unsigned char *)queue->queue) + (queue->element_size * idx);
+}
+
+static unsigned int move_forwards(queue_t *queue, unsigned int idx) {
+    idx++;
+    if (idx >= queue->capacity) {
+        idx = 0;
+    }
+
+    return idx;
+}
+
+static unsigned int move_backwards(queue_t *queue, unsigned int idx) {
+    if (idx == 0) idx = queue->capacity;
+    return idx - 1;
 }
 
 int queue__take_head(queue_t *queue, void * poped) {
@@ -432,9 +446,7 @@ int queue__take_head(queue_t *queue, void * poped) {
 
     queue->elements--;
 
-    // Move head back
-    if (queue->head == 0) queue->head = queue->capacity;
-    queue->head--;
+    queue->head = move_backwards(queue, queue->head);
 
     // Fetch data from queue
     void * head = queue__get_element_ptr(queue, queue->head);
@@ -458,9 +470,7 @@ int queue__take_tail(queue_t *queue, void * poped) {
         memcpy(poped, tail, queue->element_size);
     }
 
-    // Move tail forward
-    queue->tail++;
-    if (queue->tail >= queue->capacity) queue->tail = 0;
+    queue->tail = move_forwards(queue, queue->tail);
 
     return DLB_SUCCESS;
 }
@@ -470,10 +480,7 @@ int queue__peek_head(queue_t *queue, void **value_ptr) {
         return DLB_NOUPDT;
     }
 
-    // Move head back
-    unsigned int peek_head = queue->head;
-    if (peek_head == 0) peek_head = queue->elements;
-    peek_head--;
+    unsigned int peek_head = move_backwards(queue, queue->head);
 
     // Fetch pointer to queue storage
     *value_ptr = queue__get_element_ptr(queue, peek_head);
@@ -547,39 +554,35 @@ static bool queue__check_capacity(queue_t *queue) {
     return true;
 }
 
+
 void * queue__push_head(queue_t *queue, const void * new) {
-
-    if (! queue__check_capacity(queue)) return NULL;
-
-    void * head = queue__get_element_ptr(queue, queue->head);
+    void * head = queue__emplace_head(queue);
+    if (head == NULL) return NULL;
     memcpy(head, new, queue->element_size);
+    return head;
+}
 
-    unsigned int old_head = queue->head;
-
-    // Move head forward
-    queue->head++;
-    if (queue->head >= queue->capacity) {
-        queue->head = 0;
-    }
-
+void * queue__emplace_head(queue_t *queue) {
+    if (! queue__check_capacity(queue)) return NULL;
+    void * head = queue__get_element_ptr(queue, queue->head);
+    queue->head = move_forwards(queue, queue->head);
     queue->elements++;
-
-    return queue__get_element_ptr(queue, old_head);
+    return head;
 }
 
 void * queue__push_tail(queue_t *queue, const void * new) {
-
     if (! queue__check_capacity(queue)) return NULL;
-
-    // Move tail back
-    if (queue->tail == 0) queue->tail = queue->capacity;
-    queue->tail--;
-
+    queue->tail = move_backwards(queue, queue->tail);
     queue->elements++;
-
     void * tail = queue__get_element_ptr(queue, queue->tail);
     memcpy(tail, new, queue->element_size);
+    return tail;
+}
 
+void * queue__emplace_tail(queue_t *queue) {
+    if (! queue__check_capacity(queue)) return NULL;
+    queue->tail = move_backwards(queue, queue->tail);
+    queue->elements++;
     return queue__get_element_ptr(queue, queue->tail);
 }
 
