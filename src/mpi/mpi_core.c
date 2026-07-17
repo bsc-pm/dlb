@@ -34,6 +34,7 @@
 #include "support/tracing.h"
 #include "support/types.h"
 #include "talp/talp_mpi.h"
+#include "mngo/mngo.h"
 
 #include <mpi.h>
 #include <unistd.h>
@@ -198,6 +199,8 @@ static void get_mpi_info(void) {
 }
 
 static void after_init(void) {
+    if (mpi_ready) return;
+
     /* Fill MPI global variables */
     get_mpi_info();
 
@@ -212,6 +215,13 @@ static void after_init(void) {
         talp_mpi_init(thread_spd);
     }
 
+    // Initialize MNGO
+    if (thread_spd->options.mngo){
+      mngo_init(thread_spd);
+    } else {
+      thread_spd->mngo_info = NULL;
+    }
+
     lewi_mpi_calls = thread_spd->options.lewi_mpi_calls;
 
     mpi_ready = 1;
@@ -220,6 +230,7 @@ static void after_init(void) {
 static void before_finalize(void) {
     if (mpi_ready) {
         mpi_ready = 0;
+        mngo_fini(thread_spd);
         talp_mpi_finalize(thread_spd);
 
     }

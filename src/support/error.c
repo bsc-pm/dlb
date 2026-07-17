@@ -42,7 +42,8 @@ static const char* error_msg[] = {
     "DLB_ERR_NOMEM (-14): DLB cannot allocate more processes into the shared memory",
     "DLB_ERR_NOPOL (-15): The operation is not defined in the current policy",
     "DLB_ERR_NOTALP (-16): TALP is not initialized",
-    "DLB_ERR_NOTALP (-17): LeWI is not initialized"
+    "DLB_ERR_NOLEWI (-17): LeWI is not initialized",
+    "DLB_ERR_NOMNGO (-18): MNGO is not initialized"
 };
 
 const char* error_get_str(int errnum) {

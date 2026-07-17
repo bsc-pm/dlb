@@ -35,6 +35,9 @@ typedef enum InstrumentEvent {
     MONITOR_STATE       = 800101,
     MONITOR_CYCLES      = 800110,
     MONITOR_INSTR       = 800111,
+    MNGO_MANAGER        = 800200,
+    METRIC_PE           = 810000,
+    METRIC_LB           = 810001,
 } instrument_event_t;
 
 typedef enum InstrumentRuntimeValue {
@@ -69,11 +72,24 @@ typedef enum InstrumentRegionState {
     MONITOR_STATE_NOT_USEFUL_GPU = 5,
 } instrument_region_state_t;
 
+typedef enum InstrumentMngoValue {
+    EVENT_MNGO_TALP          = 1,
+    EVENT_MNGO_DECIDE        = 2,
+    EVENT_MNGO_HISTORY       = 3,
+    EVENT_MNGO_LEWI_ON       = 4,
+    EVENT_MNGO_LEWI_OFF      = 5,
+    EVENT_MNGO_DROM_IN       = 6,
+    EVENT_MNGO_DROM_OUT      = 7,
+    EVENT_MNGO_SEND          = 8,
+    EVENT_MNGO_READ          = 9,
+} instrument_mngo_value_t;
+
 typedef enum InstrumentAction {
     EVENT_BEGIN,
     EVENT_END,
     EVENT_BEGINEND,
 } instrument_action_t;
+
 
 /*************************************/
 

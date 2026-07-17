@@ -48,6 +48,10 @@ void spd_enter_dlb(subprocess_descriptor_t *spd) {
     thread_spd = spd ? spd : &global_spd;
 }
 
+bool spd_is_global_spd(const subprocess_descriptor_t *spd) {
+    return spd == &global_spd;
+}
+
 /*********************************************************************************/
 /*    GTree modification functions                                               */
 /*********************************************************************************/

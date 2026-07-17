@@ -47,11 +47,13 @@ typedef struct SubProcessDescriptor {
     void *lewi_info;
     void *talp_info;
     void *barrier_info;
+    void *mngo_info;
 } subprocess_descriptor_t;
 
 extern __thread subprocess_descriptor_t *thread_spd;
 
 void spd_enter_dlb(subprocess_descriptor_t *spd);
+bool spd_is_global_spd(const subprocess_descriptor_t *spd);
 void spd_register(subprocess_descriptor_t *spd);
 void spd_unregister(const subprocess_descriptor_t *spd);
 void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);

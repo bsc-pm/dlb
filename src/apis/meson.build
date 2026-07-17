@@ -16,12 +16,14 @@ headers = [
   'dlb_stats.h',
   'dlb_drom.h',
   'dlb_talp.h',
+  'dlb_mngo.h',
   'dlb_types.h',
   'dlb_errors.h',
   'dlbf.h',
   'dlbf-errors.h',
   'dlbf_drom.h',
   'dlbf_talp.h',
+  'dlbf_mngo.h',
 ]
 
 install_headers(headers)

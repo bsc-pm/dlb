@@ -291,6 +291,7 @@ static void vverbose(verbose_opts_t flag, const char *fmt, va_list list) {
     else if (vb_opts & flag & VB_BARRIER) { vprint(stderr, "DLB BARRIER", fmt, list); }
     else if (vb_opts & flag & VB_TALP)    { vprint(stderr, "DLB TALP", fmt, list); }
     else if (vb_opts & flag & VB_INSTR)   { vprint(stderr, "DLB INSTRUMENT", fmt, list); }
+    else if (vb_opts & flag & VB_MNGO)    { vprint(stderr, "DLB MNGO", fmt, list); }
 }
 
 #undef verbose
@@ -313,6 +314,29 @@ void verbose0(verbose_opts_t flag, const char *fmt, ...) {
         va_start(list, fmt);
         vverbose(flag, fmt, list);
         va_end(list);
+#ifdef MPI_LIB
+    }
+#endif
+}
+
+bool verbose_check(verbose_opts_t flag) {
+    /* Parse verbose options if verbose() was invoked before init */
+    if (unlikely(vb_opts == VB_UNDEF)) {
+        options_parse_entry("--verbose", &vb_opts);
+    }
+
+    return !quiet && !silent && (vb_opts & flag);
+}
+
+static void todo_func(const char *description, const char* file, int line, const char* func) {
+    fprintf(stderr, "!! DLB TODO [%s:%d (%s)] %s\n", file, line, func, description);
+}
+
+void todo0(const char *description, const char* file, int line, const char* func) {
+#ifdef MPI_LIB
+    if (_mpi_rank <= 0) {
+#endif
+        todo_func(description, file, line, func);
 #ifdef MPI_LIB
     }
 #endif

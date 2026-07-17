@@ -30,6 +30,7 @@
 #include "support/debug.h"
 #include "LB_core/spd.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <stddef.h>
 #include <ctype.h>
@@ -64,6 +65,7 @@ typedef enum OptionTypes {
     OPT_TLPSUM_T,   // talp_summary_t
     OPT_TLPMOD_T,   // talp_model_t
     OPT_TLPCOM_T,   // talp_component_t
+    OPT_MNGO_MODE_T,// mngo_mode_t
     OPT_OMPTM_T     // omptm_version_t
 } option_type_t;
 
@@ -135,7 +137,17 @@ static const opts_dict_t options_dictionary[] = {
         .offset         = offsetof(options_t, talp),
         .type           = OPT_TLPCOM_T,
         .flags          = (option_flags_t)(OPT_OPTIONAL)
-    },{
+    }, {
+        .var_name       = "LB_MNGO",
+        .arg_name       = "--mngo",
+        .default_value  = "no",
+        .description    = OFFSET"Enables the MNGO module. Processes using\n"
+                          OFFSET"this module use TALP metrics to enable the usage of other modules\n"
+                          OFFSET"like LeWI, and DROM depending on the live performance.",
+        .offset         = offsetof(options_t, mngo),
+        .type           = OPT_BOOL_T,
+        .flags          = (option_flags_t)(OPT_OPTIONAL)
+    }, {
         .var_name       = "LB_BARRIER",
         .arg_name       = "--barrier",
         .default_value  = "yes",
@@ -543,6 +555,54 @@ static const opts_dict_t options_dictionary[] = {
         .type           = OPT_TLPMOD_T,
         .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     },
+    // MNGO
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--mngo-mode",
+        .default_value  = "regions",
+        .description    = OFFSET"The method used to call the mngo manager.",
+        .offset         = offsetof(options_t, mngo_mode),
+        .type           = OPT_MNGO_MODE_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--mngo-helper-thread-interval",
+        .default_value  = "30",
+        .description    = OFFSET"The number of seconds MNGO waits between each event.",
+        .offset         = offsetof(options_t, mngo_interval_time),
+        .type           = OPT_INT_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--mngo-lb-in-threshold",
+        .default_value  = "10",
+        .description    = OFFSET"The percentage difference between a process useful computation\n"
+                          OFFSET"and its node average useful computation to consider that the\n"
+                          OFFSET"process is contributing to load imbalance within the node.\n"
+                          OFFSET"\n"
+                          OFFSET"Note: This will affect when MNGO redistributes resources inside\n"
+                          OFFSET"      the node (either with DROM or with LeWI).\n",
+        .offset         = offsetof(options_t, mngo_lb_in_threshold),
+        .type           = OPT_INT_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
+
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--mngo-lb-out-threshold",
+        .default_value  = "5",
+        .description    = OFFSET"The percentage difference between a process useful computation\n"
+                          OFFSET"and the global average useful computation to consider that the\n"
+                          OFFSET"process is contributing to the imbalance of other nodes.\n"
+                          OFFSET"\n"
+                          OFFSET"Note: This will change when DROM is used balance nodes across nodes.",
+        .offset         = offsetof(options_t, mngo_lb_out_threshold),
+        .type           = OPT_INT_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL)
+
+    },
     // barrier
     {
         .var_name       = "LB_NULL",
@@ -683,6 +743,8 @@ static int set_value(option_type_t type, void *option, const char *str_value) {
             return parse_talp_model(str_value, (talp_model_t*)option);
         case OPT_TLPCOM_T:
             return parse_talp_component(str_value, (talp_component_t*)option);
+        case OPT_MNGO_MODE_T:
+            return parse_mngo_mode(str_value, (mngo_mode_t*)option);
         case OPT_OMPTM_T:
             return parse_omptm_version(str_value, (omptm_version_t*)option);
     }
@@ -727,6 +789,8 @@ static const char * get_value(option_type_t type, const void *option) {
             return talp_model_tostr(*(talp_model_t*)option);
         case OPT_TLPCOM_T:
             return talp_component_tostr(*(talp_component_t*)option);
+        case OPT_MNGO_MODE_T:
+            return mngo_mode_tostr(*(mngo_mode_t*)option);
         case OPT_OMPTM_T:
             return omptm_version_tostr(*(omptm_version_t*)option);
     }
@@ -770,6 +834,8 @@ static bool values_are_equivalent(option_type_t type, const char *value1, const 
             return equivalent_talp_model(value1, value2);
         case OPT_TLPCOM_T:
             return equivalent_talp_component(value1, value2);
+        case OPT_MNGO_MODE_T:
+            return equivalent_mngo_mode(value1, value2);
         case OPT_OMPTM_T:
             return equivalent_omptm_version_opts(value1, value2);
     }
@@ -828,6 +894,9 @@ static void copy_value(option_type_t type, void *dest, const char *src) {
             break;
         case OPT_TLPCOM_T:
             memcpy(dest, src, sizeof(talp_component_t));
+            break;
+        case OPT_MNGO_MODE_T:
+            memcpy(dest, src, sizeof(mngo_mode_t));
             break;
         case OPT_OMPTM_T:
             memcpy(dest, src, sizeof(omptm_version_t));
@@ -1030,6 +1099,18 @@ void options_init(options_t *options, const char *dlb_args) {
         if (options->talp_gpu_backend[0] == '\0') {
             strcpy(options->talp_gpu_backend, options->deprecated_plugins);
         }
+    }
+
+    /* MNGO required options */
+    if (options->mngo){
+        if ( (!options->lewi) && (!options->drom) ) {
+            warning("MNGO without LeWI nor DROM won't be able to take any"
+                    " action.");
+        }
+
+        // Enable the TALP MPI component in external mode
+        options->talp |= TALP_COMPONENT_MPI;
+        options->talp_external_profiler = true;
     }
 
     /* Free intermediate buffers */
@@ -1290,6 +1371,9 @@ void options_print_variables(const options_t *options, bool print_extended) {
                 break;
             case OPT_TLPCOM_T:
                 b += snprintf(b, max_entry_len, "{%s}", get_talp_component_choices());
+                break;
+            case OPT_MNGO_MODE_T:
+                b += snprintf(b, max_entry_len, "{%s}", get_mngo_mode_choices());
                 break;
             case OPT_OMPTM_T:
                 b += snprintf(b, max_entry_len, "[%s]", get_omptm_version_choices());

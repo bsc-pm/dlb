@@ -2060,6 +2060,12 @@ void shmem_cpuinfo__update_ownership(pid_t pid, const cpu_set_t *restrict proces
                      * is guesting an external CPU, LeWI should be enabled */
                     if (unlikely(tasks == NULL)) {
                         shmem_unlock(shm_handler);
+                        verbose(VB_SHMEM,
+                            "error transfering ownership: [ cpuid: %d] [ owner: %d ] [ guest: %d ] [ state: %s ]",
+                            cpuid, cpuinfo->owner, cpuinfo->guest,
+                            cpuinfo->state == CPU_DISABLED ? "Disabled" :
+                            cpuinfo->state == CPU_BUSY     ? "Bussy"    :
+                            cpuinfo->state == CPU_LENT     ? "Lent"     : "???");
                         fatal("tasks pointer is NULL in %s. Please report bug at %s",
                                 __func__, PACKAGE_BUGREPORT);
                     }

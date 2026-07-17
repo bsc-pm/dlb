@@ -53,7 +53,8 @@ typedef enum VerboseOptions {
     VB_BARRIER  = 1 << 10,
     VB_TALP     = 1 << 11,
     VB_INSTR    = 1 << 12,
-    VB_ALL      = 0xFFFF,
+    VB_MNGO     = 1 << 13,
+    VB_ALL      = 0x0FFFF,
     VB_UNDEF    = 0xF0000,
 } verbose_opts_t;
 
@@ -77,7 +78,8 @@ typedef enum InstrumentItems {
     INST_BARR   = 1 << 4,
     INST_OMPT   = 1 << 5,
     INST_CPUS   = 1 << 6,
-    INST_CBCK   = 1 << 7
+    INST_CBCK   = 1 << 7,
+    INST_MNGO   = 1 << 8
 } instrument_items_t;
 
 typedef enum DebugOptions {
@@ -120,6 +122,11 @@ typedef enum TalpComponent {
     TALP_COMPONENT_GPU     = 1 << 3,
     TALP_COMPONENT_HWC     = 1 << 4,
 } talp_component_t;
+
+typedef enum MngoModeType {
+    MNGO_HELPER_THREAD,
+    MNGO_REGIONS,
+} mngo_mode_t;
 
 typedef enum PolicyType {
     POLICY_NONE,
@@ -245,6 +252,12 @@ int parse_talp_component(const char *str, talp_component_t *value);
 const char* talp_component_tostr(talp_component_t value);
 const char* get_talp_component_choices(void);
 bool equivalent_talp_component(const char *str1, const char *str2);
+
+/* mngo_mode_t */
+int parse_mngo_mode(const char *str, mngo_mode_t *option); 
+const char* mngo_mode_tostr(mngo_mode_t value);
+const char* get_mngo_mode_choices(void);
+bool equivalent_mngo_mode(const char *str1, const char *str2);
 
 /* interaction_mode_t */
 int parse_mode(const char *str, interaction_mode_t *value);

@@ -21,6 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "dlb_errors.h"
 #include "support/types.h"
 
 #include <stdio.h>
@@ -165,6 +166,12 @@ int main(int argc, char *argv[]) {
     assert( strcmp(talp_model_tostr(TALP_MODEL_HYBRID_V2), "hybrid-v2") == 0 );
     assert(  equivalent_talp_model("hybrid-v1", "hybrid-v1") );
     assert( !equivalent_talp_model("hybrid-v1", "hybrid-v2") );
+
+    mngo_mode_t mngo_mode;
+    err = parse_mngo_mode("", &mngo_mode);          assert(err == DLB_ERR_NOENT);
+    err = parse_mngo_mode("regions", &mngo_mode);   assert(!err && mngo_mode == MNGO_REGIONS);
+    err = parse_mngo_mode("helper-thread", &mngo_mode);
+    assert(!err && mngo_mode == MNGO_HELPER_THREAD);
 
     interaction_mode_t mode;
     err = parse_mode("", &mode);                    assert(err);
