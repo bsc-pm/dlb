@@ -450,7 +450,7 @@ if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpi_dbg.la
 libdlb_mpi_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
-libdlb_mpi_dbg_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
+libdlb_mpi_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpi_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS) $(MPI_WRAPPERS)
 nodist_libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS_NODIST) $(MPI_WRAPPERS_NODIST)
@@ -461,7 +461,7 @@ if INSTRUMENTATION_LIB
 lib_LTLIBRARIES += libdlb_mpi_instr.la
 libdlb_mpi_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
-libdlb_mpi_instr_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
+libdlb_mpi_instr_la_FCFLAGS = $(INSTR_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpi_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_instr_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS_NODIST)
@@ -472,7 +472,7 @@ if INSTRUMENTATION_DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpi_instr_dbg.la
 libdlb_mpi_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
-libdlb_mpi_instr_dbg_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
+libdlb_mpi_instr_dbg_la_FCFLAGS = $(INSTR_DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpi_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_instr_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_NODIST)
@@ -599,6 +599,7 @@ src/mpi/libdlb_mpif_la-mpi_wrappers_f08_comm_spawn.lo: src/support/libdlb_mpif_l
 lib_LTLIBRARIES += libdlb_mpif.la
 libdlb_mpif_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_mpif_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpif_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_la_SOURCES = $(SRCS) $(MPIF_SRCS) $(MPIF_WRAPPERS)
 nodist_libdlb_mpif_la_SOURCES = $(MPIF_SRCS_NODIST) $(MPIF_WRAPPERS_NODIST)
@@ -608,6 +609,7 @@ if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpif_dbg.la
 libdlb_mpif_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
+libdlb_mpif_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpif_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS) $(MPIF_WRAPPERS)
 nodist_libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS_NODIST) $(MPIF_WRAPPERS_NODIST)
@@ -618,6 +620,7 @@ if INSTRUMENTATION_LIB
 lib_LTLIBRARIES += libdlb_mpif_instr.la
 libdlb_mpif_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
+libdlb_mpif_instr_la_FCFLAGS = $(INSTR_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpif_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_instr_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS_NODIST)
@@ -628,6 +631,7 @@ if INSTRUMENTATION_DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpif_instr_dbg.la
 libdlb_mpif_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
+libdlb_mpif_instr_dbg_la_FCFLAGS = $(INSTR_DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpif_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_instr_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_NODIST)
