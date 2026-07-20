@@ -276,10 +276,10 @@ AC_DEFUN([AX_MPI],
         AC_ARG_ENABLE([mpi-f08-bindings],
             AS_HELP_STRING([--disable-mpi-f08-bindings], [disable MPI Fortran 2008 bindings]),
             [], dnl Implicit: enable_mpi_f08_bindings=$enableval
-            [enable_mpi_f08_bindings=yes]
+            [enable_mpi_f08_bindings=auto]
         )
         AC_MSG_RESULT([$enable_mpi_f08_bindings])
-        AS_IF([test x"$enable_mpi_f08_bindings" = xyes], [
+        AS_IF([test x"$enable_mpi_f08_bindings" != xno], [
             AC_MSG_CHECKING([whether MPI Fortran 2008 bindings are supported])
             AS_IF([test x"$FC" != x \
                     && test x"$mpi3" = xyes \
@@ -299,10 +299,10 @@ AC_DEFUN([AX_MPI],
                 AS_HELP_STRING([--disable-mpi-f08ts-bindings],
                     [disable MPI Fortran 2008 + TS 29113 bindings]),
                 [], dnl Implicit: enable_mpi_f08ts_bindings=$enableval
-                [enable_mpi_f08ts_bindings=yes]
+                [enable_mpi_f08ts_bindings=auto]
             )
             AC_MSG_RESULT([$enable_mpi_f08ts_bindings])
-            AS_IF([test x"$enable_mpi_f08ts_bindings" = xyes], [
+            AS_IF([test x"$enable_mpi_f08ts_bindings" != xno], [
                 AC_MSG_CHECKING([whether MPI Fortran 2008 + TS 29113 bindings are supported])
                 AS_IF([test x"$mpi_f08" = xyes \
                         && test x"$mpi3" = xyes \
@@ -318,8 +318,8 @@ AC_DEFUN([AX_MPI],
 
     # ouput variables for configure summary
     AS_IF([test "x$with_mpi" != xno && test "x$FC" != x], [BUILD_MPI_LIB=yes])
-    AS_IF([test "x$enable_c_mpi_library" != xno], [BUILD_MPIC_LIB=yes])
-    AS_IF([test "x$enable_fortran_mpi_library" != xno], [BUILD_MPIF_LIB=yes])
+    AS_IF([test "x$enable_c_mpi_library" = xyes], [BUILD_MPIC_LIB=yes])
+    AS_IF([test "x$enable_fortran_mpi_library" = xyes], [BUILD_MPIF_LIB=yes])
 
     AC_SUBST([MPICC])
     AC_SUBST([MPIFC])
