@@ -365,7 +365,7 @@ void into_sync_call(sync_call_flags_t flags) {
     const subprocess_descriptor_t *spd = thread_spd;
     if (unlikely(spd == NULL)) return;
 
-    if (spd->options.lewi && spd->lewi_enabled && flags.do_lewi) {
+    if (flags.do_lewi && spd->options.lewi && spd->lewi_enabled) {
         spd->lb_funcs.into_blocking_call(spd);
         omptool__into_blocking_call();
     }

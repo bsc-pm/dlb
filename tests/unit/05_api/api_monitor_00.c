@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
         assert( region_is_started(custom_monitor) );
 
         /* Simulate MPI_Init + MPI_Barrier + MPI_Finalize */
-        sync_call_flags_t blocking = { .is_blocking = true, .is_collective = true };
+        sync_call_flags_t blocking = { .is_mpi = true, .is_blocking = true, .is_collective = true };
         assert( DLB_Init(0, NULL, NULL) == DLB_ERR_INIT );
         talp_mpi_init(thread_spd);
         talp_into_sync_call(thread_spd, blocking);

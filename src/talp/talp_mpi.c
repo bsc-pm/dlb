@@ -154,7 +154,7 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
     /* We also need to measure the waiting time of an MPI_Finalize.
         * For this, we call an MPI_Barrier and the appropriate TALP functions.
         * The num_mpi_calls variable is also incremented inside those. */
-    sync_call_flags_t flags = { .is_blocking = true, .is_collective = true };
+    sync_call_flags_t flags = { .is_mpi = true, .is_blocking = true, .is_collective = true };
     talp_into_sync_call(spd, flags);
     PMPI_Barrier(getWorldComm());
     talp_out_of_sync_call(spd, flags);
@@ -189,40 +189,31 @@ void talp_mpi_finalize(const subprocess_descriptor_t *spd) {
         * This check is needed to avoid deadlocks on finalize. */
     if (spd->options.talp_summary) {
         verbose(VB_TALP, "Gathering TALP metrics");
-        /* FIXME: use Named Barrier */
-        /* if (shmem_barrier__get_num_participants(spd->options.barrier_id) == _mpis_per_node) { */
 
-            /* Gather data among processes in the node if node summary is enabled */
-            if (spd->options.talp_summary & SUMMARY_NODE) {
-                talp_record_node_summary(spd);
-            }
+        /* Gather data among processes in the node if node summary is enabled */
+        if (spd->options.talp_summary & SUMMARY_NODE) {
+            talp_record_node_summary(spd);
+        }
 
-            /* Gather data among MPIs if any of these summaries is enabled  */
-            if (spd->options.talp_summary
-                    & (SUMMARY_POP_METRICS | SUMMARY_PROCESS)) {
-                /* Ensure everyone has the same monitoring regions */
-                talp_register_common_mpi_regions(spd);
+        /* Gather data among MPIs if any of these summaries is enabled  */
+        if (spd->options.talp_summary
+                & (SUMMARY_POP_METRICS | SUMMARY_PROCESS)) {
+            /* Ensure everyone has the same monitoring regions */
+            talp_register_common_mpi_regions(spd);
 
-                /* Finally, reduce data */
-                for (GTreeNode *node = g_tree_node_first(talp_info->regions);
-                        node != NULL;
-                        node = g_tree_node_next(node)) {
-                    const dlb_monitor_t *monitor = g_tree_node_value(node);
-                    if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
-                        talp_record_pop_summary(spd, monitor);
-                    }
-                    if (spd->options.talp_summary & SUMMARY_PROCESS) {
-                        talp_record_process_summary(spd, monitor);
-                    }
+            /* Finally, reduce data */
+            for (GTreeNode *node = g_tree_node_first(talp_info->regions);
+                    node != NULL;
+                    node = g_tree_node_next(node)) {
+                const dlb_monitor_t *monitor = g_tree_node_value(node);
+                if (spd->options.talp_summary & SUMMARY_POP_METRICS) {
+                    talp_record_pop_summary(spd, monitor);
+                }
+                if (spd->options.talp_summary & SUMMARY_PROCESS) {
+                    talp_record_process_summary(spd, monitor);
                 }
             }
-
-            /* Synchronize all processes in node before continuing with DLB finalization  */
-            node_barrier(spd, NULL);
-        /* } else { */
-        /*     warning("The number of MPI processes and processes registered in DLB differ." */
-        /*             " TALP will not print any summary."); */
-        /* } */
+        }
     }
 #endif
 }
@@ -255,9 +246,11 @@ void talp_out_of_sync_call(const subprocess_descriptor_t *spd, sync_call_flags_t
     /* Update sample */
     talp_sample_update(talp_info);
 
-    /* Add statistic */
-    talp_sample_t *sample = talp_sample_get(talp_info);
-    ++sample->stats.num_mpi_calls;
+    /* Add statistic only if this is a real MPI call and not a DLB_Barrier */
+    if (flags.is_mpi) {
+        talp_sample_t *sample = talp_sample_get(talp_info);
+        ++sample->stats.num_mpi_calls;
+    }
 
     /* Out of Sync call -> useful */
     talp_sample_set_state(talp_info, TALP_STATE_USEFUL);

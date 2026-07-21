@@ -127,11 +127,23 @@ int main(int argc, char *argv[]) {
         region_start(&spd, monitor);
         region_stop(&spd, monitor);
 
+        /* Perform 1 MPI call and 1 DLB_Barrier */
+        sync_call_flags_t mpi_flags = { .is_mpi = true };
+        talp_into_sync_call(&spd, mpi_flags);
+        talp_out_of_sync_call(&spd, mpi_flags);
+        sync_call_flags_t dlb_barrier_flags = { .is_dlb_barrier = true };
+        talp_into_sync_call(&spd, dlb_barrier_flags);
+        talp_out_of_sync_call(&spd, dlb_barrier_flags);
+
         /* Stop global monitor */
         talp_mpi_finalize(&spd);
 
+        /* Test number of MPI calls is correct */
+        assert( monitor->num_mpi_calls == 0 );
+        assert( global_monitor->num_mpi_calls == 3 ); // Init + Custom + Finalize
+
         /* Test global monitor values are correct and greater than custom monitor */
-        assert( global_monitor->mpi_time == 0 );
+        assert( global_monitor->mpi_time > 0 );
         assert( global_monitor->useful_time > 0 );
         assert( global_monitor->useful_time > monitor->useful_time );
         assert( global_monitor->elapsed_time > monitor->elapsed_time );
