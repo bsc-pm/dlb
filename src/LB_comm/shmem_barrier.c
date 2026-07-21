@@ -478,29 +478,19 @@ void shmem_barrier__barrier(barrier_t *barrier) {
             DLB_ATOMIC_ADD_RLX(&barrier->ntimes, 1);
         } else {
             // Only if this process is not the last one, act as a blocking call
-            if (barrier->flags.lewi) {
-                sync_call_flags_t mpi_flags = (const sync_call_flags_t) {
-                    .is_dlb_barrier = true,
-                    .is_blocking = true,
-                    .is_collective = true,
-                    .do_lewi = true,
-                };
-                into_sync_call(mpi_flags);
-            }
+            sync_call_flags_t flags = (const sync_call_flags_t) {
+                .is_dlb_barrier = true,
+                .is_blocking = true,
+                .is_collective = true,
+                .do_lewi = barrier->flags.lewi,
+            };
+            into_sync_call(flags);
 
             // Barrier
             pthread_barrier_wait(&barrier->barrier);
 
-            // Recover resources for those processes that simulated a blocking call
-            if (barrier->flags.lewi) {
-                sync_call_flags_t mpi_flags = (const sync_call_flags_t) {
-                    .is_dlb_barrier = true,
-                    .is_blocking = true,
-                    .is_collective = true,
-                    .do_lewi = true,
-                };
-                out_of_sync_call(mpi_flags);
-            }
+            // End blocking call
+            out_of_sync_call(flags);
         }
 
         unsigned int participants_left = DLB_ATOMIC_SUB_FETCH(&barrier->count, 1);
