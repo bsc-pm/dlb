@@ -250,6 +250,65 @@ static void CUPTIAPI GetEventValueCallback(
 }
 
 
+/* --- Device info ------------------------------------------------------------- */
+
+typedef struct {
+    uint32_t device_id;         // local id [0..N)
+    uint64_t pci_unique_id;     // PCI domain + Bus + device
+} device_info_t;
+
+static device_info_t *device_info = NULL;
+static size_t num_devices = 0;
+
+static inline uint64_t make_pci_unique_id(uint32_t domain, uint32_t bus, uint32_t device) {
+    return ((uint64_t)domain << 32) | ((uint64_t)bus << 16) | (uint64_t)device;
+}
+
+static void finalize_device_info(void) {
+    free(device_info);
+    device_info = NULL;
+    num_devices = 0;
+}
+
+static int init_device_info(void) {
+
+    if (device_info != NULL)
+        return DLB_BACKEND_ERROR;
+
+    int device_count;
+    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
+        return DLB_BACKEND_ERROR;
+
+    if (device_count == 0)
+        return DLB_BACKEND_ERROR;
+
+    num_devices = (size_t)device_count;
+
+    device_info = calloc(num_devices, sizeof(*device_info));
+    if (device_info == NULL) {
+        num_devices = 0;
+        return DLB_BACKEND_ERROR;
+    }
+
+    for (int gpu = 0; gpu < device_count; ++gpu) {
+        struct cudaDeviceProp prop;
+
+        if (cudaGetDeviceProperties(&prop, gpu) != cudaSuccess) {
+            finalize_device_info();
+            return DLB_BACKEND_ERROR;
+        }
+
+        device_info[gpu] = (device_info_t){
+            .device_id = (uint32_t)gpu,
+            .pci_unique_id = make_pci_unique_id(
+                    prop.pciDomainID, prop.pciBusID, prop.pciDeviceID),
+        };
+    }
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+
 /* --- CUDA activities to profile ---------------------------------------------- */
 
 #if CUPTI_API_VERSION < 18
@@ -301,13 +360,13 @@ static CUpti_ActivityKind activity_kinds[] = {
 
 /* --- Local buffers management ------------------------------------------------ */
 
-/* Local buffers for storing kernel and memory records.
+/* Local buffers for storing kernel and memory records, indexed by device_id.
  * Both records need to be kept in memory because events from the GPU profiling
  * library may arrive out-of-order across different buffer flushes.  These
  * buffers are flattened and processed only when computing durations for the
  * sample. */
-static gpu_records_buffer_t kernel_buffer = {};
-static gpu_records_buffer_t memory_buffer = {};
+static gpu_records_buffer_t *kernel_buffer = NULL;
+static gpu_records_buffer_t *memory_buffer = NULL;
 
 /* After flushing the buffers, advance safe_timestamp so that any future records
  * with start times earlier than this are ignored. */
@@ -332,10 +391,11 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                 if (kernel_start >= safe_timestamp
                         && kernel_end > safe_timestamp) {
 
-                    gpu_record_append_event(&kernel_buffer, kernel_start, kernel_end);
+                    uint32_t id = kernel_record->deviceId;
+                    gpu_record_append_event(&kernel_buffer[id], kernel_start, kernel_end);
 
-                    PLUGIN_PRINT("KERNEL: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                            kernel_start, kernel_end, kernel_end - kernel_start);
+                    PLUGIN_PRINT("KERNEL: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            id, kernel_start, kernel_end, kernel_end - kernel_start);
                 }
 
                 break;
@@ -350,10 +410,11 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                 if (memory_start >= safe_timestamp
                         && memory_end > safe_timestamp) {
 
-                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+                    uint32_t id = memory_record->deviceId;
+                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMORY2: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                            memory_start, memory_end, memory_end - memory_start);
+                    PLUGIN_PRINT("MEMORY2: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            id, memory_start, memory_end, memory_end - memory_start);
                 }
 
                 break;
@@ -367,10 +428,11 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                 if (memory_start >= safe_timestamp
                         && memory_end > safe_timestamp) {
 
-                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+                    uint32_t id = memory_record->deviceId;
+                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMSET: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                            memory_start, memory_end, memory_end - memory_start);
+                    PLUGIN_PRINT("MEMSET: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            id, memory_start, memory_end, memory_end - memory_start);
                 }
 
                 break;
@@ -384,10 +446,11 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                 if (memory_start >= safe_timestamp
                         && memory_end > safe_timestamp) {
 
-                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+                    uint32_t id = memory_record->deviceId;
+                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMCPY: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                            memory_start, memory_end, memory_end - memory_start);
+                    PLUGIN_PRINT("MEMCPY: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            id, memory_start, memory_end, memory_end - memory_start);
                 }
 
                 break;
@@ -401,10 +464,11 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                 if (memory_start >= safe_timestamp
                         && memory_end > safe_timestamp) {
 
-                    gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+                    uint32_t id = memory_record->deviceId;
+                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMCPY2: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                            memory_start, memory_end, memory_end - memory_start);
+                    PLUGIN_PRINT("MEMCPY2: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                            id, memory_start, memory_end, memory_end - memory_start);
                 }
 
                 break;
@@ -599,23 +663,42 @@ static void cupti_backend_flush(void) {
         /* Update safe timestamp. All future records prior to this will be ignored. */
         safe_timestamp = new_safe_timestamp;
 
-        /* Compute kernel records duration */
-        gpu_record_flatten(&kernel_buffer);
-        uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
+        uint64_t kernel_time = 0;
+        uint64_t memory_time = 0;
+        uint64_t active_mask = 0;
 
-        /* Compute memory records duration */
-        gpu_record_flatten(&memory_buffer);
-        uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
+        for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+            uint32_t id = device_info[gpu].device_id;
 
-        /* Clear buffers */
-        gpu_record_clear_buffer(&kernel_buffer);
-        gpu_record_clear_buffer(&memory_buffer);
+             bool has_kernel = gpu_record_has_data(&kernel_buffer[id]);
+             bool has_memory = gpu_record_has_data(&memory_buffer[id]);
+
+             if (has_kernel || has_memory) {
+                 active_mask |= (1ULL << id);
+             } else {
+                 continue;
+             }
+
+            /* Compute kernel records duration */
+            gpu_record_flatten(&kernel_buffer[id]);
+            kernel_time += gpu_record_get_duration(&kernel_buffer[id]);
+
+            /* Compute memory records duration */
+            gpu_record_flatten(&memory_buffer[id]);
+            memory_time += gpu_record_get_memory_exclusive_duration(
+                    &memory_buffer[id], &kernel_buffer[id]);
+
+            /* Clear buffers */
+            gpu_record_clear_buffer(&kernel_buffer[id]);
+            gpu_record_clear_buffer(&memory_buffer[id]);
+        }
 
         if (kernel_time > 0 || memory_time > 0) {
             /* Pack values to send to TALP */
             gpu_measurements_t measurements = {
                 .useful_time = kernel_time,
                 .communication_time = memory_time,
+                .active_device_mask = active_mask,
             };
 
             /* Call TALP */
@@ -638,13 +721,31 @@ static int cupti_backend_init(const core_api_t *core_api) {
         return DLB_BACKEND_ERROR;
     }
 
+    /* Get Devices info */
+    int error = init_device_info();
+    if (error == DLB_BACKEND_ERROR) return DLB_BACKEND_ERROR;
+
+    /* Send Devices to Core */
+    gpu_device_entry_t *entries = malloc(sizeof(*entries) * num_devices);
+    for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+        entries[gpu].local_id = device_info[gpu].device_id;
+        entries[gpu].node_unique_id = device_info[gpu].pci_unique_id;
+    }
+    dlb_core_api->gpu.register_devices(entries, num_devices);
+    free(entries);
+
     /* Allocate buffer pool for CUPTI records */
     init_buffer_pool();
 
     /* Allocate local buffers */
+    kernel_buffer = malloc(sizeof(*kernel_buffer) * num_devices);
+    memory_buffer = malloc(sizeof(*memory_buffer) * num_devices);
     enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
-    gpu_record_init_buffer(&kernel_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
-    gpu_record_init_buffer(&memory_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+    for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+        uint32_t id = device_info[gpu].device_id;
+        gpu_record_init_buffer(&kernel_buffer[id], LOCAL_BUFFER_INITIAL_CAPACITY);
+        gpu_record_init_buffer(&memory_buffer[id], LOCAL_BUFFER_INITIAL_CAPACITY);
+    }
 
     cupti_plugin_initialized = true;
 
@@ -711,11 +812,21 @@ static int cupti_backend_finalize(void) {
     if (!cupti_plugin_initialized) return DLB_BACKEND_SUCCESS;
 
     /* Free local buffers */
-    gpu_record_free_buffer(&kernel_buffer);
-    gpu_record_free_buffer(&memory_buffer);
+    for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+        uint32_t id = device_info[gpu].device_id;
+        gpu_record_free_buffer(&kernel_buffer[id]);
+        gpu_record_free_buffer(&memory_buffer[id]);
+    }
+    free(kernel_buffer);
+    kernel_buffer = NULL;
+    free(memory_buffer);
+    memory_buffer = NULL;
 
     /* Free buffer pool */
     finalize_buffer_pool();
+
+    /* Free devices map */
+    finalize_device_info();
 
     cupti_plugin_initialized = false;
 
@@ -738,11 +849,11 @@ static int cupti_backend_get_gpu_affinity(char *buffer, size_t buffer_size, bool
         return DLB_BACKEND_ERROR;
     }
 
-    struct cudaDeviceProp *prop_visible =
-        (struct cudaDeviceProp*)calloc(device_count, sizeof(struct cudaDeviceProp));
+    for (int gpu = 0; gpu < device_count; ++gpu) {
 
-    for (int gpu = 0; gpu < device_count; gpu++) {
-        if (cudaGetDeviceProperties(&prop_visible[gpu], gpu) != cudaSuccess) {
+        struct cudaDeviceProp prop;
+
+        if (cudaGetDeviceProperties(&prop, gpu) != cudaSuccess) {
             return DLB_BACKEND_ERROR;
         }
 
@@ -752,7 +863,7 @@ static int cupti_backend_get_gpu_affinity(char *buffer, size_t buffer_size, bool
         b += written; remaining -= written;
 
         /* UUID */
-        CUuuid *u = &prop_visible[gpu].uuid;
+        cudaUUID_t *u = &prop.uuid;
         if (full_uuid) {
             written = snprintf(b, remaining,
                     "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",

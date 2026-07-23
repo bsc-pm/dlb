@@ -24,7 +24,7 @@
 #include <stdbool.h>
 
 typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct hwc_measurements hwc_measurements_t;
+typedef struct hwc_measurements_t hwc_measurements_t;
 
 int  talp_hwc_init(const subprocess_descriptor_t *spd);
 int  talp_hwc_thread_init(void);

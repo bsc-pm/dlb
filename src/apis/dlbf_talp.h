@@ -30,6 +30,7 @@
         integer(kind=c_int)     :: num_cpus
         integer(kind=c_int)     :: num_omp_threads
         real(kind=c_float)      :: avg_cpus
+        integer(kind=c_int)     :: num_gpus
         integer(kind=c_int64_t) :: cycles
         integer(kind=c_int64_t) :: instructions
         integer(kind=c_int)     :: num_measurements

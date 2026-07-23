@@ -67,6 +67,7 @@ typedef struct {
     int64_t useful;
     int64_t communication;
     int64_t inactive;
+    uint64_t active_device_mask;
 } gpu_timers_t;
 
 typedef struct {
@@ -168,6 +169,7 @@ typedef struct monitor_data_t {
         bool enabled:1;
     } flags;
     cpu_set_t cpu_mask;                 /* CPUs this region has been observed on */
+    uint64_t  gpu_mask;                 /* GPUs this region has been observed on */
 } monitor_data_t;
 
 
@@ -239,6 +241,7 @@ typedef struct pop_base_metrics_t {
     DO(num_cpus,                    int,            MPI_INT)        \
     DO(num_omp_threads,             int,            MPI_INT)        \
     DO(avg_cpus,                    float,          MPI_FLOAT)      \
+    DO(num_gpus,                    int,            MPI_INT)        \
     DO(cycles,                      int64_t,        mpi_int64_type) \
     DO(instructions,                int64_t,        mpi_int64_type) \
     DO(num_measurements,            int,            MPI_INT)        \
@@ -265,6 +268,7 @@ typedef struct pop_base_metrics_t {
 #define FOR_DLB_MONITOR_PRINTABLE_FIELDS(DO, DO_LAST)                                   \
     DO(num_cpus,                    int,            numCpus,                "%d")       \
     DO(num_omp_threads,             int,            numOmpThreads,          "%d")       \
+    DO(num_gpus,                    int,            numGpus,                "%d")       \
     DO(cycles,                      int64_t,        cycles,                 "%"PRId64)  \
     DO(instructions,                int64_t,        instructions,           "%"PRId64)  \
     DO(num_measurements,            int,            numMeasurements,        "%d")       \

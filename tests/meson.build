@@ -161,6 +161,7 @@ dlb_build_root = meson.project_build_root()
 dlb_bindings_dir = dlb_build_root / 'src/apis/python_bindings'
 initial_env.set('PYTHONPATH', dlb_bindings_dir)
 initial_env.set('DLB_LIB_DIR', dlb_build_root)
+initial_env.append('DLB_ARGS', '--debug-opts=wall', separator: ' ')
 
 foreach suite, suite_tests : tests
   foreach test_name, test_props : suite_tests

@@ -17,6 +17,31 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+// This file contains portions derived from rocprofiler-sdk library.
+// Original copyright:
+
+// MIT License
+//
+// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #ifndef ROCPROFILER_H
 #define ROCPROFILER_H
 
@@ -26,7 +51,24 @@ typedef enum
 {
     ROCPROFILER_STATUS_SUCCESS = 0,
     ROCPROFILER_STATUS_ERROR,
+    ROCPROFILER_STATUS_ERROR_INCOMPATIBLE_ABI,
+    ROCPROFILER_STATUS_ERROR_INVALID_ARGUMENT,
 } rocprofiler_status_t;
+
+typedef enum
+{
+    ROCPROFILER_AGENT_INFO_VERSION_NONE = 0,
+    ROCPROFILER_AGENT_INFO_VERSION_0    = 1,
+    ROCPROFILER_AGENT_INFO_VERSION_LAST,
+} rocprofiler_agent_version_t;
+
+typedef enum
+{
+    ROCPROFILER_AGENT_TYPE_NONE = 0,
+    ROCPROFILER_AGENT_TYPE_CPU,
+    ROCPROFILER_AGENT_TYPE_GPU,
+    ROCPROFILER_AGENT_TYPE_LAST,
+} rocprofiler_agent_type_t;
 
 typedef enum
 {
@@ -89,6 +131,20 @@ typedef enum
     ROCPROFILER_CALLBACK_PHASE_LAST,
 } rocprofiler_callback_phase_t;
 
+typedef enum
+{
+    ROCPROFILER_MEMORY_COPY_NONE = 0,
+    ROCPROFILER_MEMORY_COPY_HOST_TO_HOST,
+    ROCPROFILER_MEMORY_COPY_HOST_TO_DEVICE,
+    ROCPROFILER_MEMORY_COPY_DEVICE_TO_HOST,
+    ROCPROFILER_MEMORY_COPY_DEVICE_TO_DEVICE,
+    ROCPROFILER_MEMORY_COPY_LAST,
+} rocprofiler_memory_copy_operation_t;
+
+typedef struct {
+    uint64_t handle;
+} rocprofiler_agent_id_t;
+
 typedef struct {
     uint64_t handle;
 } rocprofiler_context_id_t;
@@ -100,6 +156,14 @@ typedef struct {
 typedef struct {
     uint64_t handle;
 } rocprofiler_callback_thread_t;
+
+typedef struct rocprofiler_agent_t {
+    rocprofiler_agent_id_t id;
+    rocprofiler_agent_type_t type;
+    uint32_t location_id;
+    uint32_t domain;
+    int32_t logical_node_type_id;
+} rocprofiler_agent_t;
 
 typedef int32_t rocprofiler_tracing_operation_t;
 
@@ -120,7 +184,6 @@ typedef union rocprofiler_user_data_t
     void*    ptr;
 } rocprofiler_user_data_t;
 
-
 typedef struct
 {
     union
@@ -137,14 +200,35 @@ typedef struct
 
 typedef uint64_t rocprofiler_timestamp_t;
 
-typedef struct rocprofiler_record_t {
-    rocprofiler_timestamp_t     start_timestamp;
-    rocprofiler_timestamp_t     end_timestamp;
+typedef struct rocprofiler_kernel_dispatch_info_t {
+    rocprofiler_agent_id_t    agent_id;
+} rocprofiler_kernel_dispatch_info_t;
+
+typedef struct rocprofiler_buffer_tracing_kernel_dispatch_record_t {
+    rocprofiler_timestamp_t            start_timestamp;
+    rocprofiler_timestamp_t            end_timestamp;
+    rocprofiler_kernel_dispatch_info_t dispatch_info;
+} rocprofiler_buffer_tracing_kernel_dispatch_record_t;
+
+typedef struct rocprofiler_buffer_tracing_memory_copy_record_t {
+    rocprofiler_memory_copy_operation_t operation;
+    rocprofiler_timestamp_t             start_timestamp;
+    rocprofiler_timestamp_t             end_timestamp;
+    rocprofiler_agent_id_t              dst_agent_id;
+    rocprofiler_agent_id_t              src_agent_id;
+} rocprofiler_buffer_tracing_memory_copy_record_t;
+
+typedef union {
+    rocprofiler_buffer_tracing_kernel_dispatch_record_t kernel;
+    rocprofiler_buffer_tracing_memory_copy_record_t     memory;
 } rocprofiler_record_t;
 
-typedef rocprofiler_record_t rocprofiler_buffer_tracing_kernel_dispatch_record_t;
-typedef rocprofiler_record_t rocprofiler_buffer_tracing_memory_copy_record_t;
 
+typedef rocprofiler_status_t (*rocprofiler_query_available_agents_cb_t)(
+    rocprofiler_agent_version_t version,
+    const void**                agents,
+    size_t                      num_agents,
+    void*                       user_data);
 
 typedef void (*rocprofiler_buffer_tracing_cb_t)(rocprofiler_context_id_t      context,
                                                 rocprofiler_buffer_id_t       buffer_id,
@@ -157,6 +241,12 @@ typedef void (*rocprofiler_callback_tracing_cb_t)(rocprofiler_callback_tracing_r
                                                   rocprofiler_user_data_t*              user_data,
                                                   void* callback_data);
 
+
+rocprofiler_status_t
+rocprofiler_query_available_agents(rocprofiler_agent_version_t             version,
+                                   rocprofiler_query_available_agents_cb_t callback,
+                                   size_t                                  agent_size,
+                                   void* user_data);
 
 rocprofiler_status_t
 rocprofiler_create_context(rocprofiler_context_id_t* context_id);

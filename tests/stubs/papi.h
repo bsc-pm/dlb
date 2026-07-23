@@ -17,6 +17,8 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+// This file contains portions derived from PAPI library.
+
 #ifndef PAPI_H
 #define PAPI_H
 

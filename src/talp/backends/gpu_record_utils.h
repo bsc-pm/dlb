@@ -20,6 +20,7 @@
 #ifndef GPU_RECORD_UTILS_H
 #define GPU_RECORD_UTILS_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -40,6 +41,7 @@ void gpu_record_free_buffer(gpu_records_buffer_t *buf);
 void gpu_record_clear_buffer(gpu_records_buffer_t *buf);
 void gpu_record_append_event(gpu_records_buffer_t* buf, uint64_t start, uint64_t end);
 void gpu_record_flatten(gpu_records_buffer_t *buf);
+bool gpu_record_has_data(gpu_records_buffer_t *buf);
 uint64_t gpu_record_get_duration(const gpu_records_buffer_t *buf);
 uint64_t gpu_record_get_memory_exclusive_duration(
         const gpu_records_buffer_t *mem_buf,

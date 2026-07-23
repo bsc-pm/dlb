@@ -19,7 +19,6 @@
 
 #include "talp/backends/gpu_record_utils.h"
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -125,6 +124,12 @@ void gpu_record_flatten(gpu_records_buffer_t *buf) {
     // Update new size
     buf->size = new_i + 1;
 }
+
+/* Check valid data */
+bool gpu_record_has_data(gpu_records_buffer_t *buf) {
+    return buf->size > 0;
+}
+
 
 /* Compute total duration of records. PRE: records are sorted and merged. */
 uint64_t gpu_record_get_duration(const gpu_records_buffer_t *buf) {

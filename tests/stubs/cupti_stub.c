@@ -240,6 +240,7 @@ void cupti_stub_call_kernel(void) {
         .kind = CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL,
         .start = timestamp,
         .end = timestamp + 1,
+        .deviceId = 0,
     };
 
     add_record(&record);
@@ -252,6 +253,7 @@ void cupti_stub_call_memory_op(void) {
         .kind = CUPTI_ACTIVITY_KIND_MEMCPY,
         .start = timestamp,
         .end = timestamp + 1,
+        .deviceId = 0,
     };
 
     add_record(&record);

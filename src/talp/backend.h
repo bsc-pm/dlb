@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-enum { DLB_BACKEND_ABI_VERSION = 1 };
+enum { DLB_BACKEND_ABI_VERSION = 2 };
 
 /* Backends should use these error codes for returning */
 enum DLB_Backend_Error_codes {
@@ -36,14 +36,19 @@ enum DLB_Backend_Error_codes {
     DLB_BACKEND_ERROR   = 1,
 };
 
+typedef struct gpu_device_entry_t {
+    uint32_t local_id;
+    uint64_t node_unique_id;
+} gpu_device_entry_t;
 
-typedef struct gpu_measurements {
+typedef struct gpu_measurements_t {
     int64_t useful_time;
     int64_t communication_time;
     int64_t inactive_time;
+    uint64_t active_device_mask;
 } gpu_measurements_t;
 
-typedef struct hwc_measurements {
+typedef struct hwc_measurements_t {
     int64_t cycles;
     int64_t instructions;
 } hwc_measurements_t;
@@ -57,6 +62,7 @@ typedef struct {
         void (*enter_runtime)(void);
         void (*exit_runtime)(void);
         void (*submit_measurements)(const gpu_measurements_t*);
+        void (*register_devices)(const gpu_device_entry_t *devices, size_t num_devices);
     } gpu;
 
     struct {

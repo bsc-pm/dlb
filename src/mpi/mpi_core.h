@@ -40,5 +40,6 @@ MPI_Comm getWorldComm(void);
 MPI_Comm getNodeComm(void);
 MPI_Comm getInterNodeComm(void);
 MPI_Datatype get_mpi_int64_type(void);
+MPI_Datatype get_mpi_uint64_type(void);
 
 #endif /* HANDLE_MPI_H */

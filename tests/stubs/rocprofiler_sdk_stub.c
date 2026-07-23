@@ -17,6 +17,7 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
+#include "hip/hip_runtime_api.h"
 #include "rocprofiler-sdk/registration.h"
 #include "rocprofiler-sdk/rocprofiler.h"
 
@@ -26,9 +27,11 @@
 #include <time.h>
 
 
+static rocprofiler_agent_id_t agent_id = {.handle = 111};
 static rocprofiler_client_id_t client_id = {0};
 static rocprofiler_tool_initialize_t tool_init = NULL;
 static rocprofiler_tool_finalize_t   tool_fini = NULL;
+
 
 /* Host Runtime callback */
 static rocprofiler_callback_tracing_cb_t cb_runtime_fn = NULL;
@@ -112,6 +115,23 @@ static uint64_t get_time(void) {
     return t.tv_sec * 1000000000LL + t.tv_nsec;
 }
 
+/*** HIP functions ***/
+
+hipError_t hipGetDevice(int* deviceId) {
+    *deviceId = 0;
+    return hipSuccess;
+}
+
+hipError_t hipGetDeviceCount(int* count) {
+    *count = 1;
+    return hipSuccess;
+}
+
+hipError_t hipDeviceGetUuid(hipUUID* uuid, hipDevice_t device) {
+    *uuid = (hipUUID){0};
+    return hipSuccess;
+}
+
 /*** registration ***/
 
 static void stub_fini_func(rocprofiler_client_id_t id);
@@ -167,6 +187,38 @@ void rocprof_stub_fini_tool(void) {
 }
 
 /*** rocprofiler ***/
+
+rocprofiler_status_t
+rocprofiler_query_available_agents(rocprofiler_agent_version_t             version,
+                                   rocprofiler_query_available_agents_cb_t callback,
+                                   size_t                                  agent_size,
+                                   void* user_data) {
+
+    if (version != ROCPROFILER_AGENT_INFO_VERSION_0) return ROCPROFILER_STATUS_ERROR_INVALID_ARGUMENT;
+    if (agent_size != sizeof(rocprofiler_agent_t)) return ROCPROFILER_STATUS_ERROR_INCOMPATIBLE_ABI;
+
+    // we only simulate 1 CPU agent and 1 GPU agent
+    rocprofiler_agent_t cpu_agent = {
+        .id = {0},
+        .type = ROCPROFILER_AGENT_TYPE_CPU,
+        .location_id = 0,
+        .domain = 0,
+        .logical_node_type_id = 0,
+    };
+
+    rocprofiler_agent_t gpu_agent = {
+        .id = agent_id,
+        .type = ROCPROFILER_AGENT_TYPE_GPU,
+        .location_id = 42,
+        .domain = 100,
+        .logical_node_type_id = 0,
+    };
+
+    const void* agents[] = { &cpu_agent, &gpu_agent };
+    size_t num_agents = 2;
+
+    return callback(version, agents, num_agents, user_data);
+}
 
 rocprofiler_status_t
 rocprofiler_create_context(rocprofiler_context_id_t* context_id) {
@@ -360,8 +412,11 @@ void rocprof_stub_call_kernel(void) {
 
     uint64_t timestamp = get_time();
     rocprofiler_record_t record = {
-        .start_timestamp = timestamp,
-        .end_timestamp = timestamp + 1,
+        .kernel = {
+            .start_timestamp = timestamp,
+            .end_timestamp = timestamp + 1,
+            .dispatch_info.agent_id = agent_id,
+        },
     };
 
     add_record(&record, ROCPROFILER_BUFFER_TRACING_KERNEL_DISPATCH);
@@ -371,8 +426,13 @@ void rocprof_stub_call_memory_op(void) {
 
     uint64_t timestamp = get_time();
     rocprofiler_record_t record = {
-        .start_timestamp = timestamp,
-        .end_timestamp = timestamp + 1,
+        .memory = {
+            .operation = ROCPROFILER_MEMORY_COPY_DEVICE_TO_HOST,
+            .start_timestamp = timestamp,
+            .end_timestamp = timestamp + 1,
+            .dst_agent_id = {0},
+            .src_agent_id = agent_id,
+        },
     };
 
     add_record(&record, ROCPROFILER_BUFFER_TRACING_MEMORY_COPY);

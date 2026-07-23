@@ -23,11 +23,14 @@
   # the Meson test infrastructure instead, so no test_generator is defined here.
 </testinfo>*/
 
+#include "support/debug.h"
+#include "support/options.h"
 #include "talp/backend_manager.h"
 #include "talp/backend.h"
 
 #include <assert.h>
 #include <dlfcn.h>
+#include <string.h>
 
 
 typedef void (*rocprof_stub_call_t)(void);
@@ -64,6 +67,8 @@ static int num_times_entering_runtime = 0;
 static int num_times_exiting_runtime = 0;
 static int num_times_submit = 0;
 static gpu_measurements_t gpu_measurements = {0};
+static gpu_device_entry_t *registered_devices = NULL;
+static size_t registered_num_devices = 0;
 
 static void enter_runtime(void) {
     ++num_times_entering_runtime;
@@ -78,8 +83,19 @@ static void submit(const gpu_measurements_t *measurements) {
     gpu_measurements = *measurements;
 }
 
+static void register_devices(const gpu_device_entry_t *devices, size_t num_devices) {
+    size_t devices_size = sizeof(gpu_device_entry_t) * num_devices;
+    registered_num_devices = num_devices;
+    registered_devices = malloc(devices_size);
+    memcpy(registered_devices, devices, devices_size);
+}
+
 
 int main(int argc, char *argv[]) {
+
+    options_t options;
+    options_init(&options, NULL);
+    debug_init(&options);
 
     const core_api_t test_core_api = {
         .abi_version = DLB_BACKEND_ABI_VERSION,
@@ -88,6 +104,7 @@ int main(int argc, char *argv[]) {
             .enter_runtime = enter_runtime,
             .exit_runtime = exit_runtime,
             .submit_measurements = submit,
+            .register_devices = register_devices,
         },
     };
 
@@ -108,10 +125,15 @@ int main(int argc, char *argv[]) {
      * from rocprofiler-sdk library */
     rocprof_stub_init_tool();
 
+    /* Check resources */
+    assert(registered_num_devices > 0);
+
+    /* Check Host API */
     rocprof_stub_call_runtime();
     assert( num_times_entering_runtime == 1 );
     assert( num_times_exiting_runtime == 1 );
 
+    /* Check kernels */
     rocprof_stub_call_kernel();
     assert( num_times_submit == 0);
     rocprof_stub_call_kernel();
