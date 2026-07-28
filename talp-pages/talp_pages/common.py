@@ -19,7 +19,7 @@ class ExecutionMode(Enum):
         return self.value.find("GPU") > 0
 
 
-TALP_PAGES_VERSION = "3.6.0"
+TALP_PAGES_VERSION = "3.6.1"
 
 TALP_METRIC_TO_NAME_MAP = {
     "globalEfficiency": "Global Effiency",

@@ -179,6 +179,7 @@ def __load_talp_json_3_6(json_input, json_path):
     df["dlbVersion"] = "3.6"
     df = __add_resources_3_6(df, json_input)
     has_gpus = df["totalGPUs"].to_numpy() > 0
+    has_gpus = has_gpus.any()
     execution_mode = detect_execution_mode(df, has_gpus)
     if (
         execution_mode == ExecutionMode.HYBRID
