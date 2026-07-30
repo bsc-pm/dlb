@@ -17,23 +17,30 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef TALP_GPU_H
-#define TALP_GPU_H
+#ifndef GPU_MASK_UTILS_H
+#define GPU_MASK_UTILS_H
 
-#include <stddef.h>
 #include <stdint.h>
 
-typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct gpu_measurements_t gpu_measurements_t;
-typedef struct gpu_device_entry_t gpu_device_entry_t;
+/* More than enough in any real case,
+ * predefined to match local uint64_t bitset and ease MPI comms. */
+enum { MAX_NODE_GPUS = 64 };
 
-int  talp_gpu_init(const subprocess_descriptor_t *spd);
-void talp_gpu_finalize(void);
-void talp_gpu_register_devices(const gpu_device_entry_t *devices, size_t num_devices);
-int  talp_gpu_mask_to_unique_ids(uint64_t mask, uint64_t *out_ids, int out_capacity);
-void talp_gpu_enter_runtime(void);
-void talp_gpu_exit_runtime(void);
-void talp_gpu_submit(const gpu_measurements_t *measurements);
-void talp_gpu_collect(gpu_measurements_t *out);
+static inline int gm_count(uint64_t x) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_popcountll(x);
+#else
+    /* http://en.wikipedia.org/wiki/Hamming_weight
+     * (Good approach for few nonzero bits) */
+    int count;
+    for (count=0; x; count++)
+        x &= x - 1;
+    return count;
+#endif
+}
 
-#endif /* TALP_GPU_H */
+static inline int gm_isset(uint64_t x, uint32_t bit) {
+    return (x & (1ULL << bit)) ? 1 : 0;
+}
+
+#endif /* GPU_MASK_UTILS_H */

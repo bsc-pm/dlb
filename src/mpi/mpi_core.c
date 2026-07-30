@@ -58,6 +58,7 @@ static MPI_Comm mpi_comm_node;          /* MPI Communicator specific to the node
 static MPI_Comm mpi_comm_internode;     /* MPI Communicator with 1 representative per node */
 
 static MPI_Datatype mpi_int64_type;     /* MPI datatype representing int64_t */
+static MPI_Datatype mpi_uint64_type;    /* MPI datatype representing uint64_t */
 
 static void before_init(void) {
 #if MPI_VERSION >= 3 && defined(MPI_LIBRARY_VERSION)
@@ -93,8 +94,10 @@ static void get_mpi_info(void) {
     /* Initialize MPI type */
 #if MPI_VERSION >= 3
     mpi_int64_type = MPI_INT64_T;
+    mpi_uint64_type = MPI_UINT64_T;
 #else
     PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(int64_t), &mpi_int64_type);
+    PMPI_Type_match_size(MPI_TYPECLASS_INTEGER, sizeof(uint64_t), &mpi_uint64_type);
 #endif
 
 #if MPI_VERSION >= 3
@@ -337,6 +340,10 @@ MPI_Comm getInterNodeComm(void) {
 
 MPI_Datatype get_mpi_int64_type(void) {
     return mpi_int64_type;
+}
+
+MPI_Datatype get_mpi_uint64_type(void) {
+    return mpi_uint64_type;
 }
 
 #endif /* MPI_LIB */

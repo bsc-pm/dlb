@@ -32,6 +32,7 @@
 #include <inttypes.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <string.h>
 
 
 static const core_api_t *dlb_core_api = NULL;
@@ -76,14 +77,106 @@ static rocprofiler_buffer_id_t _buffer_id = {0};
 static rocprofiler_client_id_t *client_id = NULL;;
 static rocprofiler_client_finalize_t finalize_tool_fn = NULL;
 
+
+/* --- Device info ------------------------------------------------------------- */
+
+// fixme: to backend
+typedef uint64_t gpu_uid_t;
+
+typedef struct {
+    uint32_t device_id;                 // [0..N) should match HIP_VISIBLE_DEVICES
+    uint64_t pci_unique_id;             // PCI domain + GPU BDF (Bus/Device/function number)
+    rocprofiler_agent_id_t agent_id;    // opaque id to identify device_id
+} device_info_t;
+
+static device_info_t *device_info = NULL;
+static size_t num_devices = 0;
+
+static inline uint64_t make_pci_unique_id(uint32_t domain, uint32_t location_id) {
+    return ((uint64_t)domain << 32) | ((uint64_t)location_id);
+}
+
+static void finalize_device_info(void) {
+    free(device_info);
+    device_info = NULL;
+    num_devices = 0;
+}
+
+static rocprofiler_status_t
+available_agents_cb(rocprofiler_agent_version_t version,
+                    const void **agents,
+                    size_t num_agents,
+                    void *user_data)
+{
+    (void) user_data;
+
+    if (version != ROCPROFILER_AGENT_INFO_VERSION_0)
+        return ROCPROFILER_STATUS_ERROR_INVALID_ARGUMENT;
+
+    num_devices = 0;
+    for (size_t i = 0; i < num_agents; i++) {
+        const rocprofiler_agent_t *agent = agents[i];
+
+        if (agent->type == ROCPROFILER_AGENT_TYPE_GPU) {
+            ++num_devices;
+        }
+    }
+
+    device_info = malloc(sizeof(*device_info) * num_agents);
+    if (device_info == NULL) {
+        num_devices = 0;
+        return ROCPROFILER_STATUS_ERROR;
+    }
+
+    for (size_t i = 0; i < num_agents; i++) {
+        const rocprofiler_agent_t *agent = agents[i];
+
+        if (agent->type == ROCPROFILER_AGENT_TYPE_GPU) {
+            uint32_t id = agent->logical_node_type_id;
+            device_info[id] = (device_info_t){
+                .device_id = id,
+                .pci_unique_id = make_pci_unique_id(agent->domain, agent->location_id),
+                .agent_id = agent->id,
+            };
+        }
+    }
+
+    return ROCPROFILER_STATUS_SUCCESS;
+}
+
+static int init_device_info(void) {
+
+    if (device_info != NULL)
+        return DLB_BACKEND_ERROR;
+
+    CHECK_ROCPROFILER(
+            rocprofiler_query_available_agents(
+                ROCPROFILER_AGENT_INFO_VERSION_0,
+                available_agents_cb,
+                sizeof(rocprofiler_agent_t),
+                NULL));
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static inline int agent_to_gpu_index(rocprofiler_agent_id_t id)
+{
+    for (size_t i = 0; i < num_devices; ++i) {
+        if (device_info[i].agent_id.handle == id.handle) {
+            return device_info[i].device_id;
+        }
+    }
+
+    return -1;
+}
+
+
 /* ---Host runtime events ------------------------------------------------------ */
 
 void HIP_API_callback(
         rocprofiler_callback_tracing_record_t record,
         rocprofiler_user_data_t*              user_data,
         void*                                 callback_data) {
-
-
 
     const char* operation_name = NULL;
 
@@ -105,13 +198,13 @@ void HIP_API_callback(
 
 /* --- Local buffers management ------------------------------------------------ */
 
-/* Local buffers for storing kernel and memory records.
+/* Local buffers for storing kernel and memory records, indexed by device_id.
  * Both records need to be kept in memory because events from the GPU profiling
  * library may arrive out-of-order across different buffer flushes.  These
  * buffers are flattened and processed only when computing durations for the
  * sample. */
-static gpu_records_buffer_t kernel_buffer = {};
-static gpu_records_buffer_t memory_buffer = {};
+static gpu_records_buffer_t *kernel_buffer = NULL;
+static gpu_records_buffer_t *memory_buffer = NULL;
 static pthread_mutex_t buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* After flushing the buffers, advance safe_timestamp so that any future records
@@ -151,10 +244,13 @@ void async_events_callback(
             if (kernel_start >= safe_timestamp
                     && kernel_end > safe_timestamp) {
 
-                gpu_record_append_event(&kernel_buffer, kernel_start, kernel_end);
+                int id = agent_to_gpu_index(record->dispatch_info.agent_id);
+                if (id >= 0) {
+                    gpu_record_append_event(&kernel_buffer[id], kernel_start, kernel_end);
+                }
 
-                PLUGIN_PRINT("KERNEL: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        kernel_start, kernel_end, kernel_end - kernel_start);
+                PLUGIN_PRINT("KERNEL: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                        id, kernel_start, kernel_end, kernel_end - kernel_start);
             }
         }
         else if(header->kind == ROCPROFILER_BUFFER_TRACING_MEMORY_COPY) {
@@ -168,9 +264,30 @@ void async_events_callback(
             if (memory_start >= safe_timestamp
                     && memory_end > safe_timestamp) {
 
-                gpu_record_append_event(&memory_buffer, memory_start, memory_end);
+                int dst_id = -1;
+                int src_id = -1;
+                if (record->operation == ROCPROFILER_MEMORY_COPY_HOST_TO_DEVICE
+                        || record->operation == ROCPROFILER_MEMORY_COPY_DEVICE_TO_DEVICE) {
+                    dst_id = agent_to_gpu_index(record->dst_agent_id);
+                }
 
-                PLUGIN_PRINT("MEMCPY: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                if (record->operation == ROCPROFILER_MEMORY_COPY_DEVICE_TO_HOST
+                        || record->operation == ROCPROFILER_MEMORY_COPY_DEVICE_TO_DEVICE) {
+                    src_id = agent_to_gpu_index(record->src_agent_id);
+                }
+
+                if (dst_id >= 0) {
+                    gpu_record_append_event(&memory_buffer[dst_id], memory_start, memory_end);
+                }
+
+                if (src_id >= 0) {
+                    gpu_record_append_event(&memory_buffer[src_id], memory_start, memory_end);
+                }
+
+                PLUGIN_PRINT("MEMCPY: [%s%d -> %s%d] start=%"PRIu64
+                        ", end=%"PRIu64", duration=%"PRIu64"\n",
+                        src_id >= 0 ? "" : "H", src_id >= 0 ? src_id : 0,
+                        dst_id >= 0 ? "" : "H", dst_id >= 0 ? dst_id : 0,
                         memory_start, memory_end, memory_end - memory_start);
             }
         }
@@ -198,17 +315,35 @@ static void rocprofiler_sdk_backend_flush(void) {
         /* Update safe timestamp. All future records prior to this will be ignored */
         safe_timestamp = get_timestamp();
 
-        /* Compute kernel records duration */
-        gpu_record_flatten(&kernel_buffer);
-        uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
+        uint64_t kernel_time = 0;
+        uint64_t memory_time = 0;
+        uint64_t active_mask = 0;
 
-        /* Compute memory records duration */
-        gpu_record_flatten(&memory_buffer);
-        uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
+        for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+            uint32_t id = device_info[gpu].device_id;
 
-        /* Clear buffers */
-        gpu_record_clear_buffer(&kernel_buffer);
-        gpu_record_clear_buffer(&memory_buffer);
+            bool has_kernel = gpu_record_has_data(&kernel_buffer[id]);
+            bool has_memory = gpu_record_has_data(&memory_buffer[id]);
+
+            if (has_kernel || has_memory) {
+                active_mask |= (1ULL << id);
+            } else {
+                continue;
+            }
+
+            /* Compute kernel records duration */
+            gpu_record_flatten(&kernel_buffer[id]);
+            kernel_time += gpu_record_get_duration(&kernel_buffer[id]);
+
+            /* Compute memory records duration */
+            gpu_record_flatten(&memory_buffer[id]);
+            memory_time += gpu_record_get_memory_exclusive_duration(
+                    &memory_buffer[id], &kernel_buffer[id]);
+
+            /* Clear buffers */
+            gpu_record_clear_buffer(&kernel_buffer[id]);
+            gpu_record_clear_buffer(&memory_buffer[id]);
+        }
 
         pthread_mutex_unlock(&buffer_mutex);
 
@@ -217,6 +352,7 @@ static void rocprofiler_sdk_backend_flush(void) {
             gpu_measurements_t measurements = {
                 .useful_time = kernel_time,
                 .communication_time = memory_time,
+                .active_device_mask = active_mask,
             };
 
             /* Call TALP */
@@ -242,10 +378,29 @@ static int rocprofiler_sdk_backend_init(const core_api_t *core_api) {
         return DLB_BACKEND_ERROR;
     }
 
+    /* Get Devices info */
+    int error = init_device_info();
+    if (error == DLB_BACKEND_ERROR) return DLB_BACKEND_ERROR;
+
+    /* Send Devices to Core */
+    gpu_device_entry_t *entries = malloc(sizeof(*entries) * num_devices);
+    for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+        entries[gpu].local_id = device_info[gpu].device_id;
+        entries[gpu].node_unique_id = device_info[gpu].pci_unique_id;
+    }
+    dlb_core_api->gpu.register_devices(entries, num_devices);
+    free(entries);
+
     /* Allocate local buffers */
+    kernel_buffer = malloc(sizeof(*kernel_buffer) * num_devices);
+    memory_buffer = malloc(sizeof(*memory_buffer) * num_devices);
     enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
-    gpu_record_init_buffer(&kernel_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
-    gpu_record_init_buffer(&memory_buffer, LOCAL_BUFFER_INITIAL_CAPACITY);
+    for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+        uint32_t id = device_info[gpu].device_id;
+        gpu_record_init_buffer(&kernel_buffer[id], LOCAL_BUFFER_INITIAL_CAPACITY);
+        gpu_record_init_buffer(&memory_buffer[id], LOCAL_BUFFER_INITIAL_CAPACITY);
+    }
+
 
     rocprofiler_sdk_plugin_initialized = true;
 
@@ -272,13 +427,87 @@ static int rocprofiler_sdk_backend_finalize(void) {
     if (rocprofiler_sdk_plugin_initialized) {
 
         /* Free local buffers */
-        gpu_record_free_buffer(&kernel_buffer);
-        gpu_record_free_buffer(&memory_buffer);
+        for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+                uint32_t id = device_info[gpu].device_id;
+                gpu_record_free_buffer(&kernel_buffer[id]);
+                gpu_record_free_buffer(&memory_buffer[id]);
+        }
+        free(kernel_buffer);
+        kernel_buffer = NULL;
+        free(memory_buffer);
+        memory_buffer = NULL;
+
+        /* Free devices map */
+        finalize_device_info();
 
         rocprofiler_sdk_plugin_initialized = false;
     }
 
     return DLB_BACKEND_SUCCESS;
+}
+
+static int rocprofiler_sdk_backend_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid) {
+
+    char *b = buffer;
+    size_t remaining = buffer_size;
+    int written;
+
+    int device_count;
+    if (hipGetDeviceCount(&device_count) != hipSuccess) {
+        goto trunc;
+    }
+
+    int default_device;
+    if (hipGetDevice(&default_device) != hipSuccess) {
+        goto trunc;
+    }
+
+    for (int gpu = 0; gpu < device_count; gpu++) {
+
+        /* GPU id */
+        written = snprintf(b, remaining, "%d (UUID=", gpu);
+        if (written < 0 || (size_t)written >= remaining) goto trunc;
+        b += written; remaining -= written;
+
+        /* UUID */
+        hipUUID uuid;
+        hipDeviceGetUuid(&uuid, gpu);
+        char uuid_str[17];
+        memcpy(uuid_str, uuid.bytes, 16);
+        uuid_str[16] = '\0';
+
+        if (full_uuid) {
+            written = snprintf(b, remaining, "0x%s", uuid_str);
+        } else {
+            written = snprintf(b, remaining, "..%4s", &uuid_str[12]);
+        }
+        if (written < 0 || (size_t)written >= remaining) goto trunc;
+        b += written;
+        remaining -= written;
+
+        /* default device */
+        if (gpu == default_device) {
+            written = snprintf(b, remaining, ", default");
+            if (written < 0 || (size_t)written >= remaining) goto trunc;
+            b += written; remaining -= written;
+        }
+
+        if (gpu + 1 != device_count) {
+            written = snprintf(b, remaining, "), ");
+        } else {
+            written = snprintf(b, remaining, ")");
+        }
+        if (written < 0 || (size_t)written >= remaining) goto trunc;
+        b += written; remaining -= written;
+    }
+
+    return DLB_BACKEND_SUCCESS;
+
+trunc:
+    if (buffer_size > 0) {
+        buffer[buffer_size - 1] = '\0';
+    }
+    return DLB_BACKEND_ERROR;
 }
 
 DLB_EXPORT_SYMBOL
@@ -297,7 +526,7 @@ backend_api_t* DLB_Get_Backend_API(void) {
         .stop = rocprofiler_sdk_backend_stop,
         .finalize = rocprofiler_sdk_backend_finalize,
         .flush = rocprofiler_sdk_backend_flush,
-        .get_gpu_affinity = NULL,
+        .get_gpu_affinity = rocprofiler_sdk_backend_get_gpu_affinity,
     };
     return &api;
 }
@@ -406,6 +635,9 @@ static void tool_fini(void* tool_data) {
         if (status == ROCPROFILER_STATUS_SUCCESS && active_ctx != 0) {
             CHECK_WARN_ROCPROFILER(rocprofiler_stop_context(_ctx));
         }
+
+        /* Free devices map */
+        finalize_device_info();
 
         rocprofiler_sdk_plugin_started = false;
     }

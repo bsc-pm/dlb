@@ -23,12 +23,15 @@
 #include "apis/dlb_talp.h"
 #include "support/debug.h"
 #include "support/mask_utils.h"
+#include "support/gpu_mask_utils.h"
+#include "talp/talp_gpu.h"
 #ifdef MPI_LIB
 #include "mpi/mpi_core.h"
 #endif
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 /*********************************************************************************/
 /*    POP metrics - pure MPI model                                               */
@@ -277,11 +280,32 @@ typedef struct node_reduction_t {
     int cpus_node;
     int64_t mpi_time;
     int64_t mpi_worker_idle_time;
+    uint64_t gpu_ids[MAX_NODE_GPUS];
+    int num_gpu_ids;
 } node_reduction_t;
+
+static void merge_gpu_ids(uint64_t *inout_ids, int *inout_count,
+        const uint64_t *in_ids, int in_count) {
+
+    for (int i = 0; i < in_count; ++i) {
+        bool found = false;
+        for (int j = 0; j < *inout_count; ++j) {
+            if (inout_ids[j] == in_ids[i]) { found = true; break; }
+        }
+        if (!found) {
+            if (*inout_count < MAX_NODE_GPUS) {
+                inout_ids[(*inout_count)++] = in_ids[i];
+            } else {
+                warning("MAX_NODE_GPUS exceeded, gpu count will be inaccurate");
+            }
+        }
+    }
+}
 
 /* Function called in the MPI node reduction */
 static void mpi_node_reduction_fn(void *invec, void *inoutvec, int *len,
         MPI_Datatype *datatype) {
+
     node_reduction_t *in = invec;
     node_reduction_t *inout = inoutvec;
 
@@ -292,6 +316,8 @@ static void mpi_node_reduction_fn(void *invec, void *inoutvec, int *len,
             inout[i].cpus_node += in[i].cpus_node;
             inout[i].mpi_time += in[i].mpi_time;
             inout[i].mpi_worker_idle_time += in[i].mpi_worker_idle_time;
+            merge_gpu_ids(inout[i].gpu_ids, &inout[i].num_gpu_ids,
+                    in[i].gpu_ids, in[i].num_gpu_ids);
         }
     }
 }
@@ -300,27 +326,36 @@ static void mpi_node_reduction_fn(void *invec, void *inoutvec, int *len,
 static void reduce_pop_metrics_node_reduction(node_reduction_t *node_reduction,
         const dlb_monitor_t *monitor) {
 
-    const node_reduction_t node_reduction_send = {
+    node_reduction_t node_reduction_send = {
         .node_used = monitor->num_measurements > 0,
         .cpus_node = monitor->num_cpus,
         .mpi_time = monitor->mpi_time,
         .mpi_worker_idle_time = monitor->mpi_worker_idle_time,
     };
 
-    /* MPI type: int64_t */
+    /* Extract GPUs used in this monitor */
+    const monitor_data_t *monitor_data = monitor->_data;
+    node_reduction_send.num_gpu_ids = talp_gpu_mask_to_unique_ids(
+            monitor_data->gpu_mask, node_reduction_send.gpu_ids, MAX_NODE_GPUS);
+
+    /* MPI types: int64_t and uint64_t */
     MPI_Datatype mpi_int64_type = get_mpi_int64_type();
+    MPI_Datatype mpi_uint64_type = get_mpi_uint64_type();
 
     /* MPI struct type: node_reduction_t */
     MPI_Datatype mpi_node_reduction_type;
     {
-        int count = 4;
-        int blocklengths[] = {1, 1, 1, 1};
+        int count = 6;
+        int blocklengths[] = {1, 1, 1, 1, MAX_NODE_GPUS, 1};
         MPI_Aint displacements[] = {
             offsetof(node_reduction_t, node_used),
             offsetof(node_reduction_t, cpus_node),
             offsetof(node_reduction_t, mpi_time),
-            offsetof(node_reduction_t, mpi_worker_idle_time)};
-        MPI_Datatype types[] = {MPI_C_BOOL, MPI_INT, mpi_int64_type, mpi_int64_type};
+            offsetof(node_reduction_t, mpi_worker_idle_time),
+            offsetof(node_reduction_t, gpu_ids),
+            offsetof(node_reduction_t, num_gpu_ids)};
+        MPI_Datatype types[] = {MPI_C_BOOL, MPI_INT, mpi_int64_type, mpi_int64_type,
+            mpi_uint64_type, MPI_INT};
         MPI_Datatype tmp_type;
         PMPI_Type_create_struct(count, blocklengths, displacements, types, &tmp_type);
         PMPI_Type_create_resized(tmp_type, 0, sizeof(node_reduction_t),
@@ -420,8 +455,6 @@ static void reduce_pop_metrics_app_reduction(pop_base_metrics_t *base_metrics,
         : (double)(node_reduction->mpi_time + node_reduction->mpi_worker_idle_time)
                     / node_reduction->cpus_node;
 
-    bool have_gpus = (monitor->gpu_useful_time + monitor->gpu_communication_time > 0);
-
     const pop_base_metrics_t app_reduction_send = {
         /* Resources */
         .num_cpus                = monitor->num_cpus,
@@ -431,7 +464,8 @@ static void reduce_pop_metrics_app_reduction(pop_base_metrics_t *base_metrics,
         .num_mpi_ranks           = 1,
         .num_nodes               = _process_id == 0 && node_reduction->node_used ? 1 : 0,
         .avg_cpus                = monitor->avg_cpus,
-        .num_gpus                = have_gpus ? 1 : 0,
+        .num_gpus                = _process_id == 0 && node_reduction->node_used
+                                    ? node_reduction->num_gpu_ids : 0,
         /* Hardware Counters */
         .cycles                  = (double)monitor->cycles,
         .instructions            = (double)monitor->instructions,
@@ -561,7 +595,7 @@ void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metr
         .num_mpi_ranks           = num_mpi_ranks,
         .num_nodes               = num_nodes,
         .avg_cpus                = monitor->avg_cpus,
-        .num_gpus                = talp_flags.have_gpu ? 1 : 0,
+        .num_gpus                = monitor->num_gpus,
         .cycles                  = (double)monitor->cycles,
         .instructions            = (double)monitor->instructions,
         .num_measurements        = monitor->num_measurements,

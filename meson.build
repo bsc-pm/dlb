@@ -102,6 +102,7 @@ common_srcs = [
   'src/support/env.h',
   'src/support/error.c',
   'src/support/error.h',
+  'src/support/gpu_mask_utils.h',
   'src/support/gslist.c',
   'src/support/gslist.h',
   'src/support/gtree.c',

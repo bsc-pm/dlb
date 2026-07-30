@@ -41,6 +41,8 @@ typedef struct dlb_monitor_t {
     int         num_omp_threads;
     /*! Average of CPUs assigned to the process during the region execution */
     float       avg_cpus;
+    /*! TBD */
+    int         num_gpus;
     /*! Number of measured cycles*/
     int64_t     cycles;
     /*! Number of measured instructions */

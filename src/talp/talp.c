@@ -38,6 +38,7 @@
 #include "support/tracing.h"
 #include "support/options.h"
 #include "support/mask_utils.h"
+#include "support/gpu_mask_utils.h"
 #include "talp/backend.h"
 #include "talp/perf_metrics.h"
 #include "talp/sample.h"
@@ -295,6 +296,9 @@ void talp_aggregate_sample_to_region(talp_info_t *talp_info,
 static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
         const talp_macrosample_t *restrict macrosample) {
 
+    bool have_openmp = talp_info->flags.have_openmp;
+    bool external_profiler = talp_info->flags.external_profiler;
+
     /* Update all open regions */
     pthread_mutex_lock(&talp_info->regions_mutex);
     {
@@ -319,15 +323,18 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             }
             ensure(monitor->num_cpus > 0, "Updating region with 0 CPUs. Please report.");
 
-            /* if (monitor == talp_info->monitor) { */
-            /*     warning("Macrosample CPUs: %s", mu_to_str(&macrosample->cpu_mask)); */
-            /*     warning("Region      CPUs: %s", mu_to_str(&monitor_data->cpu_mask)); */
-            /* } */
-
-            /* Number of threads */
-            if (monitor->num_omp_threads < macrosample->num_samples) {
-                monitor->num_omp_threads = macrosample->num_samples;
+            /* Number of OpenMP threads */
+            if (have_openmp) {
+                if (monitor->num_omp_threads < macrosample->num_samples) {
+                    monitor->num_omp_threads = macrosample->num_samples;
+                }
             }
+
+            /* GPU mask */
+            monitor_data->gpu_mask |= macrosample->gpu_timers.active_device_mask;
+
+            /* Number of GPUs */
+            monitor->num_gpus = gm_count(monitor_data->gpu_mask);
 
             /* Timers */
             monitor->useful_time             += macrosample->timers.useful;
@@ -354,7 +361,7 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             monitor->num_gpu_runtime_calls   += macrosample->stats.num_gpu_runtime_calls;
 
             /* Update shared memory only if requested */
-            if (talp_info->flags.external_profiler) {
+            if (external_profiler) {
                 shmem_talp__set_times(monitor_data->node_shared_id,
                         monitor->mpi_time,
                         monitor->useful_time);
@@ -378,9 +385,10 @@ int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
         /* Collect GPU measuremnts up to this point and update macrosample */
         gpu_measurements_t measurements;
         talp_gpu_collect(&measurements);
-        macrosample.gpu_timers.useful        = measurements.useful_time;
-        macrosample.gpu_timers.communication = measurements.communication_time;
-        macrosample.gpu_timers.inactive      = measurements.inactive_time;
+        macrosample.gpu_timers.useful             = measurements.useful_time;
+        macrosample.gpu_timers.communication      = measurements.communication_time;
+        macrosample.gpu_timers.inactive           = measurements.inactive_time;
+        macrosample.gpu_timers.active_device_mask = measurements.active_device_mask;
     }
 
     /* Update all started regions */

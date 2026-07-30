@@ -41,6 +41,7 @@ const core_api_t core_api = {
         .enter_runtime       = talp_gpu_enter_runtime,
         .exit_runtime        = talp_gpu_exit_runtime,
         .submit_measurements = talp_gpu_submit,
+        .register_devices    = talp_gpu_register_devices,
     },
     .hwc = {
         .submit_measurements = talp_hwc_submit,
