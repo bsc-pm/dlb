@@ -103,10 +103,20 @@ def __add_resources_3_6(df, json_input):
         resources = json_input[TALP_RESOURCES_KEY]
     except KeyError:
         resources = {"numCpus": 0, "numMpiRanks": 0, "numGpus": 0}
-
+    # Sometimes DLB does not add the numGpus in the json so lets try and except:
     num_cpus = resources["numCpus"]
     num_mpi_ranks = resources["numMpiRanks"]
-    num_gpus = resources["numGpus"]
+    try:
+        num_gpus = resources["numGpus"]
+    except KeyError:
+        # Sometimes in 3.6 we dont have the GPUs in the global ressources, so lets look at the global regions instead
+        try:
+            num_gpus = json_input[TALP_JSON_POP_METRICS_KEY][TALP_IMPLICIT_REGION_NAME][
+                "numGpus"
+            ]
+
+        except KeyError:
+            num_gpus = 0
     df["totalNumCpus"] = num_cpus
     df["totalNumMpiRanks"] = num_mpi_ranks
     df["totalGPUs"] = num_gpus
@@ -202,15 +212,12 @@ def __load_talp_json_3_6(json_input, json_path):
     elif execution_mode == ExecutionMode.SERIAL:
         df["ressourceLabel"] = ExecutionMode.SERIAL.value
     else:
+        gpu_strings = df.loc[:, "totalGPUs"].astype(str) + "xGPUs"
         df["ressourceLabel"] = (
-            df.loc[:, "totalNumCpus"].astype(str)
-            + f"x{execution_mode.value} "
-            + df.loc[:, "totalGPUs"].astype(str)
-            if has_gpus
-            else "" + "xGPUs"
-            if has_gpus
-            else ""
+            df.loc[:, "totalNumCpus"].astype(str) + f"x{execution_mode.value} "
         )
+        if has_gpus:
+            df["ressourceLabel"] = df["ressourceLabel"] + gpu_strings
 
     df["executionMode"] = execution_mode.value
     # finally sort

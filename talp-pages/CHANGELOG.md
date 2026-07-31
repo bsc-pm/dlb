@@ -1,6 +1,14 @@
 # Changelog
 All important changes to this python project will be documented in this file. 
 
+
+## 3.6.2
+
+- Bugfix: Fix minor inconsitency with 3.6.0 where GPUs are not part of global ressources
+- Bugfix: Fix MPI only label generation
+
+
+
 ## 3.6.1
 
 - Bugfix: Allow JSONs to be MPI only.
