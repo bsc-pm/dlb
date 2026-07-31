@@ -68,13 +68,6 @@ AC_DEFUN([AX_CUDA],
         AX_VAR_POPVALUE([CPPFLAGS])
     ])
 
-    ### OpenACC Profiling headers are optional
-    AS_IF([test "x$with_cuda" != xno], [
-        AX_VAR_PUSHVALUE([CPPFLAGS], [$CPPFLAGS $user_cuda_inc_flags])
-        AC_CHECK_HEADERS([acc_prof.h])
-        AX_VAR_POPVALUE([CPPFLAGS])
-    ])
-
     ### CUDA and CUPTI libraries ###
     AS_IF([test "x$with_cuda" != xno], [
         AX_VAR_PUSHVALUE([LIBS], [""])

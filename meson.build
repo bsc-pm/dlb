@@ -421,8 +421,11 @@ endif
 cupti_backend_sources = [
   'src/talp/backends/backend_utils.h',
   'src/talp/backends/cupti.c',
+  'src/talp/backends/dlb_openacc_abi.h',
   'src/talp/backends/gpu_record_utils.c',
   'src/talp/backends/gpu_record_utils.h',
+  'src/talp/backends/openacc_hooks.c',
+  'src/talp/backends/openacc_hooks.h',
 ]
 
 if cuda_dep.found()
@@ -439,9 +442,12 @@ endif
 
 rocprofiler_sdk_backend_sources = [
   'src/talp/backends/backend_utils.h',
-  'src/talp/backends/rocprofiler_sdk.c',
+  'src/talp/backends/dlb_openacc_abi.h',
   'src/talp/backends/gpu_record_utils.c',
   'src/talp/backends/gpu_record_utils.h',
+  'src/talp/backends/openacc_hooks.c',
+  'src/talp/backends/openacc_hooks.h',
+  'src/talp/backends/rocprofiler_sdk.c',
 ]
 
 # PAPI

@@ -21,6 +21,7 @@
 #include "talp/backend.h"
 #include "talp/backends/backend_utils.h"
 #include "talp/backends/gpu_record_utils.h"
+#include "talp/backends/openacc_hooks.h"
 
 #ifndef __HIP_PLATFORM_AMD__
 #define __HIP_PLATFORM_AMD__
@@ -617,6 +618,10 @@ static int tool_init(rocprofiler_client_finalize_t fini_func, void* tool_data) {
     /* Start profiling */
     CHECK_ROCPROFILER(rocprofiler_start_context(_ctx));
 
+    /* Start OpenACC profiling if found */
+    openacc_hooks_set_core_api(dlb_core_api);
+    openacc_hooks_try_init();
+
     rocprofiler_sdk_plugin_started = true;
 
     return TOOL_REGISTER_SUCCESS;
@@ -635,6 +640,9 @@ static void tool_fini(void* tool_data) {
         if (status == ROCPROFILER_STATUS_SUCCESS && active_ctx != 0) {
             CHECK_WARN_ROCPROFILER(rocprofiler_stop_context(_ctx));
         }
+
+        /* Stop OpenACC */
+        openacc_hooks_try_finalize();
 
         /* Free devices map */
         finalize_device_info();

@@ -25,13 +25,12 @@
 #include "talp/backend.h"
 #include "talp/backends/backend_utils.h"
 #include "talp/backends/gpu_record_utils.h"
+#include "talp/backends/openacc_hooks.h"
 
 #include <cuda_runtime.h>
 #include <cupti.h>
-#include <dlfcn.h>
 #include <inttypes.h>
 #include <pthread.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -40,152 +39,6 @@
 
 
 static const core_api_t *dlb_core_api = NULL;
-
-/*********************************************************************************/
-/*  OpenACC profiling                                                            */
-/*********************************************************************************/
-#ifdef HAVE_ACC_PROF_H
-#include <acc_prof.h>
-
-static bool warned_about_acc_multithread = false;
-static acc_event_t current_event = acc_ev_none;
-
-/* OpenACC Profiling for the Host constructs */
-static void openacc_callback(acc_prof_info *info, acc_event_info *event, acc_api_info *api) {
-    if (!info) return;
-
-    if (!warned_about_acc_multithread && info->thread_id > 1) {
-        warned_about_acc_multithread = true;
-        PLUGIN_WARNING(
-                "OpenACC profiling with multi-threading is not yet fully supported. "
-                "Profiling will continue, but results may be inaccurate.\n");
-
-    }
-
-    /* OpenACC events may be nested, so we will only count the outermost events
-     *
-     * Observations:
-     * - acc_ev_enter_data_{start,end} covers the duration of data operations for a construct.
-     *      It typically includes memory creation, deletion, allocation, freeing, uploading,
-     *      and downloading.
-     *
-     * - acc_ev_compute_construct_{start,end} covers the duration of the compute block.
-     *      It generally includes kernel launches and queue waits.
-     *
-     * - acc_ev_exit_data_{start,end} covers final data operations for the completion of a construct.
-     */
-
-    acc_event_t new_event = info->event_type;
-
-    switch(current_event) {
-        case acc_ev_none:
-            switch(new_event) {
-                case acc_ev_enter_data_start:
-                    PLUGIN_PRINT(" >> acc_ev_enter_data_start\n");
-                    break;
-                case acc_ev_exit_data_start:
-                    PLUGIN_PRINT(" >> acc_ev_exit_data_start\n");
-                    break;
-                case acc_ev_compute_construct_start:
-                    PLUGIN_PRINT(" >> acc_ev_compute_construct_start\n");
-                    break;
-                default:
-                    PLUGIN_ERROR("Found unexpected event %d\n", new_event);
-                    return;
-            }
-
-            dlb_core_api->gpu.enter_runtime();
-            current_event = new_event;
-            break;
-
-        case acc_ev_enter_data_start:
-            if (new_event == acc_ev_enter_data_end) {
-                PLUGIN_PRINT(" << acc_ev_enter_data_end\n");
-                dlb_core_api->gpu.exit_runtime();
-                current_event = acc_ev_none;
-            } else {
-                PLUGIN_ERROR("Found unexpected event %d after acc_ev_enter_data_start\n",
-                        new_event);
-                return;
-            }
-            break;
-
-        case acc_ev_exit_data_start:
-            if (new_event == acc_ev_exit_data_end) {
-                PLUGIN_PRINT(" << acc_ev_exit_data_end\n");
-                dlb_core_api->gpu.exit_runtime();
-                current_event = acc_ev_none;
-            } else {
-                PLUGIN_ERROR("Found unexpected event %d after acc_ev_exit_data_start\n",
-                        new_event);
-                return;
-            }
-            break;
-
-        case acc_ev_compute_construct_start:
-            if (new_event == acc_ev_compute_construct_end) {
-                PLUGIN_PRINT(" << acc_ev_compute_construct_end\n");
-                dlb_core_api->gpu.exit_runtime();
-                current_event = acc_ev_none;
-            } else {
-                PLUGIN_ERROR("Found unexpected event %d after acc_ev_compute_construct_start\n",
-                        new_event);
-                return;
-            }
-            break;
-
-        default:
-            PLUGIN_ERROR("Found unexpected event %d\n", new_event);
-            return;
-
-    }
-}
-
-static void try_init_openacc_hooks(void) {
-
-    typedef void (*fn_acc_prof_register_t)(acc_event_t, acc_prof_callback, acc_register_t);
-    fn_acc_prof_register_t real_acc_prof_register = NULL;
-
-    void *handle = dlopen(NULL, RTLD_NOW);
-    if (handle) {
-        real_acc_prof_register = (fn_acc_prof_register_t)dlsym(handle, "acc_prof_register");
-    }
-    if (real_acc_prof_register) {
-        acc_prof_register(acc_ev_enter_data_start, openacc_callback, acc_reg);
-        acc_prof_register(acc_ev_enter_data_end, openacc_callback, acc_reg);
-        acc_prof_register(acc_ev_exit_data_start, openacc_callback, acc_reg);
-        acc_prof_register(acc_ev_exit_data_end, openacc_callback, acc_reg);
-        acc_prof_register(acc_ev_compute_construct_start, openacc_callback, acc_reg);
-        acc_prof_register(acc_ev_compute_construct_end, openacc_callback, acc_reg);
-    }
-}
-
-static void try_finalize_openacc_hooks(void) {
-
-    typedef void (*fn_acc_prof_unregister_t)(acc_event_t, acc_prof_callback, acc_register_t);
-    fn_acc_prof_unregister_t real_acc_prof_unregister = NULL;
-
-    void *handle = dlopen(NULL, RTLD_NOW);
-    if (handle) {
-        real_acc_prof_unregister = (fn_acc_prof_unregister_t)dlsym(handle, "acc_prof_unregister");
-    }
-    if (real_acc_prof_unregister) {
-        acc_prof_unregister(acc_ev_enter_data_start, openacc_callback, acc_reg);
-        acc_prof_unregister(acc_ev_enter_data_end, openacc_callback, acc_reg);
-        acc_prof_unregister(acc_ev_exit_data_start, openacc_callback, acc_reg);
-        acc_prof_unregister(acc_ev_exit_data_end, openacc_callback, acc_reg);
-        acc_prof_unregister(acc_ev_compute_construct_start, openacc_callback, acc_reg);
-        acc_prof_unregister(acc_ev_compute_construct_end, openacc_callback, acc_reg);
-    }
-}
-
-#else
-
-static void try_init_openacc_hooks(void) {}
-static void try_finalize_openacc_hooks(void) {}
-
-#endif /* HAVE_ACC_PROF_H */
-
 
 /*********************************************************************************/
 /*  CUDA profiling                                                               */
@@ -394,7 +247,8 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                     uint32_t id = kernel_record->deviceId;
                     gpu_record_append_event(&kernel_buffer[id], kernel_start, kernel_end);
 
-                    PLUGIN_PRINT("KERNEL: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                    PLUGIN_PRINT("KERNEL: [%"PRIu32"]"
+                            " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, kernel_start, kernel_end, kernel_end - kernel_start);
                 }
 
@@ -413,7 +267,8 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                     uint32_t id = memory_record->deviceId;
                     gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMORY2: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                    PLUGIN_PRINT("MEMORY2: [%"PRIu32"]"
+                            " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, memory_start, memory_end, memory_end - memory_start);
                 }
 
@@ -431,7 +286,8 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                     uint32_t id = memory_record->deviceId;
                     gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMSET: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                    PLUGIN_PRINT("MEMSET: [%"PRIu32"]"
+                            " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, memory_start, memory_end, memory_end - memory_start);
                 }
 
@@ -449,7 +305,8 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                     uint32_t id = memory_record->deviceId;
                     gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMCPY: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                    PLUGIN_PRINT("MEMCPY: [%"PRIu32"]"
+                            " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, memory_start, memory_end, memory_end - memory_start);
                 }
 
@@ -467,7 +324,8 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                     uint32_t id = memory_record->deviceId;
                     gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
-                    PLUGIN_PRINT("MEMCPY2: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                    PLUGIN_PRINT("MEMCPY2: [%"PRIu32"]"
+                            " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, memory_start, memory_end, memory_end - memory_start);
                 }
 
@@ -777,7 +635,9 @@ static int cupti_backend_start(void) {
 
     CHECK_CUPTI(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
 
-    try_init_openacc_hooks();
+    /* Start OpenACC profiling if found */
+    openacc_hooks_set_core_api(dlb_core_api);
+    openacc_hooks_try_init();
 
     cupti_plugin_started = true;
 
@@ -797,7 +657,8 @@ static int cupti_backend_stop(void) {
         CHECK_WARN_CUPTI(cuptiActivityDisable(activity_kinds[i]));
     }
 
-    try_finalize_openacc_hooks();
+    /* Stop OpenACC */
+    openacc_hooks_try_finalize();
 
     /* Free internal buffers and CUDA events */
     CHECK_CUPTI(cuptiFinalize());

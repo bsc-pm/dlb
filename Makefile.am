@@ -743,8 +743,11 @@ if CUPTI_PLUGIN
 CUPTI_SRCS = \
 	src/talp/backends/backend_utils.h     \
 	src/talp/backends/cupti.c             \
+	src/talp/backends/dlb_openacc_abi.h   \
 	src/talp/backends/gpu_record_utils.c  \
 	src/talp/backends/gpu_record_utils.h  \
+	src/talp/backends/openacc_hooks.c     \
+	src/talp/backends/openacc_hooks.h     \
 	$(END)
 
 lib_LTLIBRARIES += libdlb_cupti.la
@@ -778,9 +781,12 @@ endif #ROCM_ROCPROFV2_PLUGIN
 if ROCM_ROCPROFSDK_PLUGIN
 ROCPROFILER_SDK_SRCS = \
 	src/talp/backends/backend_utils.h     \
-	src/talp/backends/rocprofiler_sdk.c   \
+	src/talp/backends/dlb_openacc_abi.h   \
 	src/talp/backends/gpu_record_utils.c  \
 	src/talp/backends/gpu_record_utils.h  \
+	src/talp/backends/openacc_hooks.c     \
+	src/talp/backends/openacc_hooks.h     \
+	src/talp/backends/rocprofiler_sdk.c   \
 	$(END)
 
 lib_LTLIBRARIES += libdlb_rocprofiler-sdk.la
