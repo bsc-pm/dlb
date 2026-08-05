@@ -37,7 +37,7 @@ static inline void ensure_capacity(gpu_records_buffer_t* buf) {
         if (buf->capacity >= MAX_EVENTS) {
             fprintf(stderr, "Too many events (> %llu), aborting\n",
                     (unsigned long long)MAX_EVENTS);
-            exit(1);
+            abort();
         }
 
         size_t new_cap = buf->capacity * 2;
@@ -46,7 +46,7 @@ static inline void ensure_capacity(gpu_records_buffer_t* buf) {
         gpu_record_t* new_data = realloc(buf->data, new_cap * sizeof(gpu_record_t));
         if (!new_data) {
             fprintf(stderr, "realloc failed\n");
-            exit(1);
+            abort();
         }
         buf->data = new_data;
         buf->capacity = new_cap;
@@ -63,7 +63,7 @@ void gpu_record_init_buffer(gpu_records_buffer_t *buf, size_t initial_capacity) 
     buf->data = malloc(initial_capacity * sizeof(gpu_record_t));
     if (!buf->data) {
         fprintf(stderr, "malloc failed\n");
-        exit(1);
+        abort();
     }
     buf->size = 0;
     buf->capacity = initial_capacity;

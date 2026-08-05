@@ -39,7 +39,32 @@ static inline int gm_count(uint64_t x) {
 #endif
 }
 
-static inline int gm_isset(uint64_t x, uint32_t bit) {
+/* Returns the number of trailing 0-bits in x, starting at the least significant bit position. */
+static inline int gm_ctz(uint64_t x)
+{
+#if defined(__GNUC__) || defined(__clang__)
+    return x ? __builtin_ctzll(x) : -1;
+#else
+    if (x == 0)
+        return -1;
+
+    int n = 0;
+    while ((x & 1) == 0) {
+        x >>= 1;
+        ++n;
+    }
+    return n;
+#endif
+}
+
+/* Clear least significat bit */
+static inline uint64_t gm_clear_lsb(uint64_t x)
+{
+    return x & (x - 1);
+}
+
+/* Check if bit is set */
+static inline int gm_isset(uint32_t bit, uint64_t x) {
     return (x & (1ULL << bit)) ? 1 : 0;
 }
 

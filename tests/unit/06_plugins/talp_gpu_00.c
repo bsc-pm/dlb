@@ -27,6 +27,7 @@
 
 #include "apis/dlb_errors.h"
 #include "apis/dlb_talp.h"
+#include "support/gpu_mask_utils.h"
 #include "talp/backend.h"
 #include "talp/sample.h"
 #include "talp/talp.h"
@@ -73,23 +74,32 @@ int main(int argc, char *argv[]) {
     cupti_stub_call_runtime();
     assert( thread_sample->stats.num_gpu_runtime_calls == 1 );
 
-    /* Call kernel */
-    gpu_measurements_t measurements = {0};
-    talp_gpu_collect(&measurements);
-    assert( measurements.useful_time == 0 );
-    assert( measurements.communication_time == 0 );
+    /* No records */
+    uint64_t gpu_mask = 0;
+    gpu_timers_t measurements = {0};
+    talp_gpu_collect(&measurements, 1, &gpu_mask);
+    assert( measurements.useful == 0 );
+    assert( measurements.communication == 0 );
+    assert( gm_count(gpu_mask) == 0 );
 
+    /* Call kernel */
+    gpu_mask = 0;
+    measurements = (gpu_timers_t){0};
     cupti_stub_call_kernel();
-    talp_gpu_collect(&measurements);
-    assert( measurements.useful_time == 1 );
-    assert( measurements.communication_time == 0 );
+    talp_gpu_collect(&measurements, 1, &gpu_mask);
+    assert( measurements.useful == 1 );
+    assert( measurements.communication == 0 );
+    assert( gm_count(gpu_mask) == 1 );
 
     /* Call memory op */
+    gpu_mask = 0;
+    measurements = (gpu_timers_t){0};
     cupti_stub_call_memory_op();
     cupti_stub_call_memory_op();
-    talp_gpu_collect(&measurements);
-    assert( measurements.useful_time == 0 );
-    assert( measurements.communication_time == 2 );
+    talp_gpu_collect(&measurements, 1, &gpu_mask);
+    assert( measurements.useful == 0 );
+    assert( measurements.communication == 2 );
+    assert( gm_count(gpu_mask) == 1 );
 
     talp_gpu_finalize();
 

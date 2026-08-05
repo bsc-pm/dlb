@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-enum { DLB_BACKEND_ABI_VERSION = 2 };
+enum { DLB_BACKEND_ABI_VERSION = 3 };
 
 /* Backends should use these error codes for returning */
 enum DLB_Backend_Error_codes {
@@ -41,17 +41,15 @@ typedef struct gpu_device_entry_t {
     uint64_t node_unique_id;
 } gpu_device_entry_t;
 
-typedef struct gpu_measurements_t {
-    int64_t useful_time;
-    int64_t communication_time;
-    int64_t inactive_time;
-    uint64_t active_device_mask;
-} gpu_measurements_t;
+typedef struct gpu_timers_t {
+    int64_t useful;
+    int64_t communication;
+} gpu_timers_t;
 
-typedef struct hwc_measurements_t {
+typedef struct hw_counters_t {
     int64_t cycles;
     int64_t instructions;
-} hwc_measurements_t;
+} hw_counters_t;
 
 /* Backend to Core communication interface */
 typedef struct {
@@ -61,13 +59,7 @@ typedef struct {
     struct {
         void (*enter_runtime)(void);
         void (*exit_runtime)(void);
-        void (*submit_measurements)(const gpu_measurements_t*);
-        void (*register_devices)(const gpu_device_entry_t *devices, size_t num_devices);
     } gpu;
-
-    struct {
-        void (*submit_measurements)(const hwc_measurements_t*);
-    } hwc;
 
 } core_api_t;
 
@@ -92,9 +84,15 @@ typedef struct {
     int (*stop)(void);
     int (*finalize)(void);
 
-    void (*flush)(void);
+    struct {
+        int (*collect)(gpu_timers_t *out, size_t capacity, uint64_t *out_mask);
+        int (*get_devices)(gpu_device_entry_t *out, size_t capacity, size_t *out_count);
+        int (*get_uuids)(char *buffer, size_t buffer_size, bool full_uuid);
+    } gpu;
 
-    int (*get_gpu_affinity)(char *buffer, size_t buffer_size, bool full_uuid);
+    struct {
+        int (*collect)(hw_counters_t *out);
+    } hwc;
 
 } backend_api_t;
 

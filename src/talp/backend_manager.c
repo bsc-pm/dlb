@@ -40,11 +40,6 @@ const core_api_t core_api = {
     .gpu = {
         .enter_runtime       = talp_gpu_enter_runtime,
         .exit_runtime        = talp_gpu_exit_runtime,
-        .submit_measurements = talp_gpu_submit,
-        .register_devices    = talp_gpu_register_devices,
-    },
-    .hwc = {
-        .submit_measurements = talp_hwc_submit,
     },
 };
 
@@ -292,8 +287,8 @@ int talp_backend_manager_get_gpu_affinity(char *buffer, size_t buffer_size, bool
 
     int error = DLB_ERR_UNKNOWN;
     if (loaded_gpu_plugin.handle != NULL
-            && loaded_gpu_plugin.api->get_gpu_affinity) {
-        int backend_error = loaded_gpu_plugin.api->get_gpu_affinity(buffer, buffer_size, full_uuid);
+            && loaded_gpu_plugin.api->gpu.get_uuids) {
+        int backend_error = loaded_gpu_plugin.api->gpu.get_uuids(buffer, buffer_size, full_uuid);
         if (backend_error == DLB_BACKEND_SUCCESS) {
             error = DLB_SUCCESS;
         }

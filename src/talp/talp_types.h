@@ -25,8 +25,14 @@
 #include "support/atomic.h"
 #include "support/gtree.h"
 #include "support/gslist.h"
+#include "talp/backend.h"
 
 #include <pthread.h>
+
+// Convenience compiler-time constant to avoid dynamic allocation.
+// We may revisit in the future.
+enum { MAX_LOCAL_GPUS = 16 };
+
 
 /*********************************************************************************/
 /*    TALP sample and macrosample                                                */
@@ -62,18 +68,6 @@ typedef struct {
     int64_t not_useful_omp_out;
     int64_t not_useful_gpu;
 } macro_timers_t;
-
-typedef struct {
-    int64_t useful;
-    int64_t communication;
-    int64_t inactive;
-    uint64_t active_device_mask;
-} gpu_timers_t;
-
-typedef struct {
-    int64_t cycles;
-    int64_t instructions;
-} hw_counters_t;
 
 typedef struct {
     int64_t num_mpi_calls;
@@ -117,11 +111,12 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
  * The macrosample is then used to update all started monitoring regions. */
 typedef struct talp_macrosample_t {
     macro_timers_t timers;
-    gpu_timers_t   gpu_timers;
     hw_counters_t  counters;
     event_stats_t  stats;
     cpu_set_t      cpu_mask;
     int            num_samples;
+    uint64_t       gpu_mask;
+    gpu_timers_t   gpu_timers[MAX_LOCAL_GPUS];
 } talp_macrosample_t;
 
 
@@ -162,14 +157,15 @@ typedef struct talp_info_t {
 /* Private data per monitor */
 typedef struct monitor_data_t {
     int id;
-    int node_shared_id;                 /* id for allocating region in the shmem */
+    int node_shared_id;                     /* id for allocating region in the shmem */
     struct {
         bool started:1;
-        bool internal:1;                /* internal regions are not reported */
+        bool internal:1;                    /* internal regions are not reported */
         bool enabled:1;
     } flags;
-    cpu_set_t cpu_mask;                 /* CPUs this region has been observed on */
-    uint64_t  gpu_mask;                 /* GPUs this region has been observed on */
+    cpu_set_t    cpu_mask;                  /* CPUs this region has been observed on */
+    uint64_t     gpu_mask;                  /* GPUs this region has been observed on */
+    gpu_timers_t gpu_timers[MAX_LOCAL_GPUS];
 } monitor_data_t;
 
 

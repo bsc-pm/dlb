@@ -30,21 +30,17 @@
 #include <pthread.h>
 
 static const backend_api_t *hwc_backend = NULL;
-static __thread hwc_measurements_t hwc = {0};
-
-static void hwc_submit(const hwc_measurements_t *raw) {
-    hwc = *raw;
-}
+static __thread hw_counters_t hwc = {0};
 
 void *test_worker_thread(void *arg) {
 
-    hwc_backend->flush();
+    hwc_backend->hwc.collect(&hwc);
     assert( hwc.cycles == 0 );
     assert( hwc.instructions == 0 );
 
     assert( hwc_backend->start() == DLB_BACKEND_SUCCESS );
 
-    hwc_backend->flush();
+    hwc_backend->hwc.collect(&hwc);
     assert( hwc.cycles == 1 );
     assert( hwc.instructions == 1 );
 
@@ -58,9 +54,6 @@ int main(int argc, char *argv[]) {
     const core_api_t test_core_api = {
         .abi_version = DLB_BACKEND_ABI_VERSION,
         .struct_size = sizeof(core_api_t),
-        .hwc = {
-            .submit_measurements = hwc_submit,
-        },
     };
 
     hwc_backend = talp_backend_manager_load_hwc_backend("papi");
@@ -69,11 +62,11 @@ int main(int argc, char *argv[]) {
     assert( hwc_backend->init(&test_core_api) == DLB_BACKEND_SUCCESS );
     assert( hwc_backend->start() == DLB_BACKEND_SUCCESS );
 
-    hwc_backend->flush();
+    hwc_backend->hwc.collect(&hwc);
     assert( hwc.cycles == 1 );
     assert( hwc.instructions == 1 );
 
-    hwc_backend->flush();
+    hwc_backend->hwc.collect(&hwc);
     assert( hwc.cycles == 2 );
     assert( hwc.instructions == 2 );
 

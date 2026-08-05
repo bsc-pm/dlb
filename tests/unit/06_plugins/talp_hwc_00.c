@@ -37,7 +37,7 @@ void *test_worker_thread(void *arg) {
 
     assert( talp_hwc_thread_init() == DLB_SUCCESS );
 
-    hwc_measurements_t hwc;
+    hw_counters_t hwc;
     talp_hwc_on_state_change(TALP_STATE_DISABLED, TALP_STATE_USEFUL);
     assert( talp_hwc_collect(&hwc) == true );
     assert( hwc.cycles == 1 );
@@ -50,7 +50,7 @@ void *test_worker_thread(void *arg) {
 
 int main(int argc, char *argv[]) {
 
-    hwc_measurements_t hwc;
+    hw_counters_t hwc = {0};
 
     subprocess_descriptor_t spd = {0};
     spd_enter_dlb(&spd);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     assert( hwc.cycles == 1 );
     assert( hwc.instructions == 1 );
 
-    /* A new collect causes a new flush, but only the difference is collected */
+    /* A new collect causes a new read, but only the difference is collected */
     assert( talp_hwc_collect(&hwc) == true );
     assert( hwc.cycles == 1 );
     assert( hwc.instructions == 1 );

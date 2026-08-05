@@ -138,6 +138,8 @@ tests = {
     'backend_cupti_00'    : {'depends' : libdlb_cupti_test},
     'backend_rocprofiler_sdk_00'
                           : {'depends' : libdlb_rocprofiler_sdk_test},
+    'backend_rocprofilerv2_00'
+                          : {'depends' : libdlb_rocprofilerv2_test},
     'backend_papi_00'     : {'depends' : libdlb_papi_test},
     'talp_gpu_00'         : {'depends' : libdlb_cupti_test},
     'talp_hwc_00'         : {'depends' : libdlb_papi_test},

@@ -25,6 +25,7 @@
 
 #include "support/debug.h"
 #include "support/options.h"
+#include "support/gpu_mask_utils.h"
 #include "talp/backend_manager.h"
 #include "talp/backend.h"
 
@@ -54,10 +55,8 @@ void load_stub_funcs(void) {
 
 static int num_times_entering_runtime = 0;
 static int num_times_exiting_runtime = 0;
-static int num_times_submit = 0;
-static gpu_measurements_t gpu_measurements = {0};
-static gpu_device_entry_t *registered_devices = NULL;
-static size_t registered_num_devices = 0;
+static gpu_device_entry_t *devices = NULL;
+static size_t num_devices = 0;
 
 static void enter_runtime(void) {
     ++num_times_entering_runtime;
@@ -65,18 +64,6 @@ static void enter_runtime(void) {
 
 static void exit_runtime(void) {
     ++num_times_exiting_runtime;
-}
-
-static void submit(const gpu_measurements_t *measurements) {
-    ++num_times_submit;
-    gpu_measurements = *measurements;
-}
-
-static void register_devices(const gpu_device_entry_t *devices, size_t num_devices) {
-    size_t devices_size = sizeof(gpu_device_entry_t) * num_devices;
-    registered_num_devices = num_devices;
-    registered_devices = malloc(devices_size);
-    memcpy(registered_devices, devices, devices_size);
 }
 
 
@@ -92,8 +79,6 @@ int main(int argc, char *argv[]) {
         .gpu = {
             .enter_runtime = enter_runtime,
             .exit_runtime = exit_runtime,
-            .submit_measurements = submit,
-            .register_devices = register_devices,
         },
     };
 
@@ -114,7 +99,10 @@ int main(int argc, char *argv[]) {
     assert( gpu_backend->start() == DLB_BACKEND_SUCCESS );
 
     /* Check resources */
-    assert(registered_num_devices > 0);
+    assert( gpu_backend->gpu.get_devices(NULL, 0, &num_devices) == DLB_BACKEND_SUCCESS );
+    assert( num_devices > 0 );
+    devices = malloc(sizeof(*devices) * num_devices);
+    assert( gpu_backend->gpu.get_devices(devices, num_devices, NULL) == DLB_BACKEND_SUCCESS );
 
     /* Check Host API */
     cupti_stub_call_runtime();
@@ -123,15 +111,14 @@ int main(int argc, char *argv[]) {
 
     /* Check kernels */
     cupti_stub_call_kernel();
-    assert( num_times_submit == 0);
     cupti_stub_call_kernel();
-    assert( num_times_submit == 0);
     cupti_stub_call_memory_op();
-    assert( num_times_submit == 0);
-    gpu_backend->flush();
-    assert( num_times_submit == 1);
-    assert( gpu_measurements.useful_time == 2 );
-    assert( gpu_measurements.communication_time == 1 );
+    gpu_timers_t gpu_timers = {0};
+    uint64_t gpu_mask = 0;
+    gpu_backend->gpu.collect(&gpu_timers, 1, &gpu_mask);
+    assert( gpu_timers.useful == 2 );
+    assert( gpu_timers.communication == 1 );
+    assert( gm_count(gpu_mask) == 1 && gm_isset(0, gpu_mask) );
 
     assert( gpu_backend->stop() == DLB_BACKEND_SUCCESS );
     assert( gpu_backend->finalize() == DLB_BACKEND_SUCCESS );

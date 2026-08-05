@@ -35,21 +35,11 @@
 
 
 typedef void (*rocprof_stub_call_t)(void);
-static rocprof_stub_call_t rocprof_stub_init_tool = NULL;
-static rocprof_stub_call_t rocprof_stub_fini_tool = NULL ;
 static rocprof_stub_call_t rocprof_stub_call_runtime = NULL;
 static rocprof_stub_call_t rocprof_stub_call_kernel = NULL;
 static rocprof_stub_call_t rocprof_stub_call_memory_op = NULL;
 
 void load_stub_funcs(void) {
-    rocprof_stub_init_tool =
-        (rocprof_stub_call_t)dlsym(RTLD_DEFAULT, "rocprof_stub_init_tool");
-    assert( rocprof_stub_init_tool != NULL );
-
-    rocprof_stub_fini_tool =
-        (rocprof_stub_call_t)dlsym(RTLD_DEFAULT, "rocprof_stub_fini_tool");
-    assert( rocprof_stub_fini_tool != NULL );
-
     rocprof_stub_call_runtime =
         (rocprof_stub_call_t)dlsym(RTLD_DEFAULT, "rocprof_stub_call_runtime");
     assert( rocprof_stub_call_runtime != NULL );
@@ -95,7 +85,7 @@ int main(int argc, char *argv[]) {
 
     const core_api_t test_bad_core_api = {0};
 
-    const backend_api_t *gpu_backend = talp_backend_manager_load_gpu_backend("rocprofiler-sdk");
+    const backend_api_t *gpu_backend = talp_backend_manager_load_gpu_backend("rocprofilerv2");
     assert( gpu_backend != NULL );
 
     /* Once the plugin is loaded, look for testing functions for triggering GPU events */
@@ -105,10 +95,6 @@ int main(int argc, char *argv[]) {
     assert( gpu_backend->init(&test_core_api) == DLB_BACKEND_SUCCESS );
     assert( gpu_backend->init(&test_core_api) == DLB_BACKEND_ERROR );
     assert( gpu_backend->start() == DLB_BACKEND_SUCCESS );
-
-    /* The plugin only does minimal initialization, it requires configuration invoked
-     * from rocprofiler-sdk library */
-    rocprof_stub_init_tool();
 
     /* Check resources */
     assert( gpu_backend->gpu.get_devices(NULL, 0, &num_devices) == DLB_BACKEND_SUCCESS );
