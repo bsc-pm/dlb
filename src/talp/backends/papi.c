@@ -192,14 +192,9 @@ static int papi_backend_start(void) {
     return DLB_BACKEND_SUCCESS;
 }
 
-static void papi_backend_flush(void);
-
 static int papi_backend_stop(void) {
 
     if (!papi_plugin_started) return DLB_BACKEND_ERROR;
-
-    /* Flush now and send measurements to TALP */
-    papi_backend_flush();
 
     int error;
 
@@ -250,30 +245,25 @@ static int papi_backend_finalize(void) {
     return DLB_BACKEND_SUCCESS;
 }
 
-/* Function called externally by TALP or when stopping plugin to force flushing buffers */
-static void papi_backend_flush(void) {
+static int papi_backend_collect(hw_counters_t *out) {
 
-    PLUGIN_PRINT("papi_backend_flush, started? %d\n", papi_plugin_started);
-
-    if (!papi_plugin_started) return;
+    if (!papi_plugin_started) return DLB_BACKEND_ERROR;
 
     long long papi_values[2];
     int error = PAPI_read(EventSet, papi_values);
     if (error != PAPI_OK) {
         PLUGIN_WARNING("Error reading PAPI counters: %d, %s\n", error, PAPI_strerror(error));
-        return;
+        return DLB_BACKEND_ERROR;
     }
 
     PLUGIN_PRINT("cycles: %lld, instructions: %lld\n", papi_values[0], papi_values[1]);
 
-    /* Pack values to send to TALP */
-    hwc_measurements_t measurements = {
+    *out = (hw_counters_t){
         .cycles = papi_values[0],
         .instructions = papi_values[1],
     };
 
-    /* Call TALP */
-    dlb_core_api->hwc.submit_measurements(&measurements);
+    return DLB_BACKEND_SUCCESS;
 }
 
 DLB_EXPORT_SYMBOL
@@ -290,7 +280,9 @@ backend_api_t* DLB_Get_Backend_API(void) {
         .start = papi_backend_start,
         .stop = papi_backend_stop,
         .finalize = papi_backend_finalize,
-        .flush = papi_backend_flush,
+        .hwc = {
+            .collect = papi_backend_collect,
+        },
     };
     return &api;
 }

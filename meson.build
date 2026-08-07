@@ -450,6 +450,15 @@ rocprofiler_sdk_backend_sources = [
   'src/talp/backends/rocprofiler_sdk.c',
 ]
 
+# ROCPROFILERV2
+
+rocprofilerv2_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/gpu_record_utils.c',
+  'src/talp/backends/gpu_record_utils.h',
+  'src/talp/backends/rocprofilerv2.c',
+]
+
 # PAPI
 
 papi_backend_sources = [
@@ -501,6 +510,24 @@ libdlb_rocprofiler_sdk_test = shared_module(
   rocprofiler_sdk_backend_sources,
   include_directories : stub_includes,
   link_with : librocprofiler_sdk_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+librocprofilerv2_stub = shared_library(
+  'rocprofilerv2_stub',
+  'tests/stubs/rocprofilerv2_stub.c',
+  # dependencies : dl_dep,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_rocprofilerv2_test = shared_module(
+  'dlb_rocprofilerv2_test',
+  rocprofilerv2_backend_sources,
+  include_directories : stub_includes,
+  link_with : librocprofilerv2_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
   install : false,

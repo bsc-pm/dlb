@@ -35,8 +35,7 @@
 typedef struct {
     bool active;
     bool have_last;
-    hwc_measurements_t last_raw;    // last raw value from backend
-    hwc_measurements_t accum;       // accumulated delta
+    hw_counters_t last_raw;    // last raw value from backend
 } hwc_ctx_t;
 
 static __thread hwc_ctx_t ctx = {0};
@@ -114,10 +113,11 @@ void talp_hwc_on_state_change(talp_sample_state_t old_state, talp_sample_state_t
 
     if (old_state != TALP_STATE_USEFUL
             && new_state == TALP_STATE_USEFUL) {
-        // ctx.last_raw is updated here
+
         ctx.active = true;
-        ctx.have_last = false;
-        hwc_backend_api->flush();
+        if (hwc_backend_api->hwc.collect(&ctx.last_raw) == DLB_BACKEND_SUCCESS) {
+            ctx.have_last = true;
+        }
     }
 
     else if (old_state == TALP_STATE_USEFUL
@@ -126,37 +126,31 @@ void talp_hwc_on_state_change(talp_sample_state_t old_state, talp_sample_state_t
     }
 }
 
-// called from backend plugin
-void talp_hwc_submit(const hwc_measurements_t *raw) {
-
-    if (!ctx.active) return;
-
-    // First submission after changing to 'useful'
-    if (!ctx.have_last) {
-        ctx.have_last = true;
-        ctx.last_raw = *raw;
-        return;
-    }
-
-    ctx.accum.cycles += raw->cycles - ctx.last_raw.cycles;
-    ctx.accum.instructions += raw->instructions - ctx.last_raw.instructions;
-
-    ctx.last_raw = *raw;
-}
-
-// called from core
-bool talp_hwc_collect(hwc_measurements_t *out) {
+bool talp_hwc_collect(hw_counters_t *out) {
 
     if (!ctx.active) {
-        *out = (const hwc_measurements_t){0};
         return false;
     }
 
-    // plugin updates ctx at this point
-    hwc_backend_api->flush();
+    hw_counters_t raw;
+    if (hwc_backend_api->hwc.collect(&raw) != DLB_BACKEND_SUCCESS) {
+        return false;
+    }
 
-    *out = ctx.accum;
-    ctx.accum = (const hwc_measurements_t){0};
+    /* Only if we try to collect before changing to 'useful' for the first time,
+     * discard this reading and use it as baseline for the next. */
+    if (unlikely(!ctx.have_last)) {
+        ctx.have_last = true;
+        ctx.last_raw = raw;
+        return false;
+    }
+
+    *out = (hw_counters_t) {
+        .cycles       = raw.cycles       - ctx.last_raw.cycles,
+        .instructions = raw.instructions - ctx.last_raw.instructions,
+    };
+
+    ctx.last_raw = raw;
 
     return true;
 }

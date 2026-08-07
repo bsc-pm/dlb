@@ -331,7 +331,7 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             }
 
             /* GPU mask */
-            monitor_data->gpu_mask |= macrosample->gpu_timers.active_device_mask;
+            monitor_data->gpu_mask |= macrosample->gpu_mask;
 
             /* Number of GPUs */
             monitor->num_gpus = gm_count(monitor_data->gpu_mask);
@@ -345,11 +345,6 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             monitor->omp_serialization_time  += macrosample->timers.not_useful_omp_out;
             monitor->gpu_runtime_time        += macrosample->timers.not_useful_gpu;
 
-            /* GPU Timers */
-            monitor->gpu_useful_time         += macrosample->gpu_timers.useful;
-            monitor->gpu_communication_time  += macrosample->gpu_timers.communication;
-            monitor->gpu_inactive_time       += macrosample->gpu_timers.inactive;
-
             /* Counters */
             monitor->cycles                  += macrosample->counters.cycles;
             monitor->instructions            += macrosample->counters.instructions;
@@ -359,6 +354,24 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             monitor->num_omp_parallels       += macrosample->stats.num_omp_parallels;
             monitor->num_omp_tasks           += macrosample->stats.num_omp_tasks;
             monitor->num_gpu_runtime_calls   += macrosample->stats.num_gpu_runtime_calls;
+
+            /* GPU Timers */
+            uint64_t mask = macrosample->gpu_mask;
+            while (mask) {
+                int gpu = gm_ctz(mask);
+
+                /* Aggregated into monitor */
+                monitor->gpu_useful_time        += macrosample->gpu_timers[gpu].useful;
+                monitor->gpu_communication_time += macrosample->gpu_timers[gpu].communication;
+
+                /* Also store the data decomposed by device in the private monitor
+                 * data for use during the later MPI node reduction. */
+                monitor_data->gpu_timers[gpu].useful        += macrosample->gpu_timers[gpu].useful;
+                monitor_data->gpu_timers[gpu].communication +=
+                    macrosample->gpu_timers[gpu].communication;
+
+                mask = gm_clear_lsb(mask);
+            }
 
             /* Update shared memory only if requested */
             if (external_profiler) {
@@ -383,12 +396,7 @@ int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
 
     if (talp_info->flags.have_gpu) {
         /* Collect GPU measuremnts up to this point and update macrosample */
-        gpu_measurements_t measurements;
-        talp_gpu_collect(&measurements);
-        macrosample.gpu_timers.useful             = measurements.useful_time;
-        macrosample.gpu_timers.communication      = measurements.communication_time;
-        macrosample.gpu_timers.inactive           = measurements.inactive_time;
-        macrosample.gpu_timers.active_device_mask = measurements.active_device_mask;
+        talp_gpu_collect(macrosample.gpu_timers, MAX_LOCAL_GPUS, &macrosample.gpu_mask);
     }
 
     /* Update all started regions */
@@ -402,7 +410,7 @@ int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
 /*    TALP collect functions for 3rd party programs:                             */
 /*      - It's also safe to call it from a 1st party program                     */
 /*      - Requires --talp-external-profiler set up in application                */
-/*      - Does not need to synchronize with application                           */
+/*      - Does not need to synchronize with application                          */
 /*********************************************************************************/
 
 /* Function that may be called from a third-party process to compute
@@ -429,8 +437,7 @@ int talp_query_pop_node_metrics(const char *name, dlb_node_metrics_t *node_metri
     int processes_per_node = 0;
 
     /* Iterate the PID list and gather times of every process */
-    int i;
-    for (i = 0; i <nelems; ++i) {
+    for (int i = 0; i <nelems; ++i) {
         int64_t mpi_time = region_list[i].mpi_time;
         int64_t useful_time = region_list[i].useful_time;
 

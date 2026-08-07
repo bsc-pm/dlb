@@ -211,15 +211,15 @@ void talp_sample_update(talp_info_t *talp_info) {
     }
 
     if (talp_info->flags.have_hwc) {
-        hwc_measurements_t measurements;
+        hw_counters_t measurements = {0};
         if (talp_hwc_collect(&measurements)) {
             sample->counters.cycles       += measurements.cycles;
             sample->counters.instructions += measurements.instructions;
         }
 
 #ifdef INSTRUMENTATION_VERSION
-        // It's safe to emit even if talp_hwc_collect returned false,
-        // struct is zero'ed in that case
+        // We want to emit even if talp_hwc_collect returned false,
+        // that's why measurements is init'd to 0 above.
         unsigned events[] = {MONITOR_CYCLES, MONITOR_INSTR};
         long long hwc_values[] = {measurements.cycles, measurements.instructions};
         instrument_nevent(2, events, hwc_values);

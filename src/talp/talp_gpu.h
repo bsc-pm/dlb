@@ -24,16 +24,14 @@
 #include <stdint.h>
 
 typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct gpu_measurements_t gpu_measurements_t;
+typedef struct gpu_timers_t gpu_timers_t;
 typedef struct gpu_device_entry_t gpu_device_entry_t;
 
 int  talp_gpu_init(const subprocess_descriptor_t *spd);
 void talp_gpu_finalize(void);
-void talp_gpu_register_devices(const gpu_device_entry_t *devices, size_t num_devices);
-int  talp_gpu_mask_to_unique_ids(uint64_t mask, uint64_t *out_ids, int out_capacity);
+uint64_t talp_gpu_local_to_unique_id(uint32_t local_id);
 void talp_gpu_enter_runtime(void);
 void talp_gpu_exit_runtime(void);
-void talp_gpu_submit(const gpu_measurements_t *measurements);
-void talp_gpu_collect(gpu_measurements_t *out);
+void talp_gpu_collect(gpu_timers_t *out, size_t capacity, uint64_t *out_mask);
 
 #endif /* TALP_GPU_H */

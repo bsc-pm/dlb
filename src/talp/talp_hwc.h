@@ -24,14 +24,13 @@
 #include <stdbool.h>
 
 typedef struct SubProcessDescriptor subprocess_descriptor_t;
-typedef struct hwc_measurements_t hwc_measurements_t;
+typedef struct hw_counters_t hw_counters_t;
 
 int  talp_hwc_init(const subprocess_descriptor_t *spd);
 int  talp_hwc_thread_init(void);
 void talp_hwc_finalize(void);
 void talp_hwc_thread_finalize(void);
 void talp_hwc_on_state_change(talp_sample_state_t old_state, talp_sample_state_t new_state);
-void talp_hwc_submit(const hwc_measurements_t *raw);
-bool talp_hwc_collect(hwc_measurements_t *out);
+bool talp_hwc_collect(hw_counters_t *out);
 
 #endif /* TALP_HWC_H */

@@ -499,8 +499,7 @@ static void CUPTIAPI bufferCompleted(
 
 /* --- Plugin functions  ------------------------------------------------------- */
 
-/* Function called externally by TALP or when stopping plugin to force flushing buffers */
-static void cupti_backend_flush(void) {
+static int cupti_backend_collect(gpu_timers_t *out, size_t capacity, uint64_t *out_mask) {
 
     /* Once buffers are processed, we need to update the new safe timestamp but we
      * capture it here to not loose records that happen between flushing and processing */
@@ -509,7 +508,7 @@ static void cupti_backend_flush(void) {
     /* Flush buffer */
     if (cupti_plugin_started) {
         /* This is a blocking call, it does not return until all activity records
-        * are returned using the registered callback. */
+         * are returned using the registered callback. */
         cuptiActivityFlushAll(0);
     }
 
@@ -521,48 +520,34 @@ static void cupti_backend_flush(void) {
         /* Update safe timestamp. All future records prior to this will be ignored. */
         safe_timestamp = new_safe_timestamp;
 
-        uint64_t kernel_time = 0;
-        uint64_t memory_time = 0;
-        uint64_t active_mask = 0;
-
-        for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+        for (size_t gpu = 0; gpu < num_devices && gpu < capacity; ++gpu) {
             uint32_t id = device_info[gpu].device_id;
 
-             bool has_kernel = gpu_record_has_data(&kernel_buffer[id]);
-             bool has_memory = gpu_record_has_data(&memory_buffer[id]);
+            bool has_kernel = gpu_record_has_data(&kernel_buffer[id]);
+            bool has_memory = gpu_record_has_data(&memory_buffer[id]);
 
-             if (has_kernel || has_memory) {
-                 active_mask |= (1ULL << id);
-             } else {
-                 continue;
-             }
+            if (!has_kernel && !has_memory) {
+                continue;
+            }
+
+            *out_mask |= (1ULL << id);
 
             /* Compute kernel records duration */
             gpu_record_flatten(&kernel_buffer[id]);
-            kernel_time += gpu_record_get_duration(&kernel_buffer[id]);
+            out[id].useful = gpu_record_get_duration(&kernel_buffer[id]);
 
             /* Compute memory records duration */
             gpu_record_flatten(&memory_buffer[id]);
-            memory_time += gpu_record_get_memory_exclusive_duration(
+            out[id].communication = gpu_record_get_memory_exclusive_duration(
                     &memory_buffer[id], &kernel_buffer[id]);
 
             /* Clear buffers */
             gpu_record_clear_buffer(&kernel_buffer[id]);
             gpu_record_clear_buffer(&memory_buffer[id]);
         }
-
-        if (kernel_time > 0 || memory_time > 0) {
-            /* Pack values to send to TALP */
-            gpu_measurements_t measurements = {
-                .useful_time = kernel_time,
-                .communication_time = memory_time,
-                .active_device_mask = active_mask,
-            };
-
-            /* Call TALP */
-            dlb_core_api->gpu.submit_measurements(&measurements);
-        }
     }
+
+    return DLB_BACKEND_SUCCESS;
 }
 
 static int cupti_backend_probe(void) {
@@ -582,15 +567,6 @@ static int cupti_backend_init(const core_api_t *core_api) {
     /* Get Devices info */
     int error = init_device_info();
     if (error == DLB_BACKEND_ERROR) return DLB_BACKEND_ERROR;
-
-    /* Send Devices to Core */
-    gpu_device_entry_t *entries = malloc(sizeof(*entries) * num_devices);
-    for (size_t gpu = 0; gpu < num_devices; ++gpu) {
-        entries[gpu].local_id = device_info[gpu].device_id;
-        entries[gpu].node_unique_id = device_info[gpu].pci_unique_id;
-    }
-    dlb_core_api->gpu.register_devices(entries, num_devices);
-    free(entries);
 
     /* Allocate buffer pool for CUPTI records */
     init_buffer_pool();
@@ -648,9 +624,6 @@ static int cupti_backend_stop(void) {
 
     if (!cupti_plugin_started) return DLB_BACKEND_SUCCESS;
 
-    /* Flush now and send measurements to TALP */
-    cupti_backend_flush();
-
     /* Stop measurements */
     CHECK_CUPTI(cuptiUnsubscribe(subscriber));
     for (size_t i = 0; i < sizeof(activity_kinds)/sizeof(activity_kinds[0]); ++i) {
@@ -659,6 +632,14 @@ static int cupti_backend_stop(void) {
 
     /* Stop OpenACC */
     openacc_hooks_try_finalize();
+
+    /* For completeness, perform a final flush and drain any pending activity
+     * buffers. Although the last profiling region has already been stopped and
+     * flushed, the CUDA runtime may still have a few operations with activity
+     * records not yet delivered. This ensures we reclaim ownership of all
+     * buffers before deallocating them. */
+    cuptiActivityFlushAll(0);
+    process_ready_buffers();
 
     /* Free internal buffers and CUDA events */
     CHECK_CUPTI(cuptiFinalize());
@@ -694,7 +675,35 @@ static int cupti_backend_finalize(void) {
     return DLB_BACKEND_SUCCESS;
 }
 
-static int cupti_backend_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid) {
+static int cupti_backend_get_devices(gpu_device_entry_t *out, size_t capacity, size_t *out_count) {
+
+    if (device_info == NULL) {
+        init_device_info();
+    }
+
+    if (out == NULL) {
+        if (out_count == NULL) {
+            return DLB_BACKEND_ERROR;
+        } else {
+            *out_count = num_devices;
+            return DLB_BACKEND_SUCCESS;
+        }
+    }
+
+    size_t upper_bound = capacity < num_devices ? capacity : num_devices;
+    for (size_t gpu = 0; gpu < upper_bound; ++gpu) {
+        out[gpu].local_id       = device_info[gpu].device_id;
+        out[gpu].node_unique_id = device_info[gpu].pci_unique_id;
+    }
+
+    if (out_count != NULL) {
+        *out_count = upper_bound;
+    }
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static int cupti_backend_get_uuids(char *buffer, size_t buffer_size, bool full_uuid) {
 
     char *b = buffer;
     size_t remaining = buffer_size;
@@ -784,8 +793,11 @@ backend_api_t* DLB_Get_Backend_API(void) {
         .start = cupti_backend_start,
         .stop = cupti_backend_stop,
         .finalize = cupti_backend_finalize,
-        .flush = cupti_backend_flush,
-        .get_gpu_affinity = cupti_backend_get_gpu_affinity,
+        .gpu = {
+            .collect = cupti_backend_collect,
+            .get_devices = cupti_backend_get_devices,
+            .get_uuids = cupti_backend_get_uuids,
+        },
     };
     return &api;
 }

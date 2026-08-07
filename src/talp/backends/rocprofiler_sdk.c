@@ -81,9 +81,6 @@ static rocprofiler_client_finalize_t finalize_tool_fn = NULL;
 
 /* --- Device info ------------------------------------------------------------- */
 
-// fixme: to backend
-typedef uint64_t gpu_uid_t;
-
 typedef struct {
     uint32_t device_id;                 // [0..N) should match HIP_VISIBLE_DEVICES
     uint64_t pci_unique_id;             // PCI domain + GPU BDF (Bus/Device/function number)
@@ -300,13 +297,12 @@ void async_events_callback(
 
 /* --- Plugin functions -------------------------------------------------------- */
 
-/* Function called externally by TALP to force flushing buffers */
-static void rocprofiler_sdk_backend_flush(void) {
+static int rocprofiler_sdk_backend_collect(gpu_timers_t *out, size_t capacity, uint64_t *out_mask) {
 
     /* Flush buffer */
     if (rocprofiler_sdk_plugin_started) {
         /* This is a blocking call, it does not return until all activity records
-        * are returned using the registered callback. */
+         * are returned using the registered callback. */
         CHECK_WARN_ROCPROFILER(rocprofiler_flush_buffer(_buffer_id));
     }
 
@@ -316,29 +312,25 @@ static void rocprofiler_sdk_backend_flush(void) {
         /* Update safe timestamp. All future records prior to this will be ignored */
         safe_timestamp = get_timestamp();
 
-        uint64_t kernel_time = 0;
-        uint64_t memory_time = 0;
-        uint64_t active_mask = 0;
-
-        for (size_t gpu = 0; gpu < num_devices; ++gpu) {
+        for (size_t gpu = 0; gpu < num_devices && gpu < capacity; ++gpu) {
             uint32_t id = device_info[gpu].device_id;
 
             bool has_kernel = gpu_record_has_data(&kernel_buffer[id]);
             bool has_memory = gpu_record_has_data(&memory_buffer[id]);
 
-            if (has_kernel || has_memory) {
-                active_mask |= (1ULL << id);
-            } else {
+            if (!has_kernel && !has_memory) {
                 continue;
             }
 
+            *out_mask |= (1ULL << id);
+
             /* Compute kernel records duration */
             gpu_record_flatten(&kernel_buffer[id]);
-            kernel_time += gpu_record_get_duration(&kernel_buffer[id]);
+            out[id].useful = gpu_record_get_duration(&kernel_buffer[id]);
 
             /* Compute memory records duration */
             gpu_record_flatten(&memory_buffer[id]);
-            memory_time += gpu_record_get_memory_exclusive_duration(
+            out[id].communication = gpu_record_get_memory_exclusive_duration(
                     &memory_buffer[id], &kernel_buffer[id]);
 
             /* Clear buffers */
@@ -347,19 +339,9 @@ static void rocprofiler_sdk_backend_flush(void) {
         }
 
         pthread_mutex_unlock(&buffer_mutex);
-
-        if (kernel_time > 0 || memory_time > 0) {
-            /* Pack values to send to TALP */
-            gpu_measurements_t measurements = {
-                .useful_time = kernel_time,
-                .communication_time = memory_time,
-                .active_device_mask = active_mask,
-            };
-
-            /* Call TALP */
-            dlb_core_api->gpu.submit_measurements(&measurements);
-        }
     }
+
+    return DLB_BACKEND_SUCCESS;
 }
 
 static int rocprofiler_sdk_backend_probe(void) {
@@ -382,15 +364,6 @@ static int rocprofiler_sdk_backend_init(const core_api_t *core_api) {
     /* Get Devices info */
     int error = init_device_info();
     if (error == DLB_BACKEND_ERROR) return DLB_BACKEND_ERROR;
-
-    /* Send Devices to Core */
-    gpu_device_entry_t *entries = malloc(sizeof(*entries) * num_devices);
-    for (size_t gpu = 0; gpu < num_devices; ++gpu) {
-        entries[gpu].local_id = device_info[gpu].device_id;
-        entries[gpu].node_unique_id = device_info[gpu].pci_unique_id;
-    }
-    dlb_core_api->gpu.register_devices(entries, num_devices);
-    free(entries);
 
     /* Allocate local buffers */
     kernel_buffer = malloc(sizeof(*kernel_buffer) * num_devices);
@@ -447,7 +420,38 @@ static int rocprofiler_sdk_backend_finalize(void) {
     return DLB_BACKEND_SUCCESS;
 }
 
-static int rocprofiler_sdk_backend_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid) {
+static int rocprofiler_sdk_backend_get_devices(
+        gpu_device_entry_t *out, size_t capacity, size_t *out_count) {
+
+    if (device_info == NULL) {
+        if (init_device_info() == DLB_BACKEND_ERROR) {
+            return DLB_BACKEND_ERROR;
+        }
+    }
+
+    if (out == NULL) {
+        if (out_count == NULL) {
+            return DLB_BACKEND_ERROR;
+        } else {
+            *out_count = num_devices;
+            return DLB_BACKEND_SUCCESS;
+        }
+    }
+
+    size_t upper_bound = capacity < num_devices ? capacity : num_devices;
+    for (size_t gpu = 0; gpu < upper_bound; ++gpu) {
+        out[gpu].local_id       = device_info[gpu].device_id;
+        out[gpu].node_unique_id = device_info[gpu].pci_unique_id;
+    }
+
+    if (out_count != NULL) {
+        *out_count = upper_bound;
+    }
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static int rocprofiler_sdk_backend_get_uuids(char *buffer, size_t buffer_size, bool full_uuid) {
 
     char *b = buffer;
     size_t remaining = buffer_size;
@@ -526,8 +530,11 @@ backend_api_t* DLB_Get_Backend_API(void) {
         .start = rocprofiler_sdk_backend_start,
         .stop = rocprofiler_sdk_backend_stop,
         .finalize = rocprofiler_sdk_backend_finalize,
-        .flush = rocprofiler_sdk_backend_flush,
-        .get_gpu_affinity = rocprofiler_sdk_backend_get_gpu_affinity,
+        .gpu = {
+            .collect = rocprofiler_sdk_backend_collect,
+            .get_devices = rocprofiler_sdk_backend_get_devices,
+            .get_uuids = rocprofiler_sdk_backend_get_uuids,
+        },
     };
     return &api;
 }
@@ -631,9 +638,6 @@ static void tool_fini(void* tool_data) {
 
     if (rocprofiler_sdk_plugin_started) {
 
-        /* Flush now and send measurements to TALP */
-        rocprofiler_sdk_backend_flush();
-
         /* Stop measurements (usually already stopped by rocprofiler-sdk finalization) */
         int active_ctx = 0;
         rocprofiler_status_t status = rocprofiler_context_is_active(_ctx, &active_ctx);
@@ -643,9 +647,6 @@ static void tool_fini(void* tool_data) {
 
         /* Stop OpenACC */
         openacc_hooks_try_finalize();
-
-        /* Free devices map */
-        finalize_device_info();
 
         rocprofiler_sdk_plugin_started = false;
     }

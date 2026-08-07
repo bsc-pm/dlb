@@ -37,9 +37,8 @@
 
 
 static const backend_api_t *gpu_backend_api = NULL;
-static gpu_measurements_t gpu_sample = {0};
-static gpu_device_entry_t *registered_devices = NULL;
-static size_t registered_num_devices = 0;
+static gpu_device_entry_t *devices = NULL;
+static size_t num_devices = 0;
 
 // Called from talp core
 int talp_gpu_init(const subprocess_descriptor_t *spd) {
@@ -80,6 +79,27 @@ int talp_gpu_init(const subprocess_descriptor_t *spd) {
         talp_output_record_gpu_vendor(GPU_VENDOR_NVIDIA);
     }
 
+    error = gpu_backend_api->gpu.get_devices(NULL, 0, &num_devices);
+    if (error == DLB_BACKEND_ERROR || num_devices == 0) {
+        debug_warning("GPU backend could not obtain number of devices");
+        gpu_backend_api->stop();
+        gpu_backend_api->finalize();
+    }
+
+    devices = malloc(sizeof(*devices) * num_devices);
+    error = gpu_backend_api->gpu.get_devices(devices, num_devices, NULL);
+    if (error == DLB_BACKEND_ERROR) {
+        debug_warning("GPU backend could not obtain device unique IDs");
+        gpu_backend_api->stop();
+        gpu_backend_api->finalize();
+    }
+
+    if (num_devices > MAX_NODE_GPUS) {
+        warning("%zu devices registered within a node but MAX_NODE_GPUS=%d. "
+                "If you think this is an error, please report bug.",
+                num_devices, MAX_NODE_GPUS);
+    }
+
     return DLB_SUCCESS;
 }
 
@@ -90,12 +110,11 @@ void talp_gpu_finalize(void) {
     if (gpu_backend_api != NULL) {
 
         gpu_backend_api->stop();
-        gpu_backend_api->flush();
         gpu_backend_api->finalize();
 
-        free(registered_devices);
-        registered_devices = NULL;
-        registered_num_devices = 0;
+        free(devices);
+        devices = NULL;
+        num_devices = 0;
 
         talp_backend_manager_unload_gpu_backend();
         gpu_backend_api = NULL;
@@ -103,40 +122,15 @@ void talp_gpu_finalize(void) {
 }
 
 
-// Called from GPU backend plugin after init: register the devices found during startup
-void talp_gpu_register_devices(const gpu_device_entry_t *devices, size_t num_devices) {
+uint64_t talp_gpu_local_to_unique_id(uint32_t local_id) {
 
-    if (num_devices > MAX_NODE_GPUS) {
-        warning("%zu devices registered within a node but MAX_NODE_GPUS=%d. "
-                "If you think this is an error, please report bug.",
-                num_devices, MAX_NODE_GPUS);
-    }
-
-    if (registered_devices == NULL && devices != NULL && num_devices > 0) {
-        size_t devices_size = sizeof(gpu_device_entry_t) * num_devices;
-        registered_num_devices = num_devices;
-        registered_devices = malloc(devices_size);
-        memcpy(registered_devices, devices, devices_size);
-    }
-}
-
-
-// Called from talp core to collect unique_ids for MPI comm
-int talp_gpu_mask_to_unique_ids(uint64_t mask, uint64_t *out_ids, int out_capacity) {
-
-    int count = 0;
-    for (size_t i = 0; i < registered_num_devices; ++i) {
-        uint32_t local_id = registered_devices[i].local_id;
-        ensure(local_id < MAX_NODE_GPUS,
-                "GPU local id (%"PRIu32") > MAX_NODE_GPUS (%d). Please report bug.",
-                local_id, MAX_NODE_GPUS);
-        if (gm_isset(mask, local_id)) {
-            ensure(count >= out_capacity,
-                    "%s: out_capacity exceeded. Please report bug." , __func__);
-            out_ids[count++] = registered_devices[i].node_unique_id;
+    for (size_t i = 0; i < num_devices; ++i) {
+        if (devices[i].local_id == local_id) {
+            return devices[i].node_unique_id;
         }
     }
-    return count;
+
+    return ULLONG_MAX;
 }
 
 
@@ -184,26 +178,10 @@ void talp_gpu_exit_runtime(void) {
 }
 
 
-// Called from GPU backend plugin: flush GPU data
-void talp_gpu_submit(const gpu_measurements_t *measurements) {
-
-    ensure(thread_is_main(), "Non-main thread updating GPU measurements. Please report bug.");
-
-    gpu_sample.useful_time        += measurements->useful_time;
-    gpu_sample.communication_time += measurements->communication_time;
-    gpu_sample.inactive_time      += measurements->inactive_time;
-    gpu_sample.active_device_mask |= measurements->active_device_mask;
-}
-
-
 // Called from core
-void talp_gpu_collect(gpu_measurements_t *out) {
+void talp_gpu_collect(gpu_timers_t *out, size_t capacity, uint64_t *out_mask) {
 
     ensure(thread_is_main(), "Non-main thread collecting GPU measurements. Please report bug.");
 
-    // flush GPU, may cause callback to talp_gpu_submit
-    gpu_backend_api->flush();
-
-    *out = gpu_sample;
-    gpu_sample = (const gpu_measurements_t){0};
+    gpu_backend_api->gpu.collect(out, capacity, out_mask);
 }

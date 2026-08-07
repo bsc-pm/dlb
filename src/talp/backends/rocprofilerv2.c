@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 
 static const core_api_t *dlb_core_api = NULL;
@@ -68,9 +69,43 @@ static const core_api_t *dlb_core_api = NULL;
 
 static bool rocprofilerv2_plugin_initialized = false;
 static bool rocprofilerv2_plugin_started = false;
-static rocprofiler_session_id_t _session_id;
-static rocprofiler_buffer_id_t _buffer_id;
+static rocprofiler_session_id_t _session_id = {0};
+static rocprofiler_buffer_id_t _buffer_id = {0};
 
+
+/* --- Device info ------------------------------------------------------------- */
+
+typedef struct {
+    uint32_t device_id;
+    uint64_t pci_unique_id;
+} device_info_t;
+
+static device_info_t *device_info = NULL;
+static size_t num_devices = 0;
+
+static int init_device_info(void) {
+
+    if (device_info != NULL)
+        return DLB_BACKEND_ERROR;
+
+    /* rocprofilerv2 is unsupported and I don't see a straightforward method
+     * to obtain a device unique id, so we'll assume 1 GPU per process and
+      the PID as unique identifier */
+    num_devices = 1;
+    device_info = malloc(sizeof(*device_info));
+    *device_info = (device_info_t){
+        .device_id = 0,
+        .pci_unique_id = getpid(),
+    };
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static void finalize_device_info(void) {
+    free(device_info);
+    device_info = NULL;
+    num_devices = 0;
+}
 
 /* --- Host runtime events ----------------------------------------------------- */
 
@@ -227,8 +262,7 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
 
 /* --- Plugin functions -------------------------------------------------------- */
 
-/* Function called externally by TALP to force flushing buffers */
-static void rocprofilerv2_backend_flush(void) {
+static int rocprofilerv2_backend_collect(gpu_timers_t *out, size_t capacity, uint64_t *out_mask) {
 
     /* Flush buffer */
     if (rocprofilerv2_plugin_started) {
@@ -240,29 +274,36 @@ static void rocprofilerv2_backend_flush(void) {
         /* Update safe timestamp. All future records prior to this will be ignored */
         safe_timestamp = get_timestamp();
 
+        /* num_devices is 1 in rocprofilerv2 */
+        if (capacity < 1) {
+            return DLB_BACKEND_SUCCESS;
+        }
+
+        bool has_kernel = gpu_record_has_data(&kernel_buffer);
+        bool has_memory = gpu_record_has_data(&memory_buffer);
+
+        if (!has_kernel && !has_memory) {
+            return DLB_BACKEND_SUCCESS;
+        }
+
+        /* gpu id 0 */
+        *out_mask = 1;
+
         /* Compute kernel records duration */
         gpu_record_flatten(&kernel_buffer);
-        uint64_t kernel_time = gpu_record_get_duration(&kernel_buffer);
+        out[0].useful = gpu_record_get_duration(&kernel_buffer);
 
         /* Compute memory records duration */
         gpu_record_flatten(&memory_buffer);
-        uint64_t memory_time = gpu_record_get_memory_exclusive_duration(&memory_buffer, &kernel_buffer);
+        out[0].communication = gpu_record_get_memory_exclusive_duration(
+                &memory_buffer, &kernel_buffer);
 
         /* Clear buffers */
         gpu_record_clear_buffer(&kernel_buffer);
         gpu_record_clear_buffer(&memory_buffer);
-
-        if (kernel_time > 0 || memory_time > 0) {
-            /* Pack values to send to TALP */
-            gpu_measurements_t measurements = {
-                .useful_time = kernel_time,
-                .communication_time = memory_time,
-            };
-
-            /* Call TALP */
-            dlb_core_api->gpu.submit_measurements(&measurements);
-        }
     }
+
+    return DLB_BACKEND_SUCCESS;
 }
 
 static int rocprofilerv2_backend_probe(void) {
@@ -276,6 +317,10 @@ static int rocprofilerv2_backend_init(const core_api_t *core_api) {
             || dlb_core_api->struct_size != sizeof(core_api_t)) {
         return DLB_BACKEND_ERROR;
     }
+
+    /* Get Devices info */
+    int error = init_device_info();
+    if (error == DLB_BACKEND_ERROR) return DLB_BACKEND_ERROR;
 
     /* Allocate local buffers */
     enum { LOCAL_BUFFER_INITIAL_CAPACITY = 256 * 1024 }; // 256k records = 4MB
@@ -353,9 +398,6 @@ static int rocprofilerv2_backend_stop(void) {
 
     if (rocprofilerv2_plugin_started) {
 
-        /* Flush now and send measurements to TALP */
-        rocprofilerv2_backend_flush();
-
         /* Stop session */
         CHECK_WARN_ROCPROFILER(rocprofiler_terminate_session(_session_id));
 
@@ -377,7 +419,41 @@ static int rocprofilerv2_backend_finalize(void) {
         gpu_record_free_buffer(&kernel_buffer);
         gpu_record_free_buffer(&memory_buffer);
 
+        /* Free devices map */
+        finalize_device_info();
+
         rocprofilerv2_plugin_initialized = false;
+    }
+
+    return DLB_BACKEND_SUCCESS;
+}
+
+static int rocprofilerv2_backend_get_devices(
+        gpu_device_entry_t *out, size_t capacity, size_t *out_count) {
+
+    if (device_info == NULL) {
+        if (init_device_info() == DLB_BACKEND_ERROR) {
+            return DLB_BACKEND_ERROR;
+        }
+    }
+
+    if (out == NULL) {
+        if (out_count == NULL) {
+            return DLB_BACKEND_ERROR;
+        } else {
+            *out_count = num_devices;
+            return DLB_BACKEND_SUCCESS;
+        }
+    }
+
+    size_t upper_bound = capacity < num_devices ? capacity : num_devices;
+    for (size_t gpu = 0; gpu < upper_bound; ++gpu) {
+        out[gpu].local_id       = device_info[gpu].device_id;
+        out[gpu].node_unique_id = device_info[gpu].pci_unique_id;
+    }
+
+    if (out_count != NULL) {
+        *out_count = upper_bound;
     }
 
     return DLB_BACKEND_SUCCESS;
@@ -399,8 +475,11 @@ backend_api_t* DLB_Get_Backend_API(void) {
         .start = rocprofilerv2_backend_start,
         .stop = rocprofilerv2_backend_stop,
         .finalize = rocprofilerv2_backend_finalize,
-        .flush = rocprofilerv2_backend_flush,
-        .get_gpu_affinity = NULL,
+        .gpu = {
+            .collect = rocprofilerv2_backend_collect,
+            .get_devices = rocprofilerv2_backend_get_devices,
+            .get_uuids = NULL,
+        },
     };
     return &api;
 }
