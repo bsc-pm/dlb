@@ -21,6 +21,7 @@ ACLOCAL_AMFLAGS=-I m4
 
 SUBDIRS = . tests
 
+bin_PROGRAMS =
 lib_LTLIBRARIES =
 noinst_LTLIBRARIES =
 BUILT_SOURCES =
@@ -815,42 +816,38 @@ endif #PAPI_PLUGIN
 #********************************************************************************
 # Support binaries
 #********************************************************************************
-bin_sources = \
-	src/utils/dlb.c \
-	src/utils/dlb_run.c \
-	src/utils/dlb_shm.c \
-	src/utils/dlb_taskset.c
-
-dlb_util_sources = \
-	src/utils/dlb_util.c \
-	src/utils/dlb_util.h \
+dlb_cmd_impl_sources = \
+	src/cli/dlb_cmd_impl.c \
+	src/cli/dlb_cmd_impl.h \
 	$(END)
 
-bin_PROGRAMS = dlb dlb_run dlb_shm dlb_taskset
-
-dlb_SOURCES = src/utils/dlb.c $(dlb_util_sources)
+bin_PROGRAMS += dlb
+dlb_SOURCES = src/cli/dlb.c $(dlb_cmd_impl_sources)
 dlb_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_LDADD = libdlb.la
 
-dlb_run_SOURCES = src/utils/dlb_run.c
+bin_PROGRAMS += dlb_run
+dlb_run_SOURCES = src/cli/dlb_run.c
 dlb_run_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_run_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_run_LDADD = libdlb.la
 
-dlb_shm_SOURCES = src/utils/dlb_shm.c
+bin_PROGRAMS += dlb_shm
+dlb_shm_SOURCES = src/cli/dlb_shm.c
 dlb_shm_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_shm_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_shm_LDADD = libdlb.la
 
-dlb_taskset_SOURCES = src/utils/dlb_taskset.c
+bin_PROGRAMS += dlb_taskset
+dlb_taskset_SOURCES = src/cli/dlb_taskset.c
 dlb_taskset_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_taskset_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_taskset_LDADD = libdlb.la
 
 if HAVE_OPENMP
-noinst_PROGRAMS = dlb_tester
-dlb_tester_SOURCES = src/utils/dlb_tester.c
+bin_PROGRAMS += dlb_tester
+dlb_tester_SOURCES = src/cli/dlb_tester.c
 dlb_tester_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 dlb_tester_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS) $(OPENMP_CFLAGS)
 dlb_tester_LDADD = libdlb.la
@@ -858,7 +855,7 @@ endif
 
 if HAVE_MPI
 bin_PROGRAMS += dlb_mpi
-dlb_mpi_SOURCES = src/utils/dlb_mpi.c $(dlb_util_sources)
+dlb_mpi_SOURCES = src/cli/dlb_mpi.c $(dlb_cmd_impl_sources)
 dlb_mpi_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 dlb_mpi_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 dlb_mpi_LDFLAGS = $(AM_LDFLAGS) $(AM_MPI_LDFLAGS)
@@ -1338,7 +1335,14 @@ dist_man_MANS = \
 	$(man3_builddir)/dlb_errors.h.3 \
 	$(END)
 
-$(man1_builddir)/doxy.stamp: $(bin_sources)
+bin_sources_with_man = \
+	src/cli/dlb.c \
+	src/cli/dlb_mpi.c \
+	src/cli/dlb_run.c \
+	src/cli/dlb_shm.c \
+	src/cli/dlb_taskset.c
+
+$(man1_builddir)/doxy.stamp: $(bin_sources_with_man)
 	@$(MKDIR_P) $(man1_builddir)
 	$(DOXYMAN1_verbose)$(DOXYGEN) $(DOXYFILE_MAN1)
 	@touch $(man1_builddir)/doxy.stamp

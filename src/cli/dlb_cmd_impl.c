@@ -159,7 +159,7 @@ static void print_affinity(bool do_gpu_affinity, bool full_uuid) {
 }
 
 
-int dlb_util(int argc, char *argv[]) {
+int dlb_cmd_impl(int argc, char *argv[]) {
 
     bool do_affinity = false;
     bool do_gpu_affinity = false;
