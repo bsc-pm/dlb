@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -54,16 +54,19 @@ static int64_t get_time_in_ms(void) {
 
 static void __attribute__((__noreturn__)) usage(const char *program, FILE *out) {
     fprintf(out, "DLB tester\n");
-    fputs("Simulate a DLB program, print binding info at the specified interval.\n\n", out);
+    fputs("Simulate a DLB program for experimenting with CPU affinity.\n\n", out);
+
+    fputs("This proces periodically reports the current CPU affinity of its threads"
+            " and remain running until interrupted.\n\n", out);
 
     fprintf(out, "usage: %s [OPTIONS]\n", program);
     fputs((
                 "Options:\n"
-                "  -b, --busy-wait              force 100%% CPU usage while waiting\n"
-                "  -i, --interval <ms>          amount of milliseconds between each update\n"
-                "  -l, --lend-cpus[=<cpuset>]   lend CPUs to LeWI, defaults to all\n"
-                "      --lend-interval <ms>     if specified, interval to reclaim lent CPUs\n"
-                "  -h, --help                   print this help\n"
+                "  -b, --busy-wait              Force busy-waiting between updates.\n"
+                "  -i, --interval <ms>          Update interval in milliseconds (default 1000).\n"
+                "  -l, --lend-cpus[=<cpuset>]   Lend CPUs to LeWI (default: all CPUs).\n"
+                "      --lend-interval <ms>     Reclaim lent CPUs every <ms>.\n"
+                "  -h, --help                   Show this help message and exit.\n"
                 "\n"
                 ), out);
 
@@ -139,10 +142,14 @@ int main(int argc, char *argv[]) {
                 break;
         }
     }
+
+    /* Startup */
+    printf("%s started (PID %d)\n", argv[0], getpid());
     printf("Query interval: %d ms\n", query_interval_ms);
     if (lend_cpus_interval > 0) {
         printf("LeWI interval:  %d ms\n", lend_cpus_interval);
     }
+    printf("Press Ctrl+C to terminate.\n\n");
 
     /* Initialize DLB */
     DLB_Init(0, &process_mask, "--drom --lewi");

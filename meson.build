@@ -19,6 +19,7 @@ dl_dep = cc.find_library('dl', required : true)
 thread_dep = dependency('threads')
 hwloc_dep = dependency('hwloc', required : get_option('hwloc'))
 common_deps = [m_dep, rt_dep, dl_dep, thread_dep, hwloc_dep]
+omp_dep = dependency('openmp', language : 'c', required : false)
 mpi_dep = dependency('mpi', language : 'c', required : get_option('mpi'))
 mpif_dep = dependency('mpi', language : 'fortran', required : get_option('mpi'))
 cuda_dep = dependency('cuda', modules: ['cupti'], required : get_option('cuda'))
@@ -554,55 +555,57 @@ libdlb_papi_test = shared_module(
 ### Binaries                                                                  ###
 #################################################################################
 
-binaries = [
-  'dlb',
-  'dlb_run',
-  'dlb_shm',
-  'dlb_taskset',
+dlb_cmd_impl = [
+  'src/cli/dlb_cmd_impl.c',
+  'src/cli/dlb_cmd_impl.h',
 ]
 
-dlb_util = [
-  'src/utils/dlb_util.c',
-  'src/utils/dlb_util.h',
-]
+binaries = {
+  'dlb': { 'extra_sources': dlb_cmd_impl },
+  'dlb_mpi': { 'extra_sources': dlb_cmd_impl, 'mpi': true },
+  'dlb_run': {},
+  'dlb_shm': {},
+  'dlb_taskset': {},
+  'dlb_tester': { 'omp': true},
+}
 
-foreach bin : binaries
-  # only dlb needs dlb_util.c
-  bin_sources = ['src/utils/' + bin + '.c']
-  if bin == 'dlb'
-    bin_sources += dlb_util
+
+foreach name, cfg : binaries
+  is_mpi = cfg.get('mpi', false)
+  is_omp = cfg.get('omp', false)
+
+   if is_mpi and not mpi_dep.found()
+    continue
   endif
 
-  executable(bin,
+  if is_omp and not omp_dep.found()
+    continue
+  endif
+
+  bin_sources = ['src/cli/' + name + '.c'] + cfg.get('extra_sources', [])
+  deps = common_deps
+  c_args = []
+
+  if is_mpi
+    deps += mpi_dep
+    c_args = mpi_cpp_flags
+  endif
+
+  if is_omp
+    deps += omp_dep
+  endif
+
+  executable(
+    name,
     bin_sources,
     include_directories : common_includes,
+    c_args : c_args,
     link_with : libdlb,
-    dependencies : common_deps,
+    dependencies : deps,
     install : true,
     install_rpath : '$ORIGIN/../' + get_option('libdir'),
   )
 endforeach
-
-
-if mpi_dep.found()
-
-  mpi_binaries = [
-    'dlb_mpi',
-  ]
-
-  foreach bin : mpi_binaries
-    bin_sources = ['src/utils/' + bin + '.c'] + dlb_util
-    executable(bin,
-      bin_sources,
-      include_directories : common_includes,
-      c_args : mpi_cpp_flags,
-      link_with : libdlb,
-      dependencies : [common_deps, mpi_dep],
-      install : true,
-      install_rpath : '$ORIGIN/../' + get_option('libdir'),
-    )
-  endforeach
-endif
 
 
 #################################################################################

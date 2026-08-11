@@ -52,9 +52,9 @@
  *      \ref dlb_taskset "dlb_taskset"(1)
  */
 
-#include "utils/dlb_util.h"
+#include "cli/dlb_cmd_impl.h"
 
 int main(int argc, char *argv[]) {
 
-    return dlb_util(argc, argv);
+    return dlb_cmd_impl(argc, argv);
 }
