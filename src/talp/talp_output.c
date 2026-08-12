@@ -1231,7 +1231,7 @@ static void sanitize_counter(const char *value_name, double *value, const char *
 
     if (*value < 0) {
         if (warn_count < MAX_DETAILED_WARNINGS) {
-            warning("Record '%s': counter '%s' had value '%f' (set to 0)",
+            warning("Region '%s': counter '%s' had value '%f' (set to 0)",
                     region_name, value_name, *value);
         } else if (warn_count == MAX_DETAILED_WARNINGS) {
             warning("Further coefficient warnings suppressed (already reported %d).",
@@ -1247,7 +1247,7 @@ static void sanitize_coefficient(const char *value_name, float *value, const cha
 
     if (*value < -FLT_EPSILON || *value > 1.0f + FLT_EPSILON) {
         if (warn_count < MAX_DETAILED_WARNINGS) {
-            warning("Record '%s': metric '%s' = %f is outside the allowed range"
+            warning("Region '%s': metric '%s' = %f is outside the allowed range"
                     " [0.0, 1.0]. If you think this is unexpected, please report"
                     " it to %s", region_name, value_name, *value, PACKAGE_BUGREPORT);
         } else if (warn_count == MAX_DETAILED_WARNINGS) {

@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import sys
 sys.path.insert(0, str(Path(__file__).parents[1]))
 from conftest import run_binary, assert_approx, NS, TIME_TOLERANCE, METRIC_TOLERANCE
@@ -8,8 +9,19 @@ BINARY = Path(__file__).parent / "test_hybrid"
 
 @pytest.mark.parametrize("repetitions", [1, 2])
 def test_hybrid_profile(tmp_path, repetitions):
-    output = run_binary(BINARY, tmp_path / "result.json",
-                        n_proc=2, extra_env={"OMP_NUM_THREADS": "2"}, args=[str(repetitions)])
+    output = run_binary(BINARY,
+                        tmp_path / "result.json",
+                        n_proc=2,
+                        extra_env={
+                            "OMP_NUM_THREADS": "2",
+                            "OMP_PROC_BIND": "true",
+                            "OMP_PLACES": "threads",
+                        },
+                        args=[str(repetitions)])
+
+    cpu_count = os.cpu_count() or 1
+
+    # ----- Region: Test -----
     g = output["Application"]["Test"]
 
     # --- Structural ---
@@ -72,4 +84,46 @@ def test_hybrid_profile(tmp_path, repetitions):
     assert_approx(g["ompSerializationEfficiency"], expected=0.71, label="ompSerializationEfficiency",
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(g["ompSchedulingEfficiency"], expected=0.99, label="ompSchedulingEfficiency",
+                  absolute_tol=METRIC_TOLERANCE)
+
+
+    # ----- Region: After OMP -----
+    a = output["Application"]["After OMP"]
+
+    # --- Structural ---
+    assert g["numCpus"] == min(4, cpu_count)
+    assert a["numOmpThreads"] == 4
+    assert a["numMpiRanks"] == 2
+    assert a["numOmpParallels"] == 0
+
+    # --- Elapsed: serial(0.5) + parallel rank0(1.0) (mpi(~0.5) is overlapped) ≈ 1.5s ---
+    elapsed_s = a["elapsedTime"] / NS
+    assert_approx(elapsed_s, expected=0.5 * repetitions, label="elapsedTime",
+                  relative_tol=TIME_TOLERANCE)
+
+    # --- MPI time: rank1 waits ~0.5s, rank0 ~0s → total ~0.5s ---
+    mpi_s = a["mpiTime"] / NS
+    assert_approx(mpi_s, expected=0.5 * repetitions, label="mpiTime",
+                  relative_tol=TIME_TOLERANCE)
+
+    # --- MPI Worker Idle time: rank1 worker thread waits ~0.5s, rank0 ~0s → total ~0.5s ---
+    mpi_worker_idles = a["mpiWorkerIdleTime"] / NS
+    assert_approx(mpi_s, expected=0.5 * repetitions, label="mpiWorkerIdleTime",
+                  relative_tol=TIME_TOLERANCE)
+
+    # --- OMP serialization---
+    # rank0: nothing
+    # rank1: 1 worker thread idle during 0.5s after parallel
+    serial_s = a["ompSerializationTime"] / NS
+    assert_approx(serial_s, expected=0.5 * repetitions, label="ompSerializationTime",
+                  relative_tol=TIME_TOLERANCE)
+
+    # --- Efficiency checks ---
+    assert_approx(a["parallelEfficiency"], expected=0.00, label="parallelEfficiency",
+                  absolute_tol=METRIC_TOLERANCE)
+    assert_approx(a["mpiParallelEfficiency"], expected=0.50, label="mpiParallelEfficiency",
+                  absolute_tol=METRIC_TOLERANCE)
+    assert_approx(a["mpiCommunicationEfficiency"], expected=1.00, label="mpiCommunicationEfficiency",
+                  absolute_tol=METRIC_TOLERANCE)
+    assert_approx(a["mpiLoadBalance"], expected=0.50, label="mpiLoadBalance",
                   absolute_tol=METRIC_TOLERANCE)
