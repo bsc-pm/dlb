@@ -156,6 +156,9 @@ static int init_device_info(void) {
             .pci_unique_id = make_pci_unique_id(
                     prop.pciDomainID, prop.pciBusID, prop.pciDeviceID),
         };
+
+        PLUGIN_PRINT("Device %"PRIu32", unique_id:%"PRIu64"\n",
+                device_info[gpu].device_id, device_info[gpu].pci_unique_id);
     }
 
     return DLB_BACKEND_SUCCESS;
@@ -176,12 +179,6 @@ typedef CUpti_ActivityKernel9 ACTIVITY_KERNEL_TYPE;
 typedef CUpti_ActivityKernel8 ACTIVITY_KERNEL_TYPE;
 #endif
 
-#if CUPTI_API_VERSION >= 24         /* 12.6 */
-typedef CUpti_ActivityMemory4 ACTIVITY_MEMORY2_TYPE;
-#else
-typedef CUpti_ActivityMemory3 ACTIVITY_MEMORY2_TYPE;
-#endif
-
 #if CUPTI_API_VERSION >= 26         /* 12.8 */
 typedef CUpti_ActivityMemcpy6 ACTIVITY_MEMCPY_TYPE;
 #else
@@ -193,15 +190,16 @@ typedef CUpti_ActivityMemset4 ACTIVITY_MEMSET_TYPE;
 typedef CUpti_ActivityMemcpyPtoP4 ACTIVITY_MEMCPY2_TYPE;
 
 static CUpti_ActivityKind activity_kinds[] = {
+    // Kernels:
     CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL,
-    // reports separate records for memory allocation and release operations, but no duration
-    CUPTI_ACTIVITY_KIND_MEMORY2,
     // H2H, H2D, D2H, D2D memory copies / sets:
     CUPTI_ACTIVITY_KIND_MEMSET,
     CUPTI_ACTIVITY_KIND_MEMCPY,
     // Peer to peer memory copies:
     CUPTI_ACTIVITY_KIND_MEMCPY2,
 
+    // reports separate records for memory allocation and release operations, but no duration
+    /* CUPTI_ACTIVITY_KIND_MEMORY2, */
     // disabled, reports lifetime of allocations
     /* CUPTI_ACTIVITY_KIND_MEMORY, */
     // to discuss:
@@ -245,31 +243,17 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                         && kernel_end > safe_timestamp) {
 
                     uint32_t id = kernel_record->deviceId;
-                    gpu_record_append_event(&kernel_buffer[id], kernel_start, kernel_end);
 
                     PLUGIN_PRINT("KERNEL: [%"PRIu32"]"
                             " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, kernel_start, kernel_end, kernel_end - kernel_start);
-                }
 
-                break;
-            }
-            case CUPTI_ACTIVITY_KIND_MEMORY2: {
-                ACTIVITY_MEMORY2_TYPE *memory_record = (ACTIVITY_MEMORY2_TYPE *)record;
-
-                // CUPTI_ACTIVITY_KIND_MEMORY2 operations do not provide a duration
-                uint64_t memory_start = memory_record->timestamp;
-                uint64_t memory_end = memory_record->timestamp;
-
-                if (memory_start >= safe_timestamp
-                        && memory_end > safe_timestamp) {
-
-                    uint32_t id = memory_record->deviceId;
-                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
-
-                    PLUGIN_PRINT("MEMORY2: [%"PRIu32"]"
-                            " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                            id, memory_start, memory_end, memory_end - memory_start);
+                    if (id < num_devices) {
+                        gpu_record_append_event(&kernel_buffer[id], kernel_start, kernel_end);
+                    } else {
+                        PLUGIN_WARNING("Unexpected out-of-range deviceId=%"PRIu32
+                                " for kind %d\n", id, kernel_record->kind);
+                    }
                 }
 
                 break;
@@ -284,11 +268,17 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                         && memory_end > safe_timestamp) {
 
                     uint32_t id = memory_record->deviceId;
-                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
                     PLUGIN_PRINT("MEMSET: [%"PRIu32"]"
                             " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, memory_start, memory_end, memory_end - memory_start);
+
+                    if (id < num_devices) {
+                        gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
+                    } else {
+                        PLUGIN_WARNING("Unexpected out-of-range deviceId=%"PRIu32
+                                " for kind %d\n", id, memory_record->kind);
+                    }
                 }
 
                 break;
@@ -303,11 +293,17 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                         && memory_end > safe_timestamp) {
 
                     uint32_t id = memory_record->deviceId;
-                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
                     PLUGIN_PRINT("MEMCPY: [%"PRIu32"]"
                             " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, memory_start, memory_end, memory_end - memory_start);
+
+                    if (id < num_devices) {
+                        gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
+                    } else {
+                        PLUGIN_WARNING("Unexpected out-of-range deviceId=%"PRIu32
+                                " for kind %d\n", id, memory_record->kind);
+                    }
                 }
 
                 break;
@@ -322,11 +318,17 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
                         && memory_end > safe_timestamp) {
 
                     uint32_t id = memory_record->deviceId;
-                    gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
 
                     PLUGIN_PRINT("MEMCPY2: [%"PRIu32"]"
                             " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             id, memory_start, memory_end, memory_end - memory_start);
+
+                    if (id < num_devices) {
+                        gpu_record_append_event(&memory_buffer[id], memory_start, memory_end);
+                    } else {
+                        PLUGIN_WARNING("Unexpected out-of-range deviceId=%"PRIu32
+                                " for kind %d\n", id, memory_record->kind);
+                    }
                 }
 
                 break;
