@@ -8,12 +8,15 @@ import pytest
 BINARY = Path(__file__).parent / "test_omp_nested"
 
 @pytest.mark.parametrize("repetitions", [1, 2])
-def test_omp_states_profile(tmp_path, repetitions):
-    output = run_binary(BINARY, tmp_path / "result.json",
-                        n_proc=1, extra_env={
+def test_omp_nested_profile(tmp_path, repetitions):
+    output = run_binary(BINARY,
+                        tmp_path / "result.json",
+                        n_proc=1,
+                        extra_env={
                             "OMP_NUM_THREADS": "2,2",
                             "OMP_PROC_BIND": "true",
-                            "OMP_PLACES": "threads"},
+                            "OMP_PLACES": "threads",
+                        },
                         args=[str(repetitions)])
 
     cpu_count = os.cpu_count() or 1
@@ -68,7 +71,7 @@ def test_omp_states_profile(tmp_path, repetitions):
     s = output["Application"]["Small"]
 
     # --- Structural ---
-    assert s["numCpus"] == 1
+    assert g["numCpus"] == min(4, cpu_count)
     assert s["numMpiRanks"] == 0
     assert s["numOmpParallels"] == 1 * repetitions
 

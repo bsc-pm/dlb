@@ -40,6 +40,9 @@ void run_test(int rank) {
         busy_wait(work);
     }
 
+    dlb_monitor_t *monitor = DLB_MonitoringRegionRegister("After OMP");
+    DLB_MonitoringRegionStart(monitor);
+
     /* MPI phase: rank 0 took 1.0s in parallel → arrives 0.5s later than rank 1 */
     int dummy = 0;
     MPI_Status status;
@@ -50,6 +53,8 @@ void run_test(int rank) {
         MPI_Recv(&dummy, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); /* waits ~0.5s */
         MPI_Send(&dummy, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
     }
+
+    DLB_MonitoringRegionStop(monitor);
 }
 
 int main(int argc, char *argv[]) {

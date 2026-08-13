@@ -386,7 +386,9 @@ void talp_sample_aggregate_all_to_macrosample(
 
             if (sample->generation_ts < current_generation_ts) {
                 /* Sample not updated in the current generation.
-                 * Skip aggregation of any other timer.*/
+                 * Skip aggregation of any other timer, but still account for the CPU.*/
+
+                CPU_OR(&macrosample->cpu_mask, &macrosample->cpu_mask, &sample->cpu_mask);
                 continue;
             }
 
