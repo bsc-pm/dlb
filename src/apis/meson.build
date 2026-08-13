@@ -12,18 +12,19 @@ dlb_h = configure_file(
 
 headers = [
   dlb_h,
+  'dlb_drom.h',
+  'dlb_errors.h',
+  'dlb_mngo.h',
   'dlb_sp.h',
   'dlb_stats.h',
-  'dlb_drom.h',
   'dlb_talp.h',
-  'dlb_mngo.h',
   'dlb_types.h',
-  'dlb_errors.h',
-  'dlbf.h',
   'dlbf-errors.h',
+  'dlbf.h',
   'dlbf_drom.h',
-  'dlbf_talp.h',
   'dlbf_mngo.h',
+  'dlbf_talp.h',
+  'dlbf_types.h',
 ]
 
 install_headers(headers)

@@ -37,13 +37,11 @@
             integer(kind=c_int), intent(in) :: ncpus
         end function dlb_drom_getnumcpus
 
-        function dlb_drom_setprocessmaskstr(pid, mask, flags)           &
-     &          result (ierr)                                           &
-     &          bind(c, name='DLB_DROM_SetProcessMaskStr')
+        function dlb_drom_setprocessmaskstr(pid, mask, flags) result (ierr)
             use iso_c_binding
             integer(kind=c_int) :: ierr
             integer(kind=c_int), value, intent(in) :: pid
-            character(kind=c_char), intent(in) :: mask(*)
+            character(len=*), intent(in) :: mask
             integer(kind=c_int), value, intent(in) :: flags
         end function dlb_drom_setprocessmaskstr
       end interface

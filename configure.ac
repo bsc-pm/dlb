@@ -198,6 +198,7 @@ AX_VAR_POPVALUE([CFLAGS])
 AX_CHECK_ATTRIBUTE_ALIAS
 
 ##### Fortran Compiler checks #####
+# Check before conditional to avoid autoreconf errors:
 AC_PROG_FC
 
 # use Fortran free-form by default
@@ -205,8 +206,17 @@ AC_PROG_FC
 # not found, because testing FC doesn't seem to work
 AC_FC_FREEFORM([:], [:])
 
-# Disable Fortran tests if FC is not found
-AS_IF([test "x$FC" != x], [
+AC_MSG_CHECKING([whether to build the Fortran API])
+AC_ARG_ENABLE([fortran],
+    AS_HELP_STRING([--disable-fortran], [do not build the Fortran API @<:@default=auto@:>@]),
+    [], dnl Implicit: enable_fortran=$enableval
+    [enable_fortran=auto]
+)
+AC_MSG_RESULT([$enable_fortran])
+
+AS_IF([test "x$enable_fortran" != xno && test "x$FC" != x], [
+    have_fortran=yes
+
     # use the Fortran compiler for the following checks
     AC_LANG_PUSH([Fortran])
 
@@ -238,12 +248,16 @@ AS_IF([test "x$FC" != x], [
 
     # Check for assumed-type support (TYPE(*)), or defer to REAL
     AX_CHECK_FC_IGNORE_TYPE
+], [
+    have_fortran=no
 ])
-AM_CONDITIONAL([HAVE_FORTRAN], [test "x$FC" != x])
+
+AM_CONDITIONAL([HAVE_FORTRAN], [test "x$have_fortran" = xyes])
+AC_SUBST([FORTRAN_ENABLED], [$have_fortran])
 
 
 ################################################################################
-# Configure library versions
+# Configure library variants
 ################################################################################
 
 AC_MSG_CHECKING([whether to compile the debug variant library])
@@ -572,6 +586,21 @@ summary_title="$PACKAGE_STRING configuration summary"
 summary_title_len="${#summary_title}"
 summary_title_underline="$(printf '%*s' "$summary_title_len" | tr ' ' '=')"
 
+# Compiler info
+# get first non-empty line
+cc_version="$($CC --version 2>/dev/null | sed -n '/./{p;q;}')"
+AS_IF([test x"$cc_version" = x], [cc_version="$CC"])
+
+AS_IF([test "x$enable_fortran" = xno], [
+    fortran_api_reason="no (disabled)"
+], [test "x$FC" = x], [
+    fortran_api_reason="no (Fortran compiler not found)"
+], [
+    fc_version="$($FC --version 2>/dev/null | sed -n '/./{p;q;}')"
+    AS_IF([test x"$fc_version" = x], [fc_version="$FC"])
+    fortran_api_reason="yes ($fc_version)"
+])
+
 # Generate variant strings
 AS_IF([test "x$enable_debug" = xyes],
       [debug_variant="yes (libdlb_dbg.so)"], [debug_variant=no])
@@ -659,6 +688,8 @@ $summary_title
 $summary_title_underline
 
 Installation prefix       : $prefix
+C compiler                : $cc_version
+Fortran API               : $fortran_api_reason
 
 Main libraries
 --------------

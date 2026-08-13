@@ -300,7 +300,7 @@ Basic usage for Fortran:
     type(c_ptr) :: dlb_handle
     integer :: err
     ...
-    dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
+    dlb_handle = DLB_MonitoringRegionRegister("Region 1")
     ...
     do ...
         ! Resume region
@@ -351,7 +351,7 @@ For Fortran codes, the struct can be accessed as in this example:
     integer :: err
     character(16), pointer :: monitor_name
     ...
-    dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
+    dlb_handle = DLB_MonitoringRegionRegister("Region 1")
     err = DLB_MonitoringRegionStart(dlb_handle)
     err = DLB_MonitoringRegionStop(dlb_handle)
     ...
@@ -501,7 +501,7 @@ Example in Fortran:
     type(dlb_pop_metrics_t) :: pop_metrics
     integer :: err
     ...
-    dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
+    dlb_handle = DLB_MonitoringRegionRegister("Region 1")
     ! The dlb_handle is then used to start and stop the region.
     ...
     ! This call performs an MPI synchronization across all processes.

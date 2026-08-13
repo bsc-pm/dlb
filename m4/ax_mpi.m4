@@ -5,7 +5,8 @@ AC_DEFUN([AX_MPI],
 [
     AC_MSG_CHECKING([for MPI])
     AC_ARG_WITH([mpi],
-        AS_HELP_STRING([--with-mpi@<:@=DIR@:>@], [build libdlb_mpi.so, a library to intercept both C and Fortran MPI]),
+        AS_HELP_STRING([--with-mpi@<:@=DIR@:>@],
+                       [build libdlb_mpi.so, a library to intercept both C and Fortran MPI]),
         [], dnl Implicit: with_mpi=$withvalue
         [with_mpi=no]
     )
@@ -34,7 +35,7 @@ AC_DEFUN([AX_MPI],
             AC_PATH_PROGS([MPICC], [$MPICC mpicc], [], [$PATH])
         ])
         AC_PATH_PROGS([MPIFC], [$MPIFC mpif90 mpifort mpifc], [], [$user_mpi_bin])
-        AS_IF([test "x$MPIFC" = x], [
+        AS_IF([test "x$MPIFC" = x && test "x$have_fortran" = xyes], [
             AC_PATH_PROGS([MPIFC], [$MPIFC mpif90 mpifort mpifc], [], [$PATH])
         ])
         AC_PATH_PROGS([MPIEXEC], [mpiexec mpirun], [], [$user_mpi_bin])
@@ -185,69 +186,69 @@ AC_DEFUN([AX_MPI],
         rm -f conftest
         AC_MSG_RESULT([$MPI_LIBRARY_VERSION])
 
-        ### MPI FORTRAN INCLUDES ###
-        AS_IF([test x"$FC" != x && test x"$mpi3" = xyes], [
+        ### MPI FORTRAN CHECKS ###
+        AS_IF([test x"$have_fortran" = xyes && test x"$mpi3" = xyes], [
             AX_CHECK_MPI_FCFLAGS([MPIFC], [$user_mpi_includes], [], [])
-        ])
 
-        # fixme, cached?
-        AX_CHECK_MPIF_LDFLAGS([MPIFC], [$user_mpi_libdir],
-            [],
-            [AC_MSG_ERROR([Cannot find Fortran MPI libraries])])
+            # fixme, cached?
+            AX_CHECK_MPIF_LDFLAGS([MPIFC], [$user_mpi_libdir],
+                [],
+                [AC_MSG_ERROR([Cannot find Fortran MPI libraries])])
 
-        ### Check for MPI_SUBARRAYS_SUPPORTED
-        AS_IF([test x"$have_mpi_f08_module" = xyes], [
-            AC_MSG_CHECKING([for MPI_SUBARRAYS_SUPPORTED])
-            AC_LANG_PUSH([Fortran])
-            AC_LANG_CONFTEST([
-                AC_LANG_PROGRAM([], [[
-                    use mpi_f08
-                    write(*, '(L1)')  MPI_SUBARRAYS_SUPPORTED
-                ]])
+            ### Check for MPI_SUBARRAYS_SUPPORTED
+            AS_IF([test x"$have_mpi_f08_module" = xyes], [
+                AC_MSG_CHECKING([for MPI_SUBARRAYS_SUPPORTED])
+                AC_LANG_PUSH([Fortran])
+                AC_LANG_CONFTEST([
+                    AC_LANG_PROGRAM([], [[
+                        use mpi_f08
+                        write(*, '(L1)')  MPI_SUBARRAYS_SUPPORTED
+                    ]])
+                ])
+                AC_LANG_POP([Fortran])
+                AS_IF([$MPIFC $FCFLAGS conftest.f -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
+                    mpi_subarrays_supported="$(./conftest)"
+                ], [
+                    mpi_subarrays_supported=no
+                ])
+                rm -f conftest
+                AC_MSG_RESULT([$mpi_subarrays_supported])
+                AS_IF([test x"$mpi_subarrays_supported" = xT], [
+                    AC_DEFINE([MPI_SUBARRAYS_SUPPORTED], [1],
+                        [Define to 1 if MPI defines MPI_SUBARRAYS_SUPPORTED constant as .TRUE.])
+                ])
             ])
-            AC_LANG_POP([Fortran])
-            AS_IF([$MPIFC $FCFLAGS conftest.f -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
-                mpi_subarrays_supported="$(./conftest)"
+
+            ### Check for MPI_F08_status C type
+            AS_IF([test x"$have_mpi_f08_module" = xyes], [
+                AC_MSG_CHECKING([for MPI_F08_status in mpi.h])
+                AC_LANG_PUSH([C])
+                AC_LANG_CONFTEST([
+                    AC_LANG_PROGRAM([], [[
+                        #include <mpi.h>
+                        (void)sizeof(MPI_F08_status);
+                    ]])
+                ])
+                AC_LANG_POP([C])
+                AS_IF([$MPICC $CFLAGS conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
+                    have_mpi_f08_status_type=yes
+                ], [
+                    have_mpi_f08_status_type=no
+                ])
+                rm -f conftest
+                AC_MSG_RESULT([$have_mpi_f08_status_type])
+                AS_IF([test "x$have_mpi_f08_status_type" = xyes], [
+                    AC_DEFINE([HAVE_MPI_F08_STATUS_TYPE], [1],
+                            [Define if MPI_F08_status is available in mpi.h])
+                ])
+            ])
+
+            ### Check for <ISO_Fortran_binding.h>
+            AC_CHECK_HEADERS([ISO_Fortran_binding.h], [
+                have_iso_fortran_h=yes
             ], [
-                mpi_subarrays_supported=no
+                have_iso_fortran_h=no
             ])
-            rm -f conftest
-            AC_MSG_RESULT([$mpi_subarrays_supported])
-            AS_IF([test x"$mpi_subarrays_supported" = xT], [
-                AC_DEFINE([MPI_SUBARRAYS_SUPPORTED], [1],
-                    [Define to 1 if MPI defines MPI_SUBARRAYS_SUPPORTED constant as .TRUE.])
-            ])
-        ])
-
-        ### Check for MPI_F08_status C type
-        AS_IF([test x"$have_mpi_f08_module" = xyes], [
-            AC_MSG_CHECKING([for MPI_F08_status in mpi.h])
-            AC_LANG_PUSH([C])
-            AC_LANG_CONFTEST([
-                AC_LANG_PROGRAM([], [[
-                    #include <mpi.h>
-                    (void)sizeof(MPI_F08_status);
-                ]])
-            ])
-            AC_LANG_POP([C])
-            AS_IF([$MPICC $CFLAGS conftest.c -o conftest 2>&AS_MESSAGE_LOG_FD 1>&2], [
-                have_mpi_f08_status_type=yes
-            ], [
-                have_mpi_f08_status_type=no
-            ])
-            rm -f conftest
-            AC_MSG_RESULT([$have_mpi_f08_status_type])
-            AS_IF([test "x$have_mpi_f08_status_type" = xyes], [
-                AC_DEFINE([HAVE_MPI_F08_STATUS_TYPE], [1],
-                        [Define if MPI_F08_status is available in mpi.h])
-            ])
-        ])
-
-        ### Check for <ISO_Fortran_binding.h>
-        AC_CHECK_HEADERS([ISO_Fortran_binding.h], [
-            have_iso_fortran_h=yes
-        ], [
-            have_iso_fortran_h=no
         ])
 
         ### Check for specific C MPI library
@@ -268,6 +269,14 @@ AC_DEFUN([AX_MPI],
         )
         AC_MSG_RESULT([$enable_fortran_mpi_library])
 
+        AS_IF([test x"$enable_fortran_mpi_library" != xno], [
+            AS_IF([test "x$enable_fortran" = xno], [
+                AC_MSG_ERROR([Cannot build Fortran MPI library. Fortran is disabled.])
+            ], [test x"$FC" = x], [
+                AC_MSG_ERROR([Cannot build Fortran MPI library. Fortran compiler not found.])
+            ])
+        ])
+
         ### MPI Fortran 2008 bindings ###
         mpi_f08=no
         AC_MSG_CHECKING([whether MPI Fortran 2008 bindings are requested])
@@ -279,7 +288,7 @@ AC_DEFUN([AX_MPI],
         AC_MSG_RESULT([$enable_mpi_f08_bindings])
         AS_IF([test x"$enable_mpi_f08_bindings" != xno], [
             AC_MSG_CHECKING([whether MPI Fortran 2008 bindings are supported])
-            AS_IF([test x"$FC" != x \
+            AS_IF([test x"$have_fortran" = xyes \
                     && test x"$mpi3" = xyes \
                     && test x"$have_iso_fortran_h" = xyes \
                     && test x"$have_mpi_f08_module" = xyes \
@@ -303,6 +312,7 @@ AC_DEFUN([AX_MPI],
             AS_IF([test x"$enable_mpi_f08ts_bindings" != xno], [
                 AC_MSG_CHECKING([whether MPI Fortran 2008 + TS 29113 bindings are supported])
                 AS_IF([test x"$mpi_f08" = xyes \
+                        && test x"$have_fortran" = xyes \
                         && test x"$mpi3" = xyes \
                         && test x"$have_iso_fortran_h" = xyes \
                         && test x"$have_mpi_f08_module" = xyes \

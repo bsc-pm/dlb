@@ -21,12 +21,10 @@
        integer, parameter ::DLB_DROM_REGION     = 2
 
        interface
-        function dlb_mngo_regionregister(region_name, flags)           &
-    &           result(handle)                                         &
-    &           bind(c, name="DLB_MNGO_RegionRegister")
+        function dlb_mngo_regionregister(region_name, flags) result(handle)
             use iso_c_binding
             type(c_ptr) :: handle
-            character(kind=c_char), intent(in) :: region_name(*)
+            character(len=*), intent(in) :: region_name
             integer(kind=c_int), value, intent(in) :: flags
         end function dlb_mngo_regionregister
 
