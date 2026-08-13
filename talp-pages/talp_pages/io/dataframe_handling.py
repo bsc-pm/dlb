@@ -205,10 +205,9 @@ def __load_talp_json_3_6(json_input, json_path):
             + "xMPI "
             + df.loc[:, "totalThreads"].astype(str)
             + "xOpenMP"
-            + num_gpus
-            if has_gpus
-            else ""
         )
+        if has_gpus:
+            df["ressourceLabel"] = df["ressourceLabel"] + num_gpus
     elif execution_mode == ExecutionMode.SERIAL:
         df["ressourceLabel"] = ExecutionMode.SERIAL.value
     else:
