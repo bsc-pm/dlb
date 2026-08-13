@@ -171,10 +171,10 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
                 if (kernel_start >= safe_timestamp
                         && kernel_end > safe_timestamp) {
 
-                    gpu_record_append_event(&kernel_buffer, kernel_start, kernel_end);
-
                     PLUGIN_PRINT("KERNEL: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                             kernel_start, kernel_end, kernel_end - kernel_start);
+
+                    gpu_record_append_event(&kernel_buffer, kernel_start, kernel_end);
                 }
 
                 break;
@@ -243,11 +243,11 @@ static void buffer_callback(const rocprofiler_record_header_t* begin,
                     if (memory_start >= safe_timestamp
                             && memory_end > safe_timestamp) {
 
-                        gpu_record_append_event(&memory_buffer, memory_start, memory_end);
-
                         PLUGIN_PRINT("%s: start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
                                 operation_name,
                                 memory_start, memory_end, memory_end - memory_start);
+
+                        gpu_record_append_event(&memory_buffer, memory_start, memory_end);
                     }
                 }
                 break;

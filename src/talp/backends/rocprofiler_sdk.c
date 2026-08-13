@@ -136,6 +136,9 @@ available_agents_cb(rocprofiler_agent_version_t version,
                 .pci_unique_id = make_pci_unique_id(agent->domain, agent->location_id),
                 .agent_id = agent->id,
             };
+
+            PLUGIN_PRINT("Device %"PRIu32", unique_id:%"PRIu64"\n",
+                    device_info[id].device_id, device_info[id].pci_unique_id);
         }
     }
 
@@ -243,12 +246,18 @@ void async_events_callback(
                     && kernel_end > safe_timestamp) {
 
                 int id = agent_to_gpu_index(record->dispatch_info.agent_id);
+
+                PLUGIN_PRINT("KERNEL: [%"PRIu32"]"
+                        " start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
+                        id, kernel_start, kernel_end, kernel_end - kernel_start);
+
                 if (id >= 0) {
                     gpu_record_append_event(&kernel_buffer[id], kernel_start, kernel_end);
+                } else {
+                    PLUGIN_WARNING("Unexpected out-of-range deviceId=%d"
+                            " for kind %d\n", id, header->kind);
                 }
 
-                PLUGIN_PRINT("KERNEL: [%"PRIu32"] start=%"PRIu64", end=%"PRIu64", duration=%"PRIu64"\n",
-                        id, kernel_start, kernel_end, kernel_end - kernel_start);
             }
         }
         else if(header->kind == ROCPROFILER_BUFFER_TRACING_MEMORY_COPY) {
@@ -264,6 +273,7 @@ void async_events_callback(
 
                 int dst_id = -1;
                 int src_id = -1;
+
                 if (record->operation == ROCPROFILER_MEMORY_COPY_HOST_TO_DEVICE
                         || record->operation == ROCPROFILER_MEMORY_COPY_DEVICE_TO_DEVICE) {
                     dst_id = agent_to_gpu_index(record->dst_agent_id);
@@ -274,6 +284,12 @@ void async_events_callback(
                     src_id = agent_to_gpu_index(record->src_agent_id);
                 }
 
+                PLUGIN_PRINT("MEMCPY: [%s%d -> %s%d] start=%"PRIu64
+                        ", end=%"PRIu64", duration=%"PRIu64"\n",
+                        src_id >= 0 ? "" : "H", src_id >= 0 ? src_id : 0,
+                        dst_id >= 0 ? "" : "H", dst_id >= 0 ? dst_id : 0,
+                        memory_start, memory_end, memory_end - memory_start);
+
                 if (dst_id >= 0) {
                     gpu_record_append_event(&memory_buffer[dst_id], memory_start, memory_end);
                 }
@@ -281,12 +297,6 @@ void async_events_callback(
                 if (src_id >= 0) {
                     gpu_record_append_event(&memory_buffer[src_id], memory_start, memory_end);
                 }
-
-                PLUGIN_PRINT("MEMCPY: [%s%d -> %s%d] start=%"PRIu64
-                        ", end=%"PRIu64", duration=%"PRIu64"\n",
-                        src_id >= 0 ? "" : "H", src_id >= 0 ? src_id : 0,
-                        dst_id >= 0 ? "" : "H", dst_id >= 0 ? dst_id : 0,
-                        memory_start, memory_end, memory_end - memory_start);
             }
         }
     }
