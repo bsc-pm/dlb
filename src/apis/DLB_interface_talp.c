@@ -74,7 +74,7 @@ int DLB_TALP_Detach(void) {
 
 DLB_EXPORT_SYMBOL
 int DLB_TALP_GetNumCPUs(int *ncpus) {
-    *ncpus = mu_get_system_size();
+    *ncpus = mu_get_system_count();
     return DLB_SUCCESS;
 }
 
