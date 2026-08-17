@@ -5,7 +5,7 @@ include 'dlbf_talp.h'
 type(c_ptr) :: dlb_handle
 integer :: err
 
-dlb_handle = DLB_MonitoringRegionRegister(c_char_"Region 1"//C_NULL_CHAR)
+dlb_handle = DLB_MonitoringRegionRegister("Region 1")
 
 
 ! Resume region

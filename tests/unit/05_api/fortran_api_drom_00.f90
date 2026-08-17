@@ -39,7 +39,7 @@ program test
     if (ncpus <= 0) call abort
     if (err /= DLB_SUCCESS) call abort
 
-    err = DLB_DROM_SetProcessMaskStr(0, c_char_"0-3"//C_NULL_CHAR, 0)
+    err = DLB_DROM_SetProcessMaskStr(0, "0-3", 0)
     if (err /= DLB_ERR_NOPROC) call abort
 
     err = DLB_DROM_Detach()

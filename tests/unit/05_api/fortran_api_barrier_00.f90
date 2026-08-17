@@ -36,14 +36,12 @@ program test
     if (err /= DLB_SUCCESS) call abort
     if (num_cpus < 3) stop
 
-    err = DLB_Init(0, C_NULL_PTR, c_char_"--barrier"//C_NULL_CHAR)
+    err = DLB_Init(0, C_NULL_PTR, "--barrier")
     if (err /= DLB_SUCCESS) call abort
 
-    dlb_barrier_1 = DLB_BarrierNamedRegister(                       &
-        c_char_"barrier 1"//C_NULL_CHAR, DLB_BARRIER_LEWI_OFF)
+    dlb_barrier_1 = DLB_BarrierNamedRegister("barrier 1", DLB_BARRIER_LEWI_OFF)
     if (.not. c_associated(dlb_barrier_1)) call abort
-    dlb_barrier_2 = DLB_BarrierNamedRegister(                       &
-        c_char_"barrier 2"//C_NULL_CHAR, DLB_BARRIER_LEWI_ON)
+    dlb_barrier_2 = DLB_BarrierNamedRegister("barrier 2", DLB_BARRIER_LEWI_ON)
     if (.not. c_associated(dlb_barrier_2)) call abort
 
     err = DLB_BarrierNamedAttach(dlb_barrier_2)

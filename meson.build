@@ -96,6 +96,7 @@ subdir('src/apis/python_bindings/')
 common_includes = [ include_directories('src'), include_directories('src/apis') ]
 
 common_srcs = [
+  'src/bindings/fortran/wrappers.f90',
   'src/support/array_template.h',
   'src/support/atomic.h',
   'src/support/dlb_common.h',
@@ -111,6 +112,7 @@ common_srcs = [
   'src/support/gtypes.h',
   'src/support/mask_utils.c',
   'src/support/mask_utils.h',
+  'src/support/mod_string.f90',
   'src/support/mytime.c',
   'src/support/mytime.h',
   'src/support/options.c',
@@ -339,7 +341,6 @@ if mpi_dep.found()
   mpi_sources = sources + [
     'src/mpi/mpi_core.c',
     'src/mpi/mpi_core.h',
-    'src/support/mod_string.f90',
   ]
 
   mpi_sources += gen_mpi_calls.process(

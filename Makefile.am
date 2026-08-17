@@ -53,7 +53,7 @@ endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/apis -I$(top_builddir)/src
 AM_CFLAGS = $(AC_CFLAGS)
-AM_FCFLAGS = $(AC_FCFLAGS)
+AM_FCFLAGS = $(AC_FCFLAGS) -I$(top_srcdir)/src/apis
 AM_LDFLAGS = $(AC_LDFLAGS) -avoid-version
 
 if HAVE_HWLOC
@@ -74,23 +74,29 @@ endif
 #********************************************************************************
 # Headers
 #********************************************************************************
-installheaders =                     \
+dlb_c_headers =                      \
 	src/apis/dlb.h               \
+	src/apis/dlb_drom.h          \
+	src/apis/dlb_errors.h        \
+	src/apis/dlb_mngo.h          \
 	src/apis/dlb_sp.h            \
 	src/apis/dlb_stats.h         \
-	src/apis/dlb_drom.h          \
 	src/apis/dlb_talp.h          \
 	src/apis/dlb_types.h         \
-	src/apis/dlb_errors.h        \
-	src/apis/dlbf.h              \
-	src/apis/dlbf-errors.h       \
-	src/apis/dlbf_drom.h         \
-	src/apis/dlbf_talp.h         \
-	src/apis/dlb_mngo.h          \
-	src/apis/dlbf_mngo.h         \
 	$(END)
 
-dist_include_HEADERS = $(installheaders)
+if HAVE_FORTRAN
+dlb_fortran_headers =                \
+	src/apis/dlbf-errors.h       \
+	src/apis/dlbf.h              \
+	src/apis/dlbf_drom.h         \
+	src/apis/dlbf_mngo.h         \
+	src/apis/dlbf_talp.h         \
+	src/apis/dlbf_types.h        \
+	$(END)
+endif
+
+dist_include_HEADERS = $(dlb_c_headers) $(dlb_fortran_headers)
 
 if HAVE_MPI
 nodist_include_HEADERS =             \
@@ -191,13 +197,12 @@ src/mpi/config_mpi.h: $(top_srcdir)/src/mpi/config_mpi.h.in $(MPICALLS_DB)
 		--mpi-fortran-wrapper "$(MPIFC)" \
 		$(pygen_opts)
 
-
 #********************************************************************************
 # libdlb_common.la
 #********************************************************************************
 # These sources do not depend on any MPI nor instrumentation version, only debug
 COMMON_SRCS = \
-	$(installheaders)                       \
+	$(dlb_c_headers)                        \
 	src/support/array_template.h            \
 	src/support/atomic.h                    \
 	src/support/dlb_common.h                \
@@ -285,13 +290,52 @@ libdlb_common_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 libdlb_common_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_common_la_SOURCES = $(COMMON_SRCS)
 
+DLB_CONVENIENCE_LIBS = libdlb_common.la
+
 if DEBUG_LIB
 noinst_LTLIBRARIES += libdlb_common_dbg.la
 libdlb_common_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_common_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_common_dbg_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_common_dbg_la_SOURCES = $(COMMON_SRCS)
+
+DLB_CONVENIENCE_LIBS_DBG = libdlb_common_dbg.la
 endif
+
+#********************************************************************************
+# libdlb_common_fortran.la
+#********************************************************************************
+# Same as libdlb_common.la but for Fortran sources only.
+# The split is needed to ensure that libdlb_mpic does not contain any Fortran symbol.
+if HAVE_FORTRAN
+FORTRAN_COMMON_SRCS = \
+	src/support/mod_string.f90              \
+	src/bindings/fortran/wrappers.f90       \
+	$(END)
+
+CLEANFILES += mod_string.mod
+
+src/bindings/fortran/wrappers.lo: src/support/mod_string.lo
+src/bindings/fortran/libdlb_common_fortran_la-wrappers.lo: src/support/libdlb_common_fortran_la-mod_string.lo
+src/bindings/fortran/libdlb_common_fortran_dbg_la-wrappers.lo: src/support/libdlb_common_fortran_dbg_la-mod_string.lo
+
+noinst_LTLIBRARIES += libdlb_common_fortran.la
+libdlb_common_fortran_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS)
+libdlb_common_fortran_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_common_fortran_la_SOURCES = $(FORTRAN_COMMON_SRCS)
+
+DLB_CONVENIENCE_LIBS += libdlb_common_fortran.la
+
+if DEBUG_LIB
+noinst_LTLIBRARIES += libdlb_common_fortran_dbg.la
+libdlb_common_fortran_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS)
+libdlb_common_fortran_dbg_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_common_fortran_dbg_la_SOURCES = $(FORTRAN_COMMON_SRCS)
+
+DLB_CONVENIENCE_LIBS_DBG += libdlb_common_fortran_dbg.la
+
+endif # DEBUG_LIB
+endif # HAVE_FORTRAN
 
 #********************************************************************************
 # libdlb.so
@@ -313,8 +357,8 @@ SRCS = \
 	src/talp/talp_mpi.h                     \
 	src/talp/talp_record.c                  \
 	src/talp/talp_record.h                  \
-	src/mngo/mngo.c							\
-	src/mngo/mngo.h							\
+	src/mngo/mngo.c                         \
+	src/mngo/mngo.h                         \
 	src/LB_numThreads/numThreads.c          \
 	src/LB_numThreads/numThreads.h          \
 	src/LB_numThreads/omptm_omp5.c          \
@@ -352,7 +396,21 @@ libdlb_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 libdlb_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_la_SOURCES = $(SRCS)
-libdlb_la_LIBADD = libdlb_common.la
+libdlb_la_LIBADD = $(DLB_CONVENIENCE_LIBS)
+if HAVE_FORTRAN
+# Override Automake linker selection:
+# We don't know if DLB_CONVENIENCE_LIBS contains some Fortran symbol so we need to
+# force C or Fortran link depening on whether we have Fortran enabled.
+libdlb_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                 $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_la_FCFLAGS) \
+                 $(FCFLAGS) $(libdlb_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_la_LINK = $(AM_V_FCLD)
+else
+libdlb_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                 $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_la_CFLAGS) \
+                 $(CFLAGS) $(libdlb_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_la_LINK = $(AM_V_CCLD)
+endif
 
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_dbg.la
@@ -360,7 +418,18 @@ libdlb_dbg_la_CPPFLAGS = $(DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_dbg_la_CFLAGS = $(DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_dbg_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_dbg_la_SOURCES = $(SRCS)
-libdlb_dbg_la_LIBADD = libdlb_common_dbg.la
+libdlb_dbg_la_LIBADD = $(DLB_CONVENIENCE_LIBS_DBG)
+if HAVE_FORTRAN
+libdlb_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                     $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_dbg_la_FCFLAGS) \
+                     $(FCFLAGS) $(libdlb_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_dbg_la_LINK = $(AM_V_FCLD)
+else
+libdlb_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                     $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_dbg_la_CFLAGS) \
+                     $(CFLAGS) $(libdlb_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_dbg_la_LINK = $(AM_V_CCLD)
+endif
 endif
 
 if INSTRUMENTATION_LIB
@@ -369,7 +438,18 @@ libdlb_instr_la_CPPFLAGS = $(INSTR_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_instr_la_CFLAGS = $(INSTR_CFLAGS) $(AM_CFLAGS)
 libdlb_instr_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_instr_la_SOURCES = $(SRCS)
-libdlb_instr_la_LIBADD = libdlb_common.la
+libdlb_instr_la_LIBADD = $(DLB_CONVENIENCE_LIBS)
+if HAVE_FORTRAN
+libdlb_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                       $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_instr_la_FCFLAGS) \
+                       $(FCFLAGS) $(libdlb_instr_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_instr_la_LINK = $(AM_V_FCLD)
+else
+libdlb_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                       $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_instr_la_CFLAGS) \
+                       $(CFLAGS) $(libdlb_instr_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_instr_la_LINK = $(AM_V_CCLD)
+endif
 endif
 
 if INSTRUMENTATION_DEBUG_LIB
@@ -378,7 +458,18 @@ libdlb_instr_dbg_la_CPPFLAGS = $(INSTR_DEBUG_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_instr_dbg_la_CFLAGS = $(INSTR_DEBUG_CFLAGS) $(AM_CFLAGS)
 libdlb_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_instr_dbg_la_SOURCES = $(SRCS)
-libdlb_instr_dbg_la_LIBADD = libdlb_common_dbg.la
+libdlb_instr_dbg_la_LIBADD = $(DLB_CONVENIENCE_LIBS_DBG)
+if HAVE_FORTRAN
+libdlb_instr_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+                           $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_instr_dbg_la_FCFLAGS) \
+                           $(FCFLAGS) $(libdlb_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_instr_dbg_la_LINK = $(AM_V_FCLD)
+else
+libdlb_instr_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+                           $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_instr_dbg_la_CFLAGS) \
+                           $(CFLAGS) $(libdlb_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_libdlb_instr_dbg_la_LINK = $(AM_V_CCLD)
+endif
 endif
 
 #********************************************************************************
@@ -389,12 +480,6 @@ MPI_SRCS = \
 	src/mpi/mpi_core.c           \
 	src/mpi/mpi_core.h           \
 	$(END)
-
-if MPI_F08
-MPI_SRCS += \
-	src/support/mod_string.f90   \
-	$(END)
-endif
 
 MPI_SRCS_NODIST = \
 	src/mpi/config_mpi.h           \
@@ -436,9 +521,6 @@ MPI_WRAPPERS_NODIST += \
 	$(END)
 endif
 
-# explicit Fortran dependecy
-src/mpi/libdlb_mpi_la-mpi_wrappers_f08_comm_spawn.lo: src/support/libdlb_mpi_la-mod_string.lo
-
 lib_LTLIBRARIES += libdlb_mpi.la
 libdlb_mpi_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpi_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
@@ -446,11 +528,8 @@ libdlb_mpi_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpi_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_la_SOURCES = $(SRCS) $(MPI_SRCS) $(MPI_WRAPPERS)
 nodist_libdlb_mpi_la_SOURCES = $(MPI_SRCS_NODIST) $(MPI_WRAPPERS_NODIST)
-libdlb_mpi_la_LIBADD = libdlb_common.la
-
-# Override Automake linker selection:
-# Force C link when no Fortran file is listed in SOURCES.
-if MPI_F08
+libdlb_mpi_la_LIBADD = $(DLB_CONVENIENCE_LIBS)
+if HAVE_FORTRAN
 libdlb_mpi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
                      $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_la_FCFLAGS) \
                      $(FCFLAGS) $(libdlb_mpi_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -470,8 +549,8 @@ libdlb_mpi_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpi_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS) $(MPI_WRAPPERS)
 nodist_libdlb_mpi_dbg_la_SOURCES = $(MPI_SRCS_NODIST) $(MPI_WRAPPERS_NODIST)
-libdlb_mpi_dbg_la_LIBADD = libdlb_common_dbg.la
-if MPI_F08
+libdlb_mpi_dbg_la_LIBADD = $(DLB_CONVENIENCE_LIBS_DBG)
+if HAVE_FORTRAN
 libdlb_mpi_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
                          $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_dbg_la_FCFLAGS) \
                          $(FCFLAGS) $(libdlb_mpi_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -481,7 +560,7 @@ libdlb_mpi_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
                          $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpi_dbg_la_CFLAGS) \
                          $(CFLAGS) $(libdlb_mpi_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_libdlb_mpi_dbg_la_LINK = $(AM_V_CCLD)
-endif # MPI_F08
+endif # HAVE_FORTRAN
 endif # DEBUG_LIB
 
 if INSTRUMENTATION_LIB
@@ -492,8 +571,8 @@ libdlb_mpi_instr_la_FCFLAGS = $(INSTR_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpi_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_instr_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_la_SOURCES = $(MPI_SRCS_NODIST)
-libdlb_mpi_instr_la_LIBADD = libdlb_common.la
-if MPI_F08
+libdlb_mpi_instr_la_LIBADD = $(DLB_CONVENIENCE_LIBS)
+if HAVE_FORTRAN
 libdlb_mpi_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
                            $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_instr_la_FCFLAGS) \
                            $(FCFLAGS) $(libdlb_mpi_instr_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -503,7 +582,7 @@ libdlb_mpi_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
                            $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpi_instr_la_CFLAGS) \
                            $(CFLAGS) $(libdlb_mpi_instr_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_libdlb_mpi_instr_la_LINK = $(AM_V_CCLD)
-endif # MPI_F08
+endif # HAVE_FORTRAN
 endif # INSTRUMENTATION_LIB
 
 if INSTRUMENTATION_DEBUG_LIB
@@ -514,8 +593,8 @@ libdlb_mpi_instr_dbg_la_FCFLAGS = $(INSTR_DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_
 libdlb_mpi_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpi_instr_dbg_la_SOURCES = $(SRCS) $(MPI_SRCS)
 nodist_libdlb_mpi_instr_dbg_la_SOURCES = $(MPI_SRCS_NODIST)
-libdlb_mpi_instr_dbg_la_LIBADD = libdlb_common_dbg.la
-if MPI_F08
+libdlb_mpi_instr_dbg_la_LIBADD = $(DLB_CONVENIENCE_LIBS_DBG)
+if HAVE_FORTRAN
 libdlb_mpi_instr_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
                                $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpi_instr_dbg_la_FCFLAGS) \
                                $(FCFLAGS) $(libdlb_mpi_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -525,7 +604,7 @@ libdlb_mpi_instr_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS)
                                $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpi_instr_dbg_la_CFLAGS) \
                                $(CFLAGS) $(libdlb_mpi_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_libdlb_mpi_instr_dbg_la_LINK = $(AM_V_CCLD)
-endif # MPI_F08
+endif # HAVE_FORTRAN
 endif # INSTRUMENTATION_DEBUG_LIB
 endif # BUILD_MPI_LIB
 
@@ -597,12 +676,6 @@ MPIF_SRCS = \
 	src/mpi/mpi_core.h           \
 	$(END)
 
-if MPI_F08
-MPIF_SRCS += \
-	src/support/mod_string.f90   \
-	$(END)
-endif
-
 MPIF_SRCS_NODIST = \
 	src/mpi/config_mpi.h           \
 	src/mpi/dlb_mpi_hooks_c.c      \
@@ -642,9 +715,6 @@ MPIF_WRAPPERS_NODIST += \
 	$(END)
 endif
 
-# explicit Fortran dependecy
-src/mpi/libdlb_mpif_la-mpi_wrappers_f08_comm_spawn.lo: src/support/libdlb_mpif_la-mod_string.lo
-
 lib_LTLIBRARIES += libdlb_mpif.la
 libdlb_mpif_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(AM_MPI_CPPFLAGS)
 libdlb_mpif_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
@@ -652,21 +722,12 @@ libdlb_mpif_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpif_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_la_SOURCES = $(SRCS) $(MPIF_SRCS) $(MPIF_WRAPPERS)
 nodist_libdlb_mpif_la_SOURCES = $(MPIF_SRCS_NODIST) $(MPIF_WRAPPERS_NODIST)
-libdlb_mpif_la_LIBADD = libdlb_common.la
-
-# Override Automake linker selection:
-# Force C link when no Fortran file is listed in SOURCES.
-if MPI_F08
+libdlb_mpif_la_LIBADD = $(DLB_CONVENIENCE_LIBS)
+# libdlb_mpif.so always needs link overriding since it needs Fortran enabled
 libdlb_mpif_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
                       $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_la_FCFLAGS) \
                       $(FCFLAGS) $(libdlb_mpif_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_libdlb_mpif_la_LINK = $(AM_V_FCLD)
-else
-libdlb_mpif_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-                      $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_la_CFLAGS) \
-                      $(CFLAGS) $(libdlb_mpif_la_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_libdlb_mpif_la_LINK = $(AM_V_CCLD)
-endif
 
 if DEBUG_LIB
 lib_LTLIBRARIES += libdlb_mpif_dbg.la
@@ -676,18 +737,11 @@ libdlb_mpif_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpif_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS) $(MPIF_WRAPPERS)
 nodist_libdlb_mpif_dbg_la_SOURCES = $(MPIF_SRCS_NODIST) $(MPIF_WRAPPERS_NODIST)
-libdlb_mpif_dbg_la_LIBADD = libdlb_common_dbg.la
-if MPI_F08
+libdlb_mpif_dbg_la_LIBADD = $(DLB_CONVENIENCE_LIBS_DBG)
 libdlb_mpif_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
                           $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_dbg_la_FCFLAGS) \
                           $(FCFLAGS) $(libdlb_mpif_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_libdlb_mpif_dbg_la_LINK = $(AM_V_FCLD)
-else
-libdlb_mpif_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-                          $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_dbg_la_CFLAGS) \
-                          $(CFLAGS) $(libdlb_mpif_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_libdlb_mpif_dbg_la_LINK = $(AM_V_CCLD)
-endif # MPI_F08
 endif # DEBUG_LIB
 
 if INSTRUMENTATION_LIB
@@ -698,18 +752,11 @@ libdlb_mpif_instr_la_FCFLAGS = $(INSTR_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI_FCFLAGS)
 libdlb_mpif_instr_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_instr_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_la_SOURCES = $(MPIF_SRCS_NODIST)
-libdlb_mpif_instr_la_LIBADD = libdlb_common.la
-if MPI_F08
+libdlb_mpif_instr_la_LIBADD = $(DLB_CONVENIENCE_LIBS)
 libdlb_mpif_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
                             $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_instr_la_FCFLAGS) \
                             $(FCFLAGS) $(libdlb_mpif_instr_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_libdlb_mpif_instr_la_LINK = $(AM_V_FCLD)
-else
-libdlb_mpif_instr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-                            $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_instr_la_CFLAGS) \
-                            $(CFLAGS) $(libdlb_mpif_instr_la_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_libdlb_mpif_instr_la_LINK = $(AM_V_CCLD)
-endif # MPI_F08
 endif # INSTRUMENTATION_LIB
 
 if INSTRUMENTATION_DEBUG_LIB
@@ -720,20 +767,12 @@ libdlb_mpif_instr_dbg_la_FCFLAGS = $(INSTR_DEBUG_FCFLAGS) $(AM_FCFLAGS) $(AM_MPI
 libdlb_mpif_instr_dbg_la_LDFLAGS = $(AM_LDFLAGS) $(AM_MPIF_LDFLAGS)
 libdlb_mpif_instr_dbg_la_SOURCES = $(SRCS) $(MPIF_SRCS)
 nodist_libdlb_mpif_instr_dbg_la_SOURCES = $(MPIF_SRCS_NODIST)
-libdlb_mpif_instr_dbg_la_LIBADD = libdlb_common_dbg.la
-if MPI_F08
+libdlb_mpif_instr_dbg_la_LIBADD = $(DLB_CONVENIENCE_LIBS_DBG)
 libdlb_mpif_instr_dbg_la_LINK = \
         $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
         $(LIBTOOLFLAGS) --mode=link $(FCLD) $(libdlb_mpif_instr_dbg_la_FCFLAGS) \
         $(FCFLAGS) $(libdlb_mpif_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_libdlb_mpif_instr_dbg_la_LINK = $(AM_V_FCLD)
-else
-libdlb_mpif_instr_dbg_la_LINK = \
-        $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-        $(LIBTOOLFLAGS) --mode=link $(CCLD) $(libdlb_mpif_instr_dbg_la_CFLAGS) \
-        $(CFLAGS) $(libdlb_mpif_instr_dbg_la_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_libdlb_mpif_instr_dbg_la_LINK = $(AM_V_CCLD)
-endif # MPI_F08
 endif # INSTRUMENTATION_DEBUG_LIB
 endif # BUILD_MPIF_LIB
 
@@ -1347,7 +1386,7 @@ $(man1_builddir)/doxy.stamp: $(bin_sources_with_man)
 	$(DOXYMAN1_verbose)$(DOXYGEN) $(DOXYFILE_MAN1)
 	@touch $(man1_builddir)/doxy.stamp
 
-$(man3_builddir)/doxy.stamp: $(installheaders)
+$(man3_builddir)/doxy.stamp: $(dlb_c_headers)
 	@$(MKDIR_P) $(man3_builddir)
 	$(DOXYMAN3_verbose)$(DOXYGEN) $(DOXYFILE_MAN3)
 	@touch $(man3_builddir)/doxy.stamp

@@ -25,13 +25,12 @@
       integer, parameter :: DLB_BARRIER_LEWI_RUNTIME    = 2
 
        interface
-        function dlb_init(ncpus, mask, dlb_args) result (ierr)          &
-     &          bind(c, name='DLB_Init')
+        function dlb_init(ncpus, mask, dlb_args) result (ierr)
             use iso_c_binding
             integer(kind=c_int) :: ierr
             integer(kind=c_int), value, intent(in) :: ncpus
             type(c_ptr), value, intent(in) :: mask
-            character(kind=c_char), intent(in) :: dlb_args(*)
+            character(len=*), intent(in) :: dlb_args
         end function dlb_init
 
         function dlb_finalize() result (ierr)                           &
@@ -258,21 +257,17 @@
             integer(kind=c_int) :: ierr
         end function dlb_barrierdetach
 
-        function dlb_barriernamedregister(barrier_name, flags)          &
-     &          result (handle)                                         &
-     &          bind(c, name='DLB_BarrierNamedRegister')
+        function dlb_barriernamedregister(barrier_name, flags) result (handle)
             use iso_c_binding
             type(c_ptr) :: handle
-            character(kind=c_char), intent(in) :: barrier_name(*)
+            character(len=*), intent(in) :: barrier_name
             integer(kind=c_int), value, intent(in) :: flags
         end function dlb_barriernamedregister
 
-        function dlb_barriernamedget(barrier_name, flags)               &
-     &          result (handle)                                         &
-     &          bind(c, name='DLB_BarrierNamedGet')
+        function dlb_barriernamedget(barrier_name, flags) result (handle)
             use iso_c_binding
             type(c_ptr) :: handle
-            character(kind=c_char), intent(in) :: barrier_name(*)
+            character(len=*), intent(in) :: barrier_name
             integer(kind=c_int), value, intent(in) :: flags
         end function dlb_barriernamedget
 
@@ -297,20 +292,18 @@
             type(c_ptr), value, intent(in) :: handle
         end function dlb_barriernameddetach
 
-        function dlb_setvariable(variable, val) result (ierr)           &
-     &          bind(c, name='DLB_SetVariable')
+        function dlb_setvariable(variable, val) result (ierr)
             use iso_c_binding
             integer(kind=c_int) :: ierr
-            character(kind=c_char), intent(in) :: variable(*)
-            character(kind=c_char), intent(in) :: val(*)
+            character(len=*), intent(in) :: variable
+            character(len=*), intent(in) :: val
         end function dlb_setvariable
 
-        function dlb_getvariable(variable, val) result (ierr)           &
-     &          bind(c, name='DLB_GetVariable')
+        function dlb_getvariable(variable, val) result (ierr)
             use iso_c_binding
             integer(kind=c_int) :: ierr
-            character(kind=c_char), intent(in) :: variable(*)
-            character(kind=c_char), intent(out) :: val(*)
+            character(len=*), intent(in) :: variable
+            character(len=*), intent(out) :: val
         end function dlb_getvariable
 
         function dlb_printvariables() result (ierr)                     &

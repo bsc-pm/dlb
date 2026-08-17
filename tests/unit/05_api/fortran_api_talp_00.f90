@@ -32,7 +32,7 @@ program test
     type(c_ptr) :: dlb_handle_1, dlb_handle_2, dlb_handle_3
     character(9), pointer :: monitor_name
 
-    err = DLB_Init(0, C_NULL_PTR, c_char_"--talp"//C_NULL_CHAR)
+    err = DLB_Init(0, C_NULL_PTR, "--talp")
     if (err /= DLB_SUCCESS) call abort
 
     ! initialize global region with 1 measurement
@@ -50,11 +50,11 @@ program test
     if (dlb_monitor%num_measurements /= 2) call abort
 
     ! register custom regions
-    dlb_handle_1 = DLB_MonitoringRegionRegister(c_char_"region 1"//C_NULL_CHAR)
+    dlb_handle_1 = DLB_MonitoringRegionRegister("region 1")
     if (.not. c_associated(dlb_handle_1)) call abort
-    dlb_handle_2 = DLB_MonitoringRegionRegister(c_char_"region 2"//C_NULL_CHAR)
+    dlb_handle_2 = DLB_MonitoringRegionRegister("region 2")
     if (.not. c_associated(dlb_handle_2)) call abort
-    dlb_handle_3 = DLB_MonitoringRegionRegister(C_NULL_CHAR)
+    dlb_handle_3 = DLB_MonitoringRegionRegister("")
     if (.not. c_associated(dlb_handle_3)) call abort
 
     do i=1, N
