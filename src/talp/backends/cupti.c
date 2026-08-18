@@ -84,7 +84,7 @@ static CUpti_SubscriberHandle subscriber;
 static CUpti_CallbackDomain tracing_domain = CUPTI_CB_DOMAIN_RUNTIME_API;
 
 /* CUDA API Runtime calls */
-static void CUPTIAPI GetEventValueCallback(
+static void GetEventValueCallback(
     void *pUserData,
     CUpti_CallbackDomain domain,
     CUpti_CallbackId callbackId,
@@ -166,6 +166,12 @@ static int init_device_info(void) {
 
 
 /* --- CUDA activities to profile ---------------------------------------------- */
+
+/*
+ * CUPTI activity record type is selected according to the CUPTI
+ * API version we compile against, NOT the CUDA Runtime version
+ * of the application being profiled.
+ */
 
 #if CUPTI_API_VERSION < 18
 #  error "CUDA Toolkit 11.8 minimum required"
@@ -430,7 +436,7 @@ static void process_ready_buffers(void) {
 /* --- CUPTI asynchronous callbacks -------------------------------------------- */
 
 /* Provide CUPTI with a buffer from the pool for writing activity records */
-static void CUPTIAPI bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords) {
+static void bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords) {
 
     pthread_mutex_lock(&buffer_mutex);
 
@@ -475,7 +481,7 @@ static void CUPTIAPI bufferRequested(uint8_t **buffer, size_t *size, size_t *max
  * The callback may be invoked concurrently by multiple CUPTI worker threads,
  * so we just mark the buffer as READY for later processing to keep the
  * callback fast and avoid blocking CUPTI.*/
-static void CUPTIAPI bufferCompleted(
+static void bufferCompleted(
     CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t valid_size)
 {
     pthread_mutex_lock(&buffer_mutex);
@@ -564,6 +570,16 @@ static int cupti_backend_init(const core_api_t *core_api) {
     if (dlb_core_api->abi_version != DLB_BACKEND_ABI_VERSION
             || dlb_core_api->struct_size != sizeof(core_api_t)) {
         return DLB_BACKEND_ERROR;
+    }
+
+    /* Check CUPTI version */
+    uint32_t cupti_runtime_version;
+    CHECK_CUPTI(cuptiGetVersion(&cupti_runtime_version));
+    PLUGIN_PRINT("CUPTI version: %"PRIu32"\n", cupti_runtime_version);
+    if (cupti_runtime_version != CUPTI_API_VERSION) {
+        PLUGIN_WARNING("CUPTI compile-time version (%d)"
+                " and runtime version (%"PRIu32") differ.\n",
+                CUPTI_API_VERSION, cupti_runtime_version);
     }
 
     /* Get Devices info */

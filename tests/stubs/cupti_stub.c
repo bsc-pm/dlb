@@ -134,6 +134,11 @@ cudaError_t cudaGetDeviceProperties(struct cudaDeviceProp *prop, int device) {
 
 /* CUPTI functions */
 
+CUptiResult cuptiGetVersion(uint32_t *version) {
+    *version = CUPTI_API_VERSION;
+    return CUPTI_SUCCESS;
+}
+
 CUptiResult cuptiSubscribe(CUpti_SubscriberHandle *subscriber,
                                     CUpti_CallbackFunc callback,
                                     void *userdata) {
