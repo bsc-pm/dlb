@@ -75,7 +75,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CUPTIAPI
 #define CUPTI_API_VERSION 21
 
 typedef enum {
@@ -143,18 +142,18 @@ typedef CUpti_ActivityMemory CUpti_ActivityMemory3;
 typedef CUpti_ActivityMemory CUpti_ActivityMemory4;
 
 
-typedef void (CUPTIAPI *CUpti_CallbackFunc)(
+typedef void (*CUpti_CallbackFunc)(
     void *userdata,
     CUpti_CallbackDomain domain,
     CUpti_CallbackId cbid,
     const void *cbdata);
 
-typedef void (CUPTIAPI *CUpti_BuffersCallbackRequestFunc)(
+typedef void (*CUpti_BuffersCallbackRequestFunc)(
     uint8_t **buffer,
     size_t *size,
     size_t *maxNumRecords);
 
-typedef void (CUPTIAPI *CUpti_BuffersCallbackCompleteFunc)(
+typedef void (*CUpti_BuffersCallbackCompleteFunc)(
     CUcontext context,
     uint32_t streamId,
     uint8_t *buffer,
@@ -162,22 +161,27 @@ typedef void (CUPTIAPI *CUpti_BuffersCallbackCompleteFunc)(
     size_t validSize);
 
 
-CUptiResult CUPTIAPI cuptiSubscribe(CUpti_SubscriberHandle *subscriber,
-                                    CUpti_CallbackFunc callback,
-                                    void *userdata);
-CUptiResult CUPTIAPI cuptiUnsubscribe(CUpti_SubscriberHandle subscriber);
-CUptiResult CUPTIAPI cuptiFinalize(void);
-CUptiResult CUPTIAPI cuptiEnableDomain(uint32_t enable,
-                                       CUpti_SubscriberHandle subscriber,
-                                       CUpti_CallbackDomain domain);
-CUptiResult CUPTIAPI cuptiActivityEnable(CUpti_ActivityKind kind);
-CUptiResult CUPTIAPI cuptiActivityDisable(CUpti_ActivityKind kind);
-CUptiResult CUPTIAPI cuptiActivityGetNextRecord(uint8_t* buffer, size_t validBufferSizeBytes,
+CUptiResult cuptiGetVersion(uint32_t *version);
+CUptiResult cuptiSubscribe(
+        CUpti_SubscriberHandle *subscriber,
+        CUpti_CallbackFunc callback,
+        void *userdata);
+CUptiResult cuptiUnsubscribe(CUpti_SubscriberHandle subscriber);
+CUptiResult cuptiFinalize(void);
+CUptiResult cuptiEnableDomain(
+        uint32_t enable,
+        CUpti_SubscriberHandle subscriber,
+        CUpti_CallbackDomain domain);
+CUptiResult cuptiActivityEnable(CUpti_ActivityKind kind);
+CUptiResult cuptiActivityDisable(CUpti_ActivityKind kind);
+CUptiResult cuptiActivityGetNextRecord(
+        uint8_t* buffer,
+        size_t validBufferSizeBytes,
         CUpti_Activity **record);
-CUptiResult CUPTIAPI cuptiActivityFlushAll(uint32_t flag);
-CUptiResult CUPTIAPI cuptiActivityRegisterCallbacks(
+CUptiResult cuptiActivityFlushAll(uint32_t flag);
+CUptiResult cuptiActivityRegisterCallbacks(
         CUpti_BuffersCallbackRequestFunc  funcBufferRequested,
         CUpti_BuffersCallbackCompleteFunc funcBufferCompleted);
-CUptiResult CUPTIAPI cuptiGetResultString(CUptiResult result, const char **str);
+CUptiResult cuptiGetResultString(CUptiResult result, const char **str);
 
 #endif /* CUPTI_H */
