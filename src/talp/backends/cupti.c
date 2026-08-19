@@ -224,6 +224,7 @@ static CUpti_ActivityKind activity_kinds[] = {
  * sample. */
 static gpu_records_buffer_t *kernel_buffer = NULL;
 static gpu_records_buffer_t *memory_buffer = NULL;
+static pthread_mutex_t records_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* After flushing the buffers, advance safe_timestamp so that any future records
  * with start times earlier than this are ignored. */
@@ -233,6 +234,8 @@ static uint64_t safe_timestamp = 0;
 /* Copy relevant information (e.g., start and end timestamps) into our
  * own kernel and memory buffers */
 static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
+
+    pthread_mutex_lock(&records_mutex);
 
     CUpti_Activity *record = NULL;
     CUptiResult status = cuptiActivityGetNextRecord(buffer, valid_size, &record);
@@ -346,6 +349,8 @@ static void process_buffer_records(uint8_t *buffer, size_t valid_size) {
 
         status = cuptiActivityGetNextRecord(buffer, valid_size, &record);
     }
+
+    pthread_mutex_unlock(&records_mutex);
 }
 
 
@@ -528,6 +533,8 @@ static int cupti_backend_collect(gpu_timers_t *out, size_t capacity, uint64_t *o
         /* Update safe timestamp. All future records prior to this will be ignored. */
         safe_timestamp = new_safe_timestamp;
 
+        pthread_mutex_lock(&records_mutex);
+
         for (size_t gpu = 0; gpu < num_devices && gpu < capacity; ++gpu) {
             uint32_t id = device_info[gpu].device_id;
 
@@ -553,6 +560,8 @@ static int cupti_backend_collect(gpu_timers_t *out, size_t capacity, uint64_t *o
             gpu_record_clear_buffer(&kernel_buffer[id]);
             gpu_record_clear_buffer(&memory_buffer[id]);
         }
+
+        pthread_mutex_unlock(&records_mutex);
     }
 
     return DLB_BACKEND_SUCCESS;
