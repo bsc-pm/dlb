@@ -33,6 +33,7 @@
 #include <sched.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 #include <assert.h>
 
 /* Test Monitoring Regions API */
@@ -116,6 +117,15 @@ int main(int argc, char **argv) {
         /* Global monitor should have been updated and started again */
         assert( global_monitor->num_measurements == 1 );
         assert( global_monitor->num_mpi_calls == 3 );
+        // FIXME: the asserts below have failed a couple of times in ARM clusters.
+        // Adding error logs to try to figure out if it's just two
+        // consecutive clock_gettime returning the same value.
+        if (!(global_monitor->mpi_time > 0)) {
+            fprintf(stderr, "MPI time check failed: %"PRId64"\n", global_monitor->mpi_time);
+        }
+        if (!(global_monitor->useful_time > 0)) {
+            fprintf(stderr, "Useful time check failed: %"PRId64"\n", global_monitor->useful_time);
+        }
         assert( global_monitor->mpi_time > 0 );
         assert( global_monitor->useful_time > 0 );
         // FIXME: to be addressed in issue #325
