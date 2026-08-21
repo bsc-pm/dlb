@@ -47,6 +47,7 @@ enum { SHMEM_SYNC_VERSION = 3 };
 enum { SHM_NAME_LENGTH = 64 };
 
 typedef struct {
+    int             fd;
     size_t          shm_size;
     char            shm_filename[SHM_NAME_LENGTH];
     char            *shm_addr;
@@ -66,6 +67,8 @@ enum { SHMEM_VERSION_IGNORE = 0 };
 
 shmem_handler_t* shmem_init(void **shdata, const shmem_props_t *shmem_props);
 void shmem_finalize(shmem_handler_t *handler, bool (*is_empty_fn)(void));
+void shmem_detach_after_fork(shmem_handler_t *handler);
+void shmem_timedlock(shmem_handler_t *handler);
 void shmem_lock(shmem_handler_t *handler);
 void shmem_unlock(shmem_handler_t *handler);
 void shmem_lock_maintenance( shmem_handler_t* handler );

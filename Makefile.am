@@ -369,12 +369,12 @@ SRCS = \
 	src/LB_numThreads/omptm_role_shift.h    \
 	src/LB_numThreads/omptool.c             \
 	src/LB_numThreads/omptool.h             \
-	src/LB_comm/comm_lend_light.c           \
-	src/LB_comm/comm_lend_light.h           \
 	src/LB_comm/shmem_cpuinfo.c             \
 	src/LB_comm/shmem_cpuinfo.h             \
 	src/LB_comm/shmem_lewi_async.c          \
 	src/LB_comm/shmem_lewi_async.h          \
+	src/LB_comm/shmem_lewi_light.c          \
+	src/LB_comm/shmem_lewi_light.h          \
 	src/LB_comm/shmem_mngo.c                \
 	src/LB_comm/shmem_mngo.h                \
 	src/LB_comm/shmem_procinfo.c            \
@@ -387,6 +387,8 @@ SRCS = \
 	src/LB_policies/lewi_mask.h             \
 	src/LB_core/DLB_kernel.c                \
 	src/LB_core/DLB_kernel.h                \
+	src/LB_core/fork_handler.c              \
+	src/LB_core/fork_handler.h              \
 	src/LB_core/node_barrier.c              \
 	src/LB_core/node_barrier.h              \
 	$(END)

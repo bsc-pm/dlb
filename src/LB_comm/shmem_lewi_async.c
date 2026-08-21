@@ -769,3 +769,29 @@ int shmem_lewi_async__reset(pid_t pid, unsigned int *new_ncpus,
 
     return error;
 }
+
+
+/*********************************************************************************/
+/*  Fork handlers                                                                */
+/*********************************************************************************/
+
+void shmem_lewi_async__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void shmem_lewi_async__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void shmem_lewi_async__atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+        subprocesses_attached = 0;
+        my_process = NULL;
+    }
+}

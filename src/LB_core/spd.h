@@ -60,4 +60,8 @@ void spd_set_pthread(const subprocess_descriptor_t *spd, pthread_t pthread);
 pthread_t spd_get_pthread(const subprocess_descriptor_t *spd);
 const subprocess_descriptor_t** spd_get_spds(void);
 
+void spd_atfork_prepare(void);
+void spd_atfork_parent(void);
+void spd_atfork_child(void);
+
 #endif /* SPD_H */

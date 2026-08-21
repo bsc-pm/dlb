@@ -117,8 +117,15 @@ size_t shmem_cpuinfo__size(void);
 void shmem_cpuinfo__print_info(const char *shmem_key, int shmem_color, int columns,
         dlb_printshmem_flags_t print_flags);
 
+/* Fork handlers */
+void shmem_cpuinfo__atfork_prepare(void);
+void shmem_cpuinfo__atfork_parent(void);
+void shmem_cpuinfo__atfork_child(void);
+
+/* Testing */
 int shmem_cpuinfo_testing__get_num_proc_requests(void);
 int shmem_cpuinfo_testing__get_num_cpu_requests(int cpuid);
 const cpu_set_t* shmem_cpuinfo_testing__get_free_cpu_set(void);
 const cpu_set_t* shmem_cpuinfo_testing__get_occupied_core_set(void);
+
 #endif /* SHMEM_CPUINFO_H */

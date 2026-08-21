@@ -23,6 +23,7 @@
 
 #include "LB_core/DLB_kernel.h"
 
+#include "LB_core/fork_handler.h"
 #include "LB_core/node_barrier.h"
 #include "LB_core/spd.h"
 #include "LB_core/thread_ctx.h"
@@ -77,6 +78,7 @@ int Initialize(subprocess_descriptor_t *spd, pid_t id, int ncpus,
     instrument_event(RUNTIME_EVENT, EVENT_INIT, EVENT_BEGIN);
     mu_init();
     timer_init();
+    fork_handler_init();
 
     // Infer LeWI mode
     spd->lb_policy =
@@ -241,7 +243,7 @@ int Finish(subprocess_descriptor_t *spd) {
 #if MPI_LIB
     /* If DLB_Finalize is called preemptively, we need to finalize also the MPI
      * module */
-    finalize_mpi_core();
+    mpi_core_finalize();
 #endif
 
     spd->lewi_enabled = false;

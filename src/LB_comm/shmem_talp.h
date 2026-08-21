@@ -63,4 +63,9 @@ size_t shmem_talp__size(void);
 int shmem_talp__get_max_regions(void);
 int shmem_talp__get_num_regions(void);
 
+/* Fork handlers */
+void shmem_talp__atfork_prepare(void);
+void shmem_talp__atfork_parent(void);
+void shmem_talp__atfork_child(void);
+
 #endif /* SHMEM_TALP_H */

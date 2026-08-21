@@ -415,6 +415,12 @@ void instrument_finalize(void) {
     event_tree = NULL;
 }
 
+void instrument_reset_after_fork(void) {
+    tracing_initialized = false;
+    g_tree_destroy(event_tree);
+    event_tree = NULL;
+}
+
 void instrument_print_flags(void) {
     info0("Tracing options: %s", instrument_items_tostr(instrument));
 }

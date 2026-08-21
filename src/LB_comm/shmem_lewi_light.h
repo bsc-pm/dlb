@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2024 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,32 +17,19 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef SHMEM_ASYNC_H
-#define SHMEM_ASYNC_H
+#ifndef SHMEM_LEWI_LIGHT_H
+#define SHMEM_LEWI_LIGHT_H
 
-#include <sched.h>
-#include <sys/types.h>
+void shmem_lewi_light__init(int def_cpus, int is_greedy, const char *shmem_key);
+void shmem_lewi_light__finalize(void);
 
-struct pm_interface;
+int shmem_lewi_light__release_cpus(int num_cpus);
+int shmem_lewi_light__acquire_cpus(int current_cpus);
+int shmem_lewi_light__check_idle_cpus(int my_cpus, int max_resources);
 
-int shmem_async_init(pid_t pid, const struct pm_interface *pm,
-        const cpu_set_t *process_mask, const char *shmem_key,
-        int shmem_size_multiplier);
-int shmem_async_finalize(pid_t pid);
+void shmem_lewi_light__atfork_prepare(void);
+void shmem_lewi_light__atfork_parent(void);
+void shmem_lewi_light__atfork_child(void);
 
-void shmem_async_enable_cpu(pid_t pid, int cpuid);
-void shmem_async_enable_cpu_set(pid_t pid, const cpu_set_t *cpu_set);
-void shmem_async_disable_cpu(pid_t pid, int cpuid);
-void shmem_async_disable_cpu_set(pid_t pid, const cpu_set_t *cpu_set);
-void shmem_async_set_num_cpus(pid_t pid, int ncpus);
+#endif /* SHMEM_LEWI_LIGHT_H */
 
-int shmem_async__version(void);
-size_t shmem_async__size(void);
-
-void shmem_async__atfork_prepare(void);
-void shmem_async__atfork_parent(void);
-void shmem_async__atfork_child(void);
-
-void shmem_async_wait_for_completion(pid_t pid);
-
-#endif /* SHMEM_ASYNC_H */

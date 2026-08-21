@@ -22,7 +22,7 @@
 
 #include "LB_core/spd.h"
 #include "apis/dlb_errors.h"
-#include "LB_comm/comm_lend_light.h"
+#include "LB_comm/shmem_lewi_light.h"
 #include "LB_numThreads/numThreads.h"
 #include "support/mask_utils.h"
 #include "support/options.h"
@@ -57,7 +57,7 @@ int lewi_Init(subprocess_descriptor_t *spd) {
     }
 
     //Initialize shared memory
-    ConfigShMem(default_cpus, greedy, spd->options.shm_key);
+    shmem_lewi_light__init(default_cpus, greedy, spd->options.shm_key);
 
     if (spd->options.lewi_warmup) {
         setThreads_Lend_light(&spd->pm, mu_get_system_size());
@@ -70,7 +70,7 @@ int lewi_Init(subprocess_descriptor_t *spd) {
 }
 
 int lewi_Finalize(subprocess_descriptor_t *spd) {
-    finalize_comm();
+    shmem_lewi_light__finalize();
     return DLB_SUCCESS;
 }
 
@@ -83,7 +83,7 @@ int lewi_EnableDLB(const subprocess_descriptor_t *spd) {
 int lewi_DisableDLB(const subprocess_descriptor_t *spd) {
     if (enabled && !single) {
         verbose(VB_MICROLB, "ResetDLB");
-        acquireCpus(myCPUS);
+        shmem_lewi_light__acquire_cpus(myCPUS);
         setThreads_Lend_light(&spd->pm, default_cpus);
     }
     enabled = 0;
@@ -92,7 +92,7 @@ int lewi_DisableDLB(const subprocess_descriptor_t *spd) {
 
 int lewi_SetMaxParallelism(const subprocess_descriptor_t *spd, int max) {
     if (myCPUS>max){
-        releaseCpus(myCPUS-max);
+        shmem_lewi_light__release_cpus(myCPUS-max);
         setThreads_Lend_light(&spd->pm, max);
     }
     max_parallelism = max;
@@ -110,12 +110,12 @@ int lewi_IntoBlockingCall(const subprocess_descriptor_t *spd) {
         if ( spd->options.lewi_keep_cpu_on_blocking_call ) {
             /* 1CPU */
             verbose(VB_MICROLB, "LENDING %d cpus", myCPUS-1);
-            releaseCpus(myCPUS-1);
+            shmem_lewi_light__release_cpus(myCPUS-1);
             setThreads_Lend_light(&spd->pm, 1);
         } else {
             /* BLOCK */
             verbose(VB_MICROLB, "LENDING %d cpus", myCPUS);
-            releaseCpus(myCPUS);
+            shmem_lewi_light__release_cpus(myCPUS);
             setThreads_Lend_light(&spd->pm, 0);
         }
     }
@@ -127,9 +127,9 @@ int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
     if (enabled) {
         int cpus;
         if (single) {
-            cpus = acquireCpus(1);
+            cpus = shmem_lewi_light__acquire_cpus(1);
         } else {
-            cpus = acquireCpus(myCPUS);
+            cpus = shmem_lewi_light__acquire_cpus(myCPUS);
         }
         setThreads_Lend_light(&spd->pm, cpus);
         verbose(VB_MICROLB, "ACQUIRING %d cpus", cpus);
@@ -139,13 +139,13 @@ int lewi_OutOfBlockingCall(const subprocess_descriptor_t *spd) {
 
 int lewi_Lend(const subprocess_descriptor_t *spd) {
     verbose(VB_MICROLB, "LENDING %d cpus", myCPUS-1);
-    releaseCpus(myCPUS-1);
+    shmem_lewi_light__release_cpus(myCPUS-1);
     setThreads_Lend_light(&spd->pm, 1);
     return DLB_SUCCESS;
 }
 
 int lewi_Reclaim(const subprocess_descriptor_t *spd) {
-    int cpus = acquireCpus(myCPUS);
+    int cpus = shmem_lewi_light__acquire_cpus(myCPUS);
     setThreads_Lend_light(&spd->pm, cpus);
     verbose(VB_MICROLB, "ACQUIRING %d cpus", cpus);
     return DLB_SUCCESS;
@@ -160,7 +160,7 @@ int lewi_BorrowCpus(const subprocess_descriptor_t *spd, int maxResources) {
     if (enabled && !single) {
         int max_resources = max_parallelism > 0 ?
             min_int(maxResources, max_parallelism - myCPUS) : maxResources;
-        int cpus = checkIdleCpus(myCPUS, max_resources);
+        int cpus = shmem_lewi_light__check_idle_cpus(myCPUS, max_resources);
         if (myCPUS!=cpus) {
             verbose(VB_MICROLB, "Using %d cpus", cpus);
             setThreads_Lend_light(&spd->pm, cpus);

@@ -670,6 +670,29 @@ void shmem_mngo__print_info(const char *shmem_key) {
 }
 
 /**
+ * Fork handlers
+ */
+void shmem_mngo__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void shmem_mngo__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void shmem_mngo__atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+        subprocesses_attached = 0;
+    }
+}
+
+/**
  *  Test functions
  */
 void test_shmem_mngo__modify_barrier_participants(int participants) {

@@ -573,3 +573,11 @@ size_t shmem_barrier__size(void) {
     return sizeof(shdata_t) + sizeof(barrier_t) * (
             max_barriers > 0 ? max_barriers : mu_get_system_size());
 }
+
+void shmem_barrier__reset_after_fork(void) {
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+    }
+}

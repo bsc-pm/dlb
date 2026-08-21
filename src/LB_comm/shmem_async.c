@@ -356,7 +356,6 @@ int shmem_async_finalize(pid_t pid) {
     return helper ? DLB_SUCCESS : DLB_ERR_NOPROC;
 }
 
-
 void shmem_async_enable_cpu(pid_t pid, int cpuid) {
     verbose(VB_ASYNC, "Enqueuing petition for pid: %d, enable cpuid %d", pid, cpuid);
     helper_t *helper = get_helper(pid);
@@ -407,12 +406,34 @@ void shmem_async_set_num_cpus(pid_t pid, int ncpus) {
 int shmem_async__version(void) {
     return SHMEM_ASYNC_VERSION;
 }
+
 size_t shmem_async__size(void) {
     // max_helpers contains a value once shmem is initialized,
     // otherwise return default size
     return sizeof(shdata_t) + sizeof(helper_t) * (
             max_helpers > 0 ? max_helpers : mu_get_system_size());
 }
+
+void shmem_async__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void shmem_async__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void shmem_async__atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+        subprocesses_attached = 0;
+    }
+}
+
 
 /* Only for testing purposes. Block current thread until helper thread
  * with the given pid has finished its pending requests */

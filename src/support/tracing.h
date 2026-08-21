@@ -101,6 +101,7 @@ void instrument_nevent(unsigned count, instrument_event_t *types, long long *val
 void add_event(unsigned type, long long value);
 void init_tracing(const options_t *options);
 void instrument_finalize(void);
+void instrument_reset_after_fork(void);
 void instrument_print_flags(void);
 #else
 #define instrument_register_event(type, value, value_description)
@@ -109,6 +110,7 @@ void instrument_print_flags(void);
 #define add_event(type, value)
 #define init_tracing(options)
 #define instrument_finalize()
+#define instrument_reset_after_fork()
 #define instrument_print_flags()
 #endif
 

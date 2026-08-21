@@ -1,5 +1,5 @@
 /*********************************************************************************/
-/*  Copyright 2009-2021 Barcelona Supercomputing Center                          */
+/*  Copyright 2009-2026 Barcelona Supercomputing Center                          */
 /*                                                                               */
 /*  This file is part of the DLB library.                                        */
 /*                                                                               */
@@ -17,18 +17,9 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#ifndef COMM_LEND_LIGHT_H
-#define COMM_LEND_LIGHT_H
+#ifndef FORK_HANDLER_H
+#define FORK_HANDLER_H
 
-void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key);
+void fork_handler_init(void);
 
-int releaseCpus(int cpus);
-
-int acquireCpus(int current_cpus);
-
-int checkIdleCpus(int myCpus, int maxResources);
-
-void finalize_comm();
-
-#endif //COMM_LEND_LIGHT
-
+#endif /* FORK_HANDLER_H */

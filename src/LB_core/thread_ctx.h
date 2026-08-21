@@ -65,4 +65,6 @@ void thread_ctx_set_main(thread_main_mode_t main_mode);
 void thread_ctx_set_worker(void);
 void thread_ctx_set_observer(bool is_observer);
 
+void thread_ctx_reset_after_fork(void);
+
 #endif /* THREAD_CTX_H */

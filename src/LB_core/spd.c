@@ -138,3 +138,39 @@ const subprocess_descriptor_t** spd_get_spds(void) {
 
     return spds;
 }
+
+/*********************************************************************************/
+/*    Fork handlers                                                              */
+/*********************************************************************************/
+void spd_atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void spd_atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+static gint deallocate_spd(gpointer key, gpointer value, gpointer data) {
+    subprocess_descriptor_t *spd = key;
+    free(spd->lewi_info);
+    free(spd->talp_info);
+    free(spd->barrier_info);
+    free(spd->mngo_info);
+    *spd = (subprocess_descriptor_t){0};
+
+    /* return false to not stop traversing */
+    return false;
+}
+
+void spd_atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    deallocate_spd(&global_spd, NULL, NULL);
+
+    g_tree_foreach(spd_tree, deallocate_spd, NULL);
+    g_tree_destroy(spd_tree);
+    spd_tree = NULL;
+
+    thread_spd = NULL;
+}

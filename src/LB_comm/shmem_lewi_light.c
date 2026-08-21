@@ -17,7 +17,7 @@
 /*  along with DLB.  If not, see <https://www.gnu.org/licenses/>.                */
 /*********************************************************************************/
 
-#include "LB_comm/comm_lend_light.h"
+#include "LB_comm/shmem_lewi_light.h"
 
 #include "LB_comm/shmem.h"
 #include "support/tracing.h"
@@ -26,15 +26,15 @@
 
 #include <stdlib.h>
 
-int defaultCPUS;
-int greedy;
-//pointers to the shared memory structures
+static int defaultCPUS;
+static int greedy;
+
 struct shdata {
     int   idleCpus;
     int   attached_nprocs;
 };
 
-struct shdata *shdata;
+static struct shdata *shdata = NULL;
 static shmem_handler_t *shm_handler = NULL;
 static const char *shmem_name = "lewi";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -69,10 +69,10 @@ static void open_shmem(const char *shmem_key) {
     pthread_mutex_unlock(&mutex);
 }
 
-void ConfigShMem(int defCPUS, int is_greedy, const char *shmem_key) {
-    verbose(VB_SHMEM, "LoadCommonConfig");
-    defaultCPUS=defCPUS;
-    greedy=is_greedy;
+void shmem_lewi_light__init(int def_cpus, int is_greedy, const char *shmem_key) {
+    verbose(VB_SHMEM, "Initializing shmem_lewi_light");
+    defaultCPUS = def_cpus;
+    greedy = is_greedy;
 
     // Shared memory creation
     open_shmem(shmem_key);
@@ -101,14 +101,14 @@ static void close_shmem(void) {
     pthread_mutex_unlock(&mutex);
 }
 
-void finalize_comm() {
+void shmem_lewi_light__finalize(void) {
     if (shm_handler) {
         __sync_fetch_and_sub(&shdata->attached_nprocs, 1);
         close_shmem();
     }
 }
 
-int releaseCpus(int cpus) {
+int shmem_lewi_light__release_cpus(int cpus) {
     verbose(VB_SHMEM, "Releasing CPUS...");
 
     __sync_fetch_and_add (&(shdata->idleCpus), cpus);
@@ -119,11 +119,7 @@ int releaseCpus(int cpus) {
     return 0;
 }
 
-/*
-Returns de number of cpus
-that are assigned
-*/
-int acquireCpus(int current_cpus) {
+int shmem_lewi_light__acquire_cpus(int current_cpus) {
     verbose(VB_SHMEM, "Acquiring CPUS...");
     int cpus = defaultCPUS-current_cpus;
 
@@ -139,34 +135,49 @@ int acquireCpus(int current_cpus) {
     return cpus+current_cpus;
 }
 
-/*
-Returns de number of cpus
-that are assigned
-*/
-int checkIdleCpus(int myCpus, int maxResources) {
+int shmem_lewi_light__check_idle_cpus(int my_cpus, int max_resources) {
     verbose(VB_SHMEM, "Checking idle CPUS... %d", shdata->idleCpus);
     int cpus;
     int aux;
 //WARNING//
     //if more CPUS than the availables are used release some
-    if ((shdata->idleCpus < 0) && (myCpus>defaultCPUS) ) {
+    if ((shdata->idleCpus < 0) && (my_cpus>defaultCPUS) ) {
         aux=shdata->idleCpus;
-        cpus=min_int(abs(aux), myCpus-defaultCPUS);
+        cpus=min_int(abs(aux), my_cpus-defaultCPUS);
         if(__sync_bool_compare_and_swap(&(shdata->idleCpus), aux, aux+cpus)) {
-            myCpus-=cpus;
+            my_cpus-=cpus;
         }
 
         //if there are idle CPUS use them
     } else if( shdata->idleCpus > 0) {
         aux=shdata->idleCpus;
-        if(aux>maxResources) { aux=maxResources; }
+        if(aux>max_resources) { aux=max_resources; }
 
         if(__sync_bool_compare_and_swap(&(shdata->idleCpus), shdata->idleCpus, shdata->idleCpus-aux)) {
-            myCpus+=aux;
+            my_cpus+=aux;
         }
     }
     add_event(IDLE_CPUS_EVENT, shdata->idleCpus);
 
-    verbose(VB_SHMEM, "Using %d CPUS... %d Idle", myCpus, shdata->idleCpus);
-    return myCpus;
+    verbose(VB_SHMEM, "Using %d CPUS... %d Idle", my_cpus, shdata->idleCpus);
+    return my_cpus;
+}
+
+void shmem_lewi_light__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void shmem_lewi_light__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void shmem_lewi_light__atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+    }
 }

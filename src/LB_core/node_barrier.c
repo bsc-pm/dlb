@@ -386,3 +386,15 @@ int node_barrier_detach(subprocess_descriptor_t *spd, barrier_t *barrier) {
 
     return error;
 }
+
+void node_barrier__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void node_barrier__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void node_barrier__atfork_child(void) {
+    pthread_mutex_init(&mutex, NULL);
+}
