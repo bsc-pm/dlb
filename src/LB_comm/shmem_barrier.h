@@ -42,4 +42,6 @@ bool shmem_barrier__exists(void);
 int shmem_barrier__version(void);
 size_t shmem_barrier__size(void);
 
+void shmem_barrier__reset_after_fork(void);
+
 #endif /* SHMEM_BARRIER_H */

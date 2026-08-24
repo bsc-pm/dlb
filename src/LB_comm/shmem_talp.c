@@ -528,3 +528,28 @@ int shmem_talp__get_max_regions(void) {
 int shmem_talp__get_num_regions(void) {
     return shdata->num_regions;
 }
+
+
+/*********************************************************************************/
+/*  Fork handlers                                                                */
+/*********************************************************************************/
+
+void shmem_talp__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void shmem_talp__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void shmem_talp__atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+        subprocesses_attached = 0;
+    }
+}

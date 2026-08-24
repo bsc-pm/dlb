@@ -2423,6 +2423,36 @@ void shmem_cpuinfo__print_info(const char *shmem_key, int shmem_color, int colum
     free(shdata_copy);
 }
 
+
+/*********************************************************************************/
+/*  Fork handlers                                                                */
+/*********************************************************************************/
+
+void shmem_cpuinfo__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void shmem_cpuinfo__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void shmem_cpuinfo__atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+        subprocesses_attached = 0;
+    }
+}
+
+/*********************************************************************************/
+/*  Testing                                                                      */
+/*********************************************************************************/
+
+
 int shmem_cpuinfo_testing__get_num_proc_requests(void) {
     return shdata->flags.queues_enabled ?
         queue_lewi_mask_request_t_size(&shdata->lewi_mask_requests) : 0;

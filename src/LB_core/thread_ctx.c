@@ -62,3 +62,7 @@ void thread_ctx_set_observer(bool is_observer) {
         previous_thread_role = THREAD_ROLE_UNKNOWN;
     }
 }
+
+void thread_ctx_reset_after_fork(void) {
+    thread_role = THREAD_ROLE_UNKNOWN;
+}

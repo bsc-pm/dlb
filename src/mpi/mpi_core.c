@@ -318,12 +318,17 @@ int is_mpi_ready(void) {
 }
 
 /* Finalize MPI variables and other modules in case DLB_Finalize is called preemptively */
-void finalize_mpi_core(void) {
+void mpi_core_finalize(void) {
     if (mpi_ready) {
         mpi_ready = 0;
         init_from_mpi = 0;
         talp_mpi_finalize(thread_spd);
     }
+}
+
+void mpi_core_reset_after_fork(void) {
+    mpi_ready = 0;
+    init_from_mpi = 0;
 }
 
 MPI_Comm getWorldComm(void) {

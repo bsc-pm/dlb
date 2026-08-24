@@ -21,6 +21,7 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "test_process.h"
 #include "unique_shmem.h"
 
 #include "apis/dlb.h"
@@ -174,17 +175,21 @@ int main( int argc, char **argv ) {
     assert( DLB_Finalize() == DLB_SUCCESS );
     assert( DLB_Finalize() == DLB_NOUPDT );
 
-    // Test that forked process cannot finalize DLB
+    // Test that forked process cannot finalize DLB not any other function that
+    // requires DLB initialization
     assert( DLB_Init(0, &process_mask, options) == DLB_SUCCESS );
     pid_t pid = fork();
     assert( pid >= 0 );
     if (pid == 0) {
-        if (DLB_Finalize() == DLB_NOUPDT) {
-            _exit(0);
-        } else {
-            fprintf(stderr, "ERROR: Child process received unexpected return from DLB_Finalize\n");
-            _exit(1);
+        if (DLB_Enable() != DLB_ERR_NOINIT) {
+            fprintf(stderr, "ERROR: Child process received unexpected return from DLB_Enable\n");
+            dlb_test__exit(1);
         }
+        if (DLB_Finalize() != DLB_NOUPDT) {
+            fprintf(stderr, "ERROR: Child process received unexpected return from DLB_Finalize\n");
+            dlb_test__exit(1);
+        }
+        dlb_test__exit(0);
     }
     int status;
     waitpid(pid, &status, 0);

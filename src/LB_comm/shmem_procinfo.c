@@ -1367,6 +1367,32 @@ size_t shmem_procinfo__size(void) {
 }
 
 
+/*********************************************************************************/
+/*  Fork handlers                                                                */
+/*********************************************************************************/
+
+void shmem_procinfo__atfork_prepare(void) {
+    pthread_mutex_lock(&mutex);
+}
+
+void shmem_procinfo__atfork_parent(void) {
+    pthread_mutex_unlock(&mutex);
+}
+
+void shmem_procinfo__atfork_child(void) {
+
+    pthread_mutex_init(&mutex, NULL);
+
+    if (shm_handler != NULL) {
+        shmem_detach_after_fork(shm_handler);
+        shdata = NULL;
+        shm_handler = NULL;
+        subprocesses_attached = 0;
+        my_pinfo = NULL;
+    }
+}
+
+
 /*** Helper functions, the shm lock must have been acquired beforehand ***/
 
 

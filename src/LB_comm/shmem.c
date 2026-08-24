@@ -151,18 +151,23 @@ shmem_handler_t* shmem_init(void **shdata, const shmem_props_t *shmem_props) {
     get_shmem_filename(handler->shm_filename, shmem_module, shmem_key, shmem_color);
 
     /* Obtain a file descriptor for the shmem */
-    int fd = shm_open(handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    if (fd == -1) {
+    handler->fd = shm_open(handler->shm_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    if (handler->fd == -1) {
         fatal("shm_open error: %s", strerror(errno));
     }
 
+    /* Close fd on exec */
+    if (fcntl(handler->fd, F_SETFD, FD_CLOEXEC) == -1) {
+        fatal("fcntl error: %s", strerror(errno));
+    }
+
     /* Truncate the regular file to a precise size */
-    if (ftruncate(fd, handler->shm_size) == -1) {
+    if (ftruncate(handler->fd, handler->shm_size) == -1) {
         fatal("ftruncate error: %s", strerror(errno));
     }
 
     /* Map shared memory object */
-    handler->shm_addr = mmap(NULL, handler->shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    handler->shm_addr = mmap(NULL, handler->shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, handler->fd, 0);
     if (handler->shm_addr == MAP_FAILED) {
         fatal("mmap error: %s",  strerror(errno));
     }
@@ -182,6 +187,9 @@ shmem_handler_t* shmem_init(void **shdata, const shmem_props_t *shmem_props) {
         }
         if (pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) != 0) {
             fatal("pthread_mutexattr_setpshared error: %s", strerror(errno));
+        }
+        if (pthread_mutexattr_setrobust(&attr, PTHREAD_MUTEX_ROBUST) != 0) {
+            fatal("pthread_mutexattr_setrobust error: %s", strerror(errno));
         }
         if (pthread_mutex_init(&handler->shsync->shmem_mutex, &attr) != 0) {
             fatal("pthread_mutex_init error: %s", strerror(errno));
@@ -203,23 +211,11 @@ shmem_handler_t* shmem_init(void **shdata, const shmem_props_t *shmem_props) {
 
     /* Check consistency */
     verbose(VB_SHMEM, "Checking shared memory consistency (%s)", shmem_module);
-    struct timespec timeout;
-    get_time_real(&timeout);
-    timeout.tv_sec += SHMEM_TIMEOUT_SECONDS;
-    int error = pthread_mutex_timedlock(&handler->shsync->shmem_mutex, &timeout);
-    if (error == ETIMEDOUT) {
-        fatal("DLB cannot obtain the lock for the shared memory.\n"
-                "This may have been caused by a previous process crashing"
-                " while acquiring the DLB shared memory lock.\n"
-                "Please, run 'dlb_shm --delete' and try again.\n"
-                "Contact us at " PACKAGE_BUGREPORT " if the issue persists.");
-    } else if (error != 0) {
-        fatal("pthread_mutex_timedlock error: %s", strerror(error));
-    }
+    shmem_timedlock(handler);
     shmem_consistency_check_version(handler->shsync->shsync_version, SHMEM_SYNC_VERSION);
     shmem_consistency_check_version(handler->shsync->shmem_version, shmem_props->version);
     shmem_consistency_check_pids(handler->shsync->pidlist, pid, shmem_props->cleanup_fn, *shdata);
-    pthread_mutex_unlock(&handler->shsync->shmem_mutex);
+    shmem_unlock(handler);
 
     return handler;
 }
@@ -257,12 +253,70 @@ void shmem_finalize(shmem_handler_t* handler, bool (*is_empty_fn)(void)) {
     free(handler);
 }
 
-void shmem_lock( shmem_handler_t* handler ) {
-    pthread_mutex_lock(&handler->shsync->shmem_mutex);
+void shmem_detach_after_fork(shmem_handler_t *handler) {
+
+    if (handler->shm_addr) {
+        munmap(handler->shm_addr, handler->shm_size);
+    }
+
+    if (handler->fd >= 0) {
+        close(handler->fd);
+    }
+
+    free(handler);
 }
 
-void shmem_unlock( shmem_handler_t* handler ) {
-    pthread_mutex_unlock(&handler->shsync->shmem_mutex);
+void shmem_timedlock(shmem_handler_t *handler) {
+
+    struct timespec timeout;
+    get_time_real(&timeout);
+    timeout.tv_sec += SHMEM_TIMEOUT_SECONDS;
+
+    pthread_mutex_t *mutex = &handler->shsync->shmem_mutex;
+
+    int rc = pthread_mutex_timedlock(mutex, &timeout);
+
+    if (rc == ETIMEDOUT) {
+        fatal("DLB cannot obtain the lock for the shared memory.\n"
+                "This may have been caused by a previous process crashing"
+                " while acquiring the DLB shared memory lock.\n"
+                "Please, run 'dlb_shm --delete' and try again.\n"
+                "Contact us at " PACKAGE_BUGREPORT " if the issue persists.");
+    } else if (rc == EOWNERDEAD) {
+        if (pthread_mutex_consistent(mutex) != 0) {
+            perror("pthread_mutex_consistent failed");
+            pthread_mutex_unlock(mutex);
+        }
+    } else if (rc != 0) {
+        fatal("pthread_mutex_timedlock error: %s", strerror(rc));
+    }
+}
+
+void shmem_lock(shmem_handler_t *handler) {
+
+    pthread_mutex_t *mutex = &handler->shsync->shmem_mutex;
+
+    int rc = pthread_mutex_lock(mutex);
+
+    if (rc == EOWNERDEAD) {
+        // The previous owner died while holding the lock.
+        // Mark the mutex consistent again:
+        if (pthread_mutex_consistent(mutex) != 0) {
+            perror("pthread_mutex_consistent failed");
+            pthread_mutex_unlock(mutex);
+        }
+    } else if (rc != 0) {
+        fatal("pthread_mutex_lock error: %s", strerror(rc));
+    }
+
+}
+
+void shmem_unlock(shmem_handler_t *handler) {
+
+    int rc = pthread_mutex_unlock(&handler->shsync->shmem_mutex);
+    if (rc != 0) {
+        fatal("pthread_mutex_unlock error: %s", strerror(rc));
+    }
 }
 
 /* Shared memory states    (BUSY(0-n)  <-  READY(0-n)  ->  MAINTENANCE(1)):

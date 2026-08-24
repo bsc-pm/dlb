@@ -61,4 +61,10 @@ int shmem_lewi_async__reset(pid_t pid, unsigned int *new_ncpus,
         lewi_request_t *requests, unsigned int *nreqs, unsigned int maxreqs,
         unsigned int *prev_requested);
 
+void shmem_lewi_async__atfork_prepare(void);
+
+void shmem_lewi_async__atfork_parent(void);
+
+void shmem_lewi_async__atfork_child(void);
+
 #endif /* SHMEM_LEWI_ASYNC_H */

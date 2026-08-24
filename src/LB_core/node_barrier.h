@@ -31,4 +31,8 @@ int node_barrier(const subprocess_descriptor_t *spd, barrier_t *barrier);
 int node_barrier_attach(subprocess_descriptor_t *spd, barrier_t *barrier);
 int node_barrier_detach(subprocess_descriptor_t *spd, barrier_t *barrier);
 
+void node_barrier__atfork_prepare(void);
+void node_barrier__atfork_parent(void);
+void node_barrier__atfork_child(void);
+
 #endif /* NODE_BARRIER_H */

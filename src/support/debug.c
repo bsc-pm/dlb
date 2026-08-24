@@ -27,11 +27,11 @@
 #include "support/options.h"
 #include "support/types.h"
 #include "support/mask_utils.h"
-#include "LB_comm/comm_lend_light.h"
 #include "LB_comm/shmem.h"
 #include "LB_comm/shmem_async.h"
 #include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_lewi_light.h"
 #include "LB_comm/shmem_procinfo.h"
 #include "LB_comm/shmem_talp.h"
 #include "LB_core/spd.h"
@@ -405,7 +405,7 @@ void dlb_clean(void) {
 
         /* Finalize shared memories that do not support subprocesses */
         shmem_barrier__finalize(shmem_key, shmem_size_multiplier);
-        finalize_comm();
+        shmem_lewi_light__finalize();
 
         /* Destroy shared memories if they still exist */
         const char *shmem_names[] = {"cpuinfo", "procinfo", "talp", "async"};

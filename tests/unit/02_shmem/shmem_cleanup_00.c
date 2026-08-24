@@ -25,11 +25,11 @@
 #include "test_process.h"
 
 #include "LB_comm/shmem.h"
-#include "LB_comm/shmem_cpuinfo.h"
-#include "LB_comm/shmem_procinfo.h"
-#include "LB_comm/shmem_barrier.h"
 #include "LB_comm/shmem_async.h"
-#include "LB_comm/comm_lend_light.h"
+#include "LB_comm/shmem_barrier.h"
+#include "LB_comm/shmem_cpuinfo.h"
+#include "LB_comm/shmem_lewi_light.h"
+#include "LB_comm/shmem_procinfo.h"
 #include "support/mask_utils.h"
 #include "apis/dlb_errors.h"
 
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
         assert( shmem_async_init(child_pid, NULL, &process_mask, SHMEM_KEY, 1) == DLB_SUCCESS );
         shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         shmem_barrier__register("barrier", 0);
-        ConfigShMem(1, 0, SHMEM_KEY);
+        shmem_lewi_light__init(1, 0, SHMEM_KEY);
 
         /* Invoke _exit so that call assert_shmem destructors are not called */
         dlb_test__exit(EXIT_SUCCESS);
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
         shmem_barrier__init(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
         barrier_t *barrier = shmem_barrier__register("barrier", 0);
         assert( barrier != NULL );
-        ConfigShMem(1, 0, SHMEM_KEY);
+        shmem_lewi_light__init(1, 0, SHMEM_KEY);
 
         /* Barrier must not block because I'm the only participant */
         shmem_barrier__barrier(barrier);
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         assert( shmem_async_finalize(child_pid) == DLB_SUCCESS );
         assert( shmem_barrier__detach(barrier) == 0 );
         shmem_barrier__finalize(SHMEM_KEY, SHMEM_SIZE_MULTIPLIER);
-        finalize_comm();
+        shmem_lewi_light__finalize();
 
         exit(EXIT_SUCCESS);
     }

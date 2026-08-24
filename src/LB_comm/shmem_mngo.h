@@ -124,6 +124,15 @@ void shmem_mngo_drom__print_redistribution(int mid, int dcpus, const char* regio
 void shmem_mngo__print_info(const char *shmem_key);
 
 /**
+ * Fork handlers
+ */
+void shmem_mngo__atfork_prepare(void);
+
+void shmem_mngo__atfork_parent(void);
+
+void shmem_mngo__atfork_child(void);
+
+/**
  * Test functions
  */
 void test_shmem_mngo__modify_barrier_participants(int participants);

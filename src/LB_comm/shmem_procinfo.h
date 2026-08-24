@@ -69,4 +69,9 @@ bool shmem_procinfo__exists(void);
 int  shmem_procinfo__version(void);
 size_t shmem_procinfo__size(void);
 
+/* Fork handlers */
+void shmem_procinfo__atfork_prepare(void);
+void shmem_procinfo__atfork_parent(void);
+void shmem_procinfo__atfork_child(void);
+
 #endif /* SHMEM_PROCINFO_H */

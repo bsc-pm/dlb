@@ -35,7 +35,8 @@ extern int _mpis_per_node;    /* Numer of MPI processes per node */
 void before_mpi(mpi_call_t mpi_call);
 void after_mpi(mpi_call_t mpi_call);
 int  is_mpi_ready(void);
-void finalize_mpi_core(void);
+void mpi_core_finalize(void);
+void mpi_core_reset_after_fork(void);
 MPI_Comm getWorldComm(void);
 MPI_Comm getNodeComm(void);
 MPI_Comm getInterNodeComm(void);
