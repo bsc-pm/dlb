@@ -581,6 +581,20 @@ AC_SUBST([AC_LDFLAGS])
 # generate the final Makefile etc.
 AC_OUTPUT
 
+AS_IF([test "x$enable_fortran" != xno], [
+    AS_CASE([$FC],
+        [*nvfortran*], [
+            AC_MSG_WARN([
+----------------------------------------------------------------------------
+ `nvfortran` is known to have some linking issues, and support is not guaranteed.
+ If you encounter compilation or linking errors, consider setting `FC=gfortran`,
+ which is known to work reliably alongside other toolchains.
+ Alternatively, disable the Fortran API with `--disable-fortran`.
+----------------------------------------------------------------------------])
+        ]
+    )
+])
+
 # Generate an underlined title
 summary_title="$PACKAGE_STRING configuration summary"
 summary_title_len="${#summary_title}"
