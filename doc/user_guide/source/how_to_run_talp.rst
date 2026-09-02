@@ -145,7 +145,7 @@ After your program has finished you will get a report similar to this on ``stder
     DLB[<hostname>:<pid>]: ### OpenMP Parallel efficiency:               0.60
     DLB[<hostname>:<pid>]: ###   - OpenMP Load Balance:                  0.80
     DLB[<hostname>:<pid>]: ###   - OpenMP Scheduling efficiency:         1.00
-    DLB[<hostname>:<pid>]: ###   - OpenMP Serialization efficiency:      0.75
+    DLB[<hostname>:<pid>]: ###   - OpenMP Coverage efficiency:           0.75
 
 .. _talp_nvidia:
 
@@ -471,7 +471,7 @@ the latter shown below:
         float omp_parallel_efficiency;
         float omp_load_balance;
         float omp_scheduling_efficiency;
-        float omp_serialization_efficiency;
+        float omp_coverage_efficiency;
     } dlb_pop_metrics_t;
 
 Example in C:

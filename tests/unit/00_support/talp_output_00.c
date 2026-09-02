@@ -123,7 +123,7 @@ static void record_pop_metrics(void) {
         .mpi_time                     = 0,
         .omp_load_imbalance_time      = 100000000,
         .omp_scheduling_time          = 100000000,
-        .omp_serialization_time       = 300000000,
+        .omp_outside_parallel_time    = 300000000,
         .min_mpi_normd_proc           = 1000,
         .min_mpi_normd_node           = 1000,
         .parallel_efficiency          = 0.24f,
@@ -135,7 +135,7 @@ static void record_pop_metrics(void) {
         .omp_parallel_efficiency      = 0.85f,
         .omp_load_balance             = 0.95f,
         .omp_scheduling_efficiency    = 0.95f,
-        .omp_serialization_efficiency = 0.95f,
+        .omp_coverage_efficiency      = 0.95f,
     };
 
     talp_output_record_pop_metrics(&metrics);
@@ -186,7 +186,7 @@ static void record_wrong_metrics(void) {
         .omp_parallel_efficiency      = 1.85f,
         .omp_load_balance             = 1.95f,
         .omp_scheduling_efficiency    = 1.95f,
-        .omp_serialization_efficiency = 1.95f,
+        .omp_coverage_efficiency      = 1.95f,
     };
 
     talp_output_record_pop_metrics(&metrics);
@@ -419,27 +419,27 @@ int main(int argc, char *argv[]) {
     {
         fprintf(stdout, "--- Single region:\n");
         dlb_monitor_t monitor = {
-            .name                    = "Region 1",
-            .num_cpus                = 1,
-            .cycles                  = 1e9,
-            .instructions            = 2e9,
-            .num_measurements        = 1,
-            .num_mpi_calls           = 5,
-            .num_omp_parallels       = 2,
-            .num_omp_tasks           = 7,
-            .num_gpu_runtime_calls   = 42,
-            .start_time              = 1e9,
-            .stop_time               = 2e9,
-            .elapsed_time            = 1e9,
-            .useful_time             = 4e8,
-            .mpi_time                = 2e8,
-            .omp_load_imbalance_time = 1e8,
-            .omp_scheduling_time     = 1e8,
-            .omp_serialization_time  = 1e8,
-            .gpu_runtime_time        = 1e8,
-            .gpu_useful_time         = 2e8,
-            .gpu_communication_time  = 2e8,
-            ._data                   = calloc(1, sizeof(monitor_data_t)),
+            .name                      = "Region 1",
+            .num_cpus                  = 1,
+            .cycles                    = 1e9,
+            .instructions              = 2e9,
+            .num_measurements          = 1,
+            .num_mpi_calls             = 5,
+            .num_omp_parallels         = 2,
+            .num_omp_tasks             = 7,
+            .num_gpu_runtime_calls     = 42,
+            .start_time                = 1e9,
+            .stop_time                 = 2e9,
+            .elapsed_time              = 1e9,
+            .useful_time               = 4e8,
+            .mpi_time                  = 2e8,
+            .omp_load_imbalance_time   = 1e8,
+            .omp_scheduling_time       = 1e8,
+            .omp_outside_parallel_time = 1e8,
+            .gpu_runtime_time          = 1e8,
+            .gpu_useful_time           = 2e8,
+            .gpu_communication_time    = 2e8,
+            ._data                     = calloc(1, sizeof(monitor_data_t)),
         };
 
         talp_flags_t flags = {

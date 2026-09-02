@@ -24,7 +24,7 @@ void run_test(int rank) {
      *
      * After the parallel region, rank 0 arrives at MPI ~0.5s after rank 1.
      *
-     * Serial section before parallel: 0.5s → serialization for worker threads.
+     * Serial section before parallel: 0.5s → outside parallel for worker threads.
      */
 
     /* Serial section */

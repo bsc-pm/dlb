@@ -12,7 +12,7 @@ void run_test(void) {
     /*
      * Pattern (4 threads):
      *
-     * ompSerializationTime: threads 1-3 are idle during serial sections.
+     * ompOutsideParallelTime: threads 1-3 are idle during serial sections.
      *   ~1.0s of serial work before the parallel region → 3 threads * 1.0s = ~3.0s
      *
      * Inside the parallel region:
@@ -24,8 +24,8 @@ void run_test(void) {
      *     overhead and synchronization between threads. Small but measurable.
      */
 
-    /* --- Serial section: only master runs, workers idle (serialization) --- */
-    busy_wait(1.0);   /* 1.0s * (nthreads-1) attributed as ompSerializationTime */
+    /* --- Serial section: only master runs, workers idle (coverage ) --- */
+    busy_wait(1.0);   /* 1.0s * (nthreads-1) attributed as ompOutsideParallelTime */
 
     /* --- Parallel region --- */
     #pragma omp parallel num_threads(4)

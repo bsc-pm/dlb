@@ -201,7 +201,7 @@ typedef struct monitor_data_t {
     DO(mpi_worker_idle_time,        int64_t,    mpi_int64_type) \
     DO(omp_load_imbalance_time,     int64_t,    mpi_int64_type) \
     DO(omp_scheduling_time,         int64_t,    mpi_int64_type) \
-    DO(omp_serialization_time,      int64_t,    mpi_int64_type) \
+    DO(omp_outside_parallel_time,   int64_t,    mpi_int64_type) \
     DO(gpu_runtime_time,            int64_t,    mpi_int64_type) \
     /* Normalized Host times by the number of assigned CPUs */  \
     DO(min_mpi_normd_proc,          double,     MPI_DOUBLE)     \
@@ -254,7 +254,7 @@ typedef struct pop_base_metrics_t {
     DO(mpi_worker_idle_time,        int64_t,        mpi_int64_type) \
     DO(omp_load_imbalance_time,     int64_t,        mpi_int64_type) \
     DO(omp_scheduling_time,         int64_t,        mpi_int64_type) \
-    DO(omp_serialization_time,      int64_t,        mpi_int64_type) \
+    DO(omp_outside_parallel_time,   int64_t,        mpi_int64_type) \
     DO(gpu_runtime_time,            int64_t,        mpi_int64_type) \
     DO(gpu_useful_time,             int64_t,        mpi_int64_type) \
     DO(gpu_communication_time,      int64_t,        mpi_int64_type) \
@@ -279,7 +279,7 @@ typedef struct pop_base_metrics_t {
     DO(mpi_worker_idle_time,        int64_t,        mpiWorkerIdleTime,      "%"PRId64)  \
     DO(omp_load_imbalance_time,     int64_t,        ompLoadImbalanceTime,   "%"PRId64)  \
     DO(omp_scheduling_time,         int64_t,        ompSchedulingTime,      "%"PRId64)  \
-    DO(omp_serialization_time,      int64_t,        ompSerializationTime,   "%"PRId64)  \
+    DO(omp_outside_parallel_time,   int64_t,        ompOutsideParallelTime, "%"PRId64)  \
     DO(gpu_runtime_time,            int64_t,        gpuRuntimeTime,         "%"PRId64)  \
     DO(gpu_useful_time,             int64_t,        gpuUsefulTime,          "%"PRId64)  \
     DO_LAST(gpu_communication_time, int64_t,        gpuCommunicationTime,   "%"PRId64)
@@ -306,7 +306,7 @@ typedef struct pop_base_metrics_t {
     DO(mpi_worker_idle_time,            int64_t,    mpiWorkerIdleTime,          "%"PRId64)  \
     DO(omp_load_imbalance_time,         int64_t,    ompLoadImbalanceTime,       "%"PRId64)  \
     DO(omp_scheduling_time,             int64_t,    ompSchedulingTime,          "%"PRId64)  \
-    DO(omp_serialization_time,          int64_t,    ompSerializationTime,       "%"PRId64)  \
+    DO(omp_outside_parallel_time,       int64_t,    ompOutsideParallelTime,     "%"PRId64)  \
     DO(gpu_runtime_time,                int64_t,    gpuRuntimeTime,             "%"PRId64)  \
     DO(min_mpi_normd_proc,              double,     minMpiNormdProc,            "%.0f")     \
     DO(min_mpi_normd_node,              double,     minMpiNormdNode,            "%.0f")     \
@@ -324,7 +324,7 @@ typedef struct pop_base_metrics_t {
     DO(omp_parallel_efficiency,         float,      ompParallelEfficiency,      "%.2f")     \
     DO(omp_load_balance,                float,      ompLoadBalance,             "%.2f")     \
     DO(omp_scheduling_efficiency,       float,      ompSchedulingEfficiency,    "%.2f")     \
-    DO(omp_serialization_efficiency,    float,      ompSerializationEfficiency, "%.2f")     \
+    DO(omp_coverage_efficiency,         float,      ompCoverageEfficiency,      "%.2f")     \
     DO(device_offload_efficiency,       float,      deviceOffloadEfficiency,    "%.2f")     \
     DO(gpu_parallel_efficiency,         float,      gpuParallelEfficiency,      "%.2f")     \
     DO(gpu_load_balance,                float,      gpuLoadBalance,             "%.2f")     \

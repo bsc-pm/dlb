@@ -52,11 +52,11 @@ def test_hybrid_profile(tmp_path, repetitions):
     assert_approx(mpi_worker_s, expected=0.5 * repetitions, label="mpiTime",
                   relative_tol=TIME_TOLERANCE)
 
-    # --- OMP serialization---
+    # --- OMP coverage ---
     # rank0: 1 worker thread idle during 0.5s serial
     # rank1: 1 worker thread idle during 0.5s serial + 0.5s after parallel
-    serial_s = g["ompSerializationTime"] / NS
-    assert_approx(serial_s, expected=1.5 * repetitions, label="ompSerializationTime",
+    serial_s = g["ompOutsideParallelTime"] / NS
+    assert_approx(serial_s, expected=1.5 * repetitions, label="ompOutsideParallelTime",
                   relative_tol=TIME_TOLERANCE)
 
     # --- OMP load imbalance: rank0(0.5s) + rank1(0.25s) = 0.75s ---
@@ -81,7 +81,7 @@ def test_hybrid_profile(tmp_path, repetitions):
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(g["ompLoadBalance"], expected=0.875, label="ompLoadBalance",
                   absolute_tol=METRIC_TOLERANCE)
-    assert_approx(g["ompSerializationEfficiency"], expected=0.71, label="ompSerializationEfficiency",
+    assert_approx(g["ompCoverageEfficiency"], expected=0.71, label="ompCoverageEfficiency",
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(g["ompSchedulingEfficiency"], expected=0.99, label="ompSchedulingEfficiency",
                   absolute_tol=METRIC_TOLERANCE)
@@ -111,11 +111,11 @@ def test_hybrid_profile(tmp_path, repetitions):
     assert_approx(mpi_s, expected=0.5 * repetitions, label="mpiWorkerIdleTime",
                   relative_tol=TIME_TOLERANCE)
 
-    # --- OMP serialization---
+    # --- OMP coverage ---
     # rank0: nothing
     # rank1: 1 worker thread idle during 0.5s after parallel
-    serial_s = a["ompSerializationTime"] / NS
-    assert_approx(serial_s, expected=0.5 * repetitions, label="ompSerializationTime",
+    serial_s = a["ompOutsideParallelTime"] / NS
+    assert_approx(serial_s, expected=0.5 * repetitions, label="ompOutsideParallelTime",
                   relative_tol=TIME_TOLERANCE)
 
     # --- Efficiency checks ---
