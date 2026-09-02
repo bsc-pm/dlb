@@ -409,22 +409,23 @@ static void pop_metrics_to_txt(FILE *out_file) {
     }
 }
 
+static const char* pop_metrics_csv_schema =
+        "name,"
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+        #json_name ","
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+        #json_name
+        FOR_DLB_POP_METRICS_FIELDS(PRINT_FMT, PRINT_FMT_LAST);
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
+
 static void pop_metrics_to_csv(FILE *out_file, bool append) {
 
     if (pop_metrics_records == NULL) return;
 
     if (!append) {
         /* Print header */
-        fprintf(out_file,
-                "name,"
-#define PRINT_FMT(var_name, c_type, json_name, fmt) \
-                #json_name ","
-#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
-                #json_name "\n"
-                FOR_DLB_POP_METRICS_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
-#undef PRINT_FMT
-#undef PRINT_FMT_LAST
-            );
+        fprintf(out_file, "%s\n", pop_metrics_csv_schema);
     }
 
     for (GSList *node = pop_metrics_records;
@@ -871,27 +872,23 @@ static void process_to_json(FILE *out_file) {
                 "  }");         /* no eol */
 }
 
+static const char *process_csv_schema =
+        "Region," "Rank," "PID," "NodeId," "Hostname," "CpuSet,"
+#define PRINT_FMT(var_name, c_type, json_name, fmt) \
+        #json_name ","
+#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
+        #json_name
+        FOR_DLB_MONITOR_PRINTABLE_FIELDS(PRINT_FMT, PRINT_FMT_LAST);
+#undef PRINT_FMT
+#undef PRINT_FMT_LAST
+
 static void process_to_csv(FILE *out_file, bool append) {
 
     if (region_records == NULL) return;
 
     if (!append) {
         /* Print header */
-        fprintf(out_file,
-                "Region,"
-                "Rank,"
-                "PID,"
-                "NodeId,"
-                "Hostname,"
-                "CpuSet,"
-#define PRINT_FMT(var_name, c_type, json_name, fmt) \
-                #json_name ","
-#define PRINT_FMT_LAST(var_name, c_type, json_name, fmt) \
-                #json_name "\n"
-                FOR_DLB_MONITOR_PRINTABLE_FIELDS(PRINT_FMT, PRINT_FMT_LAST)
-#undef PRINT_FMT
-#undef PRINT_FMT_LAST
-               );
+        fprintf(out_file, "%s\n", process_csv_schema);
     }
 
     for (GSList *node = region_records;
@@ -1218,7 +1215,110 @@ static FILE *open_file_with_dirs(const char *filename, bool *append) {
     }
 }
 
+static char* find_csv_backup_name(const char *filename) {
 
+    size_t orig_len = strlen(filename);
+
+    // We should have already checked this, but just in case
+    if (orig_len < 4 || strncmp(&filename[orig_len - 4], ".csv", 4) != 0) {
+        return NULL;
+    }
+
+    // Allocate enough for appending up to '_bak9999'
+    size_t max_extra_len = strlen("_bak9999");
+    size_t len =
+        orig_len +
+        max_extra_len +
+        1;
+
+    char *out = malloc(len);
+
+    for (int i = 1; i < 9999; ++i) {
+        snprintf(out, len,
+            "%.*s_bak%02d.csv",
+            (int)orig_len - 4,
+            filename,
+            i);
+
+        if (access(out, F_OK) != 0) {
+            return out;
+        }
+    }
+
+    free(out);
+    return NULL;
+}
+
+static void ensure_csv_schema(const char *filename, const char *schema) {
+
+    if (access(filename, F_OK) != 0) return;
+
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        warning("Cannot open %s: %s", filename, strerror(errno));
+        return;
+    }
+
+    // max header is about 800 characters at the time of writing
+    char header[2048];
+
+    // read first line
+    if (!fgets(header, sizeof(header), f)) {
+        if (ferror(f)) {
+            warning("Cannot read %s: %s",
+                    filename, strerror(errno));
+            fclose(f);
+            return;
+        }
+
+        // Empty file: consider it an old/incompatible schema.
+        header[0] = '\0';
+    }
+
+    fclose(f);
+
+    // Remove CR/LF
+    size_t len = strlen(header);
+    while(len > 0
+            && (header[len - 1] == '\n'
+                || header[len - 1] == '\r')) {
+        header[--len] = '\0';
+    }
+
+    if (strcmp(header, schema) == 0) {
+        // same schema
+        return;
+    }
+
+    char *bak_filename = find_csv_backup_name(filename);
+    if (bak_filename == NULL) {
+        warning("Could not find a suitable backup name for %s\n", filename);
+        return;
+    }
+
+    if (rename(filename, bak_filename) != 0) {
+        warning("Cannot move %s to %s: %s", filename, bak_filename, strerror(errno));
+
+    }
+
+    warning("CSV schema changed; moving %s to %s", filename, bak_filename);
+
+    free(bak_filename);
+}
+
+static inline void ensure_pop_metrics_csv_schema(const char *filename) {
+
+    if (pop_metrics_records != NULL) {
+        ensure_csv_schema(filename, pop_metrics_csv_schema);
+    }
+}
+
+static inline void ensure_process_csv_schema(const char *filename) {
+
+    if (region_records != NULL) {
+        ensure_csv_schema(filename, process_csv_schema);
+    }
+}
 
 /*********************************************************************************/
 /*    Finalize                                                                   */
@@ -1483,6 +1583,11 @@ static char *expand_output_filename(const char *template)
 
 void talp_output_finalize(const char *output_file, bool partial_output) {
 
+    /* Skip output if process has no data */
+    if (pop_metrics_records == NULL
+            && node_records == NULL
+            && region_records == NULL) return;
+
     /* For efficiency when adding records, they are prepended to their respective lists.
      * Then, they are reversed here to print them in alphabetical order. */
     pop_metrics_records = g_slist_reverse(pop_metrics_records);
@@ -1508,11 +1613,6 @@ void talp_output_finalize(const char *output_file, bool partial_output) {
         node_print();
         process_print();
     } else {
-        /* Do not open file if process has no data */
-        if (pop_metrics_records == NULL
-                && node_records == NULL
-                && region_records == NULL) return;
-
         /* Check file extension */
         typedef enum Extension {
             EXT_JSON,
@@ -1578,6 +1678,7 @@ void talp_output_finalize(const char *output_file, bool partial_output) {
                 size_t pop_file_len = filename_useful_len + strlen(pop_ext) + 1;
                 char *pop_filename = malloc(sizeof(char)*pop_file_len);
                 sprintf(pop_filename, "%.*s%s", filename_useful_len, output_file, pop_ext);
+                ensure_pop_metrics_csv_schema(pop_filename);
                 bool append_to_csv;
                 FILE *pop_file = open_file_with_dirs(pop_filename, &append_to_csv);
                 if (pop_file) {
@@ -1612,6 +1713,7 @@ void talp_output_finalize(const char *output_file, bool partial_output) {
                 size_t process_file_len = filename_useful_len + strlen(process_ext) + 1;
                 char *process_filename = malloc(sizeof(char)*process_file_len);
                 sprintf(process_filename, "%.*s%s", filename_useful_len, output_file, process_ext);
+                ensure_process_csv_schema(process_filename);
                 bool append_to_csv;
                 FILE *process_file = open_file_with_dirs(process_filename, &append_to_csv);
                 if (process_file) {
@@ -1626,6 +1728,13 @@ void talp_output_finalize(const char *output_file, bool partial_output) {
 
         /* Write to file */
         else {
+            /* If CSV, ensure that if the file is to be appended, belongs
+             * to the current schema. */
+            if (extension == EXT_CSV) {
+                ensure_pop_metrics_csv_schema(output_file);
+                ensure_process_csv_schema(output_file);
+            }
+
             /* Open file */
             bool append_to_csv;
             FILE *out_file = open_file_with_dirs(output_file,
