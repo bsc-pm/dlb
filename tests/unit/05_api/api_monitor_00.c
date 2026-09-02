@@ -38,6 +38,21 @@
 
 /* Test Monitoring Regions API */
 
+#include <time.h>
+
+void wait_for_monotonic_clock_advance(void)
+{
+    struct timespec before;
+    struct timespec after;
+
+    clock_gettime(CLOCK_MONOTONIC, &before);
+
+    do {
+        clock_gettime(CLOCK_MONOTONIC, &after);
+    } while (after.tv_sec == before.tv_sec &&
+             after.tv_nsec == before.tv_nsec);
+}
+
 int main(int argc, char **argv) {
     cpu_set_t process_mask;
     CPU_ZERO(&process_mask);
@@ -111,6 +126,7 @@ int main(int argc, char **argv) {
         assert( DLB_Init(0, NULL, NULL) == DLB_ERR_INIT );
         talp_mpi_init(thread_spd);
         talp_into_sync_call(thread_spd, blocking);
+        wait_for_monotonic_clock_advance();
         talp_out_of_sync_call(thread_spd, blocking);
         talp_mpi_finalize(thread_spd);
 
