@@ -1215,7 +1215,7 @@ static FILE *open_file_with_dirs(const char *filename, bool *append) {
     }
 }
 
-static char* find_csv_backup_name(const char *filename) {
+static char* find_old_schema_name(const char *filename) {
 
     size_t orig_len = strlen(filename);
 
@@ -1224,8 +1224,8 @@ static char* find_csv_backup_name(const char *filename) {
         return NULL;
     }
 
-    // Allocate enough for appending up to '_bak9999'
-    size_t max_extra_len = strlen("_bak9999");
+    // Allocate enough for appending up to the following string:
+    size_t max_extra_len = strlen(".old-schema.99");
     size_t len =
         orig_len +
         max_extra_len +
@@ -1233,9 +1233,9 @@ static char* find_csv_backup_name(const char *filename) {
 
     char *out = malloc(len);
 
-    for (int i = 1; i < 9999; ++i) {
+    for (int i = 1; i < 99; ++i) {
         snprintf(out, len,
-            "%.*s_bak%02d.csv",
+            "%.*s.old-schema.%d.csv",
             (int)orig_len - 4,
             filename,
             i);
@@ -1290,20 +1290,21 @@ static void ensure_csv_schema(const char *filename, const char *schema) {
         return;
     }
 
-    char *bak_filename = find_csv_backup_name(filename);
-    if (bak_filename == NULL) {
-        warning("Could not find a suitable backup name for %s\n", filename);
+    char *old_schema_filename = find_old_schema_name(filename);
+    if (old_schema_filename == NULL) {
+        warning("Could not find a suitable old-schema name for %s\n", filename);
         return;
     }
 
-    if (rename(filename, bak_filename) != 0) {
-        warning("Cannot move %s to %s: %s", filename, bak_filename, strerror(errno));
-
+    if (rename(filename, old_schema_filename) != 0) {
+        warning("Cannot move %s to %s: %s", filename, old_schema_filename, strerror(errno));
     }
 
-    warning("CSV schema changed; moving %s to %s", filename, bak_filename);
+    warning("The CSV schema changed; the existing data was preserved as %s."
+            " New data is being written to %s.\n",
+            old_schema_filename, filename);
 
-    free(bak_filename);
+    free(old_schema_filename);
 }
 
 static inline void ensure_pop_metrics_csv_schema(const char *filename) {

@@ -330,29 +330,29 @@ int main(int argc, char *argv[]) {
         asprintf(&existing_csv, "%s/talp.csv", tmpdir);
         write_to_file(existing_csv, "old_schema,Header1,Header2\n1,2,3\n");
 
-        char *expected_bak_csv;
-        asprintf(&expected_bak_csv, "%s/talp_bak01.csv", tmpdir);
+        char *expectef_old_csv;
+        asprintf(&expectef_old_csv, "%s/talp.old-schema.1.csv", tmpdir);
 
         // first record
         record_pop_metrics();
         talp_output_finalize(existing_csv, no_partial_output);
         assert( access(existing_csv, F_OK) == 0 );
         assert( count_lines(existing_csv) == 2 );
-        assert( access(expected_bak_csv, F_OK) == 0 );
-        assert( count_lines(expected_bak_csv) == 2 );
+        assert( access(expectef_old_csv, F_OK) == 0 );
+        assert( count_lines(expectef_old_csv) == 2 );
 
         // second record
         record_pop_metrics();
         talp_output_finalize(existing_csv, no_partial_output);
         assert( access(existing_csv, F_OK) == 0 );
         assert( count_lines(existing_csv) == 3 );
-        assert( access(expected_bak_csv, F_OK) == 0 );
-        assert( count_lines(expected_bak_csv) == 2 );
+        assert( access(expectef_old_csv, F_OK) == 0 );
+        assert( count_lines(expectef_old_csv) == 2 );
 
-        cat_file(expected_bak_csv);
+        cat_file(expectef_old_csv);
         cat_file(existing_csv);
 
-        free(expected_bak_csv);
+        free(expectef_old_csv);
         free(existing_csv);
     }
 
