@@ -128,19 +128,19 @@
         {
             "name": "MPI_Request_get_status_all",
             "since": "MPI-4.1",
-            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"], "ParaStation MPI": [".*"]},
             "broken_in_comment": "signature broken, missing const modifier"
         },
         {
             "name": "MPI_Request_get_status_any",
             "since": "MPI-4.1",
-            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"], "ParaStation MPI": [".*"]},
             "broken_in_comment": "signature broken, missing const modifier"
         },
         {
             "name": "MPI_Request_get_status_some",
             "since": "MPI-4.1",
-            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"], "ParaStation MPI": [".*"]},
             "broken_in_comment": "signature broken, missing const modifier"
         },
         {
@@ -209,19 +209,19 @@
         {
             "name": "MPI_Status_get_error",
             "since": "MPI-4.1",
-            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"], "ParaStation MPI": [".*"]},
             "broken_in_comment": "signature broken, missing const modifier"
         },
         {
             "name": "MPI_Status_get_source",
             "since": "MPI-4.1",
-            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"], "ParaStation MPI": [".*"]},
             "broken_in_comment": "signature broken, missing const modifier"
         },
         {
             "name": "MPI_Status_get_tag",
             "since": "MPI-4.1",
-            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"], "ParaStation MPI": [".*"]},
             "broken_in_comment": "signature broken, missing const modifier"
         },
         {
@@ -1188,7 +1188,7 @@
         {
             "name": "MPI_Info_create_env",
             "since": "MPI-4.0",
-            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"]},
+            "broken_in": {"MPICH": [".*"], "Intel MPI": [".*"], "ParaStation MPI": [".*"]},
             "broken_in_comment": "signature broken in 4.0"
         },
         {

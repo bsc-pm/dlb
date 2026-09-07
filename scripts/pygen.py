@@ -409,6 +409,7 @@ def parse_library_version(library_desc):
         'Open MPI': r'open mpi v(\d+\.\d+\.\d+)',
         'MPICH': r'mpich version:\s*(\d+\.\d+\.\d+)',
         'Intel MPI': r'intel\(r\) mpi library\s+(\d+\.\d+)',
+        'ParaStation MPI': r'parastation mpi\s+(\d+\.\d+\.\d+)',
     }
 
     for name, pattern in patterns.items():
