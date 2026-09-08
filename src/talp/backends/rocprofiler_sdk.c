@@ -34,6 +34,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 
 
 static const core_api_t *dlb_core_api = NULL;
@@ -120,7 +121,7 @@ available_agents_cb(rocprofiler_agent_version_t version,
         }
     }
 
-    device_info = malloc(sizeof(*device_info) * num_agents);
+    device_info = malloc(sizeof(*device_info) * num_devices);
     if (device_info == NULL) {
         num_devices = 0;
         return ROCPROFILER_STATUS_ERROR;
@@ -131,6 +132,11 @@ available_agents_cb(rocprofiler_agent_version_t version,
 
         if (agent->type == ROCPROFILER_AGENT_TYPE_GPU) {
             uint32_t id = agent->logical_node_type_id;
+            if (id >= num_devices) {
+                PLUGIN_WARNING("Device %"PRIu32" has an unexpected logical id."
+                       " Detected num_Devices %"PRIu64".\n", id, num_devices);
+                continue;
+            }
             device_info[id] = (device_info_t){
                 .device_id = id,
                 .pci_unique_id = make_pci_unique_id(agent->domain, agent->location_id),
@@ -355,7 +361,10 @@ static int rocprofiler_sdk_backend_collect(gpu_timers_t *out, size_t capacity, u
 }
 
 static int rocprofiler_sdk_backend_probe(void) {
-    return DLB_BACKEND_SUCCESS;
+
+    // rocprofiler_query_available_agents may throw an excepcion if no GPUs are
+    // found in the node
+    return access("/dev/kfd", R_OK | W_OK) == 0 ? DLB_BACKEND_SUCCESS : DLB_BACKEND_ERROR;
 }
 
 /* rocprofiler_sdk_backend_init and rocprofiler_sdk_backend_start are called
