@@ -24,7 +24,7 @@ void run_test(void) {
 
     dlb_monitor_t *monitor_thread = DLB_MonitoringRegionRegister("Thread");
 
-    /* --- Serial section: only master runs, workers idle (serialization) --- */
+    /* --- Serial section: only master runs, workers idle (coverage ) --- */
     busy_wait(0.15);
 
     /* --- Parallel region --- */

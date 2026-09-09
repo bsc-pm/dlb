@@ -80,7 +80,7 @@ typedef struct dlb_monitor_t {
     int64_t     omp_scheduling_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent outside
      * OpenMP parallel regions */
-    int64_t     omp_serialization_time;
+    int64_t     omp_outside_parallel_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in GPU calls inside
      * the region */
     int64_t     gpu_runtime_time;
@@ -141,7 +141,7 @@ typedef struct dlb_pop_metrics_t {
     int64_t     omp_scheduling_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) spent outside
      * OpenMP parallel regions */
-    int64_t     omp_serialization_time;
+    int64_t     omp_outside_parallel_time;
     /*! Time (in nanoseconds) of the accumulated CPU time (not useful) in GPU calls */
     int64_t     gpu_runtime_time;
     /*! MPI time normalized at process level of the process with less MPI */
@@ -177,7 +177,7 @@ typedef struct dlb_pop_metrics_t {
     /*! Efficiency of the OpenMP scheduling inside parallel regions */
     float       omp_scheduling_efficiency;
     /*! Efficiency lost due to OpenMP threads outside of parallel regions */
-    float       omp_serialization_efficiency;
+    float       omp_coverage_efficiency;
     /*! Efficiency of the Host offloading to the Device */
     float       device_offload_efficiency;
     /*! TBD */

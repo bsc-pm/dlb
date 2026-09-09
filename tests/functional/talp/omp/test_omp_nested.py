@@ -40,11 +40,11 @@ def test_omp_nested_profile(tmp_path, repetitions):
     assert_approx(useful_s, expected=2.0 * repetitions, label="usefulTime",
                   relative_tol=TIME_TOLERANCE)
 
-    # --- ompSerializationTime: 3 idle threads * 0.25s serial section
+    # --- ompOutsideParallelTime: 3 idle threads * 0.25s serial section
     #                           + 2 threads * 0.5s during first parallel
     #                           + 1 thread  * 0.5s during second parallel ---
-    serial_s = g["ompSerializationTime"] / NS
-    assert_approx(serial_s, expected=2.25 * repetitions, label="ompSerializationTime",
+    serial_s = g["ompOutsideParallelTime"] / NS
+    assert_approx(serial_s, expected=2.25 * repetitions, label="ompOutsideParallelTime",
                   relative_tol=TIME_TOLERANCE)
 
     # --- ompLoadImbalanceTime: (0.25+0.5)s from unequal parallel work ---
@@ -61,7 +61,7 @@ def test_omp_nested_profile(tmp_path, repetitions):
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(g["ompLoadBalance"], expected=0.85, label="ompLoadBalance",
                   absolute_tol=METRIC_TOLERANCE)
-    assert_approx(g["ompSerializationEfficiency"], expected=0.47, label="ompSerializationEfficiency",
+    assert_approx(g["ompCoverageEfficiency"], expected=0.47, label="ompCoverageEfficiency",
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(g["ompSchedulingEfficiency"], expected=1.00, label="ompSchedulingEfficiency",
                   absolute_tol=METRIC_TOLERANCE)
@@ -80,9 +80,9 @@ def test_omp_nested_profile(tmp_path, repetitions):
     assert_approx(useful_s, expected=0.1 * repetitions, label="usefulTime",
                   relative_tol=TIME_TOLERANCE)
 
-    # --- ompSerializationTime: 3 idle threads * 0.1s ---
-    serial_s = s["ompSerializationTime"] / NS
-    assert_approx(serial_s, expected=0.3 * repetitions, label="ompSerializationTime",
+    # --- ompOutsideParallelTime: 3 idle threads * 0.1s ---
+    serial_s = s["ompOutsideParallelTime"] / NS
+    assert_approx(serial_s, expected=0.3 * repetitions, label="ompOutsideParallelTime",
                   relative_tol=TIME_TOLERANCE)
 
     # --- Efficiency checks ---
@@ -90,7 +90,7 @@ def test_omp_nested_profile(tmp_path, repetitions):
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(s["ompLoadBalance"], expected=1.00, label="ompLoadBalance",
                   absolute_tol=METRIC_TOLERANCE)
-    assert_approx(s["ompSerializationEfficiency"], expected=0.25, label="ompSerializationEfficiency",
+    assert_approx(s["ompCoverageEfficiency"], expected=0.25, label="ompCoverageEfficiency",
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(s["ompSchedulingEfficiency"], expected=1.00, label="ompSchedulingEfficiency",
                   absolute_tol=METRIC_TOLERANCE)

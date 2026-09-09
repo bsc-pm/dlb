@@ -101,11 +101,11 @@ We define :math:`T^{I_{lb}}_{i}` to be the average thread time spent by process 
 OpenMP metrics
 --------------
 
-Let :math:`\mathrm{OMP}_\mathrm{Serial}` (*OpenMP Serialization Efficiency*) represent the time lost
+Let :math:`\mathrm{OMP}_\mathrm{Serial}` (*OpenMP Coverage Efficiency*) represent the time lost
 because OpenMP was not running a parallel region.
 
 .. math::
-    \mathrm{OMP}_{Serial} = (T - T^{I_{serial}}) / T
+    \mathrm{OMP}_{Coverage} = (T - T^{I_{serial}}) / T
 
 This metric is used to account for regions not parallelized with OpenMP.
 

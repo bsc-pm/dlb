@@ -127,8 +127,8 @@ void talp_output_print_monitoring_region(
                 monitor->omp_load_imbalance_time);
         info("### Not useful OMP Scheduling:                %"PRId64" ns",
                 monitor->omp_scheduling_time);
-        info("### Not useful OMP Serialization:             %"PRId64" ns",
-                monitor->omp_serialization_time);
+        info("### Not useful OMP outside parallel:          %"PRId64" ns",
+                monitor->omp_outside_parallel_time);
     }
     if (talp_flags.have_gpu) {
         info("### Not useful GPU runtime:                   %"PRId64" ns",
@@ -224,8 +224,8 @@ static void pop_metrics_print(void) {
                         record->omp_load_balance);
                 info("###     - Scheduling efficiency:              %1.2f",
                         record->omp_scheduling_efficiency);
-                info("###     - Serialization efficiency:           %1.2f",
-                        record->omp_serialization_efficiency);
+                info("###     - Coverage efficiency:                %1.2f",
+                        record->omp_coverage_efficiency);
             }
             if (have_gpu_activity) {
                 info("###  - Device Offload efficiency:             %1.2f",
@@ -328,7 +328,7 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "### MPI Time (ns):                             %"PRId64"\n"
                     "### OpenMP Load Imbalance Time (ns):           %"PRId64"\n"
                     "### OpenMP Scheduling Time (ns):               %"PRId64"\n"
-                    "### OpenMP Serialization Time (ns):            %"PRId64"\n"
+                    "### OpenMP Outside Parallel Time (ns):         %"PRId64"\n"
                     "### GPU Runtime Time (ns):                     %"PRId64"\n"
                     "### MPI time normalized at process level of\n"
                     "###     the process with the max non-MPI time: %.0f\n"
@@ -348,7 +348,7 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "### OpenMP Parallel efficiency:                %.2f\n"
                     "###   - OpenMP Load Balance:                   %.2f\n"
                     "###   - OpenMP Scheduling efficiency:          %.2f\n"
-                    "###   - OpenMP Serialization efficiency:       %.2f\n"
+                    "###   - OpenMP Coverage efficiency:            %.2f\n"
                     "### Device Offload efficiency:                 %.2f\n"
                     "### --- Device metrics ---\n"
                     "### Device Parallel efficiency:                %.2f\n"
@@ -374,7 +374,7 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     record->mpi_time,
                     record->omp_load_imbalance_time,
                     record->omp_scheduling_time,
-                    record->omp_serialization_time,
+                    record->omp_outside_parallel_time,
                     record->gpu_runtime_time,
                     record->min_mpi_normd_proc,
                     record->min_mpi_normd_node,
@@ -391,7 +391,7 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     record->omp_parallel_efficiency,
                     record->omp_load_balance,
                     record->omp_scheduling_efficiency,
-                    record->omp_serialization_efficiency,
+                    record->omp_coverage_efficiency,
                     record->device_offload_efficiency,
                     record->gpu_parallel_efficiency,
                     record->gpu_load_balance,
@@ -785,13 +785,13 @@ static void process_print(void) {
             }
             if (process_record->monitor.omp_load_imbalance_time > 0
                     || process_record->monitor.omp_scheduling_time > 0
-                    || process_record->monitor.omp_serialization_time > 0) {
+                    || process_record->monitor.omp_outside_parallel_time > 0) {
                 info("### Not useful OMP Load Imbalance:            %"PRId64" ns",
                         process_record->monitor.omp_load_imbalance_time);
                 info("### Not useful OMP Scheduling:                %"PRId64" ns",
                         process_record->monitor.omp_scheduling_time);
-                info("### Not useful OMP Serialization:             %"PRId64" ns",
-                        process_record->monitor.omp_serialization_time);
+                info("### Not useful OMP outside parallel:          %"PRId64" ns",
+                        process_record->monitor.omp_outside_parallel_time);
             }
             if (process_record->monitor.gpu_runtime_time > 0) {
                 info("### Not useful GPU runtime:                   %"PRId64" ns",
@@ -959,7 +959,7 @@ static void process_to_txt(FILE *out_file) {
                     "### Not useful MPI in worker threads:         %"PRId64" ns\n"
                     "### Not useful OMP Load Imbalance:            %"PRId64" ns\n"
                     "### Not useful OMP Scheduling:                %"PRId64" ns\n"
-                    "### Not useful OMP Serialization:             %"PRId64" ns\n"
+                    "### Not useful OMP outside parallel:          %"PRId64" ns\n"
                     "### Not useful GPU runtime:                   %"PRId64" ns\n"
                     "### Device useful time:                       %"PRId64" ns\n"
                     "### Device communication time:                %"PRId64" ns\n"
@@ -975,7 +975,7 @@ static void process_to_txt(FILE *out_file) {
                     process_record->monitor.mpi_worker_idle_time,
                     process_record->monitor.omp_load_imbalance_time,
                     process_record->monitor.omp_scheduling_time,
-                    process_record->monitor.omp_serialization_time,
+                    process_record->monitor.omp_outside_parallel_time,
                     process_record->monitor.gpu_runtime_time,
                     process_record->monitor.gpu_useful_time,
                     process_record->monitor.gpu_communication_time,
@@ -1387,7 +1387,7 @@ static void sanitize_records(void) {
         { "omp_parallel_efficiency",      offsetof(dlb_pop_metrics_t, omp_parallel_efficiency) },
         { "omp_load_balance",             offsetof(dlb_pop_metrics_t, omp_load_balance) },
         { "omp_scheduling_efficiency",    offsetof(dlb_pop_metrics_t, omp_scheduling_efficiency) },
-        { "omp_serialization_efficiency", offsetof(dlb_pop_metrics_t, omp_serialization_efficiency) },
+        { "omp_coverage_efficiency",      offsetof(dlb_pop_metrics_t, omp_coverage_efficiency) },
         { "device_offload_efficiency",    offsetof(dlb_pop_metrics_t, device_offload_efficiency) },
         { "gpu_parallel_efficiency",      offsetof(dlb_pop_metrics_t, gpu_parallel_efficiency) },
         { "gpu_load_balance",             offsetof(dlb_pop_metrics_t, gpu_load_balance) },

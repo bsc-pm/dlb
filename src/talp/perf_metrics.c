@@ -106,7 +106,7 @@ typedef struct perf_metrics_hybrid_t {
     float omp_parallel_efficiency;
     float omp_load_balance;
     float omp_scheduling_efficiency;
-    float omp_serialization_efficiency;
+    float omp_coverage_efficiency;
     float device_offload_efficiency;
     float gpu_parallel_efficiency;
     float gpu_load_balance;
@@ -121,24 +121,24 @@ static inline void perf_metrics__compute_hybrid_model_v1(
         perf_metrics_hybrid_t *metrics,
         const pop_base_metrics_t *base_metrics) {
 
-    int     num_cpus                = base_metrics->num_cpus;
-    int     num_gpus                = base_metrics->num_gpus;
-    int64_t elapsed_time            = base_metrics->elapsed_time;
-    int64_t useful_time             = base_metrics->useful_time;
-    int64_t mpi_time                = base_metrics->mpi_time;
-    int64_t omp_load_imbalance_time = base_metrics->omp_load_imbalance_time;
-    int64_t omp_scheduling_time     = base_metrics->omp_scheduling_time;
-    int64_t omp_serialization_time  = base_metrics->omp_serialization_time;
-    int64_t gpu_runtime_time        = base_metrics->gpu_runtime_time;
-    double  min_mpi_normd_proc      = base_metrics->min_mpi_normd_proc;
-    double  min_mpi_normd_node      = base_metrics->min_mpi_normd_node;
-    int64_t gpu_useful_time         = base_metrics->gpu_useful_time;
-    int64_t max_gpu_useful_time     = base_metrics->max_gpu_useful_time;
-    int64_t max_gpu_active_time     = base_metrics->max_gpu_active_time;
+    int     num_cpus                  = base_metrics->num_cpus;
+    int     num_gpus                  = base_metrics->num_gpus;
+    int64_t elapsed_time              = base_metrics->elapsed_time;
+    int64_t useful_time               = base_metrics->useful_time;
+    int64_t mpi_time                  = base_metrics->mpi_time;
+    int64_t omp_load_imbalance_time   = base_metrics->omp_load_imbalance_time;
+    int64_t omp_scheduling_time       = base_metrics->omp_scheduling_time;
+    int64_t omp_outside_parallel_time = base_metrics->omp_outside_parallel_time;
+    int64_t gpu_runtime_time          = base_metrics->gpu_runtime_time;
+    double  min_mpi_normd_proc        = base_metrics->min_mpi_normd_proc;
+    double  min_mpi_normd_node        = base_metrics->min_mpi_normd_node;
+    int64_t gpu_useful_time           = base_metrics->gpu_useful_time;
+    int64_t max_gpu_useful_time       = base_metrics->max_gpu_useful_time;
+    int64_t max_gpu_active_time       = base_metrics->max_gpu_active_time;
 
     /* Active is the union of all times (while CPU is not disabled) */
     int64_t sum_active = useful_time + mpi_time + omp_load_imbalance_time +
-        omp_scheduling_time + omp_serialization_time + gpu_runtime_time;
+        omp_scheduling_time + omp_outside_parallel_time + gpu_runtime_time;
 
     /* Equivalent to all CPU time if OMP was not present */
     int64_t sum_active_non_omp = useful_time + mpi_time + gpu_runtime_time;
@@ -171,14 +171,14 @@ static inline void perf_metrics__compute_hybrid_model_v1(
         .mpi_load_balance_in = max_non_mpi_normd_node / max_non_mpi_normd_proc,
         .mpi_load_balance_out = non_mpi_normd_app / max_non_mpi_normd_node,
         .omp_parallel_efficiency = (float)sum_active_non_omp / sum_active,
-        .omp_load_balance = (float)(sum_active_non_omp + omp_serialization_time)
-            / (sum_active_non_omp + omp_serialization_time + omp_load_imbalance_time),
+        .omp_load_balance = (float)(sum_active_non_omp + omp_outside_parallel_time)
+            / (sum_active_non_omp + omp_outside_parallel_time + omp_load_imbalance_time),
         .omp_scheduling_efficiency =
-            (float)(sum_active_non_omp + omp_serialization_time + omp_load_imbalance_time)
-            / (sum_active_non_omp + omp_serialization_time + omp_load_imbalance_time
+            (float)(sum_active_non_omp + omp_outside_parallel_time + omp_load_imbalance_time)
+            / (sum_active_non_omp + omp_outside_parallel_time + omp_load_imbalance_time
                     + omp_scheduling_time),
-        .omp_serialization_efficiency = (float)sum_active_non_omp
-            / (sum_active_non_omp + omp_serialization_time),
+        .omp_coverage_efficiency = (float)sum_active_non_omp
+            / (sum_active_non_omp + omp_outside_parallel_time),
         .device_offload_efficiency = (float)sum_active_non_gpu / sum_active,
         .gpu_parallel_efficiency = sum_device_time == 0 ? 0
             : (float)gpu_useful_time / sum_device_time,
@@ -196,32 +196,32 @@ static inline void perf_metrics__compute_hybrid_model_v2(
         perf_metrics_hybrid_t *metrics,
         const pop_base_metrics_t *base_metrics) {
 
-    int     num_cpus                = base_metrics->num_cpus;
-    int     num_gpus                = base_metrics->num_gpus;
-    int64_t elapsed_time            = base_metrics->elapsed_time;
-    int64_t useful_time             = base_metrics->useful_time;
-    int64_t mpi_time                = base_metrics->mpi_time;
-    int64_t mpi_worker_idle_time    = base_metrics->mpi_worker_idle_time;
-    int64_t omp_load_imbalance_time = base_metrics->omp_load_imbalance_time;
-    int64_t omp_scheduling_time     = base_metrics->omp_scheduling_time;
-    int64_t omp_serialization_time  = base_metrics->omp_serialization_time;
-    int64_t gpu_runtime_time        = base_metrics->gpu_runtime_time;
-    double  min_mpi_normd_proc      = base_metrics->min_mpi_normd_proc;
-    double  min_mpi_normd_node      = base_metrics->min_mpi_normd_node;
-    int64_t gpu_useful_time         = base_metrics->gpu_useful_time;
-    int64_t max_gpu_useful_time     = base_metrics->max_gpu_useful_time;
-    int64_t max_gpu_active_time     = base_metrics->max_gpu_active_time;
+    int     num_cpus                  = base_metrics->num_cpus;
+    int     num_gpus                  = base_metrics->num_gpus;
+    int64_t elapsed_time              = base_metrics->elapsed_time;
+    int64_t useful_time               = base_metrics->useful_time;
+    int64_t mpi_time                  = base_metrics->mpi_time;
+    int64_t mpi_worker_idle_time      = base_metrics->mpi_worker_idle_time;
+    int64_t omp_load_imbalance_time   = base_metrics->omp_load_imbalance_time;
+    int64_t omp_scheduling_time       = base_metrics->omp_scheduling_time;
+    int64_t omp_outside_parallel_time = base_metrics->omp_outside_parallel_time;
+    int64_t gpu_runtime_time          = base_metrics->gpu_runtime_time;
+    double  min_mpi_normd_proc        = base_metrics->min_mpi_normd_proc;
+    double  min_mpi_normd_node        = base_metrics->min_mpi_normd_node;
+    int64_t gpu_useful_time           = base_metrics->gpu_useful_time;
+    int64_t max_gpu_useful_time       = base_metrics->max_gpu_useful_time;
+    int64_t max_gpu_active_time       = base_metrics->max_gpu_active_time;
 
     /* Active is the union of all times (CPU not disabled) */
     int64_t sum_active = useful_time + mpi_time + omp_load_imbalance_time +
-        omp_scheduling_time + omp_serialization_time + gpu_runtime_time;
+        omp_scheduling_time + omp_outside_parallel_time + gpu_runtime_time;
 
     /* Equivalent to all CPU time if OMP was not present */
     int64_t sum_active_non_omp = useful_time + mpi_time + gpu_runtime_time;
 
     /* CPU time of OpenMP not useful */
     int64_t sum_omp_not_useful = omp_load_imbalance_time + omp_scheduling_time +
-        omp_serialization_time;
+        omp_outside_parallel_time;
 
     /* MPI time normalized at application level */
     double mpi_normd_app = (double)(mpi_time + mpi_worker_idle_time) / num_cpus;
@@ -247,14 +247,14 @@ static inline void perf_metrics__compute_hybrid_model_v2(
         .mpi_load_balance_in = max_non_mpi_normd_node / max_non_mpi_normd_proc,
         .mpi_load_balance_out = non_mpi_normd_app / max_non_mpi_normd_node,
         .omp_parallel_efficiency = (float)sum_active_non_omp / sum_active,
-        .omp_load_balance = (float)(sum_active_non_omp + omp_serialization_time)
-            / (sum_active_non_omp + omp_serialization_time + omp_load_imbalance_time),
+        .omp_load_balance = (float)(sum_active_non_omp + omp_outside_parallel_time)
+            / (sum_active_non_omp + omp_outside_parallel_time + omp_load_imbalance_time),
         .omp_scheduling_efficiency =
-            (float)(sum_active_non_omp + omp_serialization_time + omp_load_imbalance_time)
-            / (sum_active_non_omp + omp_serialization_time + omp_load_imbalance_time
+            (float)(sum_active_non_omp + omp_outside_parallel_time + omp_load_imbalance_time)
+            / (sum_active_non_omp + omp_outside_parallel_time + omp_load_imbalance_time
                     + omp_scheduling_time),
-        .omp_serialization_efficiency = (float)sum_active_non_omp
-            / (sum_active_non_omp + omp_serialization_time),
+        .omp_coverage_efficiency = (float)sum_active_non_omp
+            / (sum_active_non_omp + omp_outside_parallel_time),
         .device_offload_efficiency = (float)(useful_time + sum_omp_not_useful)
             / (useful_time + sum_omp_not_useful + gpu_runtime_time),
         .gpu_parallel_efficiency = sum_device_time == 0 ? 0
@@ -434,31 +434,31 @@ static void mpi_reduction_fn(void *invec, void *inoutvec, int *len,
     int _len = *len;
     for (int i = 0; i < _len; ++i) {
         /* Resources */
-        inout[i].num_cpus                += in[i].num_cpus;
-        inout[i].num_available_cpus      += in[i].num_available_cpus;
-        inout[i].num_omp_threads         += in[i].num_omp_threads;
-        inout[i].num_mpi_ranks           += in[i].num_mpi_ranks;
-        inout[i].num_nodes               += in[i].num_nodes;
-        inout[i].avg_cpus                += in[i].avg_cpus;
-        inout[i].num_gpus                += in[i].num_gpus;
+        inout[i].num_cpus                  += in[i].num_cpus;
+        inout[i].num_available_cpus        += in[i].num_available_cpus;
+        inout[i].num_omp_threads           += in[i].num_omp_threads;
+        inout[i].num_mpi_ranks             += in[i].num_mpi_ranks;
+        inout[i].num_nodes                 += in[i].num_nodes;
+        inout[i].avg_cpus                  += in[i].avg_cpus;
+        inout[i].num_gpus                  += in[i].num_gpus;
         /* Hardware Counters */
-        inout[i].cycles                  += in[i].cycles;
-        inout[i].instructions            += in[i].instructions;
+        inout[i].cycles                    += in[i].cycles;
+        inout[i].instructions              += in[i].instructions;
         /* Statistics */
-        inout[i].num_measurements        += in[i].num_measurements;
-        inout[i].num_mpi_calls           += in[i].num_mpi_calls;
-        inout[i].num_omp_parallels       += in[i].num_omp_parallels;
-        inout[i].num_omp_tasks           += in[i].num_omp_tasks;
-        inout[i].num_gpu_runtime_calls   += in[i].num_gpu_runtime_calls;
+        inout[i].num_measurements          += in[i].num_measurements;
+        inout[i].num_mpi_calls             += in[i].num_mpi_calls;
+        inout[i].num_omp_parallels         += in[i].num_omp_parallels;
+        inout[i].num_omp_tasks             += in[i].num_omp_tasks;
+        inout[i].num_gpu_runtime_calls     += in[i].num_gpu_runtime_calls;
         /* Host Times */
-        inout[i].elapsed_time             = max_int64(inout[i].elapsed_time, in[i].elapsed_time);
-        inout[i].useful_time             += in[i].useful_time;
-        inout[i].mpi_time                += in[i].mpi_time;
-        inout[i].mpi_worker_idle_time    += in[i].mpi_worker_idle_time;
-        inout[i].omp_load_imbalance_time += in[i].omp_load_imbalance_time;
-        inout[i].omp_scheduling_time     += in[i].omp_scheduling_time;
-        inout[i].omp_serialization_time  += in[i].omp_serialization_time;
-        inout[i].gpu_runtime_time        += in[i].gpu_runtime_time;
+        inout[i].elapsed_time               = max_int64(inout[i].elapsed_time, in[i].elapsed_time);
+        inout[i].useful_time               += in[i].useful_time;
+        inout[i].mpi_time                  += in[i].mpi_time;
+        inout[i].mpi_worker_idle_time      += in[i].mpi_worker_idle_time;
+        inout[i].omp_load_imbalance_time   += in[i].omp_load_imbalance_time;
+        inout[i].omp_scheduling_time       += in[i].omp_scheduling_time;
+        inout[i].omp_outside_parallel_time += in[i].omp_outside_parallel_time;
+        inout[i].gpu_runtime_time          += in[i].gpu_runtime_time;
 
         /* Host Normalized Times */
         inout[i].min_mpi_normd_proc =
@@ -506,42 +506,42 @@ static void reduce_pop_metrics_app_reduction(pop_base_metrics_t *base_metrics,
 
     const pop_base_metrics_t app_reduction_send = {
         /* Resources */
-        .num_cpus                = monitor->num_cpus,
-        .num_available_cpus      = _process_id == 0 && node_reduction->node_used
+        .num_cpus                  = monitor->num_cpus,
+        .num_available_cpus        = _process_id == 0 && node_reduction->node_used
                                     ? mu_get_system_count() : 0,
-        .num_omp_threads         = monitor->num_omp_threads,
-        .num_mpi_ranks           = 1,
-        .num_nodes               = _process_id == 0 && node_reduction->node_used ? 1 : 0,
-        .avg_cpus                = monitor->avg_cpus,
-        .num_gpus                = num_gpus,
+        .num_omp_threads           = monitor->num_omp_threads,
+        .num_mpi_ranks             = 1,
+        .num_nodes                 = _process_id == 0 && node_reduction->node_used ? 1 : 0,
+        .avg_cpus                  = monitor->avg_cpus,
+        .num_gpus                  = num_gpus,
         /* Hardware Counters */
-        .cycles                  = (double)monitor->cycles,
-        .instructions            = (double)monitor->instructions,
+        .cycles                    = (double)monitor->cycles,
+        .instructions              = (double)monitor->instructions,
         /* Statistics */
-        .num_measurements        = monitor->num_measurements,
-        .num_mpi_calls           = monitor->num_mpi_calls,
-        .num_omp_parallels       = monitor->num_omp_parallels,
-        .num_omp_tasks           = monitor->num_omp_tasks,
-        .num_gpu_runtime_calls   = monitor->num_gpu_runtime_calls,
+        .num_measurements          = monitor->num_measurements,
+        .num_mpi_calls             = monitor->num_mpi_calls,
+        .num_omp_parallels         = monitor->num_omp_parallels,
+        .num_omp_tasks             = monitor->num_omp_tasks,
+        .num_gpu_runtime_calls     = monitor->num_gpu_runtime_calls,
         /* Host Times */
-        .elapsed_time            = monitor->elapsed_time,
-        .useful_time             = monitor->useful_time,
-        .mpi_time                = monitor->mpi_time,
-        .mpi_worker_idle_time    = monitor->mpi_worker_idle_time,
-        .omp_load_imbalance_time = monitor->omp_load_imbalance_time,
-        .omp_scheduling_time     = monitor->omp_scheduling_time,
-        .omp_serialization_time  = monitor->omp_serialization_time,
-        .gpu_runtime_time        = monitor->gpu_runtime_time,
+        .elapsed_time              = monitor->elapsed_time,
+        .useful_time               = monitor->useful_time,
+        .mpi_time                  = monitor->mpi_time,
+        .mpi_worker_idle_time      = monitor->mpi_worker_idle_time,
+        .omp_load_imbalance_time   = monitor->omp_load_imbalance_time,
+        .omp_scheduling_time       = monitor->omp_scheduling_time,
+        .omp_outside_parallel_time = monitor->omp_outside_parallel_time,
+        .gpu_runtime_time          = monitor->gpu_runtime_time,
         /* Host Normalized Times */
-        .min_mpi_normd_proc      = min_mpi_normd_proc,
-        .min_mpi_normd_node      = min_mpi_normd_node,
+        .min_mpi_normd_proc        = min_mpi_normd_proc,
+        .min_mpi_normd_node        = min_mpi_normd_node,
         /* Device Times */
-        .gpu_useful_time         = gpu_useful_time,
-        .gpu_communication_time  = gpu_communication_time,
-        .gpu_inactive_time       = monitor->gpu_inactive_time,
+        .gpu_useful_time           = gpu_useful_time,
+        .gpu_communication_time    = gpu_communication_time,
+        .gpu_inactive_time         = monitor->gpu_inactive_time,
         /* Device Max Times */
-        .max_gpu_useful_time     = monitor->gpu_useful_time,
-        .max_gpu_active_time     = monitor->gpu_useful_time + monitor->gpu_communication_time,
+        .max_gpu_useful_time       = monitor->gpu_useful_time,
+        .max_gpu_active_time       = monitor->gpu_useful_time + monitor->gpu_communication_time,
     };
 
     /* MPI type: int64_t */
@@ -637,35 +637,35 @@ void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metr
 #endif
 
     *base_metrics = (const pop_base_metrics_t){
-        .num_cpus                = monitor->num_cpus,
-        .num_available_cpus      = mu_get_system_count(),
-        .num_omp_threads         = monitor->num_omp_threads,
-        .num_mpi_ranks           = num_mpi_ranks,
-        .num_nodes               = num_nodes,
-        .avg_cpus                = monitor->avg_cpus,
-        .num_gpus                = monitor->num_gpus,
-        .cycles                  = (double)monitor->cycles,
-        .instructions            = (double)monitor->instructions,
-        .num_measurements        = monitor->num_measurements,
-        .num_mpi_calls           = monitor->num_mpi_calls,
-        .num_omp_parallels       = monitor->num_omp_parallels,
-        .num_omp_tasks           = monitor->num_omp_tasks,
-        .num_gpu_runtime_calls   = monitor->num_gpu_runtime_calls,
-        .elapsed_time            = monitor->elapsed_time,
-        .useful_time             = monitor->useful_time,
-        .mpi_time                = monitor->mpi_time,
-        .mpi_worker_idle_time    = monitor->mpi_worker_idle_time,
-        .omp_load_imbalance_time = monitor->omp_load_imbalance_time,
-        .omp_scheduling_time     = monitor->omp_scheduling_time,
-        .omp_serialization_time  = monitor->omp_serialization_time,
-        .gpu_runtime_time        = monitor->gpu_runtime_time,
-        .min_mpi_normd_proc      = mpi_normd,
-        .min_mpi_normd_node      = mpi_normd,
-        .gpu_useful_time         = monitor->gpu_useful_time,
-        .gpu_communication_time  = monitor->gpu_communication_time,
-        .gpu_inactive_time       = monitor->gpu_inactive_time,
-        .max_gpu_useful_time     = monitor->gpu_useful_time,
-        .max_gpu_active_time     = monitor->gpu_useful_time + monitor->gpu_communication_time,
+        .num_cpus                  = monitor->num_cpus,
+        .num_available_cpus        = mu_get_system_count(),
+        .num_omp_threads           = monitor->num_omp_threads,
+        .num_mpi_ranks             = num_mpi_ranks,
+        .num_nodes                 = num_nodes,
+        .avg_cpus                  = monitor->avg_cpus,
+        .num_gpus                  = monitor->num_gpus,
+        .cycles                    = (double)monitor->cycles,
+        .instructions              = (double)monitor->instructions,
+        .num_measurements          = monitor->num_measurements,
+        .num_mpi_calls             = monitor->num_mpi_calls,
+        .num_omp_parallels         = monitor->num_omp_parallels,
+        .num_omp_tasks             = monitor->num_omp_tasks,
+        .num_gpu_runtime_calls     = monitor->num_gpu_runtime_calls,
+        .elapsed_time              = monitor->elapsed_time,
+        .useful_time               = monitor->useful_time,
+        .mpi_time                  = monitor->mpi_time,
+        .mpi_worker_idle_time      = monitor->mpi_worker_idle_time,
+        .omp_load_imbalance_time   = monitor->omp_load_imbalance_time,
+        .omp_scheduling_time       = monitor->omp_scheduling_time,
+        .omp_outside_parallel_time = monitor->omp_outside_parallel_time,
+        .gpu_runtime_time          = monitor->gpu_runtime_time,
+        .min_mpi_normd_proc        = mpi_normd,
+        .min_mpi_normd_node        = mpi_normd,
+        .gpu_useful_time           = monitor->gpu_useful_time,
+        .gpu_communication_time    = monitor->gpu_communication_time,
+        .gpu_inactive_time         = monitor->gpu_inactive_time,
+        .max_gpu_useful_time       = monitor->gpu_useful_time,
+        .max_gpu_active_time       = monitor->gpu_useful_time + monitor->gpu_communication_time,
     };
 }
 
@@ -709,7 +709,7 @@ void perf_metrics__base_to_pop_metrics(const char *monitor_name,
         .mpi_worker_idle_time            = base_metrics->mpi_worker_idle_time,
         .omp_load_imbalance_time         = base_metrics->omp_load_imbalance_time,
         .omp_scheduling_time             = base_metrics->omp_scheduling_time,
-        .omp_serialization_time          = base_metrics->omp_serialization_time,
+        .omp_outside_parallel_time       = base_metrics->omp_outside_parallel_time,
         .gpu_runtime_time                = base_metrics->gpu_runtime_time,
         .min_mpi_normd_proc              = base_metrics->min_mpi_normd_proc,
         .min_mpi_normd_node              = base_metrics->min_mpi_normd_node,
@@ -727,7 +727,7 @@ void perf_metrics__base_to_pop_metrics(const char *monitor_name,
         .omp_parallel_efficiency         = metrics.omp_parallel_efficiency,
         .omp_load_balance                = metrics.omp_load_balance,
         .omp_scheduling_efficiency       = metrics.omp_scheduling_efficiency,
-        .omp_serialization_efficiency    = metrics.omp_serialization_efficiency,
+        .omp_coverage_efficiency         = metrics.omp_coverage_efficiency,
         .device_offload_efficiency       = metrics.device_offload_efficiency,
         .gpu_parallel_efficiency         = metrics.gpu_parallel_efficiency,
         .gpu_load_balance                = metrics.gpu_load_balance,

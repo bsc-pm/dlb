@@ -337,23 +337,23 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             monitor->num_gpus = gm_count(monitor_data->gpu_mask);
 
             /* Timers */
-            monitor->useful_time             += macrosample->timers.useful;
-            monitor->mpi_time                += macrosample->timers.not_useful_mpi;
-            monitor->mpi_worker_idle_time    += macrosample->timers.not_useful_omp_during_mpi;
-            monitor->omp_load_imbalance_time += macrosample->timers.not_useful_omp_in_lb;
-            monitor->omp_scheduling_time     += macrosample->timers.not_useful_omp_in_sched;
-            monitor->omp_serialization_time  += macrosample->timers.not_useful_omp_out;
-            monitor->gpu_runtime_time        += macrosample->timers.not_useful_gpu;
+            monitor->useful_time               += macrosample->timers.useful;
+            monitor->mpi_time                  += macrosample->timers.not_useful_mpi;
+            monitor->mpi_worker_idle_time      += macrosample->timers.not_useful_omp_during_mpi;
+            monitor->omp_load_imbalance_time   += macrosample->timers.not_useful_omp_in_lb;
+            monitor->omp_scheduling_time       += macrosample->timers.not_useful_omp_in_sched;
+            monitor->omp_outside_parallel_time += macrosample->timers.not_useful_omp_out;
+            monitor->gpu_runtime_time          += macrosample->timers.not_useful_gpu;
 
             /* Counters */
-            monitor->cycles                  += macrosample->counters.cycles;
-            monitor->instructions            += macrosample->counters.instructions;
+            monitor->cycles                    += macrosample->counters.cycles;
+            monitor->instructions              += macrosample->counters.instructions;
 
             /* Stats */
-            monitor->num_mpi_calls           += macrosample->stats.num_mpi_calls;
-            monitor->num_omp_parallels       += macrosample->stats.num_omp_parallels;
-            monitor->num_omp_tasks           += macrosample->stats.num_omp_tasks;
-            monitor->num_gpu_runtime_calls   += macrosample->stats.num_gpu_runtime_calls;
+            monitor->num_mpi_calls             += macrosample->stats.num_mpi_calls;
+            monitor->num_omp_parallels         += macrosample->stats.num_omp_parallels;
+            monitor->num_omp_tasks             += macrosample->stats.num_omp_tasks;
+            monitor->num_gpu_runtime_calls     += macrosample->stats.num_gpu_runtime_calls;
 
             /* GPU Timers */
             uint64_t mask = macrosample->gpu_mask;

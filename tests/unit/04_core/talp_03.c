@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
         assert( global_monitor->mpi_time == 0 );
         assert( global_monitor->omp_load_imbalance_time == 0 );
         assert( global_monitor->omp_scheduling_time > 0 );
-        assert( global_monitor->omp_serialization_time == 0 );
+        assert( global_monitor->omp_outside_parallel_time == 0 );
     }
 
     /* Parallel region of 2 threads */
@@ -182,17 +182,17 @@ int main(int argc, char *argv[]) {
         assert( global_monitor->num_omp_parallels == 2 );
         assert( monitor->num_omp_parallels == 1 );
         assert( monitor->omp_scheduling_time > 0 );
-        assert( monitor->omp_serialization_time > 0 );
+        assert( monitor->omp_outside_parallel_time > 0 );
 
         /* The first parallel of 1 thread did not have any LB time, so both
          * monitors should have only the values of the seccond parallel */
         assert( monitor->omp_load_imbalance_time == global_monitor->omp_load_imbalance_time );
 
         /* Since the second thread was created when the global and the user
-         * monitor were started, its time is added as OpenMP serialization to
+         * monitor were started, its time is added as OpenMP outside parallel time to
          * both. The time added to the global monitor is greater because it
          * was started before. */
-        assert( monitor->omp_serialization_time < global_monitor->omp_serialization_time );
+        assert( monitor->omp_outside_parallel_time < global_monitor->omp_outside_parallel_time );
     }
 
     /* Fake num MPI/GPU calls to force printing all metrics */

@@ -27,9 +27,9 @@ def test_omp_states_profile(tmp_path, repetitions):
     assert_approx(useful_s, expected=4.0 * repetitions, label="usefulTime",
                   relative_tol=TIME_TOLERANCE)
 
-    # --- ompSerializationTime: 3 idle threads * 1.0s serial section ---
-    serial_s = g["ompSerializationTime"] / NS
-    assert_approx(serial_s, expected=3.0 * repetitions, label="ompSerializationTime",
+    # --- ompOutsideParallelTime: 3 idle threads * 1.0s serial section ---
+    serial_s = g["ompOutsideParallelTime"] / NS
+    assert_approx(serial_s, expected=3.0 * repetitions, label="ompOutsideParallelTime",
                   relative_tol=TIME_TOLERANCE)
 
     # --- ompLoadImbalanceTime: (0+0.25+0.5+0.75)s from unequal parallel work ---
@@ -46,7 +46,7 @@ def test_omp_states_profile(tmp_path, repetitions):
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(g["ompLoadBalance"], expected=0.83, label="ompLoadBalance",
                   absolute_tol=METRIC_TOLERANCE)
-    assert_approx(g["ompSerializationEfficiency"], expected=0.58, label="ompSerializationEfficiency",
+    assert_approx(g["ompCoverageEfficiency"], expected=0.58, label="ompCoverageEfficiency",
                   absolute_tol=METRIC_TOLERANCE)
     assert_approx(g["ompSchedulingEfficiency"], expected=0.99, label="ompSchedulingEfficiency",
                   absolute_tol=METRIC_TOLERANCE)

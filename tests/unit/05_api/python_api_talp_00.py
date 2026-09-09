@@ -60,7 +60,7 @@ class TestPythonTALP(TestBase):
         self.assertEqual(dlb_monitor.mpi_time, 0)
         self.assertEqual(dlb_monitor.omp_load_imbalance_time, 0)
         self.assertEqual(dlb_monitor.omp_scheduling_time, 0)
-        self.assertEqual(dlb_monitor.omp_serialization_time, 0)
+        self.assertEqual(dlb_monitor.omp_outside_parallel_time, 0)
 
         # Reporting
         dlb.DLB_MonitoringRegionReport(dlb_handle_1)

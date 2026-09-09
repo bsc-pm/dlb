@@ -38,8 +38,9 @@
 
 /* Update all open nested regions (so, excluding the innermost) and add the
  * time since its start time until the sample last timestamp (which is the time
- * that has yet not been added to the regions) as omp_serialization_time */
-static void update_serialization_in_nested_regions(const subprocess_descriptor_t *spd,
+ * that has yet not been added to the regions) as omp_outside_parallel_time */
+static void update_outside_parallel_time_in_nested_regions(
+        const subprocess_descriptor_t *spd,
         const talp_sample_t *sample) {
 
     talp_info_t *talp_info = spd->talp_info;
@@ -56,7 +57,7 @@ static void update_serialization_in_nested_regions(const subprocess_descriptor_t
                 node = node->next) {
 
             dlb_monitor_t *monitor = node->data;
-            monitor->omp_serialization_time +=
+            monitor->omp_outside_parallel_time +=
                 sample->last_updated_ts - monitor->start_time;
         }
     }
@@ -174,7 +175,7 @@ void talp_openmp_thread_begin(ompt_thread_t thread_type) {
     /* The initial time of the sample is set to match the start time of
         * the innermost open region, but other nested open regions need to
         * be fixed */
-    update_serialization_in_nested_regions(spd, sample);
+    update_outside_parallel_time_in_nested_regions(spd, sample);
 }
 
 // native-thread-end event
