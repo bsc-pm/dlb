@@ -224,6 +224,12 @@ def __load_talp_json_3_6(json_input, json_path):
     return df
 
 
+def __load_talp_json_3_7(json_input, json_path):
+    df = __load_talp_json_3_6(json_input, json_path)
+    df["dlbVersion"] = "3.7"
+    return df
+
+
 def load_talp_json_df(json_path: Path) -> pd.DataFrame:
     with open(json_path) as file:
         run_json = json.load(file)
@@ -233,6 +239,8 @@ def load_talp_json_df(json_path: Path) -> pd.DataFrame:
             df = __load_talp_json_3_5(run_json, json_path)
         elif run_json[TALP_VERSION_KEY].startswith("3.6"):
             df = __load_talp_json_3_6(run_json, json_path)
+        elif run_json[TALP_VERSION_KEY].startswith("3.7"):
+            df = __load_talp_json_3_7(run_json, json_path)
         else:
             raise ValueError(
                 f"Unable to find parser for {run_json[TALP_VERSION_KEY]}. Please use a compatible TALP-Pages release for DLB version {run_json[TALP_VERSION_KEY]}"
