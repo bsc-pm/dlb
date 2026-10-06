@@ -87,7 +87,14 @@ Below you can find a table of currently supported runtimes and the respective co
      - not supported (see note below)
    * - Cray clang compilers ``craycc,crayc++``
      - supported with version ``>=17.0.0``
+   * - NVIDIA HPC-SDK compilers ``nvc,nvc++``
+     - supported with version ``>=22.7`` 
 
+
+.. note::
+   NVIDIA HPC-SDK compilers (``nvc``, ``nvc++``) support OMPT `starting with version 22.7
+   <https://docs.nvidia.com/hpc-sdk/archive/22.7/hpc-sdk-release-notes/index.html#what-is-new>`_,
+   but it must be explicitly enabled by passing ``-mp=ompt`` when you compile your application.
 
 If you are using any supported compiler in the table above to build your application, you can execute your application like this to gather OpenMP performance metrics with TALP:
 
