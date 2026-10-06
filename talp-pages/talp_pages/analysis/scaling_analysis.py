@@ -168,8 +168,8 @@ class ScalingAnalysis:
             latest_date = None
             latest_change = None
             for df in list_of_dfs:
-                date = pd.to_datetime(df["timestamp"].to_numpy().squeeze())
-                git_commit = str(df["gitCommitShort"].to_numpy().squeeze())
+                date = pd.to_datetime(df["timestamp"].iloc[0])
+                git_commit = str(df["gitCommitShort"].iloc[0])
 
                 try:
                     if date > latest_date:

@@ -101,6 +101,21 @@ def test_handle_version_3_7_0_mpi():
     assert df["executionMode"].to_numpy() == ExecutionMode.MPI.value
 
 
+def test_handle_version_3_8_0():
+    json_path = get_json_path("jsons/unit-tests/dlb_3_8_0.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["dlbVersion"].to_numpy() == "3.8"
+    assert df["totalGPUs"].to_numpy() == 0
+    assert df["executionMode"].to_numpy() == ExecutionMode.SERIAL.value
+    # DLB 3.8.0 renamed these metrics; make sure they are migrated back
+    assert "ompSerializationEfficiency" in df.columns
+    assert "ompSerializationTime" in df.columns
+    assert "ompCoverageEfficiency" not in df.columns
+    assert "ompOutsideParallelTime" not in df.columns
+    assert df["ompSerializationEfficiency"].to_numpy() == 1.00
+
+
 def test_handle_new_dlb_version():
     json_path = get_json_path("jsons/unit-tests/new_dlb_version.json")
 
