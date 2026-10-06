@@ -1022,8 +1022,10 @@ static void talp_output_record_common(void) {
 static void common_to_json(FILE *out_file) {
     fprintf(out_file,
                     "  \"dlbVersion\": \"%s\",\n"
+                    "  \"jsonSchema\": \"%d\",\n"
                     "  \"timestamp\": \"%s\",\n",
                 common_record.dlb_version,
+                TALP_OUTPUT_JSON_SCHEMA_VERSION,
                 common_record.time_of_creation);
 }
 
