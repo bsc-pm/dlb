@@ -50,6 +50,55 @@ def test_handle_version_3_6_0_2_gpu_hybrid():
     assert df is not None
     assert df["totalGPUs"].to_numpy() == 2
     assert df["executionMode"].to_numpy() == ExecutionMode.HYBRIDGPU.value
+    assert df["ressourceLabel"].squeeze() == "2xMPI 2xOpenMP 2xGPU"
+
+
+def test_handle_version_3_6_0_hybrid_no_gpu():
+    # Regression test: a non-GPU hybrid run on a 3.6 json must still get a
+    # proper ressourceLabel instead of an empty string. The label is built as
+    # "...+num_gpus if has_gpus else ..." where due to operator precedence
+    # the "if/else" applied to the whole concatenation, not just num_gpus.
+    json_path = get_json_path("jsons/unit-tests/dlb_3_6_0_hybrid_no_gpu.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 0
+    assert df["executionMode"].to_numpy() == ExecutionMode.HYBRID.value
+    assert df["ressourceLabel"].squeeze() == "2xMPI 2xOpenMP"
+
+
+def test_handle_version_3_7_0():
+    json_path = get_json_path("jsons/unit-tests/dlb_3_7_0.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 1
+    assert df["executionMode"].to_numpy() == ExecutionMode.GPU.value
+
+
+def test_handle_version_3_7_0_hybrid_no_gpu():
+    json_path = get_json_path("jsons/unit-tests/dlb_3_7_0_hybrid_no_gpu.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 0
+    assert df["executionMode"].to_numpy() == ExecutionMode.HYBRID.value
+    assert df["ressourceLabel"].squeeze() == "2xMPI 2xOpenMP"
+
+
+def test_handle_version_3_7_0_2_gpu_hybrid():
+    json_path = get_json_path("jsons/unit-tests/dlb_3_7_0_2gpu_hybrid.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalGPUs"].to_numpy() == 2
+    assert df["executionMode"].to_numpy() == ExecutionMode.HYBRIDGPU.value
+    assert df["ressourceLabel"].squeeze() == "2xMPI 2xOpenMP 2xGPU"
+
+
+def test_handle_version_3_7_0_mpi():
+    json_path = get_json_path("jsons/unit-tests/correct_2MPI_3_7.json")
+    df = load_talp_json_df(json_path)
+    assert df is not None
+    assert df["totalNumCpus"].to_numpy() == 2
+    assert df["totalNumMpiRanks"].to_numpy() == 2
+    assert df["executionMode"].to_numpy() == ExecutionMode.MPI.value
 
 
 def test_handle_new_dlb_version():
