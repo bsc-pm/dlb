@@ -134,13 +134,15 @@ tests = {
   '06_plugins' : {
     'backend_manager_00'  : {'depends' : [libdlb_cupti_test,
                                           libdlb_rocprofiler_sdk_test,
-                                          libdlb_papi_test]},
+                                          libdlb_papi_test,
+                                          libdlb_perf_test]},
     'backend_cupti_00'    : {'depends' : libdlb_cupti_test},
     'backend_rocprofiler_sdk_00'
                           : {'depends' : libdlb_rocprofiler_sdk_test},
     'backend_rocprofilerv2_00'
                           : {'depends' : libdlb_rocprofilerv2_test},
     'backend_papi_00'     : {'depends' : libdlb_papi_test},
+    'backend_perf_00'     : {'depends' : libdlb_perf_test},
     'talp_gpu_00'         : {'depends' : libdlb_cupti_test},
     'talp_hwc_00'         : {'depends' : libdlb_papi_test},
   },

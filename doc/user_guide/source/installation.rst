@@ -99,7 +99,8 @@ to some OS utilities.
     Specify where to find the HWLOC libraries.
 
 PAPI allows DLB to collect hardware counters. If PAPI is found TALP will also
-measure the IPC of the instrumented regions.
+measure the IPC of the instrumented regions. Without PAPI, DLB falls back to its
+built-in ``perf`` backend, which is always available but normally slower.
 
 --with-papi=<papi_prefix>
     Specify where to find the PAPI libraries.

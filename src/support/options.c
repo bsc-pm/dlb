@@ -547,6 +547,18 @@ static const opts_dict_t options_dictionary[] = {
     },
     {
         .var_name       = "LB_NULL",
+        .arg_name       = "--talp-hwc-backend",
+        .default_value  = "",
+        .description    = OFFSET"Specifies the hardware counter backend plugin used by TALP.\n"
+                          OFFSET"If unset (default), DLB automatically attempts to load an HWC\n"
+                          OFFSET"backend in the following order:\n"
+                          OFFSET"'papi' and 'perf'.",
+        .offset         = offsetof(options_t, talp_hwc_backend),
+        .type           = OPT_STR_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
+    },
+    {
+        .var_name       = "LB_NULL",
         .arg_name       = "--talp-model",
         .default_value  = "hybrid-v2",
         .description    = OFFSET"For development use only.\n"

@@ -649,7 +649,7 @@ AS_IF([test "x$with_papi" != xno], [
   CPPFLAGS                : $PAPI_CPPFLAGS
   LDFLAGS                 : $PAPI_LDFLAGS"
 ], [
-    papi_plugin="no"
+    papi_plugin="not found (will fall back to perf)"
     papi_info=""
 ])
 

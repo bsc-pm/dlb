@@ -480,6 +480,25 @@ if papi_dep.found()
   )
 endif
 
+# PERF
+#
+# Always built: unlike PAPI, this backend only needs Linux kernel headers,
+# no external library to detect/link against. Uses the perf_event_open
+# syscall directly.
+
+perf_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/perf.c',
+  'src/talp/backends/perf_event_syscall.h',
+]
+
+libdlb_perf = shared_module(
+  'dlb_perf', perf_backend_sources + ['src/talp/backends/perf_event_syscall.c'],
+  include_directories : common_includes,
+  gnu_symbol_visibility : 'hidden',
+  install : true,
+)
+
 ### Stub libraries and testing plugins
 
 stub_includes = [ common_includes, include_directories('tests/stubs') ]
@@ -549,6 +568,24 @@ libdlb_papi_test = shared_module(
   papi_backend_sources,
   include_directories : stub_includes,
   link_with : libpapi_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+libperf_event_syscall_stub = shared_library(
+  'perf_event_syscall_stub',
+  'tests/stubs/perf_event_syscall_stub.c',
+  include_directories : common_includes,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_perf_test = shared_module(
+  'dlb_perf_test',
+  perf_backend_sources,
+  include_directories : stub_includes,
+  link_with : libperf_event_syscall_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
   install : false,
@@ -753,7 +790,8 @@ summary({'prefix': get_option('prefix'),
 summary({'CC': cc.get_id() + ' ' + cc.version(),
          'Build': build_type_descr,
         }, section: 'Compilation')
+papi_plugin = papi_dep.found() ? 'yes' : 'no (will fall back to perf)'
 summary({'HWLOC': hwloc_dep.found(),
-         'PAPI': papi_dep.found(),
+         'PAPI': papi_plugin,
          'MPI': mpi_dep.found(),
         }, section: 'Configuration')

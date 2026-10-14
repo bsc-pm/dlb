@@ -55,6 +55,11 @@ static int papi_backend_probe(void) {
         return DLB_BACKEND_ERROR;
     }
 
+    if (PAPI_set_domain(PAPI_DOM_USER) != PAPI_OK) {
+        PAPI_shutdown();
+        return DLB_BACKEND_ERROR;
+    }
+
     int event_set = PAPI_NULL;
     int error = PAPI_create_eventset(&event_set);
     if (error != PAPI_OK) {
@@ -143,6 +148,14 @@ static int papi_backend_init(const core_api_t *core_api) {
     int error = PAPI_thread_init(pthread_self);
     if (error != PAPI_OK) {
         PLUGIN_ERROR("PAPI Error during thread initialization. %d: %s\n",
+                error, PAPI_strerror(error));
+        return DLB_BACKEND_ERROR;
+    }
+
+    /* Only count user-space events (applies to eventsets created afterwards) */
+    error = PAPI_set_domain(PAPI_DOM_USER);
+    if (error != PAPI_OK) {
+        PLUGIN_ERROR("PAPI Error setting domain to PAPI_DOM_USER. %d: %s\n",
                 error, PAPI_strerror(error));
         return DLB_BACKEND_ERROR;
     }

@@ -536,10 +536,22 @@ For Python MPI programs, the ``dlb_mpi`` module must be used instead of the base
 Enabling Hardware Counters
 ==========================
 
-:ref:`Configure<dlb-configure-flags>` DLB with ``--with-papi`` to enable support
-for hardware performance counters through PAPI. When PAPI is available and the
-system permits access to performance counters, TALP will also report the
-average IPC (Instructions Per Cycle).
+DLB can obtain CPU hardware counters (cycles and instructions) in two ways:
+
+- Out of the box, via a built-in backend that reads them directly through the Linux ``perf_event_open`` syscall. No extra dependency is needed, and this is used automatically whenever the PAPI backend below isn't built.
+- Via PAPI, if DLB was :ref:`configured<dlb-configure-flags>` with ``--with-papi``. If present, this backend is preferred automatically over the built-in one.
+
+Most importantly, **both backends are usually built on the same kernel facility**, so they are subject to the exact same permission requirements.
+The kernels ``perf_event_paranoid`` setting must be ``0`` or lower.
+If this permission isn't granted, TALP simply runs without hardware counters rather than failing.
+
+
+.. note::
+
+   As the ``perf`` backend needs a system call into to kernel for every read of the hardware counters, the two backends differ in cost, at least on x86 machines.
+   PAPI can use the ``rdpmc``shortcut available in most machines today.
+   This results in a measured difference of up to 10x on a Sapphire Rapid machine for getting the counters and roughly 6x for the internal TALP housekeeping functions between the two backends.
+
 
 .. _talp_options:
 

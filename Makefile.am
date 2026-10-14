@@ -855,6 +855,24 @@ libdlb_papi_la_SOURCES = $(PAPI_SRCS)
 endif #PAPI_PLUGIN
 
 #********************************************************************************
+# libdlb_perf.so
+#********************************************************************************
+# Always built: this backend only needs Linux kernel headers, no external
+# library to detect/link against. Uses the perf_event_open syscall directly.
+PERF_SRCS = \
+	src/talp/backends/backend_utils.h     \
+	src/talp/backends/perf.c              \
+	src/talp/backends/perf_event_syscall.c \
+	src/talp/backends/perf_event_syscall.h \
+	$(END)
+
+lib_LTLIBRARIES += libdlb_perf.la
+libdlb_perf_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
+libdlb_perf_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_perf_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_perf_la_SOURCES = $(PERF_SRCS)
+
+#********************************************************************************
 # Support binaries
 #********************************************************************************
 dlb_cmd_impl_sources = \

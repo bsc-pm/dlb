@@ -69,6 +69,7 @@ static plugin_t loaded_gpu_plugin = {};
 // List of possible HWC backend plugin names
 static const char *hwc_plugins[] = {
     "papi",
+    "perf",
 };
 
 enum { num_hwc_plugins = sizeof(hwc_plugins) / sizeof(hwc_plugins[0]) };
