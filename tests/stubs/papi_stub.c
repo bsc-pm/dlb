@@ -60,6 +60,10 @@ int PAPI_unregister_thread(void) {
 void PAPI_shutdown(void) {
 }
 
+int PAPI_set_domain(int domain) {
+    return PAPI_OK;
+}
+
 int PAPI_create_eventset(int *EventSet) {
 
     if (EventSet == NULL) return PAPI_EINVAL;

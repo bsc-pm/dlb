@@ -45,7 +45,7 @@ static const backend_api_t *hwc_backend_api = NULL;
 
 int talp_hwc_init(const subprocess_descriptor_t *spd) {
 
-    hwc_backend_api = talp_backend_manager_load_hwc_backend(NULL);
+    hwc_backend_api = talp_backend_manager_load_hwc_backend(spd->options.talp_hwc_backend);
     if (hwc_backend_api == NULL) {
         debug_warning("HWC backend could not be loaded");
         return DLB_ERR_UNKNOWN;

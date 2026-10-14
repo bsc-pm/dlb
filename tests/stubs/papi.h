@@ -42,6 +42,8 @@
 #define PAPI_VER_CURRENT (PAPI_VERSION & 0xffff0000)
 #define PAPI_LIB_VERSION  21
 
+#define PAPI_DOM_USER      0x1
+
 #define PAPI_TOT_CYC       -2147483589
 #define PAPI_TOT_INS       -2147483598
 
@@ -58,6 +60,7 @@ int  PAPI_destroy_eventset(int *EventSet);
 int  PAPI_start(int EventSet);
 int  PAPI_stop(int EventSet, long long * values);
 int  PAPI_read(int EventSet, long long * values);
+int  PAPI_set_domain(int domain);
 int  PAPI_get_opt(int option, void * ptr);
 char *PAPI_strerror(int);
 
