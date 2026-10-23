@@ -114,6 +114,7 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"    openmp    OpenMP activity\n"
                           OFFSET"    gpu       GPU activity\n"
                           OFFSET"    hwc       Hardware counters\n"
+			  OFFSET"    energy    Energy measurements\n"
                           OFFSET"    none      Disable TALP\n"
                           OFFSET"\n"
                           OFFSET"If the option is specified without value (i.e., --talp), it is\n"
@@ -554,6 +555,17 @@ static const opts_dict_t options_dictionary[] = {
                           OFFSET"backend in the following order:\n"
                           OFFSET"'papi' and 'perf'.",
         .offset         = offsetof(options_t, talp_hwc_backend),
+        .type           = OPT_STR_T,
+        .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
+    },
+    {
+        .var_name       = "LB_NULL",
+        .arg_name       = "--talp-energy-backend",
+        .default_value  = "",
+        .description    = OFFSET"Specifies the energy backend plugin used by TALP.\n"
+                          OFFSET"If unset (default), DLB automatically attempts to load an energy\n"
+                          OFFSET"backend in the following order: 'ear' and 'seanergys'.",
+        .offset         = offsetof(options_t, talp_energy_backend),
         .type           = OPT_STR_T,
         .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)
     },

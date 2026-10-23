@@ -398,6 +398,12 @@ AX_CUDA
 # check for ROCm
 AX_ROCM
 
+# check for EAR
+AX_EAR
+
+# check for SEANERGYS
+AX_SEANERGYS
+
 # check for SPHINX
 AC_ARG_ENABLE([sphinx-doc],
               AS_HELP_STRING([--disable-sphinx-doc], [disable sphinx-doc detection]),
@@ -696,6 +702,26 @@ AS_IF([test "x$with_hwloc" != xno], [
     hwloc_info=""
 ])
 
+AS_IF([test "x$with_ear" != xno], [
+    ear_plugin="yes (libdlb_ear.so)"
+    ear_info="
+  CPPFLAGS                : $EAR_CPPFLAGS
+  LDFLAGS                 : $EAR_LDFLAGS"
+], [
+    ear_plugin="no"
+    ear_info=""
+])
+
+AS_IF([test "x$with_seanergys" != xno], [
+    seanergys_plugin="yes (libdlb_seanergys.so)"
+    seanergys_info="
+  CFLAGS		  : $SEANERGYS_CFLAGS
+  LIBS			  : $SEANERGYS_LIBS"
+], [
+    seanergys_plugin="no"
+    seanergys_info=""
+])
+
 # Summary
 AS_ECHO(["
 $summary_title
@@ -723,6 +749,8 @@ Optional plugins
 PAPI plugin               : $papi_plugin$papi_info
 CUDA plugin               : $cuda_plugin$cuda_info
 ROCm plugin               : $rocm_plugin$rocm_info
+EAR plugin                : $ear_plugin$ear_info
+SEANERGYS plugin          : $seanergys_plugin$seanergys_info
 
 Other libraries
 ---------------

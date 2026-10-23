@@ -157,6 +157,20 @@ void talp_output_print_monitoring_region(
         info("### Number of GPU runtime calls:              %"PRId64,
                 monitor->num_gpu_runtime_calls);
     }
+    if (talp_flags.have_energy) {
+	info("### Accumulated node energy: 		    %.2f J",
+		monitor->node_energy);
+	info("###   - CPU energy: 			    %.2f J",
+		monitor->cpu_energy);
+	info("###   - DRAM energy: 			    %.2f J",
+		monitor->dram_energy);
+	info("###   - Peak node power: 		    	    %.2f W",
+		monitor->node_peak_power);
+	info("###   - GPU energy: 			    %.2f J",
+		monitor->gpu_energy);
+	info("###   - Peak GPU power: 		    	    %.2f W",
+		monitor->gpu_peak_power);
+    }
 }
 
 
@@ -192,6 +206,13 @@ static void pop_metrics_print(void) {
 
             bool have_gpu_activity = record->num_gpu_runtime_calls > 0 ||
                 record->gpu_useful_time > 0;
+	
+	    bool have_node_energy = record->node_energy > 0;
+	    bool have_cpu_energy = record->cpu_energy > 0;
+	    bool have_dram_energy = record->dram_energy > 0;
+	    bool have_host_energy_activity = have_node_energy || have_cpu_energy || have_dram_energy;
+	    bool have_gpu_energy_activity = record->gpu_energy > 0;
+	    bool have_energy_activity = have_host_energy_activity || have_gpu_energy_activity;
 
             info("%s", make_header("Monitoring Region POP Metrics"));
             info("### Name:                                     %s", record->name);
@@ -257,6 +278,83 @@ static void pop_metrics_print(void) {
                 info("###  - Orchestration efficiency:              %1.2f",
                         record->gpu_orchestration_efficiency);
             }
+	    if (have_energy_activity) {
+		info("### Energy metrics:");
+		if (have_host_energy_activity) {
+		    if (have_gpu_energy_activity) {
+			info("###  - Host");
+			if (have_node_energy) {
+			    info("###     - Node Energy:                        %1.2f J",
+				    record->node_energy);
+			}
+			if (have_cpu_energy) {
+			    info("###     - CPU Energy:                         %1.2f J",
+				    record->cpu_energy);
+			}
+			if (have_dram_energy) {
+			    info("###     - DRAM Energy:                        %1.2f J",
+				    record->dram_energy);
+			}
+		    } else {
+			if (have_node_energy) {
+			    info("###  - Node Energy:                           %1.2f J",
+				    record->node_energy);
+			}
+			if (have_cpu_energy) {
+			    info("###  - CPU Energy:                            %1.2f J",
+				    record->cpu_energy);
+			}
+			if (have_dram_energy) {
+			    info("###  - DRAM Energy:                           %1.2f J",
+				    record->dram_energy);
+			}
+		    }
+		}
+		if (have_gpu_energy_activity) {
+		    if (have_host_energy_activity) {
+			info("###  - GPU");
+			info("###     - GPU Energy:                         %1.2f J",
+				record->gpu_energy);
+		    } else {
+			info("###  - GPU Energy:                            %1.2f J",
+				record->gpu_energy);
+		    }
+		}
+
+		if (have_node_energy || have_gpu_energy_activity) {
+		    info("### Power metrics:");
+		}
+		if (have_node_energy) {
+                    double node_power = record->node_energy / (record->elapsed_time / 1e9);
+		    if (have_gpu_energy_activity) {
+			info("###  - Host");
+			info("###     - Average Node Power:                 %1.2f W",
+                                node_power);
+			info("###     - Peak Node Power:                    %1.2f W",
+				record->node_peak_power);
+		    } else {
+			info("###  - Average Node Power:                    %1.2f W",
+                                node_power);
+			info("###  - Peak Node Power:                       %1.2f W",
+				record->node_peak_power);
+		    }
+		}
+		if (have_gpu_energy_activity) {
+                    double gpu_power = record->gpu_energy / (record->elapsed_time / 1e9);
+		    if (have_node_energy) {
+			info("###  - GPU");
+			info("###     - Average GPU Power:                  %1.2f W",
+                                gpu_power);
+			info("###     - Peak GPU Power:                     %1.2f W",
+				record->gpu_peak_power);
+		    } else {
+			info("###  - Average GPU Power:                     %1.2f W",
+                                gpu_power);
+			info("###  - Peak GPU Power:                        %1.2f W",
+				record->gpu_peak_power);
+		    }
+		}
+	    }
         } else {
             info("%s", make_header("Monitoring Region POP Metrics"));
             info("### Name:                                     %s", record->name);
@@ -338,6 +436,12 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     "### Device communication time:                 %"PRId64"\n"
                     "### Device max useful time:                    %"PRId64"\n"
                     "### Device max active time:                    %"PRId64"\n"
+                    "### CPU Energy (J):                            %.2f\n"
+                    "### DRAM Energy (J):                           %.2f\n"
+                    "### Node Energy (J):                           %.2f\n"
+                    "### Peak Node Power (W):                       %.2f\n"
+                    "### GPU Energy (J):                            %.2f\n"
+                    "### Peak GPU Power (W)                         %.2f\n"
                     "### --- Host metrics ---\n"
                     "### Parallel efficiency:                       %.2f\n"
                     "### MPI Parallel efficiency:                   %.2f\n"
@@ -382,6 +486,12 @@ static void pop_metrics_to_txt(FILE *out_file) {
                     record->gpu_communication_time,
                     record->max_gpu_useful_time,
                     record->max_gpu_active_time,
+                    record->cpu_energy,
+                    record->dram_energy,
+                    record->node_energy,
+                    record->node_peak_power,
+                    record->gpu_energy,
+                    record->gpu_peak_power,
                     record->parallel_efficiency,
                     record->mpi_parallel_efficiency,
                     record->mpi_communication_efficiency,

@@ -121,6 +121,7 @@ typedef enum TalpComponent {
     TALP_COMPONENT_OPENMP  = 1 << 2,
     TALP_COMPONENT_GPU     = 1 << 3,
     TALP_COMPONENT_HWC     = 1 << 4,
+    TALP_COMPONENT_ENERGY  = 1 << 5,
 } talp_component_t;
 
 typedef enum MngoModeType {

@@ -90,6 +90,19 @@ typedef struct dlb_monitor_t {
     int64_t     gpu_communication_time;
     /*! TBD */
     int64_t     gpu_inactive_time;
+    /*! Total accumulated CPU energy across all sockets, in joules. */
+    double      cpu_energy;
+    /*! Total accumulated DRAM energy, in joules. */
+    double      dram_energy;
+    /*! Total accumulated whole-node energy, in joules. This is not cpu_energy + dram_energy. */
+    double      node_energy;
+    /*! Maximum window-averaged whole-node power during the region, in watts. */
+    double      node_peak_power;
+    /*! Total accumulated GPU energy across all local devices, in joules. */
+    double      gpu_energy;
+    /*! Maximum window-averaged combined power across all local GPU devices during the region,
+     * in watts. */
+    double      gpu_peak_power;
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;
@@ -158,6 +171,19 @@ typedef struct dlb_pop_metrics_t {
     int64_t     max_gpu_useful_time;
     /* TBD */
     int64_t     max_gpu_active_time;
+    /*! Total accumulated CPU energy across all sockets, in joules. */
+    double      cpu_energy;
+    /*! Total accumulated DRAM energy, in joules. */
+    double      dram_energy;
+    /*! Total accumulated whole-node energy, in joules. This is not cpu_energy + dram_energy. */
+    double      node_energy;
+    /*! Maximum window-averaged whole-node power during the region, in watts. */
+    double      node_peak_power;
+    /*! Total accumulated GPU energy across all local devices, in joules. */
+    double      gpu_energy;
+    /*! Maximum window-averaged combined power across all local GPU devices during the region,
+     * in watts. */
+    double      gpu_peak_power;
     /*! Efficiency number [0.0 - 1.0] of the impact in the application's parallelization */
     float       parallel_efficiency;
     /*! Efficiency number of the impact in the MPI parallelization */

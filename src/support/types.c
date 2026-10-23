@@ -625,9 +625,9 @@ bool equivalent_talp_model(const char *str1, const char *str2) {
 /* talp_component_t */
 static const talp_component_t talp_component_values[] = {
     TALP_COMPONENT_NONE, TALP_COMPONENT_DEFAULT, TALP_COMPONENT_MPI, TALP_COMPONENT_OPENMP,
-        TALP_COMPONENT_GPU, TALP_COMPONENT_HWC };
-static const char* const talp_component_choices[] = {"none", "default", "mpi", "openmp", "gpu", "hwc"};
-static const char talp_component_choices_str[] = "none:default:mpi:openmp:gpu:hwc";
+        TALP_COMPONENT_GPU, TALP_COMPONENT_HWC, TALP_COMPONENT_ENERGY };
+static const char* const talp_component_choices[] = {"none", "default", "mpi", "openmp", "gpu", "hwc", "energy"};
+static const char talp_component_choices_str[] = "none:default:mpi:openmp:gpu:hwc:energy";
 enum { talp_component_nelems = sizeof(talp_component_values) / sizeof(talp_component_values[0]) };
 
 int parse_talp_component(const char *str, talp_component_t *value) {
@@ -673,6 +673,10 @@ int parse_talp_component(const char *str, talp_component_t *value) {
                 *value |= TALP_COMPONENT_HWC;
                 break;
             }
+	    if (strcmp(token, "ear") == 0) {
+		*value |= TALP_COMPONENT_ENERGY;
+		break;
+	    }
         }
         if (i == talp_component_nelems) {
             warning("Unknown --talp option: %s", token);

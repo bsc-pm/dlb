@@ -45,6 +45,7 @@
 #include "talp/regions.h"
 #include "talp/talp_gpu.h"
 #include "talp/talp_hwc.h"
+#include "talp/talp_energy.h"
 #include "talp/talp_output.h"
 #include "talp/talp_record.h"
 #include "talp/talp_types.h"
@@ -147,6 +148,18 @@ void talp_init(subprocess_descriptor_t *spd) {
         }
     }
 
+    if (spd->options.talp & (TALP_COMPONENT_DEFAULT | TALP_COMPONENT_ENERGY)) { 
+        if (talp_energy_init(spd) == DLB_SUCCESS) {
+            talp_info->flags.have_energy = true;
+            verbose(VB_TALP, "Energy component enabled successfully");
+        } else {
+            if (spd->options.talp & TALP_COMPONENT_ENERGY) {
+                /* component was explicit and failed, warn user */
+                warning("TALP: Failed to load ENERGY component");
+            }
+        }
+    }
+
 #ifdef MPI_LIB
     /* Check HWC status across all process. Every process needs to do the check
      * because it's a collective operation and some process may have been started
@@ -198,6 +211,9 @@ void talp_finalize(subprocess_descriptor_t *spd) {
     }
     if (talp_info->flags.have_hwc) {
         talp_hwc_finalize();
+    }
+    if (talp_info->flags.have_energy) {
+	talp_energy_finalize();
     }
 
     /* Per-process output (no MPI or requested by user) */
@@ -349,6 +365,21 @@ static void update_regions_with_macrosample(talp_info_t *restrict talp_info,
             monitor->cycles                    += macrosample->counters.cycles;
             monitor->instructions              += macrosample->counters.instructions;
 
+            /* Energy (save nJ reading into J)*/
+            monitor->cpu_energy               += (double)macrosample->energy.cpu / 1e9;
+            monitor->dram_energy              += (double)macrosample->energy.dram / 1e9;
+            monitor->node_energy              += (double)macrosample->energy.node / 1e9;
+            monitor->gpu_energy               += (double)macrosample->energy.gpu / 1e9;
+            if (macrosample->energy_interval_ns > 0) {
+                double instant_node_power = (double)macrosample->energy.node
+                    / (double)macrosample->energy_interval_ns;
+                monitor->node_peak_power = max_double(monitor->node_peak_power, instant_node_power);
+
+                double instant_gpu_power = (double)macrosample->energy.gpu
+                    / (double)macrosample->energy_interval_ns;
+                monitor->gpu_peak_power = max_double(monitor->gpu_peak_power, instant_gpu_power);
+            }
+
             /* Stats */
             monitor->num_mpi_calls             += macrosample->stats.num_mpi_calls;
             monitor->num_omp_parallels         += macrosample->stats.num_omp_parallels;
@@ -397,6 +428,11 @@ int talp_aggregate_samples_to_regions(talp_info_t *talp_info) {
     if (talp_info->flags.have_gpu) {
         /* Collect GPU measuremnts up to this point and update macrosample */
         talp_gpu_collect(macrosample.gpu_timers, MAX_LOCAL_GPUS, &macrosample.gpu_mask);
+    }
+
+    if (talp_info->flags.have_energy) {
+        /* Collect energy consumed up to this point and update macrosample */
+        talp_energy_collect(&macrosample.energy, &macrosample.energy_interval_ns);
     }
 
     /* Update all started regions */

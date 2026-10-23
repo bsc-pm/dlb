@@ -55,6 +55,12 @@
           integer(kind=c_int64_t) :: gpu_useful_time
           integer(kind=c_int64_t) :: gpu_communication_time
           integer(kind=c_int64_t) :: gpu_inactive_time
+          real(kind=c_double)     :: cpu_energy
+          real(kind=c_double)     :: dram_energy
+          real(kind=c_double)     :: node_energy
+          real(kind=c_double)     :: node_peak_power
+          real(kind=c_double)     :: gpu_energy
+          real(kind=c_double)     :: gpu_peak_power
           type(c_ptr)             :: data_
       end type
 
@@ -88,6 +94,12 @@
           integer(kind=c_int64_t) :: gpu_inactive_time
           integer(kind=c_int64_t) :: max_gpu_useful_time
           integer(kind=c_int64_t) :: max_gpu_active_time
+          real(kind=c_double)     :: cpu_energy
+          real(kind=c_double)     :: dram_energy
+          real(kind=c_double)     :: node_energy
+          real(kind=c_double)     :: node_peak_power
+          real(kind=c_double)     :: gpu_energy
+          real(kind=c_double)     :: gpu_peak_power
           real(kind=c_float)      :: parallel_efficiency
           real(kind=c_float)      :: mpi_parallel_efficiency
           real(kind=c_float)      :: mpi_communication_efficiency

@@ -476,6 +476,14 @@ static void mpi_reduction_fn(void *invec, void *inoutvec, int *len,
             max_int64(inout[i].max_gpu_useful_time, in[i].max_gpu_useful_time);
         inout[i].max_gpu_active_time =
             max_int64(inout[i].max_gpu_active_time, in[i].max_gpu_active_time);
+
+        /* Energy */
+        inout[i].cpu_energy     += in[i].cpu_energy;
+        inout[i].dram_energy    += in[i].dram_energy;
+        inout[i].node_energy    += in[i].node_energy;
+        inout[i].node_peak_power = max_double(inout[i].node_peak_power, in[i].node_peak_power);
+        inout[i].gpu_energy     += in[i].gpu_energy;
+        inout[i].gpu_peak_power  = max_double(inout[i].gpu_peak_power, in[i].gpu_peak_power);
     }
 }
 
@@ -542,6 +550,13 @@ static void reduce_pop_metrics_app_reduction(pop_base_metrics_t *base_metrics,
         /* Device Max Times */
         .max_gpu_useful_time       = monitor->gpu_useful_time,
         .max_gpu_active_time       = monitor->gpu_useful_time + monitor->gpu_communication_time,
+        /* Energy */
+        .cpu_energy                = _process_id == 0 ? monitor->cpu_energy : 0,
+        .dram_energy               = _process_id == 0 ? monitor->dram_energy : 0,
+        .node_energy               = _process_id == 0 ? monitor->node_energy : 0,
+        .node_peak_power           = _process_id == 0 ? monitor->node_peak_power : 0,
+        .gpu_energy                = _process_id == 0 ? monitor->gpu_energy : 0,
+        .gpu_peak_power            = _process_id == 0 ? monitor->gpu_peak_power : 0,
     };
 
     /* MPI type: int64_t */
@@ -666,6 +681,12 @@ void perf_metrics__local_monitor_into_base_metrics(pop_base_metrics_t *base_metr
         .gpu_inactive_time         = monitor->gpu_inactive_time,
         .max_gpu_useful_time       = monitor->gpu_useful_time,
         .max_gpu_active_time       = monitor->gpu_useful_time + monitor->gpu_communication_time,
+        .cpu_energy                = monitor->cpu_energy,
+        .dram_energy               = monitor->dram_energy,
+        .node_energy               = monitor->node_energy,
+        .node_peak_power           = monitor->node_peak_power,
+        .gpu_energy                = monitor->gpu_energy,
+        .gpu_peak_power            = monitor->gpu_peak_power,
     };
 }
 
@@ -718,6 +739,12 @@ void perf_metrics__base_to_pop_metrics(const char *monitor_name,
         .gpu_inactive_time               = base_metrics->gpu_inactive_time,
         .max_gpu_useful_time             = base_metrics->max_gpu_useful_time,
         .max_gpu_active_time             = base_metrics->max_gpu_active_time,
+        .cpu_energy                      = base_metrics->cpu_energy,
+        .dram_energy                     = base_metrics->dram_energy,
+        .node_energy                     = base_metrics->node_energy,
+        .node_peak_power                 = base_metrics->node_peak_power,
+        .gpu_energy                      = base_metrics->gpu_energy,
+        .gpu_peak_power                  = base_metrics->gpu_peak_power,
         .parallel_efficiency             = metrics.parallel_efficiency,
         .mpi_parallel_efficiency         = metrics.mpi_parallel_efficiency,
         .mpi_communication_efficiency    = metrics.mpi_communication_efficiency,

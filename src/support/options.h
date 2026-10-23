@@ -71,6 +71,7 @@ typedef struct Options {
     char                talp_region_select[MAX_OPTION_LENGTH];
     char                talp_gpu_backend[MAX_OPTION_LENGTH];
     char                talp_hwc_backend[MAX_OPTION_LENGTH];
+    char                talp_energy_backend[MAX_OPTION_LENGTH];
     talp_model_t        talp_model;
     /* mngo */
     int                 mngo_interval_time;
