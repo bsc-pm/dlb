@@ -51,6 +51,13 @@ typedef struct hw_counters_t {
     int64_t instructions;
 } hw_counters_t;
 
+typedef struct energy_readings_t {
+    int64_t cpu;    /* combined CPU energy, summed across sockets */
+    int64_t dram;   /* DRAM energy */
+    int64_t node;   /* whole-node reading, independently measured (not cpu + dram) */
+    int64_t gpu;    /* combined GPU energy, summed across local devices */
+} energy_readings_t;
+
 /* Backend to Core communication interface */
 typedef struct {
     uint32_t abi_version;
@@ -76,6 +83,7 @@ typedef struct {
         bool gpu_amd:1;
         bool gpu_nvidia:1;
         bool hwc:1;
+        bool energy:1;
     } capabilities;
 
     int (*probe)(void);
@@ -93,6 +101,10 @@ typedef struct {
     struct {
         int (*collect)(hw_counters_t *out);
     } hwc;
+
+    struct {
+        int (*collect)(energy_readings_t *out);
+    } energy;
 
 } backend_api_t;
 

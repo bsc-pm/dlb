@@ -127,6 +127,8 @@ common_srcs = [
   'src/talp/backend.h',
   'src/talp/backend_manager.c',
   'src/talp/backend_manager.h',
+  'src/talp/talp_energy.c',
+  'src/talp/talp_energy.h',
   'src/talp/talp_gpu.c',
   'src/talp/talp_gpu.h',
   'src/talp/talp_hwc.c',
@@ -498,6 +500,20 @@ libdlb_perf = shared_module(
   gnu_symbol_visibility : 'hidden',
   install : true,
 )
+
+# EAR
+
+ear_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/ear.c',
+]
+
+# SEANERGYS
+
+seanergys_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/seanergys.c',
+]
 
 ### Stub libraries and testing plugins
 

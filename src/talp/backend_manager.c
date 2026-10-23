@@ -77,6 +77,19 @@ enum { num_hwc_plugins = sizeof(hwc_plugins) / sizeof(hwc_plugins[0]) };
 static plugin_t loaded_hwc_plugin = {};
 
 
+/* --- Energy plugins  --------------------------------------------------------- */
+
+// List of possible energy backend plugin names
+static const char *energy_plugins[] = {
+    "ear",
+    "seanergys",
+};
+
+enum { num_energy_plugins = sizeof(energy_plugins) / sizeof(energy_plugins[0]) };
+
+static plugin_t loaded_energy_plugin = {};
+
+
 /* ----------------------------------------------------------------------------- */
 
 /* Obtain full path to libdlb.so (or whatever variant is loaded) */
@@ -193,7 +206,10 @@ static int talp_backend_manager_load(const char* plugin_name) {
     } else if (backend_api->capabilities.hwc) {
         loaded_hwc_plugin.api = backend_api;
         loaded_hwc_plugin.handle = handle;
-    } else {
+    } else if (backend_api->capabilities.energy) {
+	loaded_energy_plugin.api = backend_api;
+	loaded_energy_plugin.handle = handle;
+     } else {
         debug_warning("Unkown capabilities for plugin %s", plugin_name);
         goto close_handle_and_error;
     }
@@ -261,6 +277,34 @@ void talp_backend_manager_unload_hwc_backend(void) {
     }
 }
 
+const backend_api_t* talp_backend_manager_load_energy_backend(const char *name) {
+
+    if (loaded_energy_plugin.handle == NULL) {
+        if (name == NULL || name[0] == '\0') {
+            // Try all possible energy plugins until one succeeds
+            for (size_t i = 0; i < num_energy_plugins; ++i) {
+                const char *p = energy_plugins[i];
+                if (talp_backend_manager_load(p) == DLB_SUCCESS) {
+                    break;
+                }
+            }
+        } else {
+            talp_backend_manager_load(name);
+        }
+    }
+
+    // Note that it may be NULL if no energy plugin could be loaded
+    return loaded_energy_plugin.api;
+}
+
+void talp_backend_manager_unload_energy_backend(void) {
+
+    if (loaded_energy_plugin.handle != NULL) {
+        dlclose(loaded_energy_plugin.handle);
+        loaded_energy_plugin = (const plugin_t){};
+    }
+}
+
 void* talp_backend_manager_get_symbol_from_plugin(const char *symbol, const char *plugin_name) {
 
     if (loaded_gpu_plugin.handle != NULL
@@ -272,6 +316,12 @@ void* talp_backend_manager_get_symbol_from_plugin(const char *symbol, const char
             && strcmp(loaded_hwc_plugin.api->name, plugin_name) == 0) {
         return dlsym(loaded_hwc_plugin.handle, symbol);
     }
+
+    if (loaded_energy_plugin.handle != NULL
+            && strcmp(loaded_energy_plugin.api->name, plugin_name) == 0) {
+        return dlsym(loaded_energy_plugin.handle, symbol);
+    }
+
 
     return NULL;
 }

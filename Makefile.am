@@ -232,6 +232,8 @@ COMMON_SRCS = \
 	src/talp/backend.h                      \
 	src/talp/backend_manager.c              \
 	src/talp/backend_manager.h              \
+	src/talp/talp_energy.c                  \
+	src/talp/talp_energy.h                  \
 	src/talp/talp_gpu.c                     \
 	src/talp/talp_gpu.h                     \
 	src/talp/talp_hwc.c                     \
@@ -871,6 +873,38 @@ libdlb_perf_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS)
 libdlb_perf_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
 libdlb_perf_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_perf_la_SOURCES = $(PERF_SRCS)
+
+#********************************************************************************
+# libdlb_ear.so
+#********************************************************************************
+if EAR_PLUGIN
+EAR_SRCS = \
+	src/talp/backends/backend_utils.h     \
+	src/talp/backends/ear.c               \
+	$(END)
+
+lib_LTLIBRARIES += libdlb_ear.la
+libdlb_ear_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(EAR_CPPFLAGS)
+libdlb_ear_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_ear_la_LDFLAGS = $(AM_LDFLAGS) $(EAR_LDFLAGS)
+libdlb_ear_la_SOURCES = $(EAR_SRCS)
+endif #EAR_PLUGIN
+
+#********************************************************************************
+# libdlb_seanergys.so
+#********************************************************************************
+if HAVE_SEANERGYS
+SEANERGYS_SRCS = \
+	src/talp/backends/backend_utils.h    \
+	src/talp/backends/seanergys.c	     \
+	$(END)
+
+lib_LTLIBRARIES += libdlb_seanergys.la
+libdlb_seanergys_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(SEANERGYS_CFLAGS)
+libdlb_seanergys_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_seanergys_la_LDFLAGS = $(AM_LDFLAGS) $(SEANERGYS_LIBS)
+libdlb_seanergys_la_SOURCES = $(SEANERGYS_SRCS)
+endif #HAVE_SEANERGYS
 
 #********************************************************************************
 # Support binaries

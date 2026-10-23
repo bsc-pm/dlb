@@ -34,6 +34,10 @@ const backend_api_t*
       talp_backend_manager_load_hwc_backend(const char *name);
 void  talp_backend_manager_unload_hwc_backend(void);
 
+const backend_api_t*
+      talp_backend_manager_load_energy_backend(const char *name);
+void  talp_backend_manager_unload_energy_backend(void);
+
 void* talp_backend_manager_get_symbol_from_plugin(const char *symbol, const char *plugin_name);
 int   talp_backend_manager_get_gpu_affinity(char *buffer, size_t buffer_size, bool full_uuid);
 

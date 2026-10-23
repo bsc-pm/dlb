@@ -110,13 +110,15 @@ typedef struct DLB_ALIGN_CACHE talp_sample_t {
  * or a subset of, threads. It is only constructed when samples are aggregated.
  * The macrosample is then used to update all started monitoring regions. */
 typedef struct talp_macrosample_t {
-    macro_timers_t timers;
-    hw_counters_t  counters;
-    event_stats_t  stats;
-    cpu_set_t      cpu_mask;
-    int            num_samples;
-    uint64_t       gpu_mask;
-    gpu_timers_t   gpu_timers[MAX_LOCAL_GPUS];
+    macro_timers_t 		timers;
+    hw_counters_t  		counters;
+    event_stats_t  		stats;
+    cpu_set_t      		cpu_mask;
+    int            		num_samples;
+    uint64_t       		gpu_mask;
+    gpu_timers_t   		gpu_timers[MAX_LOCAL_GPUS];
+    energy_readings_t		energy;         
+    int64_t			energy_interval_ns; 
 } talp_macrosample_t;
 
 
@@ -133,6 +135,7 @@ typedef struct talp_flags_t {
     bool have_openmp:1;         /* whether TALP regions have OpenMP events */
     bool have_gpu:1;            /* whether TALP regions have GPU events */
     bool have_hwc:1;            /* whether TALP regions have HWC events */
+    bool have_energy:1;		/* whether TALP regions have energy readings */
 } talp_flags_t;
 
 /* Collection of samples and metadada needed for aggregation */
@@ -212,7 +215,14 @@ typedef struct monitor_data_t {
     DO(gpu_inactive_time,           int64_t,    mpi_int64_type) \
     /* Device Max Times */                                      \
     DO(max_gpu_useful_time,         int64_t,    mpi_int64_type) \
-    DO(max_gpu_active_time,         int64_t,    mpi_int64_type)
+    DO(max_gpu_active_time,         int64_t,    mpi_int64_type) \
+    /* Energy */                                                \
+    DO(cpu_energy,                  double,     MPI_DOUBLE)     \
+    DO(dram_energy,                 double,     MPI_DOUBLE)     \
+    DO(node_energy,                 double,     MPI_DOUBLE)     \
+    DO(node_peak_power,             double,     MPI_DOUBLE)     \
+    DO(gpu_energy,                  double,     MPI_DOUBLE)     \
+    DO(gpu_peak_power,              double,     MPI_DOUBLE)
 
 typedef struct pop_base_metrics_t {
     #define DEFINE_C_TYPES(name, c_type, mpi_type) c_type name;
@@ -259,6 +269,12 @@ typedef struct pop_base_metrics_t {
     DO(gpu_useful_time,             int64_t,        mpi_int64_type) \
     DO(gpu_communication_time,      int64_t,        mpi_int64_type) \
     DO(gpu_inactive_time,           int64_t,        mpi_int64_type) \
+    DO(cpu_energy,                  double,         MPI_DOUBLE)     \
+    DO(dram_energy,                 double,         MPI_DOUBLE)     \
+    DO(node_energy,                 double,         MPI_DOUBLE)     \
+    DO(node_peak_power,             double,         MPI_DOUBLE)     \
+    DO(gpu_energy,                  double,         MPI_DOUBLE)     \
+    DO(gpu_peak_power,              double,         MPI_DOUBLE)     \
     DO(_data,                       void*,          address_type)
 
 #define FOR_DLB_MONITOR_PRINTABLE_FIELDS(DO, DO_LAST)                                   \
@@ -282,7 +298,13 @@ typedef struct pop_base_metrics_t {
     DO(omp_outside_parallel_time,   int64_t,        ompOutsideParallelTime, "%"PRId64)  \
     DO(gpu_runtime_time,            int64_t,        gpuRuntimeTime,         "%"PRId64)  \
     DO(gpu_useful_time,             int64_t,        gpuUsefulTime,          "%"PRId64)  \
-    DO_LAST(gpu_communication_time, int64_t,        gpuCommunicationTime,   "%"PRId64)
+    DO(gpu_communication_time,      int64_t,        gpuCommunicationTime,   "%"PRId64)  \
+    DO(cpu_energy,                  double,         cpuEnergy,              "%.2f")     \
+    DO(dram_energy,                 double,         dramEnergy,             "%.2f")     \
+    DO(node_energy,                 double,         nodeEnergy,             "%.2f")     \
+    DO(node_peak_power,             double,         nodePeakPower,          "%.2f")     \
+    DO(gpu_energy,                  double,         gpuEnergy,              "%.2f")     \
+    DO_LAST(gpu_peak_power,         double,         gpuPeakPower,           "%.2f")
 
 /* dlb_pop_metrics_t: per-app aggregated metrics */
 /* Note: char name[DLB_MONITOR_NAME_MAX] not included */
@@ -317,6 +339,12 @@ typedef struct pop_base_metrics_t {
     DO(gpu_inactive_time,               int64_t,    gpuInactiveTime,            "%"PRId64)  \
     DO(max_gpu_useful_time,             int64_t,    maxGpuUsefulTime,           "%"PRId64)  \
     DO(max_gpu_active_time,             int64_t,    maxGpuActiveTime,           "%"PRId64)  \
+    DO(cpu_energy,                      double,     cpuEnergy,                  "%.2f")     \
+    DO(dram_energy,                     double,     dramEnergy,                 "%.2f")     \
+    DO(node_energy,                     double,     nodeEnergy,                 "%.2f")     \
+    DO(node_peak_power,                 double,     nodePeakPower,              "%.2f")     \
+    DO(gpu_energy,                      double,     gpuEnergy,                  "%.2f")     \
+    DO(gpu_peak_power,                  double,     gpuPeakPower,               "%.2f")     \
     DO(parallel_efficiency,             float,      parallelEfficiency,         "%.2f")     \
     DO(mpi_parallel_efficiency,         float,      mpiParallelEfficiency,      "%.2f")     \
     DO(mpi_communication_efficiency,    float,      mpiCommunicationEfficiency, "%.2f")     \
