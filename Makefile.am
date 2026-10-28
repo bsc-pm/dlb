@@ -1592,6 +1592,7 @@ clean-deb:
 ### tests                                                                     ###
 #################################################################################
 EXTRA_DIST += src/talp/talp_check_layout.c \
+	      tests/abi \
 	      tests/unit \
 	      tests/functional \
 	      tests/stubs \

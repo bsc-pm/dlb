@@ -1120,22 +1120,35 @@ typedef struct TALPCommonRecord {
 } talp_common_record_t;
 static talp_common_record_t common_record;
 
+static bool use_fixed_metadata = false;
+
 static void talp_output_record_common(void) {
     /* Initialize structure */
-    time_t now = time(NULL);
-    common_record = (const talp_common_record_t) {
-        .dlb_version = PACKAGE_VERSION,
-        .time_of_creation = get_iso_8601_string(localtime(&now)),
-    };
+    if (!use_fixed_metadata) {
+        time_t now = time(NULL);
+        common_record = (const talp_common_record_t) {
+            .dlb_version = PACKAGE_VERSION,
+            .time_of_creation = get_iso_8601_string(localtime(&now)),
+        };
+    } else {
+        common_record = (const talp_common_record_t) {
+            .dlb_version = "<X.Y.Z>",
+            .time_of_creation = "2000-01-01T00:00:00",
+        };
+    }
 }
 
 static void common_to_json(FILE *out_file) {
     fprintf(out_file,
                     "  \"dlbVersion\": \"%s\",\n"
                     "  \"jsonSchema\": \"%d\",\n"
+                    "  \"dlbMonitorVersion\": \"%d\",\n"
+                    "  \"dlbPOPMetricsVersion\": \"%d\",\n"
                     "  \"timestamp\": \"%s\",\n",
                 common_record.dlb_version,
-                TALP_OUTPUT_JSON_SCHEMA_VERSION,
+                (int)TALP_OUTPUT_JSON_SCHEMA_VERSION,
+                (int)DLB_MONITOR_T_VERSION,
+                (int)DLB_POP_METRICS_T_VERSION,
                 common_record.time_of_creation);
 }
 
@@ -1151,7 +1164,9 @@ static void common_to_txt(FILE *out_file) {
 }
 
 static void common_finalize(void) {
-    free(common_record.time_of_creation);
+    if (!use_fixed_metadata) {
+        free(common_record.time_of_creation);
+    }
 }
 
 
@@ -1905,4 +1920,10 @@ void talp_output_finalize(const char *output_file, bool partial_output) {
     pop_metrics_finalize();
     node_finalize();
     process_finalize();
+}
+
+/* Testing */
+
+void talp_output_testing_use_fixed_metadata(bool fixed) {
+    use_fixed_metadata = fixed;
 }

@@ -30,9 +30,9 @@ coverage:
   stage: test
   before_script:
     # Re-build in case stage is executed by another runner
-    - >
+    - |
       if [ ! -f Makefile ] ; then
-        ./bootstrap ;
+        ./bootstrap
         ./configure --disable-instrumentation --disable-instrumentation-debug --enable-coverage
         make -j$(nproc)
       fi
@@ -45,6 +45,26 @@ coverage:
     key: "$CI_PIPELINE_ID"
   rules:
     - when: on_success
+
+abi-frozen:
+  image: bscpm/citools
+  stage: test
+  needs: []                  # start immediately, don't wait for build
+  variables:
+    GIT_DEPTH: "0"           # full history so the MR base SHA exists
+  rules:
+    # Escape hatch: an MR with this label may modify old snapshots
+    - if: $CI_MERGE_REQUEST_LABELS =~ /abi-snapshot-fix/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - |
+      changed=$(git diff --name-only --diff-filter=MDRT "$CI_MERGE_REQUEST_DIFF_BASE_SHA" HEAD -- tests/abi)
+      if [ -n "$changed" ]; then
+        echo "Frozen ABI snapshots modified:"
+        echo "$changed"
+        exit 1
+      fi
 
 talp-pages:test&lint:
     stage: test

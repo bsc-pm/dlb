@@ -1,0 +1,12 @@
+version 1
+sizeof 184
+alignof 8
+field node_id int offset 128 size 4
+field processes_per_node int offset 132 size 4
+field total_useful_time int64_t offset 136 size 8
+field total_mpi_time int64_t offset 144 size 8
+field max_useful_time int64_t offset 152 size 8
+field max_mpi_time int64_t offset 160 size 8
+field parallel_efficiency float offset 168 size 4
+field communication_efficiency float offset 172 size 4
+field load_balance float offset 176 size 4

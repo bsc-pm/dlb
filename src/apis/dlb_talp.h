@@ -22,6 +22,7 @@
 
 #include <time.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #define DLB_GLOBAL_REGION_NAME "Global"
 #define DLB_GLOBAL_REGION NULL
@@ -30,6 +31,8 @@
 #define DLB_LAST_OPEN_REGION (void*)1
 
 enum { DLB_MONITOR_NAME_MAX = 128 };
+
+#define DLB_MONITOR_T_VERSION 1
 
 /*! TALP public structure */
 typedef struct dlb_monitor_t {
@@ -106,6 +109,8 @@ typedef struct dlb_monitor_t {
     /*! Internal data */
     void        *_data;
 } dlb_monitor_t;
+
+#define DLB_POP_METRICS_T_VERSION 1
 
 /*! POP metrics (of one monitor) collected among all processes */
 typedef struct dlb_pop_metrics_t {
@@ -215,6 +220,8 @@ typedef struct dlb_pop_metrics_t {
     /*! TBD */
     float       gpu_orchestration_efficiency;
 } dlb_pop_metrics_t;
+
+#define DLB_NODE_METRICS_T_VERSION 1
 
 /*! Node metrics (of one monitor) collected asynchronously from the shared memory */
 typedef struct dlb_node_metrics_t {
