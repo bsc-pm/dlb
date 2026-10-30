@@ -26,6 +26,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+enum { TALP_OUTPUT_JSON_SCHEMA_VERSION = 2 };
+
 typedef struct talp_flags_t talp_flags_t;
 
 typedef enum gpu_vendor {
@@ -79,5 +81,8 @@ void talp_output_record_resources(int num_cpus, int num_available_cpus, int num_
 void talp_output_record_process_info(void);
 
 void talp_output_finalize(const char *output_file, bool partial_output);
+
+/* Testing */
+void talp_output_testing_use_fixed_metadata(bool fixed);
 
 #endif /* TALP_OUTPUT_H */

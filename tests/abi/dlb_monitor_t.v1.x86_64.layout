@@ -1,0 +1,36 @@
+version 1
+sizeof 240
+alignof 8
+field name const char* offset 0 size 8
+field num_cpus int offset 8 size 4
+field num_omp_threads int offset 12 size 4
+field avg_cpus float offset 16 size 4
+field num_gpus int offset 20 size 4
+field cycles int64_t offset 24 size 8
+field instructions int64_t offset 32 size 8
+field num_measurements int offset 40 size 4
+field num_resets int offset 44 size 4
+field num_mpi_calls int64_t offset 48 size 8
+field num_omp_parallels int64_t offset 56 size 8
+field num_omp_tasks int64_t offset 64 size 8
+field num_gpu_runtime_calls int64_t offset 72 size 8
+field start_time int64_t offset 80 size 8
+field stop_time int64_t offset 88 size 8
+field elapsed_time int64_t offset 96 size 8
+field useful_time int64_t offset 104 size 8
+field mpi_time int64_t offset 112 size 8
+field mpi_worker_idle_time int64_t offset 120 size 8
+field omp_load_imbalance_time int64_t offset 128 size 8
+field omp_scheduling_time int64_t offset 136 size 8
+field omp_outside_parallel_time int64_t offset 144 size 8
+field gpu_runtime_time int64_t offset 152 size 8
+field gpu_useful_time int64_t offset 160 size 8
+field gpu_communication_time int64_t offset 168 size 8
+field gpu_inactive_time int64_t offset 176 size 8
+field cpu_energy double offset 184 size 8
+field dram_energy double offset 192 size 8
+field node_energy double offset 200 size 8
+field node_peak_power double offset 208 size 8
+field gpu_energy double offset 216 size 8
+field gpu_peak_power double offset 224 size 8
+field _data void* offset 232 size 8

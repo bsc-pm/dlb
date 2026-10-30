@@ -21,6 +21,8 @@
     test_generator="gens/basic-generator"
 </testinfo>*/
 
+#include "tmpdir.h"
+
 #include "apis/dlb_talp.h"
 #include "support/mask_utils.h"
 #include "talp/talp_output.h"
@@ -34,24 +36,6 @@
 #include <limits.h>
 #include <assert.h>
 
-static char *tmpdir_template = NULL;
-static char *tmpdir = NULL;
-
-static int remove_callback(const char *fpath, const struct stat *sb,
-        int typeflag, struct FTW *ftwbuf) {
-    return remove(fpath);
-}
-
-__attribute__((destructor))
-static void delete_test_directory(void) {
-    if (tmpdir != NULL) {
-        nftw (tmpdir, remove_callback, 1, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
-    }
-
-    tmpdir = NULL;
-    free(tmpdir_template);
-    tmpdir_template = NULL;
-}
 
 static int count_lines(const char *filename) {
     int lines = 0;
@@ -213,16 +197,10 @@ int main(int argc, char *argv[]) {
     gethostname(hostname, HOST_NAME_MAX);
     pid_t pid = getpid();
 
-    /* Create temporary directory for TALP output files */
-    const char *tmpdir_env = getenv("TMPDIR");
-    asprintf(&tmpdir_template, "%s/dlb_test.XXXXXX", tmpdir_env ? tmpdir_env : "/tmp");
-    tmpdir = mkdtemp(tmpdir_template);
-    printf("%s\n", tmpdir);
-
     /* JSON */
     {
-        char *json_filename;
-        asprintf(&json_filename, "%s/talp.json", tmpdir);
+        char json_filename[PATH_MAX];
+        tmpdir_path(json_filename, sizeof(json_filename), "talp.json");
 
         /* Base */
         record_metrics();
@@ -239,55 +217,51 @@ int main(int argc, char *argv[]) {
         cat_file(json_filename);
         int num_lines_in_json_w_process_info = count_lines(json_filename);
         assert( num_lines_in_json + 4 == num_lines_in_json_w_process_info );
-
-        free(json_filename);
     }
 
     /* JSON with template*/
     {
-        char *json_template;
-        asprintf(&json_template, "%s/talp_%%h_%%p.json", tmpdir);
+        char json_template[PATH_MAX];
+        snprintf(json_template, sizeof(json_template),
+                "%s/talp_%%h_%%p.json", tmpdir_get());
 
-        char *expected_filename;
-        asprintf(&expected_filename, "%s/talp_%s_%d.json", tmpdir, hostname, pid);
+        char expected_filename[PATH_MAX];
+        snprintf(expected_filename, sizeof(expected_filename),
+                "%s/talp_%s_%d.json", tmpdir_get(), hostname, pid);
 
         record_metrics();
         talp_output_finalize(json_template, no_partial_output);
         assert( access(expected_filename, F_OK) == 0);
         cat_file(expected_filename);
-
-        free(json_template);
-        free(expected_filename);
     }
 
     /* JSON with partial output */
     {
         bool partial_output = true;
 
-        char *json_filename;
-        asprintf(&json_filename, "%s/talp.json", tmpdir);
+        char json_filename[PATH_MAX];
+        snprintf(json_filename, sizeof(json_filename),
+                "%s/talp.json", tmpdir_get());
 
-        char *expected_filename;
-        asprintf(&expected_filename, "%s/talp_%s_%d.partial.json", tmpdir, hostname, pid);
+        char expected_filename[PATH_MAX];
+        snprintf(expected_filename, sizeof(expected_filename),
+                "%s/talp_%s_%d.partial.json", tmpdir_get(), hostname, pid);
 
         record_metrics();
         talp_output_finalize(json_filename, partial_output);
         assert( access(expected_filename, F_OK) == 0 );
         cat_file(expected_filename);
-
-        free(json_filename);
-        free(expected_filename);
     }
 
     /* CSV multiple files */
     {
-        char *csv_filename;
-        asprintf(&csv_filename, "%s/talp.csv", tmpdir);
+        char csv_filename[PATH_MAX];
+        snprintf(csv_filename, sizeof(csv_filename), "%s/talp.csv", tmpdir_get());
         unlink(csv_filename);
 
-        char *expected_csv1, *expected_csv2;
-        asprintf(&expected_csv1, "%s/talp-pop.csv", tmpdir);
-        asprintf(&expected_csv2, "%s/talp-process.csv", tmpdir);
+        char expected_csv1[PATH_MAX], expected_csv2[PATH_MAX];
+        snprintf(expected_csv1, sizeof(expected_csv1), "%s/talp-pop.csv", tmpdir_get());
+        snprintf(expected_csv2, sizeof(expected_csv2), "%s/talp-process.csv", tmpdir_get());
 
         record_metrics();
         talp_output_finalize(csv_filename, no_partial_output);
@@ -297,16 +271,12 @@ int main(int argc, char *argv[]) {
 
         cat_file(expected_csv1);
         cat_file(expected_csv2);
-
-        free(csv_filename);
-        free(expected_csv1);
-        free(expected_csv2);
     }
 
     /* CSV single file + append */
     {
-        char *csv_filename;
-        asprintf(&csv_filename, "%s/talp.csv", tmpdir);
+        char csv_filename[PATH_MAX];
+        snprintf(csv_filename, sizeof(csv_filename), "%s/talp.csv", tmpdir_get());
 
         // first record
         record_pop_metrics();
@@ -321,17 +291,16 @@ int main(int argc, char *argv[]) {
         assert( count_lines(csv_filename) == 3 );
 
         cat_file(csv_filename);
-        free(csv_filename);
     }
 
     /* CSV with an old schema */
     {
-        char *existing_csv;
-        asprintf(&existing_csv, "%s/talp.csv", tmpdir);
+        char existing_csv[PATH_MAX];
+        snprintf(existing_csv, sizeof(existing_csv), "%s/talp.csv", tmpdir_get());
         write_to_file(existing_csv, "old_schema,Header1,Header2\n1,2,3\n");
 
-        char *expectef_old_csv;
-        asprintf(&expectef_old_csv, "%s/talp.old-schema.1.csv", tmpdir);
+        char expectef_old_csv[PATH_MAX];
+        snprintf(expectef_old_csv, sizeof(expectef_old_csv), "%s/talp.old-schema.1.csv", tmpdir_get());
 
         // first record
         record_pop_metrics();
@@ -351,21 +320,16 @@ int main(int argc, char *argv[]) {
 
         cat_file(expectef_old_csv);
         cat_file(existing_csv);
-
-        free(expectef_old_csv);
-        free(existing_csv);
     }
 
     /* TXT */
     {
-        char *txt_filename;
-        asprintf(&txt_filename, "%s/talp.txt", tmpdir);
+        char txt_filename[PATH_MAX];
+        snprintf(txt_filename, sizeof(txt_filename), "%s/talp.txt", tmpdir_get());
 
         record_metrics();
         talp_output_finalize(txt_filename, no_partial_output);
         assert( access(txt_filename, F_OK) == 0 );
-
-        free(txt_filename);
     }
 
     /* No file */
@@ -382,15 +346,13 @@ int main(int argc, char *argv[]) {
 
     /* Output to a directory that it does not exist */
     {
-        char *subdir_filename;
-        asprintf(&subdir_filename, "%s/subdir/talp.json", tmpdir);
+        char subdir_filename[PATH_MAX];
+        snprintf(subdir_filename, sizeof(subdir_filename), "%s/subdir/talp.json", tmpdir_get());
 
         record_metrics();
         talp_output_finalize(subdir_filename, no_partial_output);
         assert( access(subdir_filename, F_OK) == 0 );
         cat_file(subdir_filename);
-
-        free(subdir_filename);
     }
 
     /* Output to an existing file that cannot be written to
@@ -398,21 +360,19 @@ int main(int argc, char *argv[]) {
     {
         record_metrics();
         fprintf(stdout, "--- Fallback metrics in txt format:\n");
-        talp_output_finalize(tmpdir, no_partial_output);
+        talp_output_finalize(tmpdir_get(), no_partial_output);
         fflush(stdout);
     }
 
     /* Output to a directory that cannot be created */
     {
-        char *wrong_subdir;
-        asprintf(&wrong_subdir, "/subdir/talp.json");
+        char wrong_subdir[PATH_MAX];
+        snprintf(wrong_subdir, sizeof(wrong_subdir), "/subdir/talp.json");
 
         record_metrics();
         fprintf(stdout, "--- Fallback metrics in json format:\n");
         talp_output_finalize(wrong_subdir, no_partial_output);
         fflush(stdout);
-
-        free(wrong_subdir);
     }
 
     /* Report single region */

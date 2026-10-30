@@ -115,6 +115,7 @@ tests = {
     'api_monitor_00'      : {},
     'api_talp_00'         : {},
     'api_talp_attach_00'  : {},
+    'api_talp_versions_00': {'args' : [meson.project_source_root() / 'tests/abi']},
     'api_sp_00'           : {},
     'api_sp_01_async'     : {'source' : 'api_sp_01.c', 'dlb_args' : '--mode=async'},
     'api_sp_01_poll'      : {'source' : 'api_sp_01.c', 'dlb_args' : '--mode=polling'},
@@ -192,7 +193,7 @@ foreach suite, suite_tests : tests
         c_args : ['-DHAVE_TEST_LIB'],
         fortran_args : ['-ffree-line-length-none']
       )
-      test_args = []
+      test_args = test_props.get('args', [])
     endif
 
     test_env = initial_env
@@ -200,10 +201,7 @@ foreach suite, suite_tests : tests
       test_env.append('DLB_ARGS', test_props.get('dlb_args'), separator: ' ')
     endif
 
-    plugin_dep = []
-    if (test_props.has_key('depends'))
-      plugin_dep = test_props.get('depends')
-    endif
+    plugin_dep = test_props.get('depends', [])
 
     test(test_name, test_program,
       env : test_env,

@@ -361,11 +361,6 @@ typedef struct pop_base_metrics_t {
     DO(gpu_communication_efficiency,    float,      gpuCommunicationEfficiency, "%.2f")     \
     DO_LAST(gpu_orchestration_efficiency, float,    gpuOrchestrationEfficiency, "%.2f")
 
-/* JSON schema version of the TALP output.
- * Bump this integer whenever the JSON changes, i.e. a metric
- * is added, removed, or its calculation changes. */
-#define TALP_OUTPUT_JSON_SCHEMA_VERSION 1
-
 /* dlb_node_metrics_t: per-node aggregated metrics */
 /* Note: char name[DLB_MONITOR_NAME_MAX] not included */
 #define FOR_DLB_NODE_METRICS_FIELDS(DO)             \
