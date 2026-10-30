@@ -517,11 +517,9 @@ seanergys_backend_sources = [
 
 ### Stub libraries and testing plugins
 
-stub_includes = [ common_includes, include_directories('tests/stubs') ]
-
 libcupti_stub = shared_library(
   'cupti_stub',
-  'tests/stubs/cupti_stub.c',
+  'tests/stubs/cupti/cupti_stub.c',
   build_by_default: false,
   install : false,
 )
@@ -529,7 +527,7 @@ libcupti_stub = shared_library(
 libdlb_cupti_test = shared_module(
   'dlb_cupti_test',
   cupti_backend_sources,
-  include_directories : stub_includes,
+  include_directories : [ common_includes, include_directories('tests/stubs/cupti') ],
   link_with : libcupti_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
@@ -538,7 +536,7 @@ libdlb_cupti_test = shared_module(
 
 librocprofiler_sdk_stub = shared_library(
   'rocprofiler-sdk_stub',
-  'tests/stubs/rocprofiler_sdk_stub.c',
+  'tests/stubs/rocprofiler/rocprofiler_sdk_stub.c',
   dependencies : dl_dep,
   build_by_default: false,
   install : false,
@@ -547,7 +545,7 @@ librocprofiler_sdk_stub = shared_library(
 libdlb_rocprofiler_sdk_test = shared_module(
   'dlb_rocprofiler-sdk_test',
   rocprofiler_sdk_backend_sources,
-  include_directories : stub_includes,
+  include_directories : [ common_includes, include_directories('tests/stubs/rocprofiler') ],
   link_with : librocprofiler_sdk_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
@@ -556,7 +554,7 @@ libdlb_rocprofiler_sdk_test = shared_module(
 
 librocprofilerv2_stub = shared_library(
   'rocprofilerv2_stub',
-  'tests/stubs/rocprofilerv2_stub.c',
+  'tests/stubs/rocprofiler/rocprofilerv2_stub.c',
   # dependencies : dl_dep,
   build_by_default: false,
   install : false,
@@ -565,7 +563,7 @@ librocprofilerv2_stub = shared_library(
 libdlb_rocprofilerv2_test = shared_module(
   'dlb_rocprofilerv2_test',
   rocprofilerv2_backend_sources,
-  include_directories : stub_includes,
+  include_directories : [ common_includes, include_directories('tests/stubs/rocprofiler') ],
   link_with : librocprofilerv2_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
@@ -574,7 +572,7 @@ libdlb_rocprofilerv2_test = shared_module(
 
 libpapi_stub = shared_library(
   'papi_stub',
-  'tests/stubs/papi_stub.c',
+  'tests/stubs/papi/papi_stub.c',
   build_by_default: false,
   install : false,
 )
@@ -582,7 +580,7 @@ libpapi_stub = shared_library(
 libdlb_papi_test = shared_module(
   'dlb_papi_test',
   papi_backend_sources,
-  include_directories : stub_includes,
+  include_directories : [ common_includes, include_directories('tests/stubs/papi') ],
   link_with : libpapi_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
@@ -591,7 +589,7 @@ libdlb_papi_test = shared_module(
 
 libperf_event_syscall_stub = shared_library(
   'perf_event_syscall_stub',
-  'tests/stubs/perf_event_syscall_stub.c',
+  'tests/stubs/perf/perf_event_syscall_stub.c',
   include_directories : common_includes,
   build_by_default: false,
   install : false,
@@ -600,7 +598,7 @@ libperf_event_syscall_stub = shared_library(
 libdlb_perf_test = shared_module(
   'dlb_perf_test',
   perf_backend_sources,
-  include_directories : stub_includes,
+  include_directories : [ common_includes, include_directories('tests/stubs/perf') ],
   link_with : libperf_event_syscall_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
