@@ -178,10 +178,12 @@ AX_CHECK_COMPILE_FLAG([--coverage], [COVERAGE_FLAGS=--coverage])
 AX_CHECK_LINK_FLAG([-lm], [AC_LDFLAGS="${AC_LDFLAGS} -lm"])
 AX_CHECK_LINK_FLAG([-ldl], [AC_LDFLAGS="${AC_LDFLAGS} -ldl"])
 AX_CHECK_LINK_FLAG([-lrt], [AC_LDFLAGS="${AC_LDFLAGS} -lrt"])
-AC_CHECK_HEADERS([stdatomic.h])
 AC_CHECK_HEADERS([execinfo.h])
 AC_CHECK_HEADERS([immintrin.h])
 AC_CHECK_HEADERS([emmintrin.h])
+
+# check for real C11 atomics support (stdatomic.h not enough)
+AX_CHECK_C11_ATOMICS
 
 # Check cpu_set_t size
 AC_CHECK_SIZEOF([cpu_set_t], [], [#include <sched.h>])

@@ -29,7 +29,7 @@
 
 /* Atomic operations */
 
-#if defined(HAVE_STDATOMIC_H) && !(defined(__INTEL_COMPILER) || defined(__NVCOMPILER))
+#ifdef HAVE_C11_ATOMICS
 #include <stdatomic.h>
 
 #define DLB_ATOMIC_ADD(ptr, val)            atomic_fetch_add(ptr, val)
@@ -51,7 +51,7 @@
 #define DLB_ATOMIC_CMP_EXCH_WEAK(ptr, expected, desired) \
                                             atomic_compare_exchange_weak(ptr, &expected, desired)
 
-#else /* not HAVE_STDATOMIC_H */
+#else /* not HAVE_C11_ATOMICS */
 
 #define _Atomic(T)              volatile __typeof__(T)
 #define atomic_int              volatile int

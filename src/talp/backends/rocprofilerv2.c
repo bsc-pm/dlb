@@ -24,7 +24,6 @@
 
 #include <inttypes.h>
 #include <rocprofiler/v2/rocprofiler.h>
-#include <stdatomic.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
