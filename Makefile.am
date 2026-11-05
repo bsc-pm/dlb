@@ -305,26 +305,55 @@ DLB_CONVENIENCE_LIBS_DBG = libdlb_common_dbg.la
 endif
 
 #********************************************************************************
+# libdlb_fortran_mods.la
+#********************************************************************************
+# Convenience library to ensure Fortran mods are only built once.
+if HAVE_FORTRAN
+FORTRAN_MODULES_SRCS = \
+	src/support/mod_string.f90              \
+	$(END)
+
+CLEANFILES += mod_string.mod
+
+# The .mod is a side effect of compiling the object. This rule makes it a real target.
+mod_string.mod: src/support/libdlb_fortran_mods_la-mod_string.lo
+	@test -f $@ || { rm -f $<; $(MAKE) $(AM_MAKEFLAGS) $<; }
+
+# Every consumer (convenience libs AND the real lib) depends on the .mod
+FORTRAN_MOD_CONSUMERS = \
+	src/bindings/fortran/wrappers.lo                              \
+	src/bindings/fortran/libdlb_common_fortran_la-wrappers.lo     \
+	src/bindings/fortran/libdlb_common_fortran_dbg_la-wrappers.lo \
+	src/mpi/libdlb_mpi_la-mpi_wrappers_f08_comm_spawn.lo          \
+	src/mpi/libdlb_mpi_dbg_la-mpi_wrappers_f08_comm_spawn.lo      \
+	src/mpi/libdlb_mpif_la-mpi_wrappers_f08_comm_spawn.lo         \
+	src/mpi/libdlb_mpif_dbg_la-mpi_wrappers_f08_comm_spawn.lo     \
+	$(END)
+
+$(FORTRAN_MOD_CONSUMERS) : mod_string.mod
+
+noinst_LTLIBRARIES += libdlb_fortran_mods.la
+libdlb_fortran_mods_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS)
+libdlb_fortran_mods_la_LDFLAGS = $(AM_LDFLAGS)
+libdlb_fortran_mods_la_SOURCES = $(FORTRAN_MODULES_SRCS)
+
+endif # HAVE_FORTRAN
+
+#********************************************************************************
 # libdlb_common_fortran.la
 #********************************************************************************
 # Same as libdlb_common.la but for Fortran sources only.
 # The split is needed to ensure that libdlb_mpic does not contain any Fortran symbol.
 if HAVE_FORTRAN
 FORTRAN_COMMON_SRCS = \
-	src/support/mod_string.f90              \
 	src/bindings/fortran/wrappers.f90       \
 	$(END)
-
-CLEANFILES += mod_string.mod
-
-src/bindings/fortran/wrappers.lo: src/support/mod_string.lo
-src/bindings/fortran/libdlb_common_fortran_la-wrappers.lo: src/support/libdlb_common_fortran_la-mod_string.lo
-src/bindings/fortran/libdlb_common_fortran_dbg_la-wrappers.lo: src/support/libdlb_common_fortran_dbg_la-mod_string.lo
 
 noinst_LTLIBRARIES += libdlb_common_fortran.la
 libdlb_common_fortran_la_FCFLAGS = $(PERFO_FCFLAGS) $(AM_FCFLAGS)
 libdlb_common_fortran_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_common_fortran_la_SOURCES = $(FORTRAN_COMMON_SRCS)
+libdlb_common_fortran_la_LIBADD = libdlb_fortran_mods.la
 
 DLB_CONVENIENCE_LIBS += libdlb_common_fortran.la
 
@@ -333,6 +362,7 @@ noinst_LTLIBRARIES += libdlb_common_fortran_dbg.la
 libdlb_common_fortran_dbg_la_FCFLAGS = $(DEBUG_FCFLAGS) $(AM_FCFLAGS)
 libdlb_common_fortran_dbg_la_LDFLAGS = $(AM_LDFLAGS)
 libdlb_common_fortran_dbg_la_SOURCES = $(FORTRAN_COMMON_SRCS)
+libdlb_common_fortran_dbg_la_LIBADD = libdlb_fortran_mods.la
 
 DLB_CONVENIENCE_LIBS_DBG += libdlb_common_fortran_dbg.la
 
