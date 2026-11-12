@@ -422,7 +422,9 @@ endif
 ### DLB Plugin libraries                                                      ###
 #################################################################################
 
+#********************************************************************************
 # CUPTI
+#********************************************************************************
 
 cupti_backend_sources = [
   'src/talp/backends/backend_utils.h',
@@ -444,7 +446,29 @@ if cuda_dep.found()
   )
 endif
 
+cupti_stub_includes = include_directories('tests/stubs/cupti')
+
+libcupti_stub = shared_library(
+  'cupti_stub',
+  'tests/stubs/cupti/cupti_stub.c',
+  include_directories : cupti_stub_includes,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_cupti_test = shared_module(
+  'dlb_cupti_test',
+  cupti_backend_sources,
+  include_directories : [ common_includes, cupti_stub_includes ],
+  link_with : libcupti_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+#********************************************************************************
 # ROCPROFILER_SDK
+#********************************************************************************
 
 rocprofiler_sdk_backend_sources = [
   'src/talp/backends/backend_utils.h',
@@ -456,7 +480,30 @@ rocprofiler_sdk_backend_sources = [
   'src/talp/backends/rocprofiler_sdk.c',
 ]
 
+rocprofiler_sdk_stub_includes = include_directories('tests/stubs/rocprofiler')
+
+librocprofiler_sdk_stub = shared_library(
+  'rocprofiler-sdk_stub',
+  'tests/stubs/rocprofiler/rocprofiler_sdk_stub.c',
+  include_directories : rocprofiler_sdk_stub_includes,
+  dependencies : dl_dep,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_rocprofiler_sdk_test = shared_module(
+  'dlb_rocprofiler-sdk_test',
+  rocprofiler_sdk_backend_sources,
+  include_directories : [ common_includes, rocprofiler_sdk_stub_includes ],
+  link_with : librocprofiler_sdk_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+#********************************************************************************
 # ROCPROFILERV2
+#********************************************************************************
 
 rocprofilerv2_backend_sources = [
   'src/talp/backends/backend_utils.h',
@@ -465,7 +512,29 @@ rocprofilerv2_backend_sources = [
   'src/talp/backends/rocprofilerv2.c',
 ]
 
+rocprofilerv2_stub_includes = include_directories('tests/stubs/rocprofiler')
+
+librocprofilerv2_stub = shared_library(
+  'rocprofilerv2_stub',
+  'tests/stubs/rocprofiler/rocprofilerv2_stub.c',
+  include_directories : rocprofilerv2_stub_includes,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_rocprofilerv2_test = shared_module(
+  'dlb_rocprofilerv2_test',
+  rocprofilerv2_backend_sources,
+  include_directories : [ common_includes, rocprofilerv2_stub_includes ],
+  link_with : librocprofilerv2_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+#********************************************************************************
 # PAPI
+#********************************************************************************
 
 papi_backend_sources = [
   'src/talp/backends/backend_utils.h',
@@ -482,8 +551,30 @@ if papi_dep.found()
   )
 endif
 
+papi_stub_includes = include_directories('tests/stubs/papi')
+
+libpapi_stub = shared_library(
+  'papi_stub',
+  'tests/stubs/papi/papi_stub.c',
+  include_directories : papi_stub_includes,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_papi_test = shared_module(
+  'dlb_papi_test',
+  papi_backend_sources,
+  include_directories : [ common_includes, papi_stub_includes ],
+  link_with : libpapi_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+#********************************************************************************
 # PERF
-#
+#********************************************************************************
+
 # Always built: unlike PAPI, this backend only needs Linux kernel headers,
 # no external library to detect/link against. Uses the perf_event_open
 # syscall directly.
@@ -501,96 +592,12 @@ libdlb_perf = shared_module(
   install : true,
 )
 
-# EAR
-
-ear_backend_sources = [
-  'src/talp/backends/backend_utils.h',
-  'src/talp/backends/ear.c',
-]
-
-# SEANERGYS
-
-seanergys_backend_sources = [
-  'src/talp/backends/backend_utils.h',
-  'src/talp/backends/seanergys.c',
-]
-
-### Stub libraries and testing plugins
-
-libcupti_stub = shared_library(
-  'cupti_stub',
-  'tests/stubs/cupti/cupti_stub.c',
-  build_by_default: false,
-  install : false,
-)
-
-libdlb_cupti_test = shared_module(
-  'dlb_cupti_test',
-  cupti_backend_sources,
-  include_directories : [ common_includes, include_directories('tests/stubs/cupti') ],
-  link_with : libcupti_stub,
-  gnu_symbol_visibility : 'hidden',
-  build_by_default: false,
-  install : false,
-)
-
-librocprofiler_sdk_stub = shared_library(
-  'rocprofiler-sdk_stub',
-  'tests/stubs/rocprofiler/rocprofiler_sdk_stub.c',
-  dependencies : dl_dep,
-  build_by_default: false,
-  install : false,
-)
-
-libdlb_rocprofiler_sdk_test = shared_module(
-  'dlb_rocprofiler-sdk_test',
-  rocprofiler_sdk_backend_sources,
-  include_directories : [ common_includes, include_directories('tests/stubs/rocprofiler') ],
-  link_with : librocprofiler_sdk_stub,
-  gnu_symbol_visibility : 'hidden',
-  build_by_default: false,
-  install : false,
-)
-
-librocprofilerv2_stub = shared_library(
-  'rocprofilerv2_stub',
-  'tests/stubs/rocprofiler/rocprofilerv2_stub.c',
-  # dependencies : dl_dep,
-  build_by_default: false,
-  install : false,
-)
-
-libdlb_rocprofilerv2_test = shared_module(
-  'dlb_rocprofilerv2_test',
-  rocprofilerv2_backend_sources,
-  include_directories : [ common_includes, include_directories('tests/stubs/rocprofiler') ],
-  link_with : librocprofilerv2_stub,
-  gnu_symbol_visibility : 'hidden',
-  build_by_default: false,
-  install : false,
-)
-
-libpapi_stub = shared_library(
-  'papi_stub',
-  'tests/stubs/papi/papi_stub.c',
-  build_by_default: false,
-  install : false,
-)
-
-libdlb_papi_test = shared_module(
-  'dlb_papi_test',
-  papi_backend_sources,
-  include_directories : [ common_includes, include_directories('tests/stubs/papi') ],
-  link_with : libpapi_stub,
-  gnu_symbol_visibility : 'hidden',
-  build_by_default: false,
-  install : false,
-)
+perf_event_syscall_stub_includes = include_directories('tests/stubs/perf')
 
 libperf_event_syscall_stub = shared_library(
   'perf_event_syscall_stub',
   'tests/stubs/perf/perf_event_syscall_stub.c',
-  include_directories : common_includes,
+  include_directories : [ common_includes, perf_event_syscall_stub_includes ],
   build_by_default: false,
   install : false,
 )
@@ -598,8 +605,66 @@ libperf_event_syscall_stub = shared_library(
 libdlb_perf_test = shared_module(
   'dlb_perf_test',
   perf_backend_sources,
-  include_directories : [ common_includes, include_directories('tests/stubs/perf') ],
+  include_directories : [ common_includes, perf_event_syscall_stub_includes ],
   link_with : libperf_event_syscall_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+#********************************************************************************
+# EAR
+#********************************************************************************
+
+ear_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/ear.c',
+]
+
+ear_stub_includes = include_directories('tests/stubs/ear')
+
+libear_stub = shared_library(
+  'ear_stub',
+  'tests/stubs/ear/ear_stub.c',
+  include_directories : ear_stub_includes,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_ear_test = shared_module(
+  'dlb_ear_test',
+  ear_backend_sources,
+  include_directories : [ common_includes, ear_stub_includes ],
+  link_with : libear_stub,
+  gnu_symbol_visibility : 'hidden',
+  build_by_default: false,
+  install : false,
+)
+
+#********************************************************************************
+# SEANERBUS
+#********************************************************************************
+
+seanerbus_backend_sources = [
+  'src/talp/backends/backend_utils.h',
+  'src/talp/backends/seanerbus.c',
+]
+
+seanerbus_stub_includes = include_directories('tests/stubs/seanerbus')
+
+libseanerbus_stub = shared_library(
+  'seanerbus_stub',
+  'tests/stubs/seanerbus/seanerbus_stub.c',
+  include_directories : seanerbus_stub_includes,
+  build_by_default: false,
+  install : false,
+)
+
+libdlb_seanerbus_test = shared_module(
+  'dlb_seanerbus_test',
+  seanerbus_backend_sources,
+  include_directories : [ common_includes, seanerbus_stub_includes ],
+  link_with : libseanerbus_stub,
   gnu_symbol_visibility : 'hidden',
   build_by_default: false,
   install : false,

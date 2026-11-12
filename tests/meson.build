@@ -136,7 +136,9 @@ tests = {
     'backend_manager_00'  : {'depends' : [libdlb_cupti_test,
                                           libdlb_rocprofiler_sdk_test,
                                           libdlb_papi_test,
-                                          libdlb_perf_test]},
+                                          libdlb_perf_test,
+                                          libdlb_ear_test,
+                                          libdlb_seanerbus_test]},
     'backend_cupti_00'    : {'depends' : libdlb_cupti_test},
     'backend_rocprofiler_sdk_00'
                           : {'depends' : libdlb_rocprofiler_sdk_test},

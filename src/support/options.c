@@ -564,7 +564,7 @@ static const opts_dict_t options_dictionary[] = {
         .default_value  = "",
         .description    = OFFSET"Specifies the energy backend plugin used by TALP.\n"
                           OFFSET"If unset (default), DLB automatically attempts to load an energy\n"
-                          OFFSET"backend in the following order: 'ear' and 'seanergys'.",
+                          OFFSET"backend in the following order: 'ear' and 'seanerbus'.",
         .offset         = offsetof(options_t, talp_energy_backend),
         .type           = OPT_STR_T,
         .flags          = (option_flags_t)(OPT_READONLY | OPT_OPTIONAL | OPT_ADVANCED)

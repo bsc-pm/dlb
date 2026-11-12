@@ -403,8 +403,8 @@ AX_ROCM
 # check for EAR
 AX_EAR
 
-# check for SEANERGYS
-AX_SEANERGYS
+# check for SEANERBUS
+AX_SEANERBUS
 
 # check for SPHINX
 AC_ARG_ENABLE([sphinx-doc],
@@ -714,14 +714,14 @@ AS_IF([test "x$with_ear" != xno], [
     ear_info=""
 ])
 
-AS_IF([test "x$with_seanergys" != xno], [
-    seanergys_plugin="yes (libdlb_seanergys.so)"
-    seanergys_info="
-  CFLAGS		  : $SEANERGYS_CFLAGS
-  LIBS			  : $SEANERGYS_LIBS"
+AS_IF([test "x$with_seanerbus" != xno], [
+    seanerbus_plugin="yes (libdlb_seanerbus.so)"
+    seanerbus_info="
+  CFLAGS                  : $SEANERBUS_CFLAGS
+  LIBS                    : $SEANERBUS_LIBS"
 ], [
-    seanergys_plugin="no"
-    seanergys_info=""
+    seanerbus_plugin="no"
+    seanerbus_info=""
 ])
 
 # Summary
@@ -752,7 +752,7 @@ PAPI plugin               : $papi_plugin$papi_info
 CUDA plugin               : $cuda_plugin$cuda_info
 ROCm plugin               : $rocm_plugin$rocm_info
 EAR plugin                : $ear_plugin$ear_info
-SEANERGYS plugin          : $seanergys_plugin$seanergys_info
+SEANERBUS plugin          : $seanerbus_plugin$seanerbus_info
 
 Other libraries
 ---------------
