@@ -31,11 +31,20 @@
 
 /* DLB's own build already passes -D_GNU_SOURCE; eard_api_conf.h #defines it
  * again unconditionally, which -Werror turns fatal on redefinition. */
-#undef _GNU_SOURCE
-#include <daemon/local_api/eard_api.h>
+#ifdef _GNU_SOURCE
+#  define DLB_SAVED_GNU_SOURCE
+#  undef _GNU_SOURCE
+#endif
+#include <daemon/local_api/eard_api_conf.h>
 #include <metrics/common/apis.h>
 #include <metrics/energy_cpu/energy_cpu.h>
 #include <metrics/gpu/gpu.h>
+#ifdef DLB_SAVED_GNU_SOURCE
+#  undef DLB_SAVED_GNU_SOURCE
+#  ifndef _GNU_SOURCE
+#    define _GNU_SOURCE
+#  endif
+#endif
 
 #include <setjmp.h>
 #include <signal.h>

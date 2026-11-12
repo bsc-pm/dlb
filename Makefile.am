@@ -921,20 +921,20 @@ libdlb_ear_la_SOURCES = $(EAR_SRCS)
 endif #EAR_PLUGIN
 
 #********************************************************************************
-# libdlb_seanergys.so
+# libdlb_seanerbus.so
 #********************************************************************************
-if HAVE_SEANERGYS
-SEANERGYS_SRCS = \
+if HAVE_SEANERBUS
+SEANERBUS_SRCS = \
 	src/talp/backends/backend_utils.h    \
-	src/talp/backends/seanergys.c	     \
+	src/talp/backends/seanerbus.c        \
 	$(END)
 
-lib_LTLIBRARIES += libdlb_seanergys.la
-libdlb_seanergys_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(SEANERGYS_CFLAGS)
-libdlb_seanergys_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
-libdlb_seanergys_la_LDFLAGS = $(AM_LDFLAGS) $(SEANERGYS_LIBS)
-libdlb_seanergys_la_SOURCES = $(SEANERGYS_SRCS)
-endif #HAVE_SEANERGYS
+lib_LTLIBRARIES += libdlb_seanerbus.la
+libdlb_seanerbus_la_CPPFLAGS = $(PERFO_CPPFLAGS) $(AM_CPPFLAGS) $(SEANERBUS_CFLAGS)
+libdlb_seanerbus_la_CFLAGS = $(PERFO_CFLAGS) $(AM_CFLAGS)
+libdlb_seanerbus_la_LDFLAGS = $(AM_LDFLAGS) $(SEANERBUS_LIBS)
+libdlb_seanerbus_la_SOURCES = $(SEANERBUS_SRCS)
+endif #HAVE_SEANERBUS
 
 #********************************************************************************
 # Support binaries

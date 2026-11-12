@@ -82,7 +82,7 @@ static plugin_t loaded_hwc_plugin = {};
 // List of possible energy backend plugin names
 static const char *energy_plugins[] = {
     "ear",
-    "seanergys",
+    "seanerbus",
 };
 
 enum { num_energy_plugins = sizeof(energy_plugins) / sizeof(energy_plugins[0]) };
