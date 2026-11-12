@@ -12,6 +12,7 @@ Build requirements
 
 * A supported platform running GNU/Linux (i386, x86-64, ARM, PowerPC, IA64, or RISC-V)
 * C compiler
+* Fortran compiler (optional, for the Fortran API and MPI Fortran interception; GNU ``gfortran`` recommended, see :ref:`dlb-fortran-compiler`)
 * Python 2.7 or higher (Python 3 recommended; required for some optional components)
 
 
@@ -31,6 +32,24 @@ Installation steps
 
     make [-j N]
     make install
+
+.. _dlb-fortran-compiler:
+
+Fortran compiler
+================
+
+If a Fortran compiler is found, DLB builds its Fortran API and the Fortran MPI interception. We recommend using GNUs ``gfortran`` to build DLB, even if the rest of the toolchain is from a different vendor::
+
+    ./configure FC=gfortran --prefix=<dlb_install_path> [--with-mpi]
+
+DLB does not install compiler-dependent Fortran module files (``.mod``); the Fortran API is provided through include headers. Therefore, a DLB installation built with ``gfortran`` can be used from applications compiled with any other Fortran compiler.
+
+Other Fortran compilers are known to cause build failures, for instance:
+
+* LLVM ``flang`` and NVIDIAs ``nvfortran`` may fail to link ``libdlb.so``.
+* Intel ``ifx`` 2024 and 2025 fail to compile the MPI Fortran 2008 bindings.
+
+The Fortran API can also be disabled explicitly with ``--disable-fortran`` if you encounter issues with the Fortran compiler.
 
 Other installation methods
 ==========================
