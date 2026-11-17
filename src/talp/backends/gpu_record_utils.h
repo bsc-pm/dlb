@@ -33,6 +33,7 @@ typedef struct {
     gpu_record_t *data;
     size_t size;
     size_t capacity;
+    size_t dropped;
 } gpu_records_buffer_t;
 
 

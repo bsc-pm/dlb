@@ -24,33 +24,44 @@
 
 /* Compare function for qsort */
 static int compare_records(const void *a, const void *b) {
-    const gpu_record_t *ra = (const gpu_record_t *)a;
-    const gpu_record_t *rb = (const gpu_record_t *)b;
-    return (ra->start > rb->start) - (ra->start < rb->start);
+    uint64_t x = ((const gpu_record_t *)a)->start;
+    uint64_t y = ((const gpu_record_t *)b)->start;
+    return (x > y) - (x < y);
 }
 
 
 /* Ensure space for 1 more element */
-static inline void ensure_capacity(gpu_records_buffer_t* buf) {
-    enum { MAX_EVENTS = 64 * 1024 * 1024 }; // 64M events = 1GB
-    if (buf->size >= buf->capacity) {
-        if (buf->capacity >= MAX_EVENTS) {
-            fprintf(stderr, "Too many events (> %llu), aborting\n",
-                    (unsigned long long)MAX_EVENTS);
-            abort();
-        }
+static inline bool ensure_capacity(gpu_records_buffer_t* buf) {
 
-        size_t new_cap = buf->capacity * 2;
-        if (new_cap > MAX_EVENTS) new_cap = MAX_EVENTS;
-
-        gpu_record_t* new_data = realloc(buf->data, new_cap * sizeof(gpu_record_t));
-        if (!new_data) {
-            fprintf(stderr, "realloc failed\n");
-            abort();
-        }
-        buf->data = new_data;
-        buf->capacity = new_cap;
+    if (buf->size < buf->capacity) {
+        return true;
     }
+
+    /* Try first saving space by compating the buffer */
+    gpu_record_flatten(buf);
+
+    if (buf->size < buf->capacity) {
+        return true;
+    }
+
+    enum { MAX_EVENTS = 64 * 1024 * 1024 }; // 64M events = 1GB
+
+    if (buf->capacity >= MAX_EVENTS) {
+        return false;
+    }
+
+    size_t new_cap = buf->capacity * 2;
+    if (new_cap > MAX_EVENTS) new_cap = MAX_EVENTS;
+
+    gpu_record_t* new_data = realloc(buf->data, new_cap * sizeof(gpu_record_t));
+    if (!new_data) {
+        fprintf(stderr, "realloc failed\n");
+        abort();
+    }
+    buf->data = new_data;
+    buf->capacity = new_cap;
+
+    return true;
 }
 
 
@@ -60,6 +71,11 @@ static inline bool is_valid_record(uint64_t start, uint64_t end) {
 
 
 void gpu_record_init_buffer(gpu_records_buffer_t *buf, size_t initial_capacity) {
+
+    if (initial_capacity == 0) {
+        initial_capacity = 1024;
+    }
+
     buf->data = malloc(initial_capacity * sizeof(gpu_record_t));
     if (!buf->data) {
         fprintf(stderr, "malloc failed\n");
@@ -71,10 +87,11 @@ void gpu_record_init_buffer(gpu_records_buffer_t *buf, size_t initial_capacity) 
 
 
 void gpu_record_free_buffer(gpu_records_buffer_t *buf) {
+    if (buf->dropped > 0) {
+        fprintf(stderr, "freeing GPU buffer, %zu dropped events.\n", buf->dropped);
+    }
     free(buf->data);
-    buf->data = NULL;
-    buf->size = 0;
-    buf->capacity = 0;
+    *buf = (gpu_records_buffer_t){0};
 }
 
 
@@ -85,11 +102,17 @@ void gpu_record_clear_buffer(gpu_records_buffer_t *buf) {
 
 /* Add one record */
 void gpu_record_append_event(gpu_records_buffer_t* buf, uint64_t start, uint64_t end) {
-    ensure_capacity(buf);
-    if (is_valid_record(start, end)) {
-        buf->data[buf->size].start = start;
-        buf->data[buf->size].end   = end;
-        buf->size++;
+
+    if (buf != NULL
+            && is_valid_record(start, end)) {
+        if (ensure_capacity(buf)) {
+            buf->data[buf->size].start = start;
+            buf->data[buf->size].end   = end;
+            buf->size++;
+        } else {
+            /* Hard cap reached, drop event */
+            buf->dropped++;
+        }
     }
 }
 
@@ -100,7 +123,7 @@ void gpu_record_flatten(gpu_records_buffer_t *buf) {
     size_t num_records = buf->size;
     gpu_record_t *records = buf->data;
 
-    if (num_records == 0) return;
+    if (num_records < 2) return;
 
     // Sort records by start time
     qsort(records, num_records, sizeof(gpu_record_t), compare_records);
