@@ -27,7 +27,7 @@
 typedef struct mu_cpuset_t {
     cpu_set_t   *set;
     size_t      alloc_size;
-    cpuid_t     count;
+    int         count;
     cpuid_t     first_cpuid;
     cpuid_t     last_cpuid;
 } mu_cpuset_t;

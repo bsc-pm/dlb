@@ -574,12 +574,8 @@ AS_CASE([$host],
     [powerpc64-bgq-linux*], [
         AC_DEFINE([IS_BGQ_MACHINE], [1], [Defined if this machine is a BGQ machine])
         AC_LDFLAGS="${AC_LDFLAGS} -dynamic"
-        ncpus=64
-    ], [
-        ncpus=$(getconf _NPROCESSORS_ONLN) || ncpus=1
     ]
 )
-AC_DEFINE_UNQUOTED([NCPUS_AT_CONFIGURE_TIME], [$ncpus], [Number of CPUs detected at cofigure time])
 ################################################################################
 
 AC_SUBST([AC_CFLAGS])

@@ -30,10 +30,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#if NCPUS_AT_CONFIGURE_TIME > 1 && NCPUS_AT_CONFIGURE_TIME < 1025
-enum { SMALL_ARRAY_DEFAULT_SIZE = NCPUS_AT_CONFIGURE_TIME };
-#else
-enum { SMALL_ARRAY_DEFAULT_SIZE = 64 };
+#ifndef SMALL_ARRAY_DEFAULT_BYTES
+#define SMALL_ARRAY_DEFAULT_BYTES 1024
 #endif
 
 #endif /* SMALL_ARRAY_TEMPLATE_H */
@@ -56,29 +54,50 @@ enum { SMALL_ARRAY_DEFAULT_SIZE = 64 };
 #define _SA_CAT(a,b)   _SA_CAT2(a,b)
 #define _SA_T(suffix)  _SA_CAT(small_array_, _SA_CAT(SMALL_ARRAY_TNAME, suffix))
 
+/* Capacity in elements, at least 1 so that buffer[] is never zero-length.
+ * Defined per instantiation because it depends on the element type. */
+#define _SA_CAP \
+    (SMALL_ARRAY_DEFAULT_BYTES >= sizeof(SMALL_ARRAY_TYPE) \
+        ? SMALL_ARRAY_DEFAULT_BYTES / sizeof(SMALL_ARRAY_TYPE) : 1)
+
+
 typedef struct _SA_T() {
     size_t            size;
     SMALL_ARRAY_TYPE *values;
-    SMALL_ARRAY_TYPE  buffer[SMALL_ARRAY_DEFAULT_SIZE];
+    SMALL_ARRAY_TYPE  buffer[_SA_CAP];
 } _SA_T(_t);
+
+
+/* Returns a pointer to n elements, or NULL if allocation failed (or n is
+ * too large). On failure the array is left empty, so _free is still safe.
+ * Elements are uninitialized. NOTE: values may point into buffer, so the
+ * struct must not be copied or returned by value after _init. */
 
 static inline SMALL_ARRAY_TYPE* _SA_T(_init)(_SA_T(_t) *array, size_t n) {
 
-    array->size = n;
-    array->values = (n <= SMALL_ARRAY_DEFAULT_SIZE)
-              ? array->buffer
-              : malloc(sizeof(SMALL_ARRAY_TYPE) * n);
+    if (n <= _SA_CAP) {
+        array->values = array->buffer;
+    } else if (n > SIZE_MAX / sizeof(SMALL_ARRAY_TYPE)) {
+        array->values = NULL;  // sizeof * n would overflow
+    } else {
+        array->values = malloc(sizeof(SMALL_ARRAY_TYPE) * n);
+    }
+
+    array->size = array->values ? n : 0;
+
     return array->values;
 }
 
 static inline void _SA_T(_free)(_SA_T(_t) *array) {
 
-    if (array->size > SMALL_ARRAY_DEFAULT_SIZE) {
+    if (array->values != array->buffer) {
         free(array->values);
     }
     array->values = NULL;
+    array->size = 0;
 }
 
+#undef _SA_CAP
 #undef _SA_T
 #undef _SA_CAT
 #undef _SA_CAT2

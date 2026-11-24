@@ -160,7 +160,7 @@ static void check_barrier_version(void) {
 }
 
 static void check_cpuinfo_version(void) {
-    enum { KNOWN_CPUINFO_VERSION = 6 };
+    enum { KNOWN_CPUINFO_VERSION = 7 };
     enum { KNOWN_QUEUE_PROC_REQS_SIZE = 4096 };
     enum { KNOWN_QUEUE_PIDS_SIZE = 8 };
     struct KnownCpuinfo {
